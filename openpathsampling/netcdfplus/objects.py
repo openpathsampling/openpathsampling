@@ -60,8 +60,14 @@ class ObjectStore(StorableNamedObject):
         Parameters
         ----------
         content_class
-        json : bool
-            if True the store will use the json pickling to store objects
+        json : bool or str `json` or `jsonobj`
+            if `False` the store will not create a json variable for serialization
+            if `True` the store will use the json pickling to store objects and a
+            single storable object will be serialized and not referenced. If a string
+            is given the string is taken as the variable type of the json variable.
+            Here only two values are allowed: `jsonobj` (equivalent to `True`) or
+            `json` which will also reference directly given storable objects.
+
         nestable : bool
             if `True` this marks the content_class to be saved as nested dict
             objects and not a pointing to saved objects. So the saved complex
@@ -74,12 +80,23 @@ class ObjectStore(StorableNamedObject):
         with a reasonable maximum number of objects that depends on the typical
         number of objects to cache and their size
 
-        Notes
-        -----
         The class that takes care of storing data in a file is called a `Storage`,
         so the netCDF+ subclassed `Storage` is a storage. The classes that know how
         to load and save an object from the storage are called `Store`,
         like ObjectStore, SampleStore, etc...
+
+        The difference between `json` and `jsonobj` is sutble. Consider storing a
+        complex object. Then there are two ways to do that. 1. `json`: Store a reference to
+        the object (provided) it is stored and 2. `jsonobj`: serialize the object and only use
+        references for contained objects. All inner objects will always be stored using
+        references. The only exception is using nestable. Consider objects that contain references
+        to objects of the same type, like e.g. operations in an equation (2*3 + 3). Each operation represents
+        a value but each operation needs values to operate on. To save such an object you have
+        again two options: 1. `nestable=False`. Store all single objects and always reference
+        the contained objects. For an equation that would mean to store several objects
+        `op1 = plus(op2, 3), op2 = times(2, 3)`. Since this is correct though not intuitive you can
+        also use 2. `nestable=True`. Store all the serialized objects nested into one object (string).
+        For our example this corresponds to `plus(times(2,3), 3)`.
 
         """
 
@@ -88,7 +105,6 @@ class ObjectStore(StorableNamedObject):
         self.content_class = content_class
         self.prefix = None
         self.cache = NoCache()
-        self.json = json
         self._free = set()
         self._cached_all = False
         self.nestable = nestable
@@ -99,6 +115,11 @@ class ObjectStore(StorableNamedObject):
         self.units = dict()
 
         self.index = weakref.WeakKeyDictionary()
+
+        if json in [True, False, 'json', 'jsonobj']:
+            self.json = json
+        else:
+            raise ValueError('Valid settings for json are only True, False, `json` or `jsonobj`.')
 
     def to_dict(self):
         return {
@@ -436,7 +457,11 @@ class ObjectStore(StorableNamedObject):
         self.storage.createDimension(self.prefix, 0)
 
         if self.json:
-            self.create_variable("json", 'jsonobj',
+            jsontype = 'jsonobj'
+            if type(self.json) is str:
+                jsontype = self.json
+
+            self.create_variable("json", jsontype,
                                description='A json serialized version of the object',
                                chunksizes=tuple([10240]))
 
@@ -830,7 +855,7 @@ class NamedObjectStore(ObjectStore):
 
         if obj is not None:
             setattr(obj, '_name',
-                    self.storage.variables[self.prefix + '_name'][idx])
+                    self.storage.variables[self.prefix + '_name'][n_idx])
             # make sure that you cannot change the name of loaded objects
             obj.fix_name()
 
@@ -861,9 +886,8 @@ class NamedObjectStore(ObjectStore):
             raise ValueError('Unsupported index type (only str or None allowed).')
 
         name = obj._name
-        fixed = obj._name_fixed
 
-        if is_str and not fixed:
+        if is_str:
             obj.name = idx
             name = obj._name
 
@@ -953,27 +977,40 @@ class UniqueNamedObjectStore(NamedObjectStore):
         err = list()
 
         if is_str:
-            if fixed and name != idx:
-                err.append(
-                    ('Cannot rename object from "%s" to "%s". '
-                     'Already fixed name!') % (name, idx)
-                )
+            if fixed:
+                if name != idx:
+                    # saving fixed under different name is not possible. Get a reasonable error message
+                    if obj in self.index:
+                        err.append(
+                            ('Cannot rename object to "%s". '
+                             'Already saved with name "%s" !') % (idx, name)
+                        )
+                    else:
+                        err.append(
+                            ('Cannot rename object to "%s". '
+                             'Already fixed name "%s" !') % (idx, name)
+                        )
 
-                if self.is_name_locked(name):
-                    err.append(
-                        ('Current name "%s" is also already taken in unique name store. '
-                         'This means you cannot save object "%s" at all. '
-                         'In general this should not happen to unsaved objects unless '
-                         'you fixed the name of the object yourself. Check your code '
-                         'for the generation of objects of the same name.') %
-                        (name, obj)
-                    )
+                        if self.is_name_locked(name):
+                            err.append(
+                                ('Current name "%s" is also already taken in unique name store. '
+                                 'This means you cannot save object "%s" at all. '
+                                 'In general this should not happen to unsaved objects unless '
+                                 'you fixed the name of the object yourself. Check your code '
+                                 'for the generation of objects of the same name.') %
+                                (name, obj)
+                            )
+                        else:
+                            err.append(
+                                ('Current name "%s" is still free. Saving without giving a specific name '
+                                 'should work. If that is what you want to do.') % name
+                            )
                 else:
-                    err.append(
-                        ('Current name "%s" is still free. Saving without giving a specific name '
-                         'should work. If that is what you want to do.') % name
-                    )
+                    # already fixed, but with same name. So that is fine. Check if already stored
+                    if obj in self.index:
+                        return self.index[obj]
             else:
+                # name is not fixed yet. So check, if we can save or whether name is already taken
                 if self.is_name_locked(idx):
                     err.append(
                         ('New name "%s" already taken in unique name store. ' +
@@ -990,8 +1027,13 @@ class UniqueNamedObjectStore(NamedObjectStore):
                              'should work') % name
                         )
         else:
-            if self.is_name_locked(name):
-                if fixed:
+            if fixed:
+                # no new name, but fixed. Check if already stored.
+                if obj in self.index:
+                    return self.index[obj]
+
+                # if not stored yet check if we could
+                if self.is_name_locked(name):
                     err.append(
                         ('Current name "%s" is already taken in unique name store. '
                          'This means you cannot save object "%s" at all. '
@@ -1000,7 +1042,9 @@ class UniqueNamedObjectStore(NamedObjectStore):
                          'for the generation of objects of the same name.') %
                         (name, obj)
                     )
-                else:
+            else:
+                # no new name and not fixed. Just check if current name is taken
+                if self.is_name_locked(name):
                     err.append(
                         ('Current name "%s" is already taken in unique name store. '
                          'Try renaming object or saving using other name.') % name
@@ -1009,6 +1053,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
         if len(err) > 0:
             raise RuntimeWarning('/n'.join(err))
 
+        # no errors, so reserve the name for nested saving and actually call save
         self.reserve_name(name)
 
         try:
@@ -1088,18 +1133,11 @@ class DictStore(NamedObjectStore):
     def __init__(self):
         super(DictStore, self).__init__(
             None,
-            json=False
+            json='json'
         )
 
     def to_dict(self):
         return {}
-
-    def _init(self):
-        super(DictStore, self)._init()
-
-        self.create_variable("json", 'json',
-                           description='A json serialized version of the content',
-                           chunksizes=tuple([10240]))
 
     def load(self, idx):
         """
@@ -1123,15 +1161,14 @@ class DictStore(NamedObjectStore):
 
             # we want to load by name and it was not in cache.
             if idx not in self.name_idx:
-                # raise ValueError('str "' + idx + '" not found in storage')
-                print 'not found'
+                raise ValueError('str "' + idx + '" not found in storage')
                 logger.debug('Name "%s" not found in the storage, returning None instead!' % idx)
                 return None
 
             if idx in self.name_idx:
                 if len(self.name_idx[idx]) > 1:
                     logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
-                        idx, len(self.cache[idx])))
+                        idx, len(self.name_idx[idx])))
 
                 n_idx = sorted(list(self.name_idx[idx]))[-1]
 

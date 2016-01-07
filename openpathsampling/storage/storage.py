@@ -61,11 +61,12 @@ class Storage(NetCDFPlus):
         storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
 
         # Copy all configurations and momenta to new file in reduced form
+        # use ._save instead of .save to override immutability checks etc...
 
         for obj in self.configurations:
-            storage2.configurations.save(obj.copy(subset=subset), idx=self.configurations.index[obj])
+            storage2.configurations._save(obj.copy(subset=subset), idx=self.configurations.index[obj])
         for obj in self.momenta:
-            storage2.momenta.save(obj.copy(subset=subset), idx=self.momenta.index[obj])
+            storage2.momenta._save(obj.copy(subset=subset), idx=self.momenta.index[obj])
 
         # All other should be copied one to one. We do this explicitly although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner

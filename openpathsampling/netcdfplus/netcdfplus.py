@@ -13,6 +13,7 @@ from objects import NamedObjectStore, ObjectStore
 import numpy as np
 import netCDF4
 import os.path
+import abc
 
 
 # =============================================================================================
@@ -149,6 +150,33 @@ class NetCDFPlus(netCDF4.Dataset):
         write `storage.variables['ensemble_json'][idx]`
         """
         return self._stores
+
+    def default_store(self, obj):
+        """
+        Return the default store used for an storable object
+
+        Parameters
+        ----------
+        obj : :class:`openpathsampling.netcdfplus.StorableObject`
+            the storable object to be tested
+
+        Returns
+        -------
+        :class:`openpathsampling.netcdfplus.ObjectStore`
+            the store that is used by default to store the given storable obj
+        """
+
+        if type(obj) is type or type(obj) is abc.ABCMeta:
+            if obj not in self._obj_store:
+                raise ValueError('Objects of class "%s" are not storable in this store.' % obj.__name__)
+
+            return self._obj_store[obj]
+        else:
+            if obj.__class__ not in self._obj_store:
+                raise ValueError('Objects of class "%s" are not storable in this store.' % obj.__class__.__name__)
+
+            return self._obj_store[obj.__class__]
+
 
     def update_storable_classes(self):
         self.simplifier.update_class_list()
@@ -433,7 +461,7 @@ class NetCDFPlus(netCDF4.Dataset):
         elif obj.__class__ in self._obj_store:
             # to store we just check if the base_class is present in the storages
             # also we assume that if a class has no base_cls
-            store = self._obj_store[obj.__class__]
+            store = self.default_store(obj)
             store.save(obj, idx)
             return
 

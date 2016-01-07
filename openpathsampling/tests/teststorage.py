@@ -9,6 +9,8 @@ import mdtraj as md
 from test_helpers import (data_filename,
                           compare_snapshot
                           )
+from nose.plugins.skip import SkipTest
+
 from openpathsampling.openmm_engine import *
 from openpathsampling.snapshot import Snapshot
 from openpathsampling.netcdfplus import ObjectJSON
