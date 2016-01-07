@@ -741,7 +741,6 @@ class NamedObjectStore(ObjectStore):
             if name != '':
                 self._update_name_in_cache(obj._name, idx)
 
-
     @property
     def name_idx(self):
         """
@@ -1166,7 +1165,7 @@ class DictStore(NamedObjectStore):
 
         Returns
         -------
-        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+        :class:`openpathsampling.netcdfplus.base.StorableObject`
             the loaded object
         """
 
@@ -1223,11 +1222,16 @@ class DictStore(NamedObjectStore):
         ----------
         obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the object to be stored
-        idx : int or string or `None`
-            the index to be used for storing. This is highly discouraged since
-            it changes an immutable object (at least in the storage). It is
-            better to store also the new object and just ignore the
-            previously stored one.
+        idx : string or `None`
+            the string index to be used for storing. Objects will not be replaced but stored again with the
+            same name. When loading the last stored object under the idx is retrieved. Effectively mimicking
+            a mutual dict with versioning. We usually encourage for most cases to use
+            the immutual dict class :class:`openpathsampling.netcdf.ImmutableDictStore` instead to avoid
+            ambiguity in stored objects.
+
+        See Also
+        --------
+        :class:`openpathsampling.netcdf.ImmutableDictStore`
 
         """
 
