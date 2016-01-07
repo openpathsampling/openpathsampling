@@ -50,6 +50,20 @@ class StorableObject(object):
 
         return summary
 
+    @property
+    def mro(self):
+        """
+        Convenience to show all parent classes.
+
+        Identical to use `inspect.getmro(self.__class__)`
+
+        Returns
+        -------
+        list of type
+            A list of parent classes
+        """
+        return inspect.getmro(self.__class__)
+
     def idx(self, store):
         if hasattr(store, 'index'):
             return store.index.get(self, None)

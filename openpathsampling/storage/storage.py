@@ -77,7 +77,7 @@ class Storage(NetCDFPlus):
             'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
             'samples', 'snapshots', 'pathsimulators', 'cvs'
         ]:
-            self.clone_storage(storage_name, storage2)
+            self.clone_store(storage_name, storage2)
 
         storage2.close()
 
@@ -105,7 +105,7 @@ class Storage(NetCDFPlus):
             'shootingpointselectors', 'engines', 'volumes',
             'ensembles', 'transitions', 'pathsimulators'
         ]:
-            self.clone_storage(storage_name, storage2)
+            self.clone_store(storage_name, storage2)
 
         storage2.close()
 

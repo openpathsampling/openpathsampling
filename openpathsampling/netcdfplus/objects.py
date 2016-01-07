@@ -5,7 +5,7 @@ import yaml
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from proxy import LoaderProxy
-from base import StorableNamedObject
+from base import StorableNamedObject, StorableObject
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -121,6 +121,9 @@ class ObjectStore(StorableNamedObject):
         else:
             raise ValueError('Valid settings for json are only True, False, `json` or `jsonobj`.')
 
+        if self.content_class is not None and not issubclass(self.content_class, StorableObject):
+            raise ValueError('Content class "%s" must be subclassed from StorableObject.' % self.content_class.__name__)
+
     def to_dict(self):
         return {
             'content_class': self.content_class,
@@ -159,7 +162,7 @@ class ObjectStore(StorableNamedObject):
         """
 
         if self._storage is None:
-            raise RuntimeError('A store need to be added to a storage to be used!')
+            raise RuntimeError('A storage needs to be added to this store to be used! Use .register() to do so.')
 
         return self._storage
 
@@ -697,6 +700,9 @@ class NamedObjectStore(ObjectStore):
         self._names_loaded = False
         self._name_idx = dict()
 
+        if self.content_class is not None and not issubclass(self.content_class, StorableNamedObject):
+            raise ValueError('Content class "%s" must be subclassed from StorableNamedObject.' % self.content_class.__name__)
+
     def _init(self):
         """
         Initialize the associated storage to allow for object storage. Mainly
@@ -704,9 +710,11 @@ class NamedObjectStore(ObjectStore):
         """
         super(NamedObjectStore, self)._init()
 
-        self.create_variable("name", 'str',
-                           description='A name',
-                           chunksizes=tuple([10240]))
+        self.create_variable(
+            "name", 'str',
+            description='The name of the object',
+            chunksizes=tuple([10240])
+        )
 
     def add_single_to_cache(self, idx, json):
         """
@@ -737,11 +745,17 @@ class NamedObjectStore(ObjectStore):
     @property
     def name_idx(self):
         """
+        Returns a dictionary of all names pointing to stored indices
 
         Returns
         -------
+        dict of str : set
+            A dictionary that has all stored names as keys and the values are a set of indices where an
+            object with this name is found.
 
         """
+
+        # if not done already cache names once
         if not self._names_loaded:
             self.update_name_cache()
 
@@ -1161,9 +1175,8 @@ class DictStore(NamedObjectStore):
 
             # we want to load by name and it was not in cache.
             if idx not in self.name_idx:
+                logger.debug('Name "%s" not found in the storage!' % idx)
                 raise ValueError('str "' + idx + '" not found in storage')
-                logger.debug('Name "%s" not found in the storage, returning None instead!' % idx)
-                return None
 
             if idx in self.name_idx:
                 if len(self.name_idx[idx]) > 1:
