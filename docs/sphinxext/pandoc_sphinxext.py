@@ -14,7 +14,7 @@ from docutils.parsers.rst import directives
 from docutils.frontend import OptionParser
 from docutils.utils import new_document
 from docutils.parsers.rst import Parser
-from IPython.nbconvert.utils.pandoc import pandoc
+from nbconvert.utils.pandoc import pandoc
 
 
 def MakePandocDirective(pandoc_type=''):

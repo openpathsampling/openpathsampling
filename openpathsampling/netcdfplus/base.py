@@ -142,6 +142,7 @@ class StorableObject(object):
         Returns a dictionary of all storable objects
 
         Returns
+        -------
         dict of str : type
             a dictionary of all subclassed objects from StorableObject. The name points to the class.
         """

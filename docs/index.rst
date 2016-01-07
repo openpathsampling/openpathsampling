@@ -17,6 +17,7 @@ Documentation
 
    getting_started
    examples/index
+   guides/index
    whatsnew
    faq
    Discussion Forums <http://discourse.openpathsampling.org>
