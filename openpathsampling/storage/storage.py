@@ -514,7 +514,7 @@ class StorageView(object):
         ----------
         store : dict-like
             the dict to be wrapped
-        store : openpathsampling.storage.ObjectStore
+        store : openpathsampling.netcdfplus.ObjectStore
             a reference to an object store used
 
         """

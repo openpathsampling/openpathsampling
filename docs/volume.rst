@@ -16,14 +16,14 @@ basic volumes
     :toctree: api/generated/
 
     Volume
+    FullVolume
+    EmptyVolume
 
 set-based volume combinations
 -----------------------------
 .. autosummary::
     :toctree: api/generated/
 
-    FullVolume
-    EmptyVolume
     IntersectionVolume
     UnionVolume
     SymmetricDifferenceVolume
@@ -44,7 +44,6 @@ voronoi cell volumes
     :toctree: api/generated/
 
     VoronoiVolume
-
 
 volume factory
 --------------

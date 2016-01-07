@@ -27,7 +27,7 @@ class StorableObject(object):
         (De-)Activate observing creation of storable objects
 
         This can be used to track which storable objects are still alive and hence look for memory leaks
-        and inspect caching. Use :method:`openpathsampling.netcdfplus.base.StorableObject.count_weaks` to get
+        and inspect caching. Use :meth:`openpathsampling.netcdfplus.base.StorableObject.count_weaks` to get
         the current summary of created objects
 
         Parameters
@@ -39,7 +39,7 @@ class StorableObject(object):
 
         See Also
         --------
-        :method:`openpathsampling.netcdfplus.base.StorableObject.count_weaks`
+        :meth:`openpathsampling.netcdfplus.base.StorableObject.count_weaks`
 
         """
         if StorableObject.observe_objects is not active:

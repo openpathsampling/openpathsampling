@@ -850,7 +850,7 @@ class CV_MDTraj_Function(CV_Function):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
     This is identical to CV_Function except that the function is called with
-    an mdraj.Trajetory object instead of the openpathsampling.Trajectory one using
+    an mdraj.Trajetory object instead of the :class:`openpathsampling.Trajectory` one using
     `f(traj.md(), **kwargs)`
 
     Examples

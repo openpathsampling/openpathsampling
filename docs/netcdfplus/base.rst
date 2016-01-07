@@ -2,15 +2,15 @@
 
 .. currentmodule:: openpathsampling.netcdfplus.base
 
-ShootingPoint Functions
-=======================
+Base Functions
+==============
 
 
-shootingpoint
--------------
+mixins for storable objects
+---------------------------
 
 .. autosummary::
     :toctree: api/generated/
 
-	StorableObject
-	StorableNamedObject
+    StorableObject
+    StorableNamedObject
