@@ -190,7 +190,7 @@ def empty_snapshot_from_openmm_topology(topology, units):
     return snapshot
 
 
-def simtk_units_from_md_snapshot(snapshot):
+def units_from_snapshot(snapshot):
     """
     Returns a dict of simtk.unit.Unit instances that represent the used units in the snapshot
 
