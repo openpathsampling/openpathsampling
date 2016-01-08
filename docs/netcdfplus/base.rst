@@ -14,3 +14,4 @@ mixins for storable objects
 
     StorableObject
     StorableNamedObject
+

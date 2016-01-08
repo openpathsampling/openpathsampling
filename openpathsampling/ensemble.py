@@ -39,8 +39,8 @@ class EnsembleCache(object):
 
     Attributes
     ----------
-        start_frame : Snapshot
-        prev_last_frame : Snapshot
+        start_frame : :class:`openpathsampling.snapshot.Snapshot`
+        prev_last_frame : :class:`openpathsampling.snapshot.Snapshot`
         direction : +1 or -1
         contents : dictionary
     """
@@ -218,7 +218,7 @@ class Ensemble(StorableNamedObject):
         
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
         
         Returns
@@ -248,7 +248,7 @@ class Ensemble(StorableNamedObject):
         
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
         
         Returns
@@ -278,7 +278,7 @@ class Ensemble(StorableNamedObject):
 
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be splitted into ensemble parts
         lazy : boolean, optional
             if True will use a faster almost linear algorithm, while False
@@ -396,7 +396,7 @@ class Ensemble(StorableNamedObject):
 
         Returns
         -------
-        list of Trajectory
+        list of :class:`openpathsampling.trajectory.Trajectory`
             Returns a list of sub-trajectories in trajectory that are in the
             ensemble.
 
@@ -1416,7 +1416,7 @@ class PartInXEnsemble(VolumeEnsemble):
         
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             The trajectory to be checked
         '''
         for frame in trajectory.as_proxies():
@@ -1676,7 +1676,7 @@ class SingleFrameEnsemble(WrappedEnsemble):
 
     Attributes
     ----------
-    ensemble : Ensemble
+    ensemble : :class:`openpathsampling.ensemble.Ensemble`
         the ensemble which should be represented in the single frame
 
     Notes
@@ -1702,9 +1702,9 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     Parameters
     ----------
-    state_vol : :class:`openpathsampling.Volume`
+    state_vol : :class:`openpathsampling.volume.Volume`
         The Volume which defines the state for this minus interface
-    innermost_vols : :class:`list of openpathsampling.Volume`
+    innermost_vols : :class:`list of openpathsampling.volume.Volume`
         The Volume defining the innermost interface with which this minus
         interface does its replica exchange.
     n_l : integer (greater than one)
@@ -1783,11 +1783,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         Parameters
         ----------
-        partial_traj : :class:`openpathsampling.Trajectory`
+        partial_traj : :class:`openpathsampling.trajectory.Trajectory`
             trajectory to extend
         minus_replica_id : int or str
             replica ID for this sample
-        engine : :class:`openpathsampling.DynamicsEngine`
+        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
             engine to use for MD extension
         """
         last_frame = partial_traj[-1]
@@ -1818,13 +1818,13 @@ class TISEnsemble(SequentialEnsemble):
 
     Attributes
     ----------
-    initial_states : Volume or list of Volume
+    initial_states : :class:`openpathsampling.volume.Volume` or list of :class:`openpathsampling.volume.Volume`
         Volume(s) that only the first or last frame may be in
-    final_states : Volume or list of Volume
+    final_states : :class:`openpathsampling.volume.Volume` or list of :class:`openpathsampling.volume.Volume`
         Volume(s) that only the last frame may be in
-    interface : Volume
+    interface : :class:`openpathsampling.volume.Volume`
         Volume which the trajectory must exit to be accepted
-    orderparameter : CollectiveVariable
+    orderparameter : :class:`openpathsampling.collectivevariable.CollectiveVariable`
         CV to be used as order parameter for this
     """
     def __init__(self, initial_states, final_states, interface,
@@ -1929,12 +1929,12 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume : openpathsampling.Volume
+        volume : :class:`openpathsampling.volume.Volume`
             The volume to start in 
         
         Returns
         -------
-        ensemble : openpathsampling.Ensemble
+        ensemble : :class:`openpathsampling.ensemble.Ensemble`
             The constructed Ensemble
         '''
         return AllInXEnsemble(volume, 0)
@@ -1946,12 +1946,12 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume : openpathsampling.Volume
+        volume : :class:`openpathsampling.volume.Volume`
             The volume to end in 
         
         Returns
         -------
-        ensemble : openpathsampling.Ensemble
+        ensemble : :class:`openpathsampling.ensemble.Ensemble`
             The constructed Ensemble
         '''        
         return AllInXEnsemble(volume, -1)
@@ -1963,14 +1963,14 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume_a : openpathsampling.Volume
+        volume_a : :class:`openpathsampling.volume.Volume`
             The volume to start in 
-        volume_b : openpathsampling.Volume
+        volume_b : :class:`openpathsampling.volume.Volume`
             The volume to end in 
         
         Returns
         -------
-        ensemble : openpathsampling.Ensemble
+        ensemble : :class:`openpathsampling.ensemble.Ensemble`
             The constructed Ensemble
         '''        
         # TODO: this is actually only for flexible path length TPS now
