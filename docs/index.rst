@@ -37,6 +37,7 @@ API Reference
     engine
     storage
     treemixin
+    trajectory
 
 Developing
 ----------

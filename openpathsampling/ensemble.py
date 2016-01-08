@@ -377,7 +377,7 @@ class Ensemble(StorableNamedObject):
 
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :py:class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be splitted into ensemble parts
         lazy : boolean
             if True will use a faster almost linear algorithm, while False
