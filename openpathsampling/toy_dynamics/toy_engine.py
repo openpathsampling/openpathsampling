@@ -30,6 +30,8 @@ class ToyEngine(DynamicsEngine):
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the DynamicsEngine calls on them for'''
 
+    base_snapshot_type = ToySnapshot
+
     default_options = {
                       'integ' : None,
                       'n_frames_max' : 5000,
