@@ -19,7 +19,7 @@ We recommend using `conda` to install OpenPathSampling.  `conda
 scientific python. Unlike ``easy_install`` or ``pip``, it handles binaries
 and binary dependencies, which are critical for most scientific workflows.
 If you're a ``conda`` user, you can install OpenPathSampling by adding the
-omnia channel. ::
+omnia channel.
 
 To install the most recent release of OpenPathSampling with conda, use the
 following commands ::

@@ -1702,9 +1702,9 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     Parameters
     ----------
-    state_vol : Volume
+    state_vol : :class:`openpathsampling.Volume`
         The Volume which defines the state for this minus interface
-    innermost_vols : list of Volume
+    innermost_vols : :class:`list of openpathsampling.Volume`
         The Volume defining the innermost interface with which this minus
         interface does its replica exchange.
     n_l : integer (greater than one)
@@ -1783,11 +1783,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         Parameters
         ----------
-        partial_traj : Trajectory
+        partial_traj : :class:`openpathsampling.Trajectory`
             trajectory to extend
-        minus_replica_id : integer or string
+        minus_replica_id : int or str
             replica ID for this sample
-        engine : DynamicsEngine
+        engine : :class:`openpathsampling.DynamicsEngine`
             engine to use for MD extension
         """
         last_frame = partial_traj[-1]
@@ -1929,12 +1929,12 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume : volume
+        volume : openpathsampling.Volume
             The volume to start in 
         
         Returns
         -------
-        ensemble : Ensemble
+        ensemble : openpathsampling.Ensemble
             The constructed Ensemble
         '''
         return AllInXEnsemble(volume, 0)
@@ -1946,12 +1946,12 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume : volume
+        volume : openpathsampling.Volume
             The volume to end in 
         
         Returns
         -------
-        ensemble : Ensemble
+        ensemble : openpathsampling.Ensemble
             The constructed Ensemble
         '''        
         return AllInXEnsemble(volume, -1)
@@ -1963,14 +1963,14 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume_a : volume
+        volume_a : openpathsampling.Volume
             The volume to start in 
-        volume_b : volume
+        volume_b : openpathsampling.Volume
             The volume to end in 
         
         Returns
         -------
-        ensemble : Ensemble
+        ensemble : openpathsampling.Ensemble
             The constructed Ensemble
         '''        
         # TODO: this is actually only for flexible path length TPS now

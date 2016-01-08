@@ -4,7 +4,6 @@
 
 CollectiveVariable Functions
 ============================
-
 :class:`openpathsampling.CollectiveVariable`
 
     >>> import openpathsampling as paths
@@ -35,5 +34,7 @@ mdtraj orderparamters
 
 msmbuilder3 collectivevariables
 -------------------------------
+.. autosummary::
+    :toctree: api/generated/
 
     CV_MSMB_Featurizer
