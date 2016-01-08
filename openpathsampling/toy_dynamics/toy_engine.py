@@ -51,6 +51,8 @@ class ToyEngine(DynamicsEngine):
         self.mass = template.topology.masses
         self._pes = template.topology.pes
 
+        self.current_snapshot = self.template
+
     @property
     def pes(self):
         return self._pes
