@@ -78,13 +78,16 @@ class ToyEngine(DynamicsEngine):
     def current_snapshot(self):
         snap_pos = self.positions
         snap_vel = self.velocities
-        return ToySnapshot(coordinates=np.array([snap_pos]),
-                        velocities=np.array([snap_vel]),
-                        topology=self.template.topology
-                       )
+        return ToySnapshot(
+            coordinates=np.array([snap_pos]),
+            velocities=np.array([snap_vel]),
+            topology=self.template.topology
+        )
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
+        self.check_snapshot_type(snap)
+
         coords = np.copy(snap.coordinates)
         vels = np.copy(snap.velocities)
         self.positions = coords[0]
