@@ -44,7 +44,9 @@ class NetCDFPlus(netCDF4.Dataset):
         'numpy.uint16': np.uint16,
         'numpy.uint32': np.uint32,
         'numpy.uint64': np.uint64,
-        'store': str
+        'store': str,
+        'obj': np.int32,
+        'lazyobj': np.int32
     }
 
     class ValueDelegate(object):
@@ -208,6 +210,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
             # add shared scalar dimension for everyone
             self.create_dimension('scalar', 1)
+            self.create_dimension('pair', 2)
 
             # create the store that holds stores
             self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
@@ -420,20 +423,21 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if type(obj) is list:
             # a list of objects will be stored one by one
-            [self.save(part, idx) for part in obj]
-            return
+            return [self.save(part, idx) for part in obj]
+
 
         elif type(obj) is tuple:
             # a tuple will store all parts
-            [self.save(part, idx) for part in obj]
-            return
+            return [self.save(part, idx) for part in obj]
+
 
         elif obj.__class__ in self._obj_store:
             # to store we just check if the base_class is present in the storages
             # also we assume that if a class has no base_cls
             store = self._obj_store[obj.__class__]
-            store.save(obj, idx)
-            return
+            store_idx = self.stores.index[store]
+            return store, store_idx, store.save(obj, idx)
+
 
         # Could not save this object.
         raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
@@ -670,6 +674,17 @@ class NetCDFPlus(netCDF4.Dataset):
         setter = None
         store = None
 
+        if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
+            store = getattr(self, var_type.split('.')[1])
+            base_type = store.content_class
+
+            get_iterable = lambda v: \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            set_iterable = lambda v: \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+
         if var_type == 'int':
             getter = lambda v: v.tolist()
             setter = lambda v: np.array(v)
@@ -698,32 +713,48 @@ class NetCDFPlus(netCDF4.Dataset):
             getter = lambda v: self.simplifier.from_json(v)
 
         elif var_type.startswith('obj.'):
-            store = getattr(self, var_type[4:])
-            base_type = store.content_class
-
-            iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
-
             getter = lambda v: \
                 [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else store.load(int(v))
+                    if get_iterable(v) else None if int(v) < 0 else store.load(int(v))
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if iterable(v) else -1 if v is None else store.save(v)
+                    if set_iterable(v) else -1 if v is None else store.save(v)
 
-        elif var_type.startswith('lazyobj.'):
-            store = getattr(self, var_type[8:])
-            base_type = store.content_class
+        elif var_type == 'obj':
+            # arbitrary object
 
-            iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+            set_iterable_simple = lambda v: \
+                False if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
             getter = lambda v: \
+                [None if int(w[1]) < 0 else self.stores[int(w[0])].load(int(w[1])) for w in v.tolist()] \
+                    if len(v.shape) > 1 else None if int(v[1]) < 0 else self.stores[int(v[0])].load(int(v[1]))
+
+            setter = lambda v: \
+                np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
+                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
+
+        elif var_type.startswith('lazyobj.'):
+            getter = lambda v: \
                 [None if int(w) < 0 else LoaderProxy(store, int(w)) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
+                    if get_iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if iterable(v) else -1 if v is None else store.save(v)
+                    if set_iterable(v) else -1 if v is None else store.save(v)
+
+        elif var_type == 'lazyobj':
+            # arbitrary object
+
+            set_iterable_simple = lambda v: \
+                False if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            getter = lambda v: \
+                [None if int(w[1]) < 0 else LoaderProxy(self.stores[int(w[0])],int(w[1])) for w in v.tolist()] \
+                    if len(v.shape) > 1 else None if int(v[1]) < 0 else LoaderProxy(self.stores[int(v[0])],int(v[1]))
+
+            setter = lambda v: \
+                np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
+                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
 
         elif var_type == 'store':
             setter = lambda v: v.prefix
@@ -855,6 +886,11 @@ class NetCDFPlus(netCDF4.Dataset):
         else:
             variable_length = False
 
+        if var_type == 'obj' or var_type == 'lazyobj':
+            dimensions.append('pair')
+            if chunksizes is not None:
+                chunksizes = tuple(list(chunksizes) + [2])
+
         nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
 
         for dim_name, size in new_dimensions.items():
@@ -924,6 +960,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
             # Define long (human-readable) names for variables.
             setattr(ncvar, "long_str", description)
+
+        self.update_delegates()
 
         return ncvar
 
