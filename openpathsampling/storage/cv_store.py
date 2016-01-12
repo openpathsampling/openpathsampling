@@ -1,12 +1,11 @@
-from openpathsampling.netcdfplus import ObjectStore
+from openpathsampling.netcdfplus import UniqueNamedObjectStore
 
 
-class ObjectDictStore(ObjectStore):
+class ObjectDictStore(UniqueNamedObjectStore):
     def __init__(self, content_class, key_class):
         super(ObjectDictStore, self).__init__(
             content_class,
             json=True,
-            has_name=True
         )
         self.key_class = key_class
         self._key_store = None
@@ -32,7 +31,7 @@ class ObjectDictStore(ObjectStore):
 
         Parameters
         ----------
-        objectdict : object
+        objectdict : :class:`openpathsampling.CollectiveVariable`
             the objectdict to store
         idx : int
             the index
@@ -41,7 +40,6 @@ class ObjectDictStore(ObjectStore):
 
         if objectdict.store_cache:
             self.create_cache(objectdict)
-
 
     def cache_var_name(self, idx):
         if type(idx) is not int:
@@ -57,14 +55,13 @@ class ObjectDictStore(ObjectStore):
             var_name = self.cache_var_name(idx)
 
             if var_name not in self.storage.variables:
-
-                params = objectdict.return_parameters_from_template(self.storage.template)
+                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
 
                 self.key_store.create_variable(
                     var_name,
-                    var_type=params['cv_return_type'],
-                    dimensions=params['cv_return_shape'],
-                    simtk_unit=params['cv_return_simtk_unit'],
+                    var_type=params['var_type'],
+                    dimensions=params['dimensions'],
+                    simtk_unit=params['simtk_unit'],
                     maskable=True
                 )
                 self.storage.update_delegates()

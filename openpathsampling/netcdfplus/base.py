@@ -18,11 +18,31 @@ class StorableObject(object):
     _weak_index = 0L
 
     _base = None
+    _args = None
 
     observe_objects = False
 
     @staticmethod
     def set_observer(active):
+        """
+        (De-)Activate observing creation of storable objects
+
+        This can be used to track which storable objects are still alive and hence look for memory leaks
+        and inspect caching. Use :method:`openpathsampling.netcdfplus.base.StorableObject.count_weaks` to get
+        the current summary of created objects
+
+        Parameters
+        ----------
+        active : bool
+            if `True` then observing is enabled. `False` disables observing. Per default observing is
+            disabled.
+
+
+        See Also
+        --------
+        :method:`openpathsampling.netcdfplus.base.StorableObject.count_weaks`
+
+        """
         if StorableObject.observe_objects is not active:
             return
 
@@ -65,17 +85,39 @@ class StorableObject(object):
 
     @classmethod
     def base(cls):
+        """
+        Return the most parent class that is actually derived from Storable(Named)Object
+
+        Important to determine which store should be used for storage
+
+        Returns
+        -------
+        type
+            the base class
+        """
         if cls._base is None:
             if cls is not StorableObject and cls is not StorableNamedObject:
                 if StorableObject in cls.__bases__ or StorableNamedObject in cls.__bases__:
                     cls._base = cls
                 else:
-                    cls._base = cls.__base__.base()
+                    if hasattr(cls.__base__, 'base'):
+                        cls._base = cls.__base__.base()
+                    else:
+                        cls._base = cls
 
         return cls._base
 
     @property
     def base_cls_name(self):
+        """
+        Return the name of the base class
+
+        Returns
+        -------
+        str
+            the string representation of the base class
+
+        """
         return self.base().__name__
 
     @property
@@ -84,13 +126,25 @@ class StorableObject(object):
 
     @classmethod
     def descendants(cls):
+        """
+        Return a list of all subclassed objects
+
+        Returns
+        -------
+        list of type
+            list of subclasses of a storable object
+        """
         return cls.__subclasses__() + \
                [g for s in cls.__subclasses__() for g in s.descendants()]
 
     @staticmethod
     def objects():
         """
-        Returns a dictionary of all subclasses
+        Returns a dictionary of all storable objects
+
+        Returns
+        dict of str : type
+            a dictionary of all subclassed objects from StorableObject. The name points to the class.
         """
         subclasses = StorableObject.descendants()
 
@@ -98,6 +152,15 @@ class StorableObject(object):
 
     @classmethod
     def args(cls):
+        """
+        Return a list of args of the __init__ function of a class
+
+        Returns
+        -------
+        list of str
+            the list of argument names. No information about defaults is included.
+
+        """
         try:
             args = inspect.getargspec(cls.__init__)
         except TypeError:
@@ -110,15 +173,43 @@ class StorableObject(object):
     _restore_name = True
 
     def to_dict(self):
+        """
+        Convert object into a dictionary representation
+
+        Used to convert the dictionary into JSON string for serialization
+
+        Returns
+        -------
+        dict
+            the dictionary representing the (immutable) state of the object
+
+        """
         excluded_keys = ['idx', 'json', 'identifier']
-        return {
-            key: value for key, value in self.__dict__.iteritems()
-            if key not in excluded_keys and key not in self._excluded_attr and
+        keys_to_store = {
+            key for key in self.__dict__
+            if key not in excluded_keys and
+            key not in self._excluded_attr and
             not (key.startswith('_') and self._exclude_private_attr)
+        }
+        return {
+            key: self.__dict__[key] for key in keys_to_store
         }
 
     @classmethod
     def from_dict(cls, dct):
+        """
+        Reconstruct an object from a dictionary representaiton
+
+        Parameters
+        ----------
+        dct : dict
+            the dictionary containing a state representaion of the class.
+
+        Returns
+        -------
+        :class:`openpathsampling.netcdfplus.StorableObject`
+            the reconstructed storable object
+        """
         if dct is None:
             dct = {}
         try:
@@ -167,9 +258,25 @@ class StorableNamedObject(StorableObject):
 
     @property
     def default_name(self):
+        """
+        Return the default name.
+
+        Usually derived from the objects class
+
+        Returns
+        -------
+        str
+            the default name
+
+        """
         return '[' + self.__class__.__name__ + ']'
 
     def fix_name(self):
+        """
+        Set the objects name to be immutable.
+
+        Usually called after load and save to fix the stored state.
+        """
         self._name_fixed = True
 
     @property
@@ -185,7 +292,9 @@ class StorableNamedObject(StorableObject):
             raise ValueError('Objects cannot be renamed to "%s" after is has been saved, it is already named "%s"' % (
                 name, self._name))
         else:
-            self._name = name
+            if name != self._name:
+                self._name = name
+                logger.debug('Nameable object is renamed from "%s" to "%s"' % (self._name, name))
 
     @property
     def is_named(self):
@@ -208,10 +317,6 @@ class StorableNamedObject(StorableObject):
         >>> import openpathsampling as p
         >>> full = p.FullVolume().named('myFullVolume')
         """
-        #        copied_object = copy.copy(self)
-        #        copied_object._name = name
-        #        if hasattr(copied_object, 'idx'):
-        #            copied_object.idx = dict()
 
         if self._name == "":
             self._name = name
@@ -219,3 +324,8 @@ class StorableNamedObject(StorableObject):
         return self
 
 
+def create_to_dict(keys_to_store):
+    def to_dict(self):
+        return {key: getattr(self, key) for key in keys_to_store}
+
+    return to_dict
