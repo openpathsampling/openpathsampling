@@ -1,11 +1,11 @@
-from openpathsampling.netcdfplus import ObjectStore, NetCDFPlus
+from openpathsampling.netcdfplus import UniqueNamedObjectStore
 
-class ObjectDictStore(ObjectStore):
+
+class ObjectDictStore(UniqueNamedObjectStore):
     def __init__(self, content_class, key_class):
         super(ObjectDictStore, self).__init__(
             content_class,
             json=True,
-            has_name=True
         )
         self.key_class = key_class
         self._key_store = None
@@ -31,14 +31,14 @@ class ObjectDictStore(ObjectStore):
 
         Parameters
         ----------
-        objectdict : object
+        objectdict : :class:`openpathsampling.CollectiveVariable`
             the objectdict to store
         idx : int
             the index
         """
         self.vars['json'][idx] = objectdict
 
-        if objectdict.cv_store_cache:
+        if objectdict.store_cache:
             self.create_cache(objectdict)
 
     def cache_var_name(self, idx):
