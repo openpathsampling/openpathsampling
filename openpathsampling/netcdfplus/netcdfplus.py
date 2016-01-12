@@ -479,9 +479,6 @@ class NetCDFPlus(netCDF4.Dataset):
             # to store we just check if the base_class is present in the storages
             # also we assume that if a class has no base_cls
             store = self.find_store(obj)
-            store.save(obj, idx)
-            return
-            store = self._obj_store[obj.__class__]
             store_idx = self.stores.index[store]
             return store, store_idx, store.save(obj, idx)
 
