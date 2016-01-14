@@ -41,34 +41,20 @@ class MoveScheme(StorableNamedObject):
 
     def to_dict(self):
         ret_dict = {
-            #'movers' : self.movers,
+            'movers' : self.movers,
             'network' : self.network,
-            #'choice_probability' : self.choice_probability,
+            'choice_probability' : self.choice_probability,
             'balance_partners' : self.balance_partners,
             'root_mover' : self.root_mover
         }
-        try:
-            ret_dict['movers'] = self.movers
-        except AttributeError:
-            pass # unset movers dict is allowed
-        try:
-            ret_dict['choice_probability'] = self.choice_probability
-        except AttributeError:
-            pass # unset choice_probability allowed
         return ret_dict
 
     @classmethod
     def from_dict(cls, dct):
         scheme = cls.__new__(cls)
         scheme.__init__(dct['network'])
-        try:
-            scheme.movers = dct['movers']
-        except KeyError:
-            pass # unset movers dict is allowed
-        try:
-            scheme.choice_probability = dct['choice_probability']
-        except KeyError:
-            pass # unset choice_probability allowed
+        scheme.movers = dct['movers']
+        scheme.choice_probability = dct['choice_probability']
         scheme.balance_partners = dct['balance_partners']
         scheme.root_mover = dct['root_mover']
         return scheme
@@ -603,36 +589,38 @@ class LockedMoveScheme(MoveScheme):
     def apply_strategy(self, strategy):
         raise TypeError("Locked schemes cannot apply strategies")
 
+    def to_dict(self):
+        # things that we always have (from MoveScheme)
+        ret_dict = {
+            'network' : self.network,
+            'balance_partners' : self.balance_partners,
+            'root_mover' : self.root_mover
+        }
+        # things that LockedMoveScheme overrides
+        ret_dict['movers'] = self._movers
+        ret_dict['choice_probability'] = self._choice_probability
+        return ret_dict
+
     @property
     def choice_probability(self):
-        try:
+        if self._choice_probability == {}:
+            raise AttributeError("'choice_probability' must be manually " + 
+                                 "set in 'LockedMoveScheme'")
+        else:
             return self._choice_probability
-        except AttributeError as e:
-            gap = "\n                "
-            failmsg = (gap + "'choice_probability' must be manually set in " +
-                       "'LockedMoveScheme'.")
-            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
-            raise
 
     @choice_probability.setter
     def choice_probability(self, vals):
-        if vals != {}:
-            # default does not set the internal version here
-            self._choice_probability = vals
+        self._choice_probability = vals
 
     @property
     def movers(self):
-        try:
+        if self._movers == {}:
+            raise AttributeError("'movers' must be manually " + 
+                                 "set in 'LockedMoveScheme'")
+        else:
             return self._movers
-        except AttributeError as e:
-            gap = "\n                "
-            failmsg = (gap + "'movers' must be manually set in" + 
-                       "'LockedMoveScheme'.")
-            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
-            raise
 
     @movers.setter
     def movers(self, vals):
-        if vals != {}:
-            # default does not set the internal version here
-            self._movers = vals
+        self._movers = vals
