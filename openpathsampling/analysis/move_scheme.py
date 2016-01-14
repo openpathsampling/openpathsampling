@@ -41,20 +41,34 @@ class MoveScheme(StorableNamedObject):
 
     def to_dict(self):
         ret_dict = {
-            'movers' : self.movers,
+            #'movers' : self.movers,
             'network' : self.network,
-            'choice_probability' : self.choice_probability,
+            #'choice_probability' : self.choice_probability,
             'balance_partners' : self.balance_partners,
             'root_mover' : self.root_mover
         }
+        try:
+            ret_dict['movers'] = self.movers
+        except AttributeError:
+            pass # unset movers dict is allowed
+        try:
+            ret_dict['choice_probability'] = self.choice_probability
+        except AttributeError:
+            pass # unset choice_probability allowed
         return ret_dict
 
     @classmethod
     def from_dict(cls, dct):
         scheme = cls.__new__(cls)
         scheme.__init__(dct['network'])
-        scheme.movers = dct['movers']
-        scheme.choice_probability = dct['choice_probability']
+        try:
+            scheme.movers = dct['movers']
+        except KeyError:
+            pass # unset movers dict is allowed
+        try:
+            scheme.choice_probability = dct['choice_probability']
+        except KeyError:
+            pass # unset choice_probability allowed
         scheme.balance_partners = dct['balance_partners']
         scheme.root_mover = dct['root_mover']
         return scheme
