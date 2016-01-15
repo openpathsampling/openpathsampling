@@ -28,6 +28,8 @@ date
 ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_cv.ipynb" || testfail=1
+date
+ipynbtest.py --strict "test_pyemma.ipynb" || testfail=1
 
 # python ipynbtest.py "visualization.ipynb" || testfail=1
 cd ../..
