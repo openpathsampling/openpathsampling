@@ -660,8 +660,8 @@ class ObjectStore(StorableNamedObject):
         else:
             dimensions = tuple([self.prefix] + list(dimensions))
 
-        if chunksizes is None:
-            chunksizes = (1, )
+        if chunksizes is not None:
+            chunksizes = tuple([1] + list(chunksizes))
 
         self.storage.create_variable(
             self.prefix + '_' + name,
