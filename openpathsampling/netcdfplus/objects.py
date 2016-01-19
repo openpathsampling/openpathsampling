@@ -660,7 +660,11 @@ class ObjectStore(StorableNamedObject):
         else:
             dimensions = tuple([self.prefix] + list(dimensions))
 
-        if chunksizes is not None:
+        if chunksizes is None and len(dimensions) == 1:
+            chunksizes = (1, )
+        elif chunksizes is not None and dimensions[-1] == '...' and len(dimensions) == len(chunksizes) + 2:
+            chunksizes = tuple([1] + list(chunksizes))
+        elif chunksizes is not None and dimensions[-1] != '...' and len(dimensions) == len(chunksizes) + 1:
             chunksizes = tuple([1] + list(chunksizes))
 
         self.storage.create_variable(
