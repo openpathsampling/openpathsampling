@@ -26,6 +26,10 @@ script:
   # Push to binstar anyway.
   - bash -x devtools/ci/after_sucess.sh
 
+after_sucess:
+  # only push to coveralls here
+  - coveralls
+
 env:
   matrix:
 # - python=2.6  CONDA_PY=26  CONDA_NPY=16
