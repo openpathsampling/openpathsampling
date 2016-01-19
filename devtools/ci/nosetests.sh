@@ -5,7 +5,7 @@ echo Run nose tests ...
 
 testfail=0
 nosetests -v -s --with-coverage || testfail=1
-coverage
+coveralls
 echo travis_fold:end:nosetests
 
 if [ $testfail -eq 1 ]
