@@ -589,36 +589,38 @@ class LockedMoveScheme(MoveScheme):
     def apply_strategy(self, strategy):
         raise TypeError("Locked schemes cannot apply strategies")
 
+    def to_dict(self):
+        # things that we always have (from MoveScheme)
+        ret_dict = {
+            'network' : self.network,
+            'balance_partners' : self.balance_partners,
+            'root_mover' : self.root_mover
+        }
+        # things that LockedMoveScheme overrides
+        ret_dict['movers'] = self._movers
+        ret_dict['choice_probability'] = self._choice_probability
+        return ret_dict
+
     @property
     def choice_probability(self):
-        try:
+        if self._choice_probability == {}:
+            raise AttributeError("'choice_probability' must be manually " + 
+                                 "set in 'LockedMoveScheme'")
+        else:
             return self._choice_probability
-        except AttributeError as e:
-            gap = "\n                "
-            failmsg = (gap + "'choice_probability' must be manually set in " +
-                       "'LockedMoveScheme'.")
-            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
-            raise
 
     @choice_probability.setter
     def choice_probability(self, vals):
-        if vals != {}:
-            # default does not set the internal version here
-            self._choice_probability = vals
+        self._choice_probability = vals
 
     @property
     def movers(self):
-        try:
+        if self._movers == {}:
+            raise AttributeError("'movers' must be manually " + 
+                                 "set in 'LockedMoveScheme'")
+        else:
             return self._movers
-        except AttributeError as e:
-            gap = "\n                "
-            failmsg = (gap + "'movers' must be manually set in" + 
-                       "'LockedMoveScheme'.")
-            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
-            raise
 
     @movers.setter
     def movers(self, vals):
-        if vals != {}:
-            # default does not set the internal version here
-            self._movers = vals
+        self._movers = vals

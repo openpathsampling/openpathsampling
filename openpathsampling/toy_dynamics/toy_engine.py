@@ -30,6 +30,8 @@ class ToyEngine(DynamicsEngine):
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the DynamicsEngine calls on them for'''
 
+    base_snapshot_type = ToySnapshot
+
     default_options = {
                       'integ' : None,
                       'n_frames_max' : 5000,
@@ -48,6 +50,8 @@ class ToyEngine(DynamicsEngine):
         self.template = template
         self.mass = template.topology.masses
         self._pes = template.topology.pes
+
+        self.current_snapshot = self.template
 
     @property
     def pes(self):
@@ -78,13 +82,16 @@ class ToyEngine(DynamicsEngine):
     def current_snapshot(self):
         snap_pos = self.positions
         snap_vel = self.velocities
-        return ToySnapshot(coordinates=np.array([snap_pos]),
-                        velocities=np.array([snap_vel]),
-                        topology=self.template.topology
-                       )
+        return ToySnapshot(
+            coordinates=np.array([snap_pos]),
+            velocities=np.array([snap_vel]),
+            topology=self.template.topology
+        )
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
+        self.check_snapshot_type(snap)
+
         coords = np.copy(snap.coordinates)
         vels = np.copy(snap.velocities)
         self.positions = coords[0]

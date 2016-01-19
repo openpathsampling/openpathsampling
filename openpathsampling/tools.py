@@ -23,26 +23,7 @@ def refresh_output(output_str, print_anyway=True, refresh=True):
     sys.stdout.flush()
 
 
-def updateunits(func):
-    def inner(self, *args, **kwargs):
-        my_units = {
-            'length' : u.nanometer,
-            'velocity' : u.nanometer / u.picoseconds,
-            'energy' : u.kilojoules_per_mole
-        }
-
-        if 'units' in kwargs and kwargs['units'] is not None:
-            my_units.update(kwargs['units'])
-
-        kwargs['units'] = my_units
-
-        return func(self, *args, **kwargs)
-
-    return inner
-
-
-@updateunits
-def snapshot_from_pdb(pdb_file, units=None):
+def snapshot_from_pdb(pdb_file):
     """
     Construct a Snapshot from the first frame in a pdb file without velocities
 
@@ -62,18 +43,17 @@ def snapshot_from_pdb(pdb_file, units=None):
     velocities = np.zeros(pdb.xyz[0].shape)
 
     snapshot = paths.Snapshot(
-        coordinates=u.Quantity(pdb.xyz[0], units['length']),
-        velocities=u.Quantity(velocities, units['velocity']),
-        box_vectors=u.Quantity(pdb.unitcell_vectors[0], units['length']),
-        potential_energy=u.Quantity(0.0, units['energy']),
-        kinetic_energy=u.Quantity(0.0, units['energy']),
+        coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
+        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
+        box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
+        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
+        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
         topology=paths.MDTrajTopology(pdb.topology)
     )
 
     return snapshot
 
-@updateunits
-def snapshot_from_testsystem(testsystem, units = None):
+def snapshot_from_testsystem(testsystem):
     """
     Construct a Snapshot from openmm topology and state objects
 
@@ -89,19 +69,19 @@ def snapshot_from_testsystem(testsystem, units = None):
 
     """
 
-    velocities = np.zeros(testsystem.positions.shape)
+    velocities = u.Quantity(np.zeros(testsystem.positions.shape), u.nanometers / u.picoseconds)
     topology = testsystem.topology
 
     box_vectors = np.array([
-                    v / units['length'] for v in
-                    testsystem.system.getDefaultPeriodicBoxVectors()]) * units['length']
+                    v / u.nanometers for v in
+                    testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
 
     snapshot = paths.Snapshot(
         coordinates=testsystem.positions,
-        velocities=u.Quantity(velocities, units['velocity']),
+        velocities=velocities,
         box_vectors=box_vectors,
-        potential_energy=u.Quantity(0.0, units['energy']),
-        kinetic_energy=u.Quantity(0.0, units['energy']),
+        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
+        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
         topology=paths.MDTrajTopology(md.Topology.from_openmm(topology))
     )
 
@@ -157,8 +137,7 @@ def trajectory_from_mdtraj(mdtrajectory):
     return trajectory
 
 
-@updateunits
-def empty_snapshot_from_openmm_topology(topology, units):
+def empty_snapshot_from_openmm_topology(topology):
     """
     Return an empty snapshot from an openmm.Topology object using the specified units.
 
@@ -179,11 +158,11 @@ def empty_snapshot_from_openmm_topology(topology, units):
     n_atoms = topology.n_atoms
 
     snapshot = paths.Snapshot(
-        coordinates=u.Quantity(np.zeros((n_atoms, 3)), units['length']),
-        velocities=u.Quantity(np.zeros((n_atoms, 3)), units['velocity']),
-        box_vectors=u.Quantity(topology.setUnitCellDimensions(), units['length']),
-        potential_energy=u.Quantity(0.0, units['energy']),
-        kinetic_energy=u.Quantity(0.0, units['energy']),
+        coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
+        velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
+        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
+        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
+        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
         topology=paths.MDTrajTopology(md.Topology.from_openmm(topology))
     )
 
