@@ -34,15 +34,10 @@ class AbstractSnapshotStore(ObjectStore):
     def _get(self, idx, from_reversed=False):
         if from_reversed:
             obj = self.cache[AbstractSnapshotStore.paired_idx(idx)]
-
-            return AbstractSnapshot(
-                is_reversed=not obj.is_reversed,
-                topology=obj.topology,
-                reversed_copy=LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
-            )
+            return obj.reversed
         else:
             momentum_reversed = self.vars['momentum_reversed'][idx]
-            topology = self.storage.topology
+            engine = self.storage.engine
 
             return AbstractSnapshot(
                 is_reversed=momentum_reversed,
@@ -370,42 +365,23 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
 
     def _set(self, idx, snapshot):
         for variable in self._variables:
-            self.vars[variable][idx] = getattr(snapshot, variable)
-            self.write(variable, AbstractSnapshotStore.paired_idx(idx), snapshot)
+            self.write(variable, idx, snapshot)
 
         super(FeatureSnapshotStore, self)._set(idx, snapshot)
 
     def _get(self, idx, from_reversed=False):
         snapshot = self.snapshot_class.__new__(self.snapshot_class)
-        if from_reversed:
-            obj = self.cache[idx ^ 1]
+        AbstractSnapshot.__init__(
+            snapshot,
+            LoaderProxy(
+                self,
+                AbstractSnapshotStore.paired_idx(idx)
+            ),
+            self.storage.topology
+        )
 
-            AbstractSnapshot.__init__(
-                snapshot,
-                not obj.is_reversed,
-                LoaderProxy(
-                    self,
-                    AbstractSnapshotStore.paired_idx(idx)
-                ),
-                self.storage.topology
-            )
-
-            for variables in self._variables:
-                setattr(snapshot, variables, getattr(obj, variables))
-
-        else:
-            AbstractSnapshot.__init__(
-                snapshot,
-                self.vars['momentum_reversed'][idx],
-                LoaderProxy(
-                    self,
-                    AbstractSnapshotStore.paired_idx(idx)
-                ),
-                self.storage.topology
-            )
-
-            for variables in self._variables:
-                setattr(snapshot, variables, self.vars[variables][idx])
+        for variables in self._variables:
+            setattr(snapshot, variables, self.vars[variables][idx])
 
         return snapshot
 
@@ -414,3 +390,31 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
 
         for feature in self.features:
             feature._init(self)
+
+    def _save(self, snapshot, idx):
+        """
+        Add the current state of the snapshot in the database.
+
+        Parameters
+        ----------
+        snapshot : Snapshot()
+            the snapshot to be saved
+        idx : int or None
+            if idx is not None the index will be used for saving in the storage.
+            This might overwrite already existing trajectories!
+
+        Notes
+        -----
+        This also saves all contained frames in the snapshot if not done yet.
+        A single Snapshot object can only be saved once!
+        """
+
+        st_idx = int(idx / 2)
+        self._set(idx, snapshot)
+
+        reversed = snapshot._reversed
+        snapshot._reversed = LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
+        reversed._reversed = LoaderProxy(self, idx)
+
+        # mark reversed as stored
+        self.index[reversed] = idx ^ 1

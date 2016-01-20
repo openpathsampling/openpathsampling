@@ -39,7 +39,7 @@ class AbstractSnapshot(StorableObject):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, is_reversed=False, reversed_copy=None, topology=None):
+    def __init__(self, engine=None):
         """
         Attributes
         ----------
@@ -56,21 +56,8 @@ class AbstractSnapshot(StorableObject):
 
         super(AbstractSnapshot, self).__init__()
 
-        self.is_reversed = is_reversed
-        self.topology = topology
-
-        if reversed_copy is None:
-            # this will always create the mirrored copy so we can save in pairs!
-            self._reversed = self.__class__.__new__(self.__class__)
-            AbstractSnapshot.__init__(
-                self._reversed,
-                is_reversed=not self.is_reversed,
-                reversed_copy=self,
-                topology=topology
-            )
-
-        else:
-            self._reversed = reversed_copy
+        self._is_reversed = False
+        self.engine = engine
 
     def __eq__(self, other):
         # This implements comparison with potentially lazy loaded snapshots
@@ -91,6 +78,9 @@ class AbstractSnapshot(StorableObject):
         No actual velocities are changed. Only if you ask for the velocities of
         a reversed object the velocities will be multiplied by -1.
         """
+        if self._reversed is None:
+            self._reversed = self.get_reversed()
+
         return self._reversed
 
     # ==========================================================================
@@ -117,7 +107,8 @@ class AbstractSnapshot(StorableObject):
         content (e.g. Configuration object) will not.
 
         """
-        this = AbstractSnapshot(is_reversed=self.is_reversed, topology=self.topology)
+        this = AbstractSnapshot(engine=self.engine)
+        this._is_reversed = self._is_reversed
         return this
 
     def reversed_copy(self):
@@ -138,6 +129,12 @@ class AbstractSnapshot(StorableObject):
         obj = self.copy()
         return obj.reversed
 
+    def get_reversed(self):
+        this = self.copy()
+        this._is_reversed = True
+        this._reversed = self
+        return this
+
 
 # =============================================================================
 # SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
@@ -153,7 +150,6 @@ class Snapshot(AbstractSnapshot):
         features.configuration,
         features.momentum
     ]
-
 
     def __init__(self, coordinates=None, velocities=None, box_vectors=None,
                  potential_energy=None, kinetic_energy=None, topology=None,
@@ -235,7 +231,7 @@ class Snapshot(AbstractSnapshot):
         copy of the original (unreversed) velocities is made which is then
         returned
         """
-        if self.is_reversed:
+        if self._is_reversed:
             return -1.0 * self.momentum.velocities
         else:
             return self.momentum.velocities
@@ -305,7 +301,7 @@ class Snapshot(AbstractSnapshot):
         this = self.__class__(
             configuration=self.configuration,
             momentum=self.momentum,
-            is_reversed=self.is_reversed,
+            is_reversed=self._is_reversed,
             topology=self.topology
         )
         return this
@@ -351,7 +347,7 @@ class Snapshot(AbstractSnapshot):
         this = Snapshot(
             configuration=self.configuration.copy(subset),
             momentum=self.momentum.copy(subset),
-            is_reversed=self.is_reversed,
+            is_reversed=self._is_reversed,
             topology=self.topology.subset(subset)
         )
         return this
@@ -416,7 +412,24 @@ class ToySnapshot(AbstractSnapshot):
         this = ToySnapshot(
             self.coordinates,
             self.velocities,
-            is_reversed=self.is_reversed,
+            is_reversed=self._is_reversed,
             topology=self.topology
         )
         return this
+
+
+class FeatureSnapshot(AbstractSnapshot):
+    def copy(self):
+        this = super(FeatureSnapshot, self).copy()
+
+        for attr in self._feature_attributes:
+            setattr(this, attr, getattr(self, attr))
+
+        return this
+
+    @property
+    def reversed(self):
+        if self._reversed is None:
+            self._reversed = self.get_reversed()
+
+        return self._reversed
