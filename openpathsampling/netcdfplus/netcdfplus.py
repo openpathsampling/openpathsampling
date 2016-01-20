@@ -914,7 +914,7 @@ class NetCDFPlus(netCDF4.Dataset):
         if chunksizes is not None:
             chunksizes = list(chunksizes)
             for ix, dim in enumerate(chunksizes):
-                if type == -1:
+                if dim == -1:
                     chunksizes[ix] = len(ncfile.dimensions[dimensions[ix]])
 
                 if type(dim) is str:
