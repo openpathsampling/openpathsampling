@@ -7,11 +7,8 @@ logger = logging.getLogger(__name__)
 
 
 class StorableObject(object):
-    """Mixin that allows an object to carry a .name property that can be saved
+    """Mixin that allows objects of the class to to be stored using netCDF+
 
-    It is not allowed to rename object once it has been given a name. Also
-    storage usually sets the name to empty if an object has not been named
-    before. This means that you cannot name an object, after is has been saved.
     """
 
     _weak_cache = weakref.WeakKeyDictionary()
@@ -61,6 +58,18 @@ class StorableObject(object):
 
     @staticmethod
     def count_weaks():
+        """
+        Return the counts of how many objects of storable type are still in memory
+
+        This includes objects not yet recycled by the garbage collector.
+
+        Returns
+        -------
+        dict of str : int
+            the dictionary which assigns the base class name of each references objects the
+            integer number of objects still present
+
+        """
         summary = dict()
         complete = list(StorableObject._weak_cache)
         for obj in complete:
@@ -70,6 +79,25 @@ class StorableObject(object):
         return summary
 
     def idx(self, store):
+        """
+        Return the index which is used for the object in the given store.
+
+        Once you store a storable object in a store it gets assigned a unique number
+        that can be used to retrieve the object back from the store. This
+        function will ask the given store if the object is stored if so what the used
+        index is.
+
+        Parameters
+        ----------
+        store : :class:`openpathsampling.netcdfplus.objects.ObjectStore`
+            the store in which to ask for the index
+
+        Returns
+        -------
+        int or None
+            the integer index for the object of it exists or `None` else
+
+        """
         if hasattr(store, 'index'):
             return store.index.get(self, None)
         else:
@@ -77,10 +105,33 @@ class StorableObject(object):
 
     @property
     def cls(self):
+        """
+        Return the class name as a string
+
+        Returns
+        -------
+        str
+            the class name
+
+        """
         return self.__class__.__name__
 
-    def save(self, storage):
-        storage.save(self)
+    def save(self, store):
+        """
+        Save the object in the given store (or storage)
+
+        Parameters
+        ----------
+        store : :class:`openpathsampling.netcdfplus.objects.ObjectStore` or :class:`openpathsampling.netcdfplus.netcdfplus.NetCDFStorage`
+            the store or storage to be saved in. if a storage is given then the default store for
+            the given object base type is determined and the appropriate store is used.
+
+        Returns
+        -------
+        int or None
+            the integer index used to save the object or `None` if the object has already been saved.
+        """
+        store.save(self)
 
     @classmethod
     def base(cls):
@@ -121,6 +172,19 @@ class StorableObject(object):
 
     @property
     def base_cls(self):
+        """
+        Return the base class
+
+        Returns
+        -------
+        type
+            the base class
+
+        See Also
+        --------
+        :func:`base()`
+
+        """
         return self.base()
 
     @classmethod
@@ -241,7 +305,7 @@ class StorableObject(object):
 class StorableNamedObject(StorableObject):
     """Mixin that allows an object to carry a .name property that can be saved
 
-    It is not allowed to rename object once it has been given a name. Also
+    It is not allowed to rename an object once it has been given a name. Also
     storage usually sets the name to empty if an object has not been named
     before. This means that you cannot name an object, after is has been saved.
     """
@@ -276,6 +340,16 @@ class StorableNamedObject(StorableObject):
 
     @property
     def name(self):
+        """
+        Return the current name of the object.
+
+        If no name has been set a default generated name is returned.
+
+        Returns
+        -------
+        str
+            the name of the object
+        """
         if self._name == '':
             return self.default_name
         else:
