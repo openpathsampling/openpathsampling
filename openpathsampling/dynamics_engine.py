@@ -49,6 +49,8 @@ class DynamicsEngine(StorableNamedObject):
         'energy' : u.Unit({})
     }
 
+    base_snapshot_type = paths.AbstractSnapshot
+
     def __init__(self, options=None, template=None):
         '''
         Create an empty DynamicsEngine object
@@ -330,3 +332,12 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
+
+    @classmethod
+    def check_snapshot_type(cls, snapshot):
+        if not isinstance(snapshot, cls.base_snapshot_type):
+            logger.warning(
+                ('This engine is intended for "%s" and derived classes. '
+                 'You are using "%s". Make sure that this is intended.') %
+                (cls.base_snapshot_type.__name__, snapshot.__class__.__name__)
+            )

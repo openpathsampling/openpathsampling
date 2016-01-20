@@ -111,20 +111,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self._store_dict.post = self._cache_dict
         self._single_dict.post = self._store_dict
 
-    @classmethod
-    def from_template(cls, name, f, template, **kwargs):
-        f_kwargs = {key: value for key, value in kwargs.iteritems() if not key.startswith('cv_')}
-        requires_lists = CollectiveVariable.function_requires_lists(f, template, **f_kwargs)
-
-        cv = cls(name, f, cv_requires_lists=requires_lists, **kwargs)
-
-        # fix cv_returns
-        parameters = cls.return_parameters_from_template(f, template, **f_kwargs)
-        for key, value in parameters.iteritems():
-            setattr(cv, key, value)
-
-        return cv
-
     # This is important since we subclass from list and lists are not hashable
     # but CVs should be
     __hash__ = object.__hash__
@@ -168,9 +154,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         -----
         This is a untility function to create a CV using a template
 
-        See also
-        --------
-        openpathsampling.CollectiveVariable.from_template
         """
 
         eval_single = True
@@ -246,9 +229,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         -----
         This is a untility function to create a CV using a template
 
-        See also
-        --------
-        openpathsampling.CollectiveVariable.from_template
         """
 
         test_value = self(template)
@@ -579,7 +559,7 @@ class CV_Callable(CollectiveVariable):
     """
 
     allow_marshal = True
-    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas']
+    allowed_modules = ['mdtraj', 'msmbuilder', 'math', 'numpy', 'pandas', 'pyemma']
 
     def __init__(
             self,
@@ -995,3 +975,125 @@ class CV_MSMB_Featurizer(CV_Generator):
 
         # run the featurizer
         return self._instance.partial_transform(ptraj)
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'featurizer': self.callable_to_dict(self.featurizer),
+            'kwargs': self.kwargs,
+            'store_cache': self.store_cache,
+            'wrap_numpy_array': self.wrap_numpy_array,
+            'scalarize_numpy_singletons': self.scalarize_numpy_singletons
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = CV_MSMB_Featurizer(
+            name=dct['name'],
+            featurizer=cls.callable_from_dict(dct['featurizer']),
+            cv_store_cache=dct['store_cache'],
+            cv_wrap_numpy_array=dct['wrap_numpy_array'],
+            cv_scalarize_numpy_singletons=dct['scalarize_numpy_singletons'],
+            **dct['kwargs']
+        )
+        return obj
+
+
+class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
+    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
+
+    This is identical to CV_Class except that the function is called with
+    an mdraj.Trajetory object instead of the openpathsampling.Trajectory one using
+    `fnc(traj.md(), **kwargs)`
+
+    """
+
+    def __init__(
+            self,
+            name,
+            featurizer,
+            topology,
+            cv_store_cache=True,
+            **kwargs
+    ):
+        """
+
+        Parameters
+        ----------
+        name
+        c : msmbuilder.Featurizer
+            the featurizer used as a callable class
+        **kwargs : **kwargs
+            a dictionary of named arguments which should be given to `c` (for example, the
+            atoms which define a specific distance/angle). Finally an instance
+            `instance = cls(**kwargs)` is create when the CV is created and
+            using the CV will call `instance(snapshots)`
+        cv_return_type
+        cv_return_shape
+        cv_return_simtk_unit
+        cv_requires_lists
+        cv_store_cache
+        scalarize_numpy_singletons : bool, default: True
+            If `True` then arrays of length 1 will be treated as array with one dimension less.
+            e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
+            use en external function to get only a single value.
+
+        Notes
+        -----
+        All trajectories or snapshots passed in kwargs will be converted
+        to mdtraj objects for convenience
+        """
+
+        md_kwargs = dict()
+        md_kwargs.update(kwargs)
+
+        # turn Snapshot and Trajectory into md.trajectory
+        for key in md_kwargs:
+            if md_kwargs[key].__class__ is paths.Snapshot:
+                md_kwargs[key] = md_kwargs[key].md()
+            elif md_kwargs[key].__class__ is paths.Trajectory:
+                md_kwargs[key] = md_kwargs[key].md()
+
+        self.topology = topology
+
+        import pyemma.coordinates
+        self._instance = pyemma.coordinates.featurizer(self.topology.md)
+
+        featurizer(self._instance, **md_kwargs)
+
+        super(CV_Generator, self).__init__(
+            name,
+            c=featurizer,
+            cv_time_reversible=True,
+            cv_requires_lists=True,
+            cv_store_cache=cv_store_cache,
+            cv_wrap_numpy_array=True,
+            cv_scalarize_numpy_singletons=True,
+            **kwargs
+        )
+
+    def _eval(self, items):
+        trajectory = paths.Trajectory(items)
+
+        t = trajectory.md(self.topology.md)
+        return self._instance.transform(t)
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'featurizer': self.callable_to_dict(self.featurizer),
+            'topology': self.topology,
+            'store_cache': self.store_cache,
+            'kwargs': self.kwargs
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = CV_PyEMMA_Featurizer(
+            name=dct['name'],
+            featurizer=cls.callable_from_dict(dct['featurizer']),
+            topology=dct['topology'],
+            cv_store_cache=dct['store_cache'],
+            **dct['kwargs']
+        )
+        return obj
