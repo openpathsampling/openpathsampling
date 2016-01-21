@@ -12,7 +12,6 @@ install:
   - export PYTHONUNBUFFERED=true
 
 script:
-  # Build conda package
   - echo travis_fold:start:conda.build.package
   - conda install --yes conda-build
   - conda build devtools/conda-recipe
@@ -20,6 +19,7 @@ script:
 
   # Run tests in _test environment
   - source activate _test
+  - python -c "import openpathsampling as paths; print paths.version.full_version"
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
 
