@@ -99,7 +99,7 @@ from pathmovechange import (
 
 from storage.storage import Storage, AnalysisStorage
 
-def git_HEAD():
+def git_HEAD(): # pragma: no cover
     from subprocess import check_output
     import os.path
     git_dir = os.path.dirname(os.path.realpath(__file__))
@@ -108,5 +108,5 @@ def git_HEAD():
 
 try:
     import version
-except ImportError:
+except ImportError: # pragma: no cover
     pass
