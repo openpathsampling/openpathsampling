@@ -501,7 +501,7 @@ class ObjectStore(StorableNamedObject):
     # INITIALISATION UTILITY FUNCTIONS
     # ==============================================================================
 
-    def create_variable(self, name, var_type, dimensions=None, **kwargs):
+    def create_variable(self, name, var_type, dimensions=None, chunksizes=None, **kwargs):
         """
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
@@ -554,10 +554,18 @@ class ObjectStore(StorableNamedObject):
         else:
             dimensions = tuple([self.prefix] + list(dimensions))
 
+        if chunksizes is None and len(dimensions) == 1:
+            chunksizes = (1, )
+        elif chunksizes is not None and dimensions[-1] == '...' and len(dimensions) == len(chunksizes) + 2:
+            chunksizes = tuple([1] + list(chunksizes))
+        elif chunksizes is not None and dimensions[-1] != '...' and len(dimensions) == len(chunksizes) + 1:
+            chunksizes = tuple([1] + list(chunksizes))
+
         self.storage.create_variable(
             self.prefix + '_' + name,
             var_type=var_type,
             dimensions=dimensions,
+            chunksizes=chunksizes,
             **kwargs
         )
 
@@ -739,3 +747,74 @@ class ObjectStore(StorableNamedObject):
                 self._update_name_in_cache(obj._name, idx)
 
         return idx
+
+    def load_single(self, idx):
+        return self._load(idx)
+
+    def load_range(self, start, end):
+        return map(self._load, range(start, end))
+
+
+class VariableStore(ObjectStore):
+    def __init__(self, content_class, var_names):
+        super(VariableStore, self).__init__(
+            content_class,
+            json=False
+        )
+
+        self.var_names = var_names
+        self._cached_all = False
+
+    def to_dict(self):
+        return {
+            'content_class': self.content_class,
+            'var_names': self.var_names
+        }
+
+    def _save(self, obj, idx):
+        for var in self.var_names:
+            self.write(var, idx, obj)
+
+    def _load(self, idx):
+        attr = {var: self.vars[var][idx] for var in self.var_names}
+        return self.content_class(**attr)
+
+    def _init(self):
+        super(VariableStore, self)._init()
+
+        # Add here the stores to be imported
+        # self.create_variable('name', 'var_type')
+
+    def all(self):
+        self.cache_all()
+        return self
+
+    def cache_all(self, part=None):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if part is None:
+            part = range(len(self))
+        else:
+            part = sorted(list(set(list(part))))
+
+        if not part:
+            return
+
+        if not self._cached_all:
+            data = zip(*[
+                self.storage.variables[self.prefix + '_' + var][part]
+                for var in self.var_names
+            ])
+
+            [self.add_to_cache(idx, v) for idx, v in zip(part, data)]
+
+            self._cached_all = True
+
+    def add_to_cache(self, idx, data):
+        if idx not in self.cache:
+            attr = {var: self.vars[var].getter(data[nn]) for nn, var in enumerate(self.var_names)}
+            obj = self.content_class(**attr)
+
+            self.index[obj] = idx
+            self.cache[idx] = obj
