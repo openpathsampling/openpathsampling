@@ -1,5 +1,15 @@
+"""
+velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+    atomic velocities (default: None)
+"""
+
 _variables = ['velocities']
 
+attributes = ['velocities']
+attributes_minus = ['velocities']
+attributes_not = []
+
+properties = []
 
 def _init(store):
 

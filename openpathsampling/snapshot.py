@@ -39,7 +39,7 @@ class AbstractSnapshot(StorableObject):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, engine=None):
+    def __init__(self, engine=None, **kwargs):
         """
         Attributes
         ----------
@@ -56,6 +56,7 @@ class AbstractSnapshot(StorableObject):
 
         super(AbstractSnapshot, self).__init__()
 
+        self._reversed = None
         self._is_reversed = False
         self.engine = engine
 
@@ -79,7 +80,7 @@ class AbstractSnapshot(StorableObject):
         a reversed object the velocities will be multiplied by -1.
         """
         if self._reversed is None:
-            self._reversed = self.get_reversed()
+            self._reversed = self.create_reversed()
 
         return self._reversed
 
@@ -107,7 +108,8 @@ class AbstractSnapshot(StorableObject):
         content (e.g. Configuration object) will not.
 
         """
-        this = AbstractSnapshot(engine=self.engine)
+        this = self.__class__.__new__(self.__class__)
+        AbstractSnapshot.__init__(this, engine=self.engine)
         this._is_reversed = self._is_reversed
         return this
 
@@ -129,7 +131,7 @@ class AbstractSnapshot(StorableObject):
         obj = self.copy()
         return obj.reversed
 
-    def get_reversed(self):
+    def create_reversed(self):
         this = self.copy()
         this._is_reversed = True
         this._reversed = self
@@ -430,6 +432,25 @@ class FeatureSnapshot(AbstractSnapshot):
     @property
     def reversed(self):
         if self._reversed is None:
-            self._reversed = self.get_reversed()
+            self._reversed = self.create_reversed()
 
         return self._reversed
+
+    def create_reversed(self):
+        this = self.copy()
+        this._is_reversed = True
+        this._reversed = self
+
+        [setattr(this, attr, - getattr(self, attr)) for attr in self._feature_attributes_minus]
+        [setattr(this, attr, ~ getattr(self, attr)) for attr in self._feature_attributes_not]
+
+        return this
+
+@features.base.set_features(
+    features.velocities,
+    features.coordinates
+)
+class MDSnapshot(FeatureSnapshot):
+    """
+    A fast MDSnapshot
+    """

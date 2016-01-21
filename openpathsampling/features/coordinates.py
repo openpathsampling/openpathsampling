@@ -1,5 +1,10 @@
 _variables = ['coordinates']
 
+attributes = ['coordinates']
+attributes_minus = []
+attributes_not = []
+
+properties = []
 
 def _init(store):
     store.create_variable('coordinates', 'numpy.float32',
