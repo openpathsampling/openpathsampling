@@ -19,9 +19,7 @@ script:
 
   # Run tests in _test environment
   - source activate _test
-  - python -c "import openpathsampling as paths"
-  - python -c "import openpathsampling.version"
-  - python -c "import openpathsampling as paths; print paths.version.full_version"
+  - python -c "import os; os.chdir(os.environ['HOME']); import openpathsampling as paths; print paths.version.full_version"
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
 
