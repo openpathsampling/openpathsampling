@@ -40,7 +40,7 @@ class Storage(NetCDFPlus):
 
         return self._template
 
-    def clone(self, filename, subset):
+    def clone(self, filename):
         """
         Creates a copy of the netCDF file and allows to reduce the used atoms.
 
@@ -57,15 +57,15 @@ class Storage(NetCDFPlus):
 
         """
 
-        storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
+        storage2 = Storage(filename=filename, template=self.template, mode='w')
 
         # Copy all configurations and momenta to new file in reduced form
         # use ._save instead of .save to override immutability checks etc...
 
         for obj in self.configurations:
-            storage2.configurations._save(obj.copy(subset=subset), idx=self.configurations.index[obj])
+            storage2.configurations._save(obj.copy(), idx=self.configurations.index[obj])
         for obj in self.momenta:
-            storage2.momenta._save(obj.copy(subset=subset), idx=self.momenta.index[obj])
+            storage2.momenta._save(obj.copy(), idx=self.momenta.index[obj])
 
         # All other should be copied one to one. We do this explicitly although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -146,13 +146,8 @@ class Storage(NetCDFPlus):
 
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
-        if Storage.USE_FEATURE_SNAPSHOTS:
-            self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
-        else:
-            if type(self._template) is paths.Snapshot:
-                self.create_store('snapshots', paths.storage.SnapshotStore())
-            elif type(self._template) is paths.ToySnapshot:
-                self.create_store('snapshots', paths.storage.ToySnapshotStore())
+        print self._template.__class__
+        self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())

@@ -102,7 +102,7 @@ class Configuration(StorableObject):
     # Utility functions
     # =========================================================================
 
-    def copy(self, subset):
+    def copy(self):
         """
         Returns a deep copy of the instance itself using a subset of coordinates.
         If this object is saved it will be stored as a separate object and
@@ -119,9 +119,8 @@ class Configuration(StorableObject):
             the reduced deep copy
         """
 
-        new_coordinates = self.coordinates[subset, :]
         # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
-        return Configuration(coordinates=new_coordinates,
+        return Configuration(coordinates=self.coordinates,
                              box_vectors=self.box_vectors,
                              potential_energy=self.potential_energy
                              )
@@ -183,7 +182,7 @@ class Momentum(StorableObject):
     # Utility functions
     # =========================================================================
 
-    def copy(self, subset):
+    def copy(self):
         """
         Returns a deep copy of the instance itself. If saved this object will
         be stored as a separate object and consume additional memory.
@@ -199,12 +198,8 @@ class Momentum(StorableObject):
             the deep copy
         """
 
-        if subset is None:
-            new_velocities = self.velocities
-        else:
-            new_velocities = self.velocities[subset, :]
-            # TODO: Keep old kinetic_energy? Is not correct but might be useful.
+        # TODO: Keep old kinetic_energy? Is not correct but might be useful.
 
-        this = Momentum(velocities=new_velocities, kinetic_energy=self.kinetic_energy)
+        this = Momentum(velocities=self.velocities, kinetic_energy=self.kinetic_energy)
 
         return this

@@ -88,7 +88,7 @@ class AbstractSnapshot(StorableObject):
     # Utility functions
     # ==========================================================================
 
-#    @abc.abstractmethod
+    @abc.abstractmethod
     def copy(self):
         """
         Returns a shallow copy of the instance itself. The contained
@@ -120,101 +120,6 @@ class AbstractSnapshot(StorableObject):
         return this
 
 
-# =============================================================================
-# SIMULATION SNAPSHOT (COMPLETE FRAME WITH COORDINATES AND VELOCITIES)
-# =============================================================================
-
-@lazy_loading_attributes('configuration', 'momentum', '_reversed')
-class Snapshot(AbstractSnapshot):
-    """
-    Simulation snapshot. Contains references to a configuration and momentum
-    """
-
-    __features__ = [
-        features.configuration,
-        features.momentum
-    ]
-
-    def __init__(self, coordinates=None, velocities=None, box_vectors=None,
-                 potential_energy=None, kinetic_energy=None, topology=None,
-                 configuration=None, momentum=None, is_reversed=False,
-                 reversed_copy=None):
-        """
-        Create a simulation snapshot. Initialization happens primarily in
-        one of two ways:
-            1. Specify `Configuration` and `Momentum` objects
-            2. Specify the things which make up `Configuration` and
-               `Momentum` objects, i.e., coordinates, velocities, box
-               vectors, etc.
-        If you want to obtain a snapshot from a currently-running MD topology,
-        use that topology's .current_snapshot property.
-
-        Parameters
-        ----------
-        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-            atomic coordinates (default: None)
-        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-            atomic velocities (default: None)
-        box_vectors : periodic box vectors (default: None)
-            the periodic box vectors at current timestep (defautl: None)
-
-        Attributes
-        ----------
-        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-            atomic coordinates
-        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-            atomic velocities
-        box_vectors : periodic box vectors
-            the periodic box vectors 
-        """
-
-
-    # ==========================================================================
-    # Utility functions
-    # ==========================================================================
-
-    @property
-    @has('configuration')
-    def xyz(self):
-        """
-        Coordinates without dimensions.
-
-        SERIOUS PROBLEM: whether .coordinates returns a u.Quantity or jut
-        numpy array depending on situation (at least for ToyDynamics). This
-        is bad.
-        """
-        coord = self.configuration.coordinates
-        if type(coord) is u.Quantity:
-            return coord._value
-        else:
-            return coord
-
-
-    def subset(self, subset):
-        """
-        Return a deep copy of the snapshot with reduced set of coordinates. Takes also care
-        of adjusting the topology.
-
-        Parameters
-        ----------
-        subset : list of int
-            a list of atomic indices specifying which entries to keep.
-
-        Notes
-        -----
-        So far the potential and kinetic energies are copied and are thus false but still useful!?!
-
-        """
-
-        this = Snapshot(
-            configuration=self.configuration.copy(subset),
-            momentum=self.momentum.copy(subset),
-            is_reversed=self._is_reversed,
-            topology=self.topology.subset(subset)
-        )
-        return this
-
-
 class FeatureSnapshot(AbstractSnapshot):
     def copy(self):
         return super(FeatureSnapshot, self).copy()
@@ -223,6 +128,8 @@ class FeatureSnapshot(AbstractSnapshot):
 @features.base.set_features(
     features.velocities,
     features.coordinates,
+    features.xyz,
+    features.topology
 )
 class ToySnapshot(FeatureSnapshot):
     """
@@ -238,7 +145,9 @@ class ToySnapshot(FeatureSnapshot):
 @features.base.set_features(
     features.velocities,
     features.coordinates,
-    features.box_vectors
+    features.box_vectors,
+    features.xyz,
+    features.topology
 )
 class MDSnapshot(FeatureSnapshot):
     """
@@ -249,6 +158,7 @@ class MDSnapshot(FeatureSnapshot):
 @features.base.set_features(
     features.configuration,
     features.momentum,
+    features.xyz,
     features.topology  # for compatibility
 )
 class Snapshot(FeatureSnapshot):

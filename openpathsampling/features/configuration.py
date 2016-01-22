@@ -5,7 +5,7 @@ from openpathsampling.snapshot import Configuration
 
 import numpy as np
 
-attributes = ['configuration', 'box_vectors', 'md', 'coordinates']
+attributes = ['configuration', 'box_vectors', 'md', 'coordinates', 'xyz']
 lazy = ['configuration']
 
 
@@ -37,6 +37,7 @@ def box_vectors(snapshot):
         return snapshot.configuration.box_vectors
 
     return None
+
 
 def md(snapshot):
     """

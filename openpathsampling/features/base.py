@@ -74,6 +74,51 @@ def set_features(*features):
         cls.__doc__ = '\n'.join(map(lambda x : x.strip(), docs))
         cls.__doc__ = cls.__doc__.replace('\n\n\n', '\n\n')
 
+        # compile copy()
+        code = []
+        code += [
+            "def copy(self):",
+            "    this = cls.__new__(cls)",
+            "    this._is_reversed = self._is_reversed",
+        ]
+
+        if __features__['lazy']:
+            code += [
+                "    this._lazy = {",
+            ]
+            code += [
+                "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
+                for lazy in __features__['lazy']
+            ]
+            code += [
+                "    }"
+            ]
+
+        code += map(
+            "    this.{0} = self.{0}".format,
+            filter(
+                lambda x : x not in __features__['lazy'],
+                __features__['parameters']
+            )
+        )
+
+        code += [
+            "    return this"
+        ]
+
+        print '\n'.join(code)
+
+        try:
+            cc = compile('\n'.join(code), '<string>', 'exec')
+            exec cc in locals()
+
+            cls.copy = copy
+
+        except RuntimeError as e:
+            print e
+            pass
+
+
         # compile create_reversed
         code = []
         code += [

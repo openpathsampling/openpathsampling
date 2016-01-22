@@ -138,6 +138,9 @@ class AbstractSnapshotStore(ObjectStore):
     def all(self):
         return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
 
+    def __len__(self):
+        return 2 * super(AbstractSnapshotStore, self).__len__()
+
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
 # =============================================================================================
@@ -161,15 +164,8 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
     def _set(self, idx, snapshot):
         [self.write(attr, idx, snapshot) for attr in self.parameters]
 
-    def _get(self, idx, from_reversed=False):
-        snapshot = self.snapshot_class.__new__(self.snapshot_class)
-        AbstractSnapshot.__init__(
-            snapshot
-        )
-
+    def _get(self, idx, snapshot):
         [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.parameters]
-
-        return snapshot
 
     def _init(self):
         super(FeatureSnapshotStore, self)._init()

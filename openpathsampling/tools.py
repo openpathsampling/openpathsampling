@@ -99,7 +99,7 @@ def snapshot_from_testsystem(testsystem):
 
     return snapshot
 
-def trajectory_from_mdtraj(mdtrajectory):
+def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     """
     Construct a Trajectory object from an mdtraj.Trajectory object
 
@@ -122,7 +122,10 @@ def trajectory_from_mdtraj(mdtrajectory):
         velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond),
         kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
     )
-    topology = paths.MDTrajTopology(mdtrajectory.topology)
+    if simple_topology:
+        topology = paths.Topology(n_atoms=mdtrajectory.xyz[0].shape[0], n_spatial=mdtrajectory.xyz[0].shape[1])
+    else:
+        topology = paths.MDTrajTopology(mdtrajectory.topology)
 
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors

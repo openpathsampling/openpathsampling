@@ -18,7 +18,7 @@ class testCV_Function(object):
 
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = paths.tools.trajectory_from_mdtraj(self.mdtraj)
+        self.traj = paths.tools.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
 
     def teardown(self):
         pass
