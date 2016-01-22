@@ -23,7 +23,7 @@ def refresh_output(output_str, print_anyway=True, refresh=True):
     sys.stdout.flush()
 
 
-def snapshot_from_pdb(pdb_file):
+def snapshot_from_pdb(pdb_file, simple_topology=False):
     """
     Construct a Snapshot from the first frame in a pdb file without velocities
 
@@ -41,6 +41,11 @@ def snapshot_from_pdb(pdb_file):
     pdb = md.load(pdb_file)
     velocities = np.zeros(pdb.xyz[0].shape)
 
+    if simple_topology:
+        topology = paths.Topology(*pdb.xyz[0].shape)
+    else:
+        topology = paths.MDTrajTopology(pdb.topology)
+
     configuration = paths.Configuration(
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
@@ -51,7 +56,7 @@ def snapshot_from_pdb(pdb_file):
     )
 
     snapshot = paths.Snapshot(
-        topology=paths.MDTrajTopology(pdb.topology),
+        topology=topology,
         configuration=configuration,
         momentum=momentum,
     )
@@ -59,7 +64,7 @@ def snapshot_from_pdb(pdb_file):
     return snapshot
 
 
-def snapshot_from_testsystem(testsystem):
+def snapshot_from_testsystem(testsystem, simple_topology=False):
     """
     Construct a Snapshot from openmm topology and state objects
 
@@ -76,7 +81,11 @@ def snapshot_from_testsystem(testsystem):
     """
 
     velocities = u.Quantity(np.zeros(testsystem.positions.shape), u.nanometers / u.picoseconds)
-    topology = testsystem.topology
+
+    if simple_topology:
+        topology = paths.Topology(*testsystem.positions.shape)
+    else:
+        topology = paths.MDTrajTopology(md.Topology.from_openmm(testsystem.topology))
 
     box_vectors = np.array([
                     v / u.nanometers for v in
@@ -92,9 +101,9 @@ def snapshot_from_testsystem(testsystem):
     )
 
     snapshot = paths.Snapshot(
-        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology)),
+        topology=topology,
         configuration=configuration,
-        momentum=momentum,
+        momentum=momentum
     )
 
     return snapshot
@@ -123,7 +132,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
         kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
     )
     if simple_topology:
-        topology = paths.Topology(n_atoms=mdtrajectory.xyz[0].shape[0], n_spatial=mdtrajectory.xyz[0].shape[1])
+        topology = paths.Topology(*mdtrajectory.xyz[0].shape)
     else:
         topology = paths.MDTrajTopology(mdtrajectory.topology)
 
@@ -152,7 +161,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     return trajectory
 
 
-def empty_snapshot_from_openmm_topology(topology):
+def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
     """
     Return an empty snapshot from an openmm.Topology object using the specified units.
 
@@ -172,6 +181,11 @@ def empty_snapshot_from_openmm_topology(topology):
     """
     n_atoms = topology.n_atoms
 
+    if simple_topology:
+        topology = paths.Topology(n_atoms, 3)
+    else:
+        topology = paths.MDTrajTopology(md.Topology.from_openmm(topology))
+
     configuration = paths.Configuration(
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers)
@@ -182,7 +196,7 @@ def empty_snapshot_from_openmm_topology(topology):
     )
 
     snapshot = paths.Snapshot(
-        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology)),
+        topology=topology,
         configuration=configuration,
         momentum=momentum,
     )

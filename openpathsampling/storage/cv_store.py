@@ -193,9 +193,135 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
         return op
 
-    def _init(self, **kwargs):
-        """
-        Initialize the associated storage to allow for ensemble storage
 
+class ReversibleObjectDictStore(ObjectDictStore):
+
+    def create_cache(self, objectdict):
+        idx = self.index.get(objectdict, None)
+        if idx is not None:
+            var_name = self.cache_var_name(idx)
+
+            if var_name not in self.storage.variables:
+
+                params = objectdict.return_parameters_from_template(self.storage.template)
+                shape = params['cv_return_shape']
+
+                if shape is None:
+                    chunksizes = None
+                else:
+                    chunksizes = tuple(shape)
+
+                self.key_store.create_variable(
+                    var_name + '_fw',
+                    var_type=params['cv_return_type'],
+                    dimensions=shape,
+                    chunksizes=chunksizes,
+                    simtk_unit=params['cv_return_simtk_unit'],
+                    maskable=True
+                )
+
+                if not objectdict.time_reversible:
+                    self.key_store.create_variable(
+                        var_name + '_bw',
+                        var_type=params['cv_return_type'],
+                        dimensions=shape,
+                        chunksizes=chunksizes,
+                        simtk_unit=params['cv_return_simtk_unit'],
+                        maskable=True
+                    )
+
+                self.storage.update_delegates()
+
+        self.set_cache_store(objectdict)
+
+    def cache_store(self, idx):
+
+        var = self.cache_var(idx)
+        if var is None:
+            return None
+
+        if var is not self._cache_stores:
+            self._cache_stores[var] = self.storage.Key_Delegate(var, self.key_store)
+
+        return self._cache_stores[var]
+
+    def cache_transfer(self, objectdict, target_file):
+        if objectdict in target_file.cvs.index:
+            source_variable = self.cache_variable(objectdict)
+            target_variable = target_file.cvs.cache_variable(objectdict)
+
+            snapshots = objectdict.storage.snapshots.index.values()
+            for snapshot in snapshots:
+                source_idx = objectdict.storage.snapshots.index[snapshot]
+                target_idx = target_file.snapshots.index.get(snapshot, None)
+                if target_idx is not None:
+                    target_variable[target_idx] = source_variable[source_idx]
+
+    def cache_var(self, obj):
+        var_name = self.cache_var_name(obj)
+        if var_name is None:
+            return None
+
+        return self.key_store.vars[var_name + '_fw']
+
+    def cache_bw(self, obj):
+        var_name = self.cache_var_name(obj)
+        if var_name is None:
+            return None
+
+        return self.key_store.vars[var_name + '_bw']
+
+    def set_cache_store(self, objectdict):
         """
-        super(ObjectDictStore, self)._init()
+        Sets the attached storage of a CV to this store
+
+        If you are using a CV in multiple files this allows to select which of the files is to be
+        used as the file store. For performance reasons a single CV can be stored in multiple files, but its
+        file cache can only be associated with a single store.
+
+        This infers that if you have a full stored cache in one file and then save the CV in another file
+        the old cache is still being used! If you switch to the new file you will have to recompute all CV
+        values a second time. You can copy the store cache to the new file using `transfer_cache` but this
+        requires that you have all snapshots loaded into memory otherwise there is no connection between
+        snapshots. Meaning we will not try to figure out which pairs of snapshots in the two files are the
+        same. You might have a snapshot stored in two files then remove the snapshot from memory and reload
+        it. In this case the loaded snapshot will not know that it is also saved in another file.
+
+        In the worst case you will have to compute the CVs again.
+        """
+        idx = self.index.get(objectdict, None)
+        if idx is not None:
+            if objectdict.time_reversible:
+                objectdict.set_cache_store(self.key_store, self.cache_var(idx), self.cache_var(idx))
+            else:
+                objectdict.set_cache_store(self.key_store, self.cache_var(idx), self.cache_bw(idx))
+        else:
+            raise RuntimeWarning(('Your object is not stored as a CV in "%s" yet and hence a store ' +
+                                  'for the cache cannot be attached.' +
+                                 'Save your CV first and retry.') % self.storage)
+
+    def _load(self, idx):
+        """
+        Restores the cache from the storage using the name of the
+        collectivevariable.
+
+        Parameters
+        ----------
+        storage : Storage() on None
+            The storage (not ObjectStore) to store in. If None then all
+            associated storages will be loaded from.
+
+        Notes
+        -----
+        Make sure that you use unique names otherwise you might load the
+        wrong parameters!
+        """
+
+        # op = self.load_json(self.prefix + '_json', idx)
+        op = self.vars['json'][idx]
+        if op.time_reversible:
+            op.set_cache_store(self.key_store, self.cache_var(idx), self.cache_var(idx))
+        else:
+            op.set_cache_store(self.key_store, self.cache_var(idx), self.cache_bw(idx))
+
+        return op

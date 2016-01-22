@@ -146,7 +146,6 @@ class Storage(NetCDFPlus):
 
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
-        print self._template.__class__
         self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
 
         self.create_store('samples', paths.storage.SampleStore())
@@ -154,7 +153,7 @@ class Storage(NetCDFPlus):
         self.create_store('pathmovechanges', paths.storage.PathMoveChangeStore())
         self.create_store('steps', paths.storage.MCStepStore())
 
-        self.create_store('cvs', paths.storage.ObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
+        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
 
         # normal objects
 
@@ -295,7 +294,8 @@ class Storage(NetCDFPlus):
             'transitions': True,
             'networks': True,
             'details': False,
-            'steps': WeakLRUCache(1000)
+            'steps': WeakLRUCache(1000),
+            'topologies': True
         }
 
     @staticmethod
@@ -324,7 +324,8 @@ class Storage(NetCDFPlus):
             'transitions': True,
             'networks': True,
             'details': False,
-            'steps': WeakLRUCache(10)
+            'steps': WeakLRUCache(10),
+            'topologies': True
         }
 
     @staticmethod
@@ -354,7 +355,8 @@ class Storage(NetCDFPlus):
             'transitions': WeakLRUCache(10),
             'networks': WeakLRUCache(10),
             'details': WeakLRUCache(10),
-            'steps': WeakLRUCache(10)
+            'steps': WeakLRUCache(10),
+            'topologies': WeakLRUCache(10)
         }
 
     #
@@ -385,7 +387,8 @@ class Storage(NetCDFPlus):
             'transitions': True,
             'networks': True,
             'details': False,
-            'steps': WeakLRUCache(50000)
+            'steps': WeakLRUCache(50000),
+            'topologies': True
         }
 
     @staticmethod
@@ -415,7 +418,8 @@ class Storage(NetCDFPlus):
             'transitions': False,
             'networks': False,
             'details': False,
-            'steps': WeakLRUCache(10)
+            'steps': WeakLRUCache(10),
+            'topologies': True
         }
 
     # No caching (so far only CVs internal storage is there)
@@ -447,7 +451,8 @@ class Storage(NetCDFPlus):
             'transitions': False,
             'networks': False,
             'details': False,
-            'steps': False
+            'steps': False,
+            'topologies': False
         }
 
 

@@ -106,8 +106,6 @@ def set_features(*features):
             "    return this"
         ]
 
-        print '\n'.join(code)
-
         try:
             cc = compile('\n'.join(code), '<string>', 'exec')
             exec cc in locals()

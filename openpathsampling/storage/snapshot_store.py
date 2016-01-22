@@ -28,6 +28,10 @@ class AbstractSnapshotStore(ObjectStore):
         super(AbstractSnapshotStore, self).__init__(AbstractSnapshot, json=False)
         self.snapshot_class = snapshot_class
 
+    def __repr__(self):
+        return "store.%s[%s(%s)]" % (
+            self.prefix, self.snapshot_class.__name__, self.content_class.__name__)
+
     @staticmethod
     def paired_idx(idx):
         """

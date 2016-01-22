@@ -438,7 +438,7 @@ class ReversibleStoredDict(StoredDict):
     """
     ChainDict that has a store attached and return existing values from the store. Supports reversible items
     """
-    def __init__(self, key_store, value_store, main_cache, cache=None, reversible=True):
+    def __init__(self, key_store, value_store, backward_store, main_cache, cache=None, reversible=True):
         """
         Parameters
         ----------
@@ -452,6 +452,7 @@ class ReversibleStoredDict(StoredDict):
         """
         super(ReversibleStoredDict, self).__init__(key_store, value_store, main_cache)
         self.reversible = reversible
+        self.backward_store = backward_store
 
     def _add_new(self, items, values):
         for item, value in zip(items, values):
@@ -461,7 +462,7 @@ class ReversibleStoredDict(StoredDict):
                 self.storable.add(key)
                 if self.reversible:
                     # if reversible store also for reversed
-                    s_key = key + 1 - 2 * (key % 2)
+                    s_key = key ^ 1
                     self.cache[s_key] = value
                     self.storable.add(s_key)
 
@@ -472,8 +473,16 @@ class ReversibleStoredDict(StoredDict):
         # Sync objects that had been saved and afterwards the CV was computed
         if len(self.storable) > 0:
             keys = [idx for idx in sorted(list(self.storable)) if idx in self.cache]
-            values = [self.cache[idx] for idx in keys]
-            self.value_store[keys] = values
+            keys_fw = [idx/2 for idx in keys if not idx & 1]
+            keys_bw = [idx/2 for idx in keys if idx & 1]
+
+            if keys_fw:
+                values_fw = [self.cache[idx] for idx in keys if not idx & 1]
+                self.value_store[keys_fw] = values_fw
+            if keys_bw:
+                values_bw = [self.cache[idx] for idx in keys if idx & 1]
+                self.backward_store[keys_bw] = values_bw
+
             self.storable.clear()
 
         # Sync objects that first had a value computed and were later stored
@@ -491,10 +500,75 @@ class ReversibleStoredDict(StoredDict):
 
             pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
             if len(pairs) > 0:
-                keys, values = zip(*pairs)
+                pair_fw = [(pair[0] / 2, pair[1]) for pair in pairs if not pair[0] & 1]
+                if pair_fw:
+                    keys_fw, values_fw = zip(*pair_fw)
+                    self.value_store[list(keys_fw)] = list(values_fw)
 
-                self._last_n_objects = len(self.key_store)
+                pair_bw = [(pair[0] / 2, pair[1]) for pair in pairs if pair[0] & 1]
+                if pair_bw:
+                    keys_bw, values_bw = zip(*pair_bw)
+                    self.backward_store[list(keys_bw)] = list(values_bw)
 
-                self.value_store[list(keys)] = list(values)
                 for key, value in pairs:
                     self.cache[key] = value
+
+            self._last_n_objects = len(self.key_store)
+
+    def cache_all(self):
+        values_fw = self.value_store[:]
+        if self.reversible:
+            values_bw = values_fw
+        else:
+            values_bw = self.backward_store[:]
+        self.cache.clear()
+        [self.cache.__setitem__(2*key, value) for key, value in enumerate(values_fw)]
+        [self.cache.__setitem__(2*key + 1, value) for key, value in enumerate(values_bw)]
+
+    def _get(self, item):
+        key = self._get_key(item)
+
+        if key is None:
+            return None
+
+        if key in self.cache:
+            return self.cache[key]
+        else:
+            # update cache with specific strategy
+            if not key & 1:
+                val = self.value_store[key / 2]
+            else:
+                val = self.backward_store[key / 2]
+
+            self.cache[key] = val
+
+            if self.reversible:
+                self.cache[key ^ 1] = val
+
+            return val
+
+    def _get_list(self, items):
+        keys = map(self._get_key, items)
+
+        idxs = [item for item in keys if item is not None and item not in self.cache]
+
+        if len(idxs) > 0:
+            sorted_idxs = sorted(list(set(idxs)))
+
+            keys_fw = [int(idx/2) for idx in sorted_idxs if not idx & 1]
+            keys_bw = [int(idx/2) for idx in sorted_idxs if idx & 1]
+
+            if keys_fw:
+                values_fw = self.value_store[keys_fw]
+            if keys_bw:
+                values_bw = self.backward_store[keys_bw]
+
+            replace = [
+                None if key is None else
+                self.cache[key] if key in self.cache else
+                values_fw[keys_fw.index(key/2)] if not key & 1 else
+                values_bw[keys_bw.index(key/2)] for key in keys]
+        else:
+            replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
+
+        return replace
