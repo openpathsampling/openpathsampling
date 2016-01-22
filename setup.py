@@ -98,7 +98,7 @@ def buildKeywordDictionary():
     setupKeywords["version"]           = "0.0.1-alpha"
     setupKeywords["author"]            = "David W.H. Swenson, Jan-Hendrik Prinz, Peter Bolhuis and John D. Chodera"
     setupKeywords["author_email"]      = "dwhs@hyperblazer.net, jan.prinz@choderalab.org, p.g.bolhuis@uva.nl, choderaj@mskcc.org"
-    setupKeywords["license"]           = "GPL 2.0"
+    setupKeywords["license"]           = "LGPL 2.1 or later"
     setupKeywords["url"]               = "http://www.openpathsampling.org"
     setupKeywords["download_url"]      = "http://github.com/choderalab/openpathsampling"
     setupKeywords["packages"]          = ['openpathsampling',
@@ -106,6 +106,7 @@ def buildKeywordDictionary():
                                           'openpathsampling.toy_dynamics',
                                           'openpathsampling.tests',
                                           'openpathsampling.analysis',
+                                          'openpathsampling.features',
                                           'openpathsampling.netcdfplus'
                                           ]
     setupKeywords["package_dir"]       = {
@@ -113,6 +114,7 @@ def buildKeywordDictionary():
         'openpathsampling.storage' : 'openpathsampling/storage',
         'openpathsampling.toy_dynamics' : 'openpathsampling/toy_dynamics',
         'openpathsampling.tests' : 'openpathsampling/tests',
+        'openpathsampling.features' : 'openpathsampling/features',
         'openpathsampling.netcdfplus' : 'openpathsampling/netcdfplus'
     }
     #setupKeywords["py_modules"]        = ["pymbar", "timeseries", "testsystems", "confidenceintervals"]

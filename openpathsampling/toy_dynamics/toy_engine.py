@@ -1,5 +1,5 @@
 import numpy as np
-from openpathsampling.snapshot import Snapshot, Momentum, Configuration
+from openpathsampling.snapshot import ToySnapshot
 from openpathsampling.dynamics_engine import DynamicsEngine
 
 def convert_to_3Ndim(v):
@@ -30,6 +30,8 @@ class ToyEngine(DynamicsEngine):
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the DynamicsEngine calls on them for'''
 
+    base_snapshot_type = ToySnapshot
+
     default_options = {
                       'integ' : None,
                       'n_frames_max' : 5000,
@@ -48,6 +50,8 @@ class ToyEngine(DynamicsEngine):
         self.template = template
         self.mass = template.topology.masses
         self._pes = template.topology.pes
+
+        self.current_snapshot = self.template
 
     @property
     def pes(self):
@@ -78,18 +82,16 @@ class ToyEngine(DynamicsEngine):
     def current_snapshot(self):
         snap_pos = self.positions
         snap_vel = self.velocities
-        snap_pot = self.pes.V(self)
-        snap_kin = self.pes.kinetic_energy(self)
-        return Snapshot(coordinates=np.array([snap_pos]),
-                        potential_energy=snap_pot,
-                        box_vectors=None,
-                        velocities=np.array([snap_vel]),
-                        kinetic_energy=snap_kin,
-                        topology=self.template.topology
-                       )
+        return ToySnapshot(
+            coordinates=np.array([snap_pos]),
+            velocities=np.array([snap_vel]),
+            topology=self.template.topology
+        )
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
+        self.check_snapshot_type(snap)
+
         coords = np.copy(snap.coordinates)
         vels = np.copy(snap.velocities)
         self.positions = coords[0]
@@ -98,29 +100,3 @@ class ToyEngine(DynamicsEngine):
     def generate_next_frame(self):
         self.integ.step(self, self.nsteps_per_frame)
         return self.current_snapshot
-
-
-    # momentum and configuration properties; these may be removed at some
-    # point
-
-    @property
-    def momentum(self):
-        return Momentum(velocities=np.array([self.velocities]),
-                        kinetic_energy=self.pes.kinetic_energy(self)
-                       )
-
-    @momentum.setter
-    def momentum(self, momentum):
-        self.velocities = momentum.velocities[0]
-
-    @property
-    def configuration(self):
-        return Configuration(coordinates=np.array([self.positions]),
-                             box_vectors=None,
-                             potential_energy=self.pes.V(self),
-                             topology=self.template.topology
-                            )
-
-    @configuration.setter
-    def configuration(self, configuration):
-        self.positions = configuration.coordinates[0]
