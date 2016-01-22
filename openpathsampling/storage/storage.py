@@ -203,7 +203,7 @@ class Storage(NetCDFPlus):
             raise RuntimeError("A Storage needs a template snapshot with a topology")
 
         if 'atom' not in self.dimensions:
-            self.createDimension('atom', self.topology.n_atoms)
+            self.createDimension('atom', self.n_atoms)
 
         # spatial dimensions
         if 'spatial' not in self.dimensions:

@@ -191,7 +191,7 @@ def units_from_snapshot(snapshot):
         if hasattr(snapshot.coordinates, 'unit'):
             units['length'] = snapshot.coordinates.unit
 
-    if snapshot.potential_energy is not None:
+    if hasattr(snapshot, 'potential_energy') and snapshot.potential_energy is not None:
         if hasattr(snapshot.potential_energy, 'unit'):
             units['energy'] = snapshot.potential_energy.unit
 

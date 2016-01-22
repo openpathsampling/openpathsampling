@@ -5,16 +5,60 @@ from openpathsampling.snapshot import Configuration
 
 import numpy as np
 
-_variables = ['configuration']
+attributes = ['configuration', 'box_vectors', 'md', 'coordinates']
+lazy = ['configuration']
 
 
-def _init(store):
+def netcdfplus_init(store):
     store.storage.create_store('configurations', ConfigurationStore())
 
     store.create_variable('configuration', 'lazyobj.configurations',
                         description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
                         chunksizes=(1,)
                         )
+
+
+def coordinates(snapshot):
+    """
+    The coordinates in the configuration
+    """
+
+    if snapshot.configuration is not None:
+        return snapshot.configuration.coordinates
+
+    return None
+
+
+def box_vectors(snapshot):
+    """
+    The box_vectors in the configuration
+    """
+    if snapshot.configuration is not None:
+        return snapshot.configuration.box_vectors
+
+    return None
+
+def md(snapshot):
+    """
+    Returns a mdtraj Trajectory object that contains only one frame
+
+    Returns
+    -------
+    mdtraj.Trajectory
+        the actual trajectory object. Can be used with all functions from mdtraj
+
+    Notes
+    -----
+    Rather slow since the topology has to be made each time. Try to avoid it
+    """
+
+    if snapshot.configuration is not None:
+        n_atoms = snapshot.coordinates.shape[0]
+
+        output = np.zeros([1, n_atoms, 3], np.float32)
+        output[0, :, :] = snapshot.coordinates
+
+        return md.Trajectory(output, snapshot.topology.md)
 
 
 class ConfigurationStore(ObjectStore):
@@ -28,9 +72,6 @@ class ConfigurationStore(ObjectStore):
         # Store configuration.
         self.vars['coordinates'][idx] = configuration.coordinates
 
-        if configuration.potential_energy is not None:
-            self.vars['potential_energy'][idx] = configuration.potential_energy
-
         if configuration.box_vectors is not None:
             self.vars['box_vectors'][idx] = configuration.box_vectors
 
@@ -40,10 +81,8 @@ class ConfigurationStore(ObjectStore):
     def _load(self, idx):
         coordinates = self.vars["coordinates"][idx]
         box_vectors = self.vars["box_vectors"][idx]
-        potential_energy = self.vars["potential_energy"][idx]
 
-        configuration = Configuration(coordinates=coordinates, box_vectors=box_vectors,
-                                      potential_energy=potential_energy)
+        configuration = Configuration(coordinates=coordinates, box_vectors=box_vectors)
         configuration.topology = self.storage.topology
 
         return configuration
@@ -94,9 +133,4 @@ class ConfigurationStore(ObjectStore):
                            dimensions=('spatial', 'spatial'),
                            chunksizes=(1, n_spatial, n_spatial),
                            simtk_unit=units['length']
-                           )
-
-        self.create_variable('potential_energy', 'float',
-                           chunksizes=(1,),
-                           simtk_unit=units['energy']
                            )

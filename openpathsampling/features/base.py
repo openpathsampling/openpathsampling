@@ -1,43 +1,61 @@
+from openpathsampling.netcdfplus import DelayedLoader
+
 def set_features(*features):
     """
     Select snapshot features
     """
+
+    use_lazy_reversed = True
+
     def _decorator(cls):
 
+        # important for compile to work properly
         import openpathsampling as paths
 
-        cls.__features__ = features
-        cls._feature_attributes = list()
-        cls._feature_attributes_minus = list()
-        cls._feature_attributes_not = list()
+        __features__ = dict()
+        __features__['classes'] = features
+        for name in ['attributes', 'minus', 'reversal', 'properties']:
+            __features__[name] = list()
+
+        if use_lazy_reversed:
+            __features__['lazy'] = ['_reversed']
+        else:
+            __features__['lazy'] = list()
 
         for feature in features:
             # loop over all the features
 
             # add properties to class
-            for prop in feature.properties:
-                if hasattr(feature, prop):
+            for prop in feature.attributes:
+                if hasattr(feature, prop) and callable(getattr(feature, prop)):
+                    __features__['properties'] += [prop]
                     setattr(cls, prop, property(getattr(feature, prop)))
 
-            # update list of all attributes to be stored
-            if type(feature.attributes) is str:
-                cls._feature_attributes += [feature.attributes]
-            else:
-                cls._feature_attributes += feature.attributes
+            for name in ['attributes', 'minus', 'lazy']:
+                if hasattr(feature, name):
+                    content = getattr(feature, name)
+                    if type(content) is str:
+                        content = [content]
 
-            # update list of all attributes to multiplied with -1
-            if type(feature.attributes_minus) is str:
-                cls._feature_attributes_minus += [feature.attributes_minus]
-            else:
-                cls._feature_attributes_minus += feature.attributes_minus
+                    __features__[name] += content
+                    
+        __features__['reversal'] = [
+            attr for attr in __features__['attributes']
+            if attr not in __features__['minus']
+            and attr not in __features__['properties']
+        ]
 
-            # update list of all attributes to be flipped
-            if type(feature.attributes_not) is str:
-                cls._feature_attributes_not += [feature.attributes_not]
-            else:
-                cls._feature_attributes_not += feature.attributes_not
+        __features__['parameters'] = [
+            attr for attr in __features__['attributes']
+            if attr not in __features__['properties']
+        ]
 
-        use_lazy_reversed = True
+        # add lazy decorators
+
+        for attr in __features__['lazy']:
+            setattr(cls, attr, DelayedLoader())
+
+        cls.__features__ = __features__
 
         # update docstring
 
@@ -49,7 +67,7 @@ def set_features(*features):
             '----------'
         ]
 
-        for feat in cls.__features__:
+        for feat in __features__:
             if feat.__doc__ is not None:
                 docs += [feat.__doc__]
 
@@ -65,23 +83,23 @@ def set_features(*features):
             "    this.engine = self.engine",
         ]
 
-        if use_lazy_reversed:
-            code += [
-                "    this._lazy = {cls._reversed : self}"
-            ]
-        else:
+        if __features__['lazy']:
+            if use_lazy_reversed:
+                code += [
+                    "    this._lazy = {cls._reversed : self}"
+                ]
+            else:
+                code += [
+                    "    this._lazy = dict()"
+                ]
+
+        if not use_lazy_reversed:
             code += [
                 "    this._reversed = self"
             ]
 
-        code += map("    this.{0} = self.{0}".format,
-                    [attr for attr in cls._feature_attributes
-                     if attr not in cls._feature_attributes_minus and
-                     attr not in cls._feature_attributes_not
-                     ]
-                    )
-        code += map("    this.{0} = - self.{0}".format, cls._feature_attributes_minus)
-        code += map("    this.{0} = ~ self.{0}".format, cls._feature_attributes_not)
+        code += map("    this.{0} = self.{0}".format, __features__['reversal'])
+        code += map("    this.{0} = - self.{0}".format, __features__['minus'])
 
         code += [
             "    return this"
@@ -101,7 +119,7 @@ def set_features(*features):
 
         # we use as signature all attributes
         parameters = ['engine=None']
-        parameters += map('{0}=None'.format, cls._feature_attributes)
+        parameters += map('{0}=None'.format, __features__['parameters'])
         signature = ', '.join(parameters)
         code = []
         code += [
@@ -110,16 +128,22 @@ def set_features(*features):
             "    self.engine = engine",
         ]
 
-        if use_lazy_reversed:
-            code += [
-                "    self._lazy = {cls._reversed : None}"
-            ]
-        else:
+        if __features__['lazy']:
+            if use_lazy_reversed:
+                code += [
+                    "    self._lazy = {cls._reversed : None}"
+                ]
+            else:
+                code += [
+                    "    self._lazy = dict()"
+                ]
+
+        if not use_lazy_reversed:
             code += [
                 "    self._reversed = None"
             ]
 
-        code += map("    self.{0} = {0}".format, cls._feature_attributes)
+        code += map("    self.{0} = {0}".format, __features__['parameters'])
 
         try:
             cc = compile('\n'.join(code), '<string>', 'exec')

@@ -5,16 +5,32 @@ from openpathsampling.snapshot import Momentum
 
 import numpy as np
 
-_variables = ['momentum']
+attributes = ['momentum', 'velocities']
+lazy = ['momentum']
 
 
-def _init(store):
+def netcdfplus_init(store):
     store.storage.create_store('momenta', MomentumStore())
 
     store.create_variable('momentum', 'lazyobj.momenta',
                         description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                         chunksizes=(1,)
                         )
+
+
+def velocities(self):
+    """
+    The velocities in the configuration. If the snapshot is reversed a
+    copy of the original (unreversed) velocities is made which is then
+    returned
+    """
+    if self.momentum is not None:
+        if self._is_reversed:
+            return -1.0 * self.momentum.velocities
+        else:
+            return self.momentum.velocities
+
+    return None
 
 
 class MomentumStore(ObjectStore):
@@ -28,15 +44,10 @@ class MomentumStore(ObjectStore):
     def _save(self, momentum, idx):
         self.vars['velocities'][idx, :, :] = momentum.velocities
 
-        if momentum.kinetic_energy is not None:
-            self.vars['kinetic_energy'][idx] = momentum.kinetic_energy
-
     def _load(self, idx):
         velocities = self.vars['velocities'][idx]
-        kinetic_energy = self.vars['kinetic_energy'][idx]
 
-        momentum = Momentum(velocities=velocities, kinetic_energy=kinetic_energy)
-
+        momentum = Momentum(velocities=velocities)
         return momentum
 
     def velocities_as_numpy(self, frame_indices=None, atom_indices=None):
@@ -101,9 +112,4 @@ class MomentumStore(ObjectStore):
                                        "'coordinate' of momentum 'momentum'.",
                            chunksizes=(1, n_atoms, n_spatial),
                            simtk_unit=units['velocity']
-                           )
-
-        self.create_variable('kinetic_energy', 'float',
-                           chunksizes=(1,),
-                           simtk_unit=units['energy']
                            )

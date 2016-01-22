@@ -113,24 +113,6 @@ class AbstractSnapshot(StorableObject):
         this._is_reversed = self._is_reversed
         return this
 
-    def reversed_copy(self):
-        """
-        Returns a shallow reversed copy of the instance itself. The
-        contained configuration and momenta are not copied and the momenta
-        are marked reversed.
-
-        Since Snapshots are made in pairs this will also lead to a new
-        (non-)reversed copy!
-
-        Returns
-        -------
-        Snapshot()
-            the reversed shallow copy
-        """
-
-        obj = self.copy()
-        return obj.reversed
-
     def create_reversed(self):
         this = self.copy()
         this._is_reversed = True
@@ -175,11 +157,7 @@ class Snapshot(AbstractSnapshot):
             atomic velocities (default: None)
         box_vectors : periodic box vectors (default: None)
             the periodic box vectors at current timestep (defautl: None)
-        potential_energy : simtk.unit.Quantity of units energy/mole
-            potential energy at current timestep (default: None)
-        kinetic_energy : simtk.unit.Quantity of units energy/mole
-            kinetic energy at current timestep (default: None)
-            
+
         Attributes
         ----------
         coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
@@ -188,96 +166,8 @@ class Snapshot(AbstractSnapshot):
             atomic velocities
         box_vectors : periodic box vectors
             the periodic box vectors 
-        potential_energy : simtk.unit.Quantity of units energy/mole
-            potential energy
-        kinetic_energy : simtk.unit.Quantity of units energy/mole
-            kinetic energy
         """
 
-        super(Snapshot, self).__init__(is_reversed, reversed_copy, topology)
-
-        if configuration is None and momentum is None:
-            if coordinates is not None:
-                configuration = Configuration(
-                    coordinates=coordinates,
-                    box_vectors=box_vectors,
-                    potential_energy=potential_energy
-                )
-
-            if velocities is not None:
-                momentum = Momentum(
-                    velocities=velocities,
-                    kinetic_energy=kinetic_energy
-                )
-
-        self.configuration = configuration
-        self.momentum = momentum
-
-        if reversed_copy is None:
-            self._reversed.configuration = self.configuration
-            self._reversed.momentum = self.momentum
-
-    @property
-    @has('configuration')
-    def coordinates(self):
-        """
-        The coordinates in the configuration
-        """
-        return self.configuration.coordinates
-
-    @property
-    @has('momentum')
-    def velocities(self):
-        """
-        The velocities in the configuration. If the snapshot is reversed a
-        copy of the original (unreversed) velocities is made which is then
-        returned
-        """
-        if self._is_reversed:
-            return -1.0 * self.momentum.velocities
-        else:
-            return self.momentum.velocities
-
-    @property
-    @has('configuration')
-    def box_vectors(self):
-        """
-        The box_vectors in the configuration
-        """
-        return self.configuration.box_vectors
-
-    @property
-    @has('configuration')
-    def potential_energy(self):
-        """
-        The potential_energy in the configuration
-        """
-        return self.configuration.potential_energy
-
-    @property
-    @has('momentum')
-    def kinetic_energy(self):
-        """
-        The kinetic_energy in the momentum
-        """
-        return self.momentum.kinetic_energy
-
-    @property
-    @has('configuration')
-    def n_atoms(self):
-        """
-        The number of atoms in the snapshot
-        """
-        return self.coordinates.shape[0]
-
-    @property
-    @has('configuration')
-    @has('momentum')
-    def total_energy(self):
-        """
-        The total energy (sum of potential and kinetic) of the snapshot
-        """
-        return self.kinetic_energy + self.potential_energy
 
     # ==========================================================================
     # Utility functions
@@ -299,36 +189,6 @@ class Snapshot(AbstractSnapshot):
         else:
             return coord
 
-    def copy(self):
-        this = self.__class__(
-            configuration=self.configuration,
-            momentum=self.momentum,
-            is_reversed=self._is_reversed,
-            topology=self.topology
-        )
-        return this
-
-    @has('configuration')
-    def md(self):
-        """
-        Returns a mdtraj Trajectory object that contains only one frame
-
-        Returns
-        -------
-        mdtraj.Trajectory
-            the actual trajectory object. Can be used with all functions from mdtraj
-
-        Notes
-        -----
-        Rather slow since the topology has to be made each time. Try to avoid it
-        """
-
-        n_atoms = self.n_atoms
-
-        output = np.zeros([1, n_atoms, 3], np.float32)
-        output[0, :, :] = self.coordinates
-
-        return md.Trajectory(output, self.topology.md)
 
     def subset(self, subset):
         """
@@ -355,102 +215,43 @@ class Snapshot(AbstractSnapshot):
         return this
 
 
-@lazy_loading_attributes('_reversed')
-class ToySnapshot(AbstractSnapshot):
-    """
-    Simulation snapshot. Contains references to a configuration and momentum
-    """
-
-    __features__ = [
-        features.coordinates,
-        features.velocities
-    ]
-
-    def __init__(self, coordinates=None, velocities=None, is_reversed=False, topology=None,
-                 reversed_copy=None):
-        """
-        Create a toy snapshot
-
-        If you want to obtain a snapshot from a currently-running MD engine,
-        use that engine's `.current_snapshot property`.
-
-        Parameters
-        ----------
-        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-            atomic coordinates (default: None)
-        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-            atomic velocities (default: None)
-
-        Attributes
-        ----------
-        coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-            atomic coordinates
-        velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-            atomic velocities
-        """
-
-        super(ToySnapshot, self).__init__(is_reversed, reversed_copy, topology)
-
-        self.coordinates = coordinates
-        self.velocities = velocities
-
-        if reversed_copy is None:
-            self._reversed.coordinates = self.coordinates
-            self._reversed.velocities = -1.0 * self.velocities
-
-    # ==========================================================================
-    # Utility functions
-    # ==========================================================================
-
-    @property
-    def xyz(self):
-        """
-        Coordinates without dimensions.
-
-        """
-        return self.coordinates
-
-    def copy(self):
-        this = ToySnapshot(
-            self.coordinates,
-            self.velocities,
-            is_reversed=self._is_reversed,
-            topology=self.topology
-        )
-        return this
-
-
 class FeatureSnapshot(AbstractSnapshot):
     def copy(self):
-        this = super(FeatureSnapshot, self).copy()
+        return super(FeatureSnapshot, self).copy()
 
-        for attr in self._feature_attributes:
-            setattr(this, attr, getattr(self, attr))
-
-        return this
-
-    @property
-    def reversed(self):
-        if self._reversed is None:
-            self._reversed = self.create_reversed()
-
-        return self._reversed
-
-    def create_reversed(self):
-        this = self.copy()
-        this._is_reversed = True
-        this._reversed = self
-
-        [setattr(this, attr, - getattr(self, attr)) for attr in self._feature_attributes_minus]
-        [setattr(this, attr, ~ getattr(self, attr)) for attr in self._feature_attributes_not]
-
-        return this
 
 @features.base.set_features(
     features.velocities,
-    features.coordinates
+    features.coordinates,
+)
+class ToySnapshot(FeatureSnapshot):
+    """
+    Simulation snapshot. Contains references to a configuration and momentum
+
+    Create a toy snapshot
+
+    If you want to obtain a snapshot from a currently-running MD engine,
+    use that engine's `.current_snapshot property`.
+    """
+
+
+@features.base.set_features(
+    features.velocities,
+    features.coordinates,
+    features.box_vectors
 )
 class MDSnapshot(FeatureSnapshot):
     """
     A fast MDSnapshot
     """
+
+
+@features.base.set_features(
+    features.configuration,
+    features.momentum
+)
+class MDWrappedSnapshot(FeatureSnapshot):
+    """
+    A fast MDSnapshot
+    """
+
