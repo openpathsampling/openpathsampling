@@ -39,7 +39,7 @@ class AbstractSnapshot(StorableObject):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, engine=None, **kwargs):
+    def __init__(self, topology=None, **kwargs):
         """
         Attributes
         ----------
@@ -58,7 +58,7 @@ class AbstractSnapshot(StorableObject):
 
         self._reversed = None
         self._is_reversed = False
-        self.engine = engine
+        self.topoloty = topology
 
     def __eq__(self, other):
         # This implements comparison with potentially lazy loaded snapshots
@@ -88,7 +88,7 @@ class AbstractSnapshot(StorableObject):
     # Utility functions
     # ==========================================================================
 
-    @abc.abstractmethod
+#    @abc.abstractmethod
     def copy(self):
         """
         Returns a shallow copy of the instance itself. The contained
@@ -109,7 +109,7 @@ class AbstractSnapshot(StorableObject):
 
         """
         this = self.__class__.__new__(self.__class__)
-        AbstractSnapshot.__init__(this, engine=self.engine)
+        AbstractSnapshot.__init__(this, topology=self.topology)
         this._is_reversed = self._is_reversed
         return this
 
@@ -146,8 +146,8 @@ class Snapshot(AbstractSnapshot):
             2. Specify the things which make up `Configuration` and
                `Momentum` objects, i.e., coordinates, velocities, box
                vectors, etc.
-        If you want to obtain a snapshot from a currently-running MD engine,
-        use that engine's .current_snapshot property.
+        If you want to obtain a snapshot from a currently-running MD topology,
+        use that topology's .current_snapshot property.
 
         Parameters
         ----------
@@ -230,8 +230,8 @@ class ToySnapshot(FeatureSnapshot):
 
     Create a toy snapshot
 
-    If you want to obtain a snapshot from a currently-running MD engine,
-    use that engine's `.current_snapshot property`.
+    If you want to obtain a snapshot from a currently-running MD topology,
+    use that topology's `.current_snapshot property`.
     """
 
 
@@ -248,9 +248,10 @@ class MDSnapshot(FeatureSnapshot):
 
 @features.base.set_features(
     features.configuration,
-    features.momentum
+    features.momentum,
+    features.topology  # for compatibility
 )
-class MDWrappedSnapshot(FeatureSnapshot):
+class Snapshot(FeatureSnapshot):
     """
     A fast MDSnapshot
     """

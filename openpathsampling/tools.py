@@ -1,13 +1,13 @@
 import openpathsampling.snapshot_content
 
-__author__ = 'Jan-Hendrik Prinz'
-
 import mdtraj as md
 import simtk.unit as u
 import numpy as np
 import openpathsampling as paths
 
 import sys
+
+__author__ = 'Jan-Hendrik Prinz'
 
 
 def refresh_output(output_str, print_anyway=True, refresh=True):
@@ -39,19 +39,25 @@ def snapshot_from_pdb(pdb_file):
 
     """
     pdb = md.load(pdb_file)
-
     velocities = np.zeros(pdb.xyz[0].shape)
 
-    snapshot = paths.Snapshot(
+    configuration = paths.Configuration(
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
-        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
-        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        topology=paths.MDTrajTopology(pdb.topology)
+    )
+
+    momentum = paths.Momentum(
+        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds)
+    )
+
+    snapshot = paths.Snapshot(
+        topology=paths.MDTrajTopology(pdb.topology),
+        configuration=configuration,
+        momentum=momentum,
     )
 
     return snapshot
+
 
 def snapshot_from_testsystem(testsystem):
     """
@@ -76,13 +82,19 @@ def snapshot_from_testsystem(testsystem):
                     v / u.nanometers for v in
                     testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
 
-    snapshot = paths.Snapshot(
+    configuration = paths.Configuration(
         coordinates=testsystem.positions,
-        velocities=velocities,
-        box_vectors=box_vectors,
-        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology))
+        box_vectors=box_vectors
+    )
+
+    momentum = paths.Momentum(
+        velocities=velocities
+    )
+
+    snapshot = paths.Snapshot(
+        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology)),
+        configuration=configuration,
+        momentum=momentum,
     )
 
     return snapshot
@@ -157,13 +169,19 @@ def empty_snapshot_from_openmm_topology(topology):
     """
     n_atoms = topology.n_atoms
 
-    snapshot = paths.Snapshot(
+    configuration = paths.Configuration(
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
-        velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
-        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
-        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology))
+        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers)
+    )
+
+    momentum = paths.Momentum(
+        velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds)
+    )
+
+    snapshot = paths.Snapshot(
+        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology)),
+        configuration=configuration,
+        momentum=momentum,
     )
 
     return snapshot
@@ -190,10 +208,6 @@ def units_from_snapshot(snapshot):
     if snapshot.coordinates is not None:
         if hasattr(snapshot.coordinates, 'unit'):
             units['length'] = snapshot.coordinates.unit
-
-    if hasattr(snapshot, 'potential_energy') and snapshot.potential_energy is not None:
-        if hasattr(snapshot.potential_energy, 'unit'):
-            units['energy'] = snapshot.potential_energy.unit
 
     if snapshot.velocities is not None:
         if hasattr(snapshot.velocities, 'unit'):

@@ -80,7 +80,6 @@ def set_features(*features):
             "def create_reversed(self):",
             "    this = cls.__new__(cls)",
             "    this._is_reversed = True",
-            "    this.engine = self.engine",
         ]
 
         if __features__['lazy']:
@@ -125,7 +124,6 @@ def set_features(*features):
         code += [
             "def __init__(self, %s):" % signature,
             "    self._is_reversed = False",
-            "    self.engine = engine",
         ]
 
         if __features__['lazy']:
