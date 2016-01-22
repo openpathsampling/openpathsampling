@@ -54,7 +54,7 @@ from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
 from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
     to_openmm_topology, trajectory_from_mdtraj
 
-from tools import units_from_snapshot
+from tools import simtk_units_from_md_snapshot
 
 from topology import ToyTopology, Topology, MDTrajTopology
 
@@ -98,3 +98,15 @@ from pathmovechange import (
 )
 
 from storage.storage import Storage, AnalysisStorage
+
+def git_HEAD(): # pragma: no cover
+    from subprocess import check_output
+    import os.path
+    git_dir = os.path.dirname(os.path.realpath(__file__))
+    return check_output(["git", "-C", git_dir, "rev-parse", "HEAD"])[:-1]
+    # chops the newline at the end
+
+try:
+    import version
+except ImportError: # pragma: no cover
+    pass
