@@ -1,7 +1,7 @@
 from openpathsampling.netcdfplus import ObjectStore
 from openpathsampling.tools import units_from_snapshot
 
-from openpathsampling.snapshot import Configuration
+from openpathsampling.snapshot_content import Configuration
 
 import numpy as np
 

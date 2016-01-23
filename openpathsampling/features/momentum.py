@@ -1,7 +1,7 @@
 from openpathsampling.netcdfplus import ObjectStore
 from openpathsampling.tools import units_from_snapshot
 
-from openpathsampling.snapshot import Momentum
+from openpathsampling.snapshot_content import Momentum
 
 import numpy as np
 
