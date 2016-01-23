@@ -49,6 +49,8 @@ class DynamicsEngine(StorableNamedObject):
         'energy' : u.Unit({})
     }
 
+    base_snapshot_type = paths.AbstractSnapshot
+
     def __init__(self, options=None, template=None):
         '''
         Create an empty DynamicsEngine object
@@ -330,3 +332,37 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
+
+
+    def generate_n_frames(self, n_frames=1):
+        """Generates n_frames, from but not including the current snapshot.
+        
+        This generates a fixed number of frames at once. If you desire the
+        reversed trajectory, you can reverse the returned trajectory.
+
+        Parameters
+        ----------
+        n_frames : integer
+            number of frames to generate
+
+        Returns
+        -------
+        paths.Trajectory()
+            the `n_frames` of the trajectory following (and not including)
+            the initial `current_snapshot`
+        """
+        self.start()
+        traj = paths.Trajectory([self.generate_next_frame() 
+                                 for i in range(n_frames)])
+        self.stop(traj)
+        return traj
+        
+
+    @classmethod
+    def check_snapshot_type(cls, snapshot):
+        if not isinstance(snapshot, cls.base_snapshot_type):
+            logger.warning(
+                ('This engine is intended for "%s" and derived classes. '
+                 'You are using "%s". Make sure that this is intended.') %
+                (cls.base_snapshot_type.__name__, snapshot.__class__.__name__)
+            )
