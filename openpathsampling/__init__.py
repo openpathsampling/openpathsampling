@@ -99,9 +99,14 @@ from pathmovechange import (
 
 from storage.storage import Storage, AnalysisStorage
 
-def git_HEAD():
+def git_HEAD(): # pragma: no cover
     from subprocess import check_output
     import os.path
     git_dir = os.path.dirname(os.path.realpath(__file__))
     return check_output(["git", "-C", git_dir, "rev-parse", "HEAD"])[:-1]
     # chops the newline at the end
+
+try:
+    import version
+except ImportError: # pragma: no cover
+    pass

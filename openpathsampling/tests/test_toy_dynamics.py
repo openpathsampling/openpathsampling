@@ -9,6 +9,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array
+import openpathsampling as paths
 
 from openpathsampling.toy_dynamics.toy_pes import *
 from openpathsampling.toy_dynamics.toy_integrators import *
@@ -204,6 +205,25 @@ class testToyEngine(object):
         self.sim.initialized = True
         traj = self.sim.generate(self.sim.current_snapshot, [true_func])
         assert_equal(len(traj), self.sim.n_frames_max)
+
+    def test_generate_n_frames(self):
+        n_frames = 3
+        self.sim.initialized = True
+        ens = paths.LengthEnsemble(4) # first snap plus n_frames
+        orig = self.sim.current_snapshot.copy()
+        traj1 = self.sim.generate(self.sim.current_snapshot, [ens.can_append])
+        self.sim.current_snapshot = orig
+        traj2 = [orig] + self.sim.generate_n_frames(3)
+        assert_equal(len(traj1), len(traj2))
+        for (s1, s2) in zip(traj1, traj2):
+            # snapshots are not the same object
+            assert_not_equal(s1, s2) 
+            # however, they have the same values stored in them
+            assert_equal(len(s1.coordinates), 1)
+            assert_equal(len(s1.coordinates[0]), 2)
+            assert_items_equal(s1.coordinates[0], s2.coordinates[0])
+            assert_items_equal(s1.velocities[0], s2.velocities[0])
+
 
     def test_start_with_snapshot(self):
         snap = ToySnapshot(coordinates=np.array([1,2]),
