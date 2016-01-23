@@ -408,7 +408,7 @@ class SampleMover(PathMover):
             random_value=rand
         )
 
-        logger.info("Trial was " + (if accepted: "accepted" else: "rejected"))
+        logger.info("Trial was " + ("accepted" if accepted else "rejected"))
 
         return accepted, details
 
