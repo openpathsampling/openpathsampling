@@ -4,27 +4,11 @@
 @author: JH Prinz
 """
 
-import mdtraj as md
-import numpy as np
-import simtk.unit as u
 import abc
 
-from snapshot_content import Configuration, Momentum
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
 import features
-
-def has(attr):
-    def _has(func):
-        def inner(self, *args, **kwargs):
-            if hasattr(self, attr) and getattr(self, attr) is not None:
-                return func(self, *args, **kwargs)
-            else:
-                return None
-
-        return inner
-
-    return _has
 
 
 # =============================================================================
@@ -39,16 +23,10 @@ class AbstractSnapshot(StorableObject):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, topology=None, **kwargs):
+    def __init__(self, topology=None):
         """
         Attributes
         ----------
-        is_reversed : bool, default: False
-            The knows if in relation to potentially stored velocities these should
-            be multiplied with -1 (True) or not (False).
-        reversed_copy : openpathsampling.AbstractSnapshot
-            If not None this is a pointer to the reversed copy (if it exists). If
-            `None` (default) the reversed copy will be created and referenced.
         topology : openpathsamping.Topology, default: None
             The corresponding topology used with this Snapshot. Can also be None
             and means no topology is specified.
@@ -57,8 +35,7 @@ class AbstractSnapshot(StorableObject):
         super(AbstractSnapshot, self).__init__()
 
         self._reversed = None
-        self._is_reversed = False
-        self.topoloty = topology
+        self.topology = topology
 
     def __eq__(self, other):
         # This implements comparison with potentially lazy loaded snapshots
@@ -94,12 +71,10 @@ class AbstractSnapshot(StorableObject):
         Returns a shallow copy of the instance itself. The contained
         configuration and momenta are not copied.
 
-        This will also create a new reversed copy automatically.
-
         Returns
         -------
-        openpathsampling.AbstractSnapshot()
-            the shallow object
+        :class:`openpathsampling.AbstractSnapshot`
+            the shallow copy
 
         Notes
         -----
@@ -110,12 +85,10 @@ class AbstractSnapshot(StorableObject):
         """
         this = self.__class__.__new__(self.__class__)
         AbstractSnapshot.__init__(this, topology=self.topology)
-        this._is_reversed = self._is_reversed
         return this
 
     def create_reversed(self):
         this = self.copy()
-        this._is_reversed = True
         this._reversed = self
         return this
 
@@ -165,4 +138,3 @@ class Snapshot(FeatureSnapshot):
     """
     A fast MDSnapshot
     """
-

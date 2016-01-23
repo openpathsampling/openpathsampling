@@ -127,13 +127,10 @@ class AbstractSnapshotStore(ObjectStore):
 
         st_idx = int(idx / 2)
 
-        if snapshot._is_reversed:
-            self._set(st_idx, snapshot.create_reversed())
-        else:
-            self._set(st_idx, snapshot)
+        self._set(st_idx, snapshot)
 
         if snapshot._reversed is not None:
-            reversed = snapshot._reversed._reversed = LoaderProxy(self, idx)
+            snapshot._reversed._reversed = LoaderProxy(self, idx)
             # mark reversed as stored
             self.index[snapshot._reversed] = AbstractSnapshotStore.paired_idx(idx)
 
@@ -144,6 +141,26 @@ class AbstractSnapshotStore(ObjectStore):
 
     def __len__(self):
         return 2 * super(AbstractSnapshotStore, self).__len__()
+
+    def duplicate(self, snapshot):
+        """
+        Store a duplicate of the snapshot as new
+
+        Parameters
+        ----------
+        snapshot
+
+        Returns
+        -------
+
+        """
+        idx = self.free()
+        st_idx = int(idx / 2)
+        self._set(st_idx, snapshot.create_reversed())
+
+        return idx
+
+
 
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES

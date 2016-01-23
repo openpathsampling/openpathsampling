@@ -1,5 +1,18 @@
 from openpathsampling.netcdfplus import DelayedLoader
 
+def has(attr):
+    def _has(func):
+        def inner(self, *args, **kwargs):
+            if hasattr(self, attr) and getattr(self, attr) is not None:
+                return func(self, *args, **kwargs)
+            else:
+                return None
+
+        return inner
+
+    return _has
+
+
 def set_features(*features):
     """
     Select snapshot features
@@ -14,7 +27,7 @@ def set_features(*features):
 
         __features__ = dict()
         __features__['classes'] = features
-        for name in ['attributes', 'minus', 'reversal', 'properties']:
+        for name in ['attributes', 'minus', 'reversal', 'properties', 'flip']:
             __features__[name] = list()
 
         if use_lazy_reversed:
@@ -31,7 +44,7 @@ def set_features(*features):
                     __features__['properties'] += [prop]
                     setattr(cls, prop, property(getattr(feature, prop)))
 
-            for name in ['attributes', 'minus', 'lazy']:
+            for name in ['attributes', 'minus', 'lazy', 'flip']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
@@ -43,6 +56,7 @@ def set_features(*features):
             attr for attr in __features__['attributes']
             if attr not in __features__['minus']
             and attr not in __features__['properties']
+            and attr not in __features__['flip']
         ]
 
         __features__['parameters'] = [
@@ -79,7 +93,6 @@ def set_features(*features):
         code += [
             "def copy(self):",
             "    this = cls.__new__(cls)",
-            "    this._is_reversed = self._is_reversed",
         ]
 
         if __features__['lazy']:
@@ -122,7 +135,6 @@ def set_features(*features):
         code += [
             "def create_reversed(self):",
             "    this = cls.__new__(cls)",
-            "    this._is_reversed = True",
         ]
 
         if __features__['lazy']:
@@ -142,6 +154,7 @@ def set_features(*features):
 
         code += map("    this.{0} = self.{0}".format, __features__['reversal'])
         code += map("    this.{0} = - self.{0}".format, __features__['minus'])
+        code += map("    this.{0} = ~ self.{0}".format, __features__['flip'])
 
         code += [
             "    return this"
@@ -161,12 +174,16 @@ def set_features(*features):
 
         # we use as signature all attributes
         parameters = ['engine=None']
-        parameters += map('{0}=None'.format, __features__['parameters'])
+        for feat in __features__['parameters']:
+            if feat in __features__['flip']:
+                parameters += ['{0}=False'.format(feat)]
+            else:
+                parameters += ['{0}=None'.format(feat)]
+
         signature = ', '.join(parameters)
         code = []
         code += [
             "def __init__(self, %s):" % signature,
-            "    self._is_reversed = False",
         ]
 
         if __features__['lazy']:
