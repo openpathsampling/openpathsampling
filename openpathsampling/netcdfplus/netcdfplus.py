@@ -34,6 +34,7 @@ class NetCDFPlus(netCDF4.Dataset):
         'bool': np.int16,
         'str': str,
         'json': str,
+        'jsonobj': str,
         'numpy.float32': np.float32,
         'numpy.float64': np.float64,
         'numpy.int8': np.int8,
@@ -147,7 +148,7 @@ class NetCDFPlus(netCDF4.Dataset):
         allows to write `storage.objects['samples'][idx]` like we
         write `storage.variables['ensemble_json'][idx]`
         """
-        return self._objects
+        return self._stores
 
     def update_storable_classes(self):
         self.simplifier.update_class_list()
@@ -268,10 +269,10 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Sets the basic properties for the storage
         """
+        self._stores = {}
         self._objects = {}
-        self._storages = {}
-        self._storages_base_cls = {}
         self._obj_store = {}
+        self._storages_base_cls = {}
         self.simplifier = StorableObjectJSON(self)
         self.vars = dict()
         self.units = dict()
@@ -285,12 +286,12 @@ class NetCDFPlus(netCDF4.Dataset):
         self.stores.save(store)
 
     def finalize_stores(self):
-        for store in self._storages.values():
+        for store in self._stores.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
                 store._init()
 
-        for store in self._storages.values():
+        for store in self._stores.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
                 store._init()
@@ -320,12 +321,13 @@ class NetCDFPlus(netCDF4.Dataset):
 
             setattr(self, store.prefix, store)
 
-        self._objects[name] = store
+        self._stores[name] = store
 
-        self._storages[store.content_class] = store
+        if store.content_class is not None:
+            self._objects[store.content_class] = store
 
-        self._obj_store[store.content_class] = store
-        self._obj_store.update({cls: store for cls in store.content_class.descendants()})
+            self._obj_store[store.content_class] = store
+            self._obj_store.update({cls: store for cls in store.content_class.descendants()})
 
     def _initialize(self):
         """
@@ -361,7 +363,7 @@ class NetCDFPlus(netCDF4.Dataset):
         Only runs when the storage is created.
         """
 
-        for storage in self._objects.values():
+        for storage in self._stores.values():
             storage._init()
 
         self.update_delegates()
@@ -375,7 +377,7 @@ class NetCDFPlus(netCDF4.Dataset):
         Only runs when an existing storage is opened.
         """
 
-        for storage in self._objects.values():
+        for storage in self._stores.values():
             storage._restore()
 
     def list_stores(self):
@@ -387,7 +389,7 @@ class NetCDFPlus(netCDF4.Dataset):
         list of str
             list of stores that can be accessed using `storage.[store]`
         """
-        return [store.prefix for store in self.objects.values()]
+        return [store.prefix for store in self._stores.values()]
 
     def list_storable_objects(self):
         """
@@ -398,7 +400,7 @@ class NetCDFPlus(netCDF4.Dataset):
         list of class
             list of base classes that can be stored using `storage.save(obj)`
         """
-        return [store.content_class for store in self.objects.values()]
+        return [store.content_class for store in self.objects.values() if store.content_class is not None]
 
     def find_store(self, obj):
         return self._obj_store.get(obj.__class__, None)
@@ -459,8 +461,8 @@ class NetCDFPlus(netCDF4.Dataset):
         `Ensemble` or `"Ensemble"` and not use the subclass
         """
 
-        if obj_type in self._storages:
-            store = self._storages[obj_type]
+        if obj_type in self._objects:
+            store = self._objects[obj_type]
             return store.load(idx)
         elif obj_type in self._obj_store:
             # check if a store for the base_cls exists and use this one
@@ -482,12 +484,12 @@ class NetCDFPlus(netCDF4.Dataset):
             The stored object from which the index is to be returned
         """
         if hasattr(obj, 'base_cls'):
-            store = self._storages[obj.base_cls]
+            store = self._objects[obj.base_cls]
             return store.idx(obj)
 
     def repr_json(self, obj):
         if hasattr(obj, 'base_cls'):
-            store = self._storages[obj.base_cls]
+            store = self._objects[obj.base_cls]
 
             if store.json:
                 return store.variables['json'][store.idx(obj)]
@@ -693,8 +695,12 @@ class NetCDFPlus(netCDF4.Dataset):
         elif var_type.startswith('numpy.'):
             pass
 
-        elif var_type == 'json':
+        elif var_type == 'jsonobj':
             setter = lambda v: self.simplifier.to_json_object(v)
+            getter = lambda v: self.simplifier.from_json(v)
+
+        elif var_type == 'json':
+            setter = lambda v: self.simplifier.to_json(v)
             getter = lambda v: self.simplifier.from_json(v)
 
         elif var_type.startswith('obj.'):
@@ -866,7 +872,7 @@ class NetCDFPlus(netCDF4.Dataset):
         if chunksizes is not None:
             chunksizes = list(chunksizes)
             for ix, dim in enumerate(chunksizes):
-                if type == -1:
+                if dim == -1:
                     chunksizes[ix] = len(ncfile.dimensions[dimensions[ix]])
 
                 if type(dim) is str:

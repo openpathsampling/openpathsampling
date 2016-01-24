@@ -70,7 +70,10 @@ class StorableObject(object):
                 if StorableObject in cls.__bases__ or StorableNamedObject in cls.__bases__:
                     cls._base = cls
                 else:
-                    cls._base = cls.__base__.base()
+                    if hasattr(cls.__base__, 'base'):
+                        cls._base = cls.__base__.base()
+                    else:
+                        cls._base = cls
 
         return cls._base
 
@@ -185,7 +188,9 @@ class StorableNamedObject(StorableObject):
             raise ValueError('Objects cannot be renamed to "%s" after is has been saved, it is already named "%s"' % (
                 name, self._name))
         else:
-            self._name = name
+            if name != self._name:
+                self._name = name
+                logger.debug('Nameable object is renamed from "%s" to "%s"' % (self._name, name))
 
     @property
     def is_named(self):
@@ -217,5 +222,3 @@ class StorableNamedObject(StorableObject):
             self._name = name
 
         return self
-
-
