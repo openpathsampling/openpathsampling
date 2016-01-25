@@ -301,6 +301,7 @@ class CacheChainDict(ChainDict):
             if self.reversible:
                 self.cache[item.reversed] = value
 
+
 class ReversibleCacheChainDict(CacheChainDict):
     """
     Return Values from a cache filled from returned values of the underlying ChainDicts and
@@ -320,6 +321,7 @@ class ReversibleCacheChainDict(CacheChainDict):
             self.cache[item] = value
             if self.reversible:
                 self.cache[item.reversed] = value
+
 
 class LRUChainDict(CacheChainDict):
     """
@@ -388,7 +390,6 @@ class StoredDict(ChainDict):
             for key, value in pairs:
                 self.cache[key] = value
             self._last_n_objects = len(self.key_store)
-
 
     def cache_all(self):
         values = self.value_store[:]
@@ -479,6 +480,7 @@ class ReversibleStoredDict(StoredDict):
             if keys_fw:
                 values_fw = [self.cache[idx] for idx in keys if not idx & 1]
                 self.value_store[keys_fw] = values_fw
+
             if keys_bw:
                 values_bw = [self.cache[idx] for idx in keys if idx & 1]
                 self.backward_store[keys_bw] = values_bw
@@ -495,8 +497,10 @@ class ReversibleStoredDict(StoredDict):
 
             if self.reversible:
                 # double all pairs of values and remove Nones
+                val_old = values
                 values = map(lambda x : x[0] if x[0] is not None else x[1], zip(values[0::2], values[1::2]))
                 values = [val for val in values for _ in (0, 1)]
+
 
             pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
             if len(pairs) > 0:
@@ -505,10 +509,11 @@ class ReversibleStoredDict(StoredDict):
                     keys_fw, values_fw = zip(*pair_fw)
                     self.value_store[list(keys_fw)] = list(values_fw)
 
-                pair_bw = [(pair[0] / 2, pair[1]) for pair in pairs if pair[0] & 1]
-                if pair_bw:
-                    keys_bw, values_bw = zip(*pair_bw)
-                    self.backward_store[list(keys_bw)] = list(values_bw)
+                if not self.reversible:
+                    pair_bw = [(pair[0] / 2, pair[1]) for pair in pairs if pair[0] & 1]
+                    if pair_bw:
+                        keys_bw, values_bw = zip(*pair_bw)
+                        self.backward_store[list(keys_bw)] = list(values_bw)
 
                 for key, value in pairs:
                     self.cache[key] = value
@@ -516,11 +521,14 @@ class ReversibleStoredDict(StoredDict):
             self._last_n_objects = len(self.key_store)
 
     def cache_all(self):
+        # TODO: This only makes sense if the cache can fit everything.
+
         values_fw = self.value_store[:]
         if self.reversible:
             values_bw = values_fw
         else:
             values_bw = self.backward_store[:]
+
         self.cache.clear()
         [self.cache.__setitem__(2*key, value) for key, value in enumerate(values_fw)]
         [self.cache.__setitem__(2*key + 1, value) for key, value in enumerate(values_bw)]
@@ -572,3 +580,4 @@ class ReversibleStoredDict(StoredDict):
             replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
 
         return replace
+
