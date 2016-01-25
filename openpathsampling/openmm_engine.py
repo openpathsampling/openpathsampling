@@ -1,4 +1,3 @@
-import numpy as np
 import simtk.unit as u
 from simtk.openmm.app import Simulation
 import simtk.openmm

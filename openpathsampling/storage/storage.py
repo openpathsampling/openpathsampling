@@ -48,8 +48,6 @@ class Storage(NetCDFPlus):
         ----------
         filename : str
             the name of the cloned storage
-        subset : list of int
-            a list of atom indices to be kept for the cloned storage
 
         Notes
         -----
