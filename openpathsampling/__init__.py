@@ -16,7 +16,6 @@ from ensemble import (
 )
 
 from snapshot import Snapshot, ToySnapshot, AbstractSnapshot, MDSnapshot, FeatureSnapshot
-from snapshot_content import Configuration, Momentum
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 

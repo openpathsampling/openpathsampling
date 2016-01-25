@@ -1,4 +1,4 @@
-import openpathsampling.snapshot_content
+from openpathsampling.snapshot_content import Configuration, Momentum
 
 import mdtraj as md
 import simtk.unit as u
@@ -46,12 +46,12 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
     else:
         topology = paths.MDTrajTopology(pdb.topology)
 
-    configuration = paths.Configuration(
+    configuration = Configuration(
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
     )
 
-    momentum = paths.Momentum(
+    momentum = Momentum(
         velocities=u.Quantity(velocities, u.nanometers / u.picoseconds)
     )
 
@@ -91,12 +91,12 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
                     v / u.nanometers for v in
                     testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
 
-    configuration = paths.Configuration(
+    configuration = Configuration(
         coordinates=testsystem.positions,
         box_vectors=box_vectors
     )
 
-    momentum = paths.Momentum(
+    momentum = Momentum(
         velocities=velocities
     )
 
@@ -127,7 +127,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     #TODO: We could also allow to have empty energies
 
     trajectory = paths.Trajectory()
-    empty_momentum = openpathsampling.snapshot_content.Momentum(
+    empty_momentum = Momentum(
         velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond),
         kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
     )
@@ -145,7 +145,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
         else:
             box_v = None
 
-        config = openpathsampling.snapshot_content.Configuration(
+        config = Configuration(
             coordinates=coord,
             box_vectors=box_v,
             potential_energy=u.Quantity(0.0, u.kilojoule_per_mole)
@@ -186,12 +186,12 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
     else:
         topology = paths.MDTrajTopology(md.Topology.from_openmm(topology))
 
-    configuration = paths.Configuration(
+    configuration = Configuration(
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers)
     )
 
-    momentum = paths.Momentum(
+    momentum = Momentum(
         velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds)
     )
 
