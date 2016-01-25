@@ -1,5 +1,5 @@
 from openpathsampling.netcdfplus import ObjectStore
-from openpathsampling.tools import units_from_snapshot
+from openpathsampling.tools import simtk_units_from_md_snapshot
 
 from openpathsampling.snapshot_content import Configuration
 
@@ -120,7 +120,7 @@ class ConfigurationStore(ObjectStore):
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
-        units = units_from_snapshot(self.storage._template)
+        units = simtk_units_from_md_snapshot(self.storage._template)
 
         self.create_variable('coordinates', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
