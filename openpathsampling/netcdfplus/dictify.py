@@ -265,7 +265,7 @@ class StorableObjectJSON(ObjectJSON):
                     return self.storage
 
             if '_idx' in obj and '_obj' in obj:
-                store = self.storage._objects[obj['_obj']]
+                store = self.storage._stores[obj['_obj']]
                 result = store.load(obj['_idx'])
 
                 return result

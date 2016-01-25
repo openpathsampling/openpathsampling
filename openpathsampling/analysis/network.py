@@ -57,8 +57,12 @@ class TPSNetwork(TransitionNetwork):
 
         all_initial = paths.join_volumes(initial_states)
         all_initial.name = "|".join([v.name for v in initial_states])
-        all_final = paths.join_volumes(final_states)
-        all_final.name = "|".join([v.name for v in final_states])
+
+        if set(initial_states) == set(final_states):
+            all_final = all_initial
+        else:
+            all_final = paths.join_volumes(final_states)
+            all_final.name = "|".join([v.name for v in final_states])
         self._sampling_transitions = [
             paths.TPSTransition(all_initial, all_final)
         ]
