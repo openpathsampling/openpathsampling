@@ -21,6 +21,7 @@ import simtk.openmm as mm
 from simtk.openmm import app
 from simtk import unit as u
 
+
 def setUp():
     global topology, template, system
     template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
@@ -44,9 +45,9 @@ def setUp():
         ewaldErrorTolerance=0.0005
     )
 
+
 class testOpenMMEngine(object):
     def setUp(self):
-        t1 = time.time()
 
         # OpenMM Integrator
         integrator = mm.LangevinIntegrator(
@@ -55,7 +56,6 @@ class testOpenMMEngine(object):
             2.0*u.femtoseconds
         )
         integrator.setConstraintTolerance(0.00001)
-
 
         # Engine options
         options = {
@@ -66,8 +66,6 @@ class testOpenMMEngine(object):
             'timestep': 2.0*u.femtoseconds
         }
 
-        t2 = time.time()
-
         self.engine = OpenMMEngine(
             template,
             system,
@@ -75,12 +73,14 @@ class testOpenMMEngine(object):
             options
         )
 
+        print hasattr(self.engine, 'current_snapshot')
+
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
         context.setPositions(self.engine.template.coordinates)
+
         context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
 
-        t3 = time.time()
 
     def teardown(self):
         pass
@@ -139,6 +139,11 @@ class testOpenMMEngine(object):
         assert_not_equal_array_array(old_vel, new_vel)
 
     def test_generate(self):
+        print self.engine
+        print dir(self.engine)
+        print hasattr(self.engine, 'current_snapshot')
+        print self.engine._current_snapshot
+        print self.engine.current_snapshot
         traj = self.engine.generate(self.engine.current_snapshot, [true_func])
         assert_equal(len(traj), self.engine.n_frames_max)
 

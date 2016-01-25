@@ -2,6 +2,8 @@ import simtk.unit as u
 from simtk.openmm.app import Simulation
 import simtk.openmm
 
+from openpathsampling.snapshot_content import Momentum, Configuration
+
 import openpathsampling as paths
 
 import logging
@@ -187,12 +189,12 @@ class OpenMMEngine(paths.DynamicsEngine):
                                                  getVelocities=True,
                                                  getEnergy=True)
 
-        configuration = paths.Configuration(
+        configuration = Configuration(
             coordinates = state.getPositions(asNumpy=True),
             box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
         )
 
-        momentum = paths.Momentum(
+        momentum = Momentum(
             velocities = state.getVelocities(asNumpy=True)
         )
 
@@ -203,6 +205,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         )
 
         return snapshot
+
     @property
     def current_snapshot(self):
         if self._current_snapshot is None:

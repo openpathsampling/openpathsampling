@@ -38,23 +38,32 @@ class AbstractSnapshot(StorableObject):
         self.topology = topology
 
     def __eq__(self, other):
-        # This implements comparison with potentially lazy loaded snapshots
-        if self is other:
-            return True
-        elif hasattr(other, '_idx'):
-            if other.__subject__ is self:
-                return True
+        if isinstance(other, self.__class__):
+            return self is other
 
-        return False
+        return NotImplemented
+
+    def __ne__(self, other):
+        if isinstance(other, self.__class__):
+            return not self is other
+
+        return NotImplemented
 
     @property
     def reversed(self):
         """
         Get the reversed copy.
 
+        Returns
+        -------
+        :class:`openpathsampling.snapshots.AbstractSnapshot`
+            the reversed partner of the current snapshot
+
         Snapshots exist in pairs and this returns the reversed counter part.
-        No actual velocities are changed. Only if you ask for the velocities of
-        a reversed object the velocities will be multiplied by -1.
+        The actual implementation takes care the the reversed version have
+        reversed momenta, etc. Usually these will not be stored separately but
+        flipped when requested.
+
         """
         if self._reversed is None:
             self._reversed = self.create_reversed()
