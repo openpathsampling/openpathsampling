@@ -1,4 +1,4 @@
-from openpathsampling.snapshot_content import Configuration, Momentum
+from openpathsampling.features.shared import Configuration, Momentum
 
 import mdtraj as md
 import simtk.unit as u
@@ -108,6 +108,7 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
 
     return snapshot
 
+
 def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     """
     Construct a Trajectory object from an mdtraj.Trajectory object
@@ -123,13 +124,9 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
         the constructed Trajectory instance
     """
 
-    #TODO: Fix energies and move these to specialized CVs
-    #TODO: We could also allow to have empty energies
-
     trajectory = paths.Trajectory()
     empty_momentum = Momentum(
-        velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond),
-        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
+        velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
     )
     if simple_topology:
         topology = paths.Topology(*mdtrajectory.xyz[0].shape)
@@ -147,8 +144,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
 
         config = Configuration(
             coordinates=coord,
-            box_vectors=box_v,
-            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole)
+            box_vectors=box_v
         )
 
         snap = paths.Snapshot(
@@ -202,35 +198,6 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
     )
 
     return snapshot
-
-
-def simtk_units_from_md_snapshot(snapshot):
-    """
-    Returns a dict of simtk.unit.Unit instances that represent the used units in the snapshot
-
-    Parameters
-    ----------
-    snapshot : Snapshot
-        the snapshot to be used
-
-    Returns
-    -------
-    units : dict of {str : simtk.unit.Unit }
-        representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
-        the simtk.unit.Unit to be used
-    """
-
-    units = {'length': None, 'energy': None, 'velocity': None}
-
-    if snapshot.coordinates is not None:
-        if hasattr(snapshot.coordinates, 'unit'):
-            units['length'] = snapshot.coordinates.unit
-
-    if snapshot.velocities is not None:
-        if hasattr(snapshot.velocities, 'unit'):
-            units['velocity'] = snapshot.velocities.unit
-
-    return units
 
 
 def to_openmm_topology(obj):

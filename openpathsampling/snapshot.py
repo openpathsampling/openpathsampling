@@ -7,7 +7,6 @@
 import abc
 
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
-
 import features
 
 

@@ -2,7 +2,7 @@ import simtk.unit as u
 from simtk.openmm.app import Simulation
 import simtk.openmm
 
-from openpathsampling.snapshot_content import Momentum, Configuration
+from openpathsampling.features.shared import Momentum, Configuration
 
 import openpathsampling as paths
 
