@@ -1,3 +1,10 @@
+"""
+Attributes
+----------
+engine : :class:`openpathsampling.DynamicsEngine`
+    referenec to the engine used to generate the snapshot
+"""
+
 attributes = ['engine', 'topology']
 
 

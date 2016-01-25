@@ -1,6 +1,8 @@
 """
-velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
-    atomic velocities (default: None)
+Attributes
+----------
+velocities : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
+    atomic velocities
 """
 
 attributes = ['velocities']

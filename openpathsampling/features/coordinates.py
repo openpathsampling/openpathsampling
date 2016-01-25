@@ -1,3 +1,11 @@
+"""
+Attributes
+----------
+coordinates : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
+    atomic coordinates
+"""
+
+
 attributes = ['coordinates']
 
 

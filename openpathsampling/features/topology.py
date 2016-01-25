@@ -1,3 +1,11 @@
+"""
+Attributes
+----------
+topology : :class:`openpathsampling.Topolgy`
+    object containing a description of the snapshots topology
+"""
+
+
 attributes = ['topology']
 
 

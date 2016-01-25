@@ -1,4 +1,5 @@
 from openpathsampling.netcdfplus import DelayedLoader
+from numpydocparse import NumpyDocParser
 
 def has(attr):
     def _has(func):
@@ -18,12 +19,15 @@ def set_features(*features):
     Select snapshot features
     """
 
+    parser = NumpyDocParser()
     use_lazy_reversed = True
 
     def _decorator(cls):
 
         # important for compile to work properly
         import openpathsampling as paths
+
+        parser.clear()
 
         __features__ = dict()
         __features__['classes'] = features
@@ -73,20 +77,29 @@ def set_features(*features):
 
         # update docstring
 
-        docs = cls.__doc__.split('\n')
+        # from class
+        parser.add_docs_from(cls)
 
-        docs += [
-            '',
-            'Attributes',
-            '----------'
-        ]
+        # from top of features
+        for feat in __features__['classes']:
+            parser.add_docs_from(feat)
 
-        for feat in __features__:
-            if feat.__doc__ is not None:
-                docs += [feat.__doc__]
+            # from properties ???
+            for prop in __features__['properties']:
+                if hasattr(feat, prop):
+                    if prop not in parser.attributes:
+                        parser.add_docs_from(
+                            getattr(feat, prop),
+                            keep_only=['attributes'],
+                            translate={'returns': 'attributes'}
+                        )
 
-        cls.__doc__ = '\n'.join(map(lambda x : x.strip(), docs))
-        cls.__doc__ = cls.__doc__.replace('\n\n\n', '\n\n')
+        cls.__doc__ = parser.get_docstring()
+
+        # print '+++++++++++++++++++++++++++'
+        # print cls.__doc__
+        # print '+++++++++++++++++++++++++++'
+        # print
 
         # compile copy()
         code = []

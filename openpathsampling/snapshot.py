@@ -106,12 +106,7 @@ class FeatureSnapshot(AbstractSnapshot):
 )
 class ToySnapshot(FeatureSnapshot):
     """
-    Simulation snapshot. Contains references to a configuration and momentum
-
-    Create a toy snapshot
-
-    If you want to obtain a snapshot from a currently-running MD topology,
-    use that topology's `.current_snapshot property`.
+    Simulation snapshot. Only references to coordinates and velocities
     """
 
 
@@ -136,5 +131,5 @@ class MDSnapshot(FeatureSnapshot):
 )
 class Snapshot(FeatureSnapshot):
     """
-    A fast MDSnapshot
+    The standard MDSnapshot supporting coordinate, velocities and box_vectors
     """

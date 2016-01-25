@@ -20,7 +20,11 @@ def netcdfplus_init(store):
 
 def coordinates(snapshot):
     """
-    The coordinates in the configuration
+    Returns
+    -------
+    coordinates: numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
+        the atomic coordinates of the configuration. The coordinates are wrapped in a
+        simtk.unit.Unit.
     """
 
     if snapshot.configuration is not None:
@@ -31,7 +35,11 @@ def coordinates(snapshot):
 
 def box_vectors(snapshot):
     """
-    The box_vectors in the configuration
+    Returns
+    -------
+    box_vectors: numpy.ndarray, shape=(3, 3), dtype=numpy.float32
+        the box_vectors of the configuration. The coordinates are wrapped in a
+        simtk.unit.Unit.
     """
     if snapshot.configuration is not None:
         return snapshot.configuration.box_vectors
@@ -41,11 +49,9 @@ def box_vectors(snapshot):
 
 def md(snapshot):
     """
-    Returns a mdtraj Trajectory object that contains only one frame
-
     Returns
     -------
-    mdtraj.Trajectory
+    md : mdtraj.Trajectory
         the actual trajectory object. Can be used with all functions from mdtraj
 
     Notes
