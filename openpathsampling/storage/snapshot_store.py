@@ -148,15 +148,32 @@ class AbstractSnapshotStore(ObjectStore):
 
         Parameters
         ----------
-        snapshot
+        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
 
         Returns
         -------
+        int
+            the index used for storing it in the store. This is the save as used by
+            save.
+
+        Notes
+        -----
+        This will circumvent the caching and indexing completely. This would be equivalent
+        of creating a copy of the current snapshot and store this one and throw the copy
+        away, leaving the given snapshot untouched. This allows you to treat the snapshot
+        as mutual.
+
+        The use becomes more obvious when applying to storing trajectories. The only way
+        to make use of this feature is using the returned `idx`
+
+        >>> idx = store.duplicate(snap)
+        >>> loaded = store[idx]  # return a duplicated as new object
+        >>> proxy = paths.LoaderProxy(store, idx) # use the duplicate without loading
 
         """
         idx = self.free()
         st_idx = int(idx / 2)
-        self._set(st_idx, snapshot.create_reversed())
+        self._set(st_idx, snapshot)
 
         return idx
 
@@ -165,6 +182,8 @@ class AbstractSnapshotStore(ObjectStore):
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
 # =============================================================================================
+
+# TODO: Move the feature stuff to module feature ???
 
 class FeatureSnapshotStore(AbstractSnapshotStore):
     """
