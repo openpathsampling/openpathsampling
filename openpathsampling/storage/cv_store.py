@@ -1,4 +1,4 @@
-from openpathsampling.netcdfplus import UniqueNamedObjectStore
+from openpathsampling.netcdfplus import UniqueNamedObjectStore, NetCDFPlus
 
 
 class ObjectDictStore(UniqueNamedObjectStore):
@@ -38,7 +38,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
         """
         self.vars['json'][idx] = objectdict
 
-        if objectdict.store_cache:
+        if objectdict.cv_store_cache:
             self.create_cache(objectdict)
 
     def cache_var_name(self, idx):
@@ -57,18 +57,18 @@ class ObjectDictStore(UniqueNamedObjectStore):
             if var_name not in self.storage.variables:
                 params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
 
-                params = objectdict.return_parameters_from_template(self.storage.template)
-                shape = params['cv_return_shape']
+                shape = params['dimensions']
 
                 if shape is None:
                     chunksizes = None
                 else:
-                    chunksizes = tuple(params['cv_return_shape'])
+                    chunksizes = tuple(params['dimensions'])
 
                 self.key_store.create_variable(
                     var_name,
                     var_type=params['var_type'],
-                    dimensions=params['dimensions'],
+                    dimensions=shape,
+                    chunksizes=chunksizes,
                     simtk_unit=params['simtk_unit'],
                     maskable=True
                 )
@@ -203,8 +203,8 @@ class ReversibleObjectDictStore(ObjectDictStore):
 
             if var_name not in self.storage.variables:
 
-                params = objectdict.return_parameters_from_template(self.storage.template)
-                shape = params['cv_return_shape']
+                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
+                shape = params['dimensions']
 
                 if shape is None:
                     chunksizes = None
@@ -213,20 +213,20 @@ class ReversibleObjectDictStore(ObjectDictStore):
 
                 self.key_store.create_variable(
                     var_name + '_fw',
-                    var_type=params['cv_return_type'],
+                    var_type=params['var_type'],
                     dimensions=shape,
                     chunksizes=chunksizes,
-                    simtk_unit=params['cv_return_simtk_unit'],
+                    simtk_unit=params['simtk_unit'],
                     maskable=True
                 )
 
-                if not objectdict.time_reversible:
+                if not objectdict.cv_time_reversible:
                     self.key_store.create_variable(
                         var_name + '_bw',
-                        var_type=params['cv_return_type'],
+                        var_type=params['var_type'],
                         dimensions=shape,
                         chunksizes=chunksizes,
-                        simtk_unit=params['cv_return_simtk_unit'],
+                        simtk_unit=params['simtk_unit'],
                         maskable=True
                     )
 
@@ -291,7 +291,7 @@ class ReversibleObjectDictStore(ObjectDictStore):
         """
         idx = self.index.get(objectdict, None)
         if idx is not None:
-            if objectdict.time_reversible:
+            if objectdict.cv_time_reversible:
                 objectdict.set_cache_store(self.key_store, self.cache_var(idx), self.cache_var(idx))
             else:
                 objectdict.set_cache_store(self.key_store, self.cache_var(idx), self.cache_bw(idx))
@@ -319,7 +319,7 @@ class ReversibleObjectDictStore(ObjectDictStore):
 
         # op = self.load_json(self.prefix + '_json', idx)
         op = self.vars['json'][idx]
-        if op.time_reversible:
+        if op.cv_time_reversible:
             op.set_cache_store(self.key_store, self.cache_var(idx), self.cache_var(idx))
         else:
             op.set_cache_store(self.key_store, self.cache_var(idx), self.cache_bw(idx))

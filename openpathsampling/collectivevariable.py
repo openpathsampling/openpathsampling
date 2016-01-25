@@ -88,7 +88,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         super(CollectiveVariable, self).__init__(post=self._single_dict > self._cache_dict)
 
-    def set_cache_store(self, key_store, value_store):
+    def set_cache_store(self, key_store, value_store, backward_store):
         self._store_dict = cd.ReversibleStoredDict(
             key_store,
             value_store,
