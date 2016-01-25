@@ -44,6 +44,9 @@ class MomentumStore(ObjectStore):
     def __init__(self):
         super(MomentumStore, self).__init__(Momentum, json=False)
 
+    def to_dict(self):
+        return {}
+
     def _save(self, momentum, idx):
         self.vars['velocities'][idx, :, :] = momentum.velocities
 

@@ -53,33 +53,36 @@ class ChainDict(object):
     """
 
     def __init__(self):
-        self.post = None
+        self._post = None
 
     def __getitem__(self, items):
         # first apply the own _get functions to compute
         results = self._get_list(items)
 
-        if self.post is not None:
+        if self._post is not None:
             nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
             if len(nones) == 0:
                 return results
             else:
-                rep = self.post[[p for p in nones]]
-                self._add_new(nones, rep)
+                rep = self._post[[p for p in nones]]
+                self._set_list(nones, rep)
 
                 it = iter(rep)
                 return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
 
         return results
 
-    def _add_new(self, items, values):
-        pass
-
     def __setitem__(self, key, value):
+        print self, key, value
         if isinstance(key, collections.Iterable):
             self._set_list(key, value)
         else:
-            self._set(key, value)
+            if value is not None:
+                self._set(key, value)
+
+        # pass __setitem__ to underlying dicts as default
+        if self._post is not None:
+            self._post[key] = value
 
     def _set(self, item, value):
         """
@@ -92,11 +95,12 @@ class ChainDict(object):
 
     def _set_list(self, items, values):
         """
-        Implementation on how to set a list of keys to this chaindict
+        Implementation on how to set multiple values to this chaindict
 
-        Default is to call _set on all single keys
+        Default implementation is to not store anything.
+        This is mostly used in caching and stores
         """
-        [self._set(item, value) for item, value in zip(items, values) if value is not None]
+        [self._set(item, value) for item, value in zip(items, values) if values is not None]
 
     def _get(self, item):
         """
@@ -118,16 +122,42 @@ class ChainDict(object):
     def __call__(self, items):
         return self[items]
 
-    ## ToDo: We might replace + by > to make the passing direction clear
-    def __add__(self, other):
+    def __gt__(self, other):
         """
-        Combine two ChainDicts first + seconds into a new one.
+        Combine two ChainDicts first > next into a new one.
 
-        >>> new_dict = first_dict + fall_back
+        >>> new_dict = first_dict > fall_back
         """
-        other.post = self
+        last = self
+        while last._post is not None:
+            last = last._post
+
+        last._post = other
+        return self
+
+    def __lt__(self, other):
+        """
+        Combine two ChainDicts seconds < first into a new one.
+
+        >>> new_dict = fall_back < first_dict
+        """
+        last = other
+        while last._post is not None:
+            last = last.post
+
+        last._post = self
         return other
 
+    @property
+    def passing_chain(self):
+        chain = [self]
+        while chain[-1]._post is not None:
+            chain.append(chain[-1]._post)
+
+        return chain
+
+    def str_chain(self):
+        return ' > '.join(map(lambda x : x.__class__.__name__, self.passing_chain))
 
 class Wrap(ChainDict):
     """A ChainDict that passes on all request to the underlying ChainDict
@@ -140,13 +170,13 @@ class Wrap(ChainDict):
             the underlying chain dict to be used
         """
         super(Wrap, self).__init__()
-        self.post = post
+        self._post = post
 
     def __getitem__(self, items):
-        return self.post[items]
+        return self._post[items]
 
     def __setitem__(self, key, value):
-        self.post[key] = value
+        self._post[key] = value
 
 
 class MergeNumpy(ChainDict):
@@ -154,7 +184,11 @@ class MergeNumpy(ChainDict):
     """
 
     def __getitem__(self, items):
-        return np.array(self.post[items])
+        return np.array(self._post[items])
+
+    def __setitem__(self, key, value):
+        self._post[key] = value
+
 
 class ExpandSingle(ChainDict):
     """
@@ -163,7 +197,7 @@ class ExpandSingle(ChainDict):
 
     def __getitem__(self, items):
         if type(items) is LoaderProxy:
-            return self.post[[items]][0]
+            return self._post[[items]][0]
         if hasattr(items, '__iter__'):
             try:
                 dummy = len(items)
@@ -173,17 +207,17 @@ class ExpandSingle(ChainDict):
                                 'You can wrap your iterator in list() if you know that it will finish.')
 
             try:
-                return self.post[items.as_proxies()]
+                return self._post[items.as_proxies()]
             except AttributeError:
                 # turn possible iterators into list since we have to do it anyway.
                 # Iterators do not work
-                return self.post[list(items)]
+                return self._post[list(items)]
 
         else:
-            return self.post[[items]][0]
+            return self._post[[items]][0]
 
     def __setitem__(self, key, value):
-        self.post[key] = value
+        self._post[key] = value
 
 class Transform(ChainDict):
     """
@@ -198,10 +232,10 @@ class Transform(ChainDict):
         self.transform = transform
 
     def __getitem__(self, item):
-        return self.post[self.transform(item)]
+        return self._post[self.transform(item)]
 
     def __setitem__(self, key, value):
-        self.post[self.transform(key)] = value
+        self._post[self.transform(key)] = value
 
 
 class Function(ChainDict):
@@ -224,9 +258,6 @@ class Function(ChainDict):
         self._eval = fnc
         self.requires_lists = requires_lists
         self.scalarize_numpy_singletons = scalarize_numpy_singletons
-
-    def _contains(self, item):
-        return False
 
     def _get(self, item):
         if self._eval is None:
@@ -260,12 +291,15 @@ class Function(ChainDict):
 
         return results
 
-
     def get_transformed_view(self, transform):
         def fnc(obj):
             return transform(self(obj))
 
         return fnc
+
+    def __setitem__(self, key, value):
+        # Cannot set the value of a function and it has no fallback
+        pass
 
 
 class CacheChainDict(ChainDict):
@@ -285,21 +319,14 @@ class CacheChainDict(ChainDict):
     def _contains(self, item):
         return item in self.cache
 
-    def _set(self, item, value):
-        if value is not None:
-            self.cache[item] = value
-
     def _get(self, item):
         try:
             return self.cache[item]
         except KeyError:
             return None
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            self.cache[item] = value
-            if self.reversible:
-                self.cache[item.reversed] = value
+    def _set(self, item, value):
+        self.cache[item] = value
 
 
 class ReversibleCacheChainDict(CacheChainDict):
@@ -316,11 +343,10 @@ class ReversibleCacheChainDict(CacheChainDict):
         super(ReversibleCacheChainDict, self).__init__(cache)
         self.reversible = reversible
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            self.cache[item] = value
-            if self.reversible:
-                self.cache[item.reversed] = value
+    def _set(self, item, value):
+        self.cache[item] = value
+        if self.reversible:
+            self.cache[item.reversed] = value
 
 
 class LRUChainDict(CacheChainDict):
@@ -358,12 +384,14 @@ class StoredDict(ChainDict):
         self.storable = set()
         self._last_n_objects = 0
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            key = self._get_key(item)
-            if key is not None:
-                self.cache[key] = value
-                self.storable.add(key)
+    def _set(self, item, value):
+        key = self._get_key(item)
+        if key is not None:
+            self.cache[key] = value
+            self.storable.add(key)
+
+    def _set_list(self, items, values):
+        [self._set(item, value) for item, value in zip(items, values) if value is not None]
 
         if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()
@@ -455,17 +483,16 @@ class ReversibleStoredDict(StoredDict):
         self.reversible = reversible
         self.backward_store = backward_store
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            key = self._get_key(item)
-            if key is not None:
-                self.cache[key] = value
-                self.storable.add(key)
-                if self.reversible:
-                    # if reversible store also for reversed
-                    s_key = key ^ 1
-                    self.cache[s_key] = value
-                    self.storable.add(s_key)
+    def _set(self, item, value):
+        key = self._get_key(item)
+        if key is not None:
+            self.cache[key] = value
+            self.storable.add(key)
+            if self.reversible:
+                # if reversible store also for reversed
+                s_key = key + 1 - 2 * (key % 2)
+                self.cache[s_key] = value
+                self.storable.add(s_key)
 
         if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()

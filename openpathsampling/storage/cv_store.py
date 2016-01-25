@@ -55,6 +55,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
             var_name = self.cache_var_name(idx)
 
             if var_name not in self.storage.variables:
+                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
 
                 params = objectdict.return_parameters_from_template(self.storage.template)
                 shape = params['cv_return_shape']
@@ -66,10 +67,9 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
                 self.key_store.create_variable(
                     var_name,
-                    var_type=params['cv_return_type'],
-                    dimensions=params['cv_return_shape'],
-                    chunksizes=chunksizes,
-                    simtk_unit=params['cv_return_simtk_unit'],
+                    var_type=params['var_type'],
+                    dimensions=params['dimensions'],
+                    simtk_unit=params['simtk_unit'],
                     maskable=True
                 )
                 self.storage.update_delegates()

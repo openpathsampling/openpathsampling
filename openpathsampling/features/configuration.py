@@ -12,10 +12,12 @@ lazy = ['configuration']
 def netcdfplus_init(store):
     store.storage.create_store('configurations', ConfigurationStore())
 
-    store.create_variable('configuration', 'lazyobj.configurations',
-                        description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
-                        chunksizes=(1,)
-                        )
+    store.create_variable(
+        'configuration',
+        'lazyobj.configurations',
+        description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
+        chunksizes=(1,)
+    )
 
 
 def coordinates(snapshot):
@@ -74,6 +76,9 @@ class ConfigurationStore(ObjectStore):
     """
     def __init__(self):
         super(ConfigurationStore, self).__init__(Configuration, json=False)
+
+    def to_dict(self):
+        return {}
 
     def _save(self, configuration, idx):
         # Store configuration.
