@@ -1,5 +1,6 @@
 import numpy as np
 from shared import ConfigurationStore
+import mdtraj
 
 attributes = ['configuration', 'box_vectors', 'md', 'coordinates', 'xyz']
 lazy = ['configuration']
@@ -63,4 +64,4 @@ def md(snapshot):
         output = np.zeros([1, n_atoms, 3], np.float32)
         output[0, :, :] = snapshot.coordinates
 
-        return md.Trajectory(output, snapshot.topology.md)
+        return mdtraj.Trajectory(output, snapshot.topology.md)

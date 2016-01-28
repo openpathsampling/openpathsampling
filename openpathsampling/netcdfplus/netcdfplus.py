@@ -1053,10 +1053,10 @@ class NetCDFPlus(netCDF4.Dataset):
         if NetCDFPlus.support_simtk_unit:
             import simtk.unit as u
 
-        if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
-            # could be a Quantity([..])
-            simtk_unit = test_type.unit
-            test_type = test_type._value
+            if type(test_type) is u.Quantity:
+                # could be a Quantity([..])
+                simtk_unit = test_type.unit
+                test_type = test_type._value
 
         if type(test_type) is np.ndarray:
             dimensions = test_type.shape

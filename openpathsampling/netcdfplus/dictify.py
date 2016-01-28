@@ -357,7 +357,7 @@ class ObjectJSON(object):
 
         Parameters
         ----------
-        code : str
+        code : function
             the python bytecode to be searched
         op : int
             the int code of the code to be found
