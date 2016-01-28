@@ -207,7 +207,7 @@ class DynamicsEngine(StorableNamedObject):
 
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the trajectory we've generated so far
         continue_conditions : list of function(Trajectory)
             callable function of a 'Trajectory' that returns True or False.
@@ -247,9 +247,9 @@ class DynamicsEngine(StorableNamedObject):
 
         Parameters
         ----------
-        snapshot : Snapshot 
+        snapshot : :class:`openpathsampling.snapshot.Snapshot`
             initial coordinates and velocities in form of a Snapshot object
-        running : (list of) function(Trajectory)
+        running : (list of) function(:class:`openpathsampling.trajectory.Trajectory`)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
         direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
@@ -260,7 +260,7 @@ class DynamicsEngine(StorableNamedObject):
 
         Returns
         -------    
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             generated trajectory of initial conditions, including initial
             coordinate set
 

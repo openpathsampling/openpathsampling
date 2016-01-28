@@ -1,7 +1,15 @@
-_variables = ['velocities']
+"""
+Attributes
+----------
+velocities : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
+    atomic velocities
+"""
+
+attributes = ['velocities']
+minus = ['velocities']
 
 
-def _init(store):
+def netcdfplus_init(store):
 
     store.create_variable('velocities', 'numpy.float32',
                         dimensions=('atom', 'spatial'),

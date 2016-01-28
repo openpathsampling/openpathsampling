@@ -30,7 +30,7 @@ class Trajectory(list, StorableObject):
         Parameters
         ----------
 
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory` or list of :class:`openpathsampling.snapshot.AbstractSnapshot`
             if specified, make a deep copy of specified trajectory
         """
 
@@ -94,7 +94,7 @@ class Trajectory(list, StorableObject):
 
         Returns
         -------
-        Trajectory()
+        :class:`openpathsampling.trajectory.Trajectory`
             the reversed trajectory
         """
 
@@ -308,7 +308,7 @@ class Trajectory(list, StorableObject):
 
         Returns
         -------
-        openpthsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
+        :class:`openpathsampling.snapshot.Snapshot` or :class:`openpathsampling.netcdfplus.proxy.LoaderProxy`
         """
         return list.__getitem__(self, item)
 
@@ -322,7 +322,8 @@ class Trajectory(list, StorableObject):
 
         Returns
         -------
-        list of openpathsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
+        list of :class:`openpathsampling.snapshot.Snapshot` or :class:`openpathsampling.netcdfplus.proxy.LoaderProxy`
+
         """
         return list(self.iter_proxies())
 
@@ -335,7 +336,8 @@ class Trajectory(list, StorableObject):
 
         Returns
         -------
-        Iterator() over list of openpathsampling.Snapshot or openpathsampling.storage.objproxy.LoaderProxy
+        Iterator() over list of :class:`openpathsampling.snapshot.Snapshot` or :class:`openpathsampling.netcdfplus.proxy.LoaderProxy`
+
 
         """
         return list.__iter__(self)
@@ -344,7 +346,7 @@ class Trajectory(list, StorableObject):
         """
         Return an iterator over all snapshots in the storage
 
-        This will always give real openpathsampling.Snapshot objects and never proxies to snapshots.
+        This will always give real :class:`openpathsampling.snapshot.Snapshot` objects and never proxies to snapshots.
         If you prefer proxies (if available) use `.iteritems()`
 
         Parameters
@@ -458,10 +460,6 @@ class Trajectory(list, StorableObject):
         """
         Compute the generalized path Hamiltonian of the trajectory.
 
-        Parameters
-        ----------
-        trajectory (Trajectory) - the trajectory
-
         Returns
         -------        
         H : simtk.unit.Quantity with units of energy
@@ -489,13 +487,18 @@ class Trajectory(list, StorableObject):
         """
         Compute the (timeless!) activity of a given trajectory, defined in Ref. [1] as
 
-        K[x(t)] / delta_t = delta_t \sum_{t=0}^{t_obs} \sum_{j=1}^N [r_j(t+delta_t) - r_j(t)]^2 / delta_t
+        .. math::
+
+            K[x(t)] / delta_t = delta_t \sum_{t=0}^{t_obs} \sum_{j=1}^N [r_j(t+delta_t) - r_j(t)]^2 / delta_t
 
         RETURNS
+        -------
 
-        K (simtk.unit) - activity K[x(t)] for the specified trajectory
+        K : simtk.unit
+            activity K[x(t)] for the specified trajectory
         
         NOTES
+        -----
         
         Can we avoid dividing and multipying by nanometers to speed up?
 
@@ -561,7 +564,7 @@ class Trajectory(list, StorableObject):
 
         Parameters
         ----------
-        other : openpathsampling.Trajectory
+        other : :class:`openpathsampling.trajectory.Trajectory`
             the second trajectory to check for common snapshots
 
         Returns
@@ -588,12 +591,12 @@ class Trajectory(list, StorableObject):
 
         Parameters
         ----------
-        other : Trajectory()
+        other : :class:`openpathsampling.trajectory.Trajectory`
             the second trajectory to use
 
         Returns
         -------
-        set of Snapshot()
+        set of :class:`openpathsampling.snapshot.Snapshot`
             the set of common snapshots
         """
         return set([snap for snap in self]) & set([snap for snap in other])
@@ -604,12 +607,12 @@ class Trajectory(list, StorableObject):
 
         Parameters
         ----------
-        other : Trajectory()
+        other : :class:`openpathsampling.trajectory.Trajectory`
             the second trajectory to use
 
         Returns
         -------
-        Trajectory
+        :class:`openpathsampling.trajectory.Trajectory`
             the shared subtrajectory
         """
         shared = self.shared_configurations(other)
@@ -627,7 +630,7 @@ class Trajectory(list, StorableObject):
         
         Returns
         -------        
-        trajectory : openpathsampling.Trajectory
+        :class:`openpathsampling.trajectory.Trajectory`
             the trajectory showing the subsets of atoms
         """
 
@@ -643,7 +646,7 @@ class Trajectory(list, StorableObject):
         
         Returns
         -------        
-        trajectory : Trajectory
+        :class:`openpathsampling.trajectory.Trajectory`
             the trajectory showing the subsets of solute atoms
         """
 
@@ -661,7 +664,7 @@ class Trajectory(list, StorableObject):
 
         Returns
         -------
-        trajectory : Trajectory
+        :class:`openpathsampling.trajectory.Trajectory`
             the trajectory showing the subsets of solute atoms
         """
         return self.subset(None)
@@ -672,19 +675,19 @@ class Trajectory(list, StorableObject):
 
         Parameters
         ----------
-        topology : mdtraj.Topology()
+        topology : :class:`mdtraj.Topology`
             If not None this topology will be used to construct the mdtraj
             objects otherwise the topology object will be taken from the
             configurations in the trajectory snapshots.
         
         Returns
         -------        
-        trajectory : mdtraj.Trajectory
+        :class:`mdtraj.Trajectory`
             the trajectory
         """
 
         if topology is None:
-            topology = self.md_topology()
+            topology = self.topology.md
 
         output = self.coordinates()
 
@@ -698,12 +701,9 @@ class Trajectory(list, StorableObject):
 
         Returns
         -------
-        topology : opentis.Topology
+        :class:`openpathsampling.topology.Topology`
             the topology object
 
-        Notes
-        -----
-        This is taken from the configuration of the first frame.
         """
 
         topology = None
@@ -716,21 +716,3 @@ class Trajectory(list, StorableObject):
                 topology = topology.subset(self.atom_indices)
 
         return topology
-
-    def md_topology(self):
-        """
-        Return a mdtraj.Topology object representing the topology of the
-        current view of the trajectory
-        
-        Returns
-        -------        
-        topology : mdtraj.Topology
-            the topology
-
-        Notes
-        -----
-        This is taken from the configuration of the first frame.
-        Use topology.md instead
-        TODO: Should be removed
-        """
-        return self.topology.md

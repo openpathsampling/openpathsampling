@@ -15,8 +15,7 @@ from ensemble import (
     OptionalEnsemble, join_ensembles
 )
 
-from snapshot import Snapshot, Momentum, ToySnapshot, AbstractSnapshot
-from snapshot_content import Configuration, Momentum
+from snapshot import Snapshot, ToySnapshot, AbstractSnapshot, MDSnapshot, FeatureSnapshot
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
@@ -53,8 +52,6 @@ from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
 
 from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
     to_openmm_topology, trajectory_from_mdtraj
-
-from tools import simtk_units_from_md_snapshot
 
 from topology import ToyTopology, Topology, MDTrajTopology
 

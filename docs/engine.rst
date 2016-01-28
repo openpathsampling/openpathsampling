@@ -13,7 +13,7 @@ engine basic
 .. autosummary::
     :toctree: api/generated/
 
-	DynamicsEngine
+    DynamicsEngine
 
 .. currentmodule:: openpathsampling.openmm_engine
 
