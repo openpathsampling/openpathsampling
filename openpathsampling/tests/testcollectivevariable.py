@@ -59,16 +59,3 @@ class testCV_Function(object):
         assert params['var_type'] == 'numpy.float32'
         assert params['simtk_unit'] is None
         assert params['dimensions'] == tuple([2])
-
-    def test_register_as_attribute(self):
-        cv = paths.CV_Function('x', lambda x: x.coordinates[:, 0])
-
-        snap = self.traj[0]
-
-        cv.register_as_attribute()
-
-        ref_value = cv(snap)
-        test_value = snap.x
-
-        assert_close_unit(ref_value, test_value)
-
