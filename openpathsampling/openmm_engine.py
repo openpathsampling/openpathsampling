@@ -11,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class OpenMMEngine(paths.DynamicsEngine):
-    """OpenMM dynamics engine based on using an openmm system and integrator object.
+    """OpenMM dynamics engine based on using an 'simtk.openmm` system and integrator object.
 
-    The engine will create a openmm.app.Simulation instance and uses this to generate new frames.
+    The engine will create a :class:`simtk.openmm.app.Simulation` instance and uses this to generate new frames.
 
     """
 
@@ -201,7 +201,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         snapshot = paths.Snapshot(
             topology=self.topology,
             configuration=configuration,
-            momentum=momentum,
+            momentum=momentum
         )
 
         return snapshot
