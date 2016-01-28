@@ -116,6 +116,10 @@ class ChainDict(object):
         Implementation on how to get the values of a list of keys
 
         Default is to use _get on each single key
+
+        Returns
+        -------
+        list of object
         """
         return [self._get(item) for item in items]
 
@@ -126,6 +130,18 @@ class ChainDict(object):
         """
         Combine two ChainDicts first > next into a new one.
 
+        Parameters
+        ----------
+        other : :class:`openpathsampling.chaindict.ChainDict`
+            the chaindict to be attached as a fallback
+
+        Returns
+        -------
+        :class:`openpathsampling.chaindict.ChainDict`
+            the current object with the attached fallback chaindict.
+
+        Examples
+        --------
         >>> new_dict = first_dict > fall_back
         """
         last = self
@@ -139,6 +155,19 @@ class ChainDict(object):
         """
         Combine two ChainDicts seconds < first into a new one.
 
+        Parameters
+        ----------
+        other : :class:`openpathsampling.chaindict.ChainDict`
+            the chaindict to be attached as a fallback
+
+        Returns
+        -------
+        :class:`openpathsampling.chaindict.ChainDict`
+            the current object with the attached fallback chaindict.
+
+        Examples
+        --------
+
         >>> new_dict = fall_back < first_dict
         """
         last = other
@@ -150,6 +179,15 @@ class ChainDict(object):
 
     @property
     def passing_chain(self):
+        """
+        Return a list of chaindicts in order they will be tried.
+
+        Returns
+        -------
+        list of :class:`openpathsampling.chaindict.ChainDict`
+            the list of chaindicts in order they are called
+
+        """
         chain = [self]
         while chain[-1]._post is not None:
             chain.append(chain[-1]._post)
@@ -157,16 +195,27 @@ class ChainDict(object):
         return chain
 
     def str_chain(self):
+        """
+        Return a string representation of the chain of dicts called.
+
+        Returns
+        -------
+        str
+            the string representation
+
+        """
         return ' > '.join(map(lambda x : x.__class__.__name__, self.passing_chain))
 
+
 class Wrap(ChainDict):
-    """A ChainDict that passes on all request to the underlying ChainDict
+    """A ChainDict that passes on all requests to the underlying ChainDict
+
     """
     def __init__(self, post):
         """
         Parameters
         ----------
-        post : chaindict
+        post : :class:`openpathsampling.chaindict.ChainDict`
             the underlying chain dict to be used
         """
         super(Wrap, self).__init__()
@@ -219,6 +268,7 @@ class ExpandSingle(ChainDict):
     def __setitem__(self, key, value):
         self._post[key] = value
 
+
 class Transform(ChainDict):
     """
     Applies a transformation to the input keys
@@ -251,8 +301,14 @@ class Function(ChainDict):
         fnc : function
             the function to be evaluated to return values to keys
         requires_lists : bool
-            if true we assume that it is faster to pass lists to this function instead
+            if `True` we assume that it is faster to pass lists to this function instead
             of evaluating each key separately
+        scalarize_numpy_singletons : bool
+            if `True` eventual numpy objects that have length one in their last dimension, will
+            be flattened by the last dimension. This is often useful if you have function that
+            will by default return a list of results. In case your function does so, you can
+            treat it as returning a scalar.
+
         """
         super(Function, self).__init__()
         self._eval = fnc
@@ -310,8 +366,8 @@ class CacheChainDict(ChainDict):
         """
         Parameters
         ----------
-        cache : dict-like class
-            the dict or cache to be used to store the data
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache to be used to store the data
         """
         super(CacheChainDict, self).__init__()
         self.cache = cache
@@ -337,8 +393,8 @@ class ReversibleCacheChainDict(CacheChainDict):
         """
         Parameters
         ----------
-        cache : dict-like class
-            the dict or cache to be used to store the data
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache to be used to store the data
         """
         super(ReversibleCacheChainDict, self).__init__(cache)
         self.reversible = reversible
@@ -351,15 +407,23 @@ class ReversibleCacheChainDict(CacheChainDict):
 
 class LRUChainDict(CacheChainDict):
     """
-    Use a LRUCache to cache values
+    Uses an LRUCache to cache values
     """
     def __init__(self, size_limit=1000000):
+        """
+
+        Parameters
+        ----------
+        size_limit : int
+            the maximal allowed number of objects in the cache
+
+        """
         super(LRUChainDict, self).__init__(LRUCache(size_limit))
 
 
 class StoredDict(ChainDict):
     """
-    ChainDict that has a store attached and return existing values from the store
+    ChainDict that has a store attached and returns existing values from the store
     """
     def __init__(self, key_store, value_store, main_cache, cache=None):
         """
@@ -369,9 +433,12 @@ class StoredDict(ChainDict):
             the store that references usable keys
         value_store : storage.Variable
             the store that references the store variable to store the values by index
-        cache : dict-like or cache, default: None
-            the cache used to access stored values faster. If None an LRUCache with
-            100000 entries is used
+        main_cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the main cache used for non-stored objects so that the StoredDict can access
+            values for these objects, too, if the objects has been saved in the meantime.
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache used to access stored values faster. If `None` (default) an
+            :class:`openpathsampling.netcdfplus.cache.LRUCache` with 1000000 (1M) entries is used.
         """
         super(StoredDict, self).__init__()
         self.value_store = value_store
@@ -463,11 +530,12 @@ class StoredDict(ChainDict):
 
         return replace
 
+
 class ReversibleStoredDict(StoredDict):
     """
     ChainDict that has a store attached and return existing values from the store. Supports reversible items
     """
-    def __init__(self, key_store, value_store, backward_store, main_cache, cache=None, reversible=True):
+    def __init__(self, key_store, value_store, backward_store, main_cache, cache=None):
         """
         Parameters
         ----------
@@ -475,12 +543,22 @@ class ReversibleStoredDict(StoredDict):
             the store that references usable keys
         value_store : storage.Variable
             the store that references the store variable to store the values by index
-        cache : dict-like or cache, default: None
-            the cache used to access stored values faster. If None an LRUCache with
-            100000 entries is used
+        backward_store : storage.Variable
+            the store that references the store variable to store the values by index
+            only for reversed objects. If `backward_store` is `value_store` then the
+            dict is assumed to be reversible in the sense that forward and backward
+            objects have the same value
+        main_cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the main cache used for non-stored objects so that the StoredDict can access
+            values for these objects, too, if the objects has been saved in the meantime.
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache used to access stored values faster. If `None` (default) an
+            :class:`openpathsampling.netcdfplus.cache.LRUCache` with 1000000 (1M) entries is used.
+
         """
         super(ReversibleStoredDict, self).__init__(key_store, value_store, main_cache)
-        self.reversible = reversible
+
+        self._reversible = backward_store is value_store
         self.backward_store = backward_store
 
     def _set(self, item, value):
@@ -488,7 +566,7 @@ class ReversibleStoredDict(StoredDict):
         if key is not None:
             self.cache[key] = value
             self.storable.add(key)
-            if self.reversible:
+            if self._reversible:
                 # if reversible store also for reversed
                 s_key = key + 1 - 2 * (key % 2)
                 self.cache[s_key] = value
@@ -522,7 +600,7 @@ class ReversibleStoredDict(StoredDict):
             objs = map(self.key_store.cache.get_silent, keys)
             values = map(self.main_cache.get_silent, objs)
 
-            if self.reversible:
+            if self._reversible:
                 # double all pairs of values and remove Nones
                 val_old = values
                 values = map(lambda x : x[0] if x[0] is not None else x[1], zip(values[0::2], values[1::2]))
@@ -536,7 +614,7 @@ class ReversibleStoredDict(StoredDict):
                     keys_fw, values_fw = zip(*pair_fw)
                     self.value_store[list(keys_fw)] = list(values_fw)
 
-                if not self.reversible:
+                if not self._reversible:
                     pair_bw = [(pair[0] / 2, pair[1]) for pair in pairs if pair[0] & 1]
                     if pair_bw:
                         keys_bw, values_bw = zip(*pair_bw)
@@ -551,7 +629,7 @@ class ReversibleStoredDict(StoredDict):
         # TODO: This only makes sense if the cache can fit everything.
 
         values_fw = self.value_store[:]
-        if self.reversible:
+        if self._reversible:
             values_bw = values_fw
         else:
             values_bw = self.backward_store[:]
@@ -577,7 +655,7 @@ class ReversibleStoredDict(StoredDict):
 
             self.cache[key] = val
 
-            if self.reversible:
+            if self._reversible:
                 self.cache[key ^ 1] = val
 
             return val

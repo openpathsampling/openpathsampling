@@ -93,8 +93,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             key_store,
             value_store,
             backward_store,
-            self._cache_dict.cache,
-            reversible=self.cv_time_reversible
+            self._cache_dict.cache
         )
         self._store_dict._post = self._cache_dict
         self._single_dict._post = self._store_dict
