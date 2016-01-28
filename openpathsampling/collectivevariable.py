@@ -6,28 +6,6 @@ import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache, ObjectJSON, create_to_dict
 
-class CVAttribute(object):
-    """
-    Descriptor class to handle cvs as attributes
-
-    This will only
-
-    """
-
-    def __init__(self, cv):
-        super(CVAttribute, self).__init__()
-        self.cv = cv
-
-    def __get__(self, instance, owner):
-        if instance is not None:
-            return self.cv[instance]
-        else:
-            return self.cv
-
-    def __set__(self, instance, value):
-        if instance is not None:
-            self.cv[instance] = value
-
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
     """
@@ -38,13 +16,13 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     name : string
         A descriptive name of the collectivevariable. It is used in the string
         representation.
-    cv_time_reversible : bool, default: True
-        If `True` the CV assumes that reversed snapshots have the same value. This is the
+    cv_time_reversible : bool
+        If `True` (default) the CV assumes that reversed snapshots have the same value. This is the
         default case when CVs do not depend on momenta reversal. This will speed up computation of
         CVs by about a factor of two. In rare cases you might want to set this to `False`
     cv_store_cache : bool
         If `True` this CV has a cache on disk attached in form of a table in a netcdf file.
-        If set to `False` then there will be no storage created when the cv is stored
+        If set to `False` (default) then there will be no storage created when the cv is stored
         automatically. You can do this later on using function in the cv_store.
 
 
@@ -54,11 +32,11 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     cv_time_reversible
     cv_store_cache
 
-    _single_dict : ChainDict
+    _single_dict : :class:`openpathsampling.chaindict.ChainDict`
         The ChainDict that takes care of using only a single element instead of
         an iterable. In the case of a single object. It will be wrapped in a list
         and later only the single element will be returned
-    _cache_dict
+    _cache_dict : :class:`openpathsampling.chaindict.ChainDict`
         The ChainDict that will cache calculated values for fast access
 
     """
@@ -88,7 +66,31 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         super(CollectiveVariable, self).__init__(post=self._single_dict > self._cache_dict)
 
-    def set_cache_store(self, key_store, value_store, backward_store):
+    def set_cache_store(self, key_store, value_store, backward_store=None):
+        """
+        Attach store variables to the collective variables.
+
+        If used the collective variable will automatically sync values with the store and
+        load from it if necessary. If the CV is created with `cv_store_cache = True`. This
+        will be done during CV creation.
+
+        Parameters
+        ----------
+        key_store : :class:`openpathsampling.netcdfplus.ObjectStore`
+            the store that references the key objects used as keys in the collective
+            variable (the input for the cv function)
+        value_store : :class:`openpathsampling.netcdfplus.ObjectStore
+            the store / variable that references the output (value) objects
+        backward_store : :class:`openpathsampling.netcdfplus.ObjectStore or None
+            the optional backward store for reversed objects
+
+        Notes
+        -----
+        Currently the backward feature is exclusively for :class:`openpathsampling.snapshot.Snapshots`
+        which implement a reversed object. If `None` backward will equal forward which will effectively
+        mean that the store treats forward and backward the same.
+
+        """
         self._store_dict = cd.ReversibleStoredDict(
             key_store,
             value_store,
@@ -101,24 +103,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     # This is important since we subclass from list and lists are not hashable
     # but CVs should be
     __hash__ = object.__hash__
-
-    def register_as_attribute(self):
-        """
-        Attach the cv as an attribute to be used with Snapshots
-
-        Examples
-        --------
-        >>> cv = CV_Function('psi', ...)
-        >>> cv.register_as_attribute()
-
-        Now this works
-        >>> print my_snap.psi
-        """
-
-        if hasattr(paths.Snapshot, self.name):
-            raise RuntimeWarning('%s is already taken as an attribute. Cannot be registered.' % self.name)
-
-        setattr(paths.Snapshot, self.name, CVAttribute(self))
 
     def sync(self):
         """
@@ -154,6 +138,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         return NotImplemented
 
     to_dict = create_to_dict(['name', 'cv_time_reversible', 'cv_store_cache'])
+
 
 class CV_Volume(CollectiveVariable):
     """ Turn a `Volume` into a collective variable
@@ -195,6 +180,7 @@ class CV_Volume(CollectiveVariable):
         return result
 
     to_dict = create_to_dict(['name', 'cv_store_cache', 'volume'])
+
 
 class CV_Callable(CollectiveVariable):
     """Turn any callable object `cv_callable` into a storable `CollectiveVariable`.
@@ -266,12 +252,12 @@ class CV_Callable(CollectiveVariable):
            with the function and this can only be done if they are passed as arguments
            to the function and added as kwargs to the CV_Function
 
-        >>> def func(snapshot, psi):
+        >>> import openpathsampling as paths
+        >>> def func(snapshot, indices):
         >>>     import mdtraj as md
-        >>>     indices = [4,6,8,10]
-        >>>     return md.compute_dihedrals(Trajectory([snapshot]).md(), [indices=indices])
+        >>>     return md.compute_dihedrals(paths.Trajectory([snapshot]).md(), indices=indices)
 
-        >>> cv = CV_Function('my_cv', func, {'psi': my_global_psi_function})
+        >>> cv = CV_Function('my_cv', func, indices=[[4, 6, 8, 10]])
 
         The function will also check if non-standard modules are imported, which are now
         numpy, math, msmbuilder, pandas and mdtraj
@@ -301,6 +287,7 @@ class CV_Callable(CollectiveVariable):
         post = self._post > self._callable_dict
 
         if cv_wrap_numpy_array:
+            # noinspection PyTypeChecker
             post = cd.MergeNumpy() > post
 
         self._post = post
@@ -312,13 +299,13 @@ class CV_Callable(CollectiveVariable):
         dct['cv_requires_lists'] = self.cv_requires_lists
         dct['cv_wrap_numpy_array'] = self.cv_wrap_numpy_array
         dct['cv_scalarize_numpy_singletons'] = self.cv_scalarize_numpy_singletons
-        dct['**kwargs'] = self.kwargs
+        dct['kwargs'] = self.kwargs
         return dct
 
     @classmethod
     def from_dict(cls, dct):
-        kwargs = dct['**kwargs']
-        del dct['**kwargs']
+        kwargs = dct['kwargs']
+        del dct['kwargs']
         dct.update(kwargs)
         obj = cls(**dct)
 
@@ -377,7 +364,7 @@ class CV_Function(CV_Callable):
         cv_requires_lists
         cv_wrap_numpy_array
         cv_scalarize_numpy_singletons
-        kwargs : **kwargs
+        kwargs
             a dictionary of named arguments which should be given to `cv_callable` (for example, the
             atoms which define a specific distance/angle). Finally
             `cv_callable(snapshots, **kwargs)` is called
@@ -578,10 +565,7 @@ class CV_MSMB_Featurizer(CV_Generator):
             using the CV will call `instance(snapshots)`
         cv_store_cache
         cv_requires_lists
-        scalarize_numpy_singletons : bool, default: True
-            If `True` then arrays of length 1 will be treated as array with one dimension less.
-            e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
-            use en external function to get only a single value.
+        cv_scalarize_numpy_singletons
 
         Notes
         -----
@@ -628,18 +612,18 @@ class CV_MSMB_Featurizer(CV_Generator):
     def to_dict(self):
         return {
             'name': self.name,
-            'featurizer': self.callable_to_dict(self.featurizer),
+            'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
             'kwargs': self.kwargs,
-            'store_cache': self.store_cache,
-            'wrap_numpy_array': self.wrap_numpy_array,
-            'scalarize_numpy_singletons': self.scalarize_numpy_singletons
+            'store_cache': self.cv_store_cache,
+            'wrap_numpy_array': self.cv_wrap_numpy_array,
+            'scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
         }
 
     @classmethod
     def from_dict(cls, dct):
         obj = CV_MSMB_Featurizer(
             name=dct['name'],
-            featurizer=cls.callable_from_dict(dct['featurizer']),
+            featurizer=ObjectJSON.callable_from_dict(dct['featurizer']),
             cv_store_cache=dct['store_cache'],
             cv_wrap_numpy_array=dct['wrap_numpy_array'],
             cv_scalarize_numpy_singletons=dct['scalarize_numpy_singletons'],
@@ -730,9 +714,9 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
     def to_dict(self):
         return {
             'name': self.name,
-            'featurizer': self.callable_to_dict(self.featurizer),
+            'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
             'topology': self.topology,
-            'store_cache': self.store_cache,
+            'store_cache': self.cv_store_cache,
             'kwargs': self.kwargs
         }
 
@@ -740,7 +724,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
     def from_dict(cls, dct):
         obj = CV_PyEMMA_Featurizer(
             name=dct['name'],
-            featurizer=cls.callable_from_dict(dct['featurizer']),
+            featurizer=ObjectJSON.callable_from_dict(dct['featurizer']),
             topology=dct['topology'],
             cv_store_cache=dct['store_cache'],
             **dct['kwargs']
