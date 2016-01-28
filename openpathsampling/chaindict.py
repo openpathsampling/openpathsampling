@@ -73,7 +73,6 @@ class ChainDict(object):
         return results
 
     def __setitem__(self, key, value):
-        print self, key, value
         if isinstance(key, collections.Iterable):
             self._set_list(key, value)
         else:
