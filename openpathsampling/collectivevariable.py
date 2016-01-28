@@ -614,22 +614,10 @@ class CV_MSMB_Featurizer(CV_Generator):
             'name': self.name,
             'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
             'kwargs': self.kwargs,
-            'store_cache': self.cv_store_cache,
-            'wrap_numpy_array': self.cv_wrap_numpy_array,
-            'scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
+            'cv_store_cache': self.cv_store_cache,
+            'cv_wrap_numpy_array': self.cv_wrap_numpy_array,
+            'cv_scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
         }
-
-    @classmethod
-    def from_dict(cls, dct):
-        obj = CV_MSMB_Featurizer(
-            name=dct['name'],
-            featurizer=ObjectJSON.callable_from_dict(dct['featurizer']),
-            cv_store_cache=dct['store_cache'],
-            cv_wrap_numpy_array=dct['wrap_numpy_array'],
-            cv_scalarize_numpy_singletons=dct['scalarize_numpy_singletons'],
-            **dct['kwargs']
-        )
-        return obj
 
 
 class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
@@ -696,7 +684,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
 
         super(CV_Generator, self).__init__(
             name,
-            c=featurizer,
+            cv_callable=featurizer,
             cv_time_reversible=True,
             cv_requires_lists=True,
             cv_store_cache=cv_store_cache,
@@ -716,17 +704,6 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
             'name': self.name,
             'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
             'topology': self.topology,
-            'store_cache': self.cv_store_cache,
+            'cv_store_cache': self.cv_store_cache,
             'kwargs': self.kwargs
         }
-
-    @classmethod
-    def from_dict(cls, dct):
-        obj = CV_PyEMMA_Featurizer(
-            name=dct['name'],
-            featurizer=ObjectJSON.callable_from_dict(dct['featurizer']),
-            topology=dct['topology'],
-            cv_store_cache=dct['store_cache'],
-            **dct['kwargs']
-        )
-        return obj
