@@ -5,6 +5,9 @@ import simtk.openmm
 
 import openpathsampling as paths
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class OpenMMEngine(paths.DynamicsEngine):
     """OpenMM dynamics engine based on using an openmm system and integrator object.
@@ -24,6 +27,8 @@ class OpenMMEngine(paths.DynamicsEngine):
         'n_frames_max': 5000,
         'platform': 'fastest'
     }
+
+    base_snapshot_type = paths.Snapshot
 
     #TODO: Planned to move topology to be part of engine and not snapshot
     #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
@@ -211,6 +216,9 @@ class OpenMMEngine(paths.DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snapshot):
+
+        self.check_snapshot_type(snapshot)
+
         if snapshot is not self._current_snapshot:
             if snapshot.configuration is not None:
                 if self._current_snapshot is None or snapshot.configuration is not self._current_snapshot.configuration:

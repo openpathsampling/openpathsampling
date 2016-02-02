@@ -6,7 +6,8 @@ class ObjectDictStore(ObjectStore):
         super(ObjectDictStore, self).__init__(
             content_class,
             json=True,
-            has_name=True
+            has_name=True,
+            unique_name=True
         )
         self.key_class = key_class
         self._key_store = None
@@ -59,11 +60,18 @@ class ObjectDictStore(ObjectStore):
             if var_name not in self.storage.variables:
 
                 params = objectdict.return_parameters_from_template(self.storage.template)
+                shape = params['cv_return_shape']
+
+                if shape is None:
+                    chunksizes = None
+                else:
+                    chunksizes = tuple(params['cv_return_shape'])
 
                 self.key_store.create_variable(
                     var_name,
                     var_type=params['cv_return_type'],
                     dimensions=params['cv_return_shape'],
+                    chunksizes=chunksizes,
                     simtk_unit=params['cv_return_simtk_unit'],
                     maskable=True
                 )
