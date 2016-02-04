@@ -7,7 +7,8 @@ Created on 06.07.2014
 
 import logging
 import openpathsampling as paths
-from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, DictStore
+from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
+    NamedObjectStore, UniqueNamedObjectStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -60,11 +61,12 @@ class Storage(NetCDFPlus):
         storage2 = Storage(filename=filename, template=self.template.subset(subset), mode='w')
 
         # Copy all configurations and momenta to new file in reduced form
+        # use ._save instead of .save to override immutability checks etc...
 
         for obj in self.configurations:
-            storage2.configurations.save(obj.copy(subset=subset), idx=self.configurations.index[obj])
+            storage2.configurations._save(obj.copy(subset=subset), idx=self.configurations.index[obj])
         for obj in self.momenta:
-            storage2.momenta.save(obj.copy(subset=subset), idx=self.momenta.index[obj])
+            storage2.momenta._save(obj.copy(subset=subset), idx=self.momenta.index[obj])
 
         # All other should be copied one to one. We do this explicitly although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -75,7 +77,7 @@ class Storage(NetCDFPlus):
             'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
             'samples', 'snapshots', 'pathsimulators', 'cvs'
         ]:
-            self.clone_storage(storage_name, storage2)
+            self.clone_store(storage_name, storage2)
 
         storage2.close()
 
@@ -103,7 +105,7 @@ class Storage(NetCDFPlus):
             'shootingpointselectors', 'engines', 'volumes',
             'ensembles', 'transitions', 'pathsimulators'
         ]:
-            self.clone_storage(storage_name, storage2)
+            self.clone_store(storage_name, storage2)
 
         storage2.close()
 
@@ -161,30 +163,30 @@ class Storage(NetCDFPlus):
 
         # normal objects
 
-        self.create_store('details', ObjectStore(paths.Details, has_name=False))
-        self.create_store('topologies', ObjectStore(paths.Topology, has_name=True))
-        self.create_store('pathmovers', ObjectStore(paths.PathMover, has_name=True))
+        self.create_store('details', ObjectStore(paths.Details))
+        self.create_store('topologies', NamedObjectStore(paths.Topology))
+        self.create_store('pathmovers', NamedObjectStore(paths.PathMover))
         self.create_store('shootingpointselectors',
-                          ObjectStore(paths.ShootingPointSelector, has_name=True))
-        self.create_store('engines', ObjectStore(paths.DynamicsEngine, has_name=True))
+                          NamedObjectStore(paths.ShootingPointSelector))
+        self.create_store('engines', NamedObjectStore(paths.DynamicsEngine))
         self.create_store('pathsimulators',
-                          ObjectStore(paths.PathSimulator, has_name=True))
-        self.create_store('transitions', ObjectStore(paths.Transition, has_name=True))
+                          NamedObjectStore(paths.PathSimulator))
+        self.create_store('transitions', NamedObjectStore(paths.Transition))
         self.create_store('networks',
-                          ObjectStore(paths.TransitionNetwork, has_name=True))
+                          NamedObjectStore(paths.TransitionNetwork))
         self.create_store('schemes',
-                          ObjectStore(paths.MoveScheme, has_name=True))
+                          NamedObjectStore(paths.MoveScheme))
 
-        # nestable objects
+        # stores where nestable could make sense but is disabled
 
         self.create_store('volumes',
-                          ObjectStore(paths.Volume, nestable=True, has_name=True))
+                          NamedObjectStore(paths.Volume, nestable=True))
         self.create_store('ensembles',
-                          ObjectStore(paths.Ensemble, nestable=True, has_name=True))
+                          NamedObjectStore(paths.Ensemble, nestable=True))
 
         # special stores
 
-        self.create_store('tag', DictStore())
+        self.create_store('tag', ImmutableDictStore())
 
     def _initialize(self):
         # Set global attributes.
