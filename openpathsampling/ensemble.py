@@ -1383,7 +1383,7 @@ class AllInXEnsemble(VolumeEnsemble):
         return PartOutXEnsemble(self.volume, self.frames, self.trusted)
 
     def __str__(self):
-        return 'x[t] in {0} for all t'.format(self._volume)
+        return 'x[t] in {0} for all t'.format(self._volume.name)
 
 
 
