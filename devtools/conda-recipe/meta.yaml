@@ -41,8 +41,6 @@ test:
     - msmbuilder
     - pyemma
     - ipynbtest
-    - gfortran
-    - libgfortran
 
   imports:
     - openpathsampling
