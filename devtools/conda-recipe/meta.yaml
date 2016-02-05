@@ -31,8 +31,7 @@ requirements:
     - svgwrite
     - networkx
     - matplotlib
-    - gfortran
-    - libgfortran3
+    - libgfortran
 
 test:
   requires:
@@ -43,7 +42,7 @@ test:
     - pyemma
     - ipynbtest
     - gfortran
-    - libgfortran3
+    - libgfortran
 
   imports:
     - openpathsampling
