@@ -72,7 +72,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
         raise KeyError("'%s' is neither an stored cv nor an integer index" % idx)
 
-    def create_cache(self, objectdict):
+    def create_cache(self, objectdict, variable_length=False):
         """
         Create the storage variable that holds the data for the object dict
 
@@ -95,6 +95,9 @@ class ObjectDictStore(UniqueNamedObjectStore):
                     chunksizes = None
                 else:
                     chunksizes = tuple(params['dimensions'])
+
+                    if variable_length:
+                        chunksizes = tuple(chunksizes[:-1] + ['...'])
 
                 self.key_store.create_variable(
                     var_name,
