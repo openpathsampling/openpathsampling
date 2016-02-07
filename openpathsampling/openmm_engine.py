@@ -244,14 +244,6 @@ class OpenMMEngine(paths.DynamicsEngine):
         self._current_snapshot = None
         return self.current_snapshot
 
-    @property
-    def momentum(self):
-        return self.current_snapshot.momentum
-
-    @property
-    def configuration(self):
-        return self.current_snapshot.configuration
-
     def minimize(self):
         self.simulation.minimizeEnergy()
         # make sure that we get the minimized structure on request
