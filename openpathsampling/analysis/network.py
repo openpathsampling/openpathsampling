@@ -225,15 +225,20 @@ class MSTISNetwork(TISNetwork):
             fromA = self.from_state[stateA]
             other_states = self.states[:state_index]+self.states[state_index+1:]
             for stateB in other_states:
+                strA = stateA.name if stateA.is_named else str(stateA)
+                strB = stateB.name if stateB.is_named else str(stateB)
                 trans = paths.TISTransition(
                     stateA=stateA,
                     stateB=stateB,
                     interfaces=fromA.interfaces,
-                    name=str(stateA) + "->" + str(stateB),
+                    name=strA + "->" + strB,
                     orderparameter=fromA.orderparameter
                 )
                 # override created stuff
                 trans.ensembles = fromA.ensembles
+                for i in range(len(trans.ensembles)):
+                    trans.ensembles[i].named(trans.name + "[" + str(i) + "]")
+                                             
                 trans.minus_ensemble = fromA.minus_ensemble
                 self.transitions[(stateA, stateB)] = trans
 
