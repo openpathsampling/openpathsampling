@@ -20,7 +20,7 @@ from trajectory import Trajectory
 from sample import Sample, SampleSet
 
 from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
-    CV_Volume, CollectiveVariable
+    CV_Volume, CollectiveVariable, ObjectVariable
 
 from pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,

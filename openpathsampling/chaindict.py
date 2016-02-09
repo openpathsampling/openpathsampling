@@ -73,11 +73,8 @@ class ChainDict(object):
         return results
 
     def __setitem__(self, key, value):
-        if isinstance(key, collections.Iterable):
-            self._set_list(key, value)
-        else:
-            if value is not None:
-                self._set(key, value)
+        if value is not None:
+            self._set(key, value)
 
         # pass __setitem__ to underlying dicts as default
         if self._post is not None:
@@ -243,9 +240,23 @@ class ExpandSingle(ChainDict):
     Iterables will be unrolled and passed as a list
     """
 
+    def __init__(self, key_class=None):
+        """
+        Parameters
+        ----------
+        post : :class:`openpathsampling.chaindict.ChainDict`
+            the underlying chain dict to be used
+        """
+        super(ExpandSingle, self).__init__()
+        self.key_class = key_class
+
     def __getitem__(self, items):
         if type(items) is LoaderProxy:
             return self._post[[items]][0]
+
+        if isinstance(items, self.key_class):
+            return self._post[[items]][0]
+
         if hasattr(items, '__iter__'):
             try:
                 dummy = len(items)
@@ -265,7 +276,20 @@ class ExpandSingle(ChainDict):
             return self._post[[items]][0]
 
     def __setitem__(self, key, value):
-        self._post[key] = value
+        if type(key) is self.key_class:
+            self._post[key] = value
+
+        elif hasattr(key, '__iter__'):
+            try:
+                dummy = len(key)
+            except AttributeError:
+                # no length means unbound iterator and we cannot handle these
+                raise AttributeError('Iterators that do not have __len__ implemented are not supported. ' +
+                                'You can wrap your iterator in list() if you know that it will finish.')
+
+            [self._post.__setitem__(key, value) for key, value in zip(key, value)]
+        else:
+            self._post[key] = value
 
 
 class Transform(ChainDict):

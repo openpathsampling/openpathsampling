@@ -399,8 +399,15 @@ class StorableNamedObject(StorableObject):
         return self
 
 
-def create_to_dict(keys_to_store):
-    def to_dict(self):
-        return {key: getattr(self, key) for key in keys_to_store}
+def create_to_dict(keys_to_store, function_keys=None):
+    if function_keys is None:
+        def to_dict(self):
+            return {key: getattr(self, key) for key in keys_to_store}
+    else:
+        def to_dict(self):
+            return {
+                key: getattr(self, key) if key not in function_keys else
+                getattr(self, key) for key in keys_to_store
+            }
 
     return to_dict

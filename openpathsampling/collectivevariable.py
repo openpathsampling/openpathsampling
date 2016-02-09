@@ -7,19 +7,15 @@ import chaindict as cd
 from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache, ObjectJSON, create_to_dict
 
 
-class CollectiveVariable(cd.Wrap, StorableNamedObject):
+class ObjectVariable(cd.Wrap, StorableNamedObject):
     """
-    Wrapper for a function that acts on snapshots or iterables of snapshots
+    Wrapper for a dictionary that uses storable objects as keys
 
     Parameters
     ----------
     name : string
         A descriptive name of the collectivevariable. It is used in the string
         representation.
-    cv_time_reversible : bool
-        If `True` (default) the CV assumes that reversed snapshots have the same value. This is the
-        default case when CVs do not depend on momenta reversal. This will speed up computation of
-        CVs by about a factor of two. In rare cases you might want to set this to `False`
     cv_store_cache : bool
         If `True` this CV has a cache on disk attached in form of a table in a netcdf file.
         If set to `False` (default) then there will be no storage created when the cv is stored
@@ -29,7 +25,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     Attributes
     ----------
     name
-    cv_time_reversible
     cv_store_cache
 
     _single_dict : :class:`openpathsampling.chaindict.ChainDict`
@@ -44,8 +39,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def __init__(
             self,
             name,
+            key_class,
+            post=None,
             cv_store_cache=False,
-            cv_time_reversible=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
@@ -54,19 +50,20 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         StorableNamedObject.__init__(self)
 
         self.name = name
-
+        self.key_class = key_class
         self.cv_store_cache = cv_store_cache
-        self.cv_time_reversible = cv_time_reversible
 
-        self._single_dict = cd.ExpandSingle()
-        self._cache_dict = cd.ReversibleCacheChainDict(
-                WeakLRUCache(1000, weak_type='key'),
-                reversible=cv_time_reversible
-        )
+        if post is None:
+            self._single_dict = cd.ExpandSingle(self.key_class)
+            self._cache_dict = cd.CacheChainDict(
+                WeakLRUCache(1000, weak_type='key')
+            )
 
-        super(CollectiveVariable, self).__init__(post=self._single_dict > self._cache_dict)
+            post = self._single_dict > self._cache_dict
 
-    def set_cache_store(self, key_store, value_store, backward_store=None):
+        super(ObjectVariable, self).__init__(post=post)
+
+    def set_cache_store(self, key_store, value_store):
         """
         Attach store variables to the collective variables.
 
@@ -81,8 +78,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             variable (the input for the cv function)
         value_store : :class:`openpathsampling.netcdfplus.ObjectStore
             the store / variable that references the output (value) objects
-        backward_store : :class:`openpathsampling.netcdfplus.ObjectStore or None
-            the optional backward store for reversed objects
 
         Notes
         -----
@@ -91,10 +86,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         mean that the store treats forward and backward the same.
 
         """
-        self._store_dict = cd.ReversibleStoredDict(
+        self._store_dict = cd.StoredDict(
             key_store,
             value_store,
-            backward_store,
             self._cache_dict.cache
         )
         self._store_dict._post = self._cache_dict
@@ -136,6 +130,102 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             return not self.__eq__(other)
 
         return NotImplemented
+
+    to_dict = create_to_dict(['name', 'cv_store_cache'])
+
+
+class CollectiveVariable(ObjectVariable):
+    """
+    Wrapper for a function that acts on snapshots or iterables of snapshots
+
+    Parameters
+    ----------
+    name : string
+        A descriptive name of the collectivevariable. It is used in the string
+        representation.
+    cv_time_reversible : bool
+        If `True` (default) the CV assumes that reversed snapshots have the same value. This is the
+        default case when CVs do not depend on momenta reversal. This will speed up computation of
+        CVs by about a factor of two. In rare cases you might want to set this to `False`
+    cv_store_cache : bool
+        If `True` this CV has a cache on disk attached in form of a table in a netcdf file.
+        If set to `False` (default) then there will be no storage created when the cv is stored
+        automatically. You can do this later on using function in the cv_store.
+
+
+    Attributes
+    ----------
+    name
+    cv_time_reversible
+    cv_store_cache
+
+    _single_dict : :class:`openpathsampling.chaindict.ChainDict`
+        The ChainDict that takes care of using only a single element instead of
+        an iterable. In the case of a single object. It will be wrapped in a list
+        and later only the single element will be returned
+    _cache_dict : :class:`openpathsampling.chaindict.ChainDict`
+        The ChainDict that will cache calculated values for fast access
+
+    """
+
+    def __init__(
+            self,
+            name,
+            cv_store_cache=False,
+            cv_time_reversible=False
+    ):
+        self.cv_time_reversible = cv_time_reversible
+
+        self._single_dict = cd.ExpandSingle(paths.Snapshot)
+        self._cache_dict = cd.ReversibleCacheChainDict(
+            WeakLRUCache(1000, weak_type='key'),
+            reversible=cv_time_reversible
+        )
+
+        super(CollectiveVariable, self).__init__(
+            name,
+            paths.Snapshot,
+            cv_store_cache=cv_store_cache,
+            post=self._single_dict > self._cache_dict
+        )
+
+    def set_cache_store(self, key_store, value_store, backward_store=None):
+        """
+        Attach store variables to the collective variables.
+
+        If used the collective variable will automatically sync values with the store and
+        load from it if necessary. If the CV is created with `cv_store_cache = True`. This
+        will be done during CV creation.
+
+        Parameters
+        ----------
+        key_store : :class:`openpathsampling.netcdfplus.ObjectStore`
+            the store that references the key objects used as keys in the collective
+            variable (the input for the cv function)
+        value_store : :class:`openpathsampling.netcdfplus.ObjectStore
+            the store / variable that references the output (value) objects
+        backward_store : :class:`openpathsampling.netcdfplus.ObjectStore or None
+            the optional backward store for reversed objects
+
+        Notes
+        -----
+        Currently the backward feature is exclusively for :class:`openpathsampling.snapshot.Snapshots`
+        which implement a reversed object. If `None` backward will equal forward which will effectively
+        mean that the store treats forward and backward the same.
+
+        """
+        self._store_dict = cd.ReversibleStoredDict(
+            key_store,
+            value_store,
+            backward_store,
+            self._cache_dict.cache
+        )
+        self._store_dict._post = self._cache_dict
+        self._single_dict._post = self._store_dict
+
+    # This is important since we subclass from list and lists are not hashable
+    # but CVs should be
+    __hash__ = object.__hash__
 
     to_dict = create_to_dict(['name', 'cv_time_reversible', 'cv_store_cache'])
 
@@ -486,7 +576,6 @@ class CV_MDTraj_Function(CV_Function):
                  name,
                  f,
                  cv_store_cache=True,
-                 cv_time_reversible=True,
                  cv_requires_lists=True,
                  cv_wrap_numpy_array=True,
                  cv_scalarize_numpy_singletons=True,
@@ -513,7 +602,7 @@ class CV_MDTraj_Function(CV_Function):
             name,
             f,
             cv_store_cache=cv_store_cache,
-            cv_time_reversible=cv_time_reversible,
+            cv_time_reversible=True,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
             cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
