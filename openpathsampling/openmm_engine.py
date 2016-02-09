@@ -198,12 +198,12 @@ class OpenMMEngine(paths.DynamicsEngine):
                                                  getEnergy=True)
 
         configuration = Configuration(
-            coordinates = state.getPositions(asNumpy=True),
-            box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
+            coordinates=state.getPositions(asNumpy=True),
+            box_vectors=state.getPeriodicBoxVectors(asNumpy=True)
         )
 
         momentum = Momentum(
-            velocities = state.getVelocities(asNumpy=True)
+            velocities=state.getVelocities(asNumpy=True)
         )
 
         snapshot = paths.Snapshot(

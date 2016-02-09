@@ -605,7 +605,6 @@ class ReversibleStoredDict(StoredDict):
                 values = map(lambda x : x[0] if x[0] is not None else x[1], zip(values[0::2], values[1::2]))
                 values = [val for val in values for _ in (0, 1)]
 
-
             pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
             if len(pairs) > 0:
                 pair_fw = [(pair[0] / 2, pair[1]) for pair in pairs if not pair[0] & 1]
@@ -622,7 +621,7 @@ class ReversibleStoredDict(StoredDict):
                 for key, value in pairs:
                     self.cache[key] = value
 
-            self._last_n_objects = len(self.key_store)
+        self._last_n_objects = len(self.key_store)
 
     def cache_all(self):
         # TODO: This only makes sense if the cache can fit everything.
