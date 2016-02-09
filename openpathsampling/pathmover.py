@@ -196,7 +196,7 @@ class PathMover(TreeMixin, StorableNamedObject):
 
         Returns
         -------
-        list of Ensemble
+        list of :class:`openpathsampling.Ensemble`
             the list of input ensembles
         """
         if self._in_ensembles is None:
@@ -991,6 +991,8 @@ class EnsembleHopMover(SampleMover):
     _is_ensemble_change_mover = True
     def __init__(self, ensemble, target_ensemble, change_replica=None, bias=None):
         """
+        A Mover that allows the change between ensembles.
+
         Parameters
         ----------
         ensemble : openpathsampling.Ensemble
@@ -1010,9 +1012,14 @@ class EnsembleHopMover(SampleMover):
         Notes
         -----
         The bias dict has the following form :
-            { 'ensembles' : [ens_1, ens_2, ens_n],
-              'values' : np.array((n,n))
-              }
+
+            .. code-block:: python
+
+                {
+                    'ensembles' : [ens_1, ens_2, ens_n],
+                    'values' : np.array((n,n))
+                }
+
         The numpy array contains all the acceptance probabilties. If possible
         a HopMover should (as all movers) be used for only a specific hop and
         not multiple ones.
@@ -1574,9 +1581,9 @@ class SubPathMover(PathMover):
         """
         Parameters
         ----------
-        mover : PathMover
+        mover : :class:`openpathsampling.PathMover`
             the submover to be delegated to
-        ensembles : nested list of Ensemble or None
+        ensembles : nested list of :class:`openpathsampling.Ensemble` or None
             the ensemble specification
         """
         super(SubPathMover, self).__init__()
@@ -1612,9 +1619,9 @@ class EnsembleFilterMover(SubPathMover):
         """
         Parameters
         ----------
-        mover : PathMover
+        mover : :class:`openpathsampling.PathMover`
             the submover to be delegated to
-        ensembles : nested list of Ensemble or None
+        ensembles : nested list of :class:`openpathsampling.Ensemble` or None
             the ensemble specification
         """
         super(EnsembleFilterMover, self).__init__(mover)
@@ -1658,9 +1665,9 @@ class OneWayShootingMover(RandomChoiceMover):
 
     Attributes
     ----------
-    selector : ShootingPointSelector
+    selector : :class:`openpathsampling.ShootingPointSelector`
         The shooting point selection scheme
-    ensemble : paths.Ensemble
+    ensemble : :class:`openpathsampling.Ensemble`
         Ensemble for this shooting mover
     """
     def __init__(self, ensemble, selector):
@@ -1701,13 +1708,13 @@ class OneWayShootingMover(RandomChoiceMover):
 class OneWayExtendMover(RandomChoiceMover):
     """
     OneWayShootingMover is a special case of a RandomChoiceMover which
-     gives a 50/50 chance of selecting either a ForwardExtendMover or
+    gives a 50/50 chance of selecting either a ForwardExtendMover or
     a BackwardExtendMover. Both submovers use the same same ensembles
     and replicas.
 
     Attributes
     ----------
-    ensembles : openpathsampling.Ensemble
+    ensemble : :class:`openpathsampling.Ensemble`
         valid ensemble
     """
     def __init__(self, ensemble, target_ensemble):

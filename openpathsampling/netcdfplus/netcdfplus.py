@@ -68,7 +68,7 @@ class NetCDFPlus(netCDF4.Dataset):
             the function applied to results from running the __getitem__ on the variable
         setter : function
             the function applied to the value to be stored using __setitem__ on the variable
-        store : openpathsampling.storage.ObjectStore
+        store : openpathsampling.netcdfplus.ObjectStore
             a reference to an object store used for convenience in some cases
 
         """
@@ -113,7 +113,7 @@ class NetCDFPlus(netCDF4.Dataset):
         ----------
         variable : dict-like
             the dict to be wrapped
-        store : openpathsampling.storage.ObjectStore
+        store : openpathsampling.netcdfplus.ObjectStore
             a reference to an object store used
 
         """

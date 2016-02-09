@@ -1,8 +1,7 @@
 """
 Created on 06.07.2014
 
-@author: JDC Chodera
-@author: JH Prinz
+@author: JDC Chodera, JH Prinz
 """
 
 import logging
@@ -84,10 +83,11 @@ class Storage(NetCDFPlus):
     # TODO: Need to copy cvs without caches!
     def clone_empty(self, filename):
         """
-        Creates a copy of the netCDF file and replicates only the static parts which I consider
-            ensembles, volumes, engines, path movers, shooting point selectors. We do not need to
-            reconstruct collective variables since these need to be created again completely and then
-            the necessary arrays in the file will be created automatically anyway.
+        Creates a copy of the netCDF file and replicates only the static parts
+
+        Static parts are ensembles, volumes, engines, path movers, shooting point selectors.
+        We do not need to reconstruct collective variables since these need to be created again
+        completely and then the necessary arrays in the file will be created automatically anyway.
 
         Parameters
         ----------
@@ -119,16 +119,16 @@ class Storage(NetCDFPlus):
 
     def __init__(self, filename, mode=None, template=None):
         """
-        Create a netdfplus storage for OPS Objects
+        Create a netCDF+ storage for OPS Objects
 
         Parameters
         ----------
         filename : string
             filename of the netcdf file to be used or created
         mode : string, default: None
-            the mode of file creation, one of 'w' (write), 'a' (append) or
+            the mode of file creation, one of ``w`` (write), ``a`` (append) or
             None, which will append any existing files.
-        template : openpathsampling.Snapshot
+        template : :class:`openpathsampling.Snapshot`
             a Snapshot instance that contains a reference to a Topology, the
             number of atoms and used units
         """
@@ -231,23 +231,23 @@ class Storage(NetCDFPlus):
 
     def sync_all(self):
         """
-        Convenience function to sync `self.cvs` and `self` at once.
+        Convenience function to use ``self.cvs`` and ``self`` at once.
 
-        Under most circumstances, you want to sync `self.cvs` and `self` at
+        Under most circumstances, you want to sync ``self.cvs`` and ``self`` at
         the same time. This just makes it easier to do that.
         """
         self.cvs.sync()
         self.sync()
 
     def set_caching_mode(self, mode='default'):
-        """
+        r"""
         Set default values for all caches
 
         Parameters
         ----------
         mode : str
-            One of the following values is allowed 'default', 'production',
-            'analysis', 'off', 'lowmemory' and 'memtest'
+            One of the following values is allowed "default``\ , ``production``\ ,
+            ``analysis``\ , ``off``\ , ``lowmemory`` and ``memtest``
 
         """
 
@@ -459,14 +459,18 @@ class Storage(NetCDFPlus):
 class AnalysisStorage(Storage):
     """
     Open a storage in read-only and do caching useful for analysis.
+
     """
 
     def __init__(self, filename):
         """
+        Open a storage in read-only and do caching useful for analysis.
+
         Parameters
         ----------
         filename : str
             The filename of the storage to be opened
+
         """
         super(AnalysisStorage, self).__init__(
             filename=filename,
@@ -481,10 +485,11 @@ class AnalysisStorage(Storage):
     @staticmethod
     def cache_for_analysis(storage):
         """
+        Run specific caching useful for later analysis sessions.
 
         Parameters
         ----------
-        storage : Storage
+        storage : :class:`openpathsampling.storage.Storage`
             The storage the caching should act upon.
 
         """
@@ -498,23 +503,25 @@ class AnalysisStorage(Storage):
         storage.steps.cache_all()
 #        storage.trajectories.cache_all()
 
+
 class StorageView(object):
     """
     A View on a storage that only changes the iteration over steps.
 
     Can be used for bootstrapping on subsets of steps and pass this object
     to analysis routines.
+
     """
 
     class StepDelegate(object):
         """
-        Delegate that will alter the __iter__ behaviour of the underlying store
+        A delegate that will alter the ``iter()`` behaviour of the underlying store
 
         Attributes
         ----------
         store : dict-like
             the dict to be wrapped
-        store : openpathsampling.storage.ObjectStore
+        store : :class:`openpathsampling.netcdfplus.ObjectStore`
             a reference to an object store used
 
         """
@@ -535,13 +542,14 @@ class StorageView(object):
 
     def __init__(self, storage, step_range):
         """
-        Attributes
+        Parameters
         ----------
-            storage : openpathsampling.Storage
-                The storage the view is watching
-            step_range : iterable
-                An iterable object that species the step indices to be iterated over
-                when using the view
+
+        storage : :class:`openpathsampling.storage.Storage`
+            The storage the view is watching
+        step_range : iterable
+            An iterable object that species the step indices to be iterated over
+            when using the view
 
         """
         self._storage = storage
