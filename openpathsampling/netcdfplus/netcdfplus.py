@@ -860,6 +860,7 @@ class NetCDFPlus(netCDF4.Dataset):
                     else:
                         getter = _get2(lambda v: v)
 
+
             self.vars[var_name] = NetCDFPlus.ValueDelegate(var, getter, setter, store)
 
         else:
@@ -927,24 +928,10 @@ class NetCDFPlus(netCDF4.Dataset):
                 dimensions[ix] = var_name + '_dim_' + str(ix)
                 new_dimensions[dimensions[ix]] = dim
 
-        if dimensions[-1] == '...':
-            # last dimension is simply [] so we allow arbitrary length and remove the last dimension
-            variable_length = True
-            dimensions = dimensions[:-1]
-        else:
-            variable_length = False
-
         if var_type == 'obj' or var_type == 'lazyobj':
             dimensions.append('pair')
             if chunksizes is not None:
                 chunksizes = tuple(list(chunksizes) + [2])
-
-        nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
-
-        for dim_name, size in new_dimensions.items():
-            ncfile.create_dimension(dim_name, size)
-
-        dimensions = tuple(dimensions)
 
         # if chunksizes are strings then replace by the actual size of the dimension
         if chunksizes is not None:
@@ -957,6 +944,23 @@ class NetCDFPlus(netCDF4.Dataset):
                     chunksizes[ix] = len(ncfile.dimensions[dim])
 
             chunksizes = tuple(chunksizes)
+
+        if '...' in dimensions:
+            vl_pos = dimensions.index('...')
+            # last dimension is simply [] so we allow arbitrary length and remove the last dimension
+            variable_length = True
+            dimensions = dimensions[:vl_pos]
+            vl_dimensions = dimensions[vl_pos + 1:]
+            effective_dimension = tuple(dimensions + [-1] + vl_dimensions)
+        else:
+            variable_length = False
+
+        nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
+
+        for dim_name, size in new_dimensions.items():
+            ncfile.create_dimension(dim_name, size)
+
+        dimensions = tuple(dimensions)
 
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, var_name + '_vlen')
@@ -1023,8 +1027,7 @@ class NetCDFPlus(netCDF4.Dataset):
             if name not in self.vars:
                 self.create_variable_delegate(name)
 
-    @staticmethod
-    def get_value_parameters(value):
+    def get_value_parameters(self, value):
         """
         Compute netcdfplus compatible parameters to store a value
 
@@ -1060,6 +1063,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if type(test_type) is np.ndarray:
             dimensions = test_type.shape
+        elif type(test_type) in self._obj_store:
+            pass
         else:
             if hasattr(test_value, '__len__'):
                 dimensions = len(test_value)
@@ -1081,7 +1086,7 @@ class NetCDFPlus(netCDF4.Dataset):
                 test_type = test_type._value
 
         if storable:
-            var_type = NetCDFPlus.identify_var_type(test_type)
+            var_type = self.identify_var_type(test_type)
             return {
                 'var_type': var_type,
                 'dimensions': dimensions,
@@ -1091,8 +1096,7 @@ class NetCDFPlus(netCDF4.Dataset):
         return {
         }
 
-    @staticmethod
-    def identify_var_type(instance):
+    def identify_var_type(self, instance):
         """
         Identify common python and numpy types
 
@@ -1115,5 +1119,7 @@ class NetCDFPlus(netCDF4.Dataset):
             return ty.__name__
         elif hasattr(instance, 'dtype'):
             return 'numpy.' + instance.dtype.type.__name__
+        elif ty in self._obj_store:
+            return 'lazyobj.' + self._obj_store[ty].prefix
         else:
             return 'None'

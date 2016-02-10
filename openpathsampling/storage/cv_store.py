@@ -80,6 +80,11 @@ class ObjectDictStore(UniqueNamedObjectStore):
         ----------
         objectdict : :class:`openpathsampling.CollectiveVariable`
             the object dictionary that you want the cache to be created for
+        variable_length : bool
+            if `False` (default) the dimensions of the CV are fixed an determined from the
+            first stored object of that type. For snapshots this is the used template.
+            If set to `True` the
+
 
         """
         idx = self.index.get(objectdict, None)
@@ -87,7 +92,9 @@ class ObjectDictStore(UniqueNamedObjectStore):
             var_name = self.cache_var_name(idx)
 
             if var_name not in self.storage.variables:
-                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
+                template_store = self.storage.find_store(self.key_class)
+                template = template_store[0]
+                params = self.storage.get_value_parameters(objectdict(template))
 
                 shape = params['dimensions']
 
@@ -255,7 +262,7 @@ class ReversibleObjectDictStore(ObjectDictStore):
 
             if var_name not in self.storage.variables:
 
-                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
+                params = self.storage.get_value_parameters(objectdict(self.storage.template))
                 shape = params['dimensions']
 
                 if shape is None:

@@ -235,6 +235,17 @@ class MergeNumpy(ChainDict):
         self._post[key] = value
 
 
+class UnrollProxy(ChainDict):
+    """All returned values from underlying ChainDicts will be turned into a numpy array
+    """
+
+    def __getitem__(self, items):
+        return np.array(self._post[items])
+
+    def __setitem__(self, key, value):
+        self._post[key] = value
+
+
 class ExpandSingle(ChainDict):
     """
     Iterables will be unrolled and passed as a list
@@ -400,7 +411,8 @@ class CacheChainDict(ChainDict):
 
     def _get(self, item):
         try:
-            return self.cache[item]
+            obj = self.cache[item]
+            return obj
         except KeyError:
             return None
 
@@ -530,12 +542,13 @@ class StoredDict(ChainDict):
         if key is None:
             return None
 
-        if key in self.cache:
-            return self.cache[key]
-        else:
+        if key not in self.cache:
             # update cache with specific strategy
             self.cache[key] = self.value_store[key]
-            return self.cache[key]
+
+        obj = self.cache[key]
+
+        return obj
 
     def _get_list(self, items):
         keys = map(self._get_key, items)
@@ -546,12 +559,14 @@ class StoredDict(ChainDict):
             sorted_idxs = sorted(list(set(idxs)))
 
             sorted_values = self.value_store[sorted_idxs]
+            for key, value in zip(sorted_idxs, sorted_values):
+                self.cache[key] = value
             replace = [None if key is None else self.cache[key] if key in self.cache else
             sorted_values[sorted_idxs.index(key)] for key in keys]
         else:
             replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
 
-        return replace
+        return [rep if not hasattr(rep, '_idx') else rep.__subject__ for rep in replace]
 
 
 class ReversibleStoredDict(StoredDict):

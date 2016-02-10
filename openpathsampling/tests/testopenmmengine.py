@@ -60,10 +60,10 @@ class testOpenMMEngine(object):
         # Engine options
         options = {
             'nsteps_per_frame': 10,
-            'platform': 'fastest',
-            'solute_indices' : range(22),
-            'n_frames_max' : 5,
-            'timestep': 2.0*u.femtoseconds
+            'platform': 'CPU',
+            'solute_indices': range(22),
+            'n_frames_max': 5,
+            'timestep': 2.0 * u.femtoseconds
         }
 
         self.engine = OpenMMEngine(
