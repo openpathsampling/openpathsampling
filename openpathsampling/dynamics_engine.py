@@ -207,7 +207,7 @@ class DynamicsEngine(StorableNamedObject):
 
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the trajectory we've generated so far
         continue_conditions : list of function(Trajectory)
             callable function of a 'Trajectory' that returns True or False.
@@ -247,9 +247,9 @@ class DynamicsEngine(StorableNamedObject):
 
         Parameters
         ----------
-        snapshot : Snapshot 
+        snapshot : :class:`openpathsampling.snapshot.Snapshot`
             initial coordinates and velocities in form of a Snapshot object
-        running : (list of) function(Trajectory)
+        running : (list of) function(:class:`openpathsampling.trajectory.Trajectory`)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
         direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
@@ -260,7 +260,7 @@ class DynamicsEngine(StorableNamedObject):
 
         Returns
         -------    
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             generated trajectory of initial conditions, including initial
             coordinate set
 
@@ -332,6 +332,31 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
+
+
+    def generate_n_frames(self, n_frames=1):
+        """Generates n_frames, from but not including the current snapshot.
+        
+        This generates a fixed number of frames at once. If you desire the
+        reversed trajectory, you can reverse the returned trajectory.
+
+        Parameters
+        ----------
+        n_frames : integer
+            number of frames to generate
+
+        Returns
+        -------
+        paths.Trajectory()
+            the `n_frames` of the trajectory following (and not including)
+            the initial `current_snapshot`
+        """
+        self.start()
+        traj = paths.Trajectory([self.generate_next_frame() 
+                                 for i in range(n_frames)])
+        self.stop(traj)
+        return traj
+        
 
     @classmethod
     def check_snapshot_type(cls, snapshot):
