@@ -26,6 +26,11 @@ script:
   # Push to binstar anyway.
   - bash -x devtools/ci/after_sucess.sh
 
+addons:
+  apt:
+    packages:
+    - pandoc
+
 env:
   matrix:
 # - python=2.6  CONDA_PY=26  CONDA_NPY=16
