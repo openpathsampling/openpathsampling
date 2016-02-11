@@ -72,7 +72,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
         raise KeyError("'%s' is neither an stored cv nor an integer index" % idx)
 
-    def create_cache(self, objectdict, variable_length=False):
+    def create_cache(self, objectdict, variable_dimensions=False):
         """
         Create the storage variable that holds the data for the object dict
 
@@ -80,7 +80,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
         ----------
         objectdict : :class:`openpathsampling.CollectiveVariable`
             the object dictionary that you want the cache to be created for
-        variable_length : bool
+        variable_dimensions : bool
             if `False` (default) the dimensions of the CV are fixed an determined from the
             first stored object of that type. For snapshots this is the used template.
             If set to `True` the
@@ -98,13 +98,18 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
                 shape = params['dimensions']
 
+                print params
+
                 if shape is None:
                     chunksizes = None
                 else:
                     chunksizes = tuple(params['dimensions'])
 
-                    if variable_length:
-                        chunksizes = tuple(chunksizes[:-1] + ['...'])
+                if variable_dimensions:
+                    if shape is None:
+                        shape = tuple(['...'])
+                    else:
+                        shape = tuple(['...'] + list(shape[1:]))
 
                 self.key_store.create_variable(
                     var_name,

@@ -235,6 +235,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self._setup_class()
 
+        self.shape = dict()
+
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
 
@@ -265,6 +267,9 @@ class NetCDFPlus(netCDF4.Dataset):
 
             # open the store that contains all stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
+            self.shape['stores_json'] = (0, )
+            self.shape['stores_name'] = (0, )
+
             self.stores.set_caching(True)
             self.create_variable_delegate('stores_json')
             self.create_variable_delegate('stores_name')
@@ -272,6 +277,18 @@ class NetCDFPlus(netCDF4.Dataset):
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
                 variable = self.variables[variable_name]
+
+                # rebuild the effective shape of the variable, needed for variable length objects only
+
+                if hasattr(variable, 'full_shape'):
+                    shape = tuple(self.simplifier.build(getattr(variable, 'full_shape')))
+                else:
+                    shape = self.shape_from_dimensions(variable.dimensions)
+
+                    if variable.dtype is not str and type(variable.datatype) is netCDF4.VLType:
+                        shape = tuple(list(shape) + [-1])
+
+                self.shape[str(variable_name)] = shape
 
                 if self.support_simtk_unit:
                     import simtk.unit as u
@@ -824,6 +841,42 @@ class NetCDFPlus(netCDF4.Dataset):
 
             getter, setter, store = self.create_type_delegate(var.var_type)
 
+            if True:
+                # check if we have a variabe length that is not the last dimension
+                # this means we have to apply the flatting trick to turn it into a storable
+                # VLEN variable
+                if -1 in self.shape[var_name][:-1]:
+
+                    obj_dtype = np.dtype(object)
+                    var_dimensions = self.shape[var_name][self.shape[var_name].index(-1) + 1:]
+
+                    get_dimensions = tuple([-1] + list(var_dimensions))
+                    set_dimensions = tuple([-1])
+
+                    def _get3(my_getter):
+                        _fnc = lambda v: \
+                            np.array([w.reshape(get_dimensions) for w in v]) \
+                                if type(v) is list or v.dtype.type is np.object_ or len(v.shape) > len(get_dimensions) \
+                                else v.reshape(get_dimensions)
+
+                        if my_getter is not None:
+                            return lambda v: _fnc(my_getter(v))
+                        else:
+                            return _fnc
+
+                    def _set3(my_setter):
+                        _fnc2 = lambda v: \
+                            np.array([w.reshape(set_dimensions) for w in v]) \
+                                if type(v) is list or v.dtype.type is np.object_ else v.reshape(set_dimensions)
+
+                        if my_setter is not None:
+                            return lambda v: my_setter(_fnc2(v))
+                        else:
+                            return _fnc2
+
+                    getter = _get3(getter)
+                    setter = _set3(setter)
+
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
                     if var_name not in self.units:
@@ -860,11 +913,23 @@ class NetCDFPlus(netCDF4.Dataset):
                     else:
                         getter = _get2(lambda v: v)
 
-
             self.vars[var_name] = NetCDFPlus.ValueDelegate(var, getter, setter, store)
 
         else:
             raise ValueError("Variable '%s' is already taken!")
+
+    def shape_from_dimensions(self, dimensions):
+        shape = list(dimensions)
+        for ix, dim in enumerate(shape):
+            if dim == '...':
+                shape[ix] = -1
+            elif type(dim) is str or type(dim) is unicode:
+                shape[ix] = len(self.dimensions[dim])
+
+                if self.dimensions[dim].isunlimited():
+                    shape[ix] = 0
+
+        return tuple(shape)
 
     def create_variable(self, var_name,
                         var_type,
@@ -925,13 +990,19 @@ class NetCDFPlus(netCDF4.Dataset):
         new_dimensions = dict()
         for ix, dim in enumerate(dimensions):
             if type(dim) is int:
-                dimensions[ix] = var_name + '_dim_' + str(ix)
-                new_dimensions[dimensions[ix]] = dim
+                if dim not in new_dimensions:
+                    dimensions[ix] = var_name + '_dim_' + str(len(new_dimensions))
+                    new_dimensions[dim] = dimensions[ix]
+
+        for size, dim_name in new_dimensions.items():
+            ncfile.create_dimension(dim_name, size)
 
         if var_type == 'obj' or var_type == 'lazyobj':
             dimensions.append('pair')
             if chunksizes is not None:
                 chunksizes = tuple(list(chunksizes) + [2])
+
+        shape = self.shape_from_dimensions(dimensions)
 
         # if chunksizes are strings then replace by the actual size of the dimension
         if chunksizes is not None:
@@ -950,15 +1021,12 @@ class NetCDFPlus(netCDF4.Dataset):
             # last dimension is simply [] so we allow arbitrary length and remove the last dimension
             variable_length = True
             dimensions = dimensions[:vl_pos]
-            vl_dimensions = dimensions[vl_pos + 1:]
-            effective_dimension = tuple(dimensions + [-1] + vl_dimensions)
+            if chunksizes is not None:
+                chunksizes = chunksizes[:vl_pos]
         else:
             variable_length = False
 
         nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
-
-        for dim_name, size in new_dimensions.items():
-            ncfile.create_dimension(dim_name, size)
 
         dimensions = tuple(dimensions)
 
@@ -971,6 +1039,10 @@ class NetCDFPlus(netCDF4.Dataset):
                                           zlib=False, chunksizes=chunksizes)
 
         setattr(ncvar, 'var_type', var_type)
+
+        json_shape = self.simplifier.to_json(list(shape))
+        self.shape[var_name] = shape
+        setattr(ncvar, 'full_shape', json_shape)
 
         if self.support_simtk_unit and simtk_unit is not None:
 
