@@ -20,7 +20,7 @@ from openpathsampling.storage import Storage
 class testStorage(object):
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = paths.tools.trajectory_from_mdtraj(self.mdtraj)
+        self.traj = paths.tools.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
 
         self.filename = data_filename("storage_test.nc")
         self.filename_clone = data_filename("storage_test_clone.nc")
@@ -98,7 +98,7 @@ class testStorage(object):
 
         store.save(self.traj)
 
-        store.clone(filename=self.filename_clone, subset = self.solute_indices)
+        store.clone(filename=self.filename_clone)
 
         # clone the storage and reduce the number of atoms to only solute
 
@@ -108,17 +108,15 @@ class testStorage(object):
 
         compare_snapshot(
             store2.snapshots.load(0),
-            store.snapshots.load(0).subset(self.solute_indices)
+            store.snapshots.load(0)
         )
 
         compare_snapshot(
             store2.snapshots.load(1),
-            store.snapshots.load(1).subset(self.solute_indices)
+            store.snapshots.load(1)
         )
         store.close()
         store2.close()
-
-        pass
 
     def test_clone_empty(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')

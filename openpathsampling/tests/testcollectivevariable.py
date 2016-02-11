@@ -2,13 +2,14 @@
 @author David W.H. Swenson
 """
 
-from test_helpers import data_filename
+from test_helpers import data_filename, assert_close_unit
 
 import mdtraj as md
 import numpy as np
 
 import openpathsampling.collectivevariable as op
 import openpathsampling as paths
+from openpathsampling.netcdfplus import NetCDFPlus
 
 from msmbuilder.featurizer import AtomPairsFeaturizer
 
@@ -41,20 +42,6 @@ class testCV_Function(object):
 
         md_distances = md.compute_distances(self.mdtraj, atom_pairs)
 
-        my_distances = atom_pair_op( self.traj )
+        my_distances = atom_pair_op(self.traj)
 
         np.testing.assert_allclose(md_distances, my_distances, rtol=10**-6, atol=10**-10)
-
-    def test_return_parameters_from_template(self):
-
-        atom_pairs = [[0,1], [10,14]]
-        atom_pair_op = op.CV_MSMB_Featurizer("atom_pairs", AtomPairsFeaturizer, pair_indices=atom_pairs)
-
-        # little trick. We just predent the atom_pairs_op is a function we want to use
-        # it cannot be stored though, but for from_template it is enough
-
-        params = atom_pair_op.return_parameters_from_template(self.traj[0])
-
-        assert params['cv_return_type'] == 'numpy.float32'
-        assert params['cv_return_simtk_unit'] is None
-        assert params['cv_return_shape'] == tuple([2])

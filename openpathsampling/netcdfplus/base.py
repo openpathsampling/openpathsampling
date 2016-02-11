@@ -15,6 +15,7 @@ class StorableObject(object):
     _weak_index = 0L
 
     _base = None
+    _args = None
 
     observe_objects = False
 
@@ -249,10 +250,14 @@ class StorableObject(object):
 
         """
         excluded_keys = ['idx', 'json', 'identifier']
-        return {
-            key: value for key, value in self.__dict__.iteritems()
-            if key not in excluded_keys and key not in self._excluded_attr and
+        keys_to_store = {
+            key for key in self.__dict__
+            if key not in excluded_keys and
+            key not in self._excluded_attr and
             not (key.startswith('_') and self._exclude_private_attr)
+        }
+        return {
+            key: self.__dict__[key] for key in keys_to_store
         }
 
     @classmethod
@@ -392,3 +397,17 @@ class StorableNamedObject(StorableObject):
             self._name = name
 
         return self
+
+
+def create_to_dict(keys_to_store, function_keys=None):
+    if function_keys is None:
+        def to_dict(self):
+            return {key: getattr(self, key) for key in keys_to_store}
+    else:
+        def to_dict(self):
+            return {
+                key: getattr(self, key) if key not in function_keys else
+                getattr(self, key) for key in keys_to_store
+            }
+
+    return to_dict

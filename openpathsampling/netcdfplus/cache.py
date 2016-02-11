@@ -1,7 +1,7 @@
-__author__ = 'Jan-Hendrik Prinz'
-
 from collections import OrderedDict
 import weakref
+
+__author__ = 'Jan-Hendrik Prinz'
 
 
 class Cache(object):
@@ -212,7 +212,7 @@ class WeakLRUCache(Cache):
             obj = self._cache.pop(item)
             self._cache[item] = obj
             return obj
-        except(KeyError):
+        except KeyError:
             obj = self._weak_cache[item]
             del self._weak_cache[item]
             self._cache[item] = obj
@@ -238,16 +238,26 @@ class WeakLRUCache(Cache):
     def get_silent(self, item):
         """
         Return item from the dict if it exists, None otherwise without reordering the LRU
+
+        Parameters
+        ----------
+        item : object
+            the item index to be retrieved from the cache
+
+        Returns
+        -------
+        object of None
+            the requested object if it exists else `None`
         """
         if item is None:
             return None
 
         try:
             return self._cache[item]
-        except(KeyError):
+        except KeyError:
             try:
                 return self._weak_cache[item]
-            except(KeyError):
+            except KeyError:
                 return None
 
     def _check_size_limit(self):

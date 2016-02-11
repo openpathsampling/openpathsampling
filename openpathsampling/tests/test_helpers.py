@@ -15,7 +15,7 @@ import numpy.testing as npt
 import simtk.unit as u
 
 from openpathsampling.trajectory import Trajectory
-from openpathsampling.snapshot import Snapshot
+from openpathsampling.snapshot import Snapshot, MDSnapshot
 from openpathsampling.dynamics_engine import DynamicsEngine
 from openpathsampling.topology import Topology
 import openpathsampling as paths
@@ -26,7 +26,7 @@ def make_1d_traj(coordinates, velocities=None, topology=None):
         velocities = [0.0]*len(coordinates)
     traj = []
     for (pos, vel) in zip(coordinates, velocities):
-        snap = Snapshot(coordinates=np.array([[pos, 0, 0]]),
+        snap = MDSnapshot(coordinates=np.array([[pos, 0, 0]]),
                         velocities=np.array([[vel, 0, 0]]),
                         topology=topology
                         )
@@ -75,7 +75,7 @@ class MoverWithSignature(paths.PathMover):
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
-        template = Snapshot(topology=topology)
+        template = MDSnapshot(topology=topology)
 
         super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
                                                 template=template)
@@ -91,7 +91,7 @@ class CalvinistDynamics(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
-        self._current_snap = snap.copy()
+        self._current_snap = snap
 
     def generate_next_frame(self):
         # find the frame in self.predestination that matches this frame
@@ -107,7 +107,7 @@ class CalvinistDynamics(DynamicsEngine):
             #print self.frame_index
 
         if self._current_snap.velocities[0][0] >= 0:
-            self._current_snap = self.predestination[self.frame_index+1].copy()
+            self._current_snap = self.predestination[self.frame_index+1]
             self.frame_index += 1
         else:
             self._current_snap = self.predestination[self.frame_index-1].reversed
@@ -186,9 +186,6 @@ def compare_snapshot(snapshot1, snapshot2):
     assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
     assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
     assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
-
-    assert_equal(snapshot1.potential_energy, snapshot2.potential_energy)
-    assert_equal(snapshot1.kinetic_energy, snapshot2.kinetic_energy)
 
 class RandomMDEngine(paths.DynamicsEngine):
     _default_options = {}
