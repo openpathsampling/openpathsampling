@@ -1,8 +1,8 @@
-from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
-from openpathsampling.snapshot import Snapshot, AbstractSnapshot
-from openpathsampling.trajectory import Trajectory
-
 import abc
+
+from openpathsampling.dynamics.snapshot import Snapshot, AbstractSnapshot
+from openpathsampling.dynamics.trajectory import Trajectory
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 
 # =============================================================================================

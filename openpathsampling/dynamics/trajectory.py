@@ -7,7 +7,6 @@ import numpy as np
 import mdtraj as md
 import simtk.unit as u
 
-import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
 

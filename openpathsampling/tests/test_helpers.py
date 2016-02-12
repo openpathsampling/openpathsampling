@@ -8,17 +8,17 @@ a duck.
 import os
 from functools import wraps
 
-from pkg_resources import resource_filename
-from nose.tools import assert_items_equal, assert_equal, assert_in
 import numpy as np
 import numpy.testing as npt
 import simtk.unit as u
+from nose.tools import assert_items_equal, assert_equal, assert_in
+from pkg_resources import resource_filename
 
-from openpathsampling.trajectory import Trajectory
-from openpathsampling.snapshot import Snapshot, MDSnapshot
-from openpathsampling.dynamics_engine import DynamicsEngine
-from openpathsampling.topology import Topology
 import openpathsampling as paths
+from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
+from openpathsampling.dynamics.snapshot import MDSnapshot
+from openpathsampling.dynamics.topology import Topology
+from openpathsampling.dynamics.trajectory import Trajectory
 
 
 def make_1d_traj(coordinates, velocities=None, topology=None):

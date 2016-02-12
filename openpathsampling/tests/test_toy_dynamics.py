@@ -3,19 +3,14 @@
 '''
 
 import os
-import numpy as np
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
-from test_helpers import true_func, assert_equal_array_array
-import openpathsampling as paths
+                        assert_almost_equal)
 
-from openpathsampling.toy_dynamics.toy_pes import *
-from openpathsampling.toy_dynamics.toy_integrators import *
-from openpathsampling.toy_dynamics.toy_engine import *
-from openpathsampling.topology import ToyTopology
-from openpathsampling.snapshot import ToySnapshot
+import openpathsampling as paths
+from openpathsampling.dynamics.topology import ToyTopology
+from openpathsampling.dynamics.toy import *
+from test_helpers import true_func, assert_equal_array_array
 
 
 # =========================================================================

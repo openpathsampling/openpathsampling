@@ -3,18 +3,16 @@
 '''
 import os
 
-from nose.tools import (assert_equal)
 import mdtraj as md
+from nose.tools import (assert_equal)
 
+from openpathsampling.dynamics.openmm.openmm_engine import *
+from openpathsampling.dynamics.snapshot import Snapshot
+from openpathsampling.netcdfplus import ObjectJSON
+from openpathsampling.storage import Storage
 from test_helpers import (data_filename,
                           compare_snapshot
                           )
-from nose.plugins.skip import SkipTest
-
-from openpathsampling.openmm_engine import *
-from openpathsampling.snapshot import Snapshot
-from openpathsampling.netcdfplus import ObjectJSON
-from openpathsampling.storage import Storage
 
 
 class testStorage(object):
