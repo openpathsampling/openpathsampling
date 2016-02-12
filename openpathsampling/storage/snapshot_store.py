@@ -1,6 +1,6 @@
 import abc
 
-from openpathsampling.dynamics.snapshot import Snapshot, AbstractSnapshot
+from openpathsampling.dynamics.snapshot import BaseSnapshot
 from openpathsampling.dynamics.trajectory import Trajectory
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
@@ -76,7 +76,7 @@ class BaseSnapshotStore(ObjectStore):
 
         Returns
         -------
-        snapshot : Snapshot
+        snapshot : :obj:`BaseSnapshot`
             the loaded snapshot instance
         """
 
@@ -113,7 +113,7 @@ class BaseSnapshotStore(ObjectStore):
 
         Parameters
         ----------
-        snapshot : Snapshot()
+        snapshot : :obj:`BaseSnapshot`
             the snapshot to be saved
         idx : int or None
             if idx is not None the index will be used for saving in the storage.
