@@ -36,7 +36,7 @@ class Storage(NetCDFPlus):
             the initial snapshot
         """
         if self._template is None:
-            self._template = self.snapshots.load(int(self.variables['template_idx'][0]))
+            self._template = self.tag['template']
 
         return self._template
 
@@ -214,8 +214,7 @@ class Storage(NetCDFPlus):
         # Save the initial configuration
         self.snapshots.save(template)
 
-        self.createVariable('template_idx', 'i4', 'scalar')
-        self.variables['template_idx'][:] = self.snapshots.index[template]
+        self.tag['template'] = template
 
     def _restore(self):
         self.set_caching_mode('default')

@@ -8,9 +8,10 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal)
 
 import openpathsampling as paths
-from openpathsampling.dynamics.topology import ToyTopology
-from openpathsampling.dynamics.toy import *
+import openpathsampling.dynamics.toy as toy
 from test_helpers import true_func, assert_equal_array_array
+
+import numpy as np
 
 
 # =========================================================================
@@ -21,10 +22,10 @@ from test_helpers import true_func, assert_equal_array_array
 def setUp():
     # set up globals
     global gaussian, linear, outer, harmonic
-    gaussian = Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
-    outer = OuterWalls([1.12, 2.0], [0.2, -0.25])
-    linear = LinearSlope([1.5, 0.75], 0.5)
-    harmonic = HarmonicOscillator([1.5, 2.0], [0.5, 3.0], [0.25, 0.75])
+    gaussian = toy.Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
+    outer = toy.OuterWalls([1.12, 2.0], [0.2, -0.25])
+    linear = toy.LinearSlope([1.5, 0.75], 0.5)
+    harmonic = toy.HarmonicOscillator([1.5, 2.0], [0.5, 3.0], [0.25, 0.75])
     global init_pos, init_vel, sys_mass
     init_pos = np.array([0.7, 0.65])
     init_vel = np.array([0.6, 0.5])
@@ -126,23 +127,23 @@ class testCombinations(object):
 
 class test_convert_fcn(object):
     def test_convert_to_3Ndim(v):
-        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0]),
+        assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0]),
                                  np.array([[1.0, 2.0, 0.0]]))
-        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0, 3.0]), 
+        assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0, 3.0]),
                                  np.array([[1.0, 2.0, 3.0]]))
-        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0, 3.0, 4.0]),
+        assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0, 3.0, 4.0]),
                                  np.array([[1.0, 2.0, 3.0], [4.0, 0.0, 0.0]]))
 
 class testToyEngine(object):
     def setUp(self):
         pes = linear
-        integ = LeapfrogVerletIntegrator(dt=0.002)
-        topology=ToyTopology(
+        integ = toy.LeapfrogVerletIntegrator(dt=0.002)
+        topology=toy.Topology(
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
         )
-        template = ToySnapshot(
+        template = toy.Snapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
             topology=topology
@@ -150,7 +151,7 @@ class testToyEngine(object):
         options={
             'integ' : integ,
             'n_frames_max' : 5}
-        sim = ToyEngine(options=options,
+        sim = toy.Engine(options=options,
                         template=template
                        )
 
@@ -179,7 +180,7 @@ class testToyEngine(object):
                            self.sim.positions)
 
     def test_snapshot_set(self):
-        snap = ToySnapshot(coordinates=np.array([[1,2,3]]),
+        snap = toy.Snapshot(coordinates=np.array([[1,2,3]]),
                         velocities=np.array([[4,5,6]]))
         self.sim.current_snapshot = snap
         assert_items_equal(self.sim.positions, [1,2,3])
@@ -221,7 +222,7 @@ class testToyEngine(object):
 
 
     def test_start_with_snapshot(self):
-        snap = ToySnapshot(coordinates=np.array([1,2]),
+        snap = toy.Snapshot(coordinates=np.array([1,2]),
                         velocities=np.array([3,4]))
         self.sim.start(snapshot=snap)
         self.sim.stop([snap])
@@ -233,13 +234,13 @@ class testToyEngine(object):
 class testLeapfrogVerletIntegrator(object):
     def setUp(self):
         pes = linear
-        integ = LeapfrogVerletIntegrator(dt=0.002)
-        topology=ToyTopology(
+        integ = toy.LeapfrogVerletIntegrator(dt=0.002)
+        topology=toy.Topology(
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
         )
-        template = ToySnapshot(
+        template = toy.Snapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
             topology=topology
@@ -247,7 +248,7 @@ class testLeapfrogVerletIntegrator(object):
         options={
             'integ' : integ,
             'n_frames_max' : 5}
-        sim = ToyEngine(options=options,
+        sim = toy.Engine(options=options,
                         template=template
                        )
 
@@ -285,14 +286,14 @@ class testLangevinBAOABIntegrator(object):
     crashes.'''
     def setUp(self):
         pes = linear
-        integ = LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
+        integ = toy.LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                         gamma=1.0)
-        topology=ToyTopology(
+        topology=toy.Topology(
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
         )
-        template = ToySnapshot(
+        template = toy.Snapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
             topology=topology
@@ -300,7 +301,7 @@ class testLangevinBAOABIntegrator(object):
         options={
             'integ' : integ,
             'n_frames_max' : 5}
-        sim = ToyEngine(options=options,
+        sim = toy.Engine(options=options,
                         template=template
                        )
 

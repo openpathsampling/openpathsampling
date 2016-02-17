@@ -1,26 +1,12 @@
-import sys
-
 import mdtraj as md
 import numpy as np
 import simtk.unit as u
 
 import openpathsampling as paths
-from features.shared import Configuration, Momentum
+from snapshot import Snapshot
+from topology import Topology, MDTrajTopology
 
 __author__ = 'Jan-Hendrik Prinz'
-
-
-def refresh_output(output_str, print_anyway=True, refresh=True):
-    try:
-        import IPython.display
-    except ImportError:
-        if print_anyway:
-            print(output_str)
-    else:
-        if refresh:
-            IPython.display.clear_output(wait=True)
-        print(output_str)
-    sys.stdout.flush()
 
 
 def snapshot_from_pdb(pdb_file, simple_topology=False):
@@ -46,16 +32,16 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
     else:
         topology = paths.MDTrajTopology(pdb.topology)
 
-    configuration = Configuration(
+    configuration = Snapshot.Configuration(
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
     )
 
-    momentum = Momentum(
+    momentum = Snapshot.Momentum(
         velocities=u.Quantity(velocities, u.nanometers / u.picoseconds)
     )
 
-    snapshot = paths.Snapshot(
+    snapshot = Snapshot(
         topology=topology,
         configuration=configuration,
         momentum=momentum,
@@ -91,16 +77,16 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
                     v / u.nanometers for v in
                     testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
 
-    configuration = Configuration(
+    configuration = Snapshot.Configuration(
         coordinates=testsystem.positions,
         box_vectors=box_vectors
     )
 
-    momentum = Momentum(
+    momentum = Snapshot.Momentum(
         velocities=velocities
     )
 
-    snapshot = paths.Snapshot(
+    snapshot = Snapshot(
         topology=topology,
         configuration=configuration,
         momentum=momentum
@@ -125,13 +111,13 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     """
 
     trajectory = paths.Trajectory()
-    empty_momentum = Momentum(
+    empty_momentum = Snapshot.Momentum(
         velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
     )
     if simple_topology:
-        topology = paths.Topology(*mdtrajectory.xyz[0].shape)
+        topology = Topology(*mdtrajectory.xyz[0].shape)
     else:
-        topology = paths.MDTrajTopology(mdtrajectory.topology)
+        topology = MDTrajTopology(mdtrajectory.topology)
 
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
@@ -142,12 +128,12 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
         else:
             box_v = None
 
-        config = Configuration(
+        config = Snapshot.Configuration(
             coordinates=coord,
             box_vectors=box_v
         )
 
-        snap = paths.Snapshot(
+        snap = Snapshot(
             configuration=config,
             momentum=empty_momentum,
             topology=topology
@@ -178,20 +164,20 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
     n_atoms = topology.n_atoms
 
     if simple_topology:
-        topology = paths.Topology(n_atoms, 3)
+        topology = Topology(n_atoms, 3)
     else:
-        topology = paths.MDTrajTopology(md.Topology.from_openmm(topology))
+        topology = MDTrajTopology(md.Topology.from_openmm(topology))
 
-    configuration = Configuration(
+    configuration = Snapshot.Configuration(
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers)
     )
 
-    momentum = Momentum(
+    momentum = Snapshot.Momentum(
         velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds)
     )
 
-    snapshot = paths.Snapshot(
+    snapshot = Snapshot(
         topology=topology,
         configuration=configuration,
         momentum=momentum,

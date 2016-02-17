@@ -12,6 +12,7 @@ from analysis.tis_analysis import (
 )
 from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
     CV_Volume, CollectiveVariable
+
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
     EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
@@ -24,17 +25,15 @@ from ensemble import (
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
     OptionalEnsemble, join_ensembles
 )
+
 from live_visualization import LiveVisualization
+
 from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
 from openpathsampling.dynamics.openmm.openmm_engine import OpenMMEngine
 from openpathsampling.dynamics.snapshot import Snapshot, ToySnapshot, AbstractSnapshot, MDSnapshot, FeatureSnapshot
 from openpathsampling.dynamics.topology import ToyTopology, Topology, MDTrajTopology
-from openpathsampling.dynamics.toy import Gaussian, HarmonicOscillator, LinearSlope, \
-    OuterWalls, Toy_PES, Toy_PES_Add, Toy_PES_Sub
-from openpathsampling.dynamics.toy import LangevinBAOABIntegrator, \
-    LeapfrogVerletIntegrator
-from openpathsampling.dynamics.toy import ToyEngine
 from openpathsampling.dynamics.trajectory import Trajectory
+
 from pathmovechange import (
     EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
     PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
@@ -45,7 +44,9 @@ from pathmovechange import (
     RejectedSamplePathMoveChange, SubPathMoveChange,
     FilterByEnsemblePathMoveChange
 )
+
 from pathmover import Details, MoveDetails, SampleDetails
+
 from pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
@@ -60,15 +61,18 @@ from pathmover import (
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
     LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover
 )
+
 from pathsimulator import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep
 )
+
 from sample import Sample, SampleSet
+
 from shooting import ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
+
 from storage.storage import Storage, AnalysisStorage
-from tools import empty_snapshot_from_openmm_topology, snapshot_from_pdb, \
-    to_openmm_topology, trajectory_from_mdtraj
+
 from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
     EmptyVolume, FullVolume, CVRangeVolume, CVRangeVolumePeriodic,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,

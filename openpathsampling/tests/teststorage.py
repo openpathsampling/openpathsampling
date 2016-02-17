@@ -6,8 +6,8 @@ import os
 import mdtraj as md
 from nose.tools import (assert_equal)
 
-from openpathsampling.dynamics.openmm.openmm_engine import *
-from openpathsampling.dynamics.snapshot import Snapshot
+import openpathsampling.dynamics.openmm as dyn
+
 from openpathsampling.netcdfplus import ObjectJSON
 from openpathsampling.storage import Storage
 from test_helpers import (data_filename,
@@ -18,7 +18,7 @@ from test_helpers import (data_filename,
 class testStorage(object):
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = paths.tools.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
+        self.traj = dyn.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
 
         self.filename = data_filename("storage_test.nc")
         self.filename_clone = data_filename("storage_test_clone.nc")
@@ -72,6 +72,21 @@ class testStorage(object):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(self.filename))
 
+        print store._objects
+        print store._obj_store
+
+        print self.template_snapshot.__class__ in store._objects
+        print self.template_snapshot.__class__ in store._obj_store
+
+        print self.template_snapshot.__class__
+
+        store.simplifier.update_class_list()
+
+        print store.simplifier.type_classes.keys()
+
+        print store.simplifier.to_json({"1" : self.template_snapshot.__class__})
+
+
         copy = self.template_snapshot.copy()
         store.save(copy)
 
@@ -81,7 +96,7 @@ class testStorage(object):
         loaded_template = store.template
 
         compare_snapshot(loaded_template, self.template_snapshot)
-        loaded_copy = store.load(Snapshot, 1)
+        loaded_copy = store.load(dyn.Snapshot, 1)
 
         compare_snapshot(loaded_template, loaded_copy)
 

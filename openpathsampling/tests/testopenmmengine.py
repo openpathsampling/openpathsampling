@@ -8,7 +8,8 @@ from nose.tools import (assert_equal)
 from simtk import unit as u
 from simtk.openmm import app
 
-import openpathsampling as paths
+import openpathsampling.dynamics.openmm as dyn
+
 from openpathsampling import Snapshot, MDSnapshot
 from openpathsampling.dynamics.openmm.openmm_engine import OpenMMEngine
 from test_helpers import (true_func, data_filename,
@@ -18,8 +19,8 @@ from test_helpers import (true_func, data_filename,
 
 def setUp():
     global topology, template, system
-    template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
-    topology = paths.tools.to_openmm_topology(template)
+    template = dyn.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    topology = dyn.to_openmm_topology(template)
 
     # Generated using OpenMM Script Builder
     # http://builder.openmm.org
@@ -54,7 +55,7 @@ class testOpenMMEngine(object):
         # Engine options
         options = {
             'nsteps_per_frame': 10,
-            'platform': 'fastest',
+            'platform': 'OpenCL',
             'solute_indices' : range(22),
             'n_frames_max' : 5,
             'timestep': 2.0*u.femtoseconds

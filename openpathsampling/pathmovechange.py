@@ -18,7 +18,7 @@ class PathMoveChange(TreeMixin, StorableObject):
     ----------
     mover : PathMover
         The mover that generated this PathMoveChange
-    generated : list of Sample
+    samples : list of Sample
         A list of newly generated samples by this particular move.
         Only used by node movers like RepEx or Shooters
     subchanges : list of PathMoveChanges

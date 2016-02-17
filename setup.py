@@ -95,7 +95,7 @@ def buildKeywordDictionary():
     from distutils.core import Extension
     setupKeywords = {}
     setupKeywords["name"]              = "openpathsampling"
-    setupKeywords["version"]           = "0.0.1-alpha"
+    setupKeywords["version"]           = "0.0.4-alpha"
     setupKeywords["author"]            = "David W.H. Swenson, Jan-Hendrik Prinz, Peter Bolhuis and John D. Chodera"
     setupKeywords["author_email"]      = "dwhs@hyperblazer.net, jan.prinz@choderalab.org, p.g.bolhuis@uva.nl, choderaj@mskcc.org"
     setupKeywords["license"]           = "LGPL 2.1 or later"
@@ -103,19 +103,19 @@ def buildKeywordDictionary():
     setupKeywords["download_url"]      = "http://github.com/choderalab/openpathsampling"
     setupKeywords["packages"]          = ['openpathsampling',
                                           'openpathsampling.storage',
-                                          'openpathsampling.toy_dynamics',
                                           'openpathsampling.tests',
                                           'openpathsampling.analysis',
-                                          'openpathsampling.features',
-                                          'openpathsampling.netcdfplus'
+                                          'openpathsampling.netcdfplus',
+                                          'openpathsampling.dynamics'
+
                                           ]
     setupKeywords["package_dir"]       = {
-        'openpathsampling' : 'openpathsampling',
-        'openpathsampling.storage' : 'openpathsampling/storage',
-        'openpathsampling.toy_dynamics' : 'openpathsampling/toy_dynamics',
-        'openpathsampling.tests' : 'openpathsampling/tests',
-        'openpathsampling.features' : 'openpathsampling/features',
-        'openpathsampling.netcdfplus' : 'openpathsampling/netcdfplus'
+        'openpathsampling': 'openpathsampling',
+        'openpathsampling.storage': 'openpathsampling/storage',
+        'openpathsampling.dynamics' : 'openpathsampling/dynamics',
+        'openpathsampling.tests': 'openpathsampling/tests',
+        'openpathsampling.features': 'openpathsampling/features',
+        'openpathsampling.netcdfplus': 'openpathsampling/netcdfplus'
     }
     #setupKeywords["py_modules"]        = ["pymbar", "timeseries", "testsystems", "confidenceintervals"]
     setupKeywords["data_files"]        = []

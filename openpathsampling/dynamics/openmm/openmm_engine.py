@@ -5,7 +5,8 @@ import simtk.unit as u
 from simtk.openmm.app import Simulation
 
 import openpathsampling as paths
-from features.shared import Momentum, Configuration
+
+from snapshot import Snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         'platform': 'fastest'
     }
 
-    base_snapshot_type = paths.Snapshot
+    base_snapshot_type = Snapshot
 
     #TODO: Planned to move topology to be part of engine and not snapshot
     #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
@@ -189,16 +190,16 @@ class OpenMMEngine(paths.DynamicsEngine):
                                                  getVelocities=True,
                                                  getEnergy=True)
 
-        configuration = Configuration(
+        configuration = Snapshot.Configuration(
             coordinates = state.getPositions(asNumpy=True),
             box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
         )
 
-        momentum = Momentum(
+        momentum = Snapshot.Momentum(
             velocities = state.getVelocities(asNumpy=True)
         )
 
-        snapshot = paths.Snapshot(
+        snapshot = Snapshot(
             topology=self.topology,
             configuration=configuration,
             momentum=momentum
