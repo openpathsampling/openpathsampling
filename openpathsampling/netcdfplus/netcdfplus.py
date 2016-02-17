@@ -345,6 +345,7 @@ class NetCDFPlus(netCDF4.Dataset):
                 store._init()
 
         self.update_delegates()
+        self.simplifier.update_class_list()
 
     def register_store(self, name, store, register_attr=True):
         """

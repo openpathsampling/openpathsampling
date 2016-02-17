@@ -3,49 +3,7 @@ import numpy as np
 import pandas as pd
 from simtk.openmm import XmlSerializer
 
-from openpathsampling.netcdfplus import StorableNamedObject
-
-
-class Topology(StorableNamedObject):
-    """
-    Topology is the object that contains all information about the structure
-    of the system to be simulated.
-
-    Attributes
-    ----------
-    n_atoms : int
-        number of atoms
-    n_spatial : int
-        number of spatial dimensions, default is 3
-    """
-
-    def __init__(self, n_atoms, n_spatial=3):
-        super(Topology, self).__init__()
-        self.n_atoms = n_atoms
-        self.n_spatial = n_spatial
-
-    def subset(self, list_of_atoms):
-        return Topology(
-            n_atoms=len(list_of_atoms),
-            n_spatial=self.n_spatial
-        )
-
-
-class ToyTopology(Topology):
-    """
-    Attributes
-    ----------
-    masses : numpy.ndarray (n_atoms, dtype=float)
-        The masses associated with each atom
-    """
-
-    def __init__(self, n_spatial, masses, pes, n_atoms=1):
-        super(ToyTopology, self).__init__(n_atoms=n_atoms, n_spatial=n_spatial)
-        self.masses = masses
-        self.pes = pes
-
-    def subset(self, list_of_atoms):
-        return self
+from openpathsampling.dynamics import Topology
 
 
 class MDTrajTopology(Topology):

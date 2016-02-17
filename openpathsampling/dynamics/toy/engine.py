@@ -1,8 +1,8 @@
 import numpy as np
 
-from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
-from openpathsampling.dynamics.snapshot import ToySnapshot
+import openpathsampling as paths
 
+from snapshot import ToySnapshot as Snapshot
 
 def convert_to_3Ndim(v):
     ndofs = len(v)
@@ -26,13 +26,14 @@ def count_atoms(ndofs):
     # first part gives whole atoms, second part says if a partial exists
     return (ndofs / 3) + min(1, ndofs % 3)
 
-class ToyEngine(DynamicsEngine):
+
+class ToyEngine(paths.DynamicsEngine):
     '''The trick is that we have various "simulation" classes (either
     generated directly as here, or subclassed for more complication
     simulation objects as in OpenMM), but they all quack the same when it
     comes to things the DynamicsEngine calls on them for'''
 
-    base_snapshot_type = ToySnapshot
+    base_snapshot_type = Snapshot
 
     default_options = {
                       'integ' : None,
@@ -84,7 +85,7 @@ class ToyEngine(DynamicsEngine):
     def current_snapshot(self):
         snap_pos = self.positions
         snap_vel = self.velocities
-        return ToySnapshot(
+        return Snapshot(
             coordinates=np.array([snap_pos]),
             velocities=np.array([snap_vel]),
             topology=self.template.topology

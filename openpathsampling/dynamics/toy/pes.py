@@ -6,27 +6,27 @@ from openpathsampling.netcdfplus import StorableObject
 # The decorator @restores_ allows us to restore the object from a JSON
 # string completely and can thus be stored automatically
 
-class Toy_PES(StorableObject):
+class PES(StorableObject):
     # For now, we only support additive combinations; maybe someday that can
     # include multiplication, too
 
     def __init__(self):
-        super(Toy_PES, self).__init__()
+        super(PES, self).__init__()
 
     def __add__(self, other):
-        return Toy_PES_Add(self, other)
+        return PES_Add(self, other)
 
     def __sub__(self, other):
-        return Toy_PES_Sub(self, other)
+        return PES_Sub(self, other)
 
     def kinetic_energy(self, sys):
         v = sys.velocities
         m = sys.mass
         return 0.5*np.dot(m, np.multiply(v,v))
 
-class Toy_PES_Combination(Toy_PES):
+class PES_Combination(PES):
     def __init__(self, pes1, pes2, fcn, dfdx_fcn):
-        super(Toy_PES_Combination, self).__init__()
+        super(PES_Combination, self).__init__()
         self.pes1 = pes1
         self.pes2 = pes2
         self._fcn = fcn
@@ -38,25 +38,25 @@ class Toy_PES_Combination(Toy_PES):
     def dVdx(self, sys):
         return self._dfdx_fcn(self.pes1.dVdx(sys), self.pes2.dVdx(sys))
 
-class Toy_PES_Sub(Toy_PES_Combination):
+class PES_Sub(PES_Combination):
     def __init__(self, pes1, pes2):
-        super(Toy_PES_Sub, self).__init__(
+        super(PES_Sub, self).__init__(
             pes1,
             pes2,
             lambda a, b: a - b,
             lambda a, b: a - b
             )
 
-class Toy_PES_Add(Toy_PES_Combination):
+class PES_Add(PES_Combination):
     def __init__(self, pes1, pes2):
-        super(Toy_PES_Add, self).__init__(
+        super(PES_Add, self).__init__(
             pes1,
             pes2,
             lambda a, b: a + b,
             lambda a, b: a + b
         )
 
-class HarmonicOscillator(Toy_PES):
+class HarmonicOscillator(PES):
     def __init__(self, A, omega, x0):
         super(HarmonicOscillator, self).__init__()
         self.A = np.array(A)
@@ -73,7 +73,7 @@ class HarmonicOscillator(Toy_PES):
         k = self.omega*self.omega*sys.mass
         return self.A*k*dx
 
-class Gaussian(Toy_PES):
+class Gaussian(PES):
     ''' Returns the Gaussian given by A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)
     '''
     def __init__(self, A, alpha, x0):
@@ -94,7 +94,7 @@ class Gaussian(Toy_PES):
             self._local_dVdx[i] = -2*self.alpha[i]*dx[i]*exp_part
         return self._local_dVdx
 
-class OuterWalls(Toy_PES):
+class OuterWalls(PES):
     def __init__(self, sigma, x0):
         super(OuterWalls, self).__init__()
         self.sigma = np.array(sigma)
@@ -114,7 +114,7 @@ class OuterWalls(Toy_PES):
             self._local_dVdx[i] = 6.0*self.sigma[i]*dx[i]**5
         return self._local_dVdx
 
-class LinearSlope(Toy_PES):
+class LinearSlope(PES):
     def __init__(self, m, c):
         super(LinearSlope, self).__init__()
         self.m = m

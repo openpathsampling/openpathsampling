@@ -1,4 +1,10 @@
-from toy_engine import ToyEngine, convert_to_3Ndim
-from toy_integrators import LangevinBAOABIntegrator, LeapfrogVerletIntegrator
-from toy_pes import Gaussian, HarmonicOscillator, LinearSlope, OuterWalls, \
-    Toy_PES, Toy_PES_Add, Toy_PES_Combination, Toy_PES_Sub
+from engine import convert_to_3Ndim
+from integrators import LangevinBAOABIntegrator, LeapfrogVerletIntegrator
+from pes import Gaussian, HarmonicOscillator, LinearSlope, OuterWalls, \
+    PES, PES_Add, PES_Combination, PES_Sub
+
+from engine import ToyEngine as Engine
+from snapshot import ToySnapshot
+from snapshot import ToySnapshot as Snapshot
+
+from topology import ToyTopology as Topology
