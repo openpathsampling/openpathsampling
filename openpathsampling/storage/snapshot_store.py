@@ -2,6 +2,7 @@ import abc
 
 from openpathsampling.dynamics.snapshot import BaseSnapshot
 from openpathsampling.dynamics.trajectory import Trajectory
+
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 
