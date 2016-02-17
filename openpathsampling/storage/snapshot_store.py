@@ -1,7 +1,8 @@
 import abc
 
-from openpathsampling.dynamics.snapshot import Snapshot, AbstractSnapshot
+from openpathsampling.dynamics.snapshot import AbstractSnapshot
 from openpathsampling.dynamics.trajectory import Trajectory
+
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 
@@ -112,7 +113,7 @@ class AbstractSnapshotStore(ObjectStore):
 
         Parameters
         ----------
-        snapshot : Snapshot()
+        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
             the snapshot to be saved
         idx : int or None
             if idx is not None the index will be used for saving in the storage.
