@@ -1,7 +1,6 @@
 import numpy as np
 
-import openpathsampling as paths
-
+from openpathsampling.dynamics import DynamicsEngine
 from snapshot import ToySnapshot as Snapshot
 
 def convert_to_3Ndim(v):
@@ -27,7 +26,7 @@ def count_atoms(ndofs):
     return (ndofs / 3) + min(1, ndofs % 3)
 
 
-class ToyEngine(paths.DynamicsEngine):
+class ToyEngine(DynamicsEngine):
     '''The trick is that we have various "simulation" classes (either
     generated directly as here, or subclassed for more complication
     simulation objects as in OpenMM), but they all quack the same when it
