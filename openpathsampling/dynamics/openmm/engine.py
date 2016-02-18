@@ -4,14 +4,13 @@ import simtk.openmm
 import simtk.unit as u
 from simtk.openmm.app import Simulation
 
-import openpathsampling as paths
-
+from openpathsampling.dynamics import DynamicsEngine
 from snapshot import Snapshot
 
 logger = logging.getLogger(__name__)
 
 
-class OpenMMEngine(paths.DynamicsEngine):
+class OpenMMEngine(DynamicsEngine):
     """OpenMM dynamics engine based on using an `simtk.openmm` system and integrator object.
 
     The engine will create a :class:`simtk.openmm.app.Simulation` instance and uses this to generate new frames.
