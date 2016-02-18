@@ -9,7 +9,6 @@ import logging
 
 import simtk.unit as u
 
-import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 
 import openpathsampling.dynamics as dyn
@@ -183,6 +182,7 @@ class DynamicsEngine(StorableNamedObject):
         }
 
     def set_as_default(self):
+        import openpathsampling as paths
         paths.EngineMover.engine = self
 
     @property
