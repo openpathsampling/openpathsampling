@@ -221,7 +221,19 @@ class Storage(NetCDFPlus):
 
     def _restore(self):
         self.set_caching_mode('default')
-        self.topology = self.topologies[0]
+
+        # check, if the necessary modules are imported
+
+        try:
+            dummy = self.template
+            self.topology = self.topologies[0]
+
+        except:
+            raise RuntimeError(
+                'Cannot restore storage. Some of the necessary classes (Engines, Snapshots, Topologies) require '
+                'to be imported separately. So you need to run certain engine imports first. The most common '
+                'way to do so is to run `import openpathsampling.dynamics.engine`'
+            )
 
     def sync_all(self):
         """

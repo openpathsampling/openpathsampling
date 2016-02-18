@@ -28,12 +28,6 @@ from ensemble import (
 
 from live_visualization import LiveVisualization
 
-from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
-from openpathsampling.dynamics.openmm.openmm_engine import OpenMMEngine
-from openpathsampling.dynamics.snapshot import Snapshot, ToySnapshot, AbstractSnapshot, MDSnapshot, FeatureSnapshot
-from openpathsampling.dynamics.topology import ToyTopology, Topology, MDTrajTopology
-from openpathsampling.dynamics.trajectory import Trajectory
-
 from pathmovechange import (
     EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
     PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
