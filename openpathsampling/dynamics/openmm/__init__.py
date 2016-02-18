@@ -1,4 +1,4 @@
-from openmm_engine import OpenMMEngine as Engine
+from engine import OpenMMEngine as Engine
 from tools import (
     empty_snapshot_from_openmm_topology,
     snapshot_from_pdb,
