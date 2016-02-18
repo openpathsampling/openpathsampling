@@ -151,7 +151,10 @@ class Storage(NetCDFPlus):
         self.create_store('pathmovechanges', paths.storage.PathMoveChangeStore())
         self.create_store('steps', paths.storage.MCStepStore())
 
-        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
+        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(
+            paths.CollectiveVariable,
+            paths.dynamics.AbstractSnapshot
+        ))
 
         # normal objects
 
