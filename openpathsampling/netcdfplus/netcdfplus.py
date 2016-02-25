@@ -722,10 +722,10 @@ class NetCDFPlus(netCDF4.Dataset):
             store = getattr(self, var_type.split('.')[1])
             base_type = store.content_class
 
-            get_iterable = lambda v: \
+            get_is_iterable = lambda v: \
                 not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
-            set_iterable = lambda v: \
+            set_is_iterable = lambda v: \
                 not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
 
@@ -763,10 +763,10 @@ class NetCDFPlus(netCDF4.Dataset):
         elif var_type.startswith('obj.'):
             getter = lambda v: \
                 [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
-                    if get_iterable(v) else None if int(v) < 0 else store.load(int(v))
+                    if get_is_iterable(v) else None if int(v) < 0 else store.load(int(v))
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if set_iterable(v) else -1 if v is None else store.save(v)
+                    if set_is_iterable(v) else -1 if v is None else store.save(v)
 
         elif var_type == 'obj':
             # arbitrary object
@@ -785,10 +785,10 @@ class NetCDFPlus(netCDF4.Dataset):
         elif var_type.startswith('lazyobj.'):
             getter = lambda v: \
                 [None if int(w) < 0 else LoaderProxy(store, int(w)) for w in v.tolist()] \
-                    if get_iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
+                    if get_is_iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if set_iterable(v) else -1 if v is None else store.save(v)
+                    if set_is_iterable(v) else -1 if v is None else store.save(v)
 
         elif var_type == 'lazyobj':
             # arbitrary object

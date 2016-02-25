@@ -7,7 +7,7 @@
 import abc
 
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
-import features
+import features as feats
 
 
 # =============================================================================
@@ -106,25 +106,31 @@ class FeatureSnapshot(AbstractSnapshot):
         return super(FeatureSnapshot, self).copy()
 
 
-def create_snapshot(name, features, description=None):
+def snapshot_factory(name, features, description=None):
     """
     Helper to create a new Snapshot class
+    
+    Parameters
+    ----------
+    name : str
+        name of the Snapshot class
+    feats : 
     """
 
     cls = type(name, (FeatureSnapshot, ), {})
     if description is not None:
         cls.__doc__ = description
 
-    cls = features.set_features(*features)(cls)
+    cls = feats.set_features(*features)(cls)
 
     return cls
 
 
-@features.set_features(
-    features.velocities,
-    features.coordinates,
-    features.xyz,
-    features.topology
+@feats.set_features(
+    feats.velocities,
+    feats.coordinates,
+    feats.xyz,
+    feats.topology
 )
 class ToySnapshot(FeatureSnapshot):
     """
@@ -132,12 +138,12 @@ class ToySnapshot(FeatureSnapshot):
     """
 
 
-@features.set_features(
-    features.velocities,
-    features.coordinates,
-    features.box_vectors,
-    features.xyz,
-    features.topology
+@feats.set_features(
+    feats.velocities,
+    feats.coordinates,
+    feats.box_vectors,
+    feats.xyz,
+    feats.topology
 )
 class MDSnapshot(FeatureSnapshot):
     """
@@ -145,11 +151,11 @@ class MDSnapshot(FeatureSnapshot):
     """
 
 
-@features.set_features(
-    features.configuration,
-    features.momentum,
-    features.xyz,
-    features.topology  # for compatibility
+@feats.set_features(
+    feats.configuration,
+    feats.momentum,
+    feats.xyz,
+    feats.topology  # for compatibility
 )
 class Snapshot(FeatureSnapshot):
     """

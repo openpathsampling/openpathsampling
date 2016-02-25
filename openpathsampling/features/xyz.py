@@ -1,4 +1,6 @@
 attributes = ['xyz']
+required = ['coordinates']
+
 
 def xyz(snapshot):
     """
@@ -7,11 +9,6 @@ def xyz(snapshot):
     xyz : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
         atomic coordinates without dimensions. Be careful.
 
-    Notes
-    -----
-    SERIOUS PROBLEM: whether .coordinates returns a u.Quantity or jut
-    numpy array depending on situation (at least for ToyDynamics). This
-    is bad.
     """
     import simtk.unit as u
 

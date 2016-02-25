@@ -71,7 +71,8 @@ def set_features(*features):
         # create and fill `__features__` with values from feature structures
         __features__ = dict()
         __features__['classes'] = features
-        for name in ['attributes', 'minus', 'reversal', 'properties', 'flip', 'numpy', 'lazy']:
+        for name in ['attributes', 'minus', 'reversal', 'properties',
+                     'flip', 'numpy', 'lazy', 'required']:
             __features__[name] = []
 
         if use_lazy_reversed:
@@ -79,6 +80,7 @@ def set_features(*features):
 
 
         origin = dict()
+        required = dict()
         # loop over all the features
         for feature in features:
 
@@ -89,7 +91,7 @@ def set_features(*features):
                     setattr(cls, prop, property(getattr(feature, prop)))
 
             # copy specific attribute types
-            for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy']:
+            for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy', 'required']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
@@ -107,6 +109,13 @@ def set_features(*features):
                         origin[c] = feature
 
                     __features__[name] += content
+
+        for name in __features__['required']:
+            if name not in __features__['attributes']:
+                raise RuntimeError((
+                    'Attribute "%s" is required. Please make sure that is will be added by '
+                    'some feature') % name
+                )
                     
         __features__['reversal'] = [
             attr for attr in __features__['attributes']
