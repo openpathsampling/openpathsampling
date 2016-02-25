@@ -2,7 +2,7 @@ import numpy as np
 from shared import ConfigurationStore
 import mdtraj
 
-attributes = ['configuration', 'box_vectors', 'md', 'coordinates', 'xyz']
+attributes = ['configuration', 'box_vectors', 'md', 'coordinates']
 lazy = ['configuration']
 
 

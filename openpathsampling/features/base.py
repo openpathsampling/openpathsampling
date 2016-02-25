@@ -77,6 +77,8 @@ def set_features(*features):
         if use_lazy_reversed:
             __features__['lazy'] = ['_reversed']
 
+
+        origin = dict()
         # loop over all the features
         for feature in features:
 
@@ -86,12 +88,23 @@ def set_features(*features):
                     __features__['properties'] += [prop]
                     setattr(cls, prop, property(getattr(feature, prop)))
 
-            # copy specific attribtue types
+            # copy specific attribute types
             for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
                         content = [content]
+
+                    if name == 'attributes':
+                        for c in content:
+                            if c in __features__['attributes']:
+                                raise RuntimeError((
+                                    'Feature collision. Attribute "%s" present in two features. ' +
+                                    'Please remove one feature "%s" or "%s"') %
+                                    (c, str(feature), str(origin[c])))
+
+                    for c in content:
+                        origin[c] = feature
 
                     __features__[name] += content
                     
