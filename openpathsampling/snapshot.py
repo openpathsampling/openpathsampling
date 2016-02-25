@@ -106,7 +106,21 @@ class FeatureSnapshot(AbstractSnapshot):
         return super(FeatureSnapshot, self).copy()
 
 
-@features.base.set_features(
+def create_snapshot(name, features, description=None):
+    """
+    Helper to create a new Snapshot class
+    """
+
+    cls = type(name, (FeatureSnapshot, ), {})
+    if description is not None:
+        cls.__doc__ = description
+
+    cls = features.set_features(*features)(cls)
+
+    return cls
+
+
+@features.set_features(
     features.velocities,
     features.coordinates,
     features.xyz,
@@ -118,7 +132,7 @@ class ToySnapshot(FeatureSnapshot):
     """
 
 
-@features.base.set_features(
+@features.set_features(
     features.velocities,
     features.coordinates,
     features.box_vectors,
@@ -131,7 +145,7 @@ class MDSnapshot(FeatureSnapshot):
     """
 
 
-@features.base.set_features(
+@features.set_features(
     features.configuration,
     features.momentum,
     features.xyz,

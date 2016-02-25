@@ -1,5 +1,6 @@
 from openpathsampling.netcdfplus import DelayedLoader
-from numpydocparse import NumpyDocTools
+from numpydoctools import NumpyDocTools
+# from openpathsampling.snapshot import FeatureSnapshot
 
 
 def set_features(*features):
@@ -228,7 +229,7 @@ def set_features(*features):
             cc = compile('\n'.join(code), '<string>', 'exec')
             exec cc in locals()
 
-            cls.copy = copyto
+            cls.copyto = copyto
 
         except RuntimeError as e:
             print e
