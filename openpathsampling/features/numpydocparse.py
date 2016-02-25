@@ -1,4 +1,4 @@
-class NumpyDocParser(object):
+class NumpyDocTools(object):
 
     known_sections = [
         'HEAD',

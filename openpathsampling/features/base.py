@@ -1,17 +1,5 @@
 from openpathsampling.netcdfplus import DelayedLoader
-from numpydocparse import NumpyDocParser
-
-def has(attr):
-    def _has(func):
-        def inner(self, *args, **kwargs):
-            if hasattr(self, attr) and getattr(self, attr) is not None:
-                return func(self, *args, **kwargs)
-            else:
-                return None
-
-        return inner
-
-    return _has
+from numpydocparse import NumpyDocTools
 
 
 def set_features(*features):
@@ -19,36 +7,86 @@ def set_features(*features):
     Select snapshot features
     """
 
-    parser = NumpyDocParser()
+    # create a parser that can combine numpy docstrings
+    parser = NumpyDocTools()
+
+    # if this is set to true than the reversed counterpart of a Snapshot
+    # is saved a lazy pointer otherwise we create a full copy
     use_lazy_reversed = True
 
     def _decorator(cls):
+        """
+        Class decorator that will attach function for compiled features
+
+        This function will use a list of features and create `__init__` and
+        copy functions based on the structure of features for performance.
+
+        It will also take care of creating a joined docstring and the corect
+        signature of the `__init__` function
+
+        A attribute `__features__` will be added that contains information
+        about the used features their structure. It is a dictionary with the
+        following keys
+
+        classes : dict of used features
+        lazy : dict of string
+            names of features that are treated as lazy loaded object
+        properties : dict of string
+            names of features that are treated as properties
+        lazy : dict of string
+            names of features that are treated as lazy loaded object
+        reversal : dict of string
+            names of features that are treated as being reversible
+        minus : dict of string
+            names of features that are treated as being reversible and
+            should be multiplied by -1.0
+        flip : dict of string
+            names of features that are treated as being reversible and
+            should be negated `~`
+        attributes : dict of string
+            names of features that are treated as being class attributes
+        parameters : dict of string
+            names of features that attributes but not properties and hence
+            possible parameters for creation
+        numpy : dict of string
+            names of features that can use numpy for faster copying, etc.
+
+        Parameters
+        ----------
+        cls : the `class` to the modified
+
+        Returns
+        -------
+        class
+            the modified class
+
+        """
 
         # important for compile to work properly
         import openpathsampling as paths
 
         parser.clear()
 
+        # create and fill `__features__` with values from feature structures
         __features__ = dict()
         __features__['classes'] = features
-        for name in ['attributes', 'minus', 'reversal', 'properties', 'flip']:
-            __features__[name] = list()
+        for name in ['attributes', 'minus', 'reversal', 'properties', 'flip', 'numpy', 'lazy']:
+            __features__[name] = []
 
         if use_lazy_reversed:
             __features__['lazy'] = ['_reversed']
-        else:
-            __features__['lazy'] = list()
 
+        # loop over all the features
         for feature in features:
-            # loop over all the features
 
-            # add properties to class
+            # add properties
             for prop in feature.attributes:
                 if hasattr(feature, prop) and callable(getattr(feature, prop)):
                     __features__['properties'] += [prop]
                     setattr(cls, prop, property(getattr(feature, prop)))
 
-            for name in ['attributes', 'minus', 'lazy', 'flip']:
+            # copy specific attribtue types
+            for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
@@ -68,23 +106,23 @@ def set_features(*features):
             if attr not in __features__['properties']
         ]
 
-        # add lazy decorators
-
+        # add descriptors that can handle lazy loaded objects
         for attr in __features__['lazy']:
             setattr(cls, attr, DelayedLoader())
 
         cls.__features__ = __features__
 
-        # update docstring
+        # update the docstring to be a union of docstrings from the class
+        # and the features
 
-        # from class
+        # get docstring from class
         parser.add_docs_from(cls)
 
         # from top of features
         for feat in __features__['classes']:
             parser.add_docs_from(feat)
 
-            # from properties ???
+            # from properties
             for prop in __features__['properties']:
                 if hasattr(feat, prop):
                     if prop not in parser.attributes:
@@ -94,14 +132,18 @@ def set_features(*features):
                             translate={'returns': 'attributes'}
                         )
 
+        # set new docstring. This is only possible since our class is created
+        # using a Metaclass for abstract classes `abc`. Normal classes cannot
+        # have thier docstring changed.
         cls.__doc__ = parser.get_docstring()
 
-        # print '+++++++++++++++++++++++++++'
-        # print cls.__doc__
-        # print '+++++++++++++++++++++++++++'
-        # print
+        # compile the function for .copy()
 
-        # compile copy()
+        # def copy(self):
+        #     this = cls.__new__(cls)
+        #     this._lazy = { ... }
+        #     this.feature1 = self.feature1
+
         code = []
         code += [
             "def copy(self):",
@@ -132,6 +174,7 @@ def set_features(*features):
             "    return this"
         ]
 
+        # compile the code and register the new function
         try:
             cc = compile('\n'.join(code), '<string>', 'exec')
             exec cc in locals()
@@ -142,8 +185,65 @@ def set_features(*features):
             print e
             pass
 
+        # compile the function for .copyto(target)
 
-        # compile create_reversed
+        # def copyto(self, target):
+        #     this = target
+        #     this._lazy = { ... }
+        #     this.feature1 = self.feature1
+        #     return this
+
+        code = []
+        code += [
+            "def copyto(self, target):",
+            "    this = target",
+        ]
+
+        if __features__['lazy']:
+            code += [
+                "    this._lazy = {",
+            ]
+            code += [
+                "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
+                for lazy in __features__['lazy']
+            ]
+            code += [
+                "    }"
+            ]
+
+        code += map(
+            "    this.{0} = self.{0}".format,
+            filter(
+                lambda x : x not in __features__['lazy'],
+                __features__['parameters']
+            )
+        )
+
+        code += [
+            "    return this"
+        ]
+
+        # compile the code and register the new function
+        try:
+            cc = compile('\n'.join(code), '<string>', 'exec')
+            exec cc in locals()
+
+            cls.copy = copyto
+
+        except RuntimeError as e:
+            print e
+            pass
+
+        # compile the function for .copyto(target)
+
+        # def create_reversed(self):
+        #     this = cls.__new__(cls)
+        #     this._lazy = { ... }
+        #     this.feature1 = self.feature1
+        #     this.feature2 = - self.feature2  # minus feature
+        #     this.feature3 = ~ self.feature3  # flip features
+        #     return this
+
         code = []
         code += [
             "def create_reversed(self):",
@@ -173,6 +273,7 @@ def set_features(*features):
             "    return this"
         ]
 
+        # compile the code and register the new function
         try:
             cc = compile('\n'.join(code), '<string>', 'exec')
             exec cc in locals()
@@ -183,9 +284,14 @@ def set_features(*features):
             print e
             pass
 
-        # compile __init__
+        # compile the function for __init__
 
-        # we use as signature all attributes
+        # def __init__(self, attribute1=None, ... ):
+        #     self._lazy = { ... }
+        #     self.feature1 = self.feature1
+        #     return this
+
+        # we use as signature all feature names in parameters
         parameters = ['engine=None']
         for feat in __features__['parameters']:
             if feat in __features__['flip']:
@@ -216,6 +322,7 @@ def set_features(*features):
 
         code += map("    self.{0} = {0}".format, __features__['parameters'])
 
+        # compile the code and register the new function
         try:
             cc = compile('\n'.join(code), '<string>', 'exec')
             exec cc in locals()
