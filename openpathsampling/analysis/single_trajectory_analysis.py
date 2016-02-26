@@ -1,5 +1,6 @@
 import openpathsampling as paths
 
+# TODO: I think this should be a method in Trajectory
 def subtrajectory_indices(trajectory, subtrajectories):
     results = []
     for subtraj in subtrajectories:
@@ -49,6 +50,10 @@ class SingleTrajectoryAnalysis(object):
             self.analyze_continuous_time(trajectory, state)
             self.analyze_lifetime(trajectory, state)
             self.analyze_flux(trajectory, state)
+
+    def analyze(self, trajectory):
+        self.add_frames(trajectory)
+        return self
 
     def continuous_time_distribution(self, state):
         dist = np.array(self.continuous_time[state])

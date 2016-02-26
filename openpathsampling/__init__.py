@@ -81,6 +81,9 @@ from analysis.replica_network import (
     trace_replicas_for_ensemble, condense_repeats,
     ReplicaNetworkGraph
 )
+from analysis.single_trajectory_analysis import (
+    SingleTrajectoryAnalysis, subtrajectory_indices
+)
 
 from live_visualization import LiveVisualization
 
