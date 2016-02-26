@@ -1,4 +1,5 @@
 import openpathsampling as paths
+import numpy as np
 
 # TODO: I think this should be a method in Trajectory
 def subtrajectory_indices(trajectory, subtrajectories):
@@ -26,7 +27,7 @@ class SingleTrajectoryAnalysis(object):
         self.continuous_time[state] += lengths
 
     def analyze_lifetime(self, trajectory, state):
-        other_state = (set([self.stateA, self.stateB]) - set([state]))[0]
+        other_state = list(set([self.stateA, self.stateB]) - set([state]))[0]
 	ensemble_BAB = paths.SequentialEnsemble([
 	    paths.AllInXEnsemble(other_state) & paths.LengthEnsemble(1),
 	    paths.PartInXEnsemble(state) & paths.AllOutXEnsemble(other_state),
