@@ -82,7 +82,7 @@ from analysis.replica_network import (
     ReplicaNetworkGraph
 )
 from analysis.single_trajectory_analysis import (
-    SingleTrajectoryAnalysis, subtrajectory_indices
+    SingleTrajectoryAnalysis 
 )
 
 from live_visualization import LiveVisualization

@@ -618,6 +618,24 @@ class Trajectory(list, StorableObject):
         shared = self.shared_configurations(other)
         return Trajectory([snap for snap in self if snap in shared])
 
+    def subtrajectory_indices(self, subtrajectories):
+        """
+        Returns a list of lists of indices for frames from subtrajectories.
+
+        Parameters
+        ----------
+        subtrajectories : list of :class:`.Trajectory`
+            input list of subtrajectories
+
+        Returns
+        -------
+        list of list of int
+            the indices within this trajectory of the frames in each
+            subtrajectory
+        """
+        return [[self.index(s) for s in subtrj] for subtrj in subtrajectories]
+
+
     # =============================================================================================
     # UTILITY FUNCTIONS
     # =============================================================================================

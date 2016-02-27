@@ -1,13 +1,6 @@
 import openpathsampling as paths
 import numpy as np
 
-# TODO: I think this should be a method in Trajectory
-def subtrajectory_indices(trajectory, subtrajectories):
-    results = []
-    for subtraj in subtrajectories:
-        results.append([trajectory.index(s) for s in subtraj])
-    return results
-
 
 class SingleTrajectoryAnalysis(object):
     def __init__(self, transition, dt=None):
