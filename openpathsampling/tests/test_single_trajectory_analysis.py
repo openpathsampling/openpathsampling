@@ -19,6 +19,8 @@ class testSingleTrajectoryAnalysis(object):
         self.stateA = vol1
         self.stateB = vol3
 
+        self.stateX = ~vol1 & ~vol3
+
         transition = paths.TPSTransition(self.stateA, self.stateB)
         self.analyzer = paths.SingleTrajectoryAnalysis(transition)
         self.traj_str = "aaaxaxxbxaxababaxbbbbbxxxxxxa"
@@ -43,7 +45,17 @@ class testSingleTrajectoryAnalysis(object):
 
 
     def test_analyze_continuous_time(self):
-        raise SkipTest
+        self.analyzer.analyze_continuous_time(self.trajectory, self.stateA)
+        assert_equal(self.analyzer.continuous_time[self.stateA],
+                     [3, 1, 1, 1, 1, 1, 1])
+        self.analyzer.analyze_continuous_time(self.trajectory, self.stateB)
+        assert_equal(self.analyzer.continuous_time[self.stateB],
+                     [1, 1, 1, 5])
+
+    @raises(KeyError)
+    def test_analyze_continuous_time_bad_state(self):
+        self.analyzer.analyze_continuous_time(self.trajectory, self.stateX)
+
 
     def test_analyze_lifetime(self):
         raise SkipTest
