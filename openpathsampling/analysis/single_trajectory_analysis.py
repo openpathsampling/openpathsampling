@@ -3,6 +3,35 @@ import numpy as np
 
 
 class SingleTrajectoryAnalysis(object):
+    """Analyze a trajectory or set of trajectories for transition properties.
+
+    Attributes
+    ----------
+    dt : float
+        time step between frames
+    continuous_frames : dict
+        dictionary mapping state to a list of number of frames continuously
+        in that state from the analyzed trajectories.
+    lifetime_frames : dict
+        dictionary mapping state to a list of the number of frames to the
+        trajectory lengths for calculating the lifetime. See Notes for more.
+    transition_frames : dict
+        dictionary mapping the transition tuple (initial_state, final_state)
+        to a list of the number of frames involves in the transition and not
+        in either state.
+    flux_frames : dict
+        TODO
+    continuous_times : dict
+        As with continuous frames, but durations multiplied by self.dt
+    lifetimes : dict
+        As with lifetime_frames, but durations multiplied by self.dt
+    transitions_durations : dict
+        As with transition_frames, but durations multiplied by self.dt
+
+    Notes
+    -----
+    LIFETIME: the 
+    """
     def __init__(self, transition, dt=None):
         self.transition = transition
         self.dt = dt
@@ -12,6 +41,11 @@ class SingleTrajectoryAnalysis(object):
                                   self.stateB: np.array([])}
         self.lifetime_frames = {self.stateA: np.array([]),
                                 self.stateB: np.array([])}
+        self.transition_duration_frames = {
+            (self.stateA, self.stateB): np.array([]),
+            (self.stateB, self.stateA): np.array([])
+        }
+
         self.flux_frames = {self.stateA: {}, self.stateB: {}}
 
     @property
@@ -61,6 +95,19 @@ class SingleTrajectoryAnalysis(object):
         # convert back to numpy to use as distribution
         self.lifetime_frames[state] = np.array(lifetime_frames)
 
+    def analyze_transition_duration(self, trajectory, stateA, stateB):
+        # we define the transitions ensemble just in case the transition is,
+        # e.g., fixed path length TPS. We want flexible path length ensemble
+        transition_ensemble = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
+            paths.OptionalEnsemble(
+                paths.AllOutXEnsemble(stateA) & paths.AllOutXEnsmble(stateB)
+            ),
+            paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
+        ])
+        transition_segments = transition_ensemble.split(trajectory)
+        np.append(self.transition_duration_frames[(stateA, stateB)],
+                  [len(seg)-2 for seg in transition_segments])
 
     def analyze_flux(self, trajectory, state):
         pass

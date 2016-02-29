@@ -25,7 +25,7 @@ class testSingleTrajectoryAnalysis(object):
         transition = paths.TPSTransition(self.stateA, self.stateB)
         self.analyzer = paths.SingleTrajectoryAnalysis(transition, dt=0.1)
         self.traj_str = "aaaxaxxbxaxababaxbbbbbxxxxxxa"
-        #               "0    5    0    5    0    5  8"
+        # frame numbers "0    5    0    5    0    5  8"
         self.trajectory = self._make_traj(self.traj_str)
 
     def _make_traj(self, traj_str):
