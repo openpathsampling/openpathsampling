@@ -72,7 +72,6 @@ class BaseSnapshot(StorableObject):
     # Utility functions
     # ==========================================================================
 
-    @abc.abstractmethod
     def copy(self):
         """
         Returns a shallow copy of the instance itself. The contained
@@ -100,7 +99,7 @@ class BaseSnapshot(StorableObject):
         return this
 
 
-def snapshot_factory(name, features, description=None, use_lazy_reversed=True, base_class=None):
+def SnapshotFactory(name, features, description=None, use_lazy_reversed=True, base_class=None):
     """
     Helper to create a new Snapshot class
     
@@ -125,12 +124,12 @@ def snapshot_factory(name, features, description=None, use_lazy_reversed=True, b
     if description is not None:
         cls.__doc__ = description
 
-    cls = feats.set_features(features, use_lazy_reversed=use_lazy_reversed)(cls)
+    cls = feats.attach_features(features, use_lazy_reversed=use_lazy_reversed)(cls)
 
     return cls
 
 
-@feats.set_features([
+@feats.attach_features([
     feats.velocities,
     feats.coordinates,
     feats.xyz,
@@ -142,7 +141,7 @@ class ToySnapshot(BaseSnapshot):
     """
 
 
-@feats.set_features([
+@feats.attach_features([
     feats.velocities,
     feats.coordinates,
     feats.box_vectors,
@@ -155,7 +154,7 @@ class MDSnapshot(BaseSnapshot):
     """
 
 
-@feats.set_features([
+@feats.attach_features([
     feats.configuration,
     feats.momentum,
     feats.xyz,

@@ -2,17 +2,13 @@ from openpathsampling.netcdfplus import DelayedLoader
 from numpydoctools import NumpyDocTools
 
 
-def set_features(features, use_lazy_reversed=True):
+def attach_features(features, use_lazy_reversed=True):
     """
     Select snapshot features
     """
 
     # create a parser that can combine numpy docstrings
     parser = NumpyDocTools()
-
-    # if this is set to true than the reversed counterpart of a Snapshot
-    # is saved a lazy pointer otherwise we create a full copy
-    use_lazy_reversed = use_lazy_reversed
 
     def _decorator(cls):
         """
