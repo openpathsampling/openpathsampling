@@ -24,8 +24,8 @@ class testSingleTrajectoryAnalysis(object):
         transition = paths.TPSTransition(self.stateA, self.stateB)
         self.analyzer = paths.SingleTrajectoryAnalysis(transition)
         self.traj_str = "aaaxaxxbxaxababaxbbbbbxxxxxxa"
+        #               "0    5    0    5    0    5  8"
         self.trajectory = self._make_traj(self.traj_str)
-
 
     def _make_traj(self, traj_str):
         sequence = []
@@ -43,24 +43,30 @@ class testSingleTrajectoryAnalysis(object):
         return make_1d_traj(coordinates=sequence,
                             velocities=[1.0]*len(sequence))
 
-
     def test_analyze_continuous_time(self):
         self.analyzer.analyze_continuous_time(self.trajectory, self.stateA)
-        assert_equal(self.analyzer.continuous_time[self.stateA],
+        assert_equal(self.analyzer.continuous_frames[self.stateA].tolist(),
                      [3, 1, 1, 1, 1, 1, 1])
         self.analyzer.analyze_continuous_time(self.trajectory, self.stateB)
-        assert_equal(self.analyzer.continuous_time[self.stateB],
+        assert_equal(self.analyzer.continuous_frames[self.stateB].tolist(),
                      [1, 1, 1, 5])
 
     @raises(KeyError)
     def test_analyze_continuous_time_bad_state(self):
         self.analyzer.analyze_continuous_time(self.trajectory, self.stateX)
 
-
     def test_analyze_lifetime(self):
-        raise SkipTest
+        self.analyzer.analyze_lifetime(self.trajectory, self.stateA)
+        self.analyzer.analyze_lifetime(self.trajectory, self.stateB)
+        assert_equal(self.analyzer.lifetime_frames[self.stateA].tolist(),
+                     [3, 1, 2])  # A->B
+        assert_equal(self.analyzer.lifetime_frames[self.stateB].tolist(),
+                     [2, 1, 1, 11])  # B->A
 
     def test_analyze_flux(self):
+        # A: [{out: 1, in: 1}
+        # B: insufficient 
+        # NOTE: we may want a separate trajectory for this
         raise SkipTest
 
     def test_add_frames(self):
