@@ -30,7 +30,7 @@ class SingleTrajectoryAnalysis(object):
 
     Notes
     -----
-    LIFETIME: the 
+    LIFETIME: the
     """
     def __init__(self, transition, dt=None):
         self.transition = transition
@@ -63,6 +63,15 @@ class SingleTrajectoryAnalysis(object):
             raise RuntimeError("No time delta set")
         return {k : self.lifetime_frames[k]*self.dt 
                 for k in self.lifetime_frames.keys()}
+
+    @property
+    def transition_duration(self):
+        if self.dt is None: # pragma: no-cover
+            # TODO: this might become a logger.warn; use dt=1 otherwise
+            raise RuntimeError("No time delta set")
+        return {k : self.transition_duration_frames[k]*self.dt 
+                for k in self.transition_duration_frames.keys()}
+
 
     def analyze_continuous_time(self, trajectory, state):
         # convert to python list for append functionality
@@ -100,14 +109,16 @@ class SingleTrajectoryAnalysis(object):
         # e.g., fixed path length TPS. We want flexible path length ensemble
         transition_ensemble = paths.SequentialEnsemble([
             paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
-            paths.OptionalEnsemble(
-                paths.AllOutXEnsemble(stateA) & paths.AllOutXEnsmble(stateB)
+            paths.OptionalEnsemble( # optional to allow instantaneous hops
+                paths.AllOutXEnsemble(stateA) & paths.AllOutXEnsemble(stateB)
             ),
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
         transition_segments = transition_ensemble.split(trajectory)
-        np.append(self.transition_duration_frames[(stateA, stateB)],
-                  [len(seg)-2 for seg in transition_segments])
+        self.transition_duration_frames[(stateA, stateB)] = np.append(
+            self.transition_duration_frames[(stateA, stateB)],
+            [len(seg)-2 for seg in transition_segments]
+        )
 
     def analyze_flux(self, trajectory, state):
         pass

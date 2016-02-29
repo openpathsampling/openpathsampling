@@ -72,6 +72,28 @@ class testSingleTrajectoryAnalysis(object):
         assert_almost_equal(self.analyzer.lifetimes[self.stateB].mean(),
                             15.0/4.0*0.1)
 
+    def test_analyze_transition_duration(self):
+        self.analyzer.analyze_transition_duration(self.trajectory,
+                                                  self.stateA, self.stateB)
+        self.analyzer.analyze_transition_duration(self.trajectory,
+                                                  self.stateB, self.stateA)
+        assert_equal(
+            self.analyzer.transition_duration_frames[(self.stateA, 
+                                                      self.stateB)].tolist(),
+            [2, 0, 0, 1]
+        )
+        assert_equal(
+            self.analyzer.transition_duration_frames[(self.stateB, 
+                                                      self.stateA)].tolist(),
+            [1, 0, 0, 6]
+        )
+        assert_equal(self.analyzer.transition_duration[(self.stateA,
+                                                        self.stateB)].mean(),
+                     3.0/4.0*0.1)
+        assert_equal(self.analyzer.transition_duration[(self.stateB,
+                                                        self.stateA)].mean(),
+                     7.0/4.0*0.1)
+
     def test_analyze_flux(self):
         # A: [{out: 1, in: 1}
         # B: insufficient 
