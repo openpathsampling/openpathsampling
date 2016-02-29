@@ -40,6 +40,7 @@ class SingleTrajectoryAnalysis(object):
         self.reset_analysis()
 
     def reset_analysis(self):
+        """Reset the analysis by emptying all saved segments."""
         self.continuous_segments = {self.stateA: [], self.stateB: []}
         self.lifetime_segments = {self.stateA: [], self.stateB: []}
         self.transition_segments = {(self.stateA, self.stateB): [], 
@@ -95,8 +96,6 @@ class SingleTrajectoryAnalysis(object):
         self.continuous_segments[state] += ensemble.split(trajectory)
 
     def analyze_lifetime(self, trajectory, state):
-        # convert to python list for append functionality
-        #lifetime_frames = self.lifetime_frames[state].tolist()
         other_state = list(set([self.stateA, self.stateB]) - set([state]))[0]
 	ensemble_BAB = paths.SequentialEnsemble([
 	    paths.AllInXEnsemble(other_state) & paths.LengthEnsemble(1),
@@ -112,10 +111,6 @@ class SingleTrajectoryAnalysis(object):
         AB_split = [ensemble_AB.split(part)[0] for part in BAB_split]
         self.lifetime_segments[state] += [subtraj[0:-1] 
                                           for subtraj in AB_split]
-        #lifetime_frames += [len(subtraj)-1 for subtraj in AB_split]
-
-        # convert back to numpy to use as distribution
-        #self.lifetime_frames[state] = np.array(lifetime_frames)
 
     def analyze_transition_duration(self, trajectory, stateA, stateB):
         # we define the transitions ensemble just in case the transition is,
@@ -127,7 +122,6 @@ class SingleTrajectoryAnalysis(object):
             ),
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
-        transition_segments = transition_ensemble.split(trajectory)
         self.transition_segments[(stateA, stateB)] += [
             seg[1:-1] for seg in transition_ensemble.split(trajectory)
         ]
@@ -144,6 +138,8 @@ class SingleTrajectoryAnalysis(object):
                 self.analyze_continuous_time(traj, state)
                 self.analyze_lifetime(traj, state)
                 self.analyze_flux(traj, state)
+            self.analyze_transition_duration(traj, self.stateA, self.stateB)
+            self.analyze_transition_duration(traj, self.stateB, self.stateA)
         # return self so we can init and analyze in one line
         return self
 
