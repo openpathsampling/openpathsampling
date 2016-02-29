@@ -14,6 +14,21 @@ class SingleTrajectoryAnalysis(object):
                                 self.stateB: np.array([])}
         self.flux_frames = {self.stateA: {}, self.stateB: {}}
 
+    @property
+    def continuous_times(self):
+        if self.dt is None: # pragma: no-cover
+            # TODO: this might become a logger.warn
+            raise RuntimeError("No time delta set")
+        return {k : self.continuous_frames[k]*self.dt 
+                for k in self.continuous_frames.keys()}
+
+    @property
+    def lifetimes(self):
+        if self.dt is None: # pragma: no-cover
+            # TODO: this might become a logger.warn; use dt=1 otherwise
+            raise RuntimeError("No time delta set")
+        return {k : self.lifetime_frames[k]*self.dt 
+                for k in self.lifetime_frames.keys()}
 
     def analyze_continuous_time(self, trajectory, state):
         # convert to python list for append functionality
@@ -59,18 +74,6 @@ class SingleTrajectoryAnalysis(object):
     def analyze(self, trajectory):
         self.add_frames(trajectory)
         return self
-
-    def continuous_time_distribution(self, state):
-        dist = np.array(self.continuous_time[state])
-        if self.dt is not None:
-            dist *= self.dt
-        return dist
-
-    def lifetime_distribution(self, state):
-        dist = np.array(self.lifetime[state])
-        if self.dt is not None:
-            dist *= self.dt
-        return dist
 
     def summary(self):
         # return a nice text/pandas output

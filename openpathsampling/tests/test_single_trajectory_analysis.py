@@ -1,4 +1,5 @@
-from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
+from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
+                        raises, assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from test_helpers import make_1d_traj
 
@@ -22,7 +23,7 @@ class testSingleTrajectoryAnalysis(object):
         self.stateX = ~vol1 & ~vol3
 
         transition = paths.TPSTransition(self.stateA, self.stateB)
-        self.analyzer = paths.SingleTrajectoryAnalysis(transition)
+        self.analyzer = paths.SingleTrajectoryAnalysis(transition, dt=0.1)
         self.traj_str = "aaaxaxxbxaxababaxbbbbbxxxxxxa"
         #               "0    5    0    5    0    5  8"
         self.trajectory = self._make_traj(self.traj_str)
@@ -50,6 +51,10 @@ class testSingleTrajectoryAnalysis(object):
         self.analyzer.analyze_continuous_time(self.trajectory, self.stateB)
         assert_equal(self.analyzer.continuous_frames[self.stateB].tolist(),
                      [1, 1, 1, 5])
+        assert_almost_equal(self.analyzer.continuous_times[self.stateA].mean(),
+                            9.0/7.0*0.1)
+        assert_almost_equal(self.analyzer.continuous_times[self.stateB].mean(),
+                            8.0/4.0*0.1)
 
     @raises(KeyError)
     def test_analyze_continuous_time_bad_state(self):
@@ -62,6 +67,10 @@ class testSingleTrajectoryAnalysis(object):
                      [3, 1, 2])  # A->B
         assert_equal(self.analyzer.lifetime_frames[self.stateB].tolist(),
                      [2, 1, 1, 11])  # B->A
+        assert_almost_equal(self.analyzer.lifetimes[self.stateA].mean(),
+                            6.0/3.0*0.1)
+        assert_almost_equal(self.analyzer.lifetimes[self.stateB].mean(),
+                            15.0/4.0*0.1)
 
     def test_analyze_flux(self):
         # A: [{out: 1, in: 1}
@@ -69,10 +78,7 @@ class testSingleTrajectoryAnalysis(object):
         # NOTE: we may want a separate trajectory for this
         raise SkipTest
 
-    def test_add_frames(self):
-        raise SkipTest
-
-    def test_analyze_and_distributions(self):
+    def test_analyze(self):
         raise SkipTest
 
     def test_summary(self):
