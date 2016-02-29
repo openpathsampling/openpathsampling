@@ -37,55 +37,66 @@ class SingleTrajectoryAnalysis(object):
         self.dt = dt
         self.stateA = transition.stateA
         self.stateB = transition.stateB
-        self.continuous_frames = {self.stateA: np.array([]),
-                                  self.stateB: np.array([])}
-        self.lifetime_frames = {self.stateA: np.array([]),
-                                self.stateB: np.array([])}
-        self.transition_duration_frames = {
-            (self.stateA, self.stateB): np.array([]),
-            (self.stateB, self.stateA): np.array([])
-        }
+        self.reset_analysis()
 
-        self.flux_frames = {self.stateA: {}, self.stateB: {}}
+    def reset_analysis(self):
+        self.continuous_segments = {self.stateA: [], self.stateB: []}
+        self.lifetime_segments = {self.stateA: [], self.stateB: []}
+        self.transition_segments = {(self.stateA, self.stateB): [], 
+                                    (self.stateB, self.stateA): []}
+        self.flux_segments = {self.stateA: {'in': [], 'out': []},
+                              self.stateB: {'in': [], 'out': []}}
 
+    @property
+    def continuous_frames(self):
+        return {k: np.array([len(seg) for seg in self.continuous_segments[k]])
+                for k in self.continuous_segments.keys()}
+    
     @property
     def continuous_times(self):
         if self.dt is None: # pragma: no-cover
             # TODO: this might become a logger.warn
             raise RuntimeError("No time delta set")
-        return {k : self.continuous_frames[k]*self.dt 
-                for k in self.continuous_frames.keys()}
+        continuous_frames = self.continuous_frames
+        return {k : continuous_frames[k]*self.dt 
+                for k in continuous_frames.keys()}
 
+    @property
+    def lifetime_frames(self):
+        return {k: np.array([len(seg) for seg in self.lifetime_segments[k]])
+                for k in self.lifetime_segments.keys()}
+                             
     @property
     def lifetimes(self):
         if self.dt is None: # pragma: no-cover
             # TODO: this might become a logger.warn; use dt=1 otherwise
             raise RuntimeError("No time delta set")
-        return {k : self.lifetime_frames[k]*self.dt 
-                for k in self.lifetime_frames.keys()}
+        lifetime_frames = self.lifetime_frames
+        return {k : lifetime_frames[k]*self.dt 
+                for k in lifetime_frames.keys()}
+
+    @property
+    def transition_duration_frames(self):
+        return {k: np.array([len(seg) for seg in self.transition_segments[k]])
+                for k in self.transition_segments.keys()}
 
     @property
     def transition_duration(self):
         if self.dt is None: # pragma: no-cover
             # TODO: this might become a logger.warn; use dt=1 otherwise
             raise RuntimeError("No time delta set")
-        return {k : self.transition_duration_frames[k]*self.dt 
-                for k in self.transition_duration_frames.keys()}
+        transition_duration_frames = self.transition_duration_frames
+        return {k : transition_duration_frames[k]*self.dt 
+                for k in transition_duration_frames.keys()}
 
 
     def analyze_continuous_time(self, trajectory, state):
-        # convert to python list for append functionality
-        continuous_frames = self.continuous_frames[state].tolist()
         ensemble = paths.AllInXEnsemble(state)
-        segments = ensemble.split(trajectory)
-        lengths = [len(seg) for seg in segments]
-        continuous_frames += lengths
-        # convert back to numpy to use as distribution
-        self.continuous_frames[state] = np.array(continuous_frames)
+        self.continuous_segments[state] += ensemble.split(trajectory)
 
     def analyze_lifetime(self, trajectory, state):
         # convert to python list for append functionality
-        lifetime_frames = self.lifetime_frames[state].tolist()
+        #lifetime_frames = self.lifetime_frames[state].tolist()
         other_state = list(set([self.stateA, self.stateB]) - set([state]))[0]
 	ensemble_BAB = paths.SequentialEnsemble([
 	    paths.AllInXEnsemble(other_state) & paths.LengthEnsemble(1),
@@ -99,10 +110,12 @@ class SingleTrajectoryAnalysis(object):
 	])
         BAB_split = ensemble_BAB.split(trajectory)
         AB_split = [ensemble_AB.split(part)[0] for part in BAB_split]
-        lifetime_frames += [len(subtraj)-1 for subtraj in AB_split]
+        self.lifetime_segments[state] += [subtraj[0:-1] 
+                                          for subtraj in AB_split]
+        #lifetime_frames += [len(subtraj)-1 for subtraj in AB_split]
 
         # convert back to numpy to use as distribution
-        self.lifetime_frames[state] = np.array(lifetime_frames)
+        #self.lifetime_frames[state] = np.array(lifetime_frames)
 
     def analyze_transition_duration(self, trajectory, stateA, stateB):
         # we define the transitions ensemble just in case the transition is,
@@ -115,22 +128,23 @@ class SingleTrajectoryAnalysis(object):
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
         transition_segments = transition_ensemble.split(trajectory)
-        self.transition_duration_frames[(stateA, stateB)] = np.append(
-            self.transition_duration_frames[(stateA, stateB)],
-            [len(seg)-2 for seg in transition_segments]
-        )
+        self.transition_segments[(stateA, stateB)] += [
+            seg[1:-1] for seg in transition_ensemble.split(trajectory)
+        ]
 
     def analyze_flux(self, trajectory, state):
         pass
 
-    def add_frames(self, trajectory):
-        for state in [self.stateA, self.stateB]:
-            self.analyze_continuous_time(trajectory, state)
-            self.analyze_lifetime(trajectory, state)
-            self.analyze_flux(trajectory, state)
-
-    def analyze(self, trajectory):
-        self.add_frames(trajectory)
+    def analyze(self, trajectories):
+        # TODO: I hate using isinstance, but I don't see anoher way
+        if isinstance(trajectories, paths.Trajectory):
+            trajectories = [trajectories]
+        for traj in trajectories:
+            for state in [self.stateA, self.stateB]:
+                self.analyze_continuous_time(traj, state)
+                self.analyze_lifetime(traj, state)
+                self.analyze_flux(traj, state)
+        # return self so we can init and analyze in one line
         return self
 
     def summary(self):
