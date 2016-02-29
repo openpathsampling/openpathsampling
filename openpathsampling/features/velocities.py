@@ -7,6 +7,7 @@ velocities : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
 
 attributes = ['velocities']
 minus = ['velocities']
+numpy = ['velocities']
 
 
 def netcdfplus_init(store):

@@ -1,4 +1,5 @@
 attributes = ['box_vectors']
+numpy = ['box_vectors']
 
 
 def netcdfplus_init(store):

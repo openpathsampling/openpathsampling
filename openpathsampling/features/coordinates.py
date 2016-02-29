@@ -7,6 +7,7 @@ coordinates : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
 
 
 attributes = ['coordinates']
+numpy = ['coordinates']
 
 
 def netcdfplus_init(store):

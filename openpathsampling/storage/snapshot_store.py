@@ -1,5 +1,5 @@
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
-from openpathsampling.snapshot import Snapshot, AbstractSnapshot
+from openpathsampling.snapshot import Snapshot, BaseSnapshot
 from openpathsampling.trajectory import Trajectory
 
 import abc
@@ -9,7 +9,7 @@ import abc
 # ABSTRACT BASE CLASS FOR SNAPSHOTS
 # =============================================================================================
 
-class AbstractSnapshotStore(ObjectStore):
+class BaseSnapshotStore(ObjectStore):
     """
     An ObjectStore for Snapshots in netCDF files.
     """
@@ -21,11 +21,11 @@ class AbstractSnapshotStore(ObjectStore):
 
         Attributes
         ----------
-        snapshot_class : openpathsampling.AbstractSnapshot
+        snapshot_class : openpathsampling.BaseSnapshot
             a snapshot class that this Store is supposed to store
 
         """
-        super(AbstractSnapshotStore, self).__init__(AbstractSnapshot, json=False)
+        super(BaseSnapshotStore, self).__init__(BaseSnapshot, json=False)
         self.snapshot_class = snapshot_class
 
     def __repr__(self):
@@ -78,8 +78,8 @@ class AbstractSnapshotStore(ObjectStore):
 
         # check if the reversed is in the cache
         try:
-            obj = self.cache[AbstractSnapshotStore.paired_idx(idx)].create_reversed()
-            obj._reversed = LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
+            obj = self.cache[BaseSnapshotStore.paired_idx(idx)].create_reversed()
+            obj._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
             return obj
         except KeyError:
             pass
@@ -88,13 +88,13 @@ class AbstractSnapshotStore(ObjectStore):
         st_idx = int(idx / 2)
 
         obj = self.snapshot_class.__new__(self.snapshot_class)
-        AbstractSnapshot.__init__(obj)
+        BaseSnapshot.__init__(obj)
 
         self._get(st_idx, obj)
         if idx & 1:
             obj = obj.create_reversed()
 
-        obj._reversed = LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
+        obj._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
         return obj
 
 
@@ -132,15 +132,15 @@ class AbstractSnapshotStore(ObjectStore):
         if snapshot._reversed is not None:
             snapshot._reversed._reversed = LoaderProxy(self, idx)
             # mark reversed as stored
-            self.index[snapshot._reversed] = AbstractSnapshotStore.paired_idx(idx)
+            self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
 
-        snapshot._reversed = LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
+        snapshot._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
 
     def all(self):
         return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
 
     def __len__(self):
-        return 2 * super(AbstractSnapshotStore, self).__len__()
+        return 2 * super(BaseSnapshotStore, self).__len__()
 
     def duplicate(self, snapshot):
         """
@@ -178,14 +178,11 @@ class AbstractSnapshotStore(ObjectStore):
         return idx
 
 
-
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
 # =============================================================================================
 
-# TODO: Move the feature stuff to module feature ???
-
-class FeatureSnapshotStore(AbstractSnapshotStore):
+class FeatureSnapshotStore(BaseSnapshotStore):
     """
     An ObjectStore for Snapshots in netCDF files.
     """

@@ -1,9 +1,8 @@
 from openpathsampling.netcdfplus import DelayedLoader
 from numpydoctools import NumpyDocTools
-# from openpathsampling.snapshot import FeatureSnapshot
 
 
-def set_features(*features):
+def set_features(features, use_lazy_reversed=True):
     """
     Select snapshot features
     """
@@ -13,7 +12,7 @@ def set_features(*features):
 
     # if this is set to true than the reversed counterpart of a Snapshot
     # is saved a lazy pointer otherwise we create a full copy
-    use_lazy_reversed = True
+    use_lazy_reversed = use_lazy_reversed
 
     def _decorator(cls):
         """
@@ -65,6 +64,7 @@ def set_features(*features):
 
         # important for compile to work properly
         import openpathsampling as paths
+        import numpy as np
 
         parser.clear()
 
@@ -113,8 +113,9 @@ def set_features(*features):
         for name in __features__['required']:
             if name not in __features__['attributes']:
                 raise RuntimeError((
-                    'Attribute "%s" is required. Please make sure that is will be added by '
-                    'some feature') % name
+                    'Attribute "%s" is required, but only "%s" found. Please make sure ' +
+                    'that is will be added by ' +
+                    'some feature') % (name, str(__features__['attributes']))
                 )
                     
         __features__['reversal'] = [
@@ -208,9 +209,9 @@ def set_features(*features):
             print e
             pass
 
-        # compile the function for .copyto(target)
+        # compile the function for .copy_to(target)
 
-        # def copyto(self, target):
+        # def copy_to(self, target):
         #     this = target
         #     this._lazy = { ... }
         #     this.feature1 = self.feature1
@@ -218,7 +219,7 @@ def set_features(*features):
 
         code = []
         code += [
-            "def copyto(self, target):",
+            "def copy_to(self, target):",
             "    this = target",
         ]
 
@@ -235,9 +236,16 @@ def set_features(*features):
             ]
 
         code += map(
+            "    np.copyto(this.{0}, self.{0})".format,
+            filter(
+                lambda x : x not in __features__['lazy'] and x in __features__['numpy'],
+                __features__['parameters']
+            )
+        )
+        code += map(
             "    this.{0} = self.{0}".format,
             filter(
-                lambda x : x not in __features__['lazy'],
+                lambda x : x not in __features__['lazy'] and x not in __features__['numpy'],
                 __features__['parameters']
             )
         )
@@ -251,13 +259,13 @@ def set_features(*features):
             cc = compile('\n'.join(code), '<string>', 'exec')
             exec cc in locals()
 
-            cls.copyto = copyto
+            cls.copy_to = copy_to
 
         except RuntimeError as e:
             print e
             pass
 
-        # compile the function for .copyto(target)
+        # compile the function for .create_reversed()
 
         # def create_reversed(self):
         #     this = cls.__new__(cls)
@@ -351,6 +359,52 @@ def set_features(*features):
             exec cc in locals()
 
             cls.__init__ = __init__
+
+        except RuntimeError as e:
+            print e
+            pass
+
+        code = []
+        code += [ "@staticmethod" ]
+        code += [
+            "def init_copy(self, %s):" % signature,
+        ]
+
+        if __features__['lazy']:
+            if use_lazy_reversed:
+                code += [
+                    "    self._lazy = {cls._reversed : None}"
+                ]
+            else:
+                code += [
+                    "    self._lazy = dict()"
+                ]
+
+        if not use_lazy_reversed:
+            code += [
+                "    self._reversed = None"
+            ]
+
+        code += map(
+            "    self.{0} = {0}".format,
+            [
+                feat for feat in __features__['parameters'] if
+                feat not in __features__['numpy']
+            ])
+
+        code += map(
+            "    np.copyto(self.{0}, {0})".format,
+            [
+                feat for feat in __features__['parameters'] if
+                feat in __features__['numpy']
+            ])
+
+        # compile the code and register the new function
+        try:
+            cc = compile('\n'.join(code), '<string>', 'exec')
+            exec cc in locals()
+
+            cls.init_copy = init_copy
 
         except RuntimeError as e:
             print e

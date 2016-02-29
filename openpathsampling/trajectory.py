@@ -30,7 +30,7 @@ class Trajectory(list, StorableObject):
         Parameters
         ----------
 
-        trajectory : :class:`openpathsampling.trajectory.Trajectory` or list of :class:`openpathsampling.snapshot.AbstractSnapshot`
+        trajectory : :class:`openpathsampling.trajectory.Trajectory` or list of :class:`openpathsampling.snapshot.BaseSnapshot`
             if specified, make a deep copy of specified trajectory
         """
 

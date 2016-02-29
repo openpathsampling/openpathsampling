@@ -14,8 +14,7 @@ import features as feats
 # ABSTRACT SNAPSHOT (IMPLEMENTS ONLY REVERSED SNAPSHOTS)
 # =============================================================================
 
-@lazy_loading_attributes('_reversed')
-class AbstractSnapshot(StorableObject):
+class BaseSnapshot(StorableObject):
     """
     Simulation snapshot. Contains references to a configuration and momentum
     """
@@ -31,7 +30,7 @@ class AbstractSnapshot(StorableObject):
             and means no topology is specified.
         """
 
-        super(AbstractSnapshot, self).__init__()
+        super(BaseSnapshot, self).__init__()
 
         self._reversed = None
         self.topology = topology
@@ -81,7 +80,7 @@ class AbstractSnapshot(StorableObject):
 
         Returns
         -------
-        :class:`openpathsampling.AbstractSnapshot`
+        :class:`openpathsampling.BaseSnapshot`
             the shallow copy
 
         Notes
@@ -92,7 +91,7 @@ class AbstractSnapshot(StorableObject):
 
         """
         this = self.__class__.__new__(self.__class__)
-        AbstractSnapshot.__init__(this, topology=self.topology)
+        BaseSnapshot.__init__(this, topology=self.topology)
         return this
 
     def create_reversed(self):
@@ -101,12 +100,7 @@ class AbstractSnapshot(StorableObject):
         return this
 
 
-class FeatureSnapshot(AbstractSnapshot):
-    def copy(self):
-        return super(FeatureSnapshot, self).copy()
-
-
-def snapshot_factory(name, features, description=None):
+def snapshot_factory(name, features, description=None, use_lazy_reversed=True, base_class=None):
     """
     Helper to create a new Snapshot class
     
@@ -114,50 +108,60 @@ def snapshot_factory(name, features, description=None):
     ----------
     name : str
         name of the Snapshot class
-    feats : 
+    features : list of :obj:`openpathsampling.features`
+        the features used to build the snapshot
+    use_lazy_reversed : bool
+    base_class : :obj:`openpathsampling.AbstractSnapshot`
     """
 
-    cls = type(name, (FeatureSnapshot, ), {})
+
+    if base_class is None:
+        base_class = BaseSnapshot
+
+    if type(base_class) is not tuple:
+        base_class = (base_class, )
+
+    cls = type(name, base_class, {})
     if description is not None:
         cls.__doc__ = description
 
-    cls = feats.set_features(*features)(cls)
+    cls = feats.set_features(features, use_lazy_reversed=use_lazy_reversed)(cls)
 
     return cls
 
 
-@feats.set_features(
+@feats.set_features([
     feats.velocities,
     feats.coordinates,
     feats.xyz,
     feats.topology
-)
-class ToySnapshot(FeatureSnapshot):
+])
+class ToySnapshot(BaseSnapshot):
     """
     Simulation snapshot. Only references to coordinates and velocities
     """
 
 
-@feats.set_features(
+@feats.set_features([
     feats.velocities,
     feats.coordinates,
     feats.box_vectors,
     feats.xyz,
     feats.topology
-)
-class MDSnapshot(FeatureSnapshot):
+])
+class MDSnapshot(BaseSnapshot):
     """
     A fast MDSnapshot
     """
 
 
-@feats.set_features(
+@feats.set_features([
     feats.configuration,
     feats.momentum,
     feats.xyz,
     feats.topology  # for compatibility
-)
-class Snapshot(FeatureSnapshot):
+])
+class Snapshot(BaseSnapshot):
     """
     The standard MDSnapshot supporting coordinate, velocities and box_vectors
     """

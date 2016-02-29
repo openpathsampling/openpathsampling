@@ -15,7 +15,7 @@ from ensemble import (
     OptionalEnsemble, join_ensembles
 )
 
-from snapshot import Snapshot, ToySnapshot, AbstractSnapshot, MDSnapshot, FeatureSnapshot
+from snapshot import Snapshot, ToySnapshot, BaseSnapshot, MDSnapshot
 from trajectory import Trajectory
 from sample import Sample, SampleSet
 
