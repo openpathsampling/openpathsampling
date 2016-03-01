@@ -1,4 +1,4 @@
-from snapshot import AbstractSnapshot, FeatureSnapshot, Snapshot, MDSnapshot, ToySnapshot
+from snapshot import BaseSnapshot, FeatureSnapshot, Snapshot, MDSnapshot, ToySnapshot
 from trajectory import Trajectory
 
 from topology import Topology
