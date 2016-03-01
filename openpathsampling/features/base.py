@@ -10,6 +10,8 @@ def attach_features(features, use_lazy_reversed=False):
     # create a parser that can combine numpy docstrings
     parser = NumpyDocTools()
 
+    ADD_SOURCE_CODE = True
+
     def _decorator(cls):
         """
         Class decorator that will attach function for compiled features
@@ -75,6 +77,10 @@ def attach_features(features, use_lazy_reversed=False):
             if name not in __features__:
                 __features__[name] = []
 
+        if ADD_SOURCE_CODE:
+            if 'debug' not in __features__:
+                __features__['debug'] = {}
+
         __features__['classes'] += features
 
         if use_lazy_reversed:
@@ -138,8 +144,6 @@ def attach_features(features, use_lazy_reversed=False):
         # add descriptors that can handle lazy loaded objects
         for attr in __features__['lazy']:
             setattr(cls, attr, DelayedLoader())
-
-        cls.__features__ = __features__
 
         # update the docstring to be a union of docstrings from the class
         # and the features
@@ -209,8 +213,12 @@ def attach_features(features, use_lazy_reversed=False):
 
         # compile the code and register the new function
         try:
-            cc = compile('\n'.join(code), '<string>', 'exec')
+            source_code = '\n'.join(code)
+            cc = compile(source_code, '<string>', 'exec')
             exec cc in locals()
+
+            if ADD_SOURCE_CODE:
+                __features__['debug']['copy'] = source_code
 
             cls.copy = copy
 
@@ -269,8 +277,12 @@ def attach_features(features, use_lazy_reversed=False):
 
         # compile the code and register the new function
         try:
-            cc = compile('\n'.join(code), '<string>', 'exec')
+            source_code = '\n'.join(code)
+            cc = compile(source_code, '<string>', 'exec')
             exec cc in locals()
+
+            if ADD_SOURCE_CODE:
+                __features__['debug']['copy_to'] = source_code
 
             cls.copy_to = copy_to
 
@@ -338,8 +350,13 @@ def attach_features(features, use_lazy_reversed=False):
 
         # compile the code and register the new function
         try:
-            cc = compile('\n'.join(code), '<string>', 'exec')
+            source_code = '\n'.join(code)
+            cc = compile(source_code, '<string>', 'exec')
             exec cc in locals()
+
+            if ADD_SOURCE_CODE:
+                __features__['debug']['create_reversed'] = source_code
+
 
             cls.create_reversed = create_reversed
 
@@ -397,8 +414,12 @@ def attach_features(features, use_lazy_reversed=False):
 
         # compile the code and register the new function
         try:
-            cc = compile('\n'.join(code), '<string>', 'exec')
+            source_code = '\n'.join(code)
+            cc = compile(source_code, '<string>', 'exec')
             exec cc in locals()
+
+            if ADD_SOURCE_CODE:
+                __features__['debug']['__init__'] = source_code
 
             cls.__init__ = __init__
 
@@ -431,8 +452,12 @@ def attach_features(features, use_lazy_reversed=False):
 
         # compile the code and register the new function
         try:
-            cc = compile('\n'.join(code), '<string>', 'exec')
+            source_code = '\n'.join(code)
+            cc = compile(source_code, '<string>', 'exec')
             exec cc in locals()
+
+            if ADD_SOURCE_CODE:
+                __features__['debug']['init_empty'] = source_code
 
             cls.init_empty = init_empty
 
@@ -481,14 +506,20 @@ def attach_features(features, use_lazy_reversed=False):
 
         # compile the code and register the new function
         try:
-            cc = compile('\n'.join(code), '<string>', 'exec')
+            source_code = '\n'.join(code)
+            cc = compile(source_code, '<string>', 'exec')
             exec cc in locals()
+
+            if ADD_SOURCE_CODE:
+                __features__['debug']['init_copy'] = source_code
 
             cls.init_copy = init_copy
 
         except RuntimeError as e:
             print e
             pass
+
+        cls.__features__ = __features__
 
         return cls
 

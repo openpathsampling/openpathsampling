@@ -81,10 +81,6 @@ class OpenMMEngine(paths.DynamicsEngine):
                     speed = pf.getSpeed()
                     platform = pf.getName()
 
-            # TODO: Remove as soon as new OpenMM version is released
-            if platform == 'CUDA':
-                platform = 'OpenCL'
-
             if platform is not None:
                 self.options['platform'] = platform
 
