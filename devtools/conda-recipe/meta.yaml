@@ -27,7 +27,7 @@ requirements:
     - pymbar
     - docopt
     - pyyaml
-    - mdtraj =1.5.1
+    - mdtraj 1.5.1
     - svgwrite
     - networkx
     - matplotlib
