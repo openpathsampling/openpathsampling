@@ -114,7 +114,7 @@ class BaseSnapshotStore(ObjectStore):
 
         Parameters
         ----------
-        snapshot : :obj:`BaseSnapshot`
+        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
             the snapshot to be saved
         idx : int or None
             if idx is not None the index will be used for saving in the storage.
