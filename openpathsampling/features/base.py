@@ -126,7 +126,7 @@ def attach_features(features, use_lazy_reversed=False):
                     'that is will be added by ' +
                     'some feature') % (name, str(__features__['attributes']))
                 )
-
+                    
         __features__['reversal'] = [
             attr for attr in __features__['attributes']
             if attr not in __features__['minus']

@@ -1,4 +1,18 @@
-class NumpyDocParser(object):
+class NumpyDocTools(object):
+    """
+    Helper class to combine several orthogonal numpydocs
+
+    It can read numpy docstrings for multiple sources and combine these into one numpydoc
+    string. This mainly used for th features mixin to make sure the docstring of the
+    combined class is accurate.
+
+    Attributes
+    ----------
+    sections : dict str to list of str
+        a list of content per section name
+    order : list of str
+        the final use order of sections
+    """
 
     known_sections = [
         'HEAD',
@@ -18,6 +32,10 @@ class NumpyDocParser(object):
         self.order = None
 
     def clear(self):
+        """
+        Clear the parser and remove all previous loaded docstrings
+
+        """
         self.sections = dict()
 
     @staticmethod
@@ -38,10 +56,38 @@ class NumpyDocParser(object):
         return lines
 
     def add_docs_from(self, obj, *args, **kwargs):
+        """
+
+        Parameters
+        ----------
+        obj : object
+            the object from which the `__doctring__` property should be parsed
+        section : str
+            the optional name of the initial section
+        keep_only : list of str
+            a list of sections that should be kept. All other section are discarded
+        translate : dict str: str
+            a dictionary of from_setion: to_section type. The from_sections are interpreted
+            as the to_section.
+        """
         if obj.__doc__ is not None:
             self.add_docs(obj.__doc__, *args, **kwargs)
 
     def add_docs(self, docs, section=None, keep_only=None, translate=None):
+        """
+
+        Parameters
+        ----------
+        docs : str
+            the docstring to be parsed
+        section : str
+            the optional name of the initial section
+        keep_only : list of str
+            a list of sections that should be kept. All other section are discarded
+        translate : dict str: str
+            a dictionary of from_setion: to_section type. The from_sections are interpreted
+            as the to_section.
+        """
         if section is None:
             current_section = 'HEAD'
         else:
@@ -73,6 +119,15 @@ class NumpyDocParser(object):
 
     @property
     def attributes(self):
+        """
+        List of all attributes found in the combined docstring
+
+        Returns
+        -------
+        list of str
+            the list of all attributes found
+
+        """
         attr = []
         if 'attributes' in self.sections:
             for line in self.sections['attributes']:
@@ -83,6 +138,22 @@ class NumpyDocParser(object):
         return attr
 
     def add_block(self, section, lines, keep_only=None, translate=None):
+        """
+        Add a section of a numpy docstring
+
+        Parameters
+        ----------
+        section : str
+            name of the section type, e.g. Attributes, Notes, ...
+        lines : list of str
+            the lines to be added
+        keep_only : list of str
+            a list of sections that should be kept. All other section are discarded
+        translate : dict str: str
+            a dictionary of from_setion: to_section type. The from_sections are interpreted
+            as the to_section.
+
+        """
         if not lines:
             return
 
@@ -108,6 +179,15 @@ class NumpyDocParser(object):
 
     @property
     def _docs(self):
+        """
+        Recreate the final list of docstrings in the set order
+
+        Returns
+        -------
+        list of str
+            the list of docstrings
+
+        """
         if self.order is None:
             order = [section for section in self.known_sections if section in self.sections]
         else:
@@ -138,6 +218,14 @@ class NumpyDocParser(object):
         return docs
 
     def get_docstring(self):
+        """
+        Get the final docstring as a string
+
+        Returns
+        -------
+        str
+            the combined docstring
+        """
         doc = '\n'.join(self._docs)
 
         doc = doc.replace('\n\n\n', '\n\n')
