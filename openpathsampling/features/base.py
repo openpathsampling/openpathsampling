@@ -2,7 +2,7 @@ from openpathsampling.netcdfplus import DelayedLoader
 from numpydoctools import NumpyDocTools
 
 
-def attach_features(features, use_lazy_reversed=True):
+def attach_features(features, use_lazy_reversed=False):
     """
     Select snapshot features
     """
@@ -65,16 +65,23 @@ def attach_features(features, use_lazy_reversed=True):
         parser.clear()
 
         # create and fill `__features__` with values from feature structures
-        __features__ = dict()
-        __features__['classes'] = features
+        if hasattr(cls, '__features__'):
+            __features__ = cls.__features__
+        else:
+            __features__ = dict()
+
         for name in ['attributes', 'minus', 'reversal', 'properties',
-                     'flip', 'numpy', 'lazy', 'required']:
-            __features__[name] = []
+                     'flip', 'numpy', 'lazy', 'required', 'classes']:
+            if name not in __features__:
+                __features__[name] = []
+
+        __features__['classes'] += features
 
         if use_lazy_reversed:
-            __features__['lazy'] = ['_reversed']
-
-
+            cls._reversed = DelayedLoader()
+            # if '_reversed' not in __features__['lazy']:
+            #     __features__['lazy'] += ['_reversed']
+            #
         origin = dict()
         required = dict()
         # loop over all the features
@@ -126,6 +133,8 @@ def attach_features(features, use_lazy_reversed=True):
             if attr not in __features__['properties']
         ]
 
+        has_lazy = bool(__features__['lazy']) or use_lazy_reversed
+
         # add descriptors that can handle lazy loaded objects
         for attr in __features__['lazy']:
             setattr(cls, attr, DelayedLoader())
@@ -170,7 +179,7 @@ def attach_features(features, use_lazy_reversed=True):
             "    this = cls.__new__(cls)",
         ]
 
-        if __features__['lazy']:
+        if has_lazy:
             code += [
                 "    this._lazy = {",
             ]
@@ -181,6 +190,10 @@ def attach_features(features, use_lazy_reversed=True):
             code += [
                 "    }"
             ]
+
+        code += [
+            "    this._reversed = None"
+        ]
 
         code += map(
             "    this.{0} = self.{0}".format,
@@ -216,10 +229,10 @@ def attach_features(features, use_lazy_reversed=True):
         code = []
         code += [
             "def copy_to(self, target):",
-            "    this = target",
+            "    this = target"
         ]
 
-        if __features__['lazy']:
+        if has_lazy:
             code += [
                 "    this._lazy = {",
             ]
@@ -230,6 +243,10 @@ def attach_features(features, use_lazy_reversed=True):
             code += [
                 "    }"
             ]
+
+        code += [
+            "    this._reversed = None"
+        ]
 
         code += map(
             "    np.copyto(this.{0}, self.{0})".format,
@@ -274,27 +291,46 @@ def attach_features(features, use_lazy_reversed=True):
         code = []
         code += [
             "def create_reversed(self):",
-            "    this = cls.__new__(cls)",
+            "    this = cls.__new__(cls)"
         ]
 
-        if __features__['lazy']:
-            if use_lazy_reversed:
-                code += [
-                    "    this._lazy = {cls._reversed : self}"
-                ]
-            else:
-                code += [
-                    "    this._lazy = dict()"
-                ]
-
-        if not use_lazy_reversed:
+        if has_lazy:
             code += [
-                "    this._reversed = self"
+                "    this._lazy = {",
+            ]
+            code += [
+                "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
+                for lazy in __features__['lazy']
             ]
 
-        code += map("    this.{0} = self.{0}".format, __features__['reversal'])
-        code += map("    this.{0} = - self.{0}".format, __features__['minus'])
-        code += map("    this.{0} = ~ self.{0}".format, __features__['flip'])
+            code += [
+                "    }"
+            ]
+
+        code += [
+            "    this._reversed = self"
+        ]
+
+        code += map(
+            "    this.{0} = self.{0}".format,
+            filter(
+                lambda x : x not in __features__['lazy'],
+                __features__['reversal']
+            )
+        )
+        code += map("    this.{0} = - self.{0}".format,
+            filter(
+                lambda x : x not in __features__['lazy'],
+                __features__['minus']
+            )
+        )
+
+        code += map("    this.{0} = ~ self.{0}".format,
+            filter(
+                lambda x : x not in __features__['lazy'],
+                __features__['flip']
+            )
+        )
 
         code += [
             "    return this"
@@ -332,22 +368,32 @@ def attach_features(features, use_lazy_reversed=True):
             "def __init__(self, %s):" % signature,
         ]
 
-        if __features__['lazy']:
-            if use_lazy_reversed:
-                code += [
-                    "    self._lazy = {cls._reversed : None}"
-                ]
-            else:
-                code += [
-                    "    self._lazy = dict()"
-                ]
-
-        if not use_lazy_reversed:
+        # dict for lazy attributes using DelayedLoader descriptor
+        if has_lazy:
             code += [
-                "    self._reversed = None"
+                "    self._lazy = {",
+            ]
+            code += [
+                "       cls.{0} : {0},".format(lazy)
+                for lazy in __features__['lazy']
+            ]
+            code += [
+                "    }"
             ]
 
-        code += map("    self.{0} = {0}".format, __features__['parameters'])
+        # set _reversed
+        code += [
+            "    self._reversed = None"
+        ]
+
+        # set non-lazy attributes
+        code += map(
+            "    self.{0} = {0}".format,
+            filter(
+                lambda x : x not in __features__['lazy'],
+                __features__['parameters']
+            )
+        )
 
         # compile the code and register the new function
         try:
@@ -360,39 +406,77 @@ def attach_features(features, use_lazy_reversed=True):
             print e
             pass
 
+        # compile the function for __init__
+
+        # def init_empty(self)):
+        #     self._lazy = {}
+        #     self._reversed = None
+        #     return this
+
+        code = []
+        code += [
+            "def init_empty(self):",
+        ]
+
+        # dict for lazy attributes using DelayedLoader descriptor
+        if has_lazy:
+            code += [
+                "    self._lazy = {}",
+            ]
+
+        # set _reversed
+        code += [
+            "    self._reversed = None"
+        ]
+
+        # compile the code and register the new function
+        try:
+            cc = compile('\n'.join(code), '<string>', 'exec')
+            exec cc in locals()
+
+            cls.init_empty = init_empty
+
+        except RuntimeError as e:
+            print e
+            pass
+
         code = []
         code += [ "@staticmethod" ]
         code += [
             "def init_copy(self, %s):" % signature,
         ]
 
-        if __features__['lazy']:
-            if use_lazy_reversed:
-                code += [
-                    "    self._lazy = {cls._reversed : None}"
-                ]
-            else:
-                code += [
-                    "    self._lazy = dict()"
-                ]
-
-        if not use_lazy_reversed:
+        if has_lazy:
             code += [
-                "    self._reversed = None"
+                "    self._lazy = {",
             ]
+            code += [
+                "       cls.{0} : {0},".format(lazy)
+                for lazy in __features__['parameters']
+                if lazy in __features__['lazy']
+            ]
+            code += [
+                "    }"
+            ]
+
+        code += [
+            "    self._reversed = None"
+        ]
 
         code += map(
             "    self.{0} = {0}".format,
             [
                 feat for feat in __features__['parameters'] if
-                feat not in __features__['numpy']
+                feat not in __features__['numpy'] and
+                feat not in __features__['lazy']
             ])
 
         code += map(
             "    np.copyto(self.{0}, {0})".format,
             [
                 feat for feat in __features__['parameters'] if
-                feat in __features__['numpy']
+                feat in __features__['numpy'] and
+                feat not in __features__['lazy']
             ])
 
         # compile the code and register the new function

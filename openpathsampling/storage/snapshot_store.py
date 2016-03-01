@@ -27,6 +27,10 @@ class BaseSnapshotStore(ObjectStore):
         """
         super(BaseSnapshotStore, self).__init__(BaseSnapshot, json=False)
         self.snapshot_class = snapshot_class
+        self._use_lazy_reversed = False
+        if hasattr(snapshot_class, '__features__'):
+            if '_reversed' in snapshot_class.__features__['lazy']:
+                self._use_lazy_reversed = True
 
     def __repr__(self):
         return "store.%s[%s(%s)]" % (
@@ -78,9 +82,7 @@ class BaseSnapshotStore(ObjectStore):
 
         # check if the reversed is in the cache
         try:
-            obj = self.cache[BaseSnapshotStore.paired_idx(idx)].create_reversed()
-            obj._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
-            return obj
+            return self.cache[BaseSnapshotStore.paired_idx(idx)].reversed
         except KeyError:
             pass
 
@@ -88,15 +90,14 @@ class BaseSnapshotStore(ObjectStore):
         st_idx = int(idx / 2)
 
         obj = self.snapshot_class.__new__(self.snapshot_class)
-        BaseSnapshot.__init__(obj)
+        self.snapshot_class.init_empty(obj)
 
         self._get(st_idx, obj)
         if idx & 1:
-            obj = obj.create_reversed()
+            obj = obj.reversed()
 
-        obj._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
+        # obj._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
         return obj
-
 
     @abc.abstractmethod
     def _set(self, idx, snapshot):
@@ -130,11 +131,8 @@ class BaseSnapshotStore(ObjectStore):
         self._set(st_idx, snapshot)
 
         if snapshot._reversed is not None:
-            snapshot._reversed._reversed = LoaderProxy(self, idx)
             # mark reversed as stored
             self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
-
-        snapshot._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
 
     def all(self):
         return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
