@@ -94,7 +94,7 @@ class BaseSnapshotStore(ObjectStore):
 
         self._get(st_idx, obj)
         if idx & 1:
-            obj = obj.reversed()
+            obj = obj.reversed
 
         # obj._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
         return obj
