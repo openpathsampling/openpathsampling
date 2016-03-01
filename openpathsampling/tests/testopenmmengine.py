@@ -10,8 +10,6 @@ from simtk.openmm import app
 
 import openpathsampling.dynamics.openmm as dyn
 
-from openpathsampling import Snapshot, MDSnapshot
-from openpathsampling.dynamics.openmm.openmm_engine import OpenMMEngine
 from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,
                           assert_not_equal_array_array)
@@ -61,7 +59,7 @@ class testOpenMMEngine(object):
             'timestep': 2.0*u.femtoseconds
         }
 
-        self.engine = OpenMMEngine(
+        self.engine = dyn.Engine(
             template,
             system,
             integrator,
@@ -103,9 +101,18 @@ class testOpenMMEngine(object):
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])
 
-        self.engine.current_snapshot = MDSnapshot(
+        configuration = dyn.Snapshot.Configuration(
             coordinates=np.array(testpos) * u.nanometers,
+            box_vectors=np.zeros((3, 3))
+        )
+
+        momentum = dyn.Snapshot.Momentum(
             velocities=np.array(testvel) * u.nanometers / u.picoseconds
+        )
+
+        self.engine.current_snapshot = dyn.Snapshot(
+            configuration=configuration,
+            momentum=momentum
         )
         state = self.engine.simulation.context.getState(getPositions=True,
                                                         getVelocities=True)
@@ -116,7 +123,7 @@ class testOpenMMEngine(object):
         np.testing.assert_almost_equal(testvel, sim_vels, decimal=5)
 
     def test_generate_next_frame(self):
-        snap0 = Snapshot(
+        snap0 = dyn.Snapshot(
             configuration=self.engine.current_snapshot.configuration,
             momentum=self.engine.current_snapshot.momentum
         )

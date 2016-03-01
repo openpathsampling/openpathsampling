@@ -73,6 +73,7 @@ from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
     RelativeComplementVolume, join_volumes
 )
 
+from openpathsampling.dynamics import Trajectory, BaseSnapshot
 
 def git_HEAD(): # pragma: no cover
     from subprocess import check_output

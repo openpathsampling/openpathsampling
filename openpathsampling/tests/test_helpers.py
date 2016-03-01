@@ -15,11 +15,11 @@ from nose.tools import assert_items_equal, assert_equal, assert_in
 from pkg_resources import resource_filename
 
 import openpathsampling as paths
-from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
 from openpathsampling.dynamics.snapshot import MDSnapshot
 from openpathsampling.dynamics.topology import Topology
 from openpathsampling.dynamics.trajectory import Trajectory
 
+from openpathsampling.dynamics import DynamicsEngine
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
     if velocities is None:
@@ -187,7 +187,7 @@ def compare_snapshot(snapshot1, snapshot2):
     assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
     assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
 
-class RandomMDEngine(paths.DynamicsEngine):
+class RandomMDEngine(DynamicsEngine):
     _default_options = {}
 
     def __init__(self, template=None):

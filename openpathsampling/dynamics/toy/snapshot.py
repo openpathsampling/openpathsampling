@@ -4,17 +4,17 @@
 @author: JH Prinz
 """
 
-from openpathsampling.dynamics import FeatureSnapshot
+from openpathsampling.dynamics import BaseSnapshot
 import features
 
 
-@features.base.set_features(
+@features.base.attach_features([
     features.velocities,
     features.coordinates,
     features.xyz,
     features.topology
-)
-class ToySnapshot(FeatureSnapshot):
+])
+class ToySnapshot(BaseSnapshot):
     """
     Simulation snapshot. Only references to coordinates and velocities
     """

@@ -2,9 +2,9 @@ import mdtraj as md
 import numpy as np
 import simtk.unit as u
 
-import openpathsampling as paths
 from snapshot import Snapshot
 from topology import Topology, MDTrajTopology
+from openpathsampling.dynamics import Trajectory
 
 __author__ = 'Jan-Hendrik Prinz'
 
@@ -28,9 +28,9 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
     velocities = np.zeros(pdb.xyz[0].shape)
 
     if simple_topology:
-        topology = paths.Topology(*pdb.xyz[0].shape)
+        topology = Topology(*pdb.xyz[0].shape)
     else:
-        topology = paths.MDTrajTopology(pdb.topology)
+        topology = MDTrajTopology(pdb.topology)
 
     configuration = Snapshot.Configuration(
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
@@ -69,9 +69,9 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
     velocities = u.Quantity(np.zeros(testsystem.positions.shape), u.nanometers / u.picoseconds)
 
     if simple_topology:
-        topology = paths.Topology(*testsystem.positions.shape)
+        topology = Topology(*testsystem.positions.shape)
     else:
-        topology = paths.MDTrajTopology(md.Topology.from_openmm(testsystem.topology))
+        topology = MDTrajTopology(md.Topology.from_openmm(testsystem.topology))
 
     box_vectors = np.array([
                     v / u.nanometers for v in
@@ -110,7 +110,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
         the constructed Trajectory instance
     """
 
-    trajectory = paths.Trajectory()
+    trajectory = Trajectory()
     empty_momentum = Snapshot.Momentum(
         velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
     )

@@ -3,6 +3,7 @@ from nose.plugins.skip import SkipTest
 from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj, raises_with_message_like
 
 import openpathsampling as paths
+import openpathsampling.dynamics.openmm as dyn
 from openpathsampling.ensemble import *
 
 import logging
@@ -490,7 +491,7 @@ class testSequentialEnsemble(EnsembleTest):
                                     lambda_min=-100.0, lambda_max=100.0)
 
         traj = paths.Trajectory([
-            paths.MDSnapshot(
+            dyn.MDSnapshot(
                 coordinates=np.array([[-0.5, 0.0]]), 
                 velocities=np.array([[0.0,0.0]])
             )
