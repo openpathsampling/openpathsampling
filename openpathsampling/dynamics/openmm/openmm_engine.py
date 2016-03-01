@@ -1,12 +1,12 @@
+import logging
+
+import simtk.openmm
 import simtk.unit as u
 from simtk.openmm.app import Simulation
-import simtk.openmm
-
-from openpathsampling.features.shared import Momentum, Configuration
 
 import openpathsampling as paths
+from features.shared import Momentum, Configuration
 
-import logging
 logger = logging.getLogger(__name__)
 
 

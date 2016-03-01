@@ -1,6 +1,8 @@
 import numpy as np
-from openpathsampling.snapshot import ToySnapshot
-from openpathsampling.dynamics_engine import DynamicsEngine
+
+from openpathsampling.dynamics.dynamics_engine import DynamicsEngine
+from openpathsampling.dynamics.snapshot import ToySnapshot
+
 
 def convert_to_3Ndim(v):
     ndofs = len(v)

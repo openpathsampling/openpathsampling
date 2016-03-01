@@ -5,7 +5,7 @@ import numpy as np
 import simtk.unit as u
 
 import openpathsampling as paths
-from openpathsampling.dynamics.features import Configuration, Momentum
+from features.shared import Configuration, Momentum
 
 __author__ = 'Jan-Hendrik Prinz'
 
