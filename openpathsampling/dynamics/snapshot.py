@@ -155,8 +155,8 @@ class MDSnapshot(BaseSnapshot):
 
 
 @feats.attach_features([
-    feats.configuration,
-    feats.momentum,
+    feats.statics,
+    feats.kinetics,
     feats.xyz,
     feats.topology  # for compatibility
 ])

@@ -191,7 +191,7 @@ class Trajectory(list, StorableObject):
 
         return len(self)
 
-    def configurations(self):
+    def statics(self):
         """
         Return a list of the snapshots in the trajectory
 
@@ -201,7 +201,7 @@ class Trajectory(list, StorableObject):
             the list of Configuration objects
 
         """
-        return [f.configuration for f in self]
+        return [f.statics for f in self]
 
     def momenta(self):
         """

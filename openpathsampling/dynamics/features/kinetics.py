@@ -1,14 +1,14 @@
-from shared import MomentumStore
+from shared import KineticContainerStore
 
-attributes = ['momentum', 'velocities', 'is_reversed']
-lazy = ['momentum']
+attributes = ['kinetics', 'velocities', 'is_reversed']
+lazy = ['kinetics']
 flip = ['is_reversed']
 
 
 def netcdfplus_init(store):
-    store.storage.create_store('momenta', MomentumStore())
+    store.storage.create_store('kinetics', KineticContainerStore())
 
-    store.create_variable('momentum', 'lazyobj.momenta',
+    store.create_variable('kinetics', 'lazyobj.kinetics',
                         description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                         )
 
@@ -23,10 +23,10 @@ def velocities(self):
     copy of the original (unreversed) velocities is made which is then
     returned
     """
-    if self.momentum is not None:
+    if self.kinetics is not None:
         if self.is_reversed:
-            return -1.0 * self.momentum.velocities
+            return -1.0 * self.kinetics.velocities
         else:
-            return self.momentum.velocities
+            return self.kinetics.velocities
 
     return None

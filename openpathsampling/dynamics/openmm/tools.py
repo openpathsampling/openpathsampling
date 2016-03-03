@@ -95,7 +95,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     """
 
     trajectory = Trajectory()
-    empty_momentum = Snapshot.Momentum(
+    empty_kinetics = Snapshot.KineticContainer(
         velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
     )
     if simple_topology:
@@ -112,14 +112,14 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
         else:
             box_v = None
 
-        config = Snapshot.Configuration(
+        statics = Snapshot.StaticContainer(
             coordinates=coord,
             box_vectors=box_v
         )
 
         snap = Snapshot(
-            configuration=config,
-            momentum=empty_momentum,
+            statics=statics,
+            kinetics=empty_kinetics,
             topology=topology
         )
         trajectory.append(snap)

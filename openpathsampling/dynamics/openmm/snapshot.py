@@ -22,8 +22,8 @@ class MDSnapshot(BaseSnapshot):
 
 
 @features.base.attach_features([
-    features.configuration,
-    features.momentum,
+    features.statics,
+    features.kinetics,
     features.xyz,
     features.topology  # for compatibility
 ])
@@ -32,8 +32,8 @@ class Snapshot(BaseSnapshot):
     The standard MDSnapshot supporting coordinate, velocities and box_vectors
     """
 
-    Configuration = features.Configuration
-    Momentum = features.Momentum
+    StaticContainer = features.StaticContainer
+    KineticContainer = features.KineticContainer
 
     @staticmethod
     def construct(coordinates=None, box_vectors=None, velocities=None, topology=None):
@@ -57,7 +57,7 @@ class Snapshot(BaseSnapshot):
         :obj:`Snapshot`
             the created `Snapshot` object
         """
-        configuration = Snapshot.Configuration(coordinates=coordinates, box_vectors=box_vectors)
-        momentum = Snapshot.Momentum(velocities=velocities)
+        statics = Snapshot.StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
+        kinetics = Snapshot.KineticContainer(velocities=velocities)
 
-        return Snapshot(topology=topology, configuration=configuration, momentum=momentum)
+        return Snapshot(topology=topology, statics=statics, kinetics=kinetics)

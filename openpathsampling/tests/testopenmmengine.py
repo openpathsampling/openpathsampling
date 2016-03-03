@@ -113,13 +113,13 @@ class testOpenMMEngine(object):
 
     def test_generate_next_frame(self):
         snap0 = dyn.Snapshot(
-            configuration=self.engine.current_snapshot.configuration,
-            momentum=self.engine.current_snapshot.momentum
+            statics=self.engine.current_snapshot.statics,
+            kinetics=self.engine.current_snapshot.kinetics
         )
         new_snap = self.engine.generate_next_frame()
         assert(new_snap is not snap0)
-        assert(new_snap.configuration is not snap0.configuration)
-        assert(new_snap.momentum is not snap0.momentum)
+        assert(new_snap.statics is not snap0.statics)
+        assert(new_snap.kinetics is not snap0.kinetics)
         old_pos = snap0.coordinates / u.nanometers
         new_pos = new_snap.coordinates / u.nanometers
         old_vel = snap0.velocities / (u.nanometers / u.picoseconds)
