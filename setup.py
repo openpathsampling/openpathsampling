@@ -106,7 +106,6 @@ def buildKeywordDictionary():
                                           'openpathsampling.tests',
                                           'openpathsampling.analysis',
                                           'openpathsampling.netcdfplus',
-                                          'openpathsampling.dynamics',
                                           'openpathsampling.engines'
                                           ]
     setupKeywords["package_dir"]       = {
