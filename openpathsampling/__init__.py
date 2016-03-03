@@ -32,7 +32,7 @@ from pathmovechange import (
     EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
     PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
     RandomChoicePathMoveChange, SamplePathMoveChange,
-    SequentialPathMoveChange,  KeepLastSamplePathMoveChange,
+    SequentialPathMoveChange, KeepLastSamplePathMoveChange,
     FilterSamplesPathMoveChange,
     PathSimulatorPathMoveChange, AcceptedSamplePathMoveChange,
     RejectedSamplePathMoveChange, SubPathMoveChange,
@@ -67,15 +67,19 @@ from shooting import ShootingPointSelector, UniformSelector, \
 
 from storage.storage import Storage, AnalysisStorage
 
-from volume import (Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
+from volume import (
+    Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
     EmptyVolume, FullVolume, CVRangeVolume, CVRangeVolumePeriodic,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )
 
 from openpathsampling.dynamics import Trajectory, BaseSnapshot
+import openpathsampling.dynamics.openmm as openmm
+import openpathsampling.dynamics.toy as toy
 
-def git_HEAD(): # pragma: no cover
+
+def git_HEAD():  # pragma: no cover
     from subprocess import check_output
     import os.path
     git_dir = os.path.dirname(os.path.realpath(__file__))
@@ -84,5 +88,5 @@ def git_HEAD(): # pragma: no cover
 
 try:
     import version
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     pass

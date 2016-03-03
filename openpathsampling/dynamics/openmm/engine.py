@@ -84,7 +84,6 @@ class OpenMMEngine(DynamicsEngine):
             if platform is not None:
                 self.options['platform'] = platform
 
-
         # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None
         self._current_momentum = None

@@ -1,6 +1,6 @@
-'''
+"""
 @author David W.H. Swenson
-'''
+"""
 
 import numpy as np
 import simtk.openmm as mm
@@ -34,7 +34,6 @@ def setUp():
         nonbondedMethod=app.PME,
         nonbondedCutoff=1.0*u.nanometers,
         constraints=app.HBonds,
-        rigidWater=True,
         ewaldErrorTolerance=0.0005
     )
 
@@ -53,10 +52,10 @@ class testOpenMMEngine(object):
         # Engine options
         options = {
             'nsteps_per_frame': 10,
-            'platform': 'OpenCL',
-            'solute_indices' : range(22),
-            'n_frames_max' : 5,
-            'timestep': 2.0*u.femtoseconds
+            'platform': 'fastest',
+            'solute_indices': range(22),
+            'n_frames_max': 5,
+            'timestep': 2.0 * u.femtoseconds
         }
 
         self.engine = dyn.Engine(
@@ -71,9 +70,7 @@ class testOpenMMEngine(object):
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
         context.setPositions(self.engine.template.coordinates)
-
         context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
-
 
     def teardown(self):
         pass
@@ -101,18 +98,10 @@ class testOpenMMEngine(object):
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])
 
-        configuration = dyn.Snapshot.Configuration(
+        self.engine.current_snapshot = dyn.Snapshot.construct(
             coordinates=np.array(testpos) * u.nanometers,
-            box_vectors=np.zeros((3, 3))
-        )
-
-        momentum = dyn.Snapshot.Momentum(
+            box_vectors=np.zeros((3, 3)),
             velocities=np.array(testvel) * u.nanometers / u.picoseconds
-        )
-
-        self.engine.current_snapshot = dyn.Snapshot(
-            configuration=configuration,
-            momentum=momentum
         )
         state = self.engine.simulation.context.getState(getPositions=True,
                                                         getVelocities=True)
