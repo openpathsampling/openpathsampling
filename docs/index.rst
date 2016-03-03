@@ -38,6 +38,7 @@ API Reference
     storage
     treemixin
     trajectory
+    openmm
 
 Developing
 ----------
