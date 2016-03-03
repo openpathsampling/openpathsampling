@@ -1,11 +1,7 @@
 import abc
 
-import openpathsampling.dynamics as dyn
-
-# from openpathsampling.dynamics.snapshot import BaseSnapshot
-# from openpathsampling.dynamics.trajectory import Trajectory
-
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
+import openpathsampling.engines as dyn
 
 
 # =============================================================================================

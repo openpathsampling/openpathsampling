@@ -4,7 +4,7 @@ import simtk.unit as u
 
 from snapshot import Snapshot
 from topology import Topology, MDTrajTopology
-from openpathsampling.dynamics import Trajectory
+from openpathsampling.engines import Trajectory
 
 __author__ = 'Jan-Hendrik Prinz'
 

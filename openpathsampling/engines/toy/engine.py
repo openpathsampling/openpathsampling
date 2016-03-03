@@ -1,6 +1,6 @@
 import numpy as np
 
-from openpathsampling.dynamics import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine
 from snapshot import ToySnapshot as Snapshot
 
 def convert_to_3Ndim(v):

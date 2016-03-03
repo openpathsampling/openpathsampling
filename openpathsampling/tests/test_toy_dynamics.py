@@ -8,7 +8,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal)
 
 import openpathsampling as paths
-import openpathsampling.dynamics.toy as toy
+import openpathsampling.engines.toy as toy
 from test_helpers import true_func, assert_equal_array_array
 
 import numpy as np

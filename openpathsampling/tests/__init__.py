@@ -2,7 +2,7 @@ import os
 
 from openpathsampling.storage import Storage
 
-import openpathsampling.dynamics.openmm as dyn
+import openpathsampling.engines.openmm as dyn
 
 import mdtraj as md
 

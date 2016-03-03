@@ -6,7 +6,7 @@ import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache, ObjectJSON, create_to_dict
 
-import openpathsampling.dynamics as dyn
+import openpathsampling.engines as dyn
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
     """
@@ -253,7 +253,7 @@ class CV_Callable(CollectiveVariable):
            with the function and this can only be done if they are passed as arguments
            to the function and added as kwargs to the CV_Function
 
-        >>> import openpathsampling.dynamics as dyn
+        >>> import openpathsampling.engines as dyn
         >>> def func(snapshot, indices):
         >>>     import mdtraj as md
         >>>     return md.compute_dihedrals(dyn.Trajectory([snapshot]).md(), indices=indices)

@@ -6,7 +6,7 @@ from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_items_equal,
                         raises)
 
-from openpathsampling.dynamics.trajectory import Trajectory
+from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.sample import *
 from openpathsampling.sample import Sample

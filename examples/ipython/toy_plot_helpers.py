@@ -2,7 +2,7 @@ import matplotlib.pylab as pylab
 import matplotlib.pyplot as plt
 import numpy as np
 
-from openpathsampling.dynamics.snapshot import Snapshot
+from openpathsampling.engines.snapshot import Snapshot
 
 
 # A little class we use for visualizing these 2D PESs

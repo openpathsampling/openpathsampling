@@ -8,7 +8,7 @@ import logging
 import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
     NamedObjectStore, UniqueNamedObjectStore
-import openpathsampling.dynamics as dyn
+import openpathsampling.engines as dyn
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')

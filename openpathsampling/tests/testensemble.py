@@ -3,7 +3,7 @@ from nose.plugins.skip import SkipTest
 from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj, raises_with_message_like
 
 import openpathsampling as paths
-import openpathsampling.dynamics.openmm as dyn
+import openpathsampling.engines.openmm as dyn
 from openpathsampling.ensemble import *
 
 import logging

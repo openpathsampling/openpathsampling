@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from simtk.openmm import XmlSerializer
 
-from openpathsampling.dynamics import Topology
+from openpathsampling.engines import Topology
 
 
 class MDTrajTopology(Topology):

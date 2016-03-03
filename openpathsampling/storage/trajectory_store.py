@@ -1,4 +1,4 @@
-from openpathsampling.dynamics.trajectory import Trajectory
+from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 
 

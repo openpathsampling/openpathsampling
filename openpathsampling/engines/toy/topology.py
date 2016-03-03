@@ -1,4 +1,4 @@
-from openpathsampling.dynamics import Topology
+from openpathsampling.engines import Topology
 
 
 class ToyTopology(Topology):

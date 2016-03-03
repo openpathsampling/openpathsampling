@@ -7,7 +7,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises)
 
 from openpathsampling.collectivevariable import CV_Function
-from openpathsampling.dynamics.trajectory import Trajectory
+from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *

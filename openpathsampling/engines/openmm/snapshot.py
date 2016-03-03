@@ -4,7 +4,7 @@
 @author: JH Prinz
 """
 
-from openpathsampling.dynamics import BaseSnapshot
+from openpathsampling.engines import BaseSnapshot
 import features
 
 

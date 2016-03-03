@@ -74,9 +74,9 @@ from volume import (
     RelativeComplementVolume, join_volumes
 )
 
-from openpathsampling.dynamics import Trajectory, BaseSnapshot
-import openpathsampling.dynamics.openmm as openmm
-import openpathsampling.dynamics.toy as toy
+from openpathsampling.engines import Trajectory, BaseSnapshot
+import openpathsampling.engines.openmm as openmm
+import openpathsampling.engines.toy as toy
 
 
 def git_HEAD():  # pragma: no cover

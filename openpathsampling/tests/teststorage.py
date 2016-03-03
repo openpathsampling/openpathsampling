@@ -6,7 +6,7 @@ import os
 import mdtraj as md
 from nose.tools import (assert_equal)
 
-import openpathsampling.dynamics.openmm as dyn
+import openpathsampling.engines.openmm as dyn
 
 from openpathsampling.netcdfplus import ObjectJSON
 from openpathsampling.storage import Storage

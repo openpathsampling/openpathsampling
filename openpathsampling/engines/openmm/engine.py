@@ -4,7 +4,7 @@ import simtk.openmm
 import simtk.unit as u
 from simtk.openmm.app import Simulation
 
-from openpathsampling.dynamics import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine
 from snapshot import Snapshot
 
 logger = logging.getLogger(__name__)

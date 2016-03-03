@@ -8,7 +8,7 @@ from nose.tools import (assert_equal)
 from simtk import unit as u
 from simtk.openmm import app
 
-import openpathsampling.dynamics.openmm as dyn
+import openpathsampling.engines.openmm as dyn
 
 from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,

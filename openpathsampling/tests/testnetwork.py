@@ -8,7 +8,7 @@ from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
 import openpathsampling as paths
 
-import openpathsampling.dynamics.toy as dyn
+import openpathsampling.engines.toy as dyn
 from openpathsampling.analysis.network import *
 from openpathsampling import VolumeFactory as vf
 

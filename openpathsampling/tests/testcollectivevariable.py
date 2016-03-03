@@ -8,7 +8,7 @@ import mdtraj as md
 import numpy as np
 
 import openpathsampling.collectivevariable as op
-import openpathsampling.dynamics.openmm as dyn
+import openpathsampling.engines.openmm as dyn
 from openpathsampling.netcdfplus import NetCDFPlus
 
 from msmbuilder.featurizer import AtomPairsFeaturizer

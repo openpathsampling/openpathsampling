@@ -15,11 +15,11 @@ from nose.tools import assert_items_equal, assert_equal, assert_in
 from pkg_resources import resource_filename
 
 import openpathsampling as paths
-from openpathsampling.dynamics.snapshot import MDSnapshot
-from openpathsampling.dynamics.topology import Topology
-from openpathsampling.dynamics.trajectory import Trajectory
+from openpathsampling.engines.snapshot import MDSnapshot
+from openpathsampling.engines.topology import Topology
+from openpathsampling.engines.trajectory import Trajectory
 
-from openpathsampling.dynamics import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
     if velocities is None:
