@@ -34,3 +34,30 @@ class Snapshot(BaseSnapshot):
 
     Configuration = features.Configuration
     Momentum = features.Momentum
+
+    @staticmethod
+    def construct(coordinates=None, box_vectors=None, velocities=None, topology=None):
+        """
+        Construct a new snapshot from numpy arrays
+
+        This will create the container objects and return a Snapshot object. Mostly a helper
+        to allow for easier creation.
+
+        Parameters
+        ----------
+        coordinates : numpy.array, shape = (atoms, spatial)
+            the atomic coordinates
+        box_vectors : numpy.array, shape = (spatial, spatial)
+            the box vectors
+        velocities : numpy.array, shape = (atoms, spatial)
+            the atomic velocities
+
+        Returns
+        -------
+        :obj:`Snapshot`
+            the created `Snapshot` object
+        """
+        configuration = Snapshot.Configuration(coordinates=coordinates, box_vectors=box_vectors)
+        momentum = Snapshot.Momentum(velocities=velocities)
+
+        return Snapshot(topology=topology, configuration=configuration, momentum=momentum)

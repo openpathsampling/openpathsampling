@@ -32,19 +32,11 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
     else:
         topology = MDTrajTopology(pdb.topology)
 
-    configuration = Snapshot.Configuration(
+    snapshot = Snapshot.construct(
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
-    )
-
-    momentum = Snapshot.Momentum(
-        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds)
-    )
-
-    snapshot = Snapshot(
-        topology=topology,
-        configuration=configuration,
-        momentum=momentum,
+        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
+        topology=topology
     )
 
     return snapshot
@@ -77,19 +69,11 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
                     v / u.nanometers for v in
                     testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
 
-    configuration = Snapshot.Configuration(
+    snapshot = Snapshot.construct(
         coordinates=testsystem.positions,
-        box_vectors=box_vectors
-    )
-
-    momentum = Snapshot.Momentum(
-        velocities=velocities
-    )
-
-    snapshot = Snapshot(
-        topology=topology,
-        configuration=configuration,
-        momentum=momentum
+        box_vectors=box_vectors,
+        velocities=velocities,
+        topology=topology
     )
 
     return snapshot
@@ -168,19 +152,11 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
     else:
         topology = MDTrajTopology(md.Topology.from_openmm(topology))
 
-    configuration = Snapshot.Configuration(
+    snapshot = Snapshot.construct(
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
-        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers)
-    )
-
-    momentum = Snapshot.Momentum(
-        velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds)
-    )
-
-    snapshot = Snapshot(
-        topology=topology,
-        configuration=configuration,
-        momentum=momentum,
+        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
+        velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
+        topology=topology
     )
 
     return snapshot

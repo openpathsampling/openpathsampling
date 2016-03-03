@@ -190,19 +190,11 @@ class OpenMMEngine(DynamicsEngine):
                                                  getVelocities=True,
                                                  getEnergy=True)
 
-        configuration = Snapshot.Configuration(
-            coordinates = state.getPositions(asNumpy=True),
-            box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
-        )
-
-        momentum = Snapshot.Momentum(
-            velocities = state.getVelocities(asNumpy=True)
-        )
-
-        snapshot = Snapshot(
-            topology=self.topology,
-            configuration=configuration,
-            momentum=momentum
+        snapshot = Snapshot.construct(
+            coordinates=state.getPositions(asNumpy=True),
+            box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
+            velocities=state.getVelocities(asNumpy=True),
+            topology=self.topology
         )
 
         return snapshot
