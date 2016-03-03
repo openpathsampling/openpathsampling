@@ -109,49 +109,7 @@ class Trajectory(list, StorableObject):
         # And a generation of scientist-programmers who grew up learning
         # "OPS trajectories are just Python lists" scream in pain when they
         # find this after googling "python list.prepend not working".
-        # (Blame JHP. This was his doing.)
-
-    def coordinates(self):
-        """
-        Return all coordinates as a numpy array
-        
-        Returns
-        -------        
-        coordinates : numpy.ndarray((n_frames, n_atoms, 3))
-            numpy.array of coordinates of size number of
-            frames 'n_frames' x number of atoms 'n_atoms' x 3 in x,y,z
-        """
-
-        # Make sure snapshots are stored and have an index and then add the snapshot index to the trajectory
-
-        n_frames = len(self)
-        n_atoms = self.n_atoms
-        n_spatial = self.spatial
-
-        output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
-
-        for frame_index in range(n_frames):
-            if self.atom_indices is None:
-                output[frame_index, :, :] = self[frame_index].coordinates
-            else:
-                output[frame_index, :, :] = self[frame_index].coordinates[self.atom_indices, :]
-
-        return output
-
-    def xyz(self):
-        n_frames = len(self)
-        n_atoms = self.n_atoms
-        n_spatial = self.spatial
-
-        output = np.zeros([n_frames, n_atoms, n_spatial], np.float32)
-
-        for frame_index in range(n_frames):
-            if self.atom_indices is None:
-                output[frame_index, :, :] = self[frame_index].xyz
-            else:
-                output[frame_index, :, :] = self[frame_index].xyz[self.atom_indices, :]
-
-        return output
+        # (Blame JHP. This was his doing.) ;)
 
     @property
     def n_snapshots(self):
@@ -191,28 +149,58 @@ class Trajectory(list, StorableObject):
 
         return len(self)
 
-    def statics(self):
+    def __getattr__(self, item):
         """
-        Return a list of the snapshots in the trajectory
-
-        Returns
-        -------
-        list of Configuration
-            the list of Configuration objects
+        Fallback to access Snapshot properties
 
         """
-        return [f.statics for f in self]
+        if len(self) > 0:
+            snapshot_class = self[0].__class__
+            if hasattr(snapshot_class, '__features__'):
+                if item in snapshot_class.__features__['attributes']:
+                    first = getattr(self[0], item)
+                    if type(first) is u.Quantity:
+                        inner = first._value
+                        if type(inner) is np.ndarray:
+                            dtype = inner.dtype
 
-    def momenta(self):
-        """
-        Return a list of the Momentum objects in the trajectory
+                            out = np.empty(tuple([len(self)] + list(inner.shape)), dtype=dtype)
 
-        Returns
-        -------
-        list of Momentum()
-            the list of Momentum objects
-        """
-        return [f.momenta for f in self]
+                            for idx, s in enumerate(list.__iter__(self)):
+                                np.copyto(out[idx], getattr(s, item)._value)
+
+                            return out * first.unit
+                        else:
+                            out = [None] * len(self)
+
+                            for idx, s in enumerate(list.__iter__(self)):
+                                out[idx] = getattr(s, item)
+
+                            return out
+                    elif type(first) is np.ndarray:
+                        dtype = first.dtype
+
+                        out = np.empty(tuple([len(self)] + list(first.shape)), dtype=dtype)
+
+                        for idx, s in enumerate(list.__iter__(self)):
+                            np.copyto(out[idx], getattr(s, item))
+
+                        return out
+                    else:
+                        out = [None] * len(self)
+
+                        for idx, s in enumerate(list.__iter__(self)):
+                            out[idx] = getattr(s, item)
+
+                        return out
+                else:
+                    raise RuntimeWarning('Feature "%s" not available for snapshots in this trajectory' % item)
+
+            else:
+                raise RuntimeWarning('Cannot access features for featureless snapshots')
+
+        else:
+            return []
 
     @property
     def spatial(self):
@@ -310,7 +298,6 @@ class Trajectory(list, StorableObject):
         :class:`openpathsampling.snapshot.Snapshot` or :class:`openpathsampling.netcdfplus.proxy.LoaderProxy`
         """
         return list.__getitem__(self, item)
-
 
     def as_proxies(self):
         """
@@ -688,7 +675,7 @@ class Trajectory(list, StorableObject):
         if topology is None:
             topology = self.topology.md
 
-        output = self.coordinates()
+        output = self.xyz
 
         return md.Trajectory(output, topology)
 
