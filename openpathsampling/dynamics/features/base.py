@@ -237,12 +237,11 @@ def attach_features(features, use_lazy_reversed=False):
         code = []
         code += [
             "def copy_to(self, target):",
-            "    this = target"
         ]
 
         if has_lazy:
             code += [
-                "    this._lazy = {",
+                "    target._lazy = {",
             ]
             code += [
                 "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
@@ -253,27 +252,23 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
         code += [
-            "    this._reversed = None"
+            "    target._reversed = None"
         ]
 
         code += map(
-            "    np.copyto(this.{0}, self.{0})".format,
+            "    np.copyto(target.{0}, self.{0})".format,
             filter(
                 lambda x : x not in __features__['lazy'] and x in __features__['numpy'],
                 __features__['parameters']
             )
         )
         code += map(
-            "    this.{0} = self.{0}".format,
+            "    target.{0} = self.{0}".format,
             filter(
                 lambda x : x not in __features__['lazy'] and x not in __features__['numpy'],
                 __features__['parameters']
             )
         )
-
-        code += [
-            "    return this"
-        ]
 
         # compile the code and register the new function
         try:
@@ -372,17 +367,22 @@ def attach_features(features, use_lazy_reversed=False):
         #     return this
 
         # we use as signature all feature names in parameters
-        parameters = ['engine=None']
+        parameters = []
         for feat in __features__['parameters']:
             if feat in __features__['flip']:
                 parameters += ['{0}=False'.format(feat)]
             else:
                 parameters += ['{0}=None'.format(feat)]
 
-        signature = ', '.join(parameters)
         code = []
+
+        if parameters:
+            signature = ', ' + ', '.join(parameters)
+        else:
+            signature = ''
+
         code += [
-            "def __init__(self, %s):" % signature,
+            "def __init__(self%s):" % signature,
         ]
 
         # dict for lazy attributes using DelayedLoader descriptor
@@ -468,7 +468,7 @@ def attach_features(features, use_lazy_reversed=False):
         code = []
         code += [ "@staticmethod" ]
         code += [
-            "def init_copy(self, %s):" % signature,
+            "def init_copy(self%s):" % signature,
         ]
 
         if has_lazy:
