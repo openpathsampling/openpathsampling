@@ -94,11 +94,11 @@ class ToyPlot(object):
                     self._initcond.coordinates[0,1],
                     'ro', zorder=3)
         for traj in bold:
-            plt.plot(traj.xyz()[:,0,0], traj.xyz()[:,0,1],
+            plt.plot(traj.xyz[:,0,0], traj.xyz[:,0,1],
                      self.repcolordict[bold.index(traj)], linewidth=2,
                     zorder=1)
         for traj in trajectories:
-            plt.plot(traj.xyz()[:,0,0], traj.xyz()[:,0,1],
+            plt.plot(traj.xyz[:,0,0], traj.xyz[:,0,1],
                      self.repcolordict[trajectories.index(traj) % 5],
                      zorder=2)
         return fig
