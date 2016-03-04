@@ -106,14 +106,24 @@ def buildKeywordDictionary():
                                           'openpathsampling.tests',
                                           'openpathsampling.analysis',
                                           'openpathsampling.netcdfplus',
-                                          'openpathsampling.engines'
+                                          'openpathsampling.engines',
+                                          'openpathsampling.engines.features',
+                                          'openpathsampling.engines.openmm',
+                                          'openpathsampling.engines.openmm.features',
+                                          'openpathsampling.engines.toy',
+                                          'openpathsampling.engines.toy.features'
                                           ]
     setupKeywords["package_dir"]       = {
         'openpathsampling': 'openpathsampling',
         'openpathsampling.storage': 'openpathsampling/storage',
-        'openpathsampling.engines': 'openpathsampling/engines',
         'openpathsampling.tests': 'openpathsampling/tests',
-        'openpathsampling.netcdfplus': 'openpathsampling/netcdfplus'
+        'openpathsampling.netcdfplus': 'openpathsampling/netcdfplus',
+        'openpathsampling.engines': 'openpathsampling/engines',
+        'openpathsampling.engines.features': 'openpathsampling/engines/features',
+        'openpathsampling.engines.openmm': 'openpathsampling/engines/openmm',
+        'openpathsampling.engines.openmm.features': 'openpathsampling/engines/openmm/features',
+        'openpathsampling.engines.toy': 'openpathsampling/engines/toy',
+        'openpathsampling.engines.toy.features': 'openpathsampling/engines/toy/features'
     }
     #setupKeywords["py_modules"]        = ["pymbar", "timeseries", "testsystems", "confidenceintervals"]
     setupKeywords["data_files"]        = []
