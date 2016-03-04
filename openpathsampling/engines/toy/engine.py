@@ -3,34 +3,15 @@ import numpy as np
 from openpathsampling.engines import DynamicsEngine
 from snapshot import ToySnapshot as Snapshot
 
-def convert_to_3Ndim(v):
-    ndofs = len(v)
-    n_whole_atoms = ndofs / 3
-    nrest = 3 - (ndofs % 3)
-
-    out = []
-    for i in range(n_whole_atoms):
-        out.append([v[3*i+0], v[3*i+1], v[3*i+2]])
-
-    last=[]
-    for i in range(ndofs % 3):
-        last.append(v[3*n_whole_atoms+i])
-    last += [0.0]*nrest
-
-    out.append(last)
-    return np.array(out)
-
-
-def count_atoms(ndofs):
-    # first part gives whole atoms, second part says if a partial exists
-    return (ndofs / 3) + min(1, ndofs % 3)
-
 
 class ToyEngine(DynamicsEngine):
-    '''The trick is that we have various "simulation" classes (either
+    """
+    The trick is that we have various "simulation" classes (either
     generated directly as here, or subclassed for more complication
     simulation objects as in OpenMM), but they all quack the same when it
-    comes to things the DynamicsEngine calls on them for'''
+    comes to things the DynamicsEngine calls on them for
+
+    """
 
     base_snapshot_type = Snapshot
 

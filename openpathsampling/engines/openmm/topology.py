@@ -64,6 +64,7 @@ class MDTrajTopology(Topology):
 
         return cls(md_topology, dct['subsets'])
 
+
 class OpenMMSystemTopology(Topology):
     """A Topology that is based on an openmm.system object
 
