@@ -1,6 +1,4 @@
-import openpathsampling.snapshot_content
-
-__author__ = 'Jan-Hendrik Prinz'
+from openpathsampling.features.shared import Configuration, Momentum
 
 import mdtraj as md
 import simtk.unit as u
@@ -8,6 +6,8 @@ import numpy as np
 import openpathsampling as paths
 
 import sys
+
+__author__ = 'Jan-Hendrik Prinz'
 
 
 def refresh_output(output_str, print_anyway=True, refresh=True):
@@ -23,7 +23,7 @@ def refresh_output(output_str, print_anyway=True, refresh=True):
     sys.stdout.flush()
 
 
-def snapshot_from_pdb(pdb_file):
+def snapshot_from_pdb(pdb_file, simple_topology=False):
     """
     Construct a Snapshot from the first frame in a pdb file without velocities
 
@@ -39,21 +39,32 @@ def snapshot_from_pdb(pdb_file):
 
     """
     pdb = md.load(pdb_file)
-
     velocities = np.zeros(pdb.xyz[0].shape)
 
-    snapshot = paths.Snapshot(
+    if simple_topology:
+        topology = paths.Topology(*pdb.xyz[0].shape)
+    else:
+        topology = paths.MDTrajTopology(pdb.topology)
+
+    configuration = Configuration(
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
-        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
-        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        topology=paths.MDTrajTopology(pdb.topology)
+    )
+
+    momentum = Momentum(
+        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds)
+    )
+
+    snapshot = paths.Snapshot(
+        topology=topology,
+        configuration=configuration,
+        momentum=momentum,
     )
 
     return snapshot
 
-def snapshot_from_testsystem(testsystem):
+
+def snapshot_from_testsystem(testsystem, simple_topology=False):
     """
     Construct a Snapshot from openmm topology and state objects
 
@@ -70,24 +81,35 @@ def snapshot_from_testsystem(testsystem):
     """
 
     velocities = u.Quantity(np.zeros(testsystem.positions.shape), u.nanometers / u.picoseconds)
-    topology = testsystem.topology
+
+    if simple_topology:
+        topology = paths.Topology(*testsystem.positions.shape)
+    else:
+        topology = paths.MDTrajTopology(md.Topology.from_openmm(testsystem.topology))
 
     box_vectors = np.array([
                     v / u.nanometers for v in
                     testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
 
-    snapshot = paths.Snapshot(
+    configuration = Configuration(
         coordinates=testsystem.positions,
-        velocities=velocities,
-        box_vectors=box_vectors,
-        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology))
+        box_vectors=box_vectors
+    )
+
+    momentum = Momentum(
+        velocities=velocities
+    )
+
+    snapshot = paths.Snapshot(
+        topology=topology,
+        configuration=configuration,
+        momentum=momentum
     )
 
     return snapshot
 
-def trajectory_from_mdtraj(mdtrajectory):
+
+def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     """
     Construct a Trajectory object from an mdtraj.Trajectory object
 
@@ -102,15 +124,14 @@ def trajectory_from_mdtraj(mdtrajectory):
         the constructed Trajectory instance
     """
 
-    #TODO: Fix energies and move these to specialized CVs
-    #TODO: We could also allow to have empty energies
-
     trajectory = paths.Trajectory()
-    empty_momentum = openpathsampling.snapshot_content.Momentum(
-        velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond),
-        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole)
+    empty_momentum = Momentum(
+        velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
     )
-    topology = paths.MDTrajTopology(mdtrajectory.topology)
+    if simple_topology:
+        topology = paths.Topology(*mdtrajectory.xyz[0].shape)
+    else:
+        topology = paths.MDTrajTopology(mdtrajectory.topology)
 
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
@@ -121,10 +142,9 @@ def trajectory_from_mdtraj(mdtrajectory):
         else:
             box_v = None
 
-        config = openpathsampling.snapshot_content.Configuration(
+        config = Configuration(
             coordinates=coord,
-            box_vectors=box_v,
-            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole)
+            box_vectors=box_v
         )
 
         snap = paths.Snapshot(
@@ -137,7 +157,7 @@ def trajectory_from_mdtraj(mdtrajectory):
     return trajectory
 
 
-def empty_snapshot_from_openmm_topology(topology):
+def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
     """
     Return an empty snapshot from an openmm.Topology object using the specified units.
 
@@ -157,49 +177,27 @@ def empty_snapshot_from_openmm_topology(topology):
     """
     n_atoms = topology.n_atoms
 
-    snapshot = paths.Snapshot(
+    if simple_topology:
+        topology = paths.Topology(n_atoms, 3)
+    else:
+        topology = paths.MDTrajTopology(md.Topology.from_openmm(topology))
+
+    configuration = Configuration(
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
-        velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
-        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
-        potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        kinetic_energy=u.Quantity(0.0, u.kilojoule_per_mole),
-        topology=paths.MDTrajTopology(md.Topology.from_openmm(topology))
+        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers)
+    )
+
+    momentum = Momentum(
+        velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds)
+    )
+
+    snapshot = paths.Snapshot(
+        topology=topology,
+        configuration=configuration,
+        momentum=momentum,
     )
 
     return snapshot
-
-
-def simtk_units_from_md_snapshot(snapshot):
-    """
-    Returns a dict of simtk.unit.Unit instances that represent the used units in the snapshot
-
-    Parameters
-    ----------
-    snapshot : Snapshot
-        the snapshot to be used
-
-    Returns
-    -------
-    units : dict of {str : simtk.unit.Unit }
-        representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
-        the simtk.unit.Unit to be used
-    """
-
-    units = {'length': None, 'energy': None, 'velocity': None}
-
-    if snapshot.coordinates is not None:
-        if hasattr(snapshot.coordinates, 'unit'):
-            units['length'] = snapshot.coordinates.unit
-
-    if snapshot.potential_energy is not None:
-        if hasattr(snapshot.potential_energy, 'unit'):
-            units['energy'] = snapshot.potential_energy.unit
-
-    if snapshot.velocities is not None:
-        if hasattr(snapshot.velocities, 'unit'):
-            units['velocity'] = snapshot.velocities.unit
-
-    return units
 
 
 def to_openmm_topology(obj):

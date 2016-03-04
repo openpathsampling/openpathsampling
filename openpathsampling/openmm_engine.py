@@ -1,7 +1,8 @@
-import numpy as np
 import simtk.unit as u
 from simtk.openmm.app import Simulation
 import simtk.openmm
+
+from openpathsampling.features.shared import Momentum, Configuration
 
 import openpathsampling as paths
 
@@ -10,9 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class OpenMMEngine(paths.DynamicsEngine):
-    """OpenMM dynamics engine based on using an openmm system and integrator object.
+    """OpenMM dynamics engine based on using an `simtk.openmm` system and integrator object.
 
-    The engine will create a openmm.app.Simulation instance and uses this to generate new frames.
+    The engine will create a :class:`simtk.openmm.app.Simulation` instance and uses this to generate new frames.
 
     """
 
@@ -82,6 +83,7 @@ class OpenMMEngine(paths.DynamicsEngine):
 
             if platform is not None:
                 self.options['platform'] = platform
+
 
         # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None
@@ -188,13 +190,22 @@ class OpenMMEngine(paths.DynamicsEngine):
                                                  getVelocities=True,
                                                  getEnergy=True)
 
-        return paths.Snapshot(coordinates = state.getPositions(asNumpy=True),
-                        box_vectors = state.getPeriodicBoxVectors(asNumpy=True),
-                        potential_energy = state.getPotentialEnergy(),
-                        velocities = state.getVelocities(asNumpy=True),
-                        kinetic_energy = state.getKineticEnergy(),
-                        topology = self.topology
-                       )
+        configuration = Configuration(
+            coordinates = state.getPositions(asNumpy=True),
+            box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
+        )
+
+        momentum = Momentum(
+            velocities = state.getVelocities(asNumpy=True)
+        )
+
+        snapshot = paths.Snapshot(
+            topology=self.topology,
+            configuration=configuration,
+            momentum=momentum
+        )
+
+        return snapshot
 
     @property
     def current_snapshot(self):
@@ -212,14 +223,11 @@ class OpenMMEngine(paths.DynamicsEngine):
         self.check_snapshot_type(snapshot)
 
         if snapshot is not self._current_snapshot:
-            if snapshot.configuration is not None:
-                if self._current_snapshot is None or snapshot.configuration is not self._current_snapshot.configuration:
-                    # new snapshot has a different configuration so update
-                    self.simulation.context.setPositions(snapshot.coordinates)
+            if snapshot.coordinates is not None:
+                self.simulation.context.setPositions(snapshot.coordinates)
 
-            if snapshot.momentum is not None:
-                if self._current_snapshot is None or snapshot.momentum is not self._current_snapshot.momentum or snapshot.is_reversed != self._current_snapshot.is_reversed:
-                    self.simulation.context.setVelocities(snapshot.velocities)
+            if snapshot.velocities is not None:
+                self.simulation.context.setVelocities(snapshot.velocities)
 
             # After the updates cache the new snapshot
             self._current_snapshot = snapshot
@@ -228,11 +236,3 @@ class OpenMMEngine(paths.DynamicsEngine):
         self.simulation.step(self.nsteps_per_frame)
         self._current_snapshot = None
         return self.current_snapshot
-
-    @property
-    def momentum(self):
-        return self.current_snapshot.momentum
-
-    @property
-    def configuration(self):
-        return self.current_snapshot.configuration

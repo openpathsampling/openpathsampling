@@ -49,7 +49,7 @@ class DynamicsEngine(StorableNamedObject):
         'energy' : u.Unit({})
     }
 
-    base_snapshot_type = paths.AbstractSnapshot
+    base_snapshot_type = paths.BaseSnapshot
 
     def __init__(self, options=None, template=None):
         '''
