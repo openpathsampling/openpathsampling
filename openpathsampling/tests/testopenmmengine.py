@@ -65,8 +65,6 @@ class testOpenMMEngine(object):
             options
         )
 
-        print hasattr(self.engine, 'current_snapshot')
-
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
         context.setPositions(self.engine.template.coordinates)
@@ -130,11 +128,6 @@ class testOpenMMEngine(object):
         assert_not_equal_array_array(old_vel, new_vel)
 
     def test_generate(self):
-        print self.engine
-        print dir(self.engine)
-        print hasattr(self.engine, 'current_snapshot')
-        print self.engine._current_snapshot
-        print self.engine.current_snapshot
         traj = self.engine.generate(self.engine.current_snapshot, [true_func])
         assert_equal(len(traj), self.engine.n_frames_max)
 

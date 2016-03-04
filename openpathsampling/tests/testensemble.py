@@ -998,9 +998,6 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         ens = SequentialEnsemble([AllInXEnsemble(vol1 | vol2 | vol3)])
         cache = ens._cache_can_append
         traj = ttraj['upper_in_in_out_out_in_in']
-        for i in traj:
-            print i,
-        print
         assert_equal(ens.can_append(traj[0:1]), True)
         assert_equal(ens.can_append(traj[0:2]), True)
         assert_equal(ens.can_append(traj[0:3]), True)
