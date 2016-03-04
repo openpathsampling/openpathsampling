@@ -51,8 +51,8 @@ class testOpenMMEngine(object):
 
         # Engine options
         options = {
-            'nsteps_per_frame': 10,
-            'platform': 'fastest',
+            'nsteps_per_frame': 2,
+            'platform': 'CPU',
             'solute_indices': range(22),
             'n_frames_max': 5,
             'timestep': 2.0 * u.femtoseconds
@@ -139,4 +139,4 @@ class testOpenMMEngine(object):
         assert_equal(len(traj), self.engine.n_frames_max)
 
     def test_snapshot_timestep(self):
-        assert_equal(self.engine.snapshot_timestep, 20 * u.femtoseconds)
+        assert_equal(self.engine.snapshot_timestep, 4 * u.femtoseconds)
