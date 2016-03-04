@@ -98,10 +98,17 @@ class testSingleTrajectoryAnalysis(object):
         # A: [{out: 1, in: 1}
         # B: insufficient 
         # NOTE: we may want a separate trajectory for this
+        flux_core_test_str = "axaxaaaxxaxbxaaxxa"
+        # frame numbers       0    5    0    5 7
+
+        core_traj = self._make_traj(flux_core_test_str)
+        self.analyzer.analyze_flux(core_traj, self.stateA)
+        print core_traj.subtrajectory_indices(self.analyzer.flux_in_segments)
+
+        assert_equal(self.analyzer.flux_in_segments[0], core_traj[0:3])
+
+
         raise SkipTest
 
     def test_analyze(self):
-        raise SkipTest
-
-    def test_summary(self):
         raise SkipTest

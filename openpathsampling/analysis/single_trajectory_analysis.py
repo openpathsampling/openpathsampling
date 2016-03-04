@@ -55,9 +55,9 @@ class SingleTrajectoryAnalysis(object):
     
     @property
     def continuous_times(self):
-        if self.dt is None: # pragma: no-cover
-            # TODO: this might become a logger.warn
+        if self.dt is None: # pragma: no cover
             raise RuntimeError("No time delta set")
+            # TODO: this might become a logger.warn
         continuous_frames = self.continuous_frames
         return {k : continuous_frames[k]*self.dt 
                 for k in continuous_frames.keys()}
@@ -69,9 +69,9 @@ class SingleTrajectoryAnalysis(object):
                              
     @property
     def lifetimes(self):
-        if self.dt is None: # pragma: no-cover
-            # TODO: this might become a logger.warn; use dt=1 otherwise
+        if self.dt is None: # pragma: no cover
             raise RuntimeError("No time delta set")
+            # TODO: this might become a logger.warn; use dt=1 otherwise
         lifetime_frames = self.lifetime_frames
         return {k : lifetime_frames[k]*self.dt 
                 for k in lifetime_frames.keys()}
@@ -83,9 +83,9 @@ class SingleTrajectoryAnalysis(object):
 
     @property
     def transition_duration(self):
-        if self.dt is None: # pragma: no-cover
-            # TODO: this might become a logger.warn; use dt=1 otherwise
+        if self.dt is None: # pragma: no cover
             raise RuntimeError("No time delta set")
+            # TODO: this might become a logger.warn; use dt=1 otherwise
         transition_duration_frames = self.transition_duration_frames
         return {k : transition_duration_frames[k]*self.dt 
                 for k in transition_duration_frames.keys()}
@@ -127,6 +127,14 @@ class SingleTrajectoryAnalysis(object):
         ]
 
     def analyze_flux(self, trajectory, state):
+        other = list(set([self.stateA, self.stateB]) - set([state]))[0]
+        start_in = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(state) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(state | other),
+            paths.AllInXEnsemble(state)
+        ])
+        flux_in_segments = start_in.split(trajectory)
+        self.flux_in_segments = flux_in_segments # TODO: DEBUG
         pass
 
     def analyze(self, trajectories):
@@ -143,6 +151,5 @@ class SingleTrajectoryAnalysis(object):
         # return self so we can init and analyze in one line
         return self
 
-    def summary(self):
-        # return a nice text/pandas output
-        pass
+    # TODO: add a `summary` function to output a nice pandas frame or
+    # something
