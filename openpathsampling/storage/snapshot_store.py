@@ -1,7 +1,7 @@
 import abc
 
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
-import openpathsampling.engines as dyn
+import openpathsampling.engines as peng
 
 
 # =============================================================================================
@@ -24,7 +24,7 @@ class BaseSnapshotStore(ObjectStore):
             a snapshot class that this Store is supposed to store
 
         """
-        super(BaseSnapshotStore, self).__init__(dyn.BaseSnapshot, json=False)
+        super(BaseSnapshotStore, self).__init__(peng.BaseSnapshot, json=False)
         self.snapshot_class = snapshot_class
         self._use_lazy_reversed = False
         if hasattr(snapshot_class, '__features__'):
@@ -134,7 +134,7 @@ class BaseSnapshotStore(ObjectStore):
             self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
 
     def all(self):
-        return dyn.Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
+        return peng.Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
 
     def __len__(self):
         return 2 * super(BaseSnapshotStore, self).__len__()

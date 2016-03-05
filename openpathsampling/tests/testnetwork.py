@@ -8,7 +8,7 @@ from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
 import openpathsampling as paths
 
-import openpathsampling.engines.toy as dyn
+import openpathsampling.engines.toy as peng
 from openpathsampling.analysis.network import *
 from openpathsampling import VolumeFactory as vf
 
@@ -179,8 +179,8 @@ class testTPSNetwork(object):
         fname = "tps_network_storage_test.nc"
         if os.path.isfile(fname):
             os.remove(fname)
-        topol = dyn.Topology(n_spatial=1, masses=[1.0], pes=None)
-        self.template = dyn.Snapshot(coordinates=np.array([[0.0]]),
+        topol = peng.Topology(n_spatial=1, masses=[1.0], pes=None)
+        self.template = peng.Snapshot(coordinates=np.array([[0.0]]),
                                        velocities=np.array([[0.0]]),
                                        topology=topol)
         states = [self.stateA, self.stateB, self.stateC]

@@ -8,7 +8,7 @@ import logging
 import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
     NamedObjectStore, UniqueNamedObjectStore
-import openpathsampling.engines as dyn
+import openpathsampling.engines as peng
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -154,17 +154,17 @@ class Storage(NetCDFPlus):
 
         self.create_store('cvs', paths.storage.ReversibleObjectDictStore(
             paths.CollectiveVariable,
-            dyn.BaseSnapshot
+            peng.BaseSnapshot
         ))
 
         # normal objects
 
         self.create_store('details', ObjectStore(paths.Details))
-        self.create_store('topologies', NamedObjectStore(dyn.Topology))
+        self.create_store('topologies', NamedObjectStore(peng.Topology))
         self.create_store('pathmovers', NamedObjectStore(paths.PathMover))
         self.create_store('shootingpointselectors',
                           NamedObjectStore(paths.ShootingPointSelector))
-        self.create_store('engines', NamedObjectStore(dyn.DynamicsEngine))
+        self.create_store('engines', NamedObjectStore(peng.DynamicsEngine))
         self.create_store('pathsimulators',
                           NamedObjectStore(paths.PathSimulator))
         self.create_store('transitions', NamedObjectStore(paths.Transition))

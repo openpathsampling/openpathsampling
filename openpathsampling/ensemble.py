@@ -319,7 +319,6 @@ class Ensemble(StorableNamedObject):
             for l in range(max_length,min_length - 1,-1):
                 for start in range(0,length-l+1):
                     tt = trajectory[start:start+l]
-#                    print start, start+l
                     # test using lazy=False
                     if self(tt, lazy=False):
                         list_left = []
@@ -334,7 +333,6 @@ class Ensemble(StorableNamedObject):
                             list_right = self.find_valid_slices(tt_right, 
                                                                 max_length=l)
 
-#                        ensemble_list = list_left + [tt] + list_right
                         ensemble_list = list_left + [slice(start,start+l)] + list_right
 
                         # no need to look further inside the iterations caught everything!
@@ -349,7 +347,6 @@ class Ensemble(StorableNamedObject):
             end = min_length
 
             while start <= length - min_length and end <= length:
-                print start, end
                 tt = trajectory[start:end]
                 if self.can_append(tt) and end < length:
                     end += 1

@@ -8,7 +8,7 @@ from nose.tools import (assert_equal)
 from simtk import unit as u
 from simtk.openmm import app
 
-import openpathsampling.engines.openmm as dyn
+import openpathsampling.engines.openmm as peng
 
 from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,
@@ -17,8 +17,8 @@ from test_helpers import (true_func, data_filename,
 
 def setUp():
     global topology, template, system
-    template = dyn.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
-    topology = dyn.to_openmm_topology(template)
+    template = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    topology = peng.to_openmm_topology(template)
 
     # Generated using OpenMM Script Builder
     # http://builder.openmm.org
@@ -58,7 +58,7 @@ class testOpenMMEngine(object):
             'timestep': 2.0 * u.femtoseconds
         }
 
-        self.engine = dyn.Engine(
+        self.engine = peng.Engine(
             template,
             system,
             integrator,
@@ -96,7 +96,7 @@ class testOpenMMEngine(object):
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])
 
-        self.engine.current_snapshot = dyn.Snapshot.construct(
+        self.engine.current_snapshot = peng.Snapshot.construct(
             coordinates=np.array(testpos) * u.nanometers,
             box_vectors=np.zeros((3, 3)),
             velocities=np.array(testvel) * u.nanometers / u.picoseconds
@@ -110,7 +110,7 @@ class testOpenMMEngine(object):
         np.testing.assert_almost_equal(testvel, sim_vels, decimal=5)
 
     def test_generate_next_frame(self):
-        snap0 = dyn.Snapshot(
+        snap0 = peng.Snapshot(
             statics=self.engine.current_snapshot.statics,
             kinetics=self.engine.current_snapshot.kinetics
         )

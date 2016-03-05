@@ -6,7 +6,7 @@ import os
 import mdtraj as md
 from nose.tools import (assert_equal)
 
-import openpathsampling.engines.openmm as dyn
+import openpathsampling.engines.openmm as peng
 
 from openpathsampling.netcdfplus import ObjectJSON
 from openpathsampling.storage import Storage
@@ -18,7 +18,7 @@ from test_helpers import (data_filename,
 class testStorage(object):
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = dyn.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
+        self.traj = peng.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
 
         self.filename = data_filename("storage_test.nc")
         self.filename_clone = data_filename("storage_test_clone.nc")
@@ -96,7 +96,7 @@ class testStorage(object):
         loaded_template = store.template
 
         compare_snapshot(loaded_template, self.template_snapshot)
-        loaded_copy = store.load(dyn.Snapshot, 1)
+        loaded_copy = store.load(peng.Snapshot, 1)
 
         compare_snapshot(loaded_template, loaded_copy)
 
