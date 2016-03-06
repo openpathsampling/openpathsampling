@@ -8,6 +8,7 @@ import logging
 import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
     NamedObjectStore, UniqueNamedObjectStore
+import openpathsampling.engines as peng
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -36,7 +37,7 @@ class Storage(NetCDFPlus):
             the initial snapshot
         """
         if self._template is None:
-            self._template = self.snapshots.load(int(self.variables['template_idx'][0]))
+            self._template = self.tag['template']
 
         return self._template
 
@@ -60,10 +61,10 @@ class Storage(NetCDFPlus):
         # Copy all configurations and momenta to new file in reduced form
         # use ._save instead of .save to override immutability checks etc...
 
-        for obj in self.configurations:
-            storage2.configurations._save(obj.copy(), idx=self.configurations.index[obj])
-        for obj in self.momenta:
-            storage2.momenta._save(obj.copy(), idx=self.momenta.index[obj])
+        for obj in self.statics:
+            storage2.statics._save(obj.copy(), idx=self.statics.index[obj])
+        for obj in self.kinetics:
+            storage2.kinetics._save(obj.copy(), idx=self.kinetics.index[obj])
 
         # All other should be copied one to one. We do this explicitly although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -151,16 +152,19 @@ class Storage(NetCDFPlus):
         self.create_store('pathmovechanges', paths.storage.PathMoveChangeStore())
         self.create_store('steps', paths.storage.MCStepStore())
 
-        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(paths.CollectiveVariable, paths.Snapshot))
+        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(
+            paths.CollectiveVariable,
+            peng.BaseSnapshot
+        ))
 
         # normal objects
 
         self.create_store('details', ObjectStore(paths.Details))
-        self.create_store('topologies', NamedObjectStore(paths.Topology))
+        self.create_store('topologies', NamedObjectStore(peng.Topology))
         self.create_store('pathmovers', NamedObjectStore(paths.PathMover))
         self.create_store('shootingpointselectors',
                           NamedObjectStore(paths.ShootingPointSelector))
-        self.create_store('engines', NamedObjectStore(paths.DynamicsEngine))
+        self.create_store('engines', NamedObjectStore(peng.DynamicsEngine))
         self.create_store('pathsimulators',
                           NamedObjectStore(paths.PathSimulator))
         self.create_store('transitions', NamedObjectStore(paths.Transition))
@@ -214,12 +218,23 @@ class Storage(NetCDFPlus):
         # Save the initial configuration
         self.snapshots.save(template)
 
-        self.createVariable('template_idx', 'i4', 'scalar')
-        self.variables['template_idx'][:] = self.snapshots.index[template]
+        self.tag['template'] = template
 
     def _restore(self):
         self.set_caching_mode('default')
-        self.topology = self.topologies[0]
+
+        # check, if the necessary modules are imported
+
+        try:
+            dummy = self.template
+            self.topology = self.topologies[0]
+
+        except:
+            raise RuntimeError(
+                'Cannot restore storage. Some of the necessary classes (Engines, Snapshots, Topologies) require '
+                'to be imported separately. So you need to run certain engine imports first. The most common '
+                'way to do so is to run `import openpathsampling.dynamics.engine`'
+            )
 
     def sync_all(self):
         """

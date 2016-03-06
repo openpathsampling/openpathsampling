@@ -1,17 +1,17 @@
 import numpy as np
-from shared import ConfigurationStore
+from shared import StaticContainerStore
 import mdtraj
 
-attributes = ['configuration', 'box_vectors', 'md', 'coordinates']
-lazy = ['configuration']
+attributes = ['statics', 'box_vectors', 'md', 'coordinates']
+lazy = ['statics']
 
 
 def netcdfplus_init(store):
-    store.storage.create_store('configurations', ConfigurationStore())
+    store.storage.create_store('statics', StaticContainerStore())
 
     store.create_variable(
-        'configuration',
-        'lazyobj.configurations',
+        'statics',
+        'lazyobj.statics',
         description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
         chunksizes=(1,)
     )
@@ -26,8 +26,8 @@ def coordinates(snapshot):
         simtk.unit.Unit.
     """
 
-    if snapshot.configuration is not None:
-        return snapshot.configuration.coordinates
+    if snapshot.statics is not None:
+        return snapshot.statics.coordinates
 
     return None
 
@@ -40,8 +40,8 @@ def box_vectors(snapshot):
         the box_vectors of the configuration. The coordinates are wrapped in a
         simtk.unit.Unit.
     """
-    if snapshot.configuration is not None:
-        return snapshot.configuration.box_vectors
+    if snapshot.statics is not None:
+        return snapshot.statics.box_vectors
 
     return None
 
@@ -58,7 +58,7 @@ def md(snapshot):
     Rather slow since the topology has to be made each time. Try to avoid it
     """
 
-    if snapshot.configuration is not None:
+    if snapshot.statics is not None:
         n_atoms = snapshot.coordinates.shape[0]
 
         output = np.zeros([1, n_atoms, 3], np.float32)

@@ -1,8 +1,7 @@
-from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
-from openpathsampling.snapshot import Snapshot, BaseSnapshot
-from openpathsampling.trajectory import Trajectory
-
 import abc
+
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
+import openpathsampling.engines as peng
 
 
 # =============================================================================================
@@ -25,7 +24,7 @@ class BaseSnapshotStore(ObjectStore):
             a snapshot class that this Store is supposed to store
 
         """
-        super(BaseSnapshotStore, self).__init__(BaseSnapshot, json=False)
+        super(BaseSnapshotStore, self).__init__(peng.BaseSnapshot, json=False)
         self.snapshot_class = snapshot_class
         self._use_lazy_reversed = False
         if hasattr(snapshot_class, '__features__'):
@@ -76,7 +75,7 @@ class BaseSnapshotStore(ObjectStore):
 
         Returns
         -------
-        snapshot : Snapshot
+        snapshot : :obj:`BaseSnapshot`
             the loaded snapshot instance
         """
 
@@ -113,7 +112,7 @@ class BaseSnapshotStore(ObjectStore):
 
         Parameters
         ----------
-        snapshot : Snapshot()
+        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
             the snapshot to be saved
         idx : int or None
             if idx is not None the index will be used for saving in the storage.
@@ -135,7 +134,7 @@ class BaseSnapshotStore(ObjectStore):
             self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
 
     def all(self):
-        return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
+        return peng.Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
 
     def __len__(self):
         return 2 * super(BaseSnapshotStore, self).__len__()

@@ -2,25 +2,24 @@
 @author: David W.H. Swenson
 '''
 
+from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises)
-from nose.plugins.skip import SkipTest
 
-from test_helpers import (assert_equal_array_array, items_equal,
-                          make_1d_traj,
-                          CalvinistDynamics
-                          )
+from openpathsampling.collectivevariable import CV_Function
+from openpathsampling.engines.trajectory import Trajectory
+from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
+from openpathsampling.pathmover import IdentityPathMover
 from openpathsampling.sample import Sample, SampleSet
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.volume import CVRangeVolume
 from test_helpers import CallIdentity, raises_with_message_like
-from openpathsampling.pathmover import IdentityPathMover
-from openpathsampling.trajectory import Trajectory
-from openpathsampling.ensemble import EnsembleFactory as ef
-from openpathsampling.collectivevariable import CV_Function
-
+from test_helpers import (assert_equal_array_array, items_equal,
+                          make_1d_traj,
+                          CalvinistDynamics
+                          )
 
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)

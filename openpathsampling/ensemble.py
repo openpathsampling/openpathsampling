@@ -319,7 +319,6 @@ class Ensemble(StorableNamedObject):
             for l in range(max_length,min_length - 1,-1):
                 for start in range(0,length-l+1):
                     tt = trajectory[start:start+l]
-#                    print start, start+l
                     # test using lazy=False
                     if self(tt, lazy=False):
                         list_left = []
@@ -334,7 +333,6 @@ class Ensemble(StorableNamedObject):
                             list_right = self.find_valid_slices(tt_right, 
                                                                 max_length=l)
 
-#                        ensemble_list = list_left + [tt] + list_right
                         ensemble_list = list_left + [slice(start,start+l)] + list_right
 
                         # no need to look further inside the iterations caught everything!
@@ -364,7 +362,7 @@ class Ensemble(StorableNamedObject):
                             start = length
                     elif self(tt[0:len(tt)-1], trusted=False):
                         ensemble_list.append(slice(start,end-1))
-                        pad = min(overlap, end - start - 2)
+                        pad = min(overlap + 1, end - start - 2)
                         start = end - pad
                     else:
                         start += 1
@@ -405,7 +403,7 @@ class Ensemble(StorableNamedObject):
         This uses self.find_valid_slices and returns the actual sub-trajectories
         '''
 
-        try:
+        # try:
             # Note here that we use trajectory.lazy() this has the following reason
             # If we would pass the trajectory object itself, then in iterations over
             # snapshots the `for snap in trajectory` will load explicitly the
@@ -429,15 +427,15 @@ class Ensemble(StorableNamedObject):
             # like the real object. If you access any attribute it will be loaded
             # and the actual attribute will be returned. Only difference is operator
             # overloading (which is not used for Snapshots) and type()
-            indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
-                                             min_length, overlap)
+        #     indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
+        #                                      min_length, overlap)
+        #
+        #     return [paths.Trajectory(trajectory[part]) for part in indices]
+        # except AttributeError:
+        indices = self.find_valid_slices(trajectory, lazy, max_length,
+                                         min_length, overlap)
 
-            return [paths.Trajectory(trajectory[part]) for part in indices]
-        except AttributeError:
-            indices = self.find_valid_slices(trajectory, lazy, max_length,
-                                             min_length, overlap)
-
-            return [trajectory[part] for part in indices]
+        return [trajectory[part] for part in indices]
 
 
 
