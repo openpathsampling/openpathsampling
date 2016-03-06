@@ -99,7 +99,7 @@ class BaseSnapshot(StorableObject):
         return this
 
 
-def SnapshotFactory(name, features, description=None, use_lazy_reversed=True, base_class=None):
+def SnapshotFactory(name, features, description=None, use_lazy_reversed=False, base_class=None):
     """
     Helper to create a new Snapshot class
     
@@ -110,9 +110,13 @@ def SnapshotFactory(name, features, description=None, use_lazy_reversed=True, ba
     features : list of :obj:`openpathsampling.features`
         the features used to build the snapshot
     use_lazy_reversed : bool
-    base_class : :obj:`openpathsampling.AbstractSnapshot`
+        still in there for legacy reasons. It will make the .reversed attribute into
+        a descriptor than can treat LoaderProxy objects. This feature is not relly used
+        anymore and can in the best case only save little memory with slowing down construction, etc.
+        Using `False` is faster
+    base_class : :obj:`openpathsampling.BaseSnapshot`
+        The base class the Snapshot is derived from. Default is the `BaseSnapshot` class.
     """
-
 
     if base_class is None:
         base_class = BaseSnapshot
@@ -127,40 +131,3 @@ def SnapshotFactory(name, features, description=None, use_lazy_reversed=True, ba
     cls = feats.attach_features(features, use_lazy_reversed=use_lazy_reversed)(cls)
 
     return cls
-
-
-@feats.attach_features([
-    feats.velocities,
-    feats.coordinates,
-    feats.xyz,
-    feats.topology
-])
-class ToySnapshot(BaseSnapshot):
-    """
-    Simulation snapshot. Only references to coordinates and velocities
-    """
-
-
-@feats.attach_features([
-    feats.velocities,
-    feats.coordinates,
-    feats.box_vectors,
-    feats.xyz,
-    feats.topology
-])
-class MDSnapshot(BaseSnapshot):
-    """
-    A fast MDSnapshot
-    """
-
-
-@feats.attach_features([
-    feats.statics,
-    feats.kinetics,
-    feats.xyz,
-    feats.topology  # for compatibility
-])
-class Snapshot(BaseSnapshot):
-    """
-    The standard MDSnapshot supporting coordinate, velocities and box_vectors
-    """

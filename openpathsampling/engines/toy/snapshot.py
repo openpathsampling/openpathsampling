@@ -4,17 +4,32 @@
 @author: JH Prinz
 """
 
-from openpathsampling.engines import BaseSnapshot
+from openpathsampling.engines import BaseSnapshot, SnapshotFactory
 import features
 
 
-@features.base.attach_features([
-    features.velocities,
-    features.coordinates,
-    features.xyz,
-    features.topology
-])
-class ToySnapshot(BaseSnapshot):
-    """
-    Simulation snapshot. Only references to coordinates and velocities
-    """
+# @feats.attach_features([
+#     feats.velocities,
+#     feats.coordinates,
+#     feats.xyz,
+#     feats.topology
+# ])
+# class ToySnapshot(BaseSnapshot):
+#     """
+#     Simulation snapshot. Only references to coordinates and velocities
+#     """
+
+
+# The following code does the same as above
+
+ToySnapshot = SnapshotFactory(
+    name='ToySnapshot',
+    features=[
+        features.velocities,
+        features.coordinates,
+        features.xyz,
+        features.topology
+    ],
+    description="Simulation snapshot. Only references to coordinates and velocities",
+    base_class=BaseSnapshot
+)

@@ -4,7 +4,7 @@
 @author: JH Prinz
 """
 
-from openpathsampling.engines import BaseSnapshot
+from openpathsampling.engines import BaseSnapshot, SnapshotFactory
 import features
 
 
@@ -19,6 +19,21 @@ class MDSnapshot(BaseSnapshot):
     """
     A fast MDSnapshot
     """
+
+# The following code does the same as above
+#
+#  MDSnapshot = SnapshotFactory(
+#     name='MDSnapshot',
+#     features=[
+#         features.velocities,
+#         features.coordinates,
+#         features.box_vectors,
+#         features.xyz,
+#         features.topology
+#     ],
+#     description="A fast MDSnapshot",
+#     base_class=BaseSnapshot
+# )
 
 
 @features.base.attach_features([

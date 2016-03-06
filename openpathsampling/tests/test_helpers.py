@@ -15,9 +15,9 @@ from nose.tools import assert_items_equal, assert_equal, assert_in
 from pkg_resources import resource_filename
 
 import openpathsampling as paths
-from openpathsampling.engines.snapshot import MDSnapshot
-from openpathsampling.engines.topology import Topology
-from openpathsampling.engines.trajectory import Trajectory
+import openpathsampling.engines.openmm as peng
+import openpathsampling.engines.toy as toys
+from openpathsampling.engines import Topology
 
 from openpathsampling.engines import DynamicsEngine
 
@@ -26,12 +26,13 @@ def make_1d_traj(coordinates, velocities=None, topology=None):
         velocities = [0.0]*len(coordinates)
     traj = []
     for (pos, vel) in zip(coordinates, velocities):
-        snap = MDSnapshot(coordinates=np.array([[pos, 0, 0]]),
-                        velocities=np.array([[vel, 0, 0]]),
-                        topology=topology
-                        )
+        snap = toys.Snapshot(
+            coordinates=np.array([[pos, 0, 0]]),
+            velocities=np.array([[vel, 0, 0]]),
+            topology=topology
+        )
         traj.append(snap)
-    return Trajectory(traj)
+    return paths.Trajectory(traj)
 
 def items_equal(truth, beauty):
     assert_equal(len(truth), len(beauty))
@@ -75,7 +76,7 @@ class MoverWithSignature(paths.PathMover):
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
-        template = MDSnapshot(topology=topology)
+        template = toys.Snapshot(topology=topology)
 
         super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
                                                 template=template)
@@ -213,11 +214,9 @@ class RandomMDEngine(DynamicsEngine):
             np.random.normal(0.0, 0.02, tmp.velocities.shape),
             tmp.velocities.unit)
 
-        return paths.Snapshot(coordinates = coordinates,
+        return peng.Snapshot.construct(coordinates = coordinates,
                         box_vectors = tmp.box_vectors,
-                        potential_energy = tmp.potential_energy,
                         velocities = velocities,
-                        kinetic_energy = tmp.kinetic_energy,
                         topology = self.topology
                        )
 
