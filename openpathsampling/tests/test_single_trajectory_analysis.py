@@ -98,17 +98,23 @@ class testSingleTrajectoryAnalysis(object):
         # A: [{out: 1, in: 1}
         # B: insufficient 
         # NOTE: we may want a separate trajectory for this
-        flux_core_test_str = "axaxaaaxxaxbxaaxxa"
-        # frame numbers       0    5    0    5 7
-
+        flux_core_test_str = "axaxaaaxxaxbxaaxxabaa"
+        # frame numbers       0    5    0    5    0
+        # in (I) or out (O):   OIOIIIOOI   IIOO 
         core_traj = self._make_traj(flux_core_test_str)
         self.analyzer.analyze_flux(core_traj, self.stateA)
-        print core_traj.subtrajectory_indices(self.analyzer.flux_in_segments)
+        flux_segs_A = self.analyzer.flux_segments[self.stateA]
+        assert_equal(len(flux_segs_A['in']), 4)
+        assert_equal(flux_segs_A['in'][0], core_traj[2:3])
+        assert_equal(flux_segs_A['in'][1], core_traj[4:7])
+        assert_equal(flux_segs_A['in'][2], core_traj[9:10])
+        assert_equal(flux_segs_A['in'][3], core_traj[13:15])
 
-        assert_equal(self.analyzer.flux_in_segments[0], core_traj[0:3])
-
-
-        raise SkipTest
+        assert_equal(len(flux_segs_A['out']), 4)
+        assert_equal(flux_segs_A['out'][0], core_traj[1:2])
+        assert_equal(flux_segs_A['out'][1], core_traj[3:4])
+        assert_equal(flux_segs_A['out'][2], core_traj[7:9])
+        assert_equal(flux_segs_A['out'][3], core_traj[15:17])
 
     def test_analyze(self):
         raise SkipTest

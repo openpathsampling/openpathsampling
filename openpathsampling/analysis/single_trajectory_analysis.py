@@ -129,14 +129,22 @@ class SingleTrajectoryAnalysis(object):
 
     def analyze_flux(self, trajectory, state):
         other = list(set([self.stateA, self.stateB]) - set([state]))[0]
-        start_in = paths.SequentialEnsemble([
+        counts_out = paths.SequentialEnsemble([
             paths.AllInXEnsemble(state) & paths.LengthEnsemble(1),
             paths.AllOutXEnsemble(state | other),
-            paths.AllInXEnsemble(state)
+            paths.AllInXEnsemble(state) & paths.LengthEnsemble(1)
         ])
-        flux_in_segments = start_in.split(trajectory)
-        self.flux_in_segments = flux_in_segments # TODO: DEBUG
-        pass
+        counts_in = paths.SequentialEnsemble([
+            paths.AllOutXEnsemble(state | other) & paths.LengthEnsemble(1),
+            paths.AllInXEnsemble(state), 
+            paths.AllOutXEnsemble(state | other) & paths.LengthEnsemble(1)
+        ])
+        flux_out_segments = counts_out.split(trajectory)
+        flux_in_segments = counts_in.split(trajectory)
+        for seg in flux_in_segments:
+            self.flux_segments[state]['in'] += [seg[1:-1]]
+        for seg in flux_out_segments:
+            self.flux_segments[state]['out'] += [seg[1:-1]]
 
     def analyze(self, trajectories):
         # TODO: I hate using isinstance, but I don't see anoher way
