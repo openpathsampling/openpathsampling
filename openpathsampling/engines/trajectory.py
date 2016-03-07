@@ -284,6 +284,28 @@ class Trajectory(list, StorableObject):
 
         return ObjectIterator()
 
+    def index_of(self, sub_traj):
+        """
+        Return a list of indices of the snapshots in sub_traj within the trajectory
+
+        Parameters
+        ----------
+        sub_traj : :obj:`Trajectory`
+
+        Returns
+        -------
+        list of int or None
+            a list of integer indices or None, if a snapshot is not found in the trajectory
+        """
+        ret = []
+        for s in sub_traj:
+            if s in self:
+                ret.append(self.index(s))
+            else:
+                ret.append(None)
+
+        return ret
+
     def get_as_proxy(self, item):
         """
         Get an actual contained element

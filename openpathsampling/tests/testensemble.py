@@ -1665,6 +1665,68 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal(len(subtrajs_out_2[0]), 1)
         assert_equal(len(subtrajs_out_2[1]), 1)
 
+        ensembleAXA = paths.SequentialEnsemble([
+            self.inA,
+            self.outA,
+            self.inA
+        ])
+
+        traj3 = make_1d_traj(coordinates=[0.3, 0.6, 0.3, 0.6, 0.3])
+
+        assert(self.inA(paths.Trajectory([traj3[0]])))
+        assert(self.outA(paths.Trajectory([traj3[1]])))
+
+        subtrajs_in_3 = ensembleAXA.split(traj3)
+        assert_equal((len(subtrajs_in_3)), 2)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert_equal((len(subtrajs_in_3[1])), 3)
+        assert(traj3.index_of(subtrajs_in_3[0]) == [0, 1, 2])
+        assert(traj3.index_of(subtrajs_in_3[1]) == [2, 3, 4])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True)
+        assert_equal((len(subtrajs_in_3)), 2)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert_equal((len(subtrajs_in_3[1])), 3)
+        assert(traj3.index_of(subtrajs_in_3[0]) == [2, 3, 4])
+        assert(traj3.index_of(subtrajs_in_3[1]) == [0, 1, 2])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, overlap=0)
+        assert_equal((len(subtrajs_in_3)), 1)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert(traj3.index_of(subtrajs_in_3[0]) == [0, 1, 2])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, overlap=0)
+        assert_equal((len(subtrajs_in_3)), 1)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert(traj3.index_of(subtrajs_in_3[0]) == [2, 3, 4])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, overlap=1, max_length=2)
+        assert_equal((len(subtrajs_in_3)), 0)
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, max_length=2)
+        assert_equal((len(subtrajs_in_3)), 0)
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, max_length=3)
+        assert_equal(len(subtrajs_in_3), 2)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert_equal((len(subtrajs_in_3[1])), 3)
+        assert(traj3.index_of(subtrajs_in_3[0]) == [0, 1, 2])
+        assert(traj3.index_of(subtrajs_in_3[1]) == [2, 3, 4])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, max_length=3)
+        assert_equal((len(subtrajs_in_3)), 2)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert_equal((len(subtrajs_in_3[1])), 3)
+        assert(traj3.index_of(subtrajs_in_3[1]) == [0, 1, 2])
+        assert(traj3.index_of(subtrajs_in_3[0]) == [2, 3, 4])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=False, min_length=4)
+        assert_equal((len(subtrajs_in_3)), 0)
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, min_length=4)
+        assert_equal((len(subtrajs_in_3)), 0)
+
+
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_ensemble(self):
