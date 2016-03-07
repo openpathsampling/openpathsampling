@@ -558,18 +558,8 @@ class Trajectory(list, StorableObject):
         bool
             returns True if at least one snapshot appears in both trajectories
         """
-
-        # if hasattr(self, 'idx') and hasattr(other, 'idx'):
-        #     shared_store = set(self.idx.keys()) & set(other.idx.keys())
-        #     # both are saved so use the snapshot idx as identifiers
-        #     if len(shared_store) > 0:
-        #         storage = list(shared_store)[0]
-        #         t1id = storage.trajectories.snapshot_indices(self.idx[storage])
-        #         t2id = storage.trajectories.snapshot_indices(other.idx[storage])
-        #         return bool(set(t1id) & set(t2id))
-
-        # Use some fallback
         return bool(self.shared_configurations(other))
+
 
     def shared_configurations(self, other):
         """
@@ -587,6 +577,7 @@ class Trajectory(list, StorableObject):
         """
         return set([snap for snap in self]) & set([snap for snap in other])
 
+
     def shared_subtrajectory(self, other):
         """
         Returns a subtrajectory which only contains frames present in other
@@ -603,6 +594,25 @@ class Trajectory(list, StorableObject):
         """
         shared = self.shared_configurations(other)
         return Trajectory([snap for snap in self if snap in shared])
+
+
+    def subtrajectory_indices(self, subtrajectories):
+        """
+        Returns a list of lists of indices for frames from subtrajectories.
+
+        Parameters
+        ----------
+        subtrajectories : list of :class:`.Trajectory`
+            input list of subtrajectories
+
+        Returns
+        -------
+        list of list of int
+            the indices within this trajectory of the frames in each
+            subtrajectory
+        """
+        return [[self.index(s) for s in subtrj] for subtrj in subtrajectories]
+
 
     # =============================================================================================
     # UTILITY FUNCTIONS

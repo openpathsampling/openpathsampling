@@ -10,6 +10,10 @@ from analysis.replica_network import (
 from analysis.tis_analysis import (
     TISTransition, Transition, TPSTransition
 )
+from analysis.single_trajectory_analysis import (
+    SingleTrajectoryAnalysis 
+)
+
 from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
     CV_Volume, CollectiveVariable
 
