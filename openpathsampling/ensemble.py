@@ -408,7 +408,7 @@ class Ensemble(StorableNamedObject):
         """
         trajs = self.find_valid_slices(trajectory, n_results=1)
         if len(trajs) > 0:
-            return trajs[0]
+            return trajectory[trajs[0]]
         else:
             return None
 
@@ -428,7 +428,7 @@ class Ensemble(StorableNamedObject):
         """
         trajs = self.find_valid_slices(trajectory, n_results=1, reverse=True)
         if len(trajs) > 0:
-            return trajs[0]
+            return trajectory[trajs[0]]
         else:
             return None
 

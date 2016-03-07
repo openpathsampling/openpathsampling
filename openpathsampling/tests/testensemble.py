@@ -1726,6 +1726,11 @@ class testEnsembleSplit(EnsembleTest):
         subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, min_length=4)
         assert_equal((len(subtrajs_in_3)), 0)
 
+        sub_traj = ensembleAXA.find_first_subtrajectory(traj3)
+        assert(traj3.index_of(sub_traj) == [0,1,2])
+
+        sub_traj = ensembleAXA.find_last_subtrajectory(traj3)
+        assert(traj3.index_of(sub_traj) == [2,3,4])
 
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
