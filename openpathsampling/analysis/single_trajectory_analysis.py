@@ -20,7 +20,8 @@ class SingleTrajectoryAnalysis(object):
         to a list of the number of frames involves in the transition and not
         in either state.
     flux_frames : dict
-        TODO
+        dictionary mapping each state to a dictionary of with keys 'in' (for
+        frames in the state) and 'out' (for frames outside the state)
     continuous_times : dict
         As with continuous frames, but durations multiplied by self.dt
     lifetimes : dict
@@ -28,9 +29,6 @@ class SingleTrajectoryAnalysis(object):
     transitions_durations : dict
         As with transition_frames, but durations multiplied by self.dt
 
-    Notes
-    -----
-    LIFETIME: the
     """
     def __init__(self, transition, dt=None):
         self.transition = transition
@@ -92,11 +90,31 @@ class SingleTrajectoryAnalysis(object):
 
 
     def analyze_continuous_time(self, trajectory, state):
+        """Analysis to obtain continuous times for given state.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to analyze
+        state : :class:`.Volume`
+            state volume to characterize. Must be one of the states in the
+            transition
+        """
         ensemble = paths.AllInXEnsemble(state)
         self.continuous_segments[state] += ensemble.split(trajectory,
                                                           overlap=0)
 
     def analyze_lifetime(self, trajectory, state):
+        """Analysis to obtain  lifetimes for given state.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to analyze
+        state : :class:`.Volume`
+            state volume to characterize. Must be one of the states in the
+            transition
+        """
         other_state = list(set([self.stateA, self.stateB]) - set([state]))[0]
 	ensemble_BAB = paths.SequentialEnsemble([
 	    paths.AllInXEnsemble(other_state) & paths.LengthEnsemble(1),
@@ -114,6 +132,17 @@ class SingleTrajectoryAnalysis(object):
                                           for subtraj in AB_split]
 
     def analyze_transition_duration(self, trajectory, stateA, stateB):
+        """Analysis to obtain transition durations for given state.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to analyze
+        stateA : :class:`.Volume`
+            initial state volume for the transition
+        stateB : :class:`.Volume`
+            final state volume for the transition
+        """
         # we define the transitions ensemble just in case the transition is,
         # e.g., fixed path length TPS. We want flexible path length ensemble
         transition_ensemble = paths.SequentialEnsemble([
@@ -128,6 +157,16 @@ class SingleTrajectoryAnalysis(object):
         ]
 
     def analyze_flux(self, trajectory, state):
+        """Analysis to obtain flux segments for given state.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to analyze
+        state : :class:`.Volume`
+            state volume to characterize. Must be one of the states in the
+            transition
+        """
         other = list(set([self.stateA, self.stateB]) - set([state]))[0]
         counts_out = paths.SequentialEnsemble([
             paths.AllInXEnsemble(state) & paths.LengthEnsemble(1),
@@ -147,6 +186,12 @@ class SingleTrajectoryAnalysis(object):
             self.flux_segments[state]['out'] += [seg[1:-1]]
 
     def analyze(self, trajectories):
+        """Full analysis of a trajectory or trajectories.
+
+        Parameters
+        ----------
+        trajectories : :class:`.Trajectory` or list of :class:`.Trajectory`
+        """
         # TODO: I hate using isinstance, but I don't see another way
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
