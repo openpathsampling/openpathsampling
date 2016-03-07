@@ -392,6 +392,46 @@ class Ensemble(StorableNamedObject):
 
         return ensemble_list
 
+    def find_first_subtrajectory(self, trajectory):
+        """
+        Return the first sub-trajectory that matches the ensemble
+
+        Parameters
+        ----------
+        trajectory :class:`openpathsampling.trajectory.Trajectory`
+            the trajectory in which to look for sub-trajectories
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory` or None
+            the found sub-trajectory or None if no sub-trajectory was found
+        """
+        trajs = self.find_valid_slices(trajectory, n_results=1)
+        if len(trajs) > 0:
+            return trajs[0]
+        else:
+            return None
+
+    def find_last_subtrajectory(self, trajectory):
+        """
+        Return the last sub-trajectory that matches the ensemble
+
+        Parameters
+        ----------
+        trajectory :class:`openpathsampling.trajectory.Trajectory`
+            the trajectory in which to look for sub-trajectories
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory` or None
+            the found sub-trajectory or None if no sub-trajectory was found
+        """
+        trajs = self.find_valid_slices(trajectory, n_results=1, reverse=True)
+        if len(trajs) > 0:
+            return trajs[0]
+        else:
+            return None
+
     def split(
             self,
             trajectory,
