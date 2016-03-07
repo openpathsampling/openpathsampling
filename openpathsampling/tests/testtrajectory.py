@@ -1,12 +1,10 @@
-from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
-from nose.plugins.skip import SkipTest
-from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj
+import logging
 
+from nose.tools import assert_items_equal
 
 import openpathsampling as paths
-from openpathsampling.trajectory import *
+from test_helpers import make_1d_traj
 
-import logging
 logging.getLogger('opentis.trajectory').setLevel(logging.DEBUG)
 logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)

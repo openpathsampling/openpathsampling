@@ -8,30 +8,31 @@ a duck.
 import os
 from functools import wraps
 
-from pkg_resources import resource_filename
-from nose.tools import assert_items_equal, assert_equal, assert_in
 import numpy as np
 import numpy.testing as npt
 import simtk.unit as u
+from nose.tools import assert_items_equal, assert_equal, assert_in
+from pkg_resources import resource_filename
 
-from openpathsampling.trajectory import Trajectory
-from openpathsampling.snapshot import Snapshot, MDSnapshot
-from openpathsampling.dynamics_engine import DynamicsEngine
-from openpathsampling.topology import Topology
 import openpathsampling as paths
+import openpathsampling.engines.openmm as peng
+import openpathsampling.engines.toy as toys
+from openpathsampling.engines import Topology
 
+from openpathsampling.engines import DynamicsEngine
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
     if velocities is None:
         velocities = [0.0]*len(coordinates)
     traj = []
     for (pos, vel) in zip(coordinates, velocities):
-        snap = MDSnapshot(coordinates=np.array([[pos, 0, 0]]),
-                        velocities=np.array([[vel, 0, 0]]),
-                        topology=topology
-                        )
+        snap = toys.Snapshot(
+            coordinates=np.array([[pos, 0, 0]]),
+            velocities=np.array([[vel, 0, 0]]),
+            topology=topology
+        )
         traj.append(snap)
-    return Trajectory(traj)
+    return paths.Trajectory(traj)
 
 def items_equal(truth, beauty):
     assert_equal(len(truth), len(beauty))
@@ -75,7 +76,7 @@ class MoverWithSignature(paths.PathMover):
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
-        template = MDSnapshot(topology=topology)
+        template = toys.Snapshot(topology=topology)
 
         super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
                                                 template=template)
@@ -187,7 +188,7 @@ def compare_snapshot(snapshot1, snapshot2):
     assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
     assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
 
-class RandomMDEngine(paths.DynamicsEngine):
+class RandomMDEngine(DynamicsEngine):
     _default_options = {}
 
     def __init__(self, template=None):
@@ -213,11 +214,9 @@ class RandomMDEngine(paths.DynamicsEngine):
             np.random.normal(0.0, 0.02, tmp.velocities.shape),
             tmp.velocities.unit)
 
-        return paths.Snapshot(coordinates = coordinates,
+        return peng.Snapshot.construct(coordinates = coordinates,
                         box_vectors = tmp.box_vectors,
-                        potential_energy = tmp.potential_energy,
                         velocities = velocities,
-                        kinetic_energy = tmp.kinetic_energy,
                         topology = self.topology
                        )
 

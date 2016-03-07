@@ -8,18 +8,17 @@ import mdtraj as md
 import numpy as np
 
 import openpathsampling.collectivevariable as op
-import openpathsampling as paths
+import openpathsampling.engines.openmm as peng
 from openpathsampling.netcdfplus import NetCDFPlus
 
 from msmbuilder.featurizer import AtomPairsFeaturizer
 
-import time
 
 class testCV_Function(object):
 
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = paths.tools.trajectory_from_mdtraj(self.mdtraj)
+        self.traj = peng.trajectory_from_mdtraj(self.mdtraj)
 
     def teardown(self):
         pass

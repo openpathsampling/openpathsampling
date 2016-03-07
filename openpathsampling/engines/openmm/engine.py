@@ -1,17 +1,17 @@
+import logging
+
+import simtk.openmm
 import simtk.unit as u
 from simtk.openmm.app import Simulation
-import simtk.openmm
 
-from openpathsampling.features.shared import Momentum, Configuration
+from openpathsampling.engines import DynamicsEngine
+from snapshot import Snapshot
 
-import openpathsampling as paths
-
-import logging
 logger = logging.getLogger(__name__)
 
 
-class OpenMMEngine(paths.DynamicsEngine):
-    """OpenMM dynamics engine based on using an `simtk.openmm` system and integrator object.
+class OpenMMEngine(DynamicsEngine):
+    """OpenMM dynamics engine based on using an 'simtk.openmm` system and integrator object.
 
     The engine will create a :class:`simtk.openmm.app.Simulation` instance and uses this to generate new frames.
 
@@ -29,7 +29,7 @@ class OpenMMEngine(paths.DynamicsEngine):
         'platform': 'fastest'
     }
 
-    base_snapshot_type = paths.Snapshot
+    base_snapshot_type = Snapshot
 
     #TODO: Planned to move topology to be part of engine and not snapshot
     #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
@@ -83,7 +83,6 @@ class OpenMMEngine(paths.DynamicsEngine):
 
             if platform is not None:
                 self.options['platform'] = platform
-
 
         # set no cached snapshot, means it will be constructed from the openmm context
         self._current_snapshot = None
@@ -190,19 +189,11 @@ class OpenMMEngine(paths.DynamicsEngine):
                                                  getVelocities=True,
                                                  getEnergy=True)
 
-        configuration = Configuration(
-            coordinates = state.getPositions(asNumpy=True),
-            box_vectors = state.getPeriodicBoxVectors(asNumpy=True)
-        )
-
-        momentum = Momentum(
-            velocities = state.getVelocities(asNumpy=True)
-        )
-
-        snapshot = paths.Snapshot(
-            topology=self.topology,
-            configuration=configuration,
-            momentum=momentum
+        snapshot = Snapshot.construct(
+            coordinates=state.getPositions(asNumpy=True),
+            box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
+            velocities=state.getVelocities(asNumpy=True),
+            topology=self.topology
         )
 
         return snapshot

@@ -3,6 +3,7 @@ from nose.plugins.skip import SkipTest
 from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj, raises_with_message_like
 
 import openpathsampling as paths
+import openpathsampling.engines.openmm as peng
 from openpathsampling.ensemble import *
 
 import logging
@@ -490,7 +491,7 @@ class testSequentialEnsemble(EnsembleTest):
                                     lambda_min=-100.0, lambda_max=100.0)
 
         traj = paths.Trajectory([
-            paths.MDSnapshot(
+            peng.MDSnapshot(
                 coordinates=np.array([[-0.5, 0.0]]), 
                 velocities=np.array([[0.0,0.0]])
             )
@@ -997,9 +998,6 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         ens = SequentialEnsemble([AllInXEnsemble(vol1 | vol2 | vol3)])
         cache = ens._cache_can_append
         traj = ttraj['upper_in_in_out_out_in_in']
-        for i in traj:
-            print i,
-        print
         assert_equal(ens.can_append(traj[0:1]), True)
         assert_equal(ens.can_append(traj[0:2]), True)
         assert_equal(ens.can_append(traj[0:3]), True)
