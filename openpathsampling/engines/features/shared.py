@@ -5,11 +5,12 @@ from simtk import unit as u
 
 from openpathsampling.netcdfplus import StorableObject, ObjectStore
 
+
 # =============================================================================
 # SIMULATION CONFIGURATION
 # =============================================================================
 
-class Configuration(StorableObject):
+class StaticContainer(StorableObject):
     """
     Simulation configuration. Only Coordinates, the associated boxvectors
     and the potential_energy
@@ -24,7 +25,7 @@ class Configuration(StorableObject):
     """
 
     # Class variables to store the global storage and the system context
-    # describing the system to be safed as configuration_indices
+    # describing the system to be saved as configuration_indices
 
     def __init__(self, coordinates, box_vectors):
         """
@@ -37,7 +38,7 @@ class Configuration(StorableObject):
         box_vectors
         """
 
-        super(Configuration, self).__init__()
+        super(StaticContainer, self).__init__()
 
         self.coordinates = copy.deepcopy(coordinates)
         self.box_vectors = copy.deepcopy(box_vectors)
@@ -84,17 +85,17 @@ class Configuration(StorableObject):
         """
 
         # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
-        return Configuration(coordinates=self.coordinates,
-                             box_vectors=self.box_vectors
-                             )
+        return StaticContainer(coordinates=self.coordinates,
+                               box_vectors=self.box_vectors
+                               )
 
 
-class ConfigurationStore(ObjectStore):
+class StaticContainerStore(ObjectStore):
     """
     An ObjectStore for Configuration. Allows to store Configuration() instances in a netcdf file.
     """
     def __init__(self):
-        super(ConfigurationStore, self).__init__(Configuration, json=False)
+        super(StaticContainerStore, self).__init__(StaticContainer, json=False)
 
     def to_dict(self):
         return {}
@@ -113,7 +114,7 @@ class ConfigurationStore(ObjectStore):
         coordinates = self.vars["coordinates"][idx]
         box_vectors = self.vars["box_vectors"][idx]
 
-        configuration = Configuration(coordinates=coordinates, box_vectors=box_vectors)
+        configuration = StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
         configuration.topology = self.storage.topology
 
         return configuration
@@ -146,7 +147,7 @@ class ConfigurationStore(ObjectStore):
             np.float32).copy()
 
     def _init(self):
-        super(ConfigurationStore, self)._init()
+        super(StaticContainerStore, self)._init()
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
@@ -172,11 +173,12 @@ class ConfigurationStore(ObjectStore):
                            simtk_unit=unit
                            )
 
+
 # =============================================================================
 # SIMULATION MOMENTUM / VELOCITY
 # =============================================================================
 
-class Momentum(StorableObject):
+class KineticContainer(StorableObject):
     """
     Simulation momentum. Contains only velocities of all atoms and
     associated kinetic energies
@@ -198,7 +200,7 @@ class Momentum(StorableObject):
         velocities
         """
 
-        super(Momentum, self).__init__()
+        super(KineticContainer, self).__init__()
 
         self.velocities = copy.deepcopy(velocities)
 
@@ -217,18 +219,18 @@ class Momentum(StorableObject):
             the shallow copy
         """
 
-        this = Momentum(velocities=self.velocities)
+        this = KineticContainer(velocities=self.velocities)
 
         return this
 
 
-class MomentumStore(ObjectStore):
+class KineticContainerStore(ObjectStore):
     """
     An ObjectStore for Momenta. Allows to store Momentum() instances in a netcdf file.
     """
 
     def __init__(self):
-        super(MomentumStore, self).__init__(Momentum, json=False)
+        super(KineticContainerStore, self).__init__(KineticContainer, json=False)
 
     def to_dict(self):
         return {}
@@ -239,7 +241,7 @@ class MomentumStore(ObjectStore):
     def _load(self, idx):
         velocities = self.vars['velocities'][idx]
 
-        momentum = Momentum(velocities=velocities)
+        momentum = KineticContainer(velocities=velocities)
         return momentum
 
     def velocities_as_numpy(self, frame_indices=None, atom_indices=None):
@@ -291,7 +293,7 @@ class MomentumStore(ObjectStore):
         Initializes the associated storage to index momentums in it
         """
 
-        super(MomentumStore, self)._init()
+        super(KineticContainerStore, self)._init()
 
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial

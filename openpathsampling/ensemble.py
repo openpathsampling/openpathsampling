@@ -413,7 +413,7 @@ class Ensemble(StorableNamedObject):
         This uses self.find_valid_slices and returns the actual sub-trajectories
         '''
 
-        try:
+        # try:
             # Note here that we use trajectory.lazy() this has the following reason
             # If we would pass the trajectory object itself, then in iterations over
             # snapshots the `for snap in trajectory` will load explicitly the
@@ -437,15 +437,15 @@ class Ensemble(StorableNamedObject):
             # like the real object. If you access any attribute it will be loaded
             # and the actual attribute will be returned. Only difference is operator
             # overloading (which is not used for Snapshots) and type()
-            indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
-                                             min_length, overlap)
+        #     indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
+        #                                      min_length, overlap)
+        #
+        #     return [paths.Trajectory(trajectory[part]) for part in indices]
+        # except AttributeError:
+        indices = self.find_valid_slices(trajectory, lazy, max_length,
+                                         min_length, overlap)
 
-            return [paths.Trajectory(trajectory[part]) for part in indices]
-        except AttributeError:
-            indices = self.find_valid_slices(trajectory, lazy, max_length,
-                                             min_length, overlap)
-
-            return [trajectory[part] for part in indices]
+        return [trajectory[part] for part in indices]
 
 
 

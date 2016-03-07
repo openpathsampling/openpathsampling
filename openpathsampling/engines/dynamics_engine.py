@@ -9,8 +9,10 @@ import logging
 
 import simtk.unit as u
 
-import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
+
+from snapshot import BaseSnapshot
+from trajectory import Trajectory
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ class DynamicsEngine(StorableNamedObject):
         'energy' : u.Unit({})
     }
 
-    base_snapshot_type = paths.BaseSnapshot
+    base_snapshot_type = BaseSnapshot
 
     def __init__(self, options=None, template=None):
         '''
@@ -181,6 +183,7 @@ class DynamicsEngine(StorableNamedObject):
         }
 
     def set_as_default(self):
+        import openpathsampling as paths
         paths.EngineMover.engine = self
 
     @property
@@ -279,7 +282,7 @@ class DynamicsEngine(StorableNamedObject):
         except:
             running = [running]
 
-        trajectory = paths.Trajectory()
+        trajectory = Trajectory()
 
         if direction > 0:
             self.current_snapshot = snapshot
@@ -352,7 +355,7 @@ class DynamicsEngine(StorableNamedObject):
             the initial `current_snapshot`
         """
         self.start()
-        traj = paths.Trajectory([self.generate_next_frame() 
+        traj = Trajectory([self.generate_next_frame()
                                  for i in range(n_frames)])
         self.stop(traj)
         return traj
