@@ -93,7 +93,8 @@ class SingleTrajectoryAnalysis(object):
 
     def analyze_continuous_time(self, trajectory, state):
         ensemble = paths.AllInXEnsemble(state)
-        self.continuous_segments[state] += ensemble.split(trajectory)
+        self.continuous_segments[state] += ensemble.split(trajectory,
+                                                          overlap=0)
 
     def analyze_lifetime(self, trajectory, state):
         other_state = list(set([self.stateA, self.stateB]) - set([state]))[0]

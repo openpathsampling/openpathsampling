@@ -1,6 +1,11 @@
 import logging
 
-from nose.tools import assert_items_equal
+from nose.tools import (
+    assert_equal, assert_not_equal, assert_items_equal, raises
+)
+from nose.plugins.skip import SkipTest
+from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj
+
 
 import openpathsampling as paths
 from test_helpers import make_1d_traj
@@ -106,8 +111,8 @@ class testSubtrajectoryIndices(object):
             paths.PartInXEnsemble(stateB) & paths.AllOutXEnsemble(stateA),
             paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1)
         ])
-        subtrajectoriesA = ensemble_A.split(trajectory)
-        subtrajectoriesB = ensemble_B.split(trajectory)
+        subtrajectoriesA = ensemble_A.split(trajectory, overlap=0)
+        subtrajectoriesB = ensemble_B.split(trajectory, overlap=0)
         subtrajectoriesABA = ensemble_ABA.split(trajectory)
 
         # make sure we have the trajectories we expect
