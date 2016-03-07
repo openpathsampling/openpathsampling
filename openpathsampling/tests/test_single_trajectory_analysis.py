@@ -117,4 +117,13 @@ class testSingleTrajectoryAnalysis(object):
         assert_equal(flux_segs_A['out'][3], core_traj[15:17])
 
     def test_analyze(self):
-        raise SkipTest
+        # only test that it runs -- correctness testing in the others
+        self.analyzer.analyze(self.trajectory)
+        cont_frames = self.analyzer.continuous_frames
+        life_frames = self.analyzer.lifetime_frames
+        self.analyzer.reset_analysis()
+        self.analyzer.analyze([self.trajectory])
+        assert_equal(cont_frames[self.stateA].tolist(), 
+                     self.analyzer.continuous_frames[self.stateA].tolist())
+        assert_equal(life_frames[self.stateA].tolist(), 
+                     self.analyzer.lifetime_frames[self.stateA].tolist())

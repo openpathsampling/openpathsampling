@@ -147,7 +147,7 @@ class SingleTrajectoryAnalysis(object):
             self.flux_segments[state]['out'] += [seg[1:-1]]
 
     def analyze(self, trajectories):
-        # TODO: I hate using isinstance, but I don't see anoher way
+        # TODO: I hate using isinstance, but I don't see another way
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
         for traj in trajectories:
