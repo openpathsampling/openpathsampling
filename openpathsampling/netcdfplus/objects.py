@@ -2,6 +2,7 @@ import logging
 import weakref
 
 import yaml
+from uuid import UUID
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from proxy import LoaderProxy
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class ObjectStore(StorableNamedObject):
+class BaseStore(StorableNamedObject):
     """
     Base Class for storing complex objects in a netCDF4 file. It holds a
     reference to the store file.`
@@ -48,7 +49,7 @@ class ObjectStore(StorableNamedObject):
             return self.dct[self.prefix + item]
 
     def prefix_delegate(self, dct):
-        return ObjectStore.DictDelegator(self, dct)
+        return BaseStore.DictDelegator(self, dct)
 
     default_cache = 10000
 
@@ -98,7 +99,7 @@ class ObjectStore(StorableNamedObject):
 
         """
 
-        super(ObjectStore, self).__init__()
+        super(BaseStore, self).__init__()
         self._storage = None
         self.content_class = content_class
         self.prefix = None
@@ -707,8 +708,224 @@ class ObjectStore(StorableNamedObject):
         return map(self._load, range(start, end))
 
 
-class NamedObjectStore(ObjectStore):
+class ObjectStore(BaseStore):
 
+    def __init__(self, content_class, json=True, nestable=False):
+        super(ObjectStore, self).__init__(content_class=content_class, json=json, nestable=nestable)
+
+        self._uuids_loaded = False
+        self._uuid_idx = dict()
+
+        if self.content_class is not None and not issubclass(self.content_class, StorableObject):
+            raise ValueError(
+                'Content class "%s" must be subclassed from StorableNamedObject.' %
+                self.content_class.__name__
+            )
+
+    def _init(self):
+        """
+        Initialize the associated storage to allow for object storage. Mainly
+        creates an index dimension with the uuid of the object.
+        """
+        super(ObjectStore, self)._init()
+
+        # TODO: Change to 16byte string
+        self.create_variable(
+            "uuid", 'str',
+            description='The uuid of the object',
+            chunksizes=tuple([10240])
+        )
+
+    def add_single_to_cache(self, idx, json):
+        """
+        Add a single object to cache by json
+
+        Parameters
+        ----------
+        idx : int
+            the index where the object was stored
+        json : str
+            json string the represents a serialized version of the stored object
+        """
+
+        if idx not in self.cache:
+            simplified = yaml.load(json)
+            obj = self.simplifier.build(simplified)
+
+            obj.json = json
+            self.index[obj] = idx
+            self.cache[idx] = obj
+
+            uuid = self.storage.variables[self.prefix + '_uuid'][idx]
+            setattr(obj, '__uuid__', UUID(uuid))
+            if uuid != '':
+                self._update_uuid_in_cache(obj.__uuid__, idx)
+
+    @property
+    def uuid_idx(self):
+        """
+        Returns a dictionary of all uuids pointing to stored indices
+
+        Returns
+        -------
+        dict of str : set
+            A dictionary that has all stored uuids as keys and the values are a set of indices where an
+            object with this uuid is found.
+
+        """
+
+        # if not done already cache uuids once
+        if not self._uuids_loaded:
+            self.update_uuid_cache()
+
+        return self._uuid_idx
+
+    def update_uuid_cache(self):
+        """
+        Update the internal uuid cache with all stored uuids in the store.
+
+        This allows to load by uuid for uuidd objects
+        """
+        if not self._uuids_loaded:
+            for idx, uuid in enumerate(self.storage.variables[self.prefix + "_uuid"][:]):
+                self._update_uuid_in_cache(uuid, idx)
+
+            self._uuids_loaded = True
+
+    def _update_uuid_in_cache(self, uuid, idx):
+        # make sure to cast unicode to str
+        uuid = str(uuid)
+        if uuid != '':
+            self._uuid_idx[uuid] = int(idx)
+
+    def find(self, uuid):
+        """
+        Return last object with a given uuid
+
+        Parameters
+        ----------
+        uuid : str
+            the uuid to be searched for
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the last object with a given uuid. This is to mimic immutable object. Once you
+            (re-)save with the same uuid you replace the old one and hence you leed to load the last
+            stored one.
+
+        """
+        return self.load(uuid)
+
+    def find_indices(self, uuid):
+        """
+        Return indices for all objects with a given uuid
+
+        Parameters
+        ----------
+        uuid : str
+            the uuid to be searched for
+
+        Returns
+        -------
+        list of int
+            a list of indices in the storage for all found objects,
+            can be empty [] if no objects with that uuid exist
+
+        """
+        return int(self.uuid_idx[uuid])
+
+    # =============================================================================
+    # LOAD/SAVE DECORATORS FOR CACHE HANDLING
+    # =============================================================================
+
+    def load(self, idx):
+        """
+        Returns an object from the storage.
+
+        Parameters
+        ----------
+        idx : int or str
+            either the integer index of the object to be loaded or a string
+            (uuid) for uuidd objects. This will always return the last object
+            found with the specified uuid. This allows to effectively change
+            existing objects.
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableNamedObject`
+            the loaded object
+        """
+
+        if type(idx) is not str and idx < 0:
+            return None
+
+        n_idx = idx
+
+        if type(idx) is UUID:
+            # we want to load by uuid and it was not in cache.
+            if idx in self.uuid_idx:
+                n_idx = int(self.uuid_idx[idx])
+            else:
+                raise ValueError('str "' + idx + '" not found in storage')
+
+        elif type(idx) is not int:
+            raise ValueError(
+                'indices of type "%s" are not allowed in uuidd storage (only str and int)' %
+                type(idx).__name__
+            )
+
+        obj = super(ObjectStore, self).load(n_idx)
+
+        if obj is not None:
+            setattr(obj, '__uuid__', self._get_uuid(n_idx))
+            # make sure that you cannot change the uuid of loaded objects
+
+            # finally store the uuid of a uuidd object in cache
+            self._update_uuid_in_cache(obj.__uuid__, n_idx)
+
+        return obj
+
+    def save(self, obj, idx=None):
+        """
+        Saves an object to the storage.
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableNamedObject`
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
+
+        """
+
+        is_str = type(idx) is str
+
+        if not is_str and idx is not None:
+            raise ValueError('Unsupported index type (only str or None allowed).')
+
+        uuid = obj.__uuid__
+
+        n_idx = super(ObjectStore, self).save(obj)
+        if n_idx > 1000:
+            print n_idx, self.name, self, idx
+
+        self._set_uuid(n_idx, uuid)
+        self._update_uuid_in_cache(uuid, n_idx)
+
+        return n_idx
+
+    def _set_uuid(self, idx, uuid):
+        self.storage.variables[self.prefix + '_uuid'][idx] = str(uuid)
+
+    def _get_uuid(self, idx):
+        return UUID(self.storage.variables[self.prefix + '_uuid'][idx])
+
+
+class NamedObjectStore(ObjectStore):
     def __init__(self, content_class, json=True, nestable=False):
         super(NamedObjectStore, self).__init__(content_class=content_class, json=json, nestable=nestable)
 

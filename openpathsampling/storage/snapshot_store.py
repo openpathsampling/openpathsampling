@@ -1,4 +1,5 @@
 import abc
+from uuid import UUID
 
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
 import openpathsampling.engines as peng
@@ -105,6 +106,13 @@ class BaseSnapshotStore(ObjectStore):
     @abc.abstractmethod
     def _get(self, idx, snapshot):
         pass
+
+    def _set_uuid(self, idx, uuid):
+        self.storage.variables[self.prefix + '_uuid'][int(idx / 2)] = str(uuid)
+
+    def _get_uuid(self, idx):
+        return UUID(self.storage.variables[self.prefix + '_uuid'][int(idx / 2)])
+
 
     def _save(self, snapshot, idx):
         """

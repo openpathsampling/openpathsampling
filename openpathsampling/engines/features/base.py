@@ -12,6 +12,14 @@ def attach_features(features, use_lazy_reversed=False):
 
     ADD_SOURCE_CODE = True
 
+    USE_UUID = True
+
+    def add_uuid(code, name):
+        if USE_UUID:
+            code += [
+                "    {0}.__uuid__ = {0}.get_uuid()".format(name)
+            ]
+
     def _decorator(cls):
         """
         Class decorator that will attach function for compiled features
@@ -183,6 +191,8 @@ def attach_features(features, use_lazy_reversed=False):
             "    this = cls.__new__(cls)",
         ]
 
+        add_uuid(code, 'this')
+
         if has_lazy:
             code += [
                 "    this._lazy = {",
@@ -238,6 +248,8 @@ def attach_features(features, use_lazy_reversed=False):
         code += [
             "def copy_to(self, target):",
         ]
+
+        add_uuid(code, 'target')
 
         if has_lazy:
             code += [
@@ -300,6 +312,11 @@ def attach_features(features, use_lazy_reversed=False):
             "def create_reversed(self):",
             "    this = cls.__new__(cls)"
         ]
+
+        if USE_UUID:
+            code += [
+                "    this.__uuid__ = self.reverse_uuid()"
+            ]
 
         if has_lazy:
             code += [
@@ -385,6 +402,8 @@ def attach_features(features, use_lazy_reversed=False):
             "def __init__(self%s):" % signature,
         ]
 
+        add_uuid(code, 'self')
+
         # dict for lazy attributes using DelayedLoader descriptor
         if has_lazy:
             code += [
@@ -439,6 +458,8 @@ def attach_features(features, use_lazy_reversed=False):
             "def init_empty(self):",
         ]
 
+        add_uuid(code, 'self')
+
         # dict for lazy attributes using DelayedLoader descriptor
         if has_lazy:
             code += [
@@ -470,6 +491,8 @@ def attach_features(features, use_lazy_reversed=False):
         code += [
             "def init_copy(self%s):" % signature,
         ]
+
+        add_uuid(code, 'self')
 
         if has_lazy:
             code += [

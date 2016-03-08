@@ -1,6 +1,7 @@
 import inspect
 import logging
 import weakref
+import uuid
 from types import MethodType
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,25 @@ class StorableObject(object):
     _args = None
 
     observe_objects = False
+
+    INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
+    CREATION_COUNT = 0L
+
+    @staticmethod
+    def get_uuid():
+        StorableObject.CREATION_COUNT += 2
+        return uuid.UUID(
+            fields=tuple(
+                StorableObject.INSTANCE_UUID +
+                [StorableObject.CREATION_COUNT]
+            )
+        )
+
+    def reverse_uuid(self):
+        return uuid.UUID(int=int(self.__uuid__) ^ 1)
+
+    def __init__(self):
+        self.__uuid__ = StorableObject.get_uuid()
 
     @staticmethod
     def set_observer(active):
