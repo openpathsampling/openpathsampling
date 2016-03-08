@@ -190,7 +190,7 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
 
         self._setup_class()
 
-        self.register_store('stores', RemoteMasterObject(ObjectStore, ))
+        self.register_store('stores', RemoteMasterObject(ObjectStore, True))
         self.stores.set_caching(True)
 
         self._create_storages()
