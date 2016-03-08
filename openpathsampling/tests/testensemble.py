@@ -1680,25 +1680,25 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal((len(subtrajs_in_3)), 2)
         assert_equal((len(subtrajs_in_3[0])), 3)
         assert_equal((len(subtrajs_in_3[1])), 3)
-        assert(traj3.index_of(subtrajs_in_3[0]) == [0, 1, 2])
-        assert(traj3.index_of(subtrajs_in_3[1]) == [2, 3, 4])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [0, 1, 2])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[1]) == [2, 3, 4])
 
         subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True)
         assert_equal((len(subtrajs_in_3)), 2)
         assert_equal((len(subtrajs_in_3[0])), 3)
         assert_equal((len(subtrajs_in_3[1])), 3)
-        assert(traj3.index_of(subtrajs_in_3[0]) == [2, 3, 4])
-        assert(traj3.index_of(subtrajs_in_3[1]) == [0, 1, 2])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [2, 3, 4])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[1]) == [0, 1, 2])
 
         subtrajs_in_3 = ensembleAXA.split(traj3, overlap=0)
         assert_equal((len(subtrajs_in_3)), 1)
         assert_equal((len(subtrajs_in_3[0])), 3)
-        assert(traj3.index_of(subtrajs_in_3[0]) == [0, 1, 2])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [0, 1, 2])
 
         subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, overlap=0)
         assert_equal((len(subtrajs_in_3)), 1)
         assert_equal((len(subtrajs_in_3[0])), 3)
-        assert(traj3.index_of(subtrajs_in_3[0]) == [2, 3, 4])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [2, 3, 4])
 
         subtrajs_in_3 = ensembleAXA.split(traj3, overlap=1, max_length=2)
         assert_equal((len(subtrajs_in_3)), 0)
@@ -1710,15 +1710,15 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal(len(subtrajs_in_3), 2)
         assert_equal((len(subtrajs_in_3[0])), 3)
         assert_equal((len(subtrajs_in_3[1])), 3)
-        assert(traj3.index_of(subtrajs_in_3[0]) == [0, 1, 2])
-        assert(traj3.index_of(subtrajs_in_3[1]) == [2, 3, 4])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [0, 1, 2])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[1]) == [2, 3, 4])
 
         subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, max_length=3)
         assert_equal((len(subtrajs_in_3)), 2)
         assert_equal((len(subtrajs_in_3[0])), 3)
         assert_equal((len(subtrajs_in_3[1])), 3)
-        assert(traj3.index_of(subtrajs_in_3[1]) == [0, 1, 2])
-        assert(traj3.index_of(subtrajs_in_3[0]) == [2, 3, 4])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[1]) == [0, 1, 2])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [2, 3, 4])
 
         subtrajs_in_3 = ensembleAXA.split(traj3, reverse=False, min_length=4)
         assert_equal((len(subtrajs_in_3)), 0)
@@ -1727,10 +1727,10 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal((len(subtrajs_in_3)), 0)
 
         sub_traj = ensembleAXA.find_first_subtrajectory(traj3)
-        assert(traj3.index_of(sub_traj) == [0,1,2])
+        assert(traj3.subtrajectory_indices(sub_traj) == [0,1,2])
 
         sub_traj = ensembleAXA.find_last_subtrajectory(traj3)
-        assert(traj3.index_of(sub_traj) == [2,3,4])
+        assert(traj3.subtrajectory_indices(sub_traj) == [2,3,4])
 
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
