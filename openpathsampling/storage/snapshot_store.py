@@ -117,6 +117,13 @@ class BaseSnapshotStore(ObjectStore):
         else:
             return uuid
 
+    def _update_uuid_in_cache(self, uuid, idx):
+        # make sure to cast unicode to str
+        uuid = str(uuid)
+        if uuid != '':
+            self._uuid_idx[uuid] = int(idx)
+            self._uuid_idx[str(UUID(int=int(UUID(uuid)) ^ 1))] = int(idx) ^ 1
+
     def update_uuid_cache(self):
         """
         Update the internal uuid cache with all stored uuids in the store.
@@ -126,7 +133,6 @@ class BaseSnapshotStore(ObjectStore):
         if not self._uuids_loaded:
             for idx, uuid in enumerate(self.storage.variables[self.prefix + "_uuid"][:]):
                 self._update_uuid_in_cache(uuid, idx * 2)
-                self._update_uuid_in_cache(str(UUID(int=int(UUID(uuid)) ^ 1)), idx * 2 + 1)
 
             self._uuids_loaded = True
 
@@ -147,7 +153,6 @@ class BaseSnapshotStore(ObjectStore):
         This also saves all contained frames in the snapshot if not done yet.
         A single Snapshot object can only be saved once!
         """
-
 
         st_idx = int(idx / 2)
 
