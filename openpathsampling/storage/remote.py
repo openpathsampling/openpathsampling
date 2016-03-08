@@ -35,6 +35,11 @@ class RemoteClientObject(ObjectStore):
 
 
 class RemoteMasterObject(ObjectStore):
+
+    def __init__(self, content_class, no_store=False):
+        super(RemoteMasterObject, self).__init__(content_class)
+        self.no_store = no_store
+
     def _load(self, idx):
         # No loading, only stuff that is in cache and memory
 
@@ -48,6 +53,14 @@ class RemoteMasterObject(ObjectStore):
 
         if hasattr(self.storage, 'client'):
             s = self.simplifier.simplify_object(obj)
+            if self.no_store:
+                # this will change the store on the client-side to
+                # use the appropriate reconstruction
+                # on client-side we want all stores to be RemoteClientObject
+                # ones. if we would use the normal push then the
+                # type on the master side would be recreated
+                # this should only be used for the StoreStore itself
+                s['_cls'] = 'RemoteClientObject'
 
             self.storage.tell(
                 '_str = "%s"' % s)
@@ -63,21 +76,6 @@ class RemoteMasterObject(ObjectStore):
             return None
 
     def save(self, obj, idx=None):
-        """
-        Saves an object to the storage.
-
-        Parameters
-        ----------
-        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
-            the object to be stored
-        idx : int or string or `None`
-            the index to be used for storing. This is highly discouraged since
-            it changes an immutable object (at least in the storage). It is
-            better to store also the new object and just ignore the
-            previously stored one.
-
-        """
-
         if obj in self.index:
             # has been saved so quit and do nothing
             return self.index[obj]
@@ -91,9 +89,6 @@ class RemoteMasterObject(ObjectStore):
                 'This store can only store object of base type "%s". Given obj is of type "%s". You'
                 'might need to use another store.' % (self.content_class, obj.__class__.__name__)
             )
-
-        if idx is not None:
-            raise ValueError('Unsupported index type (only None allowed).')
 
         n_idx = self._save(obj, None)
 
@@ -109,35 +104,9 @@ class RemoteMasterObject(ObjectStore):
     def __len__(self):
         return 10000000
 
-class RemoteMasterStoreObject(RemoteMasterObject):
-    def _save(self, obj, idx):
-        # No loading, only caching and what is left in memory
-
-        if hasattr(self.storage, 'client'):
-            s = self.simplifier.simplify_object(obj)
-            s['_cls'] = 'RemoteClientObject'
-
-            self.storage.tell(
-                '_str = "%s"' % s)
-
-            self.storage.tell(
-                "_obj = _cache_.simplifier.from_json(_str)")
-
-            self.storage.tell(
-                "_obj"
-            )
-
-            res = self.storage.ask(
-                "_cache_.%s.save(_obj)" % self.prefix)
-
-            return int(res)
-        else:
-            return None
-
-
 
 # =============================================================================================
-# OPS SPECIFIC STORAGE
+# REMOTE SPECIFIC STORAGE
 # =============================================================================================
 
 class RemoteClientStorage(Storage):
@@ -221,7 +190,7 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
 
         self._setup_class()
 
-        self.register_store('stores', RemoteMasterStoreObject(ObjectStore))
+        self.register_store('stores', RemoteMasterObject(ObjectStore, ))
         self.stores.set_caching(True)
 
         self._create_storages()
