@@ -270,10 +270,16 @@ class Ensemble(StorableNamedObject):
         return True        
 
 
-
-    def find_valid_slices(self, trajectory, lazy=True, 
-                          max_length=None, min_length=1, overlap=1):
-        '''
+    def find_valid_slices(
+            self,
+            trajectory,
+            max_length=None,
+            min_length=1,
+            overlap=1,
+            reverse=False,
+            n_results=0
+    ):
+        """
         Return slices (subtrajectories) matching the given ensemble.
 
         Parameters
@@ -294,13 +300,19 @@ class Ensemble(StorableNamedObject):
             determines the allowed overlap of all trajectories to be found.
             A value of x means that two sub-trajectorie can share up to x
             frames at the beginning and x frames at the end.  Default is 1
+        reverse : bool
+            if `True` this will start searching from the end of the trajectory.
+            Otherwise (default) it will start at the beginning.
+        n_results : int
+            if `0` this will return all results. If the integer is larger than
+            zero it will stop after the given number of slices has been found
 
         Returns
         -------
         list of slices
             Returns a list of index-slices for sub-trajectories in
             trajectory that are in the ensemble.
-        '''
+        """
         ensemble_list = []
 
         length = len(trajectory)
@@ -313,47 +325,21 @@ class Ensemble(StorableNamedObject):
 
         logger.debug("Looking for subtrajectories in " + str(trajectory))
 
-        if not lazy:
-            # this tries all possible sub-trajectories starting with the
-            # longest ones and uses recursion
-            for l in range(max_length,min_length - 1,-1):
-                for start in range(0,length-l+1):
-                    tt = trajectory[start:start+l]
-                    # test using lazy=False
-                    if self(tt, lazy=False):
-                        list_left = []
-                        list_right = []
-                        if l > min_length:
-                            pad = min(overlap, l - 1)
-                            tt_left = trajectory[0:start + pad]
-                            list_left = self.find_valid_slices(tt_left, 
-                                                               max_length=l)
-
-                            tt_right = trajectory[start + l - pad:length]
-                            list_right = self.find_valid_slices(tt_right, 
-                                                                max_length=l)
-
-                        ensemble_list = list_left + [slice(start,start+l)] + list_right
-
-                        # no need to look further inside the iterations caught everything!
-                        break
-                else:
-                    continue
-                break
-
-            return ensemble_list
-        else:
+        if not reverse:
             start = 0
-            end = min_length
+            end = start + min_length
 
             while start <= length - min_length and end <= length:
                 # print start, end
                 tt = trajectory[start:end]
-                if self.can_append(tt) and end < length:
+                if end < length and self.can_append(tt):
                     end += 1
+                    if end - start > max_length + 1:
+                        start += 1
+                        end = start + min_length
                 else:
-                    if self(tt, trusted=False):
-                        ensemble_list.append(slice(start,end))
+                    if end - start <= max_length and self(tt, trusted=False):
+                        ensemble_list.append(slice(start, end))
                         pad = min(overlap, end - start - 1)
                         start = end - pad
                         if end == length:
@@ -361,18 +347,102 @@ class Ensemble(StorableNamedObject):
                             # All other possible subtraj can only be contained
                             # in already existing ones
                             start = length
-                    elif self(tt[0:len(tt)-1], trusted=False):
-                        ensemble_list.append(slice(start,end-1))
+                    elif end - start >= min_length + 1 and self(tt[0:len(tt) - 1], trusted=False):
+                        ensemble_list.append(slice(start, end - 1))
                         pad = min(overlap + 1, end - start - 2)
                         start = end - pad
                     else:
                         start += 1
                     end = start + min_length
 
-            return ensemble_list
+                if 0 < n_results == len(ensemble_list):
+                    break
+        else:
+            end = length
+            start = end - min_length
 
-    def split(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
-        '''Return list of subtrajectories satisfying the given ensemble.
+            while start >= 0 and end >= min_length:
+                tt = trajectory[start:end]
+                if start > 0 and self.can_prepend(tt):
+                    start -= 1
+                    if end - start > max_length + 1:
+                        end -=1
+                        start = end - min_length
+                else:
+                    if end - start <= max_length and self(tt, trusted=False):
+                        ensemble_list.append(slice(start, end))
+                        pad = min(overlap, end - start - 1)
+                        end = start + pad
+                        if start == 0:
+                            # This means we have reached the end and should stop
+                            # All other possible subtraj can only be contained
+                            # in already existing ones
+                            end = 0
+
+                    elif end - start >= min_length + 1 and self(tt[1:len(tt)], trusted=False):
+                        ensemble_list.append(slice(start + 1, end))
+                        pad = min(overlap + 1, end - start - 2)
+                        end = start + pad
+                    else:
+                        end -= 1
+
+                    start = end - min_length
+
+                if 0 < n_results == len(ensemble_list):
+                    break
+
+        return ensemble_list
+
+    def find_first_subtrajectory(self, trajectory):
+        """
+        Return the first sub-trajectory that matches the ensemble
+
+        Parameters
+        ----------
+        trajectory :class:`openpathsampling.trajectory.Trajectory`
+            the trajectory in which to look for sub-trajectories
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory` or None
+            the found sub-trajectory or None if no sub-trajectory was found
+        """
+        trajs = self.find_valid_slices(trajectory, n_results=1)
+        if len(trajs) > 0:
+            return trajectory[trajs[0]]
+        else:
+            return None
+
+    def find_last_subtrajectory(self, trajectory):
+        """
+        Return the last sub-trajectory that matches the ensemble
+
+        Parameters
+        ----------
+        trajectory :class:`openpathsampling.trajectory.Trajectory`
+            the trajectory in which to look for sub-trajectories
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory` or None
+            the found sub-trajectory or None if no sub-trajectory was found
+        """
+        trajs = self.find_valid_slices(trajectory, n_results=1, reverse=True)
+        if len(trajs) > 0:
+            return trajectory[trajs[0]]
+        else:
+            return None
+
+    def split(
+            self,
+            trajectory,
+            max_length=None,
+            min_length=1,
+            overlap=1,
+            reverse=False,
+            n_results=0
+        ):
+        """Return list of subtrajectories satisfying the given ensemble.
 
         Parameters
         ----------
@@ -392,6 +462,12 @@ class Ensemble(StorableNamedObject):
             determines the allowed overlap of all trajectories to be found.
             A value of x means that two sub-trajectory can share up to x
             frames at the beginning and x frames at the end.  Default is 1
+        reverse : bool
+            if `True` this will start searching from the end of the trajectory.
+            Otherwise (default) it will start at the beginning.
+        n_results : int
+            if `0` this will return all results. If the integer is larger than
+            zero it will stop after the given number of slices has been found
 
         Returns
         -------
@@ -402,43 +478,18 @@ class Ensemble(StorableNamedObject):
         Notes
         -----
         This uses self.find_valid_slices and returns the actual sub-trajectories
-        '''
+        """
 
         # try:
-            # Note here that we use trajectory.lazy() this has the following reason
-            # If we would pass the trajectory object itself, then in iterations over
-            # snapshots the `for snap in trajectory` will load explicitly the
-            # snapshots from storage and so snap is a real Snapshot object.
-            # By real I mean that type(snap) is paths.Snapshot equal True!
-            # Internally the trajectory just keeps reference objects which are
-            # extremely fast to load and since we want the decision to load
-            # a snapshots for computing a CV not do always but only if
-            # the CV caching decides to we pass trajectory.lazy().
-            # The result is that we pass a list of snapshot.proxies for an
-            # already stored trajectory and a list of real snapshots for
-            # a just created one. The has no speed effect on non-stored
-            # trajectories, but makes it faster if the trajectory was loaded or saved
-            # and the CV is cached.
-            # One more comment, since the idea cannot be always used. The only place
-            # where this can fail is if the underlying code uses type(snap) at
-            # some point. In this case you need to be able to treat LoaderProxy
-            # objects correctly. Since split does not care about the actual snapshots
-            # we are safe to use this trick to speed up the evaluation.
-            # One last comment about the Proxies. These proxies still behave almost
-            # like the real object. If you access any attribute it will be loaded
-            # and the actual attribute will be returned. Only difference is operator
-            # overloading (which is not used for Snapshots) and type()
         #     indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
         #                                      min_length, overlap)
         #
         #     return [paths.Trajectory(trajectory[part]) for part in indices]
         # except AttributeError:
-        indices = self.find_valid_slices(trajectory, lazy, max_length,
-                                         min_length, overlap)
+        indices = self.find_valid_slices(trajectory, max_length,
+                                         min_length, overlap, reverse, n_results)
 
         return [trajectory[part] for part in indices]
-
-
 
     def __str__(self):
         '''
