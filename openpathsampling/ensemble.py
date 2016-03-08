@@ -330,6 +330,7 @@ class Ensemble(StorableNamedObject):
             end = start + min_length
 
             while start <= length - min_length and end <= length:
+                # print start, end
                 tt = trajectory[start:end]
                 if end < length and self.can_append(tt):
                     end += 1
