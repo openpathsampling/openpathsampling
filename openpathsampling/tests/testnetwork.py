@@ -136,8 +136,11 @@ class testMSTISNetwork(object):
 
 class testTPSNetwork(object):
     def setup(self):
-        from test_helpers import CallIdentity
-        xval = CallIdentity()
+        # from test_helpers import CallIdentity
+        # xval = CallIdentity()
+
+        xval = paths.CV_Function('Id', lambda x : x.coordinates[0])
+
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
@@ -179,10 +182,12 @@ class testTPSNetwork(object):
         fname = "tps_network_storage_test.nc"
         if os.path.isfile(fname):
             os.remove(fname)
+
         topol = peng.Topology(n_spatial=1, masses=[1.0], pes=None)
         self.template = peng.Snapshot(coordinates=np.array([[0.0]]),
                                        velocities=np.array([[0.0]]),
                                        topology=topol)
+
         states = [self.stateA, self.stateB, self.stateC]
         network_a = TPSNetwork(initial_states=states, final_states=states)
         assert_equal(len(network_a.sampling_transitions), 1)

@@ -4,7 +4,7 @@ author
 
 import logging
 
-from dictify import StorableObjectJSON
+from dictify import StorableObjectJSON, UUIDObjectJSON
 from proxy import LoaderProxy
 
 from objects import NamedObjectStore, ObjectStore
@@ -27,6 +27,8 @@ class NetCDFPlus(netCDF4.Dataset):
     Extension of the python netCDF wrapper for easier storage of python objects
     """
     support_simtk_unit = True
+
+    reference_by_uuid = True
 
     _type_conversion = {
         'float': np.float32,
@@ -192,6 +194,12 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         pass
 
+    def uuid(self, uuid):
+        s = str(uuid)
+        for store in self._stores.itervalues():
+            if s in store.uuid_idx:
+                return store.load(uuid)
+
     def __init__(self, filename, mode=None):
         """
         Create a storage for complex objects in a netCDF file
@@ -305,7 +313,10 @@ class NetCDFPlus(netCDF4.Dataset):
         self._objects = {}
         self._obj_store = {}
         self._storages_base_cls = {}
-        self.simplifier = StorableObjectJSON(self)
+        if self.reference_by_uuid:
+            self.simplifier = UUIDObjectJSON(self)
+        else:
+            self.simplifier = StorableObjectJSON(self)
         self.vars = dict()
         self.units = dict()
 

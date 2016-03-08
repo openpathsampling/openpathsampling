@@ -230,6 +230,7 @@ class Storage(NetCDFPlus):
             self.topology = self.topologies[0]
 
         except:
+            raise
             raise RuntimeError(
                 'Cannot restore storage. Some of the necessary classes (Engines, Snapshots, Topologies) require '
                 'to be imported separately. So you need to run certain engine imports first. The most common '

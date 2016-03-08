@@ -1,7 +1,7 @@
 import abc
 from uuid import UUID
 
-from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy, StorableObject
 import openpathsampling.engines as peng
 
 
@@ -111,8 +111,24 @@ class BaseSnapshotStore(ObjectStore):
         self.storage.variables[self.prefix + '_uuid'][int(idx / 2)] = str(uuid)
 
     def _get_uuid(self, idx):
-        return UUID(self.storage.variables[self.prefix + '_uuid'][int(idx / 2)])
+        uuid = UUID(self.storage.variables[self.prefix + '_uuid'][int(idx / 2)])
+        if idx & 1:
+            return UUID(int=int(uuid) ^ 1)
+        else:
+            return uuid
 
+    def update_uuid_cache(self):
+        """
+        Update the internal uuid cache with all stored uuids in the store.
+
+        This allows to load by uuid for uuidd objects
+        """
+        if not self._uuids_loaded:
+            for idx, uuid in enumerate(self.storage.variables[self.prefix + "_uuid"][:]):
+                self._update_uuid_in_cache(uuid, idx * 2)
+                self._update_uuid_in_cache(str(UUID(int=int(UUID(uuid)) ^ 1)), idx * 2 + 1)
+
+            self._uuids_loaded = True
 
     def _save(self, snapshot, idx):
         """
