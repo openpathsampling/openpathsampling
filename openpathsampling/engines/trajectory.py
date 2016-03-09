@@ -508,7 +508,10 @@ class Trajectory(list, StorableObject):
             the indices within this trajectory of the frames in each
             subtrajectory
         """
-        return [[self.index(s) for s in subtrj] for subtrj in subtrajectories]
+        if isinstance(subtrajectories, Trajectory):
+            return [self.index(s) for s in subtrajectories]
+        else:
+            return [[self.index(s) for s in subtrj] for subtrj in subtrajectories]
 
 
     # =============================================================================================
