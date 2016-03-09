@@ -116,7 +116,7 @@ class Storage(NetCDFPlus):
     def n_spatial(self):
         return self.topology.n_spatial
 
-    def __init__(self, filename, mode=None, template=None):
+    def __init__(self, filename, mode=None, template=None, use_uuid=False):
         """
         Create a netCDF+ storage for OPS Objects
 
@@ -133,7 +133,7 @@ class Storage(NetCDFPlus):
         """
 
         self._template = template
-        super(Storage, self).__init__(filename, mode)
+        super(Storage, self).__init__(filename, mode, use_uuid=use_uuid)
 
     def _create_storages(self):
         """

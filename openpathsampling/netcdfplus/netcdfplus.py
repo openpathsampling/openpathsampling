@@ -254,6 +254,8 @@ class NetCDFPlus(netCDF4.Dataset):
             if use_uuid:
                 self.setncattr('use_uuid', 'True')
 
+            self._create_simplifier()
+
             # create the store that holds stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
             self.stores._init()
@@ -276,6 +278,7 @@ class NetCDFPlus(netCDF4.Dataset):
             logger.debug("Restore the dict of units from the storage")
 
             self.reference_by_uuid = hasattr(self, 'use_uuid')
+            self._create_simplifier()
 
             # open the store that contains all stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
@@ -327,8 +330,6 @@ class NetCDFPlus(netCDF4.Dataset):
         self._storages_base_cls = {}
         self.vars = dict()
         self.units = dict()
-
-        self._create_simplifier()
 
     def create_store(self, name, store):
         """
