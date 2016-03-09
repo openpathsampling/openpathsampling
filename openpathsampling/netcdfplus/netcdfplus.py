@@ -30,8 +30,6 @@ class NetCDFPlus(netCDF4.Dataset):
     """
     support_simtk_unit = True
 
-    reference_by_uuid = True
-
     _type_conversion = {
         'float': np.float32,
         'int': np.int32,
@@ -56,8 +54,6 @@ class NetCDFPlus(netCDF4.Dataset):
         'obj': np.int32,
         'lazyobj': np.int32
     }
-
-
 
     class ValueDelegate(object):
         """
@@ -204,7 +200,7 @@ class NetCDFPlus(netCDF4.Dataset):
             if s in store.uuid_idx:
                 return store.load(uuid)
 
-    def __init__(self, filename, mode=None):
+    def __init__(self, filename, mode=None, use_uuid=False):
         """
         Create a storage for complex objects in a netCDF file
 
@@ -254,6 +250,10 @@ class NetCDFPlus(netCDF4.Dataset):
             self.create_dimension('scalar', 1)
             self.create_dimension('pair', 2)
 
+            self.reference_by_uuid = use_uuid
+            if use_uuid:
+                self.setncattr('use_uuid', 'True')
+
             # create the store that holds stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
             self.stores._init()
@@ -274,6 +274,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
+
+            self.reference_by_uuid = hasattr(self, 'use_uuid')
 
             # open the store that contains all stores
             self.register_store('stores', NamedObjectStore(ObjectStore))

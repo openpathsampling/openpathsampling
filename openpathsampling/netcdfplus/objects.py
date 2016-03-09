@@ -675,8 +675,6 @@ class ObjectStore(StorableNamedObject):
             # has been saved so quit and do nothing
             return self.reference(obj)
 
-        uuid = obj.__uuid__
-
         if hasattr(obj, '_idx'):
             # is a proxy of a saved object so do nothing
             return obj._idx
@@ -709,10 +707,10 @@ class ObjectStore(StorableNamedObject):
             self.cache[n_idx] = obj
 
         if self.reference_by_uuid:
+            uuid = obj.__uuid__
             self._set_uuid(n_idx, uuid)
             self._update_uuid_in_cache(uuid, n_idx)
 
-        if self.reference_by_uuid:
             return obj.__uuid__
         else:
             return n_idx

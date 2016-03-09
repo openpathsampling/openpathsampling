@@ -11,7 +11,6 @@ def attach_features(features, use_lazy_reversed=False):
     parser = NumpyDocTools()
 
     ADD_SOURCE_CODE = True
-
     USE_UUID = True
 
     def add_uuid(code, name):
