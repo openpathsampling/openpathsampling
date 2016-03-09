@@ -70,10 +70,7 @@ class DelayedLoader(object):
     def __get__(self, instance, owner):
         if instance is not None:
             obj = instance._lazy[self]
-            if type(obj) is tuple:
-                (store, idx) = obj
-                return store[idx]
-            elif hasattr(obj, '_idx'):
+            if hasattr(obj, '_idx'):
                 return obj.__subject__
             else:
                 return obj

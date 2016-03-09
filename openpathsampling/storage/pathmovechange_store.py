@@ -30,8 +30,7 @@ class PathMoveChangeStore(ObjectStore):
 
         obj.samples = self.vars['samples'][idx]
         obj.subchanges = self.vars['subchanges'][idx]
-
-        obj.details = LoaderProxy(self.storage.details, int(self.variables['details'][idx]))
+        obj.details = self.vars['details'][idx]
 
         return obj
 
@@ -62,6 +61,10 @@ class PathMoveChangeStore(ObjectStore):
 
         """
         if not self._cached_all:
+
+            dummy = self[:]
+            return
+
             idxs = range(len(self))
 
             cls_names = self.variables['cls'][:]
@@ -100,11 +103,13 @@ class PathMoveChangeStore(ObjectStore):
     def _load_partial_samples(self, cls_name, samples_idxs, mover_idx, details_idx):
         cls = self.class_list[cls_name]
         obj = cls.__new__(cls)
-        PathMoveChange.__init__(obj, mover=self.storage.pathmovers[int(mover_idx)])
+        PathMoveChange.__init__(obj, mover=self.storage.pathmovers[mover_idx])
+
+        if self.reference_by_uuid:
+            samples_idxs = self.storage.to_uuid_chunks(samples_idxs)
 
         if len(samples_idxs) > 0:
-            obj.samples = [self.storage.samples[int(idx)] for idx in samples_idxs]
+            obj.samples = [self.storage.samples[idx] for idx in samples_idxs]
 
-        obj.details = LoaderProxy(self.storage.details, int(details_idx))
-
+        obj.details = self.storage.details.proxy(details_idx)
         return obj

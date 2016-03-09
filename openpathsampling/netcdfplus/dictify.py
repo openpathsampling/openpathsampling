@@ -481,7 +481,7 @@ class UUIDObjectJSON(ObjectJSON):
 
             if '_uuid' in obj:
                 store = self.storage._stores[obj['_obj']]
-                result = store.uuid(UUID(obj['_uuid']))
+                result = store.load(UUID(obj['_uuid']))
 
                 return result
 

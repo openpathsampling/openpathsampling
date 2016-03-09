@@ -126,7 +126,6 @@ class ObjectStore(StorableNamedObject):
         self._uuids_loaded = False
         self._uuid_idx = dict()
 
-
     def to_dict(self):
         return {
             'content_class': self.content_class,
@@ -326,12 +325,19 @@ class ObjectStore(StorableNamedObject):
         if item is None:
             return None
 
-        if type(item) is not int:
-            idx = self.index.get(item)
-            if idx is None:
-                return item
-        else:
+        if type(item) is int or type(item) is UUID:
             idx = item
+        else:
+            if self.reference_by_uuid:
+                idx = item.__uuid__
+            else:
+                idx = self.index.get(item)
+
+        if idx is None:
+            return item
+
+        if self.reference_by_uuid and type(idx) is int:
+            idx = self._get_uuid(idx)
 
         return LoaderProxy(self, idx)
 
@@ -340,7 +346,7 @@ class ObjectStore(StorableNamedObject):
         Enable numpy style selection of object in the store
         """
         try:
-            if type(item) is int or type(item) is str:
+            if type(item) is int or type(item) is str or type(item) is UUID:
                 return self.load(item)
             elif type(item) is slice:
                 return [self.load(idx) for idx in range(*item.indices(len(self)))]
@@ -592,8 +598,6 @@ class ObjectStore(StorableNamedObject):
             the loaded object
         """
 
-        n_idx = int(idx)
-
         if self.reference_by_uuid and type(idx) is UUID:
             # we want to load by uuid and it was not in cache.
             if str(idx) in self.uuid_idx:
@@ -604,6 +608,8 @@ class ObjectStore(StorableNamedObject):
             raise ValueError(
                 'indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__
             )
+        else:
+            n_idx = int(idx)
 
         if n_idx < 0:
             return None
@@ -643,6 +649,12 @@ class ObjectStore(StorableNamedObject):
 
         return obj
 
+    def reference(self, obj):
+        if self.reference_by_uuid:
+            return obj.__uuid__
+        else:
+            return self.index[obj]
+
     def save(self, obj, idx=None):
         """
         Saves an object to the storage.
@@ -661,7 +673,7 @@ class ObjectStore(StorableNamedObject):
 
         if obj in self.index:
             # has been saved so quit and do nothing
-            return self.index[obj]
+            return self.reference(obj)
 
         uuid = obj.__uuid__
 
@@ -700,8 +712,10 @@ class ObjectStore(StorableNamedObject):
             self._set_uuid(n_idx, uuid)
             self._update_uuid_in_cache(uuid, n_idx)
 
-        return n_idx
-
+        if self.reference_by_uuid:
+            return obj.__uuid__
+        else:
+            return n_idx
 
     def __setitem__(self, key, value):
         """
@@ -1036,14 +1050,15 @@ class NamedObjectStore(ObjectStore):
             logger.debug("Nameable object has not been initialized correctly. Has None in _name")
             raise AttributeError('_name needs to be a string for nameable objects.')
 
-        n_idx = super(NamedObjectStore, self).save(obj)
+        reference = super(NamedObjectStore, self).save(obj)
 
         obj.fix_name()
 
+        n_idx = self.index[obj]
         self.storage.variables[self.prefix + '_name'][n_idx] = name
         self._update_name_in_cache(name, n_idx)
 
-        return n_idx
+        return reference
 
 
 class UniqueNamedObjectStore(NamedObjectStore):
@@ -1159,7 +1174,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
                 else:
                     # already fixed, but with same name. So that is fine. Check if already stored
                     if obj in self.index:
-                        return self.index[obj]
+                        return self.reference(obj)
             else:
                 # name is not fixed yet. So check, if we can save or whether name is already taken
                 if self.is_name_locked(idx):
@@ -1181,7 +1196,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
             if fixed:
                 # no new name, but fixed. Check if already stored.
                 if obj in self.index:
-                    return self.index[obj]
+                    return self.reference(obj)
 
                 # if not stored yet check if we could
                 if self.is_name_locked(name):
@@ -1208,11 +1223,11 @@ class UniqueNamedObjectStore(NamedObjectStore):
         self.reserve_name(name)
 
         try:
-            n_idx = super(UniqueNamedObjectStore, self).save(obj, idx)
+            reference = super(UniqueNamedObjectStore, self).save(obj, idx)
         finally:
             self.release_name(name)
 
-        return n_idx
+        return reference
 
 
 class VariableStore(ObjectStore):

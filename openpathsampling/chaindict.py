@@ -496,7 +496,13 @@ class StoredDict(ChainDict):
 
         if hasattr(item, '_idx'):
             if item._store is self.key_store:
-                return item._idx
+                val = item._idx
+                if type(val) is int:
+                    return val
+                else:
+
+                    erg = self.key_store.uuid_idx.get(str(val), None)
+                    return erg
 
         return self.key_store.index.get(item, None)
 

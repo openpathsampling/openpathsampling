@@ -14,6 +14,8 @@ import netCDF4
 import os.path
 import abc
 
+from uuid import UUID
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -54,6 +56,8 @@ class NetCDFPlus(netCDF4.Dataset):
         'obj': np.int32,
         'lazyobj': np.int32
     }
+
+
 
     class ValueDelegate(object):
         """
@@ -305,6 +309,12 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.sync()
 
+    def _create_simplifier(self):
+        if self.reference_by_uuid:
+            self.simplifier = UUIDObjectJSON(self)
+        else:
+            self.simplifier = StorableObjectJSON(self)
+
     def _setup_class(self):
         """
         Sets the basic properties for the storage
@@ -313,12 +323,10 @@ class NetCDFPlus(netCDF4.Dataset):
         self._objects = {}
         self._obj_store = {}
         self._storages_base_cls = {}
-        if self.reference_by_uuid:
-            self.simplifier = UUIDObjectJSON(self)
-        else:
-            self.simplifier = StorableObjectJSON(self)
         self.vars = dict()
         self.units = dict()
+
+        self._create_simplifier()
 
     def create_store(self, name, store):
         """
@@ -692,8 +700,7 @@ class NetCDFPlus(netCDF4.Dataset):
         types += ['lazyobj.' + x for x in self.objects.keys()]
         return sorted(types)
 
-    @staticmethod
-    def var_type_to_nc_type(var_type):
+    def var_type_to_nc_type(self, var_type):
         """
         Return the compatible netCDF variable type for var_type
 
@@ -703,7 +710,10 @@ class NetCDFPlus(netCDF4.Dataset):
             A object of netcdf compatible varible types
         """
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
-            nc_type = np.int32
+            if self.reference_by_uuid:
+                nc_type = str
+            else:
+                nc_type = np.int32
         else:
             nc_type = NetCDFPlus._type_conversion[var_type]
 
@@ -729,6 +739,8 @@ class NetCDFPlus(netCDF4.Dataset):
         getter = None
         setter = None
         store = None
+
+        to_uuid_chunks = lambda x: [x[i:i+36] for i in range(0, len(x), 36)]
 
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
             store = getattr(self, var_type.split('.')[1])
@@ -773,12 +785,21 @@ class NetCDFPlus(netCDF4.Dataset):
             getter = lambda v: self.simplifier.from_json(v)
 
         elif var_type.startswith('obj.'):
-            getter = lambda v: \
-                [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
-                    if get_is_iterable(v) else None if int(v) < 0 else store.load(int(v))
-            setter = lambda v: \
-                np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if set_is_iterable(v) else -1 if v is None else store.save(v)
+            if not self.reference_by_uuid:
+                getter = lambda v: \
+                    [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
+                        if get_is_iterable(v) else None if int(v) < 0 else store.load(int(v))
+                setter = lambda v: \
+                    np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+                        if set_is_iterable(v) else -1 if v is None else store.save(v)
+            else:
+                getter = lambda v: \
+                    [None if w[0] == '-' else store.load(UUID(w)) for w in to_uuid_chunks(v)] \
+                        if get_is_iterable(v) else None if v[0] == '-' else store.load(UUID(v))
+
+                setter = lambda v: \
+                    ''.join(['-' * 36 if w is None else str(store.save(w)) for w in v])\
+                        if set_is_iterable(v) else '-' * 36 if v is None else str(store.save(v))
 
         elif var_type == 'obj':
             # arbitrary object
@@ -789,18 +810,25 @@ class NetCDFPlus(netCDF4.Dataset):
             getter = lambda v: \
                 [None if int(w[1]) < 0 else self.stores[int(w[0])].load(int(w[1])) for w in v.tolist()] \
                     if len(v.shape) > 1 else None if int(v[1]) < 0 else self.stores[int(v[0])].load(int(v[1]))
-
             setter = lambda v: \
                 np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
                     if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
 
         elif var_type.startswith('lazyobj.'):
-            getter = lambda v: \
-                [None if int(w) < 0 else LoaderProxy(store, int(w)) for w in v.tolist()] \
-                    if get_is_iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
-            setter = lambda v: \
-                np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if set_is_iterable(v) else -1 if v is None else store.save(v)
+            if not self.reference_by_uuid:
+                getter = lambda v: \
+                    [None if int(w) < 0 else LoaderProxy(store, int(w)) for w in v.tolist()] \
+                        if get_is_iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
+                setter = lambda v: \
+                    np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+                        if set_is_iterable(v) else -1 if v is None else store.save(v)
+            else:
+                getter = lambda v: \
+                    [None if w[0] == '-' else LoaderProxy(store, UUID(w)) for w in to_uuid_chunks(v)] \
+                        if get_is_iterable(v) else None if v[0] == '-' else LoaderProxy(store, UUID(v))
+                setter = lambda v: \
+                    ''.join(['-' * 36 if w is None else str(store.save(w)) for w in v])\
+                        if set_is_iterable(v) else '-' * 36 if v is None else str(store.save(v))
 
         elif var_type == 'lazyobj':
             # arbitrary object
@@ -822,6 +850,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         return getter, setter, store
 
+    to_uuid_chunks = staticmethod(lambda x: [x[i:i+36] for i in range(0, len(x), 36)])
+
     def create_variable_delegate(self, var_name):
         """
         Create a delegate property that wraps the netcdf.Variable and takes care
@@ -835,6 +865,24 @@ class NetCDFPlus(netCDF4.Dataset):
                 return
 
             getter, setter, store = self.create_type_delegate(var.var_type)
+
+            if self.reference_by_uuid:
+
+                to_uuid_chunks = lambda x: [x[i:i+36] for i in range(0, len(x), 36)]
+
+                if hasattr(var, 'var_vlen'):
+                    if var.var_type.startswith('obj.'):
+                        getter = lambda v: \
+                            [None if w[0] == '-' else store.load(UUID(w)) for w in to_uuid_chunks(v)]
+                    elif var.var_type.startswith('lazyobj.'):
+                        getter = lambda v: \
+                            [None if w[0] == '-' else LoaderProxy(store, UUID(w)) for w in to_uuid_chunks(v)]
+                else:
+                    if var.var_type.startswith('obj.'):
+                        getter = lambda v: \
+                            None if v[0] == '-' else store.load(UUID(v))
+                    elif var.var_type.startswith('lazyobj.'):
+                        getter = lambda v: None if v[0] == '-' else LoaderProxy(store, UUID(v))
 
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
@@ -951,7 +999,7 @@ class NetCDFPlus(netCDF4.Dataset):
             if chunksizes is not None:
                 chunksizes = tuple(list(chunksizes) + [2])
 
-        nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
+        nc_type = self.var_type_to_nc_type(var_type)
 
         for dim_name, size in new_dimensions.items():
             ncfile.create_dimension(dim_name, size)
@@ -974,6 +1022,8 @@ class NetCDFPlus(netCDF4.Dataset):
             vlen_t = ncfile.createVLType(nc_type, var_name + '_vlen')
             ncvar = ncfile.createVariable(var_name, vlen_t, dimensions,
                                           zlib=False, chunksizes=chunksizes)
+
+            setattr(ncvar, 'var_vlen', 'True')
         else:
             ncvar = ncfile.createVariable(var_name, nc_type, dimensions,
                                           zlib=False, chunksizes=chunksizes)

@@ -163,7 +163,7 @@ class BaseSnapshotStore(ObjectStore):
             self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
 
     def all(self):
-        return peng.Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
+        return peng.Trajectory(map(self.proxy, range(len(self))))
 
     def __len__(self):
         return 2 * super(BaseSnapshotStore, self).__len__()
