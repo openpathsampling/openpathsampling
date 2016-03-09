@@ -108,6 +108,8 @@ class BaseSnapshotStore(ObjectStore):
         pass
 
     def _set_uuid(self, idx, uuid):
+        if idx & 1:
+            print 'Should not happen', idx
         self.storage.variables[self.prefix + '_uuid'][int(idx / 2)] = str(uuid)
 
     def _get_uuid(self, idx):
@@ -121,8 +123,18 @@ class BaseSnapshotStore(ObjectStore):
         # make sure to cast unicode to str
         uuid = str(uuid)
         if uuid != '':
-            self._uuid_idx[uuid] = int(idx)
-            self._uuid_idx[str(UUID(int=int(UUID(uuid)) ^ 1))] = int(idx) ^ 1
+            if uuid in self._uuid_idx:
+                if self._uuid_idx[uuid] != int(idx):
+                    raise RuntimeWarning('Already exists %s with idx %d -> %d' % (uuid, self._uuid_idx[uuid], int(idx)))
+            else:
+                self._uuid_idx[uuid] = int(idx)
+
+            ruuid = str(UUID(int=int(UUID(uuid)) ^ 1))
+            if ruuid in self._uuid_idx:
+                if self._uuid_idx[ruuid] != int(idx) ^ 1:
+                    raise RuntimeWarning('Inv Already exists %s with idx %d -> %d' % (ruuid, self._uuid_idx[ruuid], int(idx) ^ 1))
+            else:
+                self._uuid_idx[ruuid] = int(idx) ^ 1
 
     def update_uuid_cache(self):
         """
@@ -161,6 +173,16 @@ class BaseSnapshotStore(ObjectStore):
         if snapshot._reversed is not None:
             # mark reversed as stored
             self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
+
+    def save(self, obj, idx=None):
+        if self.reference_by_uuid:
+            ruuid = str(UUID(int=int(obj.__uuid__)))
+
+            if ruuid in self.uuid_idx:
+                # has been saved so quit and do nothing
+                return obj.__uuid__
+
+        return super(BaseSnapshotStore, self).save(obj, idx)
 
     def all(self):
         return peng.Trajectory(map(self.proxy, range(len(self))))

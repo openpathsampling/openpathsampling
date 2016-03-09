@@ -116,7 +116,7 @@ class Storage(NetCDFPlus):
     def n_spatial(self):
         return self.topology.n_spatial
 
-    def __init__(self, filename, mode=None, template=None, use_uuid=False):
+    def __init__(self, filename, mode=None, template=None, use_uuid=True):
         """
         Create a netCDF+ storage for OPS Objects
 
@@ -576,3 +576,85 @@ class StorageView(object):
         self.vars = self._storage.vars
 
         self.steps = StorageView.StepDelegate(self._storage.steps, step_range)
+
+
+class DistributedUUIDStorage(object):
+    """
+    A View on a storage that only changes the iteration over steps.
+
+    Can be used for bootstrapping on subsets of steps and pass this object
+    to analysis routines.
+
+    """
+
+    class MultiDelegate(object):
+        """
+        A delegate that will alter the ``iter()`` behaviour of the underlying store
+
+        Attributes
+        ----------
+        store : dict-like
+            the dict to be wrapped
+        store : :class:`openpathsampling.netcdfplus.ObjectStore`
+            a reference to an object store used
+
+        """
+
+        def __init__(self, stores, uuid_idx):
+            self.stores = stores
+            self.uuid_idx = uuid_idx
+
+        def __iter__(self):
+            for store, idx in self.uuid_idx.iteritems():
+                yield self.store[idx]
+
+        def __getitem__(self, item):
+            store, idx = self.uuid_idx.get(item, (None, None))
+            if store is not None:
+                return self.store[item]
+
+        def __setitem__(self, key, value):
+            pass
+
+        def __len__(self):
+            return len(self.uuid_idx)
+
+    def __init__(self, storages):
+        """
+        Parameters
+        ----------
+
+        storage : :class:`openpathsampling.storage.Storage`
+            The storage the view is watching
+        step_range : iterable
+            An iterable object that species the step indices to be iterated over
+            when using the view
+
+        """
+        self.storages = storages
+
+        self.template = storages[0].template
+
+        for storage in self.storages:
+            if not hasattr(storage, 'use_uuid'):
+                raise RuntimeError('A least one storage does not use UUIDs!')
+
+            if storage.template.__uuid__ != self.template.__uuid__:
+                raise RuntimeWarning('Stores you different template snapshot! Not recommended to join these storages')
+
+        # scan all uuids for all stores. This requires enough memory!
+
+        for ref_store in self.storages[0].stores:
+            uuid_idx = {}
+            stores = []
+            name = ref_store.name
+            for storage in self.storages:
+#                print name, ':', [s.name for s in storage.stores]
+                store = storage.stores[str(name)]
+                stores.append(store)
+                for uuid, key in store.uuid_idx.iteritems():
+                    u = str(uuid)
+                    if u not in uuid_idx:
+                        uuid_idx[u] = (store, key)
+
+            setattr(self, store.prefix, self.MultiDelegate(stores, uuid_idx))
