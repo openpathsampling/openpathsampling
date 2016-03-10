@@ -605,19 +605,23 @@ class DistributedUUIDStorage(object):
             self.uuid_idx = uuid_idx
 
         def __iter__(self):
-            for store, idx in self.uuid_idx.iteritems():
-                yield self.store[idx]
+            for store, idx in self.uuid_idx.itervalues():
+                yield store[idx]
 
         def __getitem__(self, item):
-            store, idx = self.uuid_idx.get(item, (None, None))
+            store, idx = self.uuid_idx.get(str(item), (None, None))
             if store is not None:
-                return self.store[item]
+                return store[item]
 
         def __setitem__(self, key, value):
             pass
 
         def __len__(self):
             return len(self.uuid_idx)
+
+        def load(self, idx):
+            print idx
+            return self[idx]
 
     def __init__(self, storages):
         """
@@ -640,7 +644,7 @@ class DistributedUUIDStorage(object):
                 raise RuntimeError('A least one storage does not use UUIDs!')
 
             if storage.template.__uuid__ != self.template.__uuid__:
-                raise RuntimeWarning('Stores you different template snapshot! Not recommended to join these storages')
+                raise RuntimeWarning('Stores use different template snapshots! Not recommended to join these storages')
 
         # scan all uuids for all stores. This requires enough memory!
 
@@ -649,7 +653,6 @@ class DistributedUUIDStorage(object):
             stores = []
             name = ref_store.name
             for storage in self.storages:
-#                print name, ':', [s.name for s in storage.stores]
                 store = storage.stores[str(name)]
                 stores.append(store)
                 for uuid, key in store.uuid_idx.iteritems():
@@ -657,4 +660,10 @@ class DistributedUUIDStorage(object):
                     if u not in uuid_idx:
                         uuid_idx[u] = (store, key)
 
-            setattr(self, store.prefix, self.MultiDelegate(stores, uuid_idx))
+            setattr(self, name, self.MultiDelegate(stores, uuid_idx))
+
+            # make all stores use the joint load functions
+
+            for storage in self.storages:
+                store = storage.stores[str(name)]
+                store.register_fallback(getattr(self, name))

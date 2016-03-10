@@ -126,12 +126,17 @@ class ObjectStore(StorableNamedObject):
         self._uuids_loaded = False
         self._uuid_idx = dict()
 
+        self.fallback_store = None
+
     def to_dict(self):
         return {
             'content_class': self.content_class,
             'json': self.json,
             'nestable': self.nestable
         }
+
+    def register_fallback(self, store):
+        self.fallback_store = store
 
     def register(self, storage, prefix):
         """
@@ -603,6 +608,8 @@ class ObjectStore(StorableNamedObject):
             if str(idx) in self.uuid_idx:
                 n_idx = int(self.uuid_idx[str(idx)])
             else:
+                if self.fallback is not None:
+                    return self.fallback_store.load(idx)
                 raise ValueError('str "' + idx + '" not found in storage')
         elif type(idx) is not int:
             raise ValueError(
