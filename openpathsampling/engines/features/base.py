@@ -73,7 +73,7 @@ def attach_features(features, use_lazy_reversed=False):
             __features__ = dict()
 
         for name in ['attributes', 'minus', 'reversal', 'properties',
-                     'flip', 'numpy', 'lazy', 'required', 'classes', 'provides']:
+                     'flip', 'numpy', 'lazy', 'required', 'classes']:
             if name not in __features__:
                 __features__[name] = []
 
@@ -83,10 +83,23 @@ def attach_features(features, use_lazy_reversed=False):
 
         __features__['classes'] += features
 
-        for feature in features:
+        # add provided additional feature and run though the added ones
+        # recursively until nothing is added
+        feat_no = 0
+        while feat_no < len(__features__['classes']):
+            feature = __features__['classes'][feat_no]
+
             # add provides additional features
             if hasattr(feature, 'provides'):
-                __features__['classes'] += feature.provides
+                if type(feature.provides) is list:
+                    for c in feature.provides:
+                        if c not in __features__['classes']:
+                            __features__['classes'].append(c)
+                else:
+                    if feature.provides not in __features__['classes']:
+                        __features__['classes'].append(feature.provides)
+
+            feat_no += 1
 
         if use_lazy_reversed:
             cls._reversed = DelayedLoader()

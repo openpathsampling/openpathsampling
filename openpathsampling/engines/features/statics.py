@@ -2,8 +2,12 @@ import numpy as np
 from shared import StaticContainerStore
 import mdtraj
 
+from openpathsampling.engines.features import xyz
+
 attributes = ['statics', 'box_vectors', 'md', 'coordinates']
 lazy = ['statics']
+
+provides = [xyz]
 
 
 def netcdfplus_init(store):

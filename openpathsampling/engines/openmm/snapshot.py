@@ -12,7 +12,6 @@ import features
     features.velocities,
     features.coordinates,
     features.box_vectors,
-    features.xyz,
     features.topology
 ])
 class MDSnapshot(BaseSnapshot):
@@ -28,7 +27,6 @@ class MDSnapshot(BaseSnapshot):
 #         features.velocities,
 #         features.coordinates,
 #         features.box_vectors,
-#         features.xyz,
 #         features.topology
 #     ],
 #     description="A fast MDSnapshot",
@@ -39,7 +37,6 @@ class MDSnapshot(BaseSnapshot):
 @features.base.attach_features([
     features.statics,
     features.kinetics,
-    features.xyz,
     features.topology  # for compatibility
 ])
 class Snapshot(BaseSnapshot):
