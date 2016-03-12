@@ -156,7 +156,7 @@ class SingleTrajectoryAnalysis(object):
             seg[1:-1] for seg in transition_ensemble.split(trajectory)
         ]
 
-    def analyze_flux(self, trajectory, state):
+    def analyze_flux(self, trajectory, state, interface=None):
         """Analysis to obtain flux segments for given state.
 
         Parameters
@@ -166,8 +166,13 @@ class SingleTrajectoryAnalysis(object):
         state : :class:`.Volume`
             state volume to characterize. Must be one of the states in the
             transition
+        interface : :class:`.Volume` or None
+            interface to calculate the flux through. If `None`, same as
+            `state`
         """
         other = list(set([self.stateA, self.stateB]) - set([state]))[0]
+        if interface is None:
+            interface = state
         counts_out = paths.SequentialEnsemble([
             paths.AllInXEnsemble(state) & paths.LengthEnsemble(1),
             paths.AllOutXEnsemble(state | other),
