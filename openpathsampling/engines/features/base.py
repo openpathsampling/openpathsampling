@@ -189,7 +189,11 @@ def attach_features(features, use_lazy_reversed=False):
             ]
             code += [
                 "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
-                for lazy in __features__['lazy']
+                for lazy in __features__['lazy'] if lazy not in __features__['numpy']
+            ]
+            code += [
+                "       cls.{0} : self._lazy[cls.{0}].copy(),".format(lazy)
+                for lazy in __features__['lazy'] if lazy in __features__['numpy']
             ]
             code += [
                 "    }"
@@ -202,7 +206,14 @@ def attach_features(features, use_lazy_reversed=False):
         code += map(
             "    this.{0} = self.{0}".format,
             filter(
-                lambda x : x not in __features__['lazy'],
+                lambda x : x not in __features__['lazy'] and x not in __features__['numpy'],
+                __features__['parameters']
+            )
+        )
+        code += map(
+            "    this.{0} = self.{0}.copy()".format,
+            filter(
+                lambda x : x not in __features__['lazy'] and x in __features__['numpy'],
                 __features__['parameters']
             )
         )
