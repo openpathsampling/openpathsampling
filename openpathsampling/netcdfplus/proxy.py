@@ -58,7 +58,13 @@ class LoaderProxy(object):
         """
         Call the loader and get the referenced object
         """
-        return self._store[self._idx]
+        try:
+            return self._store[self._idx]
+        except:
+            if type(self._idx) is int:
+                raise RuntimeWarning('Index %s is not in store. This should never happen!' % self._idx)
+            else:
+                raise RuntimeWarning('Object %s is not in store. Attach it using fallbacks.' % self._idx)
 
 
 class DelayedLoader(object):

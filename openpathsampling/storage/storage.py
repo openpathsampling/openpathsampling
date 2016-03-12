@@ -116,7 +116,11 @@ class Storage(NetCDFPlus):
     def n_spatial(self):
         return self.topology.n_spatial
 
-    def __init__(self, filename, mode=None, template=None, use_uuid=True):
+    @property
+    def topology(self):
+        return self.template.topology
+
+    def __init__(self, filename, mode=None, template=None, use_uuid=True, fallback=None):
         """
         Create a netCDF+ storage for OPS Objects
 
@@ -133,7 +137,7 @@ class Storage(NetCDFPlus):
         """
 
         self._template = template
-        super(Storage, self).__init__(filename, mode, use_uuid=use_uuid)
+        super(Storage, self).__init__(filename, mode, use_uuid=use_uuid, fallback=fallback)
 
     def _create_storages(self):
         """
@@ -189,48 +193,37 @@ class Storage(NetCDFPlus):
         setattr(self, 'title', 'OpenPathSampling Storage')
         setattr(self, 'ConventionVersion', '0.2')
 
-        self.set_caching_mode('default')
+        self.set_caching_mode()
 
         template = self._template
 
-        if template.topology is not None:
-            self.topology = template.topology
-        else:
+        if template.topology is None:
             raise RuntimeError("A Storage needs a template snapshot with a topology")
 
         if 'atom' not in self.dimensions:
-            self.createDimension('atom', self.n_atoms)
+            self.createDimension('atom', template.topology.n_atoms)
 
         # spatial dimensions
         if 'spatial' not in self.dimensions:
-            self.createDimension('spatial', self.n_spatial)
+            self.createDimension('spatial', template.topology.n_spatial)
 
         # since we want to store stuff we need to finalize stores that have not been initialized yet
         self.finalize_stores()
-
-        # TODO: Might not need to save topology
-
-        logger.info("Saving topology")
-        self.topologies.save(self.topology)
 
         logger.info("Create initial template snapshot")
 
         # Save the initial configuration
         self.snapshots.save(template)
-
         self.tag['template'] = template
 
     def _restore(self):
         self.set_caching_mode('default')
 
-        # check, if the necessary modules are imported
-
+        # check, if the necessary modules are imported and we can load the template
         try:
-            dummy = self.template
-            self.topology = self.topologies[0]
+            self.template
 
         except:
-            raise
             raise RuntimeError(
                 'Cannot restore storage. Some of the necessary classes (Engines, Snapshots, Topologies) require '
                 'to be imported separately. So you need to run certain engine imports first. The most common '
@@ -576,6 +569,37 @@ class StorageView(object):
         self.vars = self._storage.vars
 
         self.steps = StorageView.StepDelegate(self._storage.steps, step_range)
+
+
+class TrajectoryStorage(Storage):
+    """
+    A reduce storage that can only handle trajectories and CVs
+    """
+
+    def _create_storages(self):
+        """
+        Register all Stores used in the OpenPathSampling Storage
+
+        """
+
+        # objects with special storages
+
+        self.create_store('trajectories', paths.storage.TrajectoryStore())
+        self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
+
+        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(
+            paths.CollectiveVariable,
+            peng.BaseSnapshot
+        ))
+
+        # normal objects
+
+        self.create_store('topologies', NamedObjectStore(peng.Topology))
+        self.create_store('engines', NamedObjectStore(peng.DynamicsEngine))
+
+        # special stores
+
+        self.create_store('tag', ImmutableDictStore())
 
 
 class DistributedUUIDStorage(object):

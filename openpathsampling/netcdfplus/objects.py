@@ -608,9 +608,13 @@ class ObjectStore(StorableNamedObject):
             if str(idx) in self.uuid_idx:
                 n_idx = int(self.uuid_idx[str(idx)])
             else:
-                if self.fallback is not None:
+                if self.fallback_store is not None:
                     return self.fallback_store.load(idx)
-                raise ValueError('str "' + idx + '" not found in storage')
+                elif self.storage.fallback is not None:
+                    return self.storage.fallback.stores[self.name].load(idx)
+                else:
+                    raise ValueError('str "' + idx + '" not found in storage or fallback')
+
         elif type(idx) is not int:
             raise ValueError(
                 'indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__

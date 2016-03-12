@@ -498,13 +498,16 @@ class StoredDict(ChainDict):
             if item._store is self.key_store:
                 val = item._idx
                 if type(val) is int:
+                    print 'from int', val
                     return val
                 else:
-
                     erg = self.key_store.uuid_idx.get(str(val), None)
+                    print 'from uuid', erg
                     return erg
 
-        return self.key_store.index.get(item, None)
+        idx = self.key_store.index.get(item, None)
+        print 'direct', idx, item
+        return idx
 
     def _get(self, item):
         key = self._get_key(item)
@@ -611,7 +614,6 @@ class ReversibleStoredDict(StoredDict):
                 values = map(lambda x : x[0] if x[0] is not None else x[1], zip(values[0::2], values[1::2]))
                 values = [val for val in values for _ in (0, 1)]
 
-
             pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
             if len(pairs) > 0:
                 pair_fw = [(pair[0] / 2, pair[1]) for pair in pairs if not pair[0] & 1]
@@ -640,8 +642,9 @@ class ReversibleStoredDict(StoredDict):
             values_bw = self.backward_store[:]
 
         self.cache.clear()
-        [self.cache.__setitem__(2*key, value) for key, value in enumerate(values_fw)]
-        [self.cache.__setitem__(2*key + 1, value) for key, value in enumerate(values_bw)]
+
+        [self.cache.__setitem__(2 * key, value) for key, value in enumerate(values_fw) if value is not None]
+        [self.cache.__setitem__(2 * key + 1, value) for key, value in enumerate(values_bw) if value is not None]
 
     def _get(self, item):
         key = self._get_key(item)

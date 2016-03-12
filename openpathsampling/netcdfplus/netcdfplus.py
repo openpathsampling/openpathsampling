@@ -200,7 +200,7 @@ class NetCDFPlus(netCDF4.Dataset):
             if s in store.uuid_idx:
                 return store.load(uuid)
 
-    def __init__(self, filename, mode=None, use_uuid=False):
+    def __init__(self, filename, mode=None, use_uuid=False, fallback=None):
         """
         Create a storage for complex objects in a netCDF file
 
@@ -237,6 +237,7 @@ class NetCDFPlus(netCDF4.Dataset):
             logger.info("Open existing netCDF file '%s' for reading - reading from existing file", filename)
 
         self.filename = filename
+        self.fallback = fallback
 
         # call netCDF4-python to create or open .nc file
         super(NetCDFPlus, self).__init__(filename, mode)
@@ -801,7 +802,7 @@ class NetCDFPlus(netCDF4.Dataset):
                         if get_is_iterable(v) else None if v[0] == '-' else store.load(UUID(v))
 
                 setter = lambda v: \
-                    ''.join(['-' * 36 if w is None else str(store.save(w)) for w in v])\
+                    ''.join(['-' * 36 if w is None else str(store.save(w)) for w in list.__iter__(v)])\
                         if set_is_iterable(v) else '-' * 36 if v is None else str(store.save(v))
 
         elif var_type == 'obj':
@@ -830,7 +831,7 @@ class NetCDFPlus(netCDF4.Dataset):
                     [None if w[0] == '-' else LoaderProxy(store, UUID(w)) for w in to_uuid_chunks(v)] \
                         if get_is_iterable(v) else None if v[0] == '-' else LoaderProxy(store, UUID(v))
                 setter = lambda v: \
-                    ''.join(['-' * 36 if w is None else str(store.save(w)) for w in v])\
+                    ''.join(['-' * 36 if w is None else str(store.save(w)) for w in list.__iter__(v)])\
                         if set_is_iterable(v) else '-' * 36 if v is None else str(store.save(v))
 
         elif var_type == 'lazyobj':
