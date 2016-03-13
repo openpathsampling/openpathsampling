@@ -15,6 +15,7 @@ class StorableObject(object):
     _weak_index = 0L
 
     _base = None
+    _args = None
 
     observe_objects = False
 
@@ -24,7 +25,7 @@ class StorableObject(object):
         (De-)Activate observing creation of storable objects
 
         This can be used to track which storable objects are still alive and hence look for memory leaks
-        and inspect caching. Use :method:`openpathsampling.netcdfplus.base.StorableObject.count_weaks` to get
+        and inspect caching. Use :meth:`openpathsampling.netcdfplus.base.StorableObject.count_weaks` to get
         the current summary of created objects
 
         Parameters
@@ -36,7 +37,7 @@ class StorableObject(object):
 
         See Also
         --------
-        :method:`openpathsampling.netcdfplus.base.StorableObject.count_weaks`
+        :meth:`openpathsampling.netcdfplus.base.StorableObject.count_weaks`
 
         """
         if StorableObject.observe_objects is not active:
@@ -206,6 +207,7 @@ class StorableObject(object):
         Returns a dictionary of all storable objects
 
         Returns
+        -------
         dict of str : type
             a dictionary of all subclassed objects from StorableObject. The name points to the class.
         """
@@ -248,10 +250,14 @@ class StorableObject(object):
 
         """
         excluded_keys = ['idx', 'json', 'identifier']
-        return {
-            key: value for key, value in self.__dict__.iteritems()
-            if key not in excluded_keys and key not in self._excluded_attr and
+        keys_to_store = {
+            key for key in self.__dict__
+            if key not in excluded_keys and
+            key not in self._excluded_attr and
             not (key.startswith('_') and self._exclude_private_attr)
+        }
+        return {
+            key: self.__dict__[key] for key in keys_to_store
         }
 
     @classmethod
@@ -391,3 +397,10 @@ class StorableNamedObject(StorableObject):
             self._name = name
 
         return self
+
+
+def create_to_dict(keys_to_store):
+    def to_dict(self):
+        return {key: getattr(self, key) for key in keys_to_store}
+
+    return to_dict

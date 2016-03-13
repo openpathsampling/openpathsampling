@@ -4,8 +4,7 @@
 
 CollectiveVariable Functions
 ============================
-
-:class:`openpathsampling.CollectiveVariables`
+:class:`openpathsampling.CollectiveVariable`
 
     >>> import openpathsampling as paths
     >>> mover = paths.CollectiveVariable()
@@ -31,9 +30,11 @@ mdtraj orderparamters
 .. autosummary::
     :toctree: api/generated/
 
-    CV_MD_Function
+    CV_MDTraj_Function
 
 msmbuilder3 collectivevariables
 -------------------------------
+.. autosummary::
+    :toctree: api/generated/
 
-    CV_Featurizer
+    CV_MSMB_Featurizer

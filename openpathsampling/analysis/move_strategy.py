@@ -4,7 +4,6 @@ import abc
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
-from openpathsampling import PathMoverFactory as pmf
 
 LevelLabels = collections.namedtuple(
     "LevelLabels", 
@@ -219,7 +218,7 @@ class OneWayShootingStrategy(MoveStrategy):
     def make_movers(self, scheme):
         ensemble_list = self.get_ensembles(scheme, self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        shooters = pmf.OneWayShootingSet(self.selector, ensembles)
+        shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector, ensembles)
         return shooters
 
 class NearestNeighborRepExStrategy(MoveStrategy):
