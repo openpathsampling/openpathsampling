@@ -1,4 +1,6 @@
-from analysis.move_scheme import MoveScheme, DefaultScheme, LockedMoveScheme
+from analysis.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme
+)
 from analysis.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork
 )
@@ -12,6 +14,10 @@ from analysis.tis_analysis import (
 )
 from analysis.single_trajectory_analysis import (
     SingleTrajectoryAnalysis 
+)
+
+from bias_function import (
+    BiasFunction, BiasLookupFunction, BiasEnsembleTable
 )
 
 from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
