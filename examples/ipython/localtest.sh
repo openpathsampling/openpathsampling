@@ -4,8 +4,8 @@
 # to run this after every commit, but if you change much of the API, you
 # should run it.
 
-ipynbtest.py  alanine.ipynb
-ipynbtest.py ipynbtest_tutorial.ipynb
+ipynbtest.py alanine.ipynb
+#ipynbtest.py ipynbtest_tutorial.ipynb
 ipynbtest.py langevin_integrator_check.ipynb
 ipynbtest.py mistis_setup.ipynb
 ipynbtest.py mistis_analysis.ipynb
