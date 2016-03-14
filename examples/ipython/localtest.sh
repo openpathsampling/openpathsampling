@@ -22,5 +22,5 @@ ipynbtest.py test_cv.ipynb
 ipynbtest.py test_netcdfplus.ipynb
 ipynbtest.py troubleshooting_ops.ipynb
 ipynbtest.py tutorial_visualization.ipynb
-ipynbtest.py which_network.ipynb
+#ipynbtest.py which_network.ipynb # TODO: finish this notebook
 #ipynbtest.py Weina\ Alanine\ Example.ipynb
