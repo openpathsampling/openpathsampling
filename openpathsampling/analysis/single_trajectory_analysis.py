@@ -190,6 +190,31 @@ class SingleTrajectoryAnalysis(object):
         for seg in flux_out_segments:
             self.flux_segments[state]['out'] += [seg[1:-1]]
 
+    def new_analyze_flux(self, trajectory, state, interface=None):
+        other = list(set([self.stateA, self.stateB]) - set([state]))[0]
+        if interface is None:
+            interface = state
+        crossed = ~(interface | state | other)
+        last_visit = {
+            state: float('nan'),
+            crossed: float('nan'),
+            other: float('-inf')
+        }
+
+        flux_segments = self.flux_segments[state]
+        current_traj_type = None
+        for i in range(len(trajectory)):
+            frame = trajectory[i]
+            # figure out which volume the frame is in (there had better only
+            # be one answer) and assign the last_visited for that
+            frame_vols = [vol for vol in last_visit.keys() if vol(frame)]
+            assert len(frame_vols) == 1
+            frame_vol = frame_vols[0]
+            previous_visit = last_visit[frame_vol]
+            last_visit[frame_vol] = i
+            
+
+
     def analyze(self, trajectories):
         """Full analysis of a trajectory or trajectories.
 
