@@ -13,46 +13,50 @@ Documentation
 -------------
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   getting_started
-   examples/index
-   whatsnew
-   faq
-   Discussion Forums <http://discourse.openpathsampling.org>
+    getting_started
+    examples/index
+    guides/index
+    whatsnew
+    faq
+    Discussion Forums <http://discourse.openpathsampling.org>
 
 API Reference
 -------------
 
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 1
 
-   core
-   collectivevariable
-   volume
-   ensemble
-   shooting
-   pathmover
-   pathsimulator
-   engine
-   storage
+    collectivevariable
+    volume
+    ensemble
+    shooting
+    pathmover
+    pathsimulator
+    storage
+    treemixin
+    trajectory
+    openmm
 
 Developing
 ----------
 
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 1
 
-   netcdf_format
-   api
+    netcdfplus/index
+    engines/index
+
+    api
 
 README
 ------
 
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 1
 
-   readme
+    readme
 
 --------------------------------------------------------------------------------
 

@@ -3,18 +3,17 @@
 '''
 
 import os
-import numpy as np
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
+                        assert_almost_equal)
+
+from nose.plugins.skip import SkipTest
+
+import openpathsampling as paths
+import openpathsampling.engines.toy as toy
 from test_helpers import true_func, assert_equal_array_array
 
-from openpathsampling.toy_dynamics.toy_pes import *
-from openpathsampling.toy_dynamics.toy_integrators import *
-from openpathsampling.toy_dynamics.toy_engine import *
-from openpathsampling.topology import ToyTopology
-from openpathsampling.snapshot import Snapshot, Momentum, Configuration
+import numpy as np
 
 
 # =========================================================================
@@ -25,10 +24,10 @@ from openpathsampling.snapshot import Snapshot, Momentum, Configuration
 def setUp():
     # set up globals
     global gaussian, linear, outer, harmonic
-    gaussian = Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
-    outer = OuterWalls([1.12, 2.0], [0.2, -0.25])
-    linear = LinearSlope([1.5, 0.75], 0.5)
-    harmonic = HarmonicOscillator([1.5, 2.0], [0.5, 3.0], [0.25, 0.75])
+    gaussian = toy.Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
+    outer = toy.OuterWalls([1.12, 2.0], [0.2, -0.25])
+    linear = toy.LinearSlope([1.5, 0.75], 0.5)
+    harmonic = toy.HarmonicOscillator([1.5, 2.0], [0.5, 3.0], [0.25, 0.75])
     global init_pos, init_vel, sys_mass
     init_pos = np.array([0.7, 0.65])
     init_vel = np.array([0.6, 0.5])
@@ -130,33 +129,33 @@ class testCombinations(object):
 
 class test_convert_fcn(object):
     def test_convert_to_3Ndim(v):
-        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0]),
+        raise SkipTest
+
+        assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0]),
                                  np.array([[1.0, 2.0, 0.0]]))
-        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0, 3.0]), 
+        assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0, 3.0]),
                                  np.array([[1.0, 2.0, 3.0]]))
-        assert_equal_array_array(convert_to_3Ndim([1.0, 2.0, 3.0, 4.0]),
+        assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0, 3.0, 4.0]),
                                  np.array([[1.0, 2.0, 3.0], [4.0, 0.0, 0.0]]))
 
 class testToyEngine(object):
     def setUp(self):
         pes = linear
-        integ = LeapfrogVerletIntegrator(dt=0.002)
-        topology=ToyTopology(
+        integ = toy.LeapfrogVerletIntegrator(dt=0.002)
+        topology=toy.Topology(
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
         )
-        template = Snapshot(
+        template = toy.Snapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
-            potential_energy = 0.0,
-            kinetic_energy = 0.0,
             topology=topology
         )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
-        sim = ToyEngine(options=options,
+        sim = toy.Engine(options=options,
                         template=template
                        )
 
@@ -177,57 +176,19 @@ class testToyEngine(object):
     def test_snapshot_timestep(self):
         assert_equal(self.sim.snapshot_timestep, 0.02)
 
-    def test_momentum_getter(self):
-        momentum = self.sim.momentum
-        assert_items_equal(momentum.velocities[0],
-                           self.sim.velocities)
-        assert_equal(momentum.kinetic_energy,
-                     self.sim.pes.kinetic_energy(self.sim))
-    
-    def test_momentum_setter(self):
-        raise SkipTest()
-        self.sim.momentum = Momentum(velocities=np.array([[4, 5, 6]]))
-        assert_items_equal(self.sim.velocities, [4, 5])
-
-    def test_configuration_setter(self):
-        raise SkipTest()
-        # This should not work anymore
-        self.sim.configuration = Configuration(
-            coordinates=np.array([[1, 2, 3]])
-        )
-        assert_items_equal(self.sim.positions, [1, 2])
-
-
-    def test_load_configuration(self):
-        configuration = self.sim.configuration
-        assert_items_equal(configuration.coordinates[0],
-                           self.sim.positions)
-        assert_equal(configuration.potential_energy,
-                     self.sim.pes.V(self.sim))
-        assert_equal(configuration.box_vectors, None)
-
     def test_snapshot_get(self):
         snapshot = self.sim.current_snapshot
-        n_spatial=self.sim.n_spatial
-        assert_items_equal(snapshot.momentum.velocities[0],
+        assert_items_equal(snapshot.velocities[0],
                            self.sim.velocities)
-        assert_equal(snapshot.momentum.kinetic_energy,
-                     self.sim.pes.kinetic_energy(self.sim))
-        assert_items_equal(snapshot.configuration.coordinates[0],
+        assert_items_equal(snapshot.coordinates[0],
                            self.sim.positions)
-        assert_equal(snapshot.configuration.potential_energy,
-                     self.sim.pes.V(self.sim))
-        assert_equal(snapshot.configuration.box_vectors, None)
-        
+
     def test_snapshot_set(self):
-        raise SkipTest()
-        snap = Snapshot(coordinates=np.array([[1,2,3]]), 
+        snap = toy.Snapshot(coordinates=np.array([[1,2,3]]),
                         velocities=np.array([[4,5,6]]))
-        # note that we truncate the z-direction, regardless of what it is.
-        # This is for a 2D model!
         self.sim.current_snapshot = snap
-        assert_items_equal(self.sim.positions, [1,2])
-        assert_items_equal(self.sim.velocities, [4,5])
+        assert_items_equal(self.sim.positions, [1,2,3])
+        assert_items_equal(self.sim.velocities, [4,5,6])
 
     def test_generate_next_frame(self):
         # we test correctness by integrating forward, then backward
@@ -245,8 +206,27 @@ class testToyEngine(object):
         traj = self.sim.generate(self.sim.current_snapshot, [true_func])
         assert_equal(len(traj), self.sim.n_frames_max)
 
+    def test_generate_n_frames(self):
+        n_frames = 3
+        self.sim.initialized = True
+        ens = paths.LengthEnsemble(4) # first snap plus n_frames
+        orig = self.sim.current_snapshot.copy()
+        traj1 = self.sim.generate(self.sim.current_snapshot, [ens.can_append])
+        self.sim.current_snapshot = orig
+        traj2 = [orig] + self.sim.generate_n_frames(3)
+        assert_equal(len(traj1), len(traj2))
+        for (s1, s2) in zip(traj1, traj2):
+            # snapshots are not the same object
+            assert_not_equal(s1, s2) 
+            # however, they have the same values stored in them
+            assert_equal(len(s1.coordinates), 1)
+            assert_equal(len(s1.coordinates[0]), 2)
+            assert_items_equal(s1.coordinates[0], s2.coordinates[0])
+            assert_items_equal(s1.velocities[0], s2.velocities[0])
+
+
     def test_start_with_snapshot(self):
-        snap = Snapshot(coordinates=np.array([1,2]), 
+        snap = toy.Snapshot(coordinates=np.array([1,2]),
                         velocities=np.array([3,4]))
         self.sim.start(snapshot=snap)
         self.sim.stop([snap])
@@ -258,23 +238,21 @@ class testToyEngine(object):
 class testLeapfrogVerletIntegrator(object):
     def setUp(self):
         pes = linear
-        integ = LeapfrogVerletIntegrator(dt=0.002)
-        topology=ToyTopology(
+        integ = toy.LeapfrogVerletIntegrator(dt=0.002)
+        topology=toy.Topology(
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
         )
-        template = Snapshot(
+        template = toy.Snapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
-            potential_energy = 0.0,
-            kinetic_energy = 0.0,
             topology=topology
         )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
-        sim = ToyEngine(options=options,
+        sim = toy.Engine(options=options,
                         template=template
                        )
 
@@ -312,24 +290,22 @@ class testLangevinBAOABIntegrator(object):
     crashes.'''
     def setUp(self):
         pes = linear
-        integ = LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
+        integ = toy.LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                         gamma=1.0)
-        topology=ToyTopology(
+        topology=toy.Topology(
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
         )
-        template = Snapshot(
+        template = toy.Snapshot(
             coordinates=init_pos.copy(),
             velocities=init_pos.copy(),
-            potential_energy = 0.0,
-            kinetic_energy = 0.0,
             topology=topology
         )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
-        sim = ToyEngine(options=options,
+        sim = toy.Engine(options=options,
                         template=template
                        )
 

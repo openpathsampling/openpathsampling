@@ -2,29 +2,23 @@
 @author David W.H. Swenson
 '''
 import os
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (true_func,
-                          data_filename,
-                          assert_equal_array_array,
-                          assert_not_equal_array_array,
-                          compare_snapshot
-                          )
-
-from openpathsampling.openmm_engine import *
-from openpathsampling.snapshot import Snapshot
-from openpathsampling.netcdfplus import ObjectJSON
-
-from openpathsampling.storage import Storage
 
 import mdtraj as md
+from nose.tools import (assert_equal)
+
+import openpathsampling.engines.openmm as peng
+
+from openpathsampling.netcdfplus import ObjectJSON
+from openpathsampling.storage import Storage
+from test_helpers import (data_filename,
+                          compare_snapshot
+                          )
 
 
 class testStorage(object):
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = paths.tools.trajectory_from_mdtraj(self.mdtraj)
+        self.traj = peng.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
 
         self.filename = data_filename("storage_test.nc")
         self.filename_clone = data_filename("storage_test_clone.nc")
@@ -78,6 +72,21 @@ class testStorage(object):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(self.filename))
 
+        print store._objects
+        print store._obj_store
+
+        print self.template_snapshot.__class__ in store._objects
+        print self.template_snapshot.__class__ in store._obj_store
+
+        print self.template_snapshot.__class__
+
+        store.simplifier.update_class_list()
+
+        print store.simplifier.type_classes.keys()
+
+        print store.simplifier.to_json({"1" : self.template_snapshot.__class__})
+
+
         copy = self.template_snapshot.copy()
         store.save(copy)
 
@@ -87,7 +96,7 @@ class testStorage(object):
         loaded_template = store.template
 
         compare_snapshot(loaded_template, self.template_snapshot)
-        loaded_copy = store.load(Snapshot, 1)
+        loaded_copy = store.load(peng.Snapshot, 1)
 
         compare_snapshot(loaded_template, loaded_copy)
 
@@ -102,7 +111,7 @@ class testStorage(object):
 
         store.save(self.traj)
 
-        store.clone(filename=self.filename_clone, subset = self.solute_indices)
+        store.clone(filename=self.filename_clone)
 
         # clone the storage and reduce the number of atoms to only solute
 
@@ -112,17 +121,15 @@ class testStorage(object):
 
         compare_snapshot(
             store2.snapshots.load(0),
-            store.snapshots.load(0).subset(self.solute_indices)
+            store.snapshots.load(0)
         )
 
         compare_snapshot(
             store2.snapshots.load(1),
-            store.snapshots.load(1).subset(self.solute_indices)
+            store.snapshots.load(1)
         )
         store.close()
         store2.close()
-
-        pass
 
     def test_clone_empty(self):
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')

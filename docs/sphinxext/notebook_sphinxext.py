@@ -9,9 +9,8 @@ import os, shutil, glob, re
 from sphinx.util.compat import Directive
 from docutils import nodes
 from docutils.parsers.rst import directives
-from IPython.nbconvert import html, python
-from IPython.nbformat.current import read, write
-#from runipy.notebook_runner import NotebookRunner, NotebookError
+from nbconvert.exporters import HTMLExporter, PythonExporter
+
 
 class NotebookDirective(Directive):
     """Insert an evaluated notebook into a document
@@ -121,13 +120,13 @@ class notebook_node(nodes.raw):
 
 def nb_to_python(nb_path):
     """convert notebook to python script"""
-    exporter = python.PythonExporter()
+    exporter = PythonExporter()
     output, resources = exporter.from_filename(nb_path)
     return output
 
 def nb_to_html(nb_path):
     """convert notebook to html"""
-    exporter = html.HTMLExporter(template_file='full')
+    exporter = HTMLExporter(template_file='full')
     output, resources = exporter.from_filename(nb_path)
     header = output.split('<head>', 1)[1].split('</head>',1)[0]
     body = output.split('<body>', 1)[1].split('</body>',1)[0]
@@ -164,45 +163,47 @@ def nb_to_html(nb_path):
     header = '\n'.join(header_lines)
 
     # concatenate raw html lines
-    lines = ['<div class="ipynotebook">']
-    lines.append(header)
-    lines.append(body)
-    lines.append('</div>')
+    lines = ['<div class="ipynotebook">', header, body, '</div>']
     return '\n'.join(lines)
 
-def evaluate_notebook(nb_path, dest_path=None, skip_exceptions=False):
-    # Create evaluated version and save it to the dest path.
-    # Always use --pylab so figures appear inline
-    # perhaps this is questionable?
-    notebook = read(open(nb_path), 'json')
-    nb_runner = NotebookRunner(notebook, pylab=True, mpl_inline=True)
-    try:
-        nb_runner.run_notebook(skip_exceptions=skip_exceptions)
-    except NotebookError as e:
-        print('\n', '-'*80)
-        print(e)
-        print('-'*80)
-        raise
-        # Return the traceback, filtering out ANSI color codes.
-        # http://stackoverflow.com/questions/13506033/filtering-out-ansi-escape-sequences
-        # return 'Notebook conversion failed with the following traceback: \n%s' % \
-        # re.sub(r'\\033[\[\]]([0-9]{1,2}([;@][0-9]{0,2})*)*[mKP]?', '', str(e))
-    if dest_path is None:
-        dest_path = 'temp_evaluated.ipynb'
-    write(nb_runner.nb, open(dest_path, 'w'), 'json')
-    ret = nb_to_html(dest_path)
-    if dest_path is 'temp_evaluated.ipynb':
-        os.remove(dest_path)
-    return ret
+
+# def evaluate_notebook(nb_path, dest_path=None, skip_exceptions=False):
+#     # Create evaluated version and save it to the dest path.
+#     # Always use --pylab so figures appear inline
+#     # perhaps this is questionable?
+#     notebook = read(open(nb_path), 'json')
+#     nb_runner = NotebookRunner(notebook, pylab=True, mpl_inline=True)
+#     try:
+#         nb_runner.run_notebook(skip_exceptions=skip_exceptions)
+#     except NotebookError as e:
+#         print('\n', '-'*80)
+#         print(e)
+#         print('-'*80)
+#         raise
+#         # Return the traceback, filtering out ANSI color codes.
+#         # http://stackoverflow.com/questions/13506033/filtering-out-ansi-escape-sequences
+#         # return 'Notebook conversion failed with the following traceback: \n%s' % \
+#         # re.sub(r'\\033[\[\]]([0-9]{1,2}([;@][0-9]{0,2})*)*[mKP]?', '', str(e))
+#     if dest_path is None:
+#         dest_path = 'temp_evaluated.ipynb'
+#     write(nb_runner.nb, open(dest_path, 'w'), 'json')
+#     ret = nb_to_html(dest_path)
+#     if dest_path is 'temp_evaluated.ipynb':
+#         os.remove(dest_path)
+#     return ret
+
 
 def formatted_link(path):
     return "`%s <%s>`__" % (os.path.basename(path), path)
 
+
 def visit_notebook_node(self, node):
     self.visit_raw(node)
 
+
 def depart_notebook_node(self, node):
     self.depart_raw(node)
+
 
 def setup(app):
     setup.app = app
@@ -215,3 +216,8 @@ def setup(app):
                  html=(visit_notebook_node, depart_notebook_node))
 
     app.add_directive('notebook', NotebookDirective)
+
+    return {
+        'parallel_read_safe' : True,
+        'parallel_write_safe' : True
+    }

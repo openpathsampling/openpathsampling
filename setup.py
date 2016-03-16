@@ -95,25 +95,35 @@ def buildKeywordDictionary():
     from distutils.core import Extension
     setupKeywords = {}
     setupKeywords["name"]              = "openpathsampling"
-    setupKeywords["version"]           = "0.0.1-alpha"
+    setupKeywords["version"]           = "0.0.4-alpha"
     setupKeywords["author"]            = "David W.H. Swenson, Jan-Hendrik Prinz, Peter Bolhuis and John D. Chodera"
     setupKeywords["author_email"]      = "dwhs@hyperblazer.net, jan.prinz@choderalab.org, p.g.bolhuis@uva.nl, choderaj@mskcc.org"
-    setupKeywords["license"]           = "GPL 2.0"
+    setupKeywords["license"]           = "LGPL 2.1 or later"
     setupKeywords["url"]               = "http://www.openpathsampling.org"
     setupKeywords["download_url"]      = "http://github.com/choderalab/openpathsampling"
     setupKeywords["packages"]          = ['openpathsampling',
                                           'openpathsampling.storage',
-                                          'openpathsampling.toy_dynamics',
                                           'openpathsampling.tests',
                                           'openpathsampling.analysis',
-                                          'openpathsampling.netcdfplus'
+                                          'openpathsampling.netcdfplus',
+                                          'openpathsampling.engines',
+                                          'openpathsampling.engines.features',
+                                          'openpathsampling.engines.openmm',
+                                          'openpathsampling.engines.openmm.features',
+                                          'openpathsampling.engines.toy',
+                                          'openpathsampling.engines.toy.features'
                                           ]
     setupKeywords["package_dir"]       = {
-        'openpathsampling' : 'openpathsampling',
-        'openpathsampling.storage' : 'openpathsampling/storage',
-        'openpathsampling.toy_dynamics' : 'openpathsampling/toy_dynamics',
-        'openpathsampling.tests' : 'openpathsampling/tests',
-        'openpathsampling.netcdfplus' : 'openpathsampling/netcdfplus'
+        'openpathsampling': 'openpathsampling',
+        'openpathsampling.storage': 'openpathsampling/storage',
+        'openpathsampling.tests': 'openpathsampling/tests',
+        'openpathsampling.netcdfplus': 'openpathsampling/netcdfplus',
+        'openpathsampling.engines': 'openpathsampling/engines',
+        'openpathsampling.engines.features': 'openpathsampling/engines/features',
+        'openpathsampling.engines.openmm': 'openpathsampling/engines/openmm',
+        'openpathsampling.engines.openmm.features': 'openpathsampling/engines/openmm/features',
+        'openpathsampling.engines.toy': 'openpathsampling/engines/toy',
+        'openpathsampling.engines.toy.features': 'openpathsampling/engines/toy/features'
     }
     #setupKeywords["py_modules"]        = ["pymbar", "timeseries", "testsystems", "confidenceintervals"]
     setupKeywords["data_files"]        = []

@@ -16,12 +16,12 @@ def join_volumes(volume_list):
 
     Parameters
     ----------
-    volume_list : list of Volume
+    volume_list : list of :class:`openpathsampling.Volume`
         the list to be joined together
 
     Returns
     -------
-    UnionVolume 
+    :class:`openpathsampling.UnionVolume`
         the union of the elements of the list, or EmptyVolume if list is
         empty
     """
