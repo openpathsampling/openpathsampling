@@ -105,7 +105,8 @@ class SingleTrajectoryAnalysis(object):
                                                           overlap=0)
     
     @staticmethod
-    def get_lifetime_segments(trajectory, from_vol, to_vol, forbidden=None):
+    def get_lifetime_segments(trajectory, from_vol, to_vol, forbidden=None,
+                              padding=[0, -1]):
         if forbidden is None:
             forbidden = paths.EmptyVolume()
         ensemble_BAB = paths.SequentialEnsemble([
@@ -120,7 +121,7 @@ class SingleTrajectoryAnalysis(object):
         ])
         BAB_split = ensemble_BAB.split(trajectory)
         AB_split = [ensemble_AB.split(part)[0] for part in BAB_split]
-        return [subtraj[0:-1] for subtraj in AB_split]
+        return [subtraj[padding[0]:padding[1]] for subtraj in AB_split]
 
 
     def analyze_lifetime(self, trajectory, state):
@@ -183,22 +184,20 @@ class SingleTrajectoryAnalysis(object):
         other = list(set([self.stateA, self.stateB]) - set([state]))[0]
         if interface is None:
             interface = state
-        counts_out = paths.SequentialEnsemble([
-            paths.AllInXEnsemble(state) & paths.LengthEnsemble(1),
-            paths.AllOutXEnsemble(state | other),
-            paths.AllInXEnsemble(state) & paths.LengthEnsemble(1)
-        ])
-        counts_in = paths.SequentialEnsemble([
-            paths.AllOutXEnsemble(state | other) & paths.LengthEnsemble(1),
-            paths.AllInXEnsemble(state), 
-            paths.AllOutXEnsemble(state | other) & paths.LengthEnsemble(1)
-        ])
-        flux_out_segments = counts_out.split(trajectory)
-        flux_in_segments = counts_in.split(trajectory)
-        for seg in flux_in_segments:
-            self.flux_segments[state]['in'] += [seg[1:-1]]
-        for seg in flux_out_segments:
-            self.flux_segments[state]['out'] += [seg[1:-1]]
+        self.flux_segments[state]['out'] = self.get_lifetime_segments(
+            trajectory=trajectory,
+            from_vol=~interface,
+            to_vol=state,
+            forbidden=other,
+            padding=[None, -1]
+        )
+        self.flux_segments[state]['in'] = self.get_lifetime_segments(
+            trajectory=trajectory,
+            from_vol=state,
+            to_vol=~interface,
+            forbidden=other,
+            padding=[None, -1]
+        )
 
     def new_analyze_flux(self, trajectory, state, interface=None):
         other = list(set([self.stateA, self.stateB]) - set([state]))[0]
