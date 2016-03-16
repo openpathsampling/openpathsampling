@@ -120,9 +120,18 @@ class testSingleTrajectoryAnalysis(object):
         assert_equal(flux_segs_A['out'][3], core_traj[15:17])
 
     def test_analyze_flux_with_interface(self):
-        flux_interface_traj_str = ""
-        flux_traj = self._make_traj(flux_interface_traj_str)
+        flux_iface_traj_str = "aixixaiaxiixiaxaixbxbixiaaixiai"
+        # frame numbers        0    5    0    5    0    5    0
+        # in (I) or out (O)      OOOIIIOOOOOIOII       IIIOO 
+        assert_equal(len(flux_iface_traj_str), 31) # check I counted correctly
+        flux_traj = self._make_traj(flux_iface_traj_str)
+        self.analyzer.reset_analysis()
         self.analyzer.analyze_flux(flux_traj, self.stateA, self.interfaceA0)
+        flux_segs_A = self.analyzer.flux_segments[self.stateA]
+        assert_equal(flux_segs_A['in'], [flux_traj[5:8], flux_traj[13:14],
+                                         flux_traj[15:17], flux_traj[24:27]])
+        assert_equal(flux_segs_A['out'], [flux_traj[2:5], flux_traj[8:13],
+                                          flux_traj[14:15], flux_traj[27:29]])
         raise SkipTest
 
     def test_analyze(self):
