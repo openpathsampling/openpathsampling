@@ -73,7 +73,8 @@ def attach_features(features, use_lazy_reversed=False):
             __features__ = dict()
 
         for name in ['attributes', 'minus', 'reversal', 'properties',
-                     'flip', 'numpy', 'lazy', 'required', 'classes']:
+                     'flip', 'numpy', 'lazy', 'required', 'classes',
+                     'exclude_copy']:
             if name not in __features__:
                 __features__[name] = []
 
@@ -108,6 +109,8 @@ def attach_features(features, use_lazy_reversed=False):
             #
         origin = dict()
         required = dict()
+        copy_fncs = list()
+        copy_feats = list()
         # loop over all the features
         for feature in __features__['classes']:
 
@@ -117,6 +120,8 @@ def attach_features(features, use_lazy_reversed=False):
                     __features__['properties'] += [prop]
                     setattr(cls, prop, property(getattr(feature, prop)))
 
+            has_copy = False
+
             # copy specific attribute types
             for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy', 'required']:
                 if hasattr(feature, name):
@@ -125,6 +130,16 @@ def attach_features(features, use_lazy_reversed=False):
                         content = [content]
 
                     if name == 'attributes':
+                        if hasattr(feature, 'copy'):
+                            fnc = getattr(feature, 'copy')
+                            if callable(fnc):
+                                copy_fncs.append(fnc)
+                                __features__['exclude_copy'] += content
+                                fnc_name = '_copy_' + str(len(copy_feats))
+                                setattr(cls, fnc_name, fnc)
+                                copy_feats.append(fnc_name)
+                                has_copy = True
+
                         for c in content:
                             if c in __features__['attributes']:
                                 raise RuntimeError((
@@ -207,11 +222,13 @@ def attach_features(features, use_lazy_reversed=False):
             ]
             code += [
                 "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
-                for lazy in __features__['lazy'] if lazy not in __features__['numpy']
+                for lazy in __features__['lazy'] if
+                lazy not in __features__['numpy'] and lazy not in __features__['exclude_copy']
             ]
             code += [
                 "       cls.{0} : self._lazy[cls.{0}].copy(),".format(lazy)
-                for lazy in __features__['lazy'] if lazy in __features__['numpy']
+                for lazy in __features__['lazy']
+                if lazy in __features__['numpy'] and lazy not in __features__['exclude_copy']
             ]
             code += [
                 "    }"
@@ -224,16 +241,22 @@ def attach_features(features, use_lazy_reversed=False):
         code += map(
             "    this.{0} = self.{0}".format,
             filter(
-                lambda x : x not in __features__['lazy'] and x not in __features__['numpy'],
+                lambda x : x not in __features__['lazy'] and x not in __features__['numpy']
+                           and x not in __features__['exclude_copy'],
                 __features__['parameters']
             )
         )
         code += map(
             "    this.{0} = self.{0}.copy()".format,
             filter(
-                lambda x : x not in __features__['lazy'] and x in __features__['numpy'],
+                lambda x : x not in __features__['lazy'] and x in __features__['numpy']
+                           and x not in __features__['exclude_copy'],
                 __features__['parameters']
             )
+        )
+
+        code += map(
+            "    self.{0}(this)".format, copy_feats
         )
 
         code += [
@@ -249,7 +272,8 @@ def attach_features(features, use_lazy_reversed=False):
             if ADD_SOURCE_CODE:
                 __features__['debug']['copy'] = source_code
 
-            cls.copy = copy
+            if 'copy' not in cls.__dict__:
+                cls.copy = copy
 
         except RuntimeError as e:
             print e
@@ -274,7 +298,13 @@ def attach_features(features, use_lazy_reversed=False):
             ]
             code += [
                 "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
+                for lazy in __features__['lazy'] if
+                lazy not in __features__['numpy'] and lazy not in __features__['exclude_copy']
+            ]
+            code += [
+                "       cls.{0} : self._lazy[cls.{0}].copy(),".format(lazy)
                 for lazy in __features__['lazy']
+                if lazy in __features__['numpy'] and lazy not in __features__['exclude_copy']
             ]
             code += [
                 "    }"
@@ -287,16 +317,22 @@ def attach_features(features, use_lazy_reversed=False):
         code += map(
             "    np.copyto(target.{0}, self.{0})".format,
             filter(
-                lambda x : x not in __features__['lazy'] and x in __features__['numpy'],
+                lambda x : x not in __features__['lazy'] and x in __features__['numpy']
+                and x not in __features__['exclude_copy'],
                 __features__['parameters']
             )
         )
         code += map(
             "    target.{0} = self.{0}".format,
             filter(
-                lambda x : x not in __features__['lazy'] and x not in __features__['numpy'],
+                lambda x : x not in __features__['lazy'] and x not in __features__['numpy']
+                and x not in __features__['exclude_copy'],
                 __features__['parameters']
             )
+        )
+
+        code += map(
+            "    self.{0}(this)".format, copy_feats
         )
 
         # compile the code and register the new function
@@ -308,7 +344,8 @@ def attach_features(features, use_lazy_reversed=False):
             if ADD_SOURCE_CODE:
                 __features__['debug']['copy_to'] = source_code
 
-            cls.copy_to = copy_to
+            if 'copy_to' not in cls.__dict__:
+                cls.copy_to = copy_to
 
         except RuntimeError as e:
             print e
@@ -381,8 +418,53 @@ def attach_features(features, use_lazy_reversed=False):
             if ADD_SOURCE_CODE:
                 __features__['debug']['create_reversed'] = source_code
 
+            if 'create_reversed' not in cls.__dict__:
+                cls.create_reversed = create_reversed
 
-            cls.create_reversed = create_reversed
+        except RuntimeError as e:
+            print e
+            pass
+
+        # compile the function for .create_empty()
+
+        # def create_empty(self):
+        #     this = cls.__new__(cls)
+        #     this._lazy = { ... }
+        #     this._reversed = None
+        #     return this
+
+        code = []
+        code += [
+            "def create_empty(self):",
+            "    this = cls.__new__(cls)"
+        ]
+
+        if has_lazy:
+            code += [
+                "    this._lazy = {",
+            ]
+            code += [
+                "    }"
+            ]
+
+        code += [
+            "    this._reversed = None"
+        ]
+        code += [
+            "    return this"
+        ]
+
+        # compile the code and register the new function
+        try:
+            source_code = '\n'.join(code)
+            cc = compile(source_code, '<string>', 'exec')
+            exec cc in locals()
+
+            if ADD_SOURCE_CODE:
+                __features__['debug']['create_empty'] = source_code
+
+            if 'create_empty' not in cls.__dict__:
+                cls.create_empty = create_empty
 
         except RuntimeError as e:
             print e
@@ -450,7 +532,8 @@ def attach_features(features, use_lazy_reversed=False):
             if ADD_SOURCE_CODE:
                 __features__['debug']['__init__'] = source_code
 
-            cls.__init__ = __init__
+            if '__init__' not in cls.__dict__:
+                cls.__init__ = __init__
 
         except RuntimeError as e:
             print e
@@ -488,7 +571,8 @@ def attach_features(features, use_lazy_reversed=False):
             if ADD_SOURCE_CODE:
                 __features__['debug']['init_empty'] = source_code
 
-            cls.init_empty = init_empty
+            if 'init_empty' not in cls.__dict__:
+                cls.init_empty = init_empty
 
         except RuntimeError as e:
             print e
@@ -506,8 +590,13 @@ def attach_features(features, use_lazy_reversed=False):
             ]
             code += [
                 "       cls.{0} : {0},".format(lazy)
-                for lazy in __features__['parameters']
-                if lazy in __features__['lazy']
+                for lazy in __features__['lazy'] if
+                lazy not in __features__['numpy'] and lazy not in __features__['exclude_copy']
+            ]
+            code += [
+                "       cls.{0} : {0}.copy(),".format(lazy)
+                for lazy in __features__['lazy']
+                if lazy in __features__['numpy'] and lazy not in __features__['exclude_copy']
             ]
             code += [
                 "    }"
@@ -522,7 +611,8 @@ def attach_features(features, use_lazy_reversed=False):
             [
                 feat for feat in __features__['parameters'] if
                 feat not in __features__['numpy'] and
-                feat not in __features__['lazy']
+                feat not in __features__['lazy'] and
+                feat not in __features__['exclude_copy']
             ])
 
         code += map(
@@ -530,8 +620,13 @@ def attach_features(features, use_lazy_reversed=False):
             [
                 feat for feat in __features__['parameters'] if
                 feat in __features__['numpy'] and
-                feat not in __features__['lazy']
+                feat not in __features__['lazy'] and
+                feat not in __features__['exclude_copy']
             ])
+
+        code += map(
+            "    self.{0}(self)".format, copy_feats
+        )
 
         # compile the code and register the new function
         try:
@@ -542,7 +637,8 @@ def attach_features(features, use_lazy_reversed=False):
             if ADD_SOURCE_CODE:
                 __features__['debug']['init_copy'] = source_code
 
-            cls.init_copy = init_copy
+            if 'init_copy' not in cls.__dict__:
+                cls.init_copy = init_copy
 
         except RuntimeError as e:
             print e
