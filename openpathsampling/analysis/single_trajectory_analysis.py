@@ -103,6 +103,25 @@ class SingleTrajectoryAnalysis(object):
         ensemble = paths.AllInXEnsemble(state)
         self.continuous_segments[state] += ensemble.split(trajectory,
                                                           overlap=0)
+    
+    @staticmethod
+    def get_lifetime_segments(trajectory, from_vol, to_vol, forbidden=None):
+        if forbidden is None:
+            forbidden = paths.EmptyVolume()
+        ensemble_BAB = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(to_vol) & paths.LengthEnsemble(1),
+            paths.PartInXEnsemble(from_vol) & paths.AllOutXEnsemble(to_vol),
+            paths.AllInXEnsemble(to_vol) & paths.LengthEnsemble(1)
+        ]) & paths.AllOutXEnsemble(forbidden)
+        ensemble_AB = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(from_vol) & paths.LengthEnsemble(1),
+            paths.OptionalEnsemble(paths.AllOutXEnsemble(to_vol)),
+            paths.AllInXEnsemble(to_vol) & paths.LengthEnsemble(1)
+        ])
+        BAB_split = ensemble_BAB.split(trajectory)
+        AB_split = [ensemble_AB.split(part)[0] for part in BAB_split]
+        return [subtraj[0:-1] for subtraj in AB_split]
+
 
     def analyze_lifetime(self, trajectory, state):
         """Analysis to obtain  lifetimes for given state.
@@ -116,20 +135,11 @@ class SingleTrajectoryAnalysis(object):
             transition
         """
         other_state = list(set([self.stateA, self.stateB]) - set([state]))[0]
-	ensemble_BAB = paths.SequentialEnsemble([
-	    paths.AllInXEnsemble(other_state) & paths.LengthEnsemble(1),
-	    paths.PartInXEnsemble(state) & paths.AllOutXEnsemble(other_state),
-	    paths.AllInXEnsemble(other_state) & paths.LengthEnsemble(1)
-	])
-	ensemble_AB = paths.SequentialEnsemble([
-	    paths.AllInXEnsemble(state) & paths.LengthEnsemble(1),
-	    paths.OptionalEnsemble(paths.AllOutXEnsemble(other_state)),
-	    paths.AllInXEnsemble(other_state) & paths.LengthEnsemble(1)
-	])
-        BAB_split = ensemble_BAB.split(trajectory)
-        AB_split = [ensemble_AB.split(part)[0] for part in BAB_split]
-        self.lifetime_segments[state] += [subtraj[0:-1] 
-                                          for subtraj in AB_split]
+        self.lifetime_segments[state] = self.get_lifetime_segments(
+            trajectory=trajectory,
+            from_vol=state,
+            to_vol=other_state
+        )
 
     def analyze_transition_duration(self, trajectory, stateA, stateB):
         """Analysis to obtain transition durations for given state.
@@ -212,7 +222,13 @@ class SingleTrajectoryAnalysis(object):
             frame_vol = frame_vols[0]
             previous_visit = last_visit[frame_vol]
             last_visit[frame_vol] = i
-            
+
+            # need to find: 
+            #    first crossing after exiting state
+            #    first entrance of state after crossing
+            # NOTE: this is really a generic thing that should be just the
+            # same for rates... this is the lifetime outside, basically. So
+            # can't I use that code?
 
 
     def analyze(self, trajectories):

@@ -106,6 +106,7 @@ class testSingleTrajectoryAnalysis(object):
         # in (I) or out (O):   OIOIIIOOI   IIOO 
         core_traj = self._make_traj(flux_core_test_str)
         self.analyzer.new_analyze_flux(core_traj, self.stateA)
+        self.analyzer.reset_analysis()
         self.analyzer.analyze_flux(core_traj, self.stateA)
         flux_segs_A = self.analyzer.flux_segments[self.stateA]
         assert_equal(len(flux_segs_A['in']), 4)
