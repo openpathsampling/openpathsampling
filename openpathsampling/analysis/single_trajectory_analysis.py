@@ -107,6 +107,47 @@ class SingleTrajectoryAnalysis(object):
     @staticmethod
     def get_lifetime_segments(trajectory, from_vol, to_vol, forbidden=None,
                               padding=[0, -1]):
+        """General script to get lifetimes.
+
+        Lifetimes for a transition between volumes are used in several other
+        calculations: obviously, the state lifetime, but also the flux
+        through an interface. This is a generic function to calculate that.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to analyze
+        from_vol : :class:`.Volume`
+            the volume for which this represents the lifetime: the
+            trajectory segments returned are associated with the lifetime of
+            `from_vol`
+        to_vol : :class:`.Volume`
+            the volume which indicates the end of the lifetime: a frame in
+            this volume means the trajectory is no longer associated with
+            `from_vol`
+        forbidden : :class:`.Volume`
+            if a frame is in `forbidden`, it cannot be part of the lifetime
+            of `from_vol`. This isn't needed in 2-state lifetime
+            calculations; however, it is useful to exclude other states
+            from a flux calculation
+        padding : list
+            adjusts which frames are returned as list indices. That is, the
+            returned segments are `full_segment[padding[0]:padding[1]]`.
+            The `full_segment`s are the segments from (and including) each
+            first frame in `from_vol` (after a visit to `to_vol`) until (and
+            including) the first frame in `to_vol`. To get the full segment
+            as output, use `padding=[None, None]`. The default is to remove
+            the final frame (`padding=[0, -1]`) so that it doesn't include
+            the frame in `to_vol`.
+
+        Returns
+        -------
+        list of :class:`.Trajectory`
+            the frames from (and including) each first entry from `to_vol`
+            into `from_vol` until (and including) the next entry into
+            `to_vol`, with no frames in `forbidden`, and with frames removed
+            from the ends according to `padding`
+        """
         if forbidden is None:
             forbidden = paths.EmptyVolume()
         ensemble_BAB = paths.SequentialEnsemble([
@@ -198,36 +239,6 @@ class SingleTrajectoryAnalysis(object):
             forbidden=other,
             padding=[None, -1]
         )
-
-    def new_analyze_flux(self, trajectory, state, interface=None):
-        other = list(set([self.stateA, self.stateB]) - set([state]))[0]
-        if interface is None:
-            interface = state
-        crossed = ~(interface | state | other)
-        last_visit = {
-            state: float('nan'),
-            crossed: float('nan'),
-            other: float('-inf')
-        }
-
-        flux_segments = self.flux_segments[state]
-        current_traj_type = None
-        for i in range(len(trajectory)):
-            frame = trajectory[i]
-            # figure out which volume the frame is in (there had better only
-            # be one answer) and assign the last_visited for that
-            frame_vols = [vol for vol in last_visit.keys() if vol(frame)]
-            assert len(frame_vols) == 1
-            frame_vol = frame_vols[0]
-            previous_visit = last_visit[frame_vol]
-            last_visit[frame_vol] = i
-
-            # need to find: 
-            #    first crossing after exiting state
-            #    first entrance of state after crossing
-            # NOTE: this is really a generic thing that should be just the
-            # same for rates... this is the lifetime outside, basically. So
-            # can't I use that code?
 
 
     def analyze(self, trajectories):
