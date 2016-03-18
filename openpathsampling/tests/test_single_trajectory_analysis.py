@@ -16,9 +16,11 @@ class testSingleTrajectoryAnalysis(object):
     def setup(self):
         op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
+        vol2 = paths.CVRangeVolume(op, -0.1, 0.7)
         vol3 = paths.CVRangeVolume(op, 2.0, 2.5)
         self.stateA = vol1
         self.stateB = vol3
+        self.interfaceA0 = vol2
 
         self.stateX = ~vol1 & ~vol3
 
@@ -33,7 +35,8 @@ class testSingleTrajectoryAnalysis(object):
         char_to_parameters = {
             'a' : {'lo' : 0.1, 'hi' : 0.5},
             'b' : {'lo' : 2.0, 'hi' : 2.5},
-            'x' : {'lo' : 0.5, 'hi' : 2.0}
+            'i' : {'lo' : 0.5, 'hi' : 0.7},
+            'x' : {'lo' : 0.7, 'hi' : 2.0}
         }
         delta = 0.05
         for char in traj_str:
@@ -115,6 +118,21 @@ class testSingleTrajectoryAnalysis(object):
         assert_equal(flux_segs_A['out'][1], core_traj[3:4])
         assert_equal(flux_segs_A['out'][2], core_traj[7:9])
         assert_equal(flux_segs_A['out'][3], core_traj[15:17])
+
+    def test_analyze_flux_with_interface(self):
+        flux_iface_traj_str = "aixixaiaxiixiaxaixbxbixiaaixiai"
+        # frame numbers        0    5    0    5    0    5    0
+        # in (I) or out (O)      OOOIIIOOOOOIOII       IIIOO 
+        assert_equal(len(flux_iface_traj_str), 31) # check I counted correctly
+        flux_traj = self._make_traj(flux_iface_traj_str)
+        self.analyzer.reset_analysis()
+        self.analyzer.analyze_flux(flux_traj, self.stateA, self.interfaceA0)
+        flux_segs_A = self.analyzer.flux_segments[self.stateA]
+        assert_equal(flux_segs_A['in'], [flux_traj[5:8], flux_traj[13:14],
+                                         flux_traj[15:17], flux_traj[24:27]])
+        assert_equal(flux_segs_A['out'], [flux_traj[2:5], flux_traj[8:13],
+                                          flux_traj[14:15], flux_traj[27:29]])
+        raise SkipTest
 
     def test_analyze(self):
         # only test that it runs -- correctness testing in the others
