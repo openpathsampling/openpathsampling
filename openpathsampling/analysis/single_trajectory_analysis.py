@@ -1,6 +1,18 @@
 import openpathsampling as paths
 import numpy as np
 
+class TrajectorySegmentContainer(object):
+    def __init__(self, segments, dt=None):
+        self.segments = segments
+        self.dt = dt
+
+    def frames(self):
+        return np.array([len(seg) for seg in self.segments])
+
+    def times(self):
+        return np.array([len(seg)*self.dt for seg in self.segments])
+
+
 
 class SingleTrajectoryAnalysis(object):
     """Analyze a trajectory or set of trajectories for transition properties.
