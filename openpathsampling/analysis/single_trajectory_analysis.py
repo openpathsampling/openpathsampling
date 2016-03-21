@@ -6,13 +6,26 @@ class TrajectorySegmentContainer(object):
         self.segments = segments
         self.dt = dt
 
-    def frames(self):
+    def n_frames(self):
         return np.array([len(seg) for seg in self.segments])
 
     def times(self):
+        if self.dt is None:
+            raise RuntimeError("No time delta set")
+            # TODO: this might become a logger.warn
         return np.array([len(seg)*self.dt for seg in self.segments])
 
-
+    def __add__(self, other):
+        if self.dt != other.dt:
+            raise RuntimeError(
+                "Different time steps in TrajectorySegmentContainers."
+            )
+        return TrajectorySegmentContainer(self.segments + other.segments,
+                                          self.dt)
+    
+    def __len__(self):
+        return len(self.segments)
+    
 
 class SingleTrajectoryAnalysis(object):
     """Analyze a trajectory or set of trajectories for transition properties.
@@ -51,12 +64,16 @@ class SingleTrajectoryAnalysis(object):
 
     def reset_analysis(self):
         """Reset the analysis by emptying all saved segments."""
-        self.continuous_segments = {self.stateA: [], self.stateB: []}
-        self.lifetime_segments = {self.stateA: [], self.stateB: []}
+        self.continuous_segments = {self.stateA: [], 
+                                    self.stateB: []}
+        self.lifetime_segments = {self.stateA: [], 
+                                  self.stateB: []}
         self.transition_segments = {(self.stateA, self.stateB): [], 
                                     (self.stateB, self.stateA): []}
-        self.flux_segments = {self.stateA: {'in': [], 'out': []},
-                              self.stateB: {'in': [], 'out': []}}
+        self.flux_segments = {self.stateA: {'in': [],
+                                            'out': []},
+                              self.stateB: {'in': [],
+                                            'out': []}}
 
     @property
     def continuous_frames(self):

@@ -12,6 +12,48 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+class testTrajectorySegmentContainer(object):
+    def setup(self):
+        op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
+        vol3 = paths.CVRangeVolume(op, 2.0, 2.5)
+
+        self.trajectory = make_1d_traj(coordinates=[0.2, 0.3, 0.6, 2.1, 2.2,
+                                                    0.7, 0.4, 0.35, 2.4,
+                                                    0.33, 0.32, 0.31],
+                                       velocities=[0.0]*12)
+
+        all_in_1 = paths.AllInXEnsemble(vol1)
+        self.segments = all_in_1.split(self.trajectory)
+        self.container = paths.TrajectorySegmentContainer(self.segments,
+                                                          dt=0.5)
+
+    def test_list_behavior(self):
+        assert_equal(len(self.container), 3)
+        # len
+        # getters
+        # setters (should override this at some point)
+        # iterators, zip
+        raise SkipTest
+
+    def test_n_frames(self):
+        raise SkipTest
+
+    def test_times(self):
+        raise SkipTest
+
+    @raises(RuntimeError)
+    def test_times_without_dt(self):
+        raise SkipTest
+
+    def test_add(self):
+        raise SkipTest
+
+    @raises(RuntimeError)
+    def test_add_different_dt(self):
+        raise SkipTest
+        
+
 class testSingleTrajectoryAnalysis(object):
     def setup(self):
         op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
