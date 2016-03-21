@@ -3,17 +3,24 @@ import numpy as np
 
 class TrajectorySegmentContainer(object):
     def __init__(self, segments, dt=None):
-        self.segments = segments
+        self._segments = segments
         self.dt = dt
 
+    @property
     def n_frames(self):
         return np.array([len(seg) for seg in self.segments])
 
+    @property
     def times(self):
         if self.dt is None:
             raise RuntimeError("No time delta set")
             # TODO: this might become a logger.warn
         return np.array([len(seg)*self.dt for seg in self.segments])
+
+    @property
+    def segments(self):
+        # segments cannot be set
+        return self._segments
 
     def __add__(self, other):
         if self.dt != other.dt:
@@ -22,9 +29,27 @@ class TrajectorySegmentContainer(object):
             )
         return TrajectorySegmentContainer(self.segments + other.segments,
                                           self.dt)
-    
+
+    def __iadd__(self, other):
+        # in this case, we ignore dt
+        self.segments += other.segments
+
     def __len__(self):
         return len(self.segments)
+
+    def __contains__(self, item):
+        return item in self.segments
+
+    def __iter__(self):
+        return self.segments.__iter__()
+
+    def __getitem__(self, key):
+        return self.segments[key]
+
+    def __setitem__(self, key, value):
+        raise TypeError("TrajectorySegmentContainer is immutable")
+
+    # intentionally do not support __mul__ & related
     
 
 class SingleTrajectoryAnalysis(object):

@@ -6,6 +6,7 @@ from test_helpers import make_1d_traj
 import openpathsampling as paths
 
 import random
+import numpy as np
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -30,21 +31,36 @@ class testTrajectorySegmentContainer(object):
 
     def test_list_behavior(self):
         assert_equal(len(self.container), 3)
-        # len
-        # getters
-        # setters (should override this at some point)
-        # iterators, zip
+        assert_equal(self.container[0], self.segments[0])
+        for (truth, beauty) in zip(self.container, self.segments):
+            assert_equal(truth, beauty)
+        assert_equal(self.segments[0] in self.container, True)
+
+    @raises(AttributeError)
+    def test_segment_setter_fails(self):
+        self.container.segments = [self.trajectory]
+
+    @raises(TypeError)
+    def test_segments_setitem_fails(self):
+        self.container.segments[0] = self.trajectory
+        # TODO: I'd like to find a way to get this to error; for now we Skip
         raise SkipTest
+    
+    def test_segments(self):
+        assert_equal(self.container[0], self.trajectory[0:2])
+        assert_equal(self.container[1], self.trajectory[6:8])
+        assert_equal(self.container[2], self.trajectory[9:12])
 
     def test_n_frames(self):
-        raise SkipTest
+        assert_equal(self.container.n_frames.tolist(), [2, 2, 3])
 
     def test_times(self):
-        raise SkipTest
+        assert_equal(self.container.times.tolist(), [1.0, 1.0, 1.5])
 
     @raises(RuntimeError)
     def test_times_without_dt(self):
-        raise SkipTest
+        bad_container = paths.TrajectorySegmentContainer(self.segments)
+        bad_container.times
 
     def test_add(self):
         raise SkipTest
