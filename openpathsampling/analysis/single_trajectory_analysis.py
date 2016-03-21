@@ -8,43 +8,39 @@ class TrajectorySegmentContainer(object):
 
     @property
     def n_frames(self):
-        return np.array([len(seg) for seg in self.segments])
+        return np.array([len(seg) for seg in self._segments])
 
     @property
     def times(self):
         if self.dt is None:
             raise RuntimeError("No time delta set")
             # TODO: this might become a logger.warn
-        return np.array([len(seg)*self.dt for seg in self.segments])
-
-    @property
-    def segments(self):
-        # segments cannot be set
-        return self._segments
+        return np.array([len(seg)*self.dt for seg in self._segments])
 
     def __add__(self, other):
         if self.dt != other.dt:
             raise RuntimeError(
                 "Different time steps in TrajectorySegmentContainers."
             )
-        return TrajectorySegmentContainer(self.segments + other.segments,
+        return TrajectorySegmentContainer(self._segments + other._segments,
                                           self.dt)
 
     def __iadd__(self, other):
         # in this case, we ignore dt
-        self.segments += other.segments
+        self._segments += other._segments
+        return self
 
     def __len__(self):
-        return len(self.segments)
+        return len(self._segments)
 
     def __contains__(self, item):
-        return item in self.segments
+        return item in self._segments
 
     def __iter__(self):
-        return self.segments.__iter__()
+        return self._segments.__iter__()
 
     def __getitem__(self, key):
-        return self.segments[key]
+        return self._segments[key]
 
     def __setitem__(self, key, value):
         raise TypeError("TrajectorySegmentContainer is immutable")

@@ -16,15 +16,15 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 class testTrajectorySegmentContainer(object):
     def setup(self):
         op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-        vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
-        vol3 = paths.CVRangeVolume(op, 2.0, 2.5)
+        self.vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
+        self.vol3 = paths.CVRangeVolume(op, 2.0, 2.5)
 
         self.trajectory = make_1d_traj(coordinates=[0.2, 0.3, 0.6, 2.1, 2.2,
                                                     0.7, 0.4, 0.35, 2.4,
                                                     0.33, 0.32, 0.31],
                                        velocities=[0.0]*12)
 
-        all_in_1 = paths.AllInXEnsemble(vol1)
+        all_in_1 = paths.AllInXEnsemble(self.vol1)
         self.segments = all_in_1.split(self.trajectory)
         self.container = paths.TrajectorySegmentContainer(self.segments,
                                                           dt=0.5)
@@ -36,15 +36,9 @@ class testTrajectorySegmentContainer(object):
             assert_equal(truth, beauty)
         assert_equal(self.segments[0] in self.container, True)
 
-    @raises(AttributeError)
-    def test_segment_setter_fails(self):
-        self.container.segments = [self.trajectory]
-
     @raises(TypeError)
     def test_segments_setitem_fails(self):
-        self.container.segments[0] = self.trajectory
-        # TODO: I'd like to find a way to get this to error; for now we Skip
-        raise SkipTest
+        self.container[0] = self.trajectory
     
     def test_segments(self):
         assert_equal(self.container[0], self.trajectory[0:2])
@@ -63,11 +57,32 @@ class testTrajectorySegmentContainer(object):
         bad_container.times
 
     def test_add(self):
-        raise SkipTest
+        ens_B = paths.AllInXEnsemble(self.vol3)
+        segs_B = ens_B.split(self.trajectory)
+        container_B = paths.TrajectorySegmentContainer(segs_B, dt=0.5)
+        assert_equal(len(container_B), 2)
+        test_container = self.container + container_B
+        assert_equal(len(test_container), 5)
+        for seg in self.container:
+            assert_equal(seg in test_container, True)
+        for seg in container_B:
+            assert_equal(seg in test_container, True)
 
     @raises(RuntimeError)
     def test_add_different_dt(self):
-        raise SkipTest
+        ens_B = paths.AllInXEnsemble(self.vol3)
+        segs_B = ens_B.split(self.trajectory)
+        container_B = paths.TrajectorySegmentContainer(segs_B)
+        test_container = self.container + container_B
+
+    def test_iadd(self):
+        ens_B = paths.AllInXEnsemble(self.vol3)
+        segs_B = ens_B.split(self.trajectory)
+        container_B = paths.TrajectorySegmentContainer(segs_B)
+        container_B_id = id(container_B)
+        container_B += self.container
+        assert_equal(len(container_B), 5)
+        assert_equal(container_B_id, id(container_B))
         
 
 class testSingleTrajectoryAnalysis(object):
@@ -190,7 +205,6 @@ class testSingleTrajectoryAnalysis(object):
                                          flux_traj[15:17], flux_traj[24:27]])
         assert_equal(flux_segs_A['out'], [flux_traj[2:5], flux_traj[8:13],
                                           flux_traj[14:15], flux_traj[27:29]])
-        raise SkipTest
 
     def test_analyze(self):
         # only test that it runs -- correctness testing in the others
