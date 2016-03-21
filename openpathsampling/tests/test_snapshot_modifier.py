@@ -94,6 +94,8 @@ class testNoModification(object):
 
 class testRandomizeVelocities(object):
     def setup(self):
+        # TODO: check against several possibilities, including various
+        # combinations of shapes of velocities and masses.
         pass
 
     def test_call(self):

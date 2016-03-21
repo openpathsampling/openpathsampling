@@ -48,8 +48,8 @@ class SnapshotModifier(StorableNamedObject):
         return full_array
 
     @abc.abstractmethod
-    def __call__(self, snapshot): # pragma: no cover
-        pass
+    def __call__(self, snapshot): 
+        raise NotImplementedError
 
 class NoModification(SnapshotModifier):
     """Modifier with no change: returns a copy of the snapshot."""
@@ -59,7 +59,17 @@ class NoModification(SnapshotModifier):
 class RandomVelocities(SnapshotModifier):
     """Randomize velocities according to the Boltzmann distribution."""
     def __init__(self, subset_mask=None, beta=None):
-        pass
+        super(RandomVelocities, self).__init__(subset_mask)
+        self.beta = beta
 
     def __call__(self, snapshot):
-        pass
+        n_atoms = snapshot.topology.n_atoms
+        masses = snapshot.topology.masses
+        velocities = np.empty_like(snapshot.velocities)
+        n_spatial = len(velocities[0])
+        for i in range(n_atoms):
+            sigma = np.sqrt(1.0 / (beta * masses[i]))
+            velocities[atom_i, :] = sigma * np.random.normal(size=n_spatial)
+        new_snap = snapshot.copy()
+        new_snap.velocities = velocities
+        return new_snap
