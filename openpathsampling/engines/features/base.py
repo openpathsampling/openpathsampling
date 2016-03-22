@@ -127,7 +127,7 @@ class CodeContext(object):
 
 
 FeatureTuple = namedtuple(
-        '__features__', 'classes variables properties functions required lazy numpy reversal minus flip exclude_copy imports debug'
+        'FeatureTuple', 'classes variables properties functions required lazy numpy reversal minus flip exclude_copy imports debug'
     )
 
 
@@ -560,8 +560,8 @@ def attach_features(features, use_lazy_reversed=False):
                 code += [
                     "    this._lazy = {",
                 ]
-                code.format("       cls.{0} : {0},",        'lazy', [], ['numpy', 'exclude_copy'])
-                code.format("       cls.{0} : {0}.copy(),", 'lazy', ['numpy'], ['exclude_copy'])
+                code.format("       cls.{0} : {0},",        'lazy', [], ['numpy'])
+                code.format("       cls.{0} : {0}.copy(),", 'lazy', ['numpy'], [])
                 code += [
                     "    }"
                 ]
@@ -570,12 +570,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "    this._reversed = None"
             ]
 
-            code.format("    this.{0} = {0}",          'variables', [], ['lazy', 'numpy', 'exclude_copy'])
-            code.format("    np.copyto(self.{0}, {0})",   'variables', ['numpy'], ['lazy', 'exclude_copy'])
-
-            code += map(
-                "    self.{0}(this)".format, copy_feats
-            )
+            code.format("    self.{0} = {0}",          'variables', [], ['lazy', 'numpy'])
+            code.format("    np.copyto(self.{0}, {0})",   'variables', ['numpy'], ['lazy'])
 
         # register (new) __features__ with the class as a namedtuple
         cls.__features__ = FeatureTuple(**__features__)
