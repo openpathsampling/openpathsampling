@@ -67,8 +67,8 @@ class RandomVelocities(SnapshotModifier):
         masses = snapshot.topology.masses
         velocities = np.empty_like(snapshot.velocities)
         n_spatial = len(velocities[0])
-        for i in range(n_atoms):
-            sigma = np.sqrt(1.0 / (beta * masses[i]))
+        for atom_i in range(n_atoms):
+            sigma = np.sqrt(1.0 / (self.beta * masses[atom_i]))
             velocities[atom_i, :] = sigma * np.random.normal(size=n_spatial)
         new_snap = snapshot.copy()
         new_snap.velocities = velocities

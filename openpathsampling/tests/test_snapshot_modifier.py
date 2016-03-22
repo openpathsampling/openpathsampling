@@ -96,9 +96,41 @@ class testRandomizeVelocities(object):
     def setup(self):
         # TODO: check against several possibilities, including various
         # combinations of shapes of velocities and masses.
-        pass
+        topology_2x3D = paths.engines.toy.Topology(
+            n_spatial=3, n_atoms=2, masses=np.array([2.0, 3.0]), pes=None
+        )
+        topology_3x1D = paths.engines.toy.Topology(
+            n_spatial=1, n_atoms=3, masses=np.array([[2.0], [3.0], [4.0]]),
+            pes=None
+        )
+        topology_1x2D = paths.engines.toy.Topology(
+            n_spatial=2, n_atoms=1, masses=np.array([1.0, 2.0]), pes=None
+        )
+        self.snap_2x3D = paths.engines.toy.Snapshot(
+            coordinates=np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+            velocities=np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
+            topology=topology_2x3D
+        )
+        self.snap_3x1D = paths.engines.toy.Snapshot(
+            coordinates=np.array([[0.0], [0.0], [0.0]]),
+            velocities=np.array([[0.0], [0.0], [0.0]]),
+            topology=topology_3x1D
+        )
+        self.snap_1x2D = paths.engines.toy.Snapshot(
+            coordinates=np.array([[0.0, 0.0]]),
+            velocities=np.array([[0.0, 0.0]]),
+            topology=topology_1x2D
+        )
+        self.randomizer_1 = RandomVelocities(beta=1.0)
+        self.randomizer_5 = RandomVelocities(beta=1.0/5.0)
 
     def test_call(self):
+        new_1x2D = self.randomizer_1(self.snap_1x2D)
+        assert_equal(new_1x2D.coordinates.shape, new_1x2D.velocities.shape)
+        assert_array_almost_equal(new_1x2D.coordinates,
+                                  self.snap_1x2D.coordinates)
+        assert_true(new_1x2D is not self.snap_1x2D)
+        # assert_true(new_1x2D.coordinates is not self.snap_1x2D.coordinates)
         raise SkipTest
 
     def test_subset_call(self):
