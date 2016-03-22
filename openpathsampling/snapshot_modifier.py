@@ -40,11 +40,17 @@ class SnapshotModifier(StorableNamedObject):
         self.subset_mask = subset_mask
 
     def extract_subset(self, full_array):
-        return [full_array[i] for i in self.subset_mask]
+        if self.subset_mask is None:
+            return full_array.copy()
+        else:
+            return [full_array[i] for i in self.subset_mask]
 
     def apply_to_subset(self, full_array, modified):
-        for (i, val) in zip(self.subset_mask, modified):
-            full_array[i] = val
+        if self.subset_mask is None:
+            full_array = modified
+        else:
+            for (i, val) in zip(self.subset_mask, modified):
+                full_array[i] = val
         return full_array
 
     @abc.abstractmethod
@@ -63,13 +69,17 @@ class RandomVelocities(SnapshotModifier):
         self.beta = beta
 
     def __call__(self, snapshot):
-        n_atoms = snapshot.topology.n_atoms
-        masses = snapshot.topology.masses
-        velocities = np.empty_like(snapshot.velocities)
-        n_spatial = len(velocities[0])
+        new_snap = snapshot.copy()
+        # TODO: REMOVE THE NEXT 2 LINES after #445
+        new_snap.coordinates = new_snap.coordinates.copy()
+        new_snap.velocities = new_snap.velocities.copy() 
+
+        vel_subset = self.extract_subset(new_snap.velocities)
+        masses = self.extract_subset(snapshot.topology.masses)
+        n_spatial = len(vel_subset[0])
+        n_atoms = len(vel_subset)
         for atom_i in range(n_atoms):
             sigma = np.sqrt(1.0 / (self.beta * masses[atom_i]))
-            velocities[atom_i, :] = sigma * np.random.normal(size=n_spatial)
-        new_snap = snapshot.copy()
-        new_snap.velocities = velocities
+            vel_subset[atom_i, :] = sigma * np.random.normal(size=n_spatial)
+        self.apply_to_subset(new_snap.velocities, vel_subset)
         return new_snap
