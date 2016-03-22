@@ -16,6 +16,7 @@ def netcdfplus_init(store):
         chunksizes=(1,)
     )
 
+
 @property
 def coordinates(snapshot):
     """
@@ -31,6 +32,7 @@ def coordinates(snapshot):
 
     return None
 
+
 @property
 def box_vectors(snapshot):
     """
@@ -44,6 +46,7 @@ def box_vectors(snapshot):
         return snapshot.statics.box_vectors
 
     return None
+
 
 @property
 def md(snapshot):
@@ -65,6 +68,7 @@ def md(snapshot):
         output[0, :, :] = snapshot.coordinates
 
         return mdtraj.Trajectory(output, snapshot.topology.md)
+
 
 @property
 def xyz(snapshot):

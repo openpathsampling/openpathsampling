@@ -1,6 +1,6 @@
 from shared import KineticContainerStore
 
-attributes = ['kinetics', 'is_reversed']
+variables = ['kinetics', 'is_reversed']
 lazy = ['kinetics']
 flip = ['is_reversed']
 

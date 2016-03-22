@@ -5,7 +5,7 @@ engine : :class:`openpathsampling.DynamicsEngine`
     referenec to the engine used to generate the snapshot
 """
 
-attributes = ['engine']
+variables = ['engine']
 
 
 def netcdfplus_init(store):

@@ -201,7 +201,7 @@ def attach_features(features, use_lazy_reversed=False):
         else:
             __features__ = dict()
 
-        for name in ['attributes', 'minus', 'reversal', 'properties',
+        for name in ['variables', 'minus', 'reversal', 'properties',
                      'flip', 'numpy', 'lazy', 'required', 'classes',
                      'exclude_copy', 'imports', 'functions']:
             if name not in __features__:
@@ -243,13 +243,13 @@ def attach_features(features, use_lazy_reversed=False):
         for feature in __features__['classes']:
 
             # add properties
-            for prop in feature.attributes:
+            for prop in feature.__dict__:
                 if hasattr(feature, prop) and type(getattr(feature, prop)) is property:
                     __features__['properties'] += [prop]
                     setattr(cls, prop, getattr(feature, prop))
 
             # copy specific attribute types
-            for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports', 'functions']:
+            for name in ['variables', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports', 'functions']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
@@ -266,7 +266,7 @@ def attach_features(features, use_lazy_reversed=False):
                                     else:
                                         setattr(cls, c, fnc)
 
-                    if name == 'attributes':
+                    if name == 'variables':
                         if hasattr(feature, 'copy'):
                             fnc = getattr(feature, 'copy')
                             if callable(fnc):
@@ -277,7 +277,7 @@ def attach_features(features, use_lazy_reversed=False):
                                 copy_feats.append(fnc_name)
 
                         for c in content:
-                            if c in __features__['attributes']:
+                            if c in __features__['variables']:
                                 raise RuntimeError((
                                     'Feature collision. Attribute "%s" present in two features. ' +
                                     'Please remove one feature "%s" or "%s"') %
@@ -289,23 +289,17 @@ def attach_features(features, use_lazy_reversed=False):
                     __features__[name] += content
 
         for name in __features__['required']:
-            if name not in __features__['attributes']:
+            if name not in __features__['variables']:
                 raise RuntimeError((
                     'Attribute "%s" is required, but only "%s" found. Please make sure ' +
                     'that is will be added by ' +
-                    'some feature') % (name, str(__features__['attributes']))
+                    'some feature') % (name, str(__features__['variables']))
                 )
 
         __features__['reversal'] = [
-            attr for attr in __features__['attributes']
+            attr for attr in __features__['variables']
             if attr not in __features__['minus']
-            and attr not in __features__['properties']
             and attr not in __features__['flip']
-        ]
-
-        __features__['parameters'] = [
-            attr for attr in __features__['attributes']
-            if attr not in __features__['properties']
         ]
 
         has_lazy = bool(__features__['lazy']) or use_lazy_reversed
@@ -330,8 +324,8 @@ def attach_features(features, use_lazy_reversed=False):
                     if prop not in parser.attributes:
                         parser.add_docs_from(
                             getattr(feature, prop),
-                            keep_only=['attributes'],
-                            translate={'returns': 'attributes'}
+                            keep_only=['variables'],
+                            translate={'returns': 'variables'}
                         )
 
         # set new docstring. This is only possible since our class is created
@@ -368,8 +362,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "    this._reversed = None"
             ]
 
-            code.format("    this.{0} = self.{0}",          'parameters', [], ['lazy', 'numpy', 'exclude_copy'])
-            code.format("    this.{0} = self.{0}.copy()",   'parameters', ['numpy'], ['lazy', 'exclude_copy'])
+            code.format("    this.{0} = self.{0}",          'variables', [], ['lazy', 'numpy', 'exclude_copy'])
+            code.format("    this.{0} = self.{0}.copy()",   'variables', ['numpy'], ['lazy', 'exclude_copy'])
 
             code += map(
                 "    self.{0}(this)".format, copy_feats
@@ -406,8 +400,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "    target._reversed = None"
             ]
 
-            code.format("    target.{0} = self.{0}",              'parameters', [], ['lazy', 'numpy', 'exclude_copy'])
-            code.format("    np.copyto(target.{0}, self.{0})",    'parameters', ['numpy'], ['lazy', 'exclude_copy'])
+            code.format("    target.{0} = self.{0}",              'variables', [], ['lazy', 'numpy', 'exclude_copy'])
+            code.format("    np.copyto(target.{0}, self.{0})",    'variables', ['numpy'], ['lazy', 'exclude_copy'])
 
             code += map(
                 "    self.{0}(this)".format, copy_feats
@@ -492,7 +486,7 @@ def attach_features(features, use_lazy_reversed=False):
 
         # we use as signature all feature names in parameters
         parameters = []
-        for feature in __features__['parameters']:
+        for feature in __features__['variables']:
             if feature in __features__['flip']:
                 parameters += ['{0}=False'.format(feature)]
             else:
@@ -524,7 +518,7 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             # set non-lazy attributes
-            code.format("    self.{0} = {0}", 'parameters', [], ['lazy'])
+            code.format("    self.{0} = {0}", 'variables', [], ['lazy'])
 
         # compile the function for __init__
 
@@ -569,8 +563,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "    this._reversed = None"
             ]
 
-            code.format("    this.{0} = {0}",          'parameters', [], ['lazy', 'numpy', 'exclude_copy'])
-            code.format("    np.copyto(self.{0}, {0})",   'parameters', ['numpy'], ['lazy', 'exclude_copy'])
+            code.format("    this.{0} = {0}",          'variables', [], ['lazy', 'numpy', 'exclude_copy'])
+            code.format("    np.copyto(self.{0}, {0})",   'variables', ['numpy'], ['lazy', 'exclude_copy'])
 
             code += map(
                 "    self.{0}(this)".format, copy_feats

@@ -192,14 +192,14 @@ class FeatureSnapshotStore(BaseSnapshotStore):
         return self.snapshot_class.__features__['classes']
 
     @property
-    def parameters(self):
-        return self.snapshot_class.__features__['parameters']
+    def storables(self):
+        return self.snapshot_class.__features__['variables']
 
     def _set(self, idx, snapshot):
-        [self.write(attr, idx, snapshot) for attr in self.parameters]
+        [self.write(attr, idx, snapshot) for attr in self.storables]
 
     def _get(self, idx, snapshot):
-        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.parameters]
+        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.storables]
 
     def _init(self):
         super(FeatureSnapshotStore, self)._init()
