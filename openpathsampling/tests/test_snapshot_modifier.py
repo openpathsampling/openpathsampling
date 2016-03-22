@@ -121,17 +121,33 @@ class testRandomizeVelocities(object):
             velocities=np.array([[0.0, 0.0]]),
             topology=topology_1x2D
         )
-        self.randomizer_1 = RandomVelocities(beta=1.0)
-        self.randomizer_5 = RandomVelocities(beta=1.0/5.0)
+        self.randomizer = RandomVelocities(beta=1.0/5.0)
 
     def test_call(self):
-        new_1x2D = self.randomizer_1(self.snap_1x2D)
+        new_1x2D = self.randomizer(self.snap_1x2D)
         assert_equal(new_1x2D.coordinates.shape, new_1x2D.velocities.shape)
         assert_array_almost_equal(new_1x2D.coordinates,
                                   self.snap_1x2D.coordinates)
         assert_true(new_1x2D is not self.snap_1x2D)
         # assert_true(new_1x2D.coordinates is not self.snap_1x2D.coordinates)
-        raise SkipTest
+        assert_true(new_1x2D.velocities is not self.snap_1x2D.velocities)
+        # assert that the contents of the velocities have changed?
+
+        new_2x3D = self.randomizer(self.snap_2x3D)
+        assert_equal(new_2x3D.coordinates.shape, new_2x3D.velocities.shape)
+        assert_array_almost_equal(new_2x3D.coordinates,
+                                  self.snap_2x3D.coordinates)
+        assert_true(new_2x3D is not self.snap_2x3D)
+        # assert_true(new_2x3D.coordinates is not self.snap_2x3D.coordinates)
+        assert_true(new_2x3D.velocities is not self.snap_2x3D.velocities)
+
+        new_3x1D = self.randomizer(self.snap_3x1D)
+        assert_equal(new_3x1D.coordinates.shape, new_3x1D.velocities.shape)
+        assert_array_almost_equal(new_3x1D.coordinates,
+                                  self.snap_3x1D.coordinates)
+        assert_true(new_3x1D is not self.snap_3x1D)
+        # assert_true(new_3x1D.coordinates is not self.snap_3x1D.coordinates)
+        assert_true(new_3x1D.velocities is not self.snap_3x1D.velocities)
 
     def test_subset_call(self):
         raise SkipTest
