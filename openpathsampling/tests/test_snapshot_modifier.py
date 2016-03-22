@@ -121,13 +121,13 @@ class testRandomizeVelocities(object):
             velocities=np.array([[0.0, 0.0]]),
             topology=topology_1x2D
         )
-        self.randomizer = RandomVelocities(beta=1.0/5.0)
 
     def test_call(self):
         # NOTE: these tests basically check the API. Tests for correctness
         # are in `test_snapshot_modifier.ipynb`, because they are inherently
         # stochastic.
-        new_1x2D = self.randomizer(self.snap_1x2D)
+        randomizer = RandomVelocities(beta=1.0/5.0)
+        new_1x2D = randomizer(self.snap_1x2D)
         assert_equal(new_1x2D.coordinates.shape, new_1x2D.velocities.shape)
         assert_array_almost_equal(new_1x2D.coordinates,
                                   self.snap_1x2D.coordinates)
@@ -136,7 +136,7 @@ class testRandomizeVelocities(object):
         assert_true(new_1x2D.velocities is not self.snap_1x2D.velocities)
         # assert that the contents of the velocities have changed?
 
-        new_2x3D = self.randomizer(self.snap_2x3D)
+        new_2x3D = randomizer(self.snap_2x3D)
         assert_equal(new_2x3D.coordinates.shape, new_2x3D.velocities.shape)
         assert_array_almost_equal(new_2x3D.coordinates,
                                   self.snap_2x3D.coordinates)
@@ -144,7 +144,7 @@ class testRandomizeVelocities(object):
         assert_true(new_2x3D.coordinates is not self.snap_2x3D.coordinates)
         assert_true(new_2x3D.velocities is not self.snap_2x3D.velocities)
 
-        new_3x1D = self.randomizer(self.snap_3x1D)
+        new_3x1D = randomizer(self.snap_3x1D)
         assert_equal(new_3x1D.coordinates.shape, new_3x1D.velocities.shape)
         assert_array_almost_equal(new_3x1D.coordinates,
                                   self.snap_3x1D.coordinates)
@@ -153,4 +153,15 @@ class testRandomizeVelocities(object):
         assert_true(new_3x1D.velocities is not self.snap_3x1D.velocities)
 
     def test_subset_call(self):
-        raise SkipTest
+        randomizer = RandomVelocities(beta=1.0/5.0, subset_mask=[0])
+        new_2x3D = randomizer(self.snap_2x3D)
+        assert_equal(new_2x3D.coordinates.shape, new_2x3D.velocities.shape)
+        assert_array_almost_equal(new_2x3D.coordinates,
+                                  self.snap_2x3D.coordinates)
+        assert_true(new_2x3D is not self.snap_2x3D)
+        assert_true(new_2x3D.coordinates is not self.snap_2x3D.coordinates)
+        assert_true(new_2x3D.velocities is not self.snap_2x3D.velocities)
+        # show that the unchanged atom is, in fact, unchanged
+        assert_array_almost_equal(new_2x3D.velocities[1], 
+                                  self.snap_2x3D.velocities[1])
+

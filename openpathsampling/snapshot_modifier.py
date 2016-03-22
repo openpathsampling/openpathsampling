@@ -1,4 +1,3 @@
-
 import random
 import logging
 import abc
@@ -80,6 +79,6 @@ class RandomVelocities(SnapshotModifier):
         n_atoms = len(vel_subset)
         for atom_i in range(n_atoms):
             sigma = np.sqrt(1.0 / (self.beta * masses[atom_i]))
-            vel_subset[atom_i, :] = sigma * np.random.normal(size=n_spatial)
+            vel_subset[atom_i] = sigma * np.random.normal(size=n_spatial)
         self.apply_to_subset(new_snap.velocities, vel_subset)
         return new_snap
