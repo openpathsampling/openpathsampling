@@ -109,46 +109,33 @@ class SingleTrajectoryAnalysis(object):
 
     @property
     def continuous_frames(self):
-        return {k: np.array([len(seg) for seg in self.continuous_segments[k]])
+        return {k: self.continuous_segments[k].n_frames
                 for k in self.continuous_segments.keys()}
     
     @property
     def continuous_times(self):
-        if self.dt is None: # pragma: no cover
-            raise RuntimeError("No time delta set")
-            # TODO: this might become a logger.warn
-        continuous_frames = self.continuous_frames
-        return {k : continuous_frames[k]*self.dt 
-                for k in continuous_frames.keys()}
+        return {k: self.continuous_segments[k].times
+                for k in self.continuous_segments.keys()}
 
     @property
     def lifetime_frames(self):
-        return {k: np.array([len(seg) for seg in self.lifetime_segments[k]])
+        return {k: self.lifetime_segments[k].n_frames 
                 for k in self.lifetime_segments.keys()}
                              
     @property
     def lifetimes(self):
-        if self.dt is None: # pragma: no cover
-            raise RuntimeError("No time delta set")
-            # TODO: this might become a logger.warn; use dt=1 otherwise
-        lifetime_frames = self.lifetime_frames
-        return {k : lifetime_frames[k]*self.dt 
-                for k in lifetime_frames.keys()}
+        return {k: self.lifetime_segments[k].times
+                for k in self.lifetime_segments.keys()}
 
     @property
     def transition_duration_frames(self):
-        return {k: np.array([len(seg) for seg in self.transition_segments[k]])
+        return {k: self.transition_segments[k].n_frames
                 for k in self.transition_segments.keys()}
 
     @property
     def transition_duration(self):
-        if self.dt is None: # pragma: no cover
-            raise RuntimeError("No time delta set")
-            # TODO: this might become a logger.warn; use dt=1 otherwise
-        transition_duration_frames = self.transition_duration_frames
-        return {k : transition_duration_frames[k]*self.dt 
-                for k in transition_duration_frames.keys()}
-
+        return {k: self.transition_segments[k].times
+                for k in self.transition_segments.keys()}
 
     def analyze_continuous_time(self, trajectory, state):
         """Analysis to obtain continuous times for given state.
