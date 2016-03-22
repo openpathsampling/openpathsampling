@@ -11,6 +11,7 @@ import numpy as np
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testTrajectorySegmentContainer(object):
@@ -201,10 +202,12 @@ class testSingleTrajectoryAnalysis(object):
         self.analyzer.reset_analysis()
         self.analyzer.analyze_flux(flux_traj, self.stateA, self.interfaceA0)
         flux_segs_A = self.analyzer.flux_segments[self.stateA]
-        assert_equal(flux_segs_A['in'], [flux_traj[5:8], flux_traj[13:14],
-                                         flux_traj[15:17], flux_traj[24:27]])
-        assert_equal(flux_segs_A['out'], [flux_traj[2:5], flux_traj[8:13],
-                                          flux_traj[14:15], flux_traj[27:29]])
+        assert_equal(flux_segs_A['in'][:], 
+                     [flux_traj[5:8], flux_traj[13:14], flux_traj[15:17],
+                      flux_traj[24:27]])
+        assert_equal(flux_segs_A['out'][:], 
+                     [flux_traj[2:5], flux_traj[8:13], flux_traj[14:15],
+                      flux_traj[27:29]])
 
     def test_analyze(self):
         # only test that it runs -- correctness testing in the others

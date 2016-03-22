@@ -85,16 +85,27 @@ class SingleTrajectoryAnalysis(object):
 
     def reset_analysis(self):
         """Reset the analysis by emptying all saved segments."""
-        self.continuous_segments = {self.stateA: [], 
-                                    self.stateB: []}
-        self.lifetime_segments = {self.stateA: [], 
-                                  self.stateB: []}
-        self.transition_segments = {(self.stateA, self.stateB): [], 
-                                    (self.stateB, self.stateA): []}
-        self.flux_segments = {self.stateA: {'in': [],
-                                            'out': []},
-                              self.stateB: {'in': [],
-                                            'out': []}}
+        stateA = self.stateA
+        stateB = self.stateB
+        dt = self.dt
+        self.continuous_segments = {
+            stateA: TrajectorySegmentContainer(segments=[], dt=dt), 
+            stateB: TrajectorySegmentContainer(segments=[], dt=dt)
+        }
+        self.lifetime_segments = {
+            stateA: TrajectorySegmentContainer(segments=[], dt=dt), 
+            stateB: TrajectorySegmentContainer(segments=[], dt=dt)
+        }
+        self.transition_segments = {
+            (stateA, stateB): TrajectorySegmentContainer(segments=[], dt=dt),
+            (stateB, stateA): TrajectorySegmentContainer(segments=[], dt=dt)
+        }
+        self.flux_segments = {
+            stateA: {'in': TrajectorySegmentContainer(segments=[], dt=dt), 
+                     'out': TrajectorySegmentContainer(segments=[], dt=dt)},
+            stateB: {'in': TrajectorySegmentContainer(segments=[], dt=dt), 
+                     'out': TrajectorySegmentContainer(segments=[], dt=dt)}
+        }
 
     @property
     def continuous_frames(self):
@@ -151,8 +162,9 @@ class SingleTrajectoryAnalysis(object):
             transition
         """
         ensemble = paths.AllInXEnsemble(state)
-        self.continuous_segments[state] += ensemble.split(trajectory,
-                                                          overlap=0)
+        segments = ensemble.split(trajectory, overlap=0)
+        new_container = TrajectorySegmentContainer(segments, self.dt)
+        self.continuous_segments[state] += new_container
     
     @staticmethod
     def get_lifetime_segments(trajectory, from_vol, to_vol, forbidden=None,
@@ -192,7 +204,7 @@ class SingleTrajectoryAnalysis(object):
 
         Returns
         -------
-        list of :class:`.Trajectory`
+        :class:`.TrajectorySegmentContainer`
             the frames from (and including) each first entry from `to_vol`
             into `from_vol` until (and including) the next entry into
             `to_vol`, with no frames in `forbidden`, and with frames removed
@@ -227,11 +239,13 @@ class SingleTrajectoryAnalysis(object):
             transition
         """
         other_state = list(set([self.stateA, self.stateB]) - set([state]))[0]
-        self.lifetime_segments[state] = self.get_lifetime_segments(
+        segments = self.get_lifetime_segments(
             trajectory=trajectory,
             from_vol=state,
             to_vol=other_state
         )
+        self.lifetime_segments[state] += TrajectorySegmentContainer(segments,
+                                                                    self.dt)
 
     def analyze_transition_duration(self, trajectory, stateA, stateB):
         """Analysis to obtain transition durations for given state.
@@ -254,9 +268,9 @@ class SingleTrajectoryAnalysis(object):
             ),
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
-        self.transition_segments[(stateA, stateB)] += [
-            seg[1:-1] for seg in transition_ensemble.split(trajectory)
-        ]
+        segments = [seg[1:-1] for seg in transition_ensemble.split(trajectory)]
+        new_container = TrajectorySegmentContainer(segments, self.dt)
+        self.transition_segments[(stateA, stateB)] += new_container
 
     def analyze_flux(self, trajectory, state, interface=None):
         """Analysis to obtain flux segments for given state.
@@ -275,20 +289,24 @@ class SingleTrajectoryAnalysis(object):
         other = list(set([self.stateA, self.stateB]) - set([state]))[0]
         if interface is None:
             interface = state
-        self.flux_segments[state]['out'] = self.get_lifetime_segments(
+        out_segments = self.get_lifetime_segments(
             trajectory=trajectory,
             from_vol=~interface,
             to_vol=state,
             forbidden=other,
             padding=[None, -1]
         )
-        self.flux_segments[state]['in'] = self.get_lifetime_segments(
+        out_container = TrajectorySegmentContainer(out_segments, self.dt)
+        self.flux_segments[state]['out'] += out_container
+        in_segments = self.get_lifetime_segments(
             trajectory=trajectory,
             from_vol=state,
             to_vol=~interface,
             forbidden=other,
             padding=[None, -1]
         )
+        in_container = TrajectorySegmentContainer(in_segments, self.dt)
+        self.flux_segments[state]['in'] += in_container
 
 
     def analyze(self, trajectories):
