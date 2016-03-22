@@ -20,7 +20,7 @@ def netcdfplus_init(store):
         chunksizes=(1,)
     )
 
-
+@property
 def coordinates(snapshot):
     """
     Returns
@@ -35,7 +35,7 @@ def coordinates(snapshot):
 
     return None
 
-
+@property
 def box_vectors(snapshot):
     """
     Returns
@@ -49,7 +49,7 @@ def box_vectors(snapshot):
 
     return None
 
-
+@property
 def md(snapshot):
     """
     Returns

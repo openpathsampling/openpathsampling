@@ -1,5 +1,127 @@
 from openpathsampling.netcdfplus import DelayedLoader
 from numpydoctools import NumpyDocTools
+import openpathsampling as paths
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+def _snapshot_function_overridden(cls, method):
+    """
+    check if in a snapshot class a method was overridden by the user in any (super-)class
+
+    Used to prevent the decorator from overriding user set functions
+
+    Parameters
+    ----------
+    cls : :class:`BaseSnapshot`
+        a class derived from snapshot
+    method : str
+        the name of the method to be inspected
+
+    Returns
+    -------
+    bool
+        returns `True` if in any super-class the method was overridden
+
+    """
+
+    fnc = getattr(cls, method)
+
+    if hasattr(paths.BaseSnapshot, method):
+        # if the method is present in BaseSnapshot it does not count as overridden
+        return not (fnc.im_func is getattr(paths.BaseSnapshot, method).im_func)
+    elif method in cls.__dict__:
+        return True
+    elif cls is paths.BaseSnapshot or cls is object:
+        return False
+    else:
+        return _snapshot_function_overridden(cls.__base__, method)
+
+
+def _register_function(cls, name, code, __features__ = None):
+
+    import openpathsampling as paths
+    import numpy as np
+
+    # compile the code and register the new function
+    try:
+        source_code = '\n'.join(code)
+        cc = compile(source_code, '<string>', 'exec')
+        exec cc in locals()
+
+        if __features__ is not None:
+            __features__['debug'][name] = source_code
+
+        if 'copy' not in cls.__dict__:
+            if _snapshot_function_overridden(cls, name):
+                raise RuntimeWarning(
+                    'Subclassing snapshots with overridden function is only possible of all of these '
+                    'functions are overridden again. Otherwise some features might not be copied. '
+                    'The general practise of overriding is not recommended.')
+            setattr(cls, name, locals()[name])
+        else:
+            logger.debug(
+                'Function "%s" for class "%s" exists and will not be overridden' %
+                (name, cls.__name__)
+            )
+
+    except RuntimeError as e:
+        logger.warn(
+            'Problems compiling function "%s" for class "%s". Implementation will not be available!' %
+            (name, cls.__name__)
+        )
+        pass
+
+
+class CodeFunction(list):
+    def __init__(self, name, context):
+        list.__init__(self)
+        self.name = name
+        self.context = context
+
+    def __enter__(self):
+        del self[:]
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        _register_function(
+            self.context.cls,
+            self.name,
+            self,
+            self.context.__features__
+        )
+
+    def __add__(self, other):
+        self.extend(other)
+        return self
+
+    def format(self, s, list_array_name, include=None, exclude=None):
+        if include is None:
+            include = []
+        if exclude is None:
+            exclude = []
+
+        for item in self.context.__features__[list_array_name]:
+            add = True
+            for inc in include:
+                if item not in self.context.__features__[inc]:
+                    add = False
+
+            for excl in exclude:
+                if item in self.context.__features__[excl]:
+                    add = False
+
+            if add:
+                self.append(s.format(item))
+
+class CodeContext(object):
+    def __init__(self, cls, __features__):
+        self.cls = cls
+        self.__features__ = __features__
+
+    def Function(self, name):
+        return CodeFunction(name, self)
 
 
 def attach_features(features, use_lazy_reversed=False):
@@ -9,8 +131,6 @@ def attach_features(features, use_lazy_reversed=False):
 
     # create a parser that can combine numpy docstrings
     parser = NumpyDocTools()
-
-    ADD_SOURCE_CODE = True
 
     def _decorator(cls):
         """
@@ -60,10 +180,6 @@ def attach_features(features, use_lazy_reversed=False):
 
         """
 
-        # important for compile to work properly
-        import openpathsampling as paths
-        import numpy as np
-
         parser.clear()
 
         # create and fill `__features__` with values from feature structures
@@ -74,13 +190,12 @@ def attach_features(features, use_lazy_reversed=False):
 
         for name in ['attributes', 'minus', 'reversal', 'properties',
                      'flip', 'numpy', 'lazy', 'required', 'classes',
-                     'exclude_copy']:
+                     'exclude_copy', 'imports', 'functions']:
             if name not in __features__:
                 __features__[name] = []
 
-        if ADD_SOURCE_CODE:
-            if 'debug' not in __features__:
-                __features__['debug'] = {}
+        if 'debug' not in __features__:
+            __features__['debug'] = {}
 
         __features__['classes'] += features
 
@@ -91,22 +206,20 @@ def attach_features(features, use_lazy_reversed=False):
             feature = __features__['classes'][feat_no]
 
             # add provides additional features
-            if hasattr(feature, 'provides'):
-                if type(feature.provides) is list:
-                    for c in feature.provides:
+            if hasattr(feature, 'imports'):
+                if type(feature.imports) is list:
+                    for c in feature.imports:
                         if c not in __features__['classes']:
                             __features__['classes'].append(c)
                 else:
-                    if feature.provides not in __features__['classes']:
-                        __features__['classes'].append(feature.provides)
+                    if feature.imports not in __features__['classes']:
+                        __features__['classes'].append(feature.imports)
 
             feat_no += 1
 
         if use_lazy_reversed:
             cls._reversed = DelayedLoader()
-            # if '_reversed' not in __features__['lazy']:
-            #     __features__['lazy'] += ['_reversed']
-            #
+
         origin = dict()
         required = dict()
         copy_fncs = list()
@@ -116,18 +229,29 @@ def attach_features(features, use_lazy_reversed=False):
 
             # add properties
             for prop in feature.attributes:
-                if hasattr(feature, prop) and callable(getattr(feature, prop)):
+                if hasattr(feature, prop) and type(getattr(feature, prop)) is property:
                     __features__['properties'] += [prop]
-                    setattr(cls, prop, property(getattr(feature, prop)))
+                    setattr(cls, prop, getattr(feature, prop))
 
             has_copy = False
 
             # copy specific attribute types
-            for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy', 'required']:
+            for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports', 'functions']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
                         content = [content]
+
+                    if name == 'functions':
+                        for c in content:
+                            if hasattr(feature, c):
+                                fnc = getattr(feature, c)
+                                if callable(fnc):
+                                    if hasattr(cls, c):
+                                        raise RuntimeWarning(
+                                            'Collision: Function "%s" from feature %s already exists.' % (c, feature))
+                                    else:
+                                        setattr(cls, c, fnc)
 
                     if name == 'attributes':
                         if hasattr(feature, 'copy'):
@@ -210,74 +334,38 @@ def attach_features(features, use_lazy_reversed=False):
         #     this._lazy = { ... }
         #     this.feature1 = self.feature1
 
-        code = []
-        code += [
-            "def copy(self):",
-            "    this = cls.__new__(cls)",
-        ]
+        context = CodeContext(cls, __features__)
 
-        if has_lazy:
+        with context.Function('copy') as code:
             code += [
-                "    this._lazy = {",
-            ]
-            code += [
-                "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
-                for lazy in __features__['lazy'] if
-                lazy not in __features__['numpy'] and lazy not in __features__['exclude_copy']
-            ]
-            code += [
-                "       cls.{0} : self._lazy[cls.{0}].copy(),".format(lazy)
-                for lazy in __features__['lazy']
-                if lazy in __features__['numpy'] and lazy not in __features__['exclude_copy']
-            ]
-            code += [
-                "    }"
+                "def copy(self):",
+                "    this = cls.__new__(cls)",
             ]
 
-        code += [
-            "    this._reversed = None"
-        ]
+            if has_lazy:
+                code += [
+                    "    this._lazy = {",
+                ]
+                code.format("       cls.{0} : self._lazy[cls.{0}],",        'lazy', [], ['numpy', 'exclude_copy'])
+                code.format("       cls.{0} : self._lazy[cls.{0}].copy(),", 'lazy', ['numpy'], ['exclude_copy'])
+                code += [
+                    "    }"
+                ]
 
-        code += map(
-            "    this.{0} = self.{0}".format,
-            filter(
-                lambda x : x not in __features__['lazy'] and x not in __features__['numpy']
-                           and x not in __features__['exclude_copy'],
-                __features__['parameters']
+            code += [
+                "    this._reversed = None"
+            ]
+
+            code.format("    this.{0} = self.{0}",          'parameters', [], ['lazy', 'numpy', 'exclude_copy'])
+            code.format("    this.{0} = self.{0}.copy()",   'parameters', ['numpy'], ['lazy', 'exclude_copy'])
+
+            code += map(
+                "    self.{0}(this)".format, copy_feats
             )
-        )
-        code += map(
-            "    this.{0} = self.{0}.copy()".format,
-            filter(
-                lambda x : x not in __features__['lazy'] and x in __features__['numpy']
-                           and x not in __features__['exclude_copy'],
-                __features__['parameters']
-            )
-        )
 
-        code += map(
-            "    self.{0}(this)".format, copy_feats
-        )
-
-        code += [
-            "    return this"
-        ]
-
-        # compile the code and register the new function
-        try:
-            source_code = '\n'.join(code)
-            cc = compile(source_code, '<string>', 'exec')
-            exec cc in locals()
-
-            if ADD_SOURCE_CODE:
-                __features__['debug']['copy'] = source_code
-
-            if 'copy' not in cls.__dict__:
-                cls.copy = copy
-
-        except RuntimeError as e:
-            print e
-            pass
+            code += [
+                "    return this"
+            ]
 
         # compile the function for .copy_to(target)
 
@@ -287,69 +375,31 @@ def attach_features(features, use_lazy_reversed=False):
         #     this.feature1 = self.feature1
         #     return this
 
-        code = []
-        code += [
-            "def copy_to(self, target):",
-        ]
-
-        if has_lazy:
+        with context.Function('copy_to') as code:
             code += [
-                "    target._lazy = {",
-            ]
-            code += [
-                "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
-                for lazy in __features__['lazy'] if
-                lazy not in __features__['numpy'] and lazy not in __features__['exclude_copy']
-            ]
-            code += [
-                "       cls.{0} : self._lazy[cls.{0}].copy(),".format(lazy)
-                for lazy in __features__['lazy']
-                if lazy in __features__['numpy'] and lazy not in __features__['exclude_copy']
-            ]
-            code += [
-                "    }"
+                "def copy_to(self, target):",
             ]
 
-        code += [
-            "    target._reversed = None"
-        ]
+            if has_lazy:
+                code += [
+                    "    target._lazy = {",
+                ]
+                code.format("       cls.{0} : self._lazy[cls.{0}],",        'lazy', [], ['numpy', 'exclude_copy'])
+                code.format("       cls.{0} : self._lazy[cls.{0}].copy(),", 'lazy', ['numpy'], ['exclude_copy'])
+                code += [
+                    "    }"
+                ]
 
-        code += map(
-            "    np.copyto(target.{0}, self.{0})".format,
-            filter(
-                lambda x : x not in __features__['lazy'] and x in __features__['numpy']
-                and x not in __features__['exclude_copy'],
-                __features__['parameters']
+            code += [
+                "    target._reversed = None"
+            ]
+
+            code.format("    target.{0} = self.{0}",              'parameters', [], ['lazy', 'numpy', 'exclude_copy'])
+            code.format("    np.copyto(target.{0}, self.{0})",    'parameters', ['numpy'], ['lazy', 'exclude_copy'])
+
+            code += map(
+                "    self.{0}(this)".format, copy_feats
             )
-        )
-        code += map(
-            "    target.{0} = self.{0}".format,
-            filter(
-                lambda x : x not in __features__['lazy'] and x not in __features__['numpy']
-                and x not in __features__['exclude_copy'],
-                __features__['parameters']
-            )
-        )
-
-        code += map(
-            "    self.{0}(this)".format, copy_feats
-        )
-
-        # compile the code and register the new function
-        try:
-            source_code = '\n'.join(code)
-            cc = compile(source_code, '<string>', 'exec')
-            exec cc in locals()
-
-            if ADD_SOURCE_CODE:
-                __features__['debug']['copy_to'] = source_code
-
-            if 'copy_to' not in cls.__dict__:
-                cls.copy_to = copy_to
-
-        except RuntimeError as e:
-            print e
-            pass
 
         # compile the function for .create_reversed()
 
@@ -361,69 +411,39 @@ def attach_features(features, use_lazy_reversed=False):
         #     this.feature3 = ~ self.feature3  # flip features
         #     return this
 
-        code = []
-        code += [
-            "def create_reversed(self):",
-            "    this = cls.__new__(cls)"
-        ]
-
-        if has_lazy:
+        with context.Function('create_reversed') as code:
             code += [
-                "    this._lazy = {",
-            ]
-            code += [
-                "       cls.{0} : self._lazy[cls.{0}],".format(lazy)
-                for lazy in __features__['lazy']
+                "def create_reversed(self):",
+                "    this = cls.__new__(cls)"
             ]
 
+            if has_lazy:
+                code += [
+                    "    this._lazy = {",
+                ]
+                code.format("       cls.{0} : self._lazy[cls.{0}],", 'lazy')
+
+                # This should not be necessary since we do not flip lazy loading OPS objects
+
+                # code.format("       cls.{0} : self._lazy[cls.{0}],", 'reversal', ['lazy'])
+                # code.format("       cls.{0} : - self._lazy[cls.{0}],", 'minus', ['lazy'])
+                # code.format("       cls.{0} : not self._lazy[cls.{0}],", 'flip', ['lazy'])
+
+                code += [
+                    "    }"
+                ]
+
             code += [
-                "    }"
+                "    this._reversed = self"
             ]
 
-        code += [
-            "    this._reversed = self"
-        ]
+            code.format("    this.{0} = self.{0}", 'reversal', [], ['lazy'])
+            code.format("    this.{0} = - self.{0}", 'minus', [], ['lazy'])
+            code.format("    this.{0} = not self.{0}", 'flip', [], ['lazy'])
 
-        code += map(
-            "    this.{0} = self.{0}".format,
-            filter(
-                lambda x : x not in __features__['lazy'],
-                __features__['reversal']
-            )
-        )
-        code += map("    this.{0} = - self.{0}".format,
-            filter(
-                lambda x : x not in __features__['lazy'],
-                __features__['minus']
-            )
-        )
-
-        code += map("    this.{0} = ~ self.{0}".format,
-            filter(
-                lambda x : x not in __features__['lazy'],
-                __features__['flip']
-            )
-        )
-
-        code += [
-            "    return this"
-        ]
-
-        # compile the code and register the new function
-        try:
-            source_code = '\n'.join(code)
-            cc = compile(source_code, '<string>', 'exec')
-            exec cc in locals()
-
-            if ADD_SOURCE_CODE:
-                __features__['debug']['create_reversed'] = source_code
-
-            if 'create_reversed' not in cls.__dict__:
-                cls.create_reversed = create_reversed
-
-        except RuntimeError as e:
-            print e
-            pass
+            code += [
+                "    return this"
+            ]
 
         # compile the function for .create_empty()
 
@@ -433,42 +453,23 @@ def attach_features(features, use_lazy_reversed=False):
         #     this._reversed = None
         #     return this
 
-        code = []
-        code += [
-            "def create_empty(self):",
-            "    this = cls.__new__(cls)"
-        ]
-
-        if has_lazy:
+        with context.Function('create_empty') as code:
             code += [
-                "    this._lazy = {",
-            ]
-            code += [
-                "    }"
+                "def create_empty(self):",
+                "    this = cls.__new__(cls)"
             ]
 
-        code += [
-            "    this._reversed = None"
-        ]
-        code += [
-            "    return this"
-        ]
+            if has_lazy:
+                code += [
+                    "    this._lazy = {}",
+                ]
 
-        # compile the code and register the new function
-        try:
-            source_code = '\n'.join(code)
-            cc = compile(source_code, '<string>', 'exec')
-            exec cc in locals()
-
-            if ADD_SOURCE_CODE:
-                __features__['debug']['create_empty'] = source_code
-
-            if 'create_empty' not in cls.__dict__:
-                cls.create_empty = create_empty
-
-        except RuntimeError as e:
-            print e
-            pass
+            code += [
+                "    this._reversed = None"
+            ]
+            code += [
+                "    return this"
+            ]
 
         # compile the function for __init__
 
@@ -492,52 +493,28 @@ def attach_features(features, use_lazy_reversed=False):
         else:
             signature = ''
 
-        code += [
-            "def __init__(self%s):" % signature,
-        ]
-
-        # dict for lazy attributes using DelayedLoader descriptor
-        if has_lazy:
+        with context.Function('__init__') as code:
             code += [
-                "    self._lazy = {",
-            ]
-            code += [
-                "       cls.{0} : {0},".format(lazy)
-                for lazy in __features__['lazy']
-            ]
-            code += [
-                "    }"
+                "def __init__(self%s):" % signature,
             ]
 
-        # set _reversed
-        code += [
-            "    self._reversed = None"
-        ]
+            # dict for lazy attributes using DelayedLoader descriptor
+            if has_lazy:
+                code += [
+                    "    self._lazy = {",
+                ]
+                code.format("       cls.{0} : {0},", 'lazy')
+                code += [
+                    "    }"
+                ]
 
-        # set non-lazy attributes
-        code += map(
-            "    self.{0} = {0}".format,
-            filter(
-                lambda x : x not in __features__['lazy'],
-                __features__['parameters']
-            )
-        )
+            # set _reversed
+            code += [
+                "    self._reversed = None"
+            ]
 
-        # compile the code and register the new function
-        try:
-            source_code = '\n'.join(code)
-            cc = compile(source_code, '<string>', 'exec')
-            exec cc in locals()
-
-            if ADD_SOURCE_CODE:
-                __features__['debug']['__init__'] = source_code
-
-            if '__init__' not in cls.__dict__:
-                cls.__init__ = __init__
-
-        except RuntimeError as e:
-            print e
-            pass
+            # set non-lazy attributes
+            code.format("    self.{0} = {0}", 'parameters', [], ['lazy'])
 
         # compile the function for __init__
 
@@ -546,104 +523,50 @@ def attach_features(features, use_lazy_reversed=False):
         #     self._reversed = None
         #     return this
 
-        code = []
-        code += [
-            "def init_empty(self):",
-        ]
-
-        # dict for lazy attributes using DelayedLoader descriptor
-        if has_lazy:
+        with context.Function('init_empty') as code:
             code += [
-                "    self._lazy = {}",
+                "def init_empty(self):",
             ]
 
-        # set _reversed
-        code += [
-            "    self._reversed = None"
-        ]
+            # dict for lazy attributes using DelayedLoader descriptor
+            if has_lazy:
+                code += [
+                    "    self._lazy = {}",
+                ]
 
-        # compile the code and register the new function
-        try:
-            source_code = '\n'.join(code)
-            cc = compile(source_code, '<string>', 'exec')
-            exec cc in locals()
-
-            if ADD_SOURCE_CODE:
-                __features__['debug']['init_empty'] = source_code
-
-            if 'init_empty' not in cls.__dict__:
-                cls.init_empty = init_empty
-
-        except RuntimeError as e:
-            print e
-            pass
-
-        code = []
-        code += [ "@staticmethod" ]
-        code += [
-            "def init_copy(self%s):" % signature,
-        ]
-
-        if has_lazy:
+            # set _reversed
             code += [
-                "    self._lazy = {",
-            ]
-            code += [
-                "       cls.{0} : {0},".format(lazy)
-                for lazy in __features__['lazy'] if
-                lazy not in __features__['numpy'] and lazy not in __features__['exclude_copy']
-            ]
-            code += [
-                "       cls.{0} : {0}.copy(),".format(lazy)
-                for lazy in __features__['lazy']
-                if lazy in __features__['numpy'] and lazy not in __features__['exclude_copy']
-            ]
-            code += [
-                "    }"
+                "    self._reversed = None"
             ]
 
-        code += [
-            "    self._reversed = None"
-        ]
+        with context.Function('init_copy') as code:
+            code += [ "@staticmethod" ]
+            code += [
+                "def init_copy(self%s):" % signature,
+            ]
 
-        code += map(
-            "    self.{0} = {0}".format,
-            [
-                feat for feat in __features__['parameters'] if
-                feat not in __features__['numpy'] and
-                feat not in __features__['lazy'] and
-                feat not in __features__['exclude_copy']
-            ])
+            if has_lazy:
+                code += [
+                    "    this._lazy = {",
+                ]
+                code.format("       cls.{0} : {0},",        'lazy', [], ['numpy', 'exclude_copy'])
+                code.format("       cls.{0} : {0}.copy(),", 'lazy', ['numpy'], ['exclude_copy'])
+                code += [
+                    "    }"
+                ]
 
-        code += map(
-            "    np.copyto(self.{0}, {0})".format,
-            [
-                feat for feat in __features__['parameters'] if
-                feat in __features__['numpy'] and
-                feat not in __features__['lazy'] and
-                feat not in __features__['exclude_copy']
-            ])
+            code += [
+                "    this._reversed = None"
+            ]
 
-        code += map(
-            "    self.{0}(self)".format, copy_feats
-        )
+            code.format("    this.{0} = {0}",          'parameters', [], ['lazy', 'numpy', 'exclude_copy'])
+            code.format("    np.copyto(self.{0}, {0})",   'parameters', ['numpy'], ['lazy', 'exclude_copy'])
 
-        # compile the code and register the new function
-        try:
-            source_code = '\n'.join(code)
-            cc = compile(source_code, '<string>', 'exec')
-            exec cc in locals()
+            code += map(
+                "    self.{0}(this)".format, copy_feats
+            )
 
-            if ADD_SOURCE_CODE:
-                __features__['debug']['init_copy'] = source_code
-
-            if 'init_copy' not in cls.__dict__:
-                cls.init_copy = init_copy
-
-        except RuntimeError as e:
-            print e
-            pass
-
+        # register (new) __features__ with the class
         cls.__features__ = __features__
 
         return cls
