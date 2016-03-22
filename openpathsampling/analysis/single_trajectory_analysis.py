@@ -150,8 +150,7 @@ class SingleTrajectoryAnalysis(object):
         """
         ensemble = paths.AllInXEnsemble(state)
         segments = ensemble.split(trajectory, overlap=0)
-        new_container = TrajectorySegmentContainer(segments, self.dt)
-        self.continuous_segments[state] += new_container
+        return TrajectorySegmentContainer(segments, self.dt)
     
     @staticmethod
     def get_lifetime_segments(trajectory, from_vol, to_vol, forbidden=None,
@@ -231,8 +230,7 @@ class SingleTrajectoryAnalysis(object):
             from_vol=state,
             to_vol=other_state
         )
-        self.lifetime_segments[state] += TrajectorySegmentContainer(segments,
-                                                                    self.dt)
+        return TrajectorySegmentContainer(segments, self.dt)
 
     def analyze_transition_duration(self, trajectory, stateA, stateB):
         """Analysis to obtain transition durations for given state.
@@ -256,8 +254,7 @@ class SingleTrajectoryAnalysis(object):
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
         segments = [seg[1:-1] for seg in transition_ensemble.split(trajectory)]
-        new_container = TrajectorySegmentContainer(segments, self.dt)
-        self.transition_segments[(stateA, stateB)] += new_container
+        return TrajectorySegmentContainer(segments, self.dt)
 
     def analyze_flux(self, trajectory, state, interface=None):
         """Analysis to obtain flux segments for given state.
@@ -284,7 +281,6 @@ class SingleTrajectoryAnalysis(object):
             padding=[None, -1]
         )
         out_container = TrajectorySegmentContainer(out_segments, self.dt)
-        self.flux_segments[state]['out'] += out_container
         in_segments = self.get_lifetime_segments(
             trajectory=trajectory,
             from_vol=state,
@@ -293,8 +289,7 @@ class SingleTrajectoryAnalysis(object):
             padding=[None, -1]
         )
         in_container = TrajectorySegmentContainer(in_segments, self.dt)
-        self.flux_segments[state]['in'] += in_container
-
+        return {'in': in_container, 'out': out_container}
 
     def analyze(self, trajectories):
         """Full analysis of a trajectory or trajectories.
@@ -306,13 +301,27 @@ class SingleTrajectoryAnalysis(object):
         # TODO: I hate using isinstance, but I don't see another way
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
+        
+        # shortcuts for readability
+        c_segs = self.continuous_segments
+        l_segs = self.lifetime_segments
+        t_segs = self.transition_segments
+        f_dicts = self.flux_segments
         for traj in trajectories:
             for state in [self.stateA, self.stateB]:
-                self.analyze_continuous_time(traj, state)
-                self.analyze_lifetime(traj, state)
-                self.analyze_flux(traj, state)
-            self.analyze_transition_duration(traj, self.stateA, self.stateB)
-            self.analyze_transition_duration(traj, self.stateB, self.stateA)
+                c_segs[state] += self.analyze_continuous_time(traj, state)
+                l_segs[state] += self.analyze_lifetime(traj, state)
+                f_dict = self.analyze_flux(traj, state)
+                f_dicts[state]['in'] += f_dict['in']
+                f_dicts[state]['out'] += f_dict['out']
+            t_duration_AB = self.analyze_transition_duration(traj,
+                                                             self.stateA,
+                                                             self.stateB)
+            t_duration_BA = self.analyze_transition_duration(traj,
+                                                             self.stateB,
+                                                             self.stateA)
+            t_segs[(self.stateB, self.stateA)] += t_duration_AB
+            t_segs[(self.stateA, self.stateB)] += t_duration_BA
         # return self so we can init and analyze in one line
         return self
 

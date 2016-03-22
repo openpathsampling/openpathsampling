@@ -122,54 +122,34 @@ class testSingleTrajectoryAnalysis(object):
                             velocities=[1.0]*len(sequence))
 
     def test_analyze_continuous_time(self):
-        self.analyzer.analyze_continuous_time(self.trajectory, self.stateA)
-        assert_equal(self.analyzer.continuous_frames[self.stateA].tolist(),
-                     [3, 1, 1, 1, 1, 1, 1])
-        self.analyzer.analyze_continuous_time(self.trajectory, self.stateB)
-        assert_equal(self.analyzer.continuous_frames[self.stateB].tolist(),
-                     [1, 1, 1, 5])
-        assert_almost_equal(self.analyzer.continuous_times[self.stateA].mean(),
-                            9.0/7.0*0.1)
-        assert_almost_equal(self.analyzer.continuous_times[self.stateB].mean(),
-                            8.0/4.0*0.1)
-
-    @raises(KeyError)
-    def test_analyze_continuous_time_bad_state(self):
-        self.analyzer.analyze_continuous_time(self.trajectory, self.stateX)
+        resultA = self.analyzer.analyze_continuous_time(self.trajectory, 
+                                                        self.stateA)
+        assert_equal(resultA.n_frames.tolist(), [3, 1, 1, 1, 1, 1, 1])
+        resultB = self.analyzer.analyze_continuous_time(self.trajectory,
+                                                        self.stateB)
+        assert_equal(resultB.n_frames.tolist(), [1, 1, 1, 5])
+        assert_almost_equal(resultA.times.mean(), 9.0/7.0*0.1)
+        assert_almost_equal(resultB.times.mean(), 8.0/4.0*0.1)
 
     def test_analyze_lifetime(self):
-        self.analyzer.analyze_lifetime(self.trajectory, self.stateA)
-        self.analyzer.analyze_lifetime(self.trajectory, self.stateB)
-        assert_equal(self.analyzer.lifetime_frames[self.stateA].tolist(),
-                     [3, 1, 2])  # A->B
-        assert_equal(self.analyzer.lifetime_frames[self.stateB].tolist(),
-                     [2, 1, 1, 11])  # B->A
-        assert_almost_equal(self.analyzer.lifetimes[self.stateA].mean(),
-                            6.0/3.0*0.1)
-        assert_almost_equal(self.analyzer.lifetimes[self.stateB].mean(),
-                            15.0/4.0*0.1)
+        resA = self.analyzer.analyze_lifetime(self.trajectory, self.stateA)
+        resB = self.analyzer.analyze_lifetime(self.trajectory, self.stateB)
+        assert_equal(resA.n_frames.tolist(), [3, 1, 2])  # A->B
+        assert_equal(resB.n_frames.tolist(), [2, 1, 1, 11])  # B->A
+        assert_almost_equal(resA.times.mean(), 6.0/3.0*0.1)
+        assert_almost_equal(resB.times.mean(), 15.0/4.0*0.1)
 
     def test_analyze_transition_duration(self):
-        self.analyzer.analyze_transition_duration(self.trajectory,
-                                                  self.stateA, self.stateB)
-        self.analyzer.analyze_transition_duration(self.trajectory,
-                                                  self.stateB, self.stateA)
-        assert_equal(
-            self.analyzer.transition_duration_frames[(self.stateA, 
-                                                      self.stateB)].tolist(),
-            [2, 0, 0, 1]
-        )
-        assert_equal(
-            self.analyzer.transition_duration_frames[(self.stateB, 
-                                                      self.stateA)].tolist(),
-            [1, 0, 0, 6]
-        )
-        assert_equal(self.analyzer.transition_duration[(self.stateA,
-                                                        self.stateB)].mean(),
-                     3.0/4.0*0.1)
-        assert_equal(self.analyzer.transition_duration[(self.stateB,
-                                                        self.stateA)].mean(),
-                     7.0/4.0*0.1)
+        resAB = self.analyzer.analyze_transition_duration(self.trajectory,
+                                                          self.stateA,
+                                                          self.stateB)
+        resBA = self.analyzer.analyze_transition_duration(self.trajectory,
+                                                          self.stateB,
+                                                          self.stateA)
+        assert_equal(resAB.n_frames.tolist(), [2, 0, 0, 1])
+        assert_equal(resBA.n_frames.tolist(), [1, 0, 0, 6])
+        assert_equal(resAB.times.mean(), 3.0/4.0*0.1)
+        assert_equal(resBA.times.mean(), 7.0/4.0*0.1)
 
     def test_analyze_flux(self):
         # A: [{out: 1, in: 1}
@@ -179,8 +159,8 @@ class testSingleTrajectoryAnalysis(object):
         # frame numbers       0    5    0    5    0
         # in (I) or out (O):   OIOIIIOOI   IIOO 
         core_traj = self._make_traj(flux_core_test_str)
-        self.analyzer.analyze_flux(core_traj, self.stateA)
-        flux_segs_A = self.analyzer.flux_segments[self.stateA]
+        flux_segs_A = self.analyzer.analyze_flux(core_traj, self.stateA)
+        # flux_segs_A = self.analyzer.flux_segments[self.stateA]
         assert_equal(len(flux_segs_A['in']), 4)
         assert_equal(flux_segs_A['in'][0], core_traj[2:3])
         assert_equal(flux_segs_A['in'][1], core_traj[4:7])
@@ -200,8 +180,9 @@ class testSingleTrajectoryAnalysis(object):
         assert_equal(len(flux_iface_traj_str), 31) # check I counted correctly
         flux_traj = self._make_traj(flux_iface_traj_str)
         self.analyzer.reset_analysis()
-        self.analyzer.analyze_flux(flux_traj, self.stateA, self.interfaceA0)
-        flux_segs_A = self.analyzer.flux_segments[self.stateA]
+        flux_segs_A = self.analyzer.analyze_flux(flux_traj, self.stateA,
+                                                 self.interfaceA0)
+        # flux_segs_A = self.analyzer.flux_segments[self.stateA]
         assert_equal(flux_segs_A['in'][:], 
                      [flux_traj[5:8], flux_traj[13:14], flux_traj[15:17],
                       flux_traj[24:27]])
