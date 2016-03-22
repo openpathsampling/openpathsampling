@@ -45,11 +45,11 @@ class SnapshotModifier(StorableNamedObject):
             return [full_array[i] for i in self.subset_mask]
 
     def apply_to_subset(self, full_array, modified):
+        subset_mask = self.subset_mask
         if self.subset_mask is None:
-            full_array = modified
-        else:
-            for (i, val) in zip(self.subset_mask, modified):
-                full_array[i] = val
+            subset_mask = range(len(full_array))
+        for (i, val) in zip(subset_mask, modified):
+            full_array[i] = val
         return full_array
 
     @abc.abstractmethod

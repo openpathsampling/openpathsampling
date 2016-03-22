@@ -134,7 +134,8 @@ class testRandomizeVelocities(object):
         assert_true(new_1x2D is not self.snap_1x2D)
         assert_true(new_1x2D.coordinates is not self.snap_1x2D.coordinates)
         assert_true(new_1x2D.velocities is not self.snap_1x2D.velocities)
-        # assert that the contents of the velocities have changed?
+        for val in new_1x2D.velocities.flatten():
+            assert_not_equal(val, 0.0)
 
         new_2x3D = randomizer(self.snap_2x3D)
         assert_equal(new_2x3D.coordinates.shape, new_2x3D.velocities.shape)
@@ -143,6 +144,8 @@ class testRandomizeVelocities(object):
         assert_true(new_2x3D is not self.snap_2x3D)
         assert_true(new_2x3D.coordinates is not self.snap_2x3D.coordinates)
         assert_true(new_2x3D.velocities is not self.snap_2x3D.velocities)
+        for val in new_2x3D.velocities.flatten():
+            assert_not_equal(val, 0.0)
 
         new_3x1D = randomizer(self.snap_3x1D)
         assert_equal(new_3x1D.coordinates.shape, new_3x1D.velocities.shape)
@@ -151,6 +154,8 @@ class testRandomizeVelocities(object):
         assert_true(new_3x1D is not self.snap_3x1D)
         assert_true(new_3x1D.coordinates is not self.snap_3x1D.coordinates)
         assert_true(new_3x1D.velocities is not self.snap_3x1D.velocities)
+        for val in new_3x1D.velocities.flatten():
+            assert_not_equal(val, 0.0)
 
     def test_subset_call(self):
         randomizer = RandomVelocities(beta=1.0/5.0, subset_mask=[0])
@@ -164,4 +169,5 @@ class testRandomizeVelocities(object):
         # show that the unchanged atom is, in fact, unchanged
         assert_array_almost_equal(new_2x3D.velocities[1], 
                                   self.snap_2x3D.velocities[1])
-
+        for val in new_2x3D.velocities[0]:
+            assert_not_equal(val, 0.0)
