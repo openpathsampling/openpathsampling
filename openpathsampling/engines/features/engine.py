@@ -5,7 +5,7 @@ engine : :class:`openpathsampling.DynamicsEngine`
     referenec to the engine used to generate the snapshot
 """
 
-attributes = ['engine', 'topology']
+attributes = ['engine']
 
 
 def netcdfplus_init(store):
@@ -16,5 +16,6 @@ def netcdfplus_init(store):
     )
 
 
+@property
 def topology(snapshot):
     return snapshot.engine.topology

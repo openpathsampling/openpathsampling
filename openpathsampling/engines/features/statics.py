@@ -2,12 +2,8 @@ import numpy as np
 from shared import StaticContainerStore
 import mdtraj
 
-from openpathsampling.engines.features import xyz
-
-attributes = ['statics', 'box_vectors', 'md', 'coordinates']
+variables = ['statics']
 lazy = ['statics']
-
-provides = [xyz]
 
 
 def netcdfplus_init(store):
@@ -69,3 +65,20 @@ def md(snapshot):
         output[0, :, :] = snapshot.coordinates
 
         return mdtraj.Trajectory(output, snapshot.topology.md)
+
+@property
+def xyz(snapshot):
+    """
+    Returns
+    -------
+    xyz : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
+        atomic coordinates without dimensions. Be careful.
+
+    """
+    import simtk.unit as u
+
+    coord = snapshot.coordinates
+    if type(coord) is u.Quantity:
+        return coord._value
+    else:
+        return coord

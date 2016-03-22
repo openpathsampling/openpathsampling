@@ -19,6 +19,8 @@ def setup_package():
     # we can create a storage. We might move this logic out of the dynamics engine
     # and keep sotrage and engine generation completely separate!
 
+    print snapshot.__features__
+
     storage = Storage(
         filename=data_filename("ala_small_traj.nc"),
         template=snapshot,

@@ -6,6 +6,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def _snapshot_function_overridden(cls, method):
     """
     check if in a snapshot class a method was overridden by the user in any (super-)class
@@ -26,9 +27,8 @@ def _snapshot_function_overridden(cls, method):
 
     """
 
-    fnc = getattr(cls, method)
-
     if hasattr(paths.BaseSnapshot, method):
+        fnc = getattr(cls, method)
         # if the method is present in BaseSnapshot it does not count as overridden
         return not (fnc.im_func is getattr(paths.BaseSnapshot, method).im_func)
     elif method in cls.__dict__:
@@ -39,9 +39,8 @@ def _snapshot_function_overridden(cls, method):
         return _snapshot_function_overridden(cls.__base__, method)
 
 
-def _register_function(cls, name, code, __features__ = None):
+def _register_function(cls, name, code, __features__=None):
 
-    import openpathsampling as paths
     import numpy as np
 
     # compile the code and register the new function
@@ -53,7 +52,7 @@ def _register_function(cls, name, code, __features__ = None):
         if __features__ is not None:
             __features__['debug'][name] = source_code
 
-        if 'copy' not in cls.__dict__:
+        if name not in cls.__dict__:
             if _snapshot_function_overridden(cls, name):
                 raise RuntimeWarning(
                     'Subclassing snapshots with overridden function is only possible of all of these '
@@ -115,6 +114,7 @@ class CodeFunction(list):
             if add:
                 self.append(s.format(item))
 
+
 class CodeContext(object):
     def __init__(self, cls, __features__):
         self.cls = cls
@@ -126,7 +126,20 @@ class CodeContext(object):
 
 def attach_features(features, use_lazy_reversed=False):
     """
-    Select snapshot features
+    Attach features to a snapshot class
+
+    Parameters
+    ----------
+    features : list of `features`
+        a list of features that should be attached to a class. If a class already has
+        features attached these will be preserved
+    use_lazy_reversed : bool
+        if set to `True` the private variables `_reversed` which holds references to
+        the reversed snapshot instance will be treated as lazy. This allows the caching
+        to get rid of innecessary reversed snapshots to save memory. Otherwise only pairs
+        of snapshots can be deleted. Usually you do not need this. But for legacy reasons
+        this is still implemented
+
     """
 
     # create a parser that can combine numpy docstrings
@@ -197,7 +210,10 @@ def attach_features(features, use_lazy_reversed=False):
         if 'debug' not in __features__:
             __features__['debug'] = {}
 
-        __features__['classes'] += features
+        for feature in features:
+            # check for existing feature and do not register twice
+            if feature not in __features__['classes']:
+                __features__['classes'].append(feature)
 
         # add provided additional feature and run though the added ones
         # recursively until nothing is added
@@ -221,7 +237,6 @@ def attach_features(features, use_lazy_reversed=False):
             cls._reversed = DelayedLoader()
 
         origin = dict()
-        required = dict()
         copy_fncs = list()
         copy_feats = list()
         # loop over all the features
@@ -232,8 +247,6 @@ def attach_features(features, use_lazy_reversed=False):
                 if hasattr(feature, prop) and type(getattr(feature, prop)) is property:
                     __features__['properties'] += [prop]
                     setattr(cls, prop, getattr(feature, prop))
-
-            has_copy = False
 
             # copy specific attribute types
             for name in ['attributes', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports', 'functions']:
@@ -262,7 +275,6 @@ def attach_features(features, use_lazy_reversed=False):
                                 fnc_name = '_copy_' + str(len(copy_feats))
                                 setattr(cls, fnc_name, fnc)
                                 copy_feats.append(fnc_name)
-                                has_copy = True
 
                         for c in content:
                             if c in __features__['attributes']:
@@ -309,15 +321,15 @@ def attach_features(features, use_lazy_reversed=False):
         parser.add_docs_from(cls)
 
         # from top of features
-        for feat in __features__['classes']:
-            parser.add_docs_from(feat)
+        for feature in __features__['classes']:
+            parser.add_docs_from(feature)
 
             # from properties
             for prop in __features__['properties']:
-                if hasattr(feat, prop):
+                if hasattr(feature, prop):
                     if prop not in parser.attributes:
                         parser.add_docs_from(
-                            getattr(feat, prop),
+                            getattr(feature, prop),
                             keep_only=['attributes'],
                             translate={'returns': 'attributes'}
                         )
@@ -480,13 +492,11 @@ def attach_features(features, use_lazy_reversed=False):
 
         # we use as signature all feature names in parameters
         parameters = []
-        for feat in __features__['parameters']:
-            if feat in __features__['flip']:
-                parameters += ['{0}=False'.format(feat)]
+        for feature in __features__['parameters']:
+            if feature in __features__['flip']:
+                parameters += ['{0}=False'.format(feature)]
             else:
-                parameters += ['{0}=None'.format(feat)]
-
-        code = []
+                parameters += ['{0}=None'.format(feature)]
 
         if parameters:
             signature = ', ' + ', '.join(parameters)
