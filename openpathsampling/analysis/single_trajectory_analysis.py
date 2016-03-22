@@ -2,6 +2,24 @@ import openpathsampling as paths
 import numpy as np
 
 class TrajectorySegmentContainer(object):
+    """Container object to analyze lists of trajectories (or segments).
+
+    For the most part, this imitates a list. It supports most list behaviors
+    (addition, iteration, etc). However, as a list of lists, it contains a
+    few useful helpers. 
+
+    Parameters
+    ----------
+    dt : float
+        time step between frames in a segment
+
+    Attributes
+    ----------
+    n_frames : list of int
+        number of frames (length) of each segment in this container.
+    times : list of float
+        duration of each segment (length * self.dt) in this container.
+    """
     def __init__(self, segments, dt=None):
         self._segments = segments
         self.dt = dt
@@ -190,7 +208,7 @@ class SingleTrajectoryAnalysis(object):
 
         Returns
         -------
-        :class:`.TrajectorySegmentContainer`
+        list of :class:`.Trajectory`
             the frames from (and including) each first entry from `to_vol`
             into `from_vol` until (and including) the next entry into
             `to_vol`, with no frames in `forbidden`, and with frames removed
@@ -223,6 +241,12 @@ class SingleTrajectoryAnalysis(object):
         state : :class:`.Volume`
             state volume to characterize. Must be one of the states in the
             transition
+
+        Returns
+        -------
+        :class:`.TrajectorySegmentContainer`
+            lifetime from first entrance of `stateA` until first entrance of
+            `stateB`
         """
         other_state = list(set([self.stateA, self.stateB]) - set([state]))[0]
         segments = self.get_lifetime_segments(
@@ -243,6 +267,11 @@ class SingleTrajectoryAnalysis(object):
             initial state volume for the transition
         stateB : :class:`.Volume`
             final state volume for the transition
+
+        Returns
+        -------
+        :class:`.TrajectorySegmentContainer`
+            transitions from `stateA` to `stateB` within `trajectory`
         """
         # we define the transitions ensemble just in case the transition is,
         # e.g., fixed path length TPS. We want flexible path length ensemble
@@ -269,6 +298,14 @@ class SingleTrajectoryAnalysis(object):
         interface : :class:`.Volume` or None
             interface to calculate the flux through. If `None`, same as
             `state`
+        
+        Returns
+        -------
+        dict
+            key 'in' maps to :class:`.TrajectorySegmentContainer` of frames
+            marked "inside" the interface; 'out' maps to frames "outside"
+            the interface. The reciprocal of the sum of the mean of these
+            two is the flux through the interface.
         """
         other = list(set([self.stateA, self.stateB]) - set([state]))[0]
         if interface is None:

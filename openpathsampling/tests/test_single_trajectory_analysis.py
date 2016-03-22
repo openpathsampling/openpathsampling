@@ -195,9 +195,24 @@ class testSingleTrajectoryAnalysis(object):
         self.analyzer.analyze(self.trajectory)
         cont_frames = self.analyzer.continuous_frames
         life_frames = self.analyzer.lifetime_frames
+        trans_frames = self.analyzer.transition_duration_frames
+        cont_times = self.analyzer.continuous_times
+        life_times = self.analyzer.lifetimes
+        trans_times = self.analyzer.transition_duration
+
         self.analyzer.reset_analysis()
         self.analyzer.analyze([self.trajectory])
         assert_equal(cont_frames[self.stateA].tolist(), 
                      self.analyzer.continuous_frames[self.stateA].tolist())
         assert_equal(life_frames[self.stateA].tolist(), 
                      self.analyzer.lifetime_frames[self.stateA].tolist())
+        A2B = (self.stateA, self.stateB)
+        assert_equal(trans_frames[A2B].tolist(),
+                     self.analyzer.transition_duration_frames[A2B].tolist())
+        assert_equal(cont_times[self.stateA].mean(),
+                     self.analyzer.continuous_times[self.stateA].mean())
+        assert_equal(life_times[self.stateA].mean(),
+                     self.analyzer.lifetimes[self.stateA].mean())
+        assert_equal(trans_times[A2B].mean(),
+                     self.analyzer.transition_duration[A2B].mean())
+
