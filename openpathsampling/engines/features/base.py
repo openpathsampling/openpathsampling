@@ -2,6 +2,8 @@ from openpathsampling.netcdfplus import DelayedLoader
 from numpydoctools import NumpyDocTools
 import openpathsampling as paths
 
+from collections import namedtuple
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -124,6 +126,11 @@ class CodeContext(object):
         return CodeFunction(name, self)
 
 
+FeatureTuple = namedtuple(
+        '__features__', 'classes variables properties functions required lazy numpy reversal minus flip exclude_copy imports debug'
+    )
+
+
 def attach_features(features, use_lazy_reversed=False):
     """
     Attach features to a snapshot class
@@ -197,7 +204,7 @@ def attach_features(features, use_lazy_reversed=False):
 
         # create and fill `__features__` with values from feature structures
         if hasattr(cls, '__features__'):
-            __features__ = cls.__features__
+            __features__ = dict(cls.__features__)
         else:
             __features__ = dict()
 
@@ -570,8 +577,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "    self.{0}(this)".format, copy_feats
             )
 
-        # register (new) __features__ with the class
-        cls.__features__ = __features__
+        # register (new) __features__ with the class as a namedtuple
+        cls.__features__ = FeatureTuple(**__features__)
 
         return cls
 

@@ -28,7 +28,7 @@ class BaseSnapshotStore(ObjectStore):
         self.snapshot_class = snapshot_class
         self._use_lazy_reversed = False
         if hasattr(snapshot_class, '__features__'):
-            if '_reversed' in snapshot_class.__features__['lazy']:
+            if '_reversed' in snapshot_class.__features__.lazy:
                 self._use_lazy_reversed = True
 
     def __repr__(self):
@@ -189,11 +189,11 @@ class FeatureSnapshotStore(BaseSnapshotStore):
 
     @property
     def classes(self):
-        return self.snapshot_class.__features__['classes']
+        return self.snapshot_class.__features__.classes
 
     @property
     def storables(self):
-        return self.snapshot_class.__features__['variables']
+        return self.snapshot_class.__features__.variables
 
     def _set(self, idx, snapshot):
         [self.write(attr, idx, snapshot) for attr in self.storables]
