@@ -41,7 +41,7 @@ def _snapshot_function_overridden(cls, method):
         return _snapshot_function_overridden(cls.__base__, method)
 
 
-def _register_function(cls, name, code, __features__=None):
+def _register_function(cls, name, code, __features__):
 
     import numpy as np
 
@@ -51,21 +51,24 @@ def _register_function(cls, name, code, __features__=None):
         cc = compile(source_code, '<string>', 'exec')
         exec cc in locals()
 
-        if __features__ is not None:
+        if name not in cls.__dict__:
+            if hasattr(cls, '__features__') and cls.__features__.debug[name] is None:
+                raise RuntimeWarning((
+                    'Subclassing snapshots with overridden function "%s" is only possible if this '
+                    'function is overridden again, otherwise some features might not be copied. '
+                    'The general practise of overriding is not recommended.') % name)
+
+            setattr(cls, name, locals()[name])
+
             __features__['debug'][name] = source_code
 
-        if name not in cls.__dict__:
-            if _snapshot_function_overridden(cls, name):
-                raise RuntimeWarning(
-                    'Subclassing snapshots with overridden function is only possible of all of these '
-                    'functions are overridden again. Otherwise some features might not be copied. '
-                    'The general practise of overriding is not recommended.')
-            setattr(cls, name, locals()[name])
         else:
             logger.debug(
                 'Function "%s" for class "%s" exists and will not be overridden' %
                 (name, cls.__name__)
             )
+
+            __features__['debug'][name] = None
 
     except RuntimeError as e:
         logger.warn(
@@ -204,7 +207,7 @@ def attach_features(features, use_lazy_reversed=False):
 
         # create and fill `__features__` with values from feature structures
         if hasattr(cls, '__features__'):
-            __features__ = dict(cls.__features__)
+            __features__ = {'classes': list(cls.__features__.classes)}
         else:
             __features__ = dict()
 
@@ -252,6 +255,10 @@ def attach_features(features, use_lazy_reversed=False):
             # add properties
             for prop in feature.__dict__:
                 if hasattr(feature, prop) and type(getattr(feature, prop)) is property:
+                    if prop in __features__['properties']:
+                        raise RuntimeWarning(
+                            'Collision: Property "%s" already exists.' % prop)
+
                     __features__['properties'] += [prop]
                     setattr(cls, prop, getattr(feature, prop))
 
@@ -286,7 +293,7 @@ def attach_features(features, use_lazy_reversed=False):
                         for c in content:
                             if c in __features__['variables']:
                                 raise RuntimeError((
-                                    'Feature collision. Attribute "%s" present in two features. ' +
+                                    'Collision: Attribute "%s" present in two features. ' +
                                     'Please remove one feature "%s" or "%s"') %
                                     (c, str(feature), str(origin[c])))
 
@@ -295,11 +302,17 @@ def attach_features(features, use_lazy_reversed=False):
 
                     __features__[name] += content
 
+            # check for cross collisions between variables, properties and function names
+            for t1, t2 in [('variables', 'properties'), ('variables', 'functions'), ('properties', 'functions')]:
+                union = set(__features__[t1]) & set(__features__[t2])
+                if len(union) > 0:
+                    raise RuntimeError('Collision: "%s" exist as %s and %s' % (list(union), t1, t2))
+
         for name in __features__['required']:
             if name not in __features__['variables']:
                 raise RuntimeError((
-                    'Attribute "%s" is required, but only "%s" found. Please make sure ' +
-                    'that is will be added by ' +
+                    'Attribute "%s" is required, but only "%s" are found. Please make sure ' +
+                    'that it will be added by ' +
                     'some feature') % (name, str(__features__['variables']))
                 )
 
@@ -558,7 +571,7 @@ def attach_features(features, use_lazy_reversed=False):
 
             if has_lazy:
                 code += [
-                    "    this._lazy = {",
+                    "    self._lazy = {",
                 ]
                 code.format("       cls.{0} : {0},",        'lazy', [], ['numpy'])
                 code.format("       cls.{0} : {0}.copy(),", 'lazy', ['numpy'], [])
@@ -567,7 +580,7 @@ def attach_features(features, use_lazy_reversed=False):
                 ]
 
             code += [
-                "    this._reversed = None"
+                "    self._reversed = None"
             ]
 
             code.format("    self.{0} = {0}",          'variables', [], ['lazy', 'numpy'])
