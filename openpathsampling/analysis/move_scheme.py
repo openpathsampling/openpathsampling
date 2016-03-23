@@ -443,16 +443,17 @@ class MoveScheme(StorableNamedObject):
 
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
-                           n_total_trials, indentation):
+                           n_total_trials, expected_frequency, indentation):
         try:
             acceptance = float(n_accepted) / n_trials
         except ZeroDivisionError:
             acceptance = "nan"
 
         line = ("* "*indentation + str(move_name) +
-                " ran " + str(float(n_trials)/n_total_trials*100) +
-                "% of the cycles with acceptance " + str(n_accepted) + "/" +
-                str(n_trials) + " (" + str(acceptance) + ")\n")
+                " ran " + "{:.3%}".format(float(n_trials)/n_total_trials) +
+                " (expected {:.2%})".format(expected_frequency) + 
+                " of the cycles with acceptance " + str(n_accepted) + "/" +
+                str(n_trials) + " ({:.2%})\n".format(acceptance))
         return line
 
     def move_acceptance(self, storage):
@@ -491,6 +492,7 @@ class MoveScheme(StorableNamedObject):
             submovers for each move; if None, shows all submovers
         """
         my_movers = { }
+        expected_frequency = { }
         if movers is None:
             movers = self.movers.keys()
         if type(movers) is str:
@@ -519,6 +521,11 @@ class MoveScheme(StorableNamedObject):
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
+            try:
+                expected_frequency[groupname] = sum([self.choice_probability[m] 
+                                                     for m in group])
+            except KeyError:
+                expected_frequency[groupname] = float('nan')
 
         for groupname in my_movers.keys():
             if has_pandas and isinstance(output, pd.DataFrame):
@@ -530,6 +537,7 @@ class MoveScheme(StorableNamedObject):
                     n_accepted=stats[groupname][0],
                     n_trials=stats[groupname][1], 
                     n_total_trials=tot_trials,
+                    expected_frequency=expected_frequency[groupname],
                     indentation=0
                 )
                 output.write(line)
