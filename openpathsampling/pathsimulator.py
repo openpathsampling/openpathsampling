@@ -549,3 +549,12 @@ class PathSampling(PathSimulator):
             "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
             refresh=False
         )
+
+class Committor(PathSimulator):
+    def __init__(self, storage, engine=None, network=None, randomizer=None,
+                 initial_snapshots=None):
+        super(Committor, self).__init__(storage, engine)
+        self.network = network
+        self.randomizer = randomizer
+        self.initial_snapshots = initial_snapshots
+
