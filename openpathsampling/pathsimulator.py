@@ -550,11 +550,54 @@ class PathSampling(PathSimulator):
             refresh=False
         )
 
-class Committor(PathSimulator):
-    def __init__(self, storage, engine=None, network=None, randomizer=None,
-                 initial_snapshots=None):
+class CommittorSimulation(PathSimulator):
+    def __init__(self, storage, engine=None, states=None, randomizer=None,
+                 initial_snapshots=None, direction=None):
         super(Committor, self).__init__(storage, engine)
-        self.network = network
+        self.states = states
         self.randomizer = randomizer
         self.initial_snapshots = initial_snapshots
+        self.direction = direction
+
+        all_state_volume = paths.join_volumes(states)
+
+        # we should always start from a single frame not in any state
+        self.starting_ensemble = (
+            paths.AllOutXEnsemble(all_state_volume) &
+            paths.LengthEnsemble(1)
+        )
+        # shoot forward until we hit a state
+        self.forward_ensemble = paths.SequentialEnsemble([
+            paths.AllOutXEnsemble(all_state_volume),
+            paths.AllInXEnsemble(all_state_volume) & paths.LengthEnsemble(1)
+        ])
+        # or shoot backward until we hit a state
+        self.backward_ensemble = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(all_state_volume) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(all_state_volume)
+        ])
+
+        fwd_shooter = paths.ForwardExtendMover(
+            ensemble=self.starting_ensemble,
+            target_ensemble=self.forward_ensemble
+        )
+        bkwd_shooter = paths.BackwardExtendMover(
+            ensemble=self.starting_ensemble,
+            target_ensemble=self.backward_ensemble
+        )
+
+        if self.direction is None:
+            self.mover = paths.RandomChoiceMover([fwd_shooter, bkwd_shooter])
+        elif self.direction > 0:
+            self.mover = fwd_shooter
+        elif self.direction < 0:
+            self.mover = bkwd_shooter
+
+    def run(self, n_per_snapshot):
+        for snapshot in self.initial_snapshots:
+            # do what we need to get the snapshot set up
+            for step in range(n_per_snapshot):
+                # do what we need to prepare the trajectory
+                # run the trajectory
+                pass
 
