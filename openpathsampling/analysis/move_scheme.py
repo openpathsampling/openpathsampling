@@ -45,6 +45,7 @@ class MoveScheme(StorableNamedObject):
             'movers' : self.movers,
             'network' : self.network,
             'choice_probability' : self.choice_probability,
+            'real_choice_probability' : self.real_choice_probability,
             'balance_partners' : self.balance_partners,
             'root_mover' : self.root_mover
         }
@@ -56,6 +57,7 @@ class MoveScheme(StorableNamedObject):
         scheme.__init__(dct['network'])
         scheme.movers = dct['movers']
         scheme.choice_probability = dct['choice_probability']
+        scheme._real_choice_probability = dct['real_choice_probability']
         scheme.balance_partners = dct['balance_partners']
         scheme.root_mover = dct['root_mover']
         return scheme
@@ -461,7 +463,7 @@ class MoveScheme(StorableNamedObject):
         try:
             acceptance = float(n_accepted) / n_trials
         except ZeroDivisionError:
-            acceptance = "nan"
+            acceptance = float("nan")
 
         line = ("* "*indentation + str(move_name) +
                 " ran " + "{:.3%}".format(float(n_trials)/n_total_trials) +
@@ -536,8 +538,9 @@ class MoveScheme(StorableNamedObject):
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
             try:
-                expected_frequency[groupname] = sum([self.choice_probability[m] 
-                                                     for m in group])
+                expected_frequency[groupname] = sum(
+                    [self.real_choice_probability[m] for m in group]
+                )
             except KeyError:
                 expected_frequency[groupname] = float('nan')
 
