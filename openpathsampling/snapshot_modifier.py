@@ -39,12 +39,43 @@ class SnapshotModifier(StorableNamedObject):
         self.subset_mask = subset_mask
 
     def extract_subset(self, full_array):
+        """Extracts elements from full_array according to self.subset_mask
+
+        Parameters
+        ----------
+        full_array : list-like
+            the input array
+
+        Returns
+        -------
+        list
+            the elements of full_array which are selected by
+            self.subset_mask, or full_array if self.subset_mask is None
+        """
         if self.subset_mask is None:
-            return full_array.copy()
+            return full_array
         else:
             return [full_array[i] for i in self.subset_mask]
 
     def apply_to_subset(self, full_array, modified):
+        """Replaces elements of full_array according to self.subset_mask
+
+        This returns the full_array, but the modification is done in-place.
+
+        Parameters
+        ----------
+        full_array : list-like
+            array to modify
+        modified : list-like
+            array containing len(self.subset_mask) elements which will
+            replace those in `full_array`
+
+        Returns
+        -------
+        full_array : list-like
+            modified version of the input array, where the elements
+            specified by self.subset_mask have been replaced    
+        """
         subset_mask = self.subset_mask
         if self.subset_mask is None:
             subset_mask = range(len(full_array))
@@ -62,7 +93,14 @@ class NoModification(SnapshotModifier):
         return snapshot.copy()
 
 class RandomVelocities(SnapshotModifier):
-    """Randomize velocities according to the Boltzmann distribution."""
+    """Randomize velocities according to the Boltzmann distribution.
+    
+    Parameters
+    ----------
+    beta : float
+        Inverse temperature in units of inverse velocity squared [also known
+        as 1.0/(k_B * T)].
+    """
     def __init__(self, subset_mask=None, beta=None):
         super(RandomVelocities, self).__init__(subset_mask)
         self.beta = beta
