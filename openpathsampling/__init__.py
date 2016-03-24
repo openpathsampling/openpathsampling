@@ -61,7 +61,8 @@ from pathmover import (
 )
 
 from pathsimulator import (
-    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep
+    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
+    CommittorSimulation
 )
 
 from sample import Sample, SampleSet

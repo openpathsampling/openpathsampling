@@ -1,4 +1,4 @@
-from test_helpers import raises_with_message_like
+from test_helpers import raises_with_message_like, data_filename
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
@@ -12,6 +12,7 @@ class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_volume(self):
         mover = PathSimulator()
+
 
 class testCommittorSimulation(object):
     def setup(self):
@@ -34,13 +35,21 @@ class testCommittorSimulation(object):
         left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
         right = paths.CVRangeVolume(cv, 1.0, float("inf"))
 
-        randomizer = paths.RandomVelocities(beta=1.0)
+        randomizer = paths.NoModification()
 
-        self.simulation = CommittorSimulation(storage=None,
+        self.filename = data_filename("committor_test.nc")
+        storage = paths.Storage(self.filename, mode="w", template=snap0)
+
+        self.simulation = CommittorSimulation(storage=storage,
                                               engine=engine,
                                               states=[left, right],
                                               randomizer=randomizer,
                                               initial_snapshots=snap0)
+
+    def teardown(self):
+        import os
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
 
     def test_initialization(self):
         sim = self.simulation  # convenience
@@ -49,6 +58,9 @@ class testCommittorSimulation(object):
 
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=10)
+        self.simulation.storage.close()
+        storage = paths.AnalysisStorage(self.filename)
+        assert_equal(len(storage.steps), 10)
         raise SkipTest
 
     def test_forward_only_committor(self):

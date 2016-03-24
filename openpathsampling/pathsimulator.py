@@ -599,6 +599,7 @@ class CommittorSimulation(PathSimulator):
 
     def run(self, n_per_snapshot, as_chain=False):
         self.pmc_histories = [] # temporary until storage
+        self.step = 0
         for snapshot in self.initial_snapshots:
             start_snap = snapshot
             # do what we need to get the snapshot set up
@@ -613,8 +614,25 @@ class CommittorSimulation(PathSimulator):
                                  trajectory=paths.Trajectory([start_snap]),
                                  ensemble=self.starting_ensemble)
                 ])
-
+                sample_set.sanity_check()
                 new_pmc = self.mover.move(sample_set)
+                samples = new_pmc.results
+                new_sample_set = sample_set.apply_samples(samples)
+
+                mcstep = MCStep(
+                    simulation=self,
+                    mccycle = self.step,
+                    previous=sample_set,
+                    active=new_sample_set,
+                    change=new_pmc
+                )
+
+                if self.storage is not None:
+                    self.storage.steps.save(mcstep)
+                    if self.step % self.save_frequency == 0:
+                        self.sync_storage()
+
+
                 self.pmc_histories.append(new_pmc) # TODO: tmp
                 pass
 
