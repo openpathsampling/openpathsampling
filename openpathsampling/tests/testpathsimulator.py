@@ -34,7 +34,7 @@ class testCommittorSimulation(object):
         integrator = toys.LeapfrogVerletIntegrator(0.1)
         options = {
             'integ': integrator,
-            'n_frames_max': 1000,
+            'n_frames_max': 10000,
             'nsteps_per_frame': 5
         }
         self.engine = toys.Engine(options=options, template=self.snap0)
@@ -104,7 +104,7 @@ class testCommittorSimulation(object):
                                   initial_snapshots=self.snap0,
                                   direction=1)
         sim.run(n_per_snapshot=10)
-        assert_equal(len(self.simulation.storage.steps), 10)
+        assert_equal(len(sim.storage.steps), 10)
         for step in self.simulation.storage.steps:
             s = step.active[0]
             step.active.sanity_check()  # traj is in ensemble
@@ -124,7 +124,7 @@ class testCommittorSimulation(object):
                                   initial_snapshots=self.snap0,
                                   direction=-1)
         sim.run(n_per_snapshot=10)
-        assert_equal(len(self.simulation.storage.steps), 10)
+        assert_equal(len(sim.storage.steps), 10)
         for step in self.simulation.storage.steps:
             s = step.active[0]
             step.active.sanity_check()  # traj is in ensemble
@@ -140,4 +140,28 @@ class testCommittorSimulation(object):
         raise SkipTest
 
     def test_randomized_committor(self):
-        raise SkipTest
+        # this shows that we get both states even with forward-only
+        # shooting, if the randomizer gives the negative velocities
+        randomizer = paths.RandomVelocities(beta=1.0)
+        sim = CommittorSimulation(storage=self.storage,
+                                  engine=self.engine,
+                                  states=[self.left, self.right],
+                                  randomizer=randomizer,
+                                  initial_snapshots=self.snap0,
+                                  direction=1)
+        sim.run(50)
+        assert_equal(len(sim.storage.steps), 50)
+        counts = {'None-Right' : 0,
+                  'Left-None' : 0,
+                  'None-Left' : 0,
+                  'Right-None' : 0}
+        for step in sim.storage.steps:
+            step.active.sanity_check()  # traj is in ensemble
+            traj = step.active[0].trajectory
+            traj_str = traj.summarize_by_volumes_str(self.state_labels)
+            counts[traj_str] += 1
+        assert_equal(counts['Left-None'], 0)
+        assert_equal(counts['Right-None'], 0)
+        assert_true(counts['None-Left'] > 0)
+        assert_true(counts['None-Right'] > 0)
+        assert_equal(sum(counts.values()), 50)
