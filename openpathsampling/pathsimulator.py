@@ -597,11 +597,24 @@ class CommittorSimulation(PathSimulator):
         elif self.direction < 0:
             self.mover = bkwd_shooter
 
-    def run(self, n_per_snapshot):
+    def run(self, n_per_snapshot, as_chain=False):
+        self.pmc_histories = [] # temporary until storage
         for snapshot in self.initial_snapshots:
+            start_snap = snapshot
             # do what we need to get the snapshot set up
             for step in range(n_per_snapshot):
-                # do what we need to prepare the trajectory
-                # run the trajectory
+                if as_chain:
+                    start_snap = self.randomizer(start_snap)
+                else:
+                    start_snap = self.randomizer(snapshot)
+
+                sample_set = paths.SampleSet([
+                    paths.Sample(replica=0,
+                                 trajectory=paths.Trajectory([start_snap]),
+                                 ensemble=self.starting_ensemble)
+                ])
+
+                new_pmc = self.mover.move(sample_set)
+                self.pmc_histories.append(new_pmc) # TODO: tmp
                 pass
 

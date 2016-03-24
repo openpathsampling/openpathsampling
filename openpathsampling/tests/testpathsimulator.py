@@ -41,15 +41,14 @@ class testCommittorSimulation(object):
                                               states=[left, right],
                                               randomizer=randomizer,
                                               initial_snapshots=snap0)
-        
 
     def test_initialization(self):
         sim = self.simulation  # convenience
         assert_equal(len(sim.initial_snapshots), 1)
         assert_true(isinstance(sim.mover, paths.RandomChoiceMover))
-        raise SkipTest
 
     def test_committor_run(self):
+        self.simulation.run(n_per_snapshot=10)
         raise SkipTest
 
     def test_forward_only_committor(self):
