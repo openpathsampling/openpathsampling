@@ -8,6 +8,13 @@ import openpathsampling as paths
 import openpathsampling.engines.toy as toys
 import numpy as np
 
+import logging
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.engines').setLevel(logging.CRITICAL)
+
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_volume(self):
@@ -32,8 +39,8 @@ class testCommittorSimulation(object):
         }
         engine = toys.Engine(options=options, template=snap0)
         cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-        left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
-        right = paths.CVRangeVolume(cv, 1.0, float("inf"))
+        self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
+        self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
 
         randomizer = paths.NoModification()
 
@@ -42,7 +49,7 @@ class testCommittorSimulation(object):
 
         self.simulation = CommittorSimulation(storage=storage,
                                               engine=engine,
-                                              states=[left, right],
+                                              states=[self.left, self.right],
                                               randomizer=randomizer,
                                               initial_snapshots=snap0)
 
@@ -58,10 +65,34 @@ class testCommittorSimulation(object):
 
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=10)
-        self.simulation.storage.close()
-        storage = paths.AnalysisStorage(self.filename)
-        assert_equal(len(storage.steps), 10)
-        raise SkipTest
+        assert_equal(len(self.simulation.storage.steps), 10)
+        state_label = {"Left" : self.left,
+                       "Right" : self.right, 
+                       "None" : ~(self.left | self.right)}
+        counts = {'fwd' : 0, 'bkwd' : 0}
+        for step in self.simulation.storage.steps:
+            step.active.sanity_check()  # traj is in ensemble
+            traj = step.active[0].trajectory
+            traj_str = traj.summarize_by_volumes_str(state_label)
+            if traj_str == "None-Right":
+                assert_equal(step.change.canonical.mover,
+                             self.simulation.forward_mover)
+                assert_equal(step.active[0].ensemble,
+                             self.simulation.forward_ensemble)
+                counts['fwd'] += 1
+            elif traj_str == "Left-None":
+                assert_equal(step.change.canonical.mover,
+                             self.simulation.backward_mover)
+                assert_equal(step.active[0].ensemble,
+                             self.simulation.backward_ensemble)
+                counts['bkwd'] += 1
+            else:
+                raise AssertionError(
+                    str(traj_str) + "is neither 'None-Right' nor 'Left-None'"
+                )
+        assert_true(counts['fwd'] > 0)
+        assert_true(counts['bkwd'] > 0)
+        assert_equal(counts['fwd'] + counts['bkwd'], 10)
 
     def test_forward_only_committor(self):
         raise SkipTest

@@ -581,24 +581,24 @@ class CommittorSimulation(PathSimulator):
             paths.AllOutXEnsemble(all_state_volume)
         ])
 
-        fwd_shooter = paths.ForwardExtendMover(
+        self.forward_mover = paths.ForwardExtendMover(
             ensemble=self.starting_ensemble,
             target_ensemble=self.forward_ensemble
         )
-        bkwd_shooter = paths.BackwardExtendMover(
+        self.backward_mover = paths.BackwardExtendMover(
             ensemble=self.starting_ensemble,
             target_ensemble=self.backward_ensemble
         )
 
         if self.direction is None:
-            self.mover = paths.RandomChoiceMover([fwd_shooter, bkwd_shooter])
+            self.mover = paths.RandomChoiceMover([self.forward_mover,
+                                                  self.backward_mover])
         elif self.direction > 0:
-            self.mover = fwd_shooter
+            self.mover = self.forward_mover
         elif self.direction < 0:
-            self.mover = bkwd_shooter
+            self.mover = self.backward_mover
 
     def run(self, n_per_snapshot, as_chain=False):
-        self.pmc_histories = [] # temporary until storage
         self.step = 0
         for snapshot in self.initial_snapshots:
             start_snap = snapshot
@@ -632,7 +632,6 @@ class CommittorSimulation(PathSimulator):
                     if self.step % self.save_frequency == 0:
                         self.sync_storage()
 
-
-                self.pmc_histories.append(new_pmc) # TODO: tmp
                 pass
+
 
