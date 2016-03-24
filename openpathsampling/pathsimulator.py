@@ -553,9 +553,13 @@ class PathSampling(PathSimulator):
 class CommittorSimulation(PathSimulator):
     def __init__(self, storage, engine=None, states=None, randomizer=None,
                  initial_snapshots=None, direction=None):
-        super(Committor, self).__init__(storage, engine)
+        super(CommittorSimulation, self).__init__(storage, engine)
         self.states = states
         self.randomizer = randomizer
+        try:
+            initial_snapshots = list(initial_snapshots)
+        except TypeError:
+            initial_snapshots = [initial_snapshots]
         self.initial_snapshots = initial_snapshots
         self.direction = direction
 
