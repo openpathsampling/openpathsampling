@@ -28,30 +28,35 @@ class testCommittorSimulation(object):
         # negative, you hit the state on the left.
         pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
-        snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
-                              velocities=np.array([[1.0]]),
-                              topology=topology)
+        self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
+                                   velocities=np.array([[1.0]]),
+                                   topology=topology)
         integrator = toys.LeapfrogVerletIntegrator(0.1)
         options = {
             'integ': integrator,
             'n_frames_max': 1000,
             'nsteps_per_frame': 5
         }
-        engine = toys.Engine(options=options, template=snap0)
+        self.engine = toys.Engine(options=options, template=self.snap0)
         cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
         self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
         self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
+        self.state_labels = {"Left" : self.left,
+                             "Right" : self.right,
+                             "None" : ~(self.left | self.right)}
 
         randomizer = paths.NoModification()
 
         self.filename = data_filename("committor_test.nc")
-        storage = paths.Storage(self.filename, mode="w", template=snap0)
+        self.storage = paths.Storage(self.filename, 
+                                     mode="w", 
+                                     template=self.snap0)
 
-        self.simulation = CommittorSimulation(storage=storage,
-                                              engine=engine,
+        self.simulation = CommittorSimulation(storage=self.storage,
+                                              engine=self.engine,
                                               states=[self.left, self.right],
                                               randomizer=randomizer,
-                                              initial_snapshots=snap0)
+                                              initial_snapshots=self.snap0)
 
     def teardown(self):
         import os
@@ -66,14 +71,11 @@ class testCommittorSimulation(object):
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=10)
         assert_equal(len(self.simulation.storage.steps), 10)
-        state_label = {"Left" : self.left,
-                       "Right" : self.right, 
-                       "None" : ~(self.left | self.right)}
         counts = {'fwd' : 0, 'bkwd' : 0}
         for step in self.simulation.storage.steps:
             step.active.sanity_check()  # traj is in ensemble
             traj = step.active[0].trajectory
-            traj_str = traj.summarize_by_volumes_str(state_label)
+            traj_str = traj.summarize_by_volumes_str(self.state_labels)
             if traj_str == "None-Right":
                 assert_equal(step.change.canonical.mover,
                              self.simulation.forward_mover)
@@ -95,7 +97,47 @@ class testCommittorSimulation(object):
         assert_equal(counts['fwd'] + counts['bkwd'], 10)
 
     def test_forward_only_committor(self):
-        raise SkipTest
+        sim = CommittorSimulation(storage=self.storage,
+                                  engine=self.engine,
+                                  states=[self.left, self.right],
+                                  randomizer=paths.NoModification(),
+                                  initial_snapshots=self.snap0,
+                                  direction=1)
+        sim.run(n_per_snapshot=10)
+        assert_equal(len(self.simulation.storage.steps), 10)
+        for step in self.simulation.storage.steps:
+            s = step.active[0]
+            step.active.sanity_check()  # traj is in ensemble
+            assert_equal(
+                s.trajectory.summarize_by_volumes_str(self.state_labels),
+                "None-Right"
+            )
+            assert_equal(s.ensemble, sim.forward_ensemble)
+            assert_equal(step.change.canonical.mover,
+                         sim.forward_mover)
 
     def test_backward_only_committor(self):
+        sim = CommittorSimulation(storage=self.storage,
+                                  engine=self.engine,
+                                  states=[self.left, self.right],
+                                  randomizer=paths.NoModification(),
+                                  initial_snapshots=self.snap0,
+                                  direction=-1)
+        sim.run(n_per_snapshot=10)
+        assert_equal(len(self.simulation.storage.steps), 10)
+        for step in self.simulation.storage.steps:
+            s = step.active[0]
+            step.active.sanity_check()  # traj is in ensemble
+            assert_equal(
+                s.trajectory.summarize_by_volumes_str(self.state_labels),
+                "Left-None"
+            )
+            assert_equal(s.ensemble, sim.backward_ensemble)
+            assert_equal(step.change.canonical.mover,
+                         sim.backward_mover)
+
+    def test_multiple_initial_snapshots(self):
+        raise SkipTest
+
+    def test_randomized_committor(self):
         raise SkipTest
