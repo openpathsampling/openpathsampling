@@ -137,7 +137,31 @@ class testCommittorSimulation(object):
                          sim.backward_mover)
 
     def test_multiple_initial_snapshots(self):
-        raise SkipTest
+        snap1 = toys.Snapshot(coordinates=np.array([[0.1]]),
+                              velocities=np.array([[-1.0]]),
+                              topology=self.snap0.topology)
+        sim = CommittorSimulation(storage=self.storage,
+                                  engine=self.engine,
+                                  states=[self.left, self.right],
+                                  randomizer=paths.NoModification(),
+                                  initial_snapshots=[self.snap0, snap1])
+        sim.run(10)
+        assert_equal(len(self.storage.steps), 20)
+        snap0_coords = self.snap0.coordinates.tolist()
+        snap1_coords = snap1.coordinates.tolist()
+        count = {self.snap0: 0, snap1: 0}
+        for step in self.storage.steps:
+            # TODO: this should in step.change.canonical.details
+            shooting_snap = step.change.trials[0].details.shooting_snapshot
+            if shooting_snap.coordinates.tolist() == snap0_coords:
+                mysnap = self.snap0
+            elif shooting_snap.coordinates.tolist() == snap1_coords:
+                mysnap = snap1
+            else:
+                msg = "Shooting snapshot matches neither test snapshot"
+                raise AssertionError(msg)
+            count[mysnap] += 1
+        assert_equal(count, {self.snap0: 10, snap1: 10})
 
     def test_randomized_committor(self):
         # this shows that we get both states even with forward-only
