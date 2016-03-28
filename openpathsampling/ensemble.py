@@ -335,7 +335,7 @@ class Ensemble(StorableNamedObject):
                 tt = trajectory[start:end]
 
                 can_append_tt = False
-                if len(tt) != old_tt_len+1:
+                if len(tt) != old_tt_len + 1:
                     can_append_tt = self.can_append(tt)
                 else:
                     can_append_tt = self.can_append(tt, trusted=True)
@@ -372,7 +372,15 @@ class Ensemble(StorableNamedObject):
 
             while start >= 0 and end >= min_length:
                 tt = trajectory[start:end]
-                if start > 0 and self.can_prepend(tt):
+
+                can_prepend_tt = False
+                if len(tt) != old_tt_len + 1:
+                    can_prepend_tt = self.can_prepend(tt)
+                else:
+                    can_prepend_tt = self.can_prepend(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if start > 0 and can_prepend_tt:
                     start -= 1
                     if end - start > max_length + 1:
                         end -=1
