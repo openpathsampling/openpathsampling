@@ -324,6 +324,7 @@ class Ensemble(StorableNamedObject):
         min_length = max(1, min_length)
 
         logger.debug("Looking for subtrajectories in " + str(trajectory))
+        old_tt_len = 0
 
         if not reverse:
             start = 0
@@ -332,7 +333,15 @@ class Ensemble(StorableNamedObject):
             while start <= length - min_length and end <= length:
                 # print start, end
                 tt = trajectory[start:end]
-                if end < length and self.can_append(tt):
+
+                can_append_tt = False
+                if len(tt) != old_tt_len+1:
+                    can_append_tt = self.can_append(tt)
+                else:
+                    can_append_tt = self.can_append(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if end < length and can_append_tt:
                     end += 1
                     if end - start > max_length + 1:
                         start += 1
