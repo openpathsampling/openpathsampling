@@ -217,14 +217,14 @@ class SingleTrajectoryAnalysis(object):
         if forbidden is None:
             forbidden = paths.EmptyVolume()
         ensemble_BAB = paths.SequentialEnsemble([
-            paths.AllInXEnsemble(to_vol) & paths.LengthEnsemble(1),
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(to_vol),
             paths.PartInXEnsemble(from_vol) & paths.AllOutXEnsemble(to_vol),
-            paths.AllInXEnsemble(to_vol) & paths.LengthEnsemble(1)
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(to_vol)
         ]) & paths.AllOutXEnsemble(forbidden)
         ensemble_AB = paths.SequentialEnsemble([
-            paths.AllInXEnsemble(from_vol) & paths.LengthEnsemble(1),
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(from_vol),
             paths.OptionalEnsemble(paths.AllOutXEnsemble(to_vol)),
-            paths.AllInXEnsemble(to_vol) & paths.LengthEnsemble(1)
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(to_vol) 
         ])
         BAB_split = ensemble_BAB.split(trajectory)
         AB_split = [ensemble_AB.split(part)[0] for part in BAB_split]
