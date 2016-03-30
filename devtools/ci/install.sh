@@ -13,6 +13,8 @@ MINICONDA_MD5=$(curl -s https://repo.continuum.io/miniconda/ | grep -A3 $MINICON
 wget https://repo.continuum.io/miniconda/$MINICONDA
 if [[ $MINICONDA_MD5 != $(md5sum $MINICONDA | cut -d ' ' -f 1) ]]; then
     echo "Miniconda MD5 mismatch"
+    echo "Expected: $MINICONDA_MD5"
+    echo "Found: $(md5sum $MINICONDA | cut -d ' ' -f 1)"
     exit 1
 fi
 bash $MINICONDA -b
