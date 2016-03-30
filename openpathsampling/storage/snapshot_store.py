@@ -106,6 +106,14 @@ class BaseSnapshotStore(ObjectStore):
     def _get(self, idx, snapshot):
         pass
 
+    def save(self, obj, idx=None):
+        if obj._reversed is not None:
+            if obj._reversed in self.index:
+                # the reversed copy has been saved so quit and return the paired idx
+                return BaseSnapshotStore.paired_idx(self.index[obj._reversed])
+
+        return super(BaseSnapshotStore, self).save(obj)
+
     def _save(self, snapshot, idx):
         """
         Add the current state of the snapshot in the database.
@@ -127,11 +135,16 @@ class BaseSnapshotStore(ObjectStore):
 
         st_idx = int(idx / 2)
 
-        self._set(st_idx, snapshot)
-
         if snapshot._reversed is not None:
-            # mark reversed as stored
-            self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
+            if snapshot._reversed in self.index:
+                # seems we have already stored this snapshot but didn't know about it
+                # since we marked it now this will not happen again
+                raise RuntimeWarning('This should never happen! Please report a bug!')
+            else:
+                # mark reversed as stored
+                self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
+
+        self._set(st_idx, snapshot)
 
     def all(self):
         return peng.Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
