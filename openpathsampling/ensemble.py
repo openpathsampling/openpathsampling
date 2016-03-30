@@ -324,6 +324,7 @@ class Ensemble(StorableNamedObject):
         min_length = max(1, min_length)
 
         logger.debug("Looking for subtrajectories in " + str(trajectory))
+        old_tt_len = 0
 
         if not reverse:
             start = 0
@@ -332,7 +333,15 @@ class Ensemble(StorableNamedObject):
             while start <= length - min_length and end <= length:
                 # print start, end
                 tt = trajectory[start:end]
-                if end < length and self.can_append(tt):
+
+                can_append_tt = False
+                if len(tt) != old_tt_len + 1:
+                    can_append_tt = self.can_append(tt)
+                else:
+                    can_append_tt = self.can_append(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if end < length and can_append_tt:
                     end += 1
                     if end - start > max_length + 1:
                         start += 1
@@ -363,7 +372,15 @@ class Ensemble(StorableNamedObject):
 
             while start >= 0 and end >= min_length:
                 tt = trajectory[start:end]
-                if start > 0 and self.can_prepend(tt):
+
+                can_prepend_tt = False
+                if len(tt) != old_tt_len + 1:
+                    can_prepend_tt = self.can_prepend(tt)
+                else:
+                    can_prepend_tt = self.can_prepend(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if start > 0 and can_prepend_tt:
                     start -= 1
                     if end - start > max_length + 1:
                         end -=1
@@ -687,12 +704,15 @@ class EnsembleCombination(Ensemble):
         if Ensemble.use_shortcircuit:
             a = self.ensemble1(trajectory, trusted)
             logger.debug("Combination is " + self.__class__.__name__)
-            logger.debug("Combination: " + self.ensemble1.__class__.__name__ + 
-                         " is "+str(a))
-            logger.debug("Combination: " + self.ensemble2.__class__.__name__ +
-                         " is " +str(self.ensemble2(trajectory, trusted)))
-            logger.debug("Combination: returning " + 
-                         str(self.fnc(a,self.ensemble2(trajectory,trusted))))
+            logger.debug("Combination: " + self.ensemble1.__class__.__name__
+                         + " is "+str(a))
+            if logger.isEnabledFor(logging.DEBUG):
+                ens2 = self.ensemble2(trajectory, trusted)
+                logger.debug("Combination: " +
+                             self.ensemble2.__class__.__name__ +
+                             " is " +str(ens2))
+                logger.debug("Combination: returning " +
+                             str(self.fnc(a,ens2)))
             res_true = self.fnc(a, True)
             res_false = self.fnc(a, False)
             if res_false == res_true:
@@ -730,12 +750,14 @@ class EnsembleCombination(Ensemble):
             logger.debug("Combination is " + self.__class__.__name__)
             logger.debug("Combination.can_append: " + 
                          self.ensemble1.__class__.__name__ + " is "+str(a))
-            logger.debug("Combination.can_append: " 
-                         + self.ensemble2.__class__.__name__ +
-                         " is " +
-                         str(self.ensemble2.can_append(trajectory, trusted)))
-            logger.debug("Combination.can_append: returning " + 
-                         str(self.fnc(a,self.ensemble2.can_append(trajectory,trusted))))
+            if logger.isEnabledFor(logging.DEBUG):
+                ens2_can_append = self.ensemble2.can_append(trajectory,
+                                                            trusted)
+                logger.debug("Combination.can_append: " 
+                             + self.ensemble2.__class__.__name__ +
+                             " is " + str(ens2_can_append))
+                logger.debug("Combination.can_append: returning " + 
+                             str(self.fnc( a, ens2_can_append)))
             res_true = self._continue_fnc(a, True)
             res_false = self._continue_fnc(a, False)
             if res_false == res_true:
