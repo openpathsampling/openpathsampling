@@ -110,7 +110,7 @@ class BaseSnapshotStore(ObjectStore):
         if obj._reversed is not None:
             if obj._reversed in self.index:
                 # the reversed copy has been saved so quit and return the paired idx
-                return BaseSnapshotStore.paired_idx(self.index[obj._reversed])
+                self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
 
         return super(BaseSnapshotStore, self).save(obj)
 
