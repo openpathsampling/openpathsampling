@@ -698,10 +698,10 @@ class ObjectStore(StorableNamedObject):
         except:
             # in case we did not succeed remove the mark as being saved
             del self.index[obj]
-        finally:
-            # in any case release the locked indices
             self.release_idx(n_idx)
+            raise
 
+        self.release_idx(n_idx)
         return n_idx
 
     def __setitem__(self, key, value):
