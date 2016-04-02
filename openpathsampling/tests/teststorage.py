@@ -178,5 +178,9 @@ class testStorage(object):
 
         # check that the reversed one has index 1 and not 3!
         assert(store.idx(rev) == 1)
+
+        # and we have
+        assert(len(store.snapshots) == 2)
+        assert(len(store.dimensions['snapshots']) == 1)
         store.close()
 
