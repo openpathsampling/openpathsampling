@@ -183,10 +183,14 @@ def assert_close_unit(v1, v2, *args, **kwargs):
     else:
         npt.assert_allclose(v1, v2, *args, **kwargs)
 
-def compare_snapshot(snapshot1, snapshot2):
+def compare_snapshot(snapshot1, snapshot2, test_reversed=True):
+    if test_reversed:
+        compare_snapshot(snapshot1.reversed, snapshot2.reversed, False)
+
     assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
     assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
     assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+
 
 class RandomMDEngine(DynamicsEngine):
     _default_options = {}
