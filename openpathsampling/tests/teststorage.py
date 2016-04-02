@@ -164,4 +164,19 @@ class testStorage(object):
         store.close()
         store2.close()
 
-        pass
+    def test_reverse_bug(self):
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(self.filename))
+
+        # template is saved, but it has no reversed
+        assert(store.template._reversed is None)
+
+        rev = store.template.reversed
+
+        # save the reversed one
+        store.save(rev)
+
+        # check that the reversed one has index 1 and not 3!
+        assert(store.idx(rev) == 1)
+        store.close()
+
