@@ -27,7 +27,6 @@ ToySnapshot = SnapshotFactory(
     features=[
         features.velocities,
         features.coordinates,
-        features.xyz,
         features.topology
     ],
     description="Simulation snapshot. Only references to coordinates and velocities",

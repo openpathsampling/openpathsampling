@@ -29,7 +29,7 @@ class BaseSnapshotStore(ObjectStore):
         self.snapshot_class = snapshot_class
         self._use_lazy_reversed = False
         if hasattr(snapshot_class, '__features__'):
-            if '_reversed' in snapshot_class.__features__['lazy']:
+            if '_reversed' in snapshot_class.__features__.lazy:
                 self._use_lazy_reversed = True
 
     def __repr__(self):
@@ -148,6 +148,14 @@ class BaseSnapshotStore(ObjectStore):
 
             self._uuids_loaded = True
 
+    def save(self, obj, idx=None):
+        if obj._reversed is not None:
+            if obj._reversed in self.index:
+                # the reversed copy has been saved so quit and return the paired idx
+                self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
+
+        return super(BaseSnapshotStore, self).save(obj)
+
     def _save(self, snapshot, idx):
         """
         Add the current state of the snapshot in the database.
@@ -167,6 +175,15 @@ class BaseSnapshotStore(ObjectStore):
         """
 
         st_idx = int(idx / 2)
+
+        if snapshot._reversed is not None:
+            if snapshot._reversed in self.index:
+                # seems we have already stored this snapshot but didn't know about it
+                # since we marked it now this will not happen again
+                raise RuntimeWarning('This should never happen! Please report a bug!')
+            else:
+                # mark reversed as stored
+                self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
 
         self._set(st_idx, snapshot)
 
@@ -240,17 +257,17 @@ class FeatureSnapshotStore(BaseSnapshotStore):
 
     @property
     def classes(self):
-        return self.snapshot_class.__features__['classes']
+        return self.snapshot_class.__features__.classes
 
     @property
-    def parameters(self):
-        return self.snapshot_class.__features__['parameters']
+    def storables(self):
+        return self.snapshot_class.__features__.storables
 
     def _set(self, idx, snapshot):
-        [self.write(attr, idx, snapshot) for attr in self.parameters]
+        [self.write(attr, idx, snapshot) for attr in self.storables]
 
     def _get(self, idx, snapshot):
-        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.parameters]
+        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.storables]
 
     def _init(self):
         super(FeatureSnapshotStore, self)._init()

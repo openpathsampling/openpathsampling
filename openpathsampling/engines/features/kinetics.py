@@ -1,6 +1,6 @@
 from shared import KineticContainerStore
 
-attributes = ['kinetics', 'velocities', 'is_reversed']
+variables = ['kinetics', 'is_reversed']
 lazy = ['kinetics']
 flip = ['is_reversed']
 
@@ -16,7 +16,7 @@ def netcdfplus_init(store):
                         description="the indicator if momenta should be flipped.",
                         )
 
-
+@property
 def velocities(self):
     """
     The velocities in the configuration. If the snapshot is reversed a

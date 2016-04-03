@@ -4,8 +4,8 @@
 # to run this after every commit, but if you change much of the API, you
 # should run it.
 
-ipynbtest.py  alanine.ipynb
-ipynbtest.py ipynbtest_tutorial.ipynb
+ipynbtest.py alanine.ipynb
+#ipynbtest.py ipynbtest_tutorial.ipynb
 ipynbtest.py langevin_integrator_check.ipynb
 ipynbtest.py mistis_setup.ipynb
 ipynbtest.py mistis_analysis.ipynb
@@ -22,5 +22,5 @@ ipynbtest.py test_cv.ipynb
 ipynbtest.py test_netcdfplus.ipynb
 ipynbtest.py troubleshooting_ops.ipynb
 ipynbtest.py tutorial_visualization.ipynb
-ipynbtest.py which_network.ipynb
+#ipynbtest.py which_network.ipynb # TODO: finish this notebook
 #ipynbtest.py Weina\ Alanine\ Example.ipynb
