@@ -68,6 +68,17 @@ class BaseSnapshot(StorableObject):
 
         return self._reversed
 
+    def __neg__(self):
+        """
+        Access the reversed snapshot using `-`
+
+        Returns
+        -------
+        :class:`BaseSnapshot`
+            the reversed copy
+        """
+        return self.reversed
+
     # ==========================================================================
     # Utility functions
     # ==========================================================================
