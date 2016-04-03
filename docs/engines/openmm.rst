@@ -1,6 +1,6 @@
 .. _openmm:
 
-.. module:: openpathsampling.dynamics.openmm
+.. module:: openpathsampling.engines.openmm
 
 OpenMM Functions
 ================

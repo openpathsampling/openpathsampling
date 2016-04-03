@@ -1,6 +1,6 @@
 .. _base:
 
-.. module:: openpathsampling.dynamics
+.. module:: openpathsampling.engines
 
 Snapshots
 =========

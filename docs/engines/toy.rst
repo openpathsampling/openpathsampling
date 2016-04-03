@@ -1,6 +1,6 @@
 .. _toy:
 
-.. module:: openpathsampling.dynamics.toy
+.. module:: openpathsampling.engines.toy
 
 ToyDynamics Functions
 =====================
