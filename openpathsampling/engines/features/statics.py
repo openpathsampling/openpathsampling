@@ -5,6 +5,8 @@ import mdtraj
 variables = ['statics']
 lazy = ['statics']
 
+storables = ['statics']
+
 
 def netcdfplus_init(store):
     store.storage.create_store('statics', StaticContainerStore())

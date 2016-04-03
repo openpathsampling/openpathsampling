@@ -206,7 +206,7 @@ class FeatureSnapshotStore(BaseSnapshotStore):
 
     @property
     def storables(self):
-        return self.snapshot_class.__features__.variables
+        return self.snapshot_class.__features__.storables
 
     def _set(self, idx, snapshot):
         [self.write(attr, idx, snapshot) for attr in self.storables]

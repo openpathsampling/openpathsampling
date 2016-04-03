@@ -8,6 +8,8 @@ topology : :class:`openpathsampling.Topolgy`
 
 variables = ['topology']
 
+storables = ['topology']
+
 
 def netcdfplus_init(store):
     store.create_variable('topology', 'obj.topologies',

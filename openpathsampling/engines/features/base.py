@@ -130,7 +130,8 @@ class CodeContext(object):
 
 
 FeatureTuple = namedtuple(
-        'FeatureTuple', 'classes variables properties functions required lazy numpy reversal minus flip exclude_copy imports debug'
+        'FeatureTuple', 'classes variables properties functions required lazy ' +
+                        'numpy reversal minus flip exclude_copy imports debug storables'
     )
 
 
@@ -213,7 +214,7 @@ def attach_features(features, use_lazy_reversed=False):
 
         for name in ['variables', 'minus', 'reversal', 'properties',
                      'flip', 'numpy', 'lazy', 'required', 'classes',
-                     'exclude_copy', 'imports', 'functions']:
+                     'exclude_copy', 'imports', 'functions', 'storables']:
             if name not in __features__:
                 __features__[name] = []
 
@@ -263,7 +264,7 @@ def attach_features(features, use_lazy_reversed=False):
                     setattr(cls, prop, getattr(feature, prop))
 
             # copy specific attribute types
-            for name in ['variables', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports', 'functions']:
+            for name in ['variables', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports', 'functions', 'storables']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
@@ -301,6 +302,12 @@ def attach_features(features, use_lazy_reversed=False):
                         origin[c] = feature
 
                     __features__[name] += content
+
+                else:
+                    if name == 'storables':
+                        # if storables is missing we assume all variables should be stored
+
+                        __features__['storables'] += __features__['variables']
 
             # check for cross collisions between variables, properties and function names
             for t1, t2 in [('variables', 'properties'), ('variables', 'functions'), ('properties', 'functions')]:
