@@ -7,8 +7,6 @@ engine : :class:`openpathsampling.DynamicsEngine`
 
 variables = ['engine']
 
-storables = ['engine']
-
 def netcdfplus_init(store):
     store.create_variable(
         'engine',

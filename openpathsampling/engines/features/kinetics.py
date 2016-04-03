@@ -4,8 +4,6 @@ variables = ['kinetics', 'is_reversed']
 lazy = ['kinetics']
 flip = ['is_reversed']
 
-storables = ['kinetics', 'is_reversed']
-
 
 def netcdfplus_init(store):
     store.storage.create_store('kinetics', KineticContainerStore())

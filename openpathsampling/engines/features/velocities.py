@@ -9,8 +9,6 @@ variables = ['velocities']
 minus = ['velocities']
 numpy = ['velocities']
 
-storables = ['velocities']
-
 
 def netcdfplus_init(store):
 
