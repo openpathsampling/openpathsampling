@@ -8,6 +8,7 @@ coordinates : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
 variables = ['coordinates']
 numpy = ['coordinates']
 
+
 def netcdfplus_init(store):
     store.create_variable('coordinates', 'numpy.float32',
                         dimensions=('atom', 'spatial'),
@@ -15,6 +16,7 @@ def netcdfplus_init(store):
                                    "'{ix[2]}' of configuration '{ix[0]}'.",
                         chunksizes=(1, 'atom', 'spatial')
                         )
+
 
 @property
 def xyz(snapshot):
