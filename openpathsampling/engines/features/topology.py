@@ -6,7 +6,7 @@ topology : :class:`openpathsampling.Topolgy`
 """
 
 
-attributes = ['topology']
+variables = ['topology']
 
 
 def netcdfplus_init(store):
