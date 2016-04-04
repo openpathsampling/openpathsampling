@@ -1,7 +1,8 @@
 import os
 
-import openpathsampling as paths
 from openpathsampling.storage import Storage
+
+import openpathsampling.engines.openmm as peng
 
 import mdtraj as md
 
@@ -12,7 +13,7 @@ def setup_package():
     # everything else
     mdtrajectory = md.load(data_filename("ala_small_traj.pdb"))
 
-    snapshot = paths.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    snapshot = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
     # once we have a template configuration (coordinates to not really matter)
     # we can create a storage. We might move this logic out of the dynamics engine
@@ -24,7 +25,7 @@ def setup_package():
         mode='w'
     )
 
-    mytraj = paths.tools.trajectory_from_mdtraj(mdtrajectory)
+    mytraj = peng.trajectory_from_mdtraj(mdtrajectory, simple_topology=True)
     storage.trajectories.save(mytraj)
 
     storage.close()

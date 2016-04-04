@@ -8,41 +8,29 @@ install:
   - deactivate
   # Sets up a MINIConda enviroment in the name of the selected python version
   - source devtools/ci/install.sh
-  # Don't know what this is meant for
+  # Do not buffer output of python outputs but flush them directly to the terminal
   - export PYTHONUNBUFFERED=true
-  # Try to install our package
-  - ls
-  - pwd
-  - python setup.py install
 
 script:
-  # Build conda package
-  - source deactivate
   - echo travis_fold:start:conda.build.package
-  - conda install --yes conda-build jinja2
+  - conda install --yes conda-build
   - conda build devtools/conda-recipe
-  - source activate $python
   - echo travis_fold:end:conda.build.package
-  - echo travis_fold:start:conda.install.package
-  - echo Install conda package
-  - conda install --yes $HOME/miniconda2/conda-bld/linux-64/openpathsampling-*
-  # - conda list -e
-  - echo travis_fold:end:conda.install.package
 
-  # Run tests
+  # Run tests in _test environment
+  - source activate _test
+  - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
 
-  # Push to binstar anyway.
+  # Upload new docs
   - bash -x devtools/ci/after_sucess.sh
 
 env:
   matrix:
-# - python=2.6  CONDA_PY=26  CONDA_NPY=16
-# is 110 the correct numpy label? doesn't seem to cause problems....
     - python=2.7  CONDA_PY=27  CONDA_NPY=110
-# - python=3.3  CONDA_PY=33  CONDA_NPY=17
-# - python=3.4  CONDA_PY=34  CONDA_NPY=18
+# - python=3.4  CONDA_PY=34  CONDA_NPY=110
+# - python=3.5  CONDA_PY=35  CONDA_NPY=110
 
   global:
     # encrypted BINSTAR_TOKEN for push of dev package to binstar

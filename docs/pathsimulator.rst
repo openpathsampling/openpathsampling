@@ -11,7 +11,7 @@ basic pathsimulators
     :toctree: api/generated/
 
     PathSimulator
-
+    PathSampling
 
 special pathsimulators
 ----------------------
@@ -19,3 +19,4 @@ special pathsimulators
     :toctree: api/generated/
 
     Bootstrapping
+    FullBootstrapping

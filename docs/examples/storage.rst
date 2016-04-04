@@ -1,5 +1,5 @@
 OpenPathSampling Storage
 ========================
 
-.. notebook:: examples/ipython/storage_tutorial.ipynb
+.. notebook:: examples/ipython/tutorial_storage.ipynb
    :skip_exceptions:

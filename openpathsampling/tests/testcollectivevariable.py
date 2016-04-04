@@ -2,23 +2,23 @@
 @author David W.H. Swenson
 """
 
-from test_helpers import data_filename
+from test_helpers import data_filename, assert_close_unit
 
 import mdtraj as md
 import numpy as np
 
 import openpathsampling.collectivevariable as op
-import openpathsampling as paths
+import openpathsampling.engines.openmm as peng
+from openpathsampling.netcdfplus import NetCDFPlus
 
 from msmbuilder.featurizer import AtomPairsFeaturizer
 
-import time
 
 class testCV_Function(object):
 
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = paths.tools.trajectory_from_mdtraj(self.mdtraj)
+        self.traj = peng.trajectory_from_mdtraj(self.mdtraj)
 
     def teardown(self):
         pass
@@ -41,7 +41,7 @@ class testCV_Function(object):
 
         md_distances = md.compute_distances(self.mdtraj, atom_pairs)
 
-        my_distances = atom_pair_op( self.traj )
+        my_distances = atom_pair_op(self.traj)
 
         np.testing.assert_allclose(md_distances, my_distances, rtol=10**-6, atol=10**-10)
 
@@ -53,8 +53,8 @@ class testCV_Function(object):
         # little trick. We just predent the atom_pairs_op is a function we want to use
         # it cannot be stored though, but for from_template it is enough
 
-        params = atom_pair_op.return_parameters_from_template(self.traj[0])
+        params = NetCDFPlus.get_value_parameters(atom_pair_op(self.traj[0]))
 
-        assert params['cv_return_type'] == 'numpy.float32'
-        assert params['cv_return_simtk_unit'] is None
-        assert params['cv_return_shape'] == tuple([2])
+        assert params['var_type'] == 'numpy.float32'
+        assert params['simtk_unit'] is None
+        assert params['dimensions'] == tuple([2])

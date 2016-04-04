@@ -14,12 +14,22 @@ Install with Conda
 ------------------
 .. _install-with-conda:
 
-`conda <http://www.continuum.io/blog/conda>`_ is a python package manager built for scientific python. Unlike ``easy_install`` or ``pip``, it handles binaries and binary dependencies, which are critical for most scientific workflows. If you're a ``conda`` user, you can install OpenPathSampling by adding the omnia channel. If you're not a conda user, you should look into it. ::
+We recommend using `conda` to install OpenPathSampling.  `conda
+<http://www.continuum.io/blog/conda>`_ is a python package manager built for
+scientific python. Unlike ``easy_install`` or ``pip``, it handles binaries
+and binary dependencies, which are critical for most scientific workflows.
+If you're a ``conda`` user, you can install OpenPathSampling by adding the
+omnia channel.
 
-To install OpenPathSampling with conda, use the following commands ::
+To install the most recent release of OpenPathSampling with conda, use the
+following commands ::
 
-  $ conda config --add channels http://conda.binstar.org/omnia
+  $ conda config --add channels omnia
   $ conda install openpathsampling
+
+If you want the cutting edge of what OpenPathSampling can do, you can
+install the development version using `conda install openpathsampling-dev`.
+(Also, if you're reading this prior to the first official release.)
 
 .. note:: ``conda`` will automatically install all of the tricky dependencies
     from binary packages automatically! This includes pytables / numpy / scipy!
@@ -37,11 +47,13 @@ Then, in the directory containing the source code, you can install it with ::
 
   $ python setup.py install
 
+You will have to manually install the requirements and dependencies.
+
 Dependencies
 ============
 
 To use OpenPathSampling, the following libraries and software will need to
-be installed.
+be installed. (TODO: this list is partial)
 
     Linux, Mac OS X or Windows operating system
         We develop mainly on 64-bit Linux and Mac machines. Windows is not

@@ -20,14 +20,18 @@ date
 ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
 date
 ipynbtest.py "alanine.ipynb" || testfail=1
+date
+ipynbtest.py --strict "test_snapshot.ipynb" || testfail=1
 
 # needs to run after alanine since it need the trajectory.nc file
 date
-ipynbtest.py "storage_tutorial.ipynb" || testfail=1
+ipynbtest.py "tutorial_storage.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_cv.ipynb" || testfail=1
+date
+ipynbtest.py --strict "test_pyemma.ipynb" || testfail=1
 
 # python ipynbtest.py "visualization.ipynb" || testfail=1
 cd ../..

@@ -3,6 +3,7 @@ from nose.plugins.skip import SkipTest
 from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj, raises_with_message_like
 
 import openpathsampling as paths
+import openpathsampling.engines.openmm as peng
 from openpathsampling.ensemble import *
 
 import logging
@@ -490,7 +491,7 @@ class testSequentialEnsemble(EnsembleTest):
                                     lambda_min=-100.0, lambda_max=100.0)
 
         traj = paths.Trajectory([
-            paths.Snapshot(
+            peng.MDSnapshot(
                 coordinates=np.array([[-0.5, 0.0]]), 
                 velocities=np.array([[0.0,0.0]])
             )
@@ -997,9 +998,6 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         ens = SequentialEnsemble([AllInXEnsemble(vol1 | vol2 | vol3)])
         cache = ens._cache_can_append
         traj = ttraj['upper_in_in_out_out_in_in']
-        for i in traj:
-            print i,
-        print
         assert_equal(ens.can_append(traj[0:1]), True)
         assert_equal(ens.can_append(traj[0:2]), True)
         assert_equal(ens.can_append(traj[0:3]), True)
@@ -1666,6 +1664,73 @@ class testEnsembleSplit(EnsembleTest):
         assert_equal(len(subtrajs_out_2), 2)
         assert_equal(len(subtrajs_out_2[0]), 1)
         assert_equal(len(subtrajs_out_2[1]), 1)
+
+        ensembleAXA = paths.SequentialEnsemble([
+            self.inA,
+            self.outA,
+            self.inA
+        ])
+
+        traj3 = make_1d_traj(coordinates=[0.3, 0.6, 0.3, 0.6, 0.3])
+
+        assert(self.inA(paths.Trajectory([traj3[0]])))
+        assert(self.outA(paths.Trajectory([traj3[1]])))
+
+        subtrajs_in_3 = ensembleAXA.split(traj3)
+        assert_equal((len(subtrajs_in_3)), 2)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert_equal((len(subtrajs_in_3[1])), 3)
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [0, 1, 2])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[1]) == [2, 3, 4])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True)
+        assert_equal((len(subtrajs_in_3)), 2)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert_equal((len(subtrajs_in_3[1])), 3)
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [2, 3, 4])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[1]) == [0, 1, 2])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, overlap=0)
+        assert_equal((len(subtrajs_in_3)), 1)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [0, 1, 2])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, overlap=0)
+        assert_equal((len(subtrajs_in_3)), 1)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [2, 3, 4])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, overlap=1, max_length=2)
+        assert_equal((len(subtrajs_in_3)), 0)
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, max_length=2)
+        assert_equal((len(subtrajs_in_3)), 0)
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, max_length=3)
+        assert_equal(len(subtrajs_in_3), 2)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert_equal((len(subtrajs_in_3[1])), 3)
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [0, 1, 2])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[1]) == [2, 3, 4])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, max_length=3)
+        assert_equal((len(subtrajs_in_3)), 2)
+        assert_equal((len(subtrajs_in_3[0])), 3)
+        assert_equal((len(subtrajs_in_3[1])), 3)
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[1]) == [0, 1, 2])
+        assert(traj3.subtrajectory_indices(subtrajs_in_3[0]) == [2, 3, 4])
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=False, min_length=4)
+        assert_equal((len(subtrajs_in_3)), 0)
+
+        subtrajs_in_3 = ensembleAXA.split(traj3, reverse=True, min_length=4)
+        assert_equal((len(subtrajs_in_3)), 0)
+
+        sub_traj = ensembleAXA.find_first_subtrajectory(traj3)
+        assert(traj3.subtrajectory_indices(sub_traj) == [0,1,2])
+
+        sub_traj = ensembleAXA.find_last_subtrajectory(traj3)
+        assert(traj3.subtrajectory_indices(sub_traj) == [2,3,4])
 
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
