@@ -9,35 +9,35 @@ Main functions
 --------------
 
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: ../api/generated/
 
-    Snapshot
-    ToySnapshot
-    ToyEngine
-    ToyTopology
+   Snapshot
+   ToySnapshot
+   Engine
+   Topology
 
 Integrator functions
 --------------------
 
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: ../api/generated/
 
-    ToyIntegrator
-    LeapfrogVerletIntegrator
-    LangevinBAOABIntegrator
+   ToyIntegrator
+   LeapfrogVerletIntegrator
+   LangevinBAOABIntegrator
 
 
 Potential energy surface (PES) functions
 ----------------------------------------
 
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: ../api/generated/
 
-    PES
-    PES_Sub
-    PES_Add
-    HarmonicOscillator
-    Gaussian
-    OuterWalls
-    LinearSlope
+   PES
+   PES_Sub
+   PES_Add
+   HarmonicOscillator
+   Gaussian
+   OuterWalls
+   LinearSlope
 

@@ -12,29 +12,29 @@ CollectiveVariable Functions
 basic orderparamters
 --------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    CollectiveVariable
-    CV_Function
+   CollectiveVariable
+   CV_Function
 
 simple collectivevariables
 --------------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    CV_Volume
+   CV_Volume
 
 
 mdtraj orderparamters
 ---------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    CV_MDTraj_Function
+   CV_MDTraj_Function
 
 msmbuilder3 collectivevariables
 -------------------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    CV_MSMB_Featurizer
+   CV_MSMB_Featurizer

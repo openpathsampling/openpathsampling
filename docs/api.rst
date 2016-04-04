@@ -23,6 +23,7 @@ Dynamics Engines
 	:members:
 	:inherited-members:
 	:show-inheritance:
+        :imported-members:
 	
 	
 ********
@@ -66,13 +67,13 @@ Storage
 Snapshot
 ********
 
-.. automodule:: snapshot
+.. automodule:: openpathsampling.engines.snapshot
 	:members:
 
 **********
 Trajectory
 **********
 
-.. automodule:: trajectory
+.. automodule:: openpathsampling.engines.trajectory
 	:members:
 

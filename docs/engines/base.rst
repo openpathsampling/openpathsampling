@@ -5,32 +5,32 @@
 Snapshots
 =========
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: ../api/generated/
 
-    BaseSnapshot
+   BaseSnapshot
 
 
 Trajectories
 ============
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: ../api/generated/
 
-    Trajectory
+   Trajectory
 
 
 Dynamics Engine Functions
 =========================
 
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: ../api/generated/
 
-    DynamicsEngine
+   DynamicsEngine
 
 
 Topologies
 ==========
 
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: ../api/generated/
 
-    Topology
+   Topology

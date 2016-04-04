@@ -1,6 +1,7 @@
-from integrators import LangevinBAOABIntegrator, LeapfrogVerletIntegrator
+from integrators import (LangevinBAOABIntegrator, LeapfrogVerletIntegrator,
+                         ToyIntegrator)
 from pes import Gaussian, HarmonicOscillator, LinearSlope, OuterWalls, \
-    PES_Add, PES_Combination, PES_Sub
+    PES_Add, PES_Combination, PES_Sub, PES
 
 from engine import ToyEngine as Engine
 from snapshot import ToySnapshot
