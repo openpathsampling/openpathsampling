@@ -15,11 +15,11 @@ CollectiveVariable
 	:show-inheritance:
 
 
-***************
-Dynamics Engine
-***************
+****************
+Dynamics Engines
+****************
 	
-.. automodule:: dynamics_engine
+.. automodule:: engines
 	:members:
 	:inherited-members:
 	:show-inheritance:
