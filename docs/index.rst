@@ -34,10 +34,10 @@ API Reference
     shooting
     pathmover
     pathsimulator
-    engine
     storage
     treemixin
     trajectory
+    openmm
 
 Developing
 ----------
@@ -46,6 +46,8 @@ Developing
     :maxdepth: 1
 
     netcdfplus/index
+    engines/index
+
     api
 
 README

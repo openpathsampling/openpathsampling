@@ -47,7 +47,7 @@ class ChainDict(object):
 
     Attributes
     ----------
-    post : ChainDict
+    _post : ChainDict
         the ChainDict to be called when this instance cannot evaluate given keys
 
     """

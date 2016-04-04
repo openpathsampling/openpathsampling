@@ -1,31 +1,24 @@
-'''
+"""
 @author David W.H. Swenson
-'''
-import time
+"""
 
-from nose.tools import (assert_equal, assert_items_equal)
-from nose.plugins.skip import SkipTest
+import numpy as np
+import simtk.openmm as mm
+from nose.tools import (assert_equal)
+from simtk import unit as u
+from simtk.openmm import app
+
+import openpathsampling.engines.openmm as peng
 
 from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,
                           assert_not_equal_array_array)
 
-from openpathsampling.openmm_engine import OpenMMEngine
-from openpathsampling import Snapshot, MDSnapshot
-
-import openpathsampling as paths
-
-import numpy as np
-
-import simtk.openmm as mm
-from simtk.openmm import app
-from simtk import unit as u
-
 
 def setUp():
     global topology, template, system
-    template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
-    topology = paths.tools.to_openmm_topology(template)
+    template = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    topology = peng.to_openmm_topology(template)
 
     # Generated using OpenMM Script Builder
     # http://builder.openmm.org
@@ -41,7 +34,6 @@ def setUp():
         nonbondedMethod=app.PME,
         nonbondedCutoff=1.0*u.nanometers,
         constraints=app.HBonds,
-        rigidWater=True,
         ewaldErrorTolerance=0.0005
     )
 
@@ -59,28 +51,24 @@ class testOpenMMEngine(object):
 
         # Engine options
         options = {
-            'nsteps_per_frame': 10,
-            'platform': 'fastest',
-            'solute_indices' : range(22),
-            'n_frames_max' : 5,
-            'timestep': 2.0*u.femtoseconds
+            'nsteps_per_frame': 2,
+            'platform': 'CPU',
+            'solute_indices': range(22),
+            'n_frames_max': 5,
+            'timestep': 2.0 * u.femtoseconds
         }
 
-        self.engine = OpenMMEngine(
+        self.engine = peng.Engine(
             template,
             system,
             integrator,
             options
         )
 
-        print hasattr(self.engine, 'current_snapshot')
-
         context = self.engine.simulation.context
         zero_array = np.zeros((self.engine.n_atoms, 3))
         context.setPositions(self.engine.template.coordinates)
-
         context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
-
 
     def teardown(self):
         pass
@@ -108,8 +96,9 @@ class testOpenMMEngine(object):
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])
 
-        self.engine.current_snapshot = MDSnapshot(
+        self.engine.current_snapshot = peng.Snapshot.construct(
             coordinates=np.array(testpos) * u.nanometers,
+            box_vectors=np.zeros((3, 3)),
             velocities=np.array(testvel) * u.nanometers / u.picoseconds
         )
         state = self.engine.simulation.context.getState(getPositions=True,
@@ -121,14 +110,14 @@ class testOpenMMEngine(object):
         np.testing.assert_almost_equal(testvel, sim_vels, decimal=5)
 
     def test_generate_next_frame(self):
-        snap0 = Snapshot(
-            configuration=self.engine.current_snapshot.configuration,
-            momentum=self.engine.current_snapshot.momentum
+        snap0 = peng.Snapshot(
+            statics=self.engine.current_snapshot.statics,
+            kinetics=self.engine.current_snapshot.kinetics
         )
         new_snap = self.engine.generate_next_frame()
         assert(new_snap is not snap0)
-        assert(new_snap.configuration is not snap0.configuration)
-        assert(new_snap.momentum is not snap0.momentum)
+        assert(new_snap.statics is not snap0.statics)
+        assert(new_snap.kinetics is not snap0.kinetics)
         old_pos = snap0.coordinates / u.nanometers
         new_pos = new_snap.coordinates / u.nanometers
         old_vel = snap0.velocities / (u.nanometers / u.picoseconds)
@@ -139,13 +128,8 @@ class testOpenMMEngine(object):
         assert_not_equal_array_array(old_vel, new_vel)
 
     def test_generate(self):
-        print self.engine
-        print dir(self.engine)
-        print hasattr(self.engine, 'current_snapshot')
-        print self.engine._current_snapshot
-        print self.engine.current_snapshot
         traj = self.engine.generate(self.engine.current_snapshot, [true_func])
         assert_equal(len(traj), self.engine.n_frames_max)
 
     def test_snapshot_timestep(self):
-        assert_equal(self.engine.snapshot_timestep, 20 * u.femtoseconds)
+        assert_equal(self.engine.snapshot_timestep, 4 * u.femtoseconds)

@@ -1,15 +1,14 @@
-from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
-from openpathsampling.snapshot import Snapshot, AbstractSnapshot
-from openpathsampling.trajectory import Trajectory
-
 import abc
+
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
+import openpathsampling.engines as peng
 
 
 # =============================================================================================
 # ABSTRACT BASE CLASS FOR SNAPSHOTS
 # =============================================================================================
 
-class AbstractSnapshotStore(ObjectStore):
+class BaseSnapshotStore(ObjectStore):
     """
     An ObjectStore for Snapshots in netCDF files.
     """
@@ -21,12 +20,16 @@ class AbstractSnapshotStore(ObjectStore):
 
         Attributes
         ----------
-        snapshot_class : openpathsampling.AbstractSnapshot
+        snapshot_class : openpathsampling.BaseSnapshot
             a snapshot class that this Store is supposed to store
 
         """
-        super(AbstractSnapshotStore, self).__init__(AbstractSnapshot, json=False)
+        super(BaseSnapshotStore, self).__init__(peng.BaseSnapshot, json=False)
         self.snapshot_class = snapshot_class
+        self._use_lazy_reversed = False
+        if hasattr(snapshot_class, '__features__'):
+            if '_reversed' in snapshot_class.__features__.lazy:
+                self._use_lazy_reversed = True
 
     def __repr__(self):
         return "store.%s[%s(%s)]" % (
@@ -72,15 +75,13 @@ class AbstractSnapshotStore(ObjectStore):
 
         Returns
         -------
-        snapshot : Snapshot
+        snapshot : :obj:`BaseSnapshot`
             the loaded snapshot instance
         """
 
         # check if the reversed is in the cache
         try:
-            obj = self.cache[AbstractSnapshotStore.paired_idx(idx)].create_reversed()
-            obj._reversed = LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
-            return obj
+            return self.cache[BaseSnapshotStore.paired_idx(idx)].reversed
         except KeyError:
             pass
 
@@ -88,15 +89,14 @@ class AbstractSnapshotStore(ObjectStore):
         st_idx = int(idx / 2)
 
         obj = self.snapshot_class.__new__(self.snapshot_class)
-        AbstractSnapshot.__init__(obj)
+        self.snapshot_class.init_empty(obj)
 
         self._get(st_idx, obj)
         if idx & 1:
-            obj = obj.create_reversed()
+            obj = obj.reversed
 
-        obj._reversed = LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
+        # obj._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
         return obj
-
 
     @abc.abstractmethod
     def _set(self, idx, snapshot):
@@ -106,13 +106,21 @@ class AbstractSnapshotStore(ObjectStore):
     def _get(self, idx, snapshot):
         pass
 
+    def save(self, obj, idx=None):
+        if obj._reversed is not None:
+            if obj._reversed in self.index:
+                # the reversed copy has been saved so quit and return the paired idx
+                self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
+
+        return super(BaseSnapshotStore, self).save(obj)
+
     def _save(self, snapshot, idx):
         """
         Add the current state of the snapshot in the database.
 
         Parameters
         ----------
-        snapshot : Snapshot()
+        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
             the snapshot to be saved
         idx : int or None
             if idx is not None the index will be used for saving in the storage.
@@ -127,20 +135,22 @@ class AbstractSnapshotStore(ObjectStore):
 
         st_idx = int(idx / 2)
 
+        if snapshot._reversed is not None:
+            if snapshot._reversed in self.index:
+                # seems we have already stored this snapshot but didn't know about it
+                # since we marked it now this will not happen again
+                raise RuntimeWarning('This should never happen! Please report a bug!')
+            else:
+                # mark reversed as stored
+                self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
+
         self._set(st_idx, snapshot)
 
-        if snapshot._reversed is not None:
-            snapshot._reversed._reversed = LoaderProxy(self, idx)
-            # mark reversed as stored
-            self.index[snapshot._reversed] = AbstractSnapshotStore.paired_idx(idx)
-
-        snapshot._reversed = LoaderProxy(self, AbstractSnapshotStore.paired_idx(idx))
-
     def all(self):
-        return Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
+        return peng.Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
 
     def __len__(self):
-        return 2 * super(AbstractSnapshotStore, self).__len__()
+        return 2 * super(BaseSnapshotStore, self).__len__()
 
     def duplicate(self, snapshot):
         """
@@ -178,14 +188,11 @@ class AbstractSnapshotStore(ObjectStore):
         return idx
 
 
-
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
 # =============================================================================================
 
-# TODO: Move the feature stuff to module feature ???
-
-class FeatureSnapshotStore(AbstractSnapshotStore):
+class FeatureSnapshotStore(BaseSnapshotStore):
     """
     An ObjectStore for Snapshots in netCDF files.
     """
@@ -195,17 +202,17 @@ class FeatureSnapshotStore(AbstractSnapshotStore):
 
     @property
     def classes(self):
-        return self.snapshot_class.__features__['classes']
+        return self.snapshot_class.__features__.classes
 
     @property
-    def parameters(self):
-        return self.snapshot_class.__features__['parameters']
+    def storables(self):
+        return self.snapshot_class.__features__.storables
 
     def _set(self, idx, snapshot):
-        [self.write(attr, idx, snapshot) for attr in self.parameters]
+        [self.write(attr, idx, snapshot) for attr in self.storables]
 
     def _get(self, idx, snapshot):
-        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.parameters]
+        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.storables]
 
     def _init(self):
         super(FeatureSnapshotStore, self)._init()
