@@ -2,19 +2,15 @@
 @author: David W.H. Swenson
 '''
 
-import os
-import numpy as np
+from nose.plugins.skip import SkipTest
+from nose.tools import (assert_equal, assert_items_equal,
+                        raises)
 
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
-from test_helpers import true_func, assert_equal_array_array
-
+from openpathsampling.engines.trajectory import Trajectory
+from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.sample import *
-from openpathsampling.trajectory import Trajectory
 from openpathsampling.sample import Sample
 
-from openpathsampling.ensemble import LengthEnsemble
 
 class testSampleSet(object):
     def setup(self):

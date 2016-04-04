@@ -81,10 +81,15 @@ class DelayedLoader(object):
             return self
 
     def __set__(self, instance, value):
-        if type(value) is tuple:
-            instance._lazy[self] = value
-        else:
-            instance._lazy[self] = value
+
+        # print instance.__class__.__name__
+        # print instance.__dict__.keys()
+        # print instance.__class__.__dict__.keys()
+        # print instance.__class__.__features__
+
+        # print hasattr(instance, '_lazy')
+
+        instance._lazy[self] = value
 
 
 def lazy_loading_attributes(*attributes):

@@ -2,18 +2,6 @@
 
 .. currentmodule:: openpathsampling.shooting
 
-ShootingPoint Functions
-=======================
-
-
-shootingpoint
--------------
-.. autosummary::
-    :toctree: api/generated/
-
-	ShootingPoint
-
-
 ShootingPointSelector Functions
 ===============================
 

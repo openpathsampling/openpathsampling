@@ -68,3 +68,11 @@ Snapshot
 
 .. automodule:: snapshot
 	:members:
+
+**********
+Trajectory
+**********
+
+.. automodule:: trajectory
+	:members:
+
