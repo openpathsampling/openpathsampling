@@ -235,3 +235,9 @@ class OpenMMEngine(DynamicsEngine):
         self.simulation.step(self.nsteps_per_frame)
         self._current_snapshot = None
         return self.current_snapshot
+
+    def minimize(self):
+        self.simulation.minimizeEnergy()
+        # make sure that we get the minimized structure on request
+        self._current_snapshot = None
+
