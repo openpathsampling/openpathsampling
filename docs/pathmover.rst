@@ -17,6 +17,10 @@ Abstract class
     :toctree: api/generated/
 
     PathMover
+    SampleMover
+    EngineMover
+    SelectionMover
+    SubtrajectorySelectMover
 
 Changing the trajectory
 -----------------------
@@ -27,6 +31,11 @@ Changing the trajectory
     BackwardShootMover
     ForwardShootMover
     PathReversalMover
+    BackwardExtendMover
+    OneWayExtendMover
+    FinalSubtrajectorySelectMover
+    FirstSubtrajectorySelectMover
+    RandomSubtrajectorySelectMover
 
 Changing the ensemble
 ---------------------
@@ -48,6 +57,31 @@ Combining movers
     ConditionalSequentialMover
     PartialAcceptanceSequentialMover
 
+Swapping movers
+---------------
+
+.. autosummary::
+    :toctree: api/generated/
+
+    ReplicaExchangeMover
+    NeighborEnsembleReplicaExchange
+    StateSwapMover
+
+Logical movers
+--------------
+
+.. autosummary::
+    :toctree: api/generated/
+
+    ConditionalSequentialMover
+    PartialAcceptanceSequentialMover
+    SequentialMover
+    SubPathMover
+    EnsembleFilterMover
+    FirstAllowedMover
+    LastAllowedMover
+
+
 Pre-made combined movers
 ------------------------
 
@@ -56,7 +90,7 @@ Pre-made combined movers
 
     MinusMover
     OneWayShootingMover
-
+    MultipleSetMinusMover
 
 mover factory
 -------------

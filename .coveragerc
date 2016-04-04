@@ -1,0 +1,9 @@
+[report]
+omit = 
+    */python?.?/*
+    */site-packages/nose/*
+    */openpathsampling/tests/*
+exclude_lines = 
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
