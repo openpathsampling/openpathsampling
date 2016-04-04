@@ -390,7 +390,12 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             code.format("    this.{0} = self.{0}",          'variables', [], ['lazy', 'numpy', 'exclude_copy'])
-            code.format("    this.{0} = self.{0}.copy()",   'variables', ['numpy'], ['lazy', 'exclude_copy'])
+            safe_copy_str  = "    if self.{0} is not None:\n"
+            safe_copy_str += "        this.{0} = self.{0}.copy()\n"
+            safe_copy_str += "    else:\n"
+            safe_copy_str += "        this.{0} = self.{0}"
+            # old_copy_str = "    this.{0} = self.{0}.copy()"
+            code.format(safe_copy_str,   'variables', ['numpy'], ['lazy', 'exclude_copy'])
 
             code += map(
                 "    self.{0}(this)".format, copy_feats
