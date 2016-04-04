@@ -148,14 +148,6 @@ class BaseSnapshotStore(ObjectStore):
 
             self._uuids_loaded = True
 
-    def save(self, obj, idx=None):
-        if obj._reversed is not None:
-            if obj._reversed in self.index:
-                # the reversed copy has been saved so quit and return the paired idx
-                self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
-
-        return super(BaseSnapshotStore, self).save(obj)
-
     def _save(self, snapshot, idx):
         """
         Add the current state of the snapshot in the database.
@@ -198,6 +190,11 @@ class BaseSnapshotStore(ObjectStore):
             if ruuid in self.uuid_idx:
                 # has been saved so quit and do nothing
                 return obj.__uuid__
+
+        if obj._reversed is not None:
+            if obj._reversed in self.index:
+                # the reversed copy has been saved so quit and return the paired idx
+                self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
 
         return super(BaseSnapshotStore, self).save(obj, idx)
 

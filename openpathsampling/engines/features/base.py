@@ -119,11 +119,17 @@ class CodeFunction(list):
             if add:
                 self.append(s.format(item))
 
+    def add_uuid(self, name):
+        if self.context.use_uuid:
+            self += [
+                "    {0}.__uuid__ = {0}.get_uuid()".format(name)
+            ]
 
 class CodeContext(object):
-    def __init__(self, cls, __features__):
+    def __init__(self, cls, __features__, use_uuid=True):
         self.cls = cls
         self.__features__ = __features__
+        self.use_uuid = use_uuid
 
     def Function(self, name):
         return CodeFunction(name, self)
@@ -156,14 +162,7 @@ def attach_features(features, use_lazy_reversed=False):
     # create a parser that can combine numpy docstrings
     parser = NumpyDocTools()
 
-    ADD_SOURCE_CODE = True
     USE_UUID = True
-
-    def add_uuid(code, name):
-        if USE_UUID:
-            code += [
-                "    {0}.__uuid__ = {0}.get_uuid()".format(name)
-            ]
 
     def _decorator(cls):
         """
@@ -369,6 +368,8 @@ def attach_features(features, use_lazy_reversed=False):
         # have thier docstring changed.
         cls.__doc__ = parser.get_docstring()
 
+        context = CodeContext(cls, __features__, USE_UUID)
+
         # compile the function for .copy()
 
         # def copy(self):
@@ -376,13 +377,13 @@ def attach_features(features, use_lazy_reversed=False):
         #     this._lazy = { ... }
         #     this.feature1 = self.feature1
 
-        context = CodeContext(cls, __features__)
-
         with context.Function('copy') as code:
             code += [
                 "def copy(self):",
                 "    this = cls.__new__(cls)",
             ]
+
+            code.add_uuid('this')
 
             if has_lazy:
                 code += [
@@ -422,6 +423,9 @@ def attach_features(features, use_lazy_reversed=False):
                 "def copy_to(self, target):",
             ]
 
+            # Copying is effectively creating a new unique object, hence a new UUID
+            code.add_uuid('target')
+
             if has_lazy:
                 code += [
                     "    target._lazy = {",
@@ -458,6 +462,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "def create_reversed(self):",
                 "    this = cls.__new__(cls)"
             ]
+
+            code.add_uuid('this')
 
             if has_lazy:
                 code += [
@@ -501,6 +507,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "    this = cls.__new__(cls)"
             ]
 
+            code.add_uuid('this')
+
             if has_lazy:
                 code += [
                     "    this._lazy = {}",
@@ -538,6 +546,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "def __init__(self%s):" % signature,
             ]
 
+            code.add_uuid('self')
+
             # dict for lazy attributes using DelayedLoader descriptor
             if has_lazy:
                 code += [
@@ -568,6 +578,8 @@ def attach_features(features, use_lazy_reversed=False):
                 "def init_empty(self):",
             ]
 
+            code.add_uuid('self')
+
             # dict for lazy attributes using DelayedLoader descriptor
             if has_lazy:
                 code += [
@@ -584,6 +596,8 @@ def attach_features(features, use_lazy_reversed=False):
             code += [
                 "def init_copy(self%s):" % signature,
             ]
+
+            code.add_uuid('self')
 
             if has_lazy:
                 code += [
