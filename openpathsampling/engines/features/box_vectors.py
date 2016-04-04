@@ -1,4 +1,4 @@
-attributes = ['box_vectors']
+variables = ['box_vectors']
 numpy = ['box_vectors']
 
 

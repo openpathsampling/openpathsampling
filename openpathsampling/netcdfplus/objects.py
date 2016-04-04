@@ -656,8 +656,18 @@ class ObjectStore(StorableNamedObject):
             return self.index[obj]
 
         if hasattr(obj, '_idx'):
-            # is a proxy of a saved object so do nothing
-            return obj._idx
+            if obj._store is self:
+                # is a proxy of a saved object so do nothing
+                return obj._idx
+            else:
+                # it is stored but not in this store so we try storing the
+                # full snapshot which might be still in cache or memory
+                # if that is not the case it will be stored again. This can
+                # happen when you load from one store save to another. And load
+                # again after some time while the cache has been changed and try
+                # to save again the loaded object. We will not explicitly store
+                # a table that matches objects between different storages.
+                return self.save(obj.__subject__)
 
         if not isinstance(obj, self.content_class):
             raise ValueError(
@@ -670,6 +680,7 @@ class ObjectStore(StorableNamedObject):
         else:
             raise ValueError('Unsupported index type (only None allowed).')
 
+        # mark as saved so circular dependcies will not result in infinite loops
         self.index[obj] = n_idx
 
         # make sure in nested saving that an IDX is not used twice!
@@ -679,13 +690,18 @@ class ObjectStore(StorableNamedObject):
 
         try:
             self._save(obj, n_idx)
-        finally:
+
+            # store the name in the cache
+            if hasattr(self, 'cache'):
+                self.cache[n_idx] = obj
+
+        except:
+            # in case we did not succeed remove the mark as being saved
+            del self.index[obj]
             self.release_idx(n_idx)
+            raise
 
-        # store the name in the cache
-        if hasattr(self, 'cache'):
-            self.cache[n_idx] = obj
-
+        self.release_idx(n_idx)
         return n_idx
 
     def __setitem__(self, key, value):
