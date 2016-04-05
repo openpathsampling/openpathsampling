@@ -85,11 +85,10 @@ class testNoModification(object):
                                   new_3D.coordinates)
         assert_array_almost_equal(self.snapshot_3D.velocities,
                                   new_3D.velocities)
-        # TODO: this is awaiting changes in #445
-        # assert_true(self.snapshot_1D.coordinates is not new_1D.coordinates)
-        # assert_true(self.snapshot_1D.velocities is not new_1D.velocities)
-        # assert_true(self.snapshot_3D.coordinates is not new_3D.coordinates)
-        # assert_true(self.snapshot_3D.velocities is not new_3D.velocities)
+        assert_true(self.snapshot_1D.coordinates is not new_1D.coordinates)
+        assert_true(self.snapshot_1D.velocities is not new_1D.velocities)
+        assert_true(self.snapshot_3D.coordinates is not new_3D.coordinates)
+        assert_true(self.snapshot_3D.velocities is not new_3D.velocities)
 
 
 class testRandomizeVelocities(object):
