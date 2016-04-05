@@ -107,9 +107,6 @@ class RandomVelocities(SnapshotModifier):
 
     def __call__(self, snapshot):
         new_snap = snapshot.copy()
-        # TODO: REMOVE THE NEXT 2 LINES after #445
-        new_snap.coordinates = new_snap.coordinates.copy()
-        new_snap.velocities = new_snap.velocities.copy() 
 
         vel_subset = self.extract_subset(new_snap.velocities)
         masses = self.extract_subset(snapshot.topology.masses)
