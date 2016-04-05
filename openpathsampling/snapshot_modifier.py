@@ -90,8 +90,6 @@ class SnapshotModifier(StorableNamedObject):
 class NoModification(SnapshotModifier):
     """Modifier with no change: returns a copy of the snapshot."""
     def __call__(self, snapshot):
-        print snapshot, type(snapshot)
-        my_copy = snapshot.copy()
         return snapshot.copy()
 
 class RandomVelocities(SnapshotModifier):
