@@ -42,9 +42,8 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     References
     ----------
     .. [1] B. Leimkuhler and C. Matthews. "Rational Construction of
-    Stochastic Numerical Methods for Molecular Sampling." Appl. Math. Res.
-    Express, 2013, 34-56 (2013). doi:10.1093/amrx/abs010
-
+       Stochastic Numerical Methods for Molecular Sampling." Appl. Math.
+       Res. Express, 2013, 34-56 (2013). doi:10.1093/amrx/abs010
     """
 
     def __init__(self, dt, temperature, gamma):

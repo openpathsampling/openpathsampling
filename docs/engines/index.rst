@@ -6,7 +6,7 @@ Engines
 Overview
 --------
 
-The part concerned with generating trajectories using simulation framworks.
+The part concerned with generating trajectories using simulation frameworks.
 
 
 .. toctree::
@@ -22,4 +22,3 @@ API Reference
    :maxdepth: 1
 
    base
-   cache

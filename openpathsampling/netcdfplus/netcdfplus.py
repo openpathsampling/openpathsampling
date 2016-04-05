@@ -201,8 +201,9 @@ class NetCDFPlus(netCDF4.Dataset):
         filename : string
             filename of the netcdf file to be used or created
         mode : str
-            the mode of file creation, one of 'w' (write), 'a' (append) or 'r' (read-only)
-            None, which will append any existing files (equal to append), is the default.
+            the mode of file creation, one of 'w' (write), 'a' (append) or
+            'r' (read-only) None, which will append any existing files
+            (equal to append), is the default.
 
         Notes
         -----
@@ -356,11 +357,13 @@ class NetCDFPlus(netCDF4.Dataset):
         Parameters
         ----------
         name : str
-            the name of the store under which the objects are accessible like `store.{name}`
+            the name of the store under which the objects are accessible
+            like `store.{name}`
         store : :class:`openpathsampling.storages.ObjectStore`
             instance of the object store
         register_attr : bool
-            if set to false the store will not be accesible as an attribute. `True` is the default.
+            if set to false the store will not be accesible as an attribute.
+            `True` is the default.
         """
         store.register(self, name)
 
@@ -876,28 +879,30 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Create a new variable in the netCDF storage.
 
-        This is just a helper function to structure the code better and add some convenience to
-        creating more complex variables
+        This is just a helper function to structure the code better and add
+        some convenience to creating more complex variables
 
         Parameters
         ==========
         var_name : str
             The name of the variable to be created
         var_type : str
-            The string representing the type of the data stored in the variable.
-            Allowed are strings of native python types in which case the variables
-            will be treated as python or a string of the form 'numpy.type' which
-            will refer to the numpy data types. Numpy is preferred sinec the api
-            to netCDF uses numpy and thus it is faster. Possible input strings are
+            The string representing the type of the data stored in the
+            variable.  Allowed are strings of native python types in which
+            case the variables will be treated as python or a string of the
+            form 'numpy.type' which will refer to the numpy data types.
+            Numpy is preferred sinec the api to netCDF uses numpy and thus
+            it is faster. Possible input strings are
             `int`, `float`, `long`, `str`, `numpy.float32`, `numpy.float64`,
             `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64`, `json`,
             `obj.<store>`, `lazyobj.<store>`
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
-            If the last dimension is `'...'` then it is assumed that the objects are of
-            variable length. In netCDF this is usually referred to as a VLType.
-            We will treat is just as another dimension, but it can only be the last dimension.
+            If the last dimension is `'...'` then it is assumed that the
+            objects are of variable length. In netCDF this is usually
+            referred to as a VLType.  We will treat is just as another
+            dimension, but it can only be the last dimension.
         description : str
             A string describing the variable in a readable form.
         chunksizes : tuple of int
@@ -906,13 +911,14 @@ class NetCDFPlus(netCDF4.Dataset):
             we want to store everything of one object at once so this is often
             (1, ..., ...)
         simtk_unit : str
-            A string representing the units used for this variable. Can be used with
-            all var_types although it makes sense only for numeric ones.
+            A string representing the units used for this variable. Can be
+            used with all var_types although it makes sense only for numeric
+            ones.
         maskable : bool, default: False
-            If set to `True` the values in this variable can only partially exist and if
-            they have not yet been written they are filled with a fill_value which is
-            treated as a non-set variable. The created variable will interprete this values
-            as `None` when returned
+            If set to `True` the values in this variable can only partially
+            exist and if they have not yet been written they are filled with
+            a fill_value which is treated as a non-set variable. The created
+            variable will interpret this values as `None` when returned
         """
 
         ncfile = self
@@ -1036,7 +1042,8 @@ class NetCDFPlus(netCDF4.Dataset):
         Returns
         -------
         dict
-            A dictionary containing the approriate input parameters for `var_type`, `dimensions`, `simtk_unit`
+            A dictionary containing the approriate input parameters for
+            `var_type`, `dimensions`, `simtk_unit`
 
         Notes
         -----
