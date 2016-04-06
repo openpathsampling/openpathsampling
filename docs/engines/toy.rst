@@ -22,7 +22,7 @@ Integrator functions
 .. autosummary::
    :toctree: ../api/generated/
 
-   ToyIntegrator
+   integrators.ToyIntegrator
    LeapfrogVerletIntegrator
    LangevinBAOABIntegrator
 
