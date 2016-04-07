@@ -20,7 +20,7 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
 
     Returns
     -------
-    Snapshot
+    :class:`openpathsampling.engines.Snapshot`
         the constructed Snapshot
 
     """
@@ -53,7 +53,7 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
 
     Returns
     -------
-    Snapshot
+    :class:`openpathsampling.engines.Snapshot`
         the constructed Snapshot
 
     """
@@ -90,7 +90,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
 
     Returns
     -------
-    Trajectory
+    openpathsampling.engines.Trajectory
         the constructed Trajectory instance
     """
 
@@ -141,7 +141,7 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
 
     Returns
     -------
-    Snapshot
+    openpathsampling.engines.Snapshot
         the complete snapshot with zero coordinates and velocities
 
     """
@@ -164,12 +164,13 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
 
 def to_openmm_topology(obj):
     """
-    Contruct an openmm.Topology file out of a Snapshot or Configuration object. This uses the
-    mdtraj.Topology in the Configuration as well as the box_vectors.
+    Contruct an openmm.Topology file out of a Snapshot or Configuration
+    object. This uses the mdtraj.Topology in the Configuration as well as
+    the box_vectors.
 
     Parameters
     ----------
-    obj : Snapshot or configuration
+    obj : openpathsampling.engines.BaseSnapshot or Configuration
         the object to be used in the topology construction
 
     Returns
