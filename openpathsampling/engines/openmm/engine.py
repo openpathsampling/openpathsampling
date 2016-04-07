@@ -188,7 +188,7 @@ class OpenMMEngine(DynamicsEngine):
 
     @property
     def snapshot_timestep(self):
-        return self.nsteps_per_frame * (self.options['timestep'] or 1)
+        return self.nsteps_per_frame * self.simulation.integrator.getStepSize()
 
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
