@@ -351,7 +351,19 @@ class TreeRenderer(svg.Drawing):
         self.obj = []
 
 
-class MoveTreeBuilder(object):
+
+class Builder(object):
+    def svg(self):
+        return self.render().tostring()
+
+    def html(self):
+        return self.render().tostring()
+
+    def render(self):
+        raise NotImplemented('This is a stub class. Use a derived instance!')
+
+
+class MoveTreeBuilder(Builder):
     def __init__(self, storage=None):
         self.rejected = False
         self.p_x = dict()
@@ -558,7 +570,7 @@ class MoveTreeBuilder(object):
         return doc
 
 
-class PathTreeBuilder(object):
+class PathTreeBuilder(Builder):
     def __init__(self, storage, op=None, states=None):
         self.rejected = False
         self.p_x = dict()
@@ -619,6 +631,50 @@ class PathTreeBuilder(object):
                     'label_position': 'right',
                     'cls': ['shooting']
                 },
+                paths.BackwardExtendMover: {
+                    'name': 'Extend',
+                    'overlap': 'line',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'hidden',
+                    'overlap_label': 'Extend',
+                    'suffix': 'b',
+                    'label_position': 'left',
+                    'cls': ['extend']
+                },
+                paths.ForwardExtendMover: {
+                    'name': 'Extend',
+                    'overlap': 'line',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'hidden',
+                    'overlap_label': 'Extend',
+                    'suffix': 'f',
+                    'label_position': 'right',
+                    'cls': ['extend']
+                },
+                paths.FinalSubtrajectorySelectMover: {
+                    'name': 'Truncate',
+                    'overlap': 'line',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'line',
+                    'overlap_label': 'Trunc',
+                    'suffix': 't',
+                    'label_position': 'right',
+                    'cls': ['extend']
+                },
+                paths.FirstSubtrajectorySelectMover: {
+                    'name': 'Truncate',
+                    'overlap': 'line',
+                    'fw': 'blocks',
+                    'bw': 'blocks',
+                    'all': 'line',
+                    'overlap_label': 'Trunc',
+                    'suffix': 't',
+                    'label_position': 'left',
+                    'cls': ['extend']
+                },
                 paths.EnsembleHopMover: {
                     'name': 'hop',
                     'overlap': 'line',
@@ -632,7 +688,7 @@ class PathTreeBuilder(object):
                 },
                 paths.PathReversalMover: {
                     'name': 'reversal',
-                    'overlap': 'line',
+                    'overlap': 'blocks',
                     'fw': '',
                     'bw': '',
                     'all': 'blocks',
@@ -658,7 +714,7 @@ class PathTreeBuilder(object):
                     'fw': 'blocks',
                     'bw': 'blocks',
                     'all': 'hidden',
-                    'overlap_label': 'RepEx',
+                    'overlap_label': '???',
                     'suffix': '?',
                     'label_position': 'left',
                     'cls': ['repex']
@@ -738,6 +794,7 @@ class PathTreeBuilder(object):
                     connect_bw = p_x[snap] if snap in p_x else p_x[snap.reversed]
                     index_bw = snapshot
                     shift_bw = connect_bw - snapshot
+                    # print 'B', snapshot, connect_bw, shift_bw
                     break
 
             new_sample = False
@@ -754,6 +811,7 @@ class PathTreeBuilder(object):
                         connect_fw = p_x[snap] if snap in p_x else p_x[snap.reversed]
                         index_fw = snapshot
                         shift_fw = connect_fw - snapshot
+                        # print 'F', snapshot, connect_fw, shift_fw, snap
                         break
 
                 # now we know that the overlap is between (including) [connect_bw, connect_fw]
@@ -774,9 +832,15 @@ class PathTreeBuilder(object):
 
                     #            print sample.mover.__class__.__name__, 0, index_bw, index_fw, len(traj)-1
 
+                # print 'I', mover_type, shift_bw, shift_fw, index_bw, index_fw
+
             for pos, snapshot in enumerate(traj):
                 pos_x = shift + pos
                 p_x[snapshot] = pos_x
+                if snapshot.reversed in p_x:
+                    del p_x[snapshot.reversed]
+
+            # print '--', p_x[traj[0]], p_x[traj[-1]], traj[0], traj[-1]
 
             self.samp_list[sample] = {
                 'shift': shift,
@@ -786,9 +850,6 @@ class PathTreeBuilder(object):
                 'new_sample': new_sample,
                 'mover_type': mover_type
             }
-
-    def to_svg(self):
-        return self.render().tostring()
 
     def render(self):
         samples = self._samples
@@ -849,6 +910,8 @@ class PathTreeBuilder(object):
             shift = info['shift']
             index_fw = info['index_fw']
             index_bw = info['index_bw']
+            # print pos_y, shift, mover_type, index_bw, index_fw, new_sample, self.storage.idx(sample)
+
             traj = sample.trajectory
 
             if new_sample:
@@ -1007,7 +1070,7 @@ class PathTreeBuilder(object):
                             doc.shade(left, yp, xp - left + 1, cls=[color])
                         )
 
-        group.translate(32 + doc._w(1 - min_range_x), 0)
+        group.translate(32 + doc._w(1 - min_range_x), doc._h(1))
 
         tree_group = group
 
@@ -1061,7 +1124,7 @@ class PathTreeBuilder(object):
         old_tc = 1
 
         width = 64 + tree_scale * (max_range_x - min_range_x + 2) - doc.scale_x * (-0.5 - columns)
-        height = doc.scale_y * (max_y + 1.0)
+        height = doc.scale_y * (max_y + 5.2)
         left_x = (-0.5 - columns) * doc.scale_x
         top_y = -1.5 * doc.scale_y
 
@@ -1132,6 +1195,8 @@ class PathTreeBuilder(object):
             width,
             height
         )
+
+        doc['width'] = width
 
         return doc
 
@@ -1444,6 +1509,14 @@ vis_css = r"""
     opacity: 0.5;
 }
 .opstree .repex {
+    fill: blue;
+    stroke: blue;
+}
+.opstree .extend {
+    fill: blue;
+    stroke: blue;
+}
+.opstree .truncate {
     fill: blue;
     stroke: blue;
 }
