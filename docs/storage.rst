@@ -33,7 +33,5 @@ stores
     SampleStore
     SampleSetStore
     TrajectoryStore
-    SnapshotStore
-    ToySnapshotStore
-    AbstractSnapshotStore
+    BaseSnapshotStore
     FeatureSnapshotStore

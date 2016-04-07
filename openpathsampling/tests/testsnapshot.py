@@ -2,8 +2,10 @@
 @author David W.H. Swenson
 """
 
-from nose.tools import assert_equal, assert_not_equal, assert_is, raises
+from nose.tools import (assert_equal, assert_not_equal, assert_is, raises,
+                        assert_true)
 from nose.plugins.skip import Skip, SkipTest
+from numpy.testing import assert_allclose
 from test_helpers import CallIdentity, raises_with_message_like, assert_close_unit
 
 import numpy as np
@@ -40,3 +42,19 @@ class testFeatures(object):
     def test_box_vectors(self):
         Snapshot = SnapshotFactory('TestSnapshot', [features.box_vectors], 'A simple testing snapshot')
         compate_attribute(Snapshot, 'box_vectors', np.array([0.1, 2.0]), identity)
+
+class testSnapshotCopy(object):
+    def test_copy_none(self):
+        import openpathsampling.engines.openmm as paths_omm
+        # let box_vectors and topology to default to None
+        snap = paths_omm.MDSnapshot(coordinates=np.array([[0.0, 0.0, 0.0],
+                                                          [0.0, 0.0, 0.0]]),
+                                    velocities=np.array([[0.0, 0.0, 0.0],
+                                                         [0.0, 0.0, 0.0]]))
+        new_snap = snap.copy()
+        assert_true(new_snap is not snap)
+        assert_true(new_snap.coordinates is not snap.coordinates)
+        assert_allclose(new_snap.coordinates, snap.coordinates)
+        assert_true(new_snap.box_vectors is snap.box_vectors)
+        assert_true(new_snap.box_vectors is None)
+        assert_true(new_snap.topology is snap.topology)
