@@ -15,6 +15,7 @@ class testTransformedDict(object):
         self.untransformed = {(0, 1) : "a", (1, 2) : "b", (2, 3) : "c"}
         self.transformed = {0 : "a", 1 : "b", 2 : "c"}
         self.hash_function = lambda x : x[0]
+        self.empty = TransformedDict(self.hash_function, {})
 
     def test_initialization(self):
         test_dict = TransformedDict(self.hash_function, self.untransformed)
@@ -23,10 +24,17 @@ class testTransformedDict(object):
                      {0: (0,1), 1: (1,2), 2: (2,3)})
 
     def test_set_get(self):
-        pass
+        self.empty[(5,6)] = "d"
+        assert_equal(self.empty.store, {5: "d"})
+        assert_equal(self.empty.hash_representatives, {5: (5,6)})
+        assert_equal(self.empty[(5,6)], "d")
 
     def test_update(self):
-        pass
+        test_dict = TransformedDict(self.hash_function, self.untransformed)
+        test_dict.update({(5,6): "d"})
+        assert_equal(test_dict.store, {0 : "a", 1 : "b", 2 : "c", 5 : "d"})
+        assert_equal(test_dict.hash_representatives, 
+                     {0: (0,1), 1: (1,2), 2: (2,3), 5: (5,6)})
 
     def test_del(self):
         pass
@@ -37,3 +45,5 @@ class testTransformedDict(object):
     def test_len(self):
         pass
 
+class testSnapshotByCoordinateDict(object):
+    pass
