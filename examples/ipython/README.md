@@ -81,6 +81,24 @@ interfaces per outgoing transition.
     Basic setup from the W. Du and P. Bolhuis Paper on SRTIS. Is supposed to
     become the setup for an example in the publication.
 
+#### Alanine Weina Du 6 state MSTIS setting
+
+- [`weina_mstis_bootstrapping.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/weina_mstis_bootstrapping.ipynb)
+    [Part 1] Basic setup from the W. Du and P. Bolhuis Paper on SRTIS using 6 predefined states and their interfaces. This part will only construct initial trajectories that will be use later.
+    
+- [`weina_mstis_prepare.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/weina_mstis_bootstrapping.ipynb)
+	[Part 2] This will use the previously generated paths and state definitions from a file and construct all necessary parts for the 6 state MSTIS including the generation of initial minus paths for all states and equilibration. All results are stored in a file.
+
+- [`weina_mstis_run.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/weina_mstis_run.ipynb)
+    [Part 3] This will read the MSTIS setup from before and run a fixed steps and store the results. 
+
+- [`weina_mstis_restart.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/weina_mstis_restart.ipynb)
+    [Part 4] This open the current production file and will run and append more steps.
+
+- [`weina_mstis_analysis.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/weina_mstis_analysis.ipynb)
+    [Part 5] Analysis of the results in the production file. Almost entirely a copy of the analysis of the toy MSTIS analysis notebook.
+     
+
 ## Tutorials
 
 -  [`move_strategies_and_schemes.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/move_strategies_and_schemes.ipynb)
