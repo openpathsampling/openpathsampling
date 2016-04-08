@@ -203,17 +203,26 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def shade(self, x, y, w, cls=None):
+    def shade(self, x, y, w, cls=None, color=None):
         if cls is None:
             cls = list()
 
         cls += ['shade']
 
-        return self.rect(
-            class_=self.c(cls),
-            insert=self._xy(x - 0.5, y + 0.35),
-            size=self._wh(w, 0.1)
-        )
+        if color is None:
+            return self.rect(
+                class_=self.c(cls),
+                insert=self._xy(x - 0.5, y + 0.35),
+                size=self._wh(w, 0.1)
+            )
+        else:
+            return self.rect(
+                class_=self.c(cls),
+                insert=self._xy(x - 0.5, y + 0.35),
+                size=self._wh(w, 0.1),
+                fill=color
+            )
+
 
     def vertical_connector(self, x, y1, y2, cls=None):
         if cls is None:
@@ -1061,13 +1070,13 @@ class PathTreeBuilder(Builder):
                         else:
                             if left is not None:
                                 group.add(
-                                    doc.shade(left, yp, xp - left, cls=[color])
+                                    doc.shade(left, yp, xp - left, color=color)
                                 )
                                 left = None
 
                     if left is not None:
                         group.add(
-                            doc.shade(left, yp, xp - left + 1, cls=[color])
+                            doc.shade(left, yp, xp - left + 1, color=color)
                         )
 
         group.translate(32 + doc._w(1 - min_range_x), doc._h(1))
@@ -1485,6 +1494,55 @@ class ReplicaHistoryTree(PathTreeBuilder):
                 prev = s.trajectory
 
         return decorrelated
+
+
+class SampleList(list):
+    """
+    A timely ordered series of `Sample` objects.
+
+    This is effectively a list object enhanced with a few additional functions that
+    simplify analysis. Although this can hold an arbitrary list of samples it is meant
+    to represent a time evolution of samples and thus samples that have a causal relation.
+
+    Examples would be the history of samples that lead to a specific samples (heritage)
+    or the history of samples in a specific ensemble or of a given replica.
+
+    Last it provides some useful filters that make sense for samples.
+    """
+
+    def __init__(self, samples):
+        list.__init__(self, samples)
+
+    def __add__(self, other):
+        return SampleList(list.__add__(self, other))
+
+    def __getitem__(self, item):
+        if type(item) is slice:
+            return SampleList(list.__getitem__(self, item))
+        elif hasattr(item, '__iter__'):
+            SampleList(list.__getitem__(self, item))
+        else:
+            return list.__getitem__(self, item)
+
+    @property
+    def decorrelated_trajectories(self):
+        """List of decorrelated trajectories from the internal samples.
+
+        In path sampling, two trajectories are said to be "decorrelated" if
+        they share no frames in common. This is particularly important in
+        one-way shooting. This function returns the list of trajectories,
+        making the number (i.e., the length of the list) also easily
+        accessible.
+        """
+        prev = self[0].trajectory
+        decorrelated = [prev]
+        for s in [samp for samp in self]:
+            if not paths.Trajectory.is_correlated(s.trajectory, prev):
+                decorrelated.append(s.trajectory)
+                prev = s.trajectory
+
+        return decorrelated
+
 
 vis_css = r"""
 .opstree text, .movetree text {
