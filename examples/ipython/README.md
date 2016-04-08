@@ -161,6 +161,3 @@ correctness of the results.
 
 - [`toy_analysis.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/toy_analysis.ipynb)
     [Part 3] of the large ToyDynamics example. Has been replaced by the mstis examples.
-
-
-alanine_dipeptide
