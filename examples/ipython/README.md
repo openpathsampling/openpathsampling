@@ -151,6 +151,10 @@ correctness of the results.
     A test notebook that checks that the toy_engine langevin integrator will
     actually sample from the correct distributions.
 
+- [`test_snapshot_modifier.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/test_snapshot_modifier.ipynb)
+    A notebook to test and visually inspect whether the `RandomVelocities`
+    snapshot modifier gives the correct distribution.
+
 ## Attic
 
 - [`toy_bootstrapping.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/toy_bootstrapping.ipynb)

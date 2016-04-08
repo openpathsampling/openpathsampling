@@ -70,6 +70,8 @@ from sample import Sample, SampleSet
 from shooting import ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
 
+from snapshot_modifier import NoModification, RandomVelocities
+
 from storage.storage import Storage, AnalysisStorage
 
 from volume import (

@@ -490,7 +490,7 @@ class VoronoiVolume(Volume):
         
         Parameters
         ----------
-        snapshot : Snapshot
+        snapshot : :class:`opensampling.engines.BaseSnapshot`
             the snapshot to be tested
         
         Returns
@@ -514,10 +514,11 @@ class VoronoiVolume(Volume):
         
         Parameters
         ----------
-        snapshot : Snapshot
+        snapshot : :class:`opensampling.engines.BaseSnapshot`
             snapshot to be tested
         state : int or None
-            index of the cell to be tested. If `None` (Default) then the internal self.state is used
+            index of the cell to be tested. If `None` (Default) then the
+            internal self.state is used
             
         Returns
         -------
