@@ -150,7 +150,12 @@ class TreeRenderer(svg.Drawing):
 
         group.add(self.text(
             text=str(text),
-            insert=self._xy(x + (w - 1.0) / 2.0, y - 0.3)
+            insert=self._xy(x + (w - 1.0) / 2.0, y),
+            class_='shadow'
+        ))
+        group.add(self.text(
+            text=str(text),
+            insert=self._xy(x + (w - 1.0) / 2.0, y)
         ))
 
         return group
@@ -743,9 +748,9 @@ class PathTreeBuilder(Builder):
                 'reversal_direction': 'time'
             },
             'geometry': {
-                'scale_x': 15,
-                'scale_y': 20,
-                'horizontal_gap': True
+                'scale_x': 4,
+                'scale_y': 10,
+                'horizontal_gap': False
             }
         }
 
@@ -774,6 +779,7 @@ class PathTreeBuilder(Builder):
 
         options = self.options
         assume_reversed_as_same = options['settings']['time_symmetric']
+        reversal_direction = self.options['settings']['reversal_direction']
 
         if len(samples) == 0:
             # no samples, nothing to do
@@ -790,12 +796,19 @@ class PathTreeBuilder(Builder):
         self.samp_list = {}
         p_x = dict()
 
+        time_direction = +1
+
         for sample in samples:
             mover_type = type(sample.mover)
             traj = sample.trajectory
 
+            if time_direction == -1:
+                traj = paths.Trajectory(list(reversed(list(traj))))
+
             overlap_reversed = False
             index_bw = None
+
+            # print mover_type, time_direction,
 
             for snapshot in range(len(traj)):
                 snap = traj[snapshot]
@@ -812,6 +825,8 @@ class PathTreeBuilder(Builder):
                 index_fw = len(traj) - 1
                 # no overlap, so skip
                 new_sample = True
+                shift_bw = 0
+                shift_fw = 0
                 shift = 0
             else:
                 for snapshot in range(len(traj) - 1, -1, -1):
@@ -823,6 +838,16 @@ class PathTreeBuilder(Builder):
                         # print 'F', snapshot, connect_fw, shift_fw, snap
                         break
 
+                # shift = (shift_bw + shift_fw) / 2
+
+                # print 'I', index_bw, index_fw, shift_bw, shift_fw
+
+                if shift_bw != shift_fw:
+                    index_bw, index_fw = index_fw, index_bw
+                    overlap_reversed = True
+                    shift_bw, shift_fw = shift_fw, shift_bw
+                    connect_bw, connect_fw = connect_fw, connect_bw
+
                 # now we know that the overlap is between (including) [connect_bw, connect_fw]
                 # and the trajectory looks like [bw, ...] + [old, ...] + [fw, ...]
                 # with bw
@@ -832,22 +857,34 @@ class PathTreeBuilder(Builder):
                 # then we get
                 # [0, ..., index_fw -1] + [index_fw, ..., index_bw] + [index_bw + 1, ..., len(traj) - 1]
                 # this can be checked by index_bw > index_fw or shift_fw != shift_bw
-
-                shift = (shift_bw + shift_fw) / 2
-
-                if index_bw > index_fw:
-                    index_bw, index_fw = index_fw, index_bw
-                    overlap_reversed = True
+                # shift is the position of frame 0 of the old traj, so to align both we need to place the
+                # new trajectory at
 
                     #            print sample.mover.__class__.__name__, 0, index_bw, index_fw, len(traj)-1
 
                 # print 'I', mover_type, shift_bw, shift_fw, index_bw, index_fw
 
+            p_x = {}
+
+            # print time_direction, shift_bw, shift_fw, index_bw, index_fw
+
+            if reversal_direction == 'state' and overlap_reversed:
+                # reverse the time and adjust the shifting
+
+                # print shift_bw, index_bw, index_fw, len(traj)
+
+                shift = (shift_fw + shift_bw) / 2 + index_bw - (len(traj) - 1 - index_fw)
+                traj = paths.Trajectory(list(reversed(list(traj))))
+
+                time_direction *= -1
+            else:
+                shift = (shift_fw + shift_bw) / 2
+
             for pos, snapshot in enumerate(traj):
                 pos_x = shift + pos
                 p_x[snapshot] = pos_x
-                if snapshot.reversed in p_x:
-                    del p_x[snapshot.reversed]
+
+            # print time_direction,
 
             # print '--', p_x[traj[0]], p_x[traj[-1]], traj[0], traj[-1]
 
@@ -857,8 +894,10 @@ class PathTreeBuilder(Builder):
                 'index_bw': index_bw,
                 'overlap_reversed': overlap_reversed,
                 'new_sample': new_sample,
-                'mover_type': mover_type
+                'mover_type': mover_type,
+                'time_direction': time_direction
             }
+            # print
 
     def render(self):
         samples = self._samples
@@ -919,9 +958,13 @@ class PathTreeBuilder(Builder):
             shift = info['shift']
             index_fw = info['index_fw']
             index_bw = info['index_bw']
+            time_direction = info['time_direction']
             # print pos_y, shift, mover_type, index_bw, index_fw, new_sample, self.storage.idx(sample)
 
             traj = sample.trajectory
+
+            if time_direction == -1:
+                traj = paths.Trajectory(list(reversed(list(traj))))
 
             if new_sample:
                 view_options = options['mover']['new']
@@ -952,12 +995,12 @@ class PathTreeBuilder(Builder):
                               cls=cls + ['right'])
                 )
 
-            if index_bw > 0:
+            if index_bw > 0 and False:
                 group.add(
                     doc.vertical_connector(shift + index_bw, p_y[traj[index_bw]], pos_y,
                                            cls=cls + ['bw', 'connection'])
                 )
-            if index_fw < len(traj) - 1:
+            if index_fw < len(traj) - 1 and False:
                 group.add(
                     doc.vertical_connector(shift + index_fw + 1, p_y[traj[index_fw]], pos_y,
                                            cls=cls + ['fw', 'connection'])
@@ -966,9 +1009,9 @@ class PathTreeBuilder(Builder):
             if view_options['overlap'] == 'line':
                 group.add(
                     doc.horizontal_region(shift + index_bw, pos_y, index_fw - index_bw + 1,
-                                          view_options['overlap_label'], cls=cls + ['overlap'])
+                                          view_options['overlap_label'], cls=cls + ['overlap', 'whiteback'])
                 )
-                for pos, snapshot in enumerate(sample.trajectory[index_bw:index_fw + 1]):
+                for pos, snapshot in enumerate(traj[index_bw:index_fw + 1]):
                     if snapshot not in p_x:
                         p_x[snapshot] = shift + pos + index_bw
                         p_y[snapshot] = pos_y
@@ -977,7 +1020,7 @@ class PathTreeBuilder(Builder):
                 group.add(
                     doc.horizontal_region(shift + 0, pos_y, index_bw, cls=cls + ['bw'])
                 )
-                for pos, snapshot in enumerate(sample.trajectory[0:index_bw]):
+                for pos, snapshot in enumerate(traj[0:index_bw]):
                     p_x[snapshot] = shift + pos
                     p_y[snapshot] = pos_y
 
@@ -985,11 +1028,11 @@ class PathTreeBuilder(Builder):
                 group.add(
                     doc.horizontal_region(shift + index_fw + 1, pos_y, len(traj) - (index_fw + 1), cls=cls + ['fw'])
                 )
-                for pos, snapshot in enumerate(sample.trajectory[index_fw + 1:]):
+                for pos, snapshot in enumerate(traj[index_fw + 1:]):
                     p_x[snapshot] = shift + pos + index_fw + 1
                     p_y[snapshot] = pos_y
 
-            for pos, snapshot in enumerate(sample.trajectory):
+            for pos, snapshot in enumerate(traj):
                 pos_x = shift + pos
 
                 data = {
@@ -1020,7 +1063,7 @@ class PathTreeBuilder(Builder):
                                 pos_y,
                                 txt,
                                 extend_left=pos > 0,
-                                extend_right=pos < len(sample.trajectory) - 1,
+                                extend_right=pos < len(traj) - 1,
                                 cls=cls + b_cls,
                                 data=data
                             ))
@@ -1036,7 +1079,7 @@ class PathTreeBuilder(Builder):
                                     pos_y,
                                     txt,
                                     extend_left=pos > 0,
-                                    extend_right=pos < len(sample.trajectory) - 1,
+                                    extend_right=pos < len(traj) - 1,
                                     cls=cls + ['virtual'],
                                     data=data
                                 ))
@@ -1553,6 +1596,10 @@ vis_css = r"""
     font-weight: lighter;
     stroke: none !important;
 }
+.opstree text.shadow {
+    stroke-width: 3;
+    stroke: white !important;
+}
 .opstree text.bw.label {
     text-anchor: end;
 }
@@ -1642,8 +1689,6 @@ vis_css = r"""
 .opstree .infobox text {
     text-anchor: start;
 }
-
-
 
 .movetree .label .shift {
     transform: translateX(-18px);
