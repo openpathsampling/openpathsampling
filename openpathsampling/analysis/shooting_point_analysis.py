@@ -1,10 +1,15 @@
 import openpathsampling as paths
+import collections
 
 # based on http://stackoverflow.com/a/3387975
-import collections
 class TransformedDict(collections.MutableMapping):
-    """A dictionary that applies an arbitrary key-altering
-       function before accessing the keys"""
+    """A dictionary that applies an arbitrary key-altering function before
+    accessing the keys
+
+    This implementation involves a particular hashing function. It is
+    assumed that any two input objects which give the same hash are
+    effectively identical, allowing later rehashing based on the same.
+    """
 
     def __init__(self, hash_function, *args, **kwargs):
         self.store = dict()
@@ -33,6 +38,18 @@ class TransformedDict(collections.MutableMapping):
         return len(self.store)
 
     def rehash(self, new_hash):
+        """Create a new TransformedDict with this data and new hash.
+
+        It is up to the user to ensure that the mapping from the old hash to
+        the new is a function (i.e., each entry from the old hash can be
+        mapped directly onto the new hash).
+
+        For example, this is used to map from a snapshot's coordinates to
+        a collective variable based on the coordinates. However, if the
+        orignal hash was based on coordinates, but the new hash included
+        velocities, the resulting mapping would be invalid. It is up to the
+        user to avoid such invalid remappings.
+        """
         return TransformedDict(new_hash, 
                                {self.hash_representatives[k]: self.store[k] 
                                 for k in self.store})
@@ -41,47 +58,41 @@ class TransformedDict(collections.MutableMapping):
 class SnapshotByCoordinateDict(TransformedDict):
     def __init__(self, *args, **kwargs):
         hash_fcn = lambda x : x.coordinates.tostring()
-        super(TransformedDict, self).__init__(hash_fcn, args, kwargs)
-
+        super(SnapshotByCoordinateDict, self).__init__(hash_fcn, 
+                                                       *args, **kwargs)
 
 def shooting_point_analysis(steps, states):
-    results = {}
+    results = SnapshotByCoordinateDict()
     for step in steps:
-        # TODO: this should in step.change.canonical.details
-        details = step.change.canonical.trials[0].details
         try:
-            shooting_snap = shooting_snapshot
+            # TODO: this should in step.change.canonical.details
+            details = step.change.canonical.trials[0].details
+            shooting_snap = details.shooting_snapshot
         except AttributeError:
-            # wrong kind of move
+            # wrong kind of move (no shooting_snapshot)
             pass
         except IndexError:
-            # very wrong kind of move
+            # very wrong kind of move (no trials!)
             pass
         else:
             # easy to change how we define the key
-            key = shooting_snap.coordinates.tostring()
+            key = shooting_snap
             trial_traj = step.change.canonical.trials[0].trajectory
             init_traj = details.initial_trajectory
             shooting_traj = trial_traj.unique_subtrajectory(init_traj)
-            endpoints = list(set([shooting_traj[0], shooting_snap[-1]]))
+            endpoints = list(set([shooting_traj[0], shooting_traj[-1]]))
             # we use set in case there's only one frame (`first is last`)
-            local = {}
-            for state in states:
-                winners = [snap for snap in endpoints if state(snap)]
-                if len(winners) == 1:
-                    # this is messy... there has to be a better way
-                    try:
-                        result_dict = results[key]
-                    except KeyError:
-                        results[key] = {state : 0 for state in states}
-                        result_dict = results[key]
-                    finally:
-                        results[key][state] += 1
-                elif len(winners) > 1:
-                    print step.change
-                    print winners
-                    print trial_traj, init_traj, shooting_traj
-                    raise RuntimeError
-    
+            initial = collections.Counter({state: state(shooting_traj[0])
+                                           for state in states})
+            final = collections.Counter({state: state(shooting_traj[-1])
+                                         for state in states})
+            total = initial + final if len(endpoints) == 2 else initial
+            total_count = sum(total.values())
+            assert total_count == 1 or total_count == 2
+            try:
+                results[key] += total
+            except KeyError:
+                results[key] = total
+
     return results
 

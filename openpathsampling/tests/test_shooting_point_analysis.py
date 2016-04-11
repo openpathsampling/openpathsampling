@@ -10,6 +10,11 @@ import numpy as np
 
 from openpathsampling.analysis.shooting_point_analysis import *
 
+import logging
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+
 class testTransformedDict(object):
     def setup(self):
         self.untransformed = {(0, 1) : "a", (1, 2) : "b", (2, 3) : "c"}
@@ -58,6 +63,7 @@ class testTransformedDict(object):
 
 class testSnapshotByCoordinateDict(object):
     def setup(self):
+        self.empty_dict = SnapshotByCoordinateDict()
         pass
 
     def test_initialization(self):
