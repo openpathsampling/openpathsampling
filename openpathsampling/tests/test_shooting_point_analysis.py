@@ -50,5 +50,22 @@ class testTransformedDict(object):
         assert_equal(len(self.test_dict), 3)
         assert_equal(len(self.empty), 0)
 
+    def test_rehash(self):
+        rehashed = self.test_dict.rehash(lambda x : x[1])
+        assert_equal(rehashed.store, {1: "a", 2: "b", 3: "c"})
+        assert_equal(rehashed.hash_representatives,
+                     {1: (0,1), 2: (1,2), 3: (2,3)})
+
 class testSnapshotByCoordinateDict(object):
-    pass
+    def setup(self):
+        pass
+
+    def test_initialization(self):
+        raise SkipTest
+
+class testShootingPointAnalysis(object):
+    def setup(self):
+        pass
+
+    def test_shooting_point_analysis(self):
+        raise SkipTest

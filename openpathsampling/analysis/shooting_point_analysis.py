@@ -32,6 +32,11 @@ class TransformedDict(collections.MutableMapping):
     def __len__(self):
         return len(self.store)
 
+    def rehash(self, new_hash):
+        return TransformedDict(new_hash, 
+                               {self.hash_representatives[k]: self.store[k] 
+                                for k in self.store})
+
 
 class SnapshotByCoordinateDict(TransformedDict):
     def __init__(self, *args, **kwargs):
