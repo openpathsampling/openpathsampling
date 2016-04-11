@@ -2,7 +2,9 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
+
 import openpathsampling as paths
+import openpathsampling.engines as peng
 
 from external_engine import *
 
@@ -27,7 +29,7 @@ class testExternalEngine(object):
             'engine_sleep' : 0,
             'name_prefix' : "test"
         }
-        self.template = paths.Snapshot()
+        self.template = peng.toy.Snapshot()
         self.slow_engine = ExternalEngine(slow_options, self.template)
         self.fast_engine = ExternalEngine(fast_options, self.template)
         self.ensemble = paths.LengthEnsemble(5)

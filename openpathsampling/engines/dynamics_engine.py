@@ -162,7 +162,18 @@ class DynamicsEngine(StorableNamedObject):
 
     def __getattr__(self, item):
         # default is to look for an option and return it's value
-        return self.options[item]
+        try:
+            return self.options[item]
+        except KeyError:
+            default_msg = "'{0}' has no attribute '{1}'"
+            raise AttributeError(
+                (default_msg + ", nor does its options dictionary").format(
+                    self.__class__.__name__,
+                    item
+                )
+            )
+
+
 
     @property
     def topology(self):

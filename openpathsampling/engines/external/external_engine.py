@@ -1,5 +1,4 @@
-import openpathsampling as paths
-from openpathsampling import DynamicsEngine
+import openpathsampling.engines as peng
 import os
 
 import logging
@@ -13,7 +12,7 @@ import linecache
 
 import sys # DEBUG
 
-class ExternalEngine(DynamicsEngine):
+class ExternalEngine(peng.DynamicsEngine):
     """
     Generic object to handle arbitrary external engines. 
 
@@ -64,7 +63,7 @@ class ExternalEngine(DynamicsEngine):
                 # TODO: optimize sleep time
                 #print "Sleep", self.sleep_ms / 1000.0 # TODO logger
                 time.sleep(self.sleep_ms/1000.0)
-            elif isinstance(next_frame, paths.Snapshot): # success
+            elif isinstance(next_frame, peng.BaseSnapshot): # success
                 self.current_snapshot = next_frame
                 next_frame_found = True
                 self.frame_num += 1
@@ -116,9 +115,8 @@ class ExternalEngine(DynamicsEngine):
         else:
             try:
                 floatval = float(line)
-                snap = paths.Snapshot(coordinates=[[floatval]],
-                                      velocities=[[1.0]]
-                                     )
+                snap = peng.toy.Snapshot(coordinates=[[floatval]],
+                                         velocities=[[1.0]])
             except ValueError:
                 snap = "partial"
         return snap
