@@ -1,10 +1,10 @@
-import openpathsampling as paths
-from openpathsampling import PathMoverFactory as pmf
-from openpathsampling.todict import OPSNamed
-
 import itertools
-
 import collections
+import abc
+
+import openpathsampling as paths
+from openpathsampling.netcdfplus import StorableNamedObject
+
 LevelLabels = collections.namedtuple(
     "LevelLabels", 
     ["SIGNATURE", "MOVER", "GROUP", "SUPERGROUP", "GLOBAL"]
@@ -60,7 +60,7 @@ levels = StrategyLevels(
     GLOBAL=90
 )
 
-class MoveStrategy(OPSNamed):
+class MoveStrategy(StorableNamedObject):
     """
     Each MoveStrategy describes one aspect of the approach to the overall
     MoveScheme. Within path sampling, there's a near infinity of reasonable
@@ -86,7 +86,11 @@ class MoveStrategy(OPSNamed):
     level
     """
     _level = -1
+
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self, ensembles, group, replace):
+        super(MoveStrategy, self).__init__()
         self.ensembles = ensembles
         self.group = group
         self.replace = replace
@@ -173,6 +177,7 @@ class MoveStrategy(OPSNamed):
 
         return res_ensembles
 
+    @abc.abstractmethod
     def make_movers(self, scheme):
         """
         Makes the movers associated with this strategy.
@@ -213,7 +218,7 @@ class OneWayShootingStrategy(MoveStrategy):
     def make_movers(self, scheme):
         ensemble_list = self.get_ensembles(scheme, self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        shooters = pmf.OneWayShootingSet(self.selector, ensembles)
+        shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector, ensembles)
         return shooters
 
 class NearestNeighborRepExStrategy(MoveStrategy):
@@ -231,10 +236,7 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         movers = []
         for ens in ensemble_list:
             movers.extend(
-                [paths.ReplicaExchangeMover(
-                    ensemble1=ens[i],
-                    ensemble2=ens[i+1]
-                )
+                [paths.ReplicaExchangeMover(ensemble1=ens[i], ensemble2=ens[i+1])
                  for i in range(len(ens)-1)]
             )
         return movers
@@ -256,10 +258,8 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
         movers = []
         for ens in ensemble_list:
             pairs = list(itertools.combinations(ens, 2))
-            movers.extend([paths.ReplicaExchangeMover(
-                ensemble1=pair[0],
-                ensemble2=pair[1]
-            ) for pair in pairs])
+            movers.extend([paths.ReplicaExchangeMover(ensemble1= pair[0], ensemble2=pair[1])
+                           for pair in pairs])
         return movers
 
 class SelectedPairsRepExStrategy(MoveStrategy):
@@ -293,10 +293,7 @@ class SelectedPairsRepExStrategy(MoveStrategy):
         ensemble_list = self.get_ensembles(scheme, self.ensembles)
         movers = []
         for pair in ensemble_list:
-            movers.append(paths.ReplicaExchangeMover(
-                ensemble1=pair[0],
-                ensemble2=pair[1]
-            ))
+            movers.append(paths.ReplicaExchangeMover(ensemble1=pair[0], ensemble2=pair[1]))
         return movers
 
 
@@ -459,7 +456,22 @@ class MinusMoveStrategy(MoveStrategy):
         return movers
 
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
-    pass
+    """
+    Takes a given scheme and makes a single-replica minus mover.
+    """
+    def make_movers(self, scheme):
+        network = scheme.network
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        movers = []
+        for ens in ensembles:
+            innermosts = [t.ensembles[0] 
+                          for t in network.special_ensembles['minus'][ens]]
+            movers.append(paths.SingleReplicaMinusMover(
+                minus_ensemble=ens, 
+                innermost_ensembles=innermosts
+            ))
+        return movers
 
 
 class OrganizeByMoveGroupStrategy(MoveStrategy):
@@ -502,7 +514,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
             movers=mover_weights.keys(),
             weights=mover_weights.values()
         )
-        chooser.name = choosername
+        chooser.named(choosername)
         return chooser
 
     def default_weights(self, scheme):
@@ -552,8 +564,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         return weights
 
 
-    def get_weights(self, scheme, sorted_movers, sort_weights_override={}, 
-                    mover_weights_override={}):
+    def get_weights(self, scheme, sorted_movers, sort_weights_override=None,
+                    mover_weights_override=None):
         """
         Gets sort_weights and mover_weights dictionaries.
 
@@ -577,6 +589,12 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
             to weights. See class definition for the specific formats of the
             keys.
         """
+        if sort_weights_override is None:
+            sort_weights_override = dict()
+
+        if mover_weights_override is None:
+            mover_weights_override = dict()
+
         (sorted_w, mover_w) = self.default_weights(scheme)
         sorted_weights = self.override_weights(sorted_w, sort_weights_override)
         mover_weights = self.override_weights(mover_w, mover_weights_override)
@@ -710,7 +728,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         (root_weights, choosers) = zip(*root_couples)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=root_weights)
-        root_chooser.name = "RootMover"
+        root_chooser.named("RootMover")
         scheme.root_mover = root_chooser
         return root_chooser
 
@@ -914,7 +932,7 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
         (root_weights, choosers) = zip(*root_couples)
         root_chooser = paths.RandomChoiceMover(movers=choosers,
                                                weights=root_weights)
-        root_chooser.name = "RootMover"
+        root_chooser.named("RootMover")
         scheme.root_mover = root_chooser
         return root_chooser
 

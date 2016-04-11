@@ -1,9 +1,7 @@
-from storage import Storage, StorableObjectJSON
-from object_storage import ObjectStore, Query
-from snapshot_store import SnapshotStore, ConfigurationStore, MomentumStore
+from storage import Storage, AnalysisStorage
+from snapshot_store import BaseSnapshotStore, FeatureSnapshotStore
 from trajectory_store import TrajectoryStore
 from sample_store import SampleStore, SampleSetStore
-from cv_store import ObjectDictStore
-from query_store import QueryStore
+from cv_store import ObjectDictStore, ReversibleObjectDictStore
 from pathmovechange_store import PathMoveChangeStore
 from mcstep_store import MCStepStore

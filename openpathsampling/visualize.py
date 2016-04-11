@@ -1,13 +1,14 @@
-import svgwrite
 import os
+import json
+import StringIO
+
+import svgwrite
+import networkx as nx
+import matplotlib.pyplot as plt
+from networkx.readwrite import json_graph
 
 import openpathsampling as paths
-import networkx as nx
-
-import json
-import matplotlib.pyplot as plt
-import StringIO
-from networkx.readwrite import json_graph
+from openpathsampling.netcdfplus import LoaderProxy
 
 class TreeRenderer(object):
     def __init__(self):
@@ -972,27 +973,25 @@ class PathTreeBuilder(object):
                                         color='black')
                 )
 
-                # print sample.mover.cls
-                # print sample[0]
-                # print map(self.storage.idx, list(sample.parent.trajectory))
-                # print map(self.storage.idx, list(sample))
-
-                shift = shift + map(self.storage.idx, sample.parent.trajectory).index(self.storage.idx(sample[0]))
+                shift = shift + sample.parent.trajectory.index(sample[0])
 
                 self.renderer.add(
                     self.renderer.range(shift, t_count, len(sample), 'gray', mover_type.__name__[:-11] )
                 )
 
-            elif mover_type in[paths.ForwardShootMover, paths.BackwardShootMover]:
+            elif mover_type in [paths.ForwardShootMover, paths.BackwardShootMover]:
                 # ShootingMove
-                old_traj = sample.details.initial_point.trajectory
-                old_index = sample.details.initial_point.index
-                old_conf = old_traj[old_index]
+                old_traj = sample.details.initial_trajectory
+                old_conf = sample.details.shooting_snapshot
+                old_index = sample.details.initial_trajectory.index(old_conf)
                 old_conf_idx = self.storage.idx(old_conf)
 
-                new_traj = sample.details.trial_point.trajectory
-                new_index = sample.details.trial_point.index
-                new_conf = new_traj[new_index]
+                # print old_conf
+                # print "Initial:", [hex(id(s)) for s in old_traj]
+                # print "Trial:", [hex(id(s)) for s in sample.trajectory]
+
+                new_traj = sample.trajectory
+                new_index = new_traj.index(old_conf)
 
                 # print type(old_conf), self.storage.snapshots.index.get(old_conf, None)
 
@@ -1001,7 +1000,7 @@ class PathTreeBuilder(object):
                     if old_conf_idx not in p_x:
                         shift = 0
                     else:
-                        shift = p_x[old_conf_idx] - new_index
+                        shift = p_x[old_conf_idx] - new_index 
 
                     font_color = "black"
 
@@ -1010,7 +1009,7 @@ class PathTreeBuilder(object):
                     if mover_type is paths.BackwardShootMover:
                         color = "green"
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index + 1,
+                            self.renderer.v_connection(shift + new_index,
                                                        p_y[old_conf_idx], t_count,
                                                        color)
                         )
@@ -1025,7 +1024,7 @@ class PathTreeBuilder(object):
                         color = "red"
 
                         self.renderer.add(
-                            self.renderer.v_connection(shift + new_index,
+                            self.renderer.v_connection(shift + new_index + 1,
                                                        p_y[old_conf_idx], t_count,
                                                        color)
                         )
@@ -1106,38 +1105,38 @@ class PathTreeBuilder(object):
 
         matrix = self._to_matrix()
 
-        # if False & hasattr(self, 'states') and len(self.states) > 0:
-        #     for color, op in self.states:
-        #         xp = None
-        #         for y in range(0, max_y - min_y + 1):
-        #             left = None
-        #             yp = y + min_y
-        #             for x in range(0, (max_x - min_x + 1)):
-        #                 xp = x + min_x
-        #
-        #                 # if matrix[y][x] is not None:
-        #                 #     self.renderer.pre(
-        #                 #         self.renderer.shade(xp, yp, 0.9,
-        #                 #                             'black')
-        #                 #     )
-        #
-        #
-        #                 if matrix[y][x] is not None\
-        #                     and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
-        #                         if left is None:
-        #                             left = xp
-        #                 else:
-        #                     if left is not None:
-        #                         self.renderer.pre(
-        #                             self.renderer.shade(left, yp, xp - left,
-        #                                                 color)
-        #                         )
-        #                         left = None
-        #
-        #             if left is not None:
-        #                 self.renderer.pre(
-        #                     self.renderer.shade(left, yp, xp - left + 1, color)
-        #                 )
+        if hasattr(self, 'states') and len(self.states) > 0:
+            for color, op in self.states:
+                xp = None
+                for y in range(0, max_y - min_y + 1):
+                    left = None
+                    yp = y + min_y
+                    for x in range(0, (max_x - min_x + 1)):
+                        xp = x + min_x
+
+                        # if matrix[y][x] is not None:
+                        #     self.renderer.pre(
+                        #         self.renderer.shade(xp, yp, 0.9,
+                        #                             'black')
+                        #     )
+
+
+                        if matrix[y][x] is not None\
+                            and bool(op(LoaderProxy(self.storage.snapshots, matrix[y][x]))):
+                                if left is None:
+                                    left = xp
+                        else:
+                            if left is not None:
+                                self.renderer.pre(
+                                    self.renderer.shade(left, yp, xp - left,
+                                                        color)
+                                )
+                                left = None
+
+                    if left is not None:
+                        self.renderer.pre(
+                            self.renderer.shade(left, yp, xp - left + 1, color)
+                        )
 
         prev = samples[0].trajectory
         old_tc = 1

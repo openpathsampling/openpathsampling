@@ -30,12 +30,8 @@ class testFirstFrameSelector(SelectorTest):
     def test_pick(self):
         sel = FirstFrameSelector()
         sp = sel.pick(self.mytraj)
-        assert_equal(sp.selector, sel)
-        assert_equal(sp.trajectory, self.mytraj)
-        assert_equal(sp.index, 0)
-        assert_equal(sp.f, 1.0)
-        assert_equal(sp.sum_bias, 1.0)
-        snap = sp.snapshot
+        assert_equal(sp, 0)
+        snap = self.mytraj[sp]
         assert_equal(snap.coordinates[0][0], -0.5)
 
     def test_shooting_move(self):
@@ -55,12 +51,8 @@ class testFinalFrameSelector(SelectorTest):
     def test_pick(self):
         sel = FinalFrameSelector()
         sp = sel.pick(self.mytraj)
-        assert_equal(sp.selector, sel)
-        assert_equal(sp.trajectory, self.mytraj)
-        assert_equal(sp.index, 4)
-        assert_equal(sp.f, 1.0)
-        assert_equal(sp.sum_bias, 1.0)
-        snap = sp.snapshot
+        assert_equal(sp, 4)
+        snap = self.mytraj[sp]
         assert_equal(snap.coordinates[0][0], 0.5)
 
     def test_shooting_move(self):

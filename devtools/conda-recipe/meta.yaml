@@ -1,6 +1,10 @@
 package:
   name: openpathsampling-dev
-  version: !!str 0.0.2
+  version: "0.0.3"
+
+source:
+#  git_url: ../../.git
+  path: ../../
 
 build:
   preserve_egg_dir: True
@@ -9,37 +13,38 @@ build:
 requirements:
   build:
     - python
-    - numpy
     - setuptools
     - numpy
-    - scipy
-    - setuptools
-    - netcdf4
-    - openmm
-    - openmmtools
-    - pymbar
-    - docopt
-    - jinja2
-    - mdtraj
-    - svgwrite
-    - networkx
 
   run:
     - python
-    - pandas
     - numpy
     - scipy
+    - pandas
     - netcdf4
     - openmm
     - openmmtools
     - pymbar
     - docopt
     - pyyaml
-    - jinja2
-    - mdtraj
+    - mdtraj 1.5.1
     - svgwrite
     - networkx
+    - matplotlib
+
+test:
+  requires:
+    - nose
+    - nose-timer
+    - python-coveralls
+    - msmbuilder
+    - pyemma
+    - ipynbtest
+
+  imports:
+    - openpathsampling
 
 about:
   home: https://github.com/choderalab/openpathsampling
   license: GNU Lesser General Public License v2 or later (LGPLv2+)
+  summary: framework for running path sampling MD simulations

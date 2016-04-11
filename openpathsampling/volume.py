@@ -5,7 +5,8 @@ Created on 03.09.2014
 '''
 
 import range_logic
-from openpathsampling.todict import OPSNamed
+import abc
+from openpathsampling.netcdfplus import StorableNamedObject
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -15,12 +16,12 @@ def join_volumes(volume_list):
 
     Parameters
     ----------
-    volume_list : list of Volume
+    volume_list : list of :class:`openpathsampling.Volume`
         the list to be joined together
 
     Returns
     -------
-    UnionVolume 
+    :class:`openpathsampling.UnionVolume`
         the union of the elements of the list, or EmptyVolume if list is
         empty
     """
@@ -31,13 +32,17 @@ def join_volumes(volume_list):
     return volume
 
 
-class Volume(OPSNamed):
+class Volume(StorableNamedObject):
     """
     A Volume describes a set of snapshots 
     """
+
+    __metaclass__ = abc.ABCMeta
+
     def __init__(self):
         super(Volume, self).__init__()
 
+    @abc.abstractmethod
     def __call__(self, snapshot):
         '''
         Returns `True` if the given snapshot is part of the defined Region
@@ -113,7 +118,17 @@ class VolumeCombination(Volume):
         self.sfnc = str_fnc
 
     def __call__(self, snapshot):
-        return self.fnc(self.volume1.__call__(snapshot), self.volume2.__call__(snapshot))
+        # short circuit following JHP's implementation in ensemble.py
+        a = self.volume1(snapshot)
+        res_true = self.fnc(a, True)
+        res_false = self.fnc(a, False)
+        if res_false == res_true:
+            return res_true
+        else:
+            b = self.volume2(snapshot)
+            return self.fnc(a, b)
+        #return self.fnc(self.volume1.__call__(snapshot),
+                        #self.volume2.__call__(snapshot))
     
     def __str__(self):
         return '(' + self.sfnc.format(str(self.volume1), str(self.volume2)) + ')'
@@ -144,7 +159,6 @@ class RelativeComplementVolume(VolumeCombination):
     """ "Subtraction" combination (relative complement) of two volumes."""
     def __init__(self, volume1, volume2):
         super(RelativeComplementVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
-
 
 
 class NegatedVolume(Volume):
@@ -345,7 +359,7 @@ class CVRangeVolume(Volume):
             return super(CVRangeVolume, self).__sub__(other)
 
     def __call__(self, snapshot):
-        l = self.collectivevariable(snapshot)
+        l = float(self.collectivevariable(snapshot))
         return l >= self.lambda_min and l <= self.lambda_max
 
     def __str__(self):
@@ -418,7 +432,7 @@ class CVRangeVolumePeriodic(CVRangeVolume):
                                    )
 
     def __call__(self, snapshot):
-        l = self.collectivevariable(snapshot)
+        l = float(self.collectivevariable(snapshot))
         if self.wrap:
             l = self.do_wrap(l)
         if self.lambda_min > self.lambda_max:
@@ -476,7 +490,7 @@ class VoronoiVolume(Volume):
         
         Parameters
         ----------
-        snapshot : Snapshot
+        snapshot : :class:`opensampling.engines.BaseSnapshot`
             the snapshot to be tested
         
         Returns
@@ -500,10 +514,11 @@ class VoronoiVolume(Volume):
         
         Parameters
         ----------
-        snapshot : Snapshot
+        snapshot : :class:`opensampling.engines.BaseSnapshot`
             snapshot to be tested
         state : int or None
-            index of the cell to be tested. If `None` (Default) then the internal self.state is used
+            index of the cell to be tested. If `None` (Default) then the
+            internal self.state is used
             
         Returns
         -------

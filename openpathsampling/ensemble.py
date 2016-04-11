@@ -1,15 +1,16 @@
 '''
 Created on 03.09.2014
 
-@author: jan-hendrikprinz, David W.H. Swenson
+@author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 
-from openpathsampling.todict import OPSNamed
+import logging
 
+from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
-import logging
-from ops_logging import initialization_logging
+import abc
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -38,8 +39,8 @@ class EnsembleCache(object):
 
     Attributes
     ----------
-        start_frame : Snapshot
-        prev_last_frame : Snapshot
+        start_frame : :class:`openpathsampling.snapshot.Snapshot`
+        prev_last_frame : :class:`openpathsampling.snapshot.Snapshot`
         direction : +1 or -1
         contents : dictionary
     """
@@ -48,11 +49,17 @@ class EnsembleCache(object):
         self.prev_last_frame = None
         self.last_length = None
         self.direction = direction
-        self.contents = { }
+        self.contents = {}
 
     def bad_direction_error(self):
         raise RuntimeError("EnsembleCache.direction = " +
                            str(self.direction) + " invalid.") #nocover
+
+    # def clear(self):
+    #     self.start_frame = None
+    #     self.prev_last_frame = None
+    #     self.last_length = None
+    #     self.contents = {}
 
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
@@ -67,23 +74,23 @@ class EnsembleCache(object):
             if reset is None:
                 lentraj = len(trajectory)
                 if self.direction > 0:
-                    if trajectory[0] != self.start_frame:
+                    if trajectory.get_as_proxy(0) != self.start_frame:
                         reset = True
                     else:
                         if lentraj == self.last_length:
-                            reset = (trajectory[-1] != self.prev_last_frame)
+                            reset = (trajectory.get_as_proxy(-1) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
-                            reset = (trajectory[-2] != self.prev_last_frame)
+                            reset = (trajectory.get_as_proxy(-2) != self.prev_last_frame)
                         else:
                             reset = True
                 elif self.direction < 0:
-                    if trajectory[-1] != self.start_frame:
+                    if trajectory.get_as_proxy(-1) != self.start_frame:
                         reset = True
                     else:
                         if lentraj == self.last_length:
-                            reset = (trajectory[0] != self.prev_last_frame)
+                            reset = (trajectory.get_as_proxy(0) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
-                            reset = (trajectory[1] != self.prev_last_frame)
+                            reset = (trajectory.get_as_proxy(1) != self.prev_last_frame)
                         else:
                             reset = True
                 else:
@@ -96,13 +103,13 @@ class EnsembleCache(object):
         if reset:
             logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
-                self.start_frame = trajectory[0]
-                self.prev_last_frame = trajectory[-1]
+                self.start_frame = trajectory.get_as_proxy(0)
+                self.prev_last_frame = trajectory.get_as_proxy(-1)
                 self.last_length = len(trajectory)
                 self.contents = { }
             elif self.direction < 0:
-                self.start_frame = trajectory[-1]
-                self.prev_last_frame = trajectory[0]
+                self.start_frame = trajectory.get_as_proxy(-1)
+                self.prev_last_frame = trajectory.get_as_proxy(0)
                 self.last_length = len(trajectory)
                 self.contents = { }
             else:
@@ -112,15 +119,15 @@ class EnsembleCache(object):
         # by returning reset, we allow the functions that call this to reset
         # other things as well
         if self.direction > 0:
-            self.prev_last_frame = trajectory[-1]
+            self.prev_last_frame = trajectory.get_as_proxy(-1)
         elif self.direction < 0:
-            self.prev_last_frame = trajectory[0]
+            self.prev_last_frame = trajectory.get_as_proxy(0)
         else:
             self.bad_direction_error()
 
         return reset
 
-class Ensemble(OPSNamed):
+class Ensemble(StorableNamedObject):
     '''
     Path ensemble object.
 
@@ -142,6 +149,8 @@ class Ensemble(OPSNamed):
     Maybe replace - by / to get better notation. So far it has not been used
     '''
 
+    __metaclass__ = abc.ABCMeta
+
     use_shortcircuit = True
 
     def __init__(self):
@@ -155,6 +164,7 @@ class Ensemble(OPSNamed):
             return True
         return str(self) == str(other)
 
+    @abc.abstractmethod
     def __call__(self, trajectory, trusted=None):
         '''
         Return `True` if the trajectory is part of the path ensemble.
@@ -208,7 +218,7 @@ class Ensemble(OPSNamed):
         
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
         
         Returns
@@ -238,7 +248,7 @@ class Ensemble(OPSNamed):
         
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
         
         Returns
@@ -260,15 +270,21 @@ class Ensemble(OPSNamed):
         return True        
 
 
-
-    def find_valid_slices(self, trajectory, lazy=True, 
-                          max_length=None, min_length=1, overlap=1):
-        '''
+    def find_valid_slices(
+            self,
+            trajectory,
+            max_length=None,
+            min_length=1,
+            overlap=1,
+            reverse=False,
+            n_results=0
+    ):
+        """
         Return slices (subtrajectories) matching the given ensemble.
 
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be splitted into ensemble parts
         lazy : boolean, optional
             if True will use a faster almost linear algorithm, while False
@@ -284,13 +300,19 @@ class Ensemble(OPSNamed):
             determines the allowed overlap of all trajectories to be found.
             A value of x means that two sub-trajectorie can share up to x
             frames at the beginning and x frames at the end.  Default is 1
+        reverse : bool
+            if `True` this will start searching from the end of the trajectory.
+            Otherwise (default) it will start at the beginning.
+        n_results : int
+            if `0` this will return all results. If the integer is larger than
+            zero it will stop after the given number of slices has been found
 
         Returns
         -------
         list of slices
             Returns a list of index-slices for sub-trajectories in
             trajectory that are in the ensemble.
-        '''
+        """
         ensemble_list = []
 
         length = len(trajectory)
@@ -302,49 +324,31 @@ class Ensemble(OPSNamed):
         min_length = max(1, min_length)
 
         logger.debug("Looking for subtrajectories in " + str(trajectory))
+        old_tt_len = 0
 
-        if not lazy:
-            # this tries all possible sub-trajectories starting with the
-            # longest ones and uses recursion
-            for l in range(max_length,min_length - 1,-1):
-                for start in range(0,length-l+1):
-                    tt = trajectory[start:start+l]
-#                    print start, start+l
-                    # test using lazy=False
-                    if self(tt, lazy=False):
-                        list_left = []
-                        list_right = []
-                        if l > min_length:
-                            pad = min(overlap, l - 1)
-                            tt_left = trajectory[0:start + pad]
-                            list_left = self.find_valid_slices(tt_left, 
-                                                               max_length=l)
-
-                            tt_right = trajectory[start + l - pad:length]
-                            list_right = self.find_valid_slices(tt_right, 
-                                                                max_length=l)
-
-#                        ensemble_list = list_left + [tt] + list_right
-                        ensemble_list = list_left + [slice(start,start+l)] + list_right
-
-                        # no need to look further inside the iterations caught everything!
-                        break
-                else:
-                    continue
-                break
-
-            return ensemble_list
-        else:
+        if not reverse:
             start = 0
-            end = min_length
+            end = start + min_length
 
             while start <= length - min_length and end <= length:
+                # print start, end
                 tt = trajectory[start:end]
-                if self.can_append(tt) and end < length:
-                    end += 1
+
+                can_append_tt = False
+                if len(tt) != old_tt_len + 1:
+                    can_append_tt = self.can_append(tt)
                 else:
-                    if self(tt, trusted=False):
-                        ensemble_list.append(slice(start,end))
+                    can_append_tt = self.can_append(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if end < length and can_append_tt:
+                    end += 1
+                    if end - start > max_length + 1:
+                        start += 1
+                        end = start + min_length
+                else:
+                    if end - start <= max_length and self(tt, trusted=False):
+                        ensemble_list.append(slice(start, end))
                         pad = min(overlap, end - start - 1)
                         start = end - pad
                         if end == length:
@@ -352,22 +356,114 @@ class Ensemble(OPSNamed):
                             # All other possible subtraj can only be contained
                             # in already existing ones
                             start = length
-                    elif self(tt[0:len(tt)-1], trusted=False):
-                        ensemble_list.append(slice(start,end-1))
-                        pad = min(overlap, end - start - 2)
+                    elif end - start >= min_length + 1 and self(tt[0:len(tt) - 1], trusted=False):
+                        ensemble_list.append(slice(start, end - 1))
+                        pad = min(overlap + 1, end - start - 2)
                         start = end - pad
                     else:
                         start += 1
                     end = start + min_length
 
-            return ensemble_list
+                if 0 < n_results == len(ensemble_list):
+                    break
+        else:
+            end = length
+            start = end - min_length
 
-    def split(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
-        '''Return list of subtrajectories satisfying the given ensemble.
+            while start >= 0 and end >= min_length:
+                tt = trajectory[start:end]
+
+                can_prepend_tt = False
+                if len(tt) != old_tt_len + 1:
+                    can_prepend_tt = self.can_prepend(tt)
+                else:
+                    can_prepend_tt = self.can_prepend(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if start > 0 and can_prepend_tt:
+                    start -= 1
+                    if end - start > max_length + 1:
+                        end -=1
+                        start = end - min_length
+                else:
+                    if end - start <= max_length and self(tt, trusted=False):
+                        ensemble_list.append(slice(start, end))
+                        pad = min(overlap, end - start - 1)
+                        end = start + pad
+                        if start == 0:
+                            # This means we have reached the end and should stop
+                            # All other possible subtraj can only be contained
+                            # in already existing ones
+                            end = 0
+
+                    elif end - start >= min_length + 1 and self(tt[1:len(tt)], trusted=False):
+                        ensemble_list.append(slice(start + 1, end))
+                        pad = min(overlap + 1, end - start - 2)
+                        end = start + pad
+                    else:
+                        end -= 1
+
+                    start = end - min_length
+
+                if 0 < n_results == len(ensemble_list):
+                    break
+
+        return ensemble_list
+
+    def find_first_subtrajectory(self, trajectory):
+        """
+        Return the first sub-trajectory that matches the ensemble
 
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory :class:`openpathsampling.trajectory.Trajectory`
+            the trajectory in which to look for sub-trajectories
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory` or None
+            the found sub-trajectory or None if no sub-trajectory was found
+        """
+        trajs = self.find_valid_slices(trajectory, n_results=1)
+        if len(trajs) > 0:
+            return trajectory[trajs[0]]
+        else:
+            return None
+
+    def find_last_subtrajectory(self, trajectory):
+        """
+        Return the last sub-trajectory that matches the ensemble
+
+        Parameters
+        ----------
+        trajectory :class:`openpathsampling.trajectory.Trajectory`
+            the trajectory in which to look for sub-trajectories
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory` or None
+            the found sub-trajectory or None if no sub-trajectory was found
+        """
+        trajs = self.find_valid_slices(trajectory, n_results=1, reverse=True)
+        if len(trajs) > 0:
+            return trajectory[trajs[0]]
+        else:
+            return None
+
+    def split(
+            self,
+            trajectory,
+            max_length=None,
+            min_length=1,
+            overlap=1,
+            reverse=False,
+            n_results=0
+        ):
+        """Return list of subtrajectories satisfying the given ensemble.
+
+        Parameters
+        ----------
+        trajectory : :py:class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be splitted into ensemble parts
         lazy : boolean
             if True will use a faster almost linear algorithm, while False
@@ -383,23 +479,34 @@ class Ensemble(OPSNamed):
             determines the allowed overlap of all trajectories to be found.
             A value of x means that two sub-trajectory can share up to x
             frames at the beginning and x frames at the end.  Default is 1
+        reverse : bool
+            if `True` this will start searching from the end of the trajectory.
+            Otherwise (default) it will start at the beginning.
+        n_results : int
+            if `0` this will return all results. If the integer is larger than
+            zero it will stop after the given number of slices has been found
 
         Returns
         -------
-        list of Trajectory
+        list of :class:`openpathsampling.trajectory.Trajectory`
             Returns a list of sub-trajectories in trajectory that are in the
             ensemble.
 
         Notes
         -----
         This uses self.find_valid_slices and returns the actual sub-trajectories
-        '''
+        """
 
-        indices = self.find_valid_slices(trajectory, lazy, max_length, 
-                                         min_length, overlap)
+        # try:
+        #     indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
+        #                                      min_length, overlap)
+        #
+        #     return [paths.Trajectory(trajectory[part]) for part in indices]
+        # except AttributeError:
+        indices = self.find_valid_slices(trajectory, max_length,
+                                         min_length, overlap, reverse, n_results)
 
         return [trajectory[part] for part in indices]
-
 
     def __str__(self):
         '''
@@ -581,7 +688,6 @@ class EnsembleCombination(Ensemble):
     '''
     Logical combination of two ensembles
     '''
-    #TODO: EnsembleCombination cannot be saved alone yet!
     def __init__(self, ensemble1, ensemble2, fnc, str_fnc):
         super(EnsembleCombination, self).__init__()
         self.ensemble1 = ensemble1
@@ -598,12 +704,15 @@ class EnsembleCombination(Ensemble):
         if Ensemble.use_shortcircuit:
             a = self.ensemble1(trajectory, trusted)
             logger.debug("Combination is " + self.__class__.__name__)
-            logger.debug("Combination: " + self.ensemble1.__class__.__name__ + 
-                         " is "+str(a))
-            logger.debug("Combination: " + self.ensemble2.__class__.__name__ +
-                         " is " +str(self.ensemble2(trajectory, trusted)))
-            logger.debug("Combination: returning " + 
-                         str(self.fnc(a,self.ensemble2(trajectory,trusted))))
+            logger.debug("Combination: " + self.ensemble1.__class__.__name__
+                         + " is "+str(a))
+            if logger.isEnabledFor(logging.DEBUG):
+                ens2 = self.ensemble2(trajectory, trusted)
+                logger.debug("Combination: " +
+                             self.ensemble2.__class__.__name__ +
+                             " is " +str(ens2))
+                logger.debug("Combination: returning " +
+                             str(self.fnc(a,ens2)))
             res_true = self.fnc(a, True)
             res_false = self.fnc(a, False)
             if res_false == res_true:
@@ -641,12 +750,14 @@ class EnsembleCombination(Ensemble):
             logger.debug("Combination is " + self.__class__.__name__)
             logger.debug("Combination.can_append: " + 
                          self.ensemble1.__class__.__name__ + " is "+str(a))
-            logger.debug("Combination.can_append: " 
-                         + self.ensemble2.__class__.__name__ +
-                         " is " +
-                         str(self.ensemble2.can_append(trajectory, trusted)))
-            logger.debug("Combination.can_append: returning " + 
-                         str(self.fnc(a,self.ensemble2.can_append(trajectory,trusted))))
+            if logger.isEnabledFor(logging.DEBUG):
+                ens2_can_append = self.ensemble2.can_append(trajectory,
+                                                            trusted)
+                logger.debug("Combination.can_append: " 
+                             + self.ensemble2.__class__.__name__ +
+                             " is " + str(ens2_can_append))
+                logger.debug("Combination.can_append: returning " + 
+                             str(self.fnc( a, ens2_can_append)))
             res_true = self._continue_fnc(a, True)
             res_false = self._continue_fnc(a, False)
             if res_false == res_true:
@@ -1320,11 +1431,11 @@ class AllInXEnsemble(VolumeEnsemble):
             return False
         if trusted == True:
             #print "trusted"
-            frame = trajectory[-1]
+            frame = trajectory.get_as_proxy(-1)
             return self._volume(frame)
         else:
             #logger.debug("Calling volume untrusted "+repr(self))
-            for frame in trajectory:
+            for frame in trajectory.as_proxies():
                 if not self._volume(frame):
                     return False
             return True
@@ -1333,7 +1444,7 @@ class AllInXEnsemble(VolumeEnsemble):
         # order in this one only matters if it is trusted
         if trusted:
             #print "Rev Trusted"
-            frame = trajectory[0]
+            frame = trajectory.get_as_proxy(0)
             return self._volume(frame)
         else:
             #print "Rev UnTrusted"
@@ -1377,10 +1488,10 @@ class PartInXEnsemble(VolumeEnsemble):
         
         Parameters
         ----------
-        trajectory : Trajectory
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
             The trajectory to be checked
         '''
-        for frame in trajectory:
+        for frame in trajectory.as_proxies():
             if self._volume(frame):
                 return True
         return False
@@ -1405,7 +1516,7 @@ class PartOutXEnsemble(PartInXEnsemble):
         return AllInXEnsemble(self.volume, self.frames, self.trusted)
 
     def __call__(self, trajectory, trusted=None):
-        for frame in trajectory:
+        for frame in trajectory.as_proxies():
             if self._volume(frame):
                 return True
         return False
@@ -1429,10 +1540,11 @@ class ExitsXEnsemble(VolumeEnsemble):
     def __call__(self, trajectory, trusted=None):
         subtraj = trajectory
         for i in range(len(subtraj)-1):
-            frame_i = subtraj[i]
-            frame_iplus = subtraj[i+1]
-            if self._volume(frame_i) and not self._volume(frame_iplus):
-                return True
+            frame_i = subtraj.get_as_proxy(i)
+            if self._volume(frame_i):
+                frame_iplus = subtraj.get_as_proxy(i+1)
+                if not self._volume(frame_iplus):
+                    return True
         return False
 
 
@@ -1450,10 +1562,11 @@ class EntersXEnsemble(ExitsXEnsemble):
     def __call__(self, trajectory, trusted=None):
         subtraj = trajectory
         for i in range(len(subtraj)-1):
-            frame_i = subtraj[i]
-            frame_iplus = subtraj[i+1]
-            if not self._volume(frame_i) and self._volume(frame_iplus):
-                return True
+            frame_i = subtraj.get_as_proxy(i)
+            if not self._volume(frame_i):
+                frame_iplus = subtraj.get_as_proxy(i+1)
+                if self._volume(frame_iplus):
+                    return True
         return False
 
 
@@ -1517,7 +1630,6 @@ class SlicedTrajectoryEnsemble(WrappedEnsemble):
                 " in {" + start + ":" + stop + "}" + step + ")")
 
 
-
 class SuffixTrajectoryEnsemble(WrappedEnsemble):
     '''
     Ensemble which prepends its trajectory to a given trajectory.
@@ -1527,7 +1639,7 @@ class SuffixTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(SuffixTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
-        self._cached_trajectory = paths.Trajectory(add_trajectory)
+        self._cached_trajectory = paths.Trajectory(add_trajectory.as_proxies())
 
     def _alter(self, trajectory):
         logger.debug("Starting Suffix._alter")
@@ -1539,10 +1651,9 @@ class SuffixTrajectoryEnsemble(WrappedEnsemble):
         #reset = False
         if not reset:
             logger.debug("BackwardPrended was not reset")
-            first_frame = trajectory[-1]
-            first_frame.reversed
-            if self._cached_trajectory[0] != first_frame:
-                self._cached_trajectory.insert(0,first_frame)
+            first_frame = trajectory.get_as_proxy(-1)
+            if self._cached_trajectory.get_as_proxy(0) != first_frame:
+                self._cached_trajectory.insert(0, first_frame)
         else:
             self._cached_trajectory = trajectory.reversed + self.add_trajectory
 
@@ -1565,14 +1676,14 @@ class PrefixTrajectoryEnsemble(WrappedEnsemble):
     def __init__(self, ensemble, add_trajectory):
         super(PrefixTrajectoryEnsemble, self).__init__(ensemble)
         self.add_trajectory = add_trajectory
-        self._cached_trajectory = paths.Trajectory(add_trajectory)
+        self._cached_trajectory = paths.Trajectory(add_trajectory.as_proxies())
 
     def _alter(self, trajectory):
         logger.debug("Starting _alter")
         reset = self._cache_can_append.check(trajectory)
         if not reset:
-            final_frame = trajectory[-1]
-            if self._cached_trajectory[-1] != final_frame:
+            final_frame = trajectory.get_as_proxy(-1)
+            if self._cached_trajectory.get_as_proxy(-1) != final_frame:
                 self._cached_trajectory.append(final_frame)
         else: 
             logger.debug("doing it oldstyle")
@@ -1637,7 +1748,7 @@ class SingleFrameEnsemble(WrappedEnsemble):
 
     Attributes
     ----------
-    ensemble : Ensemble
+    ensemble : :class:`openpathsampling.ensemble.Ensemble`
         the ensemble which should be represented in the single frame
 
     Notes
@@ -1663,9 +1774,9 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     Parameters
     ----------
-    state_vol : Volume
+    state_vol : :class:`openpathsampling.volume.Volume`
         The Volume which defines the state for this minus interface
-    innermost_vols : list of Volume
+    innermost_vols : :class:`list of openpathsampling.volume.Volume`
         The Volume defining the innermost interface with which this minus
         interface does its replica exchange.
     n_l : integer (greater than one)
@@ -1744,11 +1855,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         Parameters
         ----------
-        partial_traj : Trajectory
+        partial_traj : :class:`openpathsampling.trajectory.Trajectory`
             trajectory to extend
-        minus_replica_id : integer or string
+        minus_replica_id : int or str
             replica ID for this sample
-        engine : DynamicsEngine
+        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
             engine to use for MD extension
         """
         last_frame = partial_traj[-1]
@@ -1771,8 +1882,6 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         )
         return minus_samp
 
-
-
 class TISEnsemble(SequentialEnsemble):
     """An ensemble for TIS (or AMS).
 
@@ -1781,13 +1890,13 @@ class TISEnsemble(SequentialEnsemble):
 
     Attributes
     ----------
-    initial_states : Volume or list of Volume
+    initial_states : :class:`openpathsampling.volume.Volume` or list of :class:`openpathsampling.volume.Volume`
         Volume(s) that only the first or last frame may be in
-    final_states : Volume or list of Volume
+    final_states : :class:`openpathsampling.volume.Volume` or list of :class:`openpathsampling.volume.Volume`
         Volume(s) that only the last frame may be in
-    interface : Volume
+    interface : :class:`openpathsampling.volume.Volume`
         Volume which the trajectory must exit to be accepted
-    orderparameter : CollectiveVariable
+    orderparameter : :class:`openpathsampling.collectivevariable.CollectiveVariable`
         CV to be used as order parameter for this
     """
     def __init__(self, initial_states, final_states, interface,
@@ -1825,12 +1934,12 @@ class TISEnsemble(SequentialEnsemble):
         initial_state_i = None
         final_state_i = None
         for state_i in range(len(self.initial_states)):
-            if self.initial_states[state_i](trajectory[0]):
+            if self.initial_states[state_i](trajectory.get_as_proxy(0)):
                 initial_state_i = state_i
                 break
         all_states = self.initial_states + self.final_states
         for state_i in range(len(all_states)):
-            if all_states[state_i](trajectory[-1]):
+            if all_states[state_i](trajectory.get_as_proxy(-1)):
                 final_state_i = state_i
                 break
 
@@ -1892,12 +2001,12 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume : volume
+        volume : :class:`openpathsampling.volume.Volume`
             The volume to start in 
         
         Returns
         -------
-        ensemble : Ensemble
+        ensemble : :class:`openpathsampling.ensemble.Ensemble`
             The constructed Ensemble
         '''
         return AllInXEnsemble(volume, 0)
@@ -1909,12 +2018,12 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume : volume
+        volume : :class:`openpathsampling.volume.Volume`
             The volume to end in 
         
         Returns
         -------
-        ensemble : Ensemble
+        ensemble : :class:`openpathsampling.ensemble.Ensemble`
             The constructed Ensemble
         '''        
         return AllInXEnsemble(volume, -1)
@@ -1926,14 +2035,14 @@ class EnsembleFactory():
         
         Parameters
         ----------
-        volume_a : volume
+        volume_a : :class:`openpathsampling.volume.Volume`
             The volume to start in 
-        volume_b : volume
+        volume_b : :class:`openpathsampling.volume.Volume`
             The volume to end in 
         
         Returns
         -------
-        ensemble : Ensemble
+        ensemble : :class:`openpathsampling.ensemble.Ensemble`
             The constructed Ensemble
         '''        
         # TODO: this is actually only for flexible path length TPS now

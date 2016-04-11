@@ -1,10 +1,13 @@
-# This should run the nosetests in the right folder
+#!/bin/sh
 
-cd openpathsampling
-cd tests
+echo travis_fold:start:nosetests
+echo Run nose tests ...
+
 testfail=0
-nosetests -v -s . || testfail=1
-cd ../..
+nosetests -v -s --with-coverage || testfail=1
+coveralls
+echo travis_fold:end:nosetests
+
 if [ $testfail -eq 1 ]
 then
     exit 1

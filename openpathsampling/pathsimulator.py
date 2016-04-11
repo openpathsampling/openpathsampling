@@ -1,18 +1,21 @@
-from openpathsampling.todict import OPSNamed, OPSObject
+import time
+import sys
+import logging
+
+from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
+
 import openpathsampling as paths
 import openpathsampling.tools
+
 from openpathsampling.pathmover import SubPathMover
-
-import time
-
-import logging
 from ops_logging import initialization_logging
+import abc
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
-import sys
 
-class MCStep(OPSObject):
+class MCStep(StorableObject):
     """
     A monte-carlo step in the main PathSimulation loop
 
@@ -49,7 +52,8 @@ class MCStep(OPSObject):
         self.mccycle = mccycle
 
 
-class PathSimulator(OPSNamed):
+class PathSimulator(StorableNamedObject):
+    __metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
     _excluded_attr = ['globalstate', 'step', 'save_frequency']
@@ -76,9 +80,9 @@ class PathSimulator(OPSNamed):
         Will sync all collective variables and the storage to disk
         """
         if self.storage is not None:
-            self.storage.cvs.sync()
-            self.storage.sync()
+            self.storage.sync_all()
 
+    @abc.abstractmethod
     def run(self, nsteps):
         """
         Run the simulator for a number of steps
@@ -88,7 +92,7 @@ class PathSimulator(OPSNamed):
         nsteps : int
             number of step to be run
         """
-        logger.warning("Running an empty pathsimulator? Try a subclass, maybe!")
+        pass
 
     def save_initial(self):
         """
@@ -104,7 +108,7 @@ class PathSimulator(OPSNamed):
 
         if self.storage is not None:
             self.storage.steps.save(mcstep)
-            self.storage.sync()
+            self.storage.sync_all()
 
 
 class BootstrapPromotionMove(SubPathMover):
@@ -195,7 +199,9 @@ class Bootstrapping(PathSimulator):
         """
         # TODO: Change input from trajectory to sample
         super(Bootstrapping, self).__init__(storage, engine)
+
         self.ensembles = ensembles
+        self.trajectory = trajectory
 
         sample = paths.Sample(
             replica=0,
@@ -204,6 +210,7 @@ class Bootstrapping(PathSimulator):
         )
 
         self.globalstate = paths.SampleSet([sample])
+
         if movers is None:
             pass # TODO: implement defaults: one per ensemble, uniform sel
         else:
@@ -217,7 +224,6 @@ class Bootstrapping(PathSimulator):
                                                ensembles=self.ensembles
                                               )
 
-        self.root = self.globalstate
 
     def run(self, nsteps):
         bootstrapmove = self._bootstrapmove
@@ -319,8 +325,13 @@ class FullBootstrapping(PathSimulator):
     calc_name = "FullBootstrapping"
 
     def __init__(self, transition, snapshot, storage=None, engine=None,
-                 extra_interfaces=[], forbidden_states=[]):
+                 extra_interfaces=None, forbidden_states=None, initial_max_length=None):
         super(FullBootstrapping, self).__init__(storage, engine)
+        if extra_interfaces is None:
+            extra_interfaces = list()
+
+        if forbidden_states is None:
+            forbidden_states = list()
         interface0 = transition.interfaces[0]
         ensemble0 = transition.ensembles[0]
         state = transition.stateA
@@ -336,6 +347,11 @@ class FullBootstrapping(PathSimulator):
             paths.OptionalEnsemble(paths.AllOutXEnsemble(state)),
             paths.SingleFrameEnsemble(paths.AllInXEnsemble(state))
         ]) & paths.AllOutXEnsemble(paths.join_volumes(forbidden_states))
+
+        self.initial_max_length = initial_max_length
+
+        if self.initial_max_length is not None:
+            self.first_traj_ensemble = paths.LengthEnsemble(slice(0, self.initial_max_length)) & self.first_traj_ensemble
 
         self.extra_ensembles = [paths.TISEnsemble(transition.stateA,
                                                   transition.stateB, iface,
@@ -361,7 +377,7 @@ class FullBootstrapping(PathSimulator):
         self.error_max_rounds = True
 
 
-    def run(self, max_ensemble_rounds=None, n_steps_per_round=20):
+    def run(self, max_ensemble_rounds=None, n_steps_per_round=20, build_attempts = 20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
         while not has_AA_path:
@@ -375,9 +391,17 @@ class FullBootstrapping(PathSimulator):
             )
             print "Selecting segment"
             sys.stdout.flush()
-            subtraj = self.ensemble0.split(first_traj)[0]
-            # check that this is A->A as well
-            has_AA_path = self.state(subtraj[-1]) and self.state(subtraj[0])
+            subtrajs = self.ensemble0.split(first_traj)
+            if len(subtrajs) > 0:
+                # if we have a short enough path go ahead
+                subtraj = subtrajs[0]
+                # check that this is A->A as well
+                has_AA_path = self.state(subtraj[-1]) and self.state(subtraj[0])
+
+            build_attempts -= 1
+            if build_attempts == 0:
+                raise RuntimeError('Too many attempts. Try another initial snapshot instead.')
+
             
         print "Sampling " + str(self.n_ensembles) + " ensembles."
         bootstrap = paths.Bootstrapping(
@@ -434,13 +458,14 @@ class PathSampling(PathSimulator):
             the storage where all results should be stored in
         engine : openpathsampling.DynamicsEngine
             the engine to be used with shooting moves
-        move_scheme : openpathsampling.PathMover
-            the mover used for the pathsampling cycle
+        move_scheme : openpathsampling.MoveScheme
+            the move scheme used for the pathsampling cycle
         globalstate : openpathsampling.SampleSet
             the initial SampleSet for the Simulator
         """
         super(PathSampling, self).__init__(storage, engine)
         self.move_scheme = move_scheme
+        self.root_mover = move_scheme.move_decision_tree()
 #        self.move_scheme.name = "PathSamplingRoot"
 
         samples = []
@@ -455,7 +480,7 @@ class PathSampling(PathSimulator):
                                ['move_scheme', 'globalstate'])
         self.live_visualization = None
         self.visualize_frequency = 1
-        self._mover = paths.PathSimulatorMover(self.move_scheme, self)
+        self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run_until(self, nsteps):
         if self.storage is not None:
@@ -475,6 +500,8 @@ class PathSampling(PathSimulator):
             cvs = list(self.storage.cvs)
 
         if self.step == 0:
+            if self.storage is not None:
+                self.storage.save(self.move_scheme)
             self.save_initial()
 
         for nn in range(nsteps):

@@ -6,27 +6,33 @@ a duck.
 """
 
 import os
-from pkg_resources import resource_filename 
-from nose.tools import assert_items_equal, assert_equal, assert_in
+from functools import wraps
 
-from openpathsampling.trajectory import Trajectory
-from openpathsampling.snapshot import Snapshot
-from openpathsampling.dynamics_engine import DynamicsEngine
-from openpathsampling.topology import Topology
-import openpathsampling as paths
 import numpy as np
+import numpy.testing as npt
+import simtk.unit as u
+from nose.tools import assert_items_equal, assert_equal, assert_in
+from pkg_resources import resource_filename
+
+import openpathsampling as paths
+import openpathsampling.engines.openmm as peng
+import openpathsampling.engines.toy as toys
+from openpathsampling.engines import Topology
+
+from openpathsampling.engines import DynamicsEngine
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
     if velocities is None:
         velocities = [0.0]*len(coordinates)
     traj = []
     for (pos, vel) in zip(coordinates, velocities):
-        snap = Snapshot(coordinates=np.array([[pos, 0, 0]]),
-                        velocities=np.array([[vel, 0, 0]]),
-                        topology=topology
-                        )
+        snap = toys.Snapshot(
+            coordinates=np.array([[pos, 0, 0]]),
+            velocities=np.array([[vel, 0, 0]]),
+            topology=topology
+        )
         traj.append(snap)
-    return Trajectory(traj)
+    return paths.Trajectory(traj)
 
 def items_equal(truth, beauty):
     assert_equal(len(truth), len(beauty))
@@ -63,10 +69,14 @@ class MoverWithSignature(paths.PathMover):
         self._in_ensembles = input_ensembles
         self._out_ensembles = output_ensembles
 
+    def move(self, globalstate):
+        # need to implement a fake move or this class will be considered abstract
+        pass
+
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
-        template = Snapshot(topology=topology)
+        template = toys.Snapshot(topology=topology)
 
         super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
                                                 template=template)
@@ -82,7 +92,7 @@ class CalvinistDynamics(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
-        self._current_snap = snap.copy()
+        self._current_snap = snap
 
     def generate_next_frame(self):
         # find the frame in self.predestination that matches this frame
@@ -98,7 +108,7 @@ class CalvinistDynamics(DynamicsEngine):
             #print self.frame_index
 
         if self._current_snap.velocities[0][0] >= 0:
-            self._current_snap = self.predestination[self.frame_index+1].copy()
+            self._current_snap = self.predestination[self.frame_index+1]
             self.frame_index += 1
         else:
             self._current_snap = self.predestination[self.frame_index-1].reversed
@@ -120,12 +130,12 @@ class CallIdentity(object):
 class AtomCounter(object):
     '''Let's be honest: that's all we're using the simulation.system object
     for. So I'll duck-punch.'''
-    def __init__(self, natoms):
-        self.natoms = natoms
+    def __init__(self, n_atoms):
+        self.n_atoms = n_atoms
 
     def getNumParticles(self):
         '''QUAAAAACK'''
-        return self.natoms
+        return self.n_atoms
 
 class SimulationDuckPunch(object):
     '''This is what happens when you find a stranger in the Alps.'''
@@ -165,3 +175,97 @@ def reorder_ensemble_signature(sig, match_with):
                            repr(sig) + "\n" + repr(found_sigs))
     else:
         return found_sigs[0]
+
+def assert_close_unit(v1, v2, *args, **kwargs):
+    if type(v1) is u.Quantity:
+        assert(v1.unit == v2.unit)
+        npt.assert_allclose(v1._value, v2._value, *args, **kwargs)
+    else:
+        npt.assert_allclose(v1, v2, *args, **kwargs)
+
+def compare_snapshot(snapshot1, snapshot2, check_reversed=False):
+    if hasattr(snapshot1, 'box_vectors') == hasattr(snapshot2, 'box_vectors'):
+        if hasattr(snapshot1, 'box_vectors'):
+            assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
+    else:
+        raise AttributeError('Snapshots disagree. Only one uses box_vectors')
+
+    assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
+    assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+
+    if check_reversed:
+        compare_snapshot(snapshot1.reversed, snapshot2.reversed, False)
+        assert_close_unit(-1.0 * snapshot1.reversed.velocities, snapshot1.velocities, rtol=1e-7, atol=0)
+        assert_close_unit(-1.0 * snapshot2.reversed.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+        assert_close_unit(snapshot1.reversed.coordinates, snapshot1.coordinates, rtol=1e-7, atol=0)
+        assert_close_unit(snapshot2.reversed.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
+
+class RandomMDEngine(DynamicsEngine):
+    _default_options = {}
+
+    def __init__(self, template=None):
+        self.options = {
+        }
+
+        super(RandomMDEngine, self).__init__(
+            options={},
+            template=template
+        )
+
+        self.initialized = True
+
+    def _build_current_snapshot(self):
+        # TODO: Add caching for this and mark if changed
+
+        tmp = self.template
+
+        coordinates = u.Quantity(
+            tmp.coordinates._value + np.random.normal(0.0, 0.02, tmp.coordinates.shape),
+            tmp.coordinates.unit)
+        velocities = u.Quantity(
+            np.random.normal(0.0, 0.02, tmp.velocities.shape),
+            tmp.velocities.unit)
+
+        return peng.Snapshot.construct(coordinates = coordinates,
+                        box_vectors = tmp.box_vectors,
+                        velocities = velocities,
+                        topology = self.topology
+                       )
+
+    @property
+    def current_snapshot(self):
+        if self._current_snapshot is None:
+            self._current_snapshot = self._build_current_snapshot()
+
+        return self._current_snapshot
+
+    @current_snapshot.setter
+    def current_snapshot(self, snapshot):
+        self._current_snapshot = snapshot
+
+    def generate_next_frame(self):
+        self._current_snapshot = None
+        return self.current_snapshot
+
+def raises_with_message_like(err, message=None):
+    """
+    Decorator that allows to run nosetests with raises and testing if the message starts with a txt.
+
+    Notes
+    -----
+    We use this to check for abstract classes using
+    >>> @raises_with_message_like(TypeError, "Can't instantiate abstract class")
+    """
+    def decorator(fnc):
+
+        @wraps(fnc)
+        def _wrapper(*args, **kwargs):
+            try:
+                fnc(*args, **kwargs)
+            except err as e:
+                if message is not None and not str(e).startswith(message):
+                    raise
+
+        return _wrapper
+
+    return decorator

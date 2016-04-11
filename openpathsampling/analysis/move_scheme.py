@@ -1,7 +1,9 @@
 import openpathsampling as paths
 
-from openpathsampling.analysis.move_strategy import levels as strategy_levels
-import openpathsampling.analysis.move_strategy as strategies
+from move_strategy import levels as strategy_levels
+import move_strategy as strategies
+
+from openpathsampling.netcdfplus import StorableNamedObject
 
 try:
     import pandas as pd
@@ -13,8 +15,7 @@ except ImportError:
 
 import sys
 
-
-class MoveScheme(paths.OPSNamed):
+class MoveScheme(StorableNamedObject):
     """
     Creates a move decision tree based on `MoveStrategy` instances.
 
@@ -442,16 +443,17 @@ class MoveScheme(paths.OPSNamed):
 
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
-                           n_total_trials, indentation):
+                           n_total_trials, expected_frequency, indentation):
         try:
             acceptance = float(n_accepted) / n_trials
         except ZeroDivisionError:
             acceptance = "nan"
 
         line = ("* "*indentation + str(move_name) +
-                " ran " + str(float(n_trials)/n_total_trials*100) +
-                "% of the cycles with acceptance " + str(n_accepted) + "/" +
-                str(n_trials) + " (" + str(acceptance) + ")\n")
+                " ran " + "{:.3%}".format(float(n_trials)/n_total_trials) +
+                " (expected {:.2%})".format(expected_frequency) + 
+                " of the cycles with acceptance " + str(n_accepted) + "/" +
+                str(n_trials) + " ({:.2%})\n".format(acceptance))
         return line
 
     def move_acceptance(self, storage):
@@ -490,6 +492,7 @@ class MoveScheme(paths.OPSNamed):
             submovers for each move; if None, shows all submovers
         """
         my_movers = { }
+        expected_frequency = { }
         if movers is None:
             movers = self.movers.keys()
         if type(movers) is str:
@@ -518,6 +521,11 @@ class MoveScheme(paths.OPSNamed):
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
+            try:
+                expected_frequency[groupname] = sum([self.choice_probability[m] 
+                                                     for m in group])
+            except KeyError:
+                expected_frequency[groupname] = float('nan')
 
         for groupname in my_movers.keys():
             if has_pandas and isinstance(output, pd.DataFrame):
@@ -529,6 +537,7 @@ class MoveScheme(paths.OPSNamed):
                     n_accepted=stats[groupname][0],
                     n_trials=stats[groupname][1], 
                     n_total_trials=tot_trials,
+                    expected_frequency=expected_frequency[groupname],
                     indentation=0
                 )
                 output.write(line)
@@ -544,7 +553,7 @@ class DefaultScheme(MoveScheme):
     """
     def __init__(self, network):
         super(DefaultScheme, self).__init__(network)
-        n_ensembles = len(network.transition_ensembles)
+        n_ensembles = len(network.sampling_ensembles)
         self.append(strategies.NearestNeighborRepExStrategy())
         self.append(strategies.OneWayShootingStrategy())
         self.append(strategies.PathReversalStrategy())
@@ -570,3 +579,56 @@ class DefaultScheme(MoveScheme):
         #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
         #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
 
+class LockedMoveScheme(MoveScheme):
+    def __init__(self, root_mover, network=None, root_accepted=None):
+        super(LockedMoveScheme, self).__init__(network)
+        self.root_mover = root_mover
+
+    def append(self, strategies, levels=None):
+        raise TypeError("Locked schemes cannot append strategies")
+
+    def build_move_decision_tree(self):
+        # override with no-op
+        pass
+
+    def move_decision_tree(self, rebuild=False):
+        return self.root_mover
+    
+    def apply_strategy(self, strategy):
+        raise TypeError("Locked schemes cannot apply strategies")
+
+    def to_dict(self):
+        # things that we always have (from MoveScheme)
+        ret_dict = {
+            'network' : self.network,
+            'balance_partners' : self.balance_partners,
+            'root_mover' : self.root_mover
+        }
+        # things that LockedMoveScheme overrides
+        ret_dict['movers'] = self._movers
+        ret_dict['choice_probability'] = self._choice_probability
+        return ret_dict
+
+    @property
+    def choice_probability(self):
+        if self._choice_probability == {}:
+            raise AttributeError("'choice_probability' must be manually " + 
+                                 "set in 'LockedMoveScheme'")
+        else:
+            return self._choice_probability
+
+    @choice_probability.setter
+    def choice_probability(self, vals):
+        self._choice_probability = vals
+
+    @property
+    def movers(self):
+        if self._movers == {}:
+            raise AttributeError("'movers' must be manually " + 
+                                 "set in 'LockedMoveScheme'")
+        else:
+            return self._movers
+
+    @movers.setter
+    def movers(self, vals):
+        self._movers = vals

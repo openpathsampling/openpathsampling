@@ -42,30 +42,31 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.ifconfig',
-    'IPython.sphinxext.ipython_console_highlighting',
-    'IPython.sphinxext.ipython_directive',
-    'matplotlib.sphinxext.plot_directive',
-    'numpydoc'
-#    ,'sphinxcontrib.napoleon'
+#    'IPython.sphinxext.ipython_console_highlighting',
+#    'IPython.sphinxext.ipython_directive',
+#    'matplotlib.sphinxext.plot_directive',
+#    'numpydoc'
+#     'sphinxcontrib.napoleon'
+    'sphinx.ext.napoleon'
 ]
 
 # Napoleon settings
-#napoleon_google_docstring = False
-#napoleon_numpy_docstring = True
-#napoleon_include_private_with_doc = False
-#napoleon_include_special_with_doc = False
-#napoleon_use_admonition_for_examples = False
-#napoleon_use_admonition_for_notes = True
-#napoleon_use_admonition_for_references = False
-#napoleon_use_ivar = False
-#napoleon_use_param = True
-#napoleon_use_rtype = True
+napoleon_google_docstring = False
+napoleon_numpy_docstring = True
+napoleon_include_private_with_doc = False
+napoleon_include_special_with_doc = True
+napoleon_use_admonition_for_examples = False
+napoleon_use_admonition_for_notes = False
+napoleon_use_admonition_for_references = False
+napoleon_use_ivar = False
+napoleon_use_param = True
+napoleon_use_rtype = True
 
 # add pandoc directives
 pandoc_from = ['markdown', 'mediawiki']
 
 autosummary_generate = True
-autodoc_default_flags = ['members', 'inherited-members']
+autodoc_default_flags = ['members', 'inherited-members', 'imported-members']
 
 sys.path.insert(0, os.path.abspath('sphinxext'))
 extensions.append('notebook_sphinxext')

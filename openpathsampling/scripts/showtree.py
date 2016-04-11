@@ -2,9 +2,11 @@ import argparse
 import os
 from openpathsampling.storage import Storage
 from openpathsampling.visualize import PathTreeBuilder
+import logging
 
 if __name__ == '__main__':
 
+    logging.basicConfig()
 
     parser = argparse.ArgumentParser(description='Analyze a file.')
     parser.add_argument('--rejected', dest='rejected', action='store_const',
@@ -69,7 +71,7 @@ if __name__ == '__main__':
         show_op = func
 
     tree = PathTreeBuilder(storage, op=show_op, states=args.state)
-    samples = storage.samples.by_ensemble(storage.ensembles.load(4))
+    samples = storage.samples.by_ensemble(storage.ensembles[-1])
     tree.from_samples(samples)
 
     if args.pdf:

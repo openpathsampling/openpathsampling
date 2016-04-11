@@ -15,14 +15,15 @@ CollectiveVariable
 	:show-inheritance:
 
 
-***************
-Dynamics Engine
-***************
+****************
+Dynamics Engines
+****************
 	
-.. automodule:: dynamics_engine
+.. automodule:: engines
 	:members:
 	:inherited-members:
 	:show-inheritance:
+        :imported-members:
 	
 	
 ********
@@ -66,5 +67,13 @@ Storage
 Snapshot
 ********
 
-.. automodule:: snapshot
+.. automodule:: openpathsampling.engines.snapshot
 	:members:
+
+**********
+Trajectory
+**********
+
+.. automodule:: openpathsampling.engines.trajectory
+	:members:
+

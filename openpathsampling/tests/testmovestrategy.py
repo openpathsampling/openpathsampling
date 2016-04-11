@@ -19,6 +19,10 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
+class MockMoveStrategy(MoveStrategy):
+    def make_movers(self, scheme):
+        return None
+
 def find_mover(scheme, group, sig):
     mover = None
     for m in scheme.movers[group]:
@@ -40,8 +44,8 @@ class testStrategyLevels(object):
 
 class MoveStrategyTestSetup(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", fcn=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", fcn=lambda s : -s.xyz[0][0])
+        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
         interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
@@ -49,14 +53,14 @@ class MoveStrategyTestSetup(object):
         interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
                                           [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, "A", cvA),
-            (self.stateB, interfacesB, "B", cvB)
+            (self.stateA, interfacesA, cvA),
+            (self.stateB, interfacesB, cvB)
         ])
 
 
 class testMoveStrategy(MoveStrategyTestSetup):
     def test_levels(self):
-        strategy = MoveStrategy(ensembles=None, group="test", replace=True)
+        strategy = MockMoveStrategy(ensembles=None, group="test", replace=True)
         assert_equal(strategy.level, -1)
         assert_equal(strategy.replace_signatures, False)
         assert_equal(strategy.replace_movers, False)
@@ -74,7 +78,8 @@ class testMoveStrategy(MoveStrategyTestSetup):
         assert_equal(strategy.replace_movers, False)
 
     def test_get_ensembles(self):
-        self.strategy = MoveStrategy(ensembles=None, group="test", replace=True)
+        self.strategy = MockMoveStrategy(ensembles=None, group="test", 
+                                         replace=True)
         scheme = MoveScheme(self.network)
         # load up the relevant ensembles to test against
         transition_ensembles = []
@@ -259,9 +264,9 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
 
     @raises(RuntimeError)
     def test_different_number_input_output_ensembles(self):
-        ens0 = self.network.transition_ensembles[0]
-        ens1 = self.network.transition_ensembles[1]
-        ens2 = self.network.transition_ensembles[2]
+        ens0 = self.network.sampling_ensembles[0]
+        ens1 = self.network.sampling_ensembles[1]
+        ens2 = self.network.sampling_ensembles[2]
         weird_mover = MoverWithSignature(
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1]
@@ -275,9 +280,9 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
 
     @raises(RuntimeError)
     def test_wrong_number_ensembles_in_signature(self):
-        ens0 = self.network.transition_ensembles[0]
-        ens1 = self.network.transition_ensembles[1]
-        ens2 = self.network.transition_ensembles[2]
+        ens0 = self.network.sampling_ensembles[0]
+        ens1 = self.network.sampling_ensembles[1]
+        ens2 = self.network.sampling_ensembles[2]
         weird_mover = MoverWithSignature(
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1, ens2]
@@ -291,9 +296,9 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
 
     @raises(RuntimeError)
     def test_not_replica_exchange_signature(self):
-        ens0 = self.network.transition_ensembles[0]
-        ens1 = self.network.transition_ensembles[1]
-        ens2 = self.network.transition_ensembles[2]
+        ens0 = self.network.sampling_ensembles[0]
+        ens1 = self.network.sampling_ensembles[1]
+        ens2 = self.network.sampling_ensembles[2]
         weird_mover = MoverWithSignature(
             input_ensembles=[ens0, ens1],
             output_ensembles=[ens1, ens2]
@@ -430,6 +435,22 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
                 True
             )
 
+
+class testSingleReplicaMinusMoveStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = SingleReplicaMinusMoveStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 2)
+
+        minuses = self.network.special_ensembles['minus']
+        ens_minusA = minuses.keys()[0]
+        ens_innerA = [t.ensembles[0] for t in minuses[ens_minusA]]
+        sig_A = set([ens_minusA] + ens_innerA)
+        ens_minusB = minuses.keys()[1]
+        ens_innerB = [t.ensembles[0] for t in minuses[ens_minusB]]
+        sig_B = set([ens_minusB] + ens_innerB)
+        all_ens_sigs = [m.ensemble_signature_set for m in movers]
 
 
 class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
