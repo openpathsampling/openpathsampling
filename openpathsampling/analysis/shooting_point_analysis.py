@@ -136,11 +136,11 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
                                       weights=count_state.values(),
                                       bins=bins)[0]
         elif ndim == 2:
-            all_hist = np.histogram2d(x=[k[0] for k in count_all]
+            all_hist = np.histogram2d(x=[k[0] for k in count_all],
                                       y=[k[1] for k in count_all],
                                       weights=count_all.values(),
                                       bins=bins)[0]
-            state_hist = np.histogram2d(x=[k[0] for k in count_state]
+            state_hist = np.histogram2d(x=[k[0] for k in count_state],
                                         y=[k[1] for k in count_state],
                                         weights=count_state.values(),
                                         bins=bins)[0]
