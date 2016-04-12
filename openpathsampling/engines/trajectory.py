@@ -194,7 +194,16 @@ class Trajectory(list, StorableObject):
                     return out
 
             else:
-                raise RuntimeWarning('Cannot access attribute "%s" from this type of snapshots')
+                std_msg = "'{0}' object has no attribute '{1}'"
+                snap_msg = "Cannot delegate to snapshots. "
+                snap_msg += "'{2}' has no attribute '{1}'"
+                spacer = "\n                "
+                msg = (std_msg + spacer + snap_msg).format(
+                    str(self.__class__.__name__), 
+                    item,
+                    snapshot_class.__name__
+                )
+                raise AttributeError(msg)
 
         else:
             return []
