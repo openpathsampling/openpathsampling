@@ -61,6 +61,7 @@ class testTransformedDict(object):
         assert_equal(rehashed.hash_representatives,
                      {1: (0,1), 2: (1,2), 3: (2,3)})
 
+
 class testSnapshotByCoordinateDict(object):
     def setup(self):
         self.empty_dict = SnapshotByCoordinateDict()
@@ -83,6 +84,7 @@ class testSnapshotByCoordinateDict(object):
     def test_get_set(self):
         self.dict1[self.snapA2] = "A2"
         assert_equal(self.dict1.store, {self.key_A: "A2", self.key_B: "B1"})
+
 
 class testShootingPointAnalysis(object):
     def setup(self):

@@ -1,5 +1,6 @@
 import openpathsampling as paths
 import collections
+import pandas as pd
 
 # based on http://stackoverflow.com/a/3387975
 class TransformedDict(collections.MutableMapping):
@@ -87,10 +88,12 @@ def shooting_point_analysis(steps, states):
             shooting_traj = trial_traj.unique_subtrajectory(init_traj)
             endpoints = list(set([shooting_traj[0], shooting_traj[-1]]))
             # we use set in case there's only one frame (`first is last`)
-            initial = collections.Counter({state: state(shooting_traj[0])
-                                           for state in states})
-            final = collections.Counter({state: state(shooting_traj[-1])
-                                         for state in states})
+            initial = collections.Counter(
+                {state: int(state(shooting_traj[0])) for state in states}
+            )
+            final = collections.Counter(
+                {state: int(state(shooting_traj[-1])) for state in states}
+            )
             total = initial + final if len(endpoints) == 2 else initial
             total_count = sum(total.values())
             assert total_count == 1 or total_count == 2
@@ -101,3 +104,9 @@ def shooting_point_analysis(steps, states):
 
     return results
 
+def shooting_point_analysis_to_pandas(results):
+    """Each snapshot is a row, each state is a column"""
+    transposed = pd.DataFrame(results.store).transpose().to_dict()
+    df = pd.DataFrame(transposed)
+    df.columns = [s.name for s in transposed.keys()]
+    return df
