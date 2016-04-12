@@ -10,6 +10,11 @@ from analysis.replica_network import (
 from analysis.tis_analysis import (
     TISTransition, Transition, TPSTransition
 )
+
+from analysis.shooting_point_analysis import (
+    ShootingPointAnalysis, SnapshotByCoordinateDict
+)
+
 from analysis.single_trajectory_analysis import (
     SingleTrajectoryAnalysis,
     TrajectorySegmentContainer

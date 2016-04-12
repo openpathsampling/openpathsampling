@@ -1,6 +1,8 @@
 import openpathsampling as paths
 import collections
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 # based on http://stackoverflow.com/a/3387975
 class TransformedDict(collections.MutableMapping):
@@ -67,46 +69,88 @@ class SnapshotByCoordinateDict(TransformedDict):
         super(SnapshotByCoordinateDict, self).__init__(hash_fcn, 
                                                        *args, **kwargs)
 
-def shooting_point_analysis(steps, states):
-    results = SnapshotByCoordinateDict()
-    for step in steps:
-        try:
-            # TODO: this should in step.change.canonical.details
-            details = step.change.canonical.trials[0].details
-            shooting_snap = details.shooting_snapshot
-        except AttributeError:
-            # wrong kind of move (no shooting_snapshot)
-            pass
-        except IndexError:
-            # very wrong kind of move (no trials!)
-            pass
-        else:
-            # easy to change how we define the key
-            key = shooting_snap
-            trial_traj = step.change.canonical.trials[0].trajectory
-            init_traj = details.initial_trajectory
-            shooting_traj = trial_traj.unique_subtrajectory(init_traj)
-            endpoints = list(set([shooting_traj[0], shooting_traj[-1]]))
-            # we use set in case there's only one frame (`first is last`)
-            initial = collections.Counter(
-                {state: int(state(shooting_traj[0])) for state in states}
-            )
-            final = collections.Counter(
-                {state: int(state(shooting_traj[-1])) for state in states}
-            )
-            total = initial + final if len(endpoints) == 2 else initial
-            total_count = sum(total.values())
-            assert total_count == 1 or total_count == 2
+
+class ShootingPointAnalysis(SnapshotByCoordinateDict):
+    def __init__(self, steps, states):
+        super(ShootingPointAnalysis, self).__init__()
+        for step in steps:
             try:
-                results[key] += total
-            except KeyError:
-                results[key] = total
+                # TODO: this should in step.change.canonical.details
+                details = step.change.canonical.trials[0].details
+                shooting_snap = details.shooting_snapshot
+            except AttributeError:
+                # wrong kind of move (no shooting_snapshot)
+                pass
+            except IndexError:
+                # very wrong kind of move (no trials!)
+                pass
+            else:
+                # easy to change how we define the key
+                key = shooting_snap
+                trial_traj = step.change.canonical.trials[0].trajectory
+                init_traj = details.initial_trajectory
+                # TODO: most of the time is spent identifying unique subtraj
+                #       instead, why not store it? good for provenance, too
+                shooting_traj = trial_traj.unique_subtrajectory(init_traj)
+                endpoints = list(set([shooting_traj[0], shooting_traj[-1]]))
+                # we use set in case there's only one frame (`first is last`)
+                initial = collections.Counter(
+                    {state: int(state(shooting_traj[0])) for state in states}
+                )
+                final = collections.Counter(
+                    {state: int(state(shooting_traj[-1])) for state in states}
+                )
+                total = initial + final if len(endpoints) == 2 else initial
+                total_count = sum(total.values())
+                assert total_count == 1 or total_count == 2
+                try:
+                    self[key] += total
+                except KeyError:
+                    self[key] = total
 
-    return results
+    def committor(self, state):
+        pass
 
-def shooting_point_analysis_to_pandas(results):
-    """Each snapshot is a row, each state is a column"""
-    transposed = pd.DataFrame(results.store).transpose().to_dict()
-    df = pd.DataFrame(transposed)
-    df.columns = [s.name for s in transposed.keys()]
-    return df
+    @staticmethod
+    def _get_key_dim(key):
+        try:
+            ndim = len(key)
+        except TypeError:
+            ndim = 1
+        if ndim > 2 or ndim < 1:
+            raise RuntimeError("Histogram key dimension {0} > 2 or {0} < 1 " 
+                               + "(key: {1})".format(ndim, key))
+        return ndim
+
+    def committor_histogram(self, new_hash, state, bins):
+        rehashed = self.rehash(new_hash)
+        r_store = rehashed.store
+        count_all = {k : sum(r_store[k].values()) for k in r_store}
+        count_state = {k : r_store[k][state] for k in r_store}
+        ndim = self._get_key_dim(r_store.keys()[0])
+        if ndim == 1:
+            all_hist = np.histogram(count_all.keys(),
+                                    weights=count_all.values(), 
+                                    bins=bins)[0]
+            state_hist = np.histogram(count_state.keys(),
+                                      weights=count_state.values(),
+                                      bins=bins)[0]
+        elif ndim == 2:
+            all_hist = np.histogram2d(x=[k[0] for k in count_all]
+                                      y=[k[1] for k in count_all],
+                                      weights=count_all.values(),
+                                      bins=bins)[0]
+            state_hist = np.histogram2d(x=[k[0] for k in count_state]
+                                        y=[k[1] for k in count_state],
+                                        weights=count_state.values(),
+                                        bins=bins)[0]
+        state_frac = [float(a) / tot if tot != 0 else float("nan") 
+                      for (a, tot) in zip(state_hist, all_hist)]
+        return state_frac, bins
+
+    def to_pandas(results):
+        """Each snapshot is a row, each state is a column"""
+        transposed = pd.DataFrame(results.store).transpose().to_dict()
+        df = pd.DataFrame(transposed)
+        df.columns = [s.name for s in transposed.keys()]
+        return df
