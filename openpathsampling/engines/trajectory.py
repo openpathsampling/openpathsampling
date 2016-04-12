@@ -541,7 +541,7 @@ class Trajectory(list, StorableObject):
     # ANALYSIS FUNCTIONS
     # =============================================================================================
 
-    def is_correlated(self, other):
+    def is_correlated(self, other, time_reversal=False):
         """
         Checks if two trajectories share a common snapshot
 
@@ -555,10 +555,9 @@ class Trajectory(list, StorableObject):
         bool
             returns True if at least one snapshot appears in both trajectories
         """
-        return bool(self.shared_configurations(other))
+        return bool(self.shared_configurations(other, time_reversal=time_reversal))
 
-
-    def shared_configurations(self, other):
+    def shared_configurations(self, other, time_reversal=False):
         """
         Returns a set of shared snapshots
 
@@ -572,10 +571,12 @@ class Trajectory(list, StorableObject):
         set of :class:`openpathsampling.snapshot.Snapshot`
             the set of common snapshots
         """
-        return set([snap for snap in self]) & set([snap for snap in other])
+        if not time_reversal:
+            return set([snap for snap in self]) & set([snap for snap in other])
+        else:
+            return set([snap for snap in self]) & (set([snap for snap in other]) | set([snap.reversed for snap in other]))
 
-
-    def shared_subtrajectory(self, other):
+    def shared_subtrajectory(self, other, time_reversal=False):
         """
         Returns a subtrajectory which only contains frames present in other
 
@@ -589,7 +590,7 @@ class Trajectory(list, StorableObject):
         :class:`openpathsampling.trajectory.Trajectory`
             the shared subtrajectory
         """
-        shared = self.shared_configurations(other)
+        shared = self.shared_configurations(other, time_reversal=time_reversal)
         return Trajectory([snap for snap in self if snap in shared])
 
 
