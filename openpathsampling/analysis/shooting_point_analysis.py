@@ -56,6 +56,11 @@ class TransformedDict(collections.MutableMapping):
 
 
 class SnapshotByCoordinateDict(TransformedDict):
+    """TransformedDict that uses snapshot coordinates as keys.
+
+    This is primarily used to have a unique key for shooting point analysis
+    (e.g., committor analysis).
+    """
     def __init__(self, *args, **kwargs):
         hash_fcn = lambda x : x.coordinates.tostring()
         super(SnapshotByCoordinateDict, self).__init__(hash_fcn, 

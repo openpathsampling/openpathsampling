@@ -64,10 +64,25 @@ class testTransformedDict(object):
 class testSnapshotByCoordinateDict(object):
     def setup(self):
         self.empty_dict = SnapshotByCoordinateDict()
-        pass
+        coords_A = np.array([[0.0, 0.0]])
+        coords_B = np.array([[1.0, 1.0]])
+        self.key_A = coords_A.tostring()
+        self.key_B = coords_B.tostring()
+        self.snapA1 = peng.toy.Snapshot(coordinates=coords_A,
+                                        velocities=np.array([[0.0, 0.0]]))
+        self.snapA2 = peng.toy.Snapshot(coordinates=coords_A,
+                                        velocities=np.array([[1.0, 1.0]]))
+        self.snapB1 = peng.toy.Snapshot(coordinates=coords_B,
+                                        velocities=np.array([[0.0, 0.0]]))
+        self.dict1 = SnapshotByCoordinateDict({self.snapA1: "A1",
+                                               self.snapB1: "B1"})
 
     def test_initialization(self):
-        raise SkipTest
+        assert_equal(self.dict1.store, {self.key_A: "A1", self.key_B: "B1"})
+
+    def test_get_set(self):
+        self.dict1[self.snapA2] = "A2"
+        assert_equal(self.dict1.store, {self.key_A: "A2", self.key_B: "B1"})
 
 class testShootingPointAnalysis(object):
     def setup(self):
