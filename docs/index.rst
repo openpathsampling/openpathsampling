@@ -20,7 +20,6 @@ Documentation
     guides/index
     whatsnew
     faq
-    Discussion Forums <http://discourse.openpathsampling.org>
 
 API Reference
 -------------
@@ -36,8 +35,7 @@ API Reference
     pathsimulator
     storage
     treemixin
-    trajectory
-    openmm
+    engines/openmm
 
 Developing
 ----------

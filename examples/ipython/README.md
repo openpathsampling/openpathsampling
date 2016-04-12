@@ -77,9 +77,29 @@ interfaces per outgoing transition.
     A simple example noteboon on how to use OpenMM to run simulations on
     Alanine dipeptide in explicit solvent.
 
-- [`Weina Alanine Example.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/Weina%20Alanine%20Example.ipynb)
+- [`alanine_dipeptide_old_example.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/alanine_dipeptide_old_example.ipynb)
     Basic setup from the W. Du and P. Bolhuis Paper on SRTIS. Is supposed to
     become the setup for an example in the publication.
+
+#### Alanine Weina Du 6 state MSTIS setting
+
+- [`alanine_dipeptide_mstis_bootstrapping.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/alanine_dipeptide_mstis_bootstrapping.ipynb)
+    [Part 1] Basic setup from the W. Du and P. Bolhuis (2011) Paper on SRTIS using 6 predefined states and their interfaces. This part will only construct initial trajectories that will be use later.[^1]
+    
+[^1]: W.-N. Du, K. A. Marino, and P. G. Bolhuis, “Multiple state transition interface sampling of alanine dipeptide in explicit solvent,” J. Chem. Phys., vol. 135, no. 14, p. 145102, 2011.
+    
+- [`alanine_dipeptide_mstis_prepare.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/alanine_dipeptide_mstis_bootstrapping.ipynb)
+	[Part 2] This will use the previously generated paths and state definitions from a file and construct all necessary parts for the 6 state MSTIS including the generation of initial minus paths for all states and equilibration. All results are stored in a file.
+
+- [`alanine_dipeptide_mstis_run.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/alanine_dipeptide_mstis_run.ipynb)
+    [Part 3] This will read the MSTIS setup from before and run a fixed steps and store the results. 
+
+- [`alanine_dipeptide_mstis_restart.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/alanine_dipeptide_mstis_restart.ipynb)
+    [Part 4] This open the current production file and will run and append more steps.
+
+- [`alanine_dipeptide_mstis_analysis.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/alanine_dipeptide_mstis_analysis.ipynb)
+    [Part 5] Analysis of the results in the production file. Almost entirely a copy of the analysis of the toy MSTIS analysis notebook.
+     
 
 ## Tutorials
 
@@ -131,6 +151,10 @@ correctness of the results.
     A test notebook that checks that the toy_engine langevin integrator will
     actually sample from the correct distributions.
 
+- [`test_snapshot_modifier.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/test_snapshot_modifier.ipynb)
+    A notebook to test and visually inspect whether the `RandomVelocities`
+    snapshot modifier gives the correct distribution.
+
 ## Attic
 
 - [`toy_bootstrapping.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/toy_bootstrapping.ipynb)
@@ -141,5 +165,3 @@ correctness of the results.
 
 - [`toy_analysis.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/toy_analysis.ipynb)
     [Part 3] of the large ToyDynamics example. Has been replaced by the mstis examples.
-
-

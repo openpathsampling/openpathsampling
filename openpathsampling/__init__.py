@@ -11,7 +11,8 @@ from analysis.tis_analysis import (
     TISTransition, Transition, TPSTransition
 )
 from analysis.single_trajectory_analysis import (
-    SingleTrajectoryAnalysis 
+    SingleTrajectoryAnalysis,
+    TrajectorySegmentContainer
 )
 
 from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
@@ -68,6 +69,8 @@ from sample import Sample, SampleSet
 
 from shooting import ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
+
+from snapshot_modifier import NoModification, RandomVelocities
 
 from storage.storage import Storage, AnalysisStorage
 

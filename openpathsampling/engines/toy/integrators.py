@@ -35,16 +35,15 @@ class LeapfrogVerletIntegrator(ToyIntegrator):
 class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     """ Langevin integrator for simple toy models
 
-    Implementation of the BAOAB integrator of Leimkuhler and Matthews. In
-    particular, see the appendix on p.54 of the reference below, which is
+    Implementation of the BAOAB integrator of Leimkuhler and Matthews [1]_.
+    In particular, see the appendix on p.54 of the reference below, which is
     where we take our notation from.
 
-    Reference
-    ---------
-    B. Leimkuhler and C. Matthews. "Rational Construction of Stochastic
-    Numerical Methods for Molecular Sampling." Appl. Math. Res. Express,
-    2013, 34-56 (2013). doi:10.1093/amrx/abs010
-
+    References
+    ----------
+    .. [1] B. Leimkuhler and C. Matthews. "Rational Construction of
+       Stochastic Numerical Methods for Molecular Sampling." Appl. Math.
+       Res. Express, 2013, 34-56 (2013). doi:10.1093/amrx/abs010
     """
 
     def __init__(self, dt, temperature, gamma):

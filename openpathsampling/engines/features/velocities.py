@@ -5,7 +5,7 @@ velocities : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
     atomic velocities
 """
 
-attributes = ['velocities']
+variables = ['velocities']
 minus = ['velocities']
 numpy = ['velocities']
 
