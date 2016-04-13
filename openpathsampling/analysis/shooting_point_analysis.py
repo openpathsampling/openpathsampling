@@ -144,13 +144,13 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
                                         y=[k[1] for k in count_state],
                                         weights=count_state.values(),
                                         bins=bins)[0]
-        state_frac = [float(a) / tot if tot != 0 else float("nan") 
-                      for (a, tot) in zip(state_hist, all_hist)]
+        state_frac = np.true_divide(state_hist, all_hist)
         return state_frac, bins
 
-    def to_pandas(results):
+    def to_pandas(self, label_function=None):
         """Each snapshot is a row, each state is a column"""
-        transposed = pd.DataFrame(results.store).transpose().to_dict()
+        transposed = pd.DataFrame(self.store).transpose().to_dict()
         df = pd.DataFrame(transposed)
         df.columns = [s.name for s in transposed.keys()]
+        # TODO: set the labels
         return df
