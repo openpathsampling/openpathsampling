@@ -152,5 +152,10 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         transposed = pd.DataFrame(self.store).transpose().to_dict()
         df = pd.DataFrame(transposed)
         df.columns = [s.name for s in transposed.keys()]
-        # TODO: set the labels
+        if label_function is None:
+            df.index = range(len(df.index))
+        else:
+            # TODO: is ordering guaranteed here?
+            df.index = [label_function(self.hash_representatives[k])
+                        for k in self.store]
         return df
