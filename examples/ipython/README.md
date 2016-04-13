@@ -94,6 +94,11 @@ interfaces per outgoing transition.
     i.e. treating the flow of replicas between ensembles as a graph and
     analyze it.
 
+- [`committors.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/committors.ipynb)
+    Examples of running committor calculations, as well as doing a committor
+    analysis based on shooting points from a path sampling simulation that
+    has already been run.
+
 - [`sequential_ensembles.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/sequential_ensembles.ipynb)
     Incomplete tutorial on how to use the SequentialPathMover object.
 
