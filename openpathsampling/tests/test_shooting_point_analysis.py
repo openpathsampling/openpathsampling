@@ -1,5 +1,5 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal, assert_true)
+                        raises, assert_almost_equal, assert_true, assert_in)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
 from test_helpers import make_1d_traj, data_filename
@@ -144,11 +144,12 @@ class testShootingPointAnalysis(object):
         committor_B = self.analyzer.committor(self.right)
         assert_true(len(committor_A) == len(committor_B) == 2)
         keys = [self.snap0, self.snap1]
-        for k0, kA, kB in zip(keys, committor_A.keys(), committor_B.keys()):
-            hash0 = self.analyzer.hash_function(k0)
+        hashes0 = [self.analyzer.hash_function(k) for k in keys]
+        for kA, kB in zip(committor_A.keys(), committor_B.keys()):
             hashA = self.analyzer.hash_function(kA)
             hashB = self.analyzer.hash_function(kB)
-            assert_true(hash0 == hashA == hashB)
+            assert_equal(hashA, hashB)
+            assert_in(hashA, hashes0)
             # hash is the same; snapshot is not
         for snap in committor_A:
             assert_equal(committor_A[snap], 
