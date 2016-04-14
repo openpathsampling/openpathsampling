@@ -2,7 +2,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
-from test_helpers import make_1d_traj
+from test_helpers import make_1d_traj, data_filename
 
 import openpathsampling as paths
 import openpathsampling.engines as peng
@@ -88,7 +88,59 @@ class testSnapshotByCoordinateDict(object):
 
 class testShootingPointAnalysis(object):
     def setup(self):
-        pass
+        # taken from the testCommittorSimulation
+        import openpathsampling.engines.toy as toys
+        pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
+        topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
+                                   velocities=np.array([[1.0]]),
+                                   topology=topology)
+        self.snap1 = toys.Snapshot(coordinates=np.array([[0.1]]),
+                                   velocities=np.array([[1.0]]),
+                                   topology=topology)
+        integrator = toys.LeapfrogVerletIntegrator(0.1)
+        options = {
+            'integ': integrator,
+            'n_frames_max': 10000,
+            'nsteps_per_frame': 5
+        }
+        self.engine = toys.Engine(options=options, template=self.snap0)
+        cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
+        self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
+
+        randomizer = paths.NoModification()
+        self.filename = data_filename("shooting_analysis.nc")
+        self.storage = paths.Storage(self.filename, 
+                                     mode="w", 
+                                     template=self.snap0)
+
+        self.simulation = paths.CommittorSimulation(
+            storage=self.storage,
+            engine=self.engine,
+            states=[self.left, self.right],
+            randomizer=randomizer,
+            initial_snapshots=[self.snap0, self.snap1]
+        )
+        self.simulation.run(20)
+        # set up the analysis object
+        self.analyzer = ShootingPointAnalysis(self.storage.steps,
+                                              [self.left, self.right])
+
+    def teardown(self):
+        import os
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
 
     def test_shooting_point_analysis(self):
         raise SkipTest
+
+    def test_committor(self):
+        raise SkipTest
+
+    def test_committor_histogram(self):
+        raise SkipTest
+
+    def test_to_pandas(self):
+        raise SkipTest
+
