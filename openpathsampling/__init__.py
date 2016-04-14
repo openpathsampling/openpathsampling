@@ -1,4 +1,6 @@
-from analysis.move_scheme import MoveScheme, DefaultScheme, LockedMoveScheme
+from analysis.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, OneWayShootingMoveScheme
+)
 from analysis.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork
 )
