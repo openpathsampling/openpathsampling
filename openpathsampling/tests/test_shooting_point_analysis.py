@@ -133,14 +133,49 @@ class testShootingPointAnalysis(object):
             os.remove(self.filename)
 
     def test_shooting_point_analysis(self):
-        raise SkipTest
+        assert_equal(len(self.analyzer), 2)
+        assert_true(0 < self.analyzer[self.snap0][self.left] < 20)
+        assert_true(0 < self.analyzer[self.snap0][self.right] < 20)
+        assert_true(0 < self.analyzer[self.snap1][self.left] < 20)
+        assert_true(0 < self.analyzer[self.snap1][self.right] < 20)
 
     def test_committor(self):
         raise SkipTest
 
-    def test_committor_histogram(self):
-        raise SkipTest
+    def test_committor_histogram_1d(self):
+        rehash = lambda snap : 2 * snap.xyz[0][0]
+        input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
+        hist, bins = self.analyzer.committor_histogram(rehash, self.left,
+                                                       input_bins)
+        assert_equal(len(hist), 5)
+        for index in [1, 3, 4]:
+            assert_true(np.isnan(hist[index]))
+        for index in [0, 2]:
+            assert_true(hist[index] > 0)
+
+        assert_equal(bins, input_bins)
+
+    def test_committor_histogram_2d(self):
+        rehash = lambda snap : (snap.xyz[0][0], 2 * snap.xyz[0][0])
+        input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
+        hist, bins = self.analyzer.committor_histogram(rehash, self.left,
+                                                       input_bins)
+        assert_equal(hist.shape, (5,5))
+        for i in range(5):
+            for j in range(5):
+                if (i,j) in [(0, 0), (1, 2)]:
+                    assert_true(hist[(i,j)] > 0)
+                else:
+                    assert_true(np.isnan(hist[(i,j)]))
+
+        # this may change later to bins[0]==bins[1]==input_bins
+        assert_equal(bins, input_bins) 
 
     def test_to_pandas(self):
-        raise SkipTest
+        df1 = self.analyzer.to_pandas()
+        df2 = self.analyzer.to_pandas(lambda x : x.xyz[0][0])
+        assert_equal(df1.shape, (2,2))
+        assert_items_equal(df1.index, range(2))
+        assert_items_equal(df2.index, [0.0, 0.1])
+        assert_items_equal(df1.columns, [self.left.name, self.right.name])
 

@@ -148,7 +148,14 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         return state_frac, bins
 
     def to_pandas(self, label_function=None):
-        """Each snapshot is a row, each state is a column"""
+        """
+        Pandas dataframe. Row for each configuration, column for each state.
+
+        Parameters
+        ----------
+        label_function : callable
+            takes snapshot, returns index to use for pandas.DataFrame
+        """
         transposed = pd.DataFrame(self.store).transpose().to_dict()
         df = pd.DataFrame(transposed)
         df.columns = [s.name for s in transposed.keys()]
