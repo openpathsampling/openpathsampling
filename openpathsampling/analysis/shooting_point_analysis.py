@@ -108,8 +108,16 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
                 except KeyError:
                     self[key] = total
 
-    def committor(self, state):
-        pass
+    def committor(self, state, label_function=None):
+        if label_function is None:
+            label_function = lambda s : s
+        results = {}
+        for k in self:
+            out_key = label_function(self.hash_representatives[k])
+            counter_k = self.store[k]
+            committor = float(counter_k[state]) / sum(counter_k.values())
+            results[out_key] = committor
+        return results
 
     @staticmethod
     def _get_key_dim(key):

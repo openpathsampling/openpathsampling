@@ -140,7 +140,28 @@ class testShootingPointAnalysis(object):
         assert_true(0 < self.analyzer[self.snap1][self.right] < 20)
 
     def test_committor(self):
-        raise SkipTest
+        committor_A = self.analyzer.committor(self.left)
+        committor_B = self.analyzer.committor(self.right)
+        assert_true(len(committor_A) == len(committor_B) == 2)
+        keys = [self.snap0, self.snap1]
+        for k0, kA, kB in zip(keys, committor_A.keys(), committor_B.keys()):
+            hash0 = self.analyzer.hash_function(k0)
+            hashA = self.analyzer.hash_function(kA)
+            hashB = self.analyzer.hash_function(kB)
+            assert_true(hash0 == hashA == hashB)
+            # hash is the same; snapshot is not
+        for snap in committor_A:
+            assert_equal(committor_A[snap], 
+                         float(self.analyzer[snap][self.left]) / 20.0)
+            assert_almost_equal(committor_A[snap] + committor_B[snap], 1.0)
+            assert_equal(committor_B[snap], 
+                         float(self.analyzer[snap][self.right]) / 20.0)
+
+        rehash = lambda snap : 2 * snap.xyz[0][0]
+        committor_A_rehash = self.analyzer.committor(self.left, rehash)
+        assert_items_equal(committor_A.values(), committor_A_rehash.values())
+        for (snap, rh)  in zip(committor_A.keys(), committor_A_rehash.keys()):
+            assert_equal(rehash(snap), rh)
 
     def test_committor_histogram_1d(self):
         rehash = lambda snap : 2 * snap.xyz[0][0]
@@ -152,7 +173,6 @@ class testShootingPointAnalysis(object):
             assert_true(np.isnan(hist[index]))
         for index in [0, 2]:
             assert_true(hist[index] > 0)
-
         assert_equal(bins, input_bins)
 
     def test_committor_histogram_2d(self):
