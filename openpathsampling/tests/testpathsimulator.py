@@ -69,8 +69,8 @@ class testCommittorSimulation(object):
         assert_true(isinstance(sim.mover, paths.RandomChoiceMover))
 
     def test_committor_run(self):
-        self.simulation.run(n_per_snapshot=10)
-        assert_equal(len(self.simulation.storage.steps), 10)
+        self.simulation.run(n_per_snapshot=20)
+        assert_equal(len(self.simulation.storage.steps), 20)
         counts = {'fwd' : 0, 'bkwd' : 0}
         for step in self.simulation.storage.steps:
             step.active.sanity_check()  # traj is in ensemble
@@ -94,7 +94,7 @@ class testCommittorSimulation(object):
                 )
         assert_true(counts['fwd'] > 0)
         assert_true(counts['bkwd'] > 0)
-        assert_equal(counts['fwd'] + counts['bkwd'], 10)
+        assert_equal(counts['fwd'] + counts['bkwd'], 20)
 
     def test_forward_only_committor(self):
         sim = CommittorSimulation(storage=self.storage,

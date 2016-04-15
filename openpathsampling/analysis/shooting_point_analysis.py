@@ -71,6 +71,21 @@ class SnapshotByCoordinateDict(TransformedDict):
 
 
 class ShootingPointAnalysis(SnapshotByCoordinateDict):
+    """
+    Container and methods for shooting point analysis.
+
+    This is especially useful for analyzing committors, which is
+    automatically done on a per-configuration basis, and can also be done
+    as a histogram.
+
+    Parameters
+    ----------
+    steps : iterable of :class:`.MCStep`
+        input MC steps to analysis
+    states : list of :class:`.Volume`
+        volumes to consider as states for the analysis. For pandas output,
+        these volumes must be named.
+    """
     def __init__(self, steps, states):
         super(ShootingPointAnalysis, self).__init__()
         for step in steps:
@@ -109,6 +124,25 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
                     self[key] = total
 
     def committor(self, state, label_function=None):
+        """Calculate the (point-by-point) committor.
+
+        This is for the point-by-point (per-configuration) committor, not
+        for histograms. See `committor_histogram` for the histogram version.
+
+        Parameters
+        ----------
+        state : :class:`.Volume`
+            the committor is 1.0 if 100% of shots enter this state
+        label_function : callable
+            the keys for the dictionary that is returned are
+            `label_function(snapshot)`; default `None` gives the snapshot as
+            key.
+
+        Returns
+        -------
+        dict :
+            mapping labels given by label_function to the committor value
+        """
         if label_function is None:
             label_function = lambda s : s
         results = {}
@@ -131,6 +165,23 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         return ndim
 
     def committor_histogram(self, new_hash, state, bins):
+        """Calculate the histogrammed version of the committor.
+
+        Parameters
+        ----------
+        new_hash : callable
+            values are histogrammed in bins based on new_hash(snapshot)
+        state : :class:`.Volume`
+            the committor is 1.0 if 100% of shots enter this state
+        bins : see numpy.histogram
+            bins input to numpy.histogram
+
+        Returns
+        -------
+        tuple :
+            (hist, bins) like numpy.histogram, where hist is the histogram
+            count and bins is the bins output from numpy.histogram 
+        """
         rehashed = self.rehash(new_hash)
         r_store = rehashed.store
         count_all = {k : sum(r_store[k].values()) for k in r_store}
