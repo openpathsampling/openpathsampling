@@ -325,7 +325,7 @@ class FullBootstrapping(PathSimulator):
     calc_name = "FullBootstrapping"
 
     def __init__(self, transition, snapshot, storage=None, engine=None,
-                 extra_interfaces=None, forbidden_states=None):
+                 extra_interfaces=None, forbidden_states=None, initial_max_length=None):
         super(FullBootstrapping, self).__init__(storage, engine)
         if extra_interfaces is None:
             extra_interfaces = list()
@@ -347,6 +347,11 @@ class FullBootstrapping(PathSimulator):
             paths.OptionalEnsemble(paths.AllOutXEnsemble(state)),
             paths.SingleFrameEnsemble(paths.AllInXEnsemble(state))
         ]) & paths.AllOutXEnsemble(paths.join_volumes(forbidden_states))
+
+        self.initial_max_length = initial_max_length
+
+        if self.initial_max_length is not None:
+            self.first_traj_ensemble = paths.LengthEnsemble(slice(0, self.initial_max_length)) & self.first_traj_ensemble
 
         self.extra_ensembles = [paths.TISEnsemble(transition.stateA,
                                                   transition.stateB, iface,
@@ -372,7 +377,7 @@ class FullBootstrapping(PathSimulator):
         self.error_max_rounds = True
 
 
-    def run(self, max_ensemble_rounds=None, n_steps_per_round=20):
+    def run(self, max_ensemble_rounds=None, n_steps_per_round=20, build_attempts = 20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
         while not has_AA_path:
@@ -386,9 +391,17 @@ class FullBootstrapping(PathSimulator):
             )
             print "Selecting segment"
             sys.stdout.flush()
-            subtraj = self.ensemble0.split(first_traj)[0]
-            # check that this is A->A as well
-            has_AA_path = self.state(subtraj[-1]) and self.state(subtraj[0])
+            subtrajs = self.ensemble0.split(first_traj)
+            if len(subtrajs) > 0:
+                # if we have a short enough path go ahead
+                subtraj = subtrajs[0]
+                # check that this is A->A as well
+                has_AA_path = self.state(subtraj[-1]) and self.state(subtraj[0])
+
+            build_attempts -= 1
+            if build_attempts == 0:
+                raise RuntimeError('Too many attempts. Try another initial snapshot instead.')
+
             
         print "Sampling " + str(self.n_ensembles) + " ensembles."
         bootstrap = paths.Bootstrapping(

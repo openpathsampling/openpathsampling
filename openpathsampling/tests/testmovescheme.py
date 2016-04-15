@@ -522,3 +522,39 @@ class testLockedMoveScheme(object):
         scheme = LockedMoveScheme(self.root_mover, self.network)
         scheme.movers = self.basic_scheme.movers
         vals = scheme.movers
+
+
+class testOneWayShootingMoveScheme(object):
+    def setup(self):
+        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
+        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
+        self.network = paths.MSTISNetwork([
+            (self.stateA, interfacesA, cvA),
+            (self.stateB, interfacesB, cvB)
+        ])
+
+    def test_scheme(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        assert_equal(len(scheme.movers), 1)
+        assert_equal(len(root.movers), 1)
+
+    def test_sanity(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        scheme.sanity_check()
+
+    def test_unused_ensembles(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        unused = scheme.find_unused_ensembles()
+        specials = self.network.special_ensembles
+        expected_unused = sum([specials[special_type].keys() 
+                               for special_type in specials], [])
+        assert_equal(set(expected_unused), set(unused))
