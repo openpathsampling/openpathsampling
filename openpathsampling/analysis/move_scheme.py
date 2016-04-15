@@ -551,13 +551,13 @@ class DefaultScheme(MoveScheme):
     path reversals, all structured as choose move type then choose specific
     move.
     """
-    def __init__(self, network):
+    def __init__(self, network, engine=None):
         super(DefaultScheme, self).__init__(network)
         n_ensembles = len(network.sampling_ensembles)
         self.append(strategies.NearestNeighborRepExStrategy())
-        self.append(strategies.OneWayShootingStrategy())
+        self.append(strategies.OneWayShootingStrategy(engine=engine))
         self.append(strategies.PathReversalStrategy())
-        self.append(strategies.MinusMoveStrategy())
+        self.append(strategies.MinusMoveStrategy(engine=engine))
         global_strategy = strategies.OrganizeByMoveGroupStrategy()
         self.append(global_strategy)
 
@@ -642,6 +642,8 @@ class OneWayShootingMoveScheme(MoveScheme):
     """
     def __init__(self, network, selector=None, ensembles=None, engine=None):
         super(OneWayShootingMoveScheme, self).__init__(network)
-        self.append(strategies.OneWayShootingStrategy(selector, ensembles))
+        self.append(strategies.OneWayShootingStrategy(selector=selector, 
+                                                      ensembles=ensembles,
+                                                      engine=engine))
         self.append(strategies.OrganizeByMoveGroupStrategy())
 
