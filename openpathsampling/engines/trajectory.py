@@ -156,36 +156,19 @@ class Trajectory(list, StorableObject):
         """
         if len(self) > 0:
             snapshot_class = self[0].__class__
-            if hasattr(snapshot_class, '__features__'):
-                if item in snapshot_class.__features__['attributes']:
-                    first = getattr(self[0], item)
-                    if type(first) is u.Quantity:
-                        inner = first._value
-                        if type(inner) is np.ndarray:
-                            dtype = inner.dtype
+            if hasattr(snapshot_class, item):
+                first = getattr(self[0], item)
+                if type(first) is u.Quantity:
+                    inner = first._value
+                    if type(inner) is np.ndarray:
+                        dtype = inner.dtype
 
-                            out = np.empty(tuple([len(self)] + list(inner.shape)), dtype=dtype)
-
-                            for idx, s in enumerate(list.__iter__(self)):
-                                np.copyto(out[idx], getattr(s, item)._value)
-
-                            return out * first.unit
-                        else:
-                            out = [None] * len(self)
-
-                            for idx, s in enumerate(list.__iter__(self)):
-                                out[idx] = getattr(s, item)
-
-                            return out
-                    elif type(first) is np.ndarray:
-                        dtype = first.dtype
-
-                        out = np.empty(tuple([len(self)] + list(first.shape)), dtype=dtype)
+                        out = np.empty(tuple([len(self)] + list(inner.shape)), dtype=dtype)
 
                         for idx, s in enumerate(list.__iter__(self)):
-                            np.copyto(out[idx], getattr(s, item))
+                            np.copyto(out[idx], getattr(s, item)._value)
 
-                        return out
+                        return out * first.unit
                     else:
                         out = [None] * len(self)
 
@@ -193,11 +176,34 @@ class Trajectory(list, StorableObject):
                             out[idx] = getattr(s, item)
 
                         return out
+                elif type(first) is np.ndarray:
+                    dtype = first.dtype
+
+                    out = np.empty(tuple([len(self)] + list(first.shape)), dtype=dtype)
+
+                    for idx, s in enumerate(list.__iter__(self)):
+                        np.copyto(out[idx], getattr(s, item))
+
+                    return out
                 else:
-                    raise RuntimeWarning('Feature "%s" not available for snapshots in this trajectory' % item)
+                    out = [None] * len(self)
+
+                    for idx, s in enumerate(list.__iter__(self)):
+                        out[idx] = getattr(s, item)
+
+                    return out
 
             else:
-                raise RuntimeWarning('Cannot access features for featureless snapshots')
+                std_msg = "'{0}' object has no attribute '{1}'"
+                snap_msg = "Cannot delegate to snapshots. "
+                snap_msg += "'{2}' has no attribute '{1}'"
+                spacer = "\n                "
+                msg = (std_msg + spacer + snap_msg).format(
+                    str(self.__class__.__name__), 
+                    item,
+                    snapshot_class.__name__
+                )
+                raise AttributeError(msg)
 
         else:
             return []

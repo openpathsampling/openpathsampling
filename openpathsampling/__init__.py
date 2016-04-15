@@ -1,5 +1,5 @@
 from analysis.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme, OneWayShootingMoveScheme
 )
 from analysis.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork
@@ -76,6 +76,8 @@ from sample import Sample, SampleSet
 
 from shooting import ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
+
+from snapshot_modifier import NoModification, RandomVelocities
 
 from storage.storage import Storage, AnalysisStorage
 

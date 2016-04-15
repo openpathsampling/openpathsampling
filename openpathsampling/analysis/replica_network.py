@@ -48,7 +48,6 @@ class ReplicaNetwork(object):
         #        if isinstance(mover, paths.ReplicaExchangeMover):
         #            pass
 
-
         #self.repex_movers = repex_movers
         self.ensembles = ensembles
 

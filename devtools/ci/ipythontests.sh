@@ -22,6 +22,8 @@ date
 ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
 date
 ipynbtest.py "alanine.ipynb" || testfail=1
+date
+ipynbtest.py --strict "test_snapshot.ipynb" || testfail=1
 
 # needs to run after alanine since it need the trajectory.nc file
 date

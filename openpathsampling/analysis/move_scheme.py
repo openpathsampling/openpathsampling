@@ -650,6 +650,7 @@ class LockedMoveScheme(MoveScheme):
     def movers(self, vals):
         self._movers = vals
 
+
 class SRTISScheme(DefaultScheme):
     """
     This gives exactly the DefaultMoveScheme, but as an SRTIS setup.
@@ -663,4 +664,16 @@ class SRTISScheme(DefaultScheme):
         self.append([strategies.PoorSingleReplicaStrategy(),
                      strategies.EnsembleHopStrategy(bias=bias),
                      sr_minus_strat])
+
+
+class OneWayShootingMoveScheme(MoveScheme):
+    """
+    MoveScheme with only a OneWayShooting strategy.
+
+    Useful for building on top of. Useful as default for TPS.
+    """
+    def __init__(self, network, selector=None, ensembles=None, engine=None):
+        super(OneWayShootingMoveScheme, self).__init__(network)
+        self.append(strategies.OneWayShootingStrategy(selector, ensembles))
+        self.append(strategies.OrganizeByMoveGroupStrategy())
 

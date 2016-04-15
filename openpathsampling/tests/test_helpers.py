@@ -183,10 +183,22 @@ def assert_close_unit(v1, v2, *args, **kwargs):
     else:
         npt.assert_allclose(v1, v2, *args, **kwargs)
 
-def compare_snapshot(snapshot1, snapshot2):
-    assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
+def compare_snapshot(snapshot1, snapshot2, check_reversed=False):
+    if hasattr(snapshot1, 'box_vectors') == hasattr(snapshot2, 'box_vectors'):
+        if hasattr(snapshot1, 'box_vectors'):
+            assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
+    else:
+        raise AttributeError('Snapshots disagree. Only one uses box_vectors')
+
     assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
     assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+
+    if check_reversed:
+        compare_snapshot(snapshot1.reversed, snapshot2.reversed, False)
+        assert_close_unit(-1.0 * snapshot1.reversed.velocities, snapshot1.velocities, rtol=1e-7, atol=0)
+        assert_close_unit(-1.0 * snapshot2.reversed.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+        assert_close_unit(snapshot1.reversed.coordinates, snapshot1.coordinates, rtol=1e-7, atol=0)
+        assert_close_unit(snapshot2.reversed.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
 
 class RandomMDEngine(DynamicsEngine):
     _default_options = {}

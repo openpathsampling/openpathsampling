@@ -23,82 +23,82 @@ Abstract class
 --------------
 
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    Ensemble
+   Ensemble
 
 Basic Ensembles
 ---------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-        EmptyEnsemble
-        FullEnsemble
+   EmptyEnsemble
+   FullEnsemble
 
 Volume Ensembles
 ----------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-        VolumeEnsemble
-        AllInXEnsemble
-        AllOutXEnsemble
-        PartInXEnsemble
-        PartOutXEnsemble
-        EntersXEnsemble
-        ExitsXEnsemble
+   VolumeEnsemble
+   AllInXEnsemble
+   AllOutXEnsemble
+   PartInXEnsemble
+   PartOutXEnsemble
+   EntersXEnsemble
+   ExitsXEnsemble
 
 Set-based Ensemble combinations
 -------------------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    IntersectionEnsemble
-    UnionEnsemble
-    SymmetricDifferenceEnsemble
-    RelativeComplementEnsemble
-    EnsembleCombination
-    NegatedEnsemble
+   IntersectionEnsemble
+   UnionEnsemble
+   SymmetricDifferenceEnsemble
+   RelativeComplementEnsemble
+   EnsembleCombination
+   NegatedEnsemble
 
 
 Length specific Ensembles
 -------------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    LengthEnsemble
-    SingleFrameEnsemble
-    OptionalEnsemble
+   LengthEnsemble
+   SingleFrameEnsemble
+   OptionalEnsemble
 
 Trajectory Altering Ensembles
 -----------------------------
 
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    ReversedTrajectoryEnsemble
-    SuffixTrajectoryEnsemble
-    PrefixTrajectoryEnsemble
-    WrappedEnsemble
+   ReversedTrajectoryEnsemble
+   SuffixTrajectoryEnsemble
+   PrefixTrajectoryEnsemble
+   WrappedEnsemble
 
 Sequential Ensembles
 --------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    SequentialEnsemble
+   SequentialEnsemble
 
 TIS-specific Ensembles
 ----------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    TISEnsemble
-    MinusInterfaceEnsemble
+   TISEnsemble
+   MinusInterfaceEnsemble
 
 Ensemble Functions
 ------------------
 .. autosummary::
-    :toctree: api/generated/
+   :toctree: api/generated/
 
-    join_ensembles
+   join_ensembles
