@@ -485,15 +485,25 @@ class EngineMover(SampleMover):
     """Baseclass for Movers that use an engine
     """
 
-    engine = None
+    default_engine = None
 
     def __init__(self, ensemble, target_ensemble, selector, engine=None):
         super(EngineMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
-        if engine is not None:
-            self.engine = engine
+        self._engine = engine
+
+    @property
+    def engine(self):
+        if self._engine is not None:
+            return self._engine
+        else:
+            return self.default_engine
+
+    @engine.setter
+    def engine(self, val):
+        self._engine = engine
 
     def _called_ensembles(self):
         return [self.ensemble]

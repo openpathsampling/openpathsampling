@@ -565,7 +565,8 @@ class DefaultScheme(MoveScheme):
         for ms in msouters.keys():
             self.append(strategies.OneWayShootingStrategy(
                 ensembles=[ms],
-                group="ms_outer_shooting"
+                group="ms_outer_shooting",
+                engine=engine
             ))
             self.append(strategies.PathReversalStrategy(
                 ensembles=[ms],
