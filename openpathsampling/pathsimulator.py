@@ -563,3 +563,89 @@ class PathSampling(PathSimulator):
             "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
             refresh=False
         )
+
+class CommittorSimulation(PathSimulator):
+    def __init__(self, storage, engine=None, states=None, randomizer=None,
+                 initial_snapshots=None, direction=None):
+        super(CommittorSimulation, self).__init__(storage, engine)
+        self.states = states
+        self.randomizer = randomizer
+        try:
+            initial_snapshots = list(initial_snapshots)
+        except TypeError:
+            initial_snapshots = [initial_snapshots]
+        self.initial_snapshots = initial_snapshots
+        self.direction = direction
+
+        all_state_volume = paths.join_volumes(states)
+
+        # we should always start from a single frame not in any state
+        self.starting_ensemble = (
+            paths.AllOutXEnsemble(all_state_volume) &
+            paths.LengthEnsemble(1)
+        )
+        # shoot forward until we hit a state
+        self.forward_ensemble = paths.SequentialEnsemble([
+            paths.AllOutXEnsemble(all_state_volume),
+            paths.AllInXEnsemble(all_state_volume) & paths.LengthEnsemble(1)
+        ])
+        # or shoot backward until we hit a state
+        self.backward_ensemble = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(all_state_volume) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(all_state_volume)
+        ])
+
+        self.forward_mover = paths.ForwardExtendMover(
+            ensemble=self.starting_ensemble,
+            target_ensemble=self.forward_ensemble
+        )
+        self.backward_mover = paths.BackwardExtendMover(
+            ensemble=self.starting_ensemble,
+            target_ensemble=self.backward_ensemble
+        )
+
+        if self.direction is None:
+            self.mover = paths.RandomChoiceMover([self.forward_mover,
+                                                  self.backward_mover])
+        elif self.direction > 0:
+            self.mover = self.forward_mover
+        elif self.direction < 0:
+            self.mover = self.backward_mover
+
+    def run(self, n_per_snapshot, as_chain=False):
+        self.step = 0
+        for snapshot in self.initial_snapshots:
+            start_snap = snapshot
+            # do what we need to get the snapshot set up
+            for step in range(n_per_snapshot):
+                if as_chain:
+                    start_snap = self.randomizer(start_snap)
+                else:
+                    start_snap = self.randomizer(snapshot)
+
+                sample_set = paths.SampleSet([
+                    paths.Sample(replica=0,
+                                 trajectory=paths.Trajectory([start_snap]),
+                                 ensemble=self.starting_ensemble)
+                ])
+                sample_set.sanity_check()
+                new_pmc = self.mover.move(sample_set)
+                samples = new_pmc.results
+                new_sample_set = sample_set.apply_samples(samples)
+
+                mcstep = MCStep(
+                    simulation=self,
+                    mccycle = self.step,
+                    previous=sample_set,
+                    active=new_sample_set,
+                    change=new_pmc
+                )
+
+                if self.storage is not None:
+                    self.storage.steps.save(mcstep)
+                    if self.step % self.save_frequency == 0:
+                        self.sync_storage()
+
+                pass
+
+
