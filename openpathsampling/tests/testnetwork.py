@@ -75,6 +75,10 @@ class testMSTISNetwork(object):
             (self.stateC, ifacesC, xval)
         ])
 
+    def test_all_states(self):
+        assert_equal(set(self.mstis.all_states), 
+                     set([self.stateA, self.stateB, self.stateC]))
+
     def test_trajectories(self):
         # TODO; make this test fully comprehensive? (loop over all
         # possibilities?)
@@ -155,6 +159,10 @@ class testTPSNetwork(object):
         network2c = TPSNetwork.from_state_pairs([(self.stateA, self.stateB)])
         assert_equal(len(network2c.sampling_transitions), 1)
         assert_equal(len(network2c.transitions), 1)
+        assert_equal(set(network2a.all_states), set(network2b.all_states))
+        assert_equal(set(network2b.all_states), set(network2c.all_states))
+        assert_equal(set(network2a.all_states), 
+                     set([self.stateA, self.stateB]))
 
 
     def test_initialization_3state(self):
