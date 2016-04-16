@@ -161,8 +161,8 @@ class testShootingPointAnalysis(object):
         rehash = lambda snap : 2 * snap.xyz[0][0]
         committor_A_rehash = self.analyzer.committor(self.left, rehash)
         assert_items_equal(committor_A.values(), committor_A_rehash.values())
-        for (snap, rh)  in zip(committor_A.keys(), committor_A_rehash.keys()):
-            assert_equal(rehash(snap), rh)
+        for snap in committor_A.keys():
+            assert_in(rehash(snap), committor_A_rehash.keys())
 
     def test_committor_histogram_1d(self):
         rehash = lambda snap : 2 * snap.xyz[0][0]
