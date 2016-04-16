@@ -567,7 +567,9 @@ class PathSampling(PathSimulator):
 class CommittorSimulation(PathSimulator):
     def __init__(self, storage, engine=None, states=None, randomizer=None,
                  initial_snapshots=None, direction=None):
-        super(CommittorSimulation, self).__init__(storage, engine)
+        super(CommittorSimulation, self).__init__(storage)
+        self.engine = engine
+        paths.EngineMover.engine = engine
         self.states = states
         self.randomizer = randomizer
         try:
