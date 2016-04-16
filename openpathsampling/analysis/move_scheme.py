@@ -632,3 +632,16 @@ class LockedMoveScheme(MoveScheme):
     @movers.setter
     def movers(self, vals):
         self._movers = vals
+
+
+class OneWayShootingMoveScheme(MoveScheme):
+    """
+    MoveScheme with only a OneWayShooting strategy.
+
+    Useful for building on top of. Useful as default for TPS.
+    """
+    def __init__(self, network, selector=None, ensembles=None, engine=None):
+        super(OneWayShootingMoveScheme, self).__init__(network)
+        self.append(strategies.OneWayShootingStrategy(selector, ensembles))
+        self.append(strategies.OrganizeByMoveGroupStrategy())
+
