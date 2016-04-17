@@ -58,15 +58,15 @@ class PathSimulator(StorableNamedObject):
     calc_name = "PathSimulator"
     _excluded_attr = ['globalstate', 'step', 'save_frequency']
 
-    def __init__(self, storage, engine=None):
+    def __init__(self, storage):
         super(PathSimulator, self).__init__()
         self.storage = storage
-        self.engine = engine
+        # self.engine = engine
         self.save_frequency = 1
         self.step = 0
         initialization_logging(
             logger=init_log, obj=self,
-            entries=['storage', 'engine']
+            entries=['storage']#, 'engine']
         )
 
         self.globalstate = None
@@ -116,8 +116,7 @@ class BootstrapPromotionMove(SubPathMover):
     Bootstrap promotion is the combination of an EnsembleHop (to the next
     ensemble up) with incrementing the replica ID.
     """
-    def __init__(self, bias=None, shooters=None,
-                 ensembles=None):
+    def __init__(self, bias=None, shooters=None, ensembles=None):
         """
         Parameters
         ----------
@@ -198,8 +197,9 @@ class Bootstrapping(PathSimulator):
             the ensembles this move should act on
         """
         # TODO: Change input from trajectory to sample
-        super(Bootstrapping, self).__init__(storage, engine)
-
+        super(Bootstrapping, self).__init__(storage)
+        self.engine = engine
+        paths.EngineMover.default_engine = engine  # set the default
         self.ensembles = ensembles
         self.trajectory = trajectory
 
@@ -326,7 +326,9 @@ class FullBootstrapping(PathSimulator):
 
     def __init__(self, transition, snapshot, storage=None, engine=None,
                  extra_interfaces=None, forbidden_states=None, initial_max_length=None):
-        super(FullBootstrapping, self).__init__(storage, engine)
+        super(FullBootstrapping, self).__init__(storage)
+        self.engine = engine
+        paths.EngineMover.default_engine = engine  # set the default
         if extra_interfaces is None:
             extra_interfaces = list()
 
@@ -447,7 +449,6 @@ class PathSampling(PathSimulator):
     def __init__(
             self,
             storage,
-            engine=None,
             move_scheme=None,
             globalstate=None
     ):
@@ -463,7 +464,7 @@ class PathSampling(PathSimulator):
         globalstate : openpathsampling.SampleSet
             the initial SampleSet for the Simulator
         """
-        super(PathSampling, self).__init__(storage, engine)
+        super(PathSampling, self).__init__(storage)
         self.move_scheme = move_scheme
         self.root_mover = move_scheme.move_decision_tree()
 #        self.move_scheme.name = "PathSamplingRoot"
@@ -566,7 +567,9 @@ class PathSampling(PathSimulator):
 class CommittorSimulation(PathSimulator):
     def __init__(self, storage, engine=None, states=None, randomizer=None,
                  initial_snapshots=None, direction=None):
-        super(CommittorSimulation, self).__init__(storage, engine)
+        super(CommittorSimulation, self).__init__(storage)
+        self.engine = engine
+        paths.EngineMover.engine = engine
         self.states = states
         self.randomizer = randomizer
         try:
