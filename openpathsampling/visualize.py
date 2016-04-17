@@ -401,7 +401,11 @@ class MoveTreeBuilder(Builder):
         #     self.css_style = content_file.read()
 
         self.css_style = vis_css
-
+        self.options = {
+            'settings': {
+                'only_canonical': True
+            }
+        }
 
     def set_ensembles(self, ensembles):
         self.ensembles = ensembles
@@ -424,7 +428,7 @@ class MoveTreeBuilder(Builder):
             class_='tree'
         )
 
-        tree = path.depth_pre_order(lambda this: this, only_canonical=False)
+        tree = path.depth_pre_order(lambda this: this, only_canonical=self.options['settings']['only_canonical'])
 
         total = len(tree)
 
@@ -515,7 +519,8 @@ class MoveTreeBuilder(Builder):
 
         max_level = 0
 
-        for yp, (level, sub_mp) in enumerate(path.depth_pre_order(lambda this: this, only_canonical=False)):
+        for yp, (level, sub_mp) in enumerate(
+                path.depth_pre_order(lambda this: this, only_canonical=self.options['settings']['only_canonical'])):
             if level > max_level:
                 max_level = level
 
