@@ -104,18 +104,13 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
                 key = shooting_snap
                 trial_traj = step.change.canonical.trials[0].trajectory
                 init_traj = details.initial_trajectory
-                # TODO: most of the time is spent identifying unique subtraj
-                #       instead, why not store it? good for provenance, too
-                shooting_traj = trial_traj.unique_subtrajectory(init_traj)
-                endpoints = list(set([shooting_traj[0], shooting_traj[-1]]))
-                # we use set in case there's only one frame (`first is last`)
-                initial = collections.Counter(
-                    {state: int(state(shooting_traj[0])) for state in states}
+                test_points = [s for s in [trial_traj[0], trial_traj[-1]]
+                               if s not in [init_traj[0], init_traj[-1]]]
+
+                total = collections.Counter(
+                    {state: sum([int(state(pt)) for pt in test_points])
+                                for state in states}
                 )
-                final = collections.Counter(
-                    {state: int(state(shooting_traj[-1])) for state in states}
-                )
-                total = initial + final if len(endpoints) == 2 else initial
                 total_count = sum(total.values())
                 assert total_count == 1 or total_count == 2
                 try:
