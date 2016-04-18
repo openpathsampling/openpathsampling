@@ -34,7 +34,7 @@ class testCommittorSimulation(object):
         integrator = toys.LeapfrogVerletIntegrator(0.1)
         options = {
             'integ': integrator,
-            'n_frames_max': 10000,
+            'n_frames_max': 100000,
             'nsteps_per_frame': 5
         }
         self.engine = toys.Engine(options=options, template=self.snap0)
@@ -183,7 +183,12 @@ class testCommittorSimulation(object):
             step.active.sanity_check()  # traj is in ensemble
             traj = step.active[0].trajectory
             traj_str = traj.summarize_by_volumes_str(self.state_labels)
-            counts[traj_str] += 1
+            try:
+                counts[traj_str] += 1
+            except KeyError:
+                msg = "Got trajectory described as '{0}', length {1}"
+                # this might be okay if it is 'None', length 100000
+                raise AssertionError(msg.format(traj_str, len(traj)))
         assert_equal(counts['Left-None'], 0)
         assert_equal(counts['Right-None'], 0)
         assert_true(counts['None-Left'] > 0)
