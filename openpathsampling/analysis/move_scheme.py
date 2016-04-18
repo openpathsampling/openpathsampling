@@ -59,7 +59,7 @@ class MoveScheme(StorableNamedObject):
         scheme.root_mover = dct['root_mover']
         return scheme
 
-    def append(self, strategies, levels=None):
+    def append(self, strategies, levels=None, force=False):
         """
         Adds new strategies to this scheme, organized by `level`.
 
@@ -69,9 +69,16 @@ class MoveScheme(StorableNamedObject):
             strategies to add to this scheme
         levels : integer or list of integer or None
             levels to associate with each strategy. If None, strategy.level.
+        force : bool
+            force the strategy to be appended, even if a root_mover exists.
+            Default False for safety.
         """
         # first we clean up the input: strategies is a list of MoveStrategy;
         # levels is a list of integers
+        if self.root_mover is not None and force is not True:
+            raise RuntimeError("Can't add strategies after the move " +
+                               "decision tree has been built. " +
+                               "Override with `force=True`.")
         try:
             strategies = list(strategies)
         except TypeError:
@@ -285,6 +292,61 @@ class MoveScheme(StorableNamedObject):
             warnstr = ("Can't use {fcn_name} before building the move " +
                        "decision tree").format(fcn_name=fcn_name)
             raise RuntimeWarning(warnstr)
+
+
+    def list_initial_ensembles(self, root=None):
+        """
+        Returns a list of initial ensembles for this move scheme.
+        
+        Used in `initial_conditions_from_trajectories` to set up 
+        """
+        # TODO
+        return list(self.find_used_ensembles(root))
+
+
+    def initial_conditions_from_trajectories(self, trajectories,
+                                             sampleset=None):
+        """
+        Create a SampleSet with as many initial ensembles as possible.
+        """
+        # TODO:
+        ensembles_to_fill = self.list_initial_ensembles()
+        if sampleset is None:
+            sampleset = paths.SampleSet([])
+
+        for ens_list in ensembles_to_fill:
+            if type(ens_list) is not list:
+                ens_list = [ens_list]
+            for ens in ens_list:
+                if ens in sampleset.ensemble_list():
+                    break  # we've already got one!
+                sample = None
+                # fill only the first in ens_list that can be filled
+                # 1. try forward
+                for traj in trajectories:
+                    if ens(traj):
+                        sample = paths.Sample(replica=None, 
+                                              trajectory=traj,
+                                              ensemble=ens)
+                        break  # take the first such trajectory
+                if sample is not None:
+                    break  # take the first ensemble that works
+                
+                # 2. try reversed
+                for traj in trajectories:
+                    if ens(traj.reversed):
+                        sample = paths.Sample(replica=None,
+                                              trajectory=traj,
+                                              ensemble=ens)
+                        break  # take the first such trajectory
+                if sample is not None:
+                    break  # take the first ensemble that works
+
+                # 3. hypothetically, try extending (future)
+            sampleset.append_as_new_replica(sample)
+        return sampleset
+        
+            
 
 
     def build_balance_partners(self):

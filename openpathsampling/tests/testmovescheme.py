@@ -191,11 +191,11 @@ class testMoveScheme(object):
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
 
-        self.scheme.append(all_repex)
+        self.scheme.append(all_repex, force=True)
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 6)
 
-        self.scheme.append(nn_repex)
+        self.scheme.append(nn_repex, force=True)
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
 
