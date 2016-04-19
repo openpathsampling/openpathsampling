@@ -44,7 +44,9 @@ class TransitionNetwork(StorableNamedObject):
 
 
 class TPSNetwork(TransitionNetwork):
-    def __init__(self, initial_states, final_states):
+    TransitionType = paths.TPSTransition
+    def __init__(self, initial_states, final_states, **kwargs):
+        # **kwargs gets passed to the transition
         super(TPSNetwork, self).__init__()
         try:
             iter(initial_states)
@@ -67,10 +69,10 @@ class TPSNetwork(TransitionNetwork):
             all_final = paths.join_volumes(final_states)
             all_final.name = "|".join([v.name for v in final_states])
         self._sampling_transitions = [
-            paths.TPSTransition(all_initial, all_final)
+            self.TransitionType(all_initial, all_final, **kwargs)
         ]
         self.transitions = {
-            (initial, final) : paths.TPSTransition(initial, final)
+            (initial, final) : self.TransitionType(initial, final, **kwargs)
             for (initial, final) in itertools.product(initial_states,
                                                       final_states)
             if initial != final
@@ -96,7 +98,7 @@ class TPSNetwork(TransitionNetwork):
         return network
 
     @classmethod
-    def from_state_pairs(cls, state_pairs):
+    def from_state_pairs(cls, state_pairs, **kwargs):
         sampling = []
         transitions = {}
         initial_states = []
@@ -107,11 +109,12 @@ class TPSNetwork(TransitionNetwork):
             if len(sampling) == 1:
                 sampling[0].add_transition(initial, final)
             elif len(sampling) == 0:
-                sampling = [paths.TPSTransition(initial, final)]
+                sampling = [cls.TransitionType(initial, final, **kwargs)]
             else:
                 raise RuntimeError("More than one sampling transition for TPS?")
 
-            transitions[(initial, final)] = paths.TPSTransition(initial, final)
+            transitions[(initial, final)] = cls.TransitionType(initial, final,
+                                                               **kwargs)
         
         network = cls.__new__(cls)
         super(cls, network).__init__()
@@ -123,8 +126,8 @@ class TPSNetwork(TransitionNetwork):
 
 
     @classmethod
-    def from_states_all_to_all(cls, states):
-        return cls(states, states)
+    def from_states_all_to_all(cls, states, **kwargs):
+        return cls(states, states, **kwargs)
 
 
 
