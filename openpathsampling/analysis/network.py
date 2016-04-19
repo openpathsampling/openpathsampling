@@ -116,10 +116,12 @@ class TPSNetwork(TransitionNetwork):
             transitions[(initial, final)] = cls.TransitionType(initial, final,
                                                                **kwargs)
         
-        network = cls.__new__(cls)
-        super(cls, network).__init__()
-        network._sampling_transitions = sampling
-        network.transitions = transitions
+        dict_result = {
+            'x_sampling_transitions' : sampling,
+            'transitions' : transitions
+        }
+        dict_result.update(kwargs)
+        network = cls.from_dict(dict_result)
         network.initial_states = initial_states
         network.final_states = final_states
         return network
@@ -128,6 +130,11 @@ class TPSNetwork(TransitionNetwork):
     @classmethod
     def from_states_all_to_all(cls, states, **kwargs):
         return cls(states, states, **kwargs)
+
+
+class FixedLengthTPSNetwork(TPSNetwork):
+    TransitionType = paths.FixedLengthTPSTransition
+    pass
 
 
 

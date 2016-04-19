@@ -19,6 +19,7 @@ import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 
 class testMSTISNetwork(object):
@@ -234,3 +235,48 @@ class testTPSNetwork(object):
         if os.path.isfile(fname):
             os.remove(fname)
 
+class testFixedLengthTPSNetwork(testTPSNetwork):
+    @property
+    def network2a(self):
+        return FixedLengthTPSNetwork(initial_states=[self.stateA],
+                                     final_states=[self.stateB],
+                                     length=10)
+
+    @property
+    def network2b(self):
+        return FixedLengthTPSNetwork(initial_states=self.stateA,
+                                     final_states=self.stateB,
+                                     length=10)
+
+    @property
+    def network2c(self):
+        return FixedLengthTPSNetwork.from_state_pairs(
+            [(self.stateA, self.stateB)], 
+            length=10
+        )
+
+    @property
+    def network3a(self):
+        return FixedLengthTPSNetwork(initial_states=self.states,
+                                     final_states=self.states,
+                                     length=10)
+
+    @property
+    def network3b(self):
+        return FixedLengthTPSNetwork.from_states_all_to_all(self.states,
+                                                            length=10)
+
+    @property
+    def network3c(self):
+        return FixedLengthTPSNetwork.from_state_pairs(
+            [(self.stateA, self.stateB), (self.stateA, self.stateC),
+             (self.stateB, self.stateA), (self.stateB, self.stateC),
+             (self.stateC, self.stateA), (self.stateC, self.stateB)],
+            length=10
+        )
+
+    def test_lengths(self):
+        for network in [self.network2a, self.network2b, self.network2c,
+                        self.network3a, self.network3b, self.network3c]:
+            assert_equal(network.sampling_transitions[0].length, 10)
+            assert_equal(network.transitions.values()[0].length, 10)
