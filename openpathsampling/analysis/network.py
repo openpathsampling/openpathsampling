@@ -55,6 +55,9 @@ class TPSNetwork(TransitionNetwork):
         except TypeError:
             final_states = [final_states]
 
+        self.initial_states = initial_states
+        self.final_states = final_states
+
         all_initial = paths.join_volumes(initial_states)
         all_initial.name = "|".join([v.name for v in initial_states])
 
@@ -80,6 +83,10 @@ class TPSNetwork(TransitionNetwork):
         }
         return ret_dict
 
+    @property
+    def all_states(self):
+        return list(set(self.initial_states + self.final_states))
+
     @classmethod
     def from_dict(cls, dct):
         network = cls.__new__(cls)
@@ -92,7 +99,11 @@ class TPSNetwork(TransitionNetwork):
     def from_state_pairs(cls, state_pairs):
         sampling = []
         transitions = {}
+        initial_states = []
+        final_states = []
         for (initial, final) in state_pairs:
+            initial_states += [initial]
+            final_states += [final]
             if len(sampling) == 1:
                 sampling[0].add_transition(initial, final)
             elif len(sampling) == 0:
@@ -106,6 +117,8 @@ class TPSNetwork(TransitionNetwork):
         super(cls, network).__init__()
         network._sampling_transitions = sampling
         network.transitions = transitions
+        network.initial_states = initial_states
+        network.final_states = final_states
         return network
 
 
@@ -140,6 +153,10 @@ class TISNetwork(TransitionNetwork):
     @property
     def ms_outers(self):
         return self.special_ensembles['ms_outer'].keys()
+
+    @property
+    def all_states(self):
+        return list(set(self.initial_states + self.final_states))
 
 
 #def join_mis_minus(minuses):
@@ -217,6 +234,9 @@ class MSTISNetwork(TISNetwork):
         self.transitions = {}
         self.build_analysis_transitions()
 
+    @property
+    def all_states(self):
+        return self.states
 
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
