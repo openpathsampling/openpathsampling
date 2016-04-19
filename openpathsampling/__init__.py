@@ -3,7 +3,7 @@ from analysis.move_scheme import (
 )
 
 from analysis.tis_analysis import (
-    TISTransition, Transition, TPSTransition
+    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
 )
 
 from analysis.network import (
