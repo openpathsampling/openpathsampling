@@ -19,16 +19,29 @@ def index_to_string(index):
 class TransitionNetwork(StorableNamedObject):
     """
     Subclasses of TransitionNetwork are the main way to set up calculations
+
+    Attributes
+    ----------
+    sampling_ensembles
+    all_ensembles
+    sampling_transitions
     """
     def __init__(self):
         super(TransitionNetwork, self).__init__()
 
     @property
     def sampling_ensembles(self):
+        """
+        Ensembles from the sampling transitions, excluding special ensembles.
+        """
         return sum([t.ensembles for t in self.sampling_transitions], [])
 
     @property
     def all_ensembles(self):
+        """
+        All ensembles in the sampling transitions, including special
+        ensembles.
+        """
         all_ens = self.sampling_ensembles
         for special_dict in self.special_ensembles.values():
             all_ens.extend(special_dict.keys())
@@ -36,6 +49,7 @@ class TransitionNetwork(StorableNamedObject):
 
     @property
     def sampling_transitions(self):
+        """The transitions used in sampling"""
         try:
             return self._sampling_transitions
         except AttributeError:
@@ -54,6 +68,19 @@ class GeneralizedTPSNetwork(TransitionNetwork):
     To simplify this, and to make the docstrings readable, we make each
     class into a simple subclass of this GeneralizedTPSNetwork, which acts
     as an abstract class that manages most of the relevant code.
+
+    Parameters
+    ----------
+    initial_states : list of :class:`.Volume`
+        acceptable initial states
+    final_states : list of :class:`.Volume`
+        acceptable final states
+
+    Attributes
+    ----------
+    TransitionType : :class:`paths.Transition`
+        Type of transition used here. Sets, for example, fixed or flexible
+        pathlengths.
     """
     TransitionType = NotImplemented
     def __init__(self, initial_states, final_states, **kwargs):
@@ -98,6 +125,7 @@ class GeneralizedTPSNetwork(TransitionNetwork):
 
     @property
     def all_states(self):
+        """list of all initial and final states"""
         return list(set(self.initial_states + self.final_states))
 
     @classmethod
@@ -144,6 +172,9 @@ class GeneralizedTPSNetwork(TransitionNetwork):
 
 
 class TPSNetwork(GeneralizedTPSNetwork):
+    """
+    Class for flexible pathlength TPS networks (2-state or multiple state).
+    """
     TransitionType = paths.TPSTransition
     # we implement these functions entirely to fix the signature (super's
     # version allow arbitrary kwargs) so the documentation can read them.
@@ -160,6 +191,9 @@ class TPSNetwork(GeneralizedTPSNetwork):
 
 
 class FixedLengthTPSNetwork(GeneralizedTPSNetwork):
+    """
+    Class for fixed pathlength TPS networks (2-states or multiple states).
+    """
     TransitionType = paths.FixedLengthTPSTransition
     # as with TPSNetwork, we don't really need to add these functions.
     # However, without them, we need to explicitly name `length` as

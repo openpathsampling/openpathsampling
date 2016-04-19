@@ -109,6 +109,7 @@ class TPSTransition(Transition):
 
 
 class FixedLengthTPSTransition(TPSTransition):
+    """Transition using fixed length TPS ensembles"""
     def __init__(self, stateA, stateB, length, name=None):
         self.length = length
         super(FixedLengthTPSTransition, self).__init__(stateA, stateB, name)

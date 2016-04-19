@@ -7,7 +7,8 @@ from analysis.tis_analysis import (
 )
 
 from analysis.network import (
-    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork
+    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
+    FixedLengthTPSNetwork
 )
 
 from analysis.replica_network import (
