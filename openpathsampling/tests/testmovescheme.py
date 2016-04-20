@@ -19,6 +19,7 @@ import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testMoveScheme(object):
     def setup(self):
@@ -463,6 +464,49 @@ class testDefaultScheme(object):
             for mover in scheme.movers[group]:
                 test_prob = scheme.choice_probability[mover]
                 assert_almost_equal(expected_prob, test_prob)
+
+    def test_initial_conditions_from_trajectory(self):
+        scheme = DefaultScheme(self.network)
+        # root = scheme.move_decision_tree()
+        assert_equal(len(scheme.list_initial_ensembles()), 9)
+        
+        traj1 = make_1d_traj([-0.6, -0.2, -0.6])
+        traj2 = make_1d_traj([-0.6, -0.2, -0.05, -0.4, -0.6])
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+
+        all_trajs = [traj1, traj2, traj3]
+
+        transAB = transBA = None
+        for trans in self.network.sampling_transitions:
+            if trans.stateA == self.stateA and trans.stateB == self.stateB:
+                transAB = trans
+            elif trans.stateA == self.stateB and trans.stateB == self.stateA:
+                transBA = trans
+            else:
+                raise RuntimeWarning("That's a weird transition!")
+        ms_outer_ens = self.network.special_ensembles['ms_outer'].keys()[0]
+
+        init_cond_1 = scheme.initial_conditions_from_trajectories(all_trajs)
+        init_cond_1.sanity_check()
+        assert_equal(len(init_cond_1), 7)
+        assert_equal(init_cond_1[transAB.ensembles[0]].trajectory, traj1)
+        assert_equal(init_cond_1[transAB.ensembles[1]].trajectory, traj1)
+        assert_equal(init_cond_1[transAB.ensembles[2]].trajectory, traj2)
+        for ens in transBA.ensembles:
+            assert_equal(init_cond_1[ens].trajectory, traj3.reversed)
+        assert_equal(init_cond_1[ms_outer_ens].trajectory, traj3)
+
+        init_cond_2 = scheme.initial_conditions_from_trajectories([traj1])
+        assert_equal(len(init_cond_2), 2)
+
+        init_cond_3 = scheme.initial_conditions_from_trajectories([traj2],
+                                                                  init_cond_2)
+        # assert_equal(len(init_cond_3), 3)
+
+        init_cond_4 = scheme.initial_conditions_from_trajectories([traj3])
+        assert_equal(len(init_cond_4), 7)
+
+        raise SkipTest
 
 
 class testLockedMoveScheme(object):

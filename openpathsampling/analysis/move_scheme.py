@@ -210,6 +210,8 @@ class MoveScheme(StorableNamedObject):
             ensembles which appear in this (sub)tree
         """
         if root is None:
+            if self.root_mover is None:
+                self.root = self.move_decision_tree()
             root = self.root_mover
         movers = root.map_pre_order(lambda x : x)
         mover_ensemble_dict = {}
@@ -298,7 +300,18 @@ class MoveScheme(StorableNamedObject):
         """
         Returns a list of initial ensembles for this move scheme.
         
-        Used in `initial_conditions_from_trajectories` to set up 
+        Used in `initial_conditions_from_trajectories` to get the ensembles
+        we need. The list returned by this is of a particular format: it
+        should be thought of as a list of lists of ensembles. Call this the
+        "list" and the "sublists". At least one member of each sublist is
+        required, and if a "sublist" is actually, an ensemble, it is treated
+        as a sublist of one. So returning [a, b, [c, d], e] is equivalent to
+        returning [[a], [b], [c, d], [e]], and is interpreted as "initial
+        conditions are ensembles a, b, e, and one of either c or d".
+
+        To make the simplest cases more explicit, normal all-replica TIS for
+        ensembles a, b, and c would return [a, b, c], or equivalently, [[a],
+        [b], [c]]. Single-replica TIS would return [[a, b, c]].
         """
         # TODO
         return list(self.find_used_ensembles(root))
@@ -336,17 +349,24 @@ class MoveScheme(StorableNamedObject):
                 for traj in trajectories:
                     if ens(traj.reversed):
                         sample = paths.Sample(replica=None,
-                                              trajectory=traj,
+                                              trajectory=traj.reversed,
                                               ensemble=ens)
                         break  # take the first such trajectory
                 if sample is not None:
                     break  # take the first ensemble that works
 
                 # 3. hypothetically, try extending (future)
-            sampleset.append_as_new_replica(sample)
+            # now, if we've found a sample, add it
+            if sample is not None:
+                sampleset.append_as_new_replica(sample)
         return sampleset
-        
-            
+
+    def check_initial_conditions(self, sampleset):
+        """
+        Check that the SampleSet can be initial conditions for this scheme.
+        """
+        ensembles_to_fill = self.list_initial_ensembles()
+        pass
 
 
     def build_balance_partners(self):
