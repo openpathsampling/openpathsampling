@@ -390,27 +390,28 @@ class MoveScheme(StorableNamedObject):
         (missing, extras) = self.check_initial_conditions(sampleset)
         msg = ""
         if len(missing) > 0:
-            msg += " Missing ensembles: " + str(missing) + "\n"
+            msg += "Missing ensembles: " + str(missing) + "\n"
         if len(extras) > 0:
-            msg += " Extra ensembles: " + str(extras) + "\n"
+            msg += "Extra ensembles: " + str(extras) + "\n"
         if msg != "":
-            raise AssertionError("Bad initial conditions." + msg)
+            raise AssertionError("Bad initial conditions.\n" + msg)
 
     def initial_conditions_report(self, sampleset):
-        (missing, extras) = self.check_initial_conditions(sampleset)
+        (missing, extra) = self.check_initial_conditions(sampleset)
         msg = ""
         if len(missing) == 0:
             msg += "No missing ensembles.\n"
         else:
-            msg += "Missing ensembles:\n*  "
-            msg += "\n*  ".join([ens.name for ens in missing])
-            msg += "\n"
+            msg += "Missing ensembles:\n"
+            for ens_list in missing:
+                msg += "*  [" 
+                msg += ", ".join([ens.name for ens in ens_list]) + "]\n"
         if len(extra) == 0:
             msg += "No extra ensembles.\n"
         else:
-            msg += "Extra ensembles:\n*  "
-            msg += "\n*  ".join([ens.name for ens in extra])
-            msg += "\n"
+            msg += "Extra ensembles:\n"
+            for ens in extra:
+                msg += "*  " + ens.name + "\n"
         return msg
     
     def build_balance_partners(self):

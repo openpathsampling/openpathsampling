@@ -518,6 +518,53 @@ class testDefaultScheme(object):
         for ens in transBA.ensembles:
             assert_equal(init_cond_4[ens].trajectory, traj3.reversed)
 
+    def test_check_initial_conditions(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        # cheating a bit, since we know what this gives
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        assert_equal(len(init_cond), 7)
+        assert_equal(len(scheme.list_initial_ensembles()), 9)
+        (missing, extra) = scheme.check_initial_conditions(init_cond)
+        assert_equal(len(missing), 2)
+        assert_equal(len(extra), 0)
+        for ens in self.network.special_ensembles['minus'].keys():
+            assert_in([ens], missing)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        (missing, extra) = scheme.check_initial_conditions(init_cond)
+        assert_equal(len(missing), 2)
+        assert_equal(len(extra), 1)
+
+    @raises(AssertionError)
+    def test_assert_initial_conditions(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        scheme.assert_initial_conditions(init_cond)
+
+    def test_initial_conditions_report(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        expected = "Missing ensembles:\n"
+        expected += "*  [[MinusInterfaceEnsemble]]\n"*2
+        expected += "Extra ensembles:\n*  [LengthEnsemble]\n"
+        assert_equal(scheme.initial_conditions_report(init_cond), expected)
+
 
 class testLockedMoveScheme(object):
     def setup(self):
@@ -612,3 +659,13 @@ class testOneWayShootingMoveScheme(object):
         expected_unused = sum([specials[special_type].keys() 
                                for special_type in specials], [])
         assert_equal(set(expected_unused), set(unused))
+
+    def test_check_initial_conditions(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        assert_equal(len(scheme.list_initial_ensembles()), 6)
+        assert_equal(len(init_cond), 6)
+        scheme.assert_initial_conditions(init_cond)
+        assert_equal(scheme.initial_conditions_report(init_cond),
+                     "No missing ensembles.\nNo extra ensembles.\n")
