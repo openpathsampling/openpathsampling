@@ -497,16 +497,26 @@ class testDefaultScheme(object):
         assert_equal(init_cond_1[ms_outer_ens].trajectory, traj3)
 
         init_cond_2 = scheme.initial_conditions_from_trajectories([traj1])
+        init_cond_2.sanity_check()
         assert_equal(len(init_cond_2), 2)
+        assert_equal(init_cond_2[transAB.ensembles[0]].trajectory, traj1)
+        assert_equal(init_cond_2[transAB.ensembles[1]].trajectory, traj1)
 
         init_cond_3 = scheme.initial_conditions_from_trajectories([traj2],
                                                                   init_cond_2)
-        # assert_equal(len(init_cond_3), 3)
+        init_cond_3.sanity_check()
+        assert_equal(len(init_cond_3), 3)
+        assert_equal(init_cond_3[transAB.ensembles[0]].trajectory, traj1)
+        assert_equal(init_cond_3[transAB.ensembles[1]].trajectory, traj1)
+        assert_equal(init_cond_3[transAB.ensembles[2]].trajectory, traj2)
 
-        init_cond_4 = scheme.initial_conditions_from_trajectories([traj3])
+        init_cond_4 = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond_4.sanity_check()
         assert_equal(len(init_cond_4), 7)
-
-        raise SkipTest
+        for ens in transAB.ensembles:
+            assert_equal(init_cond_4[ens].trajectory, traj3)
+        for ens in transBA.ensembles:
+            assert_equal(init_cond_4[ens].trajectory, traj3.reversed)
 
 
 class testLockedMoveScheme(object):

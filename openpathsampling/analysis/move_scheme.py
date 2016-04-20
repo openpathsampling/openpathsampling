@@ -327,9 +327,13 @@ class MoveScheme(StorableNamedObject):
         if sampleset is None:
             sampleset = paths.SampleSet([])
 
+        if isinstance(trajectories, paths.Trajectory):
+            trajectories = [trajectories]
+
         for ens_list in ensembles_to_fill:
             if type(ens_list) is not list:
                 ens_list = [ens_list]
+            sample = None
             for ens in ens_list:
                 if ens in sampleset.ensemble_list():
                     break  # we've already got one!
