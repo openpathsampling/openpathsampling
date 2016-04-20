@@ -656,8 +656,8 @@ class SRTISScheme(DefaultScheme):
     """
     This gives exactly the DefaultMoveScheme, but as an SRTIS setup.
     """
-    def __init__(self, network, bias=None):
-        super(SRTISScheme, self).__init__(network)
+    def __init__(self, network, bias=None, engine=None):
+        super(SRTISScheme, self).__init__(network, engine)
         sr_minus_strat = strategies.SingleReplicaMinusMoveStrategy()
         sr_minus_strat.level = strategies.levels.SUPERGROUP # GROUP?
         # maybe this should be the default for that strategy anyway? using it
