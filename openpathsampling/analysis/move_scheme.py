@@ -313,7 +313,6 @@ class MoveScheme(StorableNamedObject):
         ensembles a, b, and c would return [a, b, c], or equivalently, [[a],
         [b], [c]]. Single-replica TIS would return [[a, b, c]].
         """
-        # TODO
         return list(self.find_used_ensembles(root))
 
 
@@ -322,7 +321,6 @@ class MoveScheme(StorableNamedObject):
         """
         Create a SampleSet with as many initial ensembles as possible.
         """
-        # TODO:
         ensembles_to_fill = self.list_initial_ensembles()
         if sampleset is None:
             sampleset = paths.SampleSet([])
@@ -370,9 +368,51 @@ class MoveScheme(StorableNamedObject):
         Check that the SampleSet can be initial conditions for this scheme.
         """
         ensembles_to_fill = self.list_initial_ensembles()
-        pass
+        samples = paths.SampleSet(sampleset)  # to make a copy
+        ensembles_filled = samples.ensemble_list()
+        missing = []
+        for ens_list in ensembles_to_fill:
+            if type(ens_list) is not list:
+                ens_list = [ens_list]
+            sample = None
+            for ens in ens_list:
+                if ens in samples.ensemble_list():
+                    sample = samples[ens]
+                    break
+            if sample is not None:
+                del samples[sample]
+            else:
+                missing.append(ens_list)
+        # missing, extra
+        return (missing, samples.ensemble_list())
 
+    def assert_initial_conditions(self, sampleset):
+        (missing, extras) = self.check_initial_conditions(sampleset)
+        msg = ""
+        if len(missing) > 0:
+            msg += " Missing ensembles: " + str(missing) + "\n"
+        if len(extras) > 0:
+            msg += " Extra ensembles: " + str(extras) + "\n"
+        if msg != "":
+            raise AssertionError("Bad initial conditions." + msg)
 
+    def initial_conditions_report(self, sampleset):
+        (missing, extras) = self.check_initial_conditions(sampleset)
+        msg = ""
+        if len(missing) == 0:
+            msg += "No missing ensembles.\n"
+        else:
+            msg += "Missing ensembles:\n*  "
+            msg += "\n*  ".join([ens.name for ens in missing])
+            msg += "\n"
+        if len(extra) == 0:
+            msg += "No extra ensembles.\n"
+        else:
+            msg += "Extra ensembles:\n*  "
+            msg += "\n*  ".join([ens.name for ens in extra])
+            msg += "\n"
+        return msg
+    
     def build_balance_partners(self):
         """
         Create list of balance partners for all movers in groups.
