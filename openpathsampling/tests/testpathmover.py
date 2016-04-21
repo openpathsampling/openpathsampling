@@ -4,7 +4,7 @@
 
 from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises)
+                        raises, assert_true)
 
 from openpathsampling.collectivevariable import CV_Function
 from openpathsampling.engines.trajectory import Trajectory
@@ -116,11 +116,8 @@ class testPathMover(object):
 class testShootingMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
-                                      -0.1, 0.2, 0.4, 0.6, 0.8,
-                                     ])
-        SampleMover.engine = self.dyn
-        op = CV_Function("myid", f=lambda snap :
-                             snap.coordinates[0][0])
+                                      -0.1, 0.2, 0.4, 0.6, 0.8])
+        op = CV_Function("myid", f=lambda snap : snap.coordinates[0][0])
         self.stateA = CVRangeVolume(op, -100, 0.0)
         self.stateB = CVRangeVolume(op, 0.65, 100)
         self.tps = ef.A2BEnsemble(self.stateA, self.stateB)
@@ -164,7 +161,8 @@ class testForwardShootMover(testShootingMover):
     def test_move(self):
         mover = ForwardShootMover(
             ensemble=self.tps,
-            selector=UniformSelector()
+            selector=UniformSelector(),
+            engine=self.dyn
         )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
@@ -177,7 +175,8 @@ class testForwardShootMover(testShootingMover):
     def test_move_toy_engine(self):
         mover = ForwardShootMover(
             ensemble=self.tps,
-            selector=UniformSelector()
+            selector=UniformSelector(),
+            engine=self.toy_engine
         )
         change = mover.move(self.toy_samp)
         newsamp = self.toy_samp + change
@@ -203,12 +202,19 @@ class testBackwardShootMover(testShootingMover):
     def test_move(self):
         mover = BackwardShootMover(
             ensemble=self.tps,
-            selector=UniformSelector()
+            selector=UniformSelector(),
+            engine=self.dyn
         )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp + change
         assert_equal(len(newsamp), 1)
+        assert_equal(len(self.init_samp[0].trajectory), 8)
+        assert_not_equal(newsamp[0].trajectory[0],
+                         self.init_samp[0].trajectory[0])
+        assert_equal(newsamp[0].trajectory[-1],
+                     self.init_samp[0].trajectory[-1])
+        assert_true(len(newsamp[0].trajectory) <= 8)
         assert_equal(change.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
         assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
@@ -241,7 +247,8 @@ class testOneWayShootingMover(testShootingMover):
     def test_mover_initialization(self):
         mover = OneWayShootingMover(
             ensemble=self.tps,
-            selector=UniformSelector()
+            selector=UniformSelector(),
+            engine=self.dyn
         )
         assert_equal(len(mover.movers), 2)
         assert_equal(isinstance(mover, RandomChoiceMover), True)
