@@ -222,7 +222,8 @@ class testBackwardShootMover(testShootingMover):
     def test_move_toy_engine(self):
         mover = BackwardShootMover(
             ensemble=self.tps,
-            selector=UniformSelector()
+            selector=UniformSelector(),
+            engine=self.toy_engine
         )
         change = mover.move(self.toy_samp)
         newsamp = self.toy_samp + change
@@ -470,7 +471,7 @@ class testRandomAllowedChoiceMover(object):
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
         self.dyn.initialized = True
-        SampleMover.engine = self.dyn
+        # SampleMover.engine = self.dyn
         op = CV_Function("myid", f=lambda snap :
                              snap.coordinates[0][0])
         stateA = CVRangeVolume(op, -100, 0.0)
@@ -493,7 +494,8 @@ class testRandomAllowedChoiceMover(object):
                             ensemble=self.ens2)
 
         self.shooter = ForwardShootMover(selector=UniformSelector(),
-                                         ensemble=self.ens2)
+                                         ensemble=self.ens2,
+                                         engine=self.dyn)
         self.pathrev = PathReversalMover(ensemble=self.ens1)
 
         ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
@@ -944,13 +946,14 @@ class testMinusMover(object):
             # goes to other state:
             1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
         ])
-        SampleMover.engine = self.dyn
+        # SampleMover.engine = self.dyn
         self.dyn.initialized = True
         self.innermost = paths.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
         self.mover = MinusMover(
             minus_ensemble=self.minus,
-            innermost_ensembles=self.innermost
+            innermost_ensembles=self.innermost,
+            engine=self.dyn
         )
         self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
         self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
@@ -990,6 +993,7 @@ class testMinusMover(object):
         samples = change.results
         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
         assert_equal(samples[0].ensemble, self.minus._segment_ensemble)
+        assert_equal(self.mover.engine, self.dyn)
         
 
     def test_successful_move(self):
@@ -1162,13 +1166,14 @@ class testSingleReplicaMinusMover(object):
             # goes to other state:
             1.16, 1.26, 1.16, -0.16, 1.16, 1.26, 1.16
         ])
-        SampleMover.engine = self.dyn
+        # SampleMover.engine = self.dyn
         self.dyn.initialized = True
         self.innermost = paths.TISEnsemble(volA, volB, volX)
         self.minus = paths.MinusInterfaceEnsemble(volA, volX)
         self.mover = SingleReplicaMinusMover(
             minus_ensemble=self.minus,
-            innermost_ensembles=self.innermost
+            innermost_ensembles=self.innermost,
+            engine=self.dyn
         )
         self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
         self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]

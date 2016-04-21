@@ -62,6 +62,7 @@ class testCommittorSimulation(object):
         import os
         if os.path.isfile(self.filename):
             os.remove(self.filename)
+        paths.EngineMover.default_engine = None
 
     def test_initialization(self):
         sim = self.simulation  # convenience
