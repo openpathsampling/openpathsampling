@@ -2,11 +2,9 @@ import svgwrite as svg
 from svgwrite.container import Group
 import os
 import openpathsampling as paths
-import networkx as nx
+
 import json
-import matplotlib.pyplot as plt
-import StringIO
-from networkx.readwrite import json_graph
+from collections import namedtuple
 
 
 class TreeRenderer(svg.Drawing):
@@ -26,26 +24,25 @@ class TreeRenderer(svg.Drawing):
     def c(cls):
         return ' '.join(cls)
 
-    def _x(self, x):
-        return self._w(x)
+    def x(self, x):
+        return self.w(x)
 
-    def _y(self, y):
-        return self._h(y)
+    def y(self, y):
+        return self.h(y)
 
-    def _w(self, y):
+    def w(self, y):
         return self.scale_x * y
 
-    def _h(self, y):
+    def h(self, y):
         return self.scale_y * y
 
-    def _xy(self, x, y):
-        return self._x(x), self._y(y)
+    def xy(self, x, y):
+        return self.x(x), self.y(y)
 
-    def _wh(self, w, h):
-        return self._w(w), self._h(h)
+    def wh(self, w, h):
+        return self.w(w), self.h(h)
 
     def connector(self, x, y, text="", cls=None):
-
         if cls is None:
             cls = list()
 
@@ -73,35 +70,35 @@ class TreeRenderer(svg.Drawing):
             group.set_desc(desc=json.dumps(data))
 
         group.add(self.rect(
-            insert=self._xy(x - 0.5 + padding, y - 0.3),
-            size=self._wh(1.0 * w - 2 * padding, 0.6),
+            insert=self.xy(x - 0.5 + padding, y - 0.3),
+            size=self.wh(1.0 * w - 2 * padding, 0.6),
         ))
 
         if extend_left:
             group.add(self.circle(
-                center=self._xy(x - 0.5, y),
-                r=self._w(padding)
+                center=self.xy(x - 0.5, y),
+                r=self.w(padding)
             ))
         if extend_right:
             group.add(self.circle(
-                center=(self._xy(x + w - 0.5, y)),
-                r=self._w(padding)
+                center=(self.xy(x + w - 0.5, y)),
+                r=self.w(padding)
             ))
 
         if extend_top:
             group.add(self.circle(
-                center=self._xy(x, y - 0.3),
-                r=self._w(padding)
+                center=self.xy(x, y - 0.3),
+                r=self.w(padding)
             ))
         if extend_bottom:
             group.add(self.circle(
-                center=(self._xy(x + w - 1.0, y + 0.3)),
-                r=self._w(padding)
+                center=(self.xy(x + w - 1.0, y + 0.3)),
+                r=self.w(padding)
             ))
 
         group.add(self.text(
             text=str(text)[:4],
-            insert=self._xy(x + (w - 1.0) / 2.0, y)
+            insert=self.xy(x + (w - 1.0) / 2.0, y)
         ))
 
         return group
@@ -124,45 +121,43 @@ class TreeRenderer(svg.Drawing):
         )
 
         group.add(self.line(
-            start=self._xy(x - 0.5 + padding, y),
-            end=self._xy(x - 0.5 + w - padding, y)
+            start=self.xy(x - 0.5 + padding, y),
+            end=self.xy(x - 0.5 + w - padding, y)
         ))
 
         if extend_left:
             group.add(self.circle(
-                center=self._xy(x - 0.5, y),
-                r=self._w(padding)
+                center=self.xy(x - 0.5, y),
+                r=self.w(padding)
             ))
             group.add(self.line(
-                start=self._xy(x - 0.5, y - 0.3),
-                end=self._xy(x - 0.5, y + 0.3)
+                start=self.xy(x - 0.5, y - 0.3),
+                end=self.xy(x - 0.5, y + 0.3)
             ))
 
         if extend_right:
             group.add(self.circle(
-                center=(self._xy(x + w - 0.5, y)),
-                r=self._w(padding)
+                center=(self.xy(x + w - 0.5, y)),
+                r=self.w(padding)
             ))
             group.add(self.line(
-                start=self._xy(x + w - 0.5, y - 0.3),
-                end=self._xy(x + w - 0.5, y + 0.3)
+                start=self.xy(x + w - 0.5, y - 0.3),
+                end=self.xy(x + w - 0.5, y + 0.3)
             ))
 
         group.add(self.text(
             text=str(text),
-            insert=self._xy(x + (w - 1.0) / 2.0, y),
+            insert=self.xy(x + (w - 1.0) / 2.0, y),
             class_='shadow'
         ))
         group.add(self.text(
             text=str(text),
-            insert=self._xy(x + (w - 1.0) / 2.0, y)
+            insert=self.xy(x + (w - 1.0) / 2.0, y)
         ))
 
         return group
 
-    def vertical_region(self, x, y, w=1.0, text="", align="middle",
-                        extend_top=True, extend_bottom=True, cls=None):
-
+    def vertical_region(self, x, y, w=1.0, text="", extend_top=True, extend_bottom=True, cls=None):
         if cls is None:
             cls = list()
 
@@ -177,33 +172,33 @@ class TreeRenderer(svg.Drawing):
         )
 
         group.add(self.line(
-            start=self._xy(x, y - 0.5 + gap),
-            end=self._xy(x, y + w - 1 + 0.5 - gap)
+            start=self.xy(x, y - 0.5 + gap),
+            end=self.xy(x, y + w - 1 + 0.5 - gap)
         ))
 
         if extend_top:
             group.add(self.circle(
-                center=self._xy(x, y - 0.5 + gap),
-                r=self._w(padding)
+                center=self.xy(x, y - 0.5 + gap),
+                r=self.w(padding)
             ))
             group.add(self.line(
-                start=self._xy(x - 0 * width, y - 0.5 + gap),
-                end=self._xy(x + width, y - 0.5 + gap)
+                start=self.xy(x - 0 * width, y - 0.5 + gap),
+                end=self.xy(x + width, y - 0.5 + gap)
             ))
 
         if extend_bottom:
             group.add(self.circle(
-                center=(self._xy(x, y + (w - 1.0) + 0.5 - gap)),
-                r=self._w(padding)
+                center=(self.xy(x, y + (w - 1.0) + 0.5 - gap)),
+                r=self.w(padding)
             ))
             group.add(self.line(
-                start=self._xy(x - 0 * width, y + w - 1.0 + 0.5 - gap),
-                end=self._xy(x + width, y + w - 1.0 + 0.5 - gap)
+                start=self.xy(x - 0 * width, y + w - 1.0 + 0.5 - gap),
+                end=self.xy(x + width, y + w - 1.0 + 0.5 - gap)
             ))
 
         group.add(self.text(
             text=str(text),
-            insert=self._xy(x - width, y + (w - 1.0) / 2.0)
+            insert=self.xy(x - width, y + (w - 1.0) / 2.0)
         ))
 
         return group
@@ -217,17 +212,16 @@ class TreeRenderer(svg.Drawing):
         if color is None:
             return self.rect(
                 class_=self.c(cls),
-                insert=self._xy(x - 0.5, y + 0.35),
-                size=self._wh(w, 0.1)
+                insert=self.xy(x - 0.5, y + 0.35),
+                size=self.wh(w, 0.1)
             )
         else:
             return self.rect(
                 class_=self.c(cls),
-                insert=self._xy(x - 0.5, y + 0.35),
-                size=self._wh(w, 0.1),
+                insert=self.xy(x - 0.5, y + 0.35),
+                size=self.wh(w, 0.1),
                 fill=color
             )
-
 
     def vertical_connector(self, x, y1, y2, cls=None):
         if cls is None:
@@ -239,8 +233,8 @@ class TreeRenderer(svg.Drawing):
 
         return self.line(
             class_=self.c(cls),
-            start=self._xy(x - 0.5, y1 + padding),
-            end=self._xy(x - 0.5, y2 - padding)
+            start=self.xy(x - 0.5, y1 + padding),
+            end=self.xy(x - 0.5, y2 - padding)
         )
 
     def vertical_hook(self, x1, y1, x2, y2, cls=None):
@@ -253,8 +247,8 @@ class TreeRenderer(svg.Drawing):
 
         return self.line(
             class_=self.c(cls),
-            start=self._xy(x1, y1 + padding + 0.3),
-            end=self._xy(x2, y2 - padding - 0.3)
+            start=self.xy(x1, y1 + padding + 0.3),
+            end=self.xy(x2, y2 - padding - 0.3)
         )
 
     def horizontal_connector(self, x1, x2, y, cls=None):
@@ -267,8 +261,8 @@ class TreeRenderer(svg.Drawing):
 
         return self.line(
             class_=self.c(cls),
-            start=self._xy(x1 + 0.5 + padding, y),
-            end=self._xy(x2 - 0.5, y)
+            start=self.xy(x1 + 0.5 + padding, y),
+            end=self.xy(x2 - 0.5, y)
         )
 
     def label(self, x, y, text, cls=None):
@@ -281,18 +275,18 @@ class TreeRenderer(svg.Drawing):
             class_=self.c(cls)
         )
 
-        group.translate(self._x(x), self._y(y))
+        group.translate(self.x(x), self.y(y))
 
         group2 = self.g(
             class_='shift'
         )
 
         group2.add(
-                self.text(
-                    text=str(text),
-                    insert=(0, 0)
-                )
+            self.text(
+                text=str(text),
+                insert=(0, 0)
             )
+        )
 
         group.add(
             group2
@@ -300,7 +294,7 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def vertical_label(self, x, y, w, text, cls=None):
+    def vertical_label(self, x, y, text, cls=None):
         if cls is None:
             cls = list()
 
@@ -327,27 +321,25 @@ class TreeRenderer(svg.Drawing):
 
         return self.rect(
             class_=self.c(cls),
-            insert=self._xy(x, y),
-            size=self._wh(w, h),
+            insert=self.xy(x, y),
+            size=self.wh(w, h),
         )
 
     def to_svg(self):
         return self.tostring()
 
-    def to_html(self, svg=None):
-        if svg is None:
-            svg = self.to_svg()
-
+    def to_html(self):
+        svg_source = self.to_svg()
         html = '<!DOCTYPE html><html style="margin:0px; padding:0px; width:100%;">' + \
-               svg + '<body style="margin:0px; padding:0px;"></body></html>'
+               svg_source + '<body style="margin:0px; padding:0px;"></body></html>'
 
         return html
 
     def _height(self):
-        return self._h(self.height) + self.margin * 2
+        return self.h(self.height) + self.margin * 2
 
     def _width(self):
-        return self._w(self.width) + self.margin * 2
+        return self.w(self.width) + self.margin * 2
 
     def write_html(self, file_name='tree.html'):
         with open(file_name, 'w') as f:
@@ -361,12 +353,20 @@ class TreeRenderer(svg.Drawing):
 
         os.system(bash_command)
 
-    def clear(self):
-        self.obj = []
-
-
 
 class Builder(object):
+    def __init__(self, additional_option_categories=None):
+        options = ['analysis', 'css', 'ui', 'format']
+        if additional_option_categories is not None:
+            options += additional_option_categories
+
+        option_tuple_class = namedtuple(
+            'optionstuple',
+            ' '.join(options)
+        )
+
+        self.options = option_tuple_class(**{opt: {} for opt in options})
+
     def svg(self):
         return self.render().tostring()
 
@@ -378,14 +378,17 @@ class Builder(object):
 
 
 class MoveTreeBuilder(Builder):
-    def __init__(self, storage=None):
+    def __init__(self):
+        super(MoveTreeBuilder, self).__init__()
+
         self.rejected = False
         self.p_x = dict()
         self.p_y = dict()
         self.obj = list()
-        self.storage = storage
 
-        yp = 0
+        self.ensembles = []
+        self.pathmover = None
+
         self.traj_ens_x = dict()
         self.traj_ens_y = dict()
 
@@ -395,17 +398,10 @@ class MoveTreeBuilder(Builder):
         self.ens_x = list()
         self.repl_x = list()
 
-        # css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
-        #
-        # with open(css_file, 'r') as content_file:
-        #     self.css_style = content_file.read()
-
         self.css_style = vis_css
-        self.options = {
-            'settings': {
-                'only_canonical': True
-            }
-        }
+        self.options.analysis['only_canonical'] = True
+
+        self.doc = None
 
     def set_ensembles(self, ensembles):
         self.ensembles = ensembles
@@ -428,8 +424,7 @@ class MoveTreeBuilder(Builder):
             class_='tree'
         )
 
-        tree = path.depth_pre_order(lambda this: this, only_canonical=self.options['settings']['only_canonical'])
-
+        tree = path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])
         total = len(tree)
 
         for yp, (level, sub_mp) in enumerate(tree):
@@ -520,7 +515,7 @@ class MoveTreeBuilder(Builder):
         max_level = 0
 
         for yp, (level, sub_mp) in enumerate(
-                path.depth_pre_order(lambda this: this, only_canonical=self.options['settings']['only_canonical'])):
+                path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
             if level > max_level:
                 max_level = level
 
@@ -536,11 +531,9 @@ class MoveTreeBuilder(Builder):
                         doc.connector(
                             ens_idx,
                             yp - 0.15,
-                            '',
                             cls=['input']
                         )
                     )
-    
                     show = True
 
                 if out_ens is None or None in out_ens or ens in out_ens:
@@ -548,10 +541,8 @@ class MoveTreeBuilder(Builder):
                         doc.connector(
                             ens_idx,
                             yp + 0.15,
-                            '',
                             cls=['output'])
                     )
-    
                     show = True
     
                 if show:
@@ -588,199 +579,206 @@ class MoveTreeBuilder(Builder):
 
 
 class PathTreeBuilder(Builder):
-    def __init__(self, storage, op=None, states=None):
+    def __init__(self):
+
+        super(PathTreeBuilder, self).__init__(['movers'])
         self.rejected = False
         self.p_x = dict()
         self.p_y = dict()
         self.obj = list()
-        self.storage = storage
         self.doc = None
 
         self.move_list = {}
         self.step_list = {}
         self.samp_list = {}
 
-        # css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
-        #
-        # with open(css_file, 'r') as content_file:
-        #     self.css_style = content_file.read()
-
         self.css_style = vis_css
 
-        self.op = op
-        self.show_redundant = False
-        if states is None:
-            states = []
-        self.states = states
+        self.states = []
+        self.op = None
 
-        self.options = {
-            'mover': {
-                paths.ReplicaExchangeMover: {
-                    'name': 'RepEx',
-                    'overlap': 'line',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': 'RepEx',
-                    'suffix': 'x',
-                    'label_position': 'left',
-                    'cls': ['repex']
-                },
-                paths.BackwardShootMover: {
-                    'name': 'Shooting',
-                    'overlap': 'none',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': '',
-                    'suffix': 'b',
-                    'label_position': 'left',
-                    'cls': ['shooting']
-                },
-                paths.ForwardShootMover: {
-                    'name': 'Shooting',
-                    'overlap': 'none',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': '',
-                    'suffix': 'f',
-                    'label_position': 'right',
-                    'cls': ['shooting']
-                },
-                paths.BackwardExtendMover: {
-                    'name': 'Extend',
-                    'overlap': 'line',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': 'Extend',
-                    'suffix': 'b',
-                    'label_position': 'left',
-                    'cls': ['extend']
-                },
-                paths.ForwardExtendMover: {
-                    'name': 'Extend',
-                    'overlap': 'line',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': 'Extend',
-                    'suffix': 'f',
-                    'label_position': 'right',
-                    'cls': ['extend']
-                },
-                paths.FinalSubtrajectorySelectMover: {
-                    'name': 'Truncate',
-                    'overlap': 'line',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': 'Trunc',
-                    'suffix': 't',
-                    'label_position': 'right',
-                    'cls': ['extend']
-                },
-                paths.FirstSubtrajectorySelectMover: {
-                    'name': 'Truncate',
-                    'overlap': 'line',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': 'Trunc',
-                    'suffix': 't',
-                    'label_position': 'left',
-                    'cls': ['extend']
-                },
-                paths.EnsembleHopMover: {
-                    'name': 'hop',
-                    'overlap': 'line',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': 'EnsembleHop',
-                    'suffix': 'h',
-                    'label_position': 'left',
-                    'cls': ['hop']
-                },
-                paths.PathReversalMover: {
-                    'name': 'reversal',
-                    'overlap': 'line',
-                    'fw': '',
-                    'bw': '',
-                    'overlap_label': 'Reversal',
-                    'suffix': 'r',
-                    'label_position': 'left',
-                    'cls': ['reversal']
-                },
-                'new': {
-                    'name': 'new',
-                    'overlap': 'line',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'suffix': '+',
-                    'overlap_label': 'New',
-                    'label_position': 'left',
-                    'cls': ['unknown']
-                },
-                'unknown': {
-                    'name': '???',
-                    'overlap': 'line',
-                    'fw': 'blocks',
-                    'bw': 'blocks',
-                    'overlap_label': '???',
-                    'suffix': '?',
-                    'label_position': 'left',
-                    'cls': ['repex']
-                }
+        self._samples = None
+        self._steps = None
+
+
+        self.options.movers.update({
+            paths.ReplicaExchangeMover: {
+                'name': 'RepEx',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': 'RepEx',
+                'suffix': 'x',
+                'label_position': 'left',
+                'cls': ['repex']
             },
-            'ui': {
-                'step': True,
-                'correlation': True,
-                'sample': True,
-                'virtual': False,
-                'cv': True,
-                'info': False
+            paths.BackwardShootMover: {
+                'name': 'Shooting',
+                'overlap': 'none',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': '',
+                'suffix': 'b',
+                'label_position': 'left',
+                'cls': ['shooting']
             },
-            'settings': {
-                'time_symmetric': True,
-                'flip_time_direction': False,
-                'join_blocks': False
+            paths.ForwardShootMover: {
+                'name': 'Shooting',
+                'overlap': 'none',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': '',
+                'suffix': 'f',
+                'label_position': 'right',
+                'cls': ['shooting']
             },
-            'css': {
-                'scale_x': 5,
-                'scale_y': 10,
-                'zoom': 1.0,
-                'horizontal_gap': False,
-                'width': 'inherit'
+            paths.BackwardExtendMover: {
+                'name': 'Extend',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': 'Extend',
+                'suffix': 'b',
+                'label_position': 'left',
+                'cls': ['extend']
+            },
+            paths.ForwardExtendMover: {
+                'name': 'Extend',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': 'Extend',
+                'suffix': 'f',
+                'label_position': 'right',
+                'cls': ['extend']
+            },
+            paths.FinalSubtrajectorySelectMover: {
+                'name': 'Truncate',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': 'Trunc',
+                'suffix': 't',
+                'label_position': 'right',
+                'cls': ['extend']
+            },
+            paths.FirstSubtrajectorySelectMover: {
+                'name': 'Truncate',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': 'Trunc',
+                'suffix': 't',
+                'label_position': 'left',
+                'cls': ['extend']
+            },
+            paths.EnsembleHopMover: {
+                'name': 'hop',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': 'EnsembleHop',
+                'suffix': 'h',
+                'label_position': 'left',
+                'cls': ['hop']
+            },
+            paths.PathReversalMover: {
+                'name': 'reversal',
+                'overlap': 'line',
+                'fw': '',
+                'bw': '',
+                'overlap_label': 'Reversal',
+                'suffix': 'r',
+                'label_position': 'left',
+                'cls': ['reversal']
+            },
+            'new': {
+                'name': 'new',
+                'overlap': 'blocks',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'suffix': '+',
+                'overlap_label': 'New',
+                'label_position': 'left',
+                'cls': ['unknown']
+            },
+            'unknown': {
+                'name': '???',
+                'overlap': 'line',
+                'fw': 'blocks',
+                'bw': 'blocks',
+                'overlap_label': '???',
+                'suffix': '?',
+                'label_position': 'left',
+                'cls': ['repex']
             }
-        }
+        })
+        self.options.ui.update({
+            'step': True,
+            'correlation': True,
+            'sample': True,
+            'virtual': False,
+            'cv': True,
+            'info': False
+        })
+        self.options.analysis.update({
+            'time_symmetric': True,
+            'flip_time_direction': False,
+            'joined_blocks': False
+        })
+        self.options.css.update({
+            'scale_x': 5,
+            'scale_y': 10,
+            'zoom': 1.0,
+            'horizontal_gap': False,
+            'width': 'inherit'
+        })
+        self.options.format.update({
+            'default_label': lambda x: hex(id(x))[-5:] + ' ',
+            'trajectory_label': None,
+            'sample_label': None,
+            'step_label': None,
+            'snapshot_label': None
+        })
 
     @staticmethod
     def construct_heritage(sample):
-        list_of_samples = []
+        return list(reversed(list(sample.heritage)))
 
-        samp = sample
+    @property
+    def samples(self):
+        return self._samples
 
-        while samp.parent is not None:
-            # just one sample so use this
-            list_of_samples.append(samp)
-            samp = samp.parent
-
-        # reverse to get origin first
-        return [samp for samp in reversed(list_of_samples)]
-
-    def set_samples(self, samples):
+    @samples.setter
+    def samples(self, samples):
         self._samples = samples
         self.analyze()
+
+    @property
+    def steps(self):
+        return self._steps
+
+    @steps.setter
+    def steps(self, steps):
+        self._steps = steps
 
     def analyze(self):
         samples = self._samples
         self.move_list = {}
         self.step_list = {}
+        self.matrix = {}
 
-        options = self.options
-        assume_reversed_as_same = options['settings']['time_symmetric']
-        flip_time_direction = self.options['settings']['flip_time_direction']
+        opts = self.options
+        assume_reversed_as_same = opts.analysis['time_symmetric']
+        flip_time_direction = opts.analysis['flip_time_direction']
 
-        for step in self.storage.steps:
-            for ch in step.change:
-                if ch.samples is not None:
-                    for trial in ch.samples:
-                        self.step_list[trial] = step
-                        self.move_list[trial] = ch
+        if self.steps is not None:
+            for step in self.steps:
+                for ch in step.change:
+                    if ch.samples is not None:
+                        for trial in ch.samples:
+                            self.step_list[trial] = step
+                            self.move_list[trial] = ch
 
         self.samp_list = {}
         p_x = dict()
@@ -796,6 +794,7 @@ class PathTreeBuilder(Builder):
 
             overlap_reversed = False
             index_bw = None
+            index_fw = None
 
             for snapshot in range(len(traj)):
                 snap = traj[snapshot]
@@ -813,7 +812,6 @@ class PathTreeBuilder(Builder):
                 new_sample = True
                 shift_bw = 0
                 shift_fw = 0
-                shift = 0
             else:
                 for snapshot in range(len(traj) - 1, -1, -1):
                     snap = traj[snapshot]
@@ -821,14 +819,10 @@ class PathTreeBuilder(Builder):
                         connect_fw = p_x[snap] if snap in p_x else p_x[snap.reversed]
                         index_fw = snapshot
                         shift_fw = connect_fw - snapshot
-                        # print 'F', snapshot, connect_fw, shift_fw, snap
                         break
 
                 if shift_bw != shift_fw:
-                    # index_bw, index_fw = index_fw, index_bw
-
                     overlap_reversed = True
-                    connect_bw, connect_fw = connect_fw, connect_bw
 
                 # now we know that the overlap is between (including) [connect_bw, connect_fw]
                 # and the trajectory looks like [bw, ...] + [old, ...] + [fw, ...]
@@ -841,7 +835,6 @@ class PathTreeBuilder(Builder):
                 # this can be checked by index_bw > index_fw or shift_fw != shift_bw
 
             p_x = {}
-
 
             if flip_time_direction and overlap_reversed:
                 # reverse the time and adjust the shifting
@@ -871,18 +864,47 @@ class PathTreeBuilder(Builder):
                 'time_direction': time_direction
             }
 
+    def _write_snapshot_block(self, traj, x, y, first, last, rejected):
+        p_x = self._p_x
+        p_y = self._p_y
+
+        if rejected:
+            return
+
+        for pos, snapshot in enumerate(traj[first:last + 1]):
+            if self.options.analysis['time_symmetric']:
+                if (snapshot not in p_x and snapshot.reversed not in p_x) or \
+                        snapshot in p_x and p_x[snapshot] != x + pos + first or \
+                        snapshot.reversed in p_x and p_x[snapshot.reversed] != x + pos + first:
+                    p_x[snapshot] = x + pos + first
+                    p_y[snapshot] = y
+            else:
+                if snapshot not in p_x or p_x[snapshot] != x + pos + first:
+                    p_x[snapshot] = x + pos + first
+                    p_y[snapshot] = y
+
     def render(self):
         samples = self._samples
         doc = TreeRenderer(self.css_style)
         self.doc = doc
 
-        doc.scale_x = self.options['css']['scale_x']
-        doc.scale_y = self.options['css']['scale_y']
-        doc.horizontal_gap = 0.05 if self.options['css']['horizontal_gap'] else 0.0
-        assume_reversed_as_same = self.options['settings']['time_symmetric']
-        join_blocks = self.options['settings']['join_blocks']
+        opts = self.options
 
-        if self.options['ui']['info']:
+        doc.scale_x = opts.css['scale_x']
+        doc.scale_y = opts.css['scale_y']
+        if type(opts.css['horizontal_gap']) is bool:
+            doc.horizontal_gap = 0.05 if opts.css['horizontal_gap'] else 0.0
+        else:
+            doc.horizontal_gap = opts.css['horizontal_gap']
+
+        assume_reversed_as_same = opts.analysis['time_symmetric']
+        join_blocks = opts.analysis['joined_blocks']
+
+        trj_format = opts.format['trajectory_label'] or opts.format['default_label'] or (lambda obj: '')
+        smp_format = opts.format['sample_label'] or opts.format['default_label'] or (lambda obj: '')
+        snp_format = opts.format['snapshot_label'] or opts.format['default_label'] or (lambda obj: '')
+
+        if opts.ui['info']:
             doc.defs.add(doc.script(
                 content='''
                    box = $('.opstree .infobox text')[0];
@@ -904,10 +926,11 @@ class PathTreeBuilder(Builder):
                      });
             '''))
 
-        # /#                  kernel.execute('tv.frame = ' + $(this).data('snp')); /#
-
         p_x = dict()
         p_y = dict()
+
+        self._p_x = p_x
+        self._p_y = p_y
 
         min_range_x = 10000
         max_range_x = -10000
@@ -915,9 +938,7 @@ class PathTreeBuilder(Builder):
         group = doc.g(
             class_='tree'
         )
-
-        options = self.options
-
+        
         for pos_y, sample in enumerate(samples):
             info = self.samp_list[sample]
             mover_type = info['mover_type']
@@ -926,6 +947,8 @@ class PathTreeBuilder(Builder):
             index_fw = info['index_fw']
             index_bw = info['index_bw']
             time_direction = info['time_direction']
+
+            rejected = False
 
             bw_cls = 'bw'
             fw_cls = 'fw'
@@ -940,15 +963,13 @@ class PathTreeBuilder(Builder):
                 bw_cls, fw_cls = fw_cls, bw_cls
 
             if new_sample:
-                view_options = options['mover']['new']
-            elif mover_type in options['mover']:
-                view_options = options['mover'][mover_type]
+                view_options = opts.movers['new']
+            elif mover_type in opts.movers:
+                view_options = opts.movers[mover_type]
             else:
-                view_options = options['mover']['unknown']
+                view_options = opts.movers['unknown']
 
-            # print shift, index_bw, index_fw
-
-            traj_str = str(self.storage.idx(sample.trajectory)) + view_options['suffix']
+            traj_str = str(trj_format(traj)) + view_options['suffix'].upper()
 
             cls = [] + view_options['cls']
 
@@ -957,6 +978,7 @@ class PathTreeBuilder(Builder):
                 accepted = move.accepted
                 if not accepted:
                     cls += ['rejected']
+                    rejected = True
 
             if view_options['label_position'] == 'left':
                 group.add(
@@ -968,10 +990,10 @@ class PathTreeBuilder(Builder):
                               cls=cls + ['right'])
                 )
 
-            if 0 < index_bw < len(traj) -1:
+            if 0 < index_bw < len(traj) - 1:
                 if traj[index_bw] in p_y:
                     pos_y_old = p_y[traj[index_bw]]
-                elif assume_reversed_as_same  and traj[index_bw].reversed in p_y:
+                elif assume_reversed_as_same and traj[index_bw].reversed in p_y:
                     pos_y_old = p_y[traj[index_bw].reversed]
                 else:
                     pos_y_old = None
@@ -1009,21 +1031,10 @@ class PathTreeBuilder(Builder):
                             view_options['overlap_label'],
                             w=index_fw - index_bw + 1,
                             extend_left=False,
-                            extend_right=True,
                             cls=cls + ['overlap', 'whiteback']
                         ))
 
-                for pos, snapshot in enumerate(traj[index_bw:index_fw + 1]):
-                    if assume_reversed_as_same:
-                        if (snapshot not in p_x and snapshot.reversed not in p_x) or \
-                                snapshot in p_x and p_x[snapshot] != shift + pos + index_bw or \
-                                snapshot.reversed in p_x and p_x[snapshot.reversed] != shift + pos + index_bw:
-                            p_x[snapshot] = shift + pos + index_bw
-                            p_y[snapshot] = pos_y
-                    else:
-                        if snapshot not in p_x or p_x[snapshot] != shift + pos + index_bw:
-                            p_x[snapshot] = shift + pos + index_bw
-                            p_y[snapshot] = pos_y
+                self._write_snapshot_block(traj, shift, pos_y, index_bw, index_fw, rejected)
 
             if view_options['bw'] in ['line'] or view_options['bw'] in ['blocks'] and join_blocks:
                 if view_options['bw'] in ['line']:
@@ -1037,18 +1048,20 @@ class PathTreeBuilder(Builder):
                             pos_y,
                             w=index_bw,
                             extend_left=False,
-                            extend_right=True,
                             cls=cls + [bw_cls]
                         ))
 
-                for pos, snapshot in enumerate(traj[0:index_bw]):
-                    p_x[snapshot] = shift + pos
-                    p_y[snapshot] = pos_y
+                self._write_snapshot_block(traj, shift, pos_y, 0, index_bw - 1, rejected)
 
             if view_options['fw'] in ['line'] or view_options['fw'] in ['blocks'] and join_blocks:
                 if view_options['fw'] in ['line']:
                     group.add(
-                        doc.horizontal_region(shift + index_fw + 1, pos_y, len(traj) - (index_fw + 1), cls=cls + [fw_cls])
+                        doc.horizontal_region(
+                            shift + index_fw + 1,
+                            pos_y,
+                            len(traj) - (index_fw + 1),
+                            cls=cls + [fw_cls]
+                        )
                     )
                 else:
                     group.add(
@@ -1056,23 +1069,20 @@ class PathTreeBuilder(Builder):
                             shift + index_fw + 1,
                             pos_y,
                             w=len(traj) - (index_fw + 1),
-                            extend_left=True,
                             extend_right=False,
                             cls=cls + [fw_cls]
                         ))
 
-                for pos, snapshot in enumerate(traj[index_fw + 1:]):
-                    p_x[snapshot] = shift + pos + index_fw + 1
-                    p_y[snapshot] = pos_y
+                self._write_snapshot_block(traj, shift, pos_y, index_fw + 1, len(traj) - 1, rejected)
 
             for pos, snapshot in enumerate(traj):
                 pos_x = shift + pos
 
-                if self.options['ui']['info']:
+                if opts.ui['info']:
                     data = {
-                        'smp': self.storage.idx(sample),
-                        'snp': self.storage.idx(snapshot),
-                        'trj': self.storage.idx(sample.trajectory)
+                        'smp': smp_format(sample),
+                        'snp': snp_format(snapshot),
+                        'trj': trj_format(sample.trajectory)
                     }
                 else:
                     data = {}
@@ -1080,7 +1090,7 @@ class PathTreeBuilder(Builder):
                 if snapshot not in p_y or True:
                     txt = ''
 
-                    if self.op is not None and self.options['ui']['cv']:
+                    if self.op is not None and opts.ui['cv']:
                         txt = str(self.op(snapshot))
 
                     b_cls = []
@@ -1093,23 +1103,7 @@ class PathTreeBuilder(Builder):
                         elif view_options['overlap'] == 'blocks':
                             b_cls += ['overlap']
 
-                    if len(b_cls) > 0:
-                        group.add(
-                            doc.block(
-                                pos_x,
-                                pos_y,
-                                txt,
-                                extend_left=pos > 0,
-                                extend_right=pos < len(traj) - 1,
-                                cls=cls + b_cls,
-                                data=data
-                            ))
-
-                        p_x[snapshot] = pos_x
-                        p_y[snapshot] = pos_y
-
-                    else:
-                        if self.options['ui']['virtual']:
+                        if len(b_cls) > 0:
                             group.add(
                                 doc.block(
                                     pos_x,
@@ -1117,9 +1111,25 @@ class PathTreeBuilder(Builder):
                                     txt,
                                     extend_left=pos > 0,
                                     extend_right=pos < len(traj) - 1,
-                                    cls=cls + ['virtual'],
+                                    cls=cls + b_cls,
                                     data=data
                                 ))
+                            if not rejected:
+                                p_x[snapshot] = pos_x
+                                p_y[snapshot] = pos_y
+
+                        else:
+                            if opts.ui['virtual']:
+                                group.add(
+                                    doc.block(
+                                        pos_x,
+                                        pos_y,
+                                        txt,
+                                        extend_left=pos > 0,
+                                        extend_right=pos < len(traj) - 1,
+                                        cls=cls + ['virtual'],
+                                        data=data
+                                    ))
 
                 if pos_x < min_range_x:
                     min_range_x = pos_x
@@ -1131,10 +1141,7 @@ class PathTreeBuilder(Builder):
         self.p_y = p_y
 
         min_x, max_x = self._get_min_max(self.p_x)
-        # min_y, max_y = self._get_min_max(self.p_y)
-
-        min_y = 0
-        max_y = len(samples) - 1
+        min_y, max_y = 0, len(samples) - 1
 
         matrix = self._to_matrix()
 
@@ -1162,7 +1169,7 @@ class PathTreeBuilder(Builder):
                             doc.shade(left, yp, xp - left + 1, color=color)
                         )
 
-        group.translate(32 + doc._w(1 - min_range_x), doc._h(1))
+        group.translate(32 + doc.w(1 - min_range_x), doc.h(1))
 
         tree_group = group
 
@@ -1170,28 +1177,28 @@ class PathTreeBuilder(Builder):
             class_='legend'
         )
 
-        if self.options['ui']['info']:
+        if opts.ui['info']:
             group.add(
                 doc.label(0, -1, 'Information', cls=['infobox'])
             )
 
         columns = 0
-        tree_scale = self.options['css']['scale_x']
+        tree_scale = opts.css['scale_x']
         doc.scale_x = 32
 
-        if self.options['ui']['correlation']:
+        if opts.ui['correlation']:
             columns += 1
             cor_x = -columns
         else:
             cor_x = None
 
-        if self.options['ui']['sample']:
+        if opts.ui['sample']:
             columns += 1
             smp_x = -columns
         else:
             smp_x = None
 
-        if self.options['ui']['step']:
+        if opts.ui['step']:
             columns += 1
             cyc_x = -columns
         else:
@@ -1225,11 +1232,19 @@ class PathTreeBuilder(Builder):
 
         if len(samples) > 0:
             prev = samples[0].trajectory
+            cls = ['tableline']
+            if sample in self.move_list:
+                move = self.step_list[sample].change
+                accepted = move.accepted
+                if not accepted:
+                    cls += ['rejected']
+
             for tc, s in enumerate(samples):
+
                 group.add(
                     doc.rect(
-                        class_=doc.c(['tableline']),
-                        insert=doc._xy(-0.5 - columns, 1 + tc - 0.45),
+                        class_=doc.c(cls),
+                        insert=doc.xy(-0.5 - columns, 1 + tc - 0.45),
                         size=(
                             width,
                             doc.scale_y * 0.9
@@ -1244,7 +1259,6 @@ class PathTreeBuilder(Builder):
                                     cor_x,
                                     old_tc,
                                     1 + tc - old_tc,
-                                    "",
                                     cls=['correlation']
                                 )
                             )
@@ -1255,7 +1269,7 @@ class PathTreeBuilder(Builder):
                 if smp_x is not None:
                     group.add(
                         doc.label(smp_x, 1 + tc, str(
-                            self.storage.idx(s)))
+                            trj_format(s)))
                     )
 
                 if cyc_x is not None:
@@ -1275,7 +1289,6 @@ class PathTreeBuilder(Builder):
                     cor_x,
                     old_tc,
                     1 + len(samples) - old_tc,
-                    "",
                     extend_bottom=False,
                     cls=['correlation']))
 
@@ -1283,7 +1296,7 @@ class PathTreeBuilder(Builder):
         group_all.add(group)
         group_all.add(tree_group)
 
-        zoom = self.options['css']['zoom']
+        zoom = opts.css['zoom']
 
         group_all.scale(zoom)
 
@@ -1301,7 +1314,7 @@ class PathTreeBuilder(Builder):
         )
 
         # set width
-        w_opt = self.options['css']['width']
+        w_opt = opts.css['width']
         if w_opt == 'inherit':
             doc['width'] = width * zoom
         else:
@@ -1309,7 +1322,8 @@ class PathTreeBuilder(Builder):
 
         return doc
 
-    def _get_min_max(self, d):
+    @staticmethod
+    def _get_min_max(d):
         if len(d) > 0:
             return min(d.values()), max(d.values())
         else:
@@ -1319,8 +1333,7 @@ class PathTreeBuilder(Builder):
         min_x, max_x = self._get_min_max(self.p_x)
         min_y, max_y = self._get_min_max(self.p_y)
 
-        matrix = [[None] * (max_x - min_x + 1) for n in
-                  range(max_y - min_y + 1)]
+        matrix = [[None] * (max_x - min_x + 1) for n in range(max_y - min_y + 1)]
 
         for s in self.p_x:
             px = self.p_x[s]
@@ -1329,170 +1342,8 @@ class PathTreeBuilder(Builder):
 
         return matrix
 
-
-class SVGDiGraph(nx.DiGraph):
-    def _repr_svg_(self):
-        plt.ioff()  # turn off interactive mode
-        fig = plt.figure(figsize=(2, 2))
-        ax = fig.add_subplot(111)
-        nx.shell(self, ax=ax)
-        output = StringIO.StringIO()
-        fig.savefig(output, format='svg')
-        plt.ion()  # turn on interactive mode
-        return output.getvalue()
-
-
-class MoveTreeNX(object):
-    """Class to create a networkX based representation of a pathmover and change
-
-    """
-
-    def __init__(self, pathmover):
-        self.pathmover = pathmover
-        self._G = None
-
-    @property
-    def _enumeration(self):
-        return enumerate(self.pathmover.depth_post_order(lambda this: this))
-
-    @property
-    def G(self):
-        if self._G is None:
-            G = nx.DiGraph()
-
-            node_list = dict()
-
-            for idx, data in self._enumeration:
-                level, node = data
-                node_list[node] = idx
-                G.add_node(idx, name=node.name)
-
-            for idx, data in self._enumeration:
-                level, node = data
-                subnodes = node.submovers
-                for subnode in subnodes:
-                    G.add_edge(node_list[node], node_list[subnode])
-
-            self._G = G
-
-        return self._G
-
-    def draw(self):
-        G = self.G
-        pos = nx.spring_layout(G)
-
-        for idx, data in self._enumeration:
-            level, node = data
-            nx.networkx_nodes(
-                G,
-                pos,
-                nodelist=[idx],
-                node_color='r',
-                node_size=500,
-                alpha=0.8
-            )
-
-        plt.axis('off')
-        plt.show()
-
-        return G
-
-    @property
-    def json_tree(self):
-        data = json_graph.tree_data(self.G, len(self.G) - 1)
-        return json.dumps(data)
-
-    @property
-    def json_node_link(self):
-        data = json_graph.node_link_data(self.G)
-        return json.dumps(data)
-
-    def d3vis(self):
-        return '''
-        <style>
-
-        .node circle {
-          fill: #fff;
-          stroke: steelblue;
-          stroke-width: 1.5px;
-        }
-
-        .node {
-          font: 10px sans-serif;
-          stroke: black;
-          stroke-width:0.35px;
-        }
-
-        .link {
-          fill: none;
-          stroke: #ccc;
-          stroke-width: 1.5px;
-        }
-
-        </style>
-        <div><svg id="d3-circ-tree-svg"></svg></div>
-        ''' + '<script>var graph = ' + self.json_tree + ';</script>' + \
-               '''
-        <script src="http://d3js.org/d3.v3.min.js"></script>
-
-        <script>
-
-//        require.config({paths: {d3: "http://d3js.org/d3.v3.min"}});
-
-//        require(["d3"], function(d3) {
-        (function() {
-            var diameter = 1200;
-            var padding = 0;
-
-            var tree = d3.layout.tree()
-                .size([360, diameter / 2 - 120])
-                .separation(function(a, b) { return (a.parent == b.parent ? 1 : 2) / a.depth; });
-
-            var nodes = tree.nodes(graph),
-                links = tree.links(nodes);
-
-            var diagonal = d3.svg.diagonal.radial()
-                .projection(function(d) { return [d.y, d.x / 360 * Math.PI]; });
-
-            var vertical = d3.svg.diagonal.radial()
-                .projection(function(d) { return [-d.x, -d.y / 360 * Math.PI]; });
-
-            var svg = d3.select("#d3-circ-tree-svg")
-                .attr("width", (diameter + padding))
-                .attr("height", (diameter + padding) / 2)
-              .append("g")
-                .attr("transform", "translate(" + (diameter + padding) / 2 + "," + (0*(diameter + padding) / 2 + 50) + ")rotate(90)");
-
-            var link = svg.selectAll(".link")
-              .data(links)
-              .enter().append("path")
-              .attr("class", "link")
-              .attr("d", diagonal);
-
-            link.append("circle")
-              .attr("r", 4.5);
-
-            var node = svg.selectAll(".node")
-              .data(nodes)
-            .enter().append("g")
-              .attr("class", "node")
-              .attr("transform", function(d) { return "rotate(" + (d.x / 2 - 90) + ")translate(" + d.y + ")"; })
-
-            node.append("circle")
-              .attr("r", 4.5);
-
-            node.append("text")
-              .attr("dy", ".31em")
-              .attr("text-anchor", function(d) { return d.x < 180 ? "start" : "end"; })
-              .attr("transform", function(d) { return d.x < 180 ? "translate(8)" : "rotate(180)translate(-8)"; })
-              .textual(function(d) { return d.name; });
-
-            d3.select(self.frameElement).style("height", diameter + 50 + "px");
-//        });
-        })();
-
-        </script>
-        '''
+    def use_storage_indices(self, storage):
+        self.options.format['default_label'] = storage.idx
 
 
 class ReplicaHistoryTree(PathTreeBuilder):
@@ -1500,7 +1351,7 @@ class ReplicaHistoryTree(PathTreeBuilder):
     Simplified PathTreeBuilder for the common case of tracking a replica
     over some steps.
 
-    Intended behaviors: 
+    Intended behaviors:
     * The samples are determined during initialization.
     * The defaults are as similar to the old tree representation as
       reasonable.
@@ -1510,32 +1361,21 @@ class ReplicaHistoryTree(PathTreeBuilder):
       require an extra method.
     """
 
-    def __init__(self, storage, steps, replica):
-        # TODO: if we implement substorages (see #330) we can remove the
+    def __init__(self, steps, replica):
         # steps variable here and just iterate over storage.
-        super(ReplicaHistoryTree, self).__init__(storage)
+        super(ReplicaHistoryTree, self).__init__()
         self.replica = replica
-        self.steps = steps
         self._accepted_samples = None
         self._trial_samples = None
 
         # defaults:
         self.rejected = False
-        self.show_redundant = False
         self.states = []
 
-        # build the tree 
-        self.set_samples(self.samples)
+        self.steps = steps
 
     def rebuild(self):
-        """Rebuild the internal structures.
-
-        It seems like some changes in the visualization require a complete
-        rebuild. That's not ideal. If that can be changed, this function
-        could be removed.
-
-        """
-        self.set_samples(self.samples)
+        self.analyze()
 
     @property
     def accepted_samples(self):
@@ -1570,13 +1410,6 @@ class ReplicaHistoryTree(PathTreeBuilder):
             self._trial_samples = samples
 
         return self._trial_samples
-
-    @property
-    def samples(self):
-        if self.rejected:
-            return self.trial_samples
-        else:
-            return self.accepted_samples
 
     @property
     def decorrelated_trajectories(self):
@@ -1779,3 +1612,8 @@ vis_css = r"""
     fill: gray;
 }
 """
+
+# css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
+#
+# with open(css_file, 'r') as content_file:
+#     vis_css = content_file.read()
