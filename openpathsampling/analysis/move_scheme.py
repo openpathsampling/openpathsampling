@@ -319,7 +319,25 @@ class MoveScheme(StorableNamedObject):
     def initial_conditions_from_trajectories(self, trajectories,
                                              sampleset=None):
         """
-        Create a SampleSet with as many initial ensembles as possible.
+        Create a SampleSet with as many initial samples as possible.
+
+        Parameters
+        ----------
+        trajectories : list of :class:`.Trajectory` or :class:`.Trajectory`
+            the input trajectories to use
+        sampleset : :class:`.SampleSet`, optional
+            if given, add samples to this sampleset. Default is None, which
+            means that this will start a new sampleset.
+
+        Returns
+        -------
+        :class:`.SampleSet`
+            sample set with samples for every initial ensemble for this
+            scheme that could be satisfied by the given trajectories
+
+        See Also
+        --------
+        list_initial_ensembles
         """
         ensembles_to_fill = self.list_initial_ensembles()
         if sampleset is None:
@@ -365,7 +383,30 @@ class MoveScheme(StorableNamedObject):
 
     def check_initial_conditions(self, sampleset):
         """
-        Check that the SampleSet can be initial conditions for this scheme.
+        Check for missing or extra ensembles for initial conditions.
+
+        This is primary used programmatically as a reusable function for
+        several use cases where we need this information. See functions
+        under "see also" for examples of such cases.
+
+        Parameters
+        ----------
+        sampleset : :class:`.SampleSet`
+            proposed set of initial conditions for this movescheme
+
+        Returns
+        -------
+        missing : list of list of :class:`.Ensemble`
+            ensembles needed by the move scheme and missing in the sample
+            set, in the format used by `list_initial_ensembles`
+        extra : list of :class:`.Ensemble`
+            ensembles in the sample set that are not used by the 
+
+        See Also
+        --------
+        list_initial_ensembles
+        assert_initial_conditions
+        initial_conditions_report
         """
         ensembles_to_fill = self.list_initial_ensembles()
         samples = paths.SampleSet(sampleset)  # to make a copy
@@ -386,17 +427,56 @@ class MoveScheme(StorableNamedObject):
         # missing, extra
         return (missing, samples.ensemble_list())
 
-    def assert_initial_conditions(self, sampleset):
+    def assert_initial_conditions(self, sampleset, allow_extras=False):
+        """
+        Assertion that the given sampleset is good for initial conditions.
+
+        Parameters
+        ----------
+        sampleset : :class:`.SampleSet`
+            proposed set of initial conditions for this movescheme
+        allow_extras : bool
+            whether extra ensembles are allowed, default False, meaning the
+            extra ensembles raise an assertion error
+
+        Raises
+        ------
+        AssertionError
+            the proposed initial conditions are not valid for this scheme
+
+        See Also
+        --------
+        check_initial_conditions
+        initial_conditions_report
+        """
         (missing, extras) = self.check_initial_conditions(sampleset)
         msg = ""
         if len(missing) > 0:
             msg += "Missing ensembles: " + str(missing) + "\n"
-        if len(extras) > 0:
+        if len(extras) > 0 and not allow_extras:
             msg += "Extra ensembles: " + str(extras) + "\n"
         if msg != "":
             raise AssertionError("Bad initial conditions.\n" + msg)
 
     def initial_conditions_report(self, sampleset):
+        """
+        String report on whether the given SampleSet gives good initial
+        conditions.
+
+        This is intended to provide a user-friendly tool for interactive
+        setup.
+
+        Parameters
+        ----------
+        sampleset : :class:`.SampleSet`
+            proposed set of initial conditions for this movescheme
+
+        Returns
+        -------
+        str
+            a human-readable string describing if (and which) ensembles are
+            missing
+        """
         (missing, extra) = self.check_initial_conditions(sampleset)
         msg = ""
         if len(missing) == 0:
