@@ -16,7 +16,6 @@ Topics
 
 This part covers discussions about various topics.
 
-
-Ensembles vs Volumes
---------------------
+.. toctree::
+   transitions_and_networks
 

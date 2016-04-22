@@ -21,7 +21,9 @@ encounted ideas like multiple state path sampling methods and multiple
 interface set transition interface sampling.
 
 A longer discussion of networks, and the associated concept of transitions,
-can be found in the file *TODO: add current ipynb here*
+can be found in the file `Transitions and Networks
+<guides/transitions_and_networks.html>`_.
+
 
 
 Abstract class
