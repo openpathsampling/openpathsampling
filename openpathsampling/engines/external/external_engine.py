@@ -77,14 +77,13 @@ class ExternalEngine(peng.DynamicsEngine):
         self._traj_num += 1
         self.frame_num = 0
         self.set_filenames(self._traj_num)
-        self.write_frame_to_file(self.input_file, self.current_snapshot)
+        self.write_frame_to_file(self.input_file, self.current_snapshot, "w")
 
         cmd = shlex.split(self.engine_command())
         try:
             # TODO: add the ability to have handlers for stdin and stdout
             self.proc = psutil.Popen(shlex.split(self.engine_command()),
-                                     preexec_fn=os.setsid
-                                    )
+                                     preexec_fn=os.setsid)
         except OSError:
             pass #TODO: need to handle this, but do what? Probably reraise
 
@@ -129,7 +128,11 @@ class ExternalEngine(peng.DynamicsEngine):
 
     def write_frame_to_file(self, filename, snapshot, mode="a"):
         """Writes given snapshot to file."""
-        pass
+        f = open(filename, mode)
+        snapshot_text = "{pos} {vel}\n".format(pos=snapshot.xyz[0][0],
+                                               vel=snapshot.xyz[0][0])
+        f.write(snapshot_text)
+        f.close()
 
     def who_to_kill(self):
         """Returns psutil.Process object to send kill signal to.

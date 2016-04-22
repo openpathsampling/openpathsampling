@@ -29,7 +29,8 @@ class testExternalEngine(object):
             'engine_sleep' : 0,
             'name_prefix' : "test"
         }
-        self.template = peng.toy.Snapshot()
+        self.template = peng.toy.Snapshot(coordinates=np.array([[0.0]]),
+                                          velocities=np.array([[1.0]]))
         self.slow_engine = ExternalEngine(slow_options, self.template)
         self.fast_engine = ExternalEngine(fast_options, self.template)
         self.ensemble = paths.LengthEnsemble(5)
