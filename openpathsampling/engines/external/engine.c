@@ -11,6 +11,13 @@ int main(int argc, char ** argv)
     // argv[0] is program name
     int milliseconds = atoi(argv[1]);
     FILE * f = (argc == 2) ? stdout : fopen(argv[2], "w");
+    double initial_position = 0.0;
+    double velocity = 1.0;
+    if (argc == 4) {
+        // this means we have an input file given last
+        FILE * inf = fopen(argv[3], "r");
+        // TODO: set initial value
+    }
 
     struct timespec sleep_time, foo;
 
@@ -18,8 +25,10 @@ int main(int argc, char ** argv)
     sleep_time.tv_nsec = (milliseconds % 1000) * 1000000;
 
     int max_steps = 1000000;
+    double position = initial_position;
     int i; for (i=0; i<max_steps; i++) {
-        fprintf(f, "0.0\n"); fflush(f); 
+        position += velocity;
+        fprintf(f, "%lf %lf\n", position, velocity); fflush(f); 
         nanosleep(&sleep_time, &foo);
     }
 }

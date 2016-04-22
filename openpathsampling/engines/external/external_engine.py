@@ -1,4 +1,5 @@
 import openpathsampling.engines as peng
+import numpy as np
 import os
 
 import logging
@@ -114,9 +115,14 @@ class ExternalEngine(peng.DynamicsEngine):
             snap = None
         else:
             try:
-                floatval = float(line)
-                snap = peng.toy.Snapshot(coordinates=[[floatval]],
-                                         velocities=[[1.0]])
+                splitted = line.split()
+                if len(splitted) == 2:
+                    coords = float(splitted[0])
+                    vels = float(splitted[1])
+                else:
+                    raise ValueError()  # force the raise we then ignore
+                snap = peng.toy.Snapshot(coordinates=np.array([[coords]]),
+                                         velocities=np.array([[vels]]))
             except ValueError:
                 snap = "partial"
         return snap

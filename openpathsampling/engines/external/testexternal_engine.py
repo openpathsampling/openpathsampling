@@ -54,7 +54,7 @@ class testExternalEngine(object):
     def test_read_frame_from_file(self):
         eng = self.slow_engine
         testf = open('testf1.data', 'w')
-        testf.write("1.0\n2.0\n3.0\n")
+        testf.write("1.0 1.0\n2.0 1.0\n3.0 1.0\n")
         testf.close()
         snap2 = eng.read_frame_from_file("testf1.data", 1)
         assert_equal(snap2.xyz[0][0], 2.0)
@@ -69,7 +69,7 @@ class testExternalEngine(object):
     def test_read_frame_while_writing_file(self):
         eng = self.slow_engine
         testf = open('testf2.data', 'w')
-        testf.write("6.0\ninvalid")
+        testf.write("6.0 1.0\ninvalid")
         testf.close()
         snap1 = eng.read_frame_from_file("testf2.data", 0)
         assert_equal(snap1.xyz[0][0], 6.0)
@@ -77,13 +77,18 @@ class testExternalEngine(object):
         assert_equal(snap2, "partial")
         os.remove('testf2.data')
 
+        testf = open('testf3.data', 'w')
+        testf.write("6.0 ")
+        testf.close()
+        snap3 = eng.read_frame_from_file("testf3.data", 0)
+        assert_equal(snap3, "partial")
+        os.remove('testf3.data')
 
     def test_generate_next_frame(self):
         eng = self.slow_engine
         eng.start(self.template)
         traj = eng.generate_next_frame()
         eng.stop(traj)
-
 
     def test_slow_run(self):
         # generate traj in LengthEnsemble if frames only come every 100ms
