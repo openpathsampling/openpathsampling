@@ -35,6 +35,23 @@ See below for a complete list of available notebooks.
 
 ## Examples
 
+#### Simple TPS examples
+
+Transition path sampling (TPS) is the simplest path sampling algorithm.
+These examples demostrate just how easy it is to set up a TPS simulation
+using OpenPathSampling.
+
+* [`simple_tps.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/simple_tps.ipynb)
+    This example does flexible-pathlength TPS. You need to start with (a) a
+    working MD engine for your system; (b) state definitions for your
+    system; and (c) a trajectory (not necessarily physically real, but as
+    close as possible) connecting the initial and final states for your
+    system.
+* [`simple_fixed_length_tps.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/simple_fixed_length_tps.ipynb)
+    This example is for fixed-pathlength TPS. In addition to the information
+    from the flexible-pathlength version, you also need to know an
+    appropriate pathlength to use: here we use 5000 frames.
+
 #### MSTIS example (3 parts)
 
 This is the main example illustrating the usage of OpenPathSampling for a
