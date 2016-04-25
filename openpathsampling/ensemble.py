@@ -269,6 +269,43 @@ class Ensemble(StorableNamedObject):
         '''
         return True        
 
+    def strict_can_append(self, trajectory, trusted=False):
+        """
+        Returns true if the trajectory can be the beginning of a trajectory
+        in the ensemble.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to test
+
+        Returns
+        -------
+        bool
+            True if and only if the given trajectory can be the beginning of
+            a trajectory in the ensemble.
+        """
+        # default behavior is to be the same as can_append
+        return self.can_append(trajectory, trusted)
+
+    def strict_can_prepend(self, trajectory, trusted=False):
+        """
+        Returns true if the trajectory can be the end of a trajectory in the
+        ensemble.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to test
+
+        Returns
+        -------
+        bool
+            True if and only if the given trajectory can be the end of a
+            trajectory in the ensemble.
+        """
+        # default behavior is to be the same as can_prepend
+        return self.can_prepend(trajectory, trusted)
 
     def find_valid_slices(
             self,
@@ -336,9 +373,9 @@ class Ensemble(StorableNamedObject):
 
                 can_append_tt = False
                 if len(tt) != old_tt_len + 1:
-                    can_append_tt = self.can_append(tt)
+                    can_append_tt = self.strict_can_append(tt)
                 else:
-                    can_append_tt = self.can_append(tt, trusted=True)
+                    can_append_tt = self.strict_can_append(tt, trusted=True)
                 old_tt_len = len(tt)
 
                 if end < length and can_append_tt:
@@ -793,6 +830,44 @@ class EnsembleCombination(Ensemble):
         else:
             return self.fnc(self.ensemble1.can_prepend(trajectory, trusted), 
                             self.ensemble2.can_prepend(trajectory, trusted))
+
+    def strict_can_append(self, trajectory, trusted=False):
+        if Ensemble.use_shortcircuit:
+            a = self.ensemble1.strict_can_append(trajectory, trusted)
+            res_true = self._continue_fnc(a, True)
+            res_false = self._continue_fnc(a, False)
+            if res_false == res_true:
+                return res_true
+            else:
+                b = self.ensemble2.strict_can_append(trajectory, trusted)
+                if b == True:
+                    return res_true
+                else:
+                    return res_false
+        else:
+            return self.fnc(
+                self.ensemble1.strict_can_append(trajectory, trusted),
+                self.ensemble2.strict_can_append(trajectory, trusted)
+            )
+
+    def strict_can_prepend(self, trajectory, trusted=False):
+        if Ensemble.use_shortcircuit:
+            a = self.ensemble1.strict_can_prepend(trajectory, trusted)
+            res_true = self._continue_fnc(a, True)
+            res_false = self._continue_fnc(a, False)
+            if res_false == res_true:
+                return res_true
+            else:
+                b = self.ensemble2.strict_can_prepend(trajectory, trusted)
+                if b == True:
+                    return res_true
+                else:
+                    return res_false
+        else:
+            return self.fnc(
+                self.ensemble1.strict_can_prepend(trajectory, trusted),
+                self.ensemble2.strict_can_prepend(trajectory, trusted)
+            )
 
     def __str__(self):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
