@@ -19,16 +19,29 @@ def index_to_string(index):
 class TransitionNetwork(StorableNamedObject):
     """
     Subclasses of TransitionNetwork are the main way to set up calculations
+
+    Attributes
+    ----------
+    sampling_ensembles
+    all_ensembles
+    sampling_transitions
     """
     def __init__(self):
         super(TransitionNetwork, self).__init__()
 
     @property
     def sampling_ensembles(self):
+        """
+        Ensembles from the sampling transitions, excluding special ensembles.
+        """
         return sum([t.ensembles for t in self.sampling_transitions], [])
 
     @property
     def all_ensembles(self):
+        """
+        All ensembles in the sampling transitions, including special
+        ensembles.
+        """
         all_ens = self.sampling_ensembles
         for special_dict in self.special_ensembles.values():
             all_ens.extend(special_dict.keys())
@@ -36,6 +49,7 @@ class TransitionNetwork(StorableNamedObject):
 
     @property
     def sampling_transitions(self):
+        """The transitions used in sampling"""
         try:
             return self._sampling_transitions
         except AttributeError:
@@ -43,9 +57,35 @@ class TransitionNetwork(StorableNamedObject):
 
 
 
-class TPSNetwork(TransitionNetwork):
-    def __init__(self, initial_states, final_states):
-        super(TPSNetwork, self).__init__()
+class GeneralizedTPSNetwork(TransitionNetwork):
+    """General class for TPS-based method.
+
+    The main differences between fixed-length and flexible-length TPS is a
+    small change in the ensemble. In implementation, this means that they
+    use different transition classes, and that they have slightly different
+    function signatures (fixed-length requires a length argument).
+
+    To simplify this, and to make the docstrings readable, we make each
+    class into a simple subclass of this GeneralizedTPSNetwork, which acts
+    as an abstract class that manages most of the relevant code.
+
+    Parameters
+    ----------
+    initial_states : list of :class:`.Volume`
+        acceptable initial states
+    final_states : list of :class:`.Volume`
+        acceptable final states
+
+    Attributes
+    ----------
+    TransitionType : :class:`paths.Transition`
+        Type of transition used here. Sets, for example, fixed or flexible
+        pathlengths.
+    """
+    TransitionType = NotImplemented
+    def __init__(self, initial_states, final_states, **kwargs):
+        # **kwargs gets passed to the transition
+        super(GeneralizedTPSNetwork, self).__init__()
         try:
             iter(initial_states)
         except TypeError:
@@ -67,10 +107,10 @@ class TPSNetwork(TransitionNetwork):
             all_final = paths.join_volumes(final_states)
             all_final.name = "|".join([v.name for v in final_states])
         self._sampling_transitions = [
-            paths.TPSTransition(all_initial, all_final)
+            self.TransitionType(all_initial, all_final, **kwargs)
         ]
         self.transitions = {
-            (initial, final) : paths.TPSTransition(initial, final)
+            (initial, final) : self.TransitionType(initial, final, **kwargs)
             for (initial, final) in itertools.product(initial_states,
                                                       final_states)
             if initial != final
@@ -85,18 +125,19 @@ class TPSNetwork(TransitionNetwork):
 
     @property
     def all_states(self):
+        """list of all initial and final states"""
         return list(set(self.initial_states + self.final_states))
 
     @classmethod
     def from_dict(cls, dct):
         network = cls.__new__(cls)
-        super(TPSNetwork, network).__init__()
+        super(GeneralizedTPSNetwork, network).__init__()
         network._sampling_transitions = dct['x_sampling_transitions']
         network.transitions = dct['transitions']
         return network
 
     @classmethod
-    def from_state_pairs(cls, state_pairs):
+    def from_state_pairs(cls, state_pairs, **kwargs):
         sampling = []
         transitions = {}
         initial_states = []
@@ -107,25 +148,73 @@ class TPSNetwork(TransitionNetwork):
             if len(sampling) == 1:
                 sampling[0].add_transition(initial, final)
             elif len(sampling) == 0:
-                sampling = [paths.TPSTransition(initial, final)]
+                sampling = [cls.TransitionType(initial, final, **kwargs)]
             else:
                 raise RuntimeError("More than one sampling transition for TPS?")
 
-            transitions[(initial, final)] = paths.TPSTransition(initial, final)
+            transitions[(initial, final)] = cls.TransitionType(initial, final,
+                                                               **kwargs)
         
-        network = cls.__new__(cls)
-        super(cls, network).__init__()
-        network._sampling_transitions = sampling
-        network.transitions = transitions
+        dict_result = {
+            'x_sampling_transitions' : sampling,
+            'transitions' : transitions
+        }
+        dict_result.update(kwargs)
+        network = cls.from_dict(dict_result)
         network.initial_states = initial_states
         network.final_states = final_states
         return network
 
 
     @classmethod
-    def from_states_all_to_all(cls, states):
-        return cls(states, states)
+    def from_states_all_to_all(cls, states, **kwargs):
+        return cls(states, states, **kwargs)
 
+
+class TPSNetwork(GeneralizedTPSNetwork):
+    """
+    Class for flexible pathlength TPS networks (2-state or multiple state).
+    """
+    TransitionType = paths.TPSTransition
+    # we implement these functions entirely to fix the signature (super's
+    # version allow arbitrary kwargs) so the documentation can read them.
+    def __init__(self, initial_states, final_states):
+        super(TPSNetwork, self).__init__(initial_states, final_states)
+
+    @classmethod
+    def from_state_pairs(cls, state_pairs):
+        return super(TPSNetwork, cls).from_state_pairs(state_pairs)
+
+    @classmethod
+    def from_states_all_to_all(cls, states):
+        return super(TPSNetwork, cls).from_states_all_to_all(states)
+
+
+class FixedLengthTPSNetwork(GeneralizedTPSNetwork):
+    """
+    Class for fixed pathlength TPS networks (2-states or multiple states).
+    """
+    TransitionType = paths.FixedLengthTPSTransition
+    # as with TPSNetwork, we don't really need to add these functions.
+    # However, without them, we need to explicitly name `length` as
+    # length=value in these functions. This frees us of that, and gives us
+    # clearer documentation.
+    def __init__(self, initial_states, final_states, length):
+        super(FixedLengthTPSNetwork, self).__init__(initial_states,
+                                                    final_states,
+                                                    length=length)
+
+    @classmethod
+    def from_state_pairs(cls, state_pairs, length):
+        return super(FixedLengthTPSNetwork, cls).from_state_pairs(
+            state_pairs, length=length
+        )
+
+    @classmethod
+    def from_states_all_to_all(cls, states, length):
+        return super(FixedLengthTPSNetwork, cls).from_states_all_to_all(
+            states, length=length
+        )
 
 
 class TISNetwork(TransitionNetwork):
