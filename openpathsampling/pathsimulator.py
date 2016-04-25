@@ -363,13 +363,15 @@ class FullBootstrapping(PathSimulator):
 
         self.transition_shooters = [
             paths.OneWayShootingMover(selector=paths.UniformSelector(), 
-                                      ensemble=ens) 
+                                      ensemble=ens,
+                                      engine=self.engine) 
             for ens in transition.ensembles
         ]
 
         self.extra_shooters = [
             paths.OneWayShootingMover(selector=paths.UniformSelector(), 
-                                      ensemble=ens) 
+                                      ensemble=ens,
+                                      engine=self.engine) 
             for ens in self.extra_ensembles
         ]
         self.snapshot = snapshot.copy()
@@ -569,7 +571,7 @@ class CommittorSimulation(PathSimulator):
                  initial_snapshots=None, direction=None):
         super(CommittorSimulation, self).__init__(storage)
         self.engine = engine
-        paths.EngineMover.engine = engine
+        paths.EngineMover.default_engine = engine
         self.states = states
         self.randomizer = randomizer
         try:
