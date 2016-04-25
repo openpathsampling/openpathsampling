@@ -77,11 +77,7 @@ class TPSTransition(Transition):
         if name is not None:
             self.name = name
         if not hasattr(self, "ensembles"):
-            self.ensembles = [paths.SequentialEnsemble([
-                paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
-                paths.AllOutXEnsemble(stateA | stateB),
-                paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
-            ])]
+            self.ensembles = [self._tps_ensemble(stateA, stateB)]
 
     def to_dict(self):
         return {
@@ -97,16 +93,44 @@ class TPSTransition(Transition):
         mytrans.ensembles = dct['ensembles']
         return mytrans
 
-    def add_transition(self, stateA, stateB):
-        new_ens = paths.SequentialEnsemble([
+    def _tps_ensemble(self, stateA, stateB):
+        return paths.SequentialEnsemble([
             paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
             paths.AllOutXEnsemble(stateA | stateB),
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
+
+    def add_transition(self, stateA, stateB):
+        new_ens = self._tps_ensemble(stateA, stateB)
         try:
             self.ensembles[0] = self.ensembles[0] | new_ens
         except AttributeError:
             self.ensembles = [new_ens]
+
+
+class FixedLengthTPSTransition(TPSTransition):
+    """Transition using fixed length TPS ensembles"""
+    def __init__(self, stateA, stateB, length, name=None):
+        self.length = length
+        super(FixedLengthTPSTransition, self).__init__(stateA, stateB, name)
+
+    def to_dict(self):
+        dct = super(FixedLengthTPSTransition, self).to_dict()
+        dct['length'] = self.length
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        mytrans = super(FixedLengthTPSTransition, cls).from_dict(dct)
+        mytrans.length = dct['length']
+        return mytrans
+    
+    def _tps_ensemble(self, stateA, stateB):
+        return paths.SequentialEnsemble([
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(stateA),
+            paths.LengthEnsemble(self.length - 2), 
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(stateB)
+        ])
 
 
 class TISTransition(Transition):

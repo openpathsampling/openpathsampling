@@ -131,6 +131,7 @@ class testShootingPointAnalysis(object):
         import os
         if os.path.isfile(self.filename):
             os.remove(self.filename)
+        paths.EngineMover.default_engine = None # set by Committor
 
     def test_shooting_point_analysis(self):
         assert_equal(len(self.analyzer), 2)

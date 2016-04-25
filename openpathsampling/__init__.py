@@ -1,16 +1,20 @@
 from analysis.move_scheme import (
     MoveScheme, DefaultScheme, LockedMoveScheme, OneWayShootingMoveScheme
 )
-from analysis.network import (
-    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork
+
+from analysis.tis_analysis import (
+    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
 )
+
+from analysis.network import (
+    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
+    FixedLengthTPSNetwork
+)
+
 from analysis.replica_network import (
     ReplicaNetwork, trace_ensembles_for_replica,
     trace_replicas_for_ensemble, condense_repeats,
     ReplicaNetworkGraph
-)
-from analysis.tis_analysis import (
-    TISTransition, Transition, TPSTransition
 )
 
 from analysis.shooting_point_analysis import (
