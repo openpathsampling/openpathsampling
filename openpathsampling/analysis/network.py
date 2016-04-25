@@ -95,6 +95,8 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         except TypeError:
             final_states = [final_states]
 
+        self.special_ensembles = {None : {}}
+
         self.initial_states = initial_states
         self.final_states = final_states
 
