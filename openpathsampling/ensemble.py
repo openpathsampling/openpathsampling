@@ -702,6 +702,7 @@ class NegatedEnsemble(Ensemble):
     '''
     Negates an Ensemble and simulates a `not` statement
     '''
+    # TODO: this whole concept is false and this should be removed
     def __init__(self, ensemble):
         super(NegatedEnsemble, self).__init__()
         self.ensemble = ensemble
@@ -885,11 +886,13 @@ class IntersectionEnsemble(EnsembleCombination):
 
 
 class SymmetricDifferenceEnsemble(EnsembleCombination):
+    # TODO: this is not yet supported. Should be removed. ~DWHS
     def __init__(self, ensemble1, ensemble2):
         super(SymmetricDifferenceEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
 
 class RelativeComplementEnsemble(EnsembleCombination):
+    # TODO: this is not yet supported. Should be removed. ~DWHS
     def __init__(self, ensemble1, ensemble2):
         super(RelativeComplementEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
 
@@ -1675,7 +1678,16 @@ class WrappedEnsemble(Ensemble):
                                              trusted)
 
     def can_prepend(self, trajectory, trusted=None):
-        return self._new_ensemble.can_prepend(self._alter(trajectory))
+        return self._new_ensemble.can_prepend(self._alter(trajectory),
+                                              trusted)
+
+    def strict_can_append(self, trajectory, trusted=None):
+        return self._new_ensemble.strict_can_append(self._alter(trajectory),
+                                                    trusted)
+
+    def strict_can_prepend(self, trajectory, trusted=None):
+        return self._new_ensemble.strict_can_prepend(self._alter(trajectory),
+                                                     trusted)
 
 
 class SlicedTrajectoryEnsemble(WrappedEnsemble):
@@ -1741,6 +1753,11 @@ class SuffixTrajectoryEnsemble(WrappedEnsemble):
     def can_append(self, trajectory, trusted=None):
         raise RuntimeError("SuffixTrajectoryEnsemble.can_append is nonsense.")
 
+    def strict_can_append(self, trajectory, trusted=None):
+        # was overridden in WrappedEnsemble: here should raise same error as
+        # can_append does
+        return self.can_append(trajectory, trusted)
+
 
 class PrefixTrajectoryEnsemble(WrappedEnsemble):
     '''
@@ -1779,6 +1796,11 @@ class PrefixTrajectoryEnsemble(WrappedEnsemble):
 
     def can_prepend(self, trajectory, trusted=None):
         raise RuntimeError("PrefixTrajectoryEnsemble.can_prepend is nonsense.")
+
+    def strict_can_prepend(self, trajectory, trusted=None):
+        # was overridden in WrappedEnsemble: here should raise same error as
+        # can_append does
+        return self.can_prepend(trajectory, trusted)
 
 
 class ReversedTrajectoryEnsemble(WrappedEnsemble):
