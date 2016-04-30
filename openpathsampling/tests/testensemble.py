@@ -200,6 +200,18 @@ class testPartOutXEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.leaveX, ttraj[test], res, failmsg)
 
+    def test_can_append(self):
+        self._test_everything(self.leaveX.can_append, default=True)
+
+    def test_can_prepend(self):
+        self._test_everything(self.leaveX.can_prepend, default=True)
+
+    def test_strict_can_append(self):
+        self._test_everything(self.leaveX.strict_can_append, default=True)
+
+    def test_strict_can_prepend(self):
+        self._test_everything(self.leaveX.strict_can_prepend, default=True)
+
     def test_leaveX_0(self):
         """PartOutXEnsemble treatment of zero-length trajectory"""
         assert_equal(self.leaveX(paths.Trajectory([])), False)
@@ -224,6 +236,45 @@ class testAllInXEnsemble(EnsembleTest):
                 res = True
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.inX, ttraj[test], res, failmsg)
+
+    def test_can_append(self):
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX.can_append, ttraj[test], res, failmsg)
+
+    def test_can_prepend(self):
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX.can_prepend, ttraj[test], res,
+                              failmsg)
+
+    def test_strict_can_append(self):
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX.strict_can_append, ttraj[test], res,
+                              failmsg)
+
+    def test_strict_can_prepend(self):
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX.strict_can_prepend, ttraj[test], res,
+                              failmsg)
 
     def test_inX_0(self):
         """AllInXEnsemble treatment of zero-length trajectory"""
