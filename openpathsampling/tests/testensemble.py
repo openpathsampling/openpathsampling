@@ -301,6 +301,44 @@ class testAllOutXEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.outX, ttraj[test], res, failmsg)
 
+    def test_can_append(self):
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX.can_append, ttraj[test], res, failmsg)
+
+    def test_can_prepend(self):
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX.can_prepend, ttraj[test], res, failmsg)
+
+    def test_strict_can_append(self):
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX.strict_can_append, ttraj[test], res,
+                              failmsg)
+
+    def test_strict_can_prepend(self):
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX.strict_can_prepend, ttraj[test],
+                              res, failmsg)
+
     def test_outX_0(self):
         """AllOutXEnsemble treatment of zero-length trajectory"""
         assert_equal(self.outX(paths.Trajectory([])), False)
@@ -325,6 +363,18 @@ class testPartInXEnsemble(EnsembleTest):
                 res = False
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.hitX, ttraj[test], res, failmsg)
+
+    def test_can_append(self):
+        self._test_everything(self.hitX.can_append, default=True)
+
+    def test_can_prepend(self):
+        self._test_everything(self.hitX.can_prepend, default=True)
+
+    def test_strict_can_append(self):
+        self._test_everything(self.hitX.strict_can_append, default=True)
+
+    def test_strict_can_prepend(self):
+        self._test_everything(self.hitX.strict_can_prepend, default=True)
 
     def test_hitX_0(self):
         """PartInXEnsemble treatment of zero-length trajectory"""
