@@ -1130,7 +1130,7 @@ class SequentialEnsemble(Ensemble):
         return subtraj_first+1
 
 
-    def can_append(self, trajectory, trusted=False):
+    def _generic_can_append(self, trajectory, trusted=False, strict=False):
         # treat this like we're implementing a regular expression parser ...
         # .*ensemble.+ ; but we have to do this for all possible matches
         # There are three tests we consider:
@@ -1260,7 +1260,7 @@ class SequentialEnsemble(Ensemble):
                     if ens_first == final_ens:
                         logger.debug("Started with the last ensemble, got nothin'")
                         return False
-                    else:
+                    elif strict is False:
                         logger.debug(
                             "Reassigning all frames, starting with ensemble " +
                             str(ens_first)
@@ -1268,10 +1268,21 @@ class SequentialEnsemble(Ensemble):
                         ens_first += 1
                         ens_num = ens_first
                         subtraj_first = 0
-                        self.update_cache(cache, ens_num, ens_first, subtraj_first)
+                        self.update_cache(cache, ens_num, ens_first,
+                                          subtraj_first)
+                    else:
+                        logger.debug(
+                            "First ensemble fails and strict -- return false"
+                        )
+                        return False
 
+    def can_append(self, trajectory, trusted=False):
+        return self._generic_can_append(trajectory, trusted, strict=False)
 
-    def can_prepend(self, trajectory, trusted=False):
+    def strict_can_append(self, trajectory, trusted=False):
+        return self._generic_can_append(trajectory, trusted, strict=True)
+
+    def _generic_can_prepend(self, trajectory, trusted=False, strict=False):
         # based on .can_append(); see notes there for algorithm details
         cache = self._cache_can_prepend
         if trusted:
@@ -1393,7 +1404,7 @@ class SequentialEnsemble(Ensemble):
                     if ens_final == first_ens:
                         logger.debug("Started with the last ensemble, got nothin'")
                         return False
-                    else:
+                    elif strict is False:
                         logger.debug(
                             "Reassigning all frames, starting with ensemble " +
                             str(ens_final)
@@ -1401,7 +1412,19 @@ class SequentialEnsemble(Ensemble):
                         ens_final -= 1
                         ens_num = ens_final
                         subtraj_final = len(trajectory)
-                        self.update_cache(cache, ens_num, ens_final, subtraj_final)
+                        self.update_cache(cache, ens_num, ens_final,
+                                          subtraj_final)
+                    else:
+                        logger.debug(
+                            "First ensemble fails and strict -- return false"
+                        )
+                        return False
+
+    def can_prepend(self, trajectory, trusted=False):
+        return self._generic_can_prepend(trajectory, trusted, strict=False)
+
+    def strict_can_prepend(self, trajectory, trusted=False):
+        return self._generic_can_prepend(trajectory, trusted, strict=True)
 
     def __str__(self):
         head = "[\n"
