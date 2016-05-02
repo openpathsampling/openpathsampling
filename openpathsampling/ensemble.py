@@ -1130,7 +1130,7 @@ class SequentialEnsemble(Ensemble):
         return subtraj_first+1
 
 
-    def _generic_can_append(self, trajectory, trusted=False, strict=False):
+    def _generic_can_append(self, trajectory, trusted, strict):
         # treat this like we're implementing a regular expression parser ...
         # .*ensemble.+ ; but we have to do this for all possible matches
         # There are three tests we consider:
@@ -1282,7 +1282,7 @@ class SequentialEnsemble(Ensemble):
     def strict_can_append(self, trajectory, trusted=False):
         return self._generic_can_append(trajectory, trusted, strict=True)
 
-    def _generic_can_prepend(self, trajectory, trusted=False, strict=False):
+    def _generic_can_prepend(self, trajectory, trusted, strict):
         # based on .can_append(); see notes there for algorithm details
         cache = self._cache_can_prepend
         if trusted:

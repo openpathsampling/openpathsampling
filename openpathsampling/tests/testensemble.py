@@ -525,14 +525,6 @@ class testSequentialEnsemble(EnsembleTest):
                                     self.outX,
                                     self.inX & self.length1 ]
         )
-        self.minus = SequentialEnsemble([
-            self.inX & self.length1,
-            self.outX & self.leaveX0,
-            self.inX & self.length1,
-            self.inX0 | self.length0,
-            self.outX & self.leaveX0,
-            self.inX & self.length1
-        ])
         self.tis = SequentialEnsemble([
             self.inX & self.length1,
             self.outX & self.leaveX0,
@@ -642,82 +634,119 @@ class testSequentialEnsemble(EnsembleTest):
             self._single_test(self.pseudo_tis.can_append, 
                                 ttraj[test], results[test], failmsg)
 
+    def test_strict_can_append_tis(self):
+        results = {
+            'upper_in_out' : True,
+            'lower_in_out' : True,
+            'upper_in_out_in' : False,
+            'lower_in_out_in' : False,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : False,
+            'lower_out_out_out' : False,
+            'upper_out_in' : False,
+            'lower_out_in' : False,
+            'upper_out' : False,
+            'lower_out' : False,
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False
+        }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.pseudo_tis.strict_can_append, 
+                                ttraj[test], results[test], failmsg)
+
     def test_can_append_pseudominus(self):
         """SequentialEnsemble as Pseudo-MinusEnsemble knows when it can append"""
-        results =   {   'upper_in_out' : True,
-                        'lower_in_out' : True,
-                        'upper_in_out_in' : True,
-                        'lower_in_out_in' : True,
-                        'upper_in' : True,
-                        'lower_in' : True,
-                        'upper_in_in_in' : True,
-                        'lower_in_in_in' : True,
-                        'upper_out_out_out' : True,
-                        'lower_out_out_out' : True,
-                        'upper_out_in' : True,
-                        'lower_out_in' : True,
-                        'upper_out' : True,
-                        'lower_out' : True,
-
-                        'upper_in_out_in_in' : True,
-                        'lower_in_out_in_in' : True,
-                        'upper_in_out_in_out_in' : False,
-                        'lower_in_out_in_out_in' : False,
-                        'upper_in_out_in_in_out' : True,
-                        'lower_in_out_in_in_out' : True,
-                        'upper_out_in_out' : True,
-                        'lower_out_in_out' : True,
-                        'upper_out_in_in_out' : True,
-                        'lower_out_in_in_out' : True,
-                        'upper_out_in_out_in': False,
-                        'lower_out_in_out_in': False,
-                        'upper_out_in_in_out_in' : False,
-                        'lower_out_in_in_out_in' : False,
-                        'upper_in_cross_in' : True,
-                        'lower_in_cross_in' : True,
-                        'upper_in_cross_in_cross' : True,
-                        'lower_in_cross_in_cross' : True,
-                        'upper_cross_in_cross_in' : False,
-                        'lower_cross_in_cross_in' : False,
-                        'upper_in_cross_in_cross_in' : False,
-                        'lower_in_cross_in_cross_in' : False
-                    }   
+        results = {
+            'upper_in_out' : True,
+            'lower_in_out' : True,
+            'upper_in_out_in' : True,
+            'lower_in_out_in' : True,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : True,
+            'lower_in_in_in' : True,
+            'upper_out_out_out' : True,
+            'lower_out_out_out' : True,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : True,
+            'lower_out' : True,
+            'upper_in_out_in_in' : True,
+            'lower_in_out_in_in' : True,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False,
+            'upper_in_out_in_in_out' : True,
+            'lower_in_out_in_in_out' : True,
+            'upper_out_in_out' : True,
+            'lower_out_in_out' : True,
+            'upper_out_in_in_out' : True,
+            'lower_out_in_in_out' : True,
+            'upper_out_in_out_in': False,
+            'lower_out_in_out_in': False,
+            'upper_out_in_in_out_in' : False,
+            'lower_out_in_in_out_in' : False,
+            'upper_in_cross_in' : True,
+            'lower_in_cross_in' : True,
+            'upper_in_cross_in_cross' : True,
+            'lower_in_cross_in_cross' : True,
+            'upper_cross_in_cross_in' : False,
+            'lower_cross_in_cross_in' : False,
+            'upper_in_cross_in_cross_in' : False,
+            'lower_in_cross_in_cross_in' : False
+        }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus.can_append, 
                                 ttraj[test], results[test], failmsg)
 
-    def test_can_append_minus(self):
-        results = {'upper_in_cross_in' : True,
-                   'lower_in_cross_in' : True,
-                   'upper_in_cross_in_cross' : True,
-                   'lower_in_cross_in_cross' : True,
-                   'upper_cross_in_cross_in' : False,
-                   'lower_cross_in_cross_in' : False,
-                   'upper_in_cross_in_cross_in' : False,
-                   'lower_in_cross_in_cross_in' : False
-                  }
+    def test_strict_can_append_pseudominus(self):
+        results = {
+            'upper_in_out' : True,
+            'lower_in_out' : True,
+            'upper_in_out_in' : True,
+            'lower_in_out_in' : True,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : False,
+            'lower_out_out_out' : False,
+            'upper_out_in' : False,
+            'lower_out_in' : False,
+            'upper_out' : False,
+            'lower_out' : False,
+            'upper_in_out_in_in' : True,
+            'lower_in_out_in_in' : True,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False,
+            'upper_in_out_in_in_out' : True,
+            'lower_in_out_in_in_out' : True,
+            'upper_out_in_out' : False,
+            'lower_out_in_out' : False,
+            'upper_out_in_in_out' : False,
+            'lower_out_in_in_out' : False,
+            'upper_out_in_out_in': False,
+            'lower_out_in_out_in': False,
+            'upper_out_in_in_out_in' : False,
+            'lower_out_in_in_out_in' : False,
+            'upper_in_cross_in' : True,
+            'lower_in_cross_in' : True,
+            'upper_in_cross_in_cross' : True,
+            'lower_in_cross_in_cross' : True,
+            'upper_cross_in_cross_in' : False,
+            'lower_cross_in_cross_in' : False,
+            'upper_in_cross_in_cross_in' : False,
+            'lower_in_cross_in_cross_in' : False
+        }   
         for test in results.keys():
-            logging.getLogger('openpathsampling.ensemble').debug(
-                "Testing " + str(test) + " (" + str(results[test]) + ")"
-            )
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus.can_append, 
-                                ttraj[test], results[test], failmsg)
-
-    def test_can_prepend_minus(self):
-        results = {'upper_in_cross_in' : True,
-                   'lower_in_cross_in' : True,
-                   'upper_in_cross_in_cross' : False,
-                   'lower_in_cross_in_cross' : False,
-                   'upper_cross_in_cross_in' : True,
-                   'lower_cross_in_cross_in' : True,
-                   'upper_in_cross_in_cross_in' : False,
-                   'lower_in_cross_in_cross_in' : False
-                  }
-        for test in results.keys():
-            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus.can_append, 
+            self._single_test(self.pseudo_minus.strict_can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_pseudo_tis(self):
@@ -747,8 +776,7 @@ class testSequentialEnsemble(EnsembleTest):
                                 ttraj[test], results[test], failmsg)
 
 
-    def test_can_prepend_minus(self):
-        """SequentialEnsemble as MinusEnsemble knows when it can prepend"""
+    def test_can_prepend_pseudo_minus(self):
         results =   {   'upper_in_out' : True,
                         'lower_in_out' : True,
                         'upper_in_out_in' : True,
@@ -877,20 +905,6 @@ class testSequentialEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.tis, ttraj[test], results[test], failmsg)
     
-    def test_sequential_minus(self):
-        """SequentialEnsemble as MinusEnsemble identifies paths"""
-        results = {}
-        for test in ttraj.keys():
-            results[test] = False
-        results['upper_in_out_cross_out_in_out_in_out_cross_out_in'] = True
-        results['lower_in_out_cross_out_in_out_in_out_cross_out_in'] = True
-        results['upper_in_cross_in_cross_in'] = True
-        results['lower_in_cross_in_cross_in'] = True
-
-        for test in results.keys():
-            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus, ttraj[test], results[test], failmsg)
-
     def test_sequential_generate_first_tis(self):
         """SequentialEnsemble to generate the first TIS path"""
         ensemble = SequentialEnsemble([
