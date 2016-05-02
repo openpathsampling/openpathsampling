@@ -1402,7 +1402,7 @@ class testOptionalEnsemble(EnsembleTest):
         self.start_opt = SequentialEnsemble([
             OptionalEnsemble(AllOutXEnsemble(vol1)),
             AllInXEnsemble(vol1),
-            AllOutXEnsemble(vol1),
+            AllOutXEnsemble(vol1)
         ])
         self.end_opt = SequentialEnsemble([
             AllOutXEnsemble(vol1),
@@ -1412,7 +1412,7 @@ class testOptionalEnsemble(EnsembleTest):
         self.mid_opt = SequentialEnsemble([
             AllInXEnsemble(vol1),
             OptionalEnsemble(AllOutXEnsemble(vol1) & AllInXEnsemble(vol2)),
-            AllOutXEnsemble(vol2),
+            AllOutXEnsemble(vol2)
         ])
 
     def test_optional_start(self):
@@ -1444,7 +1444,22 @@ class testOptionalEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
-    def test_optional_start_can_preprend(self):
+    def test_optional_start_strict_can_append(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'in_out' : True,
+                        'out_in' : True,
+                        'out_out_in' : True,
+                        'in_out_in' : False,
+                        'out_in_out' : True
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt.strict_can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_start_can_prepend(self):
         bare_results = {'in' : True,
                         'out' : True,
                         'out_in_out' : True,
@@ -1458,6 +1473,24 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.start_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_start_strict_can_prepend(self):
+        bare_results = {'in' : False,
+                        'out' : True,
+                        'out_in_out' : True,
+                        'out_out_in_out' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in_out' : False,
+                        'out_in' : False,
+                        'out_in_out_in' : False,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt.strict_can_prepend
         for test in results.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
@@ -1491,7 +1524,23 @@ class testOptionalEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
-    def test_optional_middle_can_preprend(self):
+    def test_optional_middle_strict_can_append(self):
+        bare_results = {'in' : True,
+                        'out' : False,
+                        'in_out' : True,
+                        'out_in' : False,
+                        'in_cross' : True,
+                        'in_out_cross' : True,
+                        'out_cross' : False,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt.strict_can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_can_prepend(self):
         bare_results = {'in' : True,
                         'out' : True,
                         'in_out' : True,
@@ -1502,6 +1551,21 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.mid_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_strict_can_prepend(self):
+        bare_results = {'in' : False,
+                        'out' : False,
+                        'in_out' : False,
+                        'out_in' : False,
+                        'in_cross' : True,
+                        'out_cross' : True,
+                        'in_cross_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt.strict_can_prepend
         for test in results.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
@@ -1535,6 +1599,22 @@ class testOptionalEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
+    def test_optional_end_strict_can_append(self):
+        bare_results = {'in' : False,
+                        'out' : True,
+                        'out_in' : True,
+                        'in_out' : False,
+                        'out_in_out' : True,
+                        'in_out_in' : False,
+                        'out_in_out_in' : False,
+                        'in_in_out' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.end_opt.strict_can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
     def test_optional_middle_can_prepend(self):
         bare_results = {'in' : True,
                         'out' : True,
@@ -1547,6 +1627,22 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.end_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_strict_can_prepend(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'out_in' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in_out' : False,
+                        'in_out_in' : False,
+                        'out_in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.end_opt.strict_can_prepend
         for test in results.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
