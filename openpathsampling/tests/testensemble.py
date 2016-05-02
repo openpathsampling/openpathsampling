@@ -1824,6 +1824,28 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl2.can_append, non_default, True)
 
+    def test_minus_nl2_strict_can_append(self):
+        non_default = [
+            'in',
+            'hit',
+            'in_out',
+            'in_out_in',
+            'in_out_out_out',
+            'in_out_out_in',
+            'in_out_in_out',
+            'in_out_in_in',
+            'in_out_out_in_out',
+            'in_out_in_in_out',
+            'in_cross',
+            'in_cross_in',
+            'in_out_cross',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_cross_in_cross',
+        ]
+        self._test_everything(self.minus_nl2.strict_can_append, non_default, 
+                              False)
+
     def test_minus_nl2_can_prepend(self):
         non_default = [
             'in_cross_in_cross',
@@ -1844,6 +1866,32 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl2.can_prepend, non_default, True)
 
+    def test_minus_nl2_strict_can_prepend(self):
+        non_default = [
+            'in',
+            'hit',
+            'out_in',
+            'cross_in',
+            'in_cross_in',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_out_in',
+            'out_out_in',
+            'out_out_out_in',
+            'in_in_cross_in',
+            'out_in_cross_in',
+            'out_in_out_out_in',
+            'in_in_out_in',
+            'in_out_out_in',
+            'out_in_out_in',
+            'out_in_in_out_in',
+            'out_out_in_out_in',
+            'cross_in_cross_in',
+            'out_hit_in_out_in'
+        ]
+        self._test_everything(self.minus_nl2.strict_can_prepend,
+                              non_default, False)
+
     def test_minus_interstitial_nl2_ensemble(self):
         non_default = [
             'in_cross_in_cross_in',
@@ -1862,6 +1910,22 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         self._test_everything(self.minus_interstitial_nl2.can_append,
                               non_default, True)
 
+    def test_minus_interstitial_nl2_strict_can_append(self):
+        non_default = [
+            'in',
+            'hit',
+            'in_out',
+            'in_out_out_out',
+            'in_cross',
+            'in_cross_in',
+            'in_out_cross',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_cross_in_cross',
+        ]
+        self._test_everything(self.minus_interstitial_nl2.strict_can_append,
+                              non_default, False)
+
     def test_minus_interstitial_nl2_can_prepend(self):
         non_default = [
             'in_cross_in_cross_in',
@@ -1870,6 +1934,24 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_interstitial_nl2.can_prepend,
                               non_default, True)
+
+    def test_minus_interstitial_nl2_strict_can_prepend(self):
+        non_default = [
+            'in',
+            'hit',
+            'out_in',
+            'cross_in',
+            'in_cross_in',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'out_out_in',
+            'out_out_out_in',
+            'in_in_cross_in',
+            'out_in_cross_in',
+            'cross_in_cross_in',
+        ]
+        self._test_everything(self.minus_interstitial_nl2.strict_can_prepend,
+                              non_default, False)
 
     def test_minus_nl3_ensemble(self):
         non_default = [
@@ -1884,12 +1966,67 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl3.can_append, non_default, True)
 
+    def test_minus_nl3_strict_can_append(self):
+        non_default = [
+            'in',
+            'hit',
+            'in_out',
+            'in_out_in',
+            'in_out_out_out',
+            'in_out_out_in',
+            'in_out_in_out',
+            'in_out_in_in',
+            'in_out_out_in_out',
+            'in_out_in_in_out',
+            'in_cross',
+            'in_cross_in',
+            'in_out_cross',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_cross_in_cross',
+            'in_cross_in_cross_in',
+            'in_out_in_in_out_in',
+            'in_out_in_out_in'
+        ]
+        self._test_everything(self.minus_nl3.strict_can_append, non_default,
+                              False)
+
     def test_minus_nl3_can_prepend(self):
         non_default = [
             'in_out_cross_out_in_out_in_out_cross_out_in',
             'out_in_in_in_out_in_out_in_in_in_out'
         ]
         self._test_everything(self.minus_nl3.can_prepend, non_default, True)
+
+    def test_minus_nl3_strict_can_prepend(self):
+        non_default = [
+            'in',
+            'hit',
+            'out_in',
+            'cross_in',
+            'in_cross_in',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_out_in',
+            'out_out_in',
+            'out_out_out_in',
+            'in_in_cross_in',
+            'out_in_cross_in',
+            'out_in_out_out_in',
+            'in_in_out_in',
+            'in_out_out_in',
+            'out_in_out_in',
+            'out_in_in_out_in',
+            'out_out_in_out_in',
+            'cross_in_cross_in',
+            'out_hit_in_out_in',
+            'in_cross_in_cross_in',
+            'in_out_in_in_out_in',
+            'in_out_in_out_in'
+        ]
+        self._test_everything(self.minus_nl3.strict_can_prepend,
+                              non_default, False)
+
 
 # TODO: this whole class should become a single test in SeqEns
 class testSingleEnsembleSequentialEnsemble(EnsembleTest):
