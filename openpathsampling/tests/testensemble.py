@@ -751,66 +751,131 @@ class testSequentialEnsemble(EnsembleTest):
 
     def test_can_prepend_pseudo_tis(self):
         """SequentialEnsemble as Pseudo-TISEnsemble knows when it can prepend"""
-        results =   {   'upper_in_out' : False,
-                        'lower_in_out' : False,
-                        'upper_in_out_in' : False,
-                        'lower_in_out_in' : False,
-                        'upper_in' : True,
-                        'lower_in' : True,
-                        'upper_in_in_in' : False,
-                        'lower_in_in_in' : False,
-                        'upper_out_out_out' : True,
-                        'lower_out_out_out' : True,
-                        'upper_out_in' : True,
-                        'lower_out_in' : True,
-                        'upper_out' : True,
-                        'lower_out' : True,
-                        'upper_in_out_in_in' : False,
-                        'lower_in_out_in_in' : False,
-                        'upper_in_out_in_out_in' : False,
-                        'lower_in_out_in_out_in' : False
-                    }   
+        results =   {
+            'upper_in_out' : False,
+            'lower_in_out' : False,
+            'upper_in_out_in' : False,
+            'lower_in_out_in' : False,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : True,
+            'lower_out_out_out' : True,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : True,
+            'lower_out' : True,
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False
+        }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_tis.can_prepend, 
                                 ttraj[test], results[test], failmsg)
 
+    def test_strict_can_prepend_pseudo_tis(self):
+        results =   {
+            'upper_in_out' : False,
+            'lower_in_out' : False,
+            'upper_in_out_in' : False,
+            'lower_in_out_in' : False,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : False,
+            'lower_out_out_out' : False,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : False,
+            'lower_out' : False,
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False
+        }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.pseudo_tis.strict_can_prepend, 
+                                ttraj[test], results[test], failmsg)
 
     def test_can_prepend_pseudo_minus(self):
-        results =   {   'upper_in_out' : True,
-                        'lower_in_out' : True,
-                        'upper_in_out_in' : True,
-                        'lower_in_out_in' : True,
-                        'upper_in' : True,
-                        'lower_in' : True,
-                        'upper_in_in_in' : True,
-                        'lower_in_in_in' : True,
-                        'upper_out_out_out' : True,
-                        'lower_out_out_out' : True,
-                        'upper_out_in' : True,
-                        'lower_out_in' : True,
-                        'upper_out' : True,
-                        'lower_out' : True,
+        results =   {
+            'upper_in_out' : True,
+            'lower_in_out' : True,
+            'upper_in_out_in' : True,
+            'lower_in_out_in' : True,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : True,
+            'lower_in_in_in' : True,
+            'upper_out_out_out' : True,
+            'lower_out_out_out' : True,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : True,
+            'lower_out' : True,
 
-                        'upper_in_out_in_in' : False,
-                        'lower_in_out_in_in' : False,
-                        'upper_in_out_in_out_in' : False,
-                        'lower_in_out_in_out_in' : False,
-                        'upper_in_out_in_in_out' : False,
-                        'lower_in_out_in_in_out' : False,
-                        'upper_out_in_out' : True,
-                        'lower_out_in_out' : True,
-                        'upper_out_in_in_out' : True,
-                        'lower_out_in_in_out' : True,
-                        'upper_out_in_out_in': True,
-                        'lower_out_in_out_in': True,
-                        'upper_out_in_in_out_in' : True,
-                        'lower_out_in_in_out_in' : True
-                    }   
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False,
+            'upper_in_out_in_in_out' : False,
+            'lower_in_out_in_in_out' : False,
+            'upper_out_in_out' : True,
+            'lower_out_in_out' : True,
+            'upper_out_in_in_out' : True,
+            'lower_out_in_in_out' : True,
+            'upper_out_in_out_in': True,
+            'lower_out_in_out_in': True,
+            'upper_out_in_in_out_in' : True,
+            'lower_out_in_in_out_in' : True
+        }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus.can_prepend, 
                                 ttraj[test], results[test], failmsg)
+
+    def test_strict_can_prepend_pseudo_minus(self):
+        results =   {
+            'upper_in_out' : False,
+            'lower_in_out' : False,
+            'upper_in_out_in' : True,
+            'lower_in_out_in' : True,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : False,
+            'lower_out_out_out' : False,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : False,
+            'lower_out' : False,
+
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False,
+            'upper_in_out_in_in_out' : False,
+            'lower_in_out_in_in_out' : False,
+            'upper_out_in_out' : False,
+            'lower_out_in_out' : False,
+            'upper_out_in_in_out' : False,
+            'lower_out_in_in_out' : False,
+            'upper_out_in_out_in': True,
+            'lower_out_in_out_in': True,
+            'upper_out_in_in_out_in' : True,
+            'lower_out_in_in_out_in' : True
+        }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.pseudo_minus.strict_can_prepend, 
+                                ttraj[test], results[test], failmsg)
+
 
     
     def test_sequential_transition_frames(self):
