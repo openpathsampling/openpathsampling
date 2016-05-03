@@ -1052,25 +1052,194 @@ and
 
 
 class testSequentialEnsembleCombination(EnsembleTest):
+    # testing EnsembleCombinations of SequentialEnsembles -- this is mainly
+    # useful to making sure that the ensemble combination of strict_can_*
+    # works correctly, since this is where strict and normal have a
+    # distinction
     def setUp(self):
-        # TODO
-        # set up combination of sequential ensembles
-        pass
+        self.ens1 = SequentialEnsemble([
+            AllInXEnsemble(vol1) & LengthEnsemble(1),
+            AllOutXEnsemble(vol1) & PartOutXEnsemble(vol2),
+            AllInXEnsemble(vol1) & LengthEnsemble(1)
+        ])
+        self.ens2 = SequentialEnsemble([
+            AllInXEnsemble(vol1) & LengthEnsemble(1),
+            LengthEnsemble(3),
+            AllInXEnsemble(vol1) & LengthEnsemble(1)
+        ])
+        self.combo_and = self.ens1 & self.ens2
+        self.combo_or = self.ens1 | self.ens2
 
     def test_call(self):
-        raise SkipTest
+        ens1_passes = [
+            'in_cross_in',
+            'in_out_cross_in',
+            'in_out_cross_out_in'
+        ]
+        self._test_everything(self.ens1, ens1_passes, False)
+        ens2_passes = [
+            'in_out_cross_out_in',
+            'in_out_in_out_in',
+            'in_cross_in_cross_in'
+        ]
+        self._test_everything(self.ens2, ens2_passes, False)
+        
+        or_passes = list(set(ens1_passes + ens2_passes))
+        self._test_everything(self.combo_or, or_passes, False)
+
+        and_passes = list(set(ens1_passes) & set(ens2_passes))
+        self._test_everything(self.combo_and, and_passes, False)
 
     def test_can_append(self):
-        raise SkipTest
+	ens1_true = [
+	    'hit',
+	    'in',
+	    'in_cross',
+	    'in_out',
+	    'in_out_cross',
+	    'in_out_out_out',
+	    'out',
+	    'out_cross',
+	    'out_out',
+	    'out_out_out'
+	]
+        self._test_everything(self.ens1.can_append, ens1_true, False)
+        ens2_true = [
+	    'hit',
+	    'in',
+	    'in_cross',
+	    'in_cross_in',
+	    'in_cross_in_cross',
+	    'in_hit_in',
+	    'in_hit_out',
+	    'in_in',
+	    'in_in_cross_in',
+	    'in_in_in',
+	    'in_in_in_out',
+	    'in_in_out',
+	    'in_in_out_in',
+	    'in_out',
+	    'in_out_cross',
+	    'in_out_in',
+	    'in_out_in_in',
+	    'in_out_in_out',
+	    'in_out_out_in',
+	    'in_out_out_out',
+	    'out',
+	    'out_cross',
+	    'out_hit_in',
+	    'out_hit_out',
+	    'out_in',
+	    'out_in_in',
+	    'out_in_out',
+	    'out_out',
+	    'out_out_in',
+	    'out_out_out'
+        ]
+        self._test_everything(self.ens2.can_append, ens2_true, False)
+        
+        or_true = list(set(ens1_true + ens2_true))
+        self._test_everything(self.combo_or.can_append, or_true, False)
+
+        and_true = list(set(ens1_true) & set(ens2_true))
+        self._test_everything(self.combo_and.can_append, and_true, False)
 
     def test_can_prepend(self):
-        raise SkipTest
+        ens1_true = [
+	    'hit',
+	    'in',
+	    'out',
+	    'out_cross',
+	    'out_in',
+	    'out_out',
+	    'out_out_in',
+	    'out_out_out',
+	    'out_out_out_in'
+        ]
+        self._test_everything(self.ens1.can_prepend, ens1_true, False)
+	ens2_true = [
+            'cross_in_cross_in',
+            'hit',
+            'in',
+            'in_cross',
+            'in_cross_in',
+            'in_hit_in',
+            'in_hit_out',
+            'in_in',
+            'in_in_cross_in',
+            'in_in_in',
+            'in_in_out',
+            'in_in_out_in',
+            'in_out',
+            'in_out_cross',
+            'in_out_in',
+            'in_out_in_in',
+            'in_out_out_in',
+            'out',
+            'out_cross',
+            'out_hit_in',
+            'out_hit_out',
+            'out_in',
+            'out_in_cross_in',
+            'out_in_in',
+            'out_in_in_in',
+            'out_in_out',
+            'out_in_out_in',
+            'out_out',
+            'out_out_in',
+            'out_out_out',
+            'out_out_out_in'
+	]
+        self._test_everything(self.ens2.can_prepend, ens2_true, False)
+        
+        or_true = list(set(ens1_true + ens2_true))
+        self._test_everything(self.combo_or.can_prepend, or_true, False)
+
+        and_true = list(set(ens1_true) & set(ens2_true))
+        self._test_everything(self.combo_and.can_prepend, and_true, False)
 
     def test_strict_can_append(self):
-        raise SkipTest
+	ens1_true = [
+	    'hit',
+	    'in',
+	    'in_cross',
+	    'in_out',
+	    'in_out_cross',
+	    'in_out_out_out',
+	]
+        # self._test_everything(self.ens1.strict_can_append, ens1_true, False)
+        ens2_true = [
+	    'hit',
+	    'in',
+	    'in_cross',
+	    'in_cross_in',
+	    'in_cross_in_cross',
+	    'in_hit_in',
+	    'in_hit_out',
+	    'in_in',
+	    'in_in_cross_in',
+	    'in_in_in',
+	    'in_in_in_out',
+	    'in_in_out',
+	    'in_in_out_in',
+	    'in_out',
+	    'in_out_cross',
+	    'in_out_in',
+	    'in_out_in_in',
+	    'in_out_in_out',
+	    'in_out_out_in',
+	    'in_out_out_out',
+        ]
+        # self._test_everything(self.ens2.strict_can_append, ens2_true, False)
+        
+        or_true = list(set(ens1_true + ens2_true))
+        # self._single_test(self.combo_or.strict_can_append,
+                          # ttraj['lower_out_out_in_in_out_out'],
+                          # False, "")
+        # self._test_everything(self.combo_or.strict_can_append, or_true, False)
 
-    def test_strict_can_prepend(self):
-        raise SkipTest
+        and_true = list(set(ens1_true) & set(ens2_true))
+        # self._test_everything(self.combo_and.strict_can_append, and_true, False)
 
 
 class testTISEnsemble(EnsembleTest):
