@@ -77,7 +77,10 @@ class EnsembleCache(object):
                     if trajectory.get_as_proxy(0) != self.start_frame:
                         reset = True
                     else:
-                        if lentraj == self.last_length:
+                        if lentraj == 1:
+                            # makes no difference here; always reset
+                            reset = True
+                        elif lentraj == self.last_length:
                             reset = (trajectory.get_as_proxy(-1) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
                             reset = (trajectory.get_as_proxy(-2) != self.prev_last_frame)
@@ -87,7 +90,9 @@ class EnsembleCache(object):
                     if trajectory.get_as_proxy(-1) != self.start_frame:
                         reset = True
                     else:
-                        if lentraj == self.last_length:
+                        if lentraj == 1:
+                            reset = True
+                        elif lentraj == self.last_length:
                             reset = (trajectory.get_as_proxy(0) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
                             reset = (trajectory.get_as_proxy(1) != self.prev_last_frame)
@@ -558,6 +563,9 @@ class Ensemble(StorableNamedObject):
 
     # This is not correct for all ensembles.
     # def __xor__(self, other):
+        # # TODO: return (self | other) & ~(self & other)
+        # # NOTE: that should also get the automatic special case handling
+        # # (other is self, Empty, or Full) from treatment in __and__/__or__
         # if self is other:
             # return EmptyEnsemble()
         # elif type(other) is EmptyEnsemble:
@@ -760,16 +768,22 @@ class EnsembleCombination(Ensemble):
             logger.debug("Combination." + fname + ": " +
                          self.ensemble1.__class__.__name__ + " is " + str(a))
             ens2 = f2(trajectory, trusted)
+            # logger.debug("Doing ens2_prime")
+            # ens2_prime = f2(trajectory, trusted)
             logger.debug("Combination." + fname + ": " +
                          self.ensemble2.__class__.__name__ + " is " +str(ens2))
+            # assert(ens2 == ens2_prime)
             logger.debug("Combination: returning " + str(self.fnc(a,ens2)))
         res_true = self.fnc(a, True)
         res_false = self.fnc(a, False)
         if res_false == res_true:
             # result is independent of ensemble_b so ignore it
+            # logger.debug("Returning res_true == res_false ==" + str(res_true))
             return res_true
         else:
             b = f2(trajectory, trusted)
+            # logger.debug("Needs test:" + str(a) + " " + str(self.fnc) +
+                         # str(b) + str(self.fnc(a,b)))
             return self.fnc(a, b)
 
 
@@ -1166,7 +1180,7 @@ class SequentialEnsemble(Ensemble):
 
 
         if self._use_cache: 
-            cache.check(trajectory)
+            reset = cache.check(trajectory)
             if cache.contents == { }:
                 self.update_cache(cache, 0, 0, 0)
                 self.assign_frames(cache, None, None, None)
@@ -1183,22 +1197,33 @@ class SequentialEnsemble(Ensemble):
         logger.debug(
             "Beginning can_append with subtraj_first=" + str(subtraj_first)
             + "; ens_first=" + str(ens_first) + "; ens_num=" + str(ens_num)
+            + "; strict=" + str(strict)
         )
         logger.debug(
             "Can-append sees a trusted cache: " + str(cache.trusted)
         )
+        if cache.trusted:
+            logger.debug("Cache contents: " + str(cache.contents))
+            logger.debug("cache.prev_last_frame: " +
+                         str(trajectory.index(cache.prev_last_frame)))
         for i in range(len(self.ensembles)):
             ens = self.ensembles[i]
             logger.debug("Ensemble " + str(i) + " : " + ens.__class__.__name__)
 
         while True: #  main loop, with various 
             if self._use_cache and cache.trusted:
-                last_checked = trajectory.index(cache.prev_last_frame)-1
+                offset = 1
+                offset = 0
+                # if cache.last_length == len(trajectory):
+                    # offset += 1
+                last_checked = trajectory.index(cache.prev_last_frame) - offset
             else:
                 last_checked = None
+            logger.debug("last_checked = " + str(last_checked))
             subtraj_final = self._find_subtraj_final(
                 trajectory, subtraj_first, ens_num, last_checked
             )
+            cache.last_length = subtraj_final
             logger.debug(
                 "Subtraj for ens " + str(ens_num) + " : " +
                 "("+str(subtraj_first)+","+str(subtraj_final)+")"
@@ -1242,7 +1267,7 @@ class SequentialEnsemble(Ensemble):
                     ens_num += 1
                     subtraj_first = subtraj_final
                     logger.debug("Moving to the next ensemble " + str(ens_num))
-            else: 
+            else:  # no subtrajectory found
                 if subtraj_final == traj_final:
                     # all frames assigned, but not all ensembles finished;
                     # next frame might satisfy next ensemble
@@ -1310,7 +1335,7 @@ class SequentialEnsemble(Ensemble):
         ens_num = ens_final
 
         if self._use_cache:
-            cache.check(trajectory)
+            reset = cache.check(trajectory)
             if cache.contents == { }:
                 self.update_cache(cache, ens_num, first_ens, subtraj_final)
                 self.assign_frames(cache, None, None, None)
@@ -1328,8 +1353,12 @@ class SequentialEnsemble(Ensemble):
         # logging startup
         logger.debug("Beginning can_prepend with ens_num:" + str(ens_num) +
                      "  ens_final:" + str(ens_final) + "  subtraj_final " +
-                     str(subtraj_final)
+                     str(subtraj_final) + "; strict=" + str(strict)
                     )
+        if cache.trusted:
+            logger.debug("Cache contents: " + str(cache.contents))
+            logger.debug("cache.prev_start_frame: " +
+                         str(trajectory.index(cache.start_frame)))
         for i in range(len(self.ensembles)):
             logger.debug(
                 "Ensemble " + str(i) + 
@@ -1338,11 +1367,14 @@ class SequentialEnsemble(Ensemble):
 
         while True:
             if self._use_cache and cache.trusted:
-                last_checked = trajectory.index(cache.prev_last_frame)+1
+                offset = 1
+                offset = 0
+                last_checked = trajectory.index(cache.prev_last_frame)+offset
             else:
                 last_checked = None
             subtraj_first = self._find_subtraj_first(
                 trajectory, subtraj_final, ens_num, last_checked)
+            cache.last_length = len(trajectory) - subtraj_first
 
             assign_final = subtraj_final - len(trajectory)
             if assign_final == 0:

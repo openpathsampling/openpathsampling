@@ -1207,7 +1207,7 @@ class testSequentialEnsembleCombination(EnsembleTest):
 	    'in_out_cross',
 	    'in_out_out_out',
 	]
-        # self._test_everything(self.ens1.strict_can_append, ens1_true, False)
+        self._test_everything(self.ens1.strict_can_append, ens1_true, False)
         ens2_true = [
 	    'hit',
 	    'in',
@@ -1230,17 +1230,52 @@ class testSequentialEnsembleCombination(EnsembleTest):
 	    'in_out_out_in',
 	    'in_out_out_out',
         ]
-        # self._test_everything(self.ens2.strict_can_append, ens2_true, False)
-        
+        self._test_everything(self.ens2.strict_can_append, ens2_true, False)
+
         or_true = list(set(ens1_true + ens2_true))
-        # self._single_test(self.combo_or.strict_can_append,
-                          # ttraj['lower_out_out_in_in_out_out'],
-                          # False, "")
-        # self._test_everything(self.combo_or.strict_can_append, or_true, False)
+        self._test_everything(self.combo_or.strict_can_append, or_true, False)
 
         and_true = list(set(ens1_true) & set(ens2_true))
-        # self._test_everything(self.combo_and.strict_can_append, and_true, False)
+        self._test_everything(self.combo_and.strict_can_append, and_true, False)
 
+    def test_strict_can_prepend(self):
+        ens1_true = [
+	    'hit',
+	    'in',
+	    'out_in',
+	    'out_out_in',
+	    'out_out_out_in'
+        ]
+        self._test_everything(self.ens1.strict_can_prepend, ens1_true, False)
+	ens2_true = [
+            'cross_in_cross_in',
+            'hit',
+            'in',
+            'in_cross_in',
+            'in_hit_in',
+            'in_in',
+            'in_in_cross_in',
+            'in_in_in',
+            'in_in_out_in',
+            'in_out_in',
+            'in_out_in_in',
+            'in_out_out_in',
+            'out_hit_in',
+            'out_in',
+            'out_in_cross_in',
+            'out_in_in',
+            'out_in_in_in',
+            'out_in_out_in',
+            'out_out_in',
+            'out_out_out_in'
+	]
+        self._test_everything(self.ens2.strict_can_prepend, ens2_true, False)
+
+        or_true = list(set(ens1_true + ens2_true))
+        self._test_everything(self.combo_or.strict_can_prepend, or_true, False)
+
+        and_true = list(set(ens1_true) & set(ens2_true))
+        self._test_everything(self.combo_and.strict_can_prepend, and_true, False)
 
 class testTISEnsemble(EnsembleTest):
     def setUp(self):
