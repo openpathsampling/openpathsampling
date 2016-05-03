@@ -730,9 +730,13 @@ class EnsembleCombination(Ensemble):
     def to_dict(self):
         return { 'ensemble1' : self.ensemble1, 'ensemble2' : self.ensemble2 }
 
-    def _generalized_short_circuit(self, combo, f1, f2, trajectory, trusted):
+    def _generalized_short_circuit(self, combo, f1, f2, trajectory, trusted,
+                                   fname=""):
         """
         Handles short-circuit logic, all in one place for code simplicity.
+
+        Short-circuit logic skips the second part of the combination if the
+        result doesn't depend on it.
 
         Parameters
         ----------
@@ -747,18 +751,18 @@ class EnsembleCombination(Ensemble):
             input trajectory
         trusted : bool
             the `trusted` flag to send to f1 and f2
+        fname : string
+            name of the functions f1 and f2. Only used in debug output.
         """
         a = f1(trajectory, trusted)
-        if logger.isEnabledFor(logging.DEBUG):  # pragma : no cover
+        if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
             logger.debug("Combination is " + self.__class__.__name__)
-            logger.debug("Combination: " + self.ensemble1.__class__.__name__
-                         + " is "+str(a))
+            logger.debug("Combination." + fname + ": " +
+                         self.ensemble1.__class__.__name__ + " is " + str(a))
             ens2 = f2(trajectory, trusted)
-            logger.debug("Combination: " +
-                         self.ensemble2.__class__.__name__ +
-                         " is " +str(ens2))
-            logger.debug("Combination: returning " +
-                         str(self.fnc(a,ens2)))
+            logger.debug("Combination." + fname + ": " +
+                         self.ensemble2.__class__.__name__ + " is " +str(ens2))
+            logger.debug("Combination: returning " + str(self.fnc(a,ens2)))
         res_true = self.fnc(a, True)
         res_false = self.fnc(a, False)
         if res_false == res_true:
@@ -770,39 +774,23 @@ class EnsembleCombination(Ensemble):
 
 
     def __call__(self, trajectory, trusted=None):
-        # Shortcircuit will automatically skip the second part of the
-        # combination if the result does not depend on it!  This makes sense
-        # since the expensive part is the ensemble testing not computing two
-        # logic operations
         if Ensemble.use_shortcircuit:
             return self._generalized_short_circuit(
                 combo=self.fnc,
                 f1=self.ensemble1,
                 f2=self.ensemble2,
                 trajectory=trajectory,
-                trusted=trusted
+                trusted=trusted,
+                fname="__call__"
             )
-            # a = self.ensemble1(trajectory, trusted)
-            # if logger.isEnabledFor(logging.DEBUG):
-                # logger.debug("Combination is " + self.__class__.__name__)
-                # logger.debug("Combination: " + self.ensemble1.__class__.__name__
-                             # + " is "+str(a))
-                # ens2 = self.ensemble2(trajectory, trusted)
-                # logger.debug("Combination: " +
-                             # self.ensemble2.__class__.__name__ +
-                             # " is " +str(ens2))
-                # logger.debug("Combination: returning " +
-                             # str(self.fnc(a,ens2)))
-            # res_true = self.fnc(a, True)
-            # res_false = self.fnc(a, False)
-            # if res_false == res_true:
-                # # result is independent of ensemble_b so ignore it
-                # return res_true
-            # else:
-                # b = self.ensemble2(trajectory, trusted)
-                # return self.fnc(a, b)
         else:
             return self.fnc(self.ensemble1(trajectory, trusted), self.ensemble2(trajectory, trusted))
+
+    # NOTE: I'm pretty sure the following can be removed. It is incorrect
+    # (see path ensemble theory docs). The correct way to handle this is by
+    # having explicit complement (inverse) ensembles and only allowing 3
+    # operations -- complement (inverse), union (logical or), and intersection
+    # (logical and). ~DWHS
 
     # Forward / Backward is tricky
     # We can do the following. If a or b is true this means that the real
@@ -831,34 +819,9 @@ class EnsembleCombination(Ensemble):
                 f1=self.ensemble1.can_append,
                 f2=self.ensemble2.can_append,
                 trajectory=trajectory,
-                trusted=trusted
+                trusted=trusted,
+                fname="can_append"
             )
-            # a = self.ensemble1.can_append(trajectory, trusted)
-            # logger.debug("Combination is " + self.__class__.__name__)
-            # logger.debug("Combination.can_append: " + 
-                         # self.ensemble1.__class__.__name__ + " is "+str(a))
-            # if logger.isEnabledFor(logging.DEBUG):
-                # ens2_can_append = self.ensemble2.can_append(trajectory,
-                                                            # trusted)
-                # logger.debug("Combination.can_append: " 
-                             # + self.ensemble2.__class__.__name__ +
-                             # " is " + str(ens2_can_append))
-                # logger.debug("Combination.can_append: returning " + 
-                             # str(self.fnc( a, ens2_can_append)))
-            # res_true = self._continue_fnc(a, True)
-            # res_false = self._continue_fnc(a, False)
-            # if res_false == res_true:
-                # # result is independent of ensemble_b so ignore it
-                # return res_true
-            # else:
-                # b = self.ensemble2.can_append(trajectory, trusted)
-                # #logger.debug("b is " + str(b))
-                # if b == True:
-                    # #logger.debug("Will return res_true")
-                    # return res_true
-                # else:
-                    # #logger.debug("Will return res_false")
-                    # return res_false
         else:
             return self.fnc(self.ensemble1.can_append(trajectory, trusted), 
                             self.ensemble2.can_append(trajectory, trusted))
@@ -870,20 +833,9 @@ class EnsembleCombination(Ensemble):
                 f1=self.ensemble1.can_prepend,
                 f2=self.ensemble2.can_prepend,
                 trajectory=trajectory,
-                trusted=trusted
+                trusted=trusted,
+                fname="can_prepend"
             )
-            # a = self.ensemble1.can_prepend(trajectory, trusted)
-            # res_true = self._continue_fnc(a, True)
-            # res_false = self._continue_fnc(a, False)
-            # if res_false == res_true:
-                # # result is independent of ensemble_b so ignore it
-                # return res_true
-            # else:
-                # b = self.ensemble2.can_prepend(trajectory, trusted)
-                # if b == True:
-                    # return res_true
-                # else:
-                    # return res_false
         else:
             return self.fnc(self.ensemble1.can_prepend(trajectory, trusted), 
                             self.ensemble2.can_prepend(trajectory, trusted))
@@ -895,7 +847,8 @@ class EnsembleCombination(Ensemble):
                 f1=self.ensemble1.strict_can_append,
                 f2=self.ensemble2.strict_can_append,
                 trajectory=trajectory,
-                trusted=trusted
+                trusted=trusted,
+                fname="strict_can_append"
             )
         else:
             return self.fnc(
@@ -910,7 +863,8 @@ class EnsembleCombination(Ensemble):
                 f1=self.ensemble1.strict_can_prepend,
                 f2=self.ensemble2.strict_can_prepend,
                 trajectory=trajectory,
-                trusted=trusted
+                trusted=trusted,
+                fname="strict_can_prepend"
             )
         else:
             return self.fnc(
@@ -935,12 +889,18 @@ class IntersectionEnsemble(EnsembleCombination):
 
 class SymmetricDifferenceEnsemble(EnsembleCombination):
     # TODO: this is not yet supported. Should be removed. ~DWHS
+    # should just be a shortcut for (ens1 | ens2) & ~(ens1 & ens2)
+    # should probably not even be a class. Just have `ensemble.__xor__`
+    # return (ens1 | ens2) & ~(ens1 & ens2)
     def __init__(self, ensemble1, ensemble2):
         super(SymmetricDifferenceEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
 
 class RelativeComplementEnsemble(EnsembleCombination):
     # TODO: this is not yet supported. Should be removed. ~DWHS
+    # should be a shortcut for ens1 & ~ens2
+    # should probably not even be a class. Just have `ensemble.__sub__`
+    # return ens1 & ~ens2
     def __init__(self, ensemble1, ensemble2):
         super(RelativeComplementEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
 
@@ -992,8 +952,10 @@ class SequentialEnsemble(Ensemble):
 
         self._use_cache = True # cache can be turned off
         self._cache_can_append = EnsembleCache(+1)
+        self._cache_strict_can_append = EnsembleCache(+1)
         self._cache_call = EnsembleCache(+1)
         self._cache_can_prepend = EnsembleCache(-1)
+        self._cache_strict_can_prepend = EnsembleCache(-1)
         self._cache_check_reverse = EnsembleCache(-1)
 
         # sanity checks
@@ -1192,6 +1154,9 @@ class SequentialEnsemble(Ensemble):
         # Returning false can only happen if all ensembles have been tested
         #self._check_cache(trajectory, function="can_append")
         cache = self._cache_can_append
+        if strict:
+            cache = self._cache_strict_can_append
+
         if trusted:
             cache.trusted = True
 
@@ -1333,6 +1298,8 @@ class SequentialEnsemble(Ensemble):
     def _generic_can_prepend(self, trajectory, trusted, strict):
         # based on .can_append(); see notes there for algorithm details
         cache = self._cache_can_prepend
+        if strict:
+            cache = self._cache_strict_can_prepend
         if trusted:
             cache.trusted = True
 
@@ -1736,11 +1703,14 @@ class WrappedEnsemble(Ensemble):
         self._new_ensemble = self.ensemble
         self.trusted = None
         self._cache_can_append = EnsembleCache(+1)
+        self._cache_strict_can_append = EnsembleCache(+1)
         self._cache_call = EnsembleCache(+1)
-        self._cache_can_prepend = EnsembleCache(+1) #TODO: this is weird
+
         # cache_can_prepend has to think it is going forward because the
         # frames given to it are from a forward growing trajectory... only
         # later is everything turned around
+        self._cache_can_prepend = EnsembleCache(+1) 
+        self._cache_strict_can_prepend = EnsembleCache(+1)
 
     def __call__(self, trajectory, trusted=None):
         return self._new_ensemble(self._alter(trajectory), trusted)
@@ -1812,7 +1782,7 @@ class SuffixTrajectoryEnsemble(WrappedEnsemble):
         #logger.debug("trajrev " + str([id(i) for i in trajectory.reversed]))
         #reset = False
         if not reset:
-            logger.debug("BackwardPrended was not reset")
+            logger.debug("SuffixTrajectory was not reset")
             first_frame = trajectory.get_as_proxy(-1)
             if self._cached_trajectory.get_as_proxy(0) != first_frame:
                 self._cached_trajectory.insert(0, first_frame)

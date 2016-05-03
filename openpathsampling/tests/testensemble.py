@@ -10,6 +10,7 @@ import logging
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.DEBUG)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 logger = logging.getLogger('openpathsampling.tests.testensemble')
 
 import re
@@ -1049,6 +1050,29 @@ and
 )
 ]""")
 
+
+class testSequentialEnsembleCombination(EnsembleTest):
+    def setUp(self):
+        # TODO
+        # set up combination of sequential ensembles
+        pass
+
+    def test_call(self):
+        raise SkipTest
+
+    def test_can_append(self):
+        raise SkipTest
+
+    def test_can_prepend(self):
+        raise SkipTest
+
+    def test_strict_can_append(self):
+        raise SkipTest
+
+    def test_strict_can_prepend(self):
+        raise SkipTest
+
+
 class testTISEnsemble(EnsembleTest):
     def setUp(self):
         self.tis = TISEnsemble(vol1, vol3, vol2, op) 
@@ -1674,6 +1698,7 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
             traj[0:2]
         )
         assert_equal(ens.can_append(traj[0:3]), False)
+        assert_equal(ens.strict_can_append(traj[0:3]), False)
         assert_equal(ens(traj[0:3]), False)
 
     def test_good_start_traj(self):
@@ -1683,8 +1708,26 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
             traj[0:2]
         )
         assert_equal(ens.can_append(traj[2:3]), True)
+        assert_equal(ens.strict_can_append(traj[2:3]), True)
         assert_equal(ens(traj[2:3]), True)
 
+    @raises(RuntimeError)
+    def test_can_prepend(self):
+        traj = ttraj['upper_in_in_in']
+        ens = PrefixTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[0:2]
+        )
+        ens.can_prepend(traj[2:3])
+
+    @raises(RuntimeError)
+    def test_strict_can_prepend(self):
+        traj = ttraj['upper_in_in_in']
+        ens = PrefixTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[0:2]
+        )
+        ens.strict_can_prepend(traj[2:3])
 
     def test_caching_in_fwdapp_seq(self):
         inX = AllInXEnsemble(vol1)
@@ -1715,6 +1758,7 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
         assert_equal(ens._cached_trajectory, traj[0:6])
         assert_equal(ens._cache_can_append.trusted, True)
 
+
 class testSuffixTrajectoryEnsemble(EnsembleTest):
     def setUp(self):
         xval = paths.CV_Function("x", lambda s : s.xyz[0][0])
@@ -1729,6 +1773,7 @@ class testSuffixTrajectoryEnsemble(EnsembleTest):
             traj[-2:]
         )
         assert_equal(ens.can_prepend(traj[-3:2]), False)
+        assert_equal(ens.strict_can_prepend(traj[-3:2]), False)
         assert_equal(ens(traj[-3:2]), False)
 
     def test_good_end_traj(self):
@@ -1738,9 +1783,29 @@ class testSuffixTrajectoryEnsemble(EnsembleTest):
             traj[-2:]
         )
         assert_equal(ens.can_prepend(traj[-3:-2]), True)
+        assert_equal(ens.strict_can_prepend(traj[-3:-2]), True)
         assert_equal(ens(traj[-3:-2]), True)
         assert_equal(ens.can_prepend(traj[-4:-2]), False)
+        assert_equal(ens.strict_can_prepend(traj[-4:-2]), False)
         assert_equal(ens(traj[-4:-2]), False)
+
+    @raises(RuntimeError)
+    def test_can_append(self):
+        traj = ttraj['upper_out_in_in_in']
+        ens = SuffixTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[-2:]
+        )
+        ens.can_append(traj)
+
+    @raises(RuntimeError)
+    def test_strict_can_append(self):
+        traj = ttraj['upper_out_in_in_in']
+        ens = SuffixTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[-2:]
+        )
+        ens.strict_can_append(traj)
 
     def test_caching_in_bkwdprep_seq(self):
         length1 = LengthEnsemble(1)
