@@ -61,10 +61,11 @@ class ExternalEngine(peng.DynamicsEngine):
             if next_frame == "partial":
                 time.sleep(0.001) # wait a millisec and rerun
             elif next_frame is None:
-                # TODO: optimize sleep time
+                # TODO: optimize sleep time to wait longer
                 #print "Sleep", self.sleep_ms / 1000.0 # TODO logger
                 time.sleep(self.sleep_ms/1000.0)
             elif isinstance(next_frame, peng.BaseSnapshot): # success
+                # TODO: optimize sleep time to wait less
                 self.current_snapshot = next_frame
                 next_frame_found = True
                 self.frame_num += 1
@@ -130,7 +131,7 @@ class ExternalEngine(peng.DynamicsEngine):
         """Writes given snapshot to file."""
         f = open(filename, mode)
         snapshot_text = "{pos} {vel}\n".format(pos=snapshot.xyz[0][0],
-                                               vel=snapshot.xyz[0][0])
+                                               vel=snapshot.velocities[0][0])
         f.write(snapshot_text)
         f.close()
 
@@ -156,6 +157,8 @@ class ExternalEngine(peng.DynamicsEngine):
 
     def engine_command(self):
         """Generates a string for the command to run the engine."""
-        return "engine " + str(self.engine_sleep) + " " + str(self.output_file)
+        return ("engine " + str(self.engine_sleep) + " " +
+                str(self.output_file) + " " + str(self.input_file))
+                        
 
 

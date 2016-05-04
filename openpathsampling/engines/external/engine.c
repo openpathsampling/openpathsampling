@@ -24,8 +24,8 @@ int main(int argc, char ** argv)
     double velocity = 1.0;
     if (argc == 4) {
         // this means we have an input file given last
-        FILE * inf = fopen(argv[3], "r");
-        // TODO: set initial value
+        FILE * in_f = fopen(argv[3], "r");
+        fscanf(in_f, "%lf %lf", &initial_position, &velocity);
     }
 
     struct timespec sleep_time, foo;

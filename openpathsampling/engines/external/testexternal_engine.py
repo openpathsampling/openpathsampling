@@ -1,6 +1,6 @@
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
+                        assert_almost_equal, raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
 
 import openpathsampling as paths
@@ -12,6 +12,10 @@ import psutil
 
 import time
 import os
+
+import logging
+
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 
 def setUp():
     # TODO: run Makefile
@@ -106,16 +110,34 @@ class testExternalEngine(object):
         assert_equal(len(traj), 5)
 
     def test_in_shooting_move(self):
+        import glob
+        for testfile in glob.glob("test*out") + glob.glob("test*inp"):
+            os.remove(testfile)
         ens10 = paths.LengthEnsemble(10)
         init_traj = self.fast_engine.generate_forward(self.template, ens10)
         assert_equal(ens10(init_traj), True)
         init_conds = paths.SampleSet([
             paths.Sample(replica=0, ensemble=ens10, trajectory=init_traj)
         ])
-        print [snap.xyz[0][0] for snap in init_conds[0].trajectory]
         shooter = paths.OneWayShootingMover(ensemble=ens10,
                                             selector=paths.UniformSelector(),
                                             engine=self.fast_engine)
-        change = shooter.move(init_conds)
-        new_sample_set = init_conds.apply_samples(change.results)
-        print [snap.xyz[0][0] for snap in new_sample_set[0].trajectory]
+        prev_sample_set = init_conds
+        default_traj = [[[0.0]], [[1.0]], [[2.0]], [[3.0]], [[4.0]],
+                        [[5.0]], [[6.0]], [[7.0]], [[8.0]], [[9.0]]]
+        assert_items_equal(init_conds[0].trajectory.xyz, default_traj)
+        for step in range(10):
+            assert_equal(len(prev_sample_set), 1)
+            change = shooter.move(prev_sample_set)
+            new_sample_set = prev_sample_set.apply_samples(change.results)
+            assert_items_equal(new_sample_set[0].trajectory.xyz,
+                               default_traj)
+            prev_traj = prev_sample_set[0].trajectory
+            new_traj = new_sample_set[0].trajectory
+            shared = prev_traj.shared_configurations(new_traj)
+            assert_true(0 < len(list(shared)) < len(new_traj))
+            prev_sample_set = new_sample_set
+
+        for testfile in glob.glob("test*out") + glob.glob("test*inp"):
+            os.remove(testfile)
+

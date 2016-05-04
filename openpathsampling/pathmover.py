@@ -522,7 +522,6 @@ class EngineMover(SampleMover):
 
         trial_trajectory = self._run(initial_trajectory, shooting_index)
 
-
         bias = self.selector.probability_ratio(
             initial_trajectory[shooting_index],
             initial_trajectory,
