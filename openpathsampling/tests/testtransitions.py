@@ -1,6 +1,8 @@
 from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
 from nose.plugins.skip import SkipTest
-from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj
+from test_helpers import (
+    CallIdentity, prepend_exception_message, make_1d_traj, data_filename
+)
 
 
 import openpathsampling as paths
@@ -10,6 +12,7 @@ import logging
 logging.getLogger('opentis.analysis.tis_analysis').setLevel(logging.DEBUG)
 logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testTISTransition(object):
     def setup(self):
@@ -21,6 +24,51 @@ class testTISTransition(object):
     def test_ensemble_statistics(self):
         pass
 
+class testFixedLengthTPSTransition(object):
+    def setup(self):
+        op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        self.stateA = paths.CVRangeVolume(op, 0.1, 0.5)
+        self.stateB = paths.CVRangeVolume(op, 2.0, 2.5)
+
+        self.transition = paths.FixedLengthTPSTransition(self.stateA,
+                                                         self.stateB,
+                                                         length=4)
+        self.good_traj = self._make_traj("aixb")
+        self.short_traj = self._make_traj("axb")
+        self.long_traj = self._make_traj("aixbb")
+        self.bad_states_traj = self._make_traj("aixx")
+
+    def _make_traj(self, string):
+        pretraj = []
+        for l in string:
+            pretraj.append({"a" : 0.3, "b" : 2.2, "i" : 0.6, "x" : 1.0}[l])
+        return make_1d_traj(coordinates=pretraj, velocities=[1.0]*len(pretraj))
+
+    def test_init(self):
+        assert_equal(len(self.transition.ensembles), 1)
+        assert_equal(self.transition.length, 4)
+        assert_equal(self.transition.ensembles[0](self.good_traj), True)
+        assert_equal(self.transition.ensembles[0](self.short_traj), False)
+        assert_equal(self.transition.ensembles[0](self.long_traj), False)
+        assert_equal(self.transition.ensembles[0](self.bad_states_traj), False)
+
+    def test_storage(self):
+        import os
+        filename = data_filename("transitions.nc")
+        if os.path.isfile(filename):
+            os.remove(filename)
+        storage = paths.Storage(filename, "w", self.good_traj[0])
+
+        storage.save(self.transition)
+        assert_equal(len(storage.transitions), 1)
+        storage.sync_all()
+
+        storage_r = paths.storage.AnalysisStorage(filename)
+        reloaded = storage_r.transitions[0]
+        assert_equal(self.transition.ensembles[0], reloaded.ensembles[0])
+
+        if os.path.isfile(filename):
+            os.remove(filename)
 
 class testMinusSidesSummary(object):
     def setup(self):
@@ -46,14 +94,11 @@ class testMinusSidesSummary(object):
             "aixiixxiaaiixxaxiiaaaiixxxiiia"
         )
 
-
-
     def _make_traj(self, string):
         pretraj = []
         for l in string:
             pretraj.append({"a" : 0.3, "b" : 2.2, "i" : 0.6, "x" : 1.0}[l])
         return make_1d_traj(coordinates=pretraj, velocities=[1.0]*len(pretraj))
-
 
     def test_normal_minus(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.stateA)

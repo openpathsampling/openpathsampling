@@ -502,13 +502,25 @@ class EngineMover(SampleMover):
     """Baseclass for Movers that use an engine
     """
 
-    engine = None
+    default_engine = None
 
-    def __init__(self, ensemble, target_ensemble, selector):
+    def __init__(self, ensemble, target_ensemble, selector, engine=None):
         super(EngineMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
+        self._engine = engine
+
+    @property
+    def engine(self):
+        if self._engine is not None:
+            return self._engine
+        else:
+            return self.default_engine
+
+    @engine.setter
+    def engine(self, val):
+        self._engine = engine
 
     def _called_ensembles(self):
         return [self.ensemble]
@@ -618,11 +630,12 @@ class EngineMover(SampleMover):
 class ForwardShootMover(EngineMover):
     """A forward shooting sample generator
     """
-    def __init__(self, ensemble, selector):
+    def __init__(self, ensemble, selector, engine=None):
         super(ForwardShootMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=ensemble,
-            selector=selector
+            selector=selector,
+            engine=engine
         )
 
     @property
@@ -632,11 +645,12 @@ class ForwardShootMover(EngineMover):
 class BackwardShootMover(EngineMover):
     """A Backward shooting generator
     """
-    def __init__(self, ensemble, selector):
+    def __init__(self, ensemble, selector, engine=None):
         super(BackwardShootMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=ensemble,
-            selector=selector
+            selector=selector,
+            engine=engine
         )
 
     @property
@@ -649,11 +663,12 @@ class ForwardExtendMover(EngineMover):
     A Sample Mover implementing Forward Extension
     """
     _direction = "forward"
-    def __init__(self, ensemble, target_ensemble):
+    def __init__(self, ensemble, target_ensemble, engine=None):
         super(ForwardExtendMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=target_ensemble,
             selector=paths.FinalFrameSelector(),
+            engine=engine
         )
 
     @property
@@ -666,11 +681,12 @@ class BackwardExtendMover(EngineMover):
     A Sample Mover implementing Backward Extension
     """
     _direction = "backward"
-    def __init__(self, ensemble, target_ensemble):
+    def __init__(self, ensemble, target_ensemble, engine=None):
         super(BackwardExtendMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=target_ensemble,
             selector=paths.FirstFrameSelector(),
+            engine=engine
         )
 
     @property
@@ -1689,15 +1705,17 @@ class OneWayShootingMover(RandomChoiceMover):
     ensemble : :class:`openpathsampling.Ensemble`
         Ensemble for this shooting mover
     """
-    def __init__(self, ensemble, selector):
+    def __init__(self, ensemble, selector, engine=None):
         movers = [
             ForwardShootMover(
                 ensemble=ensemble,
-                selector=selector
+                selector=selector,
+                engine=engine
             ),
             BackwardShootMover(
                 ensemble=ensemble,
-                selector=selector
+                selector=selector,
+                engine=engine
             )
         ]
         super(OneWayShootingMover, self).__init__(
@@ -1736,15 +1754,17 @@ class OneWayExtendMover(RandomChoiceMover):
     ensemble : :class:`openpathsampling.Ensemble`
         valid ensemble
     """
-    def __init__(self, ensemble, target_ensemble):
+    def __init__(self, ensemble, target_ensemble, engine=None):
         movers = [
             ForwardExtendMover(
                 ensemble=ensemble,
-                target_ensemble=target_ensemble
+                target_ensemble=target_ensemble,
+                engine=engine
             ),
             BackwardExtendMover(
                 ensemble=ensemble,
-                target_ensemble=target_ensemble
+                target_ensemble=target_ensemble,
+                engine=engine
             )
         ]
         super(OneWayExtendMover, self).__init__(
@@ -1774,7 +1794,7 @@ class MinusMover(SubPathMover):
     """
     _is_canonical = True
 
-    def __init__(self, minus_ensemble, innermost_ensembles):
+    def __init__(self, minus_ensemble, innermost_ensembles, engine=None):
         try:
             innermost_ensembles = list(innermost_ensembles)
         except TypeError:
@@ -1806,11 +1826,13 @@ class MinusMover(SubPathMover):
         extension_mover = RandomChoiceMover([
             ForwardExtendMover(
                 ensemble=segment,
-                target_ensemble=minus_ensemble
+                target_ensemble=minus_ensemble,
+                engine=engine
             ),
             BackwardExtendMover(
                 ensemble=segment,
-                target_ensemble=minus_ensemble
+                target_ensemble=minus_ensemble,
+                engine=engine
             )
         ])
 
@@ -1844,7 +1866,8 @@ class SingleReplicaMinusMover(MinusMover):
     minus interface. Instead, it just puts the newly generated segment into
     the innermost ensemble.
     """
-    def __init__(self, minus_ensemble, innermost_ensembles, bias=None):
+    def __init__(self, minus_ensemble, innermost_ensembles, 
+                 bias=None, engine=None):
         try:
             innermost_ensembles = list(innermost_ensembles)
         except TypeError:
@@ -1873,14 +1896,14 @@ class SingleReplicaMinusMover(MinusMover):
 
         forward_minus = ConditionalSequentialMover([
             hop_innermost_to_segment,
-            ForwardExtendMover(segment, minus_ensemble),
+            ForwardExtendMover(segment, minus_ensemble, engine=engine),
             FinalSubtrajectorySelectMover(minus_ensemble, segment),
             hop_segment_to_innermost
         ])
 
         backward_minus = ConditionalSequentialMover([
             hop_innermost_to_segment,
-            BackwardExtendMover(segment, minus_ensemble),
+            BackwardExtendMover(segment, minus_ensemble, engine=engine),
             FirstSubtrajectorySelectMover(minus_ensemble, segment),
             hop_segment_to_innermost
         ])
@@ -1933,7 +1956,7 @@ def PathReversalSet(ensembles):
 
 class PathMoverFactory(object):
     @staticmethod
-    def OneWayShootingSet(selector_set, interface_set):
+    def OneWayShootingSet(selector_set, interface_set, engine=None):
         if type(selector_set) is not list:
             selector_set = [selector_set]*len(interface_set)
 
@@ -1941,7 +1964,8 @@ class PathMoverFactory(object):
         for (selector, iface) in zip(selector_set, interface_set):
             mover = OneWayShootingMover(
                 selector=selector,
-                ensemble=iface
+                ensemble=iface,
+                engine=engine
             )
             mover.named("OneWayShootingMover " + str(iface.name))
             mover_set.append(mover)
@@ -1980,17 +2004,12 @@ class MoveDetails(Details):
 
     Attributes
     ----------
-    replica : integer
-        replica ID to which this trial move would apply
     inputs : list of Trajectory
         the Samples which were used as inputs to the move
-    trial : Trajectory
-        the Trajectory
-    trial_is_in_ensemble : bool
-        whether the attempted move created a trajectory in the right
-        ensemble
-    mover : PathMover
-        the PathMover which generated this sample out of other samples
+    trials : list of Trajectory
+        the trial trajectories
+    results : list of Trajectory
+        the results
 
     Specific move types may have add several other attributes for each
     MoveDetails object. For example, shooting moves will also include

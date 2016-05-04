@@ -18,7 +18,7 @@ class SelectorTest(object):
         self.dyn = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
                                       0.1, 0.2, 0.3, 0.4, 0.5])
                                       #0.5, 0.4, 0.3, 0.2, 0.1])
-        SampleMover.engine = self.dyn
+        # SampleMover.engine = self.dyn
         self.dyn.initialized = True
         self.ens = LengthEnsemble(5)
         self.gs = SampleSet(Sample(
@@ -37,7 +37,8 @@ class testFirstFrameSelector(SelectorTest):
     def test_shooting_move(self):
         self.shooter = ForwardShootMover(
             ensemble=self.ens,
-            selector=FirstFrameSelector()
+            selector=FirstFrameSelector(),
+            engine=self.dyn
         )
         change = self.shooter.move(self.gs)
         samples = change.trials
@@ -58,7 +59,8 @@ class testFinalFrameSelector(SelectorTest):
     def test_shooting_move(self):
         self.shooter = BackwardShootMover(
             ensemble=self.ens,
-            selector=FinalFrameSelector()
+            selector=FinalFrameSelector(),
+            engine=self.dyn
         )
         change = self.shooter.move(self.gs)
         samples = change.trials

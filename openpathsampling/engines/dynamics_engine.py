@@ -82,7 +82,8 @@ class DynamicsEngine(StorableNamedObject):
         self._check_options(options)
 
         # as default set a newly generated engine as the default engine
-        self.set_as_default()
+        # self.set_as_default()
+        # REMOVED because this breaks the ability to have multiple engines
 
     def _check_options(self, options = None):
         """
