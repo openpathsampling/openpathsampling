@@ -105,4 +105,17 @@ class testExternalEngine(object):
                                          [self.ensemble.can_append])
         assert_equal(len(traj), 5)
 
-
+    def test_in_shooting_move(self):
+        ens10 = paths.LengthEnsemble(10)
+        init_traj = self.fast_engine.generate_forward(self.template, ens10)
+        assert_equal(ens10(init_traj), True)
+        init_conds = paths.SampleSet([
+            paths.Sample(replica=0, ensemble=ens10, trajectory=init_traj)
+        ])
+        print [snap.xyz[0][0] for snap in init_conds[0].trajectory]
+        shooter = paths.OneWayShootingMover(ensemble=ens10,
+                                            selector=paths.UniformSelector(),
+                                            engine=self.fast_engine)
+        change = shooter.move(init_conds)
+        new_sample_set = init_conds.apply_samples(change.results)
+        print [snap.xyz[0][0] for snap in new_sample_set[0].trajectory]

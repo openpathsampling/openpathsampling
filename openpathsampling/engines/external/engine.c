@@ -2,6 +2,15 @@
 #include <stdlib.h>
 #include <time.h>
 
+/*
+ * engine.c
+ *
+ * Trivial 1D "engine" to be used for tests of an external engine.
+ *
+ * Allows us to control pace of creating new frames, as well as initial
+ * frame condition.
+ */
+
 int main(int argc, char ** argv)
 {
     if (argc < 2) {
