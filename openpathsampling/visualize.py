@@ -1143,7 +1143,11 @@ class PathTreeBuilder(Builder):
         min_x, max_x = self._get_min_max(self.p_x)
         min_y, max_y = 0, len(samples) - 1
 
-        matrix = self._to_matrix()
+        matrix = self._to_matrix(min_y=min_y, max_y=max_y)
+
+        # print min_x, max_x
+        # print min_y, max_y
+        # print len(matrix), len(matrix[0])
 
         if hasattr(self, 'states') and len(self.states) > 0:
             for color, op in self.states.iteritems():
@@ -1153,8 +1157,9 @@ class PathTreeBuilder(Builder):
                     yp = y + min_y
                     for x in range(0, (max_x - min_x + 1)):
                         xp = x + min_x
+                        val = None
 
-                        if matrix[y][x] is not None and bool(op(matrix[y][x])):
+                        if (matrix[y][x] is not None and bool(op(matrix[y][x]))):
                             if left is None:
                                 left = xp
                         else:
@@ -1329,9 +1334,12 @@ class PathTreeBuilder(Builder):
         else:
             return 0, 0
 
-    def _to_matrix(self):
-        min_x, max_x = self._get_min_max(self.p_x)
-        min_y, max_y = self._get_min_max(self.p_y)
+    def _to_matrix(self, min_x=None, max_x=None, min_y=None, max_y=None):
+        if min_x is None or max_x is None:
+            min_x, max_x = self._get_min_max(self.p_x)
+
+        if min_y is None or max_y is None:
+            min_y, max_y = self._get_min_max(self.p_y)
 
         matrix = [[None] * (max_x - min_x + 1) for n in range(max_y - min_y + 1)]
 
@@ -1432,6 +1440,104 @@ class ReplicaHistoryTree(PathTreeBuilder):
         return decorrelated
 
 
+class SnapshotMatrix(object):
+    def __init__(self, sample_list):
+        self.sample_list = sample_list
+        length = len(sample_list)
+        self.matrix = [{} for n in range(length)]
+        self.ranges = [{} for n in range(length)]
+        self.shift = [0 for n in range(length)]
+
+    def __setitem__(self, key, value):
+        y_pos = key[0]
+        x_pos = key[1]
+        if type(value) is paths.Trajectory:
+            for pos, snapshot in enumerate(value):
+                if x_pos not in self.matrix[y_pos]:
+                    self.matrix[y_pos][x_pos + pos] = snapshot
+                else:
+                    raise KeyError('Position already set. Can only be set once')
+
+            self.shift[y_pos] = x_pos
+
+        elif isinstance(value, paths.BaseSnapshot):
+            if x_pos not in self.matrix[y_pos]:
+                self.matrix[y_pos][x_pos] = value
+            else:
+                raise KeyError('Position already set. Can only be set once')
+
+    def __getitem__(self, item):
+        y_pos = item[0]
+        x_pos = item[1]
+        return self.matrix[y_pos][x_pos]
+
+    def get(self, y_pos, x_pos):
+        if x_pos in self.matrix[y_pos]:
+            return self.matrix[y_pos]
+        else
+            return None
+
+    def is_new(self, y_pos, x_pos):
+        if x_pos not in self.matrix[y_pos]:
+            raise KeyError('No snapshot at this position')
+
+        snapshot = self.matrix[y_pos][x_pos]
+
+        pos = y_pos
+        while pos > 0:
+            if snapshot in self.matrix[pos - 1]:
+                return False
+
+            pos -= 1
+
+        return True
+
+    def first(self, y_pos, x_pos):
+        snapshot = self.matrix[y_pos][x_pos]
+
+        pos = y_pos
+        if pos > 0:
+            if self.sample_list[pos].parent is None:
+                return None
+
+            new_y_pos = self.sample_list.parent(pos)
+
+            if new_y_pos > pos:
+                return None
+
+            if self.matrix[new_y_pos][x_pos] is snapshot:
+                return None
+
+            return new_y_pos
+        else:
+            return None
+
+    def parent(self, y_pos, x_pos):
+        snapshot = self.matrix[y_pos][x_pos]
+
+        pos = y_pos
+        found = None
+        while pos > 0:
+            if self.sample_list[pos].parent is None:
+                return found
+
+            new_y_pos = self.sample_list.parent(pos)
+
+            if new_y_pos > pos:
+                return found
+
+            if self.matrix[new_y_pos][x_pos] is snapshot:
+                return found
+
+            found = new_y_pos
+            pos = new_y_pos
+            snapshot = snapshot.parent
+
+        return found
+
+    def all_new(self, y_pos):
+
+
 class SampleList(list):
     """
     A timely ordered series of `Sample` objects.
@@ -1449,6 +1555,11 @@ class SampleList(list):
     def __init__(self, samples):
         list.__init__(self, samples)
 
+        self.time_symmetric = True
+        self.flip_time_direction = False
+        self.matrix = []
+        self.parents = []
+
     def __add__(self, other):
         return SampleList(list.__add__(self, other))
 
@@ -1459,6 +1570,109 @@ class SampleList(list):
             SampleList(list.__getitem__(self, item))
         else:
             return list.__getitem__(self, item)
+
+    def parent(self, idx):
+        if type(idx) is int:
+            return self.index(self[idx].parent)
+        else:
+            return self.index(idx.parent)
+
+    def analyze(self):
+
+        matrix = SnapshotMatrix(self)
+        samples = self
+
+        # erase all steps from first onward
+        if first > 0:
+            self.matrix = self.matrix[:first]
+
+        for pos in range(len(samples) - first):
+            self.matrix.append({})
+
+        assume_reversed_as_same = self.time_symmetric
+        flip_time_direction = self.flip_time_direction
+
+        time_direction = +1
+
+        for y_pos, sample in enumerate(samples[first:], first):
+            mover_type = type(sample.mover)
+            traj = sample.trajectory
+
+            if time_direction == -1:
+                traj = paths.Trajectory(list(reversed(list(traj))))
+
+            overlap_reversed = False
+            index_bw = None
+            index_fw = None
+
+            for snapshot in range(len(traj)):
+                snap = traj[snapshot]
+                if snap in p_x or assume_reversed_as_same and snap.reversed in p_x:
+                    connect_bw = p_x[snap] if snap in p_x else p_x[snap.reversed]
+                    index_bw = snapshot
+                    shift_bw = connect_bw - snapshot
+                    break
+
+            new_sample = False
+            if index_bw is None:
+                index_bw = 0
+                index_fw = len(traj) - 1
+                # no overlap, so skip
+                new_sample = True
+                shift_bw = 0
+                shift_fw = 0
+            else:
+                for snapshot in range(len(traj) - 1, -1, -1):
+                    snap = traj[snapshot]
+                    if snap in p_x or (assume_reversed_as_same and snap.reversed in p_x):
+                        connect_fw = p_x[snap] if snap in p_x else p_x[snap.reversed]
+                        index_fw = snapshot
+                        shift_fw = connect_fw - snapshot
+                        break
+
+                if shift_bw != shift_fw:
+                    overlap_reversed = True
+
+                # now we know that the overlap is between (including) [connect_bw, connect_fw]
+                # and the trajectory looks like [bw, ...] + [old, ...] + [fw, ...]
+                # with bw
+                # [0, ..., index_bw -1] + [index_bw, ..., index_fw] + [index_fw + 1, ..., len(traj) - 1]
+                # both shift_fw and shift_bw always exist and are the same if the trajectory is extended
+                # or truncated or shoot from. If the overlapping trajectory is reversed before extending
+                # then we get
+                # [0, ..., index_fw -1] + [index_fw, ..., index_bw] + [index_bw + 1, ..., len(traj) - 1]
+                # this can be checked by index_bw > index_fw or shift_fw != shift_bw
+
+            p_x = {}
+
+            if flip_time_direction and overlap_reversed:
+                # reverse the time and adjust the shifting
+
+                index_bw = len(traj) - 1 - index_bw
+                index_fw = len(traj) - 1 - index_fw
+
+                shift = (shift_fw + shift_bw) / 2 + index_bw - (len(traj) - 1 - index_fw)
+                traj = paths.Trajectory(list(reversed(list(traj))))
+
+                time_direction *= -1
+
+            else:
+                shift = (shift_fw + shift_bw) / 2
+
+            for pos, snapshot in enumerate(traj):
+                pos_x = shift + pos
+                p_x[snapshot] = pos_x
+                self.matrix[y_pos][pos_x] = snapshot
+
+            self.samp_list[sample] = {
+                'shift': shift,
+                'index_fw': index_fw,
+                'index_bw': index_bw,
+                'overlap_reversed': overlap_reversed,
+                'new_sample': new_sample,
+                'mover_type': mover_type,
+                'time_direction': time_direction
+            }
 
     @property
     def decorrelated_trajectories(self):
