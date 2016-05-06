@@ -630,7 +630,7 @@ class ReversibleStoredDict(StoredDict):
                 for key, value in pairs:
                     self.cache[key] = value
 
-            self._last_n_objects = len(self.key_store)
+        self._last_n_objects = len(self.key_store)
 
     def cache_all(self):
         # TODO: This only makes sense if the cache can fit everything.

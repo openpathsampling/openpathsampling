@@ -1,4 +1,4 @@
-.. _cache:
+.. _util:
 
 .. currentmodule:: openpathsampling.netcdfplus.util
 

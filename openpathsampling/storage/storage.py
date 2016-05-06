@@ -33,7 +33,7 @@ class Storage(NetCDFPlus):
 
         Returns
         -------
-        Snapshot
+        openpathsampling.engines.BaseSnapshot
             the initial snapshot
         """
         if self._template is None:
@@ -84,9 +84,10 @@ class Storage(NetCDFPlus):
         """
         Creates a copy of the netCDF file and replicates only the static parts
 
-        Static parts are ensembles, volumes, engines, path movers, shooting point selectors.
-        We do not need to reconstruct collective variables since these need to be created again
-        completely and then the necessary arrays in the file will be created automatically anyway.
+        Static parts are ensembles, volumes, engines, path movers, shooting
+        point selectors.  We do not need to reconstruct collective variables
+        since these need to be created again completely and then the
+        necessary arrays in the file will be created automatically anyway.
 
         Parameters
         ----------
@@ -129,7 +130,7 @@ class Storage(NetCDFPlus):
         filename : string
             filename of the netcdf file to be used or created
         mode : string, default: None
-            the mode of file creation, one of ``w`` (write), ``a`` (append) or
+            the mode of file creation, one of `'w'` (write), `'a'` (append) or
             None, which will append any existing files.
         template : :class:`openpathsampling.Snapshot`
             a Snapshot instance that contains a reference to a Topology, the

@@ -194,7 +194,16 @@ class Trajectory(list, StorableObject):
                     return out
 
             else:
-                raise RuntimeWarning('Cannot access attribute "%s" from this type of snapshots')
+                std_msg = "'{0}' object has no attribute '{1}'"
+                snap_msg = "Cannot delegate to snapshots. "
+                snap_msg += "'{2}' has no attribute '{1}'"
+                spacer = "\n                "
+                msg = (std_msg + spacer + snap_msg).format(
+                    str(self.__class__.__name__), 
+                    item,
+                    snapshot_class.__name__
+                )
+                raise AttributeError(msg)
 
         else:
             return []
@@ -488,6 +497,24 @@ class Trajectory(list, StorableObject):
         """
         shared = self.shared_configurations(other)
         return Trajectory([snap for snap in self if snap in shared])
+
+    def unique_subtrajectory(self, other):
+        """
+        Returns a subtrajectory which contains frames not present in other
+
+
+        Parameters
+        ----------
+        other : :class:`openpathsampling.trajectory.Trajectory`
+            the second trajectory to use
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory`
+            the unique frames subtrajectory (opposite of shared)
+        """
+        unique = set([snap for snap in self]) - set([snap for snap in other])
+        return Trajectory([snap for snap in self if snap in unique])
 
 
     def subtrajectory_indices(self, subtrajectories):

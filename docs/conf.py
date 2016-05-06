@@ -66,7 +66,7 @@ napoleon_use_rtype = True
 pandoc_from = ['markdown', 'mediawiki']
 
 autosummary_generate = True
-autodoc_default_flags = ['members', 'inherited-members']
+autodoc_default_flags = ['members', 'inherited-members', 'imported-members']
 
 sys.path.insert(0, os.path.abspath('sphinxext'))
 extensions.append('notebook_sphinxext')

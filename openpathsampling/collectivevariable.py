@@ -71,25 +71,27 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         """
         Attach store variables to the collective variables.
 
-        If used the collective variable will automatically sync values with the store and
-        load from it if necessary. If the CV is created with `cv_store_cache = True`. This
-        will be done during CV creation.
+        If used the collective variable will automatically sync values with
+        the store and load from it if necessary. If the CV is created with
+        `cv_store_cache = True`. This will be done during CV creation.
 
         Parameters
         ----------
         key_store : :class:`openpathsampling.netcdfplus.ObjectStore`
-            the store that references the key objects used as keys in the collective
-            variable (the input for the cv function)
-        value_store : :class:`openpathsampling.netcdfplus.ObjectStore
+            the store that references the key objects used as keys in the
+            collective variable (the input for the cv function)
+        value_store : :class:`openpathsampling.netcdfplus.ObjectStore`
             the store / variable that references the output (value) objects
-        backward_store : :class:`openpathsampling.netcdfplus.ObjectStore or None
+        backward_store : :class:`openpathsampling.netcdfplus.ObjectStore` or None
             the optional backward store for reversed objects
 
         Notes
         -----
-        Currently the backward feature is exclusively for :class:`openpathsampling.snapshot.Snapshots`
-        which implement a reversed object. If `None` backward will equal forward which will effectively
-        mean that the store treats forward and backward the same.
+        Currently the backward feature is exclusively for
+        :class:`openpathsampling.snapshot.BaseSnapshot` which implement a
+        reversed object. If `None` backward will equal forward which will
+        effectively mean that the store treats forward and backward the
+        same.
 
         """
         self._store_dict = cd.ReversibleStoredDict(
