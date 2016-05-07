@@ -468,7 +468,9 @@ def attach_features(features, use_lazy_reversed=False):
                 "    this = cls.__new__(cls)"
             ]
 
-            code.add_uuid('this')
+            code += [
+                "    this.__uuid__ = self.reverse_uuid()"
+            ]
 
             if has_lazy:
                 code += [

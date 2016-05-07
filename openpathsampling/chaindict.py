@@ -498,15 +498,15 @@ class StoredDict(ChainDict):
             if item._store is self.key_store:
                 val = item._idx
                 if type(val) is int:
-                    print 'from int', val
+#                    print 'from int', val
                     return val
                 else:
                     erg = self.key_store.uuid_idx.get(str(val), None)
-                    print 'from uuid', erg
+#                    print 'from uuid', erg
                     return erg
 
         idx = self.key_store.index.get(item, None)
-        print 'direct', idx, item
+#        print 'direct', idx, item
         return idx
 
     def _get(self, item):
