@@ -253,6 +253,7 @@ class StorableObject(object):
         return args[0]
 
     _excluded_attr = []
+    _included_attr = []
     _exclude_private_attr = True
     _restore_non_initial_attr = True
     _restore_name = True
@@ -272,9 +273,11 @@ class StorableObject(object):
         excluded_keys = ['idx', 'json', 'identifier']
         keys_to_store = {
             key for key in self.__dict__
-            if key not in excluded_keys and
-            key not in self._excluded_attr and
-            not (key.startswith('_') and self._exclude_private_attr)
+            if key in self._included_attr or (
+                key not in excluded_keys and
+                key not in self._excluded_attr and
+                not (key.startswith('_') and self._exclude_private_attr)
+            )
         }
         return {
             key: self.__dict__[key] for key in keys_to_store

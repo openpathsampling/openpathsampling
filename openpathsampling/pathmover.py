@@ -487,7 +487,8 @@ class EngineMover(SampleMover):
 
     default_engine = None
 
-    _exclude_private_attr = False
+    # this will store the engine attribute for all subclasses as well
+    _included_attr = ['_engine']
 
     def __init__(self, ensemble, target_ensemble, selector, engine=None):
         super(EngineMover, self).__init__()
