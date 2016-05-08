@@ -200,6 +200,7 @@ class testStorage(object):
         store.save(rev)
 
         # check that the reversed one has index 1 and not 3!
+        print store.idx(rev)
         assert(store.idx(rev) == 1)
 
         # and we have exactly one snapshot

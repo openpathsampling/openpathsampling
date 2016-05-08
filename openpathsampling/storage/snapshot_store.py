@@ -239,6 +239,17 @@ class BaseSnapshotStore(ObjectStore):
 
         return idx
 
+    def idx(self, obj):
+        try:
+            return self.index[obj]
+        except KeyError:
+            pass
+
+        try:
+            return BaseSnapshotStore.paired_idx(self.index[obj.reversed])
+        except KeyError:
+            return None
+
 
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
