@@ -711,7 +711,7 @@ class ObjectStore(StorableNamedObject):
         else:
             raise ValueError('Unsupported index type (only None allowed).')
 
-        # mark as saved so circular dependcies will not result in infinite loops
+        # mark as saved so circular dependencies will not result in infinite loops
         self.index[obj] = n_idx
 
         # make sure in nested saving that an IDX is not used twice!

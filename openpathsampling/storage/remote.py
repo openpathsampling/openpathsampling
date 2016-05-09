@@ -10,9 +10,12 @@ from openpathsampling.netcdfplus import ObjectStore
 import openpathsampling.engines as peng
 
 from openpathsampling.storage import Storage
+from openpathsampling.netcdfplus.dictify import UUIDObjectJSON
 
 from Queue import Empty
 import re
+
+from uuid import UUID
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -33,12 +36,28 @@ class RemoteClientObject(ObjectStore):
         else:
             return max(self.index.values()) + 1
 
+    def _set_uuid(self, idx, uuid):
+        pass
+
+    @property
+    def uuid_idx(self):
+        return self._uuid_idx
+
 
 class RemoteMasterObject(ObjectStore):
+
+    length = 0L
 
     def __init__(self, content_class, no_store=False):
         super(RemoteMasterObject, self).__init__(content_class)
         self.no_store = no_store
+
+    def __len__(self):
+        return self.length
+
+    @property
+    def uuid_idx(self):
+        return self._uuid_idx
 
     def _load(self, idx):
         # No loading, only stuff that is in cache and memory
@@ -46,7 +65,14 @@ class RemoteMasterObject(ObjectStore):
         result = self.storage.ask(
             "_cache_.simplifier.simplify_object(_cache_.%s[%d])" % (self.prefix, idx))
 
-        return self.storage.simplifier.from_json(result)
+        uuid = self.storage.ask(
+            "_cache_.%s[%d].__uuid__" % (self.prefix, idx)
+        )
+
+        obj = self.storage.simplifier.from_json(result)
+        obj.__uuid__ = UUID(uuid)
+
+        return obj
 
     def _save(self, obj, idx):
         # No loading, only caching and what is left in memory
@@ -68,41 +94,25 @@ class RemoteMasterObject(ObjectStore):
             self.storage.tell(
                 "_obj = _cache_.simplifier.from_json(_str)")
 
+            self.storage.tell(
+                "_obj.__uuid__ = paths.storage.remote.UUID('%s')" % obj.__uuid__
+            )
+
+            res = self.storage.ask(
+                "_obj"
+            )
+
+            print '_obj =', res
+
             res = self.storage.ask(
                 "_cache_.%s.save(_obj)" % self.prefix)
 
-            return int(res)
-        else:
-            return None
+            print res
 
-    def save(self, obj, idx=None):
-        if obj in self.index:
-            # has been saved so quit and do nothing
-            return self.index[obj]
+        self.length = max(self.length, idx + 1)
 
-        if hasattr(obj, '_idx'):
-            # is a proxy of a saved object so do nothing
-            return obj._idx
-
-        if not isinstance(obj, self.content_class):
-            raise ValueError(
-                'This store can only store object of base type "%s". Given obj is of type "%s". You'
-                'might need to use another store.' % (self.content_class, obj.__class__.__name__)
-            )
-
-        n_idx = self._save(obj, None)
-
-        if n_idx is not None:
-            self.index[obj] = n_idx
-
-            # store the name in the cache
-            if hasattr(self, 'cache'):
-                self.cache[n_idx] = obj
-
-        return n_idx
-
-    def __len__(self):
-        return 10000000
+    def _set_uuid(self, idx, uuid):
+        pass
 
 
 # =============================================================================================
@@ -132,6 +142,9 @@ class RemoteClientStorage(Storage):
             a Snapshot instance that contains a reference to a Topology, the
             number of atoms and used units
         """
+
+        self.reference_by_uuid = True
+        self.simplifier = UUIDObjectJSON(self)
 
         self._setup_class()
 
@@ -180,13 +193,17 @@ class RemoteMasterStorage(Storage):
 
         self.client_name = '_cache_'
 
+        self.reference_by_uuid = True
+
         self.tell(
 """
 import openpathsampling as paths
-paths.netcdfplus.base.StorableObject.set_observer(True)
+# paths.netcdfplus.base.StorableObject.set_observer(True)
 _cache_ = paths.storage.remote.RemoteClientStorage()
 """
         )
+
+        self.simplifier = UUIDObjectJSON(self)
 
         self._setup_class()
 
@@ -196,9 +213,16 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
         self._create_storages()
         self._initialize()
 
-        for store, idx in self.stores.index.iteritems():
-            self.tell("_cache_.register_store('%s', _cache_.stores[%d])" % (store.name, idx))
-            self.tell("_cache_.stores[%d].name = '%s'" % (idx, store.name))
+        for uuid, idx in self.stores._uuid_idx.iteritems():
+            store = self.stores.cache[idx]
+            print store.name, idx
+            what = self.ask("_cache_.stores[paths.storage.remote.UUID('%s')]" % uuid)
+            print what
+            self.tell("_cache_.register_store('%s', _cache_.stores[paths.storage.remote.UUID('%s')])" % (store.name, uuid))
+
+            print self.ask("_cache_.%s" % store.name)
+
+            self.tell("_cache_.%s.name = '%s'" % (store.name, store.name))
 
         self.tell("_cache_.set_caching_mode('default')")
         self.tell("_cache_.simplifier.update_class_list()")
@@ -215,6 +239,7 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
         try:
             while not found:
                 msg = self.client.iopub_channel.get_msg(timeout=1.0)
+#                print msg
                 if 'msg_id' in msg['parent_header'] and msg['parent_header']['msg_id'] == uuid:
                     if msg['msg_type'] == 'execute_result':
                         found = True
