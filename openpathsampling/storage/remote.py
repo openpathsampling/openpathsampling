@@ -17,6 +17,8 @@ import re
 
 from uuid import UUID
 
+from jupyter_client.manager import KernelManager
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -226,7 +228,16 @@ class RemoteMasterStorage(Storage):
     def n_spatial(self):
         return self.topology.n_spatial
 
-    def __init__(self, client):
+    def __del__(self):
+        self.client.stop_channels()
+        self.km.shutdown_kernel()
+#        del self.client
+#        del self.km
+
+    def close(self):
+        self.__del__()
+
+    def __init__(self, client=None):
         """
         Create a netCDF+ storage for OPS Objects
 
@@ -242,10 +253,19 @@ class RemoteMasterStorage(Storage):
             number of atoms and used units
         """
 
-        self.client = client
+        if client is None:
+            self.manual_kernel = False
+            self.km = KernelManager()
+            self.km.start_kernel()
+            self.client = self.km.client()
+            self.client.start_channels()
 
-        self.iopub = client.iopub_channel
-        self.shell = client.shell_channel
+            self.client.execute("import openpathsampling as paths")
+        else:
+            self.client = client
+
+        self.iopub = self.client.iopub_channel
+        self.shell = self.client.shell_channel
 
         self.client_name = '_cache_'
 
@@ -354,8 +374,3 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
     def _initialize(self):
         # Set global attributes.
         self.set_caching_mode('default')
-
-    def close(self):
-        self.kc.stop_channels()
-        self.km.shutdown_kernel()
-        del self.km
