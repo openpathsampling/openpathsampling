@@ -115,7 +115,7 @@ It is perhaps easiest to understand the idea of networks and transitions if
 we visualize them for the case of transition interface sampling. Let's take
 one of the commonly-used illustrations of TIS as a starting point:
 
-(two-state TIS)
+.. image:: two_state_tis.png
 
 Here we see two transitions: :math:`A\to B` and :math:`B\to A`. In this
 simple example, there is no distinction between sampling transitions and
@@ -164,7 +164,7 @@ Three-state networks
 Now let's consider a 3-state system. In the image below, we illustrate the
 sampling network for an :class:`.MSTISNetwork` for a 3-state system.
 
-(3-state MSTIS)
+.. image:: three_state_tis.png
 
 In this example, there are 3 sampling transitions: 
 
