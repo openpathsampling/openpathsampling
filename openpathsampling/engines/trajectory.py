@@ -156,7 +156,7 @@ class Trajectory(list, StorableObject):
         """
         if len(self) > 0:
             snapshot_class = self[0].__class__
-            if hasattr(snapshot_class, item):
+            if hasattr(snapshot_class, '__features__') and item in snapshot_class.__features__.variables:
                 first = getattr(self[0], item)
                 if type(first) is u.Quantity:
                     inner = first._value

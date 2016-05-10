@@ -59,15 +59,79 @@ class RemoteMasterObject(ObjectStore):
     def uuid_idx(self):
         return self._uuid_idx
 
+    def load(self, idx):
+        """
+        Returns an object from the storage.
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the object to be loaded
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the loaded object
+        """
+
+        n_idx = -1
+
+        if self.reference_by_uuid and type(idx) is UUID:
+            # we want to load by uuid and it was not in cache.
+            if str(idx) in self.uuid_idx:
+                n_idx = int(self.uuid_idx[str(idx)])
+
+                # if it is in the cache, return it
+                try:
+                    obj = self.cache[n_idx]
+                    logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
+                    return obj
+
+                except KeyError:
+                    pass
+
+        else:
+            raise ValueError(
+                'indices of type "%s" are not allowed in named storage (only UUID)' % type(idx).__name__
+            )
+
+
+        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
+
+        # this loader uses UUID not an integer index to load from remote kernel
+        obj = self._load(idx)
+
+        # let's add the loaded object to this cache also and for that we need an index
+
+        n_idx = self.free()
+        self.index[obj] = n_idx
+
+        if obj is not None:
+            # update cache there might have been a change due to naming
+            self.cache[n_idx] = obj
+
+            if self.reference_by_uuid:
+                setattr(obj, '__uuid__', idx)
+                # make sure that you cannot change the uuid of loaded objects
+
+                # finally store the uuid of a uuidd object in cache
+                self._update_uuid_in_cache(obj.__uuid__, n_idx)
+
+        return obj
+
     def _load(self, idx):
         # No loading, only stuff that is in cache and memory
 
-        result = self.storage.ask(
-            "_cache_.simplifier.simplify_object(_cache_.%s[%d])" % (self.prefix, idx))
+        uuid = str(idx)
 
-        uuid = self.storage.ask(
-            "_cache_.%s[%d].__uuid__" % (self.prefix, idx)
-        )
+        result = self.storage.ask(
+            "_cache_.simplifier.simplify_object(_cache_.%s[paths.storage.remote.UUID('%s')])" % (self.prefix, uuid))
+
+        # check_uuid = self.storage.ask(
+        #     "_cache_.%s[paths.storage.remote.UUID('%s')].__uuid__" % (self.prefix, uuid)
+        # )
+        #
+        # assert(uuid == check_uuid[6:-2])
 
         obj = self.storage.simplifier.from_json(result)
         obj.__uuid__ = UUID(uuid)
@@ -98,16 +162,8 @@ class RemoteMasterObject(ObjectStore):
                 "_obj.__uuid__ = paths.storage.remote.UUID('%s')" % obj.__uuid__
             )
 
-            res = self.storage.ask(
-                "_obj"
-            )
-
-            print '_obj =', res
-
-            res = self.storage.ask(
+            _ = self.storage.ask(
                 "_cache_.%s.save(_obj)" % self.prefix)
-
-            print res
 
         self.length = max(self.length, idx + 1)
 
@@ -215,13 +271,7 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
 
         for uuid, idx in self.stores._uuid_idx.iteritems():
             store = self.stores.cache[idx]
-            print store.name, idx
-            what = self.ask("_cache_.stores[paths.storage.remote.UUID('%s')]" % uuid)
-            print what
             self.tell("_cache_.register_store('%s', _cache_.stores[paths.storage.remote.UUID('%s')])" % (store.name, uuid))
-
-            print self.ask("_cache_.%s" % store.name)
-
             self.tell("_cache_.%s.name = '%s'" % (store.name, store.name))
 
         self.tell("_cache_.set_caching_mode('default')")
