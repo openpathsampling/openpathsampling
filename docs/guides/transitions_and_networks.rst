@@ -108,10 +108,52 @@ analysis network.
 Examples of Networks and Transitions
 ====================================
 
+Two-state network
+-----------------
+
 It is perhaps easiest to understand the idea of networks and transitions if
 we visualize them for the case of transition interface sampling. Let's take
 one of the commonly-used illustrations of TIS as a starting point:
 
 (two-state TIS)
 
-In this simple example, there are two transitions:
+Here we see two transitions: :math:`A\to B` and :math:`B\to A`. In this
+simple example, there is no distinction between sampling transitions and
+analysis transitions. 
+
+In practice, this network can be created as either an :class:`.MSTISNetwork`
+or a :class:`.MISTISNetwork`:
+
+.. code-block:: python
+
+   # mstis version 
+   mstis = paths.MSTISNetwork([
+       (stateA, interfacesAB, orderparameterAB),
+       (stateB, interfacesBA, orderparameterBA)
+   ])
+
+   # mistis version
+   mistis = paths.MISTISNetwork([
+       (stateA, interfacesAB, orderparameterAB, stateB),
+       (stateB, interfacesBA, orderparameterBA, stateA)
+   ])
+
+Both of these would give the same behavior.
+
+Note that there are other approaches that could give different networks. By
+default, both :class:`.MSTISNetwork` and :class:`.MISTISNetwork` create a
+"multiple state outer interface," which links the two transitions. Whether
+this interface is actually used depends on the :class:`.MoveScheme`:
+however, another network type might not even make it. Similarly, the
+transitions in both of these create a :class:`.MinusInterfaceEnsemble`,
+which could be removed.
+
+For simplicity, we recommend that users who wish to avoid making use of
+these ensembles adjust the :class:`.MoveStrategy` and :class:`.MoveScheme`
+to manage that, rather than creating a new :class:`.TransitionNetwork`.
+
+Three-state networks
+--------------------
+
+Now let's consider a 3-state system. In the image below, we illustrate the
+sampling network for an :class:`.MSTISNetwork` for a 3-state system.
