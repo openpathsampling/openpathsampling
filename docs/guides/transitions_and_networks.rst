@@ -93,15 +93,17 @@ Handcrafting the analysis network
 
 The analysis network is determined by the list of all state pairs that
 represent the transitions you're studying. It is contained in the
-`network.transitions` dictionary, which has keys of tuples in the form
-`(stateA, stateB)` with values of the `Transition` object that describes the
-$A\to B$ transition. During analysis calculations, you will often perform
-the analysis on the sampling network, but copy the results of that analysis
-to the transition network using
-`analysis_transition.copy_analysis_from(sampling_transition)`. For example,
-in MSTIS, you only run one crossing probability analysis per state (per
-sampling transition), but this is used to link to all the specific
-state-to-state transitions in the analysis network.
+:class:`network.transitions <.TransitionNetwork.transitions>` dictionary,
+which has keys of tuples in the form ``(stateA, stateB)`` with values of the
+:class:`.Transition` object that describes the :math:`A\to B` transition.
+During analysis calculations, you will often perform the analysis on the
+sampling network, but copy the results of that analysis to the transition
+network using
+:meth:`analysis_transition.copy_analysis_from(sampling_transition)
+<.Transition.copy_analysis_from>`.  For example, in MSTIS, you only run one
+crossing probability analysis per state (per sampling transition), but this
+is used to link to all the specific state-to-state transitions in the
+analysis network.
 
 Examples of Networks and Transitions
 ====================================
