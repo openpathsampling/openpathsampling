@@ -119,7 +119,13 @@ one of the commonly-used illustrations of TIS as a starting point:
 
 Here we see two transitions: :math:`A\to B` and :math:`B\to A`. In this
 simple example, there is no distinction between sampling transitions and
-analysis transitions. 
+analysis transitions. Each transition consists of several ensembles. The
+ensembles define the paths that will actually be sampled during the path
+sampling simulation. The transitions provide a context for analyzing those
+results: in TIS, we combine results from sampling multiple ensembles in a
+specific way in order to determine rates. The :class:`Transition` object
+keeps the information on how to combine information from its various
+ensembles.
 
 In practice, this network can be created as either an :class:`.MSTISNetwork`
 or a :class:`.MISTISNetwork`:
@@ -157,3 +163,38 @@ Three-state networks
 
 Now let's consider a 3-state system. In the image below, we illustrate the
 sampling network for an :class:`.MSTISNetwork` for a 3-state system.
+
+(3-state MSTIS)
+
+In this example, there are 3 sampling transitions: 
+
+* from state A, through the interfaces associated with A, and to either
+  state B or state C
+* from state B, through the interfaces associated with B, and to either
+  state A or state C
+* from state C, through the interfaces associated with C, and to either
+  state A or state B
+
+However, there are 6 analysis transitions: :math:`A\to B`, :math:`A\to C`,
+:math:`B\to A`, :math:`B\to C`, :math:`C\to A`, and :math:`C\to B`. Each
+sampling transition samples for two analysis transitions.
+
+When you want a rate, you want the rate for the analysis transition. For
+example, you would typically want a rate for the :math:`A\to B` process, not
+the :math:`A\to (B \text{ or } C)` process, which is what the sampling
+transition would give you. However, the sampling transitions can be much
+more efficient to sampling: the number of analysis transitions scales as the
+square of the number of states, while, in MSTIS, the number of sampling
+transitions scales linearly with (actually, is equal to) the number of
+states.
+
+:class:`MISTISNetworks <.MISTISNetwork>`, on the other hand, have a sampling
+transition for each analysis transition. This can give the advantage of
+allowing a better order parameter to be used as an approximation to very
+different reaction coordinates coming from the same state. It also allows
+you to focus on only a subset of the :math:`N^2` possible transitions.
+
+By distinguishing between sampling transitions and analysis transitions,
+OpenPathSampling makes it easy to allow this kind of flexibility in the
+underlying sampling style, while still making it very easy to set up a given
+kind of network with minimal code.
