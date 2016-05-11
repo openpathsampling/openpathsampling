@@ -8,6 +8,7 @@ Created on 19.07.2014
 import random
 import logging
 import abc
+import collections
 
 import numpy as np
 
@@ -441,18 +442,10 @@ class SampleMover(PathMover):
         # this ugliness is to get the n_new_frames out of the sample details
         # and into a MoveDetails object. The better approach is just to have
         # this it be in the move details of an undecided PMC.
-        n_new_frames = {}
+        n_new_frames = collections.Counter({})
         for t in trials:
-            try:
-                trial_new_frames = t.details.n_new_frames
-            except AttributeError:
-                pass
-            else:
-                for e in t.details.n_new_frames.keys():
-                    try:
-                        n_new_frames[e] += t.details.n_new_frames[e]
-                    except KeyError:
-                        n_new_frames[e] = t.details.n_new_frames[e]
+            if hasattr(t.details, 'n_new_frames'):
+                n_new_frames += t.details.n_new_frames
 
         # 4. accept/reject
         accepted, details = self._accept(trials)
@@ -556,7 +549,7 @@ class EngineMover(SampleMover):
         trial_details = paths.SampleDetails(
             initial_trajectory=initial_trajectory,
             shooting_snapshot=initial_trajectory[shooting_index],
-            n_new_frames={self.engine : n_new_frames}
+            n_new_frames=collections.Counter({self.engine : n_new_frames})
         )
 
         trial = paths.Sample(

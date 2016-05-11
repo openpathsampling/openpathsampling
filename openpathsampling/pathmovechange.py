@@ -1,6 +1,7 @@
 __author__ = 'Jan-Hendrik Prinz'
 
 import logging
+import collections
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
@@ -272,9 +273,7 @@ class PathMoveChange(TreeMixin, StorableObject):
         try:
             return self.details.n_new_frames
         except AttributeError:
-            return dict()
-
-
+            return collections.Counter({})
 
 class EmptyPathMoveChange(PathMoveChange):
     """
@@ -402,7 +401,6 @@ class SequentialPathMoveChange(PathMoveChange):
         for subchange in self.subchanges:
             ret_dict.update(subchange.n_timesteps_used)
         return ret_dict
-
 
     def __str__(self):
         return 'SequentialMove : %s : %d samples\n' % \

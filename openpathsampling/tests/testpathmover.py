@@ -264,6 +264,20 @@ class testOneWayShootingMover(testShootingMover):
         assert_equal(ForwardShootMover in moverclasses, True)
         assert_equal(BackwardShootMover in moverclasses, True)
 
+    def test_move_toy_engine(self):
+        mover = OneWayShootingMover(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.toy_samp)
+        newsamp = self.toy_samp + change
+        assert_equal(len(newsamp), 1)
+        n_new_frames = len(set(change.trials[0].trajectory) - 
+                           set(self.init_samp[0].trajectory))
+        raise SkipTest
+        print n_new_frames, change.details.n_new_frames
+
 class testPathReversalMover(object):
     def setup(self):
         op = CV_Function("myid", f=lambda snap :
