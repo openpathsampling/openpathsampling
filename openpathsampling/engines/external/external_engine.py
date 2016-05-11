@@ -13,6 +13,8 @@ import linecache
 
 import sys # DEBUG
 
+logger = logging.getLogger(__name__)
+
 class ExternalEngine(peng.DynamicsEngine):
     """
     Generic object to handle arbitrary external engines. 
@@ -23,24 +25,24 @@ class ExternalEngine(peng.DynamicsEngine):
 
     # TODO: include clever adaptive waiting scheme
 
-    default_options = {
+    _default_options = {
         'n_frames_max' : 10000,
         'name_prefix' : "test",
         'default_sleep_ms' : 100,
-        'engine_sleep' : 100
+        'auto_optimize_sleep' : True,
+        'engine_sleep' : 100,
+        'n_spatial' : 1,
+        'n_atoms' : 1
     }
 
     killsig = signal.SIGTERM
 
     def __init__(self, options, template):
         # needs to be overridden for each engine
-        options = {
-            'n_spatial' : 1,
-            'n_atoms' : 1
-        }
         super(ExternalEngine, self).__init__(options=options)
         self.template = template
         self.sleep_ms = self.default_sleep_ms
+        self.start_time = None
         self._traj_num = -1
 
     @property
@@ -58,29 +60,38 @@ class ExternalEngine(peng.DynamicsEngine):
             next_frame = self.read_frame_from_file(self.output_file,
                                                    self.frame_num)
             #print self.frame_num, next_frame # DEBUG LOGGER
+            now = time.time()
             if next_frame == "partial":
                 time.sleep(0.001) # wait a millisec and rerun
             elif next_frame is None:
                 # TODO: optimize sleep time to wait longer
-                #print "Sleep", self.sleep_ms / 1000.0 # TODO logger
+                logger.info("Sleeping for {:.2f}ms".format(self.sleep_ms))
                 time.sleep(self.sleep_ms/1000.0)
             elif isinstance(next_frame, peng.BaseSnapshot): # success
-                # TODO: optimize sleep time to wait less
+                self.n_frames_since_start += 1
+                logger.info("Found frame")
                 self.current_snapshot = next_frame
                 next_frame_found = True
                 self.frame_num += 1
             else:
                 raise RuntimeError("Strange return value from read_next_frame_from_file")
+            if self.auto_optimize_sleep and self.n_frames_since_start > 0:
+                self.sleep_ms = ((now - self.start_time) / 
+                                 self.n_frames_since_start) * 1000.0
         return self.current_snapshot
 
     def start(self, snapshot=None):
         super(ExternalEngine, self).start(snapshot)
+        print "Engine", self.engine_sleep
+        print "Default", self.default_sleep_ms
         self._traj_num += 1
         self.frame_num = 0
+        self.n_frames_since_start = 0
         self.set_filenames(self._traj_num)
         self.write_frame_to_file(self.input_file, self.current_snapshot, "w")
 
         cmd = shlex.split(self.engine_command())
+        self.start_time = time.time()
         try:
             # TODO: add the ability to have handlers for stdin and stdout
             self.proc = psutil.Popen(shlex.split(self.engine_command()),
@@ -90,6 +101,7 @@ class ExternalEngine(peng.DynamicsEngine):
 
     def stop(self, trajectory):
         super(ExternalEngine, self).stop(trajectory)
+        logger.info("total_time {:.4f}".format(time.time() - self.start_time))
         proc = self.who_to_kill()
         proc.send_signal(self.killsig)
         proc.wait() # wait for the zombie to die

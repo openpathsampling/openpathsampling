@@ -85,7 +85,7 @@ class DynamicsEngine(StorableNamedObject):
         # self.set_as_default()
         # REMOVED because this breaks the ability to have multiple engines
 
-    def _check_options(self, options = None):
+    def _check_options(self, options=None):
         """
         This will register all variables in the options dict as a member variable if
         they are present in either the DynamicsEngine.default_options or this
@@ -107,9 +107,11 @@ class DynamicsEngine(StorableNamedObject):
 
         Notes
         -----
-        Options are what is necessary to recreate the engine, but not runtime variables or independent
-        variables like the actual initialization status, the runners or an attached storage.
-        If there are non-default options present they will be ignored (no error thrown)
+        Options are what is necessary to recreate the engine, but not
+        runtime variables or independent variables like the actual
+        initialization status, the runners or an attached storage.  If there
+        are non-default options present they will be ignored (no error
+        thrown)
         """
         # start with default options from a dynamics engine
         my_options = {}
