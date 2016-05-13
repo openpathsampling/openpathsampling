@@ -1,4 +1,6 @@
-import openpathsampling.engines as peng
+from openpathsampling.engines.dynamics_engine import DynamicsEngine
+from openpathsampling.engines.snapshot import BaseSnapshot
+from openpathsampling.engines.toy import ToySnapshot
 import numpy as np
 import os
 
@@ -15,7 +17,7 @@ import sys # DEBUG
 
 logger = logging.getLogger(__name__)
 
-class ExternalEngine(peng.DynamicsEngine):
+class ExternalEngine(DynamicsEngine):
     """
     Generic object to handle arbitrary external engines. 
 
@@ -31,6 +33,7 @@ class ExternalEngine(peng.DynamicsEngine):
         'default_sleep_ms' : 100,
         'auto_optimize_sleep' : True,
         'engine_sleep' : 100,
+        'engine_directory' : "",
         'n_spatial' : 1,
         'n_atoms' : 1
     }
@@ -67,7 +70,7 @@ class ExternalEngine(peng.DynamicsEngine):
                 # TODO: optimize sleep time to wait longer
                 logger.info("Sleeping for {:.2f}ms".format(self.sleep_ms))
                 time.sleep(self.sleep_ms/1000.0)
-            elif isinstance(next_frame, peng.BaseSnapshot): # success
+            elif isinstance(next_frame, BaseSnapshot): # success
                 self.n_frames_since_start += 1
                 logger.info("Found frame")
                 self.current_snapshot = next_frame
@@ -82,8 +85,6 @@ class ExternalEngine(peng.DynamicsEngine):
 
     def start(self, snapshot=None):
         super(ExternalEngine, self).start(snapshot)
-        print "Engine", self.engine_sleep
-        print "Default", self.default_sleep_ms
         self._traj_num += 1
         self.frame_num = 0
         self.n_frames_since_start = 0
@@ -93,6 +94,7 @@ class ExternalEngine(peng.DynamicsEngine):
         cmd = shlex.split(self.engine_command())
         self.start_time = time.time()
         try:
+            logger.info(self.engine_command())
             # TODO: add the ability to have handlers for stdin and stdout
             self.proc = psutil.Popen(shlex.split(self.engine_command()),
                                      preexec_fn=os.setsid)
@@ -133,8 +135,8 @@ class ExternalEngine(peng.DynamicsEngine):
                     vels = float(splitted[1])
                 else:
                     raise ValueError()  # force the raise we then ignore
-                snap = peng.toy.Snapshot(coordinates=np.array([[coords]]),
-                                         velocities=np.array([[vels]]))
+                snap = ToySnapshot(coordinates=np.array([[coords]]),
+                                   velocities=np.array([[vels]]))
             except ValueError:
                 snap = "partial"
         return snap
@@ -169,8 +171,12 @@ class ExternalEngine(peng.DynamicsEngine):
 
     def engine_command(self):
         """Generates a string for the command to run the engine."""
-        return ("engine " + str(self.engine_sleep) + " " +
-                str(self.output_file) + " " + str(self.input_file))
+        if self.engine_directory != "":
+            engine_path = os.path.join(self.engine_directory, "engine")
+        else:
+            engine_path = "engine"
+        return (engine_path + " " + str(self.engine_sleep)
+                + " " + str(self.output_file) + " " + str(self.input_file))
                         
 
 

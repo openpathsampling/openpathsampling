@@ -1,4 +1,3 @@
-
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
@@ -6,37 +5,51 @@ from nose.plugins.skip import Skip, SkipTest
 import openpathsampling as paths
 import openpathsampling.engines as peng
 
-from external_engine import *
+import numpy as np
 
 import psutil
+import shlex
 
 import time
 import os
+import glob
 
 import logging
 
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+
+engine_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                          "external_engine")
 
 def setUp():
-    # TODO: run Makefile
-    pass
+    proc = psutil.Popen("make", cwd=engine_dir)
+    proc.wait()
+
+def teardown():
+    # proc = psutil.Popen("make clean", cwd=engine_dir, shell=True)
+    # proc.wait()
+    for testfile in glob.glob("test*out") + glob.glob("test*inp"):
+        os.remove(testfile)
 
 class testExternalEngine(object):
     def setUp(self):
         slow_options = {
             'n_frames_max' : 10000, 
             'engine_sleep' : 100,
-            'name_prefix' : "test"
+            'name_prefix' : "test",
+            'engine_directory' : engine_dir
         }
         fast_options = {
             'n_frames_max' : 10000, 
             'engine_sleep' : 0,
-            'name_prefix' : "test"
+            'name_prefix' : "test",
+            'engine_directory' : engine_dir
         }
         self.template = peng.toy.Snapshot(coordinates=np.array([[0.0]]),
                                           velocities=np.array([[1.0]]))
-        self.slow_engine = ExternalEngine(slow_options, self.template)
-        self.fast_engine = ExternalEngine(fast_options, self.template)
+        self.slow_engine = peng.ExternalEngine(slow_options, self.template)
+        self.fast_engine = peng.ExternalEngine(fast_options, self.template)
         self.ensemble = paths.LengthEnsemble(5)
 
     def test_start_stop(self):
@@ -104,13 +117,14 @@ class testExternalEngine(object):
 
     def test_fast_run(self):
         # generate traj in LengthEnsemble if frames come as fast as possible
+        print "starting fast"
         self.fast_engine.initialized = True
         traj = self.fast_engine.generate(self.template, 
                                          [self.ensemble.can_append])
+        print "done generating"
         assert_equal(len(traj), 5)
 
     def test_in_shooting_move(self):
-        import glob
         for testfile in glob.glob("test*out") + glob.glob("test*inp"):
             os.remove(testfile)
         ens10 = paths.LengthEnsemble(10)
