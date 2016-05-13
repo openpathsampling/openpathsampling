@@ -117,11 +117,9 @@ class testExternalEngine(object):
 
     def test_fast_run(self):
         # generate traj in LengthEnsemble if frames come as fast as possible
-        print "starting fast"
         self.fast_engine.initialized = True
         traj = self.fast_engine.generate(self.template, 
                                          [self.ensemble.can_append])
-        print "done generating"
         assert_equal(len(traj), 5)
 
     def test_in_shooting_move(self):
