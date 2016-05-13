@@ -63,7 +63,8 @@ class testExternalEngine(object):
         # start it; check that it is running
         eng.start(self.template)
         assert_equal(eng.proc.is_running(), True)
-        assert_equal(eng.proc.status(), 'running') # zombies also run
+        # zombies also run
+        assert_not_equal(eng.proc.status(), psutil.STATUS_ZOMBIE) 
 
         # stop it; check that it isn't running
         eng.stop(None)
