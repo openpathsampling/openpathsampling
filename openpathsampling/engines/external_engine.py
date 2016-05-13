@@ -76,7 +76,7 @@ class ExternalEngine(DynamicsEngine):
                 self.current_snapshot = next_frame
                 next_frame_found = True
                 self.frame_num += 1
-            else:
+            else:  # pragma: no cover
                 raise RuntimeError("Strange return value from read_next_frame_from_file")
             if self.auto_optimize_sleep and self.n_frames_since_start > 0:
                 self.sleep_ms = ((now - self.start_time) / 
@@ -98,7 +98,7 @@ class ExternalEngine(DynamicsEngine):
             # TODO: add the ability to have handlers for stdin and stdout
             self.proc = psutil.Popen(shlex.split(self.engine_command()),
                                      preexec_fn=os.setsid)
-        except OSError:
+        except OSError:  # pragma: no cover/
             pass #TODO: need to handle this, but do what? Probably reraise
 
     def stop(self, trajectory):
@@ -173,7 +173,7 @@ class ExternalEngine(DynamicsEngine):
         """Generates a string for the command to run the engine."""
         if self.engine_directory != "":
             engine_path = os.path.join(self.engine_directory, "engine")
-        else:
+        else:  # pragma: no cover
             engine_path = "engine"
         return (engine_path + " " + str(self.engine_sleep)
                 + " " + str(self.output_file) + " " + str(self.input_file))

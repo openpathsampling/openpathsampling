@@ -25,9 +25,25 @@ engine to run its dynamics. The main difference is that the indirect
 approach uses the file system and external processes as intermediates for
 this translation.
 
+## API elements for both control models
+
+Most parts of creating a new engine are independent of the approach to
+controlling the dynamics. 
+
+**TODO: list this stuff**
+
 ## Direct control API
 
+If you intend to use direct control, your engine class should inherit from
+`paths.engines.DynamicsEngine`. You will need to implement these methods:
+
+**TODO: more on the direct API**
+
 ## Indirect control API
+
+If you intend to use indirect control, your engine class should inherit from
+`paths.engines.ExternalEngine`, and you should consider overriding the
+following methods:
 
 * `read_frame_from_file(filename, frame_num)`: reads the frame from the
   external engine's file format
@@ -44,10 +60,16 @@ Additionally, you may wish to override the following options:
 * `killsig` (class variable): the signal sent to terminate the process
   (default is `signal.SIGTERM`).
 * `default_sleep_ms` (set in `options`): time the engines sleeps before
-  checking again whether a new frame has been written. (In the near future,
-  we will have an adaptive approach so that this optimizes on the fly.)
+  checking again whether a new frame has been written. Note that
+  `ExternalEngine`s will automatically optimize the sleep time until you set
+  the option `auto_optimize_sleep` to `False`. 
 
 ## Testing your new engine
+
+We strongly recommend developing thorough unit tests for your engine, and we
+require unit tests for any engines added to the OpenPathSampling core. In
+particular, there are some special cases for each of direct and indirect
+control that your tests should include.
 
 ### Extra tests for direct control
 
