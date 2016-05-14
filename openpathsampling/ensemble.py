@@ -762,9 +762,9 @@ class EnsembleCombination(Ensemble):
         fname : string
             name of the functions f1 and f2. Only used in debug output.
         """
+        logger.debug("Combination is " + self.__class__.__name__)
         a = f1(trajectory, trusted)
         if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
-            logger.debug("Combination is " + self.__class__.__name__)
             logger.debug("Combination." + fname + ": " +
                          self.ensemble1.__class__.__name__ + " is " + str(a))
             ens2 = f2(trajectory, trusted)
@@ -773,7 +773,7 @@ class EnsembleCombination(Ensemble):
             logger.debug("Combination." + fname + ": " +
                          self.ensemble2.__class__.__name__ + " is " +str(ens2))
             # assert(ens2 == ens2_prime)
-            logger.debug("Combination: returning " + str(self.fnc(a,ens2)))
+            logger.debug("Combination should return " + str(self.fnc(a,ens2)))
         res_true = self.fnc(a, True)
         res_false = self.fnc(a, False)
         if res_false == res_true:
@@ -893,12 +893,16 @@ class EnsembleCombination(Ensemble):
 
 class UnionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(UnionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
+        super(UnionEnsemble, self).__init__(ensemble1, ensemble2,
+                                            fnc=lambda a,b : a or b,
+                                            str_fnc='{0}\nor\n{1}')
 
 
 class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
+        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2,
+                                                   fnc=lambda a,b : a and b,
+                                                   str_fnc='{0}\nand\n{1}')
 
 
 class SymmetricDifferenceEnsemble(EnsembleCombination):
@@ -1548,6 +1552,15 @@ class VolumeEnsemble(Ensemble):
         self.volume = volume
         self.trusted = trusted
 
+        self._use_cache = True
+        self._cache_can_append = EnsembleCache(+1)
+        self._cache_strict_can_append = EnsembleCache(+1)
+        self._cache_call = EnsembleCache(+1)
+        self._cache_can_prepend = EnsembleCache(-1)
+        self._cache_strict_can_prepend = EnsembleCache(-1)
+        self._cache_check_reverse = EnsembleCache(-1)
+
+
     @property
     def _volume(self):
         '''
@@ -1560,7 +1573,6 @@ class AllInXEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectories with all frames in the given volume
     '''
-
     def can_append(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
@@ -1576,17 +1588,49 @@ class AllInXEnsemble(VolumeEnsemble):
             return self(trajectory[slice(0,1)], trusted)
         else:
             return self(trajectory)
-        
+
+    def _trusted_call(self, trajectory, cache):
+        """
+        Generalized version of the call when trusted.
+
+        This uses a cache, which has the result for the previous trajectory
+        (`trajectory[:-1]` if forward, `trajectory[1:]` if backward) in the
+        `cache.contents['previous']`.
+
+        Paramters
+        ---------
+        trajectory : paths.Trajectory
+            input trajectory to test
+        cache : paths.EnsembleCache
+            ensemble cache for this function
+
+        Returns
+        -------
+        bool :
+            result of __call__
+        """
+        frame_num = -(cache.direction + 1) / 2  # 1 -> -1; -1 -> 0
+        reset = cache.check(trajectory)
+        if reset:
+            cache.contents['previous'] = None
+        cached_val = cache.contents['previous']
+        if cached_val == True or cached_val is None:
+            # need to check this frame (no prev traj, or prev traj is True)
+            frame = trajectory.get_as_proxy(frame_num)
+            cache.contents['previous'] = self._volume(frame)
+            return cache.contents['previous']
+        else:
+            # cached_val is false, result must be false
+            return False
     
     def __call__(self, trajectory, trusted=None):
         if len(trajectory) == 0:
             return False
-        if trusted == True:
-            #print "trusted"
-            frame = trajectory.get_as_proxy(-1)
-            return self._volume(frame)
+        if trusted == True and self._use_cache:
+            return self._trusted_call(trajectory, self._cache_call)
         else:
-            #logger.debug("Calling volume untrusted "+repr(self))
+            logger.debug("Untrusted VolumeEnsemble "+repr(self))
+            #logger.debug("Trajectory " + repr(trajectory))
             for frame in trajectory.as_proxies():
                 if not self._volume(frame):
                     return False

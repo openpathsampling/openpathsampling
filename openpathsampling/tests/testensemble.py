@@ -2451,10 +2451,7 @@ class testUnionEnsemble(EnsembleTest):
             assert_equal(self.outA_or_outB(traj[0:2], trusted=True), True)
             assert_equal(self.outA_or_outB(traj[0:3], trusted=True), True)
             assert_equal(self.outA_or_outB(traj[0:4], trusted=True), True)
-            #assert_equal(self.outA_or_outB(traj, trusted=True), False)
-
-
-
+            assert_equal(self.outA_or_outB(traj, trusted=True), False)
 
     def test_can_append(self):
         pass
