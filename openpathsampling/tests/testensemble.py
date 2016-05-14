@@ -2450,7 +2450,7 @@ class testUnionEnsemble(EnsembleTest):
         traj = self.local_ttraj['upper_out_in_out_out_cross']
         assert_equal(self.outA_or_outB(traj[0:1], trusted=True), True)
         assert_equal(self.outA._cache_call.contents['previous'], True)
-        assert_equal(self.outB._cache_call.contents['previous'], True)
+        # cache for B might not have been made yet: we can skip it
 
         assert_equal(self.outA_or_outB(traj[0:2], trusted=True), True)
         assert_equal(self.outA._cache_call.contents['previous'], False)
