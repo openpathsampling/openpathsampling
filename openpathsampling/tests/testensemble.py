@@ -2424,8 +2424,9 @@ class testEnsembleSplit(EnsembleTest):
 
 class testUnionEnsemble(EnsembleTest):
     def setup(self):
-        self.outA_or_outB = (paths.AllOutXEnsemble(vol1) |
-                             paths.AllOutXEnsemble(~vol2))
+        self.outA = paths.AllOutXEnsemble(vol1)
+        self.outB = paths.AllOutXEnsemble(~vol2)
+        self.outA_or_outB = self.outA | self.outB
         OAOOB = build_trajdict(['babbc'], lower, upper)
         for test in OAOOB.keys():
             OAOOB[test] = make_1d_traj(coordinates=OAOOB[test],
@@ -2433,7 +2434,7 @@ class testUnionEnsemble(EnsembleTest):
         self.local_ttraj = dict(ttraj)
         self.local_ttraj.update(OAOOB)
 
-    def test_call(self):
+    def test_call_outA_or_outB(self):
         out_out_results = {
             'upper_out' : True,
             'upper_out_in' : True,
@@ -2446,12 +2447,26 @@ class testUnionEnsemble(EnsembleTest):
             self._single_test(self.outA_or_outB, self.local_ttraj[test], 
                               out_out_results[test], failmsg)
 
-            traj = self.local_ttraj['upper_out_in_out_out_cross']
-            assert_equal(self.outA_or_outB(traj[0:1], trusted=True), True)
-            assert_equal(self.outA_or_outB(traj[0:2], trusted=True), True)
-            assert_equal(self.outA_or_outB(traj[0:3], trusted=True), True)
-            assert_equal(self.outA_or_outB(traj[0:4], trusted=True), True)
-            assert_equal(self.outA_or_outB(traj, trusted=True), False)
+        traj = self.local_ttraj['upper_out_in_out_out_cross']
+        assert_equal(self.outA_or_outB(traj[0:1], trusted=True), True)
+        assert_equal(self.outA._cache_call.contents['previous'], True)
+        assert_equal(self.outB._cache_call.contents['previous'], True)
+
+        assert_equal(self.outA_or_outB(traj[0:2], trusted=True), True)
+        assert_equal(self.outA._cache_call.contents['previous'], False)
+        assert_equal(self.outB._cache_call.contents['previous'], True)
+
+        assert_equal(self.outA_or_outB(traj[0:3], trusted=True), True)
+        assert_equal(self.outA._cache_call.contents['previous'], False)
+        assert_equal(self.outB._cache_call.contents['previous'], True)
+
+        assert_equal(self.outA_or_outB(traj[0:4], trusted=True), True)
+        assert_equal(self.outA._cache_call.contents['previous'], False)
+        assert_equal(self.outB._cache_call.contents['previous'], True)
+
+        assert_equal(self.outA_or_outB(traj, trusted=True), False)
+        assert_equal(self.outA._cache_call.contents['previous'], False)
+        assert_equal(self.outB._cache_call.contents['previous'], False)
 
     def test_can_append(self):
         pass
