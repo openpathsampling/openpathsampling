@@ -1422,8 +1422,6 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         assert_equal(ens.can_append(traj[0:4]), True)
         assert_equal(ens.can_append(traj[0:5]), True)
         assert_equal(ens.can_append(traj[0:6]), True)
-        
-
 
     def test_sequential_caching_can_append(self):
         cache = self.pseudo_minus._cache_can_append
@@ -2423,6 +2421,49 @@ class testEnsembleSplit(EnsembleTest):
 
         sub_traj = ensembleAXA.find_last_subtrajectory(traj3)
         assert(traj3.subtrajectory_indices(sub_traj) == [2,3,4])
+
+class testUnionEnsemble(EnsembleTest):
+    def setup(self):
+        self.outA_or_outB = (paths.AllOutXEnsemble(vol1) |
+                             paths.AllOutXEnsemble(~vol2))
+        OAOOB = build_trajdict(['babbc'], lower, upper)
+        for test in OAOOB.keys():
+            OAOOB[test] = make_1d_traj(coordinates=OAOOB[test],
+                                       velocities=[1.0]*len(OAOOB[test]))
+        self.local_ttraj = dict(ttraj)
+        self.local_ttraj.update(OAOOB)
+
+    def test_call(self):
+        out_out_results = {
+            'upper_out' : True,
+            'upper_out_in' : True,
+            'upper_out_in_out' : True,
+            'upper_out_in_out_out' : True,
+            'upper_out_in_out_out_cross' : False
+        }
+        for test in out_out_results.keys():
+            failmsg = "Failure in "+test+"("+str(self.local_ttraj[test])+"): "
+            self._single_test(self.outA_or_outB, self.local_ttraj[test], 
+                              out_out_results[test], failmsg)
+
+            traj = self.local_ttraj['upper_out_in_out_out_cross']
+            assert_equal(self.outA_or_outB(traj[0:1], trusted=True), True)
+            assert_equal(self.outA_or_outB(traj[0:2], trusted=True), True)
+            assert_equal(self.outA_or_outB(traj[0:3], trusted=True), True)
+            assert_equal(self.outA_or_outB(traj[0:4], trusted=True), True)
+            #assert_equal(self.outA_or_outB(traj, trusted=True), False)
+
+
+
+
+    def test_can_append(self):
+        pass
+
+    def test_can_prepend(self):
+        pass
+
+class testIntersectionEnsemble(object):
+    pass
 
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
