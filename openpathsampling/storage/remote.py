@@ -14,6 +14,7 @@ from openpathsampling.netcdfplus.dictify import UUIDObjectJSON
 
 from Queue import Empty
 import re
+import time
 
 from uuid import UUID
 
@@ -75,8 +76,6 @@ class RemoteMasterObject(ObjectStore):
         :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the loaded object
         """
-
-        n_idx = -1
 
         if self.reference_by_uuid and type(idx) is UUID:
             # we want to load by uuid and it was not in cache.
@@ -154,10 +153,10 @@ class RemoteMasterObject(ObjectStore):
                 # this should only be used for the StoreStore itself
                 s['_cls'] = 'RemoteClientObject'
 
-            self.storage.tell(
-                '_str = "%s"' % s)
+            vv = self.storage.ask(
+                '_str = """%s"""' % s)
 
-            self.storage.tell(
+            rr = self.storage.ask(
                 "_obj = _cache_.simplifier.from_json(_str)")
 
             self.storage.tell(
@@ -304,22 +303,27 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
         uuid = self.tell(cmd)
         return self.listen(uuid)
 
-    def listen(self, uuid):
+    def listen(self, uuid, timeout=10.0):
         found = False
+        result = None
         try:
-            while not found:
-                msg = self.client.iopub_channel.get_msg(timeout=1.0)
+            t1 = time.time()
+            while not found and time.time() - t1 < timeout:
+                msg = self.client.iopub_channel.get_msg(timeout=2.0)
 #                print msg
                 if 'msg_id' in msg['parent_header'] and msg['parent_header']['msg_id'] == uuid:
                     if msg['msg_type'] == 'execute_result':
-                        found = True
                         result = msg['content']['data']['text/plain']
-                    elif msg['msg_type'] =='error':
+                    elif msg['msg_type'] == 'error':
                         found = True
                         result = None
                         error = msg['content']
                         print error['evalue']
                         print self._tb(error['traceback'])
+                    elif msg['msg_type'] == 'status':
+                        status = msg['content']['execution_state']
+                        if status == 'idle':
+                            found = True
 
         except Empty:
             return None
@@ -330,7 +334,14 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
         self.iopub.get_msgs()
 
     def tell(self, cmd):
-        return self.client.execute(cmd)
+        uuid = self.client.execute(cmd)
+        self._last_uuid = uuid
+        return uuid
+
+    def wait_for_idle(self, timeout=0.0):
+        if self._last_uuid is not None:
+            result = self.listen(self._last_uuid)
+
 
     def __getitem__(self, item):
         ss = self.ask('_cache_.simplifier.simplify(%s)' % item)
@@ -365,7 +376,9 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
             'transitions' : paths.Transition,
             'schemes' : paths.MoveScheme,
             'volumes' : paths.Volume,
-            'ensembles' : paths.Ensemble
+            'ensembles' : paths.Ensemble,
+            'statics' : paths.engines.openmm.features.StaticContainer,
+            'kinetics' : paths.engines.openmm.features.KineticContainer
         }
 
         for name, obj in stores.iteritems():

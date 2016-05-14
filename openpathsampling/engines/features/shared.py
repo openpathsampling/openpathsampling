@@ -89,6 +89,11 @@ class StaticContainer(StorableObject):
                                box_vectors=self.box_vectors
                                )
 
+    def to_dict(self):
+        return {
+            'coordinates': self.coordinates,
+            'box_vectors': self.box_vectors
+        }
 
 class StaticContainerStore(ObjectStore):
     """
@@ -222,6 +227,11 @@ class KineticContainer(StorableObject):
         this = KineticContainer(velocities=self.velocities)
 
         return this
+
+    def to_dict(self):
+        return {
+            'velocities': self.velocities
+        }
 
 
 class KineticContainerStore(ObjectStore):

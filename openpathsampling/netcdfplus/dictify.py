@@ -74,10 +74,10 @@ class ObjectJSON(object):
             if obj.__class__ is units.Quantity:
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
-                    return {'_value': obj.value_in_unit_system(self.unit_system),
+                    return {'_value': self.simplify_object(obj.value_in_unit_system(self.unit_system), base_type),
                             '_units': self.unit_to_dict(obj.unit.in_unit_system(self.unit_system))}
                 else:
-                    return {'_value': obj / obj.unit, '_units': self.unit_to_dict(obj.unit)}
+                    return {'_value': self.simplify(obj / obj.unit, base_type), '_units': self.unit_to_dict(obj.unit)}
             elif obj.__class__ is np.ndarray:
                 # this is maybe not the best way to store large numpy arrays!
                 return {'_numpy': self.simplify(obj.shape), '_dtype': str(obj.dtype), '_data': base64.b64encode(obj)}
@@ -134,7 +134,7 @@ class ObjectJSON(object):
     def build(self, obj):
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
-                return obj['_value'] * self.unit_from_dict(obj['_units'])
+                return self.build(obj['_value']) * self.unit_from_dict(obj['_units'])
 
             elif '_slice' in obj:
                 return slice(*obj['_slice'])

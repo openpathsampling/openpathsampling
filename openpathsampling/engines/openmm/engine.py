@@ -225,6 +225,9 @@ class OpenMMEngine(DynamicsEngine):
             if snapshot.coordinates is not None:
                 self.simulation.context.setPositions(snapshot.coordinates)
 
+            if snapshot.box_vectors is not None:
+                self.simulation.context.setPeriodicBoxVectors(snapshot.box_vectors)
+
             if snapshot.velocities is not None:
                 self.simulation.context.setVelocities(snapshot.velocities)
 
