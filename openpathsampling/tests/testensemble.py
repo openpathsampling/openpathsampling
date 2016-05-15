@@ -2422,11 +2422,16 @@ class testEnsembleSplit(EnsembleTest):
         sub_traj = ensembleAXA.find_last_subtrajectory(traj3)
         assert(traj3.subtrajectory_indices(sub_traj) == [2,3,4])
 
-class testUnionEnsemble(EnsembleTest):
+class testVolumeCombinations(EnsembleTest):
     def setup(self):
         self.outA = paths.AllOutXEnsemble(vol1)
         self.outB = paths.AllOutXEnsemble(~vol2)
+        self.partinA = paths.PartInXEnsemble(vol1)
+        self.partinB = paths.PartInXEnsemble(~vol2)
         self.outA_or_outB = self.outA | self.outB
+        self.outA_and_outB = self.outA & self.outB
+        self.partinA_or_partinB = self.partinA | self.partinB
+        self.partinA_and_partinB = self.partinA & self.partinB
         OAOOB = build_trajdict(['babbc'], lower, upper)
         for test in OAOOB.keys():
             OAOOB[test] = make_1d_traj(coordinates=OAOOB[test],
@@ -2434,48 +2439,117 @@ class testUnionEnsemble(EnsembleTest):
         self.local_ttraj = dict(ttraj)
         self.local_ttraj.update(OAOOB)
 
+    def _test_trusted_fwd(self, trajectory, function, results,
+                          cache_results=None):
+        # Tests `trajectory` frame by frame in a forward direction for the
+        # `function`, expecting `results`. Additionally, can take the 
+
+        if cache_results is None:
+            cache_results = {}
+
+        # clear the caches before starting
+        for cache in cache_results.keys():
+            cache.__init__(direction=cache.direction)
+
+        for i in range(len(trajectory)):
+            print i
+            # test untrusted
+            assert_equal(function(trajectory[0:i+1]), results[i])
+            # test trusted
+            assert_equal(function(trajectory[0:i+1], trusted=True), results[i])
+            for cache in cache_results.keys():
+                # TODO: this is currently very specific to the caches used
+                # by volumes ensembles. That should be generalized by
+                # allowing several different tags within contents.
+                # cache_results could {cache : {'content_key' : [values]}}
+                if cache_results[cache][i] is not None:
+                    print "cache", cache_results.keys().index(cache)
+                    assert_equal(cache.contents['previous'],
+                                 cache_results[cache][i])
+
+
     def test_call_outA_or_outB(self):
-        out_out_results = {
-            'upper_out' : True,
-            'upper_out_in' : True,
-            'upper_out_in_out' : True,
-            'upper_out_in_out_out' : True,
-            'upper_out_in_out_out_cross' : False
-        }
-        for test in out_out_results.keys():
-            failmsg = "Failure in "+test+"("+str(self.local_ttraj[test])+"): "
-            self._single_test(self.outA_or_outB, self.local_ttraj[test], 
-                              out_out_results[test], failmsg)
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_or_outB, 
+            results=[True, True, True, True, False], 
+            cache_results={
+                self.outA._cache_call : [True, False, False, False, False],
+                self.outB._cache_call : [None, True, True, True, False]
+            }
+        )
+        # TODO: there could be a problem here with short-circuit logic --
+        # check that the cache does things correctly (or perhaps minimally)
+        # if we have the same begin but skip a frame?
+        raise SkipTest
 
-        traj = self.local_ttraj['upper_out_in_out_out_cross']
-        assert_equal(self.outA_or_outB(traj[0:1], trusted=True), True)
-        assert_equal(self.outA._cache_call.contents['previous'], True)
-        # cache for B might not have been made yet: we can skip it
+    def test_call_outA_and_outB(self):
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_and_outB,
+            results=[True, False, False, False, False],
+            cache_results={
+                # cache for A gets checked first: value of cache for B
+                # doesn't matter once cache for A is False (short-circuit)
+                self.outA._cache_call : [True, False, False, False, False],
+                self.outB._cache_call : [True, None, None, None, None]
+            }
+        )
 
-        assert_equal(self.outA_or_outB(traj[0:2], trusted=True), True)
-        assert_equal(self.outA._cache_call.contents['previous'], False)
-        assert_equal(self.outB._cache_call.contents['previous'], True)
+    def test_call_partinA_or_partinB(self):
+        raise SkipTest
 
-        assert_equal(self.outA_or_outB(traj[0:3], trusted=True), True)
-        assert_equal(self.outA._cache_call.contents['previous'], False)
-        assert_equal(self.outB._cache_call.contents['previous'], True)
+    def test_call_partinA_and_partinB(self):
+        raise SkipTest
 
-        assert_equal(self.outA_or_outB(traj[0:4], trusted=True), True)
-        assert_equal(self.outA._cache_call.contents['previous'], False)
-        assert_equal(self.outB._cache_call.contents['previous'], True)
+    def test_can_append_outA_or_outB(self):
+        raise SkipTest
 
-        assert_equal(self.outA_or_outB(traj, trusted=True), False)
-        assert_equal(self.outA._cache_call.contents['previous'], False)
-        assert_equal(self.outB._cache_call.contents['previous'], False)
+    def test_can_append_partinA_or_partinB(self):
+        raise SkipTest
 
-    def test_can_append(self):
-        pass
+    def test_can_append_outA_and_outB(self):
+        raise SkipTest
 
-    def test_can_prepend(self):
-        pass
+    def test_can_append_partinA_and_partinB(self):
+        raise SkipTest
 
-class testIntersectionEnsemble(object):
-    pass
+    def test_can_prepend_outA_or_outB(self):
+        raise SkipTest
+
+    def test_can_prepend_partinA_or_partinB(self):
+        raise SkipTest
+
+    def test_can_prepend_outA_and_outB(self):
+        raise SkipTest
+
+    def test_can_prepend_partinA_and_partinB(self):
+        raise SkipTest
+
+    def test_strict_can_append_outA_or_outB(self):
+        raise SkipTest
+
+    def test_strict_can_append_partinA_or_partinB(self):
+        raise SkipTest
+
+    def test_strict_can_append_outA_and_outB(self):
+        raise SkipTest
+
+    def test_strict_can_append_partinA_and_partinB(self):
+        raise SkipTest
+
+    def test_strict_can_prepend_outA_or_outB(self):
+        raise SkipTest
+
+    def test_strict_can_prepend_partinA_or_partinB(self):
+        raise SkipTest
+
+    def test_strict_can_prepend_outA_and_outB(self):
+        raise SkipTest
+
+    def test_strict_can_prepend_partinA_and_partinB(self):
+        raise SkipTest
+
 
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")

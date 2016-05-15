@@ -1626,6 +1626,11 @@ class AllInXEnsemble(VolumeEnsemble):
     def __call__(self, trajectory, trusted=None):
         if len(trajectory) == 0:
             return False
+        # TODO: We might be able to speed this up based on can_append
+        # being the same as call for this ensemble. Something like check
+        # the can_append cache instead of/as well as the call cache. May
+        # still have problems with overshooting -- but this might provide a
+        # speed-up in sequential ensemble's checking phase
         if trusted == True and self._use_cache:
             return self._trusted_call(trajectory, self._cache_call)
         else:
@@ -1706,7 +1711,7 @@ class PartOutXEnsemble(PartInXEnsemble):
     @property
     def _volume(self):
         # effectively use PartInXEnsemble but with inverted volume
-        return ~ self.volume
+        return ~self.volume
 
     def __invert__(self):
         return AllInXEnsemble(self.volume, self.trusted)
