@@ -2436,15 +2436,16 @@ class testVolumeCombinations(EnsembleTest):
         self.outA_and_outB = self.outA & self.outB
         self.partinA_or_partinB = self.partinA | self.partinB
         self.partinA_and_partinB = self.partinA & self.partinB
-        extras = build_trajdict(['babbc', 'ca', 'bcbba'], lower, upper)
+        extras = build_trajdict(['babbc', 'ca', 'bcbba', 'abbc', 'cbba'], 
+                                lower, upper)
         for test in extras.keys():
             extras[test] = make_1d_traj(coordinates=extras[test],
                                        velocities=[1.0]*len(extras[test]))
         self.local_ttraj = dict(ttraj)
         self.local_ttraj.update(extras)
 
-    def _test_trusted_fwd(self, trajectory, function, results,
-                          cache_results=None):
+    def _test_trusted(self, trajectory, function, results,
+                      cache_results=None, direction=+1):
         # Tests `trajectory` frame by frame in a forward direction for the
         # `function`, expecting `results`. Additionally, can take the 
 
@@ -2456,10 +2457,16 @@ class testVolumeCombinations(EnsembleTest):
             cache.__init__(direction=cache.direction)
 
         for i in range(len(trajectory)):
+            if direction > 0:
+                start = 0
+                end = i+1
+            elif direction < 0:
+                start = len(trajectory)-i-1
+                end = len(trajectory)
             # test untrusted
-            assert_equal(function(trajectory[0:i+1]), results[i])
+            assert_equal(function(trajectory[start:end]), results[i])
             # test trusted
-            trusted_val = function(trajectory[0:i+1], trusted=True)
+            trusted_val = function(trajectory[start:end], trusted=True)
             #print i, trusted_val, results[i]
             assert_equal(trusted_val, results[i])
             for cache in cache_results.keys():
@@ -2470,7 +2477,7 @@ class testVolumeCombinations(EnsembleTest):
                 if cache_results[cache][i] is not None:
                     #print "cache", cache_results.keys().index(cache),
                     try:
-                        contents = cache.contents['previous'],
+                        contents = cache.contents['previous']
                     except KeyError:
                         contents = None
                     #print contents, cache_results[cache][i]
@@ -2479,7 +2486,7 @@ class testVolumeCombinations(EnsembleTest):
                                  cache_results[cache][i])
 
     def test_call_outA_or_outB(self):
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
             function=self.outA_or_outB, 
             results=[True, True, True, True, False], 
@@ -2488,7 +2495,7 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_call : [None, True, True, True, False]
             }
         )
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
             function=self.outA_or_outB,
             results=[True, True, True, True, False],
@@ -2497,7 +2504,7 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_call : [None, None, None, None, False]
             }
         )
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_in_cross'],
             function=self.outA_or_outB,
             results=[True, False],
@@ -2506,7 +2513,7 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_call : [True, False]
             }
         )
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_cross_in'],
             function=self.outA_or_outB,
             results=[True, False],
@@ -2517,7 +2524,7 @@ class testVolumeCombinations(EnsembleTest):
         )
 
     def test_call_outA_and_outB(self):
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
             function=self.outA_and_outB,
             results=[True, False, False, False, False],
@@ -2528,7 +2535,7 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_call : [True, None, None, None, None]
             }
         )
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
             function=self.outA_and_outB,
             results=[True, False, False, False, False],
@@ -2545,7 +2552,7 @@ class testVolumeCombinations(EnsembleTest):
         raise SkipTest
 
     def test_can_append_outA_or_outB(self):
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
             function=self.outA_or_outB.can_append, 
             results=[True, True, True, True, False], 
@@ -2554,7 +2561,7 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_can_append : [None, True, True, True, False]
             }
         )
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
             function=self.outA_or_outB.can_append,
             results=[True, True, True, True, False],
@@ -2563,7 +2570,7 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_can_append : [None, None, None, None, False]
             }
         )
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_in_cross'],
             function=self.outA_or_outB.can_append,
             results=[True, False],
@@ -2572,7 +2579,7 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_can_append : [True, False]
             }
         )
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_cross_in'],
             function=self.outA_or_outB.can_append,
             results=[True, False],
@@ -2583,7 +2590,7 @@ class testVolumeCombinations(EnsembleTest):
         )
 
     def test_can_append_outA_and_outB(self):
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
             function=self.outA_and_outB.can_append,
             results=[True, False, False, False, False],
@@ -2594,7 +2601,7 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_can_append : [True, None, None, None, None]
             }
         )
-        self._test_trusted_fwd(
+        self._test_trusted(
             trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
             function=self.outA_and_outB.can_append,
             results=[True, False, False, False, False],
@@ -2605,7 +2612,26 @@ class testVolumeCombinations(EnsembleTest):
         )
 
     def test_can_prepend_outA_or_outB(self):
-        raise SkipTest
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, True, False],
+                self.outB._cache_can_prepend : [None, None, None, False]
+            },
+            direction=-1
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_out_out_in'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [False, False, False, False],
+                self.outB._cache_can_prepend : [True, True, True, False]
+            },
+            direction=-1
+        )
 
     def test_can_prepend_outA_and_outB(self):
         raise SkipTest
