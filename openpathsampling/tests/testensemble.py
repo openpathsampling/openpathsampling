@@ -2469,7 +2469,12 @@ class testVolumeCombinations(EnsembleTest):
                 # cache_results could {cache : {'content_key' : [values]}}
                 if cache_results[cache][i] is not None:
                     #print "cache", cache_results.keys().index(cache),
-                    #print cache.contents['previous'], cache_results[cache][i]
+                    try:
+                        contents = cache.contents['previous'],
+                    except KeyError:
+                        contents = None
+                    #print contents, cache_results[cache][i]
+
                     assert_equal(cache.contents['previous'],
                                  cache_results[cache][i])
 
@@ -2540,51 +2545,69 @@ class testVolumeCombinations(EnsembleTest):
         raise SkipTest
 
     def test_can_append_outA_or_outB(self):
-        raise SkipTest
-
-    def test_can_append_partinA_or_partinB(self):
-        raise SkipTest
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_or_outB.can_append, 
+            results=[True, True, True, True, False], 
+            cache_results={
+                self.outA._cache_can_append : [True, False, False, False, False],
+                self.outB._cache_can_append : [None, True, True, True, False]
+            }
+        )
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, True, True, True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, True, False],
+                self.outB._cache_can_append : [None, None, None, None, False]
+            }
+        )
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_in_cross'],
+            function=self.outA_or_outB.can_append,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_can_append : [False, False],
+                self.outB._cache_can_append : [True, False]
+            }
+        )
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_cross_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, False],
+                self.outB._cache_can_append : [None, False]
+            }
+        )
 
     def test_can_append_outA_and_outB(self):
-        raise SkipTest
-
-    def test_can_append_partinA_and_partinB(self):
-        raise SkipTest
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_and_outB.can_append,
+            results=[True, False, False, False, False],
+            cache_results={
+                # cache for A gets checked first: value of cache for B
+                # doesn't matter once cache for A is False (short-circuit)
+                self.outA._cache_can_append : [True, False, False, False, False],
+                self.outB._cache_can_append : [True, None, None, None, None]
+            }
+        )
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_and_outB.can_append,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, True, False],
+                self.outB._cache_can_append : [True, False, False, False, None]
+            }
+        )
 
     def test_can_prepend_outA_or_outB(self):
         raise SkipTest
 
-    def test_can_prepend_partinA_or_partinB(self):
-        raise SkipTest
-
     def test_can_prepend_outA_and_outB(self):
-        raise SkipTest
-
-    def test_can_prepend_partinA_and_partinB(self):
-        raise SkipTest
-
-    def test_strict_can_append_outA_or_outB(self):
-        raise SkipTest
-
-    def test_strict_can_append_partinA_or_partinB(self):
-        raise SkipTest
-
-    def test_strict_can_append_outA_and_outB(self):
-        raise SkipTest
-
-    def test_strict_can_append_partinA_and_partinB(self):
-        raise SkipTest
-
-    def test_strict_can_prepend_outA_or_outB(self):
-        raise SkipTest
-
-    def test_strict_can_prepend_partinA_or_partinB(self):
-        raise SkipTest
-
-    def test_strict_can_prepend_outA_and_outB(self):
-        raise SkipTest
-
-    def test_strict_can_prepend_partinA_and_partinB(self):
         raise SkipTest
 
 

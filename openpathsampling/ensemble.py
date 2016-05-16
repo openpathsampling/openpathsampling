@@ -1640,6 +1640,7 @@ class AllInXEnsemble(VolumeEnsemble):
                 # would be to implement a more complicated cache.reset,
                 # which checks whether the previous traj was a subtraj of
                 # this one (other than one frame less). ~~~DWHS
+                reset_value = self(trajectory[:-1], trusted=False)
                 cache.contents['previous'] = self(trajectory[:-1],
                                                   trusted=False)
 
@@ -1656,8 +1657,9 @@ class AllInXEnsemble(VolumeEnsemble):
     def can_append(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
-        if trusted == True:
-            return self(trajectory[slice(len(trajectory)-1, None)], trusted)
+        elif trusted and self._use_cache:
+            return self._trusted_call(trajectory, self._cache_can_append)
+            #return self(trajectory[slice(len(trajectory)-1, None)], trusted)
         else:
             return self(trajectory)
 
