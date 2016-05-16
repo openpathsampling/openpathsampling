@@ -1612,7 +1612,17 @@ class AllInXEnsemble(VolumeEnsemble):
         frame_num = -(cache.direction + 1) / 2  # 1 -> -1; -1 -> 0
         reset = cache.check(trajectory)
         if reset:
-            cache.contents['previous'] = None
+            if len(trajectory) < 2:
+                cache.contents['previous'] = None
+            else:
+                # NOTE: is it possible that we'd reset a cache more than
+                # once in a single trajectory? that could mean that this
+                # starts to scale quadratically
+                # I think a necessary condition for that to be a problem is
+                # that this ensemble shows up in both a Union and an
+                # Intersection ...
+                cache.contents['previous'] = self(trajectory[:-1],
+                                                  trusted=False)
         cached_val = cache.contents['previous']
         if cached_val == True or cached_val is None:
             # need to check this frame (no prev traj, or prev traj is True)
@@ -1666,7 +1676,7 @@ class AllOutXEnsemble(AllInXEnsemble):
     '''    
     @property
     def _volume(self):
-        return ~ self.volume
+        return ~self.volume
     
     def __str__(self):
         return 'x[t] in {0} for all t'.format(self._volume)
