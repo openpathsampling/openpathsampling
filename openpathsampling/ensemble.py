@@ -63,6 +63,32 @@ class EnsembleCache(object):
 
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
+
+        The trajectory is considered trustworthy based on checking several
+        factors, compared to the last time the cache was checked. For
+        forward caches (direction > 0), these are
+        * the first frame has not changed
+        * the length is the same, or has changed by 1
+        * if length unchanged, the final frame is the same; if length
+          changed by 1, the penultimate frame is the old final frame
+        Similar rules apply for backward caches (direction < 0), with
+        obvious changes of "final" and "first" frames.
+
+        If the trajectory is not trustworthy, we return True (should be
+        reset).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            the trajectory to test
+        reset : bool or None
+            force a value for reset. If None, the value is determined based
+            on the test criteria.
+
+        Returns
+        -------
+        bool :
+            the value of reset
         """
         logger.debug("Checking cache....")
         #logger.debug("traj " + str([id(s) for s in trajectory]))
@@ -176,8 +202,15 @@ class Ensemble(StorableNamedObject):
 
         Parameters
         ----------
+        trajectory: :class:`.Trajectory`
+            The trajectory to be checked
         trusted : boolean
-            If trusted is not None it overrides the default setting in the ensemble
+            For many ensembles, a faster algorithm can be used if we know
+            some information about the trajectory with one fewer frames.
+            The `trusted` flag tells the ensemble to use such an algorithm.
+            This is usually used in combination with an
+            :class:`.EnsembleCache` which makes short-cut calculations
+            possible.
         '''
         return False
 
@@ -226,8 +259,7 @@ class Ensemble(StorableNamedObject):
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
         trusted : bool
-            should equal pre-computed `can_append(trajectory[:-1])`. If
-            trusted=True, some ensembles can be computed more efficiently
+            If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
         
         Returns
@@ -251,8 +283,7 @@ class Ensemble(StorableNamedObject):
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
         trusted : bool
-            should equal pre-computed `can_prepend(trajectory[1:])`. If
-            trusted=True, some ensembles can be computed more efficiently
+            If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
         
         Returns
@@ -1573,22 +1604,6 @@ class AllInXEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectories with all frames in the given volume
     '''
-    def can_append(self, trajectory, trusted=False):
-        if len(trajectory) == 0:
-            return True
-        if trusted == True:
-            return self(trajectory[slice(len(trajectory)-1, None)], trusted)
-        else:
-            return self(trajectory)
-
-    def can_prepend(self, trajectory, trusted=False):
-        if len(trajectory) == 0:
-            return True
-        if trusted == True:
-            return self(trajectory[slice(0,1)], trusted)
-        else:
-            return self(trajectory)
-
     def _trusted_call(self, trajectory, cache):
         """
         Generalized version of the call when trusted.
@@ -1617,12 +1632,17 @@ class AllInXEnsemble(VolumeEnsemble):
             else:
                 # NOTE: is it possible that we'd reset a cache more than
                 # once in a single trajectory? that could mean that this
-                # starts to scale quadratically
-                # I think a necessary condition for that to be a problem is
-                # that this ensemble shows up in both a Union and an
-                # Intersection ...
+                # starts to scale quadratically. I can't think of a case
+                # where this is a practical concern (short-circuit logic
+                # means the recache should only happen once per trajectory
+                # for All*XEnsembles, and the call should only happen once
+                # per trajectory for Part*XEnsembles.) In any case, the fix
+                # would be to implement a more complicated cache.reset,
+                # which checks whether the previous traj was a subtraj of
+                # this one (other than one frame less). ~~~DWHS
                 cache.contents['previous'] = self(trajectory[:-1],
                                                   trusted=False)
+
         cached_val = cache.contents['previous']
         if cached_val == True or cached_val is None:
             # need to check this frame (no prev traj, or prev traj is True)
@@ -1633,6 +1653,22 @@ class AllInXEnsemble(VolumeEnsemble):
             # cached_val is false, result must be false
             return False
     
+    def can_append(self, trajectory, trusted=False):
+        if len(trajectory) == 0:
+            return True
+        if trusted == True:
+            return self(trajectory[slice(len(trajectory)-1, None)], trusted)
+        else:
+            return self(trajectory)
+
+    def can_prepend(self, trajectory, trusted=False):
+        if len(trajectory) == 0:
+            return True
+        if trusted == True:
+            return self(trajectory[slice(0,1)], trusted)
+        else:
+            return self(trajectory)
+
     def __call__(self, trajectory, trusted=None):
         if len(trajectory) == 0:
             return False
@@ -1640,8 +1676,8 @@ class AllInXEnsemble(VolumeEnsemble):
         # being the same as call for this ensemble. Something like check
         # the can_append cache instead of/as well as the call cache. May
         # still have problems with overshooting -- but this might provide a
-        # speed-up in sequential ensemble's checking phase
-        if trusted == True and self._use_cache:
+        # speed-up in sequential ensemble's checking phase. ~~~DWHS
+        if trusted and self._use_cache:
             return self._trusted_call(trajectory, self._cache_call)
         else:
             logger.debug("Untrusted VolumeEnsemble "+repr(self))

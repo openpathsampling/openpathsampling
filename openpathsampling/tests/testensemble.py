@@ -2512,7 +2512,6 @@ class testVolumeCombinations(EnsembleTest):
         )
 
     def test_call_outA_and_outB(self):
-        raise SkipTest
         self._test_trusted_fwd(
             trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
             function=self.outA_and_outB,
@@ -2524,15 +2523,15 @@ class testVolumeCombinations(EnsembleTest):
                 self.outB._cache_call : [True, None, None, None, None]
             }
         )
-        #self._test_trusted_fwd(
-            #trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
-            #function=self.outA_or_outB,
-            #results=[True, False, False, False, False],
-            ##cache_results={
-                #self.outA._cache_call : [True, True, True, True, False],
-                #self.outB._cache_call : [True, False, False, False, None]
-            #}
-        #)
+        self._test_trusted_fwd(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_and_outB,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_call : [True, True, True, True, False],
+                self.outB._cache_call : [True, False, False, False, None]
+            }
+        )
 
     def test_call_partinA_or_partinB(self):
         raise SkipTest
