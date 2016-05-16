@@ -2436,8 +2436,8 @@ class testVolumeCombinations(EnsembleTest):
         self.outA_and_outB = self.outA & self.outB
         self.partinA_or_partinB = self.partinA | self.partinB
         self.partinA_and_partinB = self.partinA & self.partinB
-        extras = build_trajdict(['babbc', 'ca', 'bcbba', 'abbc', 'cbba'], 
-                                lower, upper)
+        extras = build_trajdict(['babbc', 'ca', 'bcbba', 'abbc', 'cbba',
+                                 'abbcb', 'cbbab'], lower, upper)
         for test in extras.keys():
             extras[test] = make_1d_traj(coordinates=extras[test],
                                        velocities=[1.0]*len(extras[test]))
@@ -2634,7 +2634,26 @@ class testVolumeCombinations(EnsembleTest):
         )
 
     def test_can_prepend_outA_and_outB(self):
-        raise SkipTest
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross_out'],
+            function=self.outA_and_outB.can_prepend,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, True, True, False],
+                self.outB._cache_can_prepend : [True, False, False, False, False]
+            },
+            direction=-1
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_out_out_in_out'],
+            function=self.outA_and_outB.can_prepend,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, False, False, False, False],
+                self.outB._cache_can_prepend : [True, None, None, None, None]
+            },
+            direction=-1
+        )
 
 
 class testAbstract(object):

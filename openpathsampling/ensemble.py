@@ -1585,10 +1585,8 @@ class VolumeEnsemble(Ensemble):
 
         self._use_cache = True
         self._cache_can_append = EnsembleCache(+1)
-        self._cache_strict_can_append = EnsembleCache(+1)
         self._cache_call = EnsembleCache(+1)
         self._cache_can_prepend = EnsembleCache(-1)
-        self._cache_strict_can_prepend = EnsembleCache(-1)
         self._cache_check_reverse = EnsembleCache(-1)
 
 
@@ -1670,9 +1668,8 @@ class AllInXEnsemble(VolumeEnsemble):
     def can_prepend(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
-        if trusted == True:
+        if trusted and self._use_cache:
             return self._trusted_call(trajectory, self._cache_can_prepend)
-            #return self(trajectory[slice(0,1)], trusted)
         else:
             return self(trajectory)
 
@@ -1696,10 +1693,11 @@ class AllInXEnsemble(VolumeEnsemble):
 
     def check_reverse(self, trajectory, trusted=False):
         # order in this one only matters if it is trusted
-        if trusted:
+        if trusted and self._use_cache:
             #print "Rev Trusted"
-            frame = trajectory.get_as_proxy(0)
-            return self._volume(frame)
+            return self._trusted_call(trajectory, self._cache_check_reverse)
+            #frame = trajectory.get_as_proxy(0)
+            #return self._volume(frame)
         else:
             #print "Rev UnTrusted"
             return self(trajectory) # in this case, order wouldn't matter
