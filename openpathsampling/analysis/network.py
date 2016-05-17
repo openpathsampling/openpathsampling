@@ -37,6 +37,13 @@ class TransitionNetwork(StorableNamedObject):
         return sum([t.ensembles for t in self.sampling_transitions], [])
 
     @property
+    def analysis_ensembles(self):
+        """
+        Ensembles from the analysis transitions, excluding special ensembles.
+        """
+        return sum([t.ensembles for t in self.transitions.values()], [])
+
+    @property
     def all_ensembles(self):
         """
         All ensembles in the sampling transitions, including special
@@ -83,7 +90,8 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         pathlengths.
     """
     TransitionType = NotImplemented
-    def __init__(self, initial_states, final_states, **kwargs):
+    def __init__(self, initial_states, final_states,
+                 allow_self_transitions=False, **kwargs):
         # **kwargs gets passed to the transition
         super(GeneralizedTPSNetwork, self).__init__()
         try:
@@ -108,15 +116,30 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         else:
             all_final = paths.join_volumes(final_states)
             all_final.name = "|".join([v.name for v in final_states])
-        self._sampling_transitions = [
-            self.TransitionType(all_initial, all_final, **kwargs)
-        ]
+        
+        self._sampling_transitions = []
+        for my_initial in initial_states:
+            my_final_states = [final for final in final_states
+                               if my_initial != final or allow_self_transitions]
+            my_final = paths.join_volumes(my_final_states)
+            my_final.name = "|".join([v.name for v in my_final_states])
+            if  len(self._sampling_transitions) == 0:
+                self._sampling_transitions = [
+                    self.TransitionType(my_initial, my_final, **kwargs)
+                ]
+            elif len(self._sampling_transitions) == 1:
+                self._sampling_transitions[0].add_transition(my_initial, 
+                                                             my_final)
+            else:
+                raise RuntimeError("More than one sampling transition for TPS?")
+
         self.transitions = {
             (initial, final) : self.TransitionType(initial, final, **kwargs)
             for (initial, final) in itertools.product(initial_states,
                                                       final_states)
             if initial != final
         }
+
 
     def to_dict(self):
         ret_dict = {
