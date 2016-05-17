@@ -148,6 +148,8 @@ class testTPSNetwork(object):
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
         self.states = [self.stateA, self.stateB, self.stateC]
+        self.traj = {}
+        self.traj['AA'] = make_1d_traj([-0.51, -0.49, -0.42])
         
     # define all the test networks as properties: we can do something
     # similar then for the fixed path length, and just need to override
@@ -235,6 +237,12 @@ class testTPSNetwork(object):
         if os.path.isfile(fname):
             os.remove(fname)
 
+    def test_allow_self_transitions_false(self):
+        raise SkipTest
+
+    def test_allow_self_transitions_true(self):
+        raise SkipTest
+
 class testFixedLengthTPSNetwork(testTPSNetwork):
     @property
     def network2a(self):
@@ -280,3 +288,10 @@ class testFixedLengthTPSNetwork(testTPSNetwork):
                         self.network3a, self.network3b, self.network3c]:
             assert_equal(network.sampling_transitions[0].length, 10)
             assert_equal(network.transitions.values()[0].length, 10)
+
+    def test_allow_self_transitions_false(self):
+        raise SkipTest
+
+    def test_allow_self_transitions_true(self):
+        raise SkipTest
+
