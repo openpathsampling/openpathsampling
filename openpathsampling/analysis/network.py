@@ -109,9 +109,10 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         self.final_states = final_states
 
         all_initial = paths.join_volumes(initial_states)
-        all_initial.name = "|".join([v.name for v in initial_states])
+        if len(initial_states) > 1:
+            all_initial.name = "|".join([v.name for v in initial_states])
 
-        if set(initial_states) == set(final_states):
+        if set(initial_states) == set(final_states) or len(final_states) == 1:
             all_final = all_initial
         else:
             all_final = paths.join_volumes(final_states)
@@ -122,7 +123,8 @@ class GeneralizedTPSNetwork(TransitionNetwork):
             my_final_states = [final for final in final_states
                                if my_initial != final or allow_self_transitions]
             my_final = paths.join_volumes(my_final_states)
-            my_final.name = "|".join([v.name for v in my_final_states])
+            if len(my_final_states) > 1:
+                my_final.name = "|".join([v.name for v in my_final_states])
             if  len(self._sampling_transitions) == 0:
                 self._sampling_transitions = [
                     self.TransitionType(my_initial, my_final, **kwargs)
