@@ -35,6 +35,7 @@ API Reference
     pathsimulator
     storage
     treemixin
+    network
     engines/openmm
 
 Developing
@@ -61,4 +62,4 @@ README
 
 License
 -------
-OpenPathSampling is licensed under ???
+OpenPathSampling is licensed under the LGPL, v. 2.1 or later.
