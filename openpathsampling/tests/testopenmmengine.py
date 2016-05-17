@@ -98,7 +98,7 @@ class testOpenMMEngine(object):
 
         self.engine.current_snapshot = peng.Snapshot.construct(
             coordinates=np.array(testpos) * u.nanometers,
-            box_vectors=np.zeros((3, 3)),
+            box_vectors=np.identity(3) * u.nanometers,
             velocities=np.array(testvel) * u.nanometers / u.picoseconds
         )
         state = self.engine.simulation.context.getState(getPositions=True,
