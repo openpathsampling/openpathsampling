@@ -2445,7 +2445,7 @@ class testVolumeCombinations(EnsembleTest):
         self.local_ttraj.update(extras)
 
     def _test_trusted(self, trajectory, function, results,
-                      cache_results=None, direction=+1):
+                      cache_results=None, direction=+1, start_traj_len=1):
         # Tests `trajectory` frame by frame in a forward direction for the
         # `function`, expecting `results`. Additionally, can take the 
 
@@ -2456,18 +2456,18 @@ class testVolumeCombinations(EnsembleTest):
         for cache in cache_results.keys():
             cache.__init__(direction=cache.direction)
 
-        for i in range(len(trajectory)):
+        for i in range(len(trajectory)-start_traj_len):
             if direction > 0:
                 start = 0
-                end = i+1
+                end = start + (i+start_traj_len)
             elif direction < 0:
-                start = len(trajectory)-i-1
                 end = len(trajectory)
+                start = end - (i+start_traj_len)
             # test untrusted
             assert_equal(function(trajectory[start:end]), results[i])
             # test trusted
             trusted_val = function(trajectory[start:end], trusted=True)
-            #print i, trusted_val, results[i]
+            # print i, "["+str(start)+":"+str(end)+"]", trusted_val, results[i]
             assert_equal(trusted_val, results[i])
             for cache in cache_results.keys():
                 # TODO: this is currently very specific to the caches used
@@ -2545,12 +2545,6 @@ class testVolumeCombinations(EnsembleTest):
             }
         )
 
-    def test_call_partinA_or_partinB(self):
-        raise SkipTest
-
-    def test_call_partinA_and_partinB(self):
-        raise SkipTest
-
     def test_can_append_outA_or_outB(self):
         self._test_trusted(
             trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
@@ -2587,6 +2581,18 @@ class testVolumeCombinations(EnsembleTest):
                 self.outA._cache_can_append : [True, False],
                 self.outB._cache_can_append : [None, False]
             }
+        )
+
+    def test_call_start_from_later_frame(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, False],
+                self.outB._cache_can_append : [None, None, None, False]
+            },
+            start_traj_len=2
         )
 
     def test_can_append_outA_and_outB(self):
@@ -2632,6 +2638,20 @@ class testVolumeCombinations(EnsembleTest):
             },
             direction=-1
         )
+
+    def test_can_prepend_start_from_later_frame(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, False],
+                self.outB._cache_can_prepend : [None, None, False]
+            },
+            direction=-1,
+            start_traj_len=2
+        )
+
 
     def test_can_prepend_outA_and_outB(self):
         self._test_trusted(
