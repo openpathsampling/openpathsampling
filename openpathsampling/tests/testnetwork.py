@@ -310,7 +310,18 @@ class testFixedLengthTPSNetwork(testTPSNetwork):
             assert_equal(network.transitions.values()[0].length, 10)
 
     def test_allow_self_transitions_false(self):
-        raise SkipTest
+        network = FixedLengthTPSNetwork.from_states_all_to_all(
+            self.states, allow_self_transitions=False, length=4
+        )
+        assert_equal(len(network.sampling_ensembles), 1)
+        ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AA']), False)
+        assert_equal(ensemble(self.traj['AB']), True)
+        assert_equal(ensemble(self.traj['BA']), True)
+        assert_equal(ensemble(self.traj['BC']), True)
+        assert_equal(ensemble(self.traj['CA']), True)
+        assert_equal(ensemble(self.traj['BB']), False)
+        assert_equal(ensemble(self.traj['CC']), False)
 
     def test_allow_self_transitions_true(self):
         raise SkipTest
