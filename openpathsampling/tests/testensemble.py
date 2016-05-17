@@ -1,6 +1,8 @@
-from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
+from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
+                        raises)
 from nose.plugins.skip import SkipTest
-from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj, raises_with_message_like
+from test_helpers import (CallIdentity, prepend_exception_message,
+                          make_1d_traj, raises_with_message_like)
 
 import openpathsampling as paths
 import openpathsampling.engines.openmm as peng
@@ -1422,8 +1424,6 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         assert_equal(ens.can_append(traj[0:4]), True)
         assert_equal(ens.can_append(traj[0:5]), True)
         assert_equal(ens.can_append(traj[0:6]), True)
-        
-
 
     def test_sequential_caching_can_append(self):
         cache = self.pseudo_minus._cache_can_append
@@ -2423,6 +2423,258 @@ class testEnsembleSplit(EnsembleTest):
 
         sub_traj = ensembleAXA.find_last_subtrajectory(traj3)
         assert(traj3.subtrajectory_indices(sub_traj) == [2,3,4])
+
+class testVolumeCombinations(EnsembleTest):
+    def setup(self):
+        self.outA = paths.AllOutXEnsemble(vol1)
+        self.outB = paths.AllOutXEnsemble(~vol2)
+        self.outA.special_debug = True
+        self.outB.special_debug = True
+        self.partinA = paths.PartInXEnsemble(vol1)
+        self.partinB = paths.PartInXEnsemble(~vol2)
+        self.outA_or_outB = self.outA | self.outB
+        self.outA_and_outB = self.outA & self.outB
+        self.partinA_or_partinB = self.partinA | self.partinB
+        self.partinA_and_partinB = self.partinA & self.partinB
+        extras = build_trajdict(['babbc', 'ca', 'bcbba', 'abbc', 'cbba',
+                                 'abbcb', 'cbbab'], lower, upper)
+        for test in extras.keys():
+            extras[test] = make_1d_traj(coordinates=extras[test],
+                                       velocities=[1.0]*len(extras[test]))
+        self.local_ttraj = dict(ttraj)
+        self.local_ttraj.update(extras)
+
+    def _test_trusted(self, trajectory, function, results,
+                      cache_results=None, direction=+1, start_traj_len=1):
+        # Tests `trajectory` frame by frame in a forward direction for the
+        # `function`, expecting `results`. Additionally, can take the 
+
+        if cache_results is None:
+            cache_results = {}
+
+        # clear the caches before starting
+        for cache in cache_results.keys():
+            cache.__init__(direction=cache.direction)
+
+        for i in range(len(trajectory)-start_traj_len):
+            if direction > 0:
+                start = 0
+                end = start + (i+start_traj_len)
+            elif direction < 0:
+                end = len(trajectory)
+                start = end - (i+start_traj_len)
+            # test untrusted
+            assert_equal(function(trajectory[start:end]), results[i])
+            # test trusted
+            trusted_val = function(trajectory[start:end], trusted=True)
+            # print i, "["+str(start)+":"+str(end)+"]", trusted_val, results[i]
+            assert_equal(trusted_val, results[i])
+            for cache in cache_results.keys():
+                # TODO: this is currently very specific to the caches used
+                # by volumes ensembles. That should be generalized by
+                # allowing several different tags within contents.
+                # cache_results could {cache : {'content_key' : [values]}}
+                if cache_results[cache][i] is not None:
+                    #print "cache", cache_results.keys().index(cache),
+                    try:
+                        contents = cache.contents['previous']
+                    except KeyError:
+                        contents = None
+                    #print contents, cache_results[cache][i]
+
+                    assert_equal(cache.contents['previous'],
+                                 cache_results[cache][i])
+
+    def test_call_outA_or_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_or_outB, 
+            results=[True, True, True, True, False], 
+            cache_results={
+                self.outA._cache_call : [True, False, False, False, False],
+                self.outB._cache_call : [None, True, True, True, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_or_outB,
+            results=[True, True, True, True, False],
+            cache_results={
+                self.outA._cache_call : [True, True, True, True, False],
+                self.outB._cache_call : [None, None, None, None, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_cross'],
+            function=self.outA_or_outB,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_call : [False, False],
+                self.outB._cache_call : [True, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_in'],
+            function=self.outA_or_outB,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_call : [True, False],
+                self.outB._cache_call : [None, False]
+            }
+        )
+
+    def test_call_outA_and_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_and_outB,
+            results=[True, False, False, False, False],
+            cache_results={
+                # cache for A gets checked first: value of cache for B
+                # doesn't matter once cache for A is False (short-circuit)
+                self.outA._cache_call : [True, False, False, False, False],
+                self.outB._cache_call : [True, None, None, None, None]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_and_outB,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_call : [True, True, True, True, False],
+                self.outB._cache_call : [True, False, False, False, None]
+            }
+        )
+
+    def test_can_append_outA_or_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_or_outB.can_append, 
+            results=[True, True, True, True, False], 
+            cache_results={
+                self.outA._cache_can_append : [True, False, False, False, False],
+                self.outB._cache_can_append : [None, True, True, True, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, True, True, True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, True, False],
+                self.outB._cache_can_append : [None, None, None, None, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_cross'],
+            function=self.outA_or_outB.can_append,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_can_append : [False, False],
+                self.outB._cache_can_append : [True, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, False],
+                self.outB._cache_can_append : [None, False]
+            }
+        )
+
+    def test_call_start_from_later_frame(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, False],
+                self.outB._cache_can_append : [None, None, None, False]
+            },
+            start_traj_len=2
+        )
+
+    def test_can_append_outA_and_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_and_outB.can_append,
+            results=[True, False, False, False, False],
+            cache_results={
+                # cache for A gets checked first: value of cache for B
+                # doesn't matter once cache for A is False (short-circuit)
+                self.outA._cache_can_append : [True, False, False, False, False],
+                self.outB._cache_can_append : [True, None, None, None, None]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_and_outB.can_append,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, True, False],
+                self.outB._cache_can_append : [True, False, False, False, None]
+            }
+        )
+
+    def test_can_prepend_outA_or_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, True, False],
+                self.outB._cache_can_prepend : [None, None, None, False]
+            },
+            direction=-1
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_out_out_in'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [False, False, False, False],
+                self.outB._cache_can_prepend : [True, True, True, False]
+            },
+            direction=-1
+        )
+
+    def test_can_prepend_start_from_later_frame(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, False],
+                self.outB._cache_can_prepend : [None, None, False]
+            },
+            direction=-1,
+            start_traj_len=2
+        )
+
+
+    def test_can_prepend_outA_and_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross_out'],
+            function=self.outA_and_outB.can_prepend,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, True, True, False],
+                self.outB._cache_can_prepend : [True, False, False, False, False]
+            },
+            direction=-1
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_out_out_in_out'],
+            function=self.outA_and_outB.can_prepend,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, False, False, False, False],
+                self.outB._cache_can_prepend : [True, None, None, None, None]
+            },
+            direction=-1
+        )
+
 
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
