@@ -261,7 +261,15 @@ class testTPSNetwork(object):
         network = TPSNetwork.from_states_all_to_all(
             self.states, allow_self_transitions=True
         )
-        raise SkipTest
+        assert_equal(len(network.sampling_ensembles), 1)
+        ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AA']), True)
+        assert_equal(ensemble(self.traj['AB']), True)
+        assert_equal(ensemble(self.traj['BA']), True)
+        assert_equal(ensemble(self.traj['BC']), True)
+        assert_equal(ensemble(self.traj['CA']), True)
+        assert_equal(ensemble(self.traj['BB']), True)
+        assert_equal(ensemble(self.traj['CC']), True)
 
 class testFixedLengthTPSNetwork(testTPSNetwork):
     @property
@@ -324,5 +332,16 @@ class testFixedLengthTPSNetwork(testTPSNetwork):
         assert_equal(ensemble(self.traj['CC']), False)
 
     def test_allow_self_transitions_true(self):
-        raise SkipTest
+        network = FixedLengthTPSNetwork.from_states_all_to_all(
+            self.states, allow_self_transitions=True, length=4
+        )
+        assert_equal(len(network.sampling_ensembles), 1)
+        ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AA']), True)
+        assert_equal(ensemble(self.traj['AB']), True)
+        assert_equal(ensemble(self.traj['BA']), True)
+        assert_equal(ensemble(self.traj['BC']), True)
+        assert_equal(ensemble(self.traj['CA']), True)
+        assert_equal(ensemble(self.traj['BB']), True)
+        assert_equal(ensemble(self.traj['CC']), True)
 
