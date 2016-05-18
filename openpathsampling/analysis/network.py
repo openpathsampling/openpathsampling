@@ -82,6 +82,8 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         acceptable initial states
     final_states : list of :class:`.Volume`
         acceptable final states
+    allow_self_transitions : bool
+        whether self-transitions (A->A) are allowed; default is False
 
     Attributes
     ----------
