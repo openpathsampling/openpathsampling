@@ -562,28 +562,6 @@ class ObjectStore(StorableNamedObject):
             **kwargs
         )
 
-    # ==============================================================================
-    # COLLECTIVE VARIABLE UTILITY FUNCTIONS
-    # ==============================================================================
-
-    @property
-    def op_idx(self):
-        """
-        Returns a function that returns for an object of this storage the idx.
-        This can be used to construct order parameters the return the index
-        in this storage. Useful for visualization
-
-        Returns
-        -------
-        function
-            the function that reports the index (int) in this store or None if it is not stored
-        """
-
-        def idx(obj):
-            return self.index.get(obj)
-
-        return idx
-
     # =============================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
     # =============================================================================
@@ -665,6 +643,39 @@ class ObjectStore(StorableNamedObject):
             return obj.__uuid__
         else:
             return self.index[obj]
+
+    def remember(self, obj):
+        """
+        Tell a store that an obj should be assumed as stored
+
+        This is useful, if you do not want to store an object in a specific store. Especially to make sure
+        snapshots are not stored multiple times
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the object to the fake stored
+
+        """
+        if self.reference_by_uuid:
+            self.index[obj] = -1
+
+    def forget(self, obj):
+        """
+        This will revert remembering non-stored objects.
+
+        Stored objects cannot be forgotten
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the object to be forgotten
+
+        """
+        if self.reference_by_uuid:
+            if obj in self.index:
+                if self.index[obj] < 0:
+                    del self.index[obj]
 
     def save(self, obj, idx=None):
         """

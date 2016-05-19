@@ -5,10 +5,11 @@ Created on 06.07.2014
 """
 
 import logging
+
 import openpathsampling as paths
-from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
-    NamedObjectStore, UniqueNamedObjectStore
 import openpathsampling.engines as peng
+from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
+    NamedObjectStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -570,125 +571,3 @@ class StorageView(object):
         self.vars = self._storage.vars
 
         self.steps = StorageView.StepDelegate(self._storage.steps, step_range)
-
-
-class TrajectoryStorage(Storage):
-    """
-    A reduce storage that can only handle trajectories and CVs
-    """
-
-    def _create_storages(self):
-        """
-        Register all Stores used in the OpenPathSampling Storage
-
-        """
-
-        # objects with special storages
-
-        self.create_store('trajectories', paths.storage.TrajectoryStore())
-        self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
-
-        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(
-            paths.CollectiveVariable,
-            peng.BaseSnapshot
-        ))
-
-        # normal objects
-
-        self.create_store('topologies', NamedObjectStore(peng.Topology))
-        self.create_store('engines', NamedObjectStore(peng.DynamicsEngine))
-
-        # special stores
-
-        self.create_store('tag', ImmutableDictStore())
-
-
-class DistributedUUIDStorage(object):
-    """
-    A View on a storage that only changes the iteration over steps.
-
-    Can be used for bootstrapping on subsets of steps and pass this object
-    to analysis routines.
-
-    """
-
-    class MultiDelegate(object):
-        """
-        A delegate that will alter the ``iter()`` behaviour of the underlying store
-
-        Attributes
-        ----------
-        store : dict-like
-            the dict to be wrapped
-        store : :class:`openpathsampling.netcdfplus.ObjectStore`
-            a reference to an object store used
-
-        """
-
-        def __init__(self, stores, uuid_idx):
-            self.stores = stores
-            self.uuid_idx = uuid_idx
-
-        def __iter__(self):
-            for store, idx in self.uuid_idx.itervalues():
-                yield store[idx]
-
-        def __getitem__(self, item):
-            store, idx = self.uuid_idx.get(str(item), (None, None))
-            if store is not None:
-                return store[item]
-
-        def __setitem__(self, key, value):
-            pass
-
-        def __len__(self):
-            return len(self.uuid_idx)
-
-        def load(self, idx):
-            print idx
-            return self[idx]
-
-    def __init__(self, storages):
-        """
-        Parameters
-        ----------
-
-        storage : :class:`openpathsampling.storage.Storage`
-            The storage the view is watching
-        step_range : iterable
-            An iterable object that species the step indices to be iterated over
-            when using the view
-
-        """
-        self.storages = storages
-
-        self.template = storages[0].template
-
-        for storage in self.storages:
-            if not hasattr(storage, 'use_uuid'):
-                raise RuntimeError('A least one storage does not use UUIDs!')
-
-            if storage.template.__uuid__ != self.template.__uuid__:
-                raise RuntimeWarning('Stores use different template snapshots! Not recommended to join these storages')
-
-        # scan all uuids for all stores. This requires enough memory!
-
-        for ref_store in self.storages[0].stores:
-            uuid_idx = {}
-            stores = []
-            name = ref_store.name
-            for storage in self.storages:
-                store = storage.stores[str(name)]
-                stores.append(store)
-                for uuid, key in store.uuid_idx.iteritems():
-                    u = str(uuid)
-                    if u not in uuid_idx:
-                        uuid_idx[u] = (store, key)
-
-            setattr(self, name, self.MultiDelegate(stores, uuid_idx))
-
-            # make all stores use the joint load functions
-
-            for storage in self.storages:
-                store = storage.stores[str(name)]
-                store.register_fallback(getattr(self, name))

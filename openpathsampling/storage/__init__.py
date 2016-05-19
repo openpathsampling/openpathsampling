@@ -6,3 +6,4 @@ from cv_store import ObjectDictStore, ReversibleObjectDictStore
 from pathmovechange_store import PathMoveChangeStore
 from mcstep_store import MCStepStore
 from remote import RemoteMasterStorage, RemoteClientStorage
+from distributed import DistributedUUIDStorage, TrajectoryStorage
