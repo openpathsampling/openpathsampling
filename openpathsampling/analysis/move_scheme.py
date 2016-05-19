@@ -718,7 +718,10 @@ class MoveScheme(StorableNamedObject):
         if self._mover_acceptance == { }:
             self.move_acceptance(storage)
 
-        tot_trials = len(storage.steps)
+        n_no_move_trials = sum([self._mover_acceptance[k][1]
+                                for k in self._mover_acceptance.keys()
+                                if k[0] is None])
+        tot_trials = len(storage.steps) - n_no_move_trials
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
