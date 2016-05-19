@@ -142,15 +142,20 @@ class testMSTISNetwork(object):
 
 class testTPSNetwork(object):
     def setup(self):
-        # from test_helpers import CallIdentity
-        # xval = CallIdentity()
-
-        xval = paths.CV_Function('Id', lambda x : x.coordinates[0])
-
+        from test_helpers import CallIdentity
+        xval = paths.CV_Function("xval", lambda snap: snap.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
         self.states = [self.stateA, self.stateB, self.stateC]
+        self.traj = {}
+        self.traj['AA'] = make_1d_traj([-0.51, -0.49, -0.49, -0.52])
+        self.traj['AB'] = make_1d_traj([-0.51, -0.25, -0.25, 0.0])
+        self.traj['BA'] = make_1d_traj([0.0, -0.15, -0.35, -0.52])
+        self.traj['BB'] = make_1d_traj([0.0, -0.25, 0.25, 0.02])
+        self.traj['BC'] = make_1d_traj([0.01, 0.16, 0.25, 0.53])
+        self.traj['CC'] = make_1d_traj([0.51, 0.35, 0.36, 0.55])
+        self.traj['CA'] = make_1d_traj([0.52, 0.22, -0.22, -0.52])
         
     # define all the test networks as properties: we can do something
     # similar then for the fixed path length, and just need to override
@@ -240,6 +245,34 @@ class testTPSNetwork(object):
         if os.path.isfile(fname):
             os.remove(fname)
 
+    def test_allow_self_transitions_false(self):
+        network = TPSNetwork.from_states_all_to_all(
+            self.states, allow_self_transitions=False
+        )
+        assert_equal(len(network.sampling_ensembles), 1)
+        ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AA']), False)
+        assert_equal(ensemble(self.traj['AB']), True)
+        assert_equal(ensemble(self.traj['BA']), True)
+        assert_equal(ensemble(self.traj['BC']), True)
+        assert_equal(ensemble(self.traj['CA']), True)
+        assert_equal(ensemble(self.traj['BB']), False)
+        assert_equal(ensemble(self.traj['CC']), False)
+
+    def test_allow_self_transitions_true(self):
+        network = TPSNetwork.from_states_all_to_all(
+            self.states, allow_self_transitions=True
+        )
+        assert_equal(len(network.sampling_ensembles), 1)
+        ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AA']), True)
+        assert_equal(ensemble(self.traj['AB']), True)
+        assert_equal(ensemble(self.traj['BA']), True)
+        assert_equal(ensemble(self.traj['BC']), True)
+        assert_equal(ensemble(self.traj['CA']), True)
+        assert_equal(ensemble(self.traj['BB']), True)
+        assert_equal(ensemble(self.traj['CC']), True)
+
 class testFixedLengthTPSNetwork(testTPSNetwork):
     @property
     def network2a(self):
@@ -285,3 +318,32 @@ class testFixedLengthTPSNetwork(testTPSNetwork):
                         self.network3a, self.network3b, self.network3c]:
             assert_equal(network.sampling_transitions[0].length, 10)
             assert_equal(network.transitions.values()[0].length, 10)
+
+    def test_allow_self_transitions_false(self):
+        network = FixedLengthTPSNetwork.from_states_all_to_all(
+            self.states, allow_self_transitions=False, length=4
+        )
+        assert_equal(len(network.sampling_ensembles), 1)
+        ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AA']), False)
+        assert_equal(ensemble(self.traj['AB']), True)
+        assert_equal(ensemble(self.traj['BA']), True)
+        assert_equal(ensemble(self.traj['BC']), True)
+        assert_equal(ensemble(self.traj['CA']), True)
+        assert_equal(ensemble(self.traj['BB']), False)
+        assert_equal(ensemble(self.traj['CC']), False)
+
+    def test_allow_self_transitions_true(self):
+        network = FixedLengthTPSNetwork.from_states_all_to_all(
+            self.states, allow_self_transitions=True, length=4
+        )
+        assert_equal(len(network.sampling_ensembles), 1)
+        ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AA']), True)
+        assert_equal(ensemble(self.traj['AB']), True)
+        assert_equal(ensemble(self.traj['BA']), True)
+        assert_equal(ensemble(self.traj['BC']), True)
+        assert_equal(ensemble(self.traj['CA']), True)
+        assert_equal(ensemble(self.traj['BB']), True)
+        assert_equal(ensemble(self.traj['CC']), True)
+

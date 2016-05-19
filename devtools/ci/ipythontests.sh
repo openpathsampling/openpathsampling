@@ -27,7 +27,7 @@ ipynbtest.py --strict "test_snapshot.ipynb" || testfail=1
 date
 ipynbtest.py "tutorial_storage.ipynb" || testfail=1
 date
-ipynbtest.py "test_netcdfplus.ipynb" || testfail=1
+ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_cv.ipynb" || testfail=1
 date

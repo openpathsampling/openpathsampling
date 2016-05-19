@@ -322,6 +322,20 @@ class NetCDFPlus(netCDF4.Dataset):
         else:
             self.simplifier = StorableObjectJSON(self)
 
+
+    @property
+    def file_size(self):
+        return os.path.getsize(self.filename)
+
+    @property
+    def file_size_str(self):
+        current = float(self.file_size)
+        for prefix in ["k", "M", "G"]:
+            if current > 1024:
+                output_prefix = prefix
+                current /= 1024.0
+        return "{0:.2f}{1}B".format(current, prefix)
+
     def _setup_class(self):
         """
         Sets the basic properties for the storage

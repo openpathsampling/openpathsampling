@@ -218,7 +218,6 @@ class OpenMMEngine(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snapshot):
-
         self.check_snapshot_type(snapshot)
 
         if snapshot is not self._current_snapshot:

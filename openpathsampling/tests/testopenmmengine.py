@@ -96,17 +96,21 @@ class testOpenMMEngine(object):
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])
 
+        testbvecs = 5.0 * np.identity(3)
+
         self.engine.current_snapshot = peng.Snapshot.construct(
             coordinates=np.array(testpos) * u.nanometers,
-            box_vectors=np.identity(3) * u.nanometers,
+            box_vectors=np.array(testbvecs) * u.nanometers,
             velocities=np.array(testvel) * u.nanometers / u.picoseconds
         )
         state = self.engine.simulation.context.getState(getPositions=True,
                                                         getVelocities=True)
         sim_coords = state.getPositions(asNumpy=True) / u.nanometers
+        sim_bvecs = state.getPeriodicBoxVectors(asNumpy=True) / u.nanometers
         sim_vels = state.getVelocities(asNumpy=True) / (u.nanometers/u.picoseconds)
 
         np.testing.assert_almost_equal(testpos, sim_coords, decimal=5)
+        np.testing.assert_almost_equal(testbvecs, sim_bvecs, decimal=5)
         np.testing.assert_almost_equal(testvel, sim_vels, decimal=5)
 
     def test_generate_next_frame(self):
