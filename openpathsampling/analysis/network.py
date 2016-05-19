@@ -82,6 +82,8 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         acceptable initial states
     final_states : list of :class:`.Volume`
         acceptable final states
+    allow_self_transitions : bool
+        whether self-transitions (A->A) are allowed; default is False
 
     Attributes
     ----------
@@ -194,8 +196,10 @@ class GeneralizedTPSNetwork(TransitionNetwork):
 
 
     @classmethod
-    def from_states_all_to_all(cls, states, **kwargs):
-        return cls(states, states, **kwargs)
+    def from_states_all_to_all(cls, states, allow_self_transitions=False,
+                               **kwargs):
+        return cls(states, states,
+                   allow_self_transitions=allow_self_transitions, **kwargs)
 
 
 class TPSNetwork(GeneralizedTPSNetwork):
@@ -205,16 +209,20 @@ class TPSNetwork(GeneralizedTPSNetwork):
     TransitionType = paths.TPSTransition
     # we implement these functions entirely to fix the signature (super's
     # version allow arbitrary kwargs) so the documentation can read them.
-    def __init__(self, initial_states, final_states):
-        super(TPSNetwork, self).__init__(initial_states, final_states)
+    def __init__(self, initial_states, final_states,
+                 allow_self_transitions=False):
+        super(TPSNetwork, self).__init__(initial_states, final_states,
+                                         allow_self_transitions)
 
     @classmethod
-    def from_state_pairs(cls, state_pairs):
+    def from_state_pairs(cls, state_pairs, allow_self_transitions=False):
         return super(TPSNetwork, cls).from_state_pairs(state_pairs)
 
     @classmethod
-    def from_states_all_to_all(cls, states):
-        return super(TPSNetwork, cls).from_states_all_to_all(states)
+    def from_states_all_to_all(cls, states, allow_self_transitions=False):
+        return super(TPSNetwork, cls).from_states_all_to_all(
+            states, allow_self_transitions
+        )
 
 
 class FixedLengthTPSNetwork(GeneralizedTPSNetwork):
@@ -226,10 +234,12 @@ class FixedLengthTPSNetwork(GeneralizedTPSNetwork):
     # However, without them, we need to explicitly name `length` as
     # length=value in these functions. This frees us of that, and gives us
     # clearer documentation.
-    def __init__(self, initial_states, final_states, length):
-        super(FixedLengthTPSNetwork, self).__init__(initial_states,
-                                                    final_states,
-                                                    length=length)
+    def __init__(self, initial_states, final_states, length,
+                 allow_self_transitions=False):
+        super(FixedLengthTPSNetwork, self).__init__(
+            initial_states, final_states,
+            allow_self_transitions=allow_self_transitions, length=length
+        )
 
     @classmethod
     def from_state_pairs(cls, state_pairs, length):
@@ -238,9 +248,12 @@ class FixedLengthTPSNetwork(GeneralizedTPSNetwork):
         )
 
     @classmethod
-    def from_states_all_to_all(cls, states, length):
+    def from_states_all_to_all(cls, states, length,
+                               allow_self_transitions=False):
         return super(FixedLengthTPSNetwork, cls).from_states_all_to_all(
-            states, length=length
+            states=states,
+            allow_self_transitions=allow_self_transitions,
+            length=length
         )
 
 

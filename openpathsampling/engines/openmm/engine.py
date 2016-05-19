@@ -218,12 +218,18 @@ class OpenMMEngine(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snapshot):
-
         self.check_snapshot_type(snapshot)
 
         if snapshot is not self._current_snapshot:
             if snapshot.coordinates is not None:
                 self.simulation.context.setPositions(snapshot.coordinates)
+
+            if snapshot.box_vectors is not None:
+                self.simulation.context.setPeriodicBoxVectors(
+                    snapshot.box_vectors[0],
+                    snapshot.box_vectors[1],
+                    snapshot.box_vectors[2]
+                )
 
             if snapshot.velocities is not None:
                 self.simulation.context.setVelocities(snapshot.velocities)
