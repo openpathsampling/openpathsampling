@@ -9,10 +9,14 @@ to path sampling. Since it is easy to get lost under all those options, here
 we summarize the most common setups of networks and move schemes for
 transition path sampling and transition interface sampling.
 
-Throughout the following, we assume that you've already defined volumes for
-the states ``A``, ``B``, ``C``, etc., as well as lists of interfaces for the
-``interfacesA`` or ``interfacesAB``, etc., and collective variables for the
-``cvA`` or ``cvAB``, etc.
+
+Throughout the following, we assume that ``A``, ``B``, ``C``, etc. are
+volumes that represent states. We assume that ``interfacesA`` is a list of
+interfaces leaving state ``A``, and that ``interfacesAB`` is a list of
+interfaces leaving state ``A`` in the expected direction of ``B``.
+Similarly, we expect ``orderparameterA`` is a collective variable describing
+the process of leaving ``A``, and ``orderparameterAB`` is a CV for leaving
+``A`` toward ``B``.
 
 ------------------------
 Transition Path Sampling
@@ -132,7 +136,7 @@ transition listed:
 
 .. code-block:: python
 
-   network = paths.MISTISNetwork([(A, interfaces, orderparameter, B)])
+   network = paths.MISTISNetwork([(A, interfacesAB, orderparameterAB, B)])
 
 This will sample the transition from ``A`` to ``B`` using the list of
 ``interfaces``, and the resulting analysis will be based on the collective
@@ -151,8 +155,8 @@ simpler, and gives completely equivalent results:
 
 .. code-block:: python
 
-   network = paths.MSTISNetwork([(stateA, interfacesA, orderparameterA),
-                                 (stateB, interfacesB, orderparameterB)])
+   network = paths.MSTISNetwork([(A, interfacesA, orderparameterA),
+                                 (B, interfacesB, orderparameterB)])
 
 
 Multiple-state TIS
@@ -194,7 +198,7 @@ This move scheme is generated with
 
 .. code-block:: python
 
-   scheme = paths.DefaultMoveScheme(network, engine)
+   scheme = paths.DefaultScheme(network, engine)
 
 Single replica TIS
 ------------------
