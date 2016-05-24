@@ -6,6 +6,8 @@ import functools
 
 import weakref
 
+from base import StorableObject
+
 # =============================================================================
 # Loader Proxy
 # =============================================================================
@@ -36,6 +38,13 @@ class LoaderProxy(object):
         self._subject = weakref.ref(ref)
         return ref
 
+    @property
+    def reversed(self):
+        if self._store.reference_by_uuid:
+            return LoaderProxy(self._store, StorableObject.reverse_uuid(self._idx))
+        else:
+            return LoaderProxy(self._store, self._idx ^ 1)
+
     def __eq__(self, other):
         if self is other:
             return True
@@ -52,6 +61,7 @@ class LoaderProxy(object):
         return self._store.content_class
 
     def __getattr__(self, item):
+        print item
         return getattr(self.__subject__, item)
 
     def _load_(self):

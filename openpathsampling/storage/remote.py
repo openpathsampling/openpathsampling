@@ -42,10 +42,6 @@ class RemoteClientObject(ObjectStore):
     def _set_uuid(self, idx, uuid):
         pass
 
-    @property
-    def uuid_idx(self):
-        return self._uuid_idx
-
 
 class RemoteMasterObject(ObjectStore):
 
@@ -57,10 +53,6 @@ class RemoteMasterObject(ObjectStore):
 
     def __len__(self):
         return self.length
-
-    @property
-    def uuid_idx(self):
-        return self._uuid_idx
 
     def load(self, idx):
         """
@@ -79,8 +71,8 @@ class RemoteMasterObject(ObjectStore):
 
         if self.reference_by_uuid and type(idx) is UUID:
             # we want to load by uuid and it was not in cache.
-            if str(idx) in self.uuid_idx:
-                n_idx = int(self.uuid_idx[str(idx)])
+            if str(idx) in self.index:
+                n_idx = int(self.index[str(idx)])
 
                 # if it is in the cache, return it
                 try:
@@ -116,7 +108,7 @@ class RemoteMasterObject(ObjectStore):
                 # make sure that you cannot change the uuid of loaded objects
 
                 # finally store the uuid of a uuidd object in cache
-                self._update_uuid_in_cache(obj.__uuid__, n_idx)
+                self.index[obj] = n_idx
 
         return obj
 
@@ -288,7 +280,7 @@ _cache_ = paths.storage.remote.RemoteClientStorage()
         self._create_storages()
         self._initialize()
 
-        for uuid, idx in self.stores._uuid_idx.iteritems():
+        for uuid, idx in self.stores.index.iteritems():
             store = self.stores.cache[idx]
             self.tell("_cache_.register_store('%s', _cache_.stores[paths.storage.remote.UUID('%s')])" % (store.name, uuid))
             self.tell("_cache_.%s.name = '%s'" % (store.name, store.name))

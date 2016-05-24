@@ -34,7 +34,11 @@ class StorableObject(object):
         )
 
     def reverse_uuid(self):
-        return uuid.UUID(int=int(self.__uuid__) ^ 1)
+        return StorableObject.ruuid(self.__uuid__)
+
+    @staticmethod
+    def ruuid(id):
+        return uuid.UUID(int=int(id) ^ 1)
 
     def __init__(self):
         self.__uuid__ = StorableObject.get_uuid()

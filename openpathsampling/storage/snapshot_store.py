@@ -2,12 +2,27 @@ import abc
 from uuid import UUID
 
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy, StorableObject
+from openpathsampling.netcdfplus.objects import UUIDDict
 import openpathsampling.engines as peng
 
 
 # =============================================================================================
 # ABSTRACT BASE CLASS FOR SNAPSHOTS
 # =============================================================================================
+
+class UUIDReversalDict(UUIDDict):
+    @staticmethod
+    def rev_id(obj):
+        return StorableObject.ruuid(UUIDReversalDict.id(obj))
+
+    def __setitem__(self, key, value):
+        dict.__setitem__(self, self.id(key), value)
+        dict.__setitem__(self, self.rev_id(key), value ^ 1)
+
+    def __delitem__(self, key):
+        dict.__delitem__(self, self.id(key))
+        dict.__delitem__(self, self.rev_id(key))
+
 
 class BaseSnapshotStore(ObjectStore):
     """
@@ -31,6 +46,9 @@ class BaseSnapshotStore(ObjectStore):
         if hasattr(snapshot_class, '__features__'):
             if '_reversed' in snapshot_class.__features__.lazy:
                 self._use_lazy_reversed = True
+
+    def create_uuid_index(self):
+        return UUIDReversalDict()
 
     def __repr__(self):
         return "store.%s[%s(%s)]" % (
@@ -107,46 +125,22 @@ class BaseSnapshotStore(ObjectStore):
     def _get(self, idx, snapshot):
         pass
 
-    def _set_uuid(self, idx, uuid):
-        if idx & 1:
-            print 'Should not happen', idx
-        self.storage.variables[self.prefix + '_uuid'][int(idx / 2)] = str(uuid)
+    def _set_id(self, idx, obj):
+        if self.reference_by_uuid:
+            self.vars['uuid'][int(idx / 2)] = obj.__uuid__
 
-    def _get_uuid(self, idx):
-        uuid = UUID(self.storage.variables[self.prefix + '_uuid'][int(idx / 2)])
-        if idx & 1:
-            return UUID(int=int(uuid) ^ 1)
-        else:
-            return uuid
+    def _get_id(self, idx, obj):
+        if self.reference_by_uuid:
+            uuid = self.vars['uuid'][int(idx / 2)]
+            if idx & 1:
+                uuid = StorableObject.ruuid(uuid)
 
-    def _update_uuid_in_cache(self, uuid, idx):
-        # make sure to cast unicode to str
-        uuid = str(uuid)
-        if uuid != '':
-            if uuid in self._uuid_idx:
-                if self._uuid_idx[uuid] != int(idx):
-                    raise RuntimeWarning('Already exists %s with idx %d -> %d' % (uuid, self._uuid_idx[uuid], int(idx)))
-            else:
-                self._uuid_idx[uuid] = int(idx)
+            obj.__uuid__ = uuid
 
-            ruuid = str(UUID(int=int(UUID(uuid)) ^ 1))
-            if ruuid in self._uuid_idx:
-                if self._uuid_idx[ruuid] != int(idx) ^ 1:
-                    raise RuntimeWarning('Inv Already exists %s with idx %d -> %d' % (ruuid, self._uuid_idx[ruuid], int(idx) ^ 1))
-            else:
-                self._uuid_idx[ruuid] = int(idx) ^ 1
-
-    def update_uuid_cache(self):
-        """
-        Update the internal uuid cache with all stored uuids in the store.
-
-        This allows to load by uuid for uuidd objects
-        """
-        if not self._uuids_loaded:
-            for idx, uuid in enumerate(self.storage.variables[self.prefix + "_uuid"][:]):
-                self._update_uuid_in_cache(uuid, idx * 2)
-
-            self._uuids_loaded = True
+    def load_indices(self):
+        if self.reference_by_uuid:
+            for idx, uuid in enumerate(self.vars['uuid'][:]):
+                self.index[uuid] = idx * 2
 
     def _save(self, snapshot, idx):
         """
@@ -169,9 +163,8 @@ class BaseSnapshotStore(ObjectStore):
         st_idx = int(idx / 2)
 
         if snapshot._reversed is not None:
-            if snapshot._reversed in self.index:
+            if not self.reference_by_uuid and snapshot._reversed in self.index:
                 # seems we have already stored this snapshot but didn't know about it
-                # since we marked it now this will not happen again
                 raise RuntimeWarning('This should never happen! Please report a bug!')
             else:
                 # mark reversed as stored
@@ -187,12 +180,12 @@ class BaseSnapshotStore(ObjectStore):
         if self.reference_by_uuid:
             ruuid = str(UUID(int=int(obj.__uuid__)))
 
-            if ruuid in self.uuid_idx:
+            if ruuid in self.index:
                 # has been saved so quit and do nothing
                 return obj.__uuid__
 
         if obj._reversed is not None:
-            if obj._reversed in self.index:
+            if not self.reference_by_uuid and obj._reversed in self.index:
                 # the reversed copy has been saved so quit and return the paired idx
                 self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
 

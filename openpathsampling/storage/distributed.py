@@ -53,21 +53,21 @@ class DistributedUUIDStorage(object):
         ----------
         stores : list of :class:`openpathsampling.netcdfplus.ObjectStore`
             a list of references to the object stores used
-        uuid_idx : dict
+        index : dict
             the dict containing all uuid references
 
         """
 
-        def __init__(self, stores, uuid_idx):
+        def __init__(self, stores, index):
             self.stores = stores
-            self.uuid_idx = uuid_idx
+            self.index = index
 
         def __iter__(self):
-            for store, idx in self.uuid_idx.itervalues():
+            for store, idx in self.index.itervalues():
                 yield store[idx]
 
         def __getitem__(self, item):
-            store, idx = self.uuid_idx.get(str(item), (None, None))
+            store, idx = self.index.get(str(item), (None, None))
             if store is not None:
                 return store[item]
 
@@ -75,7 +75,7 @@ class DistributedUUIDStorage(object):
             pass
 
         def __len__(self):
-            return len(self.uuid_idx)
+            return len(self.index)
 
         def load(self, idx):
             print idx
@@ -132,9 +132,9 @@ class DistributedUUIDStorage(object):
             name = store.name
             if name not in self.stores:
                 # a store is not yet present in the multi storage, so add it
-                uuid_idx = {}
+                index = {}
                 stores = []
-                delegate = self.MultiDelegate(stores, uuid_idx)
+                delegate = self.MultiDelegate(stores, index)
                 setattr(self, name, delegate)
                 self.stores[name] = delegate
             else:
@@ -142,10 +142,10 @@ class DistributedUUIDStorage(object):
 
             delegate.stores.append(store)
 
-            for uuid, key in store.uuid_idx.iteritems():
+            for uuid, key in store.index.iteritems():
                 u = str(uuid)
-                if u not in delegate.uuid_idx:
-                    delegate.uuid_idx[u] = (store, key)
+                if u not in delegate.index:
+                    delegate.index[u] = (store, key)
 
             # make all stores use the joint load functions
             store.register_fallback(getattr(self, name))
