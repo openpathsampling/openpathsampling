@@ -154,6 +154,9 @@ class ObjectStore(StorableNamedObject):
 
         self.fallback_store = None
 
+    def is_created(self):
+        return self._created
+
     def to_dict(self):
         return {
             'content_class': self.content_class,

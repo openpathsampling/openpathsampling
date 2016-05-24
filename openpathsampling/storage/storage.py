@@ -67,9 +67,9 @@ class Storage(NetCDFPlus):
             map(storage2.kinetics.save, self.kinetics)
         else:
             for obj in self.statics:
-                storage2.statics._save(obj.copy(), idx=self.statics.index[obj])
+                storage2.statics._save(obj, self.statics.index[obj])
             for obj in self.kinetics:
-                storage2.kinetics._save(obj.copy(), idx=self.kinetics.index[obj])
+                storage2.kinetics._save(obj, self.kinetics.index[obj])
 
         # All other should be copied one to one. We do this explicitly although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner

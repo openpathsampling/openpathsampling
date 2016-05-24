@@ -110,7 +110,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
     def cache_var(self, obj):
         """
-        Return the storage.vars[''] variable that vontains the values
+        Return the storage.vars[''] variable that contains the values
 
         Parameters
         ----------
@@ -130,7 +130,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
     def cache_variable(self, obj):
         """
-        Return the storage.vars[''] variable that vontains the values
+        Return the storage.vars[''] variable that contains the values
 
         Parameters
         ----------
@@ -139,7 +139,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
         Returns
         -------
-        :class:`openpathsampling.netcdf.ObjectStore` or `netcdf4.Variable`
+        :class:`openpathsampling.netcdfplus.ObjectStore` or `netcdf4.Variable`
 
         """
         var_name = self.cache_var_name(obj)
@@ -206,7 +206,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
     def sync(self, objectdict=None):
         """
-        This will update the stored cache of the collectivevariable. It is
+        This will update the stored cache of the collective variable. It is
         different from saving in that the object is only created if it is
         saved (and the object caching will prevent additional creation)
 

@@ -60,8 +60,11 @@ class LoaderProxy(object):
     def __class__(self):
         return self._store.content_class
 
+    @property
+    def __uuid__(self):
+        return self._idx
+
     def __getattr__(self, item):
-        print item
         return getattr(self.__subject__, item)
 
     def _load_(self):
