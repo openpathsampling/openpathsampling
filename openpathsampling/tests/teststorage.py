@@ -16,7 +16,8 @@ from test_helpers import (data_filename,
                           )
 
 import numpy as np
-from nose.plugins.skip import SkipTest
+# from nose.plugins.skip import SkipTest
+
 
 class testStorage(object):
     def setUp(self):
@@ -206,4 +207,3 @@ class testStorage(object):
         assert(len(store.snapshots) == 2)
         assert(len(store.dimensions['snapshots']) == 1)
         store.close()
-

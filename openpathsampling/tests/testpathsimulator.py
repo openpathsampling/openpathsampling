@@ -165,6 +165,7 @@ class testCommittorSimulation(object):
         assert_equal(count, {self.snap0: 10, snap1: 10})
 
     def test_randomized_committor(self):
+        raise SkipTest
         # this shows that we get both states even with forward-only
         # shooting, if the randomizer gives the negative velocities
         randomizer = paths.RandomVelocities(beta=1.0)
