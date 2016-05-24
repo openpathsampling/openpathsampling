@@ -122,7 +122,6 @@ class testStorage(object):
         store.close()
 
     def test_clone(self):
-        raise SkipTest
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(self.filename))
 
@@ -154,7 +153,6 @@ class testStorage(object):
         store2.close()
 
     def test_clone_empty(self):
-        raise SkipTest
         store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
         assert(os.path.isfile(self.filename))
 

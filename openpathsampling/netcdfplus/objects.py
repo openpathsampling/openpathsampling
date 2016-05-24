@@ -195,7 +195,7 @@ class ObjectStore(StorableNamedObject):
     def reference_by_uuid(self):
         return self.storage.reference_by_uuid
 
-    def _restore(self):
+    def restore(self):
         if self.reference_by_uuid:
             self.load_indices()
 
@@ -508,7 +508,7 @@ class ObjectStore(StorableNamedObject):
         """
         self._free.discard(idx)
 
-    def _init(self):
+    def initialize(self):
         """
         Initialize the associated storage to allow for object storage. Mainly
         creates an index dimension with the name of the object.
@@ -888,12 +888,12 @@ class NamedObjectStore(ObjectStore):
                 self.content_class.__name__
             )
 
-    def _init(self):
+    def initialize(self):
         """
         Initialize the associated storage to allow for object storage. Mainly
         creates an index dimension with the name of the object.
         """
-        super(NamedObjectStore, self)._init()
+        super(NamedObjectStore, self).initialize()
 
         self.create_variable(
             "name", 'str',
@@ -1300,8 +1300,8 @@ class VariableStore(ObjectStore):
         attr = {var: self.vars[var][idx] for var in self.var_names}
         return self.content_class(**attr)
 
-    def _init(self):
-        super(VariableStore, self)._init()
+    def initialize(self):
+        super(VariableStore, self).initialize()
 
         # Add here the stores to be imported
         # self.create_variable('name', 'var_type')
@@ -1425,7 +1425,7 @@ class DictStore(NamedObjectStore):
 
         return obj
 
-    def _restore(self):
+    def restore(self):
         pass
 
     def save(self, obj, idx=None):

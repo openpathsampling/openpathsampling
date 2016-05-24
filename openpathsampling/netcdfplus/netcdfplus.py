@@ -255,7 +255,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
             # create the store that holds stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
-            self.stores._init()
+            self.stores.initialize()
             self.stores.set_caching(True)
             self.update_delegates()
 
@@ -282,9 +282,11 @@ class NetCDFPlus(netCDF4.Dataset):
             self.stores.set_caching(True)
             self.create_variable_delegate('stores_json')
             self.create_variable_delegate('stores_name')
-            self.create_variable_delegate('stores_uuid')
 
-            self.stores._restore()
+            if self.reference_by_uuid:
+                self.create_variable_delegate('stores_uuid')
+
+            self.stores.restore()
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -373,12 +375,12 @@ class NetCDFPlus(netCDF4.Dataset):
         for store in self._stores.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
-                store._init()
+                store.initialize()
 
         for store in self._stores.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
-                store._init()
+                store.initialize()
 
         self.update_delegates()
         self.simplifier.update_class_list()
@@ -451,7 +453,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
 
         for storage in self._stores.values():
-            storage._init()
+            storage.initialize()
 
         self.update_delegates()
 
@@ -465,7 +467,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
 
         for storage in self._stores.values():
-            storage._restore()
+            storage.restore()
 
     def list_stores(self):
         """
@@ -606,7 +608,6 @@ class NetCDFPlus(netCDF4.Dataset):
                 copied_storages += 1
                 if variable not in new_storage.variables:
                     # collectivevariables have additional variables in the storage that need to be copied
-                    # TODO: copy chunksizes?
                     var = self.variables[variable]
                     new_storage.createVariable(
                         variable,

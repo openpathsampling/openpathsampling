@@ -34,8 +34,8 @@ class PathMoveChangeStore(ObjectStore):
 
         return obj
 
-    def _init(self, units=None):
-        super(PathMoveChangeStore, self)._init()
+    def initialize(self, units=None):
+        super(PathMoveChangeStore, self).initialize()
 
         # New short-hand definition
         self.create_variable('details', 'lazyobj.details')

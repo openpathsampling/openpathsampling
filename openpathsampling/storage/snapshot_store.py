@@ -270,8 +270,8 @@ class FeatureSnapshotStore(BaseSnapshotStore):
     def _get(self, idx, snapshot):
         [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.storables]
 
-    def _init(self):
-        super(FeatureSnapshotStore, self)._init()
+    def initialize(self):
+        super(FeatureSnapshotStore, self).initialize()
 
         for feature in self.classes:
             if hasattr(feature, 'netcdfplus_init'):

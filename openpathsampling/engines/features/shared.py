@@ -151,8 +151,8 @@ class StaticContainerStore(ObjectStore):
         return self.storage.variables[self.prefix + '_coordinates'][frame_indices, atom_indices, :].astype(
             np.float32).copy()
 
-    def _init(self):
-        super(StaticContainerStore, self)._init()
+    def initialize(self):
+        super(StaticContainerStore, self).initialize()
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial
 
@@ -298,12 +298,12 @@ class KineticContainerStore(ObjectStore):
 
         return self.velocities_as_numpy(frame_indices, atom_indices)
 
-    def _init(self):
+    def initialize(self):
         """
         Initializes the associated storage to index momentums in it
         """
 
-        super(KineticContainerStore, self)._init()
+        super(KineticContainerStore, self).initialize()
 
         n_atoms = self.storage.n_atoms
         n_spatial = self.storage.n_spatial

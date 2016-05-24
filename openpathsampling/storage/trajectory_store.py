@@ -86,8 +86,8 @@ class TrajectoryStore(ObjectStore):
 
         return ObjectIterator()
 
-    def _init(self, units=None):
-        super(TrajectoryStore, self)._init()
+    def initialize(self, units=None):
+        super(TrajectoryStore, self).initialize()
 
         # index associated storage in class variable for all Trajectory instances to access
 
