@@ -41,7 +41,7 @@ class LoaderProxy(object):
     @property
     def reversed(self):
         if self._store.reference_by_uuid:
-            return LoaderProxy(self._store, StorableObject.reverse_uuid(self._idx))
+            return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
         else:
             return LoaderProxy(self._store, self._idx ^ 1)
 

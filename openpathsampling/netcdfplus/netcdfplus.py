@@ -550,7 +550,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
 
         if self.reference_by_uuid:
-            for store in self.objects:
+            for store in self.objects.values():
                 if uuid in store.index:
                     return store[uuid]
 

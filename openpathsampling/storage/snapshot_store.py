@@ -5,6 +5,8 @@ from openpathsampling.netcdfplus import ObjectStore, LoaderProxy, StorableObject
 from openpathsampling.netcdfplus.objects import UUIDDict
 import openpathsampling.engines as peng
 
+from collections import OrderedDict
+
 
 # =============================================================================================
 # ABSTRACT BASE CLASS FOR SNAPSHOTS
@@ -16,12 +18,12 @@ class UUIDReversalDict(UUIDDict):
         return StorableObject.ruuid(UUIDReversalDict.id(obj))
 
     def __setitem__(self, key, value):
-        dict.__setitem__(self, self.id(key), value)
-        dict.__setitem__(self, self.rev_id(key), value ^ 1)
+        OrderedDict.__setitem__(self, self.id(key), value)
+        OrderedDict.__setitem__(self, self.rev_id(key), value ^ 1)
 
     def __delitem__(self, key):
-        dict.__delitem__(self, self.id(key))
-        dict.__delitem__(self, self.rev_id(key))
+        OrderedDict.__delitem__(self, self.id(key))
+        OrderedDict.__delitem__(self, self.rev_id(key))
 
 
 class BaseSnapshotStore(ObjectStore):
@@ -192,7 +194,10 @@ class BaseSnapshotStore(ObjectStore):
         return super(BaseSnapshotStore, self).save(obj, idx)
 
     def all(self):
-        return peng.Trajectory(map(self.proxy, range(len(self))))
+        if self.reference_by_uuid:
+            return peng.Trajectory(map(self.proxy, self.index))
+        else:
+            return peng.Trajectory(map(self.proxy, range(len(self))))
 
     def __len__(self):
         return 2 * super(BaseSnapshotStore, self).__len__()

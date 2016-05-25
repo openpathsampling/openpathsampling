@@ -173,8 +173,6 @@ class ObjectDictStore(UniqueNamedObjectStore):
         objectdict : :class:`openpathsampling.CollectiveVariable`
             the objectdict you want to set this store as its cache
         """
-        print 'idx', self.index
-        print 'name', self.name_idx
         idx = self.index.get(objectdict, None)
         if idx is not None:
             objectdict.set_cache_store(self.key_store, self.cache_var(idx))
@@ -323,14 +321,14 @@ class ReversibleObjectDictStore(ObjectDictStore):
         return self.key_store.vars[var_name + '_bw']
 
     def set_cache_store(self, objectdict):
-        print 'idx', self.index
-        print 'name', self.name_idx
-        print objectdict.__uuid__
-        print objectdict in self.index
-        print objectdict.__uuid__ in self.index
-        print self.index.get(objectdict)
-        print self.index.get(objectdict.__uuid__)
-        print self.idx(objectdict)
+        # print 'idx', self.index
+        # print 'name', self.name_idx
+        # print objectdict.__uuid__
+        # print objectdict in self.index
+        # print objectdict.__uuid__ in self.index
+        # print self.index.get(objectdict)
+        # print self.index.get(objectdict.__uuid__)
+        # print self.idx(objectdict)
 
         idx = self.index.get(objectdict)
         if idx is not None:

@@ -500,7 +500,7 @@ class StoredDict(ChainDict):
                 if type(val) is int:
                     return val
                 else:
-                    erg = self.key_store.index.get(str(val))
+                    erg = self.key_store.index.get(val)
                     return erg
 
         idx = self.key_store.index.get(item)

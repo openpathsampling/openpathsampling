@@ -8,13 +8,15 @@ from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from proxy import LoaderProxy
 from base import StorableNamedObject, StorableObject
 
+from collections import OrderedDict
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-class UUIDDict(dict):
+class UUIDDict(OrderedDict):
     def __init__(self):
-        dict.__init__(self)
+        OrderedDict.__init__(self)
 
     @staticmethod
     def id(obj):
@@ -26,19 +28,19 @@ class UUIDDict(dict):
             return obj.__uuid__
 
     def __getitem__(self, item):
-        return dict.__getitem__(self, self.id(item))
+        return OrderedDict.__getitem__(self, self.id(item))
 
     def __setitem__(self, key, value):
-        dict.__setitem__(self, self.id(key), value)
+        OrderedDict.__setitem__(self, self.id(key), value)
 
     def __delitem__(self, key):
-        dict.__delitem__(self, self.id(key))
+        OrderedDict.__delitem__(self, self.id(key))
 
     def __contains__(self, item):
-        return dict.__contains__(self, self.id(item))
+        return OrderedDict.__contains__(self, self.id(item))
 
     def get(self, item, default=None):
-        return dict.get(self, self.id(item), default)
+        return OrderedDict.get(self, self.id(item), default)
 
 
 class ObjectStore(StorableNamedObject):
@@ -292,10 +294,8 @@ class ObjectStore(StorableNamedObject):
         """
         if self.reference_by_uuid:
             # we want to iterater in the order object were saved!
-            for idx in range(len(self)):
-                uuid = self.vars['uuid'][idx]
+            for uuid in self.index:
                 yield self.load(uuid)
-
         else:
             for idx in range(len(self)):
                 yield self.load(idx)
@@ -435,6 +435,7 @@ class ObjectStore(StorableNamedObject):
         if not self._cached_all:
             idxs = range(len(self))
             jsons = self.variables['json'][:]
+
 
             [self.add_single_to_cache(i, j) for i, j in zip(
                 idxs,
@@ -676,15 +677,14 @@ class ObjectStore(StorableNamedObject):
 
         logger.debug('Calling load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
 
-        self.index[obj] = n_idx
-
         if obj is not None:
+            self._get_id(n_idx, obj)
+
             # update cache there might have been a change due to naming
+            self.index[obj] = n_idx
             self.cache[n_idx] = obj
 
             logger.debug('Try loading UUID object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
-
-            self._get_id(n_idx, obj)
 
         logger.debug('Finished load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
 
@@ -835,9 +835,7 @@ class ObjectStore(StorableNamedObject):
             simplified = yaml.load(json)
             obj = self.simplifier.build(simplified)
 
-            if self.reference_by_uuid:
-                uuid = self.storage.variables[self.prefix + '_uuid'][idx]
-                setattr(obj, '__uuid__', UUID(uuid))
+            self._get_id(idx, obj)
 
             self.cache[idx] = obj
             self.index[obj] = idx
@@ -1345,6 +1343,7 @@ class VariableStore(ObjectStore):
         if idx not in self.cache:
             attr = {var: self.vars[var].getter(data[nn]) for nn, var in enumerate(self.var_names)}
             obj = self.content_class(**attr)
+            self._get_id(idx, obj)
 
             self.index[obj] = idx
             self.cache[idx] = obj
