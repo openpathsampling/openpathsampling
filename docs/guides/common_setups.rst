@@ -10,7 +10,7 @@ we summarize the most common setups of networks and move schemes for
 transition path sampling and transition interface sampling.
 
 
-Throughout the following, we assume that ``A``, ``B``, ``C``, etc. are
+Throughout the following, we assume that ``A``, ``B``, and ``C`` are
 volumes that represent states. We assume that ``interfacesA`` is a list of
 interfaces leaving state ``A``, and that ``interfacesAB`` is a list of
 interfaces leaving state ``A`` in the expected direction of ``B``.
@@ -54,7 +54,7 @@ Bidirectional two-state TPS
 
 If you want to sample both the :math:`A\to B` transitions and the
 :math:`B\to A` transitions in one TPS simulation, then you can achieve the
-desired sampling ensemble is several ways.
+desired sampling ensemble in several ways.
 
 First, you could use the approach as above, but using
 ``initial_states=[A,B]`` and ``final_states=[A,B]``. But there is a shortcut
@@ -85,11 +85,11 @@ like to include the self-transitions (not likely), then add the parameter
 ``from_states_all_to_all``. 
 
 The method :meth:`.from_state_pairs` *will* allow self-transitions if you
-explicitly include them. In practice, this is most useful when you only want
-to include certain transitions. For example, if you have states ``A``,
-``B``, and ``C``, but only want to include the transitions :math:`A\to B`,
-:math:`A\to C`, and :math:`B\to C`, this is the method to use. You'd create
-the network with
+explicitly include them. In practice, :meth:`.from_state_pairs` is most
+useful when you only want to include certain transitions. For example, if
+you have states ``A``, ``B``, and ``C``, but only want to include the
+transitions :math:`A\to B`, :math:`A\to C`, and :math:`B\to C`, this is the
+method to use. You'd create the network with
 
 .. code-block:: python
 
@@ -98,7 +98,7 @@ the network with
 Move schemes for TPS
 ====================
 
-Often, when doing TPS (and especially when doing fixed-length TPS), the
+Often, when using TPS (and especially when using flexible-length TPS), the
 entire move scheme consists of a single shooting mover. Currently, OPS only
 supports one-way shooting. A move scheme consisting of a single one-way
 shooting move can be created with the :class:`.OneWayShootingMoveScheme`.
@@ -108,7 +108,7 @@ The common way to set this up is:
 
    scheme = paths.OneWayShootingScheme(network, selector, engine)
 
-where ``network`` is a TPS network, ``selector`` is a shooting point
+where ``network`` would be the (TPS) network, ``selector`` is a shooting point
 selector (usually an instance of :class:`.UniformSelector`), and ``engine``
 is the desired dynamics engine.
 
@@ -121,9 +121,9 @@ Transition Interface Sampling
 Transition networks for TIS
 ===========================
 
-As with TPS, the 2-state system is just a special case of the multiple-state
-approach, so we use the same network classes to create 2-state systems as
-multiple-state systems.
+As with TPS, the 2-state system in TIS is just a special case of the
+multiple-state approach, so we use the same network classes to create
+2-state systems as multiple-state systems.
 
 .. _unidirectional-TIS:
 
@@ -173,6 +173,10 @@ then you need to use the multiple interface set variant of multiple state
 TIS. This is given by straightforward extension of the unidirectional case
 to more transitions. An illustration of this is in the toy model MISTIS
 example.
+
+More details on the distinctions between the MSTIS network and the MISTIS
+networks are in the :ref:`"Which network should I use" <which-network>`
+section.
 
 Move schemes for TIS
 ====================
