@@ -1474,7 +1474,7 @@ class SnapshotMatrix(object):
     def get(self, y_pos, x_pos):
         if x_pos in self.matrix[y_pos]:
             return self.matrix[y_pos]
-        else
+        else:
             return None
 
     def is_new(self, y_pos, x_pos):
