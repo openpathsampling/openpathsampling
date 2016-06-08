@@ -650,6 +650,27 @@ class CommittorSimulation(PathSimulator):
                     if self.step % self.save_frequency == 0:
                         self.sync_storage()
 
-                pass
+class DirectSimulation(PathSimulator):
+    def __init__(self, storage=None, engine=None, states=None,
+                 interfaces=None, initial_snapshot=None):
+        super(DirectSimulation, self).__init__(storage)
+        self.engine = engine
+        self.states = states
+        self.interfaces = interfaces
+        self.initial_snapshot = initial_snapshot
+        self.engine.current_snapshot = initial_snapshot
+        self.save_every = 1
+        # TODO: might set these elsewhere for reloading purposes?
+        self.transitions = []
+        self.fluxes = {state: {'in': [], 'out': []} for state in self.states}
 
+    def run(self, n_steps):
+        pass
 
+    @property
+    def rate(self):
+        pass
+
+    @property
+    def flux(self):
+        pass
