@@ -1,6 +1,8 @@
 import time
 import sys
 import logging
+import numpy as np
+import pandas as pd
 
 from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
@@ -651,26 +653,112 @@ class CommittorSimulation(PathSimulator):
                         self.sync_storage()
 
 class DirectSimulation(PathSimulator):
+    """
+    Direct simulation to calculate rates and fluxes.
+
+    In practice, this is primarily used to calculate the flux if you want to
+    do so without saving the entire trajectory. However, it will also save
+    the trajectory, if you want it to.
+
+    Parameters
+    ----------
+    storage
+    engine : paths.engine.DynamicsEngine
+        the engine for the molecular dynamics
+    states : list of paths.Volume
+        states
+    flux_pairs : list of 2-tuples of (state, interface)
+    initial_snapshot : paths.engines.Snapshot
+        initial snapshot for the MD
+    """
     def __init__(self, storage=None, engine=None, states=None,
-                 interfaces=None, initial_snapshot=None):
+                 flux_pairs=None, initial_snapshot=None):
         super(DirectSimulation, self).__init__(storage)
         self.engine = engine
         self.states = states
-        self.interfaces = interfaces
+        self.flux_pairs = flux_pairs
+        if flux_pairs is None:
+            self.flux_pairs = []
         self.initial_snapshot = initial_snapshot
-        self.engine.current_snapshot = initial_snapshot
         self.save_every = 1
+
         # TODO: might set these elsewhere for reloading purposes?
-        self.transitions = []
-        self.fluxes = {state: {'in': [], 'out': []} for state in self.states}
+        self.transition_count = []
+        self.flux_events = {pair: [] for pair in self.flux_pairs}
 
     def run(self, n_steps):
-        pass
+        most_recent_state = None
+        last_interface_exit = {p : -1 for p in self.flux_pairs}
+        last_state_visit = {s : -1 for s in self.states}
+        was_in_interface = {p : None for p in self.flux_pairs}
+        local_traj = [self.initial_snapshot]
+        self.engine.current_snapshot = self.initial_snapshot
+        for step in range(n_steps):
+            frame = self.engine.generate_next_frame()
+
+            # update the most recent state if we're in a state
+            state = None # no state at all
+            for s in self.states:
+                if s(frame):
+                    state = s
+            if state: 
+                last_state_visit[state] = step
+                if state is not most_recent_state:
+                    if most_recent_state:
+                        self.transition_count.append((state, step))
+                    most_recent_state = state
+
+            # update whether we've left any interface
+            for p in self.flux_pairs:
+                state = p[0]
+                interface = p[1]
+                is_in_interface = interface(frame)
+                if not is_in_interface and was_in_interface[p]:
+                    if state is most_recent_state:
+                        # successful exit
+                        if last_interface_exit[p] < last_state_visit[state]:
+                            flux_time_range = (step, last_interface_exit[p])
+                            self.flux_events[p].append(flux_time_range)
+                        last_interface_exit[p] = step
+                was_in_interface[p] = is_in_interface
 
     @property
-    def rate(self):
-        pass
+    def transitions(self):
+        prev_state = None
+        prev_time = None
+        results = {}
+        for (new_state, time) in self.transition_count:
+            if prev_state is not None and prev_time is not None:
+                lag = time - prev_time
+                try:
+                    results[(prev_state, new_state)] += [lag]
+                except KeyError:
+                    results[(prev_state, new_state)] = [lag]
+            prev_state = new_state
+            prev_time = time
+        return results
 
     @property
-    def flux(self):
-        pass
+    def rate_matrix(self):
+        transitions = self.transitions
+        rates = {t : 1.0 / np.array(transitions[t]).mean() 
+                 for t in transitions}
+        rate_matrix = pd.DataFrame(columns=self.states,
+                                   index=self.states)
+        for t in rates:
+            rate_matrix.set_value(t[0], t[1], rates[t])
+        return rate_matrix
+
+    @property
+    def fluxes(self):
+        return {p : 1.0 / np.array(self.flux_events[p]).mean()
+                for p in self.flux_events}
+
+    @property
+    def n_transitions(self):
+        transitions = self.transitions
+        return {t : len(transitions[t]) for t in transitions}
+
+    @property
+    def n_flux_events(self):
+        return {p : len(self.flux_events[p]) for p in self.flux_events}
