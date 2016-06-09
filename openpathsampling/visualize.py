@@ -1003,6 +1003,7 @@ class PathTreeBuilder(Builder):
                         doc.vertical_connector(shift + index_bw, pos_y_old, pos_y,
                                                cls=cls + [bw_cls, 'connection'])
                     )
+
             if 0 < index_fw < len(traj) - 1:
                 if traj[index_fw] in p_y:
                     pos_y_old = p_y[traj[index_fw]]
@@ -1444,48 +1445,54 @@ class SnapshotMatrix(object):
     def __init__(self, sample_list):
         self.sample_list = sample_list
         length = len(sample_list)
-        self.matrix = [{} for n in range(length)]
+        self.matrix = {}
         self.ranges = [{} for n in range(length)]
         self.shift = [0 for n in range(length)]
 
     def __setitem__(self, key, value):
         y_pos = key[0]
         x_pos = key[1]
-        if type(value) is paths.Trajectory:
+
+        if x_pos not in self.matrix:
+            self.matrix[x_pos] = {}
+
+        if isinstance(value, paths.BaseSnapshot):
+                self.matrix[x_pos][y_pos] = value
+
+        elif type(value) is paths.Trajectory:
             for pos, snapshot in enumerate(value):
-                if x_pos not in self.matrix[y_pos]:
-                    self.matrix[y_pos][x_pos + pos] = snapshot
-                else:
-                    raise KeyError('Position already set. Can only be set once')
+                self[y_pos, x_pos + pos] = snapshot
 
             self.shift[y_pos] = x_pos
 
-        elif isinstance(value, paths.BaseSnapshot):
-            if x_pos not in self.matrix[y_pos]:
-                self.matrix[y_pos][x_pos] = value
-            else:
-                raise KeyError('Position already set. Can only be set once')
 
     def __getitem__(self, item):
         y_pos = item[0]
         x_pos = item[1]
-        return self.matrix[y_pos][x_pos]
+        if x_pos in self.matrix:
+            return self.matrix[x_pos][y_pos]
+        else:
+            raise KeyError('Position not found.')
 
     def get(self, y_pos, x_pos):
-        if x_pos in self.matrix[y_pos]:
-            return self.matrix[y_pos]
+        if x_pos in self.matrix:
+            return self.matrix[x_pos].get(y_pos)
         else:
             return None
 
     def is_new(self, y_pos, x_pos):
-        if x_pos not in self.matrix[y_pos]:
+
+        if not self[y_pos, x_pos]:
             raise KeyError('No snapshot at this position')
 
-        snapshot = self.matrix[y_pos][x_pos]
+        snapshot = self[y_pos, x_pos]
+
+        for pos in reversed(sorted(self.matrix[x_pos].keys())):
+
 
         pos = y_pos
         while pos > 0:
-            if snapshot in self.matrix[pos - 1]:
+            if snapshot is self.matrix[pos - 1]:
                 return False
 
             pos -= 1
@@ -1493,7 +1500,7 @@ class SnapshotMatrix(object):
         return True
 
     def first(self, y_pos, x_pos):
-        snapshot = self.matrix[y_pos][x_pos]
+        snapshot = self[y_pos, x_pos]
 
         pos = y_pos
         if pos > 0:
@@ -1559,6 +1566,7 @@ class SampleList(list):
         self.flip_time_direction = False
         self.matrix = []
         self.parents = []
+        self.samp_list = None
 
     def __add__(self, other):
         return SampleList(list.__add__(self, other))
@@ -1582,19 +1590,12 @@ class SampleList(list):
         matrix = SnapshotMatrix(self)
         samples = self
 
-        # erase all steps from first onward
-        if first > 0:
-            self.matrix = self.matrix[:first]
-
-        for pos in range(len(samples) - first):
-            self.matrix.append({})
-
         assume_reversed_as_same = self.time_symmetric
         flip_time_direction = self.flip_time_direction
 
         time_direction = +1
 
-        for y_pos, sample in enumerate(samples[first:], first):
+        for y_pos, sample in enumerate(samples):
             mover_type = type(sample.mover)
             traj = sample.trajectory
 
@@ -1662,7 +1663,7 @@ class SampleList(list):
             for pos, snapshot in enumerate(traj):
                 pos_x = shift + pos
                 p_x[snapshot] = pos_x
-                self.matrix[y_pos][pos_x] = snapshot
+                matrix[y_pos, pos_x] = snapshot
 
             self.samp_list[sample] = {
                 'shift': shift,
@@ -1673,6 +1674,8 @@ class SampleList(list):
                 'mover_type': mover_type,
                 'time_direction': time_direction
             }
+
+            self.matrix = matrix
 
     @property
     def decorrelated_trajectories(self):
