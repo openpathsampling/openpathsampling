@@ -868,7 +868,9 @@ class SRTISScheme(DefaultScheme):
     """
     def __init__(self, network, bias=None, engine=None):
         super(SRTISScheme, self).__init__(network, engine)
-        sr_minus_strat = strategies.SingleReplicaMinusMoveStrategy()
+        sr_minus_strat = strategies.SingleReplicaMinusMoveStrategy(
+            engine=engine
+        )
         sr_minus_strat.level = strategies.levels.SUPERGROUP # GROUP?
         # maybe this should be the default for that strategy anyway? using it
         # at mover-level seems less likely than group-level
