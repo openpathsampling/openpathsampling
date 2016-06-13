@@ -290,6 +290,49 @@ class Trajectory(list, StorableObject):
 
         return ObjectIterator()
 
+    def index_symmetric(self, value):
+        """
+        Return index of a snapshot or its reversed is in a trajectory
+
+        """
+        try:
+            fw = self.index(value)
+        except ValueError:
+            fw = None
+            pass
+
+        try:
+            bw = self.index(value.reversed)
+        except ValueError:
+            bw = None
+            pass
+
+        if fw is None:
+            if bw is None:
+                raise ValueError('%r or its reversed is not found in trajectory.')
+            else:
+                return bw
+        else:
+            if bw is None:
+                return fw
+            else:
+                return min(fw, bw)
+
+    def contains_symmetric(self, item):
+        """
+        Test whether a snapshot or its reversed is in a trajectory
+
+        Returns
+        -------
+        bool
+
+        """
+        fw = item in self
+        if not fw:
+            return item.reversed in self
+        else:
+            return True
+
     def get_as_proxy(self, item):
         """
         Get an actual contained element
