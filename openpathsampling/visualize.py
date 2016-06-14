@@ -583,8 +583,6 @@ class PathTreeBuilder(Builder):
 
         super(PathTreeBuilder, self).__init__(['movers'])
         self.rejected = False
-        self.p_x = dict()
-        self.p_y = dict()
         self.obj = list()
         self.doc = None
 
@@ -594,10 +592,10 @@ class PathTreeBuilder(Builder):
 
         self.css_style = vis_css
 
-        self.states = []
+        self.states = {}
         self.op = None
 
-        self._samples = None
+        self._sample_list = None
         self._steps = None
 
         self.options.movers.update({
@@ -738,7 +736,9 @@ class PathTreeBuilder(Builder):
             'sample_label': None,
             'step_label': None,
             'snapshot_label': None,
-            'repeat'
+            'display_repeated': True,
+            'new_snapshots': True,
+            'repeated_snapshots': True
         })
 
     @staticmethod
@@ -747,12 +747,11 @@ class PathTreeBuilder(Builder):
 
     @property
     def samples(self):
-        return self._samples
+        return list(self._sample_list)
 
     @samples.setter
     def samples(self, samples):
-        self._samples = samples
-        self.analyze()
+        self._sample_list = SampleList(samples)
 
     @property
     def steps(self):
@@ -762,129 +761,8 @@ class PathTreeBuilder(Builder):
     def steps(self, steps):
         self._steps = steps
 
-    def analyze(self):
-        samples = self._samples
-        self.move_list = {}
-        self.step_list = {}
-        self.matrix = {}
-
-        opts = self.options
-        assume_reversed_as_same = opts.analysis['time_symmetric']
-        flip_time_direction = opts.analysis['flip_time_direction']
-
-        if self.steps is not None:
-            for step in self.steps:
-                for ch in step.change:
-                    if ch.samples is not None:
-                        for trial in ch.samples:
-                            self.step_list[trial] = step
-                            self.move_list[trial] = ch
-
-        self.samp_list = {}
-        p_x = dict()
-
-        time_direction = +1
-
-        for sample in samples:
-            mover_type = type(sample.mover)
-            traj = sample.trajectory
-
-            if time_direction == -1:
-                traj = paths.Trajectory(list(reversed(list(traj))))
-
-            overlap_reversed = False
-            index_bw = None
-            index_fw = None
-
-            for snapshot in range(len(traj)):
-                snap = traj[snapshot]
-                if snap in p_x or assume_reversed_as_same and snap.reversed in p_x:
-                    connect_bw = p_x[snap] if snap in p_x else p_x[snap.reversed]
-                    index_bw = snapshot
-                    shift_bw = connect_bw - snapshot
-                    break
-
-            new_sample = False
-            if index_bw is None:
-                index_bw = 0
-                index_fw = len(traj) - 1
-                # no overlap, so skip
-                new_sample = True
-                shift_bw = 0
-                shift_fw = 0
-            else:
-                for snapshot in range(len(traj) - 1, -1, -1):
-                    snap = traj[snapshot]
-                    if snap in p_x or (assume_reversed_as_same and snap.reversed in p_x):
-                        connect_fw = p_x[snap] if snap in p_x else p_x[snap.reversed]
-                        index_fw = snapshot
-                        shift_fw = connect_fw - snapshot
-                        break
-
-                if shift_bw != shift_fw:
-                    overlap_reversed = True
-
-                # now we know that the overlap is between (including) [connect_bw, connect_fw]
-                # and the trajectory looks like [bw, ...] + [old, ...] + [fw, ...]
-                # with bw
-                # [0, ..., index_bw -1] + [index_bw, ..., index_fw] + [index_fw + 1, ..., len(traj) - 1]
-                # both shift_fw and shift_bw always exist and are the same if the trajectory is extended
-                # or truncated or shoot from. If the overlapping trajectory is reversed before extending
-                # then we get
-                # [0, ..., index_fw -1] + [index_fw, ..., index_bw] + [index_bw + 1, ..., len(traj) - 1]
-                # this can be checked by index_bw > index_fw or shift_fw != shift_bw
-
-            p_x = {}
-
-            if flip_time_direction and overlap_reversed:
-                # reverse the time and adjust the shifting
-
-                index_bw = len(traj) - 1 - index_bw
-                index_fw = len(traj) - 1 - index_fw
-
-                shift = (shift_fw + shift_bw) / 2 + index_bw - (len(traj) - 1 - index_fw)
-                traj = paths.Trajectory(list(reversed(list(traj))))
-
-                time_direction *= -1
-
-            else:
-                shift = (shift_fw + shift_bw) / 2
-
-            for pos, snapshot in enumerate(traj):
-                pos_x = shift + pos
-                p_x[snapshot] = pos_x
-
-            self.samp_list[sample] = {
-                'shift': shift,
-                'index_fw': index_fw,
-                'index_bw': index_bw,
-                'overlap_reversed': overlap_reversed,
-                'new_sample': new_sample,
-                'mover_type': mover_type,
-                'time_direction': time_direction
-            }
-
-    def _write_snapshot_block(self, traj, x, y, first, last, rejected):
-        p_x = self._p_x
-        p_y = self._p_y
-
-        if rejected:
-            return
-
-        for pos, snapshot in enumerate(traj[first:last + 1]):
-            if self.options.analysis['time_symmetric']:
-                if (snapshot not in p_x and snapshot.reversed not in p_x) or \
-                        snapshot in p_x and p_x[snapshot] != x + pos + first or \
-                        snapshot.reversed in p_x and p_x[snapshot.reversed] != x + pos + first:
-                    p_x[snapshot] = x + pos + first
-                    p_y[snapshot] = y
-            else:
-                if snapshot not in p_x or p_x[snapshot] != x + pos + first:
-                    p_x[snapshot] = x + pos + first
-                    p_y[snapshot] = y
-
     def render(self):
-        samples = self._samples
+        samples = self.samples
         doc = TreeRenderer(self.css_style)
         self.doc = doc
 
@@ -898,7 +776,6 @@ class PathTreeBuilder(Builder):
             doc.horizontal_gap = opts.css['horizontal_gap']
 
         assume_reversed_as_same = opts.analysis['time_symmetric']
-        join_blocks = opts.analysis['joined_blocks']
 
         trj_format = opts.format['trajectory_label'] or opts.format['default_label'] or (lambda obj: '')
         smp_format = opts.format['sample_label'] or opts.format['default_label'] or (lambda obj: '')
@@ -926,24 +803,15 @@ class PathTreeBuilder(Builder):
                      });
             '''))
 
-        p_x = dict()
-        p_y = dict()
-
-        self._p_x = p_x
-        self._p_y = p_y
-
-        min_range_x = 10000
-        max_range_x = -10000
-
-        display_repeated = opts.format['display_repeated']
-        new_snapshots = opts.format['new_snapshots']
-        repeated_snapshots = opts.format['repeated_snapshots']
+        # display_repeated = opts.format['display_repeated']
+        # new_snapshots = opts.format['new_snapshots']
+        # repeated_snapshots = opts.format['repeated_snapshots']
 
         group = doc.g(
             class_='tree'
         )
 
-        matrix = self.samples.matrix
+        matrix = self._sample_list.matrix
         
         for pos_y, sample in enumerate(samples):
             info = self.samp_list[sample]
@@ -953,13 +821,11 @@ class PathTreeBuilder(Builder):
             length_fw = info['length_fw']
             length_bw = info['length_bw']
             length = info['length']
-            length_shared = info['length_shared']
+            # length_shared = info['length_shared']
             time_direction = info['time_direction']
 
-            overlap_reversed = info['overlap_reversed']
-            correlation = info['correlation']
-
-            rejected = False
+            # overlap_reversed = info['overlap_reversed']
+            # correlation = info['correlation']
 
             bw_cls = 'bw'
             fw_cls = 'fw'
@@ -986,7 +852,6 @@ class PathTreeBuilder(Builder):
                 accepted = move.accepted
                 if not accepted:
                     cls += ['rejected']
-                    rejected = True
 
             if view_options['label_position'] == 'left':
                 group.add(
@@ -1021,7 +886,7 @@ class PathTreeBuilder(Builder):
 
             for add_cls, region, label in [
                     [[bw_cls], (0, length_bw), ''],
-                    [[fw_cls], (length - length_fw,length), ''],
+                    [[fw_cls], (length - length_fw, length), ''],
                     [['overlap', 'whiteback'], (length_bw, length - length_fw), view_options['overlap_label']],
                     [['reversed'], (length_bw, length - length_fw)]
             ]:
@@ -1078,7 +943,7 @@ class PathTreeBuilder(Builder):
         # print min_y, max_y
         # print len(matrix), len(matrix[0])
 
-        if hasattr(self, 'states') and len(self.states) > 0:
+        if hasattr(self, 'states') and self.states:
             for color, op in self.states.iteritems():
                 xp = None
                 for y in range(0, max_y - min_y + 1):
@@ -1152,13 +1017,9 @@ class PathTreeBuilder(Builder):
                 doc.label(cor_x, 0, 'cor')
             )
 
-        if max_range_x == -10000:
-            max_range_x = 0
-            min_range_x = 0
-
         old_tc = 1
 
-        width = 64 + tree_scale * (max_range_x - min_range_x + 2) - doc.scale_x * (-0.5 - columns)
+        width = 64 + tree_scale * (max_x - min_x + 2) - doc.scale_x * (-0.5 - columns)
         height = doc.scale_y * (max_y + 3.0)
         left_x = (-0.5 - columns) * doc.scale_x
         top_y = -1.5 * doc.scale_y
@@ -1166,14 +1027,8 @@ class PathTreeBuilder(Builder):
         if len(samples) > 0:
             prev = samples[0].trajectory
             cls = ['tableline']
-            if sample in self.move_list:
-                move = self.step_list[sample].change
-                accepted = move.accepted
-                if not accepted:
-                    cls += ['rejected']
 
             for tc, s in enumerate(samples):
-
                 group.add(
                     doc.rect(
                         class_=doc.c(cls),
@@ -1255,29 +1110,6 @@ class PathTreeBuilder(Builder):
 
         return doc
 
-    @staticmethod
-    def _get_min_max(d):
-        if len(d) > 0:
-            return min(d.values()), max(d.values())
-        else:
-            return 0, 0
-
-    def _to_matrix(self, min_x=None, max_x=None, min_y=None, max_y=None):
-        if min_x is None or max_x is None:
-            min_x, max_x = self._get_min_max(self.p_x)
-
-        if min_y is None or max_y is None:
-            min_y, max_y = self._get_min_max(self.p_y)
-
-        matrix = [[None] * (max_x - min_x + 1) for n in range(max_y - min_y + 1)]
-
-        for s in self.p_x:
-            px = self.p_x[s]
-            py = self.p_y[s]
-            matrix[py - min_y][px - min_x] = s
-
-        return matrix
-
     def use_storage_indices(self, storage):
         self.options.format['default_label'] = storage.idx
 
@@ -1309,9 +1141,6 @@ class ReplicaHistoryTree(PathTreeBuilder):
         self.states = []
 
         self.steps = steps
-
-    def rebuild(self):
-        self.analyze()
 
     @property
     def accepted_samples(self):
@@ -1357,15 +1186,7 @@ class ReplicaHistoryTree(PathTreeBuilder):
         making the number (i.e., the length of the list) also easily
         accessible.
         """
-        prev = self.samples[0].trajectory
-        decorrelated = [prev]
-        # TODO: this should be restricted to accepted samples
-        for s in [samp for samp in self.samples]:
-            if not paths.Trajectory.is_correlated(s.trajectory, prev):
-                decorrelated.append(s.trajectory)
-                prev = s.trajectory
-
-        return decorrelated
+        return None
 
 
 class SnapshotMatrix(object):
@@ -1545,6 +1366,7 @@ class SampleList(list):
             mover_type = type(sample.mover)
             traj = sample.trajectory
             parent_shift = 0
+            parent_traj = None
             overlap = None
 
             if sample.parent is not None:
@@ -1612,7 +1434,7 @@ class SampleList(list):
                     'mover_type': mover_type,
                     'time_direction': time_direction,
                     'correlation': (1.0 * overlap_length) / len(traj),
-                    'parent_y':
+                    'parent_y': self.parent(sample)
                 }
 
             matrix[y_pos, traj_shift] = traj
