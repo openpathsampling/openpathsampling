@@ -1192,10 +1192,8 @@ class ReplicaHistoryTree(PathTreeBuilder):
 class SnapshotMatrix(object):
     def __init__(self, sample_list):
         self.sample_list = sample_list
-        length = len(sample_list)
         self.matrix = {}
-        self.ranges = [{} for n in range(length)]
-        self.shift = [0 for n in range(length)]
+        self.shift = [0] * range(len(sample_list))
 
     def __setitem__(self, key, value):
         y_pos = key[0]
