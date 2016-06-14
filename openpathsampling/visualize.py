@@ -4,7 +4,7 @@ import os
 import openpathsampling as paths
 
 import json
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 
 class TreeRenderer(svg.Drawing):
@@ -580,7 +580,6 @@ class MoveTreeBuilder(Builder):
 
 class PathTreeBuilder(Builder):
     def __init__(self):
-
         super(PathTreeBuilder, self).__init__(['movers'])
         self.rejected = False
         self.obj = list()
@@ -601,113 +600,74 @@ class PathTreeBuilder(Builder):
         self.options.movers.update({
             paths.ReplicaExchangeMover: {
                 'name': 'RepEx',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': 'RepEx',
                 'suffix': 'x',
-                'label_position': 'left',
                 'cls': ['repex']
             },
             paths.BackwardShootMover: {
-                'name': 'Shooting',
-                'overlap': 'none',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': '',
+                'name': 'Backward',
                 'suffix': 'b',
-                'label_position': 'left',
                 'cls': ['shooting']
             },
             paths.ForwardShootMover: {
-                'name': 'Shooting',
-                'overlap': 'none',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': '',
+                'name': 'Forward',
                 'suffix': 'f',
                 'label_position': 'right',
                 'cls': ['shooting']
             },
             paths.BackwardExtendMover: {
                 'name': 'Extend',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': 'Extend',
                 'suffix': 'b',
-                'label_position': 'left',
                 'cls': ['extend']
             },
             paths.ForwardExtendMover: {
                 'name': 'Extend',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': 'Extend',
                 'suffix': 'f',
                 'label_position': 'right',
                 'cls': ['extend']
             },
             paths.FinalSubtrajectorySelectMover: {
                 'name': 'Truncate',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': 'Trunc',
                 'suffix': 't',
                 'label_position': 'right',
                 'cls': ['extend']
             },
             paths.FirstSubtrajectorySelectMover: {
                 'name': 'Truncate',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': 'Trunc',
                 'suffix': 't',
-                'label_position': 'left',
                 'cls': ['extend']
             },
             paths.EnsembleHopMover: {
-                'name': 'hop',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': 'EnsembleHop',
+                'name': 'Hop',
                 'suffix': 'h',
-                'label_position': 'left',
                 'cls': ['hop']
             },
             paths.PathReversalMover: {
-                'name': 'reversal',
-                'overlap': 'line',
-                'fw': '',
-                'bw': '',
-                'overlap_label': 'Reversal',
+                'name': 'Reversal',
                 'suffix': 'r',
-                'label_position': 'left',
                 'cls': ['reversal']
             },
             'new': {
-                'name': 'new',
-                'overlap': 'blocks',
-                'fw': 'blocks',
-                'bw': 'blocks',
+                'name': 'New',
                 'suffix': '+',
-                'overlap_label': 'New',
-                'label_position': 'left',
                 'cls': ['unknown']
             },
             'unknown': {
                 'name': '???',
-                'overlap': 'line',
-                'fw': 'blocks',
-                'bw': 'blocks',
-                'overlap_label': '???',
+                'suffix': '?',
+                'cls': ['repex']
+            },
+            'default': {
+                'name': '---',
+                'overlap': 'none',
+                'fw': 'single',
+                'bw': 'single',
+                'new': 'single',
+                'reversed': 'block',
+                'full': 'line',
+                'label': '???',
                 'suffix': '?',
                 'label_position': 'left',
-                'cls': ['repex']
+                'cls': []
             }
         })
         self.options.ui.update({
@@ -747,7 +707,7 @@ class PathTreeBuilder(Builder):
 
     @property
     def samples(self):
-        return list(self._sample_list)
+        return self._sample_list
 
     @samples.setter
     def samples(self, samples):
@@ -811,21 +771,31 @@ class PathTreeBuilder(Builder):
             class_='tree'
         )
 
-        matrix = self._sample_list.matrix
+        matrix = self.samples.matrix
         
         for pos_y, sample in enumerate(samples):
-            info = self.samp_list[sample]
+            info = samples[sample]
             mover_type = info['mover_type']
             new_sample = info['new']
             shift = info['shift']
-            length_fw = info['length_fw']
-            length_bw = info['length_bw']
-            length = info['length']
-            # length_shared = info['length_shared']
             time_direction = info['time_direction']
+            length = info['length']
 
-            # overlap_reversed = info['overlap_reversed']
-            # correlation = info['correlation']
+            if not new_sample:
+                length_fw = info['length_fw']
+                length_bw = info['length_bw']
+                # length_shared = info['length_shared']
+
+                overlap_reversed = info['overlap_reversed']
+                # correlation = info['correlation']
+
+                bw_x = shift + length_bw
+                fw_x = shift + length - 1 - length_fw
+
+            else:
+                overlap_reversed = False
+                length_bw = 0
+                length_fw = 0
 
             bw_cls = 'bw'
             fw_cls = 'fw'
@@ -836,12 +806,17 @@ class PathTreeBuilder(Builder):
                 traj = paths.Trajectory(list(reversed(list(traj))))
                 bw_cls, fw_cls = fw_cls, bw_cls
 
+            view_options = {}
+            view_options.update(opts.movers['default'])
+
             if new_sample:
-                view_options = opts.movers['new']
+                view_options_upd = opts.movers['new']
             elif mover_type in opts.movers:
-                view_options = opts.movers[mover_type]
+                view_options_upd = opts.movers[mover_type]
             else:
-                view_options = opts.movers['unknown']
+                view_options_upd = opts.movers['unknown']
+
+            view_options.update(view_options_upd)
 
             traj_str = str(trj_format(traj)) + view_options['suffix'].upper()
 
@@ -863,45 +838,80 @@ class PathTreeBuilder(Builder):
                               cls=cls + ['right'])
                 )
 
-            bw_x = shift + length_bw
-            fw_x = shift + length - 1 - length_fw
+            if not new_sample:
+                if 0 < length_bw:
+                    root_y = matrix.root(pos_y, bw_x)
 
-            if 0 < length_bw:
-                root_y = matrix.root(pos_y, bw_x)
+                    if root_y < pos_y:
+                        group.add(
+                            doc.vertical_connector(bw_x, root_y, pos_y,
+                                                   cls=cls + [bw_cls, 'connection'])
+                        )
 
-                if root_y < pos_y:
-                    group.add(
-                        doc.vertical_connector(bw_x, root_y, pos_y,
-                                               cls=cls + [bw_cls, 'connection'])
-                    )
+                if 0 < length_fw:
+                    root_y = matrix.root(pos_y, fw_x)
 
-            if 0 < length_fw:
-                root_y = matrix.root(pos_y, fw_x)
+                    if root_y < pos_y:
+                        group.add(
+                            doc.vertical_connector(fw_x + 1, root_y, pos_y,
+                                                   cls=cls + [fw_cls, 'connection'])
+                        )
 
-                if root_y < pos_y:
-                    group.add(
-                        doc.vertical_connector(fw_x, root_y, pos_y,
-                                               cls=cls + [fw_cls, 'connection'])
-                    )
+            parts = []
 
-            for add_cls, region, label in [
-                    [[bw_cls], (0, length_bw), ''],
-                    [[fw_cls], (length - length_fw, length), ''],
-                    [['overlap', 'whiteback'], (length_bw, length - length_fw), view_options['overlap_label']],
-                    [['reversed'], (length_bw, length - length_fw)]
-            ]:
-                vis_type = ''
+            regions = {
+                'bw': (0, length_bw),
+                'fw': (length - length_fw, length),
+                'full': (0, length),
+                'overlap': (length_bw, length - length_fw),
+                'reversed': (length_bw, length - length_fw),
+                'new': (0, length)
+            }
+            clss = {
+                'fw': [fw_cls],
+                'bw': [bw_cls],
+                'reversed': ['reversed'],
+                'full': ['full'],
+                'overlap': ['overlap'],
+                'new': ['new']
+            }
+
+
+            if not new_sample:
+                if length_bw > 0:
+                    parts.append('bw')
+
+                if length_fw > 0:
+                    parts.append('fw')
+
+                if overlap_reversed:
+                    parts.append('reversed')
+                else:
+                    if length_bw == 0 and length_fw == 0:
+                        # all snaps are repeated to treat differently
+                        parts.append('full')
+                    else:
+                        parts.append('overlap')
+            else:
+                parts.append('new')
+
+            for part in parts:
+                vis_type = view_options[part]
+                add_cls = clss[part]
+                label = view_options['label'] or view_options['name']
+                region = regions[part]
+
                 if vis_type == 'line':
                     group.add(
                         doc.horizontal_region(shift + region[0], pos_y, region[1] - region[0],
-                                              view_options['overlap_label'], cls=cls + add_cls)
+                                              label, cls=cls + add_cls)
                     )
                 elif vis_type == 'block':
                     group.add(
                         doc.block(
                             shift + region[0],
                             pos_y,
-                            view_options['overlap_label'],
+                            view_options['label'],
                             w=region[1] - region[0],
                             extend_left=False,
                             cls=cls + add_cls
@@ -936,23 +946,17 @@ class PathTreeBuilder(Builder):
                                 data=data
                             ))
 
-        min_x, max_x = min(matrix.matrix.keys()), max(matrix.matrix.keys())
+        min_x, max_x = min(matrix.matrix_x.keys()), max(matrix.matrix_x.keys())
         min_y, max_y = 0, len(samples) - 1
-
-        # print min_x, max_x
-        # print min_y, max_y
-        # print len(matrix), len(matrix[0])
 
         if hasattr(self, 'states') and self.states:
             for color, op in self.states.iteritems():
                 xp = None
-                for y in range(0, max_y - min_y + 1):
+                for yp in range(0, max_y):
                     left = None
-                    yp = y + min_y
-                    for x in range(0, (max_x - min_x + 1)):
-                        xp = x + min_x
-
-                        if matrix[y, x] is not None and bool(op(matrix[y, x])):
+                    for xp in matrix.get_x_range(yp):
+                        snap = matrix[yp, xp]
+                        if bool(op(snap)):
                             if left is None:
                                 left = xp
                         else:
@@ -1192,18 +1196,23 @@ class ReplicaHistoryTree(PathTreeBuilder):
 class SnapshotMatrix(object):
     def __init__(self, sample_list):
         self.sample_list = sample_list
-        self.matrix = {}
-        self.shift = [0] * range(len(sample_list))
+        self.matrix_x = {}
+        self.matrix_y = {}
+        self.shift = [0] * len(sample_list)
 
     def __setitem__(self, key, value):
         y_pos = key[0]
         x_pos = key[1]
 
-        if x_pos not in self.matrix:
-            self.matrix[x_pos] = {}
+        if x_pos not in self.matrix_x:
+            self.matrix_x[x_pos] = {}
+
+        if y_pos not in self.matrix_y:
+            self.matrix_y[y_pos] = {}
 
         if isinstance(value, paths.BaseSnapshot):
-                self.matrix[x_pos][y_pos] = value
+            self.matrix_x[x_pos][y_pos] = value
+            self.matrix_y[y_pos][x_pos] = value
 
         elif type(value) is paths.Trajectory:
             for pos, snapshot in enumerate(value):
@@ -1214,21 +1223,26 @@ class SnapshotMatrix(object):
     def __getitem__(self, item):
         y_pos = item[0]
         x_pos = item[1]
-        if x_pos in self.matrix:
-            return self.matrix[x_pos][y_pos]
+        if x_pos in self.matrix_x:
+            # print y_pos, x_pos, self.matrix[x_pos].keys()
+            return self.matrix_x[x_pos][y_pos]
         else:
-            raise KeyError('Position not found.')
+            raise KeyError(x_pos)
+
+    def get_x_range(self, y_pos):
+        xs = set(self.matrix_y[y_pos])
+        return range(min(xs), max(xs) + 1)
 
     def get(self, y_pos, x_pos):
-        if x_pos in self.matrix:
-            return self.matrix[x_pos].get(y_pos)
+        if x_pos in self.matrix_x:
+            return self.matrix_x[x_pos].get(y_pos)
         else:
             return None
 
     def is_new(self, y_pos, x_pos):
         snapshot = self[y_pos, x_pos]
 
-        x = self.matrix[x_pos]
+        x = self.matrix_x[x_pos]
 
         pos = y_pos
         while pos > 0:
@@ -1247,16 +1261,17 @@ class SnapshotMatrix(object):
     def root(self, y_pos, x_pos):
         snapshot = self[y_pos, x_pos]
 
-        x = self.matrix[x_pos]
+        x = self.matrix_x[x_pos]
 
         pos = y_pos
         while pos > 0:
             new_y_pos = self.sample_list.parent(pos)
+            # print pos, new_y_pos, x.keys()
 
             if not new_y_pos or new_y_pos > pos:
                 return pos
 
-            if snapshot is not x[new_y_pos]:
+            if new_y_pos not in x or snapshot is not x[new_y_pos]:
                 return pos
 
             pos = new_y_pos
@@ -1266,7 +1281,7 @@ class SnapshotMatrix(object):
     def parent(self, y_pos, x_pos):
         snapshot = self[y_pos, x_pos]
 
-        x = self.matrix[x_pos]
+        x = self.matrix_x[x_pos]
 
         if y_pos == 0:
             return None
@@ -1282,7 +1297,7 @@ class SnapshotMatrix(object):
         return new_y_pos
 
 
-class SampleList(list):
+class SampleList(OrderedDict):
     """
     A timely ordered series of `Sample` objects.
 
@@ -1297,31 +1312,46 @@ class SampleList(list):
     """
 
     def __init__(self, samples):
-        list.__init__(self, samples)
+        OrderedDict.__init__(self)
 
         self.time_symmetric = True
         self.flip_time_direction = False
         self.matrix = []
         self.parents = []
-        self.samp_list = {}
 
-    def __add__(self, other):
-        return SampleList(list.__add__(self, other))
+        if hasattr(samples, '__iter__'):
+            for s in samples:
+                self[s] = {}
+        else:
+            self[samples] = {}
+
+        self.analyze()
+
+    def __iadd__(self, other):
+        for s in other:
+            self[s] = {}
+
+        self.analyze()
 
     def __getitem__(self, item):
         if type(item) is slice:
-            return SampleList(list.__getitem__(self, item))
-        elif hasattr(item, '__iter__'):
-            SampleList(list.__getitem__(self, item))
+            return SampleList(self.keys()[item])
+        elif isinstance(item, list):
+            return [self[s] for s in item]
+        elif type(item) is int:
+            return self.keys()[item]
         else:
-            return list.__getitem__(self, item)
+            return OrderedDict.__getitem__(self, item)
+
+    def index(self, value):
+        return self.keys().index(value)
 
     def parent(self, idx):
         try:
             if type(idx) is int:
-                return self.index(self[idx].parent)
+                return self.keys().index(self[idx].parent)
             else:
-                return self.index(idx.parent)
+                return self.keys().index(idx.parent)
         except ValueError:
             return None
 
@@ -1341,11 +1371,11 @@ class SampleList(list):
         if type(sample) is int:
             sample = self[sample]
 
-        if sample in self.samp_list:
-            if self.samp_list[sample]['time_direction'] > 0:
-                x_pos = self.samp_list[sample]['shift'] + self._trajectory_index(sample, snapshot)
+        if sample in self:
+            if self[sample]['time_direction'] > 0:
+                x_pos = self[sample]['shift'] + self._trajectory_index(sample, snapshot)
             else:
-                x_pos = self.samp_list[sample]['shift'] + len(sample) - 1 - self._trajectory_index(sample, snapshot)
+                x_pos = self[sample]['shift'] + len(sample) - 1 - self._trajectory_index(sample, snapshot)
 
             return x_pos
         else:
@@ -1354,13 +1384,12 @@ class SampleList(list):
     def analyze(self):
 
         matrix = SnapshotMatrix(self)
-        samples = self
 
         flip_time_direction = self.flip_time_direction
 
         parent = None
 
-        for y_pos, sample in enumerate(samples):
+        for y_pos, sample in enumerate(self):
             mover_type = type(sample.mover)
             traj = sample.trajectory
             parent_shift = 0
@@ -1370,13 +1399,13 @@ class SampleList(list):
             if sample.parent is not None:
                 parent = sample.parent
 
-            if parent not in self.samp_list:
+            if parent not in self:
                 parent = None
                 time_direction = +1
 
             if parent is not None:
-                parent_shift = self.samp_list[parent]['shift']
-                time_direction = self.samp_list[parent]['time_direction']
+                parent_shift = self[parent]['shift']
+                time_direction = self[parent]['time_direction']
 
                 parent_traj = parent.trajectory
 
@@ -1391,12 +1420,13 @@ class SampleList(list):
                 # no overlap so we need to start new
                 traj_shift = 0
 
-                self.samp_list[sample] = {
+                self[sample] = {
                     'shift': 0,
                     'new': True,
                     'mover_type': mover_type,
                     'time_direction': time_direction,
-                    'correlation': 0.0
+                    'correlation': 0.0,
+                    'length': len(traj)
                 }
 
             else:
@@ -1415,13 +1445,14 @@ class SampleList(list):
 
                         traj = paths.Trajectory(list(reversed(list(traj))))
                         time_direction *= -1
+                        overlap_reversed = False
                     else:
                         # after
                         overlap_length = 0
 
                 traj_shift = parent_shift + self._trajectory_index(parent_traj, overlap[0]) - new_bw
 
-                self.samp_list[sample] = {
+                self[sample] = {
                     'shift': traj_shift,
                     'length_fw': len(traj) - 1 - new_fw,
                     'length_bw': new_bw,
@@ -1443,7 +1474,7 @@ class SampleList(list):
 
     @property
     def correlation(self):
-        return [self.samp_list[s]['correlation'] for s in self]
+        return [s['correlation'] for s in self.values()]
 
     @property
     def decorrelated_trajectories(self):
@@ -1458,13 +1489,20 @@ class SampleList(list):
         prev = self[0].trajectory
         decorrelated = [prev]
 
-        for s in [samp for samp in self]:
+        for s in self:
             if not s.trajectory.is_correlated(prev, self.time_symmetric):
                 decorrelated.append(s.trajectory)
                 prev = s.trajectory
 
         return decorrelated
 
+    @property
+    def first(self):
+        return self[0]
+
+    @property
+    def last(self):
+        return self[-1]
 
 vis_css = r"""
 .opstree text, .movetree text {
@@ -1491,6 +1529,10 @@ vis_css = r"""
 }
 .opstree g.block:hover rect {
     opacity: 0.5;
+}
+.opstree .shooting {
+    fill: gray;
+    stroke: gray;
 }
 .opstree .repex {
     fill: blue;
