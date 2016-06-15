@@ -195,3 +195,19 @@ class testCommittorSimulation(object):
         assert_true(counts['None-Left'] > 0)
         assert_true(counts['None-Right'] > 0)
         assert_equal(sum(counts.values()), 50)
+
+class testDirectSimulation(object):
+    def setup(self):
+        pass
+
+    def test_run(self):
+        raise SkipTest
+
+    def test_transitions(self):
+        raise SkipTest
+
+    def test_rate_matrix(self):
+        raise SkipTest
+
+    def test_fluxes(self):
+        raise SkipTest
