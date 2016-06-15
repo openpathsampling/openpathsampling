@@ -209,19 +209,41 @@ class TreeRenderer(svg.Drawing):
 
         cls += ['shade']
 
-        if color is None:
-            return self.rect(
-                class_=self.c(cls),
-                insert=self.xy(x - 0.5, y + 0.35),
-                size=self.wh(w, 0.1)
-            )
-        else:
-            return self.rect(
-                class_=self.c(cls),
-                insert=self.xy(x - 0.5, y + 0.35),
-                size=self.wh(w, 0.1),
-                fill=color
-            )
+        adds = {}
+
+        if color is not None:
+            adds = {'fill': color}
+
+        group = self.g(
+            class_=self.c(cls)
+        )
+
+        group.add(self.rect(
+            insert=self.xy(x - 0.5, y + 0.10),
+            size=self.wh(w, 0.25),
+            fill='white'
+        ))
+
+        group.add(self.rect(
+            insert=self.xy(x - 0.5, y - 0.35),
+            size=self.wh(w, 0.25),
+            fill='white'
+        ))
+
+        group.add(self.rect(
+            insert=self.xy(x - 0.5, y + 0.15),
+            size=self.wh(w, 0.15),
+            **adds
+        ))
+
+        group.add(self.rect(
+            insert=self.xy(x - 0.5, y - 0.30),
+            size=self.wh(w, 0.15),
+            **adds
+        ))
+
+
+        return group
 
     def vertical_connector(self, x, y1, y2, cls=None):
         if cls is None:
@@ -345,13 +367,13 @@ class TreeRenderer(svg.Drawing):
         with open(file_name, 'w') as f:
             f.write(self.to_html())
 
-    def save_pdf(self, file_name='tree.pdf'):
-        with open('tree_xxx.html', 'w') as f:
-            f.write(self.to_html())
-
-        bash_command = "open tree_xxx.html " + file_name
-
-        os.system(bash_command)
+    # def save_pdf(self, file_name='tree.pdf'):
+    #     with open('tree_xxx.html', 'w') as f:
+    #         f.write(self.to_html())
+    #
+    #     bash_command = "open tree_xxx.html " + file_name
+    #
+    #     os.system(bash_command)
 
 
 class Builder(object):
@@ -597,109 +619,7 @@ class PathTreeBuilder(Builder):
         self._sample_list = None
         self._steps = None
 
-        self.options.movers.update({
-            paths.ReplicaExchangeMover: {
-                'name': 'RepEx',
-                'suffix': 'x',
-                'cls': ['repex']
-            },
-            paths.BackwardShootMover: {
-                'name': 'Backward',
-                'suffix': 'b',
-                'cls': ['shooting']
-            },
-            paths.ForwardShootMover: {
-                'name': 'Forward',
-                'suffix': 'f',
-                'label_position': 'right',
-                'cls': ['shooting']
-            },
-            paths.BackwardExtendMover: {
-                'name': 'Extend',
-                'suffix': 'b',
-                'cls': ['extend']
-            },
-            paths.ForwardExtendMover: {
-                'name': 'Extend',
-                'suffix': 'f',
-                'label_position': 'right',
-                'cls': ['extend']
-            },
-            paths.FinalSubtrajectorySelectMover: {
-                'name': 'Truncate',
-                'suffix': 't',
-                'label_position': 'right',
-                'cls': ['extend']
-            },
-            paths.FirstSubtrajectorySelectMover: {
-                'name': 'Truncate',
-                'suffix': 't',
-                'cls': ['extend']
-            },
-            paths.EnsembleHopMover: {
-                'name': 'Hop',
-                'suffix': 'h',
-                'cls': ['hop']
-            },
-            paths.PathReversalMover: {
-                'name': 'Reversal',
-                'suffix': 'r',
-                'cls': ['reversal']
-            },
-            'new': {
-                'name': 'New',
-                'suffix': '+',
-                'cls': ['unknown']
-            },
-            'unknown': {
-                'name': '???',
-                'suffix': '?',
-                'cls': ['repex']
-            },
-            'default': {
-                'name': '---',
-                'overlap': 'none',
-                'fw': 'single',
-                'bw': 'single',
-                'new': 'single',
-                'reversed': 'block',
-                'full': 'line',
-                'label': '???',
-                'suffix': '?',
-                'label_position': 'left',
-                'cls': []
-            }
-        })
-        self.options.ui.update({
-            'step': True,
-            'correlation': True,
-            'sample': True,
-            'virtual': False,
-            'cv': True,
-            'info': False
-        })
-        self.options.analysis.update({
-            'time_symmetric': True,
-            'flip_time_direction': False,
-            'joined_blocks': False
-        })
-        self.options.css.update({
-            'scale_x': 5,
-            'scale_y': 10,
-            'zoom': 1.0,
-            'horizontal_gap': False,
-            'width': 'inherit'
-        })
-        self.options.format.update({
-            'default_label': lambda x: hex(id(x))[-5:] + ' ',
-            'trajectory_label': None,
-            'sample_label': None,
-            'step_label': None,
-            'snapshot_label': None,
-            'display_repeated': True,
-            'new_snapshots': True,
-            'repeated_snapshots': True
-        })
+        self.reset_options()
 
     @staticmethod
     def construct_heritage(sample):
@@ -722,6 +642,7 @@ class PathTreeBuilder(Builder):
         self._steps = steps
 
     def render(self):
+        self.samples.analyze()
         samples = self.samples
         doc = TreeRenderer(self.css_style)
         self.doc = doc
@@ -772,7 +693,10 @@ class PathTreeBuilder(Builder):
         )
 
         matrix = self.samples.matrix
-        
+        vis_blocks = {}
+
+        # Loops over samples and plot these
+
         for pos_y, sample in enumerate(samples):
             info = samples[sample]
             mover_type = info['mover_type']
@@ -818,7 +742,7 @@ class PathTreeBuilder(Builder):
 
             view_options.update(view_options_upd)
 
-            traj_str = str(trj_format(traj)) + view_options['suffix'].upper()
+            traj_str = str(trj_format(sample.trajectory)) + view_options['suffix'].upper()
 
             cls = [] + view_options['cls']
 
@@ -837,6 +761,8 @@ class PathTreeBuilder(Builder):
                     doc.label(shift + len(traj) - 1, pos_y, traj_str,
                               cls=cls + ['right'])
                 )
+
+            # draw shooting hooks
 
             if not new_sample:
                 if 0 < length_bw:
@@ -857,6 +783,8 @@ class PathTreeBuilder(Builder):
                                                    cls=cls + [fw_cls, 'connection'])
                         )
 
+            # draw actual parts of the trajectory as single snapshots, a block of snapshots or a line
+
             parts = []
 
             regions = {
@@ -876,6 +804,14 @@ class PathTreeBuilder(Builder):
                 'new': ['new']
             }
 
+            vis_types = {
+                'fw': 'new',
+                'bw': 'new',
+                'reversed': 'reversed',
+                'full': 'full',
+                'overlap': 'overlap',
+                'new': 'new'
+            }
 
             if not new_sample:
                 if length_bw > 0:
@@ -896,10 +832,12 @@ class PathTreeBuilder(Builder):
                 parts.append('new')
 
             for part in parts:
-                vis_type = view_options[part]
+                hidden = False
+                vis_type = view_options[vis_types[part]]
                 add_cls = clss[part]
                 label = view_options['label'] or view_options['name']
                 region = regions[part]
+                # print sample.mover, part, type(vis_type), vis_type, add_cls
 
                 if vis_type == 'line':
                     group.add(
@@ -945,9 +883,16 @@ class PathTreeBuilder(Builder):
                                 cls=cls + add_cls,
                                 data=data
                             ))
+                else:
+                    hidden = True
+
+                if not hidden:
+                    self._update_vis_block(vis_blocks, pos_y, shift, region)
 
         min_x, max_x = min(matrix.matrix_x.keys()), max(matrix.matrix_x.keys())
         min_y, max_y = 0, len(samples) - 1
+
+        # mark snapshot volumes with colors
 
         if hasattr(self, 'states') and self.states:
             for color, op in self.states.iteritems():
@@ -955,8 +900,7 @@ class PathTreeBuilder(Builder):
                 for yp in range(0, max_y):
                     left = None
                     for xp in matrix.get_x_range(yp):
-                        snap = matrix[yp, xp]
-                        if bool(op(snap)):
+                        if xp in vis_blocks[yp] and bool(op(matrix[yp, xp])):
                             if left is None:
                                 left = xp
                         else:
@@ -974,6 +918,8 @@ class PathTreeBuilder(Builder):
         group.translate(32 + doc.w(1 - min_x), doc.h(1))
 
         tree_group = group
+
+        # draw left side legend from here
 
         group = doc.g(
             class_='legend'
@@ -1114,9 +1060,122 @@ class PathTreeBuilder(Builder):
 
         return doc
 
+    @staticmethod
+    def _update_vis_block(vis_block, pos_y, shift, region):
+        # necessary to remember where we actually drew something
+        if pos_y not in vis_block:
+            vis_block[pos_y] = set()
+
+        vis_block[pos_y].update(range(shift + region[0], shift + region[1] + 1))
+
     def use_storage_indices(self, storage):
         self.options.format['default_label'] = storage.idx
 
+    def reset_options(self):
+        self.options.movers.update({
+            paths.ReplicaExchangeMover: {
+                'name': 'RepEx',
+                'suffix': 'x',
+                'cls': ['repex']
+            },
+            paths.BackwardShootMover: {
+                'name': 'Backward',
+                'suffix': 'b',
+                'cls': ['shooting']
+            },
+            paths.ForwardShootMover: {
+                'name': 'Forward',
+                'suffix': 'f',
+                'label_position': 'right',
+                'cls': ['shooting']
+            },
+            paths.BackwardExtendMover: {
+                'name': 'Extend',
+                'suffix': 'b',
+                'overlap': 'line',  # this will repeat the part where the extension is started
+                'cls': ['extend']
+            },
+            paths.ForwardExtendMover: {
+                'name': 'Extend',
+                'suffix': 'f',
+                'overlap': 'line',  # this will repeat the part where the extension is started
+                'label_position': 'right',
+                'cls': ['extend']
+            },
+            paths.FinalSubtrajectorySelectMover: {
+                'name': 'Truncate',
+                'suffix': 't',
+                'label_position': 'right',
+                'cls': ['extend']
+            },
+            paths.FirstSubtrajectorySelectMover: {
+                'name': 'Truncate',
+                'suffix': 't',
+                'cls': ['extend']
+            },
+            paths.EnsembleHopMover: {
+                'name': 'Hop',
+                'suffix': 'h',
+                'cls': ['hop']
+            },
+            paths.PathReversalMover: {
+                'name': 'Reversal',
+                'suffix': 'r',
+                'cls': ['reversal']
+            },
+            'new': {
+                'name': 'New',
+                'suffix': '+',
+                'cls': ['unknown']
+            },
+            'unknown': {
+                'name': '???',
+                'suffix': '?',
+                'cls': ['repex']
+            },
+            'default': {
+                'name': '---',
+                'overlap': 'none',
+                'new': 'single',
+                'reversed': 'block',
+                'full': 'line',
+                'label': '',
+                'suffix': '?',
+                'label_position': 'left',
+                'cls': []
+            }
+        })
+        self.options.ui.update({
+            'step': True,
+            'correlation': True,
+            'sample': True,
+            'virtual': False,
+            'cv': True,
+            'info': False
+        })
+        self.options.analysis.update({
+            'time_symmetric': True,
+            'flip_time_direction': False,
+            'joined_blocks': False
+        })
+        self.options.css.update({
+            'scale_x': 5,
+            'scale_y': 10,
+            'zoom': 1.0,
+            'horizontal_gap': False,
+            'width': 'inherit'
+        })
+        self.options.format.update({
+            'default_label': lambda x: hex(id(x))[-5:] + ' ',
+            # 'default_label': lambda x: '',
+            'trajectory_label': None,
+            'sample_label': None,
+            'step_label': None,
+            'snapshot_label': None,
+            'display_repeated': True,
+            'new_snapshots': True,
+            'repeated_snapshots': True
+        })
 
 class ReplicaHistoryTree(PathTreeBuilder):
     """
@@ -1200,6 +1259,10 @@ class SnapshotMatrix(object):
         self.matrix_y = {}
         self.shift = [0] * len(sample_list)
 
+    @property
+    def time_symmetric(self):
+        return self.sample_list.time_symmetric
+
     def __setitem__(self, key, value):
         y_pos = key[0]
         x_pos = key[1]
@@ -1258,6 +1321,15 @@ class SnapshotMatrix(object):
 
         return True
 
+    def _snapshot_is(self, snap1, snap2):
+        if not self.time_symmetric:
+            return snap1 is snap2
+        else:
+            if snap1 is snap2:
+                return True
+            else:
+                return snap1.reversed is snap2
+
     def root(self, y_pos, x_pos):
         snapshot = self[y_pos, x_pos]
 
@@ -1268,10 +1340,10 @@ class SnapshotMatrix(object):
             new_y_pos = self.sample_list.parent(pos)
             # print pos, new_y_pos, x.keys()
 
-            if not new_y_pos or new_y_pos > pos:
+            if new_y_pos is None or new_y_pos > pos:
                 return pos
 
-            if new_y_pos not in x or snapshot is not x[new_y_pos]:
+            if new_y_pos not in x or not self._snapshot_is(snapshot, x[new_y_pos]):
                 return pos
 
             pos = new_y_pos
@@ -1288,11 +1360,11 @@ class SnapshotMatrix(object):
 
         new_y_pos = self.sample_list.parent(y_pos)
 
-        if not new_y_pos or new_y_pos > y_pos:
+        if new_y_pos is None or new_y_pos > y_pos:
             return None
 
-        if snapshot is not x[new_y_pos]:
-            return
+        if not self._snapshot_is(snapshot, x[new_y_pos]):
+            return None
 
         return new_y_pos
 
@@ -1314,8 +1386,8 @@ class SampleList(OrderedDict):
     def __init__(self, samples):
         OrderedDict.__init__(self)
 
-        self.time_symmetric = True
-        self.flip_time_direction = False
+        self._time_symmetric = True
+        self._flip_time_direction = False
         self.matrix = []
         self.parents = []
 
@@ -1331,6 +1403,24 @@ class SampleList(OrderedDict):
         for s in other:
             self[s] = {}
 
+        self.analyze()
+
+    @property
+    def time_symmetric(self):
+        return self._time_symmetric
+
+    @time_symmetric.setter
+    def time_symmetric(self, value):
+        self._time_symmetric = value
+        self.analyze()
+
+    @property
+    def flip_time_direction(self):
+        return self._flip_time_direction
+
+    @time_symmetric.setter
+    def flip_time_direction(self, value):
+        self._flip_time_direction = value
         self.analyze()
 
     def __getitem__(self, item):
@@ -1517,10 +1607,10 @@ vis_css = r"""
     stroke-width: 3;
     stroke: white !important;
 }
-.opstree text.bw.label {
+.opstree .left.label .shift text {
     text-anchor: end;
 }
-.opstree text.fw.label {
+.opstree .right.label .shift text {
     text-anchor: start;
 }
 .opstree .block text, .movetree .block text {
@@ -1529,10 +1619,6 @@ vis_css = r"""
 }
 .opstree g.block:hover rect {
     opacity: 0.5;
-}
-.opstree .shooting {
-    fill: gray;
-    stroke: gray;
 }
 .opstree .repex {
     fill: blue;
@@ -1570,6 +1656,10 @@ vis_css = r"""
     fill: red;
     stroke: red;
 }
+.opstree .shooting.overlap {
+    fill: #666;
+    stroke: #666;
+}
 .opstree .reversal {
     fill: gold;
     stroke: gold;
@@ -1602,13 +1692,16 @@ vis_css = r"""
     opacity: 0.2;
 }
 .opstree .left.label .shift {
-    transform: translateX(-24px);
+    transform: translateX(-0px);
 }
 .opstree .right.label .shift {
-    transform: translateX(+24px);
+    transform: translateX(+0px);
 }
 .opstree .infobox text {
     text-anchor: start;
+}
+.opstree .shade {
+    stroke: none;
 }
 
 .movetree .label .shift {
