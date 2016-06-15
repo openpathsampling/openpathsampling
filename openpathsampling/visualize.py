@@ -1418,7 +1418,7 @@ class SampleList(OrderedDict):
     def flip_time_direction(self):
         return self._flip_time_direction
 
-    @time_symmetric.setter
+    @flip_time_direction.setter
     def flip_time_direction(self, value):
         self._flip_time_direction = value
         self.analyze()
