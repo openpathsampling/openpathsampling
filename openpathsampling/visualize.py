@@ -1,3 +1,5 @@
+
+
 import svgwrite as svg
 from svgwrite.container import Group
 import openpathsampling as paths
@@ -6,7 +8,16 @@ import json
 from collections import namedtuple, OrderedDict
 
 
+# TODO: Move TreeRenderer and Builder to a different file ???
+
 class TreeRenderer(svg.Drawing):
+    """
+    Helper Class to render SVG Drawings
+
+    Main use is that it is difficult to scale coordinates in SVG
+    without distort the content. What we want is to move objects further
+    apart of close while maintaining their size.
+    """
     def __init__(self, css_style=''):
         super(TreeRenderer, self).__init__()
         self.scale_x = 20.0
@@ -52,7 +63,7 @@ class TreeRenderer(svg.Drawing):
     def block(self, x, y, text="",
               extend_right=True, extend_left=True,
               extend_top=False, extend_bottom=False,
-              w=1.0, cls=None, data=None):
+              w=1.0, color=None, cls=None, data=None):
 
         if cls is None:
             cls = list()
@@ -65,12 +76,18 @@ class TreeRenderer(svg.Drawing):
             class_=self.c(cls)
         )
 
+        if color is not None:
+            adds = { 'fill': color }
+        else:
+            adds = {}
+
         if data is not None:
             group.set_desc(desc=json.dumps(data))
 
         group.add(self.rect(
             insert=self.xy(x - 0.5 + padding, y - 0.3),
             size=self.wh(1.0 * w - 2 * padding, 0.6),
+            **adds
         ))
 
         if extend_left:
@@ -369,12 +386,11 @@ class TreeRenderer(svg.Drawing):
     def _width(self):
         return self.w(self.width) + self.margin * 2
 
-    def write_html(self, file_name='tree.html'):
-        with open(file_name, 'w') as f:
-            f.write(self.to_html())
-
 
 class Builder(object):
+    """
+    Abstract class of building SVG representations
+    """
     def __init__(self, additional_option_categories=None):
         options = ['analysis', 'css', 'ui', 'format']
         if additional_option_categories is not None:
@@ -394,11 +410,27 @@ class Builder(object):
         return self.render().tostring()
 
     def render(self):
+        """
+        Create the graphics object
+
+        Returns
+        -------
+        `class`:TreeRenderer
+            the rendering object that can return the final graphics
+        """
         raise NotImplemented('This is a stub class. Use a derived instance!')
 
 
 class MoveTreeBuilder(Builder):
-    def __init__(self):
+    """
+    Builder Class for creating MoveTree Visualisations
+
+    You need to specify a :obj:`openpathsampling.PathMover` and a list of ensembles. Then it will
+    display all possible steps in the pathmover and its relation to the given list of ensembles.
+
+    This is useful to get an idea which parts of the ensemble affect which part of ensembles
+    """
+    def __init__(self, pathmover=None, ensembles=None):
         super(MoveTreeBuilder, self).__init__()
 
         self.p_x = dict()
@@ -421,6 +453,12 @@ class MoveTreeBuilder(Builder):
         self.options.analysis['only_canonical'] = True
 
         self.doc = None
+
+        if pathmover is not None:
+            self.set_mover(pathmover)
+
+        if ensembles is not None:
+            self.set_ensembles(ensembles)
 
     def set_ensembles(self, ensembles):
         self.ensembles = ensembles
@@ -598,6 +636,32 @@ class MoveTreeBuilder(Builder):
 
 
 class PathTreeBuilder(Builder):
+    """
+    Builder class to visualize the time evolution of a list of samples
+
+    This will basically create path trees as known from TIS and adding some useful
+    features.
+
+    The basic way to use it is to create a list of samples that should be visualized first.
+    Then create the `PathTreeBuilder` and
+    >>> tree = PathTreeBuilder()
+    >>> tree.samples = my_samplelist
+    >>> SVG(tree.svg())
+
+    There are a lot of options. For a full list see the tutorial on pathree visualization.
+
+    Attributes
+    ----------
+    samples : a `SampleList` object containing the list of samples
+        the list of samples to be plotted
+    states : dict, 'svg_color': :obj:`openpathsampling.Volume`-like
+        a dictionary listing a color that fulfills the SVG specification like `#888`, `gold` or `rgb(12,32,59)`
+        referencing a volume like object that will return a bool when passed a snapshot. If true then the snapshot
+        is highlighed using the given color
+    op : :obj:`openpathsampling.CollectiveVariable`-like
+        a function that returns a value when passed a snapshot. The value will be put on single snapshots.
+
+    """
     def __init__(self):
         super(PathTreeBuilder, self).__init__(['movers'])
         self.obj = list()
@@ -611,6 +675,7 @@ class PathTreeBuilder(Builder):
         self._samples = None
 
         self.reset_options()
+        self.coloring = None
 
     @property
     def samples(self):
@@ -638,7 +703,7 @@ class PathTreeBuilder(Builder):
         else:
             doc.horizontal_gap = opts.css['horizontal_gap']
 
-        assume_reversed_as_same = opts.analysis['time_symmetric']
+        assume_reversed_as_same = self.samples.time_symmetric
 
         trj_format = opts.format['trajectory_label'] or opts.format['default_label'] or (lambda obj: '')
         smp_format = opts.format['sample_label'] or opts.format['default_label'] or (lambda obj: '')
@@ -856,7 +921,8 @@ class PathTreeBuilder(Builder):
                                 extend_left=pos > 0,
                                 extend_right=pos < length - 1,
                                 cls=cls + add_cls,
-                                data=data
+                                data=data,
+                                color=self.coloring(snapshot) if self.coloring else None
                             ))
                 else:
                     hidden = True
@@ -1022,9 +1088,21 @@ class PathTreeBuilder(Builder):
         vis_block[pos_y].update(range(shift + region[0], shift + region[1] + 1))
 
     def use_storage_indices(self, storage):
+        """
+        Set the default_labelling to use indices in the given storage
+        Parameters
+        ----------
+        storage : :obj:`openpathsampling.Storage`
+            the storage to be used for indices
+
+        """
         self.options.format['default_label'] = storage.idx
 
     def reset_options(self):
+        """
+        Return the options to default
+
+        """
         self.options.movers.update({
             paths.ReplicaExchangeMover: {
                 'name': 'RepEx',
@@ -1089,7 +1167,7 @@ class PathTreeBuilder(Builder):
             'default': {
                 'name': '---',
                 'overlap': 'none',
-                'new': 'single',
+                'new': 'block',
                 'reversed': 'block',
                 'full': 'line',
                 'label': '',
@@ -1102,21 +1180,17 @@ class PathTreeBuilder(Builder):
             'step': True,
             'correlation': True,
             'sample': True,
-            'virtual': False,
             'cv': True,
             'info': False
         })
         self.options.analysis.update({
-            'time_symmetric': True,
-            'flip_time_direction': False,
-            'joined_blocks': False
         })
         self.options.css.update({
             'scale_x': 5,
             'scale_y': 15,
             'zoom': 1.0,
             'horizontal_gap': False,
-            'width': 'inherit'
+            'width': '100%'
         })
         self.options.format.update({
             'default_label': lambda x: hex(id(x))[-5:] + ' ',
@@ -1257,15 +1331,34 @@ class SampleList(OrderedDict):
     or the history of samples in a specific ensemble or of a given replica.
 
     Last it provides some useful filters that make sense for samples.
+
+    Attributes
+    ----------
+    time_symmetric : bool, default: `True`
+        if `True` a snapshots and its reversed counterpart will be treated alike.
+    flip_time_direction : bool, default: `False`
+        if `True` the sample list detects if a reversal happens between to successive
+        samples and will reverse the time direction to counter the flip. This results in
+        a much clearer picture and shows the redundancy of snapshots when reversing
+        trajectories. Use with care it will distort the sense of time from left to right
+        in the generated picture
+
     """
 
-    def __init__(self, samples):
+    def __init__(self, samples, time_symmetric=None, flip_time_direction=None):
         OrderedDict.__init__(self)
 
-        self._time_symmetric = True
-        self._flip_time_direction = False
-        self.matrix = []
-        self.parents = []
+        if time_symmetric is None:
+            self._time_symmetric = True
+        else:
+            self._time_symmetric = time_symmetric
+
+        if flip_time_direction is None:
+            self._flip_time_direction = False
+        else:
+            self._flip_time_direction = flip_time_direction
+
+        self._matrix = []
 
         if hasattr(samples, '__iter__'):
             for s in samples:
@@ -1275,7 +1368,23 @@ class SampleList(OrderedDict):
 
         self.analyze()
 
+    @property
+    def matrix(self):
+        """
+        :obj:`SnapshotMatrix`
+            a generated sparse matrix of snapshots. Mostly used for plotting purposes
+        """
+        return self._matrix
+
     def set_samples(self, samples):
+        """
+
+        Parameters
+        ----------
+        samples : list of :obj:`openpathsampling.Sample`
+            the list of samples to be inspected
+
+        """
         self.clear()
         for s in samples:
             self[s] = {}
@@ -1283,7 +1392,60 @@ class SampleList(OrderedDict):
         self.analyze()
 
     @staticmethod
+    def from_ancestors(sample):
+        """
+        Generate a :obj:`SampleList` from the ancestors of a given sample
+
+        Parameters
+        ----------
+        sample : :obj:`openpathsampling.Sample`
+            the sample from which the ancestory are traced. It will follow the `.parent`
+            property until no parent is found
+
+        Returns
+        -------
+        :obj:`SampleList`
+            the generated list of samples
+
+        """
+
+        l = []
+
+        while sample is not None:
+            l.append(sample)
+            sample = sample.parent
+
+        return SampleList(reversed(l))
+
+    @staticmethod
     def from_steps(steps, replica, accepted):
+        """
+        Generate a :obj:`SampleList` from a list of step and a replica ID
+
+        Parameters
+        ----------
+        steps : list of :obj:`openpathsampling.MCStep`
+            the list of simulation steps to be inspected and turned into a list of samples
+        replica : int
+            the replica ID to be traced
+        accepted : bool
+            if `True` only accepted samples will be included in the list. Otherwise it will also
+            contain trial samples
+
+        Returns
+        -------
+        :obj:`SampleList`
+            the generated list of samples
+
+        Notes
+        -----
+        This is a special ordered dict of the form `{ samp1: information, samp2: information }`. So if you
+        get by integer to will get the sample at the position while getting a sample will act as a regular
+        dict. So this will actually work and return the information of the third sample in the list.
+
+        >>> sl = SampleList()
+        >>> print sl[sl[3]]
+        """
         return SampleList(SampleList._get_samples_from_steps(steps, replica, accepted))
 
     @staticmethod
@@ -1308,6 +1470,19 @@ class SampleList(OrderedDict):
             return samples
 
     def without_redundant(self):
+        """
+        Remove all redundant samples and return a new object
+
+        Redundant samples are samples where the overlap with the previous sample is effectively
+        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+
+        Returns
+        -------
+        :obj:`SampleList`
+            the generated list of samples
+
+
+        """
         l = SampleList(
             [samp for samp, data in self.iteritems() if data['length_shared'] < data['length']]
         )
@@ -1316,9 +1491,26 @@ class SampleList(OrderedDict):
         return l
 
     def remove_redundant(self):
+        """
+        Remove all redundant samples from the current object.
+
+        Redundant samples are samples where the overlap with the previous sample is effectively
+        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+
+        """
         l = [samp for samp, data in self.iteritems() if data['length_shared'] < data['length']]
         self.set_samples(l)
-        return l
+
+    def flatten_to_main(self):
+        """
+        Remove all redundant samples from the current object.
+
+        Redundant samples are samples where the overlap with the previous sample is effectively
+        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+
+        """
+        l = [samp for samp, data in self.iteritems() if data['level'] == 0]
+        self.set_samples(l)
 
     @property
     def time_symmetric(self):
@@ -1349,9 +1541,40 @@ class SampleList(OrderedDict):
             return OrderedDict.__getitem__(self, item)
 
     def index(self, value):
+        """
+        Return the index of a sample in the list
+
+        Parameters
+        ----------
+        value : :obj:`openpathsampling.Sample`
+
+        Returns
+        -------
+        int
+            the index if present in the list. Throw an exception otherwise
+        """
         return self.keys().index(value)
 
     def parent(self, idx):
+        """
+        Return the index of the next present parent of an index or sample
+
+        Next present parent means. That from the given sample we check if the
+        direct parent is in the list. If so its index is returned. If not we
+        try recursively of the parent of the parent and so on until we find
+        a sample that is present or return None
+
+        Parameters
+        ----------
+        idx : :obj:`openpathsampling.Sample` or int
+            If an `int` is given the Sample at the index in the list is used,
+            othewise the sample is used for finding the parent
+
+        Returns
+        -------
+        int or None
+            the index of the parent in the list if present. None otherwise.
+        """
         try:
             if type(idx) is int:
                 samp = self[idx]
@@ -1379,21 +1602,12 @@ class SampleList(OrderedDict):
         else:
             return snapshot in trajectory
 
-    def snapshot_position_x(self, sample, snapshot):
-        if type(sample) is int:
-            sample = self[sample]
-
-        if sample in self:
-            if self[sample]['time_direction'] > 0:
-                x_pos = self[sample]['shift'] + self._trajectory_index(sample, snapshot)
-            else:
-                x_pos = self[sample]['shift'] + len(sample) - 1 - self._trajectory_index(sample, snapshot)
-
-            return x_pos
-        else:
-            return None
-
     def analyze(self):
+        """
+        Perform the analysis of the samples.
+
+        Should be called automatically when relevant changes are detected.
+        """
         matrix = SnapshotMatrix(self)
         flip_time_direction = self.flip_time_direction
         parent = None
@@ -1487,7 +1701,7 @@ class SampleList(OrderedDict):
 
             parent = sample
 
-        self.matrix = matrix
+        self._matrix = matrix
 
         for sample in reversed(self):
             pos_y = self.index(sample)
@@ -1498,6 +1712,18 @@ class SampleList(OrderedDict):
 
     @property
     def correlation(self):
+        """
+        Return a list of correlation between neighboring samples in the list
+
+        The correlation is the fraction of shared snapshots. If `time_symmetric` is set
+        then this is taken into account and reversing of snapshots is ignored.
+
+        Returns
+        -------
+        list of float
+            the list of correlations
+
+        """
         return [s['correlation'] for s in self.values()]
 
     @property
@@ -1509,29 +1735,65 @@ class SampleList(OrderedDict):
         one-way shooting. This function returns the list of trajectories,
         making the number (i.e., the length of the list) also easily
         accessible.
+
+        Note that this only traced the main path of samples. So if you have
+        e.g. rejected parts these will not be taken into account.
+
+        Returns
+        -------
+        list of :obj:`opnpathsampling.Trajectory`
+        """
+
+        return [samp.trajectory for samp in self.decorrelated]
+
+    @property
+    def decorrelated(self):
+        """List of decorrelated samples from the internal samples.
+
+        In path sampling, two trajectories are said to be "decorrelated" if
+        they share no frames in common. This is particularly important in
+        one-way shooting. This function returns the list of trajectories,
+        making the number (i.e., the length of the list) also easily
+        accessible.
+
+        Note that this only traced the main path of samples. So if you have
+        e.g. rejected parts these will not be taken into account.
+
+        Returns
+        -------
+        list of :obj:`opnpathsampling.Trajectory`
         """
         prev = self[0].trajectory
-        decorrelated = [prev]
+        decorrelated = [self[0]]
 
         for s in self:
             # check if we are on the main path of evolution and not something that is rejected
             # at some point
             if self[s]['level'] == 0:
                 if not s.trajectory.is_correlated(prev, self.time_symmetric):
-                    decorrelated.append(s.trajectory)
+                    decorrelated.append(s)
                     prev = s.trajectory
 
         return decorrelated
 
     @property
     def first(self):
+        """
+        :obj:`openpathsampling.Sample`
+            Returns the first sample in the list
+        """
         return self[0]
 
     @property
     def last(self):
+        """
+        :obj:`openpathsampling.Sample`
+            Returns the last sample in the list
+        """
         return self[-1]
 
 
+# TODO: Move this to extra file and load using 'pkgutil' or so
 vis_css = r"""
 .opstree text, .movetree text {
     alignment-baseline: central;
@@ -1553,6 +1815,9 @@ vis_css = r"""
 }
 .opstree .block text, .movetree .block text {
     fill: white !important;
+    stroke: none !important;
+}
+.opstree .block {
     stroke: none !important;
 }
 .opstree g.block:hover rect {
@@ -1621,7 +1886,7 @@ vis_css = r"""
     opacity: 0.3;
 }
 .opstree .level {
-    opacity: 0.1;
+    opacity: 0.5;
 }
 .opstree .orange {
     fill: orange;
