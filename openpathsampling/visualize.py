@@ -1,6 +1,5 @@
 import svgwrite as svg
 from svgwrite.container import Group
-import os
 import openpathsampling as paths
 
 import json
@@ -97,7 +96,7 @@ class TreeRenderer(svg.Drawing):
             ))
 
         group.add(self.text(
-            text=str(text)[:4],
+            text=str(text),
             insert=self.xy(x + (w - 1.0) / 2.0, y)
         ))
 
@@ -125,6 +124,9 @@ class TreeRenderer(svg.Drawing):
             end=self.xy(x - 0.5 + w - padding, y)
         ))
 
+        extend_left = False
+        extend_right = False
+
         if extend_left:
             group.add(self.circle(
                 center=self.xy(x - 0.5, y),
@@ -144,6 +146,14 @@ class TreeRenderer(svg.Drawing):
                 start=self.xy(x + w - 0.5, y - 0.3),
                 end=self.xy(x + w - 0.5, y + 0.3)
             ))
+
+        text = str(text)
+
+        if self.w(w) < len(text) * 5:
+            text = text[0]
+
+        if self.w(w) < 10:
+            text = ''
 
         group.add(self.text(
             text=str(text),
@@ -219,14 +229,14 @@ class TreeRenderer(svg.Drawing):
         )
 
         group.add(self.rect(
-            insert=self.xy(x - 0.5, y + 0.10),
-            size=self.wh(w, 0.25),
+            insert=self.xy(x - 0.6, y + 0.10),
+            size=self.wh(w + 0.2, 0.25),
             fill='white'
         ))
 
         group.add(self.rect(
-            insert=self.xy(x - 0.5, y - 0.35),
-            size=self.wh(w, 0.25),
+            insert=self.xy(x - 0.6, y - 0.35),
+            size=self.wh(w + 0.2, 0.25),
             fill='white'
         ))
 
@@ -241,7 +251,6 @@ class TreeRenderer(svg.Drawing):
             size=self.wh(w, 0.15),
             **adds
         ))
-
 
         return group
 
@@ -631,7 +640,10 @@ class PathTreeBuilder(Builder):
 
     @samples.setter
     def samples(self, samples):
-        self._sample_list = SampleList(samples)
+        if isinstance(samples, SampleList):
+            self._sample_list = samples
+        else:
+            self._sample_list = SampleList(samples)
 
     @property
     def steps(self):
@@ -699,19 +711,27 @@ class PathTreeBuilder(Builder):
 
         for pos_y, sample in enumerate(samples):
             info = samples[sample]
+
+            if pos_y < len(samples) - 1:
+                next_sample = samples[pos_y + 1]
+            else:
+                next_sample = None
+            if pos_y > 0:
+                prev_sample = samples[pos_y - 1]
+            else:
+                prev_sample = None
+
             mover_type = info['mover_type']
             new_sample = info['new']
             shift = info['shift']
             time_direction = info['time_direction']
             length = info['length']
+            level = info['level']
 
             if not new_sample:
                 length_fw = info['length_fw']
                 length_bw = info['length_bw']
-                # length_shared = info['length_shared']
-
                 overlap_reversed = info['overlap_reversed']
-                # correlation = info['correlation']
 
                 bw_x = shift + length_bw
                 fw_x = shift + length - 1 - length_fw
@@ -726,12 +746,12 @@ class PathTreeBuilder(Builder):
 
             traj = sample.trajectory
 
-            if time_direction == -1:
-                traj = paths.Trajectory(list(reversed(list(traj))))
-                bw_cls, fw_cls = fw_cls, bw_cls
-
             view_options = {}
             view_options.update(opts.movers['default'])
+
+            if time_direction == -1:
+                bw_cls, fw_cls = fw_cls, bw_cls
+                view_options['label_position'] = 'left' if view_options['label_position'] == 'right' else 'right'
 
             if new_sample:
                 view_options_upd = opts.movers['new']
@@ -746,11 +766,17 @@ class PathTreeBuilder(Builder):
 
             cls = [] + view_options['cls']
 
-            if sample in self.move_list:
-                move = self.step_list[sample].change
-                accepted = move.accepted
-                if not accepted:
-                    cls += ['rejected']
+            # if self.samples.step_list is not None:
+            #     pass
+
+            # if sample in self.move_list:
+            #     move = self.step_list[sample].change
+            #     accepted = move.accepted
+            #     if not accepted:
+            #         cls += ['rejected']
+
+            if level > 0:
+                cls += ['level']
 
             if view_options['label_position'] == 'left':
                 group.add(
@@ -758,7 +784,7 @@ class PathTreeBuilder(Builder):
                 )
             elif view_options['label_position'] == 'right':
                 group.add(
-                    doc.label(shift + len(traj) - 1, pos_y, traj_str,
+                    doc.label(shift + length - 1, pos_y, traj_str,
                               cls=cls + ['right'])
                 )
 
@@ -835,11 +861,11 @@ class PathTreeBuilder(Builder):
                 hidden = False
                 vis_type = view_options[vis_types[part]]
                 add_cls = clss[part]
-                label = view_options['label'] or view_options['name']
                 region = regions[part]
                 # print sample.mover, part, type(vis_type), vis_type, add_cls
 
                 if vis_type == 'line':
+                    label = view_options['label'] or view_options['name']
                     group.add(
                         doc.horizontal_region(shift + region[0], pos_y, region[1] - region[0],
                                               label, cls=cls + add_cls)
@@ -856,8 +882,8 @@ class PathTreeBuilder(Builder):
                         ))
                 elif vis_type == 'single':
                     for pos in range(region[0], region[1]):
-                        snapshot = traj[pos]
                         pos_x = shift + pos
+                        snapshot = matrix[pos_y, pos_x]
 
                         if opts.ui['info']:
                             data = {
@@ -879,7 +905,7 @@ class PathTreeBuilder(Builder):
                                 pos_y,
                                 txt,
                                 extend_left=pos > 0,
-                                extend_right=pos < len(traj) - 1,
+                                extend_right=pos < length - 1,
                                 cls=cls + add_cls,
                                 data=data
                             ))
@@ -957,11 +983,11 @@ class PathTreeBuilder(Builder):
                 doc.label(smp_x, 0, 'smp')
             )
 
-        if cyc_x is not None:
-            group.add(
-                doc.label(cyc_x, 0, 'cyc')
-            )
-
+        # if cyc_x is not None:
+        #     group.add(
+        #         doc.label(cyc_x, 0, 'cyc')
+        #     )
+        #
         if cor_x is not None:
             group.add(
                 doc.label(cor_x, 0, 'cor')
@@ -1007,19 +1033,19 @@ class PathTreeBuilder(Builder):
                 if smp_x is not None:
                     group.add(
                         doc.label(smp_x, 1 + tc, str(
-                            trj_format(s)))
+                            smp_format(s)))
                     )
 
-                if cyc_x is not None:
-                    if s in self.step_list:
-                        txt = str(self.step_list[s].mccycle)
-                    else:
-                        txt = '---'
-
-                    group.add(
-                        doc.label(cyc_x, 1 + tc, str(
-                            txt))
-                    )
+                # if cyc_x is not None:
+                #     if s in self.step_list:
+                #         txt = str(self.step_list[s].mccycle)
+                #     else:
+                #         txt = '---'
+                #
+                #     group.add(
+                #         doc.label(cyc_x, 1 + tc, str(
+                #             txt))
+                #     )
 
         if cor_x is not None:
             group.add(
@@ -1160,7 +1186,7 @@ class PathTreeBuilder(Builder):
         })
         self.options.css.update({
             'scale_x': 5,
-            'scale_y': 10,
+            'scale_y': 15,
             'zoom': 1.0,
             'horizontal_gap': False,
             'width': 'inherit'
@@ -1168,7 +1194,7 @@ class PathTreeBuilder(Builder):
         self.options.format.update({
             'default_label': lambda x: hex(id(x))[-5:] + ' ',
             # 'default_label': lambda x: '',
-            'trajectory_label': None,
+            'trajectory_label': lambda x: '',
             'sample_label': None,
             'step_label': None,
             'snapshot_label': None,
@@ -1176,80 +1202,6 @@ class PathTreeBuilder(Builder):
             'new_snapshots': True,
             'repeated_snapshots': True
         })
-
-class ReplicaHistoryTree(PathTreeBuilder):
-    """
-    Simplified PathTreeBuilder for the common case of tracking a replica
-    over some steps.
-
-    Intended behaviors:
-    * The samples are determined during initialization.
-    * The defaults are as similar to the old tree representation as
-      reasonable.
-    * This object also calculates decorrelated trajectories (which is
-      usually what we look for from this tree). The number of decorrelated
-      trajectories is obtained as the length of that list, and does not
-      require an extra method.
-    """
-
-    def __init__(self, steps, replica):
-        # steps variable here and just iterate over storage.
-        super(ReplicaHistoryTree, self).__init__()
-        self.replica = replica
-        self._accepted_samples = None
-        self._trial_samples = None
-
-        # defaults:
-        self.rejected = False
-        self.states = []
-
-        self.steps = steps
-
-    @property
-    def accepted_samples(self):
-        """
-        Returns the accepted samples in self.steps involving self.replica
-        """
-        if self._accepted_samples is None:
-            samp = self.steps[-1].active[self.replica]
-            samples = [samp]
-            while samp.parent is not None:
-                samp = samp.parent
-                samples.append(samp)
-
-            self._accepted_samples = list(reversed(samples))
-
-        return self._accepted_samples
-
-    @property
-    def trial_samples(self):
-        """
-        Returns trial samples from self.steps involving self.replica
-        """
-        if self._trial_samples is None:
-            samp = self.steps[0].active[self.replica]
-            samples = [samp]
-            for step in self.steps:
-                rep_trials = [s for s in step.change.trials
-                              if s.replica == self.replica]
-                if len(rep_trials) > 0:
-                    samples.append(rep_trials[-1])
-
-            self._trial_samples = samples
-
-        return self._trial_samples
-
-    @property
-    def decorrelated_trajectories(self):
-        """List of decorrelated trajectories from the internal samples.
-
-        In path sampling, two trajectories are said to be "decorrelated" if
-        they share no frames in common. This is particularly important in
-        one-way shooting. This function returns the list of trajectories,
-        making the number (i.e., the length of the list) also easily
-        accessible.
-        """
-        return None
 
 
 class SnapshotMatrix(object):
@@ -1287,7 +1239,6 @@ class SnapshotMatrix(object):
         y_pos = item[0]
         x_pos = item[1]
         if x_pos in self.matrix_x:
-            # print y_pos, x_pos, self.matrix[x_pos].keys()
             return self.matrix_x[x_pos][y_pos]
         else:
             raise KeyError(x_pos)
@@ -1338,7 +1289,6 @@ class SnapshotMatrix(object):
         pos = y_pos
         while pos > 0:
             new_y_pos = self.sample_list.parent(pos)
-            # print pos, new_y_pos, x.keys()
 
             if new_y_pos is None or new_y_pos > pos:
                 return pos
@@ -1405,6 +1355,37 @@ class SampleList(OrderedDict):
 
         self.analyze()
 
+    @staticmethod
+    def from_steps(steps, replica, accepted):
+        return SampleList(SampleList._get_samples_from_steps(steps, replica, accepted))
+
+    @staticmethod
+    def _get_samples_from_steps(steps, replica, accepted):
+        if accepted:
+            samp = steps[-1].active[replica]
+            samples = [samp]
+            while samp.parent is not None:
+                samp = samp.parent
+                samples.append(samp)
+
+            return list(reversed(samples))
+        else:
+            samp = steps[0].active[replica]
+            samples = [samp]
+            for step in steps:
+                rep_trials = [s for s in step.change.trials
+                              if s.replica == replica]
+                if len(rep_trials) > 0:
+                    samples.append(rep_trials[-1])
+
+            return samples
+
+    def without_redundant(self):
+        l = SampleList([samp for samp, data in self.iteritems() if data['length_shared'] < data['length']])
+        l.flip_time_direction = self.flip_time_direction
+        l.time_symmetric = self.time_symmetric
+        return l
+
     @property
     def time_symmetric(self):
         return self._time_symmetric
@@ -1439,9 +1420,16 @@ class SampleList(OrderedDict):
     def parent(self, idx):
         try:
             if type(idx) is int:
-                return self.keys().index(self[idx].parent)
+                samp = self[idx]
             else:
-                return self.keys().index(idx.parent)
+                samp = idx
+
+            parent = samp.parent
+            while parent not in self and parent is not None:
+                parent = parent.parent
+
+            return self.keys().index(parent)
+
         except ValueError:
             return None
 
@@ -1472,16 +1460,14 @@ class SampleList(OrderedDict):
             return None
 
     def analyze(self):
-
         matrix = SnapshotMatrix(self)
-
         flip_time_direction = self.flip_time_direction
-
         parent = None
 
         for y_pos, sample in enumerate(self):
             mover_type = type(sample.mover)
             traj = sample.trajectory
+            length = len(traj)
             parent_shift = 0
             parent_traj = None
             overlap = None
@@ -1490,8 +1476,11 @@ class SampleList(OrderedDict):
                 parent = sample.parent
 
             if parent not in self:
-                parent = None
-                time_direction = +1
+                while parent not in self and parent is not None:
+                    parent = parent.parent
+
+                if parent is None:
+                    time_direction = +1
 
             if parent is not None:
                 parent_shift = self[parent]['shift']
@@ -1516,9 +1505,10 @@ class SampleList(OrderedDict):
                     'mover_type': mover_type,
                     'time_direction': time_direction,
                     'correlation': 0.0,
-                    'length': len(traj)
+                    'length': len(traj),
+                    'level': 0,
+                    'length_shared': 0
                 }
-
             else:
                 new_fw = self._trajectory_index(traj, overlap[-1])
                 new_bw = self._trajectory_index(traj, overlap[0])
@@ -1536,6 +1526,8 @@ class SampleList(OrderedDict):
                         traj = paths.Trajectory(list(reversed(list(traj))))
                         time_direction *= -1
                         overlap_reversed = False
+                        new_fw, new_bw = length - 1 - new_bw, length - 1 - new_fw
+
                     else:
                         # after
                         overlap_length = 0
@@ -1544,16 +1536,17 @@ class SampleList(OrderedDict):
 
                 self[sample] = {
                     'shift': traj_shift,
-                    'length_fw': len(traj) - 1 - new_fw,
+                    'length_fw': length - 1 - new_fw,
                     'length_bw': new_bw,
                     'length_shared': overlap_length,
-                    'length': len(traj),
+                    'length': length,
                     'overlap_reversed': overlap_reversed,
                     'new': False,
                     'mover_type': mover_type,
                     'time_direction': time_direction,
                     'correlation': (1.0 * overlap_length) / len(traj),
-                    'parent_y': self.parent(sample)
+                    'parent_y': self.parent(sample),
+                    'level': 0
                 }
 
             matrix[y_pos, traj_shift] = traj
@@ -1561,6 +1554,13 @@ class SampleList(OrderedDict):
             parent = sample
 
         self.matrix = matrix
+
+        for sample in reversed(self):
+            pos_y = self.index(sample)
+            pos_parent = self.parent(sample)
+            if pos_parent is not None and pos_parent < pos_y - 1:
+                for pos in range(pos_parent + 1, pos_y):
+                    self[self[pos]]['level'] += 1
 
     @property
     def correlation(self):
@@ -1580,9 +1580,12 @@ class SampleList(OrderedDict):
         decorrelated = [prev]
 
         for s in self:
-            if not s.trajectory.is_correlated(prev, self.time_symmetric):
-                decorrelated.append(s.trajectory)
-                prev = s.trajectory
+            # check if we are on the main path of evolution and not something that is rejected
+            # at some point
+            if self[s]['level'] == 0:
+                if not s.trajectory.is_correlated(prev, self.time_symmetric):
+                    decorrelated.append(s.trajectory)
+                    prev = s.trajectory
 
         return decorrelated
 
@@ -1593,6 +1596,7 @@ class SampleList(OrderedDict):
     @property
     def last(self):
         return self[-1]
+
 
 vis_css = r"""
 .opstree text, .movetree text {
@@ -1676,10 +1680,14 @@ vis_css = r"""
     fill: black !important;
 }
 .opstree .h-connector {
-/*                stroke-dasharray: 3 3; */
+    stroke-width: 0.1px;
+    stroke-dasharray: 3 3;
 }
 .opstree .rejected {
     opacity: 0.3;
+}
+.opstree .level {
+    opacity: 0.1;
 }
 .opstree .orange {
     fill: orange;
@@ -1691,11 +1699,11 @@ vis_css = r"""
 .tableline:hover {
     opacity: 0.2;
 }
-.opstree .left.label .shift {
-    transform: translateX(-0px);
+.opstree .left.label g.shift {
+    transform: translateX(-6px);
 }
-.opstree .right.label .shift {
-    transform: translateX(+0px);
+.opstree .right.label g.shift {
+    transform: translateX(+6px);
 }
 .opstree .infobox text {
     text-anchor: start;
