@@ -103,7 +103,7 @@ class TreeRenderer(svg.Drawing):
         return group
 
     def horizontal_region(self, x, y, w=1.0, text="",
-                          extend_right=True, extend_left=True, cls=None):
+                          extend_right=False, extend_left=False, cls=None):
 
         if cls is None:
             cls = list()
@@ -123,9 +123,6 @@ class TreeRenderer(svg.Drawing):
             start=self.xy(x - 0.5 + padding, y),
             end=self.xy(x - 0.5 + w - padding, y)
         ))
-
-        extend_left = False
-        extend_right = False
 
         if extend_left:
             group.add(self.circle(
@@ -376,14 +373,6 @@ class TreeRenderer(svg.Drawing):
         with open(file_name, 'w') as f:
             f.write(self.to_html())
 
-    # def save_pdf(self, file_name='tree.pdf'):
-    #     with open('tree_xxx.html', 'w') as f:
-    #         f.write(self.to_html())
-    #
-    #     bash_command = "open tree_xxx.html " + file_name
-    #
-    #     os.system(bash_command)
-
 
 class Builder(object):
     def __init__(self, additional_option_categories=None):
@@ -412,7 +401,6 @@ class MoveTreeBuilder(Builder):
     def __init__(self):
         super(MoveTreeBuilder, self).__init__()
 
-        self.rejected = False
         self.p_x = dict()
         self.p_y = dict()
         self.obj = list()
@@ -597,7 +585,7 @@ class MoveTreeBuilder(Builder):
         width = len(self.ensembles) * doc.scale_x - left_x + 50
         height = (total + 1) * doc.scale_y - top_y
 
-        # adjust viewbox to fit full image
+        # adjust view box to fit full image
         doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
             left_x,
             top_y,
@@ -612,46 +600,28 @@ class MoveTreeBuilder(Builder):
 class PathTreeBuilder(Builder):
     def __init__(self):
         super(PathTreeBuilder, self).__init__(['movers'])
-        self.rejected = False
         self.obj = list()
         self.doc = None
-
-        self.move_list = {}
-        self.step_list = {}
-        self.samp_list = {}
 
         self.css_style = vis_css
 
         self.states = {}
         self.op = None
 
-        self._sample_list = None
-        self._steps = None
+        self._samples = None
 
         self.reset_options()
 
-    @staticmethod
-    def construct_heritage(sample):
-        return list(reversed(list(sample.heritage)))
-
     @property
     def samples(self):
-        return self._sample_list
+        return self._samples
 
     @samples.setter
     def samples(self, samples):
         if isinstance(samples, SampleList):
-            self._sample_list = samples
+            self._samples = samples
         else:
-            self._sample_list = SampleList(samples)
-
-    @property
-    def steps(self):
-        return self._steps
-
-    @steps.setter
-    def steps(self, steps):
-        self._steps = steps
+            self._samples = SampleList(samples)
 
     def render(self):
         self.samples.analyze()
@@ -712,15 +682,6 @@ class PathTreeBuilder(Builder):
         for pos_y, sample in enumerate(samples):
             info = samples[sample]
 
-            if pos_y < len(samples) - 1:
-                next_sample = samples[pos_y + 1]
-            else:
-                next_sample = None
-            if pos_y > 0:
-                prev_sample = samples[pos_y - 1]
-            else:
-                prev_sample = None
-
             mover_type = info['mover_type']
             new_sample = info['new']
             shift = info['shift']
@@ -744,14 +705,8 @@ class PathTreeBuilder(Builder):
             bw_cls = 'bw'
             fw_cls = 'fw'
 
-            traj = sample.trajectory
-
             view_options = {}
             view_options.update(opts.movers['default'])
-
-            if time_direction == -1:
-                bw_cls, fw_cls = fw_cls, bw_cls
-                view_options['label_position'] = 'left' if view_options['label_position'] == 'right' else 'right'
 
             if new_sample:
                 view_options_upd = opts.movers['new']
@@ -762,18 +717,13 @@ class PathTreeBuilder(Builder):
 
             view_options.update(view_options_upd)
 
+            if time_direction == -1:
+                bw_cls, fw_cls = fw_cls, bw_cls
+                view_options['label_position'] = 'left' if view_options['label_position'] == 'right' else 'right'
+
             traj_str = str(trj_format(sample.trajectory)) + view_options['suffix'].upper()
 
             cls = [] + view_options['cls']
-
-            # if self.samples.step_list is not None:
-            #     pass
-
-            # if sample in self.move_list:
-            #     move = self.step_list[sample].change
-            #     accepted = move.accepted
-            #     if not accepted:
-            #         cls += ['rejected']
 
             if level > 0:
                 cls += ['level']
@@ -862,7 +812,6 @@ class PathTreeBuilder(Builder):
                 vis_type = view_options[vis_types[part]]
                 add_cls = clss[part]
                 region = regions[part]
-                # print sample.mover, part, type(vis_type), vis_type, add_cls
 
                 if vis_type == 'line':
                     label = view_options['label'] or view_options['name']
@@ -972,22 +921,11 @@ class PathTreeBuilder(Builder):
         else:
             smp_x = None
 
-        if opts.ui['step']:
-            columns += 1
-            cyc_x = -columns
-        else:
-            cyc_x = None
-
         if smp_x is not None:
             group.add(
                 doc.label(smp_x, 0, 'smp')
             )
 
-        # if cyc_x is not None:
-        #     group.add(
-        #         doc.label(cyc_x, 0, 'cyc')
-        #     )
-        #
         if cor_x is not None:
             group.add(
                 doc.label(cor_x, 0, 'cor')
@@ -1036,17 +974,6 @@ class PathTreeBuilder(Builder):
                             smp_format(s)))
                     )
 
-                # if cyc_x is not None:
-                #     if s in self.step_list:
-                #         txt = str(self.step_list[s].mccycle)
-                #     else:
-                #         txt = '---'
-                #
-                #     group.add(
-                #         doc.label(cyc_x, 1 + tc, str(
-                #             txt))
-                #     )
-
         if cor_x is not None:
             group.add(
                 doc.vertical_region(
@@ -1069,7 +996,7 @@ class PathTreeBuilder(Builder):
         # set the overall OPS tree class
         doc['class'] = 'opstree'
 
-        # adjust viewbox to fit full image
+        # adjust view box to fit full image
         doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
             left_x * zoom,
             top_y * zoom,
@@ -1289,7 +1216,6 @@ class SnapshotMatrix(object):
         pos = y_pos
         while pos > 0:
             new_y_pos = self.sample_list.parent(pos)
-
             if new_y_pos is None or new_y_pos > pos:
                 return pos
 
@@ -1349,8 +1275,9 @@ class SampleList(OrderedDict):
 
         self.analyze()
 
-    def __iadd__(self, other):
-        for s in other:
+    def set_samples(self, samples):
+        self.clear()
+        for s in samples:
             self[s] = {}
 
         self.analyze()
@@ -1381,9 +1308,16 @@ class SampleList(OrderedDict):
             return samples
 
     def without_redundant(self):
-        l = SampleList([samp for samp, data in self.iteritems() if data['length_shared'] < data['length']])
+        l = SampleList(
+            [samp for samp, data in self.iteritems() if data['length_shared'] < data['length']]
+        )
         l.flip_time_direction = self.flip_time_direction
         l.time_symmetric = self.time_symmetric
+        return l
+
+    def remove_redundant(self):
+        l = [samp for samp, data in self.iteritems() if data['length_shared'] < data['length']]
+        self.set_samples(l)
         return l
 
     @property
