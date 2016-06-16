@@ -45,7 +45,7 @@ class MoveScheme(StorableNamedObject):
             'network' : self.network,
             'choice_probability' : self.choice_probability,
             'balance_partners' : self.balance_partners,
-            'root_mover' : self.root_mover
+            'root_mover' : self.root_mover,
         }
         return ret_dict
 

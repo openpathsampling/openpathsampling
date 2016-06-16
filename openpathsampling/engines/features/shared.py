@@ -52,8 +52,14 @@ class StaticContainer(StorableObject):
                 coords = self.coordinates
 
             if np.any(np.isnan(coords)):
-                raise ValueError(
-                    "Some coordinates became 'nan'; simulation is unstable or buggy.")
+                try:
+                    import pandas as pd
+                except ImportError:
+                    df=""
+                else:
+                    df=str(pd.Dataframe(coords)) + "\n"
+                raise ValueError(df + "Some coordinates became 'nan'; " +
+                                 "simulation is unstable or buggy.")
 
         return
 
