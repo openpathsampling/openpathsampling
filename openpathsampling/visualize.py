@@ -77,7 +77,7 @@ class TreeRenderer(svg.Drawing):
         )
 
         if color is not None:
-            adds = { 'fill': color }
+            adds = {'fill': color}
         else:
             adds = {}
 
@@ -652,8 +652,6 @@ class PathTreeBuilder(Builder):
 
     Attributes
     ----------
-    samples : a `SampleList` object containing the list of samples
-        the list of samples to be plotted
     states : dict, 'svg_color': :obj:`openpathsampling.Volume`-like
         a dictionary listing a color that fulfills the SVG specification like `#888`, `gold` or `rgb(12,32,59)`
         referencing a volume like object that will return a bool when passed a snapshot. If true then the snapshot
@@ -679,6 +677,10 @@ class PathTreeBuilder(Builder):
 
     @property
     def samples(self):
+        """
+        :obj:`SampleList` : a `SampleList` object containing the list of samples
+        to be plotted
+        """
         return self._samples
 
     @samples.setter
@@ -731,10 +733,6 @@ class PathTreeBuilder(Builder):
                      });
             '''))
 
-        # display_repeated = opts.format['display_repeated']
-        # new_snapshots = opts.format['new_snapshots']
-        # repeated_snapshots = opts.format['repeated_snapshots']
-
         group = doc.g(
             class_='tree'
         )
@@ -747,7 +745,14 @@ class PathTreeBuilder(Builder):
         for pos_y, sample in enumerate(samples):
             info = samples[sample]
 
-            mover_type = info['mover_type']
+            mover_type = 'unknown'
+            mover = sample.mover
+            if mover is not None:
+                mover_type = mover.__class__.__name__
+
+            if hasattr(mover, '_visualization_class'):
+                mover_type = getattr(mover, '_visualization_class')
+
             new_sample = info['new']
             shift = info['shift']
             time_direction = info['time_direction']
@@ -1104,52 +1109,52 @@ class PathTreeBuilder(Builder):
 
         """
         self.options.movers.update({
-            paths.ReplicaExchangeMover: {
+            'ReplicaExchangeMover': {
                 'name': 'RepEx',
                 'suffix': 'x',
                 'cls': ['repex']
             },
-            paths.BackwardShootMover: {
+            'BackwardShootMover': {
                 'name': 'Backward',
                 'suffix': 'b',
                 'cls': ['shooting']
             },
-            paths.ForwardShootMover: {
+            'ForwardShootMover': {
                 'name': 'Forward',
                 'suffix': 'f',
                 'label_position': 'right',
                 'cls': ['shooting']
             },
-            paths.BackwardExtendMover: {
+            'BackwardExtendMover': {
                 'name': 'Extend',
                 'suffix': 'b',
                 'overlap': 'line',  # this will repeat the part where the extension is started
                 'cls': ['extend']
             },
-            paths.ForwardExtendMover: {
+            'ForwardExtendMover': {
                 'name': 'Extend',
                 'suffix': 'f',
                 'overlap': 'line',  # this will repeat the part where the extension is started
                 'label_position': 'right',
                 'cls': ['extend']
             },
-            paths.FinalSubtrajectorySelectMover: {
+            'FinalSubtrajectorySelectMover': {
                 'name': 'Truncate',
                 'suffix': 't',
                 'label_position': 'right',
                 'cls': ['extend']
             },
-            paths.FirstSubtrajectorySelectMover: {
+            'FirstSubtrajectorySelectMover': {
                 'name': 'Truncate',
                 'suffix': 't',
                 'cls': ['extend']
             },
-            paths.EnsembleHopMover: {
+            'EnsembleHopMover': {
                 'name': 'Hop',
                 'suffix': 'h',
                 'cls': ['hop']
             },
-            paths.PathReversalMover: {
+            'PathReversalMover': {
                 'name': 'Reversal',
                 'suffix': 'r',
                 'cls': ['reversal']
@@ -1613,7 +1618,6 @@ class SampleList(OrderedDict):
         parent = None
 
         for y_pos, sample in enumerate(self):
-            mover_type = type(sample.mover)
             traj = sample.trajectory
             length = len(traj)
             parent_shift = 0
@@ -1650,12 +1654,14 @@ class SampleList(OrderedDict):
                 self[sample] = {
                     'shift': 0,
                     'new': True,
-                    'mover_type': mover_type,
                     'time_direction': time_direction,
                     'correlation': 0.0,
                     'length': len(traj),
                     'level': 0,
-                    'length_shared': 0
+                    'length_shared': 0,
+                    'length_fw': 0,
+                    'length_bw': 0,
+                    'overlap_reversed': False
                 }
             else:
                 new_fw = self._trajectory_index(traj, overlap[-1])
@@ -1690,7 +1696,6 @@ class SampleList(OrderedDict):
                     'length': length,
                     'overlap_reversed': overlap_reversed,
                     'new': False,
-                    'mover_type': mover_type,
                     'time_direction': time_direction,
                     'correlation': (1.0 * overlap_length) / len(traj),
                     'parent_y': self.parent(sample),
@@ -1798,6 +1803,14 @@ vis_css = r"""
 .opstree text, .movetree text {
     alignment-baseline: central;
     font-size: 10px;
+    text-anchor: middle;
+    font-family: Futura-CondensedMedium;
+    font-weight: lighter;
+    stroke: none !important;
+}
+.opstree .block text, .movetree .block text {
+    alignment-baseline: central;
+    font-size: 8px;
     text-anchor: middle;
     font-family: Futura-CondensedMedium;
     font-weight: lighter;

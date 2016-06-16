@@ -153,6 +153,11 @@ interfaces per outgoing transition.
 - [`tutorial_visualization.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/tutorial_visualization.ipynb)
     Contains a basic tutorial on visualization function. Still incomplete
 
+- [`tutorial_pathtree_visualization.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/tutorial_pathtree_visualization.ipynb)
+    A tutorial on the possibilities to visualize the evolution of samples during simulations. This graphics are often referred to as pathtrees.
+
+tutorial_pathtree_visualization
+
 - [`which_network.ipynb`](http://github.com/choderalab/openpathsampling/blob/master/examples/ipython/which_network.ipynb)
     A tutorial for beginners on how to decide which (MISTIS or MSTIS) to
     use. Still incomplete.
