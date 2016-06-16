@@ -213,23 +213,47 @@ class testDirectSimulation(object):
         cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
         self.center = paths.CVRangeVolume(cv, -0.2, 0.2)
         self.interface = paths.CVRangeVolume(cv, -0.3, 0.3)
-        self.outside = ~paths.CVRangeVolume(cv, -0.9, 0.9)
-        flux_pairs = [(self.center, self.interface)]
+        self.outside = paths.CVRangeVolume(cv, 0.6, 0.9)
+        self.extra = paths.CVRangeVolume(cv, -1.5, -0.9)
+        self.flux_pairs = [(self.center, self.interface)]
         self.sim = DirectSimulation(storage=None,
                                     engine=self.engine,
                                     states=[self.center, self.outside],
-                                    flux_pairs=flux_pairs,
+                                    flux_pairs=self.flux_pairs,
                                     initial_snapshot=self.snap0)
 
     def test_run(self):
-
-        raise SkipTest
+        self.sim.run(200)
+        assert_true(len(self.sim.transition_count) > 1)
+        assert_true(len(self.sim.flux_events[self.flux_pairs[0]]) > 1)
 
     def test_transitions(self):
-        raise SkipTest
+        # set fake data
+        self.sim.transition_count = [
+            (self.center, 1), (self.outside, 4), (self.center, 7),
+            (self.extra, 10), (self.center, 12), (self.outside, 14)
+        ]
+        assert_equal(self.sim.n_transitions,
+                     {(self.center, self.outside): 2,
+                      (self.outside, self.center): 1,
+                      (self.center, self.extra): 1,
+                      (self.extra, self.center): 1})
+        assert_equal(self.sim.transitions,
+                     {(self.center, self.outside) : [3, 2],
+                      (self.outside, self.center) : [3],
+                      (self.center, self.extra): [3],
+                      (self.extra, self.center): [2]})
 
     def test_rate_matrix(self):
+        self.sim.transition_count = [
+            (self.center, 1), (self.outside, 4), (self.center, 7),
+            (self.extra, 10), (self.center, 12), (self.outside, 14)
+        ]
+        # rate_matrix = self.sim.rate_matrix
         raise SkipTest
 
     def test_fluxes(self):
+        raise SkipTest
+
+    def test_sim_with_storage(self):
         raise SkipTest
