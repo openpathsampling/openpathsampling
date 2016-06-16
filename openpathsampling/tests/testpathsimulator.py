@@ -198,9 +198,31 @@ class testCommittorSimulation(object):
 
 class testDirectSimulation(object):
     def setup(self):
-        pass
+        pes = toys.HarmonicOscillator(A=[1.0], omega=[1.0], x0=[0.0])
+        topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
+                                   velocities=np.array([[1.0]]),
+                                   topology=topology)
+        integrator = toys.LeapfrogVerletIntegrator(0.1)
+        options = {
+            'integ': integrator,
+            'n_frames_max': 100000,
+            'nsteps_per_frame': 2
+        }
+        self.engine = toys.Engine(options=options, template=self.snap0)
+        cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        self.center = paths.CVRangeVolume(cv, -0.2, 0.2)
+        self.interface = paths.CVRangeVolume(cv, -0.3, 0.3)
+        self.outside = ~paths.CVRangeVolume(cv, -0.9, 0.9)
+        flux_pairs = [(self.center, self.interface)]
+        self.sim = DirectSimulation(storage=None,
+                                    engine=self.engine,
+                                    states=[self.center, self.outside],
+                                    flux_pairs=flux_pairs,
+                                    initial_snapshot=self.snap0)
 
     def test_run(self):
+
         raise SkipTest
 
     def test_transitions(self):
