@@ -943,7 +943,7 @@ class PathTreeBuilder(Builder):
         if hasattr(self, 'states') and self.states:
             for color, op in self.states.iteritems():
                 xp = None
-                for yp in range(0, max_y):
+                for yp in range(0, max_y + 1):
                     left = None
                     for xp in matrix.get_x_range(yp):
                         if xp in vis_blocks[yp] and bool(op(matrix[yp, xp])):
