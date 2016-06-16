@@ -245,12 +245,26 @@ class testDirectSimulation(object):
                       (self.extra, self.center): [2]})
 
     def test_rate_matrix(self):
+        self.sim.states += [self.extra]
         self.sim.transition_count = [
             (self.center, 1), (self.outside, 4), (self.center, 7),
             (self.extra, 10), (self.center, 12), (self.outside, 14)
         ]
-        # rate_matrix = self.sim.rate_matrix
-        raise SkipTest
+        rate_matrix = self.sim.rate_matrix.as_matrix()
+        nan = float("nan")
+        test_matrix = np.array([[nan, 1.0/2.5, 1.0/3.0],
+                                [1.0/3.0, nan, nan],
+                                [1.0/2.0, nan, nan]])
+        # for some reason, np.testing.assert_allclose(..., equal_nan=True)
+        # was raising errors on this input. this hack gets the behavior
+        for i in range(len(self.sim.states)):
+            for j in range(len(self.sim.states)):
+                if np.isnan(test_matrix[i][j]):
+                    assert_true(np.isnan(rate_matrix[i][j]))
+                else:
+                    assert_almost_equal(rate_matrix[i][j],
+                                        test_matrix[i][j])
+
 
     def test_fluxes(self):
         raise SkipTest
