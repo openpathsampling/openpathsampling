@@ -662,14 +662,34 @@ class DirectSimulation(PathSimulator):
 
     Parameters
     ----------
-    storage
+    storage : paths.Storage
+        file to store the trajectory in. Default is None, meaning that the
+        trajectory isn't stored (also faster)
     engine : paths.engine.DynamicsEngine
         the engine for the molecular dynamics
     states : list of paths.Volume
-        states
+        states to look for transitions between
     flux_pairs : list of 2-tuples of (state, interface)
+        fluxes will calculate the flux out of `state` and through
+        `interface` for each pair in this list
     initial_snapshot : paths.engines.Snapshot
         initial snapshot for the MD
+
+    Attributes
+    ----------
+    transitions : dict with keys 2-tuple of paths.Volume, values list of int
+        for each pair of states (from_state, to_state) as a key, gives the
+        number of frames for each transition from the entry into from_state
+        to entry into to_state
+    rate_matrix : pd.DataFrame
+        calculates the rate matrix, in units of per-frames
+    fluxes : dict with keys 2-tuple of paths.Volume, values float
+        flux out of state and through interface for each (state, interface)
+        key pair
+    n_transitions : dict with keys 2-tuple of paths.Volume, values int
+        number of transition events for each pair of states
+    n_flux_events : dict with keys 2-tuple of paths.Volume, values int
+        number of flux events for each (state, interface) pair
     """
     def __init__(self, storage=None, engine=None, states=None,
                  flux_pairs=None, initial_snapshot=None):
