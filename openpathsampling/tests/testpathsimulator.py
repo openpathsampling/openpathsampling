@@ -1,4 +1,5 @@
-from test_helpers import raises_with_message_like, data_filename
+from test_helpers import (raises_with_message_like, data_filename,
+                          CalvinistDynamics, make_1d_traj)
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
@@ -211,6 +212,7 @@ class testDirectSimulation(object):
         }
         self.engine = toys.Engine(options=options, template=self.snap0)
         cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        self.cv = cv
         self.center = paths.CVRangeVolume(cv, -0.2, 0.2)
         self.interface = paths.CVRangeVolume(cv, -0.3, 0.3)
         self.outside = paths.CVRangeVolume(cv, 0.6, 0.9)
@@ -226,6 +228,7 @@ class testDirectSimulation(object):
         self.sim.run(200)
         assert_true(len(self.sim.transition_count) > 1)
         assert_true(len(self.sim.flux_events[self.flux_pairs[0]]) > 1)
+        print self.sim.flux_events
 
     def test_transitions(self):
         # set fake data
@@ -250,6 +253,9 @@ class testDirectSimulation(object):
             (self.center, 1), (self.outside, 4), (self.center, 7),
             (self.extra, 10), (self.center, 12), (self.outside, 14)
         ]
+        # As of pandas 0.18.1, callables can be used in `df.loc`, etc. Since
+        # we're using (callable) volumes for labels of columns/indices in
+        # our dataframes, this sucks for us. Raise an issue with pandas?
         rate_matrix = self.sim.rate_matrix.as_matrix()
         nan = float("nan")
         test_matrix = np.array([[nan, 1.0/2.5, 1.0/3.0],
@@ -265,8 +271,65 @@ class testDirectSimulation(object):
                     assert_almost_equal(rate_matrix[i][j],
                                         test_matrix[i][j])
 
-
     def test_fluxes(self):
+        left_interface = paths.CVRangeVolume(self.cv, -0.3, float("inf"))
+        right_interface = paths.CVRangeVolume(self.cv, float("-inf"), 0.3)
+        sim = DirectSimulation(storage=None,
+                               engine=self.engine,
+                               states=[self.center, self.outside],
+                               flux_pairs=[(self.center, left_interface),
+                                           (self.center, right_interface)],
+                               initial_snapshot=self.snap0)
+        # actually got these out of running for 200 steps
+        # sim.run(200)
+        print sim.flux_events
+        print sim.transition_count
+        fake_flux_events = {(self.center, right_interface):
+                            [(3, -1), (65, 3), (128, 65), (191, 128)],
+                            (self.center, left_interface):
+                            [(34, -1), (97, 34), (160, 97)]}
+        sim.flux_events = fake_flux_events
+        n_flux_events = {(self.center, right_interface): 4,
+                         (self.center, left_interface): 3}
+        assert_equal(sim.n_flux_events, n_flux_events)
+        raise SkipTest
+
+    def test_flux_from_calvinist_dynamics(self):
+        # this test includes an entire trajectory, and should will test that
+        # we create the expected internal transition_count and flux_events 
+
+        # To check for the multiple interface set case, we need to have two 
+        # dimensions. We can hack two "independent" dimensions from a one
+        # dimensional system by making the second CV non-monotonic with the
+        # first. For the full trajectory, we need snapshots `S` (in the
+        # state); `I` (interstitial: outside the state, but not outside
+        # either interface); `X_a` (outside interface alpha, not outside
+        # interface beta); `X_b` (outside interface beta, not outside
+        # interface alpha); and `X_ab` (outside interface alpha and beta).
+        cv1 = self.cv
+        cv2 = paths.CV_Function("abs_sin", 
+                                lambda snap : np.abs(np.sin(snap.xyz[0][0])))
+        state = paths.CVRangeVolume(cv1, -np.pi/8.0, np.pi/8.0)
+        alpha = paths.CVRangeVolume(cv1, float("-inf"), 3.0/8.0*np.pi)
+        beta = paths.CVRangeVolume(cv2, float("-inf"), np.sqrt(2)/2.0)
+        # approx     alpha: x < 1.17   beta: abs(sin(x)) < 0.70
+        S = 0              # cv1 =  0.00; cv2 = 0.00
+        I = np.pi/5.0      # cv1 =  0.63; cv2 = 0.59
+        X_a = np.pi        # cv1 =  3.14; cv2 = 0.00
+        X_b = -np.pi/3.0   # cv1 = -1.05; cv2 = 0.87
+        X_ab = np.pi/2.0   # cv1 =  1.57; cv2 = 1.00
+        # That hack is utterly crazy, but I'm kinda proud of it!
+        predetermined = [S, I, X_a, S, X_a, S, X_ab, I, S, X_b, S, I, X_b, S, S]
+        #                   cross a  cross a  cross a&b  cross b   cross b
+        engine = CalvinistDynamics(predetermined)
+        init = make_1d_traj([S])
+        sim = DirectSimulation(storage=None,
+                               engine=engine,
+                               states=[state],
+                               flux_pairs=[(state, alpha), (state, beta)],
+                               initial_snapshot=init[0])
+        sim.run(len(predetermined)-1)
+        print sim.flux_events
         raise SkipTest
 
     def test_sim_with_storage(self):

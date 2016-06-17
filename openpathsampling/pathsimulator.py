@@ -715,9 +715,10 @@ class DirectSimulation(PathSimulator):
                 is_in_interface = interface(frame)
                 if not is_in_interface and was_in_interface[p]:
                     if state is most_recent_state:
+                        last_exit = last_interface_exit[p]
                         # successful exit
-                        if last_interface_exit[p] < last_state_visit[state]:
-                            flux_time_range = (step, last_interface_exit[p])
+                        if 0 < last_exit < last_state_visit[state]:
+                            flux_time_range = (step, last_exit)
                             self.flux_events[p].append(flux_time_range)
                         last_interface_exit[p] = step
                 was_in_interface[p] = is_in_interface
