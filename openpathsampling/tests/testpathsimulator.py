@@ -280,12 +280,8 @@ class testDirectSimulation(object):
                                flux_pairs=[(self.center, left_interface),
                                            (self.center, right_interface)],
                                initial_snapshot=self.snap0)
-        # actually got these out of running for 200 steps
-        # sim.run(200)
-        print sim.flux_events
-        print sim.transition_count
         fake_flux_events = {(self.center, right_interface):
-                            [(3, -1), (65, 3), (128, 65), (191, 128)],
+                            [(3, -1), (15, 3), (23, 15), (48, 23)],
                             (self.center, left_interface):
                             [(34, -1), (97, 34), (160, 97)]}
         sim.flux_events = fake_flux_events
@@ -307,6 +303,7 @@ class testDirectSimulation(object):
         cv2 = paths.CV_Function("abs_sin", 
                                 lambda snap : np.abs(np.sin(snap.xyz[0][0])))
         state = paths.CVRangeVolume(cv1, -np.pi/8.0, np.pi/8.0)
+        other_state = paths.CVRangeVolume(cv1, -5.0/8.0*np.pi, -3.0/8.0*np.pi)
         alpha = paths.CVRangeVolume(cv1, float("-inf"), 3.0/8.0*np.pi)
         beta = paths.CVRangeVolume(cv2, float("-inf"), np.sqrt(2)/2.0)
         # approx     alpha: x < 1.17   beta: abs(sin(x)) < 0.70
@@ -315,29 +312,39 @@ class testDirectSimulation(object):
         X_a = np.pi        # cv1 =  3.14; cv2 = 0.00
         X_b = -np.pi/3.0   # cv1 = -1.05; cv2 = 0.87
         X_ab = np.pi/2.0   # cv1 =  1.57; cv2 = 1.00
+        other = -np.pi/2.0 # cv1 = -1.57; cv2 = 1.00
         # That hack is utterly crazy, but I'm kinda proud of it!
-        predetermined = [S, S, I, X_a,   # first exit
-                         S, X_a,      # cross A
-                         S, X_ab,     # cross A & B
-                         I, S, X_b,   # cross B
-                         S, I, X_b,   # cross B
-                         S, S, X_ab,  # cross A & B
-                         S]
+        predetermined = [S, S, I, X_a,   # (2) first exit 
+                         S, X_a,         # (4) cross A
+                         S, X_ab,        # (6) cross A & B
+                         I, S, X_b,      # (9) cross B
+                         S, I, X_b,      # (12) cross B
+                         other, I, X_b,  # (15) cross to other state
+                         S, X_b,         # (17) first cross B
+                         S, X_a,         # (19) first cross A
+                         S, S, X_ab,     # (22) cross A & B
+                         I, X_ab,        # (24) recrossing test
+                         S, I,           # (26) false crossing test
+                         S, S]
         engine = CalvinistDynamics(predetermined)
         init = make_1d_traj([S])
         sim = DirectSimulation(storage=None,
                                engine=engine,
-                               states=[state],
+                               states=[state, other_state],
                                flux_pairs=[(state, alpha), (state, beta)],
                                initial_snapshot=init[0])
         sim.run(len(predetermined)-1)
         # subtract 1 from the indices in `predetermined`, b/c 0 index of the
         # traj comes after the found initial step
         expected_flux_events = {
-            (state, alpha): [(4, 2), (6, 4), (15, 6)],
-            (state, beta): [(9, 6), (12, 9), (15, 12)]
+            (state, alpha): [(4, 2), (6, 4), (22, 19)],
+            (state, beta): [(9, 6), (12, 9), (22, 17)]
         }
-        assert_equal(sim.flux_events, expected_flux_events)
+        assert_equal(len(sim.flux_events), 2)
+        assert_equal(sim.flux_events[(state, alpha)],
+                     expected_flux_events[(state, alpha)])
+        assert_equal(sim.flux_events[(state, beta)],
+                     expected_flux_events[(state, beta)])
 
     def test_sim_with_storage(self):
         raise SkipTest

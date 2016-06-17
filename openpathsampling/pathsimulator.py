@@ -704,6 +704,14 @@ class DirectSimulation(PathSimulator):
             if state: 
                 last_state_visit[state] = step
                 if state is not most_recent_state:
+                    # we've made a transition: on the first entrance into
+                    # this state, we reset the last_interface_exit
+                    state_flux_pairs = [p for p in self.flux_pairs 
+                                        if p[0] == state]
+                    for p in state_flux_pairs:
+                        last_interface_exit[p] = -1
+                    # if this isn't the first change of state, we add the
+                    # transition
                     if most_recent_state:
                         self.transition_count.append((state, step))
                     most_recent_state = state
