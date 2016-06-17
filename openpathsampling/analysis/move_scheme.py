@@ -28,7 +28,7 @@ class MoveScheme(StorableNamedObject):
     root_mover : PathMover
         Root of the move decision tree (`None` until tree is built)
     """
-    def __init__(self, network, engine=None):
+    def __init__(self, network):
         super(MoveScheme, self).__init__()
         self.movers = {}
         self.network = network
@@ -36,7 +36,6 @@ class MoveScheme(StorableNamedObject):
         self.balance_partners = {}
         self.choice_probability = {}
         self.root_mover = None
-        self.engine = engine
 
         self._mover_acceptance = {} # used in analysis
 
@@ -47,14 +46,13 @@ class MoveScheme(StorableNamedObject):
             'choice_probability' : self.choice_probability,
             'balance_partners' : self.balance_partners,
             'root_mover' : self.root_mover,
-            'engine' : self.engine
         }
         return ret_dict
 
     @classmethod
     def from_dict(cls, dct):
         scheme = cls.__new__(cls)
-        scheme.__init__(dct['network'], engine=dct['engine'])
+        scheme.__init__(dct['network'])
         scheme.movers = dct['movers']
         scheme.choice_probability = dct['choice_probability']
         scheme.balance_partners = dct['balance_partners']
@@ -764,12 +762,12 @@ class DefaultScheme(MoveScheme):
     move.
     """
     def __init__(self, network, engine=None):
-        super(DefaultScheme, self).__init__(network, engine)
+        super(DefaultScheme, self).__init__(network)
         n_ensembles = len(network.sampling_ensembles)
         self.append(strategies.NearestNeighborRepExStrategy())
-        self.append(strategies.OneWayShootingStrategy(engine=self.engine))
+        self.append(strategies.OneWayShootingStrategy(engine=engine))
         self.append(strategies.PathReversalStrategy())
-        self.append(strategies.MinusMoveStrategy(engine=self.engine))
+        self.append(strategies.MinusMoveStrategy(engine=engine))
         global_strategy = strategies.OrganizeByMoveGroupStrategy()
         self.append(global_strategy)
 
@@ -778,7 +776,7 @@ class DefaultScheme(MoveScheme):
             self.append(strategies.OneWayShootingStrategy(
                 ensembles=[ms],
                 group="ms_outer_shooting",
-                engine=self.engine
+                engine=engine
             ))
             self.append(strategies.PathReversalStrategy(
                 ensembles=[ms],
@@ -854,9 +852,9 @@ class OneWayShootingMoveScheme(MoveScheme):
     Useful for building on top of. Useful as default for TPS.
     """
     def __init__(self, network, selector=None, ensembles=None, engine=None):
-        super(OneWayShootingMoveScheme, self).__init__(network, engine)
+        super(OneWayShootingMoveScheme, self).__init__(network)
         self.append(strategies.OneWayShootingStrategy(selector=selector, 
                                                       ensembles=ensembles,
-                                                      engine=self.engine))
+                                                      engine=engine))
         self.append(strategies.OrganizeByMoveGroupStrategy())
 
