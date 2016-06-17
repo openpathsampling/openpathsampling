@@ -760,8 +760,14 @@ class DirectSimulation(PathSimulator):
 
     @property
     def fluxes(self):
-        return {p : 1.0 / np.array(self.flux_events[p]).mean()
-                for p in self.flux_events}
+        results = {}
+        for p in self.flux_events:
+            lags = [t[0] - t[1] for t in self.flux_events[p]]
+            results[p] = 1.0 / np.mean(lags)
+        return results
+
+        # return {p : 1.0 / np.array(self.flux_events[p]).mean()
+                # for p in self.flux_events}
 
     @property
     def n_transitions(self):

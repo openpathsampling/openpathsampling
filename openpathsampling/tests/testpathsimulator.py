@@ -281,14 +281,19 @@ class testDirectSimulation(object):
                                            (self.center, right_interface)],
                                initial_snapshot=self.snap0)
         fake_flux_events = {(self.center, right_interface):
-                            [(3, -1), (15, 3), (23, 15), (48, 23)],
+                            [(15, 3), (23, 15), (48, 23)],
                             (self.center, left_interface):
-                            [(34, -1), (97, 34), (160, 97)]}
+                            [(97, 34), (160, 97)]}
         sim.flux_events = fake_flux_events
-        n_flux_events = {(self.center, right_interface): 4,
-                         (self.center, left_interface): 3}
+        n_flux_events = {(self.center, right_interface): 3,
+                         (self.center, left_interface): 2}
         assert_equal(sim.n_flux_events, n_flux_events)
-        raise SkipTest
+        expected_fluxes = {(self.center, right_interface):
+                           1.0 / (((15-3) + (23-15) + (48-23))/3.0),
+                           (self.center, left_interface):
+                           1.0 / (((97-34) + (160-97))/2.0)}
+        for p in expected_fluxes:
+            assert_almost_equal(sim.fluxes[p], expected_fluxes[p])
 
     def test_flux_from_calvinist_dynamics(self):
         # To check for the multiple interface set case, we need to have two 
