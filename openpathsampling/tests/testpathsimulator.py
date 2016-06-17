@@ -295,9 +295,6 @@ class testDirectSimulation(object):
         raise SkipTest
 
     def test_flux_from_calvinist_dynamics(self):
-        # this test includes an entire trajectory, and should will test that
-        # we create the expected internal transition_count and flux_events 
-
         # To check for the multiple interface set case, we need to have two 
         # dimensions. We can hack two "independent" dimensions from a one
         # dimensional system by making the second CV non-monotonic with the
@@ -319,8 +316,13 @@ class testDirectSimulation(object):
         X_b = -np.pi/3.0   # cv1 = -1.05; cv2 = 0.87
         X_ab = np.pi/2.0   # cv1 =  1.57; cv2 = 1.00
         # That hack is utterly crazy, but I'm kinda proud of it!
-        predetermined = [S, I, X_a, S, X_a, S, X_ab, I, S, X_b, S, I, X_b, S, S]
-        #                   cross a  cross a  cross a&b  cross b   cross b
+        predetermined = [S, S, I, X_a,   # first exit
+                         S, X_a,      # cross A
+                         S, X_ab,     # cross A & B
+                         I, S, X_b,   # cross B
+                         S, I, X_b,   # cross B
+                         S, S, X_ab,  # cross A & B
+                         S]
         engine = CalvinistDynamics(predetermined)
         init = make_1d_traj([S])
         sim = DirectSimulation(storage=None,
@@ -329,8 +331,13 @@ class testDirectSimulation(object):
                                flux_pairs=[(state, alpha), (state, beta)],
                                initial_snapshot=init[0])
         sim.run(len(predetermined)-1)
-        print sim.flux_events
-        raise SkipTest
+        # subtract 1 from the indices in `predetermined`, b/c 0 index of the
+        # traj comes after the found initial step
+        expected_flux_events = {
+            (state, alpha): [(4, 2), (6, 4), (15, 6)],
+            (state, beta): [(9, 6), (12, 9), (15, 12)]
+        }
+        assert_equal(sim.flux_events, expected_flux_events)
 
     def test_sim_with_storage(self):
         raise SkipTest
