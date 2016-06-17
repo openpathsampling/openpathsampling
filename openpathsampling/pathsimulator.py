@@ -691,7 +691,7 @@ class DirectSimulation(PathSimulator):
         last_interface_exit = {p : -1 for p in self.flux_pairs}
         last_state_visit = {s : -1 for s in self.states}
         was_in_interface = {p : None for p in self.flux_pairs}
-        local_traj = [self.initial_snapshot]
+        local_traj = paths.Trajectory([self.initial_snapshot])
         self.engine.current_snapshot = self.initial_snapshot
         for step in range(n_steps):
             frame = self.engine.generate_next_frame()
@@ -730,6 +730,12 @@ class DirectSimulation(PathSimulator):
                             self.flux_events[p].append(flux_time_range)
                         last_interface_exit[p] = step
                 was_in_interface[p] = is_in_interface
+
+            if self.storage is not None:
+                local_traj += [frame]
+
+        if self.storage is not None:
+            self.storage.save(local_traj)
 
     @property
     def transitions(self):

@@ -8,6 +8,7 @@ from openpathsampling.pathsimulator import *
 import openpathsampling as paths
 import openpathsampling.engines.toy as toys
 import numpy as np
+import os
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -60,7 +61,6 @@ class testCommittorSimulation(object):
                                               initial_snapshots=self.snap0)
 
     def teardown(self):
-        import os
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
@@ -228,7 +228,6 @@ class testDirectSimulation(object):
         self.sim.run(200)
         assert_true(len(self.sim.transition_count) > 1)
         assert_true(len(self.sim.flux_events[self.flux_pairs[0]]) > 1)
-        print self.sim.flux_events
 
     def test_transitions(self):
         # set fake data
@@ -352,4 +351,21 @@ class testDirectSimulation(object):
                      expected_flux_events[(state, beta)])
 
     def test_sim_with_storage(self):
-        raise SkipTest
+        tmpfile = data_filename("direct_sim_test.nc")
+        if os.path.isfile(tmpfile):
+            os.remove(tmpfile)
+
+        storage = paths.Storage(tmpfile, "w", self.snap0)
+        sim = DirectSimulation(storage=storage,
+                               engine=self.engine,
+                               states=[self.center, self.outside],
+                               initial_snapshot=self.snap0)
+
+        sim.run(200)
+        storage.close()
+        read_store = paths.AnalysisStorage(tmpfile)
+        assert_equal(len(read_store.trajectories), 1)
+        traj = read_store.trajectories[0]
+        assert_equal(len(traj), 201)
+        read_store.close()
+        os.remove(tmpfile)
