@@ -436,7 +436,7 @@ class FullBootstrapping(PathSimulator):
                        + " round of " + str(n_steps_per_round) + " steps.")
                 if self.error_max_rounds:
                     raise RuntimeError(msg)
-                else:
+                else: # pragma: no-cover
                     logger.warning(msg)
                 break
             n_filled = len(bootstrap.globalstate)

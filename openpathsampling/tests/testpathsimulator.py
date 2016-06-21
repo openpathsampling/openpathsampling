@@ -30,7 +30,7 @@ class testFullBootstrapping(object):
         self.stateB = paths.CVRangeVolume(self.cv, 1.0, 2.0)
         self.stateC = paths.CVRangeVolume(self.cv, 3.0, 4.0)
         interfacesAB = paths.VolumeFactory.CVRangeVolumeSet(
-            self.cv, 0.0, [0.0, 0.1, 0.2]
+            self.cv, -1.0, [0.0, 0.1, 0.2]
         )
         interfacesBC = paths.VolumeFactory.CVRangeVolumeSet(
             self.cv, 1.0, [2.0, 2.1, 2.2]
@@ -55,23 +55,40 @@ class testFullBootstrapping(object):
             snapshot=self.snapA
         )
 
+    @raises(RuntimeError)
     def test_initial_max_length(self):
-        pass
+        engine = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1, 0.1, -0.1])
+        bootstrap_AB_maxlength = paths.FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            initial_max_length = 3,
+            engine=engine
+        )
+        gs = bootstrap_AB_maxlength.run(build_attempts=1)
 
     def test_first_traj_ensemble(self):
-        pass
+        traj_starts_in = make_1d_traj([-0.2, -0.1, 0.1, -0.1])
+        traj_starts_out = make_1d_traj([0.1, -0.1, 0.1, -0.1])
+        traj_not_good = make_1d_traj([0.1, -0.1, 0.1])
+        first_traj_ens = self.noforbid_noextra_AB.first_traj_ensemble
+        assert_equal(first_traj_ens(traj_starts_in), True)
+        assert_equal(first_traj_ens(traj_starts_out), True)
+        assert_equal(first_traj_ens(traj_not_good), False)
 
     def test_sampling_ensembles(self):
-        pass
+        raise SkipTest
 
     def test_run_already_satisfied(self):
-        pass
+        raise SkipTest
 
-    def test_build_attempts_fail(self):
-        pass
+    def test_run_extra_ensembles(self):
+        raise SkipTest
+
+    def test_run_forbidden_ensembles(self):
+        raise SkipTest
 
     def test_too_much_bootstrapping(self):
-        pass
+        raise SkipTest
 
 class testCommittorSimulation(object):
     def setup(self):
