@@ -430,7 +430,7 @@ class MoveTreeBuilder(Builder):
 
     This is useful to get an idea which parts of the ensemble affect which part of ensembles
     """
-    def __init__(self, pathmover=None, ensembles=None):
+    def __init__(self, pathmover=None, ensembles=None, initial=None):
         super(MoveTreeBuilder, self).__init__()
 
         self.p_x = dict()
@@ -439,6 +439,7 @@ class MoveTreeBuilder(Builder):
 
         self.ensembles = []
         self.pathmover = None
+        self.initial = None
 
         self.traj_ens_x = dict()
         self.traj_ens_y = dict()
@@ -455,16 +456,13 @@ class MoveTreeBuilder(Builder):
         self.doc = None
 
         if pathmover is not None:
-            self.set_mover(pathmover)
+            self.pathmover = pathmover
 
         if ensembles is not None:
-            self.set_ensembles(ensembles)
+            self.ensembles = ensembles
 
-    def set_ensembles(self, ensembles):
-        self.ensembles = ensembles
-
-    def set_mover(self, pathmover):
-        self.pathmover = pathmover
+        if initial is not None:
+            self.initial = initial
 
     def render(self):
         doc = TreeRenderer(self.css_style)
