@@ -1,4 +1,5 @@
-from test_helpers import raises_with_message_like, data_filename
+from test_helpers import (raises_with_message_like, data_filename,
+                          CalvinistDynamics, make_1d_traj)
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
@@ -20,6 +21,57 @@ class testAbstract(object):
     def test_abstract_volume(self):
         mover = PathSimulator()
 
+
+class testFullBootstrapping(object):
+    def setup(self):
+        self.cv = paths.CV_Function("Id", lambda snap: snap.xyz[0][0])
+        cv_neg = paths.CV_Function("Neg", lambda snap: -snap.xyz[0][0])
+        self.stateA = paths.CVRangeVolume(self.cv, -1.0, 0.0)
+        self.stateB = paths.CVRangeVolume(self.cv, 1.0, 2.0)
+        self.stateC = paths.CVRangeVolume(self.cv, 3.0, 4.0)
+        interfacesAB = paths.VolumeFactory.CVRangeVolumeSet(
+            self.cv, 0.0, [0.0, 0.1, 0.2]
+        )
+        interfacesBC = paths.VolumeFactory.CVRangeVolumeSet(
+            self.cv, 1.0, [2.0, 2.1, 2.2]
+        )
+        interfacesBA = paths.VolumeFactory.CVRangeVolumeSet(
+            cv_neg, -1.0, [-1.0, -0.9, -0.8]
+        )
+
+        network = paths.MISTISNetwork([
+            (self.stateA, interfacesAB, self.cv, self.stateB),
+            (self.stateB, interfacesBC, self.cv, self.stateC),
+            (self.stateB, interfacesBA, cv_neg, self.stateA)
+        ])
+        self.tisAB = network.input_transitions[(self.stateA, self.stateB)]
+        self.tisBC = network.input_transitions[(self.stateB, self.stateC)]
+        self.tisBA = network.input_transitions[(self.stateB, self.stateA)]
+        self.network = network
+        self.snapA = make_1d_traj([-0.5])[0]
+
+        self.noforbid_noextra_AB = paths.FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA
+        )
+
+    def test_initial_max_length(self):
+        pass
+
+    def test_first_traj_ensemble(self):
+        pass
+
+    def test_sampling_ensembles(self):
+        pass
+
+    def test_run_already_satisfied(self):
+        pass
+
+    def test_build_attempts_fail(self):
+        pass
+
+    def test_too_much_bootstrapping(self):
+        pass
 
 class testCommittorSimulation(object):
     def setup(self):

@@ -325,7 +325,8 @@ class FullBootstrapping(PathSimulator):
     calc_name = "FullBootstrapping"
 
     def __init__(self, transition, snapshot, storage=None, engine=None,
-                 extra_interfaces=None, forbidden_states=None, initial_max_length=None):
+                 extra_interfaces=None, forbidden_states=None,
+                 initial_max_length=None):
         super(FullBootstrapping, self).__init__(storage)
         self.engine = engine
         paths.EngineMover.default_engine = engine  # set the default
@@ -353,12 +354,15 @@ class FullBootstrapping(PathSimulator):
         self.initial_max_length = initial_max_length
 
         if self.initial_max_length is not None:
-            self.first_traj_ensemble = paths.LengthEnsemble(slice(0, self.initial_max_length)) & self.first_traj_ensemble
+            self.first_traj_ensemble = (
+                paths.LengthEnsemble(slice(0, self.initial_max_length)) & 
+                self.first_traj_ensemble
+            )
 
-        self.extra_ensembles = [paths.TISEnsemble(transition.stateA,
-                                                  transition.stateB, iface,
-                                                  transition.orderparameter)
-                                for iface in extra_interfaces
+        self.extra_ensembles = [
+            paths.TISEnsemble(transition.stateA, transition.stateB, iface,
+                              transition.orderparameter)
+            for iface in extra_interfaces
         ]
 
         self.transition_shooters = [
@@ -381,7 +385,8 @@ class FullBootstrapping(PathSimulator):
         self.error_max_rounds = True
 
 
-    def run(self, max_ensemble_rounds=None, n_steps_per_round=20, build_attempts = 20):
+    def run(self, max_ensemble_rounds=None, n_steps_per_round=20,
+            build_attempts=20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
         while not has_AA_path:

@@ -555,7 +555,7 @@ class MISTISNetwork(TISNetwork):
         unnamed_states = [s for s in list_all_states if not s.is_named]
         name_index = 0
         for state in unnamed_states:
-            while index_to_string(name_index) in all_names:
+            while index_to_string(name_index) in all_state_names:
                 name_index += 1
             state.named(index_to_string(name_index))
             name_index += 1
