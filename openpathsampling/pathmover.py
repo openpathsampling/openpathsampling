@@ -67,16 +67,62 @@ def make_list_of_pairs(l):
 
 
 class ReplicaStateSet(set):
+    """
+    Represents a set of possible state of replicas
+    """
     @staticmethod
     def from_sampleset(sampleset):
+        """
+        Construct a set of a single state from a `SampleSet`
+
+        Parameters
+        ----------
+        sampleset : :obj:`openpathsampling.SampleSet`
+            The sampleset turned into a single set replica state
+
+        Returns
+        -------
+        :obj:`ReplicaStateSet`
+            the constructed set of replica states
+
+        """
         return ReplicaStateSet({ReplicaState.from_sampleset(sampleset)})
 
     @staticmethod
     def from_ensembles(ensembles):
+        """
+        Construct a set of a single state from a list of ensembles
+
+        Parameters
+        ----------
+        ensembles : iterable of :obj:`openpathsampling.Ensemble`
+            The ensembles turned into a single set replica state
+
+        Returns
+        -------
+        :obj:`ReplicaStateSet`
+            the constructed set of replica states
+
+        """
         return ReplicaStateSet({ReplicaState.from_ensembles(ensembles)})
 
     @staticmethod
     def from_ensembles_dict(ensembles_dict):
+        """
+        Construct a set of a single state from a dictionary of ensembles to ints
+
+        Parameters
+        ----------
+        ensembles_dict : dict of :obj:`openpathsampling.Ensemble`: int
+            The dict representing the number of times an ensemble is in the
+             replica state
+
+        Returns
+        -------
+        :obj:`ReplicaStateSet`
+            the constructed set of replica states
+
+        """
         return ReplicaStateSet({ReplicaState.from_ensemble_dict(ensembles_dict)})
 
     def _reduce(self, func):
@@ -90,6 +136,22 @@ class ReplicaStateSet(set):
 
 
 class ReplicaState(frozenset):
+    """
+    Represents a set of samples: how many samples per ensembles
+
+    This object is represented bya frozenset of tuples to make it hashable.
+    Technically it could be represented by a :class:`collections.Counter`
+
+    lesser than and greater than are implemented and work as they would for
+    a Counter. So lesser or equal means that all ensembles present in the
+    "smaller" state are also present in the "larger" one and the
+    multiplicity is smaller for all ensembles.
+
+    This is useful to check if certain requirements are met. When `necessary`
+    represent the minimal necessary number of samples per ensemble and `current`
+    is the current state of the sampleset then `necessary <= current` checks if
+    the requirements are met
+    """
     @staticmethod
     def from_sampleset(sampleset):
         d = {}
@@ -130,6 +192,9 @@ class ReplicaState(frozenset):
 
 
 class InOutSet(set):
+    """
+    Represents a set of possible in-out relations
+    """
     def __add__(self, other):
         if other is None or len(other) == 0:
             return self
@@ -153,7 +218,13 @@ class InOutSet(set):
             ]))
 
     @property
-    def minimal(self):
+    def ins_minimal(self):
+        """
+
+        Returns
+        -------
+
+        """
         c = Counter()
         for s in self:
             if s.essential:
@@ -163,6 +234,27 @@ class InOutSet(set):
 
     @property
     def ins(self):
+        """
+        The maximally needed replica state for input
+
+        Maximally means, that larger input will not change the behaviour
+        anymore or cause different behaviour
+
+        A mover might be called "simple" if the minimal and maximally required
+        replica state is the same. We could additionally require that the
+        multiplicity per ensemble is one.
+
+        Returns
+        -------
+        :obj:'collections.Counter`
+            a Counter object representing the maximal replica state used for input
+
+        Notes
+        -----
+        A counter can be turned into a ReplicaState by
+        `ReplicaState(dict(counter).items())`.
+
+        """
         c = Counter()
         for s in self:
             c |= s.ins
@@ -170,7 +262,13 @@ class InOutSet(set):
         return c
 
     @property
-    def affected(self):
+    def outs(self):
+        """
+        The maximal set of ensembles
+        Returns
+        -------
+
+        """
         c = Counter()
         for s in self:
             c |= s.outs
@@ -178,13 +276,25 @@ class InOutSet(set):
         return c
 
     @property
-    def outs(self):
-        return self.affected
+    def outs_minimal(self):
+        """
+
+        Returns
+        -------
+
+        """
+        c = Counter()
+        for s in self:
+            if s.essential:
+                c |= s.outs
+
+        return c
 
     @property
     def is_constant(self):
         """
         Check whether the move will leave the number of samples per ensemle unchanged
+
         Returns
         -------
 
@@ -192,31 +302,71 @@ class InOutSet(set):
         return all([s.ins == s.outs for s in self])
 
     def filter(self, ensembles):
+        """
+        Return a InOutSet with relations limited to within a given set of ensembles
+
+        Parameters
+        ----------
+        ensembles : iterable of `openpathsampling.Ensemble`
+
+        Returns
+        -------
+        `InOutSet`
+            the reduced in-out-relation table
+        """
         return InOutSet({
             s.filter(ensembles) for s in self if set(s.ins) <= set(ensembles)
         })
 
     def move(self, replica_states):
-        if type(replica_states) is ReplicaState:
-            replica_states = ReplicaStateSet({replica_states})
+        """
+        Move a set of replica states and return a set of possible outcomes
 
+        Parameters
+        ----------
+        replica_states : `ReplicaStateSet`
+
+        Returns
+        -------
+        `ReplicaStateSet`
+            the set of possible replica states being produced by this in-out-relation
+        """
         ret = set()
 
         for replica_state in replica_states:
             c = Counter(replica_state)
-            if c >= self.minimal:
+
+            # Only move a replica state if it meets the minimal requirements
+            # are met.
+            if c >= self.ins_minimal:
                 ret.update({
                     s.move(replica_state)
                     for s in self
                     if s.ins <= c
                 })
-            else:
-                print 'Cannot MATCH!', c, self.required
 
         return ReplicaStateSet(ret)
 
 
 class InOut(frozenset):
+    """
+    Represent the change in occupied ensembles during a move
+
+    A mover changes a sampleset and will replace samples, move
+    them between ensembles or create new ones. This change will be
+    represented by this object.
+
+    Assume that we replace a sample in ensemble A and move a second
+    sample from A to B. This wil be represented by
+
+        { (A, A, 1),
+          (A, B, 1) }
+
+    This class makes handling these objects easier. Chaining these changes
+    will result in new possible changes. Since chaining can result in multiple
+    possible relations depending on the occupation state of the ensemble
+    chaingin will return a set of in-out-relations.
+    """
     def __new__(cls, *args):
         return frozenset.__new__(cls, args[0])
 
@@ -232,6 +382,13 @@ class InOut(frozenset):
 
     @property
     def ensembles(self):
+        """
+        Return a list of all appearing ensembles in the relations
+
+        Returns
+        -------
+
+        """
         outs = set([s[1] for s in self])
         ins = set(r[0] for r in self)
         ens = ins | outs
@@ -240,25 +397,54 @@ class InOut(frozenset):
 
     @property
     def ins(self):
+        """
+        Return input ensembles and their multiplicity
+
+        Returns
+        -------
+        :obj:'collections.Counter`
+            a Counter object representing the input requirements
+
+        """
         d = Counter()
         for s,v in self:
             d[s[0]] += v
 
         return d
 
-    def filter(self, ensembles):
-        return InOut([s for s in self if s[0][0] in ensembles and s[0][1] in ensembles])
-
     @property
     def outs(self):
+        """
+        Returns
+        -------
+        :obj:'collections.Counter`
+            a Counter object representing the input requirements
+
+        """
+
         d = Counter()
         for s, v in self:
             d[s[1]] += v
 
         return d
 
-    def in_ensembles(self, ensembles):
-        return not bool(self.ensembles - set(ensembles))
+    def filter(self, ensembles):
+        """
+        Remove all relations in using a set of ensembles
+
+        Parameters
+        ----------
+        ensembles : iterable of `openpathsampling.Ensemble`
+            the set of ensembles
+
+        Returns
+        -------
+
+        """
+        return InOut([s for s in self if s[0][0] in ensembles and s[0][1] in ensembles])
+
+    # def in_ensembles(self, ensembles):
+    #     return not bool(self.ensembles - set(ensembles))
 
     def __mul__(self, other):
 
@@ -304,17 +490,18 @@ class InOut(frozenset):
 
         return inouts
 
-    @staticmethod
-    def join_in_out(mat1, mat2):
-        l = [(s[0], r[1]) for s in mat1 for r in mat2 if s[1] is r[0]]
-        outs = set([s[1] for s in mat1])
-        ins = set(r[0] for r in mat2)
-        l += [s for s in mat1 if s[1] not in ins]
-        l += [r for r in mat2 if r[0] not in outs]
-
-        return set(l)
-
     def move(self, replica_state):
+        """
+        Move a replica state by the relations in this object
+
+        Parameters
+        ----------
+        replica_state
+
+        Returns
+        -------
+
+        """
         d = Counter(dict(replica_state))
         d = d - self.ins + self.outs
 
@@ -450,6 +637,20 @@ class PathMover(TreeMixin, StorableNamedObject):
         return [replica_states] * len(self.submovers)
 
     def _generate_in_out(self):
+        if len(self.output_ensembles) == 0:
+            return {
+                InOutSet([])
+            }
+        elif len(self.input_ensembles) == 1 and len(self.output_ensembles) == 1:
+            return InOutSet([
+                InOut([((self.input_ensembles[0], self.output_ensembles[0]), 1)])
+            ])
+        else:
+            # Fallback could be all possibilities, but for now we ask the user!
+            raise NotImplementedError('Please implement the in-out-matrix for this mover.')
+
+    @property
+    def in_out(self):
         """
         List the input -> output relation for ensembles
 
@@ -468,10 +669,6 @@ class PathMover(TreeMixin, StorableNamedObject):
         ens1 -> ens1
         None -> ens1
 
-        Although not really this is similar to a perturbation matrix and it should be
-        used as such. The more complex movers will combine these into an effective
-        matrix
-
         Returns
         -------
         list of list of tuple : (:obj:`openpathsampling.Ensemble`, :obj:`openpathsampling.Ensemble`)
@@ -483,21 +680,6 @@ class PathMover(TreeMixin, StorableNamedObject):
         two, (2) return nothing if there are no out_ensembles and (3) for more then two
         require implementation
         """
-
-        if len(self.output_ensembles) == 0:
-            return {
-                InOutSet([])
-            }
-        elif len(self.input_ensembles) == 1 and len(self.output_ensembles) == 1:
-            return InOutSet([
-                InOut([((self.input_ensembles[0], self.output_ensembles[0]), 1)])
-            ])
-        else:
-            # Fallback could be all possibilities, but for now we ask the user!
-            raise NotImplementedError('Please implement the in-out-matrix for this mover.')
-
-    @property
-    def in_out(self):
         if self._inout is None:
             self._inout = self._generate_in_out()
 
