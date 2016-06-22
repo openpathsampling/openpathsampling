@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import math
 from lookup_function import LookupFunction
+import collections
 
 # TODO: someday I should replace this with a variant of my sparse-histogram
 # code. It is easy to use and probably can be made faster than numpy for
@@ -78,10 +79,12 @@ class Histogram(object):
         """Add `data` to an existing histogram; return resulting histogram"""
         if self._histogram is None:
             return self.histogram(data, weights)
-        newhist = np.histogram(data, bins=self.bins, weights=weights)[0]
+        bin_counts = np.histogram(data, bins=self.bins, weights=weights)[0]
+        new_hist = collections.Counter(
+            {b : num for (b, num) in zip(self.bins, bin_counts)}
+        )
+        self._histogram += new_hist
         newcount = len(data) if weights is None else sum(weights)
-        for bin_i in range(len(newhist)):
-            self._histogram[bin_i] += newhist[bin_i]
         self.count += newcount
         return self._histogram.copy()
 
@@ -99,8 +102,11 @@ class Histogram(object):
         """
         if data is not None:
             results = np.histogram(data, bins=self.bins, weights=weights)
-            self._histogram = results[0]
+            counts = results[0]
             self.bins = results[1]
+            self._histogram = collections.Counter(
+                {b : num for (b, num) in zip(self.bins, counts)}
+            )
             # self.bins must be reset in case it was an integer (implicit
             # range) so we can have the correct bins if we use
             # `add_data_to_histogram` later
@@ -146,7 +152,7 @@ class Histogram(object):
     def _normalization(self):
         """Return normalization constant (integral over this histogram)."""
         dx = [self.bins[i+1] - self.bins[i] for i in range(len(self.bins)-1)]
-        norm = np.dot(self._histogram, dx)
+        norm = np.dot(self._histogram.values(), dx)
         return norm
 
     # Yes, the following could be cached. No, I don't think it is worth it.
@@ -168,9 +174,9 @@ class Histogram(object):
         normed_hist = self.histogram() # returns a copy
         nnorm = self._normalization() if not raw_probability else self.count
         norm = 1.0/nnorm
-        normed_hist = normed_hist * norm
+        normed_hist_list = [normed_hist[k] * norm for k in normed_hist]
         xvals = self.xvals(bin_edge)
-        return LookupFunction(xvals, normed_hist)
+        return LookupFunction(xvals, normed_hist_list)
 
     def cumulative(self, maximum=1.0, bin_edge="r"):
         """Cumulative from the left: number of values less than bin value.
@@ -179,8 +185,8 @@ class Histogram(object):
         """
         cumul_hist = []
         total = 0.0
-        for val in self._histogram:
-            total += val
+        for k in sorted(self._histogram.keys()):
+            total += self._histogram[k]
             cumul_hist.append(total)
 
         cumul_hist = np.array(cumul_hist)
@@ -199,8 +205,8 @@ class Histogram(object):
         """
         cumul_hist = []
         total = 0.0
-        for val in reversed(self._histogram):
-            total += val
+        for k in reversed(sorted(self._histogram.keys())):
+            total += self._histogram[k]
             cumul_hist.insert(0, total)
 
         cumul_hist = np.array(cumul_hist)

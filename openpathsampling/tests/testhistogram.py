@@ -3,6 +3,12 @@ from nose.plugins.skip import SkipTest
 from test_helpers import assert_items_almost_equal
 
 import logging
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+
+import collections
 
 from openpathsampling.analysis import Histogram
 
@@ -10,8 +16,10 @@ class testHistogram(object):
     def setup(self):
         self.data = [1.0, 1.1, 1.2, 1.3, 2.0, 1.4, 2.3, 2.5, 3.1, 3.5]
         self.nbins = 5
-        self.hist = [5, 0, 2, 1, 2]
+        hist_counts = [5, 0, 2, 1, 2]
         self.bins = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
+        self.hist = collections.Counter({1.0: 5, 1.5: 0, 2.0: 2, 2.5: 1,
+                                         3.0: 2})
 
         self.default_hist = Histogram()
         self.hist_nbins = Histogram(n_bins=5)
@@ -53,7 +61,7 @@ class testHistogram(object):
         assert_items_equal(hist, self.hist)
 
         hist2 = histogram.add_data_to_histogram(self.data)
-        assert_items_equal(hist2, map((2).__mul__, hist))
+        assert_items_equal(hist2, hist+hist)
         assert_equal(histogram.count, 20)
 
     def test_compare_parameters(self):
