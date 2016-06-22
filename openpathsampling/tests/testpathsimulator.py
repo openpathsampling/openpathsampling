@@ -8,6 +8,7 @@ from openpathsampling.pathsimulator import *
 import openpathsampling as paths
 import openpathsampling.engines.toy as toys
 import numpy as np
+import os
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -30,13 +31,13 @@ class testFullBootstrapping(object):
         self.stateB = paths.CVRangeVolume(self.cv, 1.0, 2.0)
         self.stateC = paths.CVRangeVolume(self.cv, 3.0, 4.0)
         interfacesAB = paths.VolumeFactory.CVRangeVolumeSet(
-            self.cv, -1.0, [0.0, 0.1, 0.2]
+            self.cv, -1.0, [0.0, 0.2, 0.4]
         )
         interfacesBC = paths.VolumeFactory.CVRangeVolumeSet(
-            self.cv, 1.0, [2.0, 2.1, 2.2]
+            self.cv, 1.0, [2.0, 2.2, 2.4]
         )
         interfacesBA = paths.VolumeFactory.CVRangeVolumeSet(
-            cv_neg, -1.0, [-1.0, -0.9, -0.8]
+            cv_neg, -1.0, [-1.0, -0.8, -0.6]
         )
 
         network = paths.MISTISNetwork([
@@ -64,6 +65,7 @@ class testFullBootstrapping(object):
             initial_max_length = 3,
             engine=engine
         )
+        bootstrap_AB_maxlength.output_stream = open(os.devnull, "w")
         gs = bootstrap_AB_maxlength.run(build_attempts=1)
 
     def test_first_traj_ensemble(self):
@@ -76,15 +78,29 @@ class testFullBootstrapping(object):
         assert_equal(first_traj_ens(traj_not_good), False)
 
     def test_sampling_ensembles(self):
-        raise SkipTest
+        traj1 = make_1d_traj([-0.2, -0.1, 0.1, -0.1])
+        traj2 = make_1d_traj([-0.1, 0.1, -0.1])
+        traj3 = make_1d_traj([-0.1, 0.1, 0.3, -0.1])
+        traj4 = make_1d_traj([0.1, 0.3, 0.1])
+        all_ensembles = self.noforbid_noextra_AB.all_ensembles
+        assert_equal(len(all_ensembles), 3)
+        for ens in all_ensembles:
+            assert_equal(ens(traj1), False)
+            assert_equal(ens(traj4), False)
+        assert_equal(all_ensembles[0](traj2), True)
+        assert_equal(all_ensembles[0](traj3), True)
+        assert_equal(all_ensembles[1](traj2), False)
+        assert_equal(all_ensembles[1](traj3), True)
+        assert_equal(all_ensembles[2](traj2), False)
+        assert_equal(all_ensembles[2](traj3), False)
 
     def test_run_already_satisfied(self):
         raise SkipTest
 
-    def test_run_extra_ensembles(self):
+    def test_run_extra_interfaces(self):
         raise SkipTest
 
-    def test_run_forbidden_ensembles(self):
+    def test_run_forbidden_states(self):
         raise SkipTest
 
     def test_too_much_bootstrapping(self):

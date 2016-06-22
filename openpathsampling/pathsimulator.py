@@ -56,7 +56,8 @@ class PathSimulator(StorableNamedObject):
     __metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
-    _excluded_attr = ['globalstate', 'step', 'save_frequency']
+    _excluded_attr = ['globalstate', 'step', 'save_frequency',
+                      'output_stream']
 
     def __init__(self, storage):
         super(PathSimulator, self).__init__()
@@ -68,8 +69,8 @@ class PathSimulator(StorableNamedObject):
             logger=init_log, obj=self,
             entries=['storage']#, 'engine']
         )
-
         self.globalstate = None
+        self.output_stream = sys.stdout  # user can change to file handler
 
     # TODO: Remove, is not used
     def set_replicas(self, samples):
@@ -392,13 +393,13 @@ class FullBootstrapping(PathSimulator):
         while not has_AA_path:
             self.engine.current_snapshot = self.snapshot.copy()
             self.engine.snapshot = self.snapshot.copy()
-            print "Building first trajectory"
+            self.output_stream.write("Building first trajectory\n")
             sys.stdout.flush()
             first_traj = self.engine.generate(
                 self.engine.current_snapshot, 
                 [self.first_traj_ensemble.can_append]
             )
-            print "Selecting segment"
+            self.output_stream.write("Selecting segment\n")
             sys.stdout.flush()
             subtrajs = self.ensemble0.split(first_traj)
             if len(subtrajs) > 0:
@@ -412,14 +413,15 @@ class FullBootstrapping(PathSimulator):
                 raise RuntimeError('Too many attempts. Try another initial snapshot instead.')
 
             
-        print "Sampling " + str(self.n_ensembles) + " ensembles."
+        self.output_stream.write("Sampling " + str(self.n_ensembles) +
+                                 " ensembles.\n")
         bootstrap = paths.Bootstrapping(
             storage=self.storage,
             ensembles=self.all_ensembles,
             movers=self.transition_shooters + self.extra_shooters,
             trajectory=subtraj
         )
-        print "Beginning bootstrapping"
+        self.output_stream.write("Beginning bootstrapping\n")
         n_rounds = 0
         n_filled = len(bootstrap.globalstate)
         while n_filled < self.n_ensembles:
