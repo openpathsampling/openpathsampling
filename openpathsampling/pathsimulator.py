@@ -323,7 +323,7 @@ class FullBootstrapping(PathSimulator):
     Takes a snapshot as input; gives you back a sample set with trajectories
     for every ensemble in the transition.
 
-    Someday this will be combined with the regular bootstrapping code. 
+    This includes
 
     Parameters
     ----------
@@ -338,8 +338,9 @@ class FullBootstrapping(PathSimulator):
     extra_interfaces : list of :class:`.Volume`
         additional interfaces to make into TIS ensembles (beyond those in
         the transition)
-    forbidden_staes : list of :class:`.Volume`
-        states that should not be sampled
+    forbidden_states : list of :class:`.Volume`
+        regions that are disallowed during the initial trajectory. Note that
+        these region *are* allowed during the interface sampling
     initial_max_length : int
         maximum length of the initial A->A trajectory
     """
@@ -459,9 +460,9 @@ class FullBootstrapping(PathSimulator):
                        + " round of " + str(n_steps_per_round) + " steps.")
                 if self.error_max_rounds:
                     raise RuntimeError(msg)
-                else: # pragma: no-cover
+                else: # pragma: no cover
                     logger.warning(msg)
-                break
+                    break
             n_filled = len(bootstrap.globalstate)
 
         return bootstrap.globalstate

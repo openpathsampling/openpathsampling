@@ -118,7 +118,30 @@ class testFullBootstrapping(object):
         assert_equal(len(gs), 4)
 
     def test_run_forbidden_states(self):
-        raise SkipTest
+        engine = CalvinistDynamics([-0.5, 0.3, 3.2, -0.1, 0.8, -0.1])
+        # first, without setting forbidden_states
+        bootstrap1 = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine
+        )
+        bootstrap1.output_stream = open(os.devnull, "w")
+        gs1 = bootstrap1.run()
+        assert_equal(len(gs1), 3)
+        assert_items_equal(self.cv(gs1[0]), [-0.5, 0.3, 3.2, -0.1])
+        # now with setting forbidden_states
+        bootstrap2 = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine,
+            forbidden_states=[self.stateC]
+        )
+        bootstrap2.output_stream = open(os.devnull, "w")
+        # make sure this is where we get the error
+        try:
+            gs2 = bootstrap2.run()
+        except RuntimeError:
+            pass
 
     @raises(RuntimeError)
     def test_too_much_bootstrapping(self):
