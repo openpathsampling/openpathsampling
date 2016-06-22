@@ -95,16 +95,41 @@ class testFullBootstrapping(object):
         assert_equal(all_ensembles[2](traj3), False)
 
     def test_run_already_satisfied(self):
-        raise SkipTest
+        engine = CalvinistDynamics([-0.5, 0.8, -0.1])
+        bootstrap = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine
+        )
+        bootstrap.output_stream = open(os.devnull, "w")
+        gs = bootstrap.run()
+        assert_equal(len(gs), 3)
 
     def test_run_extra_interfaces(self):
-        raise SkipTest
+        engine = CalvinistDynamics([-0.5, 0.8, -0.1])
+        bootstrap = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine,
+            extra_interfaces=[paths.CVRangeVolume(self.cv, -1.0, 0.6)]
+        )
+        bootstrap.output_stream = open(os.devnull, "w")
+        gs = bootstrap.run()
+        assert_equal(len(gs), 4)
 
     def test_run_forbidden_states(self):
         raise SkipTest
 
+    @raises(RuntimeError)
     def test_too_much_bootstrapping(self):
-        raise SkipTest
+        engine = CalvinistDynamics([-0.5, 0.2, -0.1])
+        bootstrap = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine,
+        )
+        bootstrap.output_stream = open(os.devnull, "w")
+        gs = bootstrap.run(max_ensemble_rounds=1)
 
 class testCommittorSimulation(object):
     def setup(self):

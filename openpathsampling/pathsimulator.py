@@ -253,7 +253,8 @@ class Bootstrapping(PathSimulator):
             paths.tools.refresh_output(
                 ("Working on Bootstrapping cycle step %d" +
                 " in ensemble %d/%d .\n") %
-                ( self.step, ens_num + 1, len(self.ensembles) )
+                ( self.step, ens_num + 1, len(self.ensembles) ),
+                output_stream=self.output_stream
             )
 
             movepath = bootstrapmove.move(self.globalstate)
@@ -310,10 +311,11 @@ class Bootstrapping(PathSimulator):
         self.sync_storage()
 
         paths.tools.refresh_output(
-                ("DONE! Completed Bootstrapping cycle step %d" +
-                " in ensemble %d/%d .\n") %
-                ( self.step, ens_num + 1, len(self.ensembles) )
-            )
+            ("DONE! Completed Bootstrapping cycle step %d" +
+            " in ensemble %d/%d.\n") %
+            ( self.step, ens_num + 1, len(self.ensembles) ),
+            output_stream=self.output_stream
+        )
 
 
 class FullBootstrapping(PathSimulator):
@@ -322,6 +324,24 @@ class FullBootstrapping(PathSimulator):
     for every ensemble in the transition.
 
     Someday this will be combined with the regular bootstrapping code. 
+
+    Parameters
+    ----------
+    transition : :class:`.TISTransition`
+        the TIS transition to fill by bootstrapping
+    snapshot : :class:`.Snapshot`
+        the initial snapshot
+    storage : :class:`.Storage`
+        storage file to record the steps (optional)
+    engine : :class:`.DynamicsEngine`
+        MD engine to use for dynamics
+    extra_interfaces : list of :class:`.Volume`
+        additional interfaces to make into TIS ensembles (beyond those in
+        the transition)
+    forbidden_staes : list of :class:`.Volume`
+        states that should not be sampled
+    initial_max_length : int
+        maximum length of the initial A->A trajectory
     """
     calc_name = "FullBootstrapping"
 
@@ -421,6 +441,7 @@ class FullBootstrapping(PathSimulator):
             movers=self.transition_shooters + self.extra_shooters,
             trajectory=subtraj
         )
+        bootstrap.output_stream = self.output_stream
         self.output_stream.write("Beginning bootstrapping\n")
         n_rounds = 0
         n_filled = len(bootstrap.globalstate)
