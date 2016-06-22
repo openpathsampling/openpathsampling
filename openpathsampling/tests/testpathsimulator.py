@@ -1,4 +1,5 @@
-from test_helpers import raises_with_message_like, data_filename
+from test_helpers import (raises_with_message_like, data_filename,
+                          CalvinistDynamics, make_1d_traj)
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
@@ -7,6 +8,7 @@ from openpathsampling.pathsimulator import *
 import openpathsampling as paths
 import openpathsampling.engines.toy as toys
 import numpy as np
+import os
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -20,6 +22,137 @@ class testAbstract(object):
     def test_abstract_volume(self):
         mover = PathSimulator()
 
+
+class testFullBootstrapping(object):
+    def setup(self):
+        self.cv = paths.CV_Function("Id", lambda snap: snap.xyz[0][0])
+        cv_neg = paths.CV_Function("Neg", lambda snap: -snap.xyz[0][0])
+        self.stateA = paths.CVRangeVolume(self.cv, -1.0, 0.0)
+        self.stateB = paths.CVRangeVolume(self.cv, 1.0, 2.0)
+        self.stateC = paths.CVRangeVolume(self.cv, 3.0, 4.0)
+        interfacesAB = paths.VolumeFactory.CVRangeVolumeSet(
+            self.cv, -1.0, [0.0, 0.2, 0.4]
+        )
+        interfacesBC = paths.VolumeFactory.CVRangeVolumeSet(
+            self.cv, 1.0, [2.0, 2.2, 2.4]
+        )
+        interfacesBA = paths.VolumeFactory.CVRangeVolumeSet(
+            cv_neg, -1.0, [-1.0, -0.8, -0.6]
+        )
+
+        network = paths.MISTISNetwork([
+            (self.stateA, interfacesAB, self.cv, self.stateB),
+            (self.stateB, interfacesBC, self.cv, self.stateC),
+            (self.stateB, interfacesBA, cv_neg, self.stateA)
+        ])
+        self.tisAB = network.input_transitions[(self.stateA, self.stateB)]
+        self.tisBC = network.input_transitions[(self.stateB, self.stateC)]
+        self.tisBA = network.input_transitions[(self.stateB, self.stateA)]
+        self.network = network
+        self.snapA = make_1d_traj([-0.5])[0]
+
+        self.noforbid_noextra_AB = paths.FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA
+        )
+
+    @raises(RuntimeError)
+    def test_initial_max_length(self):
+        engine = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1, 0.1, -0.1])
+        bootstrap_AB_maxlength = paths.FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            initial_max_length = 3,
+            engine=engine
+        )
+        bootstrap_AB_maxlength.output_stream = open(os.devnull, "w")
+        gs = bootstrap_AB_maxlength.run(build_attempts=1)
+
+    def test_first_traj_ensemble(self):
+        traj_starts_in = make_1d_traj([-0.2, -0.1, 0.1, -0.1])
+        traj_starts_out = make_1d_traj([0.1, -0.1, 0.1, -0.1])
+        traj_not_good = make_1d_traj([0.1, -0.1, 0.1])
+        first_traj_ens = self.noforbid_noextra_AB.first_traj_ensemble
+        assert_equal(first_traj_ens(traj_starts_in), True)
+        assert_equal(first_traj_ens(traj_starts_out), True)
+        assert_equal(first_traj_ens(traj_not_good), False)
+
+    def test_sampling_ensembles(self):
+        traj1 = make_1d_traj([-0.2, -0.1, 0.1, -0.1])
+        traj2 = make_1d_traj([-0.1, 0.1, -0.1])
+        traj3 = make_1d_traj([-0.1, 0.1, 0.3, -0.1])
+        traj4 = make_1d_traj([0.1, 0.3, 0.1])
+        all_ensembles = self.noforbid_noextra_AB.all_ensembles
+        assert_equal(len(all_ensembles), 3)
+        for ens in all_ensembles:
+            assert_equal(ens(traj1), False)
+            assert_equal(ens(traj4), False)
+        assert_equal(all_ensembles[0](traj2), True)
+        assert_equal(all_ensembles[0](traj3), True)
+        assert_equal(all_ensembles[1](traj2), False)
+        assert_equal(all_ensembles[1](traj3), True)
+        assert_equal(all_ensembles[2](traj2), False)
+        assert_equal(all_ensembles[2](traj3), False)
+
+    def test_run_already_satisfied(self):
+        engine = CalvinistDynamics([-0.5, 0.8, -0.1])
+        bootstrap = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine
+        )
+        bootstrap.output_stream = open(os.devnull, "w")
+        gs = bootstrap.run()
+        assert_equal(len(gs), 3)
+
+    def test_run_extra_interfaces(self):
+        engine = CalvinistDynamics([-0.5, 0.8, -0.1])
+        bootstrap = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine,
+            extra_interfaces=[paths.CVRangeVolume(self.cv, -1.0, 0.6)]
+        )
+        bootstrap.output_stream = open(os.devnull, "w")
+        gs = bootstrap.run()
+        assert_equal(len(gs), 4)
+
+    def test_run_forbidden_states(self):
+        engine = CalvinistDynamics([-0.5, 0.3, 3.2, -0.1, 0.8, -0.1])
+        # first, without setting forbidden_states
+        bootstrap1 = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine
+        )
+        bootstrap1.output_stream = open(os.devnull, "w")
+        gs1 = bootstrap1.run()
+        assert_equal(len(gs1), 3)
+        assert_items_equal(self.cv(gs1[0]), [-0.5, 0.3, 3.2, -0.1])
+        # now with setting forbidden_states
+        bootstrap2 = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine,
+            forbidden_states=[self.stateC]
+        )
+        bootstrap2.output_stream = open(os.devnull, "w")
+        # make sure this is where we get the error
+        try:
+            gs2 = bootstrap2.run()
+        except RuntimeError:
+            pass
+
+    @raises(RuntimeError)
+    def test_too_much_bootstrapping(self):
+        engine = CalvinistDynamics([-0.5, 0.2, -0.1])
+        bootstrap = FullBootstrapping(
+            transition=self.tisAB,
+            snapshot=self.snapA,
+            engine=engine,
+        )
+        bootstrap.output_stream = open(os.devnull, "w")
+        gs = bootstrap.run(max_ensemble_rounds=1)
 
 class testCommittorSimulation(object):
     def setup(self):
