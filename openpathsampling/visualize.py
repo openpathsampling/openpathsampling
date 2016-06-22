@@ -5,7 +5,9 @@ from svgwrite.container import Group
 import openpathsampling as paths
 
 import json
-from collections import namedtuple, OrderedDict
+from collections import namedtuple, OrderedDict, Counter
+
+import openpathsampling.pathmover as pm
 
 
 # TODO: Move TreeRenderer and Builder to a different file ???
@@ -58,7 +60,7 @@ class TreeRenderer(svg.Drawing):
 
         cls += ['connector']
 
-        return self.block(x, y, text, False, False, True, True, cls=cls)
+        return self.block(x, y, text, False, False, False, False, cls=cls)
 
     def block(self, x, y, text="",
               extend_right=True, extend_left=True,
@@ -464,6 +466,24 @@ class MoveTreeBuilder(Builder):
         if initial is not None:
             self.initial = initial
 
+    @staticmethod
+    def from_scheme(scheme):
+        return MoveTreeBuilder(
+            pathmover=scheme.root_mover,
+            ensembles=list(scheme.find_used_ensembles()) + list(scheme.find_hidden_ensembles()),
+            initial=scheme.list_initial_ensembles()
+        )
+
+    @staticmethod
+    def _get_sub_used(mover, replica_states, level):
+        l = [(mover, level, replica_states)]
+        subs = mover.sub_replica_state(replica_states)
+        map(
+            lambda x, y, z : l.extend(MoveTreeBuilder._get_sub_used(x, y, z)),
+            mover.submovers, subs, [1 + level] * len(mover.submovers)
+            )
+        return l
+
     def render(self):
         doc = TreeRenderer(self.css_style)
         self.doc = doc
@@ -569,13 +589,32 @@ class MoveTreeBuilder(Builder):
 
         max_level = 0
 
+        initial_rs = paths.pathmover.ReplicaStateSet.from_ensembles(self.initial)
+        subs = MoveTreeBuilder._get_sub_used(self.pathmover, initial_rs, 0)
+
+        # this checks if the mover can actually be run without problems
+        # assert(Counter(dict(initial_rs)) >= self.pathmover.in_out_matrix.minimal)
+
         for yp, (level, sub_mp) in enumerate(
                 path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
+            sub = subs[yp]
+
             if level > max_level:
                 max_level = level
 
-            in_ens = sub_mp.input_ensembles
-            out_ens = sub_mp.output_ensembles
+            possible_input_replica_states = [Counter(dict(s)) for s in sub[2]]
+            sub_io_set = sub_mp.in_out
+
+            # minimal_input_replica_states = sub_io_set.minimal
+
+            # in_ens = sub_mp.input_ensembles
+            # out_ens = sub_mp.output_ensembles
+
+            possible_ins = [i.ins for i in sub_io_set if any(s >= i.ins for s in possible_input_replica_states)]
+            possible_outs = [i.outs for i in sub_io_set if any(s >= i.ins for s in possible_input_replica_states)]
+
+            in_ens = reduce(lambda a, b : a | b, possible_ins, Counter())
+            out_ens = reduce(lambda a, b : a | b, possible_outs, Counter())
 
             for ens_idx, ens in enumerate(self.ensembles):
                 txt = chr(ens_idx + 65)

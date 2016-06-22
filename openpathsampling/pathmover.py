@@ -66,6 +66,29 @@ def make_list_of_pairs(l):
     return outlist
 
 
+class ReplicaStateSet(set):
+    @staticmethod
+    def from_sampleset(sampleset):
+        return ReplicaStateSet({ReplicaState.from_sampleset(sampleset)})
+
+    @staticmethod
+    def from_ensembles(ensembles):
+        return ReplicaStateSet({ReplicaState.from_ensembles(ensembles)})
+
+    @staticmethod
+    def from_ensembles_dict(ensembles_dict):
+        return ReplicaStateSet({ReplicaState.from_ensemble_dict(ensembles_dict)})
+
+    def _reduce(self, func):
+        return reduce(func, map(lambda x: Counter(dict(x)), self), Counter())
+
+    def reduce_min(self):
+        return self._reduce(lambda x, y: x & y)
+
+    def reduce_max(self):
+        return self._reduce(lambda x, y: x & y)
+
+
 class ReplicaState(frozenset):
     @staticmethod
     def from_sampleset(sampleset):
@@ -74,6 +97,18 @@ class ReplicaState(frozenset):
             d[sample.ensemble] = d.get(sample.ensemble, 0) + 1
 
         return ReplicaState(d.items())
+
+    @staticmethod
+    def from_ensembles(ensembles):
+        d = {}
+        for ens in ensembles:
+            d[ens] = 1
+
+        return ReplicaState(d.items())
+
+    @staticmethod
+    def from_ensemble_dict(ensemble_dict):
+        return ReplicaState(ensemble_dict.items())
 
     def __str__(self):
         ensemble_list = sorted([s for s in self], key=lambda x: hex(id(x[0])))
@@ -86,6 +121,12 @@ class ReplicaState(frozenset):
 
     def filter(self, ensembles):
         return ReplicaState({s for s in self if s[0] in ensembles})
+
+    def __gt__(self, other):
+        return Counter(dict(self)) > Counter(dict(self))
+
+    def __lt__(self, other):
+        return Counter(dict(self)) < Counter(dict(self))
 
 
 class InOutSet(set):
@@ -112,10 +153,11 @@ class InOutSet(set):
             ]))
 
     @property
-    def required(self):
+    def minimal(self):
         c = Counter()
         for s in self:
-            c &= s.ins
+            if s.essential:
+                c |= s.ins
 
         return c
 
@@ -154,25 +196,39 @@ class InOutSet(set):
             s.filter(ensembles) for s in self if set(s.ins) <= set(ensembles)
         })
 
-    def move(self, replica_state):
-        c = Counter(replica_state)
-        if c < self.required:
-            raise ValueError('Cannot move ReplicaState. The minimal number of samples per ensemble is not met')
-        else:
-            return {
-                s.move(replica_state)
-                for s in self
-                if s.ins <= c
-            }
+    def move(self, replica_states):
+        if type(replica_states) is ReplicaState:
+            replica_states = ReplicaStateSet({replica_states})
+
+        ret = set()
+
+        for replica_state in replica_states:
+            c = Counter(replica_state)
+            if c >= self.minimal:
+                ret.update({
+                    s.move(replica_state)
+                    for s in self
+                    if s.ins <= c
+                })
+            else:
+                print 'Cannot MATCH!', c, self.required
+
+        return ReplicaStateSet(ret)
 
 
-class InOutMatrix(frozenset):
-    def __init__(self, relations=None, safe=True):
+class InOut(frozenset):
+    def __new__(cls, *args):
+        return frozenset.__new__(cls, args[0])
+
+    def __init__(self, relations=None, essential=None):
         # note that frozenset uses __new__ to input data. The next line is only for
         # making sure all the rest is set correctly. __init__ will NOT set the content!
         frozenset.__init__(self, relations)
 
-        self.safe = safe
+        if essential is None:
+            essential = True
+
+        self.essential = essential
 
     @property
     def ensembles(self):
@@ -191,7 +247,7 @@ class InOutMatrix(frozenset):
         return d
 
     def filter(self, ensembles):
-        return InOutMatrix([s for s in self if s[0][0] in ensembles and s[0][1] in ensembles])
+        return InOut([s for s in self if s[0][0] in ensembles and s[0][1] in ensembles])
 
     @property
     def outs(self):
@@ -203,18 +259,6 @@ class InOutMatrix(frozenset):
 
     def in_ensembles(self, ensembles):
         return not bool(self.ensembles - set(ensembles))
-
-    def __add__(self, other):
-        if other is None:
-            return self
-        else:
-            return InOutMatrix(self.join_in_out(self, other), safe=False)
-
-    def __radd__(self, other):
-        if other is None:
-            return self
-        elif isinstance(other, InOutMatrix):
-            return InOutMatrix(self.join_in_out(other, self), safe=False)
 
     def __mul__(self, other):
 
@@ -231,26 +275,32 @@ class InOutMatrix(frozenset):
         for e in ens:
             # now we have `froms -> e -> tos` as all possibilities with one connection
             # and we need to form all possible pair combinations with zero, one, ... pairs
-            froms = sum([ [s[0]] * mat1[s] for s in mat1 if s[1] is e], [])
-            tos = sum([ [s[1]] * mat2[s] for s in mat2 if s[0] is e], [])
+            froms = sum([[s[0]] * mat1[s] for s in mat1 if s[1] is e], [])
+            tos = sum([[s[1]] * mat2[s] for s in mat2 if s[0] is e], [])
 
-            parts.append( self._fromto(froms, e, tos) )
+            parts.append(self._fromto(froms, e, tos))
 
-        return InOutSet(map(lambda x: InOutMatrix(x.items()), map(lambda x: sum(x, Counter()), product(*parts))))
+        if self.essential and other.essential:
+            return InOutSet(map(lambda x: InOut(sum(zip(*x)[0], Counter()).items(), all(zip(*x)[1])), product(*parts)))
+        else:
+            return InOutSet(map(lambda x: InOut(sum(zip(*x)[0], Counter()).items(), False), product(*parts)))
 
     def _fromto(self, froms, e, tos):
         frees = [(f, e) for f in froms] + [(e, t) for t in tos]
-        pairs = product(range(len(froms)), range(len(tos)))
-        inouts = list()
-        inouts.append(Counter(frees))
+        pairs = list(product(range(len(froms)), range(len(tos))))
+        if len(pairs) == 0:
+            inouts = [(Counter(frees), True)]
+        else:
+            inouts = list()
+            inouts.append((Counter(frees), False))
 
-        for i1, i2 in pairs:
-            fix = (froms[i1], tos[i2])
-            r_froms = froms[:i1] + froms[i1+1:]
-            r_tos = tos[:i1] + tos[i1+1:]
-            for rest in self._fromto(r_froms, e, r_tos):
-                rest[fix] += 1
-                inouts.append(rest)
+            for i1, i2 in pairs:
+                fix = (froms[i1], tos[i2])
+                r_froms = froms[:i1] + froms[i1 + 1:]
+                r_tos = tos[:i1] + tos[i1 + 1:]
+                for rest in self._fromto(r_froms, e, r_tos):
+                    rest[0][fix] += 1
+                    inouts.append(rest)
 
         return inouts
 
@@ -377,23 +427,29 @@ class PathMover(TreeMixin, StorableNamedObject):
         else:
             return [ensembles]
 
-    def _ensemble_signature(self, as_set=False):
-        """Return tuple form of (input_ensembles, output_ensembles).
-        
-        Useful for MoveScheme, e.g., identifying which movers should be
-        removed as part of a replacement.
+    # +-------------------------------------------------------------------------
+    # | analyze effects of sample sets
+    # +-------------------------------------------------------------------------
+
+    def move_replica_state(self, replica_states):
+        return self.in_out.move(replica_states)
+
+    def sub_replica_state(self, replica_states):
         """
-        inp = tuple(self.input_ensembles)
-        out = tuple(self.output_ensembles)
-        if as_set:
-            inp = set(inp)
-            out = set(out)
-        return inp, out
+        Return set of replica states that a submover might be called with
 
-    def move_replica_state(self, replica_state):
-        return self.in_out_matrix.move(replica_state)
+        Parameters
+        ----------
+        replica_states : set of `ReplicaState`
 
-    def _ensemble_matrix(self):
+        Returns
+        -------
+        list of set of `ReplicaState`
+
+        """
+        return [replica_states] * len(self.submovers)
+
+    def _generate_in_out(self):
         """
         List the input -> output relation for ensembles
 
@@ -434,18 +490,31 @@ class PathMover(TreeMixin, StorableNamedObject):
             }
         elif len(self.input_ensembles) == 1 and len(self.output_ensembles) == 1:
             return InOutSet([
-                InOutMatrix([((self.input_ensembles[0], self.output_ensembles[0]), 1)])
+                InOut([((self.input_ensembles[0], self.output_ensembles[0]), 1)])
             ])
         else:
             # Fallback could be all possibilities, but for now we ask the user!
             raise NotImplementedError('Please implement the in-out-matrix for this mover.')
 
     @property
-    def in_out_matrix(self):
+    def in_out(self):
         if self._inout is None:
-            self._inout = self._ensemble_matrix()
+            self._inout = self._generate_in_out()
 
         return self._inout
+
+    def _ensemble_signature(self, as_set=False):
+        """Return tuple form of (input_ensembles, output_ensembles).
+        
+        Useful for MoveScheme, e.g., identifying which movers should be
+        removed as part of a replacement.
+        """
+        inp = tuple(self.input_ensembles)
+        out = tuple(self.output_ensembles)
+        if as_set:
+            inp = set(inp)
+            out = set(out)
+        return inp, out
 
     @property
     def ensemble_signature(self):
@@ -986,9 +1055,9 @@ class ReplicaExchangeMover(SampleMover):
     def _get_out_ensembles(self):
         return [self.ensemble1, self.ensemble2]
 
-    def _ensemble_matrix(self):
+    def _generate_in_out(self):
         return InOutSet([
-            InOutMatrix([
+            InOut([
                 ((self.ensemble1, self.ensemble2), 1),
                 ((self.ensemble2, self.ensemble1), 1)
             ])
@@ -1072,9 +1141,9 @@ class StateSwapMover(SampleMover):
     def _get_out_ensembles(self):
         return [self.ensemble1, self.ensemble2]
 
-    def _ensemble_matrix(self):
+    def _generate_in_out(self):
         return InOutSet([
-            InOutMatrix([
+            InOut([
                 ((self.ensemble1, self.ensemble2), 1),
                 ((self.ensemble2, self.ensemble1), 1)
             ])
@@ -1435,8 +1504,8 @@ class SelectionMover(PathMover):
                 break
         return sub_change
 
-    def _ensemble_matrix(self):
-        return InOutSet(set.union(*[sub.in_out_matrix for sub in self.submovers]))
+    def _generate_in_out(self):
+        return InOutSet(set.union(*[sub.in_out for sub in self.submovers]))
 
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
@@ -1644,12 +1713,20 @@ class ConditionalMover(PathMover):
         initialization_logging(init_log, self,
                                ['if_mover', 'then_mover', 'else_mover'])
 
-    def _ensemble_matrix(self):
+    def _generate_in_out(self):
         return InOutSet({
-            self.if_mover.in_out_matrix + self.then_mover.in_out_matrix
+                            self.if_mover.in_out + self.then_mover.in_out
         } | {
-            self.if_mover.in_out_matrix + self.else_mover.in_out_matrix
+                            self.if_mover.in_out + self.else_mover.in_out
         })
+
+    def sub_replica_state(self, replica_states):
+        if_replica_states = self.if_mover.in_out.move(replica_states)
+        return [
+            if_replica_states,
+            self.then_mover.in_out.move(if_replica_states),
+            self.else_mover.in_out.move(if_replica_states),
+        ]
 
     @property
     def submovers(self):
@@ -1717,8 +1794,17 @@ class SequentialMover(PathMover):
                 break
         return sub_change
 
-    def _ensemble_matrix(self):
-        return InOutSet(sum([sub.in_out_matrix for sub in self.submovers], InOutSet()))
+    def _generate_in_out(self):
+        return InOutSet(sum([sub.in_out for sub in self.submovers], InOutSet()))
+
+    def sub_replica_state(self, replica_states):
+        ret = list()
+        ret.append(replica_states)
+        for sub in self.submovers[:-1]:
+            replica_states = sub.in_out.move(replica_states)
+            ret.append(replica_states)
+
+        return ret
 
     def _get_in_ensembles(self):
         return [ sub.input_ensembles for sub in self.submovers ]
@@ -1756,7 +1842,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     accepted shooting move should be accepted.
     """
 
-    def _ensemble_matrix(self):
+    def _generate_in_out(self):
         # This can get VERY big, not sure if we should really do that!
         return InOutSet(set.union(*[
             set(map(sum(self.submovers[1:length], InOutSet())))
@@ -1902,8 +1988,11 @@ class SubPathMover(PathMover):
     def _get_out_ensembles(self):
         return self.mover.output_ensembles
 
-    def _ensemble_matrix(self):
-        return self.mover.in_out_matrix
+    def _generate_in_out(self):
+        return self.mover.in_out
+
+    def sub_replica_state(self, replica_states):
+        return [replica_states]
 
     def move(self, globalstate):
         subchange = self.mover.move(globalstate)
@@ -1957,8 +2046,11 @@ class EnsembleFilterMover(SubPathMover):
     def _get_out_ensembles(self):
         return self.ensembles
 
-    def _ensemble_matrix(self):
-        return self.mover.in_out_matrix.filter(self.ensembles)
+    def _generate_in_out(self):
+        return self.mover.in_out.filter(self.ensembles)
+
+    def sub_replica_state(self, replica_states):
+        return [{rs.filter(self.ensembles) for rs in replica_states}]
 
 
 class OneWayShootingMover(RandomChoiceMover):
@@ -2122,6 +2214,14 @@ class MinusMover(SubPathMover):
                 ]),
             ensembles=[minus_ensemble] + innermost_ensembles
         )
+
+        # for testing what happens without the filter
+        mover = \
+            ConditionalSequentialMover([
+                sub_trajectory_selector,
+                repex_chooser,
+                extension_mover
+            ])
 
         self.minus_ensemble = minus_ensemble
         self.innermost_ensembles = innermost_ensembles
