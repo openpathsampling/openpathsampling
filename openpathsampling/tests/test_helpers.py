@@ -8,30 +8,34 @@ a duck.
 import os
 from functools import wraps
 
-from pkg_resources import resource_filename
-from nose.tools import assert_items_equal, assert_equal, assert_in
 import numpy as np
 import numpy.testing as npt
 import simtk.unit as u
+from nose.tools import assert_items_equal, assert_equal, assert_in
+from pkg_resources import resource_filename
 
-from openpathsampling.trajectory import Trajectory
-from openpathsampling.snapshot import Snapshot
-from openpathsampling.dynamics_engine import DynamicsEngine
-from openpathsampling.topology import Topology
 import openpathsampling as paths
+import openpathsampling.engines.openmm as peng
+import openpathsampling.engines.toy as toys
+from openpathsampling.engines import Topology
 
+from openpathsampling.engines import DynamicsEngine
 
 def make_1d_traj(coordinates, velocities=None, topology=None):
     if velocities is None:
         velocities = [0.0]*len(coordinates)
+    if topology is None:
+        topology = toys.Topology(n_atoms=1, n_spatial=3, 
+                                 masses=[1.0, 1.0, 1.0], pes=None)
     traj = []
     for (pos, vel) in zip(coordinates, velocities):
-        snap = Snapshot(coordinates=np.array([[pos, 0, 0]]),
-                        velocities=np.array([[vel, 0, 0]]),
-                        topology=topology
-                        )
+        snap = toys.Snapshot(
+            coordinates=np.array([[pos, 0, 0]]),
+            velocities=np.array([[vel, 0, 0]]),
+            topology=topology
+        )
         traj.append(snap)
-    return Trajectory(traj)
+    return paths.Trajectory(traj)
 
 def items_equal(truth, beauty):
     assert_equal(len(truth), len(beauty))
@@ -75,7 +79,7 @@ class MoverWithSignature(paths.PathMover):
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
-        template = Snapshot(topology=topology)
+        template = toys.Snapshot(topology=topology)
 
         super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
                                                 template=template)
@@ -91,7 +95,7 @@ class CalvinistDynamics(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snap):
-        self._current_snap = snap.copy()
+        self._current_snap = snap
 
     def generate_next_frame(self):
         # find the frame in self.predestination that matches this frame
@@ -107,7 +111,7 @@ class CalvinistDynamics(DynamicsEngine):
             #print self.frame_index
 
         if self._current_snap.velocities[0][0] >= 0:
-            self._current_snap = self.predestination[self.frame_index+1].copy()
+            self._current_snap = self.predestination[self.frame_index+1]
             self.frame_index += 1
         else:
             self._current_snap = self.predestination[self.frame_index-1].reversed
@@ -182,15 +186,24 @@ def assert_close_unit(v1, v2, *args, **kwargs):
     else:
         npt.assert_allclose(v1, v2, *args, **kwargs)
 
-def compare_snapshot(snapshot1, snapshot2):
-    assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
+def compare_snapshot(snapshot1, snapshot2, check_reversed=False):
+    if hasattr(snapshot1, 'box_vectors') == hasattr(snapshot2, 'box_vectors'):
+        if hasattr(snapshot1, 'box_vectors'):
+            assert_close_unit(snapshot1.box_vectors, snapshot2.box_vectors, rtol=1e-7, atol=0)
+    else:
+        raise AttributeError('Snapshots disagree. Only one uses box_vectors')
+
     assert_close_unit(snapshot1.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
     assert_close_unit(snapshot1.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
 
-    assert_equal(snapshot1.potential_energy, snapshot2.potential_energy)
-    assert_equal(snapshot1.kinetic_energy, snapshot2.kinetic_energy)
+    if check_reversed:
+        compare_snapshot(snapshot1.reversed, snapshot2.reversed, False)
+        assert_close_unit(-1.0 * snapshot1.reversed.velocities, snapshot1.velocities, rtol=1e-7, atol=0)
+        assert_close_unit(-1.0 * snapshot2.reversed.velocities, snapshot2.velocities, rtol=1e-7, atol=0)
+        assert_close_unit(snapshot1.reversed.coordinates, snapshot1.coordinates, rtol=1e-7, atol=0)
+        assert_close_unit(snapshot2.reversed.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
 
-class RandomMDEngine(paths.DynamicsEngine):
+class RandomMDEngine(DynamicsEngine):
     _default_options = {}
 
     def __init__(self, template=None):
@@ -216,11 +229,9 @@ class RandomMDEngine(paths.DynamicsEngine):
             np.random.normal(0.0, 0.02, tmp.velocities.shape),
             tmp.velocities.unit)
 
-        return paths.Snapshot(coordinates = coordinates,
+        return peng.Snapshot.construct(coordinates = coordinates,
                         box_vectors = tmp.box_vectors,
-                        potential_energy = tmp.potential_energy,
                         velocities = velocities,
-                        kinetic_energy = tmp.kinetic_energy,
                         topology = self.topology
                        )
 

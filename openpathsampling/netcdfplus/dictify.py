@@ -7,6 +7,11 @@ from simtk import unit as units
 import yaml
 import abc
 
+import marshal
+import types
+import opcode
+import __builtin__
+
 from base import StorableObject
 
 __author__ = 'Jan-Hendrik Prinz'
@@ -129,11 +134,14 @@ class ObjectJSON(object):
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
                 return obj['_value'] * self.unit_from_dict(obj['_units'])
+
             elif '_slice' in obj:
                 return slice(*obj['_slice'])
+
             elif '_numpy' in obj:
                 return np.frombuffer(base64.decodestring(obj['_data']), dtype=np.dtype(obj['_dtype'])).reshape(
                     self.build(obj['_numpy']))
+
             elif '_cls' in obj and '_dict' in obj:
                 if obj['_cls'] not in self.class_list:
                     self.update_class_list()
@@ -145,8 +153,10 @@ class ObjectJSON(object):
 
                 attributes = self.build(obj['_dict'])
                 return self.class_list[obj['_cls']].from_dict(attributes)
+
             elif '_tuple' in obj:
                 return tuple([self.build(o) for o in obj['_tuple']])
+
             elif '_type' in obj:
                 # return a type of a built-in type that represents a type in netcdf
                 return self.type_names.get(obj['_type'])
@@ -156,6 +166,7 @@ class ObjectJSON(object):
                     self.build(key): self.build(o)
                     for key, o in self.build(obj['_dict'])
                     }
+
             elif '_import' in obj:
                 module = obj['_import']
                 if module.split('.')[0] in self.allowed_imports:
@@ -164,13 +175,18 @@ class ObjectJSON(object):
                 else:
                     return None
 
+            elif '_marshal' in obj or '_module' in obj:
+                return self.callable_from_dict(obj)
+
             else:
                 return {
                     key: self.build(o)
                     for key, o in obj.iteritems()
                     }
+
         elif type(obj) is list:
             return [self.build(o) for o in obj]
+
         else:
             return obj
 
@@ -205,6 +221,168 @@ class ObjectJSON(object):
             unit *= getattr(units, unit_name) ** unit_multiplication
 
         return unit
+
+    @staticmethod
+    def callable_to_dict(c):
+        """
+        Turn a callable function of class into a dictionary
+
+        Used for conversion to JSON
+
+        Parameters
+        ----------
+        c : callable (function or class with __call__)
+            the function to be turned into a dict representation
+
+        Returns
+        -------
+        dict
+            the dict representation of the callable
+        """
+        f_module = c.__module__
+        is_local = f_module == '__main__'
+        is_loaded = f_module.split('.')[0] == 'openpathsampling'
+        is_class = isinstance(c, (type, types.ClassType))
+        if not is_class:
+            if is_local or is_loaded:
+                # this is a local function, let's see if we can save it
+                if ObjectJSON.allow_marshal and callable(c):
+                    # use marshal
+                    global_vars = ObjectJSON._find_var(c, opcode.opmap['LOAD_GLOBAL'])
+                    import_vars = ObjectJSON._find_var(c, opcode.opmap['IMPORT_NAME'])
+
+                    builtins = dir(__builtin__)
+
+                    global_vars = list(set([
+                                               var for var in global_vars if var not in builtins
+                                               ]))
+
+                    import_vars = list(set(import_vars))
+
+                    if len(global_vars) > 0:
+                        err = 'The function you try to save relies on globally set variables' + \
+                              '\nand these cannot be saved since storage has no access to the' + \
+                              '\nglobal scope. This includes imports!'
+                        err += '\nWe require that the following globals: ' + str(global_vars) + ' either'
+                        err += '\n(1) be replaced by constants'
+                        err += '\n(2) be defined inside your function,' + \
+                               '\n' + '\n'.join(map(lambda x: '    ' + x + '= ...', global_vars))
+                        err += '\n(3) imports need to be "re"-imported inside your function' + \
+                               '\n' + '\n'.join(map(lambda x: '    import ' + x, global_vars))
+                        err += '\n(4) be passed as an external parameter (does not work for imports!), like in '
+                        err += '\n        my_cv = CV_Function("cv_name", ' + c.func_name + ', ' + \
+                               ', '.join(map(lambda x: x + '=' + x, global_vars)) + ')'
+                        err += '\n    and change your function definition like this'
+                        err += '\n        def ' + c.func_name + '(snapshot, ...,  ' + \
+                               ', '.join(global_vars) + '):'
+
+                        print err
+
+                        raise RuntimeError('Cannot store function! Dependency on global variables')
+
+                        # print [obj._idx for obj in global_vars if hasattr(obj, '_idx')]
+                        # print [obj for obj in global_vars]
+
+                    not_allowed_modules = [module for module in import_vars
+                                           if module not in ObjectJSON.allowed_imports]
+
+                    if len(not_allowed_modules) > 0:
+                        err = 'The function you try to save requires the following modules to ' + \
+                              '\nbe installed: ' + str(not_allowed_modules) + ' which are not marked as safe!'
+                        err += '\nYou can change the list of safe modules in "CV_function._allowed_modules"'
+                        err += '\nYou can also include the import startement in your function like'
+                        err += '\n' + '\n'.join(['import ' + v for v in not_allowed_modules])
+
+                        print err
+
+                        raise RuntimeError('Cannot store function! Not allowed modules used.')
+
+                    return {
+                        '_marshal': base64.b64encode(
+                            marshal.dumps(c.func_code)),
+                        '_global_vars': global_vars,
+                        '_module_vars': import_vars
+                    }
+
+        if not is_local:
+            # save the external class, e.g. msmbuilder featurizer
+            if f_module.split('.')[0] in ObjectJSON.allowed_imports:
+                # only store the function and the module
+                return {
+                    '_module': c.__module__,
+                    '_name': c.__name__
+                }
+
+        raise RuntimeError('Locally defined classes are not storable yet')
+
+    @staticmethod
+    def callable_from_dict(c_dict):
+        """
+        Turn a dictionary back in a callable function or class
+
+        Used for conversion from JSON
+
+        Parameters
+        ----------
+        c_dict : dict
+            the dictionary that contains the information
+
+        Returns
+        -------
+        callable
+            the reconstructed callable function or class
+
+        """
+        c = None
+
+        if c_dict is not None:
+            if '_marshal' in c_dict:
+                if ObjectJSON.allow_marshal:
+                    code = marshal.loads(base64.b64decode(c_dict['_marshal']))
+                    c = types.FunctionType(code, globals(), code.co_name)
+
+            elif '_module' in c_dict:
+                module = c_dict['_module']
+                packages = module.split('.')
+                if packages[0] in ObjectJSON.allowed_imports:
+                    imp = importlib.import_module(module)
+                    c = getattr(imp, c_dict['_name'])
+
+        return c
+
+    @staticmethod
+    def _find_var(code, op):
+        """
+        Helper function to search in python bytecode for a specific function call
+
+        Parameters
+        ----------
+        code : function
+            the python bytecode to be searched
+        op : int
+            the int code of the code to be found
+
+        Returns
+        -------
+        list of func_code.co_names
+            a list of co_names used in this function when calling op
+        """
+
+        #TODO: Clean this up. It now works only for codes that use co_names
+        opcodes = code.func_code.co_code
+        i = 0
+        ret = []
+        while i < len(opcodes):
+            int_code = ord(opcodes[i])
+            if int_code == op:
+                ret.append((i, ord(opcodes[i + 1]) + ord(opcodes[i + 2]) * 256))
+
+            if int_code < opcode.HAVE_ARGUMENT:
+                i += 1
+            else:
+                i += 3
+
+        return [code.func_code.co_names[i[1]] for i in ret]
 
     def to_json(self, obj, base_type=''):
         simplified = self.simplify(obj, base_type)
@@ -265,7 +443,7 @@ class StorableObjectJSON(ObjectJSON):
                     return self.storage
 
             if '_idx' in obj and '_obj' in obj:
-                store = self.storage._objects[obj['_obj']]
+                store = self.storage._stores[obj['_obj']]
                 result = store.load(obj['_idx'])
 
                 return result

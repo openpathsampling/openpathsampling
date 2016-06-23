@@ -1,18 +1,21 @@
-__author__ = 'Jan-Hendrik Prinz'
+"""
+author
+"""
 
 import logging
-
-logger = logging.getLogger(__name__)
-init_log = logging.getLogger('openpathsampling.initialization')
 
 from dictify import StorableObjectJSON
 from proxy import LoaderProxy
 
-from objects import ObjectStore
+from objects import NamedObjectStore, ObjectStore
 
 import numpy as np
 import netCDF4
 import os.path
+import abc
+
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('openpathsampling.initialization')
 
 
 # =============================================================================================
@@ -34,6 +37,7 @@ class NetCDFPlus(netCDF4.Dataset):
         'bool': np.int16,
         'str': str,
         'json': str,
+        'jsonobj': str,
         'numpy.float32': np.float32,
         'numpy.float64': np.float64,
         'numpy.int8': np.int8,
@@ -44,7 +48,9 @@ class NetCDFPlus(netCDF4.Dataset):
         'numpy.uint16': np.uint16,
         'numpy.uint32': np.uint32,
         'numpy.uint64': np.uint64,
-        'store': str
+        'store': str,
+        'obj': np.int32,
+        'lazyobj': np.int32
     }
 
     class ValueDelegate(object):
@@ -64,7 +70,7 @@ class NetCDFPlus(netCDF4.Dataset):
             the function applied to results from running the __getitem__ on the variable
         setter : function
             the function applied to the value to be stored using __setitem__ on the variable
-        store : openpathsampling.storage.ObjectStore
+        store : openpathsampling.netcdfplus.ObjectStore
             a reference to an object store used for convenience in some cases
 
         """
@@ -109,7 +115,7 @@ class NetCDFPlus(netCDF4.Dataset):
         ----------
         variable : dict-like
             the dict to be wrapped
-        store : openpathsampling.storage.ObjectStore
+        store : openpathsampling.netcdfplus.ObjectStore
             a reference to an object store used
 
         """
@@ -147,7 +153,33 @@ class NetCDFPlus(netCDF4.Dataset):
         allows to write `storage.objects['samples'][idx]` like we
         write `storage.variables['ensemble_json'][idx]`
         """
-        return self._objects
+        return self._stores
+
+    def find_store(self, obj):
+        """
+        Return the default store used for an storable object
+
+        Parameters
+        ----------
+        obj : :class:`openpathsampling.netcdfplus.StorableObject`
+            the storable object to be tested
+
+        Returns
+        -------
+        :class:`openpathsampling.netcdfplus.ObjectStore`
+            the store that is used by default to store the given storable obj
+        """
+
+        if type(obj) is type or type(obj) is abc.ABCMeta:
+            if obj not in self._obj_store:
+                raise ValueError('Objects of class "%s" are not storable in this store.' % obj.__name__)
+
+            return self._obj_store[obj]
+        else:
+            if obj.__class__ not in self._obj_store:
+                raise ValueError('Objects of class "%s" are not storable in this store.' % obj.__class__.__name__)
+
+            return self._obj_store[obj.__class__]
 
     def update_storable_classes(self):
         self.simplifier.update_class_list()
@@ -168,9 +200,10 @@ class NetCDFPlus(netCDF4.Dataset):
         ----------
         filename : string
             filename of the netcdf file to be used or created
-        mode : string, default: None
-            the mode of file creation, one of 'w' (write), 'a' (append) or 'r' (read-only)
-            None, which will append any existing files.
+        mode : str
+            the mode of file creation, one of 'w' (write), 'a' (append) or
+            'r' (read-only) None, which will append any existing files
+            (equal to append), is the default.
 
         Notes
         -----
@@ -208,9 +241,10 @@ class NetCDFPlus(netCDF4.Dataset):
 
             # add shared scalar dimension for everyone
             self.create_dimension('scalar', 1)
+            self.create_dimension('pair', 2)
 
             # create the store that holds stores
-            self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
+            self.register_store('stores', NamedObjectStore(ObjectStore))
             self.stores._init()
             self.stores.set_caching(True)
             self.update_delegates()
@@ -231,7 +265,7 @@ class NetCDFPlus(netCDF4.Dataset):
             logger.debug("Restore the dict of units from the storage")
 
             # open the store that contains all stores
-            self.register_store('stores', ObjectStore(ObjectStore, has_name=True))
+            self.register_store('stores', NamedObjectStore(ObjectStore))
             self.stores.set_caching(True)
             self.create_variable_delegate('stores_json')
             self.create_variable_delegate('stores_name')
@@ -264,14 +298,28 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.sync()
 
+
+    @property
+    def file_size(self):
+        return os.path.getsize(self.filename)
+
+    @property
+    def file_size_str(self):
+        current = float(self.file_size)
+        for prefix in ["k", "M", "G"]:
+            if current > 1024:
+                output_prefix = prefix
+                current /= 1024.0
+        return "{0:.2f}{1}B".format(current, prefix)
+
     def _setup_class(self):
         """
         Sets the basic properties for the storage
         """
+        self._stores = {}
         self._objects = {}
-        self._storages = {}
-        self._storages_base_cls = {}
         self._obj_store = {}
+        self._storages_base_cls = {}
         self.simplifier = StorableObjectJSON(self)
         self.vars = dict()
         self.units = dict()
@@ -279,23 +327,40 @@ class NetCDFPlus(netCDF4.Dataset):
     def create_store(self, name, store):
         """
         Create a special variable type `obj.name` that can hold storable objects
+
+        Parameters
+        ----------
+        name : str
+            the name of the store inside this storage
+        store : :class:`openpathsampling.netcdf.ObjectStore`
+            the store to be added to this storage
+
         """
         self.register_store(name, store)
         store.name = name
         self.stores.save(store)
 
     def finalize_stores(self):
-        for store in self._storages.values():
+        """
+        Run initializations for all added stores.
+
+        This will make sure that all previously added stores are now useable. If you add more stores you need to
+        call this again. The reason this is done at all is that stores might reference each other and so no
+        unique order of creation can be found. Thus you first create stores with all their dependencies and then
+        finalize all of them together.
+        """
+        for store in self._stores.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
                 store._init()
 
-        for store in self._storages.values():
+        for store in self._stores.values():
             if not store._created:
                 logger.info("Initializing store '%s'" % store.name)
                 store._init()
 
         self.update_delegates()
+        self.simplifier.update_class_list()
 
     def register_store(self, name, store, register_attr=True):
         """
@@ -306,11 +371,13 @@ class NetCDFPlus(netCDF4.Dataset):
         Parameters
         ----------
         name : str
-            the name of the store under which the objects are accessible like `store.{name}`
-        store : openpathsampling.storages.ObjectStore
+            the name of the store under which the objects are accessible
+            like `store.{name}`
+        store : :class:`openpathsampling.storages.ObjectStore`
             instance of the object store
-        register_attr : bool, default: True
-            if set to false the store will not be accesible as an attribute
+        register_attr : bool
+            if set to false the store will not be accesible as an attribute.
+            `True` is the default.
         """
         store.register(self, name)
 
@@ -320,12 +387,13 @@ class NetCDFPlus(netCDF4.Dataset):
 
             setattr(self, store.prefix, store)
 
-        self._objects[name] = store
+        self._stores[name] = store
 
-        self._storages[store.content_class] = store
+        if store.content_class is not None:
+            self._objects[store.content_class] = store
 
-        self._obj_store[store.content_class] = store
-        self._obj_store.update({cls: store for cls in store.content_class.descendants()})
+            self._obj_store[store.content_class] = store
+            self._obj_store.update({cls: store for cls in store.content_class.descendants()})
 
     def _initialize(self):
         """
@@ -361,7 +429,7 @@ class NetCDFPlus(netCDF4.Dataset):
         Only runs when the storage is created.
         """
 
-        for storage in self._objects.values():
+        for storage in self._stores.values():
             storage._init()
 
         self.update_delegates()
@@ -375,7 +443,7 @@ class NetCDFPlus(netCDF4.Dataset):
         Only runs when an existing storage is opened.
         """
 
-        for storage in self._objects.values():
+        for storage in self._stores.values():
             storage._restore()
 
     def list_stores(self):
@@ -387,7 +455,7 @@ class NetCDFPlus(netCDF4.Dataset):
         list of str
             list of stores that can be accessed using `storage.[store]`
         """
-        return [store.prefix for store in self.objects.values()]
+        return [store.prefix for store in self._stores.values()]
 
     def list_storable_objects(self):
         """
@@ -395,13 +463,10 @@ class NetCDFPlus(netCDF4.Dataset):
 
         Returns
         -------
-        list of class
+        list of type
             list of base classes that can be stored using `storage.save(obj)`
         """
-        return [store.content_class for store in self.objects.values()]
-
-    def find_store(self, obj):
-        return self._obj_store.get(obj.__class__, None)
+        return [store.content_class for store in self.objects.values() if store.content_class is not None]
 
     def save(self, obj, idx=None):
         """
@@ -420,20 +485,21 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if type(obj) is list:
             # a list of objects will be stored one by one
-            [self.save(part, idx) for part in obj]
-            return
+            return [self.save(part, idx) for part in obj]
+
 
         elif type(obj) is tuple:
             # a tuple will store all parts
-            [self.save(part, idx) for part in obj]
-            return
+            return [self.save(part, idx) for part in obj]
+
 
         elif obj.__class__ in self._obj_store:
             # to store we just check if the base_class is present in the storages
             # also we assume that if a class has no base_cls
-            store = self._obj_store[obj.__class__]
-            store.save(obj, idx)
-            return
+            store = self.find_store(obj)
+            store_idx = self.stores.index[store]
+            return store, store_idx, store.save(obj, idx)
+
 
         # Could not save this object.
         raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
@@ -450,7 +516,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         Returns
         -------
-        object
+        :class:`openpathsampling.netcdfplus.StorableObject`
             the object loaded from the storage
 
         Notes
@@ -459,8 +525,8 @@ class NetCDFPlus(netCDF4.Dataset):
         `Ensemble` or `"Ensemble"` and not use the subclass
         """
 
-        if obj_type in self._storages:
-            store = self._storages[obj_type]
+        if obj_type in self._objects:
+            store = self._objects[obj_type]
             return store.load(idx)
         elif obj_type in self._obj_store:
             # check if a store for the base_cls exists and use this one
@@ -482,19 +548,19 @@ class NetCDFPlus(netCDF4.Dataset):
             The stored object from which the index is to be returned
         """
         if hasattr(obj, 'base_cls'):
-            store = self._storages[obj.base_cls]
+            store = self._objects[obj.base_cls]
             return store.idx(obj)
 
     def repr_json(self, obj):
         if hasattr(obj, 'base_cls'):
-            store = self._storages[obj.base_cls]
+            store = self._objects[obj.base_cls]
 
             if store.json:
                 return store.variables['json'][store.idx(obj)]
 
         return None
 
-    def clone_storage(self, storage_to_copy, new_storage):
+    def clone_store(self, store_to_copy, new_storage):
         """
         Clone a store from one storage to another. Mainly used as a helper
         for the cloning of a store
@@ -507,10 +573,10 @@ class NetCDFPlus(netCDF4.Dataset):
             the new Storage object
 
         """
-        if type(storage_to_copy) is str:
-            storage_name = storage_to_copy
+        if type(store_to_copy) is str:
+            storage_name = store_to_copy
         else:
-            storage_name = storage_to_copy.prefix
+            storage_name = store_to_copy.prefix
 
         copied_storages = 0
 
@@ -552,9 +618,9 @@ class NetCDFPlus(netCDF4.Dataset):
 
         Parameters
         ----------
-        name : str
+        dim_name : str
             the name for the new dimension
-        length : int
+        size : int
             the number of elements in this dimension. None (default) means
             an infinite dimension that extends when more objects are stored
 
@@ -670,6 +736,17 @@ class NetCDFPlus(netCDF4.Dataset):
         setter = None
         store = None
 
+        if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
+            store = getattr(self, var_type.split('.')[1])
+            base_type = store.content_class
+
+            get_is_iterable = lambda v: \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            set_is_iterable = lambda v: \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+
         if var_type == 'int':
             getter = lambda v: v.tolist()
             setter = lambda v: np.array(v)
@@ -693,37 +770,57 @@ class NetCDFPlus(netCDF4.Dataset):
         elif var_type.startswith('numpy.'):
             pass
 
-        elif var_type == 'json':
+        elif var_type == 'jsonobj':
             setter = lambda v: self.simplifier.to_json_object(v)
             getter = lambda v: self.simplifier.from_json(v)
 
+        elif var_type == 'json':
+            setter = lambda v: self.simplifier.to_json(v)
+            getter = lambda v: self.simplifier.from_json(v)
+
         elif var_type.startswith('obj.'):
-            store = getattr(self, var_type[4:])
-            base_type = store.content_class
-
-            iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
-
             getter = lambda v: \
                 [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else store.load(int(v))
+                    if get_is_iterable(v) else None if int(v) < 0 else store.load(int(v))
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if iterable(v) else -1 if v is None else store.save(v)
+                    if set_is_iterable(v) else -1 if v is None else store.save(v)
 
-        elif var_type.startswith('lazyobj.'):
-            store = getattr(self, var_type[8:])
-            base_type = store.content_class
+        elif var_type == 'obj':
+            # arbitrary object
 
-            iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+            set_iterable_simple = lambda v: \
+                False if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
             getter = lambda v: \
+                [None if int(w[1]) < 0 else self.stores[int(w[0])].load(int(w[1])) for w in v.tolist()] \
+                    if len(v.shape) > 1 else None if int(v[1]) < 0 else self.stores[int(v[0])].load(int(v[1]))
+
+            setter = lambda v: \
+                np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
+                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
+
+        elif var_type.startswith('lazyobj.'):
+            getter = lambda v: \
                 [None if int(w) < 0 else LoaderProxy(store, int(w)) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
+                    if get_is_iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if iterable(v) else -1 if v is None else store.save(v)
+                    if set_is_iterable(v) else -1 if v is None else store.save(v)
+
+        elif var_type == 'lazyobj':
+            # arbitrary object
+
+            set_iterable_simple = lambda v: \
+                False if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            getter = lambda v: \
+                [None if int(w[1]) < 0 else LoaderProxy(self.stores[int(w[0])],int(w[1])) for w in v.tolist()] \
+                    if len(v.shape) > 1 else None if int(v[1]) < 0 else LoaderProxy(self.stores[int(v[0])],int(v[1]))
+
+            setter = lambda v: \
+                np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
+                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
 
         elif var_type == 'store':
             setter = lambda v: v.prefix
@@ -796,28 +893,30 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Create a new variable in the netCDF storage.
 
-        This is just a helper function to structure the code better and add some convenience to
-        creating more complex variables
+        This is just a helper function to structure the code better and add
+        some convenience to creating more complex variables
 
         Parameters
         ==========
-        name : str
+        var_name : str
             The name of the variable to be created
         var_type : str
-            The string representing the type of the data stored in the variable.
-            Allowed are strings of native python types in which case the variables
-            will be treated as python or a string of the form 'numpy.type' which
-            will refer to the numpy data types. Numpy is preferred sinec the api
-            to netCDF uses numpy and thus it is faster. Possible input strings are
+            The string representing the type of the data stored in the
+            variable.  Allowed are strings of native python types in which
+            case the variables will be treated as python or a string of the
+            form 'numpy.type' which will refer to the numpy data types.
+            Numpy is preferred sinec the api to netCDF uses numpy and thus
+            it is faster. Possible input strings are
             `int`, `float`, `long`, `str`, `numpy.float32`, `numpy.float64`,
             `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64`, `json`,
             `obj.<store>`, `lazyobj.<store>`
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
-            If the last dimension is `'...'` then it is assumed that the objects are of
-            variable length. In netCDF this is usually referred to as a VLType.
-            We will treat is just as another dimension, but it can only be the last dimension.
+            If the last dimension is `'...'` then it is assumed that the
+            objects are of variable length. In netCDF this is usually
+            referred to as a VLType.  We will treat is just as another
+            dimension, but it can only be the last dimension.
         description : str
             A string describing the variable in a readable form.
         chunksizes : tuple of int
@@ -825,14 +924,15 @@ class NetCDFPlus(netCDF4.Dataset):
             block sizes a variable is stored. Usually for object related stuff
             we want to store everything of one object at once so this is often
             (1, ..., ...)
-        simtk_units : str
-            A string representing the units used for this variable. Can be used with
-            all var_types although it makes sense only for numeric ones.
+        simtk_unit : str
+            A string representing the units used for this variable. Can be
+            used with all var_types although it makes sense only for numeric
+            ones.
         maskable : bool, default: False
-            If set to `True` the values in this variable can only partially exist and if
-            they have not yet been written they are filled with a fill_value which is
-            treated as a non-set variable. The created variable will interprete this values
-            as `None` when returned
+            If set to `True` the values in this variable can only partially
+            exist and if they have not yet been written they are filled with
+            a fill_value which is treated as a non-set variable. The created
+            variable will interpret this values as `None` when returned
         """
 
         ncfile = self
@@ -855,6 +955,11 @@ class NetCDFPlus(netCDF4.Dataset):
         else:
             variable_length = False
 
+        if var_type == 'obj' or var_type == 'lazyobj':
+            dimensions.append('pair')
+            if chunksizes is not None:
+                chunksizes = tuple(list(chunksizes) + [2])
+
         nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
 
         for dim_name, size in new_dimensions.items():
@@ -866,7 +971,7 @@ class NetCDFPlus(netCDF4.Dataset):
         if chunksizes is not None:
             chunksizes = list(chunksizes)
             for ix, dim in enumerate(chunksizes):
-                if type == -1:
+                if dim == -1:
                     chunksizes[ix] = len(ncfile.dimensions[dimensions[ix]])
 
                 if type(dim) is str:
@@ -925,6 +1030,8 @@ class NetCDFPlus(netCDF4.Dataset):
             # Define long (human-readable) names for variables.
             setattr(ncvar, "long_str", description)
 
+        self.update_delegates()
+
         return ncvar
 
     def update_delegates(self):
@@ -936,3 +1043,99 @@ class NetCDFPlus(netCDF4.Dataset):
         for name in self.variables:
             if name not in self.vars:
                 self.create_variable_delegate(name)
+
+    @staticmethod
+    def get_value_parameters(value):
+        """
+        Compute netcdfplus compatible parameters to store a value
+
+        Parameters
+        ----------
+        value
+
+        Returns
+        -------
+        dict
+            A dictionary containing the approriate input parameters for
+            `var_type`, `dimensions`, `simtk_unit`
+
+        Notes
+        -----
+        This is a utility function to create a CV using a template
+
+        """
+
+        dimensions = None
+        storable = True
+        simtk_unit = None
+
+        test_value = value
+        test_type = value
+
+        if NetCDFPlus.support_simtk_unit:
+            import simtk.unit as u
+
+            if type(test_type) is u.Quantity:
+                # could be a Quantity([..])
+                simtk_unit = test_type.unit
+                test_type = test_type._value
+
+        if type(test_type) is np.ndarray:
+            dimensions = test_type.shape
+        else:
+            if hasattr(test_value, '__len__'):
+                dimensions = len(test_value)
+                test_type = test_value[0]
+                if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
+                    for val in test_value:
+                        if type(val._value) is not type(test_value._value):
+                            # all values must be of same type
+                            storable = False
+                else:
+                    for val in test_value:
+                        if type(val) is not type(test_value):
+                            # all values must be of same type
+                            storable = False
+
+            if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
+                # could also be [Quantity, ...]
+                simtk_unit = test_type.unit
+                test_type = test_type._value
+
+        if storable:
+            var_type = NetCDFPlus.identify_var_type(test_type)
+            return {
+                'var_type': var_type,
+                'dimensions': dimensions,
+                'simtk_unit': simtk_unit
+            }
+
+        return {
+        }
+
+    @staticmethod
+    def identify_var_type(instance):
+        """
+        Identify common python and numpy types
+
+        Parameters
+        ----------
+        instance
+            python variable instance to be tested for it numeric type
+
+        Returns
+        -------
+        str
+            a string representation of the variable type
+
+        """
+        ty = type(instance)
+
+        known_types = [float, int, bool, str]
+
+        if ty in known_types:
+            return ty.__name__
+        elif hasattr(instance, 'dtype'):
+            return 'numpy.' + instance.dtype.type.__name__
+        else:
+            return 'None'

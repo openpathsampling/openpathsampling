@@ -291,7 +291,10 @@ class SampleSet(StorableObject):
         The new replica ID is taken to be one greater than the highest
         previous replica ID.
         """
-        max_repID = max([s.replica for s in self.samples])
+        if len(self) == 0:
+            max_repID = -1
+        else:
+            max_repID = max([s.replica for s in self.samples])
         self.append(Sample(
             replica=max_repID + 1,
             trajectory=sample.trajectory,

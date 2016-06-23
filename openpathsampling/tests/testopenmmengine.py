@@ -1,30 +1,24 @@
-'''
+"""
 @author David W.H. Swenson
-'''
-import time
+"""
 
-from nose.tools import (assert_equal, assert_items_equal)
-from nose.plugins.skip import SkipTest
+import numpy as np
+import simtk.openmm as mm
+from nose.tools import (assert_equal)
+from simtk import unit as u
+from simtk.openmm import app
+
+import openpathsampling.engines.openmm as peng
 
 from test_helpers import (true_func, data_filename,
                           assert_equal_array_array,
                           assert_not_equal_array_array)
 
-from openpathsampling.openmm_engine import OpenMMEngine
-from openpathsampling import Configuration, Momentum, Snapshot
-
-import openpathsampling as paths
-
-import numpy as np
-
-import simtk.openmm as mm
-from simtk.openmm import app
-from simtk import unit as u
 
 def setUp():
     global topology, template, system
-    template = paths.tools.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
-    topology = paths.tools.to_openmm_topology(template)
+    template = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
+    topology = peng.to_openmm_topology(template)
 
     # Generated using OpenMM Script Builder
     # http://builder.openmm.org
@@ -40,13 +34,12 @@ def setUp():
         nonbondedMethod=app.PME,
         nonbondedCutoff=1.0*u.nanometers,
         constraints=app.HBonds,
-        rigidWater=True,
         ewaldErrorTolerance=0.0005
     )
 
+
 class testOpenMMEngine(object):
     def setUp(self):
-        t1 = time.time()
 
         # OpenMM Integrator
         integrator = mm.LangevinIntegrator(
@@ -56,19 +49,16 @@ class testOpenMMEngine(object):
         )
         integrator.setConstraintTolerance(0.00001)
 
-
         # Engine options
         options = {
-            'nsteps_per_frame': 10,
-            'platform': 'fastest',
-            'solute_indices' : range(22),
-            'n_frames_max' : 5,
-            'timestep': 2.0*u.femtoseconds
+            'nsteps_per_frame': 2,
+            'platform': 'CPU',
+            'solute_indices': range(22),
+            'n_frames_max': 5,
+            'timestep': 2.0 * u.femtoseconds
         }
 
-        t2 = time.time()
-
-        self.engine = OpenMMEngine(
+        self.engine = peng.Engine(
             template,
             system,
             integrator,
@@ -79,8 +69,6 @@ class testOpenMMEngine(object):
         zero_array = np.zeros((self.engine.n_atoms, 3))
         context.setPositions(self.engine.template.coordinates)
         context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
-
-        t3 = time.time()
 
     def teardown(self):
         pass
@@ -108,27 +96,32 @@ class testOpenMMEngine(object):
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])
 
-        self.engine.current_snapshot = Snapshot(
+        testbvecs = 5.0 * np.identity(3)
+
+        self.engine.current_snapshot = peng.Snapshot.construct(
             coordinates=np.array(testpos) * u.nanometers,
+            box_vectors=np.array(testbvecs) * u.nanometers,
             velocities=np.array(testvel) * u.nanometers / u.picoseconds
         )
         state = self.engine.simulation.context.getState(getPositions=True,
                                                         getVelocities=True)
         sim_coords = state.getPositions(asNumpy=True) / u.nanometers
+        sim_bvecs = state.getPeriodicBoxVectors(asNumpy=True) / u.nanometers
         sim_vels = state.getVelocities(asNumpy=True) / (u.nanometers/u.picoseconds)
 
         np.testing.assert_almost_equal(testpos, sim_coords, decimal=5)
+        np.testing.assert_almost_equal(testbvecs, sim_bvecs, decimal=5)
         np.testing.assert_almost_equal(testvel, sim_vels, decimal=5)
 
     def test_generate_next_frame(self):
-        snap0 = Snapshot(
-            configuration=self.engine.current_snapshot.configuration,
-            momentum=self.engine.current_snapshot.momentum
+        snap0 = peng.Snapshot(
+            statics=self.engine.current_snapshot.statics,
+            kinetics=self.engine.current_snapshot.kinetics
         )
         new_snap = self.engine.generate_next_frame()
         assert(new_snap is not snap0)
-        assert(new_snap.configuration is not snap0.configuration)
-        assert(new_snap.momentum is not snap0.momentum)
+        assert(new_snap.statics is not snap0.statics)
+        assert(new_snap.kinetics is not snap0.kinetics)
         old_pos = snap0.coordinates / u.nanometers
         new_pos = new_snap.coordinates / u.nanometers
         old_vel = snap0.velocities / (u.nanometers / u.picoseconds)
@@ -143,44 +136,4 @@ class testOpenMMEngine(object):
         assert_equal(len(traj), self.engine.n_frames_max)
 
     def test_snapshot_timestep(self):
-        assert_equal(self.engine.snapshot_timestep, 20 * u.femtoseconds)
-
-    def test_momentum_setter(self):
-        raise SkipTest()
-        testvel = []
-        for i in range(self.engine.n_atoms):
-            testvel.append([0.1*i, 0.1*i, 0.1*i])
-        self.engine.momentum = Momentum(velocities=testvel,
-                                        kinetic_energy=None)
-        np.testing.assert_almost_equal(self.engine.current_snapshot.velocities /
-                                       (u.nanometers / u.picoseconds), testvel, decimal=5)
-
-    def test_momentum_getter(self):
-        momentum = self.engine.momentum
-        state = self.engine.simulation.context.getState(getVelocities=True)
-        velocities = state.getVelocities(asNumpy=True)
-        assert_equal_array_array(
-            momentum.velocities / (u.nanometers / u.picoseconds),
-            velocities / (u.nanometers / u.picoseconds)
-        )
-
-    def test_configuration_setter(self):
-        raise SkipTest()
-        pdb_pos = self.engine.template.coordinates / u.nanometers
-        testpos = []
-        for i in range(len(pdb_pos)):
-            testpos.append(list(np.array(pdb_pos[i]) + 
-                                np.array([1.0, 1.0, 1.0]))
-                          )
-        self.engine.configuration = Configuration(coordinates=testpos)
-        np.testing.assert_almost_equal(self.engine.current_snapshot.coordinates /
-                                 u.nanometers, testpos, decimal=5)
-
-    def test_configuration_getter(self):
-        config = self.engine.configuration
-        state = self.engine.simulation.context.getState(getPositions=True)
-        positions = state.getPositions(asNumpy=True)
-        assert_equal_array_array(
-            config.coordinates / u.nanometers,
-            positions / u.nanometers
-        )
+        assert_equal(self.engine.snapshot_timestep, 4 * u.femtoseconds)

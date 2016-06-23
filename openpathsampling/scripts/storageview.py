@@ -87,8 +87,8 @@ if __name__ == '__main__':
 
     line("Number of trajectories", len(storage.trajectories))
     line("Number of snapshots", len(storage.snapshots))
-    line("Number of configurations", len(storage.configurations))
-    line("Number of momenta", len(storage.momenta))
+    line("Number of configurations", len(storage.statics))
+    line("Number of momenta", len(storage.kinetics))
 
     headline("Topology")
 
