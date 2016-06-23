@@ -56,7 +56,8 @@ class PathSimulator(StorableNamedObject):
     __metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
-    _excluded_attr = ['globalstate', 'step', 'save_frequency']
+    _excluded_attr = ['globalstate', 'step', 'save_frequency',
+                      'output_stream']
 
     def __init__(self, storage):
         super(PathSimulator, self).__init__()
@@ -68,8 +69,8 @@ class PathSimulator(StorableNamedObject):
             logger=init_log, obj=self,
             entries=['storage']#, 'engine']
         )
-
         self.globalstate = None
+        self.output_stream = sys.stdout  # user can change to file handler
 
     # TODO: Remove, is not used
     def set_replicas(self, samples):
@@ -252,7 +253,8 @@ class Bootstrapping(PathSimulator):
             paths.tools.refresh_output(
                 ("Working on Bootstrapping cycle step %d" +
                 " in ensemble %d/%d .\n") %
-                ( self.step, ens_num + 1, len(self.ensembles) )
+                ( self.step, ens_num + 1, len(self.ensembles) ),
+                output_stream=self.output_stream
             )
 
             movepath = bootstrapmove.move(self.globalstate)
@@ -309,10 +311,11 @@ class Bootstrapping(PathSimulator):
         self.sync_storage()
 
         paths.tools.refresh_output(
-                ("DONE! Completed Bootstrapping cycle step %d" +
-                " in ensemble %d/%d .\n") %
-                ( self.step, ens_num + 1, len(self.ensembles) )
-            )
+            ("DONE! Completed Bootstrapping cycle step %d" +
+            " in ensemble %d/%d.\n") %
+            ( self.step, ens_num + 1, len(self.ensembles) ),
+            output_stream=self.output_stream
+        )
 
 
 class FullBootstrapping(PathSimulator):
@@ -320,12 +323,32 @@ class FullBootstrapping(PathSimulator):
     Takes a snapshot as input; gives you back a sample set with trajectories
     for every ensemble in the transition.
 
-    Someday this will be combined with the regular bootstrapping code. 
+    This includes
+
+    Parameters
+    ----------
+    transition : :class:`.TISTransition`
+        the TIS transition to fill by bootstrapping
+    snapshot : :class:`.Snapshot`
+        the initial snapshot
+    storage : :class:`.Storage`
+        storage file to record the steps (optional)
+    engine : :class:`.DynamicsEngine`
+        MD engine to use for dynamics
+    extra_interfaces : list of :class:`.Volume`
+        additional interfaces to make into TIS ensembles (beyond those in
+        the transition)
+    forbidden_states : list of :class:`.Volume`
+        regions that are disallowed during the initial trajectory. Note that
+        these region *are* allowed during the interface sampling
+    initial_max_length : int
+        maximum length of the initial A->A trajectory
     """
     calc_name = "FullBootstrapping"
 
     def __init__(self, transition, snapshot, storage=None, engine=None,
-                 extra_interfaces=None, forbidden_states=None, initial_max_length=None):
+                 extra_interfaces=None, forbidden_states=None,
+                 initial_max_length=None):
         super(FullBootstrapping, self).__init__(storage)
         self.engine = engine
         paths.EngineMover.default_engine = engine  # set the default
@@ -353,12 +376,15 @@ class FullBootstrapping(PathSimulator):
         self.initial_max_length = initial_max_length
 
         if self.initial_max_length is not None:
-            self.first_traj_ensemble = paths.LengthEnsemble(slice(0, self.initial_max_length)) & self.first_traj_ensemble
+            self.first_traj_ensemble = (
+                paths.LengthEnsemble(slice(0, self.initial_max_length)) & 
+                self.first_traj_ensemble
+            )
 
-        self.extra_ensembles = [paths.TISEnsemble(transition.stateA,
-                                                  transition.stateB, iface,
-                                                  transition.orderparameter)
-                                for iface in extra_interfaces
+        self.extra_ensembles = [
+            paths.TISEnsemble(transition.stateA, transition.stateB, iface,
+                              transition.orderparameter)
+            for iface in extra_interfaces
         ]
 
         self.transition_shooters = [
@@ -381,19 +407,20 @@ class FullBootstrapping(PathSimulator):
         self.error_max_rounds = True
 
 
-    def run(self, max_ensemble_rounds=None, n_steps_per_round=20, build_attempts = 20):
+    def run(self, max_ensemble_rounds=None, n_steps_per_round=20,
+            build_attempts=20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
         while not has_AA_path:
             self.engine.current_snapshot = self.snapshot.copy()
             self.engine.snapshot = self.snapshot.copy()
-            print "Building first trajectory"
+            self.output_stream.write("Building first trajectory\n")
             sys.stdout.flush()
             first_traj = self.engine.generate(
                 self.engine.current_snapshot, 
                 [self.first_traj_ensemble.can_append]
             )
-            print "Selecting segment"
+            self.output_stream.write("Selecting segment\n")
             sys.stdout.flush()
             subtrajs = self.ensemble0.split(first_traj)
             if len(subtrajs) > 0:
@@ -407,14 +434,16 @@ class FullBootstrapping(PathSimulator):
                 raise RuntimeError('Too many attempts. Try another initial snapshot instead.')
 
             
-        print "Sampling " + str(self.n_ensembles) + " ensembles."
+        self.output_stream.write("Sampling " + str(self.n_ensembles) +
+                                 " ensembles.\n")
         bootstrap = paths.Bootstrapping(
             storage=self.storage,
             ensembles=self.all_ensembles,
             movers=self.transition_shooters + self.extra_shooters,
             trajectory=subtraj
         )
-        print "Beginning bootstrapping"
+        bootstrap.output_stream = self.output_stream
+        self.output_stream.write("Beginning bootstrapping\n")
         n_rounds = 0
         n_filled = len(bootstrap.globalstate)
         while n_filled < self.n_ensembles:
@@ -431,9 +460,9 @@ class FullBootstrapping(PathSimulator):
                        + " round of " + str(n_steps_per_round) + " steps.")
                 if self.error_max_rounds:
                     raise RuntimeError(msg)
-                else:
+                else: # pragma: no cover
                     logger.warning(msg)
-                break
+                    break
             n_filled = len(bootstrap.globalstate)
 
         return bootstrap.globalstate

@@ -33,7 +33,7 @@ conda list -e
 # Install pandoc for markdown support
 sudo apt-get install pandoc
 
-(cd docs && make html && cd -)
+(cd docs && python premake.py && make html && cd -)
 ls -lt docs/_build
 pwd
 echo travis_fold:end:build.docs
