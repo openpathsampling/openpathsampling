@@ -5,6 +5,7 @@
 import functools
 
 import weakref
+import types
 
 # =============================================================================
 # Loader Proxy
@@ -14,7 +15,7 @@ class LoaderProxy(object):
     """
     A proxy that loads an underlying object if attributes are accessed
     """
-    __slots__ = ['_subject', '_idx', '_store', '__weakref__']
+    __slots__ = ['_subject', '_idx', '_store', '__weakref__', '_load_store', '_load_idx']
 
     def __init__(self, store, idx):
         self._idx = idx
@@ -39,7 +40,7 @@ class LoaderProxy(object):
     def __eq__(self, other):
         if self is other:
             return True
-        elif type(other) is LoaderProxy:
+        elif hasattr(other, '_idx'):
             if self._idx == other._idx and self._store is other._store:
                 return True
         elif self.__subject__ is other:
@@ -59,6 +60,24 @@ class LoaderProxy(object):
         Call the loader and get the referenced object
         """
         return self._store[self._idx]
+
+class ReferringLoaderProxy(LoaderProxy):
+    """
+    A proxy that loads an underlying object if attributes are accessed
+    """
+
+    def __init__(self, store, idx, load_store, load_idx):
+        self._idx = idx
+        self._store = store
+        self._subject = None
+        self._load_idx = load_idx
+        self._load_store = load_store
+
+    def _load_(self):
+        """
+        Call the loader and get the referenced object
+        """
+        return self._load_store[self._load_idx]
 
 
 class DelayedLoader(object):
@@ -133,6 +152,12 @@ def lazy_loading_attributes(*attributes):
             _super_init(self, *args, **kwargs)
 
         cls.__init__ = _init
+
+        def _proxy(self, attr):
+            return self._lazy[getattr(self.__class__, attr)]
+
+        cls._proxy = _proxy
+
         return cls
 
     return _decorator

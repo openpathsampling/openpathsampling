@@ -388,12 +388,12 @@ class NetCDFPlus(netCDF4.Dataset):
             setattr(self, store.prefix, store)
 
         self._stores[name] = store
+		self.assign_primary_store(store, store.content_class)
 
-        if store.content_class is not None:
-            self._objects[store.content_class] = store
-
-            self._obj_store[store.content_class] = store
-            self._obj_store.update({cls: store for cls in store.content_class.descendants()})
+    def assign_primary_store(self, store, cls):
+        self._objects[cls] = store
+        self._obj_store[cls] = store
+        self._obj_store.update({c: store for c in cls.descendants()})
 
     def _initialize(self):
         """
@@ -498,6 +498,7 @@ class NetCDFPlus(netCDF4.Dataset):
             # also we assume that if a class has no base_cls
             store = self.find_store(obj)
             store_idx = self.stores.index[store]
+
             return store, store_idx, store.save(obj, idx)
 
 
@@ -745,7 +746,6 @@ class NetCDFPlus(netCDF4.Dataset):
 
             set_is_iterable = lambda v: \
                 not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
-
 
         if var_type == 'int':
             getter = lambda v: v.tolist()

@@ -220,3 +220,130 @@ class FeatureSnapshotStore(BaseSnapshotStore):
         for feature in self.classes:
             if hasattr(feature, 'netcdfplus_init'):
                 feature.netcdfplus_init(self)
+
+
+class ExternalMDConfigurationStore(ObjectStore):
+
+    def __init__(self):
+        super(ExternalMDConfigurationStore, self).__init__(ExternalMDConfiguration, json=False)
+
+    def _save(self, mdframe, idx):
+        self.write('mdfile', idx, mdframe)
+        self.vars['frame'][idx] = mdframe.frame
+
+    def _load(self, idx):
+        mdfile = self.vars['mdfile'][idx]
+        frame = self.vars['frame'][idx]
+
+        return ExternalMDConfiguration(mdfile, frame, self.storage.topology)
+
+    def _init(self):
+        super(ExternalMDConfigurationStore, self)._init()
+
+        self.init_variable('mdfile', 'lazyobj.mdfiles',
+                           chunksizes=(1, ),
+                           )
+
+        self.init_variable('frame', 'int',
+                           chunksizes=(1, ),
+                           )
+
+class ExternalMDFile(ExternalFile):
+    """A Reference to an external file
+    """
+
+    def __init__(self, url):
+        super(ExternalMDFile, self).__init__(url)
+        self._mdfile = None
+
+    @property
+    def file(self):
+        if self._mdfile is None:
+            self._mdfile = md.load(self.url)
+
+        return self._mdfile
+
+@lazy_loading_attributes('mdfile')
+class ExternalMDConfiguration(StorableObject):
+    """A Reference to an external file
+    """
+
+    def __init__(self, mdfile, frame, topology=None):
+        super(ExternalMDConfiguration, self).__init__()
+        self.mdfile = mdfile
+        self.frame = frame
+        self.topology = topology
+
+    @property
+    def configuration(self):
+        mdtrajectory = self.mdfile.file
+
+        coord = u.Quantity(mdtrajectory.xyz[self.frame], u.nanometers)
+        if mdtrajectory.unitcell_vectors is not None:
+            box_v = u.Quantity(mdtrajectory.unitcell_vectors[self.frame],
+                               u.nanometers)
+        else:
+            box_v = None
+
+        configuration = Configuration(
+            coordinates=coord,
+            box_vectors=box_v,
+            potential_energy=u.Quantity(0.0, u.kilojoule_per_mole),
+            topology=self.topology
+        )
+
+        return configuration
+
+class MultiConfigurationStore(ObjectStore):
+    """
+    A store that represents Configurations from multiple sources
+    """
+
+    def __init__(self):
+        super(MultiConfigurationStore, self).__init__(Configuration, json=False)
+
+    def _load(self, idx):
+        # try loading from internal first
+        configuration = self.vars['intconf'][idx]
+
+        if configuration is None:
+            # try external
+            configuration = self.vars['extconf'][idx].configuration
+
+        return configuration
+
+    def persist(self, idx):
+        int_idx = self.variables['intconf'][idx]
+        ext_idx = self.variables['extconf'][idx]
+        if int_idx == -1 and ext_idx >= 0:
+            self.vars['intconf'][idx] = self.vars['extconf'][idx].configuration
+
+    def _save(self, obj, idx):
+        # saving is only done internal
+        # this function is never called by proxies
+
+        self.vars['intconf'][idx] = obj
+        self.vars['extconf'][idx] = None
+
+    def save_as_external(self, mdfile, frame):
+        obj = ExternalMDConfiguration(mdfile, frame)
+        idx = len(self)
+        self.vars['intconf'][idx] = None
+        self.vars['extconf'][idx] = obj
+
+        return idx
+
+    def _init(self):
+        """
+        Initializes the associated storage to index configuration_indices in it
+        """
+        super(MultiConfigurationStore, self)._init()
+
+        self.init_variable('intconf', 'obj.intconf',
+                           description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
+                           chunksizes=(1,)
+                           )
+
+        self.init_variable('extconf', 'obj.extconf',
+                           chunksizes=(1,)
+                           )

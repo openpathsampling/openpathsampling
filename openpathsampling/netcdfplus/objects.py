@@ -289,18 +289,26 @@ class ObjectStore(StorableNamedObject):
 
         return ObjectIterator()
 
-    def write(self, variable, idx, obj, attribute=None):
-        if attribute is None:
-            attribute = variable
+    def write(self, variable, idx, obj, to_lazy=True):
+        # this attribute uses a lazy decorator to check if we want to store a proxy
+
+        if hasattr(obj, '_lazy') and hasattr(obj.__class__, variable):
+            val = obj._proxy(variable)
+            if hasattr(val, '_idx'):
+                # is a proxy so saving is simple
+                assert(self.vars[variable].store is val._store)
+                self.variables[variable][int(idx)] = val._idx
+                # that's it
+                return
+        else:
+            val = getattr(obj, variable)
 
         var = self.vars[variable]
-        val = getattr(obj, attribute)
-
         var[int(idx)] = val
 
-        if var.var_type.startswith('lazy'):
+        if to_lazy and var.var_type.startswith('lazy'):
             proxy = var.store.proxy(val)
-            setattr(obj, attribute, proxy)
+            setattr(obj, variable, proxy)
 
     def proxy(self, item):
         """
