@@ -26,7 +26,7 @@ class Storage(NetCDFPlus):
 
     @property
     def _ops_version_(self):
-        return paths.version.version
+        return paths.version.short_version
 
     USE_FEATURE_SNAPSHOTS = True
 
