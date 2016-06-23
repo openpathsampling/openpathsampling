@@ -468,10 +468,28 @@ class MoveTreeBuilder(Builder):
 
     @staticmethod
     def from_scheme(scheme):
+        """
+        Initaliza a new `MoveTreeBuilder` from the date in a `MoveScheme`
+
+        Parameters
+        ----------
+        scheme : :obj:`openpathsampling.MoveScheme`
+
+        Returns
+        -------
+        :obj:`MoveTreeBuilder`
+        """
+        try:
+            # inp is a move scheme
+            input_ensembles = scheme.list_initial_ensembles()
+        except AttributeError:
+            # inp is a path mover
+            input_ensembles = scheme.input_ensembles
+
         return MoveTreeBuilder(
             pathmover=scheme.root_mover,
             ensembles=list(scheme.find_used_ensembles()) + list(scheme.find_hidden_ensembles()),
-            initial=scheme.list_initial_ensembles()
+            initial=input_ensembles
         )
 
     @staticmethod
