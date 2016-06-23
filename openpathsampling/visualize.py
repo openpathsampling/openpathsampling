@@ -1405,7 +1405,7 @@ class SampleList(OrderedDict):
 
     """
 
-    def __init__(self, samples, time_symmetric=None, flip_time_direction=None):
+    def __init__(self, samples, time_symmetric=None, flip_time_direction=None, trace_missing=None):
         OrderedDict.__init__(self)
 
         if time_symmetric is None:
@@ -1417,6 +1417,11 @@ class SampleList(OrderedDict):
             self._flip_time_direction = False
         else:
             self._flip_time_direction = flip_time_direction
+
+        if flip_time_direction is None:
+            self._trace_missing = False
+        else:
+            self._trace_missing = trace_missing
 
         self._matrix = []
 
@@ -1590,6 +1595,15 @@ class SampleList(OrderedDict):
         self._flip_time_direction = value
         self.analyze()
 
+    @property
+    def trace_missing(self):
+        return self._trace_missing
+
+    @trace_missing.setter
+    def trace_missing(self, value):
+        self._trace_missing = value
+        self.analyze()
+
     def __getitem__(self, item):
         if type(item) is slice:
             return SampleList(self.keys()[item])
@@ -1671,6 +1685,7 @@ class SampleList(OrderedDict):
         matrix = SnapshotMatrix(self)
         flip_time_direction = self.flip_time_direction
         parent = None
+        time_direction = +1
 
         for y_pos, sample in enumerate(self):
             traj = sample.trajectory
@@ -1704,10 +1719,46 @@ class SampleList(OrderedDict):
 
             if overlap is None or len(overlap) == 0:
                 # no overlap so we need to start new
-                traj_shift = 0
+                if not self.trace_missing:
+                    traj_shift = 0
+                elif parent is not None:
+                    # if a parent is present but no overlap we could trace the missing chain
+                    # and use this shift. This is "expensive" so by default it is switched off
+
+                    current = paths.Sample(
+                        replica=sample.replica,
+                        trajectory=traj,
+                        ensemble=sample.ensemble,
+                        bias=sample.bias,
+                        details=sample.details,
+                        parent=sample.parent,
+                        mover=sample.mover
+                    )
+
+                    parent_list = [current]
+                    while current is not parent and current is not None:
+                        current = current.parent
+                        parent_list.append(current)
+
+                    if current is None:
+                        # cannot trace to actual parent. That should not be possible since previously
+                        # we found a parent. So just to make sure
+                        traj_shift = 0
+                    else:
+                        missing_sl = SampleList(
+                            reversed(parent_list),
+                            time_symmetric=self.time_symmetric,
+                            flip_time_direction=self.flip_time_direction,
+                            trace_missing=False
+                        )
+
+                        traj_shift = parent_shift + missing_sl[missing_sl.last]['shift']
+
+                else:
+                    traj_shift = 0
 
                 self[sample] = {
-                    'shift': 0,
+                    'shift': traj_shift,
                     'new': True,
                     'time_direction': time_direction,
                     'correlation': 0.0,
