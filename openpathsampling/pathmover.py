@@ -1015,6 +1015,11 @@ class EngineMover(SampleMover):
         self.target_ensemble = target_ensemble
         self._engine = engine
 
+    def to_dict(self):
+        dct = super(EngineMover, self).to_dict()
+        dct['engine'] = self.engine
+        return dct
+
     @property
     def engine(self):
         if self._engine is not None:
