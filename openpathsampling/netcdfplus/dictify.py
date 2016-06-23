@@ -240,6 +240,7 @@ class ObjectJSON(object):
             the dict representation of the callable
         """
         f_module = c.__module__
+        # TODO: Fix that
         is_local = f_module == '__main__'
         is_loaded = f_module.split('.')[0] == 'openpathsampling'
         is_class = isinstance(c, (type, types.ClassType))
