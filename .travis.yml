@@ -23,7 +23,7 @@ script:
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
 
-  # Push to binstar anyway.
+  # Upload new docs
   - bash -x devtools/ci/after_sucess.sh
 
 addons:
@@ -33,11 +33,9 @@ addons:
 
 env:
   matrix:
-# - python=2.6  CONDA_PY=26  CONDA_NPY=16
-# is 110 the correct numpy label? doesn't seem to cause problems....
     - python=2.7  CONDA_PY=27  CONDA_NPY=110
-# - python=3.3  CONDA_PY=33  CONDA_NPY=17
-# - python=3.4  CONDA_PY=34  CONDA_NPY=18
+# - python=3.4  CONDA_PY=34  CONDA_NPY=110
+# - python=3.5  CONDA_PY=35  CONDA_NPY=110
 
   global:
     # encrypted BINSTAR_TOKEN for push of dev package to binstar

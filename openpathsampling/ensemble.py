@@ -63,6 +63,32 @@ class EnsembleCache(object):
 
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
+
+        The trajectory is considered trustworthy based on checking several
+        factors, compared to the last time the cache was checked. For
+        forward caches (direction > 0), these are
+        * the first frame has not changed
+        * the length is the same, or has changed by 1
+        * if length unchanged, the final frame is the same; if length
+          changed by 1, the penultimate frame is the old final frame
+        Similar rules apply for backward caches (direction < 0), with
+        obvious changes of "final" and "first" frames.
+
+        If the trajectory is not trustworthy, we return True (should be
+        reset).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            the trajectory to test
+        reset : bool or None
+            force a value for reset. If None, the value is determined based
+            on the test criteria.
+
+        Returns
+        -------
+        bool :
+            the value of reset
         """
         logger.debug("Checking cache....")
         #logger.debug("traj " + str([id(s) for s in trajectory]))
@@ -77,7 +103,10 @@ class EnsembleCache(object):
                     if trajectory.get_as_proxy(0) != self.start_frame:
                         reset = True
                     else:
-                        if lentraj == self.last_length:
+                        if lentraj == 1:
+                            # makes no difference here; always reset
+                            reset = True
+                        elif lentraj == self.last_length:
                             reset = (trajectory.get_as_proxy(-1) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
                             reset = (trajectory.get_as_proxy(-2) != self.prev_last_frame)
@@ -87,7 +116,9 @@ class EnsembleCache(object):
                     if trajectory.get_as_proxy(-1) != self.start_frame:
                         reset = True
                     else:
-                        if lentraj == self.last_length:
+                        if lentraj == 1:
+                            reset = True
+                        elif lentraj == self.last_length:
                             reset = (trajectory.get_as_proxy(0) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
                             reset = (trajectory.get_as_proxy(1) != self.prev_last_frame)
@@ -171,8 +202,15 @@ class Ensemble(StorableNamedObject):
 
         Parameters
         ----------
+        trajectory: :class:`.Trajectory`
+            The trajectory to be checked
         trusted : boolean
-            If trusted is not None it overrides the default setting in the ensemble
+            For many ensembles, a faster algorithm can be used if we know
+            some information about the trajectory with one fewer frames.
+            The `trusted` flag tells the ensemble to use such an algorithm.
+            This is usually used in combination with an
+            :class:`.EnsembleCache` which makes short-cut calculations
+            possible.
         '''
         return False
 
@@ -210,7 +248,7 @@ class Ensemble(StorableNamedObject):
         return None
     
     def can_append(self, trajectory, trusted=False):
-        '''
+        """
         Returns true, if the trajectory so far can still be in the ensemble
         if it is appended by a frame. To check, it assumes that the
         trajectory to length L-1 is okay. This is mainly for interactive
@@ -220,27 +258,21 @@ class Ensemble(StorableNamedObject):
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
+        trusted : bool
+            If trusted=True, some ensembles can be computed more efficiently
+            (e.g., by checking only one frame)
         
         Returns
         -------
-        can_append : bool
+        bool
             Returns true or false if using a forward step (extending the
             trajectory forward in time at its end) `trajectory` could  still
             be in the ensemble and thus makes sense to continue a simulation
-        
-
-        Notes
-        -----
-        This is only tricky for this that depend on the history like
-        PartInXEnsemble or PartOutXEnsembles. In theory these can only be
-        checked if the full range of frames has been generated. This could
-        be triggered, when the last frame is reached.  This is even more
-        difficult if this depends on the length.
-        '''
+        """
         return True        
 
     def can_prepend(self, trajectory, trusted=False):
-        '''
+        """
         Returns true, if the trajectory so far can still be in the ensemble
         if it is prepended by a frame. To check, it assumes that the
         trajectory from index 1 is okay. This is mainly for interactive
@@ -250,30 +282,68 @@ class Ensemble(StorableNamedObject):
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
+        trusted : bool
+            If trusted=True, some ensembles can be computed more efficiently
+            (e.g., by checking only one frame)
         
         Returns
         -------
-        can_prepend : bool
+        bool
             Returns true or false if using a backward step (extending the
             trajectory backwards in time at its beginning) `trajectory`
             could  still be in the ensemble and thus makes sense to continue
             a simulation
-        
-        Notes
-        
-        This is only tricky for this that depend on the history like
-        PartInXEnsemble or PartOutXEnsembles. In theory these can only be checked
-        if the full range of frames has been generated. This could be
-        triggered, when the last frame is reached.  This is even more
-        difficult if this depends on the length.
-        '''
+        """
         return True        
 
+    def strict_can_append(self, trajectory, trusted=False):
+        """
+        Returns true if the trajectory can be the beginning of a trajectory
+        in the ensemble.
 
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to test
 
-    def find_valid_slices(self, trajectory, lazy=True, 
-                          max_length=None, min_length=1, overlap=1):
-        '''
+        Returns
+        -------
+        bool
+            True if and only if the given trajectory can be the beginning of
+            a trajectory in the ensemble.
+        """
+        # default behavior is to be the same as can_append
+        return self.can_append(trajectory, trusted)
+
+    def strict_can_prepend(self, trajectory, trusted=False):
+        """
+        Returns true if the trajectory can be the end of a trajectory in the
+        ensemble.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            trajectory to test
+
+        Returns
+        -------
+        bool
+            True if and only if the given trajectory can be the end of a
+            trajectory in the ensemble.
+        """
+        # default behavior is to be the same as can_prepend
+        return self.can_prepend(trajectory, trusted)
+
+    def find_valid_slices(
+            self,
+            trajectory,
+            max_length=None,
+            min_length=1,
+            overlap=1,
+            reverse=False,
+            n_results=0
+    ):
+        """
         Return slices (subtrajectories) matching the given ensemble.
 
         Parameters
@@ -294,13 +364,19 @@ class Ensemble(StorableNamedObject):
             determines the allowed overlap of all trajectories to be found.
             A value of x means that two sub-trajectorie can share up to x
             frames at the beginning and x frames at the end.  Default is 1
+        reverse : bool
+            if `True` this will start searching from the end of the trajectory.
+            Otherwise (default) it will start at the beginning.
+        n_results : int
+            if `0` this will return all results. If the integer is larger than
+            zero it will stop after the given number of slices has been found
 
         Returns
         -------
         list of slices
             Returns a list of index-slices for sub-trajectories in
             trajectory that are in the ensemble.
-        '''
+        """
         ensemble_list = []
 
         length = len(trajectory)
@@ -312,49 +388,31 @@ class Ensemble(StorableNamedObject):
         min_length = max(1, min_length)
 
         logger.debug("Looking for subtrajectories in " + str(trajectory))
+        old_tt_len = 0
 
-        if not lazy:
-            # this tries all possible sub-trajectories starting with the
-            # longest ones and uses recursion
-            for l in range(max_length,min_length - 1,-1):
-                for start in range(0,length-l+1):
-                    tt = trajectory[start:start+l]
-#                    print start, start+l
-                    # test using lazy=False
-                    if self(tt, lazy=False):
-                        list_left = []
-                        list_right = []
-                        if l > min_length:
-                            pad = min(overlap, l - 1)
-                            tt_left = trajectory[0:start + pad]
-                            list_left = self.find_valid_slices(tt_left, 
-                                                               max_length=l)
-
-                            tt_right = trajectory[start + l - pad:length]
-                            list_right = self.find_valid_slices(tt_right, 
-                                                                max_length=l)
-
-#                        ensemble_list = list_left + [tt] + list_right
-                        ensemble_list = list_left + [slice(start,start+l)] + list_right
-
-                        # no need to look further inside the iterations caught everything!
-                        break
-                else:
-                    continue
-                break
-
-            return ensemble_list
-        else:
+        if not reverse:
             start = 0
-            end = min_length
+            end = start + min_length
 
             while start <= length - min_length and end <= length:
+                # print start, end
                 tt = trajectory[start:end]
-                if self.can_append(tt) and end < length:
-                    end += 1
+
+                can_append_tt = False
+                if len(tt) != old_tt_len + 1:
+                    can_append_tt = self.strict_can_append(tt)
                 else:
-                    if self(tt, trusted=False):
-                        ensemble_list.append(slice(start,end))
+                    can_append_tt = self.strict_can_append(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if end < length and can_append_tt:
+                    end += 1
+                    if end - start > max_length + 1:
+                        start += 1
+                        end = start + min_length
+                else:
+                    if end - start <= max_length and self(tt, trusted=False):
+                        ensemble_list.append(slice(start, end))
                         pad = min(overlap, end - start - 1)
                         start = end - pad
                         if end == length:
@@ -362,18 +420,110 @@ class Ensemble(StorableNamedObject):
                             # All other possible subtraj can only be contained
                             # in already existing ones
                             start = length
-                    elif self(tt[0:len(tt)-1], trusted=False):
-                        ensemble_list.append(slice(start,end-1))
-                        pad = min(overlap, end - start - 2)
+                    elif end - start >= min_length + 1 and self(tt[0:len(tt) - 1], trusted=False):
+                        ensemble_list.append(slice(start, end - 1))
+                        pad = min(overlap + 1, end - start - 2)
                         start = end - pad
                     else:
                         start += 1
                     end = start + min_length
 
-            return ensemble_list
+                if 0 < n_results == len(ensemble_list):
+                    break
+        else:
+            end = length
+            start = end - min_length
 
-    def split(self, trajectory, lazy=True, max_length=None, min_length=1, overlap=1):
-        '''Return list of subtrajectories satisfying the given ensemble.
+            while start >= 0 and end >= min_length:
+                tt = trajectory[start:end]
+
+                can_prepend_tt = False
+                if len(tt) != old_tt_len + 1:
+                    can_prepend_tt = self.can_prepend(tt)
+                else:
+                    can_prepend_tt = self.can_prepend(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if start > 0 and can_prepend_tt:
+                    start -= 1
+                    if end - start > max_length + 1:
+                        end -=1
+                        start = end - min_length
+                else:
+                    if end - start <= max_length and self(tt, trusted=False):
+                        ensemble_list.append(slice(start, end))
+                        pad = min(overlap, end - start - 1)
+                        end = start + pad
+                        if start == 0:
+                            # This means we have reached the end and should stop
+                            # All other possible subtraj can only be contained
+                            # in already existing ones
+                            end = 0
+
+                    elif end - start >= min_length + 1 and self(tt[1:len(tt)], trusted=False):
+                        ensemble_list.append(slice(start + 1, end))
+                        pad = min(overlap + 1, end - start - 2)
+                        end = start + pad
+                    else:
+                        end -= 1
+
+                    start = end - min_length
+
+                if 0 < n_results == len(ensemble_list):
+                    break
+
+        return ensemble_list
+
+    def find_first_subtrajectory(self, trajectory):
+        """
+        Return the first sub-trajectory that matches the ensemble
+
+        Parameters
+        ----------
+        trajectory :class:`openpathsampling.trajectory.Trajectory`
+            the trajectory in which to look for sub-trajectories
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory` or None
+            the found sub-trajectory or None if no sub-trajectory was found
+        """
+        trajs = self.find_valid_slices(trajectory, n_results=1)
+        if len(trajs) > 0:
+            return trajectory[trajs[0]]
+        else:
+            return None
+
+    def find_last_subtrajectory(self, trajectory):
+        """
+        Return the last sub-trajectory that matches the ensemble
+
+        Parameters
+        ----------
+        trajectory :class:`openpathsampling.trajectory.Trajectory`
+            the trajectory in which to look for sub-trajectories
+
+        Returns
+        -------
+        :class:`openpathsampling.trajectory.Trajectory` or None
+            the found sub-trajectory or None if no sub-trajectory was found
+        """
+        trajs = self.find_valid_slices(trajectory, n_results=1, reverse=True)
+        if len(trajs) > 0:
+            return trajectory[trajs[0]]
+        else:
+            return None
+
+    def split(
+            self,
+            trajectory,
+            max_length=None,
+            min_length=1,
+            overlap=1,
+            reverse=False,
+            n_results=0
+        ):
+        """Return list of subtrajectories satisfying the given ensemble.
 
         Parameters
         ----------
@@ -393,6 +543,12 @@ class Ensemble(StorableNamedObject):
             determines the allowed overlap of all trajectories to be found.
             A value of x means that two sub-trajectory can share up to x
             frames at the beginning and x frames at the end.  Default is 1
+        reverse : bool
+            if `True` this will start searching from the end of the trajectory.
+            Otherwise (default) it will start at the beginning.
+        n_results : int
+            if `0` this will return all results. If the integer is larger than
+            zero it will stop after the given number of slices has been found
 
         Returns
         -------
@@ -403,43 +559,18 @@ class Ensemble(StorableNamedObject):
         Notes
         -----
         This uses self.find_valid_slices and returns the actual sub-trajectories
-        '''
+        """
 
-        try:
-            # Note here that we use trajectory.lazy() this has the following reason
-            # If we would pass the trajectory object itself, then in iterations over
-            # snapshots the `for snap in trajectory` will load explicitly the
-            # snapshots from storage and so snap is a real Snapshot object.
-            # By real I mean that type(snap) is paths.Snapshot equal True!
-            # Internally the trajectory just keeps reference objects which are
-            # extremely fast to load and since we want the decision to load
-            # a snapshots for computing a CV not do always but only if
-            # the CV caching decides to we pass trajectory.lazy().
-            # The result is that we pass a list of snapshot.proxies for an
-            # already stored trajectory and a list of real snapshots for
-            # a just created one. The has no speed effect on non-stored
-            # trajectories, but makes it faster if the trajectory was loaded or saved
-            # and the CV is cached.
-            # One more comment, since the idea cannot be always used. The only place
-            # where this can fail is if the underlying code uses type(snap) at
-            # some point. In this case you need to be able to treat LoaderProxy
-            # objects correctly. Since split does not care about the actual snapshots
-            # we are safe to use this trick to speed up the evaluation.
-            # One last comment about the Proxies. These proxies still behave almost
-            # like the real object. If you access any attribute it will be loaded
-            # and the actual attribute will be returned. Only difference is operator
-            # overloading (which is not used for Snapshots) and type()
-            indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
-                                             min_length, overlap)
+        # try:
+        #     indices = self.find_valid_slices(trajectory.as_proxies(), lazy, max_length,
+        #                                      min_length, overlap)
+        #
+        #     return [paths.Trajectory(trajectory[part]) for part in indices]
+        # except AttributeError:
+        indices = self.find_valid_slices(trajectory, max_length,
+                                         min_length, overlap, reverse, n_results)
 
-            return [paths.Trajectory(trajectory[part]) for part in indices]
-        except AttributeError:
-            indices = self.find_valid_slices(trajectory, lazy, max_length,
-                                             min_length, overlap)
-
-            return [trajectory[part] for part in indices]
-
-
+        return [trajectory[part] for part in indices]
 
     def __str__(self):
         '''
@@ -461,15 +592,19 @@ class Ensemble(StorableNamedObject):
         else:
             return UnionEnsemble(self, other)
 
-    def __xor__(self, other):
-        if self is other:
-            return EmptyEnsemble()
-        elif type(other) is EmptyEnsemble:
-            return self
-        elif type(other) is FullEnsemble:
-            return NegatedEnsemble(self)        
-        else:
-            return SymmetricDifferenceEnsemble(self, other)
+    # This is not correct for all ensembles.
+    # def __xor__(self, other):
+        # # TODO: return (self | other) & ~(self & other)
+        # # NOTE: that should also get the automatic special case handling
+        # # (other is self, Empty, or Full) from treatment in __and__/__or__
+        # if self is other:
+            # return EmptyEnsemble()
+        # elif type(other) is EmptyEnsemble:
+            # return self
+        # elif type(other) is FullEnsemble:
+            # return NegatedEnsemble(self)        
+        # else:
+            # return SymmetricDifferenceEnsemble(self, other)
 
     def __and__(self, other):
         if self is other:
@@ -481,18 +616,20 @@ class Ensemble(StorableNamedObject):
         else:
             return IntersectionEnsemble(self, other)
 
-    def __sub__(self, other):
-        if self is other:
-            return EmptyEnsemble()
-        elif type(other) is EmptyEnsemble:
-            return self
-        elif type(other) is FullEnsemble:
-            return EmptyEnsemble()
-        else:
-            return RelativeComplementEnsemble(self, other)
+    # This is not correct for all ensembles.
+    # def __sub__(self, other):
+        # if self is other:
+            # return EmptyEnsemble()
+        # elif type(other) is EmptyEnsemble:
+            # return self
+        # elif type(other) is FullEnsemble:
+            # return EmptyEnsemble()
+        # else:
+            # return RelativeComplementEnsemble(self, other)
         
-    def __invert__(self):
-        return NegatedEnsemble(self)
+    # This is not correct for all ensembles.
+    # def __invert__(self):
+        # return NegatedEnsemble(self)
         
     @staticmethod
     def _indent(s):
@@ -598,6 +735,7 @@ class NegatedEnsemble(Ensemble):
     '''
     Negates an Ensemble and simulates a `not` statement
     '''
+    # TODO: this whole concept is false and this should be removed
     def __init__(self, ensemble):
         super(NegatedEnsemble, self).__init__()
         self.ensemble = ensemble
@@ -631,28 +769,73 @@ class EnsembleCombination(Ensemble):
     def to_dict(self):
         return { 'ensemble1' : self.ensemble1, 'ensemble2' : self.ensemble2 }
 
+    def _generalized_short_circuit(self, combo, f1, f2, trajectory, trusted,
+                                   fname=""):
+        """
+        Handles short-circuit logic, all in one place for code simplicity.
+
+        Short-circuit logic skips the second part of the combination if the
+        result doesn't depend on it.
+
+        Parameters
+        ----------
+        combo : 
+            the combination function
+        f1 :
+            ensemble1's function. Takes trajectory, returns bool. Examples
+            include `__call__`, `can_append`, etc.
+        f2 : 
+            ensemble2's function. As with f1, but for ensemble 2.
+        trajectory : :class:`.Trajectory`
+            input trajectory
+        trusted : bool
+            the `trusted` flag to send to f1 and f2
+        fname : string
+            name of the functions f1 and f2. Only used in debug output.
+        """
+        logger.debug("Combination is " + self.__class__.__name__)
+        a = f1(trajectory, trusted)
+        if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
+            logger.debug("Combination." + fname + ": " +
+                         self.ensemble1.__class__.__name__ + " is " + str(a))
+            ens2 = f2(trajectory, trusted)
+            # logger.debug("Doing ens2_prime")
+            # ens2_prime = f2(trajectory, trusted)
+            logger.debug("Combination." + fname + ": " +
+                         self.ensemble2.__class__.__name__ + " is " +str(ens2))
+            # assert(ens2 == ens2_prime)
+            logger.debug("Combination should return " + str(self.fnc(a,ens2)))
+        res_true = self.fnc(a, True)
+        res_false = self.fnc(a, False)
+        if res_false == res_true:
+            # result is independent of ensemble_b so ignore it
+            # logger.debug("Returning res_true == res_false ==" + str(res_true))
+            return res_true
+        else:
+            b = f2(trajectory, trusted)
+            # logger.debug("Needs test:" + str(a) + " " + str(self.fnc) +
+                         # str(b) + str(self.fnc(a,b)))
+            return self.fnc(a, b)
+
+
     def __call__(self, trajectory, trusted=None):
-        # Shortcircuit will automatically skip the second part of the combination if the result does not depend on it!
-        # This makes sense since the expensive part is the ensemble testing not computing two logic operations
         if Ensemble.use_shortcircuit:
-            a = self.ensemble1(trajectory, trusted)
-            logger.debug("Combination is " + self.__class__.__name__)
-            logger.debug("Combination: " + self.ensemble1.__class__.__name__ + 
-                         " is "+str(a))
-            logger.debug("Combination: " + self.ensemble2.__class__.__name__ +
-                         " is " +str(self.ensemble2(trajectory, trusted)))
-            logger.debug("Combination: returning " + 
-                         str(self.fnc(a,self.ensemble2(trajectory,trusted))))
-            res_true = self.fnc(a, True)
-            res_false = self.fnc(a, False)
-            if res_false == res_true:
-                # result is independent of ensemble_b so ignore it
-                return res_true
-            else:
-                b = self.ensemble2(trajectory, trusted)
-                return self.fnc(a, b)
+            return self._generalized_short_circuit(
+                combo=self.fnc,
+                f1=self.ensemble1,
+                f2=self.ensemble2,
+                trajectory=trajectory,
+                trusted=trusted,
+                fname="__call__"
+            )
         else:
             return self.fnc(self.ensemble1(trajectory, trusted), self.ensemble2(trajectory, trusted))
+
+    # NOTE: I'm pretty sure the following can be removed. It is incorrect
+    # (see path ensemble theory docs). The correct way to handle this is by
+    # having explicit complement (inverse) ensembles and only allowing 3
+    # operations -- complement (inverse), union (logical or), and intersection
+    # (logical and). ~DWHS
 
     # Forward / Backward is tricky
     # We can do the following. If a or b is true this means that the real
@@ -676,51 +859,63 @@ class EnsembleCombination(Ensemble):
 
     def can_append(self, trajectory, trusted=False):
         if Ensemble.use_shortcircuit:
-            a = self.ensemble1.can_append(trajectory, trusted)
-            logger.debug("Combination is " + self.__class__.__name__)
-            logger.debug("Combination.can_append: " + 
-                         self.ensemble1.__class__.__name__ + " is "+str(a))
-            logger.debug("Combination.can_append: " 
-                         + self.ensemble2.__class__.__name__ +
-                         " is " +
-                         str(self.ensemble2.can_append(trajectory, trusted)))
-            logger.debug("Combination.can_append: returning " + 
-                         str(self.fnc(a,self.ensemble2.can_append(trajectory,trusted))))
-            res_true = self._continue_fnc(a, True)
-            res_false = self._continue_fnc(a, False)
-            if res_false == res_true:
-                # result is independent of ensemble_b so ignore it
-                return res_true
-            else:
-                b = self.ensemble2.can_append(trajectory, trusted)
-                #logger.debug("b is " + str(b))
-                if b == True:
-                    #logger.debug("Will return res_true")
-                    return res_true
-                else:
-                    #logger.debug("Will return res_false")
-                    return res_false
+            return self._generalized_short_circuit(
+                combo=self.fnc,
+                f1=self.ensemble1.can_append,
+                f2=self.ensemble2.can_append,
+                trajectory=trajectory,
+                trusted=trusted,
+                fname="can_append"
+            )
         else:
             return self.fnc(self.ensemble1.can_append(trajectory, trusted), 
                             self.ensemble2.can_append(trajectory, trusted))
 
     def can_prepend(self, trajectory, trusted=False):
         if Ensemble.use_shortcircuit:
-            a = self.ensemble1.can_prepend(trajectory, trusted)
-            res_true = self._continue_fnc(a, True)
-            res_false = self._continue_fnc(a, False)
-            if res_false == res_true:
-                # result is independent of ensemble_b so ignore it
-                return res_true
-            else:
-                b = self.ensemble2.can_prepend(trajectory, trusted)
-                if b == True:
-                    return res_true
-                else:
-                    return res_false
+            return self._generalized_short_circuit(
+                combo=self.fnc,
+                f1=self.ensemble1.can_prepend,
+                f2=self.ensemble2.can_prepend,
+                trajectory=trajectory,
+                trusted=trusted,
+                fname="can_prepend"
+            )
         else:
             return self.fnc(self.ensemble1.can_prepend(trajectory, trusted), 
                             self.ensemble2.can_prepend(trajectory, trusted))
+
+    def strict_can_append(self, trajectory, trusted=False):
+        if Ensemble.use_shortcircuit:
+            return self._generalized_short_circuit(
+                combo=self.fnc,
+                f1=self.ensemble1.strict_can_append,
+                f2=self.ensemble2.strict_can_append,
+                trajectory=trajectory,
+                trusted=trusted,
+                fname="strict_can_append"
+            )
+        else:
+            return self.fnc(
+                self.ensemble1.strict_can_append(trajectory, trusted),
+                self.ensemble2.strict_can_append(trajectory, trusted)
+            )
+
+    def strict_can_prepend(self, trajectory, trusted=False):
+        if Ensemble.use_shortcircuit:
+            return self._generalized_short_circuit(
+                combo=self.fnc,
+                f1=self.ensemble1.strict_can_prepend,
+                f2=self.ensemble2.strict_can_prepend,
+                trajectory=trajectory,
+                trusted=trusted,
+                fname="strict_can_prepend"
+            )
+        else:
+            return self.fnc(
+                self.ensemble1.strict_can_prepend(trajectory, trusted),
+                self.ensemble2.strict_can_prepend(trajectory, trusted)
+            )
 
     def __str__(self):
 #        print self.sfnc, self.ensemble1, self.ensemble2, self.sfnc.format('(' + str(self.ensemble1) + ')' , '(' + str(self.ensemble1) + ')')
@@ -729,20 +924,32 @@ class EnsembleCombination(Ensemble):
 
 class UnionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(UnionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
+        super(UnionEnsemble, self).__init__(ensemble1, ensemble2,
+                                            fnc=lambda a,b : a or b,
+                                            str_fnc='{0}\nor\n{1}')
 
 
 class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
+        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2,
+                                                   fnc=lambda a,b : a and b,
+                                                   str_fnc='{0}\nand\n{1}')
 
 
 class SymmetricDifferenceEnsemble(EnsembleCombination):
+    # TODO: this is not yet supported. Should be removed. ~DWHS
+    # should just be a shortcut for (ens1 | ens2) & ~(ens1 & ens2)
+    # should probably not even be a class. Just have `ensemble.__xor__`
+    # return (ens1 | ens2) & ~(ens1 & ens2)
     def __init__(self, ensemble1, ensemble2):
         super(SymmetricDifferenceEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a ^ b, str_fnc = '{0}\nxor\n{1}')
 
 
 class RelativeComplementEnsemble(EnsembleCombination):
+    # TODO: this is not yet supported. Should be removed. ~DWHS
+    # should be a shortcut for ens1 & ~ens2
+    # should probably not even be a class. Just have `ensemble.__sub__`
+    # return ens1 & ~ens2
     def __init__(self, ensemble1, ensemble2):
         super(RelativeComplementEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
 
@@ -794,8 +1001,10 @@ class SequentialEnsemble(Ensemble):
 
         self._use_cache = True # cache can be turned off
         self._cache_can_append = EnsembleCache(+1)
+        self._cache_strict_can_append = EnsembleCache(+1)
         self._cache_call = EnsembleCache(+1)
         self._cache_can_prepend = EnsembleCache(-1)
+        self._cache_strict_can_prepend = EnsembleCache(-1)
         self._cache_check_reverse = EnsembleCache(-1)
 
         # sanity checks
@@ -980,7 +1189,7 @@ class SequentialEnsemble(Ensemble):
         return subtraj_first+1
 
 
-    def can_append(self, trajectory, trusted=False):
+    def _generic_can_append(self, trajectory, trusted, strict):
         # treat this like we're implementing a regular expression parser ...
         # .*ensemble.+ ; but we have to do this for all possible matches
         # There are three tests we consider:
@@ -994,6 +1203,9 @@ class SequentialEnsemble(Ensemble):
         # Returning false can only happen if all ensembles have been tested
         #self._check_cache(trajectory, function="can_append")
         cache = self._cache_can_append
+        if strict:
+            cache = self._cache_strict_can_append
+
         if trusted:
             cache.trusted = True
 
@@ -1003,7 +1215,7 @@ class SequentialEnsemble(Ensemble):
 
 
         if self._use_cache: 
-            cache.check(trajectory)
+            reset = cache.check(trajectory)
             if cache.contents == { }:
                 self.update_cache(cache, 0, 0, 0)
                 self.assign_frames(cache, None, None, None)
@@ -1020,22 +1232,33 @@ class SequentialEnsemble(Ensemble):
         logger.debug(
             "Beginning can_append with subtraj_first=" + str(subtraj_first)
             + "; ens_first=" + str(ens_first) + "; ens_num=" + str(ens_num)
+            + "; strict=" + str(strict)
         )
         logger.debug(
             "Can-append sees a trusted cache: " + str(cache.trusted)
         )
+        if cache.trusted:
+            logger.debug("Cache contents: " + str(cache.contents))
+            logger.debug("cache.prev_last_frame: " +
+                         str(trajectory.index(cache.prev_last_frame)))
         for i in range(len(self.ensembles)):
             ens = self.ensembles[i]
             logger.debug("Ensemble " + str(i) + " : " + ens.__class__.__name__)
 
         while True: #  main loop, with various 
             if self._use_cache and cache.trusted:
-                last_checked = trajectory.index(cache.prev_last_frame)-1
+                offset = 1
+                offset = 0
+                # if cache.last_length == len(trajectory):
+                    # offset += 1
+                last_checked = trajectory.index(cache.prev_last_frame) - offset
             else:
                 last_checked = None
+            logger.debug("last_checked = " + str(last_checked))
             subtraj_final = self._find_subtraj_final(
                 trajectory, subtraj_first, ens_num, last_checked
             )
+            cache.last_length = subtraj_final
             logger.debug(
                 "Subtraj for ens " + str(ens_num) + " : " +
                 "("+str(subtraj_first)+","+str(subtraj_final)+")"
@@ -1079,7 +1302,7 @@ class SequentialEnsemble(Ensemble):
                     ens_num += 1
                     subtraj_first = subtraj_final
                     logger.debug("Moving to the next ensemble " + str(ens_num))
-            else: 
+            else:  # no subtrajectory found
                 if subtraj_final == traj_final:
                     # all frames assigned, but not all ensembles finished;
                     # next frame might satisfy next ensemble
@@ -1110,7 +1333,7 @@ class SequentialEnsemble(Ensemble):
                     if ens_first == final_ens:
                         logger.debug("Started with the last ensemble, got nothin'")
                         return False
-                    else:
+                    elif strict is False:
                         logger.debug(
                             "Reassigning all frames, starting with ensemble " +
                             str(ens_first)
@@ -1118,12 +1341,25 @@ class SequentialEnsemble(Ensemble):
                         ens_first += 1
                         ens_num = ens_first
                         subtraj_first = 0
-                        self.update_cache(cache, ens_num, ens_first, subtraj_first)
+                        self.update_cache(cache, ens_num, ens_first,
+                                          subtraj_first)
+                    else:
+                        logger.debug(
+                            "First ensemble fails and strict -- return false"
+                        )
+                        return False
 
+    def can_append(self, trajectory, trusted=False):
+        return self._generic_can_append(trajectory, trusted, strict=False)
 
-    def can_prepend(self, trajectory, trusted=False):
+    def strict_can_append(self, trajectory, trusted=False):
+        return self._generic_can_append(trajectory, trusted, strict=True)
+
+    def _generic_can_prepend(self, trajectory, trusted, strict):
         # based on .can_append(); see notes there for algorithm details
         cache = self._cache_can_prepend
+        if strict:
+            cache = self._cache_strict_can_prepend
         if trusted:
             cache.trusted = True
 
@@ -1134,7 +1370,7 @@ class SequentialEnsemble(Ensemble):
         ens_num = ens_final
 
         if self._use_cache:
-            cache.check(trajectory)
+            reset = cache.check(trajectory)
             if cache.contents == { }:
                 self.update_cache(cache, ens_num, first_ens, subtraj_final)
                 self.assign_frames(cache, None, None, None)
@@ -1152,8 +1388,12 @@ class SequentialEnsemble(Ensemble):
         # logging startup
         logger.debug("Beginning can_prepend with ens_num:" + str(ens_num) +
                      "  ens_final:" + str(ens_final) + "  subtraj_final " +
-                     str(subtraj_final)
+                     str(subtraj_final) + "; strict=" + str(strict)
                     )
+        if cache.trusted:
+            logger.debug("Cache contents: " + str(cache.contents))
+            logger.debug("cache.prev_start_frame: " +
+                         str(trajectory.index(cache.start_frame)))
         for i in range(len(self.ensembles)):
             logger.debug(
                 "Ensemble " + str(i) + 
@@ -1162,11 +1402,14 @@ class SequentialEnsemble(Ensemble):
 
         while True:
             if self._use_cache and cache.trusted:
-                last_checked = trajectory.index(cache.prev_last_frame)+1
+                offset = 1
+                offset = 0
+                last_checked = trajectory.index(cache.prev_last_frame)+offset
             else:
                 last_checked = None
             subtraj_first = self._find_subtraj_first(
                 trajectory, subtraj_final, ens_num, last_checked)
+            cache.last_length = len(trajectory) - subtraj_first
 
             assign_final = subtraj_final - len(trajectory)
             if assign_final == 0:
@@ -1243,7 +1486,7 @@ class SequentialEnsemble(Ensemble):
                     if ens_final == first_ens:
                         logger.debug("Started with the last ensemble, got nothin'")
                         return False
-                    else:
+                    elif strict is False:
                         logger.debug(
                             "Reassigning all frames, starting with ensemble " +
                             str(ens_final)
@@ -1251,7 +1494,19 @@ class SequentialEnsemble(Ensemble):
                         ens_final -= 1
                         ens_num = ens_final
                         subtraj_final = len(trajectory)
-                        self.update_cache(cache, ens_num, ens_final, subtraj_final)
+                        self.update_cache(cache, ens_num, ens_final,
+                                          subtraj_final)
+                    else:
+                        logger.debug(
+                            "First ensemble fails and strict -- return false"
+                        )
+                        return False
+
+    def can_prepend(self, trajectory, trusted=False):
+        return self._generic_can_prepend(trajectory, trusted, strict=False)
+
+    def strict_can_prepend(self, trajectory, trusted=False):
+        return self._generic_can_prepend(trajectory, trusted, strict=True)
 
     def __str__(self):
         head = "[\n"
@@ -1319,10 +1574,21 @@ class VolumeEnsemble(Ensemble):
     '''
     Path ensembles based on the Volume object
     '''    
-    def __init__(self, volume, trusted = True):
+    def __init__(self, volume, trusted=True):
+        # TODO: does `trusted` actually mean anything or do anything as a
+        # property? it is about the condition of trusting the trajectory
+        # when we run it, so it relevant in functions. I don't think we need
+        # it here. ~DWHS
         super(VolumeEnsemble, self).__init__()
         self.volume = volume
         self.trusted = trusted
+
+        self._use_cache = True
+        self._cache_can_append = EnsembleCache(+1)
+        self._cache_call = EnsembleCache(+1)
+        self._cache_can_prepend = EnsembleCache(-1)
+        self._cache_check_reverse = EnsembleCache(-1)
+
 
     @property
     def _volume(self):
@@ -1336,33 +1602,90 @@ class AllInXEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectories with all frames in the given volume
     '''
+    def _trusted_call(self, trajectory, cache):
+        """
+        Generalized version of the call when trusted.
 
+        This uses a cache, which has the result for the previous trajectory
+        (`trajectory[:-1]` if forward, `trajectory[1:]` if backward) in the
+        `cache.contents['previous']`.
+
+        Paramters
+        ---------
+        trajectory : paths.Trajectory
+            input trajectory to test
+        cache : paths.EnsembleCache
+            ensemble cache for this function
+
+        Returns
+        -------
+        bool :
+            result of __call__
+        """
+        frame_num = -(cache.direction + 1) / 2  # 1 -> -1; -1 -> 0
+        reset = cache.check(trajectory)
+        if reset:
+            if len(trajectory) < 2:
+                cache.contents['previous'] = None
+            else:
+                # NOTE: is it possible that we'd reset a cache more than
+                # once in a single trajectory? that could mean that this
+                # starts to scale quadratically. I can't think of a case
+                # where this is a practical concern (short-circuit logic
+                # means the recache should only happen once per trajectory
+                # for All*XEnsembles, and the call should only happen once
+                # per trajectory for Part*XEnsembles.) In any case, the fix
+                # would be to implement a more complicated cache.reset,
+                # which checks whether the previous traj was a subtraj of
+                # this one (other than one frame less). ~~~DWHS
+                if frame_num == -1:
+                    reset_value = self(trajectory[:-1], trusted=False)
+                elif frame_num == 0:
+                    reset_value = self(trajectory[1:], trusted=False)
+                else:  # pragma: no cover
+                    raise RuntimeError("Bad value for frame_num: " +
+                                       str(frame_num))
+                cache.contents['previous'] = reset_value
+
+        cached_val = cache.contents['previous']
+        if cached_val == True or cached_val is None:
+            # need to check this frame (no prev traj, or prev traj is True)
+            frame = trajectory.get_as_proxy(frame_num)
+            cache.contents['previous'] = self._volume(frame)
+            return cache.contents['previous']
+        else:
+            # cached_val is false, result must be false
+            return False
+    
     def can_append(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
-        if trusted == True:
-            return self(trajectory[slice(len(trajectory)-1, None)], trusted)
+        elif trusted and self._use_cache:
+            return self._trusted_call(trajectory, self._cache_can_append)
         else:
             return self(trajectory)
 
     def can_prepend(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
-        if trusted == True:
-            return self(trajectory[slice(0,1)], trusted)
+        if trusted and self._use_cache:
+            return self._trusted_call(trajectory, self._cache_can_prepend)
         else:
             return self(trajectory)
-        
-    
+
     def __call__(self, trajectory, trusted=None):
         if len(trajectory) == 0:
             return False
-        if trusted == True:
-            #print "trusted"
-            frame = trajectory.get_as_proxy(-1)
-            return self._volume(frame)
+        # TODO: We might be able to speed this up based on can_append
+        # being the same as call for this ensemble. Something like check
+        # the can_append cache instead of/as well as the call cache. May
+        # still have problems with overshooting -- but this might provide a
+        # speed-up in sequential ensemble's checking phase. ~~~DWHS
+        if trusted and self._use_cache:
+            return self._trusted_call(trajectory, self._cache_call)
         else:
-            #logger.debug("Calling volume untrusted "+repr(self))
+            logger.debug("Untrusted VolumeEnsemble "+repr(self))
+            #logger.debug("Trajectory " + repr(trajectory))
             for frame in trajectory.as_proxies():
                 if not self._volume(frame):
                     return False
@@ -1370,17 +1693,18 @@ class AllInXEnsemble(VolumeEnsemble):
 
     def check_reverse(self, trajectory, trusted=False):
         # order in this one only matters if it is trusted
-        if trusted:
+        if trusted and self._use_cache:
             #print "Rev Trusted"
-            frame = trajectory.get_as_proxy(0)
-            return self._volume(frame)
+            return self._trusted_call(trajectory, self._cache_check_reverse)
+            #frame = trajectory.get_as_proxy(0)
+            #return self._volume(frame)
         else:
             #print "Rev UnTrusted"
             return self(trajectory) # in this case, order wouldn't matter
 
 
     def __invert__(self):
-        return PartOutXEnsemble(self.volume, self.frames, self.trusted)
+        return PartOutXEnsemble(self.volume, self.trusted)
 
     def __str__(self):
         return 'x[t] in {0} for all t'.format(self._volume)
@@ -1393,13 +1717,13 @@ class AllOutXEnsemble(AllInXEnsemble):
     '''    
     @property
     def _volume(self):
-        return ~ self.volume
+        return ~self.volume
     
     def __str__(self):
         return 'x[t] in {0} for all t'.format(self._volume)
 
     def __invert__(self):
-        return PartInXEnsemble(self.volume, self.frames, self.trusted)
+        return PartInXEnsemble(self.volume, self.trusted)
 
 
 class PartInXEnsemble(VolumeEnsemble):
@@ -1425,7 +1749,7 @@ class PartInXEnsemble(VolumeEnsemble):
         return False
 
     def __invert__(self):
-        return AllOutXEnsemble(self.volume, self.frames, self.trusted)
+        return AllOutXEnsemble(self.volume, self.trusted)
 
 
 class PartOutXEnsemble(PartInXEnsemble):
@@ -1438,10 +1762,10 @@ class PartOutXEnsemble(PartInXEnsemble):
     @property
     def _volume(self):
         # effectively use PartInXEnsemble but with inverted volume
-        return ~ self.volume
+        return ~self.volume
 
     def __invert__(self):
-        return AllInXEnsemble(self.volume, self.frames, self.trusted)
+        return AllInXEnsemble(self.volume, self.trusted)
 
     def __call__(self, trajectory, trusted=None):
         for frame in trajectory.as_proxies():
@@ -1511,11 +1835,14 @@ class WrappedEnsemble(Ensemble):
         self._new_ensemble = self.ensemble
         self.trusted = None
         self._cache_can_append = EnsembleCache(+1)
+        self._cache_strict_can_append = EnsembleCache(+1)
         self._cache_call = EnsembleCache(+1)
-        self._cache_can_prepend = EnsembleCache(+1) #TODO: this is weird
+
         # cache_can_prepend has to think it is going forward because the
         # frames given to it are from a forward growing trajectory... only
         # later is everything turned around
+        self._cache_can_prepend = EnsembleCache(+1) 
+        self._cache_strict_can_prepend = EnsembleCache(+1)
 
     def __call__(self, trajectory, trusted=None):
         return self._new_ensemble(self._alter(trajectory), trusted)
@@ -1528,7 +1855,16 @@ class WrappedEnsemble(Ensemble):
                                              trusted)
 
     def can_prepend(self, trajectory, trusted=None):
-        return self._new_ensemble.can_prepend(self._alter(trajectory))
+        return self._new_ensemble.can_prepend(self._alter(trajectory),
+                                              trusted)
+
+    def strict_can_append(self, trajectory, trusted=None):
+        return self._new_ensemble.strict_can_append(self._alter(trajectory),
+                                                    trusted)
+
+    def strict_can_prepend(self, trajectory, trusted=None):
+        return self._new_ensemble.strict_can_prepend(self._alter(trajectory),
+                                                     trusted)
 
 
 class SlicedTrajectoryEnsemble(WrappedEnsemble):
@@ -1578,7 +1914,7 @@ class SuffixTrajectoryEnsemble(WrappedEnsemble):
         #logger.debug("trajrev " + str([id(i) for i in trajectory.reversed]))
         #reset = False
         if not reset:
-            logger.debug("BackwardPrended was not reset")
+            logger.debug("SuffixTrajectory was not reset")
             first_frame = trajectory.get_as_proxy(-1)
             if self._cached_trajectory.get_as_proxy(0) != first_frame:
                 self._cached_trajectory.insert(0, first_frame)
@@ -1593,6 +1929,11 @@ class SuffixTrajectoryEnsemble(WrappedEnsemble):
 
     def can_append(self, trajectory, trusted=None):
         raise RuntimeError("SuffixTrajectoryEnsemble.can_append is nonsense.")
+
+    def strict_can_append(self, trajectory, trusted=None):
+        # was overridden in WrappedEnsemble: here should raise same error as
+        # can_append does
+        return self.can_append(trajectory, trusted)
 
 
 class PrefixTrajectoryEnsemble(WrappedEnsemble):
@@ -1632,6 +1973,11 @@ class PrefixTrajectoryEnsemble(WrappedEnsemble):
 
     def can_prepend(self, trajectory, trusted=None):
         raise RuntimeError("PrefixTrajectoryEnsemble.can_prepend is nonsense.")
+
+    def strict_can_prepend(self, trajectory, trusted=None):
+        # was overridden in WrappedEnsemble: here should raise same error as
+        # can_append does
+        return self.can_prepend(trajectory, trusted)
 
 
 class ReversedTrajectoryEnsemble(WrappedEnsemble):

@@ -48,7 +48,9 @@ class NetCDFPlus(netCDF4.Dataset):
         'numpy.uint16': np.uint16,
         'numpy.uint32': np.uint32,
         'numpy.uint64': np.uint64,
-        'store': str
+        'store': str,
+        'obj': np.int32,
+        'lazyobj': np.int32
     }
 
     class ValueDelegate(object):
@@ -199,8 +201,9 @@ class NetCDFPlus(netCDF4.Dataset):
         filename : string
             filename of the netcdf file to be used or created
         mode : str
-            the mode of file creation, one of 'w' (write), 'a' (append) or 'r' (read-only)
-            None, which will append any existing files (equal to append), is the default.
+            the mode of file creation, one of 'w' (write), 'a' (append) or
+            'r' (read-only) None, which will append any existing files
+            (equal to append), is the default.
 
         Notes
         -----
@@ -238,6 +241,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
             # add shared scalar dimension for everyone
             self.create_dimension('scalar', 1)
+            self.create_dimension('pair', 2)
 
             # create the store that holds stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
@@ -294,6 +298,20 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.sync()
 
+
+    @property
+    def file_size(self):
+        return os.path.getsize(self.filename)
+
+    @property
+    def file_size_str(self):
+        current = float(self.file_size)
+        for prefix in ["k", "M", "G"]:
+            if current > 1024:
+                output_prefix = prefix
+                current /= 1024.0
+        return "{0:.2f}{1}B".format(current, prefix)
+
     def _setup_class(self):
         """
         Sets the basic properties for the storage
@@ -342,6 +360,7 @@ class NetCDFPlus(netCDF4.Dataset):
                 store._init()
 
         self.update_delegates()
+        self.simplifier.update_class_list()
 
     def register_store(self, name, store, register_attr=True):
         """
@@ -352,11 +371,13 @@ class NetCDFPlus(netCDF4.Dataset):
         Parameters
         ----------
         name : str
-            the name of the store under which the objects are accessible like `store.{name}`
+            the name of the store under which the objects are accessible
+            like `store.{name}`
         store : :class:`openpathsampling.storages.ObjectStore`
             instance of the object store
         register_attr : bool
-            if set to false the store will not be accesible as an attribute. `True` is the default.
+            if set to false the store will not be accesible as an attribute.
+            `True` is the default.
         """
         store.register(self, name)
 
@@ -464,20 +485,21 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if type(obj) is list:
             # a list of objects will be stored one by one
-            [self.save(part, idx) for part in obj]
-            return
+            return [self.save(part, idx) for part in obj]
+
 
         elif type(obj) is tuple:
             # a tuple will store all parts
-            [self.save(part, idx) for part in obj]
-            return
+            return [self.save(part, idx) for part in obj]
+
 
         elif obj.__class__ in self._obj_store:
             # to store we just check if the base_class is present in the storages
             # also we assume that if a class has no base_cls
             store = self.find_store(obj)
-            store.save(obj, idx)
-            return
+            store_idx = self.stores.index[store]
+            return store, store_idx, store.save(obj, idx)
+
 
         # Could not save this object.
         raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
@@ -714,6 +736,17 @@ class NetCDFPlus(netCDF4.Dataset):
         setter = None
         store = None
 
+        if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
+            store = getattr(self, var_type.split('.')[1])
+            base_type = store.content_class
+
+            get_is_iterable = lambda v: \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            set_is_iterable = lambda v: \
+                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+
         if var_type == 'int':
             getter = lambda v: v.tolist()
             setter = lambda v: np.array(v)
@@ -746,32 +779,48 @@ class NetCDFPlus(netCDF4.Dataset):
             getter = lambda v: self.simplifier.from_json(v)
 
         elif var_type.startswith('obj.'):
-            store = getattr(self, var_type[4:])
-            base_type = store.content_class
-
-            iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
-
             getter = lambda v: \
                 [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else store.load(int(v))
+                    if get_is_iterable(v) else None if int(v) < 0 else store.load(int(v))
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if iterable(v) else -1 if v is None else store.save(v)
+                    if set_is_iterable(v) else -1 if v is None else store.save(v)
 
-        elif var_type.startswith('lazyobj.'):
-            store = getattr(self, var_type[8:])
-            base_type = store.content_class
+        elif var_type == 'obj':
+            # arbitrary object
 
-            iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+            set_iterable_simple = lambda v: \
+                False if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
             getter = lambda v: \
+                [None if int(w[1]) < 0 else self.stores[int(w[0])].load(int(w[1])) for w in v.tolist()] \
+                    if len(v.shape) > 1 else None if int(v[1]) < 0 else self.stores[int(v[0])].load(int(v[1]))
+
+            setter = lambda v: \
+                np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
+                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
+
+        elif var_type.startswith('lazyobj.'):
+            getter = lambda v: \
                 [None if int(w) < 0 else LoaderProxy(store, int(w)) for w in v.tolist()] \
-                    if iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
+                    if get_is_iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
             setter = lambda v: \
                 np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
-                    if iterable(v) else -1 if v is None else store.save(v)
+                    if set_is_iterable(v) else -1 if v is None else store.save(v)
+
+        elif var_type == 'lazyobj':
+            # arbitrary object
+
+            set_iterable_simple = lambda v: \
+                False if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+
+            getter = lambda v: \
+                [None if int(w[1]) < 0 else LoaderProxy(self.stores[int(w[0])],int(w[1])) for w in v.tolist()] \
+                    if len(v.shape) > 1 else None if int(v[1]) < 0 else LoaderProxy(self.stores[int(v[0])],int(v[1]))
+
+            setter = lambda v: \
+                np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
+                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
 
         elif var_type == 'store':
             setter = lambda v: v.prefix
@@ -844,28 +893,30 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Create a new variable in the netCDF storage.
 
-        This is just a helper function to structure the code better and add some convenience to
-        creating more complex variables
+        This is just a helper function to structure the code better and add
+        some convenience to creating more complex variables
 
         Parameters
         ==========
         var_name : str
             The name of the variable to be created
         var_type : str
-            The string representing the type of the data stored in the variable.
-            Allowed are strings of native python types in which case the variables
-            will be treated as python or a string of the form 'numpy.type' which
-            will refer to the numpy data types. Numpy is preferred sinec the api
-            to netCDF uses numpy and thus it is faster. Possible input strings are
+            The string representing the type of the data stored in the
+            variable.  Allowed are strings of native python types in which
+            case the variables will be treated as python or a string of the
+            form 'numpy.type' which will refer to the numpy data types.
+            Numpy is preferred sinec the api to netCDF uses numpy and thus
+            it is faster. Possible input strings are
             `int`, `float`, `long`, `str`, `numpy.float32`, `numpy.float64`,
             `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64`, `json`,
             `obj.<store>`, `lazyobj.<store>`
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
-            If the last dimension is `'...'` then it is assumed that the objects are of
-            variable length. In netCDF this is usually referred to as a VLType.
-            We will treat is just as another dimension, but it can only be the last dimension.
+            If the last dimension is `'...'` then it is assumed that the
+            objects are of variable length. In netCDF this is usually
+            referred to as a VLType.  We will treat is just as another
+            dimension, but it can only be the last dimension.
         description : str
             A string describing the variable in a readable form.
         chunksizes : tuple of int
@@ -874,13 +925,14 @@ class NetCDFPlus(netCDF4.Dataset):
             we want to store everything of one object at once so this is often
             (1, ..., ...)
         simtk_unit : str
-            A string representing the units used for this variable. Can be used with
-            all var_types although it makes sense only for numeric ones.
+            A string representing the units used for this variable. Can be
+            used with all var_types although it makes sense only for numeric
+            ones.
         maskable : bool, default: False
-            If set to `True` the values in this variable can only partially exist and if
-            they have not yet been written they are filled with a fill_value which is
-            treated as a non-set variable. The created variable will interprete this values
-            as `None` when returned
+            If set to `True` the values in this variable can only partially
+            exist and if they have not yet been written they are filled with
+            a fill_value which is treated as a non-set variable. The created
+            variable will interpret this values as `None` when returned
         """
 
         ncfile = self
@@ -902,6 +954,11 @@ class NetCDFPlus(netCDF4.Dataset):
             dimensions = dimensions[:-1]
         else:
             variable_length = False
+
+        if var_type == 'obj' or var_type == 'lazyobj':
+            dimensions.append('pair')
+            if chunksizes is not None:
+                chunksizes = tuple(list(chunksizes) + [2])
 
         nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
 
@@ -973,6 +1030,8 @@ class NetCDFPlus(netCDF4.Dataset):
             # Define long (human-readable) names for variables.
             setattr(ncvar, "long_str", description)
 
+        self.update_delegates()
+
         return ncvar
 
     def update_delegates(self):
@@ -984,3 +1043,99 @@ class NetCDFPlus(netCDF4.Dataset):
         for name in self.variables:
             if name not in self.vars:
                 self.create_variable_delegate(name)
+
+    @staticmethod
+    def get_value_parameters(value):
+        """
+        Compute netcdfplus compatible parameters to store a value
+
+        Parameters
+        ----------
+        value
+
+        Returns
+        -------
+        dict
+            A dictionary containing the approriate input parameters for
+            `var_type`, `dimensions`, `simtk_unit`
+
+        Notes
+        -----
+        This is a utility function to create a CV using a template
+
+        """
+
+        dimensions = None
+        storable = True
+        simtk_unit = None
+
+        test_value = value
+        test_type = value
+
+        if NetCDFPlus.support_simtk_unit:
+            import simtk.unit as u
+
+            if type(test_type) is u.Quantity:
+                # could be a Quantity([..])
+                simtk_unit = test_type.unit
+                test_type = test_type._value
+
+        if type(test_type) is np.ndarray:
+            dimensions = test_type.shape
+        else:
+            if hasattr(test_value, '__len__'):
+                dimensions = len(test_value)
+                test_type = test_value[0]
+                if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
+                    for val in test_value:
+                        if type(val._value) is not type(test_value._value):
+                            # all values must be of same type
+                            storable = False
+                else:
+                    for val in test_value:
+                        if type(val) is not type(test_value):
+                            # all values must be of same type
+                            storable = False
+
+            if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
+                # could also be [Quantity, ...]
+                simtk_unit = test_type.unit
+                test_type = test_type._value
+
+        if storable:
+            var_type = NetCDFPlus.identify_var_type(test_type)
+            return {
+                'var_type': var_type,
+                'dimensions': dimensions,
+                'simtk_unit': simtk_unit
+            }
+
+        return {
+        }
+
+    @staticmethod
+    def identify_var_type(instance):
+        """
+        Identify common python and numpy types
+
+        Parameters
+        ----------
+        instance
+            python variable instance to be tested for it numeric type
+
+        Returns
+        -------
+        str
+            a string representation of the variable type
+
+        """
+        ty = type(instance)
+
+        known_types = [float, int, bool, str]
+
+        if ty in known_types:
+            return ty.__name__
+        elif hasattr(instance, 'dtype'):
+            return 'numpy.' + instance.dtype.type.__name__
+        else:
+            return 'None'

@@ -3,6 +3,7 @@ omit =
     */python?.?/*
     */site-packages/nose/*
     */openpathsampling/tests/*
+    */mdtraj/*
 exclude_lines = 
     pragma: no cover
     def __repr__

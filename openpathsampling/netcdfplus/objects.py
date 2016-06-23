@@ -18,13 +18,11 @@ class ObjectStore(StorableNamedObject):
 
     Attributes
     ----------
-    storage
     content_class : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
         a reference to the class type to be stored using this Storage. Must be
         subclassed from :py:func:`openpathsampling.netcdfplus.base.StorableObject`
     json : string
         if already computed a JSON Serialized string of the object
-    simplifier
     cache : :py:class:`openpathsampling.netcdfplus.cache.Cache`
         a dictionary that holds references to all stored elements by index
         or string for named objects. This is only used for cached access
@@ -227,7 +225,7 @@ class ObjectStore(StorableNamedObject):
         int or None
             The integer index of the given object or None if it is not stored yet
         """
-        return self.index.get(obj, None)
+        return self.index.get(obj)
 
     def __iter__(self):
         """
@@ -322,7 +320,7 @@ class ObjectStore(StorableNamedObject):
             return None
 
         if type(item) is not int:
-            idx = self.index.get(item, None)
+            idx = self.index.get(item)
             if idx is None:
                 return item
         else:
@@ -442,12 +440,22 @@ class ObjectStore(StorableNamedObject):
     def reserve_idx(self, idx):
         """
         Locks an idx as used
+
+        Parameters
+        ----------
+        idx : int
+            the integer index to be reserved
         """
         self._free.add(idx)
 
     def release_idx(self, idx):
         """
         Releases a lock on an idx
+
+        Parameters
+        ----------
+        idx : int
+            the integer index to be released
         """
         self._free.discard(idx)
 
@@ -464,9 +472,12 @@ class ObjectStore(StorableNamedObject):
             if type(self.json) is str:
                 jsontype = self.json
 
-            self.create_variable("json", jsontype,
-                               description='A json serialized version of the object',
-                               chunksizes=tuple([10240]))
+            self.create_variable(
+                "json",
+                jsontype,
+                description='A json serialized version of the object',
+                chunksizes=tuple([10240])
+            )
 
         self._created = True
 
@@ -563,7 +574,7 @@ class ObjectStore(StorableNamedObject):
         """
 
         def idx(obj):
-            return self.index.get(obj, None)
+            return self.index.get(obj)
 
         return idx
 
@@ -645,8 +656,18 @@ class ObjectStore(StorableNamedObject):
             return self.index[obj]
 
         if hasattr(obj, '_idx'):
-            # is a proxy of a saved object so do nothing
-            return obj._idx
+            if obj._store is self:
+                # is a proxy of a saved object so do nothing
+                return obj._idx
+            else:
+                # it is stored but not in this store so we try storing the
+                # full snapshot which might be still in cache or memory
+                # if that is not the case it will be stored again. This can
+                # happen when you load from one store save to another. And load
+                # again after some time while the cache has been changed and try
+                # to save again the loaded object. We will not explicitly store
+                # a table that matches objects between different storages.
+                return self.save(obj.__subject__)
 
         if not isinstance(obj, self.content_class):
             raise ValueError(
@@ -659,6 +680,7 @@ class ObjectStore(StorableNamedObject):
         else:
             raise ValueError('Unsupported index type (only None allowed).')
 
+        # mark as saved so circular dependcies will not result in infinite loops
         self.index[obj] = n_idx
 
         # make sure in nested saving that an IDX is not used twice!
@@ -668,13 +690,18 @@ class ObjectStore(StorableNamedObject):
 
         try:
             self._save(obj, n_idx)
-        finally:
+
+            # store the name in the cache
+            if hasattr(self, 'cache'):
+                self.cache[n_idx] = obj
+
+        except:
+            # in case we did not succeed remove the mark as being saved
+            del self.index[obj]
             self.release_idx(n_idx)
+            raise
 
-        # store the name in the cache
-        if hasattr(self, 'cache'):
-            self.cache[n_idx] = obj
-
+        self.release_idx(n_idx)
         return n_idx
 
     def __setitem__(self, key, value):
@@ -705,7 +732,10 @@ class NamedObjectStore(ObjectStore):
         self._name_idx = dict()
 
         if self.content_class is not None and not issubclass(self.content_class, StorableNamedObject):
-            raise ValueError('Content class "%s" must be subclassed from StorableNamedObject.' % self.content_class.__name__)
+            raise ValueError(
+                'Content class "%s" must be subclassed from StorableNamedObject.' %
+                self.content_class.__name__
+            )
 
     def _init(self):
         """
@@ -866,7 +896,10 @@ class NamedObjectStore(ObjectStore):
                 raise ValueError('str "' + idx + '" not found in storage')
 
         elif type(idx) is not int:
-            raise ValueError('indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__)
+            raise ValueError(
+                'indices of type "%s" are not allowed in named storage (only str and int)' %
+                type(idx).__name__
+            )
 
         obj = super(NamedObjectStore, self).load(n_idx)
 
@@ -913,7 +946,7 @@ class NamedObjectStore(ObjectStore):
             logger.debug("Nameable object has not been initialized correctly. Has None in _name")
             raise AttributeError('_name needs to be a string for nameable objects.')
 
-        n_idx = super(NamedObjectStore, self).save(obj, idx=None)
+        n_idx = super(NamedObjectStore, self).save(obj)
 
         obj.fix_name()
 
@@ -921,6 +954,7 @@ class NamedObjectStore(ObjectStore):
         self._update_name_in_cache(name, n_idx)
 
         return n_idx
+
 
 class UniqueNamedObjectStore(NamedObjectStore):
 
@@ -936,6 +970,11 @@ class UniqueNamedObjectStore(NamedObjectStore):
     def reserve_name(self, name):
         """
         Locks a name as used
+
+        Parameters
+        ----------
+        name : str
+            the name to be locked for storage
         """
         if name != "":
             self._free_name.add(name)
@@ -943,6 +982,11 @@ class UniqueNamedObjectStore(NamedObjectStore):
     def release_name(self, name):
         """
         Releases a locked name
+
+        Parameters
+        ----------
+        name : str
+            the name to be released for being used as a name
         """
         self._free_name.discard(name)
 
@@ -1117,6 +1161,12 @@ class VariableStore(ObjectStore):
 
     def cache_all(self, part=None):
         """Load all samples as fast as possible into the cache
+
+        Parameters
+        ----------
+        part : list of int or `None`
+            If `None` (default) all samples will be loaded. Otherwise the list of indices
+            in `part` will be loaded into the cache
 
         """
         if part is None:
@@ -1300,7 +1350,7 @@ class ImmutableDictStore(DictStore):
         if idx in self.name_idx:
             # immutable means no duplicates, so quit
             raise RuntimeWarning(
-                    'Cannot re-save existing key "%s" in immutable dict store.' % idx
+                'Cannot re-save existing key "%s" in immutable dict store.' % idx
             )
 
         return super(ImmutableDictStore, self).save(obj, idx)

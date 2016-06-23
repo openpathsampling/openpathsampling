@@ -19,6 +19,7 @@ import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testMoveScheme(object):
     def setup(self):
@@ -191,11 +192,11 @@ class testMoveScheme(object):
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
 
-        self.scheme.append(all_repex)
+        self.scheme.append(all_repex, force=True)
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 6)
 
-        self.scheme.append(nn_repex)
+        self.scheme.append(nn_repex, force=True)
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
 
@@ -464,6 +465,106 @@ class testDefaultScheme(object):
                 test_prob = scheme.choice_probability[mover]
                 assert_almost_equal(expected_prob, test_prob)
 
+    def test_initial_conditions_from_trajectory(self):
+        scheme = DefaultScheme(self.network)
+        # root = scheme.move_decision_tree()
+        assert_equal(len(scheme.list_initial_ensembles()), 9)
+        
+        traj1 = make_1d_traj([-0.6, -0.2, -0.6])
+        traj2 = make_1d_traj([-0.6, -0.2, -0.05, -0.4, -0.6])
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+
+        all_trajs = [traj1, traj2, traj3]
+
+        transAB = transBA = None
+        for trans in self.network.sampling_transitions:
+            if trans.stateA == self.stateA and trans.stateB == self.stateB:
+                transAB = trans
+            elif trans.stateA == self.stateB and trans.stateB == self.stateA:
+                transBA = trans
+            else:
+                raise RuntimeWarning("That's a weird transition!")
+        ms_outer_ens = self.network.special_ensembles['ms_outer'].keys()[0]
+
+        init_cond_1 = scheme.initial_conditions_from_trajectories(all_trajs)
+        init_cond_1.sanity_check()
+        assert_equal(len(init_cond_1), 7)
+        assert_equal(init_cond_1[transAB.ensembles[0]].trajectory, traj1)
+        assert_equal(init_cond_1[transAB.ensembles[1]].trajectory, traj1)
+        assert_equal(init_cond_1[transAB.ensembles[2]].trajectory, traj2)
+        for ens in transBA.ensembles:
+            assert_equal(init_cond_1[ens].trajectory, traj3.reversed)
+        assert_equal(init_cond_1[ms_outer_ens].trajectory, traj3)
+
+        init_cond_2 = scheme.initial_conditions_from_trajectories([traj1])
+        init_cond_2.sanity_check()
+        assert_equal(len(init_cond_2), 2)
+        assert_equal(init_cond_2[transAB.ensembles[0]].trajectory, traj1)
+        assert_equal(init_cond_2[transAB.ensembles[1]].trajectory, traj1)
+
+        init_cond_3 = scheme.initial_conditions_from_trajectories([traj2],
+                                                                  init_cond_2)
+        init_cond_3.sanity_check()
+        assert_equal(len(init_cond_3), 3)
+        assert_equal(init_cond_3[transAB.ensembles[0]].trajectory, traj1)
+        assert_equal(init_cond_3[transAB.ensembles[1]].trajectory, traj1)
+        assert_equal(init_cond_3[transAB.ensembles[2]].trajectory, traj2)
+
+        init_cond_4 = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond_4.sanity_check()
+        assert_equal(len(init_cond_4), 7)
+        for ens in transAB.ensembles:
+            assert_equal(init_cond_4[ens].trajectory, traj3)
+        for ens in transBA.ensembles:
+            assert_equal(init_cond_4[ens].trajectory, traj3.reversed)
+
+    def test_check_initial_conditions(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        # cheating a bit, since we know what this gives
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        assert_equal(len(init_cond), 7)
+        assert_equal(len(scheme.list_initial_ensembles()), 9)
+        (missing, extra) = scheme.check_initial_conditions(init_cond)
+        assert_equal(len(missing), 2)
+        assert_equal(len(extra), 0)
+        for ens in self.network.special_ensembles['minus'].keys():
+            assert_in([ens], missing)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        (missing, extra) = scheme.check_initial_conditions(init_cond)
+        assert_equal(len(missing), 2)
+        assert_equal(len(extra), 1)
+
+    @raises(AssertionError)
+    def test_assert_initial_conditions(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        scheme.assert_initial_conditions(init_cond)
+
+    def test_initial_conditions_report(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        expected = "Missing ensembles:\n"
+        expected += "*  [[MinusInterfaceEnsemble]]\n"*2
+        expected += "Extra ensembles:\n*  [LengthEnsemble]\n"
+        assert_equal(scheme.initial_conditions_report(init_cond), expected)
+
 
 class testLockedMoveScheme(object):
     def setup(self):
@@ -522,3 +623,49 @@ class testLockedMoveScheme(object):
         scheme = LockedMoveScheme(self.root_mover, self.network)
         scheme.movers = self.basic_scheme.movers
         vals = scheme.movers
+
+
+class testOneWayShootingMoveScheme(object):
+    def setup(self):
+        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
+        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
+                                          [-0.5, -0.3, -0.1, 0.0])
+        self.network = paths.MSTISNetwork([
+            (self.stateA, interfacesA, cvA),
+            (self.stateB, interfacesB, cvB)
+        ])
+
+    def test_scheme(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        assert_equal(len(scheme.movers), 1)
+        assert_equal(len(root.movers), 1)
+
+    def test_sanity(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        scheme.sanity_check()
+
+    def test_unused_ensembles(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        unused = scheme.find_unused_ensembles()
+        specials = self.network.special_ensembles
+        expected_unused = sum([specials[special_type].keys() 
+                               for special_type in specials], [])
+        assert_equal(set(expected_unused), set(unused))
+
+    def test_check_initial_conditions(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        assert_equal(len(scheme.list_initial_ensembles()), 6)
+        assert_equal(len(init_cond), 6)
+        scheme.assert_initial_conditions(init_cond)
+        assert_equal(scheme.initial_conditions_report(init_cond),
+                     "No missing ensembles.\nNo extra ensembles.\n")
