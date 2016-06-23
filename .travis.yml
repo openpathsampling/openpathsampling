@@ -26,6 +26,11 @@ script:
   # Upload new docs
   - bash -x devtools/ci/after_sucess.sh
 
+addons:
+  apt:
+    packages:
+    - pandoc
+
 env:
   matrix:
     - python=2.7  CONDA_PY=27  CONDA_NPY=110
