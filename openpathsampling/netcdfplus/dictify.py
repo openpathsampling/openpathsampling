@@ -245,7 +245,7 @@ class ObjectJSON(object):
         is_loaded = f_module.split('.')[0] == 'openpathsampling'
         is_class = isinstance(c, (type, types.ClassType))
         if not is_class:
-            if is_local or is_loaded:
+            # if is_local or is_loaded:
                 # this is a local function, let's see if we can save it
                 if ObjectJSON.allow_marshal and callable(c):
                     # use marshal
@@ -304,15 +304,15 @@ class ObjectJSON(object):
                         '_global_vars': global_vars,
                         '_module_vars': import_vars
                     }
-
-        if not is_local:
-            # save the external class, e.g. msmbuilder featurizer
-            if f_module.split('.')[0] in ObjectJSON.allowed_imports:
-                # only store the function and the module
-                return {
-                    '_module': c.__module__,
-                    '_name': c.__name__
-                }
+        else:
+            if not is_local:
+                # save the external class, e.g. msmbuilder featurizer
+                if f_module.split('.')[0] in ObjectJSON.allowed_imports:
+                    # only store the function and the module
+                    return {
+                        '_module': c.__module__,
+                        '_name': c.__name__
+                    }
 
         raise RuntimeError('Locally defined classes are not storable yet')
 
