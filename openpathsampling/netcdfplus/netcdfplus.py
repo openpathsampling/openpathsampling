@@ -14,7 +14,7 @@ import netCDF4
 import os.path
 import abc
 
-import version
+# import version
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -32,7 +32,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
     @property
     def _netcdfplus_version_(self):
-        return version.version
+        # return version.version
+        return '0.1.0'
 
     _type_conversion = {
         'float': np.float32,
