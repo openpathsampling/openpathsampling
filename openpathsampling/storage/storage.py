@@ -24,7 +24,9 @@ class Storage(NetCDFPlus):
     simulation. This allows effective storage of shooting trajectories
     """
 
-    _ops_version_ = '0.1.0'
+    @property
+    def _ops_version_(self):
+        return paths.version.version
 
     USE_FEATURE_SNAPSHOTS = True
 
@@ -189,7 +191,7 @@ class Storage(NetCDFPlus):
 
     def write_meta(self):
         self.setncattr('storage_format', 'openpathsampling')
-        self.setncattr('storage_version', self._ops_version_)
+        self.setncattr('storage_version', paths.version.version)
 
     def _initialize(self):
         # Set global attributes.
@@ -291,17 +293,21 @@ class Storage(NetCDFPlus):
 
     def check_version(self):
         super(Storage, self).check_version()
-        s1 = self.getncattr('storage_version')
-        s2 = self._ops_version_
+        try:
+            s1 = self.getncattr('storage_version')
+            s2 = self._ops_version_
 
-        cp = self._cmp_version(s1, s2)
+            cp = self._cmp_version(s1, s2)
 
-        if cp != 0:
-            logger.info('Loading different OPS storage version. Installed version is %s and loaded version is %s' % s2, s1)
-            if cp > 0:
-                logger.info('Loaded version is newer consider upgrading OPS conda package!')
-            else:
-                logger.info('Loaded version is older. Should be no problem other then missing features and information')
+            if cp != 0:
+                logger.info('Loading different OPS storage version. Installed version is %s and loaded version is %s' % s2, s1)
+                if cp > 0:
+                    logger.info('Loaded version is newer consider upgrading OPS conda package!')
+                else:
+                    logger.info('Loaded version is older. Should be no problem other then missing features and information')
+
+        except AttributeError:
+            logger.info('Using Pre 1.0 version. Try upgrading the OPS conda package!')
 
     @staticmethod
     def default_cache_sizes():

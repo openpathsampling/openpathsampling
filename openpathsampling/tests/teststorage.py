@@ -6,6 +6,8 @@ import os
 import mdtraj as md
 from nose.tools import (assert_equal)
 
+import openpathsampling as paths
+
 import openpathsampling.engines.openmm as peng
 import openpathsampling.engines.toy as toys
 
@@ -207,3 +209,8 @@ class testStorage(object):
         assert(len(store.dimensions['snapshots']) == 1)
         store.close()
 
+    def test_version(self):
+        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        assert(os.path.isfile(self.filename))
+
+        assert(store.storage_version == paths.version.version)

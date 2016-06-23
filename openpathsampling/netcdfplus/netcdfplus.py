@@ -14,6 +14,8 @@ import netCDF4
 import os.path
 import abc
 
+import version
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -28,7 +30,9 @@ class NetCDFPlus(netCDF4.Dataset):
     """
     support_simtk_unit = True
 
-    _netcdfplus_version_ = '0.1.0'
+    @property
+    def _netcdfplus_version_(self):
+        return version.version
 
     _type_conversion = {
         'float': np.float32,
@@ -334,19 +338,20 @@ class NetCDFPlus(netCDF4.Dataset):
         return 0
 
     def check_version(self):
-        s1 = self.getncattr('version')
-        s2 = self._netcdfplus_version_
+        try:
+            s1 = self.getncattr('version')
+            s2 = self._netcdfplus_version_
 
-        cp = self._cmp_version(s1, s2)
+            cp = self._cmp_version(s1, s2)
 
-        if cp != 0:
-            logger.info('Loading different netcdf version. Installed version is %s and loaded version is %s' % s2, s1)
-            if cp > 0:
-                logger.info('Loaded version is newer consider upgrading your conda package!')
-            else:
-                logger.info('Loaded version is older. Should be no problem other then missing features and information')
-
-
+            if cp != 0:
+                logger.info('Loading different netcdf version. Installed version is %s and loaded version is %s' % s2, s1)
+                if cp > 0:
+                    logger.info('Loaded version is newer consider upgrading your conda package!')
+                else:
+                    logger.info('Loaded version is older. Should be no problem other then missing features and information')
+        except AttributeError:
+            logger.info('Using Pre 1.0 version which did not store the version number in the file. Try upgrading your conda package!')
 
     def write_meta(self):
         pass
