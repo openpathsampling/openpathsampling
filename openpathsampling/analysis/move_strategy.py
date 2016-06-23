@@ -4,7 +4,6 @@ import abc
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
-from openpathsampling import PathMoverFactory as pmf
 
 LevelLabels = collections.namedtuple(
     "LevelLabels", 
@@ -207,19 +206,22 @@ class OneWayShootingStrategy(MoveStrategy):
     Strategy for OneWayShooting. Allows choice of shooting point selector.
     """
     _level = levels.MOVER
-    def __init__(self, selector=None, ensembles=None, group="shooting",
-                 replace=True):
+    def __init__(self, selector=None, ensembles=None, engine=None,
+                 group="shooting", replace=True):
         super(OneWayShootingStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
         )
         if selector is None:
             selector = paths.UniformSelector()
         self.selector = selector
+        self.engine = engine
 
     def make_movers(self, scheme):
         ensemble_list = self.get_ensembles(scheme, self.ensembles)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        shooters = pmf.OneWayShootingSet(self.selector, ensembles)
+        shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector,
+                                                            ensembles,
+                                                            self.engine)
         return shooters
 
 class NearestNeighborRepExStrategy(MoveStrategy):
@@ -420,10 +422,12 @@ class MinusMoveStrategy(MoveStrategy):
     Takes a given scheme and makes the minus mover.
     """
     _level = levels.MOVER
-    def __init__(self, ensembles=None, group="minus", replace=True):
+    def __init__(self, engine=None, ensembles=None, group="minus",
+                 replace=True):
         super(MinusMoveStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
         )
+        self.engine = engine
 
     def get_ensembles(self, scheme, ensembles):
         network = scheme.network
@@ -452,7 +456,8 @@ class MinusMoveStrategy(MoveStrategy):
                           for t in network.special_ensembles['minus'][ens]]
             movers.append(paths.MinusMover(
                 minus_ensemble=ens, 
-                innermost_ensembles=innermosts
+                innermost_ensembles=innermosts,
+                engine=self.engine
             ))
         return movers
 
@@ -470,7 +475,8 @@ class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
                           for t in network.special_ensembles['minus'][ens]]
             movers.append(paths.SingleReplicaMinusMover(
                 minus_ensemble=ens, 
-                innermost_ensembles=innermosts
+                innermost_ensembles=innermosts,
+                engine=self.engine
             ))
         return movers
 

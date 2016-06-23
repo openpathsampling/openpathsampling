@@ -16,12 +16,12 @@ def join_volumes(volume_list):
 
     Parameters
     ----------
-    volume_list : list of Volume
+    volume_list : list of :class:`openpathsampling.Volume`
         the list to be joined together
 
     Returns
     -------
-    UnionVolume 
+    :class:`openpathsampling.UnionVolume`
         the union of the elements of the list, or EmptyVolume if list is
         empty
     """
@@ -118,7 +118,17 @@ class VolumeCombination(Volume):
         self.sfnc = str_fnc
 
     def __call__(self, snapshot):
-        return self.fnc(self.volume1.__call__(snapshot), self.volume2.__call__(snapshot))
+        # short circuit following JHP's implementation in ensemble.py
+        a = self.volume1(snapshot)
+        res_true = self.fnc(a, True)
+        res_false = self.fnc(a, False)
+        if res_false == res_true:
+            return res_true
+        else:
+            b = self.volume2(snapshot)
+            return self.fnc(a, b)
+        #return self.fnc(self.volume1.__call__(snapshot),
+                        #self.volume2.__call__(snapshot))
     
     def __str__(self):
         return '(' + self.sfnc.format(str(self.volume1), str(self.volume2)) + ')'
@@ -480,7 +490,7 @@ class VoronoiVolume(Volume):
         
         Parameters
         ----------
-        snapshot : Snapshot
+        snapshot : :class:`opensampling.engines.BaseSnapshot`
             the snapshot to be tested
         
         Returns
@@ -504,10 +514,11 @@ class VoronoiVolume(Volume):
         
         Parameters
         ----------
-        snapshot : Snapshot
+        snapshot : :class:`opensampling.engines.BaseSnapshot`
             snapshot to be tested
         state : int or None
-            index of the cell to be tested. If `None` (Default) then the internal self.state is used
+            index of the cell to be tested. If `None` (Default) then the
+            internal self.state is used
             
         Returns
         -------

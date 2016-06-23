@@ -14,7 +14,7 @@ class LiveVisualization(object):
         self.background = None
         self._save_bg_axes = None
 
-        self.fig = plt.figure()
+        self.fig = None
 
         self.extent = self.xlim + self.ylim
 
@@ -47,14 +47,15 @@ class LiveVisualization(object):
     def draw_samples(self, samples, accepted=True):
         self.draw_background()
         for sample in samples:
-            self.ax.plot(
-                self.cv_x(sample.trajectory),
-                self.cv_y(sample.trajectory),
-                linewidth=2, zorder=2,
-                color=self.ensemble_colors[sample.ensemble]
-            )
-            # draw arrowheads at the end of each active
-            self.draw_arrowhead(sample, accepted=accepted)
+            if sample.ensemble in self.ensemble_colors:
+                self.ax.plot(
+                    self.cv_x(sample.trajectory),
+                    self.cv_y(sample.trajectory),
+                    linewidth=2, zorder=2,
+                    color=self.ensemble_colors[sample.ensemble]
+                )
+                # draw arrowheads at the end of each active
+                self.draw_arrowhead(sample, accepted=accepted)
         return self.fig
 
     def draw_trials(self, change):

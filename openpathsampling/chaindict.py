@@ -47,39 +47,41 @@ class ChainDict(object):
 
     Attributes
     ----------
-    post : ChainDict
+    _post : ChainDict
         the ChainDict to be called when this instance cannot evaluate given keys
 
     """
 
     def __init__(self):
-        self.post = None
+        self._post = None
 
     def __getitem__(self, items):
         # first apply the own _get functions to compute
         results = self._get_list(items)
 
-        if self.post is not None:
+        if self._post is not None:
             nones = [obj[0] for obj in zip(items, results) if obj[1] is None]
             if len(nones) == 0:
                 return results
             else:
-                rep = self.post[[p for p in nones]]
-                self._add_new(nones, rep)
+                rep = self._post[[p for p in nones]]
+                self._set_list(nones, rep)
 
                 it = iter(rep)
                 return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
 
         return results
 
-    def _add_new(self, items, values):
-        pass
-
     def __setitem__(self, key, value):
         if isinstance(key, collections.Iterable):
             self._set_list(key, value)
         else:
-            self._set(key, value)
+            if value is not None:
+                self._set(key, value)
+
+        # pass __setitem__ to underlying dicts as default
+        if self._post is not None:
+            self._post[key] = value
 
     def _set(self, item, value):
         """
@@ -92,11 +94,12 @@ class ChainDict(object):
 
     def _set_list(self, items, values):
         """
-        Implementation on how to set a list of keys to this chaindict
+        Implementation on how to set multiple values to this chaindict
 
-        Default is to call _set on all single keys
+        Default implementation is to not store anything.
+        This is mostly used in caching and stores
         """
-        [self._set(item, value) for item, value in zip(items, values) if value is not None]
+        [self._set(item, value) for item, value in zip(items, values) if values is not None]
 
     def _get(self, item):
         """
@@ -112,41 +115,116 @@ class ChainDict(object):
         Implementation on how to get the values of a list of keys
 
         Default is to use _get on each single key
+
+        Returns
+        -------
+        list of object
         """
         return [self._get(item) for item in items]
 
     def __call__(self, items):
         return self[items]
 
-    ## ToDo: We might replace + by > to make the passing direction clear
-    def __add__(self, other):
+    def __gt__(self, other):
         """
-        Combine two ChainDicts first + seconds into a new one.
+        Combine two ChainDicts first > next into a new one.
 
-        >>> new_dict = first_dict + fall_back
+        Parameters
+        ----------
+        other : :class:`openpathsampling.chaindict.ChainDict`
+            the chaindict to be attached as a fallback
+
+        Returns
+        -------
+        :class:`openpathsampling.chaindict.ChainDict`
+            the current object with the attached fallback chaindict.
+
+        Examples
+        --------
+        >>> new_dict = first_dict > fall_back
         """
-        other.post = self
+        last = self
+        while last._post is not None:
+            last = last._post
+
+        last._post = other
+        return self
+
+    def __lt__(self, other):
+        """
+        Combine two ChainDicts seconds < first into a new one.
+
+        Parameters
+        ----------
+        other : :class:`openpathsampling.chaindict.ChainDict`
+            the chaindict to be attached as a fallback
+
+        Returns
+        -------
+        :class:`openpathsampling.chaindict.ChainDict`
+            the current object with the attached fallback chaindict.
+
+        Examples
+        --------
+
+        >>> new_dict = fall_back < first_dict
+        """
+        last = other
+        while last._post is not None:
+            last = last.post
+
+        last._post = self
         return other
+
+    @property
+    def passing_chain(self):
+        """
+        Return a list of chaindicts in order they will be tried.
+
+        Returns
+        -------
+        list of :class:`openpathsampling.chaindict.ChainDict`
+            the list of chaindicts in order they are called
+
+        """
+        chain = [self]
+        while chain[-1]._post is not None:
+            chain.append(chain[-1]._post)
+
+        return chain
+
+    def str_chain(self):
+        """
+        Return a string representation of the chain of dicts called.
+
+        Returns
+        -------
+        str
+            the string representation
+
+        """
+        return ' > '.join(map(lambda x : x.__class__.__name__, self.passing_chain))
 
 
 class Wrap(ChainDict):
-    """A ChainDict that passes on all request to the underlying ChainDict
+    """A ChainDict that passes on all requests to the underlying ChainDict
+
     """
     def __init__(self, post):
         """
         Parameters
         ----------
-        post : chaindict
+        post : :class:`openpathsampling.chaindict.ChainDict`
             the underlying chain dict to be used
         """
         super(Wrap, self).__init__()
-        self.post = post
+        self._post = post
 
     def __getitem__(self, items):
-        return self.post[items]
+        return self._post[items]
 
     def __setitem__(self, key, value):
-        self.post[key] = value
+        self._post[key] = value
 
 
 class MergeNumpy(ChainDict):
@@ -154,7 +232,11 @@ class MergeNumpy(ChainDict):
     """
 
     def __getitem__(self, items):
-        return np.array(self.post[items])
+        return np.array(self._post[items])
+
+    def __setitem__(self, key, value):
+        self._post[key] = value
+
 
 class ExpandSingle(ChainDict):
     """
@@ -163,7 +245,7 @@ class ExpandSingle(ChainDict):
 
     def __getitem__(self, items):
         if type(items) is LoaderProxy:
-            return self.post[[items]][0]
+            return self._post[[items]][0]
         if hasattr(items, '__iter__'):
             try:
                 dummy = len(items)
@@ -173,17 +255,18 @@ class ExpandSingle(ChainDict):
                                 'You can wrap your iterator in list() if you know that it will finish.')
 
             try:
-                return self.post[items.as_proxies()]
+                return self._post[items.as_proxies()]
             except AttributeError:
                 # turn possible iterators into list since we have to do it anyway.
                 # Iterators do not work
-                return self.post[list(items)]
+                return self._post[list(items)]
 
         else:
-            return self.post[[items]][0]
+            return self._post[[items]][0]
 
     def __setitem__(self, key, value):
-        self.post[key] = value
+        self._post[key] = value
+
 
 class Transform(ChainDict):
     """
@@ -198,10 +281,10 @@ class Transform(ChainDict):
         self.transform = transform
 
     def __getitem__(self, item):
-        return self.post[self.transform(item)]
+        return self._post[self.transform(item)]
 
     def __setitem__(self, key, value):
-        self.post[self.transform(key)] = value
+        self._post[self.transform(key)] = value
 
 
 class Function(ChainDict):
@@ -210,23 +293,26 @@ class Function(ChainDict):
 
     This works effective like a function called with square brackets
     """
-    def __init__(self, fnc, requires_lists=True, single_as_scalar=False):
+    def __init__(self, fnc, requires_lists=True, scalarize_numpy_singletons=False):
         """
         Parameters
         ----------
         fnc : function
             the function to be evaluated to return values to keys
         requires_lists : bool
-            if true we assume that it is faster to pass lists to this function instead
+            if `True` we assume that it is faster to pass lists to this function instead
             of evaluating each key separately
+        scalarize_numpy_singletons : bool
+            if `True` eventual numpy objects that have length one in their last dimension, will
+            be flattened by the last dimension. This is often useful if you have function that
+            will by default return a list of results. In case your function does so, you can
+            treat it as returning a scalar.
+
         """
         super(Function, self).__init__()
         self._eval = fnc
         self.requires_lists = requires_lists
-        self.single_as_scalar = single_as_scalar
-
-    def _contains(self, item):
-        return False
+        self.scalarize_numpy_singletons = scalarize_numpy_singletons
 
     def _get(self, item):
         if self._eval is None:
@@ -238,7 +324,7 @@ class Function(ChainDict):
         else:
             result = self._eval(item)
 
-        if self.single_as_scalar and result.shape[-1] == 1:
+        if self.scalarize_numpy_singletons and result.shape[-1] == 1:
             return result.reshape(result.shape[:-1])
 
         return result
@@ -250,22 +336,25 @@ class Function(ChainDict):
         if self.requires_lists:
             results = self._eval(items)
 
-            if self.single_as_scalar and results.shape[-1] == 1:
+            if self.scalarize_numpy_singletons and results.shape[-1] == 1:
                 results = results.reshape(results.shape[:-1])
 
         else:
             results = [self._eval(obj) for obj in items]
-            if self.single_as_scalar and results[0].shape[-1] == 1:
+            if self.scalarize_numpy_singletons and results[0].shape[-1] == 1:
                 results = map(lambda x : x.reshape(x.shape[:-1]), results)
 
         return results
-
 
     def get_transformed_view(self, transform):
         def fnc(obj):
             return transform(self(obj))
 
         return fnc
+
+    def __setitem__(self, key, value):
+        # Cannot set the value of a function and it has no fallback
+        pass
 
 
 class CacheChainDict(ChainDict):
@@ -276,8 +365,8 @@ class CacheChainDict(ChainDict):
         """
         Parameters
         ----------
-        cache : dict-like class
-            the dict or cache to be used to store the data
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache to be used to store the data
         """
         super(CacheChainDict, self).__init__()
         self.cache = cache
@@ -285,21 +374,15 @@ class CacheChainDict(ChainDict):
     def _contains(self, item):
         return item in self.cache
 
-    def _set(self, item, value):
-        if value is not None:
-            self.cache[item] = value
-
     def _get(self, item):
         try:
             return self.cache[item]
         except KeyError:
             return None
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            self.cache[item] = value
-            if self.reversible:
-                self.cache[item.reversed] = value
+    def _set(self, item, value):
+        self.cache[item] = value
+
 
 class ReversibleCacheChainDict(CacheChainDict):
     """
@@ -309,29 +392,37 @@ class ReversibleCacheChainDict(CacheChainDict):
         """
         Parameters
         ----------
-        cache : dict-like class
-            the dict or cache to be used to store the data
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache to be used to store the data
         """
         super(ReversibleCacheChainDict, self).__init__(cache)
         self.reversible = reversible
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            self.cache[item] = value
-            if self.reversible:
-                self.cache[item.reversed] = value
+    def _set(self, item, value):
+        self.cache[item] = value
+        if self.reversible:
+            self.cache[item.reversed] = value
+
 
 class LRUChainDict(CacheChainDict):
     """
-    Use a LRUCache to cache values
+    Uses an LRUCache to cache values
     """
     def __init__(self, size_limit=1000000):
+        """
+
+        Parameters
+        ----------
+        size_limit : int
+            the maximal allowed number of objects in the cache
+
+        """
         super(LRUChainDict, self).__init__(LRUCache(size_limit))
 
 
 class StoredDict(ChainDict):
     """
-    ChainDict that has a store attached and return existing values from the store
+    ChainDict that has a store attached and returns existing values from the store
     """
     def __init__(self, key_store, value_store, main_cache, cache=None):
         """
@@ -341,9 +432,12 @@ class StoredDict(ChainDict):
             the store that references usable keys
         value_store : storage.Variable
             the store that references the store variable to store the values by index
-        cache : dict-like or cache, default: None
-            the cache used to access stored values faster. If None an LRUCache with
-            100000 entries is used
+        main_cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the main cache used for non-stored objects so that the StoredDict can access
+            values for these objects, too, if the objects has been saved in the meantime.
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache used to access stored values faster. If `None` (default) an
+            :class:`openpathsampling.netcdfplus.cache.LRUCache` with 1000000 (1M) entries is used.
         """
         super(StoredDict, self).__init__()
         self.value_store = value_store
@@ -356,12 +450,14 @@ class StoredDict(ChainDict):
         self.storable = set()
         self._last_n_objects = 0
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            key = self._get_key(item)
-            if key is not None:
-                self.cache[key] = value
-                self.storable.add(key)
+    def _set(self, item, value):
+        key = self._get_key(item)
+        if key is not None:
+            self.cache[key] = value
+            self.storable.add(key)
+
+    def _set_list(self, items, values):
+        [self._set(item, value) for item, value in zip(items, values) if value is not None]
 
         if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()
@@ -388,7 +484,6 @@ class StoredDict(ChainDict):
             for key, value in pairs:
                 self.cache[key] = value
             self._last_n_objects = len(self.key_store)
-
 
     def cache_all(self):
         values = self.value_store[:]
@@ -434,11 +529,12 @@ class StoredDict(ChainDict):
 
         return replace
 
+
 class ReversibleStoredDict(StoredDict):
     """
     ChainDict that has a store attached and return existing values from the store. Supports reversible items
     """
-    def __init__(self, key_store, value_store, main_cache, cache=None, reversible=True):
+    def __init__(self, key_store, value_store, backward_store, main_cache, cache=None):
         """
         Parameters
         ----------
@@ -446,24 +542,34 @@ class ReversibleStoredDict(StoredDict):
             the store that references usable keys
         value_store : storage.Variable
             the store that references the store variable to store the values by index
-        cache : dict-like or cache, default: None
-            the cache used to access stored values faster. If None an LRUCache with
-            100000 entries is used
+        backward_store : storage.Variable
+            the store that references the store variable to store the values by index
+            only for reversed objects. If `backward_store` is `value_store` then the
+            dict is assumed to be reversible in the sense that forward and backward
+            objects have the same value
+        main_cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the main cache used for non-stored objects so that the StoredDict can access
+            values for these objects, too, if the objects has been saved in the meantime.
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache used to access stored values faster. If `None` (default) an
+            :class:`openpathsampling.netcdfplus.cache.LRUCache` with 1000000 (1M) entries is used.
+
         """
         super(ReversibleStoredDict, self).__init__(key_store, value_store, main_cache)
-        self.reversible = reversible
 
-    def _add_new(self, items, values):
-        for item, value in zip(items, values):
-            key = self._get_key(item)
-            if key is not None:
-                self.cache[key] = value
-                self.storable.add(key)
-                if self.reversible:
-                    # if reversible store also for reversed
-                    s_key = key + 1 - 2 * (key % 2)
-                    self.cache[s_key] = value
-                    self.storable.add(s_key)
+        self._reversible = backward_store is value_store
+        self.backward_store = backward_store
+
+    def _set(self, item, value):
+        key = self._get_key(item)
+        if key is not None:
+            self.cache[key] = value
+            self.storable.add(key)
+            if self._reversible:
+                # if reversible store also for reversed
+                s_key = key + 1 - 2 * (key % 2)
+                self.cache[s_key] = value
+                self.storable.add(s_key)
 
         if self.max_save_buffer_size is not None and len(self.storable) > self.max_save_buffer_size:
             self.sync()
@@ -472,8 +578,17 @@ class ReversibleStoredDict(StoredDict):
         # Sync objects that had been saved and afterwards the CV was computed
         if len(self.storable) > 0:
             keys = [idx for idx in sorted(list(self.storable)) if idx in self.cache]
-            values = [self.cache[idx] for idx in keys]
-            self.value_store[keys] = values
+            keys_fw = [idx/2 for idx in keys if not idx & 1]
+            keys_bw = [idx/2 for idx in keys if idx & 1]
+
+            if keys_fw:
+                values_fw = [self.cache[idx] for idx in keys if not idx & 1]
+                self.value_store[keys_fw] = values_fw
+
+            if keys_bw:
+                values_bw = [self.cache[idx] for idx in keys if idx & 1]
+                self.backward_store[keys_bw] = values_bw
+
             self.storable.clear()
 
         # Sync objects that first had a value computed and were later stored
@@ -484,17 +599,88 @@ class ReversibleStoredDict(StoredDict):
             objs = map(self.key_store.cache.get_silent, keys)
             values = map(self.main_cache.get_silent, objs)
 
-            if self.reversible:
+            if self._reversible:
                 # double all pairs of values and remove Nones
-                values = map(lambda x : x[0] or x[1], zip(values[0::2], values[1::2]))
+                val_old = values
+                values = map(lambda x : x[0] if x[0] is not None else x[1], zip(values[0::2], values[1::2]))
                 values = [val for val in values for _ in (0, 1)]
 
             pairs = [(key, value) for key, value in zip(keys, values) if value is not None]
             if len(pairs) > 0:
-                keys, values = zip(*pairs)
+                pair_fw = [(pair[0] / 2, pair[1]) for pair in pairs if not pair[0] & 1]
+                if pair_fw:
+                    keys_fw, values_fw = zip(*pair_fw)
+                    self.value_store[list(keys_fw)] = list(values_fw)
 
-                self._last_n_objects = len(self.key_store)
+                if not self._reversible:
+                    pair_bw = [(pair[0] / 2, pair[1]) for pair in pairs if pair[0] & 1]
+                    if pair_bw:
+                        keys_bw, values_bw = zip(*pair_bw)
+                        self.backward_store[list(keys_bw)] = list(values_bw)
 
-                self.value_store[list(keys)] = list(values)
                 for key, value in pairs:
                     self.cache[key] = value
+
+        self._last_n_objects = len(self.key_store)
+
+    def cache_all(self):
+        # TODO: This only makes sense if the cache can fit everything.
+
+        values_fw = self.value_store[:]
+        if self._reversible:
+            values_bw = values_fw
+        else:
+            values_bw = self.backward_store[:]
+
+        self.cache.clear()
+        [self.cache.__setitem__(2*key, value) for key, value in enumerate(values_fw)]
+        [self.cache.__setitem__(2*key + 1, value) for key, value in enumerate(values_bw)]
+
+    def _get(self, item):
+        key = self._get_key(item)
+
+        if key is None:
+            return None
+
+        if key in self.cache:
+            return self.cache[key]
+        else:
+            # update cache with specific strategy
+            if not key & 1:
+                val = self.value_store[key / 2]
+            else:
+                val = self.backward_store[key / 2]
+
+            self.cache[key] = val
+
+            if self._reversible:
+                self.cache[key ^ 1] = val
+
+            return val
+
+    def _get_list(self, items):
+        keys = map(self._get_key, items)
+
+        idxs = [item for item in keys if item is not None and item not in self.cache]
+
+        if len(idxs) > 0:
+            sorted_idxs = sorted(list(set(idxs)))
+
+            keys_fw = [int(idx/2) for idx in sorted_idxs if not idx & 1]
+            keys_bw = [int(idx/2) for idx in sorted_idxs if idx & 1]
+
+            if keys_fw:
+                values_fw = self.value_store[keys_fw]
+            if keys_bw:
+                values_bw = self.backward_store[keys_bw]
+
+            replace = [
+                None if key is None else
+                self.cache[key] if key in self.cache else
+                values_fw[keys_fw.index(key/2)] if not key & 1 else
+                values_bw[keys_bw.index(key/2)] for key in keys]
+        else:
+            replace = [None if key is None else self.cache[key] if key in self.cache else None for key in keys]
+
+        return replace
+

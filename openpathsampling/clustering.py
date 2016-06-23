@@ -10,11 +10,11 @@ Main file copied from Cluster.py from MSMBuilder
 
 from __future__ import print_function, absolute_import, division
 import numpy as np
-from msmbuilder import clustering
+from msmbuilder.cluster import clustering
 
 from msmbuilder.metrics import RMSD
 
-from trajectory import Trajectory
+from openpathsampling import Trajectory
 
 class Object(object):
             pass

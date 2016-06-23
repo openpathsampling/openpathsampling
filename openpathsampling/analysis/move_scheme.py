@@ -1,7 +1,7 @@
 import openpathsampling as paths
 
-from openpathsampling.analysis.move_strategy import levels as strategy_levels
-import openpathsampling.analysis.move_strategy as strategies
+from move_strategy import levels as strategy_levels
+import move_strategy as strategies
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
@@ -45,7 +45,7 @@ class MoveScheme(StorableNamedObject):
             'network' : self.network,
             'choice_probability' : self.choice_probability,
             'balance_partners' : self.balance_partners,
-            'root_mover' : self.root_mover
+            'root_mover' : self.root_mover,
         }
         return ret_dict
 
@@ -59,7 +59,7 @@ class MoveScheme(StorableNamedObject):
         scheme.root_mover = dct['root_mover']
         return scheme
 
-    def append(self, strategies, levels=None):
+    def append(self, strategies, levels=None, force=False):
         """
         Adds new strategies to this scheme, organized by `level`.
 
@@ -69,9 +69,16 @@ class MoveScheme(StorableNamedObject):
             strategies to add to this scheme
         levels : integer or list of integer or None
             levels to associate with each strategy. If None, strategy.level.
+        force : bool
+            force the strategy to be appended, even if a root_mover exists.
+            Default False for safety.
         """
         # first we clean up the input: strategies is a list of MoveStrategy;
         # levels is a list of integers
+        if self.root_mover is not None and force is not True:
+            raise RuntimeError("Can't add strategies after the move " +
+                               "decision tree has been built. " +
+                               "Override with `force=True`.")
         try:
             strategies = list(strategies)
         except TypeError:
@@ -203,6 +210,8 @@ class MoveScheme(StorableNamedObject):
             ensembles which appear in this (sub)tree
         """
         if root is None:
+            if self.root_mover is None:
+                self.root = self.move_decision_tree()
             root = self.root_mover
         movers = root.map_pre_order(lambda x : x)
         mover_ensemble_dict = {}
@@ -287,6 +296,204 @@ class MoveScheme(StorableNamedObject):
             raise RuntimeWarning(warnstr)
 
 
+    def list_initial_ensembles(self, root=None):
+        """
+        Returns a list of initial ensembles for this move scheme.
+        
+        Used in `initial_conditions_from_trajectories` to get the ensembles
+        we need. The list returned by this is of a particular format: it
+        should be thought of as a list of lists of ensembles. Call this the
+        "list" and the "sublists". At least one member of each sublist is
+        required, and if a "sublist" is actually, an ensemble, it is treated
+        as a sublist of one. So returning [a, b, [c, d], e] is equivalent to
+        returning [[a], [b], [c, d], [e]], and is interpreted as "initial
+        conditions are ensembles a, b, e, and one of either c or d".
+
+        To make the simplest cases more explicit, normal all-replica TIS for
+        ensembles a, b, and c would return [a, b, c], or equivalently, [[a],
+        [b], [c]]. Single-replica TIS would return [[a, b, c]].
+        """
+        return list(self.find_used_ensembles(root))
+
+
+    def initial_conditions_from_trajectories(self, trajectories,
+                                             sampleset=None):
+        """
+        Create a SampleSet with as many initial samples as possible.
+
+        Parameters
+        ----------
+        trajectories : list of :class:`.Trajectory` or :class:`.Trajectory`
+            the input trajectories to use
+        sampleset : :class:`.SampleSet`, optional
+            if given, add samples to this sampleset. Default is None, which
+            means that this will start a new sampleset.
+
+        Returns
+        -------
+        :class:`.SampleSet`
+            sample set with samples for every initial ensemble for this
+            scheme that could be satisfied by the given trajectories
+
+        See Also
+        --------
+        list_initial_ensembles
+        """
+        ensembles_to_fill = self.list_initial_ensembles()
+        if sampleset is None:
+            sampleset = paths.SampleSet([])
+
+        if isinstance(trajectories, paths.Trajectory):
+            trajectories = [trajectories]
+
+        for ens_list in ensembles_to_fill:
+            if type(ens_list) is not list:
+                ens_list = [ens_list]
+            sample = None
+            for ens in ens_list:
+                if ens in sampleset.ensemble_list():
+                    break  # we've already got one!
+                sample = None
+                # fill only the first in ens_list that can be filled
+                # 1. try forward
+                for traj in trajectories:
+                    if ens(traj):
+                        sample = paths.Sample(replica=None, 
+                                              trajectory=traj,
+                                              ensemble=ens)
+                        break  # take the first such trajectory
+                if sample is not None:
+                    break  # take the first ensemble that works
+                
+                # 2. try reversed
+                for traj in trajectories:
+                    if ens(traj.reversed):
+                        sample = paths.Sample(replica=None,
+                                              trajectory=traj.reversed,
+                                              ensemble=ens)
+                        break  # take the first such trajectory
+                if sample is not None:
+                    break  # take the first ensemble that works
+
+                # 3. hypothetically, try extending (future)
+            # now, if we've found a sample, add it
+            if sample is not None:
+                sampleset.append_as_new_replica(sample)
+        return sampleset
+
+    def check_initial_conditions(self, sampleset):
+        """
+        Check for missing or extra ensembles for initial conditions.
+
+        This is primary used programmatically as a reusable function for
+        several use cases where we need this information. See functions
+        under "see also" for examples of such cases.
+
+        Parameters
+        ----------
+        sampleset : :class:`.SampleSet`
+            proposed set of initial conditions for this movescheme
+
+        Returns
+        -------
+        missing : list of list of :class:`.Ensemble`
+            ensembles needed by the move scheme and missing in the sample
+            set, in the format used by `list_initial_ensembles`
+        extra : list of :class:`.Ensemble`
+            ensembles in the sample set that are not used by the 
+
+        See Also
+        --------
+        list_initial_ensembles
+        assert_initial_conditions
+        initial_conditions_report
+        """
+        ensembles_to_fill = self.list_initial_ensembles()
+        samples = paths.SampleSet(sampleset)  # to make a copy
+        ensembles_filled = samples.ensemble_list()
+        missing = []
+        for ens_list in ensembles_to_fill:
+            if type(ens_list) is not list:
+                ens_list = [ens_list]
+            sample = None
+            for ens in ens_list:
+                if ens in samples.ensemble_list():
+                    sample = samples[ens]
+                    break
+            if sample is not None:
+                del samples[sample]
+            else:
+                missing.append(ens_list)
+        # missing, extra
+        return (missing, samples.ensemble_list())
+
+    def assert_initial_conditions(self, sampleset, allow_extras=False):
+        """
+        Assertion that the given sampleset is good for initial conditions.
+
+        Parameters
+        ----------
+        sampleset : :class:`.SampleSet`
+            proposed set of initial conditions for this movescheme
+        allow_extras : bool
+            whether extra ensembles are allowed, default False, meaning the
+            extra ensembles raise an assertion error
+
+        Raises
+        ------
+        AssertionError
+            the proposed initial conditions are not valid for this scheme
+
+        See Also
+        --------
+        check_initial_conditions
+        initial_conditions_report
+        """
+        (missing, extras) = self.check_initial_conditions(sampleset)
+        msg = ""
+        if len(missing) > 0:
+            msg += "Missing ensembles: " + str(missing) + "\n"
+        if len(extras) > 0 and not allow_extras:
+            msg += "Extra ensembles: " + str(extras) + "\n"
+        if msg != "":
+            raise AssertionError("Bad initial conditions.\n" + msg)
+
+    def initial_conditions_report(self, sampleset):
+        """
+        String report on whether the given SampleSet gives good initial
+        conditions.
+
+        This is intended to provide a user-friendly tool for interactive
+        setup.
+
+        Parameters
+        ----------
+        sampleset : :class:`.SampleSet`
+            proposed set of initial conditions for this movescheme
+
+        Returns
+        -------
+        str
+            a human-readable string describing if (and which) ensembles are
+            missing
+        """
+        (missing, extra) = self.check_initial_conditions(sampleset)
+        msg = ""
+        if len(missing) == 0:
+            msg += "No missing ensembles.\n"
+        else:
+            msg += "Missing ensembles:\n"
+            for ens_list in missing:
+                msg += "*  [" 
+                msg += ", ".join([ens.name for ens in ens_list]) + "]\n"
+        if len(extra) == 0:
+            msg += "No extra ensembles.\n"
+        else:
+            msg += "Extra ensembles:\n"
+            for ens in extra:
+                msg += "*  " + ens.name + "\n"
+        return msg
+    
     def build_balance_partners(self):
         """
         Create list of balance partners for all movers in groups.
@@ -443,16 +650,17 @@ class MoveScheme(StorableNamedObject):
 
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
-                           n_total_trials, indentation):
+                           n_total_trials, expected_frequency, indentation):
         try:
             acceptance = float(n_accepted) / n_trials
         except ZeroDivisionError:
             acceptance = "nan"
 
         line = ("* "*indentation + str(move_name) +
-                " ran " + str(float(n_trials)/n_total_trials*100) +
-                "% of the cycles with acceptance " + str(n_accepted) + "/" +
-                str(n_trials) + " (" + str(acceptance) + ")\n")
+                " ran " + "{:.3%}".format(float(n_trials)/n_total_trials) +
+                " (expected {:.2%})".format(expected_frequency) + 
+                " of the cycles with acceptance " + str(n_accepted) + "/" +
+                str(n_trials) + " ({:.2%})\n".format(acceptance))
         return line
 
     def move_acceptance(self, storage):
@@ -491,6 +699,7 @@ class MoveScheme(StorableNamedObject):
             submovers for each move; if None, shows all submovers
         """
         my_movers = { }
+        expected_frequency = { }
         if movers is None:
             movers = self.movers.keys()
         if type(movers) is str:
@@ -509,7 +718,10 @@ class MoveScheme(StorableNamedObject):
         if self._mover_acceptance == { }:
             self.move_acceptance(storage)
 
-        tot_trials = len(storage.steps)
+        n_no_move_trials = sum([self._mover_acceptance[k][1]
+                                for k in self._mover_acceptance.keys()
+                                if k[0] is None])
+        tot_trials = len(storage.steps) - n_no_move_trials
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
@@ -519,6 +731,11 @@ class MoveScheme(StorableNamedObject):
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
+            try:
+                expected_frequency[groupname] = sum([self.choice_probability[m] 
+                                                     for m in group])
+            except KeyError:
+                expected_frequency[groupname] = float('nan')
 
         for groupname in my_movers.keys():
             if has_pandas and isinstance(output, pd.DataFrame):
@@ -530,6 +747,7 @@ class MoveScheme(StorableNamedObject):
                     n_accepted=stats[groupname][0],
                     n_trials=stats[groupname][1], 
                     n_total_trials=tot_trials,
+                    expected_frequency=expected_frequency[groupname],
                     indentation=0
                 )
                 output.write(line)
@@ -543,13 +761,13 @@ class DefaultScheme(MoveScheme):
     path reversals, all structured as choose move type then choose specific
     move.
     """
-    def __init__(self, network):
+    def __init__(self, network, engine=None):
         super(DefaultScheme, self).__init__(network)
         n_ensembles = len(network.sampling_ensembles)
         self.append(strategies.NearestNeighborRepExStrategy())
-        self.append(strategies.OneWayShootingStrategy())
+        self.append(strategies.OneWayShootingStrategy(engine=engine))
         self.append(strategies.PathReversalStrategy())
-        self.append(strategies.MinusMoveStrategy())
+        self.append(strategies.MinusMoveStrategy(engine=engine))
         global_strategy = strategies.OrganizeByMoveGroupStrategy()
         self.append(global_strategy)
 
@@ -557,7 +775,8 @@ class DefaultScheme(MoveScheme):
         for ms in msouters.keys():
             self.append(strategies.OneWayShootingStrategy(
                 ensembles=[ms],
-                group="ms_outer_shooting"
+                group="ms_outer_shooting",
+                engine=engine
             ))
             self.append(strategies.PathReversalStrategy(
                 ensembles=[ms],
@@ -589,36 +808,53 @@ class LockedMoveScheme(MoveScheme):
     def apply_strategy(self, strategy):
         raise TypeError("Locked schemes cannot apply strategies")
 
+    def to_dict(self):
+        # things that we always have (from MoveScheme)
+        ret_dict = {
+            'network' : self.network,
+            'balance_partners' : self.balance_partners,
+            'root_mover' : self.root_mover
+        }
+        # things that LockedMoveScheme overrides
+        ret_dict['movers'] = self._movers
+        ret_dict['choice_probability'] = self._choice_probability
+        return ret_dict
+
     @property
     def choice_probability(self):
-        try:
+        if self._choice_probability == {}:
+            raise AttributeError("'choice_probability' must be manually " + 
+                                 "set in 'LockedMoveScheme'")
+        else:
             return self._choice_probability
-        except AttributeError as e:
-            gap = "\n                "
-            failmsg = (gap + "'choice_probability' must be manually set in " +
-                       "'LockedMoveScheme'.")
-            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
-            raise
 
     @choice_probability.setter
     def choice_probability(self, vals):
-        if vals != {}:
-            # default does not set the internal version here
-            self._choice_probability = vals
+        self._choice_probability = vals
 
     @property
     def movers(self):
-        try:
+        if self._movers == {}:
+            raise AttributeError("'movers' must be manually " + 
+                                 "set in 'LockedMoveScheme'")
+        else:
             return self._movers
-        except AttributeError as e:
-            gap = "\n                "
-            failmsg = (gap + "'movers' must be manually set in" + 
-                       "'LockedMoveScheme'.")
-            e.args = tuple([e.args[0] + failmsg] + list(e.args[1:]))
-            raise
 
     @movers.setter
     def movers(self, vals):
-        if vals != {}:
-            # default does not set the internal version here
-            self._movers = vals
+        self._movers = vals
+
+
+class OneWayShootingMoveScheme(MoveScheme):
+    """
+    MoveScheme with only a OneWayShooting strategy.
+
+    Useful for building on top of. Useful as default for TPS.
+    """
+    def __init__(self, network, selector=None, ensembles=None, engine=None):
+        super(OneWayShootingMoveScheme, self).__init__(network)
+        self.append(strategies.OneWayShootingStrategy(selector=selector, 
+                                                      ensembles=ensembles,
+                                                      engine=engine))
+        self.append(strategies.OrganizeByMoveGroupStrategy())
+

@@ -19,10 +19,19 @@ These are the leaves of a path tree. The atomic moved that can be made
     :toctree: api/generated/
 
     Storage
+    AnalysisStorage
 
 stores
 ------
 .. autosummary::
     :toctree: api/generated/
 
-    ObjectStore
+    SampleStore
+    PathMoveChangeStore
+    MCStepStore
+    ObjectDictStore
+    SampleStore
+    SampleSetStore
+    TrajectoryStore
+    BaseSnapshotStore
+    FeatureSnapshotStore

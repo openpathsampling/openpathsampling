@@ -207,10 +207,10 @@ class testReplicaExchangeStrategy(MoveStrategyTestSetup):
         root = scheme.move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 6)
         old_movers = scheme.movers['repex']
-        scheme.append(EnsembleHopStrategy())
+        scheme.append(EnsembleHopStrategy(), force=True)
         root = scheme.move_decision_tree(rebuild=True)
         assert_equal(len(scheme.movers['repex']), 12)
-        scheme.append(ReplicaExchangeStrategy())
+        scheme.append(ReplicaExchangeStrategy(), force=True)
         root = scheme.move_decision_tree(rebuild=True)
         assert_equal(len(scheme.movers['repex']), 6)
         new_movers = scheme.movers['repex']
@@ -223,7 +223,7 @@ class testReplicaExchangeStrategy(MoveStrategyTestSetup):
     @raises(RuntimeError)
     def test_detailed_balance_partners(self):
         scheme = DefaultScheme(self.network)
-        scheme.append(EnsembleHopStrategy())
+        scheme.append(EnsembleHopStrategy(), force=True)
         root = scheme.move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 12)
         scheme.movers['repex'].pop()
@@ -1241,13 +1241,13 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         scheme.append(OrganizeByMoveGroupStrategy())
         root_1a = scheme.move_decision_tree()
         choice_prob_1a = scheme.choice_probability
-        scheme.append(OrganizeByEnsembleStrategy())
+        scheme.append(OrganizeByEnsembleStrategy(), force=True)
         root_1b = scheme.move_decision_tree(rebuild=True)
         choice_prob_1b = scheme.choice_probability
         assert(choice_prob_1a is not choice_prob_1b)
         for m in choice_prob_1a:
             assert_almost_equal(choice_prob_1a[m], choice_prob_1b[m])
-        scheme.append(OrganizeByMoveGroupStrategy())
+        scheme.append(OrganizeByMoveGroupStrategy(), force=True)
         root_1c = scheme.move_decision_tree(rebuild=True)
         choice_prob_1c = scheme.choice_probability
         assert(choice_prob_1a is not choice_prob_1c)
@@ -1256,16 +1256,16 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
         # Organize by ensemble, switch to move group, switch back
         scheme.strategies = {}
-        scheme.append(OrganizeByEnsembleStrategy())
+        scheme.append(OrganizeByEnsembleStrategy(), force=True)
         root_2a = scheme.move_decision_tree(rebuild=True)
         choice_prob_2a = scheme.choice_probability
-        scheme.append(OrganizeByMoveGroupStrategy())
+        scheme.append(OrganizeByMoveGroupStrategy(), force=True)
         root_2b = scheme.move_decision_tree(rebuild=True)
         choice_prob_2b = scheme.choice_probability
         assert(choice_prob_2a is not choice_prob_2b)
         for m in choice_prob_2a:
             assert_almost_equal(choice_prob_2a[m], choice_prob_2b[m])
-        scheme.append(OrganizeByEnsembleStrategy())
+        scheme.append(OrganizeByEnsembleStrategy(), force=True)
         root_2c = scheme.move_decision_tree(rebuild=True)
         choice_prob_2c = scheme.choice_probability
         assert(choice_prob_1a is not choice_prob_1c)
