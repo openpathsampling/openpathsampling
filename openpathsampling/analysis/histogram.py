@@ -9,7 +9,100 @@ import collections
 # code. It is easy to use and probably can be made faster than numpy for
 # large datasets (by allowing the use of generators)
 
-class Histogram(object):
+class GenericHistogram(object):
+    """
+    """
+    def __init__(self, bin_widths, left_bin_edges):
+        self.bin_widths = np.array(bin_widths)
+        if left_bin_edges is None:
+            self.left_bin_edges = None
+        else:
+            self.left_bin_edges = np.array(left_bin_edges)
+        self.count = 0
+        self.name = None
+        self._histogram = None
+
+    def empty_copy(self):
+        """Returns a new histogram with the same bin shape, but empty"""
+        return type(self)(self.bin_widths, self.left_bin_edges)
+
+    @staticmethod
+    def sum_histograms(hists):
+        # (w, r) = (hists[0].bin_width, hists[0].bin_range)
+        # newhist = Histogram(bin_width=w, bin_range=r)
+        newhist = hists[0].empty_copy()
+        newhist._histogram = collections.Counter({})
+
+        for hist in hists:
+            if not newhist.compare_parameters(hist):
+                raise RuntimeError
+            newhist.count += hist.count
+            newhist._histogram += hist._histogram
+
+        return newhist
+
+    def map_to_bins(self, data):
+        """
+        Parameters
+        ----------
+        data : np.array
+
+        Returns
+        -------
+        tuple:
+            the bin that the data represents
+        """
+        return tuple(np.floor((data - self.left_bin_edges) / self.bin_widths))
+
+    def add_data_to_histogram(self, data, weights=None):
+        if self._histogram is None:
+            return self.histogram(data, weights)
+        if weights is None:
+            weights = [1.0]*len(data)
+
+        part_hist = sum((collections.Counter({self.map_to_bins(d) : w})
+                        for (d, w) in zip (data, weights)),
+                        collections.Counter({}))
+
+        self._histogram += part_hist
+        self.count += len(data) if weights is None else sum(weights)
+        return self._histogram.copy()
+
+    def histogram(self, data=None, weights=None):
+        if data is not None:
+            self._histogram = collections.Counter({})
+            return self.add_data_to_histogram(data, weights)
+        elif self._histogram is None:
+            raise RuntimeError("Histogram.histogram called without data!")
+        else:
+            return self._histogram.copy()
+
+    def xvals(self, bin_edge_type):
+        int_bins = np.array(self._histogram.keys())
+        left_bins = int_bins * self.bin_widths + self.left_bin_edges
+        if bin_edge_type == "l":
+            return left_bins
+        elif bin_edge_type == "m":
+            return left_bins + 0.5 * self.bin_widths
+        elif bin_edge_type == "r":
+            return left_bins + self.bin_widths
+        elif bin_edge_type == "p":
+            pass # TODO: patches; give the range
+        else:
+            raise RuntimeError("Unknown bin edge type: " + str(bin_edge_type))
+
+    def __call__(self, bin_edge_type="m"):
+        pass
+
+    def compare_parameters(self, other):
+        pass
+
+
+class SparseHistogram(GenericHistogram):
+    pass
+
+
+class Histogram(GenericHistogram):
     """Wrapper for numpy.histogram with additional conveniences.
 
     In addition to the behavior in numpy.histogram, this provides a few
@@ -52,41 +145,29 @@ class Histogram(object):
                 self.n_bins = 20 # default
             self.bins = self.n_bins
 
-        self.count = 0
-        self.name = None
-        self._histogram = None
+        try:
+            left_bin_edges = (self.bins[0],)
+        except TypeError:
+            left_bin_edges = None
 
-    @staticmethod
-    def sum_histograms(hists):
-        (w, r) = (hists[0].bin_width, hists[0].bin_range)
-        newhist = Histogram(bin_width=w, bin_range=r)
+        super(Histogram, self).__init__(bin_widths=(self.bin_width,),
+                                        left_bin_edges=left_bin_edges)
 
-        for hist in hists:
-            if not newhist.compare_parameters(hist):
-                raise RuntimeError
+    def empty_copy(self):
+        return type(self)(bin_width=self.bin_width, bin_range=self.bin_range)
 
-            newhist.count += hist.count
-            try:
-                for i in range(newhist.n_bins):
-                    newhist._histogram[i] += hist._histogram[i]
-            except TypeError:
-                newhist._histogram = hist._histogram.copy()
-        
-        return newhist
-
-
-    def add_data_to_histogram(self, data, weights=None):
-        """Add `data` to an existing histogram; return resulting histogram"""
-        if self._histogram is None:
-            return self.histogram(data, weights)
-        bin_counts = np.histogram(data, bins=self.bins, weights=weights)[0]
-        new_hist = collections.Counter(
-            {b : num for (b, num) in zip(self.bins, bin_counts)}
-        )
-        self._histogram += new_hist
-        newcount = len(data) if weights is None else sum(weights)
-        self.count += newcount
-        return self._histogram.copy()
+    # def add_data_to_histogram(self, data, weights=None):
+        # """Add `data` to an existing histogram; return resulting histogram"""
+        # if self._histogram is None:
+            # return self.histogram(data, weights)
+        # bin_counts = np.histogram(data, bins=self.bins, weights=weights)[0]
+        # new_hist = collections.Counter(
+            # {b : num for (b, num) in zip(self.bins, bin_counts)}
+        # )
+        # self._histogram += new_hist
+        # newcount = len(data) if weights is None else sum(weights)
+        # self.count += newcount
+        # return self._histogram.copy()
 
     def histogram(self, data=None, weights=None):
         """Build the histogram based on `data`.
@@ -100,35 +181,37 @@ class Histogram(object):
         changed. If you want to add data to the histogram, you should use
         `add_data_to_histogram`.
         """
+        if self.left_bin_edges is not None:
+            return super(Histogram, self).histogram(data, weights)
         if data is not None:
-            results = np.histogram(data, bins=self.bins, weights=weights)
-            counts = results[0]
-            self.bins = results[1]
-            self._histogram = collections.Counter(
-                {b : num for (b, num) in zip(self.bins, counts)}
-            )
+            max_val = max(data)
+            min_val = min(data)
+            self.bin_width = (max_val-min_val)/self.bins
+            # results = np.histogram(data, bins=self.bins, weights=weights)
+            # counts = results[0]
+            # self.bins = results[1]
+            self.left_bin_edges = np.array((min_val,))
+            self.bin_widths = np.array((self.bin_width,))
+            return super(Histogram, self).histogram(data, weights)
             # self.bins must be reset in case it was an integer (implicit
             # range) so we can have the correct bins if we use
             # `add_data_to_histogram` later
-            self.count = len(data) if weights is None else sum(weights)
-        elif self._histogram is None:
-            raise RuntimeError("Histogram.histogram called without data!")
-        return self._histogram.copy()
+            # self._histogram = collections.Counter(
+                # {b : num for (b, num) in zip(self.bins, counts)}
+            # )
+            # self.count = len(data) if weights is None else sum(weights)
+        # elif self._histogram is None:
+            # raise RuntimeError("Histogram.histogram called without data!")
+        # return self._histogram.copy()
 
-    def xvals(self, bin_edge):
-        if bin_edge == "m":
-            xvals = [0.5*(self.bins[i]+self.bins[i+1]) 
-                     for i in range(len(self.bins)-1)]
-        elif bin_edge == "r":
-            xvals = self.bins[1:]
-        elif bin_edge == "l":
-            xvals = self.bins[0:-1]
-        return xvals
+    def xvals(self, bin_edge_type):
+        xvals = sorted(super(Histogram, self).xvals(bin_edge_type)[:,0])
+        return list(np.arange(xvals[0], xvals[-1], self.bin_width))
 
     def __call__(self, bin_edge="m"):
         """Return copy of histogram if it has already been built"""
-        hist = self.histogram()
         vals = self.xvals(bin_edge)
+        hist = self.histogram()
         return LookupFunction(vals, hist)
 
     def compare_parameters(self, other):

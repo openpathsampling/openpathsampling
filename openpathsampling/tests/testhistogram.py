@@ -18,8 +18,10 @@ class testHistogram(object):
         self.nbins = 5
         hist_counts = [5, 0, 2, 1, 2]
         self.bins = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
-        self.hist = collections.Counter({1.0: 5, 1.5: 0, 2.0: 2, 2.5: 1,
-                                         3.0: 2})
+        self.left_bin_edges = (1.0,)
+        self.bin_widths = (0.5,)
+        self.hist = collections.Counter({(0,): 5, (2,): 2, (3,): 1,
+                                         (4,): 1, (5,): 1})
 
         self.default_hist = Histogram()
         self.hist_nbins = Histogram(n_bins=5)
@@ -88,7 +90,8 @@ class testHistogram(object):
     def test_xvals(self):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data) # need this to set the bins
-        assert_items_equal(histo.bins, self.bins)
+        assert_equal(histo.left_bin_edges, self.left_bin_edges)
+        assert_equal(histo.bin_widths, self.bin_widths)
         assert_items_equal(histo.xvals("l"), [1.0, 1.5, 2.0, 2.5, 3.0])
         assert_items_equal(histo.xvals("r"), [1.5, 2.0, 2.5, 3.0, 3.5])
         assert_items_equal(histo.xvals("m"), [1.25, 1.75, 2.25, 2.75, 3.25])
