@@ -1722,7 +1722,6 @@ class SelectionMover(PathMover):
                 e.args = tuple([msg + e.args[0]] + list(e.args[1:]))
                 raise
 
-
         logger_str = "{name} ({cls}) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(
             name=self.name,
@@ -2401,14 +2400,6 @@ class MinusMover(SubPathMover):
                 ]),
             ensembles=[minus_ensemble] + innermost_ensembles
         )
-
-        # for testing what happens without the filter
-        mover = \
-            ConditionalSequentialMover([
-                sub_trajectory_selector,
-                repex_chooser,
-                extension_mover
-            ])
 
         self.minus_ensemble = minus_ensemble
         self.innermost_ensembles = innermost_ensembles
