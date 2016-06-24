@@ -675,6 +675,18 @@ class PathTreeBuilder(Builder):
         self.reset_options()
         self.coloring = None
 
+    @staticmethod
+    def from_ancestors(sample):
+        pt = PathTreeBuilder()
+        pt.samples = SampleList.from_ancestors(sample)
+        return pt
+
+    @staticmethod
+    def from_steps(steps, replica, accepted=True):
+        pt = PathTreeBuilder()
+        pt.samples = SampleList.from_steps(steps, replica, accepted)
+        return pt
+
     @property
     def samples(self):
         """
@@ -742,7 +754,14 @@ class PathTreeBuilder(Builder):
 
         # Loops over samples and plot these
 
-        for pos_y, sample in enumerate(samples):
+        pos_y = -1
+
+        draw_pos_y = {}
+
+        for num, sample in enumerate(samples):
+            pos_y += 1
+            draw_pos_y[num] = pos_y
+
             info = samples[sample]
 
             mover_type = 'unknown'
@@ -787,6 +806,11 @@ class PathTreeBuilder(Builder):
 
             view_options.update(view_options_upd)
 
+            if view_options['hide']:
+                pos_y -= 1
+                draw_pos_y[num] = None
+                continue
+
             if time_direction == -1:
                 bw_cls, fw_cls = fw_cls, bw_cls
                 view_options['label_position'] = 'left' if view_options['label_position'] == 'right' else 'right'
@@ -812,18 +836,18 @@ class PathTreeBuilder(Builder):
 
             if not new_sample:
                 if 0 < length_bw:
-                    root_y = matrix.root(pos_y, bw_x)
+                    root_y = draw_pos_y[matrix.root(num, bw_x)]
 
-                    if root_y < pos_y:
+                    if root_y is not None and root_y < pos_y:
                         group.add(
                             doc.vertical_connector(bw_x, root_y, pos_y,
                                                    cls=cls + [bw_cls, 'connection'])
                         )
 
                 if 0 < length_fw:
-                    root_y = matrix.root(pos_y, fw_x)
+                    root_y = draw_pos_y[matrix.root(num, fw_x)]
 
-                    if root_y < pos_y:
+                    if root_y is not None and root_y < pos_y:
                         group.add(
                             doc.vertical_connector(fw_x + 1, root_y, pos_y,
                                                    cls=cls + [fw_cls, 'connection'])
@@ -936,7 +960,7 @@ class PathTreeBuilder(Builder):
                     self._update_vis_block(vis_blocks, pos_y, shift, region)
 
         min_x, max_x = min(matrix.matrix_x.keys()), max(matrix.matrix_x.keys())
-        min_y, max_y = 0, len(samples) - 1
+        min_y, max_y = 0, pos_y
 
         # mark snapshot volumes with colors
 
@@ -1112,7 +1136,8 @@ class PathTreeBuilder(Builder):
             'ReplicaExchangeMover': {
                 'name': 'RepEx',
                 'suffix': 'x',
-                'cls': ['repex']
+                'cls': ['repex'],
+                'hide': True
             },
             'BackwardShootMover': {
                 'name': 'Backward',
@@ -1178,7 +1203,8 @@ class PathTreeBuilder(Builder):
                 'label': '',
                 'suffix': '?',
                 'label_position': 'left',
-                'cls': []
+                'cls': [],
+                'hide': False
             }
         })
         self.options.ui.update({
@@ -1377,6 +1403,28 @@ class SampleList(OrderedDict):
             self[samples] = {}
 
         self.analyze()
+
+    def filter(self, filter_func):
+        """
+        Keep only samples where the filter function returns True
+
+        """
+        try:
+            # see, if the filter function accepts two parameters
+            self.set_samples([
+                samp for samp, data in self.iteritems() if filter_func(samp, data)
+            ])
+        except:
+            self.set_samples([
+                samp for samp in self if filter_func(samp)
+            ])
+
+    @staticmethod
+    def filter_redundant_moves(samp, data):
+        """
+        A filter letting only samples pass that are not identical to the previous one
+        """
+        return not data['length'] == data['length_shared']
 
     @property
     def matrix(self):
