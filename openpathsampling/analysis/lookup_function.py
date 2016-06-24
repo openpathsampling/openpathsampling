@@ -29,6 +29,14 @@ class LookupFunction(object):
         self.sorted_ordinates = np.array(sorted(self.pairs.keys()))
         self._values = np.array([self.pairs[x] for x in self.sorted_ordinates])
 
+    @classmethod
+    def from_dict(cls, dct):
+        x = dct.keys()
+        y = dct.values()
+        print x
+        print y
+        return cls(x, y)
+
     def keys(self):
         """
         Return the (ordered) list of ordinates

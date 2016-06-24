@@ -69,34 +69,49 @@ class GenericHistogram(object):
         return self._histogram.copy()
 
     def histogram(self, data=None, weights=None):
-        if data is not None:
+        if data is None and self._histogram is None:
+            raise RuntimeError("histogram() called without data!")
+        elif data is not None:
             self._histogram = collections.Counter({})
             return self.add_data_to_histogram(data, weights)
-        elif self._histogram is None:
-            raise RuntimeError("Histogram.histogram called without data!")
         else:
             return self._histogram.copy()
 
-    def xvals(self, bin_edge_type):
-        int_bins = np.array(self._histogram.keys())
-        left_bins = int_bins * self.bin_widths + self.left_bin_edges
+    @staticmethod
+    def _left_edge_to_bin_edge_type(left_bins, widths, bin_edge_type):
         if bin_edge_type == "l":
             return left_bins
         elif bin_edge_type == "m":
-            return left_bins + 0.5 * self.bin_widths
+            return left_bins + 0.5 * widths
         elif bin_edge_type == "r":
-            return left_bins + self.bin_widths
+            return left_bins + widths
         elif bin_edge_type == "p":
             pass # TODO: patches; give the range
         else:
             raise RuntimeError("Unknown bin edge type: " + str(bin_edge_type))
 
+
+    def xvals(self, bin_edge_type):
+        int_bins = np.array(self._histogram.keys())
+        left_bins = int_bins * self.bin_widths + self.left_bin_edges
+        return self._left_edge_to_bin_edge_type(left_bins, self.bin_widths,
+                                                bin_edge_type)
+
     def __call__(self, bin_edge_type="m"):
         pass
 
     def compare_parameters(self, other):
-        pass
-
+        # None returns false: use that as a quick test
+        if other == None:
+            return False
+        if self.left_bin_edges is None or other.left_bin_edges is None:
+            # this is to avoid a numpy warning on the next
+            return self.left_bin_edges is other.left_bin_edges
+        if self.left_bin_edges != other.left_bin_edges:
+            return False
+        if self.bin_widths != other.bin_widths:
+            return False
+        return True
 
 class SparseHistogram(GenericHistogram):
     pass
@@ -156,19 +171,6 @@ class Histogram(GenericHistogram):
     def empty_copy(self):
         return type(self)(bin_width=self.bin_width, bin_range=self.bin_range)
 
-    # def add_data_to_histogram(self, data, weights=None):
-        # """Add `data` to an existing histogram; return resulting histogram"""
-        # if self._histogram is None:
-            # return self.histogram(data, weights)
-        # bin_counts = np.histogram(data, bins=self.bins, weights=weights)[0]
-        # new_hist = collections.Counter(
-            # {b : num for (b, num) in zip(self.bins, bin_counts)}
-        # )
-        # self._histogram += new_hist
-        # newcount = len(data) if weights is None else sum(weights)
-        # self.count += newcount
-        # return self._histogram.copy()
-
     def histogram(self, data=None, weights=None):
         """Build the histogram based on `data`.
 
@@ -187,40 +189,35 @@ class Histogram(GenericHistogram):
             max_val = max(data)
             min_val = min(data)
             self.bin_width = (max_val-min_val)/self.bins
-            # results = np.histogram(data, bins=self.bins, weights=weights)
-            # counts = results[0]
-            # self.bins = results[1]
             self.left_bin_edges = np.array((min_val,))
             self.bin_widths = np.array((self.bin_width,))
-            return super(Histogram, self).histogram(data, weights)
-            # self.bins must be reset in case it was an integer (implicit
-            # range) so we can have the correct bins if we use
-            # `add_data_to_histogram` later
-            # self._histogram = collections.Counter(
-                # {b : num for (b, num) in zip(self.bins, counts)}
-            # )
-            # self.count = len(data) if weights is None else sum(weights)
-        # elif self._histogram is None:
-            # raise RuntimeError("Histogram.histogram called without data!")
-        # return self._histogram.copy()
+        return super(Histogram, self).histogram(data, weights)
 
     def xvals(self, bin_edge_type):
-        xvals = sorted(super(Histogram, self).xvals(bin_edge_type)[:,0])
-        return list(np.arange(xvals[0], xvals[-1], self.bin_width))
+        int_bins = np.array(self._histogram.keys())[:,0]
+        n_bins = max(int_bins) - min(int_bins) + 1
+        width = self.bin_widths[0]
+        left_bins = (self.left_bin_edges[0] + np.arange(n_bins) * width)
+        return self._left_edge_to_bin_edge_type(left_bins, width,
+                                                bin_edge_type)
 
     def __call__(self, bin_edge="m"):
         """Return copy of histogram if it has already been built"""
         vals = self.xvals(bin_edge)
         hist = self.histogram()
-        return LookupFunction(vals, hist)
+        bins = sorted(hist.keys())
+        min_bin = bins[0][0]
+        max_bin = bins[-1][0]
+        bin_range = range(int(min_bin), int(max_bin)+1)
+        hist_list = [hist[(b,)] for b in bin_range]
+        return LookupFunction(vals, hist_list)
 
     def compare_parameters(self, other):
         """Return true if `other` has the same bin parameters as `self`.
 
         Useful for checking whether a histogram needs to be rebuilt.
         """
-        # None returns false: use that as a quick test
-        if other == None:
+        if not super(Histogram, self).compare_parameters(other):
             return False
         if type(other.bins) is not int:
             if type(self.bins) is int:
@@ -234,8 +231,11 @@ class Histogram(GenericHistogram):
 
     def _normalization(self):
         """Return normalization constant (integral over this histogram)."""
-        dx = [self.bins[i+1] - self.bins[i] for i in range(len(self.bins)-1)]
-        norm = np.dot(self._histogram.values(), dx)
+        hist = self('l')
+        bin_edges = self.xvals('l')
+        dx = [bin_edges[i+1] - bin_edges[i] for i in range(len(bin_edges)-1)]
+        dx += [dx[-1]]  # assume the "forever" bin is same as last limited
+        norm = np.dot(hist.values(), dx)
         return norm
 
     # Yes, the following could be cached. No, I don't think it is worth it.
@@ -254,10 +254,10 @@ class Histogram(GenericHistogram):
         histogram normalized by the sum of the bin counts, with no
         consideration of the bin widths.
         """
-        normed_hist = self.histogram() # returns a copy
+        normed_hist = self() # returns a copy
         nnorm = self._normalization() if not raw_probability else self.count
         norm = 1.0/nnorm
-        normed_hist_list = [normed_hist[k] * norm for k in normed_hist]
+        normed_hist_list = [normed_hist(k) * norm for k in normed_hist.keys()]
         xvals = self.xvals(bin_edge)
         return LookupFunction(xvals, normed_hist_list)
 
@@ -268,8 +268,9 @@ class Histogram(GenericHistogram):
         """
         cumul_hist = []
         total = 0.0
-        for k in sorted(self._histogram.keys()):
-            total += self._histogram[k]
+        hist = self(bin_edge)
+        for k in sorted(hist.keys()):
+            total += hist(k)
             cumul_hist.append(total)
 
         cumul_hist = np.array(cumul_hist)
@@ -288,8 +289,9 @@ class Histogram(GenericHistogram):
         """
         cumul_hist = []
         total = 0.0
-        for k in reversed(sorted(self._histogram.keys())):
-            total += self._histogram[k]
+        hist = self(bin_edge)
+        for k in reversed(sorted(hist.keys())):
+            total += hist(k)
             cumul_hist.insert(0, total)
 
         cumul_hist = np.array(cumul_hist)
