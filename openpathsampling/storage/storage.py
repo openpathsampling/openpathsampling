@@ -24,6 +24,11 @@ class Storage(NetCDFPlus):
     simulation. This allows effective storage of shooting trajectories
     """
 
+    @property
+    def _ops_version_(self):
+        return '0.1.0'
+        # return paths.version.short_version
+
     USE_FEATURE_SNAPSHOTS = True
 
     @property
@@ -185,6 +190,10 @@ class Storage(NetCDFPlus):
 
         self.create_store('tag', ImmutableDictStore())
 
+    def write_meta(self):
+        self.setncattr('storage_format', 'openpathsampling')
+        self.setncattr('storage_version', paths.version.version)
+
     def _initialize(self):
         # Set global attributes.
         setattr(self, 'title', 'OpenPathSampling Storage')
@@ -282,6 +291,24 @@ class Storage(NetCDFPlus):
             if hasattr(self, store_name):
                 store = getattr(self, store_name)
                 store.set_caching(caching)
+
+    def check_version(self):
+        super(Storage, self).check_version()
+        try:
+            s1 = self.getncattr('storage_version')
+            s2 = self._ops_version_
+
+            cp = self._cmp_version(s1, s2)
+
+            if cp != 0:
+                logger.info('Loading different OPS storage version. Installed version is %s and loaded version is %s' % s2, s1)
+                if cp > 0:
+                    logger.info('Loaded version is newer consider upgrading OPS conda package!')
+                else:
+                    logger.info('Loaded version is older. Should be no problem other then missing features and information')
+
+        except AttributeError:
+            logger.info('Using Pre 1.0 version. Try upgrading the OPS conda package!')
 
     @staticmethod
     def default_cache_sizes():
