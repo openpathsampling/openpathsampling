@@ -264,7 +264,7 @@ class ObjectJSON(object):
             import_vars = list(set(import_vars))
 
             if len(global_vars) > 0:
-                err = 'The function you try to save relies on globally set variables' + \
+                err = 'The function you try to save relies on globally set vari00ables' + \
                       '\nand these cannot be saved since storage has no access to the' + \
                       '\nglobal scope. This includes imports!'
                 err += '\nWe require that the following globals: ' + str(global_vars) + ' either'
