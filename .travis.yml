@@ -1,22 +1,41 @@
 language: python
+
 python:
-- '2.7'
+  # We don't actually use the Travis Python, but this keeps it organized.
+  - "2.7"
+
 install:
-- deactivate
-- source devtools/ci/install.sh
-- export PYTHONUNBUFFERED=true
+  - deactivate
+  # Sets up a MINIConda enviroment in the name of the selected python version
+  - source devtools/ci/install.sh
+  # Do not buffer output of python outputs but flush them directly to the terminal
+  - export PYTHONUNBUFFERED=true
+
 script:
-- echo travis_fold:start:conda.build.package
-- conda install --yes conda-build
-- conda build devtools/conda-recipe
-- echo travis_fold:end:conda.build.package
-- source activate _test
-- source devtools/ci/git_hash.sh
-- source devtools/ci/nosetests.sh
-- source devtools/ci/ipythontests.sh
-- bash -x devtools/ci/after_sucess.sh
+  - echo travis_fold:start:conda.build.package
+  - conda install --yes conda-build
+  - conda build devtools/conda-recipe
+  - echo travis_fold:end:conda.build.package
+
+  # Run tests in _test environment
+  - source activate _test
+  - source devtools/ci/git_hash.sh
+  - source devtools/ci/nosetests.sh
+  - source devtools/ci/ipythontests.sh
+
+  # Upload new docs
+  - bash -x devtools/ci/after_sucess.sh
+
+addons:
+  apt:
+    packages:
+    - pandoc
+
 env:
   matrix:
-  - python=2.7  CONDA_PY=27  CONDA_NPY=110
+    - python=2.7  CONDA_PY=27  CONDA_NPY=110
+# - python=3.4  CONDA_PY=34  CONDA_NPY=110
+# - python=3.5  CONDA_PY=35  CONDA_NPY=110
+
   global:
   - secure: kb37xmsSV3pEnESnINzwlW2Cju/UFzA/G+m+NsihAwO8RMPZwKCrZK/rptgkUDACXJxom5M690WEukQkHnOt+OTrWhu7WKZgYeVuWUs2++RohYv/m5npaOHMMn+uYmF328v4PvPmXxbD02zzg5Tgdn82x8oa6J8BKX8ohOQ6Xpg=
