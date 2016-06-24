@@ -1,7 +1,7 @@
 #!/bin/sh
 # This script was taken from https://github.com/pandegroup/mdtraj/tree/master/devtools
 
-sudo apt-get update
+# sudo apt-get update
 
 ### Install Miniconda
 
