@@ -145,6 +145,34 @@ class Storage(NetCDFPlus):
         self._template = template
         super(Storage, self).__init__(filename, mode, use_uuid=use_uuid, fallback=fallback)
 
+    def split_snapshots(self):
+        """
+        Creates two copies of the current storage. One containing trajectories and the other the rest
+        """
+
+        filename = '.'.join(self.filename.split('.')[:-1])
+
+        filename_main = filename + '_main.nc'
+        filename_data = filename + '_frames.nc'
+
+        storage_main = Storage(filename=filename_main, template=self.template, mode='w')
+        storage_data = Storage(filename=filename_data, template=self.template, mode='w')
+
+        map(storage_data.trajectories.save, self.trajectories)
+        map(storage_main.trajectories.remember, self.trajectories)
+
+        for storage_name in [
+            'steps',
+            'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
+            'shootingpointselectors', 'engines', 'volumes',
+            'samplesets', 'ensembles', 'transitions', 'pathmovechanges',
+            'samples', 'pathsimulators', 'cvs'
+        ]:
+            map(getattr(storage_main, storage_name).save, getattr(self, storage_name))
+
+        storage_main.close()
+        storage_data.close()
+
     def _create_storages(self):
         """
         Register all Stores used in the OpenPathSampling Storage
