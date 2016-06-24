@@ -296,19 +296,22 @@ class Storage(NetCDFPlus):
         super(Storage, self).check_version()
         try:
             s1 = self.getncattr('storage_version')
-            s2 = self._ops_version_
-
-            cp = self._cmp_version(s1, s2)
-
-            if cp != 0:
-                logger.info('Loading different OPS storage version. Installed version is %s and loaded version is %s' % s2, s1)
-                if cp > 0:
-                    logger.info('Loaded version is newer consider upgrading OPS conda package!')
-                else:
-                    logger.info('Loaded version is older. Should be no problem other then missing features and information')
-
         except AttributeError:
-            logger.info('Using Pre 1.0 version. Try upgrading the OPS conda package!')
+            logger.info('Using openpathsampling Pre 1.0 version. No version detected using 0.0.0')
+            s1 = '0.0.0'
+
+        s2 = self._ops_version_
+
+        cp = self._cmp_version(s1, s2)
+
+        if cp != 0:
+            logger.info('Loading different OPS storage version. Installed version '
+                        'is %s and loaded version is %s' % (s2, s1))
+            if cp > 0:
+                logger.info('Loaded version is newer consider upgrading OPS conda package!')
+            else:
+                logger.info('Loaded version is older. Should be no problem other then '
+                            'missing features and information')
 
     @staticmethod
     def default_cache_sizes():

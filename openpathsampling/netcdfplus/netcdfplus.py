@@ -341,18 +341,22 @@ class NetCDFPlus(netCDF4.Dataset):
     def check_version(self):
         try:
             s1 = self.getncattr('version')
-            s2 = self._netcdfplus_version_
-
-            cp = self._cmp_version(s1, s2)
-
-            if cp != 0:
-                logger.info('Loading different netcdf version. Installed version is %s and loaded version is %s' % s2, s1)
-                if cp > 0:
-                    logger.info('Loaded version is newer consider upgrading your conda package!')
-                else:
-                    logger.info('Loaded version is older. Should be no problem other then missing features and information')
         except AttributeError:
-            logger.info('Using Pre 1.0 version which did not store the version number in the file. Try upgrading your conda package!')
+            logger.info('Using netcdfplus Pre 1.0 version. No version detected using 0.0.0')
+            s1 = '0.0.0'
+
+        s2 = self._netcdfplus_version_
+
+        cp = self._cmp_version(s1, s2)
+
+        if cp != 0:
+            logger.info('Loading different netcdf version. Installed version is '
+                        '%s and loaded version is %s' % (s2, s1))
+            if cp > 0:
+                logger.info('Loaded version is newer consider upgrading your conda package!')
+            else:
+                logger.info('Loaded version is older. Should be no problem other then '
+                            'missing features and information')
 
     def write_meta(self):
         pass
