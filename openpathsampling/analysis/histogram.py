@@ -9,8 +9,16 @@ import collections
 # code. It is easy to use and probably can be made faster than numpy for
 # large datasets (by allowing the use of generators)
 
-class GenericHistogram(object):
+class SparseHistogram(object):
     """
+    Base class for sparse-based histograms.
+
+    Parameters
+    ----------
+    bin_widths : tuple of floats
+        bin (voxel) size
+    left_bin_edges : tuple of floats
+        lesser side of the bin (for each direction)
     """
     def __init__(self, bin_widths, left_bin_edges):
         self.bin_widths = np.array(bin_widths)
@@ -25,6 +33,24 @@ class GenericHistogram(object):
     def empty_copy(self):
         """Returns a new histogram with the same bin shape, but empty"""
         return type(self)(self.bin_widths, self.left_bin_edges)
+
+    def histogram(self, data=None, weights=None):
+        """Build the histogram.
+
+        Parameters
+        ----------
+        data : list of list of floats
+            input data
+        weights : list of floats
+            weight for each input data point
+        """
+        if data is None and self._histogram is None:
+            raise RuntimeError("histogram() called without data!")
+        elif data is not None:
+            self._histogram = collections.Counter({})
+            return self.add_data_to_histogram(data, weights)
+        else:
+            return self._histogram.copy()
 
     @staticmethod
     def sum_histograms(hists):
@@ -55,6 +81,16 @@ class GenericHistogram(object):
         return tuple(np.floor((data - self.left_bin_edges) / self.bin_widths))
 
     def add_data_to_histogram(self, data, weights=None):
+        """Adds data to the internal histogram counter.
+
+        Parameters
+        ----------
+        data : list or list of list
+            input data
+        weights : list or None
+            weight associated with each datapoint. Default `None` is same
+            weights for all
+        """
         if self._histogram is None:
             return self.histogram(data, weights)
         if weights is None:
@@ -67,15 +103,6 @@ class GenericHistogram(object):
         self._histogram += part_hist
         self.count += len(data) if weights is None else sum(weights)
         return self._histogram.copy()
-
-    def histogram(self, data=None, weights=None):
-        if data is None and self._histogram is None:
-            raise RuntimeError("histogram() called without data!")
-        elif data is not None:
-            self._histogram = collections.Counter({})
-            return self.add_data_to_histogram(data, weights)
-        else:
-            return self._histogram.copy()
 
     @staticmethod
     def _left_edge_to_bin_edge_type(left_bins, widths, bin_edge_type):
@@ -100,6 +127,9 @@ class GenericHistogram(object):
     def __call__(self, bin_edge_type="m"):
         pass
 
+    def normalized(self, raw_probability=False, bin_edge="m"):
+        pass
+
     def compare_parameters(self, other):
         # None returns false: use that as a quick test
         if other == None:
@@ -113,11 +143,8 @@ class GenericHistogram(object):
             return False
         return True
 
-class SparseHistogram(GenericHistogram):
-    pass
 
-
-class Histogram(GenericHistogram):
+class Histogram(SparseHistogram):
     """Wrapper for numpy.histogram with additional conveniences.
 
     In addition to the behavior in numpy.histogram, this provides a few
