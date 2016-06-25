@@ -14,7 +14,7 @@ requirements:
   build:
     - python
     - setuptools
-    - numpy
+    - pyyaml
 
   run:
     - python
@@ -45,6 +45,6 @@ test:
     - openpathsampling
 
 about:
-  home: https://github.com/choderalab/openpathsampling
-  license: GNU Lesser General Public License v2 or later (LGPLv2+)
+  home: https://github.com/openpathsampling/openpathsampling
+  license: GNU Lesser General Public License v2.1 or later (LGPLv2.1+)
   summary: framework for running path sampling MD simulations

@@ -247,7 +247,7 @@ class NetCDFPlus(netCDF4.Dataset):
             logger.info("Setup netCDF file and create variables")
 
             self.setncattr('format', 'netcdf+')
-            self.setncattr('version', self._netcdfplus_version_)
+            self.setncattr('ncplus_version', self._netcdfplus_version_)
 
             self.write_meta()
 
@@ -340,7 +340,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
     def check_version(self):
         try:
-            s1 = self.getncattr('version')
+            s1 = self.getncattr('ncplus_version')
         except AttributeError:
             logger.info('Using netcdfplus Pre 1.0 version. No version detected using 0.0.0')
             s1 = '0.0.0'
