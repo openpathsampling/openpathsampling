@@ -11,9 +11,9 @@ class SparseHistogram(object):
 
     Parameters
     ----------
-    bin_widths : tuple of floats
+    bin_widths : array-like
         bin (voxel) size
-    left_bin_edges : tuple of floats
+    left_bin_edges : array-like
         lesser side of the bin (for each direction)
     """
     def __init__(self, bin_widths, left_bin_edges):
@@ -39,6 +39,11 @@ class SparseHistogram(object):
             input data
         weights : list of floats
             weight for each input data point
+
+        Returns
+        -------
+        collection.Counter :
+            copy of the current counter
         """
         if data is None and self._histogram is None:
             raise RuntimeError("histogram() called without data!")
@@ -68,6 +73,7 @@ class SparseHistogram(object):
         Parameters
         ----------
         data : np.array
+            input data
 
         Returns
         -------
@@ -86,6 +92,11 @@ class SparseHistogram(object):
         weights : list or None
             weight associated with each datapoint. Default `None` is same
             weights for all
+
+        Returns
+        -------
+        collections.Counter :
+            copy of the current histogram counter
         """
         if self._histogram is None:
             return self.histogram(data, weights)
@@ -115,6 +126,20 @@ class SparseHistogram(object):
 
 
     def xvals(self, bin_edge_type):
+        """Position values for the bin
+
+        Parameters
+        ----------
+        bin_edge_type : 'l' 'm', 'r', 'p'
+            type of values to return; 'l' gives left bin edges, 'r' gives
+            right bin edges, 'm' gives midpoint of the bin, and 'p' is not
+            implemented, but will give vertices of the patch for the bin
+        
+        Returns
+        -------
+        np.array :
+            The values of the bin edges
+        """
         int_bins = np.array(self._histogram.keys())
         left_bins = int_bins * self.bin_widths + self.left_bin_edges
         return self._left_edge_to_bin_edge_type(left_bins, self.bin_widths,
@@ -126,6 +151,23 @@ class SparseHistogram(object):
                                    counter=self._histogram)
 
     def normalized(self, raw_probability=False, bin_edge="m"):
+        """
+        Callable normalized version of the sparse histogram.
+
+        Parameters
+        ----------
+        raw_probability : bool
+            if True, the voxel size is ignored and the sum of the counts
+            adds to one. If False (default), the sum of the counts times the
+            voxel volume adds to one.
+        bin_edge : string
+            not used; here for compatibility with 1D versions
+
+        Returns
+        -------
+        :class:`.VoxelLookupFunction`
+            callable version of the normalized histogram
+        """
         voxel_vol = reduce(lambda x, y: x.__mul__(y), self.bin_widths)
         scale = voxel_vol if not raw_probability else 1.0
         norm = 1.0 / (self.count * scale)
@@ -136,6 +178,21 @@ class SparseHistogram(object):
                                    counter=counter)
 
     def compare_parameters(self, other):
+        """Test whether the other histogram has the same parameters.
+
+        Used to check whether we can simply combine these histograms.
+
+        Parameters
+        ----------
+        other : :class:`.SparseHistogram`
+            histogram to compare with
+
+        Returns
+        -------
+        bool : 
+            True if these were set up with equivalent parameters, False
+            otherwise
+        """
         # None returns false: use that as a quick test
         if other == None:
             return False
