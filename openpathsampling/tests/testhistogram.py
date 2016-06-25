@@ -131,3 +131,12 @@ class testHistogram(object):
 
 
 
+class testSparseHistogram(object):
+    def setup(self):
+        pass
+
+    def test_call(self):
+        raise SkipTest
+
+    def test_normalized(self):
+        raise SkipTest

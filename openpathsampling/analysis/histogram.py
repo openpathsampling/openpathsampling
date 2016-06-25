@@ -5,10 +5,6 @@ import math
 from lookup_function import LookupFunction
 import collections
 
-# TODO: someday I should replace this with a variant of my sparse-histogram
-# code. It is easy to use and probably can be made faster than numpy for
-# large datasets (by allowing the use of generators)
-
 class SparseHistogram(object):
     """
     Base class for sparse-based histograms.
