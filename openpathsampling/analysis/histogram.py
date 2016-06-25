@@ -126,8 +126,14 @@ class SparseHistogram(object):
                                    counter=self._histogram)
 
     def normalized(self, raw_probability=False, bin_edge="m"):
-
-        pass
+        voxel_vol = reduce(lambda x, y: x.__mul__(y), self.bin_widths)
+        scale = voxel_vol if not raw_probability else 1.0
+        norm = 1.0 / (self.count * scale)
+        counter = collections.Counter({k : self._histogram[k] * norm
+                                       for k in self._histogram.keys()})
+        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges, 
+                                   bin_widths=self.bin_widths,
+                                   counter=counter)
 
     def compare_parameters(self, other):
         # None returns false: use that as a quick test

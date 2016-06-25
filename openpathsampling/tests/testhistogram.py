@@ -1,4 +1,5 @@
-from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
+from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
+                        raises, assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from test_helpers import assert_items_almost_equal
 
@@ -156,5 +157,11 @@ class testSparseHistogram(object):
         assert_equal(histo_fcn((2.00, 2.00)), 0)
 
     def test_normalized(self):
-
-        raise SkipTest
+        raw_prob_normed = self.histo.normalized(raw_probability=True)
+        assert_almost_equal(raw_prob_normed((0.25, 0.65)), 0.5)
+        assert_almost_equal(raw_prob_normed((0.01, 0.09)), 0.25)
+        assert_almost_equal(raw_prob_normed((0.61, 0.89)), 0.25)
+        normed_fcn = self.histo.normalized()
+        assert_almost_equal(normed_fcn((0.25, 0.65)), 0.5/0.15)
+        assert_almost_equal(normed_fcn((0.01, 0.09)), 0.25/0.15)
+        assert_almost_equal(normed_fcn((0.61, 0.89)), 0.25/0.15)
