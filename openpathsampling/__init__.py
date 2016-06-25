@@ -79,7 +79,7 @@ from pathmover import (
 
 from pathsimulator import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
-    CommittorSimulation
+    CommittorSimulation, DirectSimulation
 )
 
 from sample import Sample, SampleSet
