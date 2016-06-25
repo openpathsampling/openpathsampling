@@ -48,7 +48,7 @@ def main():
 
     prefs = yaml.load(yaml_string)
 
-    print prefs['description']
+    print 'writing meta.yaml file in devtools/conda-recipe'
 
     tag = '    - '
 
