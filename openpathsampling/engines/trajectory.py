@@ -37,26 +37,26 @@ class Trajectory(list, StorableObject):
         list.__init__(self)
         StorableObject.__init__(self)
 
-        self.path_probability = None  # For future uses
-
         if trajectory is not None:
-            # Try to make a copy out of whatever container we were provided
-            if hasattr(trajectory, 'atom_indices'):
-                self.atom_indices = trajectory.atom_indices
-            else:
-                self.atom_indices = None
             if type(trajectory) is Trajectory:
                 self.extend(trajectory.iter_proxies())
             else:
                 self.extend(trajectory)
-        else:
-            self.atom_indices = None
 
     def extend(self, iterable):
         if type(iterable) is Trajectory:
             list.extend(self, iterable.iter_proxies())
         else:
             list.extend(self, iterable)
+
+    def to_dict(self):
+        return {
+            'snapshots': self.as_proxies()
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls(dct['snapshots'])
 
     def __str__(self):
         return 'Trajectory[' + str(len(self)) + ']'
@@ -156,7 +156,7 @@ class Trajectory(list, StorableObject):
         """
         if len(self) > 0:
             snapshot_class = self[0].__class__
-            if hasattr(snapshot_class, item):
+            if hasattr(snapshot_class, item) or hasattr(snapshot_class, '__features__') and item in snapshot_class.__features__.variables:
                 first = getattr(self[0], item)
                 if type(first) is u.Quantity:
                     inner = first._value
@@ -234,10 +234,7 @@ class Trajectory(list, StorableObject):
         
         """
 
-        if self.atom_indices is None:
-            n_atoms = self[0].xyz.shape[0]
-        else:
-            n_atoms = len(self.atom_indices)
+        n_atoms = self[0].xyz.shape[0]
         return n_atoms
 
     # =============================================================================================
@@ -248,7 +245,6 @@ class Trajectory(list, StorableObject):
         ret = list.__getslice__(self, *args, **kwargs)
         if type(ret) is list:
             ret = Trajectory(ret)
-            ret.atom_indices = self.atom_indices
 
         return ret
 
@@ -264,7 +260,6 @@ class Trajectory(list, StorableObject):
 
         if type(ret) is list:
             ret = Trajectory(ret)
-            ret.atom_indices = self.atom_indices
         elif hasattr(ret, '_idx'):
             ret = ret.__subject__
 
@@ -448,104 +443,6 @@ class Trajectory(list, StorableObject):
         summary = self.summarize_by_volumes(label_dict)
         return delimiter.join([str(s[0]) for s in summary])
 
-    def pathHamiltonian(self):
-        """
-        Compute the generalized path Hamiltonian of the trajectory.
-
-        Returns
-        -------        
-        H : simtk.unit.Quantity with units of energy
-            the generalized path Hamiltonian
-
-        References
-        ----------       
-        For a description of the path Hamiltonian, see [1]:
-
-        [1] Chodera JD, Swope WC, Noe F, Prinz JH, Shirts MR, and Pande VS. Dynamical reweighting:
-        Improved estimates of dynamical properties from simulations at multiple temperatures.    
-        """
-
-        nsnapshots = len(self)
-        if nsnapshots > 0:
-            H = self[0].total_energy
-            for snapshot_index in range(1, nsnapshots - 1):
-                H += self[snapshot_index].kinetic_energy
-        else:
-            H = 0
-
-        return H
-
-    def computeActivity(self, atom_indices=None):
-        """
-        Compute the (timeless!) activity of a given trajectory, defined in Ref. [1] as
-
-        .. math::
-
-            K[x(t)] / delta_t = delta_t \sum_{t=0}^{t_obs} \sum_{j=1}^N [r_j(t+delta_t) - r_j(t)]^2 / delta_t
-
-        RETURNS
-        -------
-
-        K : simtk.unit
-            activity K[x(t)] for the specified trajectory
-        
-        NOTES
-        -----
-        
-        Can we avoid dividing and multipying by nanometers to speed up?
-
-        """
-
-        # Determine number of frames in trajectory.
-        nframes = len(self)
-
-        # Compute activity of component A.
-        K = 0.0
-
-        if atom_indices is None:
-            atom_indices = slice(None)
-
-        for frame_index in range(nframes - 1):
-            # Compute displacement of all atoms.
-            delta_r = self[frame_index + 1].coordinates - self[frame_index].coordinates
-            # Compute contribution to activity K.
-            K += ((delta_r[atom_indices, :] / u.nanometers) ** 2).sum()
-
-        return K * (u.nanometers ** 2)
-
-    def logEquilibriumTrajectoryProbability(self):
-        """
-        Compute the (temperatureless!) log equilibrium probability
-
-        Up to an unknown additive constant of an unbiased trajectory evolved
-        according to Verlet dynamics with Andersen thermostatting.
-
-        Parameters
-        ----------
-        trajectory : openpathsampling.Trajectory
-            the trajectory
-
-        Returns
-        -------        
-        log_q : float
-            the log equilibrium probability of the trajectory divided by the
-            inverse temperature beta
-        
-        NOTES
-        -----
-        This might be better places into the trajectory class. The trajectory
-        should know the system and ensemble? and so it is not necessarily
-        TPS specific
-
-        """
-
-        nsnapshots = len(self)
-        log_q = - self[0].total_energy
-        for snapshot_index in range(1, nsnapshots - 1):
-            log_q += - self[snapshot_index].kinetic_energy
-
-        return log_q
-
     # =============================================================================================
     # ANALYSIS FUNCTIONS
     # =============================================================================================
@@ -645,53 +542,6 @@ class Trajectory(list, StorableObject):
     # UTILITY FUNCTIONS
     # =============================================================================================
 
-    def subset(self, atom_indices):
-        """
-        Reduce the view of the trajectory to a subset of atoms specified.
-
-        This is only a view, no data will be changed or copied.
-        
-        Returns
-        -------        
-        :class:`openpathsampling.trajectory.Trajectory`
-            the trajectory showing the subsets of atoms
-        """
-
-        t = Trajectory(self)
-        t.atom_indices = atom_indices
-        return t
-
-    @property
-    def solute(self):
-        """
-        Reduce the view of the trajectory to a subset of solute atoms
-        specified in the associated DynamicsEngine
-        
-        Returns
-        -------        
-        :class:`openpathsampling.trajectory.Trajectory`
-            the trajectory showing the subsets of solute atoms
-        """
-
-        # TODO: To remove the dependency of the dynamics engine we need to get the information
-        # TODO: about the solute_indices from somewhere else, preferrably the topology?
-
-        if Trajectory.engine is None:
-            raise ValueError("No engine specified to get solute_indices from !")
-
-        return self.subset(Trajectory.engine.solute_indices)
-
-    def full(self):
-        """
-        Return a view of the trajectory with all atoms
-
-        Returns
-        -------
-        :class:`openpathsampling.trajectory.Trajectory`
-            the trajectory showing the subsets of solute atoms
-        """
-        return self.subset(None)
-
     def md(self, topology=None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
@@ -734,8 +584,5 @@ class Trajectory(list, StorableObject):
         if len(self) > 0 and self[0].topology is not None:
             # if no topology is defined
             topology = self[0].topology
-
-            if self.atom_indices is not None:
-                topology = topology.subset(self.atom_indices)
 
         return topology

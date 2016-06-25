@@ -223,10 +223,12 @@ class testTPSNetwork(object):
         fname = data_filename("tps_network_storage_test.nc")
         if os.path.isfile(fname):
             os.remove(fname)
+
         topol = peng.Topology(n_spatial=1, masses=[1.0], pes=None)
         self.template = peng.Snapshot(coordinates=np.array([[0.0]]),
                                        velocities=np.array([[0.0]]),
                                        topology=topol)
+
         states = [self.stateA, self.stateB, self.stateC]
         network_a = TPSNetwork(initial_states=states, final_states=states)
         assert_equal(len(network_a.sampling_transitions), 1)

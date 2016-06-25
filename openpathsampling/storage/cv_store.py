@@ -110,7 +110,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
     def cache_var(self, obj):
         """
-        Return the storage.vars[''] variable that vontains the values
+        Return the storage.vars[''] variable that contains the values
 
         Parameters
         ----------
@@ -130,7 +130,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
     def cache_variable(self, obj):
         """
-        Return the storage.vars[''] variable that vontains the values
+        Return the storage.vars[''] variable that contains the values
 
         Parameters
         ----------
@@ -139,7 +139,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
         Returns
         -------
-        :class:`openpathsampling.netcdf.ObjectStore` or `netcdf4.Variable`
+        :class:`openpathsampling.netcdfplus.ObjectStore` or `netcdf4.Variable`
 
         """
         var_name = self.cache_var_name(obj)
@@ -204,7 +204,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
     def sync(self, objectdict=None):
         """
-        This will update the stored cache of the collectivevariable. It is
+        This will update the stored cache of the collective variable. It is
         different from saving in that the object is only created if it is
         saved (and the object caching will prevent additional creation)
 
@@ -321,7 +321,16 @@ class ReversibleObjectDictStore(ObjectDictStore):
         return self.key_store.vars[var_name + '_bw']
 
     def set_cache_store(self, objectdict):
-        idx = self.index.get(objectdict, None)
+        # print 'idx', self.index
+        # print 'name', self.name_idx
+        # print objectdict.__uuid__
+        # print objectdict in self.index
+        # print objectdict.__uuid__ in self.index
+        # print self.index.get(objectdict)
+        # print self.index.get(objectdict.__uuid__)
+        # print self.idx(objectdict)
+
+        idx = self.index.get(objectdict)
         if idx is not None:
             if objectdict.cv_time_reversible:
                 objectdict.set_cache_store(self.key_store, self.cache_var(idx), self.cache_var(idx))

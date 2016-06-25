@@ -4,7 +4,7 @@ author
 
 import logging
 
-from dictify import StorableObjectJSON
+from dictify import StorableObjectJSON, UUIDObjectJSON
 from proxy import LoaderProxy
 
 from objects import NamedObjectStore, ObjectStore
@@ -13,6 +13,8 @@ import numpy as np
 import netCDF4
 import os.path
 import abc
+
+from uuid import UUID
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -50,7 +52,8 @@ class NetCDFPlus(netCDF4.Dataset):
         'numpy.uint64': np.uint64,
         'store': str,
         'obj': np.int32,
-        'lazyobj': np.int32
+        'lazyobj': np.int32,
+        'uuid': str
     }
 
     class ValueDelegate(object):
@@ -192,7 +195,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         pass
 
-    def __init__(self, filename, mode=None):
+    def __init__(self, filename, mode=None, use_uuid=False, fallback=None):
         """
         Create a storage for complex objects in a netCDF file
 
@@ -230,6 +233,7 @@ class NetCDFPlus(netCDF4.Dataset):
             logger.info("Open existing netCDF file '%s' for reading - reading from existing file", filename)
 
         self.filename = filename
+        self.fallback = fallback
 
         # call netCDF4-python to create or open .nc file
         super(NetCDFPlus, self).__init__(filename, mode)
@@ -243,9 +247,15 @@ class NetCDFPlus(netCDF4.Dataset):
             self.create_dimension('scalar', 1)
             self.create_dimension('pair', 2)
 
+            self.reference_by_uuid = use_uuid
+            if use_uuid:
+                self.setncattr('use_uuid', 'True')
+
+            self._create_simplifier()
+
             # create the store that holds stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
-            self.stores._init()
+            self.stores.initialize()
             self.stores.set_caching(True)
             self.update_delegates()
 
@@ -264,11 +274,19 @@ class NetCDFPlus(netCDF4.Dataset):
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
 
+            self.reference_by_uuid = hasattr(self, 'use_uuid')
+            self._create_simplifier()
+
             # open the store that contains all stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
             self.stores.set_caching(True)
             self.create_variable_delegate('stores_json')
             self.create_variable_delegate('stores_name')
+
+            if self.reference_by_uuid:
+                self.create_variable_delegate('stores_uuid')
+
+            self.stores.restore()
 
             # Create a dict of simtk.Unit() instances for all netCDF.Variable()
             for variable_name in self.variables:
@@ -287,6 +305,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
             # register all stores that are listed in self.stores
             for store in self.stores:
+                logger.debug("Register store %s in the storage" % store.name)
                 self.register_store(store.name, store)
                 store.register(self, store.name)
 
@@ -298,6 +317,11 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.sync()
 
+    def _create_simplifier(self):
+        if self.reference_by_uuid:
+            self.simplifier = UUIDObjectJSON(self)
+        else:
+            self.simplifier = StorableObjectJSON(self)
 
     @property
     def file_size(self):
@@ -305,12 +329,14 @@ class NetCDFPlus(netCDF4.Dataset):
 
     @property
     def file_size_str(self):
-        current = float(self.file_size)
+        current = self.file_size
+        output_prefix = ''
         for prefix in ["k", "M", "G"]:
-            if current > 1024:
+            if current >= 1024:
                 output_prefix = prefix
                 current /= 1024.0
-        return "{0:.2f}{1}B".format(current, prefix)
+
+        return "{0:.2f}{1}B".format(current, output_prefix)
 
     def _setup_class(self):
         """
@@ -320,7 +346,6 @@ class NetCDFPlus(netCDF4.Dataset):
         self._objects = {}
         self._obj_store = {}
         self._storages_base_cls = {}
-        self.simplifier = StorableObjectJSON(self)
         self.vars = dict()
         self.units = dict()
 
@@ -350,14 +375,14 @@ class NetCDFPlus(netCDF4.Dataset):
         finalize all of them together.
         """
         for store in self._stores.values():
-            if not store._created:
+            if not store.is_created():
                 logger.info("Initializing store '%s'" % store.name)
-                store._init()
+                store.initialize()
 
         for store in self._stores.values():
-            if not store._created:
+            if not store.is_created():
                 logger.info("Initializing store '%s'" % store.name)
-                store._init()
+                store.initialize()
 
         self.update_delegates()
         self.simplifier.update_class_list()
@@ -430,7 +455,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
 
         for storage in self._stores.values():
-            storage._init()
+            storage.initialize()
 
         self.update_delegates()
 
@@ -444,7 +469,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
 
         for storage in self._stores.values():
-            storage._restore()
+            storage.restore()
 
     def list_stores(self):
         """
@@ -474,7 +499,10 @@ class NetCDFPlus(netCDF4.Dataset):
 
         Parameters
         ----------
-        obj : the object to store
+        obj : :class:`StorableObject`
+            the object to store
+        idx : str
+            the name to be stored by
 
         Returns
         -------
@@ -487,11 +515,9 @@ class NetCDFPlus(netCDF4.Dataset):
             # a list of objects will be stored one by one
             return [self.save(part, idx) for part in obj]
 
-
         elif type(obj) is tuple:
             # a tuple will store all parts
             return [self.save(part, idx) for part in obj]
-
 
         elif obj.__class__ in self._obj_store:
             # to store we just check if the base_class is present in the storages
@@ -500,19 +526,18 @@ class NetCDFPlus(netCDF4.Dataset):
             store_idx = self.stores.index[store]
             return store, store_idx, store.save(obj, idx)
 
-
         # Could not save this object.
         raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
                              obj.__class__.__name__)
 
-    def load(self, obj_type, idx):
+    def load(self, uuid):
         """
-        Load an object of the specified type from the storage
+        Load an object from the storage
 
         Parameters
         ----------
-        obj_type : str or class
-            the store or class of the base object to be loaded.
+        uuid : uuid.UUID
+            the uuid to be loaded
 
         Returns
         -------
@@ -521,22 +546,17 @@ class NetCDFPlus(netCDF4.Dataset):
 
         Notes
         -----
-        If you want to load a sub-classed Ensemble you need to load using
-        `Ensemble` or `"Ensemble"` and not use the subclass
+        this only works in storages with uuids otherwise load directly from the sub-stores
         """
 
-        if obj_type in self._objects:
-            store = self._objects[obj_type]
-            return store.load(idx)
-        elif obj_type in self._obj_store:
-            # check if a store for the base_cls exists and use this one
-            store = self._obj_store[obj_type]
-            return store.load(idx)
-        elif obj_type in self.simplifier.class_list:
-            store = self._obj_store[self.simplifier.class_list[obj_type]]
-            return store.load(idx)
+        if self.reference_by_uuid:
+            for store in self.objects.values():
+                if uuid in store.index:
+                    return store[uuid]
 
-        raise RuntimeError("No store registered to load variable type '%s'" % obj_type)
+            raise KeyError("UUID %s not found in storage" % uuid)
+        else:
+            raise RuntimeError("Can only load directly from stores that support UUIDs.")
 
     def idx(self, obj):
         """
@@ -585,7 +605,6 @@ class NetCDFPlus(netCDF4.Dataset):
                 copied_storages += 1
                 if variable not in new_storage.variables:
                     # collectivevariables have additional variables in the storage that need to be copied
-                    # TODO: copy chunksizes?
                     var = self.variables[variable]
                     new_storage.createVariable(
                         variable,
@@ -698,10 +717,13 @@ class NetCDFPlus(netCDF4.Dataset):
         types += ['lazyobj.' + x for x in self.objects.keys()]
         return sorted(types)
 
-    @staticmethod
-    def var_type_to_nc_type(var_type):
+    def var_type_to_nc_type(self, var_type):
         """
         Return the compatible netCDF variable type for var_type
+
+        Parameters
+        ----------
+        var_type :
 
         Returns
         -------
@@ -709,7 +731,10 @@ class NetCDFPlus(netCDF4.Dataset):
             A object of netcdf compatible varible types
         """
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
-            nc_type = np.int32
+            if self.reference_by_uuid:
+                nc_type = str
+            else:
+                nc_type = np.int32
         else:
             nc_type = NetCDFPlus._type_conversion[var_type]
 
@@ -736,16 +761,17 @@ class NetCDFPlus(netCDF4.Dataset):
         setter = None
         store = None
 
+        to_uuid_chunks = lambda x: [x[i:i + 36] for i in range(0, len(x), 36)]
+
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
             store = getattr(self, var_type.split('.')[1])
             base_type = store.content_class
 
             get_is_iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
+                v.base_cls is not base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
             set_is_iterable = lambda v: \
-                not v.base_cls is base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
-
+                v.base_cls is not base_type if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
         if var_type == 'int':
             getter = lambda v: v.tolist()
@@ -758,10 +784,10 @@ class NetCDFPlus(netCDF4.Dataset):
         elif var_type == 'index':
             getter = lambda v: \
                 [None if int(w) < 0 else int(w) for w in v.tolist()] \
-                    if hasattr(v, '__iter__') else None if int(v) < 0 else int(v)
+                if hasattr(v, '__iter__') else None if int(v) < 0 else int(v)
             setter = lambda v: \
                 [-1 if w is None else w for w in v] \
-                    if hasattr(v, '__iter__') else -1 if v is None else v
+                if hasattr(v, '__iter__') else -1 if v is None else v
 
         elif var_type == 'float':
             getter = lambda v: v.tolist()
@@ -779,12 +805,21 @@ class NetCDFPlus(netCDF4.Dataset):
             getter = lambda v: self.simplifier.from_json(v)
 
         elif var_type.startswith('obj.'):
-            getter = lambda v: \
-                [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
+            if not self.reference_by_uuid:
+                getter = lambda v: \
+                    [None if int(w) < 0 else store.load(int(w)) for w in v.tolist()] \
                     if get_is_iterable(v) else None if int(v) < 0 else store.load(int(v))
-            setter = lambda v: \
-                np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+                setter = lambda v: \
+                    np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if set_is_iterable(v) else -1 if v is None else store.save(v)
+            else:
+                getter = lambda v: \
+                    [None if w[0] == '-' else store.load(UUID(w)) for w in to_uuid_chunks(v)] \
+                    if get_is_iterable(v) else None if v[0] == '-' else store.load(UUID(v))
+
+                setter = lambda v: \
+                    ''.join(['-' * 36 if w is None else str(store.save(w)) for w in list.__iter__(v)]) \
+                    if set_is_iterable(v) else '-' * 36 if v is None else str(store.save(v))
 
         elif var_type == 'obj':
             # arbitrary object
@@ -794,19 +829,34 @@ class NetCDFPlus(netCDF4.Dataset):
 
             getter = lambda v: \
                 [None if int(w[1]) < 0 else self.stores[int(w[0])].load(int(w[1])) for w in v.tolist()] \
-                    if len(v.shape) > 1 else None if int(v[1]) < 0 else self.stores[int(v[0])].load(int(v[1]))
-
+                if len(v.shape) > 1 else None if int(v[1]) < 0 else self.stores[int(v[0])].load(int(v[1]))
             setter = lambda v: \
                 np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
-                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
+                if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
 
         elif var_type.startswith('lazyobj.'):
-            getter = lambda v: \
-                [None if int(w) < 0 else LoaderProxy(store, int(w)) for w in v.tolist()] \
+            if not self.reference_by_uuid:
+                getter = lambda v: \
+                    [None if int(w) < 0 else LoaderProxy(store, int(w)) for w in v.tolist()] \
                     if get_is_iterable(v) else None if int(v) < 0 else LoaderProxy(store, int(v))
-            setter = lambda v: \
-                np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
+                setter = lambda v: \
+                    np.array([-1 if w is None else store.save(w) for w in v], dtype=np.int32) \
                     if set_is_iterable(v) else -1 if v is None else store.save(v)
+            else:
+                getter = lambda v: \
+                    [None if w[0] == '-' else LoaderProxy(store, UUID(w)) for w in to_uuid_chunks(v)] \
+                    if get_is_iterable(v) else None if v[0] == '-' else LoaderProxy(store, UUID(v))
+                setter = lambda v: \
+                    ''.join(['-' * 36 if w is None else str(store.save(w)) for w in list.__iter__(v)]) \
+                    if set_is_iterable(v) else '-' * 36 if v is None else str(store.save(v))
+
+        elif var_type == 'uuid':
+            getter = lambda v: \
+                [None if w[0] == '-' else UUID(w) for w in v] \
+                if type(v) is not unicode else None if v[0] == '-' else UUID(v)
+            setter = lambda v: \
+                ''.join(['-' * 36 if w is None else str(w) for w in list.__iter__(v)]) \
+                if hasattr(v, '__iter__') else '-' * 36 if v is None else str(v)
 
         elif var_type == 'lazyobj':
             # arbitrary object
@@ -815,12 +865,12 @@ class NetCDFPlus(netCDF4.Dataset):
                 False if hasattr(v, 'base_cls') else hasattr(v, '__iter__')
 
             getter = lambda v: \
-                [None if int(w[1]) < 0 else LoaderProxy(self.stores[int(w[0])],int(w[1])) for w in v.tolist()] \
-                    if len(v.shape) > 1 else None if int(v[1]) < 0 else LoaderProxy(self.stores[int(v[0])],int(v[1]))
+                [None if int(w[1]) < 0 else LoaderProxy(self.stores[int(w[0])], int(w[1])) for w in v.tolist()] \
+                if len(v.shape) > 1 else None if int(v[1]) < 0 else LoaderProxy(self.stores[int(v[0])], int(v[1]))
 
             setter = lambda v: \
                 np.array([(-1, -1) if w is None else self.save(w)[1:] for w in v], dtype=np.int32) \
-                    if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
+                if set_iterable_simple(v) else (-1, -1) if v is None else self.save(v)[1:]
 
         elif var_type == 'store':
             setter = lambda v: v.prefix
@@ -828,10 +878,18 @@ class NetCDFPlus(netCDF4.Dataset):
 
         return getter, setter, store
 
+    to_uuid_chunks = staticmethod(lambda x: [x[i:i + 36] for i in range(0, len(x), 36)])
+
     def create_variable_delegate(self, var_name):
         """
         Create a delegate property that wraps the netcdf.Variable and takes care
         of type conversions
+
+        Parameters
+        ----------
+        var_name : str
+            the name of the variable for which a delegate should be created
+
         """
 
         if var_name not in self.vars:
@@ -841,6 +899,24 @@ class NetCDFPlus(netCDF4.Dataset):
                 return
 
             getter, setter, store = self.create_type_delegate(var.var_type)
+
+            if self.reference_by_uuid:
+
+                to_uuid_chunks = lambda x: [x[i:i + 36] for i in range(0, len(x), 36)]
+
+                if hasattr(var, 'var_vlen'):
+                    if var.var_type.startswith('obj.'):
+                        getter = lambda v: \
+                            [None if w[0] == '-' else store.load(UUID(w)) for w in to_uuid_chunks(v)]
+                    elif var.var_type.startswith('lazyobj.'):
+                        getter = lambda v: \
+                            [None if w[0] == '-' else LoaderProxy(store, UUID(w)) for w in to_uuid_chunks(v)]
+                else:
+                    if var.var_type.startswith('obj.'):
+                        getter = lambda v: \
+                            None if v[0] == '-' else store.load(UUID(v))
+                    elif var.var_type.startswith('lazyobj.'):
+                        getter = lambda v: None if v[0] == '-' else LoaderProxy(store, UUID(v))
 
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
@@ -870,8 +946,8 @@ class NetCDFPlus(netCDF4.Dataset):
                     def _get2(my_getter):
                         return lambda v: \
                             [None if hasattr(w, 'mask') else my_getter(w) for w in v] \
-                                if type(v) is not str and len(v.shape) > 0 else \
-                                (None if hasattr(v, 'mask') else my_getter(v))
+                            if type(v) is not str and len(v.shape) > 0 else \
+                            (None if hasattr(v, 'mask') else my_getter(v))
 
                     if getter is not None:
                         getter = _get2(getter)
@@ -960,7 +1036,7 @@ class NetCDFPlus(netCDF4.Dataset):
             if chunksizes is not None:
                 chunksizes = tuple(list(chunksizes) + [2])
 
-        nc_type = NetCDFPlus.var_type_to_nc_type(var_type)
+        nc_type = self.var_type_to_nc_type(var_type)
 
         for dim_name, size in new_dimensions.items():
             ncfile.create_dimension(dim_name, size)
@@ -981,11 +1057,15 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, var_name + '_vlen')
-            ncvar = ncfile.createVariable(var_name, vlen_t, dimensions,
-                                          zlib=False, chunksizes=chunksizes)
+            ncvar = ncfile.createVariable(
+                var_name, vlen_t, dimensions, chunksizes=chunksizes
+            )
+
+            setattr(ncvar, 'var_vlen', 'True')
         else:
-            ncvar = ncfile.createVariable(var_name, nc_type, dimensions,
-                                          zlib=False, chunksizes=chunksizes)
+            ncvar = ncfile.createVariable(
+                var_name, nc_type, dimensions, chunksizes=chunksizes
+            )
 
         setattr(ncvar, 'var_type', var_type)
 
@@ -1079,6 +1159,8 @@ class NetCDFPlus(netCDF4.Dataset):
                 # could be a Quantity([..])
                 simtk_unit = test_type.unit
                 test_type = test_type._value
+        else:
+            u = None
 
         if type(test_type) is np.ndarray:
             dimensions = test_type.shape

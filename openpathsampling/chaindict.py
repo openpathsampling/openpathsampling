@@ -496,9 +496,15 @@ class StoredDict(ChainDict):
 
         if hasattr(item, '_idx'):
             if item._store is self.key_store:
-                return item._idx
+                val = item._idx
+                if type(val) is int:
+                    return val
+                else:
+                    erg = self.key_store.index.get(val)
+                    return erg
 
-        return self.key_store.index.get(item, None)
+        idx = self.key_store.index.get(item)
+        return idx
 
     def _get(self, item):
         key = self._get_key(item)
@@ -633,8 +639,9 @@ class ReversibleStoredDict(StoredDict):
             values_bw = self.backward_store[:]
 
         self.cache.clear()
-        [self.cache.__setitem__(2*key, value) for key, value in enumerate(values_fw)]
-        [self.cache.__setitem__(2*key + 1, value) for key, value in enumerate(values_bw)]
+
+        [self.cache.__setitem__(2 * key, value) for key, value in enumerate(values_fw) if value is not None]
+        [self.cache.__setitem__(2 * key + 1, value) for key, value in enumerate(values_bw) if value is not None]
 
     def _get(self, item):
         key = self._get_key(item)

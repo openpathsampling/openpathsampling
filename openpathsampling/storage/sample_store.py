@@ -12,8 +12,8 @@ class SampleStore(VariableStore):
     def by_ensemble(self, ensemble):
         return [sample for sample in self.iterator() if sample.ensemble == ensemble]
 
-    def _init(self):
-        super(SampleStore, self)._init()
+    def initialize(self):
+        super(SampleStore, self).initialize()
 
         # New short-hand definition
         self.create_variable('trajectory', 'obj.trajectories')
@@ -50,12 +50,12 @@ class SampleSetStore(VariableStore):
 
         return self.variables['samples'][idx].tolist()
 
-    def _init(self, units=None):
+    def initialize(self, units=None):
         """
         Initialize the associated storage to allow for sampleset storage
 
         """
-        super(SampleSetStore, self)._init()
+        super(SampleSetStore, self).initialize()
 
         self.create_variable('samples', 'obj.samples',
                            dimensions='...',

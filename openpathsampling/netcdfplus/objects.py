@@ -2,13 +2,45 @@ import logging
 import weakref
 
 import yaml
+from uuid import UUID
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from proxy import LoaderProxy
 from base import StorableNamedObject, StorableObject
 
+from collections import OrderedDict
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
+
+
+class UUIDDict(OrderedDict):
+    def __init__(self):
+        OrderedDict.__init__(self)
+
+    @staticmethod
+    def id(obj):
+        if type(obj) is str:
+            return UUID(obj)
+        elif type(obj) is UUID:
+            return obj
+        else:
+            return obj.__uuid__
+
+    def __getitem__(self, item):
+        return OrderedDict.__getitem__(self, self.id(item))
+
+    def __setitem__(self, key, value):
+        OrderedDict.__setitem__(self, self.id(key), value)
+
+    def __delitem__(self, key):
+        OrderedDict.__delitem__(self, self.id(key))
+
+    def __contains__(self, item):
+        return OrderedDict.__contains__(self, self.id(item))
+
+    def get(self, item, default=None):
+        return OrderedDict.get(self, self.id(item), default)
 
 
 class ObjectStore(StorableNamedObject):
@@ -36,7 +68,7 @@ class ObjectStore(StorableNamedObject):
         'numpy.float32', 'numpy.float64',
         'numpy.int8', 'numpy.inf16', 'numpy.int32', 'numpy.int64',
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
-        'index', 'length'
+        'index', 'length', 'uuid'
     ]
 
     class DictDelegator(object):
@@ -112,7 +144,7 @@ class ObjectStore(StorableNamedObject):
         self.vars = dict()
         self.units = dict()
 
-        self.index = weakref.WeakKeyDictionary()
+        self.index = None
 
         if json in [True, False, 'json', 'jsonobj']:
             self.json = json
@@ -122,12 +154,20 @@ class ObjectStore(StorableNamedObject):
         if self.content_class is not None and not issubclass(self.content_class, StorableObject):
             raise ValueError('Content class "%s" must be subclassed from StorableObject.' % self.content_class.__name__)
 
+        self.fallback_store = None
+
+    def is_created(self):
+        return self._created
+
     def to_dict(self):
         return {
             'content_class': self.content_class,
             'json': self.json,
             'nestable': self.nestable
         }
+
+    def register_fallback(self, store):
+        self.fallback_store = store
 
     def register(self, storage, prefix):
         """
@@ -147,6 +187,27 @@ class ObjectStore(StorableNamedObject):
         self.variables = self.prefix_delegate(self.storage.variables)
         self.units = self.prefix_delegate(self.storage.units)
         self.vars = self.prefix_delegate(self.storage.vars)
+
+        if self.reference_by_uuid:
+            self.index = self.create_uuid_index()
+        else:
+            self.index = weakref.WeakKeyDictionary()
+
+    def create_uuid_index(self):
+        return UUIDDict()
+
+    @property
+    def reference_by_uuid(self):
+        return self.storage.reference_by_uuid
+
+    def restore(self):
+        if self.reference_by_uuid:
+            self.load_indices()
+
+    def load_indices(self):
+        uuids = self.vars['uuid'][:]
+        for idx, uuid in enumerate(uuids):
+            self.index[uuid] = idx
 
     @property
     def storage(self):
@@ -225,13 +286,20 @@ class ObjectStore(StorableNamedObject):
         int or None
             The integer index of the given object or None if it is not stored yet
         """
-        return self.index.get(obj)
+        return self.index[obj]
 
     def __iter__(self):
         """
         Add iteration over all elements in the storage
         """
-        return self.iterator()
+        if self.reference_by_uuid:
+            # we want to iterater in the order object were saved!
+            for uuid in self.index:
+                yield self.load(uuid)
+        else:
+            for idx in range(len(self)):
+                yield self.load(idx)
+
 
     def __len__(self):
         """
@@ -319,12 +387,16 @@ class ObjectStore(StorableNamedObject):
         if item is None:
             return None
 
-        if type(item) is not int:
-            idx = self.index.get(item)
-            if idx is None:
-                return item
-        else:
+        if type(item) is int or type(item) is UUID:
             idx = item
+        else:
+            idx = self.reference(item)
+
+        if idx is None:
+            return item
+
+        # if self.reference_by_uuid and type(idx) is int:
+        #     idx = self._get_uuid(idx)
 
         return LoaderProxy(self, idx)
 
@@ -333,7 +405,7 @@ class ObjectStore(StorableNamedObject):
         Enable numpy style selection of object in the store
         """
         try:
-            if type(item) is int or type(item) is str:
+            if type(item) is int or type(item) is str or type(item) is UUID:
                 return self.load(item)
             elif type(item) is slice:
                 return [self.load(idx) for idx in range(*item.indices(len(self)))]
@@ -364,31 +436,12 @@ class ObjectStore(StorableNamedObject):
             idxs = range(len(self))
             jsons = self.variables['json'][:]
 
+
             [self.add_single_to_cache(i, j) for i, j in zip(
                 idxs,
                 jsons)]
 
             self._cached_all = True
-
-    def add_single_to_cache(self, idx, json):
-        """
-        Add a single object to cache by json
-
-        Parameters
-        ----------
-        idx : int
-            the index where the object was stored
-        json : str
-            json string the represents a serialized version of the stored object
-        """
-
-        if idx not in self.cache:
-            simplified = yaml.load(json)
-            obj = self.simplifier.build(simplified)
-
-            obj.json = json
-            self.index[obj] = idx
-            self.cache[idx] = obj
 
     def _save(self, obj, idx):
         self.vars['json'][idx] = obj
@@ -459,7 +512,7 @@ class ObjectStore(StorableNamedObject):
         """
         self._free.discard(idx)
 
-    def _init(self):
+    def initialize(self):
         """
         Initialize the associated storage to allow for object storage. Mainly
         creates an index dimension with the name of the object.
@@ -479,10 +532,15 @@ class ObjectStore(StorableNamedObject):
                 chunksizes=tuple([10240])
             )
 
-        self._created = True
+        if self.storage.reference_by_uuid:
+            # TODO: Change to 16byte string
+            self.create_variable(
+                "uuid", 'uuid',
+                description='The uuid of the object',
+                chunksizes=tuple([10240])
+            )
 
-    def _restore(self):
-        pass
+        self._created = True
 
     # ==============================================================================
     # INITIALISATION UTILITY FUNCTIONS
@@ -556,28 +614,6 @@ class ObjectStore(StorableNamedObject):
             **kwargs
         )
 
-    # ==============================================================================
-    # COLLECTIVE VARIABLE UTILITY FUNCTIONS
-    # ==============================================================================
-
-    @property
-    def op_idx(self):
-        """
-        Returns a function that returns for an object of this storage the idx.
-        This can be used to construct order parameters the return the index
-        in this storage. Useful for visualization
-
-        Returns
-        -------
-        function
-            the function that reports the index (int) in this store or None if it is not stored
-        """
-
-        def idx(obj):
-            return self.index.get(obj)
-
-        return idx
-
     # =============================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
     # =============================================================================
@@ -597,15 +633,27 @@ class ObjectStore(StorableNamedObject):
             the loaded object
         """
 
-        if type(idx) is not int:
+        if type(idx) is UUID:
+            # we want to load by uuid and it was not in cache.
+            if idx in self.index:
+                n_idx = int(self.index[idx])
+            else:
+                if self.fallback_store is not None:
+                    return self.fallback_store.load(idx)
+                elif self.storage.fallback is not None:
+                    return self.storage.fallback.stores[self.name].load(idx)
+                else:
+                    raise ValueError('str %s not found in storage or fallback' % idx)
+
+        elif type(idx) is not int:
             raise ValueError(
                 'indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__
             )
+        else:
+            n_idx = int(idx)
 
-        if idx < 0:
+        if n_idx < 0:
             return None
-
-        n_idx = int(idx)
 
         # if it is in the cache, return it
         try:
@@ -625,15 +673,62 @@ class ObjectStore(StorableNamedObject):
             logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0. This should never happen!!!')
             raise RuntimeError('Loading of negative int should result in no object. This should never happen!')
         else:
-            obj = self._load(idx)
+            obj = self._load(n_idx)
 
-        self.index[obj] = n_idx
+        logger.debug('Calling load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
 
         if obj is not None:
+            self._get_id(n_idx, obj)
+
             # update cache there might have been a change due to naming
+            self.index[obj] = n_idx
             self.cache[n_idx] = obj
 
+            logger.debug('Try loading UUID object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+
+        logger.debug('Finished load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+
         return obj
+
+    def reference(self, obj):
+        if self.reference_by_uuid:
+            return obj.__uuid__
+        else:
+            return self.index.get(obj)
+
+    def remember(self, obj):
+        """
+        Tell a store that an obj should be assumed as stored
+
+        This is useful, if you do not want to store an object in a specific store. Especially to make sure
+        snapshots are not stored multiple times
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the object to the fake stored
+
+        """
+
+        if obj not in self.index:
+            self.index[obj] = -1
+
+    def forget(self, obj):
+        """
+        This will revert remembering non-stored objects.
+
+        Stored objects cannot be forgotten
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the object to be forgotten
+
+        """
+
+        if obj in self.index:
+            if self.index[obj] < 0:
+                del self.index[obj]
 
     def save(self, obj, idx=None):
         """
@@ -653,7 +748,7 @@ class ObjectStore(StorableNamedObject):
 
         if obj in self.index:
             # has been saved so quit and do nothing
-            return self.index[obj]
+            return self.reference(obj)
 
         if hasattr(obj, '_idx'):
             if obj._store is self:
@@ -680,7 +775,7 @@ class ObjectStore(StorableNamedObject):
         else:
             raise ValueError('Unsupported index type (only None allowed).')
 
-        # mark as saved so circular dependcies will not result in infinite loops
+        # mark as saved so circular dependencies will not result in infinite loops
         self.index[obj] = n_idx
 
         # make sure in nested saving that an IDX is not used twice!
@@ -702,7 +797,9 @@ class ObjectStore(StorableNamedObject):
             raise
 
         self.release_idx(n_idx)
-        return n_idx
+        self._set_id(n_idx, obj)
+
+        return self.reference(obj)
 
     def __setitem__(self, key, value):
         """
@@ -722,9 +819,64 @@ class ObjectStore(StorableNamedObject):
     def load_range(self, start, end):
         return map(self._load, range(start, end))
 
+    def add_single_to_cache(self, idx, json):
+        """
+        Add a single object to cache by json
+
+        Parameters
+        ----------
+        idx : int
+            the index where the object was stored
+        json : str
+            json string the represents a serialized version of the stored object
+        """
+
+        if idx not in self.cache:
+            simplified = yaml.load(json)
+            obj = self.simplifier.build(simplified)
+
+            self._get_id(idx, obj)
+
+            self.cache[idx] = obj
+            self.index[obj] = idx
+
+            return obj
+
+    def uuid(self, uuid):
+        """
+        Return last object with a given uuid
+
+        Parameters
+        ----------
+        uuid : str
+            the uuid to be searched for
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the last object with a given uuid. This is to mimic immutable object. Once you
+            (re-)save with the same uuid you replace the old one and hence you leed to load the last
+            stored one.
+
+        """
+        return self.load(uuid)
+
+    # def _set_uuid(self, idx, uuid):
+    #     self.storage.variables[self.prefix + '_uuid'][idx] = uuid
+    #
+    # def _get_uuid(self, idx):
+    #     return UUID(self.storage.variables[self.prefix + '_uuid'][idx])
+
+    def _set_id(self, idx, obj):
+        if self.reference_by_uuid:
+            self.vars['uuid'][idx] = obj.__uuid__
+
+    def _get_id(self, idx, obj):
+        if self.reference_by_uuid:
+            obj.__uuid__ = self.vars['uuid'][idx]
+
 
 class NamedObjectStore(ObjectStore):
-
     def __init__(self, content_class, json=True, nestable=False):
         super(NamedObjectStore, self).__init__(content_class=content_class, json=json, nestable=nestable)
 
@@ -737,12 +889,12 @@ class NamedObjectStore(ObjectStore):
                 self.content_class.__name__
             )
 
-    def _init(self):
+    def initialize(self):
         """
         Initialize the associated storage to allow for object storage. Mainly
         creates an index dimension with the name of the object.
         """
-        super(NamedObjectStore, self)._init()
+        super(NamedObjectStore, self).initialize()
 
         self.create_variable(
             "name", 'str',
@@ -763,12 +915,7 @@ class NamedObjectStore(ObjectStore):
         """
 
         if idx not in self.cache:
-            simplified = yaml.load(json)
-            obj = self.simplifier.build(simplified)
-
-            obj.json = json
-            self.index[obj] = idx
-            self.cache[idx] = obj
+            obj = super(NamedObjectStore, self).add_single_to_cache(idx, json)
 
             name = self.storage.variables[self.prefix + '_name'][idx]
             setattr(obj, '_name', name)
@@ -879,7 +1026,7 @@ class NamedObjectStore(ObjectStore):
             the loaded object
         """
 
-        if type(idx) is not str and idx < 0:
+        if type(idx) is int and idx < 0:
             return None
 
         n_idx = idx
@@ -895,6 +1042,9 @@ class NamedObjectStore(ObjectStore):
             else:
                 raise ValueError('str "' + idx + '" not found in storage')
 
+        elif type(idx) is UUID:
+            pass
+
         elif type(idx) is not int:
             raise ValueError(
                 'indices of type "%s" are not allowed in named storage (only str and int)' %
@@ -904,6 +1054,7 @@ class NamedObjectStore(ObjectStore):
         obj = super(NamedObjectStore, self).load(n_idx)
 
         if obj is not None:
+            n_idx = self.index[obj]
             setattr(obj, '_name',
                     self.storage.variables[self.prefix + '_name'][n_idx])
             # make sure that you cannot change the name of loaded objects
@@ -946,14 +1097,15 @@ class NamedObjectStore(ObjectStore):
             logger.debug("Nameable object has not been initialized correctly. Has None in _name")
             raise AttributeError('_name needs to be a string for nameable objects.')
 
-        n_idx = super(NamedObjectStore, self).save(obj)
+        reference = super(NamedObjectStore, self).save(obj)
 
         obj.fix_name()
 
+        n_idx = self.index[obj]
         self.storage.variables[self.prefix + '_name'][n_idx] = name
         self._update_name_in_cache(name, n_idx)
 
-        return n_idx
+        return reference
 
 
 class UniqueNamedObjectStore(NamedObjectStore):
@@ -1041,7 +1193,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
             if fixed:
                 if name != idx:
                     # saving fixed under different name is not possible. Get a reasonable error message
-                    if obj in self.index:
+                    if obj in self:
                         err.append(
                             ('Cannot rename object to "%s". '
                              'Already saved with name "%s" !') % (idx, name)
@@ -1069,7 +1221,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
                 else:
                     # already fixed, but with same name. So that is fine. Check if already stored
                     if obj in self.index:
-                        return self.index[obj]
+                        return self.reference(obj)
             else:
                 # name is not fixed yet. So check, if we can save or whether name is already taken
                 if self.is_name_locked(idx):
@@ -1091,7 +1243,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
             if fixed:
                 # no new name, but fixed. Check if already stored.
                 if obj in self.index:
-                    return self.index[obj]
+                    return self.reference(obj)
 
                 # if not stored yet check if we could
                 if self.is_name_locked(name):
@@ -1118,11 +1270,11 @@ class UniqueNamedObjectStore(NamedObjectStore):
         self.reserve_name(name)
 
         try:
-            n_idx = super(UniqueNamedObjectStore, self).save(obj, idx)
+            reference = super(UniqueNamedObjectStore, self).save(obj, idx)
         finally:
             self.release_name(name)
 
-        return n_idx
+        return reference
 
 
 class VariableStore(ObjectStore):
@@ -1149,8 +1301,8 @@ class VariableStore(ObjectStore):
         attr = {var: self.vars[var][idx] for var in self.var_names}
         return self.content_class(**attr)
 
-    def _init(self):
-        super(VariableStore, self)._init()
+    def initialize(self):
+        super(VariableStore, self).initialize()
 
         # Add here the stores to be imported
         # self.create_variable('name', 'var_type')
@@ -1191,6 +1343,7 @@ class VariableStore(ObjectStore):
         if idx not in self.cache:
             attr = {var: self.vars[var].getter(data[nn]) for nn, var in enumerate(self.var_names)}
             obj = self.content_class(**attr)
+            self._get_id(idx, obj)
 
             self.index[obj] = idx
             self.cache[idx] = obj
@@ -1238,6 +1391,8 @@ class DictStore(NamedObjectStore):
 
                 n_idx = sorted(list(self.name_idx[idx]))[-1]
 
+                logger.debug('Found name "%s" in storage! Loading IDX %d!' % (idx, n_idx))
+
         elif type(idx) is int:
             n_idx = idx
         else:
@@ -1264,9 +1419,16 @@ class DictStore(NamedObjectStore):
                 'Loading of negative int should result in no object. This should never happen!'
             )
         else:
+
+            logger.debug('Loading named object from index IDX # %d' % n_idx)
             obj = self._load(n_idx)
 
+            logger.debug('Loading named object from index IDX # %d.. DONE' % n_idx)
+
         return obj
+
+    def restore(self):
+        pass
 
     def save(self, obj, idx=None):
         """
