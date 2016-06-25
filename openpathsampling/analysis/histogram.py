@@ -216,9 +216,12 @@ class Histogram(SparseHistogram):
             self.bin_widths = np.array((self.bin_width,))
         return super(Histogram, self).histogram(data, weights)
 
-    def xvals(self, bin_edge_type):
+    def xvals(self, bin_edge_type="l"):
         int_bins = np.array(self._histogram.keys())[:,0]
-        n_bins = max(int_bins) - min(int_bins) + 1
+        # always include left_edge_bin as 0 point; always include 0 and
+        # greater bin values (but allow negative)
+        min_bin = min(min(int_bins), 0)
+        n_bins = max(int_bins) - min_bin + 1
         width = self.bin_widths[0]
         left_bins = (self.left_bin_edges[0] + np.arange(n_bins) * width)
         return self._left_edge_to_bin_edge_type(left_bins, width,
@@ -229,7 +232,7 @@ class Histogram(SparseHistogram):
         vals = self.xvals(bin_edge)
         hist = self.histogram()
         bins = sorted(hist.keys())
-        min_bin = bins[0][0]
+        min_bin = min(bins[0][0], self.left_bin_edges[0])
         max_bin = bins[-1][0]
         bin_range = range(int(min_bin), int(max_bin)+1)
         hist_list = [hist[(b,)] for b in bin_range]
@@ -350,20 +353,20 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
     for hist in hists:
         # check that the keys match
         if keys is None:
-            keys = hist.plot_bins(**fcn_args)
-        for (t,b) in zip(keys, hist.plot_bins(**fcn_args)):
+            keys = hist.xvals()
+        for (t,b) in zip(keys, hist.xvals()):
             if t != b:
                 raise Warning("Bins don't match up")
         if hist.name is None:
             hist.name = str(hists.index(hist))
 
         hist_data = {
-            "histogram" : hist.histogram,
+            "histogram" : hist,
             "normalized" : hist.normalized,
             "reverse_cumulative" : hist.reverse_cumulative,
             "cumulative" : hist.cumulative,
             "rebinned" : hist.rebinned
-        }[fcn](**fcn_args)
+        }[fcn](**fcn_args).values()
 
         bin_edge = {
             "histogram" : "m",
@@ -375,7 +378,7 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
 
         frames.append(pd.DataFrame({hist.name : hist_data}, index=xvals))
     all_frames = pd.concat(frames, axis=1)
-    return all_frames
+    return all_frames.fillna(0.0)
 
 
 def write_histograms(fname, hists):
