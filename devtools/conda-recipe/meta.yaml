@@ -1,6 +1,6 @@
 package:
   name: openpathsampling-dev
-  version: "0.0.3"
+  version: "0.1.0"
 
 source:
 #  git_url: ../../.git
@@ -45,6 +45,6 @@ test:
     - openpathsampling
 
 about:
-  home: https://github.com/openpathsampling/openpathsampling
-  license: GNU Lesser General Public License v2.1 or later (LGPLv2.1+)
-  summary: framework for running path sampling MD simulations
+  home: http://github.com/openpathsampling/openpathsampling
+  license: LGPL 2.1 or later
+  summary: 'OpenPathSampling: A python package to do path sampling simulations'
