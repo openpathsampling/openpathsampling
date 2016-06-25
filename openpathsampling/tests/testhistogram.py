@@ -10,7 +10,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 import collections
 
-from openpathsampling.analysis import Histogram
+from openpathsampling.analysis import Histogram, SparseHistogram
 
 class testHistogram(object):
     def setup(self):
@@ -133,10 +133,28 @@ class testHistogram(object):
 
 class testSparseHistogram(object):
     def setup(self):
-        pass
+        data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
+        self.histo = SparseHistogram(bin_widths=(0.5, 0.3),
+                                     left_bin_edges=(0.0, -0.1))
+        self.histo.histogram(data)
+
+    def test_correct(self):
+        correct_results = collections.Counter({
+            (0, 0) : 1,
+            (0, 2) : 2,
+            (1, 3) : 1
+        })
+        assert_equal(self.histo._histogram, correct_results)
 
     def test_call(self):
-        raise SkipTest
+        histo_fcn = self.histo()
+        # voxels we have filled
+        assert_equal(histo_fcn((0.25, 0.65)), 2)
+        assert_equal(histo_fcn((0.01, 0.09)), 1)
+        assert_equal(histo_fcn((0.61, 0.89)), 1)
+        # empty voxel gives 0
+        assert_equal(histo_fcn((2.00, 2.00)), 0)
 
     def test_normalized(self):
+
         raise SkipTest

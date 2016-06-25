@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
-from lookup_function import LookupFunction
+from lookup_function import LookupFunction, VoxelLookupFunction
 import collections
 
 class SparseHistogram(object):
@@ -121,9 +121,12 @@ class SparseHistogram(object):
                                                 bin_edge_type)
 
     def __call__(self, bin_edge_type="m"):
-        pass
+        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges, 
+                                   bin_widths=self.bin_widths,
+                                   counter=self._histogram)
 
     def normalized(self, raw_probability=False, bin_edge="m"):
+
         pass
 
     def compare_parameters(self, other):

@@ -201,3 +201,20 @@ class LookupFunctionGroup(LookupFunction):
     
     def append(self, item):
         self.functions.append(item)
+
+
+class VoxelLookupFunction(object):
+    """Turn sparse histogram into a lookup function.
+
+    For any data point inside a voxel, return the sparse histogram value for
+    that voxel. If no such voxel, returns 0.0. No interpolation.
+    """
+    def __init__(self, left_bin_edges, bin_widths, counter):
+        self.left_bin_edges = left_bin_edges
+        self.bin_widths = bin_widths
+        self.counter = counter
+
+    def __call__(self, value):
+        val_bin = tuple(np.floor((value - self.left_bin_edges) /
+                                 self.bin_widths))
+        return self.counter[val_bin]
