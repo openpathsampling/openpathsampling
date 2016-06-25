@@ -14,7 +14,7 @@ Install with Conda
 ------------------
 .. _install-with-conda:
 
-We recommend using `conda` to install OpenPathSampling.  `conda
+We recommend using ``conda`` to install OpenPathSampling.  `conda
 <http://www.continuum.io/blog/conda>`_ is a python package manager built for
 scientific python. Unlike ``easy_install`` or ``pip``, it handles binaries
 and binary dependencies, which are critical for most scientific workflows.
@@ -28,7 +28,7 @@ following commands ::
   $ conda install openpathsampling
 
 If you want the cutting edge of what OpenPathSampling can do, you can
-install the development version using `conda install openpathsampling-dev`.
+install the development version using ``conda install openpathsampling-dev``.
 (Also, if you're reading this prior to the first official release.)
 
 .. note:: ``conda`` will automatically install all of the tricky dependencies
@@ -41,7 +41,7 @@ Install from Source
 -------------------
 Clone the source code repository from github::
 
-  $ git clone git://github.com/choderalab/openpathsampling.git
+  $ git clone git://github.com/openpathsampling/openpathsampling.git
 
 Then, in the directory containing the source code, you can install it with ::
 

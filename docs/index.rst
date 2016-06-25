@@ -5,7 +5,7 @@ A Python toolkit to run PathSampling algorithms.
 
 Participate in the development process on GitHub_
 
-.. _GitHub: http://github.com/choderalab/openpathsampling
+.. _GitHub: http://github.com/openpathsampling/openpathsampling
 
 --------------------------------------------------------------------------------
 
