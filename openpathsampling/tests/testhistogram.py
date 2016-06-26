@@ -1,17 +1,28 @@
-from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
+from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
+                        raises, assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from test_helpers import assert_items_almost_equal
 
 import logging
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-from openpathsampling.analysis import Histogram
+import collections
+
+from openpathsampling.analysis import Histogram, SparseHistogram
 
 class testHistogram(object):
     def setup(self):
         self.data = [1.0, 1.1, 1.2, 1.3, 2.0, 1.4, 2.3, 2.5, 3.1, 3.5]
         self.nbins = 5
-        self.hist = [5, 0, 2, 1, 2]
+        hist_counts = [5, 0, 2, 1, 1, 1]
         self.bins = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
+        self.left_bin_edges = (1.0,)
+        self.bin_widths = (0.5,)
+        self.hist = collections.Counter({(0,): 5, (2,): 2, (3,): 1,
+                                         (4,): 1, (5,): 1})
 
         self.default_hist = Histogram()
         self.hist_nbins = Histogram(n_bins=5)
@@ -53,7 +64,7 @@ class testHistogram(object):
         assert_items_equal(hist, self.hist)
 
         hist2 = histogram.add_data_to_histogram(self.data)
-        assert_items_equal(hist2, map((2).__mul__, hist))
+        assert_items_equal(hist2, hist+hist)
         assert_equal(histogram.count, 20)
 
     def test_compare_parameters(self):
@@ -69,21 +80,23 @@ class testHistogram(object):
         histo = Histogram(n_bins=5)
         assert_equal(self.hist_nbins_range.compare_parameters(histo), False)
         histo.histogram(self.data)
-        assert_equal(self.hist_nbins_range.compare_parameters(histo), True)
+        assert_equal(self.hist_nbins_range.compare_parameters(histo), False)
         assert_equal(
             self.hist_nbins_range.compare_parameters(self.hist_nbins),
             False
         )
-        assert_equal(histo.compare_parameters(self.hist_nbins), True)
+        assert_equal(histo.compare_parameters(self.hist_nbins), False)
         assert_equal(self.hist_nbins.compare_parameters(histo), False)
 
     def test_xvals(self):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data) # need this to set the bins
-        assert_items_equal(histo.bins, self.bins)
-        assert_items_equal(histo.xvals("l"), [1.0, 1.5, 2.0, 2.5, 3.0])
-        assert_items_equal(histo.xvals("r"), [1.5, 2.0, 2.5, 3.0, 3.5])
-        assert_items_equal(histo.xvals("m"), [1.25, 1.75, 2.25, 2.75, 3.25])
+        assert_equal(histo.left_bin_edges, self.left_bin_edges)
+        assert_equal(histo.bin_widths, self.bin_widths)
+        assert_items_equal(histo.xvals("l"), [1.0, 1.5, 2.0, 2.5, 3.0, 3.5])
+        assert_items_equal(histo.xvals("r"), [1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
+        assert_items_equal(histo.xvals("m"), 
+                           [1.25, 1.75, 2.25, 2.75, 3.25, 3.75])
 
 
     def test_normalization(self):
@@ -94,24 +107,61 @@ class testHistogram(object):
     def test_normalized(self):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data)
-        assert_items_equal(histo.normalized(), [1.0, 0.0, 0.4, 0.2, 0.4])
-        assert_items_equal(histo.normalized(raw_probability=True),
-                           [0.5, 0.0, 0.2, 0.1, 0.2])
+        assert_items_equal(histo.normalized().values(),
+                           [1.0, 0.0, 0.4, 0.2, 0.2, 0.2])
+        assert_items_equal(histo.normalized(raw_probability=True).values(),
+                           [0.5, 0.0, 0.2, 0.1, 0.1, 0.1])
 
     def test_cumulative(self):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data)
-        assert_items_almost_equal(histo.cumulative(), [5.0, 5.0, 7.0, 8.0, 10.0])
+        cumulative = histo.cumulative(None).values()
+        assert_items_almost_equal(cumulative, [5.0, 5.0, 7.0, 8.0, 9.0, 10.0])
         assert_items_almost_equal(histo.cumulative(maximum=1.0), 
-                                  [0.5, 0.5, 0.7, 0.8, 1.0])
+                                  [0.5, 0.5, 0.7, 0.8, 0.9, 1.0])
 
     def test_reverse_cumulative(self):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data)
-        assert_items_almost_equal(histo.reverse_cumulative(),
-                                  [10, 5, 5, 3, 2])
-        assert_items_almost_equal(histo.reverse_cumulative(maximum=1.0),
-                                  [1.0, 0.5, 0.5, 0.3, 0.2])
+        rev_cumulative = histo.reverse_cumulative(maximum=None)
+        assert_items_almost_equal(rev_cumulative.values(),
+                                  [10, 5, 5, 3, 2, 1])
+        rev_cumulative = histo.reverse_cumulative(maximum=1.0)
+        assert_items_almost_equal(rev_cumulative.values(),
+                                  [1.0, 0.5, 0.5, 0.3, 0.2, 0.1])
 
 
 
+class testSparseHistogram(object):
+    def setup(self):
+        data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
+        self.histo = SparseHistogram(bin_widths=(0.5, 0.3),
+                                     left_bin_edges=(0.0, -0.1))
+        self.histo.histogram(data)
+
+    def test_correct(self):
+        correct_results = collections.Counter({
+            (0, 0) : 1,
+            (0, 2) : 2,
+            (1, 3) : 1
+        })
+        assert_equal(self.histo._histogram, correct_results)
+
+    def test_call(self):
+        histo_fcn = self.histo()
+        # voxels we have filled
+        assert_equal(histo_fcn((0.25, 0.65)), 2)
+        assert_equal(histo_fcn((0.01, 0.09)), 1)
+        assert_equal(histo_fcn((0.61, 0.89)), 1)
+        # empty voxel gives 0
+        assert_equal(histo_fcn((2.00, 2.00)), 0)
+
+    def test_normalized(self):
+        raw_prob_normed = self.histo.normalized(raw_probability=True)
+        assert_almost_equal(raw_prob_normed((0.25, 0.65)), 0.5)
+        assert_almost_equal(raw_prob_normed((0.01, 0.09)), 0.25)
+        assert_almost_equal(raw_prob_normed((0.61, 0.89)), 0.25)
+        normed_fcn = self.histo.normalized()
+        assert_almost_equal(normed_fcn((0.25, 0.65)), 0.5/0.15)
+        assert_almost_equal(normed_fcn((0.01, 0.09)), 0.25/0.15)
+        assert_almost_equal(normed_fcn((0.61, 0.89)), 0.25/0.15)
