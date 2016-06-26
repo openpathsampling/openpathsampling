@@ -1,5 +1,3 @@
-
-
 import svgwrite as svg
 from svgwrite.container import Group
 import openpathsampling as paths
