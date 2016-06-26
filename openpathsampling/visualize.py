@@ -699,7 +699,7 @@ class PathTreeBuilder(Builder):
 
     The basic way to use it is to create a list of samples that should be visualized first.
     Then create the `PathTreeBuilder` and
-    >>> tree = PathTreeBuilder()
+    >>> tree = PathTreeBuilder.from_()
     >>> tree.samples = my_samplelist
     >>> SVG(tree.svg())
 
@@ -732,14 +732,68 @@ class PathTreeBuilder(Builder):
 
     @staticmethod
     def from_ancestors(sample):
+        """
+        Create a PathTreeBuilder from a list of ancestors of a sample.
+
+        Parameters
+        ----------
+        sample : list of :obj:`openpathsampling.Sample`
+            the sample from which to trace the ancestors
+
+        Returns
+        -------
+        :obj:`PathTreeBuilder`
+            the pathtreebuilder to render the path tree
+
+        """
         pt = PathTreeBuilder()
         pt.samples = SampleList.from_ancestors(sample)
         return pt
 
     @staticmethod
     def from_steps(steps, replica, accepted=True):
+        """
+        Create a PathTreeBuilder from the path of a replica in a list of steps
+
+        Parameters
+        ----------
+        steps : ist of :obj:`openpathsampling.MCStep`
+            the steps to be analyzed
+        replica: int
+            the replica ID to trace
+        accepted : bool, default: True
+            if `True` only the accepted samples will be traced, otherwise also
+            rejected samples will be included. Rejected samples are shown
+            in light coloring
+
+        Returns
+        -------
+        :obj:`PathTreeBuilder`
+            the pathtreebuilder to render the path tree
+
+        """
         pt = PathTreeBuilder()
         pt.samples = SampleList.from_steps(steps, replica, accepted)
+        return pt
+
+    @staticmethod
+    def from_samples(samples):
+        """
+        Create a PathTreeBuilder from a list of samples.
+
+        Parameters
+        ----------
+        samples : list of :obj:`openpathsampling.Sample`
+            the list of samples to be displayed
+
+        Returns
+        -------
+        :obj:`PathTreeBuilder`
+            the pathtreebuilder to render the path tree
+
+        """
+        pt = PathTreeBuilder()
+        pt.samples = samples
         return pt
 
     @property
@@ -981,7 +1035,7 @@ class PathTreeBuilder(Builder):
                 elif vis_type == 'single':
                     for pos in range(region[0], region[1]):
                         pos_x = shift + pos
-                        snapshot = matrix[pos_y, pos_x]
+                        snapshot = matrix[num, pos_x]
 
                         if opts.ui['info']:
                             data = {
@@ -1012,7 +1066,7 @@ class PathTreeBuilder(Builder):
                     hidden = True
 
                 if not hidden:
-                    self._update_vis_block(vis_blocks, pos_y, shift, region)
+                    self._update_vis_block(vis_blocks, num, shift, region)
 
         min_x, max_x = min(matrix.matrix_x.keys()), max(matrix.matrix_x.keys())
         min_y, max_y = 0, pos_y
@@ -1022,10 +1076,14 @@ class PathTreeBuilder(Builder):
         if hasattr(self, 'states') and self.states:
             for color, op in self.states.iteritems():
                 xp = None
-                for yp in range(0, max_y + 1):
+                for num in range(len(samples)):
+                    yp = draw_pos_y[num]
+                    if yp is None:
+                        continue
+
                     left = None
-                    for xp in matrix.get_x_range(yp):
-                        if xp in vis_blocks[yp] and bool(op(matrix[yp, xp])):
+                    for xp in matrix.get_x_range(num):
+                        if xp in vis_blocks[num] and bool(op(matrix[num, xp])):
                             if left is None:
                                 left = xp
                         else:
@@ -1092,35 +1150,39 @@ class PathTreeBuilder(Builder):
             prev = samples[0].trajectory
             cls = ['tableline']
 
-            for tc, s in enumerate(samples):
+            for num, s in enumerate(samples):
+                pos_y = draw_pos_y[num]
+                if pos_y is None:
+                    continue
+
                 group.add(
                     doc.rect(
                         class_=doc.c(cls),
-                        insert=doc.xy(-0.5 - columns, 1 + tc - 0.45),
+                        insert=doc.xy(-0.5 - columns, 1 + pos_y - 0.45),
                         size=(
                             width,
                             doc.scale_y * 0.9
                         )
                     )
                 )
-                if tc > 0:
+                if pos_y > 0:
                     if not paths.Trajectory.is_correlated(s.trajectory, prev, time_reversal=assume_reversed_as_same):
                         if cor_x is not None:
                             group.add(
                                 doc.vertical_region(
                                     cor_x,
                                     old_tc,
-                                    1 + tc - old_tc,
+                                    1 + pos_y - old_tc,
                                     cls=['correlation']
                                 )
                             )
 
-                        old_tc = 1 + tc
+                        old_tc = 1 + pos_y
                         prev = s.trajectory
 
                 if smp_x is not None:
                     group.add(
-                        doc.label(smp_x, 1 + tc, str(
+                        doc.label(smp_x, 1 + pos_y, str(
                             smp_format(s)))
                     )
 
