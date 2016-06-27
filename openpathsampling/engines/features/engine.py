@@ -7,7 +7,6 @@ engine : :class:`openpathsampling.DynamicsEngine`
 
 variables = ['engine']
 
-
 def netcdfplus_init(store):
     store.create_variable(
         'engine',
@@ -17,10 +16,5 @@ def netcdfplus_init(store):
 
 
 @property
-def topology(snapshot):
-    return snapshot.engine.topology
-
-
-@property
-def masses(snapshot):
-    return snapshot.topology.masses
+def dim(snapshot):
+    return snapshot.engine.dimensions

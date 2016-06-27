@@ -1,6 +1,7 @@
 variables = ['box_vectors']
 numpy = ['box_vectors']
 
+dimensions = ['spatial']
 
 def netcdfplus_init(store):
     store.create_variable('box_vectors', 'numpy.float32',

@@ -15,7 +15,7 @@ class BaseSnapshotStore(ObjectStore):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, snapshot_class):
+    def __init__(self, snapshot_class, snapshot_dimensions=None):
         """
 
         Attributes
@@ -26,6 +26,8 @@ class BaseSnapshotStore(ObjectStore):
         """
         super(BaseSnapshotStore, self).__init__(peng.BaseSnapshot, json=False)
         self.snapshot_class = snapshot_class
+        self.snapshot_dimensions = snapshot_dimensions
+
         self._use_lazy_reversed = False
         if hasattr(snapshot_class, '__features__'):
             if '_reversed' in snapshot_class.__features__.lazy:
@@ -61,7 +63,8 @@ class BaseSnapshotStore(ObjectStore):
 
     def to_dict(self):
         return {
-            'snapshot_class': self.snapshot_class
+            'snapshot_class': self.snapshot_class,
+            'snapshot_dimensions': self.snapshot_dimensions
         }
 
     def _load(self, idx):
@@ -106,7 +109,14 @@ class BaseSnapshotStore(ObjectStore):
     def _get(self, idx, snapshot):
         pass
 
+    def set_dimensions(self, dimensions):
+        self.snapshot_dimensions = dimensions
+        self._init_snapshot()
+
     def save(self, obj, idx=None):
+        if self.snapshot_dimensions is None:
+            self.set_dimensions(obj.engine.dimensions)
+
         if obj._reversed is not None:
             if obj._reversed in self.index:
                 # the reversed copy has been saved so quit and return the paired idx
@@ -131,7 +141,6 @@ class BaseSnapshotStore(ObjectStore):
         This also saves all contained frames in the snapshot if not done yet.
         A single Snapshot object can only be saved once!
         """
-
 
         st_idx = int(idx / 2)
 
@@ -187,6 +196,9 @@ class BaseSnapshotStore(ObjectStore):
 
         return idx
 
+    def _init_snapshot(self):
+        pass
+
 
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
@@ -216,6 +228,13 @@ class FeatureSnapshotStore(BaseSnapshotStore):
 
     def _init(self):
         super(FeatureSnapshotStore, self)._init()
+
+    def _init_snapshot(self):
+        if self.snapshot_dimensions is None:
+            raise RuntimeError('snapshot_dimensions need to be set before initialization')
+
+        for dim, size in self.snapshot_dimensions:
+            self.storage.create_dimension(dim, size)
 
         for feature in self.classes:
             if hasattr(feature, 'netcdfplus_init'):

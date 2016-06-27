@@ -21,16 +21,24 @@ class ToyEngine(DynamicsEngine):
         'nsteps_per_frame': 10
     }
 
-    def __init__(self, options, template):
+    def __init__(self, options, topology):
         if 'n_spatial' not in options:
-            options['n_spatial'] = template.topology.n_spatial
+            options['n_spatial'] = topology.n_spatial
 
         options['n_atoms'] = 1
 
+        snapshot_dimensions = {
+            'atoms': topology.n_atoms,
+            'spatial': topology.n_spatial
+        }
+
         super(ToyEngine, self).__init__(
             options=options,
-            template=template
+            snapshot_class=Snapshot,
+            snapshot_dimensions=snapshot_dimensions
         )
+
+        self.topology = topology
 
         self._mass = None
         self._minv = None
@@ -38,8 +46,9 @@ class ToyEngine(DynamicsEngine):
         self.positions = None
         self.velocities = None
 
-        self.mass = template.topology.masses
-        self._pes = template.topology.pes
+        self._mass = topology.masses
+        self._pes = topology.pes
+
 
     @property
     def pes(self):

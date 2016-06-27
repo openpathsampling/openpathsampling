@@ -169,7 +169,7 @@ class testToyEngine(object):
             os.remove('toy_tmp.nc')
 
     def test_sanity(self):
-        assert_items_equal(self.sim.mass, sys_mass)
+        assert_items_equal(self.sim._mass, sys_mass)
         assert_items_equal(self.sim._minv, [1.0/m_i for m_i in sys_mass])
         assert_equal(self.sim.nsteps_per_frame, 10)
 

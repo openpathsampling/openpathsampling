@@ -32,7 +32,7 @@ class OpenMMEngine(DynamicsEngine):
     base_snapshot_type = Snapshot
 
     #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
-    def __init__(self, template, system, integrator, options=None, properties=None):
+    def __init__(self, topology, system, integrator, options=None, properties=None):
         """
         Parameters
         ----------
@@ -62,10 +62,17 @@ class OpenMMEngine(DynamicsEngine):
 
         self.system = system
         self.integrator = integrator
+        self.topology = topology
+
+        dimensions = {
+            'atoms': topology.n_atoms,
+            'spatial': topology.n_spatial
+        }
 
         super(OpenMMEngine, self).__init__(
             options=options,
-            template=template
+            snapshot_class=Snapshot,
+            snapshot_dimensions=dimensions
         )
 
         if self.options['platform'] == 'fastest':
@@ -96,6 +103,18 @@ class OpenMMEngine(DynamicsEngine):
 
         self._simulation = None
 
+    def to_dict(self):
+        system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
+        integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
+
+        return {
+            'system_xml' : system_xml,
+            'integrator_xml' : integrator_xml,
+            'topology' : self.topology,
+            'options' : self.options,
+            'properties' : self.properties
+        }
+
     def from_new_options(self, integrator=None, options=None):
         """
         Create a new engine with the same system, but different options and/or integrator
@@ -115,7 +134,7 @@ class OpenMMEngine(DynamicsEngine):
         if options is not None:
             new_options.update(options)
 
-        new_engine = OpenMMEngine(self.template, self.system, integrator, new_options)
+        new_engine = OpenMMEngine(self.topology, self.system, integrator, new_options)
 
         if integrator is self.integrator and new_engine.options['platform'] == self.options['platform']:
             # apparently we use a simulation object which is the same as the new one
@@ -153,32 +172,16 @@ class OpenMMEngine(DynamicsEngine):
                 platform=simtk.openmm.Platform.getPlatformByName(self.platform)
             )
 
-    @property
-    def platform(self):
-        return self.options['platform']
-
-    def to_dict(self):
-        system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
-        integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
-
-        return {
-            'system_xml' : system_xml,
-            'integrator_xml' : integrator_xml,
-            'template' : self.template,
-            'options' : self.options,
-            'properties' : self.properties
-        }
-
     @classmethod
     def from_dict(cls, dct):
         system_xml = dct['system_xml']
         integrator_xml = dct['integrator_xml']
-        template = dct['template']
+        topology = dct['topology']
         options = dct['options']
         properties = dct['properties']
 
         return OpenMMEngine(
-            template=template,
+            topology=topology,
             system=simtk.openmm.XmlSerializer.deserialize(system_xml),
             integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
             options=options,

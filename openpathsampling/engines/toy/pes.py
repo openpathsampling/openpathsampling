@@ -21,7 +21,7 @@ class PES(StorableObject):
 
     def kinetic_energy(self, sys):
         v = sys.velocities
-        m = sys.mass
+        m = sys._mass
         return 0.5*np.dot(m, np.multiply(v,v))
 
 class PES_Combination(PES):
@@ -65,12 +65,12 @@ class HarmonicOscillator(PES):
 
     def V(self, sys):
         dx = sys.positions - self.x0
-        k = self.omega*self.omega*sys.mass
+        k = self.omega*self.omega*sys._mass
         return 0.5*np.dot(self.A * k, dx * dx)
 
     def dVdx(self, sys):
         dx = sys.positions - self.x0
-        k = self.omega*self.omega*sys.mass
+        k = self.omega*self.omega*sys._mass
         return self.A*k*dx
 
 class Gaussian(PES):

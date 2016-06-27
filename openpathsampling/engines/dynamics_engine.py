@@ -1,9 +1,9 @@
-'''
+"""
 Created on 01.07.2014
 
 @author JDC Chodera
 @author: JH Prinz
-'''
+"""
 
 import logging
 
@@ -29,14 +29,14 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
 
 class DynamicsEngine(StorableNamedObject):
-    '''
+    """
     Wraps simulation tool (parameters, storage, etc.)
 
     Notes
     -----
     Should be considered an abstract class: only its subclasses can be
     instantiated.
-    '''
+    """
 
     FORWARD = 1
     BACKWARD = -1
@@ -54,10 +54,10 @@ class DynamicsEngine(StorableNamedObject):
 
     base_snapshot_type = BaseSnapshot
 
-    def __init__(self, options=None, template=None, topology=None):
-        '''
+    def __init__(self, options=None, snapshot_class=None, snapshot_dimensions=None, template=None):
+        """
         Create an empty DynamicsEngine object
-        
+
         Notes
         -----
         The purpose of an engine is to create trajectories and keep track
@@ -66,31 +66,27 @@ class DynamicsEngine(StorableNamedObject):
         the associated storage. In the initialization this storage is
         created as well as the related Trajectory and Snapshot classes are
         initialized.
-        '''
+        """
 
         super(DynamicsEngine, self).__init__()
 
-        self.template = template
+        if snapshot_class is None:
+            snapshot_class = BaseSnapshot
 
-        if template is not None and topology is None:
-            self.topology = template.topology
+        if snapshot_dimensions is None:
+            snapshot_dimensions = {}
 
-        elif topology is not None:
-            self.topology = topology
-
-        # Trajectories need to know the engine as a hack to get the topology.
-        # Better would be a link to the topology directly. This is needed to create
-        # mdtraj.Trajectory() objects
-
-        # TODO: Remove this and put the logic outside of the engine. The engine in trajectory is only
-        # used to get the solute indices which should depend on the topology anyway
-        # Trajectory.engine = self
+        self.snapshot_class = snapshot_class
+        self.snapshot_dimensions = snapshot_dimensions
 
         self._check_options(options)
 
-        # as default set a newly generated engine as the default engine
-        # self.set_as_default()
-        # REMOVED because this breaks the ability to have multiple engines
+    def to_dict(self):
+        return {
+            'options': self.options,
+            'snapshot_class': self.snapshot_class,
+            'snapshot_dimensions': self.snapshot_dimensions
+        }
 
     def _check_options(self, options=None):
         """
@@ -179,19 +175,8 @@ class DynamicsEngine(StorableNamedObject):
         return self.options[item]
 
     @property
-    def n_atoms(self):
-        return self.topology.n_atoms
-
-    @property
-    def n_spatial(self):
-        return self.topology.n_spatial
-
-    def to_dict(self):
-        return {
-            'options': self.options,
-            'template': self.template,
-            'topology': self.topology
-        }
+    def dimensions(self):
+        return self.snapshot_dimensions
 
     def set_as_default(self):
         import openpathsampling as paths
@@ -384,9 +369,7 @@ class TopologyEngine(DynamicsEngine):
     _default_options = {}
 
     def __init__(self, topology):
-        super(TopologyEngine, self).__init__(
-            topology=topology
-        )
+        super(TopologyEngine, self).__init__()
 
     def generate_next_frame(self):
         pass

@@ -131,7 +131,8 @@ class CodeContext(object):
 
 FeatureTuple = namedtuple(
         'FeatureTuple', 'classes variables properties functions required lazy ' +
-                        'numpy reversal minus flip exclude_copy imports debug storables'
+                        'numpy reversal minus flip exclude_copy imports debug storables ' +
+                        'dimensions'
     )
 
 
@@ -214,7 +215,8 @@ def attach_features(features, use_lazy_reversed=False):
 
         for name in ['variables', 'minus', 'reversal', 'properties',
                      'flip', 'numpy', 'lazy', 'required', 'classes',
-                     'exclude_copy', 'imports', 'functions', 'storables']:
+                     'exclude_copy', 'imports', 'functions', 'storables',
+                     'dimensions']:
             if name not in __features__:
                 __features__[name] = []
 
@@ -264,7 +266,8 @@ def attach_features(features, use_lazy_reversed=False):
                     setattr(cls, prop, getattr(feature, prop))
 
             # copy specific attribute types
-            for name in ['variables', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports', 'functions', 'storables']:
+            for name in ['variables', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports',
+                         'functions', 'storables', 'dimensions']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
@@ -330,6 +333,8 @@ def attach_features(features, use_lazy_reversed=False):
         ]
 
         has_lazy = bool(__features__['lazy']) or use_lazy_reversed
+
+        __features__['dimensions'] = list(set(__features__['dimensions']))
 
         # add descriptors that can handle lazy loaded objects
         for attr in __features__['lazy']:
