@@ -19,3 +19,8 @@ def netcdfplus_init(store):
 @property
 def topology(snapshot):
     return snapshot.engine.topology
+
+
+@property
+def masses(snapshot):
+    return snapshot.topology.masses
