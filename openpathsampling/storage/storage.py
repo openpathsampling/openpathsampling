@@ -105,6 +105,7 @@ class Storage(NetCDFPlus):
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
         self.create_store('snapshots', paths.storage.FeatureSnapshotStore(
+            self.template.engine.snapshot_dimensions,
             self.template.engine.snapshot_dimensions
         ))
 
@@ -155,19 +156,21 @@ class Storage(NetCDFPlus):
         # since we want to store stuff we need to finalize stores that have not been initialized yet
         self.finalize_stores()
 
+        self.tag['template'] = self._template
+
     def _restore(self):
         self.set_caching_mode()
 
         # check, if the necessary modules are imported and we can load the template
-        # try:
-        #     dummy = self.template
-        #
-        # except:
-        #     raise RuntimeError(
-        #         'Cannot restore storage. Some of the necessary classes (Engines, Snapshots, Topologies) require '
-        #         'to be imported separately. So you need to run certain engine imports first. The most common '
-        #         'way to do so is to run `import openpathsampling.dynamics.engine`'
-        #     )
+        try:
+            dummy = self.template
+
+        except:
+            raise RuntimeError(
+                'Cannot restore storage. Some of the necessary classes (Engines, Snapshots, Topologies) require '
+                'to be imported separately. So you need to run certain engine imports first. The most common '
+                'way to do so is to run `import openpathsampling.dynamics.engine`'
+            )
 
     def sync_all(self):
         """
