@@ -77,7 +77,7 @@ class Storage(NetCDFPlus):
 
         storage2.close()
 
-    def __init__(self, filename, mode=None, use_uuid=True, fallback=None):
+    def __init__(self, filename, template, mode=None, use_uuid=True, fallback=None):
         """
         Create a netCDF+ storage for OPS Objects
 
@@ -92,13 +92,7 @@ class Storage(NetCDFPlus):
 
         super(Storage, self).__init__(filename, mode, use_uuid=use_uuid, fallback=fallback)
 
-    def add_snapshot_class(self, snapshot_class, snapshot_dimensions):
-        self.create_store('snapshots', paths.storage.FeatureSnapshotStore(
-            snapshot_class,
-            snapshot_dimensions
-        ))
-
-        self.finalize_stores()
+        self._template = template
 
     def _create_storages(self):
         """
@@ -110,7 +104,9 @@ class Storage(NetCDFPlus):
 
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
-        # self.create_store('snapshots', paths.storage.FeatureSnapshotStore())
+        self.create_store('snapshots', paths.storage.FeatureSnapshotStore(
+            self.template.engine.snapshot_dimensions
+        ))
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
