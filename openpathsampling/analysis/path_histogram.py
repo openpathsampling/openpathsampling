@@ -4,6 +4,8 @@ from openpathsampling.analysis import SparseHistogram
 from collections import Counter
 import numpy as np
 
+# should path histogram be moved to the generic histogram.py? Seems to be
+# independent of the fact that this is actually OPS
 class PathHistogram(SparseHistogram):
     def __init__(self, left_bin_edges, bin_widths, interpolate=True,
                  per_traj=True):
@@ -24,23 +26,53 @@ class PathHistogram(SparseHistogram):
         # if the manhattan_distance is 1, we're adjacent
         if manhattan_distance == 1:
             return bin_list
-        # if the abs_dx is the same for each, we should check if we're
-        # unluckily on the diagonal
-        if np.all(abs_dx == abs_dx[0]):
-            pass # test that we aren't on diag
-
         # otherwise, use one of the interpolation algos to find bins
         if self.interpolate == "subdivide":
             bin_list = self.subdivide_interpolation(start_pt=old_pt,
                                                     end_pt=new_pt,
                                                     start_bin=old_bin,
                                                     end_bin=new_bin)
+        # TODO add other interpolation schemes. 
         return list(set(bin_list) - set([old_bin]))
 
     def subdivide_interpolation(self, start_pt, end_pt, start_bin, end_bin):
-        mid_pt = start_pt + 0.5*(np.asarray(end_pt) - np.asarray(start_pt))
+        """Interpolate between bins using recursive division.
+
+        Note that this is probably not the very fastest possible algorithm,
+        but an easy one to prove works in arbitrary dimensions.
+
+        Paramters
+        ---------
+        start_pt : array-like of float
+        end_pt : array-like of float
+        start_bin : array-like of int
+        end_bin : array-like of int
+
+        Returns
+        -------
+        list of array-like of int :
+            the bins associated with this path
+        """
+        delta = np.asarray(end_pt) - np.asarray(start_pt)
+        mid_pt = start_pt + 0.5 * delta
         mid_bin = self.map_to_bins(mid_pt)
-        if mid_bin == start_bin:
+        # check for diagonal first 
+        if np.all(abs(np.asarray(end_bin) - np.asarray(start_bin)) == 1):
+            left_edges = self.left_bin_edges + self.bin_widths * end_bin
+            test_array = (left_edges - start_pt) / delta
+            if np.allclose(test_array, test_array[0]):
+                return [start_bin, end_bin]
+
+        manhattan_dist_start = sum(abs(np.asarray(mid_bin) - 
+                                       np.asarray(start_bin)))
+        manhattan_dist_end = sum(abs(np.asarray(end_bin) - 
+                                     np.asarray(mid_bin)))
+
+        # how much work we have to do depends on what's already adjacent
+        if manhattan_dist_start == 1 and manhattan_dist_end == 1:
+            return [start_bin, mid_bin, end_bin]
+        # if we're in the same bin, only have one direction to go
+        elif mid_bin == start_bin:
             return self.subdivide_interpolation(start_pt=mid_pt,
                                                 end_pt=end_pt,
                                                 start_bin=mid_bin,
@@ -50,13 +82,6 @@ class PathHistogram(SparseHistogram):
                                                 end_pt=mid_pt,
                                                 start_bin=start_bin,
                                                 end_bin=mid_bin)
-
-        manhattan_dist_start = sum(abs(np.asarray(mid_bin) - 
-                                       np.asarray(start_bin)))
-        manhattan_dist_end = sum(abs(np.asarray(end_bin) - 
-                                     np.asarray(mid_bin)))
-        if manhattan_dist_start == 1 and manhattan_dist_end == 1:
-            return [start_bin, mid_bin, end_bin]
         elif manhattan_dist_start == 1:
             return ([start_bin] + 
                     self.subdivide_interpolation(start_pt=mid_pt,
@@ -81,7 +106,7 @@ class PathHistogram(SparseHistogram):
             return start_side + end_side
 
 
-    def add_trajectory(self, traj):
+    def add_trajectory(self, traj, trajectory_weight=1.0):
         # make a list of every bin visited, possibly interpolating gaps
         bin_list = [self.map_to_bins(traj[0])]
         for fnum in range(len(traj)-1):
@@ -96,9 +121,12 @@ class PathHistogram(SparseHistogram):
             local_hist = Counter(local_hist.keys())
         if self._histogram is None:
             self._histogram = Counter({})
-        self._histogram += local_hist
+        self._histogram += local_hist * trajectory_weight
 
 
-class PathDensityHistogram(SparseHistogram):
-    def __init__(self, cvs, left_bin_edges, bin_widths):
+class PathDensityHistogram(PathHistogram):
+    def __init__(self, cvs, left_bin_edges, bin_widths, interpolate=True):
+        pass
+
+    def add_trajectories(self, trajectories):
         pass
