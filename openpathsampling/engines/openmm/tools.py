@@ -46,42 +46,6 @@ class OpenMMToolsTestsystemEngine(TopologyEngine):
         }
 
 
-class MDEngine(DynamicsEngine):
-
-    _default_options = {}
-
-    @staticmethod
-    def from_pdb(filename, topology_filename=None, simple_topology=False):
-        if topology_filename is not None:
-            pdb = md.load(filename, topology_filename)
-        else:
-            pdb = md.load(filename)
-        velocities = np.zeros(pdb.xyz[0].shape)
-
-        if simple_topology:
-            topology = Topology(*pdb.xyz[0].shape)
-        else:
-            topology = MDTrajTopology(pdb.topology)
-
-        engine = MDEngine(
-        )
-
-        template = Snapshot.construct(
-            coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
-            box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
-            velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
-            engine=engine
-        )
-
-        engine.topology = topology
-        engine.template = template
-
-        return engine
-
-    def generate_next_frame(self):
-        pass
-
-
 def snapshot_from_pdb(pdb_file, simple_topology=False):
     """
     Construct a Snapshot from the first frame in a pdb file without velocities

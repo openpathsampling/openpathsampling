@@ -87,7 +87,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
             var_name = self.cache_var_name(idx)
 
             if var_name not in self.storage.variables:
-                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
+                params = NetCDFPlus.get_value_parameters(self._get_test_value(objectdict))
 
                 shape = params['dimensions']
 
@@ -242,6 +242,10 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
         return op
 
+    def _get_test_value(self, objectdict):
+        return objectdict(self.storage.template)
+        return next(objectdict._cache_dict.itervalues())
+
 
 class ReversibleObjectDictStore(ObjectDictStore):
 
@@ -252,7 +256,7 @@ class ReversibleObjectDictStore(ObjectDictStore):
 
             if var_name not in self.storage.variables:
 
-                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
+                params = NetCDFPlus.get_value_parameters(self._get_test_value(objectdict))
                 shape = params['dimensions']
 
                 if shape is None:

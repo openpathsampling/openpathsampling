@@ -1,6 +1,7 @@
 import numpy as np
 from shared import StaticContainerStore
 import mdtraj
+from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['statics']
 lazy = ['statics']
@@ -11,7 +12,10 @@ dimensions = ['atom', 'spatial']
 
 
 def netcdfplus_init(store):
-    store.storage.create_store('statics', StaticContainerStore())
+    static_store = StaticContainerStore()
+    static_store.set_caching(WeakLRUCache(10000))
+
+    store.storage.create_store('statics', static_store)
 
     store.create_variable(
         'statics',

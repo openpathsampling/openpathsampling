@@ -33,7 +33,7 @@ class BaseSnapshotStore(ObjectStore):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, snapshot_class, snapshot_dimensions=None):
+    def __init__(self, snapshot_class=None, snapshot_dimensions=None):
         """
 
         Attributes
@@ -129,19 +129,6 @@ class BaseSnapshotStore(ObjectStore):
     @abc.abstractmethod
     def _get(self, idx, snapshot):
         pass
-
-    def set_dimensions(self, dimensions):
-        self.snapshot_dimensions = dimensions
-        self._init_snapshot()
-
-    def save(self, obj, idx=None):
-        if self.snapshot_dimensions is None:
-            self.set_dimensions(obj.engine.dimensions)
-
-        if obj._reversed is not None:
-            if obj._reversed in self.index:
-                # the reversed copy has been saved so quit and return the paired idx
-                self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
 
     def _set_id(self, idx, obj):
         if self.reference_by_uuid:
@@ -277,8 +264,8 @@ class FeatureSnapshotStore(BaseSnapshotStore):
     An ObjectStore for Snapshots in netCDF files.
     """
 
-    def __init__(self, snapshot_class):
-        super(FeatureSnapshotStore, self).__init__(snapshot_class)
+    def __init__(self, snapshot_class=None, snapshot_dimensions=None):
+        super(FeatureSnapshotStore, self).__init__(snapshot_class, snapshot_dimensions)
 
     @property
     def classes(self):
@@ -297,13 +284,17 @@ class FeatureSnapshotStore(BaseSnapshotStore):
     def initialize(self):
         super(FeatureSnapshotStore, self).initialize()
 
+        self._init_snapshot()
+
     def _init_snapshot(self):
         if self.snapshot_dimensions is None:
             raise RuntimeError('snapshot_dimensions need to be set before initialization')
 
-        for dim, size in self.snapshot_dimensions:
+        for dim, size in self.snapshot_dimensions.iteritems():
             self.storage.create_dimension(dim, size)
 
         for feature in self.classes:
             if hasattr(feature, 'netcdfplus_init'):
                 feature.netcdfplus_init(self)
+
+        self.storage.finalize_stores()

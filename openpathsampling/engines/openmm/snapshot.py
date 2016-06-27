@@ -73,3 +73,7 @@ class Snapshot(BaseSnapshot):
         kinetics = Snapshot.KineticContainer(velocities=velocities)
 
         return Snapshot(engine=engine, statics=statics, kinetics=kinetics)
+
+    @property
+    def topology(self):
+        return self.engine.topology

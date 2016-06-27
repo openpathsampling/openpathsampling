@@ -73,9 +73,6 @@ class DynamicsEngine(StorableNamedObject):
         if snapshot_class is None:
             snapshot_class = BaseSnapshot
 
-        if snapshot_dimensions is None:
-            snapshot_dimensions = {}
-
         self.snapshot_class = snapshot_class
         self.snapshot_dimensions = snapshot_dimensions
 
@@ -370,6 +367,7 @@ class TopologyEngine(DynamicsEngine):
 
     def __init__(self, topology):
         super(TopologyEngine, self).__init__()
+        self.topology = topology
 
     def generate_next_frame(self):
         pass

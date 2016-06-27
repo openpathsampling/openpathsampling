@@ -16,7 +16,7 @@ def split_md_storage(filename, update_cvs=True):
         filename=filename
     )
 
-    if not isinstance(storage_from.template, peng.Snapshot):
+    if not issubclass(storage_from.snapshots.snapshot.snapshot_class, peng.Snapshot):
         raise RuntimeError('Split only makes sense (for now) for storages with openmm.Snapshots')
 
     filename_base = '.'.join(filename.split('.')[:-1])
@@ -24,8 +24,8 @@ def split_md_storage(filename, update_cvs=True):
     filename_main = filename_base + '_main.nc'
     filename_data = filename_base + '_frames.nc'
 
-    storage_main = paths.Storage(filename=filename_main, template=storage_from.template, mode='w')
-    storage_data = paths.Storage(filename=filename_data, template=storage_from.template, mode='w')
+    storage_main = paths.Storage(filename=filename_main, mode='w')
+    storage_data = paths.Storage(filename=filename_data, mode='w')
 
     # save trajectories to data
     map(storage_data.trajectories.save, storage_from.trajectories)

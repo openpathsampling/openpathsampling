@@ -204,6 +204,7 @@ def compare_snapshot(snapshot1, snapshot2, check_reversed=False):
         assert_close_unit(snapshot1.reversed.coordinates, snapshot1.coordinates, rtol=1e-7, atol=0)
         assert_close_unit(snapshot2.reversed.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
 
+
 class RandomMDEngine(DynamicsEngine):
     _default_options = {}
 
@@ -211,11 +212,9 @@ class RandomMDEngine(DynamicsEngine):
         self.options = {
         }
 
-        super(RandomMDEngine, self).__init__(
-            options={},
-            template=template
-        )
+        super(RandomMDEngine, self).__init__()
 
+        self.template = template
         self.initialized = True
 
     def _build_current_snapshot(self):
@@ -233,7 +232,7 @@ class RandomMDEngine(DynamicsEngine):
         return peng.Snapshot.construct(coordinates = coordinates,
                         box_vectors = tmp.box_vectors,
                         velocities = velocities,
-                        topology = self.topology
+                        engine=self
                        )
 
     @property
