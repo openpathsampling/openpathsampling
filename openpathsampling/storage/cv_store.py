@@ -145,7 +145,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
         var_name = self.cache_var_name(obj)
         snap_name = self.storage.snapshots.prefix
 
-        return self.variables[snap_name + '_' + var_name]
+        return self.storage.variables[snap_name + '_' + var_name]
 
     def has_cache(self, idx):
         return self.cache_var(idx) is not None
@@ -349,3 +349,4 @@ class ReversibleObjectDictStore(ObjectDictStore):
             op.set_cache_store(self.key_store, self.cache_var(idx), self.cache_bw(idx))
 
         return op
+
