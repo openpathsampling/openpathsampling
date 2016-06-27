@@ -105,23 +105,29 @@ class PathHistogram(SparseHistogram):
                                                     end_bin=end_bin)
             return start_side + end_side
 
-
-    def add_trajectory(self, traj, trajectory_weight=1.0):
+    def single_trajectory_counter(self, trajectory):
         # make a list of every bin visited, possibly interpolating gaps
-        bin_list = [self.map_to_bins(traj[0])]
-        for fnum in range(len(traj)-1):
+        bin_list = [self.map_to_bins(trajectory[0])]
+        for fnum in range(len(trajectory)-1):
             if self.interpolate:
-                bin_list += self.interpolated_bins(traj[fnum], traj[fnum+1])
+                bin_list += self.interpolated_bins(trajectory[fnum],
+                                                   trajectory[fnum+1])
             else:
-                bin_list += [self.map_to_bins(traj[fnum+1])]
+                bin_list += [self.map_to_bins(trajectory[fnum+1])]
 
         local_hist = Counter(bin_list)
         if self.per_traj:
             # keys only exist once, so the counter gives 1 if key present
             local_hist = Counter(local_hist.keys())
+        return local_hist
+
+    def add_trajectory(self, trajectory, weight=1.0):
+        local_hist = self.single_trajectory_counter(trajectory)
+        local_hist = Counter({k : local_hist[k] * weight
+                              for k in local_hist.keys()})
         if self._histogram is None:
             self._histogram = Counter({})
-        self._histogram += local_hist * trajectory_weight
+        self._histogram += local_hist
 
 
 class PathDensityHistogram(PathHistogram):
