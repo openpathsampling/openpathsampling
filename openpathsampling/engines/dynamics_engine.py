@@ -71,7 +71,9 @@ class DynamicsEngine(StorableNamedObject):
         super(DynamicsEngine, self).__init__()
 
         self.template = template
-        self.topology = topology
+
+        if template is not None and topology is None:
+            self.topology = template.topology
 
         # Trajectories need to know the engine as a hack to get the topology.
         # Better would be a link to the topology directly. This is needed to create
