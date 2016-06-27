@@ -1,5 +1,9 @@
-from openpathsampling.netcdfplus import UniqueNamedObjectStore, NetCDFPlus, ObjectStore
+from openpathsampling.netcdfplus import UniqueNamedObjectStore, NetCDFPlus, ObjectStore, VariableStore
+from openpathsampling.netcdfplus.objects import UUIDDict
 
+from openpathsampling.engines import BaseSnapshot
+
+from uuid import UUID
 
 class ObjectDictStore(UniqueNamedObjectStore):
     """
@@ -13,6 +17,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
         self._key_store = None
 
         self._cache_stores = dict()
+        self._uuid_ref = None
 
     def initialize(self, units=None):
         super(ObjectDictStore, self).initialize()
@@ -22,8 +27,8 @@ class ObjectDictStore(UniqueNamedObjectStore):
         if self.reference_by_uuid:
             self.storage.create_dimension('cv_cache')
 
-            self.create_variable(
-                name='index',
+            self.storage.create_variable(
+                self.prefix + '_index',
                 var_type='uuid',
                 dimensions=('cv_cache',),
                 description="the uuid for a specific cv_index",
@@ -35,6 +40,11 @@ class ObjectDictStore(UniqueNamedObjectStore):
             'content_class': self.content_class,
             'key_class': self.key_class
         }
+
+    def register(self, storage, prefix):
+        super(ObjectDictStore, self).register(storage, prefix)
+        if self.reference_by_uuid:
+            self._uuid_ref = UUIDDict()
 
     @property
     def key_store(self):
@@ -84,45 +94,47 @@ class ObjectDictStore(UniqueNamedObjectStore):
         if type(idx) is not int:
             idx = self.index.get(idx, None)
         if idx is not None:
-            return 'cv_%d_values' % idx
+            return 'cv%d' % idx
 
         raise KeyError("'%s' is neither an stored cv nor an integer index" % idx)
 
-    def create_cache(self, objectdict):
-        """
-        Create the storage variable that holds the data for the object dict
+    def create_cache(self, cv):
+        params = NetCDFPlus.get_value_parameters(cv(self.storage.template))
+        shape = params['dimensions']
 
-        Parameters
-        ----------
-        objectdict : :class:`openpathsampling.CollectiveVariable`
-            the object dictionary that you want the cache to be created for
+        if shape is None:
+            chunksizes = None
+        else:
+            chunksizes = tuple(params['dimensions'])
 
-        """
-        idx = self.index.get(objectdict, None)
-        if idx is not None:
-            var_name = self.cache_var_name(idx)
+        cache = KeyStore(cv)
 
-            if var_name not in self.storage.variables:
-                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
+        idx = self.index.get(cv, None)
+        var_name = self.cache_var_name(idx)
 
-                shape = params['dimensions']
+        self.storage.register_store(var_name, cache)
+        self.storage.create_dimension(cache.prefix, 0)
 
-                if shape is None:
-                    chunksizes = None
-                else:
-                    chunksizes = tuple(params['dimensions'])
+        if shape is not None:
+            shape = tuple([0] + list(shape))
+            chunksizes = tuple([1] + list(chunksizes))
+        else:
+            shape = tuple([0])
+            chunksizes = tuple([1])
 
-                self.key_store.create_variable(
-                    var_name,
-                    var_type=params['var_type'],
-                    dimensions=shape,
-                    chunksizes=chunksizes,
-                    simtk_unit=params['simtk_unit'],
-                    maskable=True
-                )
-                self.storage.update_delegates()
+        cache.create_variable(
+            'value',
+            var_type=params['var_type'],
+            dimensions=shape,
+            chunksizes=chunksizes,
+            simtk_unit=params['simtk_unit'],
+        )
 
-        self.set_cache_store(objectdict)
+        cache.create_variable('index', 'index')
+
+        print var_name
+
+        self.set_cache_store(cv)
 
     def cache_var(self, obj):
         """
@@ -144,7 +156,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
         return self.key_store.vars[var_name]
 
-    def cache_variable(self, obj):
+    def cache_store(self, cv):
         """
         Return the storage.vars[''] variable that contains the values
 
@@ -158,10 +170,10 @@ class ObjectDictStore(UniqueNamedObjectStore):
         :class:`openpathsampling.netcdfplus.ObjectStore` or `netcdf4.Variable`
 
         """
-        var_name = self.cache_var_name(obj)
-        snap_name = self.storage.snapshots.prefix
+        idx = self.index.get(cv, None)
+        var_name = self.cache_var_name(idx)
 
-        return self.variables[snap_name + '_' + var_name]
+        return self.storage.stores[var_name]
 
     def has_cache(self, idx):
         return self.cache_var(idx) is not None
@@ -258,109 +270,17 @@ class ObjectDictStore(UniqueNamedObjectStore):
 
         return op
 
-
-class CVCache(ObjectStore):
-    def __init__(self, cv, template):
-        super(ObjectStore, self).__init__(
-            None
-        )
-        self.key_class = peng.BaseSnapshot
-        self._key_store = None
-
-        self._cache_stores = dict()
-
-    def initialize(self, units=None):
-        super(ObjectStore, self).initialize()
-
-        # index associated storage in class variable for all Trajectory instances to access
-
+    def restore(self):
         if self.reference_by_uuid:
-            self.storage.create_dimension('cv_cache')
+            self._uuid_ref = UUIDDict()
 
-            self.create_variable(
-                name='index',
-                var_type='uuid',
-                dimensions=('cv_cache',),
-                description="the uuid for a specific cv_index",
-                chunksizes=(10240,)
-            )
+            for pos, idx in enumerate(self.vars['index'][:]):
+                self._uuid_ref[self._uuid_ref[idx]] = pos
 
+            self.load_indices()
 
-    def create_cache(self, objectdict):
-        """
-        Create the storage variable that holds the data for the object dict
-
-        Parameters
-        ----------
-        objectdict : :class:`openpathsampling.CollectiveVariable`
-            the object dictionary that you want the cache to be created for
-
-        """
-        idx = self.index.get(objectdict, None)
-        if idx is not None:
-            var_name = self.cache_var_name(idx)
-
-            if var_name not in self.storage.variables:
-                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
-
-                shape = params['dimensions']
-
-                if shape is None:
-                    chunksizes = None
-                else:
-                    chunksizes = tuple(params['dimensions'])
-
-                self.key_store.create_variable(
-                    var_name,
-                    var_type=params['var_type'],
-                    dimensions=shape,
-                    chunksizes=chunksizes,
-                    simtk_unit=params['simtk_unit'],
-                    maskable=True
-                )
-                self.storage.update_delegates()
-
-        self.set_cache_store(objectdict)
 
 class ReversibleObjectDictStore(ObjectDictStore):
-    def create_cache(self, objectdict):
-        idx = self.index.get(objectdict, None)
-        if idx is not None:
-            var_name = self.cache_var_name(idx)
-
-            if var_name not in self.storage.variables:
-
-                params = NetCDFPlus.get_value_parameters(objectdict(self.storage.template))
-                shape = params['dimensions']
-
-                if shape is None:
-                    chunksizes = None
-                else:
-                    chunksizes = tuple(shape)
-
-                self.key_store.create_variable(
-                    var_name + '_fw',
-                    var_type=params['var_type'],
-                    dimensions=shape,
-                    chunksizes=chunksizes,
-                    simtk_unit=params['simtk_unit'],
-                    maskable=True
-                )
-
-                if not objectdict.cv_time_reversible:
-                    self.key_store.create_variable(
-                        var_name + '_bw',
-                        var_type=params['var_type'],
-                        dimensions=shape,
-                        chunksizes=chunksizes,
-                        simtk_unit=params['simtk_unit'],
-                        maskable=True
-                    )
-
-                self.storage.update_delegates()
-
-        self.set_cache_store(objectdict)
-
     def cache_store(self, idx):
 
         var = self.cache_var(idx)
@@ -389,14 +309,7 @@ class ReversibleObjectDictStore(ObjectDictStore):
         if var_name is None:
             return None
 
-        return self.key_store.vars[var_name + '_fw']
-
-    def cache_bw(self, obj):
-        var_name = self.cache_var_name(obj)
-        if var_name is None:
-            return None
-
-        return self.key_store.vars[var_name + '_bw']
+        return self.storage._stores[var_name]
 
     def set_cache_store(self, objectdict):
         # print 'idx', self.index
@@ -410,10 +323,7 @@ class ReversibleObjectDictStore(ObjectDictStore):
 
         idx = self.index.get(objectdict)
         if idx is not None:
-            if objectdict.cv_time_reversible:
-                objectdict.set_cache_store(self.key_store, self.cache_var(idx), self.cache_var(idx))
-            else:
-                objectdict.set_cache_store(self.key_store, self.cache_var(idx), self.cache_bw(idx))
+            objectdict.set_cache_store(self.key_store, self.cache_var(idx))
         else:
             raise RuntimeWarning(('Your object is not stored as a CV in "%s" yet and hence a store ' +
                                   'for the cache cannot be attached.' +
@@ -427,3 +337,132 @@ class ReversibleObjectDictStore(ObjectDictStore):
             op.set_cache_store(self.key_store, self.cache_var(idx), self.cache_bw(idx))
 
         return op
+
+    def add_uuid(self, idx):
+        if self.reference_by_uuid:
+            length = int(len(self.variables['index']))
+            print length, idx.__uuid__
+            self._uuid_ref[idx] = length
+            self.vars['index'][length] = idx.__uuid__
+
+        return length
+
+
+class KeyStore(ObjectStore):
+
+    def __init__(self, cv):
+        super(KeyStore, self).__init__(
+            BaseSnapshot
+        )
+
+        self.cv = cv
+
+    @property
+    def uuid_ref(self):
+        return self.storage.cvs._uuid_ref
+
+    def create_int_index(self):
+        return dict()
+
+    # =============================================================================
+    # LOAD/SAVE DECORATORS FOR CACHE HANDLING
+    # =============================================================================
+
+    def load(self, idx):
+        """
+        Returns an object from the storage.
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the object to be loaded
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the loaded object
+        """
+
+        # we want to load by uuid and it was not in cache.
+        if idx in self.index:
+            n_idx = self.index[idx]
+        else:
+            if self.fallback_store is not None:
+                return self.fallback_store.load(idx)
+            elif self.storage.fallback is not None:
+                return self.storage.fallback.stores[self.name].load(idx)
+            else:
+                raise ValueError('str %s not found in storage or fallback' % idx)
+
+        if n_idx < 0:
+            return None
+
+        # if it is in the cache, return it
+        try:
+            obj = self.cache[n_idx]
+            return obj
+
+        except KeyError:
+            pass
+
+        print n_idx
+
+        obj = self.vars['value'][n_idx]
+
+        self.index[idx] = n_idx
+        self.cache[n_idx] = obj
+
+        return obj
+
+    def __setitem__(self, idx, value):
+        """
+        Saves an object to the storage.
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
+
+        """
+
+        if idx in self.index:
+            # has been saved so quit and do nothing
+            return
+
+        n_idx = self.free()
+        self.vars['value'][n_idx] = value
+
+        if idx in self.uuid_ref:
+            self.vars['index'][n_idx] = self.uuid_ref[idx]
+        else:
+            self.vars['index'][n_idx] = self.storage.cvs.add_uuid(idx)
+
+        self.index[idx] = n_idx
+        self.cache[n_idx] = value
+
+    def restore(self):
+        uuid_ref = self.uuid_ref
+        for pos, idx in enumerate(self.vars['index'][:]):
+            self.index[uuid_ref[idx]] = pos
+
+    def initialize(self):
+        pass
+
+    def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
+        try:
+            if isinstance(item, BaseSnapshot):
+                return self.load(item)
+            elif type(item) is list:
+                return [self.load(idx) for idx in item]
+            elif item is Ellipsis:
+                return self.iterator()
+        except KeyError:
+            return None

@@ -568,6 +568,7 @@ class ReversibleStoredDict(StoredDict):
 
     def _set(self, item, value):
         key = self._get_key(item)
+        print key
         if key is not None:
             self.cache[key] = value
             self.storable.add(key)
@@ -587,6 +588,7 @@ class ReversibleStoredDict(StoredDict):
             keys_fw = [idx/2 for idx in keys if not idx & 1]
             keys_bw = [idx/2 for idx in keys if idx & 1]
 
+            print keys, keys_fw
             if keys_fw:
                 values_fw = [self.cache[idx] for idx in keys if not idx & 1]
                 self.value_store[keys_fw] = values_fw

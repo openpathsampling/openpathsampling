@@ -191,10 +191,13 @@ class ObjectStore(StorableNamedObject):
         if self.reference_by_uuid:
             self.index = self.create_uuid_index()
         else:
-            self.index = weakref.WeakKeyDictionary()
+            self.index = self.create_int_index()
 
     def create_uuid_index(self):
         return UUIDDict()
+
+    def create_int_index(self):
+        return weakref.WeakKeyDictionary()
 
     @property
     def reference_by_uuid(self):
@@ -518,7 +521,7 @@ class ObjectStore(StorableNamedObject):
         creates an index dimension with the name of the object.
         """
         # define dimensions used for the specific object
-        self.storage.createDimension(self.prefix, 0)
+        self.storage.create_dimension(self.prefix, 0)
 
         if self.json:
             jsontype = 'jsonobj'
