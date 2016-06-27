@@ -6,6 +6,7 @@ import numpy as np
 from simtk import unit as units
 import yaml
 import abc
+from uuid import UUID
 
 import marshal
 import types
@@ -73,10 +74,10 @@ class ObjectJSON(object):
             if obj.__class__ is units.Quantity:
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
-                    return {'_value': obj.value_in_unit_system(self.unit_system),
+                    return {'_value': self.simplify_object(obj.value_in_unit_system(self.unit_system), base_type),
                             '_units': self.unit_to_dict(obj.unit.in_unit_system(self.unit_system))}
                 else:
-                    return {'_value': obj / obj.unit, '_units': self.unit_to_dict(obj.unit)}
+                    return {'_value': self.simplify(obj / obj.unit, base_type), '_units': self.unit_to_dict(obj.unit)}
             elif obj.__class__ is np.ndarray:
                 # this is maybe not the best way to store large numpy arrays!
                 return {'_numpy': self.simplify(obj.shape), '_dtype': str(obj.dtype), '_data': base64.b64encode(obj)}
@@ -133,7 +134,7 @@ class ObjectJSON(object):
     def build(self, obj):
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
-                return obj['_value'] * self.unit_from_dict(obj['_units'])
+                return self.build(obj['_value']) * self.unit_from_dict(obj['_units'])
 
             elif '_slice' in obj:
                 return slice(*obj['_slice'])
@@ -431,7 +432,7 @@ class StorableObjectJSON(ObjectJSON):
                     # this also returns the base class name used for storage
                     # store objects only if they are not creatable. If so they will only be created in their
                     # top instance and we use the simplify from the super class ObjectJSON
-                    self.storage.save(obj)
+                    store.save(obj)
                     return {'_idx': store.index[obj], '_obj': store.prefix}
 
         return super(StorableObjectJSON, self).simplify(obj, base_type)
@@ -449,3 +450,39 @@ class StorableObjectJSON(ObjectJSON):
                 return result
 
         return super(StorableObjectJSON, self).build(obj)
+
+
+class UUIDObjectJSON(ObjectJSON):
+    def __init__(self, storage, unit_system=None):
+        super(UUIDObjectJSON, self).__init__(unit_system)
+        self.excluded_keys = ['json']
+        self.storage = storage
+
+    def simplify(self, obj, base_type=''):
+        if obj is self.storage:
+            return {'_storage': 'self'}
+        if obj.__class__.__module__ != '__builtin__':
+            if obj.__class__ in self.storage._obj_store:
+                store = self.storage._obj_store[obj.__class__]
+                if not store.nestable or obj.base_cls_name != base_type:
+                    # this also returns the base class name used for storage
+                    # store objects only if they are not creatable. If so they will only be created in their
+                    # top instance and we use the simplify from the super class ObjectJSON
+                    store.save(obj)
+                    return {'_uuid': str(obj.__uuid__), '_obj': store.prefix}
+
+        return super(UUIDObjectJSON, self).simplify(obj, base_type)
+
+    def build(self, obj):
+        if type(obj) is dict:
+            if '_storage' in obj:
+                if obj['_storage'] == 'self':
+                    return self.storage
+
+            if '_uuid' in obj:
+                store = self.storage._stores[obj['_obj']]
+                result = store.load(UUID(obj['_uuid']))
+
+                return result
+
+        return super(UUIDObjectJSON, self).build(obj)

@@ -1,6 +1,7 @@
 import inspect
 import logging
 import weakref
+import uuid
 from types import MethodType
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,29 @@ class StorableObject(object):
     _args = None
 
     observe_objects = False
+
+    INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
+    CREATION_COUNT = 0L
+
+    @staticmethod
+    def get_uuid():
+        StorableObject.CREATION_COUNT += 2
+        return uuid.UUID(
+            fields=tuple(
+                StorableObject.INSTANCE_UUID +
+                [StorableObject.CREATION_COUNT]
+            )
+        )
+
+    def reverse_uuid(self):
+        return StorableObject.ruuid(self.__uuid__)
+
+    @staticmethod
+    def ruuid(id):
+        return uuid.UUID(int=int(id) ^ 1)
+
+    def __init__(self):
+        self.__uuid__ = StorableObject.get_uuid()
 
     @staticmethod
     def set_observer(active):
@@ -40,7 +64,7 @@ class StorableObject(object):
         :meth:`openpathsampling.netcdfplus.base.StorableObject.count_weaks`
 
         """
-        if StorableObject.observe_objects is not active:
+        if StorableObject.observe_objects is active:
             return
 
         if active:
@@ -233,6 +257,7 @@ class StorableObject(object):
         return args[0]
 
     _excluded_attr = []
+    _included_attr = []
     _exclude_private_attr = True
     _restore_non_initial_attr = True
     _restore_name = True
@@ -252,9 +277,11 @@ class StorableObject(object):
         excluded_keys = ['idx', 'json', 'identifier']
         keys_to_store = {
             key for key in self.__dict__
-            if key not in excluded_keys and
-            key not in self._excluded_attr and
-            not (key.startswith('_') and self._exclude_private_attr)
+            if key in self._included_attr or (
+                key not in excluded_keys and
+                key not in self._excluded_attr and
+                not (key.startswith('_') and self._exclude_private_attr)
+            )
         }
         return {
             key: self.__dict__[key] for key in keys_to_store

@@ -1,12 +1,30 @@
 import abc
+from uuid import UUID
 
-from openpathsampling.netcdfplus import ObjectStore, LoaderProxy
+from openpathsampling.netcdfplus import ObjectStore, LoaderProxy, StorableObject
+from openpathsampling.netcdfplus.objects import UUIDDict
 import openpathsampling.engines as peng
+
+from collections import OrderedDict
 
 
 # =============================================================================================
 # ABSTRACT BASE CLASS FOR SNAPSHOTS
 # =============================================================================================
+
+class UUIDReversalDict(UUIDDict):
+    @staticmethod
+    def rev_id(obj):
+        return StorableObject.ruuid(UUIDReversalDict.id(obj))
+
+    def __setitem__(self, key, value):
+        OrderedDict.__setitem__(self, self.id(key), value)
+        OrderedDict.__setitem__(self, self.rev_id(key), value ^ 1)
+
+    def __delitem__(self, key):
+        OrderedDict.__delitem__(self, self.id(key))
+        OrderedDict.__delitem__(self, self.rev_id(key))
+
 
 class BaseSnapshotStore(ObjectStore):
     """
@@ -32,6 +50,9 @@ class BaseSnapshotStore(ObjectStore):
         if hasattr(snapshot_class, '__features__'):
             if '_reversed' in snapshot_class.__features__.lazy:
                 self._use_lazy_reversed = True
+
+    def create_uuid_index(self):
+        return UUIDReversalDict()
 
     def __repr__(self):
         return "store.%s[%s(%s)]" % (
@@ -122,7 +143,22 @@ class BaseSnapshotStore(ObjectStore):
                 # the reversed copy has been saved so quit and return the paired idx
                 self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
 
-        return super(BaseSnapshotStore, self).save(obj)
+    def _set_id(self, idx, obj):
+        if self.reference_by_uuid:
+            self.vars['uuid'][int(idx / 2)] = obj.__uuid__
+
+    def _get_id(self, idx, obj):
+        if self.reference_by_uuid:
+            uuid = self.vars['uuid'][int(idx / 2)]
+            if idx & 1:
+                uuid = StorableObject.ruuid(uuid)
+
+            obj.__uuid__ = uuid
+
+    def load_indices(self):
+        if self.reference_by_uuid:
+            for idx, uuid in enumerate(self.vars['uuid'][:]):
+                self.index[uuid] = idx * 2
 
     def _save(self, snapshot, idx):
         """
@@ -145,9 +181,8 @@ class BaseSnapshotStore(ObjectStore):
         st_idx = int(idx / 2)
 
         if snapshot._reversed is not None:
-            if snapshot._reversed in self.index:
+            if not self.reference_by_uuid and snapshot._reversed in self.index:
                 # seems we have already stored this snapshot but didn't know about it
-                # since we marked it now this will not happen again
                 raise RuntimeWarning('This should never happen! Please report a bug!')
             else:
                 # mark reversed as stored
@@ -155,8 +190,30 @@ class BaseSnapshotStore(ObjectStore):
 
         self._set(st_idx, snapshot)
 
+        if snapshot._reversed is not None:
+            # mark reversed as stored
+            self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
+
+    def save(self, obj, idx=None):
+        if self.reference_by_uuid:
+            ruuid = str(UUID(int=int(obj.__uuid__)))
+
+            if ruuid in self.index:
+                # has been saved so quit and do nothing
+                return obj.__uuid__
+
+        if obj._reversed is not None:
+            if not self.reference_by_uuid and obj._reversed in self.index:
+                # the reversed copy has been saved so quit and return the paired idx
+                self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
+
+        return super(BaseSnapshotStore, self).save(obj, idx)
+
     def all(self):
-        return peng.Trajectory([LoaderProxy(self, idx) for idx in range(len(self))])
+        if self.reference_by_uuid:
+            return peng.Trajectory(map(self.proxy, self.index))
+        else:
+            return peng.Trajectory(map(self.proxy, range(len(self))))
 
     def __len__(self):
         return 2 * super(BaseSnapshotStore, self).__len__()
@@ -199,6 +256,17 @@ class BaseSnapshotStore(ObjectStore):
     def _init_snapshot(self):
         pass
 
+    def idx(self, obj):
+        try:
+            return self.index[obj]
+        except KeyError:
+            pass
+
+        try:
+            return BaseSnapshotStore.paired_idx(self.index[obj.reversed])
+        except KeyError:
+            return None
+
 
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
@@ -226,8 +294,8 @@ class FeatureSnapshotStore(BaseSnapshotStore):
     def _get(self, idx, snapshot):
         [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.storables]
 
-    def _init(self):
-        super(FeatureSnapshotStore, self)._init()
+    def initialize(self):
+        super(FeatureSnapshotStore, self).initialize()
 
     def _init_snapshot(self):
         if self.snapshot_dimensions is None:

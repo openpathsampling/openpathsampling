@@ -981,9 +981,9 @@ class PathTreeBuilder(object):
 
             elif mover_type in [paths.ForwardShootMover, paths.BackwardShootMover]:
                 # ShootingMove
-                old_traj = sample.details.initial_trajectory
+                # old_traj = sample.details.initial_trajectory
                 old_conf = sample.details.shooting_snapshot
-                old_index = sample.details.initial_trajectory.index(old_conf)
+                # old_index = sample.details.initial_trajectory.index(old_conf)
                 old_conf_idx = self.storage.idx(old_conf)
 
                 # print old_conf

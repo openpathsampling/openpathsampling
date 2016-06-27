@@ -5,10 +5,11 @@ Created on 06.07.2014
 """
 
 import logging
+
 import openpathsampling as paths
-from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
-    NamedObjectStore, UniqueNamedObjectStore
 import openpathsampling.engines as peng
+from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
+    NamedObjectStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -61,10 +62,14 @@ class Storage(NetCDFPlus):
         # Copy all configurations and momenta to new file in reduced form
         # use ._save instead of .save to override immutability checks etc...
 
-        for obj in self.statics:
-            storage2.statics._save(obj.copy(), idx=self.statics.index[obj])
-        for obj in self.kinetics:
-            storage2.kinetics._save(obj.copy(), idx=self.kinetics.index[obj])
+        if self.reference_by_uuid:
+            map(storage2.statics.save, self.statics)
+            map(storage2.kinetics.save, self.kinetics)
+        else:
+            for obj in self.statics:
+                storage2.statics._save(obj, self.statics.index[obj])
+            for obj in self.kinetics:
+                storage2.kinetics._save(obj, self.kinetics.index[obj])
 
         # All other should be copied one to one. We do this explicitly although we could just copy all
         # and exclude configurations and momenta, but this seems cleaner
@@ -117,7 +122,11 @@ class Storage(NetCDFPlus):
     def n_spatial(self):
         return self.topology.n_spatial
 
-    def __init__(self, filename, mode=None, template=None):
+    @property
+    def topology(self):
+        return self.template.topology
+
+    def __init__(self, filename, mode=None, template=None, use_uuid=True, fallback=None):
         """
         Create a netCDF+ storage for OPS Objects
 
@@ -134,7 +143,7 @@ class Storage(NetCDFPlus):
         """
 
         self._template = template
-        super(Storage, self).__init__(filename, mode)
+        super(Storage, self).__init__(filename, mode, use_uuid=use_uuid, fallback=fallback)
 
     def _create_storages(self):
         """
@@ -190,45 +199,35 @@ class Storage(NetCDFPlus):
         setattr(self, 'title', 'OpenPathSampling Storage')
         setattr(self, 'ConventionVersion', '0.2')
 
-        self.set_caching_mode('default')
+        self.set_caching_mode()
 
         template = self._template
 
-        if template.topology is not None:
-            self.topology = template.topology
-        else:
+        if template.topology is None:
             raise RuntimeError("A Storage needs a template snapshot with a topology")
 
         if 'atom' not in self.dimensions:
-            self.createDimension('atom', self.n_atoms)
+            self.createDimension('atom', template.topology.n_atoms)
 
         # spatial dimensions
         if 'spatial' not in self.dimensions:
-            self.createDimension('spatial', self.n_spatial)
+            self.createDimension('spatial', template.topology.n_spatial)
 
         # since we want to store stuff we need to finalize stores that have not been initialized yet
         self.finalize_stores()
-
-        # TODO: Might not need to save topology
-
-        logger.info("Saving topology")
-        self.topologies.save(self.topology)
 
         logger.info("Create initial template snapshot")
 
         # Save the initial configuration
         self.snapshots.save(template)
-
         self.tag['template'] = template
 
     def _restore(self):
-        self.set_caching_mode('default')
+        self.set_caching_mode()
 
-        # check, if the necessary modules are imported
-
+        # check, if the necessary modules are imported and we can load the template
         try:
             dummy = self.template
-            self.topology = self.topologies[0]
 
         except:
             raise RuntimeError(
@@ -293,8 +292,8 @@ class Storage(NetCDFPlus):
         return {
             'trajectories': WeakLRUCache(10000),
             'snapshots': WeakLRUCache(10000),
-            'configurations': WeakLRUCache(10000),
-            'momenta': WeakLRUCache(10000),
+            'statics': WeakLRUCache(10000),
+            'kinetics': WeakLRUCache(10000),
             'samples': WeakLRUCache(25000),
             'samplesets': False,
             'cvs': True,
@@ -321,10 +320,10 @@ class Storage(NetCDFPlus):
         """
 
         return {
-            'trajectories': WeakLRUCache(10),
-            'snapshots': WeakLRUCache(100),
-            'configurations': WeakLRUCache(10),
-            'momenta': WeakLRUCache(10),
+            'trajectories': WeakLRUCache(1000),
+            'snapshots': WeakLRUCache(1000),
+            'statics': WeakLRUCache(10),
+            'kinetics': WeakLRUCache(10),
             'samples': WeakLRUCache(25),
             'samplesets': False,
             'cvs': True,
@@ -354,8 +353,8 @@ class Storage(NetCDFPlus):
         return {
             'trajectories': WeakLRUCache(10),
             'snapshots': WeakLRUCache(10),
-            'configurations': WeakLRUCache(10),
-            'momenta': WeakLRUCache(10),
+            'statics': WeakLRUCache(10),
+            'kinetics': WeakLRUCache(10),
             'samples': WeakLRUCache(10),
             'samplesets': WeakLRUCache(10),
             'cvs': WeakLRUCache(10),
@@ -386,8 +385,8 @@ class Storage(NetCDFPlus):
         return {
             'trajectories': WeakLRUCache(500000),
             'snapshots': WeakLRUCache(100000),
-            'configurations': WeakLRUCache(10000),
-            'momenta': WeakLRUCache(1000),
+            'statics': WeakLRUCache(10000),
+            'kinetics': WeakLRUCache(1000),
             'samples': WeakLRUCache(1000000),
             'samplesets': WeakLRUCache(100000),
             'cvs': True,
@@ -415,11 +414,11 @@ class Storage(NetCDFPlus):
 
         """
         return {
-            'trajectories': WeakLRUCache(100),
-            'snapshots': WeakLRUCache(100),
-            'configurations': WeakLRUCache(1000),
-            'momenta': WeakLRUCache(1000),
-            'samples': WeakLRUCache(100),
+            'trajectories': WeakLRUCache(1000),
+            'snapshots': WeakLRUCache(10000),
+            'statics': WeakLRUCache(1000),
+            'kinetics': WeakLRUCache(1000),
+            'samples': WeakLRUCache(10000),
             'samplesets': False,
             'cvs': False,
             'pathmovers': False,
@@ -450,8 +449,8 @@ class Storage(NetCDFPlus):
         return {
             'trajectories': False,
             'snapshots': False,
-            'configurations': False,
-            'momenta': False,
+            'statics': False,
+            'kinetics': False,
             'samples': False,
             'samplesets': False,
             'cvs': False,
@@ -568,7 +567,7 @@ class StorageView(object):
         """
         self._storage = storage
 
-        for name, store in self._storage._objects.iteritems():
+        for store in self._storage.objects:
             setattr(self, store.prefix, store)
 
         self.variables = self._storage.variables

@@ -13,9 +13,9 @@ class TrajectoryStore(ObjectStore):
         self.vars['snapshots'][idx] = trajectory
         snapshot_store = self.storage.snapshots
 
-        for frame, snapshot in enumerate(trajectory):
+        for frame, snapshot in enumerate(trajectory.iter_proxies()):
             if type(snapshot) is not LoaderProxy:
-                loader = LoaderProxy(snapshot_store, snapshot_store.index[snapshot])
+                loader = snapshot_store.proxy(snapshot)
                 trajectory[frame] = loader
 
     def _load(self, idx):
@@ -86,8 +86,8 @@ class TrajectoryStore(ObjectStore):
 
         return ObjectIterator()
 
-    def _init(self, units=None):
-        super(TrajectoryStore, self)._init()
+    def initialize(self, units=None):
+        super(TrajectoryStore, self).initialize()
 
         # index associated storage in class variable for all Trajectory instances to access
 

@@ -6,6 +6,8 @@ import functools
 
 import weakref
 
+from base import StorableObject
+
 # =============================================================================
 # Loader Proxy
 # =============================================================================
@@ -36,6 +38,13 @@ class LoaderProxy(object):
         self._subject = weakref.ref(ref)
         return ref
 
+    @property
+    def reversed(self):
+        if self._store.reference_by_uuid:
+            return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
+        else:
+            return LoaderProxy(self._store, self._idx ^ 1)
+
     def __eq__(self, other):
         if self is other:
             return True
@@ -51,6 +60,10 @@ class LoaderProxy(object):
     def __class__(self):
         return self._store.content_class
 
+    @property
+    def __uuid__(self):
+        return self._idx
+
     def __getattr__(self, item):
         return getattr(self.__subject__, item)
 
@@ -58,7 +71,13 @@ class LoaderProxy(object):
         """
         Call the loader and get the referenced object
         """
-        return self._store[self._idx]
+        try:
+            return self._store[self._idx]
+        except:
+            if type(self._idx) is int:
+                raise RuntimeWarning('Index %s is not in store. This should never happen!' % self._idx)
+            else:
+                raise RuntimeWarning('Object %s is not in store. Attach it using fallbacks.' % self._idx)
 
 
 class DelayedLoader(object):
@@ -70,10 +89,7 @@ class DelayedLoader(object):
     def __get__(self, instance, owner):
         if instance is not None:
             obj = instance._lazy[self]
-            if type(obj) is tuple:
-                (store, idx) = obj
-                return store[idx]
-            elif hasattr(obj, '_idx'):
+            if hasattr(obj, '_idx'):
                 return obj.__subject__
             else:
                 return obj
