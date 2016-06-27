@@ -4,22 +4,9 @@ import simtk.unit as u
 
 from snapshot import Snapshot
 from topology import Topology, MDTrajTopology
-from openpathsampling.engines import Trajectory, DynamicsEngine
+from openpathsampling.engines import Trajectory, DynamicsEngine, TopologyEngine
 
 __author__ = 'Jan-Hendrik Prinz'
-
-
-class TopologyEngine(DynamicsEngine):
-
-    _default_options = {}
-
-    def __init__(self, topology):
-        super(TopologyEngine, self).__init__(
-            topology=topology
-        )
-
-    def generate_next_frame(self):
-        pass
 
 
 class FileEngine(TopologyEngine):
@@ -269,7 +256,7 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
         velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
-        topology=topology
+        engine=TopologyEngine(topology)
     )
 
     return snapshot

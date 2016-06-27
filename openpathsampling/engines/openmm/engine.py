@@ -31,7 +31,6 @@ class OpenMMEngine(DynamicsEngine):
 
     base_snapshot_type = Snapshot
 
-    #TODO: Planned to move topology to be part of engine and not snapshot
     #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
     def __init__(self, template, system, integrator, options=None, properties=None):
         """
@@ -166,7 +165,6 @@ class OpenMMEngine(DynamicsEngine):
             'system_xml' : system_xml,
             'integrator_xml' : integrator_xml,
             'template' : self.template,
-            'topology' : self.topology,
             'options' : self.options,
             'properties' : self.properties
         }
@@ -202,7 +200,7 @@ class OpenMMEngine(DynamicsEngine):
             coordinates=state.getPositions(asNumpy=True),
             box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
             velocities=state.getVelocities(asNumpy=True),
-            topology=self.topology
+            engine=self
         )
 
         return snapshot

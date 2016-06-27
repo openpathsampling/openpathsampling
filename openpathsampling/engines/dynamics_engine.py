@@ -75,6 +75,9 @@ class DynamicsEngine(StorableNamedObject):
         if template is not None and topology is None:
             self.topology = template.topology
 
+        elif topology is not None:
+            self.topology = topology
+
         # Trajectories need to know the engine as a hack to get the topology.
         # Better would be a link to the topology directly. This is needed to create
         # mdtraj.Trajectory() objects
@@ -374,3 +377,16 @@ class DynamicsEngine(StorableNamedObject):
                  'You are using "%s". Make sure that this is intended.') %
                 (cls.base_snapshot_type.__name__, snapshot.__class__.__name__)
             )
+
+
+class TopologyEngine(DynamicsEngine):
+
+    _default_options = {}
+
+    def __init__(self, topology):
+        super(TopologyEngine, self).__init__(
+            topology=topology
+        )
+
+    def generate_next_frame(self):
+        pass
