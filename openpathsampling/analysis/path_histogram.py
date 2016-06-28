@@ -121,6 +121,13 @@ class PathHistogram(SparseHistogram):
             local_hist = Counter(local_hist.keys())
         return local_hist
 
+    def add_data_to_histogram(self, trajectories, weights=None):
+        if weights is None:
+            weights = [1.0] * len(trajectories)
+        for (traj, w) in zip(trajectories, weights):
+            self.add_trajectory(traj, w)
+        return self._histogram.copy()
+
     def add_trajectory(self, trajectory, weight=1.0):
         local_hist = self.single_trajectory_counter(trajectory)
         local_hist = Counter({k : local_hist[k] * weight
@@ -132,7 +139,21 @@ class PathHistogram(SparseHistogram):
 
 class PathDensityHistogram(PathHistogram):
     def __init__(self, cvs, left_bin_edges, bin_widths, interpolate=True):
-        pass
+        super(PathDensityHistogram, self).__init__(
+            left_bin_edges=left_bin_edges, 
+            bin_widths=bin_widths,
+            interpolate=interpolate,
+            per_traj=True
+        )
+        self.cvs = cvs
 
-    def add_trajectories(self, trajectories):
-        pass
+    def add_data_to_histogram(self, trajectories, weights=None):
+        if isinstance(trajectories, paths.Trajectory):
+            trajectories = [trajectories]
+        if weights is None:
+            weights = [1.0] * len(trajectories)
+
+        for (traj, w) in zip(trajectories, weights):
+            cv_traj = [cv(traj) for cv in self.cvs]
+            self.add_trajectory(zip(*cv_traj), w)
+
