@@ -48,6 +48,18 @@ class PathMoveChange(TreeMixin, StorableObject):
             self.samples = samples
         self.details = details
 
+    def __getattr__(self, item):
+        # try to get attributes from details dict
+        try:
+            return getattr(self.details, item)
+        except AttributeError as e:
+            msg = "{0} not found in change's details".format(str(item))
+            if not e.args: 
+                e.args = [msg]
+            else:
+                e.args = tuple([e.args[0] + "; " + msg] + list(e.args[1:]))
+            raise
+
     # hook for TreeMixin
     @property
     def _subnodes(self):
