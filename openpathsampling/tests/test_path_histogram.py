@@ -166,7 +166,24 @@ class testPathDensityHistogram(object):
             assert_equal(counter[bin_label], 0.0)
 
     def test_histogram_with_weights(self):
-        raise SkipTest
+        hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
+                                    self.bin_widths)
+        counter = hist.histogram([self.traj1, self.traj2], 
+                                 weights=[1.0, 2.0])
+        assert_equal(len(counter), 5)
+        for bin_label in [(0,0,0), (2,0,0), (1,0,0)]:
+            assert_equal(counter[bin_label], 1.0)
+        assert_equal(counter[(2,1,1)], 2.0)
+        assert_equal(counter[(2,1,0)], 3.0)
+        for bin_label in [(1,1,1), (2,2,2), (-1,0,0), (0,-1,0)]:
+            assert_equal(counter[bin_label], 0.0)
 
     def test_histogram_single_traj(self):
-        raise SkipTest
+        hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
+                                    self.bin_widths)
+        counter = hist.histogram(self.traj1)
+        assert_equal(len(counter), 4)
+        for bin_label in [(0,0,0), (2,0,0), (1,0,0), (2,1,0)]:
+            assert_equal(counter[bin_label], 1.0)
+        for bin_label in [(1,1,1), (2,2,2), (-1,0,0), (0,-1,0)]:
+            assert_equal(counter[bin_label], 0.0)
