@@ -19,6 +19,7 @@ script:
 
   # Run tests in _test environment
   - source activate _test
+  - python module_locations.py 
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
