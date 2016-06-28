@@ -61,6 +61,8 @@ class testPathHistogram(object):
         for val in [(1,1), (1,2), (1,3), (2,4), (3,4), (4,5), (4,6)]:
             assert_equal(hist._histogram[val], 1.0)
         assert_equal(hist._histogram[(3,5)], 1.0)
+        assert_equal(hist._histogram[(2,2)], 0.0)
+
 
     def test_nointerp_pertraj(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
@@ -73,8 +75,30 @@ class testPathHistogram(object):
             assert_equal(hist._histogram[val], 0.0)
 
     def test_diag_interp(self):
+        hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
+                             bin_widths=(0.5, 0.5),
+                             interpolate=True, per_traj=True)
+        hist.add_trajectory(self.diag)
+        for val in [(0,0), (1,1), (2,2), (3,3), (4,4)]:
+            assert_equal(hist._histogram[val], 1.0)
+        for val in [(1,2), (1,6)]:
+            assert_equal(hist._histogram[val], 0.0)
         raise SkipTest
 
     def test_add_with_weight(self):
-        raise SkipTest
+        hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
+                             bin_widths=(0.5, 0.5),
+                             interpolate=True, per_traj=True)
+        hist.add_trajectory(self.trajectory)
+        hist.add_trajectory(self.diag, weight=2)
+        for val in [(0,1), (0,2), (0,3), (1,2), (1,3), (1,4), (2,1), (2,3),
+                    (2,4), (2,5), (3,1), (3,2), (3,4), (3,5), (3,6), (4,5),
+                    (4,6)]:
+            assert_equal(hist._histogram[val], 1.0)
+        for val in [(2,2), (4,4)]:
+            assert_equal(hist._histogram[val], 2.0)
+        for val in [(0,0), (1,1), (3,3)]:
+            assert_equal(hist._histogram[val], 3.0)
+        for val in [(0,4), (0,5), (0.6), (0,7), (-1,0)]:
+            assert_equal(hist._histogram[val], 0.0)
 
