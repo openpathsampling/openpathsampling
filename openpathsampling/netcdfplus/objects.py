@@ -419,6 +419,12 @@ class ObjectStore(StorableNamedObject):
         except KeyError:
             return None
 
+    def get(self, item):
+        try:
+            return self[item]
+        except:
+            return None
+
     def _load(self, idx):
         obj = self.vars['json'][idx]
         return obj

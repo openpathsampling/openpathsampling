@@ -1,4 +1,5 @@
-from openpathsampling.netcdfplus import UniqueNamedObjectStore, NetCDFPlus, ObjectStore, VariableStore
+from openpathsampling.netcdfplus import UniqueNamedObjectStore, NetCDFPlus, ObjectStore, \
+    VariableStore, WeakLRUCache
 from openpathsampling.netcdfplus.objects import UUIDDict
 
 from openpathsampling.engines import BaseSnapshot
@@ -129,6 +130,8 @@ class ObjectDictStore(UniqueNamedObjectStore):
             chunksizes=chunksizes,
             simtk_unit=params['simtk_unit'],
         )
+
+        cache.set_caching(WeakLRUCache(100000))
 
         cache.create_variable('index', 'index')
 
@@ -264,7 +267,6 @@ class ObjectDictStore(UniqueNamedObjectStore):
             cv.cache_all()
 
     def _load(self, idx):
-        # op = self.load_json(self.prefix + '_json', idx)
         op = self.vars['json'][idx]
         op.set_cache_store(self.key_store, self.cache_var(idx))
 
@@ -341,21 +343,33 @@ class ReversibleObjectDictStore(ObjectDictStore):
     def add_uuid(self, idx):
         if self.reference_by_uuid:
             length = int(len(self.variables['index']))
-            print length, idx.__uuid__
             self._uuid_ref[idx] = length
             self.vars['index'][length] = idx.__uuid__
 
         return length
 
+    def snapshot_uuid_index(self, idx):
+        if self.reference_by_uuid:
+            try:
+                return self._uuid_ref[idx]
+            except:
+                length = int(len(self.variables['index']))
+                self._uuid_ref[idx] = length
+                self.vars['index'][length] = idx.__uuid__
+
+                return length
+        else:
+            return self.storage.snapshots.idx(idx)
+
+
 
 class KeyStore(ObjectStore):
 
     def __init__(self, cv):
-        super(KeyStore, self).__init__(
-            BaseSnapshot
-        )
+        super(KeyStore, self).__init__(None)
 
         self.cv = cv
+        self._storable = None
 
     @property
     def uuid_ref(self):
@@ -405,8 +419,6 @@ class KeyStore(ObjectStore):
         except KeyError:
             pass
 
-        print n_idx
-
         obj = self.vars['value'][n_idx]
 
         self.index[idx] = n_idx
@@ -420,13 +432,11 @@ class KeyStore(ObjectStore):
 
         Parameters
         ----------
-        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+        idx : :py:class:`openpathsampling.engines.BaseSnapshot`
             the object to be stored
-        idx : int or string or `None`
-            the index to be used for storing. This is highly discouraged since
-            it changes an immutable object (at least in the storage). It is
-            better to store also the new object and just ignore the
-            previously stored one.
+        value : anything that can be stored
+            this includes storable objects, python numbers, numpy.arrays,
+            strings, etc.
 
         """
 
@@ -434,21 +444,32 @@ class KeyStore(ObjectStore):
             # has been saved so quit and do nothing
             return
 
-        n_idx = self.free()
-        self.vars['value'][n_idx] = value
+        pos = self.storage.cvs.snapshot_index(idx)
 
-        if idx in self.uuid_ref:
-            self.vars['index'][n_idx] = self.uuid_ref[idx]
-        else:
-            self.vars['index'][n_idx] = self.storage.cvs.add_uuid(idx)
+        if pos is not None:
 
-        self.index[idx] = n_idx
-        self.cache[n_idx] = value
+            n_idx = self.free()
+            self.vars['value'][n_idx] = value
+            self.vars['index'][n_idx] = pos
+
+            self.index[idx] = n_idx
+            self.cache[n_idx] = value
+
+    def sync(self, cv):
+        if not self.reference_by_uuid:
+            # for uuids this cannot happen
+            # necessary if we compute cvs that are not stored
+
+        for
 
     def restore(self):
-        uuid_ref = self.uuid_ref
-        for pos, idx in enumerate(self.vars['index'][:]):
-            self.index[uuid_ref[idx]] = pos
+        if self.reference_by_uuid:
+            uuid_ref = self.uuid_ref
+            for pos, idx in enumerate(self.vars['index'][:]):
+                self.index[uuid_ref[idx]] = pos
+        else:
+            for pos, idx in enumerate(self.vars['index'][:]):
+                self.index[idx] = pos
 
     def initialize(self):
         pass
@@ -465,4 +486,10 @@ class KeyStore(ObjectStore):
             elif item is Ellipsis:
                 return self.iterator()
         except KeyError:
+            return None
+
+    def get(self, item):
+        if item in self.index:
+            return self[item]
+        else:
             return None

@@ -94,12 +94,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         same.
 
         """
-        self._store_dict = cd.ReversibleStoredDict(
-            key_store,
-            value_store,
-            backward_store,
-            self._cache_dict.cache
-        )
+        self._store_dict = cd.StoredDict(value_store)
         self._store_dict._post = self._cache_dict
         self._single_dict._post = self._store_dict
 
