@@ -37,10 +37,30 @@ class testPathHistogram(object):
             assert_equal(hist._histogram[val], 0.0)
 
     def test_interp_nopertraj(self):
-        raise SkipTest
+        hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
+                             bin_widths=(0.5, 0.5),
+                             interpolate=True, per_traj=False)
+        hist.add_trajectory(self.trajectory)
+        for val in [(0,0), (0,2), (3,1), (3,2)]:
+            assert_equal(hist._histogram[val], 1.0)
+        for val in [(0,1), (0,3), (1,4), (2,1), (2,3), (2,5), (3,1), (3,2),
+                    (3,3), (3,6)]:
+            assert_equal(hist._histogram[val], 1.0)
+        for val in [(1,1), (1,2), (1,3), (2,4), (3,4), (4,5), (4,6)]:
+            assert_equal(hist._histogram[val], 2.0)
+        assert_equal(hist._histogram[(3,5)], 3.0)
 
     def test_interp_pertraj(self):
-        raise SkipTest
+        hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
+                             bin_widths=(0.5, 0.5),
+                             interpolate=True, per_traj=True)
+        hist.add_trajectory(self.trajectory)
+        for val in [(0,0), (0,2), (3,1), (3,2), (0,1), (0,3), (1,4), (2,1),
+                    (2,3), (2,5), (3,1), (3,2), (3,3), (3,6)]:
+            assert_equal(hist._histogram[val], 1.0)
+        for val in [(1,1), (1,2), (1,3), (2,4), (3,4), (4,5), (4,6)]:
+            assert_equal(hist._histogram[val], 1.0)
+        assert_equal(hist._histogram[(3,5)], 1.0)
 
     def test_nointerp_pertraj(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
