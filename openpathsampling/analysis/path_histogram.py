@@ -7,6 +7,25 @@ import numpy as np
 # should path histogram be moved to the generic histogram.py? Seems to be
 # independent of the fact that this is actually OPS
 class PathHistogram(SparseHistogram):
+    """
+    N-dim sparse histogram for trajectories.
+
+    This allows features like interpolating between bins and normalizing the
+    histogram to the number of trajectories.
+    
+    Parameters
+    ----------
+    left_bin_edges : array-like
+        lesser side of the bin (for each direction)
+    bin_widths : array-like
+        bin (voxel) size
+    interpolate : bool or string
+        whether to interpolate missing bin visits. String value determines
+        interpolation type (currently only "subdivide" allowed). Default
+        True gives "subdivide" method, False gives no interpolation.
+    per_traj : bool
+        whether to normalize per trajectory (instead of per-snapshot)
+    """
     def __init__(self, left_bin_edges, bin_widths, interpolate=True,
                  per_traj=True):
         super(PathHistogram, self).__init__(left_bin_edges=left_bin_edges, 
@@ -17,6 +36,21 @@ class PathHistogram(SparseHistogram):
         self.per_traj = per_traj
 
     def interpolated_bins(self, old_pt, new_pt):
+        """Interpolate between trajectory points.
+
+        Parameters
+        ----------
+        old_pt : array-like of float
+            previous point in CV space
+        new_pt : array-like of float
+            next point in CV space
+
+        Returns
+        -------
+        list of array-like of int
+            bins which interpolate between old_pt and new_pt (not including
+            the bin that old_pt is found in)
+        """
         # bins for this do not include the bin of the old point
         old_bin = self.map_to_bins(old_pt)
         new_bin = self.map_to_bins(new_pt)
@@ -44,9 +78,13 @@ class PathHistogram(SparseHistogram):
         Paramters
         ---------
         start_pt : array-like of float
+            initial point to interpolate from
         end_pt : array-like of float
+            final point to interpolate to
         start_bin : array-like of int
+            bin associated with initial point
         end_bin : array-like of int
+            bin associated with final point
 
         Returns
         -------
@@ -106,6 +144,19 @@ class PathHistogram(SparseHistogram):
             return start_side + end_side
 
     def single_trajectory_counter(self, trajectory):
+        """
+        Calculate the counter (local histogram) for an unweighted trajectory
+
+        Parameters
+        ----------
+        trajectory : list of array-like
+            the reduced space trajectory
+
+        Returns
+        -------
+        collections.Counter
+            histogram counter for this trajectory
+        """
         # make a list of every bin visited, possibly interpolating gaps
         bin_list = [self.map_to_bins(trajectory[0])]
         for fnum in range(len(trajectory)-1):
@@ -122,6 +173,21 @@ class PathHistogram(SparseHistogram):
         return local_hist
 
     def add_data_to_histogram(self, trajectories, weights=None):
+        """Adds data to the internal histogram counter.
+
+        Parameters
+        ----------
+        trajectories : list of list of array-like
+            input data
+        weights : list or None
+            weight associated with each datapoint. Default `None` is same
+            weights for all
+
+        Returns
+        -------
+        collections.Counter :
+            copy of the current histogram counter
+        """
         if weights is None:
             weights = [1.0] * len(trajectories)
         for (traj, w) in zip(trajectories, weights):
@@ -129,6 +195,15 @@ class PathHistogram(SparseHistogram):
         return self._histogram.copy()
 
     def add_trajectory(self, trajectory, weight=1.0):
+        """Add a single trajectory to internal counter, with given weight
+
+        Parameters
+        ----------
+        trajectory : list of array-like
+            the reduced space trajectory
+        weight : float
+            the weight of the trajectory. Default 1.0
+        """
         local_hist = self.single_trajectory_counter(trajectory)
         local_hist = Counter({k : local_hist[k] * weight
                               for k in local_hist.keys()})
@@ -138,6 +213,21 @@ class PathHistogram(SparseHistogram):
 
 
 class PathDensityHistogram(PathHistogram):
+    """Histogram for path density plot.
+
+    Parameters
+    ----------
+    cvs : list of paths.CollectiveVariable
+        the collective variables to define the reduced space
+    left_bin_edges : array-like
+        lesser side of the bin (for each direction)
+    bin_widths : array-like
+        bin (voxel) size
+    interpolate : bool or string
+        whether to interpolate missing bin visits. String value determines
+        interpolation type (currently only "subdivide" allowed). Default
+        True gives "subdivide" method, False gives no interpolation.
+    """
     def __init__(self, cvs, left_bin_edges, bin_widths, interpolate=True):
         super(PathDensityHistogram, self).__init__(
             left_bin_edges=left_bin_edges, 
@@ -148,6 +238,21 @@ class PathDensityHistogram(PathHistogram):
         self.cvs = cvs
 
     def add_data_to_histogram(self, trajectories, weights=None):
+        """Adds data to the internal histogram counter.
+
+        Parameters
+        ----------
+        trajectories : list of :class:`.Trajectory` or :class:`.Trajectory`
+            input data
+        weights : list or None
+            weight associated with each datapoint. Default `None` is same
+            weights for all
+
+        Returns
+        -------
+        collections.Counter :
+            copy of the current histogram counter
+        """
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
         if weights is None:
