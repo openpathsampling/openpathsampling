@@ -136,3 +136,37 @@ class testPathHistogram(object):
             assert_equal(counter[val], 0.0)
 
 
+class testPathDensityHistogram(object):
+    def setup(self):
+        id_cv = paths.CV_Function("Id",
+                                  lambda snap : snap.xyz[0][0])
+        sin_cv = paths.CV_Function("sin",
+                                   lambda snap : np.sin(snap.xyz[0][0]))
+        square_cv = paths.CV_Function("x^2",
+                                      lambda snap : snap.xyz[0][0]**2)
+        self.cvs = [id_cv, sin_cv, square_cv]
+        self.left_bin_edges = (0,0,0)
+        self.bin_widths = (0.25, 0.5, 0.4)
+
+        self.traj1 = make_1d_traj([0.1, 0.51, 0.61])
+        # [(0, 0, 0), (2, 0, 0), (2, 1, 0)]
+        # interpolate: (1, 0, 0)
+        self.traj2 = make_1d_traj([0.6, 0.7])
+        # [(2, 1, 0), (2, 1, 1)]
+
+    def test_histogram_no_weights(self):
+        hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
+                                    self.bin_widths)
+        counter = hist.histogram([self.traj1, self.traj2])
+        assert_equal(len(counter), 5)
+        for bin_label in [(0,0,0), (2,0,0), (1,0,0), (2,1,1)]:
+            assert_equal(counter[bin_label], 1.0)
+        assert_equal(counter[(2,1,0)], 2.0)
+        for bin_label in [(1,1,1), (2,2,2), (-1,0,0), (0,-1,0)]:
+            assert_equal(counter[bin_label], 0.0)
+
+    def test_histogram_with_weights(self):
+        raise SkipTest
+
+    def test_histogram_single_traj(self):
+        raise SkipTest

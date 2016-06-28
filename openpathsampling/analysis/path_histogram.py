@@ -157,3 +157,5 @@ class PathDensityHistogram(PathHistogram):
             cv_traj = [cv(traj) for cv in self.cvs]
             self.add_trajectory(zip(*cv_traj), w)
 
+        return self._histogram.copy()
+
