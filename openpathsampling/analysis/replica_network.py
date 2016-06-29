@@ -35,36 +35,6 @@ class ReplicaNetwork(object):
         self.analyze_exchanges(steps)
 
 
-
-    def check_storage(self, storage):
-        """Checks whether we have a valid storage to look at.
-
-        If storage is given as a parameter, it overwrites the instance
-        variable.
-        """
-        if storage != None:
-            if storage != self.storage:
-                self.analysis = { }
-                self.traces = { } 
-                self.all_replicas = []
-                self.ensembles = []
-                self.ensemble_to_number = {}
-                self.ensemble_to_string = {}
-            self.storage = storage
-        if self.storage == None:
-            raise RuntimeError("No storage given for analysis")
-        if self.all_replicas == [] or self.all_ensembles == []:
-            reps_ens = get_all_ensembles_and_replicas(storage)
-            self.all_replicas = reps_ens['replicas']
-            self.all_ensembles = reps_ens['ensembles']
-        if self.ensemble_to_number == {} or self.ensemble_to_string == {}:
-            # set the default labels here
-            self.initial_order()
-            sset0 = self.storage.samplesets[0]
-            labels = {e : str(sset0[e].replica) for e in self.all_ensembles}
-            self.set_labels(labels)
-        return self.storage
-
     def set_labels(self, ens2str=None):
         """
         Sets label dictionaries. Requires that you run self.initial_order
@@ -121,11 +91,6 @@ class ReplicaNetwork(object):
         return ensemble_to_number
 
     def analyze_exchanges(self, steps=None, force=False):
-        # TODO: convert this into something that yields ((repA, repB),
-        # accepted): separate obtaining those tuples from adding up the
-        # number of trials and acceptances -- this will make the rest of the
-        # code usable for non-OPS purposes
-        # storage = self.check_storage(storage)
         if force == False and self.analysis != { }:
             return (self.analysis['n_trials'], self.analysis['n_accepted'])
         if steps is None:
@@ -461,39 +426,6 @@ class ReplicaNetwork(object):
 
         return {'down' : down_trips, 'up' : up_trips, 'round' : round_trips}
 
-def get_all_ensembles_and_replicas(storage, first_sampleset=True):
-    """
-    Retrieve all ensembles and replicas used in SampleSets
-
-    Parameters
-    ----------
-    storage : paths.Storage
-        storage file
-    first_sampleset : bool (True)
-        if True, assume that all relevant information is in the first
-        SampleSet. If False, search through all saved SampleSets.
-
-    Returns
-    -------
-    dict
-        keys: 'ensembles', 'replicas', each containing a list
-    """
-    if first_sampleset:
-        ensembles = [s.ensemble for s in storage.steps[0].active]
-        replicas = [s.replica for s in storage.steps[0].active]
-    else:
-        # This approach uses dicts so we don't have to hunt for the key; the
-        # value assigned is arbitrarily 1. Still has to loop over
-        # nsets*nsamples, but that's better than nsets*nsamples*nensembles
-        ensembles_dict = {}
-        replicas_dict = {}
-        for sset in storage.sampleset:
-            for s in sset:
-                ensembles[s.ensemble] = 1
-                replicas[s.replica] = 1
-        ensembles = ensembles_dict.keys()
-        replicas = replicas_dict.keys()
-    return { 'ensembles' : ensembles, 'replicas' : replicas }
 
 class ReplicaNetworkGraph(object):
     """
