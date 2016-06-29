@@ -101,6 +101,7 @@ class StaticContainer(StorableObject):
             'box_vectors': self.box_vectors
         }
 
+
 class StaticContainerStore(ObjectStore):
     """
     An ObjectStore for Configuration. Allows to store Configuration() instances in a netcdf file.
@@ -159,29 +160,19 @@ class StaticContainerStore(ObjectStore):
 
     def initialize(self):
         super(StaticContainerStore, self).initialize()
-        n_atoms = self.storage.n_atoms
-        n_spatial = self.storage.n_spatial
-
-        snapshot = self.storage.template
-
-        unit = None
-
-        if snapshot.coordinates is not None:
-            if hasattr(snapshot.coordinates, 'unit'):
-                unit = snapshot.coordinates.unit
 
         self.create_variable('coordinates', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="coordinate of atom '{ix[1]}' in dimension " +
                                        "'{ix[2]}' of configuration '{ix[0]}'.",
-                           chunksizes=(1, n_atoms, n_spatial),
-                           simtk_unit=unit
+                           chunksizes=(1, 'atom', 'spatial'),
+                           simtk_unit=u.nanometers
                            )
 
         self.create_variable('box_vectors', 'numpy.float32',
                            dimensions=('spatial', 'spatial'),
-                           chunksizes=(1, n_spatial, n_spatial),
-                           simtk_unit=unit
+                           chunksizes=(1, 'spatial', 'spatial'),
+                           simtk_unit=u.nanometers
                            )
 
 
@@ -311,21 +302,10 @@ class KineticContainerStore(ObjectStore):
 
         super(KineticContainerStore, self).initialize()
 
-        n_atoms = self.storage.n_atoms
-        n_spatial = self.storage.n_spatial
-
-        snapshot = self.storage.template
-
-        unit = None
-
-        if snapshot.coordinates is not None:
-            if hasattr(snapshot.coordinates, 'unit'):
-                unit = snapshot.coordinates.unit
-
         self.create_variable('velocities', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="the velocity of atom 'atom' in dimension " +
                                        "'coordinate' of momentum 'momentum'.",
-                           chunksizes=(1, n_atoms, n_spatial),
-                           simtk_unit=unit
+                           chunksizes=(1, 'atom', 'spatial'),
+                           simtk_unit=u.nanometers / u.picoseconds
                            )

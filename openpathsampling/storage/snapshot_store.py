@@ -248,6 +248,7 @@ class BaseSnapshotStore(IndexedObjectStore):
         except KeyError:
             return None
 
+
 class BaseSnapshotIndexedStore(IndexedObjectStore):
     """
     An ObjectStore for Snapshots in netCDF files.
@@ -266,7 +267,8 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
         """
         super(BaseSnapshotIndexedStore, self).__init__(peng.BaseSnapshot, json=False)
         self.descriptor = descriptor
-        self._cls = descriptor['class']
+        self._dimensions = descriptor.dimensions
+        self._cls = self.descriptor.snapshot_class
 
         # self._use_lazy_reversed = False
         # if hasattr(snapshot_class, '__features__'):
@@ -465,7 +467,7 @@ class FeatureSnapshotIndexedStore(BaseSnapshotIndexedStore):
     def initialize(self):
         super(FeatureSnapshotIndexedStore, self).initialize()
 
-        for dim, size in self.descriptor['dimensions'].iteritems():
+        for dim, size in self._dimensions.iteritems():
             self.storage.create_dimension(dim, size)
 
         for feature in self.classes:
@@ -503,6 +505,9 @@ class SnapshotWrapperStore(ObjectStore):
         self.storage.create_variable('cv_cache', 'obj.stores', 'cv_cache')
 
     def add_type(self, descriptor):
+        if descriptor in self.type_list:
+            return self.type_list[descriptor]
+
         store = FeatureSnapshotIndexedStore(descriptor)
 
         store_idx = int(len(self.storage.dimensions['snapshot_type']))
@@ -511,10 +516,12 @@ class SnapshotWrapperStore(ObjectStore):
         self.storage.register_store(store_name, store, False)
         self.type_list[store_idx] = descriptor
 
-        self.storage.variables['snapshot_type'][store_idx] = store
+        self.storage.vars['snapshot_type'][store_idx] = store
 
         self.storage.finalize_stores()
         self.storage.update_delegates()
+
+        return store
 
     @staticmethod
     def _snapshot_store_name(idx):
@@ -531,3 +538,27 @@ class SnapshotWrapperStore(ObjectStore):
     def restore(self):
         for idx, store in enumerate(self.vars['snapshot_type']):
             self.type_list[store.descriptor] = store
+
+
+class SnapshotDescriptor(frozenset, StorableObject):
+    def __init__(self, contents):
+        StorableObject.__init__(self)
+        frozenset.__init__(contents)
+        self._dimensions = dict(self)
+        self._cls = self._dimensions['class']
+        del self._dimensions['class']
+
+    @property
+    def snapshot_class(self):
+        return self._cls
+
+    @property
+    def dimensions(self):
+        return self._dimensions
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls(dct.items())
+
+    def to_dict(self):
+        return dict(self)

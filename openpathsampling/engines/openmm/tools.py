@@ -156,7 +156,7 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
         velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
-        topology=topology
+        engine=engine
     )
 
     return snapshot
