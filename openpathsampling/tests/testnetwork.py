@@ -21,8 +21,8 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-
-class testMSTISNetwork(object):
+class testMultipleStateTIS(object):
+    # generic class to set up states and ifaces
     def setup(self):
         xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
@@ -32,6 +32,12 @@ class testMSTISNetwork(object):
         ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
         ifacesB = vf.CVRangeVolumeSet(xval, [-0.2, -0.15, -0.1], [0.2, 0.15, 0.1])
         ifacesC = vf.CVRangeVolumeSet(xval, [0.5, 0.4, 0.3], float("inf"))
+
+
+        self.xval = xval
+        self.ifacesA = ifacesA
+        self.ifacesB = ifacesB
+        self.ifacesC = ifacesC
 
         self.traj = {}
         self.traj['AA'] = make_1d_traj(
@@ -72,10 +78,13 @@ class testMSTISNetwork(object):
             velocities=[1.0]*4
         )
 
+class testMSTISNetwork(testMultipleStateTIS):
+    def setup(self):
+        super(testMSTISNetwork, self).setup()
         self.mstis = MSTISNetwork([
-            (self.stateA, ifacesA, xval),
-            (self.stateB, ifacesB, xval),
-            (self.stateC, ifacesC, xval)
+            (self.stateA, self.ifacesA, self.xval),
+            (self.stateB, self.ifacesB, self.xval),
+            (self.stateC, self.ifacesC, self.xval)
         ])
 
     def test_all_states(self):
@@ -138,6 +147,30 @@ class testMSTISNetwork(object):
         assert_equal(self.stateA.name, "B")
         assert_equal(self.stateB.name, "A")
         assert_equal(self.stateC.name, "C")
+
+class testMISTISNetwork(testMultipleStateTIS):
+    def setup(self):
+        super(testMISTISNetwork, self).setup()
+        self.mistis = MISTISNetwork([
+            (self.stateA, self.ifacesA, self.xval, self.stateB),
+            (self.stateB, self.ifacesB, self.xval, self.stateA),
+            (self.stateA, self.ifacesA, self.xval, self.stateC)
+        ])
+
+    def test_initialization(self):
+        assert_equal(len(self.mistis.sampling_transitions), 3)
+        assert_equal(len(self.mistis.input_transitions), 3)
+        assert_equal(len(self.mistis.transitions), 3)
+        # TODO: add more checks here
+
+    def test_trajectories_nonstrict(self):
+        raise SkipTest
+
+    def test_trajectories_strict(self):
+        raise SkipTest
+
+    def test_storage(self):
+        raise SkipTest
 
 
 class testTPSNetwork(object):
