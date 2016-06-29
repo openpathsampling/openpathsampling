@@ -164,10 +164,64 @@ class testMISTISNetwork(testMultipleStateTIS):
         # TODO: add more checks here
 
     def test_trajectories_nonstrict(self):
-        raise SkipTest
+        fromA = [trans for trans in self.mistis.sampling_transitions
+                 if trans.stateA == self.stateA]
+        fromB = [trans for trans in self.mistis.sampling_transitions
+                 if trans.stateA == self.stateB]
+        assert_equal(len(fromA), 2)
+        assert_equal(len(fromB), 1)
+        fromA_0 = fromA[0].ensembles[0]
+        fromA_1 = fromA[1].ensembles[0]
+        fromB_0 = fromB[0].ensembles[0]
+        assert_equal(fromA_0(self.traj['AA']), True)
+        assert_equal(fromA_0(self.traj['AB']), True)
+        assert_equal(fromA_0(self.traj['AC']), True)
+        assert_equal(fromA_0(self.traj['BB']), False)
+        assert_equal(fromA_0(self.traj['CB']), False)
+        assert_equal(fromA_1(self.traj['AA']), True)
+        assert_equal(fromA_1(self.traj['AB']), True)
+        assert_equal(fromA_1(self.traj['AC']), True)
+        assert_equal(fromA_1(self.traj['CB']), False)
+        assert_equal(fromA_1(self.traj['CB']), False)
+        assert_equal(fromB_0(self.traj['BA']), True)
+        assert_equal(fromB_0(self.traj['BB']), True)
+        assert_equal(fromB_0(self.traj['BB']), True)
+        assert_equal(fromB_0(self.traj['AB']), False)
+        assert_equal(fromB_0(self.traj['CB']), False)
 
     def test_trajectories_strict(self):
-        raise SkipTest
+        strict = MISTISNetwork([
+            (self.stateA, self.ifacesA, self.xval, self.stateB),
+            (self.stateB, self.ifacesB, self.xval, self.stateA),
+            (self.stateA, self.ifacesA, self.xval, self.stateC)
+        ], strict_sampling=True)
+        transAB = [trans for trans in strict.sampling_transitions
+                 if (trans.stateA == self.stateA and 
+                     trans.stateB == self.stateB)][0]
+        transAC = [trans for trans in strict.sampling_transitions
+                 if (trans.stateA == self.stateA and 
+                     trans.stateB == self.stateC)][0]
+        transBA = [trans for trans in strict.sampling_transitions
+                 if (trans.stateA == self.stateB and 
+                     trans.stateB == self.stateA)][0]
+        ensAB = transAB.ensembles[0]
+        ensAC = transAC.ensembles[0]
+        ensBA = transBA.ensembles[0]
+        assert_equal(ensAB(self.traj['AA']), True)
+        assert_equal(ensAB(self.traj['AB']), True)
+        assert_equal(ensAB(self.traj['AC']), False)
+        assert_equal(ensAB(self.traj['BB']), False)
+        assert_equal(ensAB(self.traj['BC']), False)
+        assert_equal(ensAC(self.traj['AA']), True)
+        assert_equal(ensAC(self.traj['AC']), True)
+        assert_equal(ensAC(self.traj['AB']), False)
+        assert_equal(ensAC(self.traj['BB']), False)
+        assert_equal(ensAC(self.traj['BC']), False)
+        assert_equal(ensBA(self.traj['BB']), True)
+        assert_equal(ensBA(self.traj['BA']), True)
+        assert_equal(ensBA(self.traj['BC']), False)
+        assert_equal(ensBA(self.traj['AB']), False)
+        assert_equal(ensBA(self.traj['AC']), False)
 
     def test_storage(self):
         raise SkipTest

@@ -650,20 +650,27 @@ class MISTISNetwork(TISNetwork):
                 ensemble_to_intersect = paths.FullEnsemble()
             # TODO: fix following for strict_sampling
             if transition not in all_in_pairs:
+                # if we don't have a pair partner, use all interfaces
                 sample_trans = paths.TISTransition(
                     stateA=stateA,
-                    stateB=all_states,
+                    stateB=final_state,
                     interfaces=transition.interfaces,
                     orderparameter=transition.orderparameter
                 )
             else:
-                # ??? what am I doing here?
+                # if we do have a pair partner, outermost is MS-interface
                 sample_trans = paths.TISTransition(
                     stateA=stateA,
-                    stateB=all_states,
+                    stateB=final_state,
                     interfaces=transition.interfaces[:-1],
                     orderparameter=transition.orderparameter
                 )
+            new_ensembles = [e & ensemble_to_intersect 
+                             for e in sample_trans.ensembles]
+            if self.strict_sampling:
+                for (old, new) in zip(new_ensembles, sample_trans.ensembles):
+                    old.name = new.name + " strict"
+            sample_trans.ensembles = new_ensembles
             sample_trans.named("Sampling " + str(stateA) + "->" + str(stateB))
             self.transition_to_sampling[transition] = sample_trans
 
