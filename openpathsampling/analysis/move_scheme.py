@@ -664,15 +664,16 @@ class MoveScheme(StorableNamedObject):
         return line
 
     def move_acceptance(self, steps):
-        delta = step.change
-        for m in delta:
-            acc = 1 if m.accepted else 0
-            key = (m.mover, str(delta.key(m)))
-            try:
-                self._mover_acceptance[key][0] += acc
-                self._mover_acceptance[key][1] += 1
-            except KeyError:
-                self._mover_acceptance[key] = [acc, 1]
+        for step in steps:
+            delta = step.change
+            for m in delta:
+                acc = 1 if m.accepted else 0
+                key = (m.mover, str(delta.key(m)))
+                try:
+                    self._mover_acceptance[key][0] += acc
+                    self._mover_acceptance[key][1] += 1
+                except KeyError:
+                    self._mover_acceptance[key] = [acc, 1]
 
     def move_summary(self, steps, movers=None, output=sys.stdout, depth=0):
         """
