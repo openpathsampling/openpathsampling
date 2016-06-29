@@ -2,7 +2,7 @@ import abc
 from uuid import UUID
 
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy, StorableObject
-from openpathsampling.netcdfplus.objects import UUIDDict
+from openpathsampling.netcdfplus.objects import UUIDDict, IndexedObjectStore
 import openpathsampling.engines as peng
 
 from collections import OrderedDict
@@ -26,7 +26,7 @@ class UUIDReversalDict(UUIDDict):
         OrderedDict.__delitem__(self, self.rev_id(key))
 
 
-class BaseSnapshotStore(ObjectStore):
+class BaseSnapshotStore(IndexedObjectStore):
     """
     An ObjectStore for Snapshots in netCDF files.
     """
@@ -248,6 +248,161 @@ class BaseSnapshotStore(ObjectStore):
         except KeyError:
             return None
 
+class BaseSnapshotIndexedStore(IndexedObjectStore):
+    """
+    An ObjectStore for Snapshots in netCDF files.
+    """
+
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, descriptor):
+        """
+
+        Attributes
+        ----------
+        snapshot_class : openpathsampling.BaseSnapshot
+            a snapshot class that this Store is supposed to store
+
+        """
+        super(BaseSnapshotIndexedStore, self).__init__(peng.BaseSnapshot, json=False)
+        self.descriptor = descriptor
+        self._cls = descriptor['class']
+
+        # self._use_lazy_reversed = False
+        # if hasattr(snapshot_class, '__features__'):
+        #     if '_reversed' in snapshot_class.__features__.lazy:
+        #         self._use_lazy_reversed = True
+
+    @property
+    def reference_by_uuid(self):
+        # This one does explicitly use integer indices
+        return False
+
+    @property
+    def snapshot_class(self):
+        return self._cls
+
+    @property
+    def dimensions(self):
+        return self.descriptor['dimensions']
+
+    def __repr__(self):
+        return "store.%s[%s(%s)]" % (
+            self.prefix, self._cls.__name__, self.content_class.__name__)
+
+    def to_dict(self):
+        return {
+            'descriptor': self.descriptor,
+        }
+
+    def _load(self, idx):
+        """
+        Load a snapshot from the storage.
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the snapshot to be loaded
+
+        Returns
+        -------
+        snapshot : :obj:`BaseSnapshot`
+            the loaded snapshot instance
+        """
+
+        # if not load and return it
+        st_idx = int(idx)
+
+        obj = self._cls.__new__(self._cls)
+        self._cls.init_empty(obj)
+        self._get(st_idx, obj)
+        return obj
+
+    @abc.abstractmethod
+    def _set(self, idx, snapshot):
+        pass
+
+    @abc.abstractmethod
+    def _get(self, idx, snapshot):
+        pass
+
+    def _set_id(self, idx, obj):
+        if self.reference_by_uuid:
+            self.vars['uuid'][int(idx / 2)] = obj.__uuid__
+
+    def _get_id(self, idx, obj):
+        if self.reference_by_uuid:
+            uuid = self.vars['uuid'][int(idx / 2)]
+            if idx & 1:
+                uuid = StorableObject.ruuid(uuid)
+
+            obj.__uuid__ = uuid
+
+    def load_indices(self):
+        if self.reference_by_uuid:
+            for pos, idx in enumerate(self.vars['index'][:]):
+                self.index[idx] = pos
+
+    def _save(self, snapshot, idx):
+        """
+        Add the current state of the snapshot in the database.
+
+        Parameters
+        ----------
+        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
+            the snapshot to be saved
+        idx : int or None
+            if idx is not None the index will be used for saving in the storage.
+            This might overwrite already existing trajectories!
+
+        Notes
+        -----
+        This also saves all contained frames in the snapshot if not done yet.
+        A single Snapshot object can only be saved once!
+        """
+
+        self._set(idx, snapshot)
+
+    def all(self):
+        return peng.Trajectory(map(self.proxy, range(len(self))))
+
+    def duplicate(self, snapshot):
+        """
+        Store a duplicate of the snapshot as new
+
+        Parameters
+        ----------
+        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
+
+        Returns
+        -------
+        int
+            the index used for storing it in the store. This is the save as used by
+            save.
+
+        Notes
+        -----
+        This will circumvent the caching and indexing completely. This would be equivalent
+        of creating a copy of the current snapshot and store this one and throw the copy
+        away, leaving the given snapshot untouched. This allows you to treat the snapshot
+        as mutual.
+
+        The use becomes more obvious when applying to storing trajectories. The only way
+        to make use of this feature is using the returned `idx`
+
+        >>> idx = store.duplicate(snap)
+        >>> loaded = store[idx]  # return a duplicated as new object
+        >>> proxy = paths.LoaderProxy(store, idx) # use the duplicate without loading
+
+        """
+        idx = self.free()
+        st_idx = int(idx)
+        self._set(st_idx, snapshot)
+
+        return idx
+
+    def idx(self, obj):
+        return self.index[obj]
 
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
@@ -281,3 +436,98 @@ class FeatureSnapshotStore(BaseSnapshotStore):
         for feature in self.classes:
             if hasattr(feature, 'netcdfplus_init'):
                 feature.netcdfplus_init(self)
+
+
+class FeatureSnapshotIndexedStore(BaseSnapshotIndexedStore):
+    """
+    An ObjectStore for Snapshots in netCDF files.
+    """
+
+    def __init__(self, descriptor):
+        super(FeatureSnapshotIndexedStore, self).__init__(
+            descriptor
+    )
+
+    @property
+    def classes(self):
+        return self.snapshot_class.__features__.classes
+
+    @property
+    def storables(self):
+        return self.snapshot_class.__features__.storables
+
+    def _set(self, idx, snapshot):
+        [self.write(attr, idx, snapshot) for attr in self.storables]
+
+    def _get(self, idx, snapshot):
+        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.storables]
+
+    def initialize(self):
+        super(FeatureSnapshotIndexedStore, self).initialize()
+
+        for dim, size in self.descriptor['dimensions'].iteritems():
+            self.storage.create_dimension(dim, size)
+
+        for feature in self.classes:
+            if hasattr(feature, 'netcdfplus_init'):
+                feature.netcdfplus_init(self)
+
+
+class SnapshotWrapperStore(ObjectStore):
+    """
+    A Store to store arbitrary snapshots
+    """
+    def __init__(self):
+        super(SnapshotWrapperStore, self).__init__(peng.BaseSnapshot, json=False)
+
+        self.type_list = {}
+        self.cv_list = {}
+
+    def _load(self, idx):
+        store = self.vars['store'][idx]
+        return store[idx]
+
+    def _save(self, obj, idx):
+        store = self.type_list[obj.engine.snapshot_type]
+        store[idx] = obj
+
+    def initialize(self):
+        super(SnapshotWrapperStore, self).initialize()
+
+        self.create_variable('store', 'index')
+
+        self.storage.create_dimension('snapshot_type')
+        self.storage.create_dimension('cv_cache')
+
+        self.storage.create_variable('snapshot_type', 'obj.stores', 'snapshot_type')
+        self.storage.create_variable('cv_cache', 'obj.stores', 'cv_cache')
+
+    def add_type(self, descriptor):
+        store = FeatureSnapshotIndexedStore(descriptor)
+
+        store_idx = int(len(self.storage.dimensions['snapshot_type']))
+        store_name = 'snapshot' + str(store_idx)
+
+        self.storage.register_store(store_name, store, False)
+        self.type_list[store_idx] = descriptor
+
+        self.storage.variables['snapshot_type'][store_idx] = store
+
+        self.storage.finalize_stores()
+        self.storage.update_delegates()
+
+    @staticmethod
+    def _snapshot_store_name(idx):
+        return 'snapshot' + str(idx)
+
+    @staticmethod
+    def to_descriptor(cls, dims):
+        description = {}
+        description.update(dims)
+        description['class'] = cls
+
+        return description
+
+    def restore(self):
+        for idx, store in enumerate(self.vars['snapshot_type']):
+            self.type_list[store.descriptor] = store

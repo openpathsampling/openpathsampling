@@ -1525,3 +1525,134 @@ class ImmutableDictStore(DictStore):
             )
 
         return super(ImmutableDictStore, self).save(obj, idx)
+
+
+class IndexedObjectStore(ObjectStore):
+    """
+    This has a prefilled .index which knows at which position a certain index is stored.
+    This way you can circumvent holes and keep the file smaller
+    """
+
+    # =============================================================================
+    # LOAD/SAVE DECORATORS FOR CACHE HANDLING
+    # =============================================================================
+
+    def load(self, idx):
+        """
+        Returns an object from the storage.
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the object to be loaded
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the loaded object
+        """
+
+        # we want to load by uuid and it was not in cache.
+        if idx in self.index:
+            n_idx = self.index[idx]
+        else:
+            raise KeyError(idx)
+
+        if n_idx < 0:
+            return None
+
+        # if it is in the cache, return it
+        try:
+            obj = self.cache[n_idx]
+            return obj
+
+        except KeyError:
+            pass
+
+        obj = self._load(n_idx)
+        self.cache[n_idx] = obj
+
+        return obj
+
+    def save(self, obj, idx=None):
+        """
+        Saves an object to the storage.
+
+        Parameters
+        ----------
+        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the object to be stored
+        idx : int or string or `None`
+            the index to be used for storing. This is highly discouraged since
+            it changes an immutable object (at least in the storage). It is
+            better to store also the new object and just ignore the
+            previously stored one.
+
+        """
+
+        if idx in self.index:
+            # has been saved so quit and do nothing
+            return idx
+
+        if idx is None:
+            n_idx = self.free()
+        else:
+            raise ValueError('Unsupported index type (only None allowed).')
+
+        # mark as saved so circular dependencies will not result in infinite loops
+        self.index[idx] = n_idx
+
+        # make sure in nested saving that an IDX is not used twice!
+        self.reserve_idx(n_idx)
+
+        logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
+
+        try:
+            self._save(obj, n_idx)
+
+            # store the name in the cache
+            if hasattr(self, 'cache'):
+                self.cache[n_idx] = obj
+
+        except:
+            # in case we did not succeed remove the mark as being saved
+            del self.index[obj]
+            self.release_idx(n_idx)
+            raise
+
+        self.release_idx(n_idx)
+        self._set_id(n_idx, obj)
+
+        return idx
+
+    def restore(self):
+        for pos, idx in enumerate(self.vars['index'][:]):
+            self.index[idx] = pos
+
+    def initialize(self):
+        super(IndexedObjectStore, self).initialize()
+
+        self.create_variable(
+            'index',
+            'index'
+        )
+
+    def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
+        try:
+            if type(item) is int:
+                return self.load(item)
+            elif type(item) is list:
+                return [self.load(idx) for idx in item]
+            elif item is Ellipsis:
+                return self.iterator()
+        except KeyError:
+            return None
+
+    def get(self, item):
+        if item in self.index:
+            return self[item]
+        else:
+            return None

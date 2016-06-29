@@ -7,6 +7,8 @@ lazy = ['statics']
 
 storables = ['statics']
 
+dimensions = ['atom', 'spatial']
+
 
 def netcdfplus_init(store):
     store.storage.create_store('statics', StaticContainerStore())

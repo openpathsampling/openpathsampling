@@ -459,8 +459,7 @@ class KeyStore(ObjectStore):
         if not self.reference_by_uuid:
             # for uuids this cannot happen
             # necessary if we compute cvs that are not stored
-
-        for
+            pass
 
     def restore(self):
         if self.reference_by_uuid:
