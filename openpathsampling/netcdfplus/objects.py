@@ -755,6 +755,8 @@ class ObjectStore(StorableNamedObject):
 
         """
 
+        # print 'save', self.name, self.index.get(obj)
+
         if obj in self.index:
             # has been saved so quit and do nothing
             return self.reference(obj)

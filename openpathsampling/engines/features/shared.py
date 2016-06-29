@@ -3,7 +3,7 @@ import copy
 import numpy as np
 from simtk import unit as u
 
-from openpathsampling.netcdfplus import StorableObject, ObjectStore
+from openpathsampling.netcdfplus import StorableObject, ObjectStore, WeakLRUCache
 
 
 # =============================================================================

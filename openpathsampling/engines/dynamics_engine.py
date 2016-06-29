@@ -1,9 +1,9 @@
-'''
+"""
 Created on 01.07.2014
 
 @author JDC Chodera
 @author: JH Prinz
-'''
+"""
 
 import logging
 
@@ -16,47 +16,48 @@ from trajectory import Trajectory
 
 logger = logging.getLogger(__name__)
 
-#=============================================================================
+# =============================================================================
 # SOURCE CONTROL
-#=============================================================================
+# =============================================================================
 
 __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
-#=============================================================================
+
+# =============================================================================
 # Multi-State Transition Interface Sampling
-#=============================================================================
+# =============================================================================
 
 
 class DynamicsEngine(StorableNamedObject):
-    '''
+    """
     Wraps simulation tool (parameters, storage, etc.)
 
     Notes
     -----
     Should be considered an abstract class: only its subclasses can be
     instantiated.
-    '''
+    """
 
     FORWARD = 1
     BACKWARD = -1
 
     _default_options = {
-        'n_frames_max' : None,
-        'timestep' : None
+        'n_frames_max': None,
+        'timestep': None
     }
 
     units = {
-        'length' : u.Unit({}),
-        'velocity' : u.Unit({}),
-        'energy' : u.Unit({})
+        'length': u.Unit({}),
+        'velocity': u.Unit({}),
+        'energy': u.Unit({})
     }
 
     base_snapshot_type = BaseSnapshot
 
-    def __init__(self, options=None, template=None):
-        '''
+    def __init__(self, options=None, snapshot_class=None, snapshot_dimensions=None, template=None):
+        """
         Create an empty DynamicsEngine object
-        
+
         Notes
         -----
         The purpose of an engine is to create trajectories and keep track
@@ -65,27 +66,26 @@ class DynamicsEngine(StorableNamedObject):
         the associated storage. In the initialization this storage is
         created as well as the related Trajectory and Snapshot classes are
         initialized.
-        '''
+        """
 
         super(DynamicsEngine, self).__init__()
 
-        self.template = template
+        if snapshot_class is None:
+            snapshot_class = BaseSnapshot
 
-        # Trajectories need to know the engine as a hack to get the topology.
-        # Better would be a link to the topology directly. This is needed to create
-        # mdtraj.Trajectory() objects
-
-        # TODO: Remove this and put the logic outside of the engine. The engine in trajectory is only
-        # used to get the solute indices which should depend on the topology anyway
-        # Trajectory.engine = self
+        self.snapshot_class = snapshot_class
+        self.snapshot_dimensions = snapshot_dimensions
 
         self._check_options(options)
 
-        # as default set a newly generated engine as the default engine
-        # self.set_as_default()
-        # REMOVED because this breaks the ability to have multiple engines
+    def to_dict(self):
+        return {
+            'options': self.options,
+            'snapshot_class': self.snapshot_class,
+            'snapshot_dimensions': self.snapshot_dimensions
+        }
 
-    def _check_options(self, options = None):
+    def _check_options(self, options=None):
         """
         This will register all variables in the options dict as a member variable if
         they are present in either the DynamicsEngine.default_options or this
@@ -141,13 +141,17 @@ class DynamicsEngine(StorableNamedObject):
                             if my_options[variable].unit.is_compatible(default_value):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('Unit of option "' + str(variable) + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
+                                raise ValueError('Unit of option "' + str(variable) + '" (' + str(
+                                    my_options[variable].unit) + ') not compatible to "' + str(
+                                    default_value.unit) + '"')
 
                         elif type(my_options[variable]) is list:
                             if type(my_options[variable][0]) is type(default_value[0]):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('List elements for option "' + str(variable) + '" must be of type "' + str(type(default_value[0])) + '"')
+                                raise ValueError('List elements for option "' + str(
+                                    variable) + '" must be of type "' + str(
+                                    type(default_value[0])) + '"')
                         else:
                             okay_options[variable] = my_options[variable]
                     elif isinstance(type(my_options[variable]), type(default_value)):
@@ -155,7 +159,9 @@ class DynamicsEngine(StorableNamedObject):
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
                     else:
-                        raise ValueError('Type of option "' + str(variable) + '" (' + str(type(my_options[variable])) + ') is not "' + str(type(default_value)) + '"')
+                        raise ValueError('Type of option "' + str(variable) + '" (' + str(
+                            type(my_options[variable])) + ') is not "' + str(
+                            type(default_value)) + '"')
 
             self.options = okay_options
         else:
@@ -166,22 +172,8 @@ class DynamicsEngine(StorableNamedObject):
         return self.options[item]
 
     @property
-    def topology(self):
-        return self.template.topology
-
-    @property
-    def n_atoms(self):
-        return self.topology.n_atoms
-
-    @property
-    def n_spatial(self):
-        return self.topology.n_spatial
-
-    def to_dict(self):
-        return {
-            'options' : self.options,
-            'template' : self.template
-        }
+    def dimensions(self):
+        return self.snapshot_dimensions
 
     def set_as_default(self):
         import openpathsampling as paths
@@ -203,7 +195,7 @@ class DynamicsEngine(StorableNamedObject):
         when you hit a stop condition."""
         pass
 
-    def stop_conditions(self, trajectory, continue_conditions=None, 
+    def stop_conditions(self, trajectory, continue_conditions=None,
                         trusted=True):
         """
         Test whether we can continue; called by generate a couple of times,
@@ -228,7 +220,6 @@ class DynamicsEngine(StorableNamedObject):
                 can_continue = condition(trajectory, trusted)
                 stop = stop or not can_continue
         return stop
-
 
     def generate_forward(self, snapshot, ensemble):
         """
@@ -303,9 +294,9 @@ class DynamicsEngine(StorableNamedObject):
                                     trusted=False)
 
         logger.info("Starting trajectory")
-        log_freq = 10 # TODO: set this from a singleton class
+        log_freq = 10  # TODO: set this from a singleton class
         while stop == False:
-            if self.options.get('n_frames_max', None) is not None :
+            if self.options.get('n_frames_max', None) is not None:
                 if len(trajectory) >= self.options['n_frames_max']:
                     break
 
@@ -337,7 +328,6 @@ class DynamicsEngine(StorableNamedObject):
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
 
-
     def generate_n_frames(self, n_frames=1):
         """Generates n_frames, from but not including the current snapshot.
         
@@ -357,10 +347,9 @@ class DynamicsEngine(StorableNamedObject):
         """
         self.start()
         traj = Trajectory([self.generate_next_frame()
-                                 for i in range(n_frames)])
+                           for i in range(n_frames)])
         self.stop(traj)
         return traj
-        
 
     @classmethod
     def check_snapshot_type(cls, snapshot):
@@ -370,3 +359,15 @@ class DynamicsEngine(StorableNamedObject):
                  'You are using "%s". Make sure that this is intended.') %
                 (cls.base_snapshot_type.__name__, snapshot.__class__.__name__)
             )
+
+
+class TopologyEngine(DynamicsEngine):
+
+    _default_options = {}
+
+    def __init__(self, topology):
+        super(TopologyEngine, self).__init__()
+        self.topology = topology
+
+    def generate_next_frame(self):
+        pass

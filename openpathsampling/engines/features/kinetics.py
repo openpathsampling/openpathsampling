@@ -1,4 +1,5 @@
 from shared import KineticContainerStore
+from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['kinetics', 'is_reversed']
 lazy = ['kinetics']
@@ -8,7 +9,9 @@ dimensions = ['atom', 'spatial']
 
 
 def netcdfplus_init(store):
-    store.storage.create_store('kinetics', KineticContainerStore())
+    kinetic_store = KineticContainerStore()
+    kinetic_store.set_caching(WeakLRUCache(10000))
+    store.storage.create_store('kinetics', kinetic_store)
 
     store.create_variable('kinetics', 'lazyobj.kinetics',
                         description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",

@@ -137,8 +137,8 @@ class CodeContext(object):
 
 FeatureTuple = namedtuple(
         'FeatureTuple', 'classes variables properties functions required lazy ' +
-                        'numpy reversal minus flip exclude_copy imports debug ' +
-                        'storables dimensions'
+                        'numpy reversal minus flip exclude_copy imports debug storables ' +
+                        'dimensions'
     )
 
 
@@ -274,8 +274,8 @@ def attach_features(features, use_lazy_reversed=False):
                     setattr(cls, prop, getattr(feature, prop))
 
             # copy specific attribute types
-            for name in ['variables', 'minus', 'lazy', 'flip', 'numpy', 'required',
-                         'imports', 'functions', 'storables', 'dimensions']:
+            for name in ['variables', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports',
+                         'functions', 'storables', 'dimensions']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:

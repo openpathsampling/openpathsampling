@@ -5,4 +5,4 @@ from topology import Topology
 
 import features
 
-from dynamics_engine import DynamicsEngine
+from dynamics_engine import DynamicsEngine, TopologyEngine

@@ -12,7 +12,7 @@ import features
     features.velocities,
     features.coordinates,
     features.box_vectors,
-    features.topology
+    features.engine
 ])
 class MDSnapshot(BaseSnapshot):
     """
@@ -27,7 +27,7 @@ class MDSnapshot(BaseSnapshot):
 #         features.velocities,
 #         features.coordinates,
 #         features.box_vectors,
-#         features.topology
+#         features.engine
 #     ],
 #     description="A fast MDSnapshot",
 #     base_class=BaseSnapshot
@@ -37,7 +37,7 @@ class MDSnapshot(BaseSnapshot):
 @features.base.attach_features([
     features.statics,
     features.kinetics,
-    features.topology  # for compatibility
+    features.engine
 ])
 class Snapshot(BaseSnapshot):
     """
@@ -48,7 +48,7 @@ class Snapshot(BaseSnapshot):
     KineticContainer = features.KineticContainer
 
     @staticmethod
-    def construct(coordinates=None, box_vectors=None, velocities=None, topology=None):
+    def construct(coordinates=None, box_vectors=None, velocities=None, engine=None):
         """
         Construct a new snapshot from numpy arrays
 
@@ -72,4 +72,8 @@ class Snapshot(BaseSnapshot):
         statics = Snapshot.StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
         kinetics = Snapshot.KineticContainer(velocities=velocities)
 
-        return Snapshot(topology=topology, statics=statics, kinetics=kinetics)
+        return Snapshot(engine=engine, statics=statics, kinetics=kinetics)
+
+    @property
+    def topology(self):
+        return self.engine.topology

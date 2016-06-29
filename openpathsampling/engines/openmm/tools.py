@@ -4,9 +4,46 @@ import simtk.unit as u
 
 from snapshot import Snapshot
 from topology import Topology, MDTrajTopology
-from openpathsampling.engines import Trajectory
+from openpathsampling.engines import Trajectory, DynamicsEngine, TopologyEngine
 
 __author__ = 'Jan-Hendrik Prinz'
+
+
+class FileEngine(TopologyEngine):
+
+    _default_options = {}
+
+    def __init__(self, topology, filename):
+        super(FileEngine, self).__init__(
+            topology=topology
+        )
+
+        self.filename = filename
+
+    def to_dict(self):
+        return {
+            'topology': self.topology,
+            'filename': self.filename
+        }
+
+
+class OpenMMToolsTestsystemEngine(TopologyEngine):
+
+    _default_options = {}
+
+    def __init__(self, topology, testsystem_name):
+
+        super(OpenMMToolsTestsystemEngine, self).__init__(
+            topology=topology
+        )
+
+        self.testsystem_name = testsystem_name
+
+    def to_dict(self):
+        return {
+            'topology': self.topology,
+            'testsystem_name': self.testsystem_name
+        }
 
 
 def snapshot_from_pdb(pdb_file, simple_topology=False):
@@ -36,10 +73,35 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
         velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
-        topology=topology
+        engine=FileEngine(topology, pdb_file)
     )
 
     return snapshot
+
+
+def topology_from_pdb(pdb_file, simple_topology=False):
+    """
+    Construct a Topology from the first frame in a pdb file without velocities
+
+    Parameters
+    ----------
+    pdb_file : str
+        The filename of the .pdb file to be used
+
+    Returns
+    -------
+    :class:`openpathsampling.engines.Snapshot`
+        the constructed Snapshot
+
+    """
+    pdb = md.load(pdb_file)
+
+    if simple_topology:
+        topology = Topology(*pdb.xyz[0].shape)
+    else:
+        topology = MDTrajTopology(pdb.topology)
+
+    return topology
 
 
 def snapshot_from_testsystem(testsystem, simple_topology=False):
@@ -48,7 +110,7 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
 
     Parameters
     ----------
-    omm_topology : openmm.Topology
+    testsystem : openmmtools.Topology
         The filename of the .pdb file to be used
 
     Returns
@@ -73,7 +135,7 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
         coordinates=testsystem.positions,
         box_vectors=box_vectors,
         velocities=velocities,
-        topology=topology
+        engine=OpenMMToolsTestsystemEngine(topology, testsystem.name)
     )
 
     return snapshot
@@ -103,6 +165,8 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     else:
         topology = MDTrajTopology(mdtrajectory.topology)
 
+    engine = TopologyEngine(topology)
+
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
@@ -120,7 +184,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
         snap = Snapshot(
             statics=statics,
             kinetics=empty_kinetics,
-            topology=topology
+            engine=engine
         )
         trajectory.append(snap)
 
@@ -156,7 +220,7 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
         velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
-        engine=engine
+        engine=TopologyEngine(topology)
     )
 
     return snapshot

@@ -95,7 +95,6 @@ class DistributedUUIDStorage(object):
         """
         self.storages = []
 
-        self.template = None
         self.main_storage = None
         self.stores = {}
 
@@ -119,14 +118,13 @@ class DistributedUUIDStorage(object):
         if not hasattr(storage, 'use_uuid'):
             raise RuntimeError('The storage to be added does not use UUIDs!')
 
-        if self.template is None:
-            self.template = storage.template
-        else:
-            if storage.template.__uuid__ != self.template.__uuid__:
-                raise RuntimeWarning(
-                    'The storage to be added uses a different template snapshot! It is NOT '
-                    'recommended to join these storages'
-                )
+        # if self.snapshots.snapshot_class is not storage.snapshots.snapshot_class or \
+        #         self.snapshots.snapshot_dimensions != storage.snapshots.snapshot_dimensions:
+        #     if storage.template.__uuid__ != self.template.__uuid__:
+        #         raise RuntimeWarning(
+        #             'The storage to be added uses a different template snapshot! It is NOT '
+        #             'recommended to join these storages'
+        #         )
 
         for store in storage.stores:
             name = store.name

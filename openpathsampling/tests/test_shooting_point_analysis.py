@@ -92,12 +92,13 @@ class testShootingPointAnalysis(object):
         import openpathsampling.engines.toy as toys
         pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        engine = peng.TopologyEngine(topology)
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
-                                   topology=topology)
+                                   engine=engine)
         self.snap1 = toys.Snapshot(coordinates=np.array([[0.1]]),
                                    velocities=np.array([[1.0]]),
-                                   topology=topology)
+                                   engine=engine)
         integrator = toys.LeapfrogVerletIntegrator(0.1)
         options = {
             'integ': integrator,
