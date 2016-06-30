@@ -537,12 +537,20 @@ class MISTISNetwork(TISNetwork):
         The distinction between the three types of transitions in the object
         are a bit subtle, but important. The `input_transitions` are, of
         course, the transitions given in the input. These are A->B
-        transitions. The `sampling_transitions` are what are used in
-        sampling. These are A->any transitions. Finally, the 
+        transitions, but would allow any other state. The
+        `sampling_transitions` are what are used in sampling. These are
+        A->any transitions if strict sampling is off, or "A->B & not_others"
+        if strict sampling is on. Finally, the regular `transitions` are the
+        transitions that are used for analysis (use the sampling ensembles
+        for the interfaces, but also A->B).
 
     Parameters
     ----------
     trans_info : list of tuple
+        Details of each interface set. 4-tuple in the order (initial_state,
+        interfaces, orderparameter, final_state) where initial_state and
+        final_state are Volumes, interfaces is a list of Volumes, and
+        orderparameter is a CollectiveVariable
     strict_sampling : bool
         whether the final state from the tuple is the *only* allowed final
         state in the sampling; default False

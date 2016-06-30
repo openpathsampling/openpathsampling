@@ -77,6 +77,10 @@ class testMultipleStateTIS(object):
             coordinates=[0.52, 0.22, -0.22, -0.52],
             velocities=[1.0]*4
         )
+        self.traj['ABC'] = make_1d_traj(
+            coordinates=[-0.52, -0.22, 0.0, 0.22, 0.52],
+            velocities=[1.0]*5
+        )
 
 class testMSTISNetwork(testMultipleStateTIS):
     def setup(self):
@@ -178,11 +182,13 @@ class testMISTISNetwork(testMultipleStateTIS):
         assert_equal(fromA_0(self.traj['AC']), True)
         assert_equal(fromA_0(self.traj['BB']), False)
         assert_equal(fromA_0(self.traj['CB']), False)
+        assert_equal(fromA_0(self.traj['ABC']), False)
         assert_equal(fromA_1(self.traj['AA']), True)
         assert_equal(fromA_1(self.traj['AB']), True)
         assert_equal(fromA_1(self.traj['AC']), True)
         assert_equal(fromA_1(self.traj['CB']), False)
         assert_equal(fromA_1(self.traj['CB']), False)
+        assert_equal(fromA_1(self.traj['ABC']), False)
         assert_equal(fromB_0(self.traj['BA']), True)
         assert_equal(fromB_0(self.traj['BB']), True)
         assert_equal(fromB_0(self.traj['BB']), True)
@@ -212,11 +218,13 @@ class testMISTISNetwork(testMultipleStateTIS):
         assert_equal(ensAB(self.traj['AC']), False)
         assert_equal(ensAB(self.traj['BB']), False)
         assert_equal(ensAB(self.traj['BC']), False)
+        assert_equal(ensAB(self.traj['ABC']), False)
         assert_equal(ensAC(self.traj['AA']), True)
         assert_equal(ensAC(self.traj['AC']), True)
         assert_equal(ensAC(self.traj['AB']), False)
         assert_equal(ensAC(self.traj['BB']), False)
         assert_equal(ensAC(self.traj['BC']), False)
+        assert_equal(ensAC(self.traj['ABC']), False)
         assert_equal(ensBA(self.traj['BB']), True)
         assert_equal(ensBA(self.traj['BA']), True)
         assert_equal(ensBA(self.traj['BC']), False)
@@ -224,7 +232,23 @@ class testMISTISNetwork(testMultipleStateTIS):
         assert_equal(ensBA(self.traj['AC']), False)
 
     def test_storage(self):
-        raise SkipTest
+        import os
+        fname = data_filename("mistis_storage_test.nc")
+        if os.path.isfile(fname):
+            os.remove(fname)
+        template = self.traj['AA'][0]
+        storage_w = paths.Storage(fname, "w", template)
+        storage_w.save(self.mistis)
+        storage_w.sync_all()
+
+        storage_r = paths.AnalysisStorage(fname)
+        reloaded = storage_r.networks[0]
+        assert_equal(reloaded.strict_sampling, False)
+        assert_equal(reloaded.sampling_transitions[0].ensembles[0],
+                     self.mistis.sampling_transitions[0].ensembles[0])
+
+        if os.path.isfile(fname):
+            os.remove(fname)
 
 
 class testTPSNetwork(object):
