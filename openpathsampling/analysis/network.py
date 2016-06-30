@@ -291,7 +291,7 @@ class TISNetwork(TransitionNetwork):
 #def join_mis_minus(minuses):
     #pass
 
-#def msouter_state_switching(mstis, storage):
+#def msouter_state_switching(mstis, steps):
 
 class MSTISNetwork(TISNetwork):
     """
@@ -466,14 +466,14 @@ class MSTISNetwork(TISNetwork):
         return mystr
 
 
-    def rate_matrix(self, storage, force=False):
+    def rate_matrix(self, steps, force=False):
         """
         Calculate the matrix of all rates.
 
         Parameters
         ----------
-        storage : Storage
-            object containing storage to be analyzed
+        steps : iterable of :class:`.MCStep`
+            steps to be analyzed
         force : bool (False)
             if True, cached results are overwritten
 
@@ -494,9 +494,9 @@ class MSTISNetwork(TISNetwork):
                 if trans_hist.hist_args == {}:
                     trans_hist.hist_args = self.hist_args[histname]
         
-            transition.total_crossing_probability(storage=storage,
+            transition.total_crossing_probability(steps=steps,
                                                   force=force)
-            transition.minus_move_flux(storage=storage, force=force)
+            transition.minus_move_flux(steps=steps, force=force)
             for stateB in self.from_state.keys():
                 if stateA != stateB:
                     analysis_trans = self.transitions[(stateA, stateB)]
@@ -504,7 +504,7 @@ class MSTISNetwork(TISNetwork):
 
 
         for trans in self.transitions.values():
-            rate = trans.rate(storage)
+            rate = trans.rate(steps)
             self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
             #print trans.stateA.name, trans.stateB.name, 
             #print rate
@@ -512,7 +512,7 @@ class MSTISNetwork(TISNetwork):
         return self._rate_matrix
 
 
-#def multiple_set_minus_switching(mistis, storage):
+#def multiple_set_minus_switching(mistis, steps):
 
 class MISTISNetwork(TISNetwork):
     """
@@ -703,7 +703,7 @@ class MISTISNetwork(TISNetwork):
             self.transitions[(stateA, stateB)] = analysis_trans
 
 
-    def rate_matrix(self, storage, force=False):
+    def rate_matrix(self, steps, force=False):
         self._rate_matrix = pd.DataFrame(columns=self.final_states,
                                          index=self.initial_states)
         for trans in self.transitions.values():
@@ -712,7 +712,7 @@ class MISTISNetwork(TISNetwork):
                 trans_hist = trans.ensemble_histogram_info[histname]
                 if trans_hist.hist_args == {}:
                     trans_hist.hist_args = self.hist_args[histname]
-            tcp = trans.total_crossing_probability(storage=storage,
+            tcp = trans.total_crossing_probability(steps=steps,
                                                    force=force)
             if trans._flux is None:
                 logger.warning("No flux for transition " + str(trans.name)
@@ -721,7 +721,7 @@ class MISTISNetwork(TISNetwork):
                 # we give NaN so we can calculate the condition transition
                 # probability automatically
 
-            rate = trans.rate(storage)
+            rate = trans.rate(steps)
             self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
 
         return self._rate_matrix
