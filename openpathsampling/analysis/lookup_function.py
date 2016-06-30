@@ -29,6 +29,14 @@ class LookupFunction(object):
         self.sorted_ordinates = np.array(sorted(self.pairs.keys()))
         self._values = np.array([self.pairs[x] for x in self.sorted_ordinates])
 
+    @classmethod
+    def from_dict(cls, dct):
+        x = dct.keys()
+        y = dct.values()
+        print x
+        print y
+        return cls(x, y)
+
     def keys(self):
         """
         Return the (ordered) list of ordinates
@@ -193,3 +201,20 @@ class LookupFunctionGroup(LookupFunction):
     
     def append(self, item):
         self.functions.append(item)
+
+
+class VoxelLookupFunction(object):
+    """Turn sparse histogram into a lookup function.
+
+    For any data point inside a voxel, return the sparse histogram value for
+    that voxel. If no such voxel, returns 0.0. No interpolation.
+    """
+    def __init__(self, left_bin_edges, bin_widths, counter):
+        self.left_bin_edges = left_bin_edges
+        self.bin_widths = bin_widths
+        self.counter = counter
+
+    def __call__(self, value):
+        val_bin = tuple(np.floor((value - self.left_bin_edges) /
+                                 self.bin_widths))
+        return self.counter[val_bin]

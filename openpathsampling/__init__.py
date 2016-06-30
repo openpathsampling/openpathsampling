@@ -11,6 +11,8 @@ from analysis.network import (
     FixedLengthTPSNetwork
 )
 
+from analysis.path_histogram import PathDensityHistogram
+
 from analysis.replica_network import (
     ReplicaNetwork, trace_ensembles_for_replica,
     trace_replicas_for_ensemble, condense_repeats,
