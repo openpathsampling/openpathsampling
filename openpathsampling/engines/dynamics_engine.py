@@ -11,7 +11,7 @@ import simtk.unit as u
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
-from snapshot import BaseSnapshot
+from snapshot import BaseSnapshot, SnapshotDescriptor
 from trajectory import Trajectory
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ class DynamicsEngine(StorableNamedObject):
 
     base_snapshot_type = BaseSnapshot
 
-    def __init__(self, options=None, snapshot_class=None, snapshot_dimensions=None, template=None):
+    def __init__(self, options=None, descriptor=None, template=None):
         """
         Create an empty DynamicsEngine object
 
@@ -70,19 +70,13 @@ class DynamicsEngine(StorableNamedObject):
 
         super(DynamicsEngine, self).__init__()
 
-        if snapshot_class is None:
-            snapshot_class = BaseSnapshot
-
-        self.snapshot_class = snapshot_class
-        self.snapshot_dimensions = snapshot_dimensions
-
+        self.descriptor = descriptor
         self._check_options(options)
 
     def to_dict(self):
         return {
             'options': self.options,
-            'snapshot_class': self.snapshot_class,
-            'snapshot_dimensions': self.snapshot_dimensions
+            'descriptor': self.descriptor
         }
 
     def _check_options(self, options=None):
@@ -361,13 +355,12 @@ class DynamicsEngine(StorableNamedObject):
             )
 
 
-class TopologyEngine(DynamicsEngine):
-
+class NoEngine(DynamicsEngine):
     _default_options = {}
 
-    def __init__(self, topology):
-        super(TopologyEngine, self).__init__()
-        self.topology = topology
+    def __init__(self, descriptor):
+        super(NoEngine, self).__init__()
+        self.descriptor = descriptor
 
     def generate_next_frame(self):
         pass

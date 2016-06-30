@@ -175,7 +175,6 @@ class StaticContainerStore(ObjectStore):
                            simtk_unit=u.nanometers
                            )
 
-
 # =============================================================================
 # SIMULATION MOMENTUM / VELOCITY
 # =============================================================================

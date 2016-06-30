@@ -15,11 +15,15 @@ def netcdfplus_init(store):
     static_store = StaticContainerStore()
     static_store.set_caching(WeakLRUCache(10000))
 
-    store.storage.create_store('statics', static_store)
+    name = store.prefix + 'statics'
+
+    static_store.set_dimension_prefix_store(store)
+
+    store.storage.create_store(name, static_store, False)
 
     store.create_variable(
         'statics',
-        'lazyobj.statics',
+        'lazyobj.' + name,
         description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
         chunksizes=(1,)
     )

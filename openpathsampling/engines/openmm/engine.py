@@ -4,7 +4,7 @@ import simtk.openmm
 import simtk.unit as u
 from simtk.openmm.app import Simulation
 
-from openpathsampling.engines import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import Snapshot
 
 logger = logging.getLogger(__name__)
@@ -69,10 +69,14 @@ class OpenMMEngine(DynamicsEngine):
             'spatial': topology.n_spatial
         }
 
+        descriptor = SnapshotDescriptor.construct(
+            Snapshot,
+            dimensions
+        )
+
         super(OpenMMEngine, self).__init__(
             options=options,
-            snapshot_class=Snapshot,
-            snapshot_dimensions=dimensions
+            descriptor=descriptor
         )
 
         if self.options['platform'] == 'fastest':

@@ -375,6 +375,9 @@ class CacheChainDict(ChainDict):
         return item in self.cache
 
     def _get(self, item):
+        if item is None:
+            return None
+
         try:
             return self.cache[item]
         except KeyError:

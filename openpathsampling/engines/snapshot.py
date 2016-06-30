@@ -142,3 +142,45 @@ def SnapshotFactory(name, features, description=None, use_lazy_reversed=False, b
     cls = feats.attach_features(features, use_lazy_reversed=use_lazy_reversed)(cls)
 
     return cls
+
+
+class SnapshotDescriptor(frozenset, StorableObject):
+    def __init__(self, contents):
+        StorableObject.__init__(self)
+        frozenset.__init__(contents)
+        self._dimensions = dict(self)
+        self._cls = self._dimensions['class']
+        del self._dimensions['class']
+
+    @property
+    def snapshot_class(self):
+        return self._cls
+
+    @property
+    def dimensions(self):
+        return self._dimensions
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls(dct.items())
+
+    def to_dict(self):
+        return dict(self)
+
+    @staticmethod
+    def construct(snapshot_class, snapshot_dimensions):
+        d = {'class': snapshot_class}
+
+        if set(snapshot_class.__features__.dimensions) > set(snapshot_dimensions.keys()):
+            raise RuntimeError(
+                'Snapshot of type %s needs %s as dimensions, you only provided %s' %
+                (
+                    snapshot_class.__class__.__name__,
+                    str(set(snapshot_class.__features__['dimensions'])),
+                    str(set(snapshot_dimensions.keys()))
+                )
+            )
+
+        d.update(snapshot_dimensions)
+
+        return SnapshotDescriptor(d.items())

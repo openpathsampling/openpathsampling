@@ -254,7 +254,9 @@ class NetCDFPlus(netCDF4.Dataset):
             self._create_simplifier()
 
             # create the store that holds stores
-            self.register_store('stores', NamedObjectStore(ObjectStore))
+            store_stores = NamedObjectStore(ObjectStore)
+            store_stores.name = 'stores'
+            self.register_store('stores', store_stores)
             self.stores.initialize()
             self.stores.set_caching(True)
             self.update_delegates()
@@ -349,7 +351,7 @@ class NetCDFPlus(netCDF4.Dataset):
         self.vars = dict()
         self.units = dict()
 
-    def create_store(self, name, store):
+    def create_store(self, name, store, register_attr=True):
         """
         Create a special variable type `obj.name` that can hold storable objects
 
@@ -361,7 +363,7 @@ class NetCDFPlus(netCDF4.Dataset):
             the store to be added to this storage
 
         """
-        self.register_store(name, store)
+        self.register_store(name, store, register_attr=register_attr)
         store.name = name
         self.stores.save(store)
 
@@ -647,6 +649,7 @@ class NetCDFPlus(netCDF4.Dataset):
         if dim_name not in self.dimensions:
             self.createDimension(dim_name, size)
 
+
     def cache_image(self):
         """
         Return an dict containing information about all caches
@@ -764,7 +767,9 @@ class NetCDFPlus(netCDF4.Dataset):
         to_uuid_chunks = lambda x: [x[i:i + 36] for i in range(0, len(x), 36)]
 
         if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
-            store = getattr(self, var_type.split('.')[1])
+            store_name = str(var_type.split('.')[1])
+            store = self._stores[store_name]
+
             base_type = store.content_class
 
             get_is_iterable = lambda v: \

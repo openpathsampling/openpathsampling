@@ -468,11 +468,13 @@ class FeatureSnapshotIndexedStore(BaseSnapshotIndexedStore):
         super(FeatureSnapshotIndexedStore, self).initialize()
 
         for dim, size in self._dimensions.iteritems():
-            self.storage.create_dimension(dim, size)
+            self.storage.create_dimension(self.prefix + dim, size)
 
         for feature in self.classes:
             if hasattr(feature, 'netcdfplus_init'):
                 feature.netcdfplus_init(self)
+
+        self.storage.sync()
 
 
 class SnapshotWrapperStore(ObjectStore):
@@ -485,12 +487,48 @@ class SnapshotWrapperStore(ObjectStore):
         self.type_list = {}
         self.cv_list = {}
 
+        self._treat_missing_snapshot_type = 'fail'
+
+
+    @property
+    def treat_missing_snapshot_type(self):
+        return self._treat_missing_snapshot_type
+
+    @treat_missing_snapshot_type.setter
+    def treat_missing_snapshot_type(self, value):
+        allowed = ['create', 'ignore', 'fail']
+        if value not in allowed:
+            raise ValueError('Only one of %s choices allowed.' % allowed)
+
+        self._treat_missing_snapshot_type = value
+
     def _load(self, idx):
         store = self.vars['store'][idx]
         return store[idx]
 
     def _save(self, obj, idx):
-        store = self.type_list[obj.engine.snapshot_type]
+        try:
+            store = self.type_list[obj.engine.descriptor]
+        except KeyError:
+            # Apparently there is no store yet to handle the given type of snapshot
+            if self.treat_missing_snapshot_type == 'create':
+                # we just create space for it
+                self.add_type(obj.engine.descriptor)
+            elif self.treat_missing_snapshot_type == 'ignore':
+                # we keep silent about it
+                pass
+            else:
+                # we fail with cannot store
+                raise RuntimeError(
+                    (
+                        'The store cannot hold snapshots of the given type : '
+                        'class "%s" and dimensions %s. Try adding the snapshot type '
+                        'using .add_type(snapshot).'
+                    ) % (
+                        obj.__class__.__name__,
+                        obj.engine.descriptor.dimensions
+                    )
+                )
         store[idx] = obj
 
     def initialize(self):
@@ -505,23 +543,29 @@ class SnapshotWrapperStore(ObjectStore):
         self.storage.create_variable('cv_cache', 'obj.stores', 'cv_cache')
 
     def add_type(self, descriptor):
+        if isinstance(descriptor, peng.BaseSnapshot):
+            descriptor = descriptor.engine.descriptor
+
         if descriptor in self.type_list:
-            return self.type_list[descriptor]
+            return 
 
         store = FeatureSnapshotIndexedStore(descriptor)
 
         store_idx = int(len(self.storage.dimensions['snapshot_type']))
         store_name = 'snapshot' + str(store_idx)
-
         self.storage.register_store(store_name, store, False)
-        self.type_list[store_idx] = descriptor
 
+        # this will tell the store to add its own prefix for dimension names
+        store.set_dimension_prefix_store(store)
+
+        store.name = store_name
+        self.storage.stores.save(store)
+
+        self.type_list[descriptor] = store
         self.storage.vars['snapshot_type'][store_idx] = store
 
         self.storage.finalize_stores()
         self.storage.update_delegates()
-
-        return store
 
     @staticmethod
     def _snapshot_store_name(idx):
@@ -539,26 +583,54 @@ class SnapshotWrapperStore(ObjectStore):
         for idx, store in enumerate(self.vars['snapshot_type']):
             self.type_list[store.descriptor] = store
 
+    def save(self, obj, idx=None):
+        if obj in self.index:
+            # has been saved so quit and do nothing
+            if not self.index[obj] == -1:
+                return self.reference(obj)
 
-class SnapshotDescriptor(frozenset, StorableObject):
-    def __init__(self, contents):
-        StorableObject.__init__(self)
-        frozenset.__init__(contents)
-        self._dimensions = dict(self)
-        self._cls = self._dimensions['class']
-        del self._dimensions['class']
+        if hasattr(obj, '_idx'):
+            if obj._store is self:
+                # is a proxy of a saved object so do nothing
+                return obj._idx
+            else:
+                # it is stored but not in this store so we try storing the
+                # full snapshot which might be still in cache or memory
+                # if that is not the case it will be stored again. This can
+                # happen when you load from one store save to another. And load
+                # again after some time while the cache has been changed and try
+                # to save again the loaded object. We will not explicitly store
+                # a table that matches objects between different storages.
+                return self.save(obj.__subject__)
 
-    @property
-    def snapshot_class(self):
-        return self._cls
+        if not isinstance(obj, self.content_class):
+            raise ValueError(
+                'This store can only store object of base type "%s". Given obj is of type "%s". You'
+                'might need to use another store.' % (self.content_class, obj.__class__.__name__)
+            )
 
-    @property
-    def dimensions(self):
-        return self._dimensions
+        n_idx = self.free()
 
-    @classmethod
-    def from_dict(cls, dct):
-        return cls(dct.items())
+        # mark as saved so circular dependencies will not result in infinite loops
+        self.index[obj] = n_idx
 
-    def to_dict(self):
-        return dict(self)
+        # make sure in nested saving that an IDX is not used twice!
+        self.reserve_idx(n_idx)
+
+        try:
+            self._save(obj, n_idx)
+
+            # store the name in the cache
+            if hasattr(self, 'cache'):
+                self.cache[n_idx] = obj
+
+        except:
+            # in case we did not succeed remove the mark as being saved
+            del self.index[obj]
+            self.release_idx(n_idx)
+            raise
+
+        self.release_idx(n_idx)
+        self._set_id(n_idx, obj)
+
+        return self.reference(obj)

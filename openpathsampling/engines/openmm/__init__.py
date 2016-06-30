@@ -10,3 +10,4 @@ from tools import (
 import features
 
 from snapshot import Snapshot, MDSnapshot
+from openpathsampling.engines import NoEngine, SnapshotDescriptor

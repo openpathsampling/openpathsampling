@@ -4,9 +4,34 @@ import simtk.unit as u
 
 from snapshot import Snapshot
 from topology import Topology, MDTrajTopology
-from openpathsampling.engines import Trajectory, DynamicsEngine, TopologyEngine
+from openpathsampling.engines import Trajectory, DynamicsEngine, NoEngine, SnapshotDescriptor
 
 __author__ = 'Jan-Hendrik Prinz'
+
+
+class TopologyEngine(NoEngine):
+    _default_options = {}
+
+    def __init__(self, topology):
+
+        descriptor = SnapshotDescriptor.construct(
+            Snapshot,
+            {
+                'atom': topology.n_atoms,
+                'spatial': topology.n_spatial
+            }
+        )
+
+        super(NoEngine, self).__init__(
+            descriptor=descriptor
+        )
+
+        self.topology = topology
+
+    def to_dict(self):
+        return {
+            'topology': self.topology,
+        }
 
 
 class FileEngine(TopologyEngine):

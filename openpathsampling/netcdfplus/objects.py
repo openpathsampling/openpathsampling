@@ -140,6 +140,9 @@ class ObjectStore(StorableNamedObject):
         self.nestable = nestable
         self._created = False
 
+        # This will not be stored since its information is contained in the dimension names
+        self._dimension_prefix_store = None
+
         self.variables = dict()
         self.vars = dict()
         self.units = dict()
@@ -527,6 +530,7 @@ class ObjectStore(StorableNamedObject):
         creates an index dimension with the name of the object.
         """
         # define dimensions used for the specific object
+
         self.storage.create_dimension(self.prefix, 0)
 
         if self.json:
@@ -615,6 +619,16 @@ class ObjectStore(StorableNamedObject):
         elif chunksizes is not None and dimensions[-1] != '...' and len(dimensions) == len(chunksizes) + 1:
             chunksizes = tuple([1] + list(chunksizes))
 
+        if self.dimension_prefix:
+            dimensions = tuple(
+                [dimensions[0]] +
+                [self.dimension_prefix + dim if type(dim) is str and dim != '...' else dim for dim in dimensions[1:]]
+            )
+            chunksizes = tuple(
+                [chunksizes[0]] +
+                [self.dimension_prefix + chs if type(chs) is str else chs for chs in chunksizes[1:]]
+            )
+
         self.storage.create_variable(
             self.prefix + '_' + name,
             var_type=var_type,
@@ -622,6 +636,29 @@ class ObjectStore(StorableNamedObject):
             chunksizes=chunksizes,
             **kwargs
         )
+
+    @property
+    def dimension_prefix(self):
+        if self._dimension_prefix_store is not None:
+            return self._dimension_prefix_store.prefix
+        else:
+            return ''
+
+    def set_dimension_prefix_store(self, prefix_store=None):
+        """
+        Select which store or none should be used to prefix dimension names
+
+        If you want to create multiple instances of a store and these should have
+        differently long dimensions you need unique names for these. This way you can
+        select a store and the dimensions will be prefixed with the stores prefix
+
+        Parameters
+        ----------
+        prefix_store : :obj:`openpathsampling.netcdf.ObjectStore`
+            the store from which to use its prefix / name to prefix dimension names
+
+        """
+        self._dimension_prefix_store = prefix_store
 
     # =============================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
@@ -720,7 +757,7 @@ class ObjectStore(StorableNamedObject):
         """
 
         if obj not in self.index:
-            self.index[obj] = -1
+            self.index[obj] = -2
 
     def forget(self, obj):
         """
@@ -736,7 +773,7 @@ class ObjectStore(StorableNamedObject):
         """
 
         if obj in self.index:
-            if self.index[obj] < 0:
+            if self.index[obj] == -2:
                 del self.index[obj]
 
     def save(self, obj, idx=None):
@@ -759,7 +796,10 @@ class ObjectStore(StorableNamedObject):
 
         if obj in self.index:
             # has been saved so quit and do nothing
-            return self.reference(obj)
+            if not self.index[obj] == -1:
+                return self.reference(obj)
+
+            # numbers other than -1 are reserved for other things
 
         if hasattr(obj, '_idx'):
             if obj._store is self:
@@ -781,10 +821,7 @@ class ObjectStore(StorableNamedObject):
                 'might need to use another store.' % (self.content_class, obj.__class__.__name__)
             )
 
-        if idx is None:
-            n_idx = self.free()
-        else:
-            raise ValueError('Unsupported index type (only None allowed).')
+        n_idx = self.free()
 
         # mark as saved so circular dependencies will not result in infinite loops
         self.index[obj] = n_idx
@@ -1066,6 +1103,7 @@ class NamedObjectStore(ObjectStore):
 
         if obj is not None:
             n_idx = self.index[obj]
+            v = self.storage.variables[self.prefix + '_name']
             setattr(obj, '_name',
                     self.storage.variables[self.prefix + '_name'][n_idx])
             # make sure that you cannot change the name of loaded objects
@@ -1576,6 +1614,9 @@ class IndexedObjectStore(ObjectStore):
 
         return obj
 
+    def create_int_index(self):
+        return dict()
+
     def save(self, obj, idx=None):
         """
         Saves an object to the storage.
@@ -1596,10 +1637,7 @@ class IndexedObjectStore(ObjectStore):
             # has been saved so quit and do nothing
             return idx
 
-        if idx is None:
-            n_idx = self.free()
-        else:
-            raise ValueError('Unsupported index type (only None allowed).')
+        n_idx = self.free()
 
         # mark as saved so circular dependencies will not result in infinite loops
         self.index[idx] = n_idx

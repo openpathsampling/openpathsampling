@@ -362,9 +362,7 @@ class ReversibleObjectDictStore(ObjectDictStore):
             return self.storage.snapshots.idx(idx)
 
 
-
 class KeyStore(ObjectStore):
-
     def __init__(self, cv):
         super(KeyStore, self).__init__(None)
 
@@ -373,7 +371,7 @@ class KeyStore(ObjectStore):
 
     @property
     def uuid_ref(self):
-        return self.storage.cvs._uuid_ref
+        return self.storage.snapshots.index
 
     def create_int_index(self):
         return dict()
