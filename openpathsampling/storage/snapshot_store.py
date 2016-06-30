@@ -485,6 +485,7 @@ class SnapshotWrapperStore(ObjectStore):
         super(SnapshotWrapperStore, self).__init__(peng.BaseSnapshot, json=False)
 
         self.type_list = {}
+        self.store_list = []
         self.cv_list = {}
 
         self._treat_missing_snapshot_type = 'fail'
@@ -508,15 +509,24 @@ class SnapshotWrapperStore(ObjectStore):
 
     def _save(self, obj, idx):
         try:
-            store = self.type_list[obj.engine.descriptor]
+            store, store_idx = self.type_list[obj.engine.descriptor]
+            store[idx] = obj
+            self.vars['store'][idx] = store_idx
+            return store
+
         except KeyError:
             # Apparently there is no store yet to handle the given type of snapshot
             if self.treat_missing_snapshot_type == 'create':
                 # we just create space for it
-                self.add_type(obj.engine.descriptor)
+                store, store_idx = self.add_type(obj.engine.descriptor)
+                store[idx] = obj
+                self.vars['store'][idx] = store_idx
+                return store
+
             elif self.treat_missing_snapshot_type == 'ignore':
                 # we keep silent about it
-                pass
+                self.vars['store'][idx] = -1
+                return None
             else:
                 # we fail with cannot store
                 raise RuntimeError(
@@ -529,29 +539,28 @@ class SnapshotWrapperStore(ObjectStore):
                         obj.engine.descriptor.dimensions
                     )
                 )
-        store[idx] = obj
 
     def initialize(self):
         super(SnapshotWrapperStore, self).initialize()
 
         self.create_variable('store', 'index')
 
-        self.storage.create_dimension('snapshot_type')
-        self.storage.create_dimension('cv_cache')
+        self.storage.create_dimension('snapshottype')
+        self.storage.create_dimension('cvcache')
 
-        self.storage.create_variable('snapshot_type', 'obj.stores', 'snapshot_type')
-        self.storage.create_variable('cv_cache', 'obj.stores', 'cv_cache')
+        self.storage.create_variable('snapshottype', 'obj.stores', 'snapshottype')
+        self.storage.create_variable('cvcache', 'obj.stores', 'cvcache')
 
     def add_type(self, descriptor):
         if isinstance(descriptor, peng.BaseSnapshot):
             descriptor = descriptor.engine.descriptor
 
         if descriptor in self.type_list:
-            return 
+            return self.type_list[descriptor]
 
         store = FeatureSnapshotIndexedStore(descriptor)
 
-        store_idx = int(len(self.storage.dimensions['snapshot_type']))
+        store_idx = int(len(self.storage.dimensions['snapshottype']))
         store_name = 'snapshot' + str(store_idx)
         self.storage.register_store(store_name, store, False)
 
@@ -561,11 +570,14 @@ class SnapshotWrapperStore(ObjectStore):
         store.name = store_name
         self.storage.stores.save(store)
 
-        self.type_list[descriptor] = store
-        self.storage.vars['snapshot_type'][store_idx] = store
+        self.type_list[descriptor] = (store, store_idx)
+        self.store_list.append(store)
+        self.storage.vars['snapshottype'][store_idx] = store
 
         self.storage.finalize_stores()
         self.storage.update_delegates()
+
+        return store
 
     @staticmethod
     def _snapshot_store_name(idx):
@@ -580,28 +592,87 @@ class SnapshotWrapperStore(ObjectStore):
         return description
 
     def restore(self):
-        for idx, store in enumerate(self.vars['snapshot_type']):
-            self.type_list[store.descriptor] = store
+        for idx, store in enumerate(self.vars['snapshottype']):
+            self.type_list[store.descriptor] = (store, idx)
+            self.store_list.append(store)
 
     def save(self, obj, idx=None):
-        if obj in self.index:
-            # has been saved so quit and do nothing
-            if not self.index[obj] == -1:
-                return self.reference(obj)
+        # Cases to cover
+        # A. uuid
+        # 1. uuid not in self.index and ruuid not in self.index -> save
+        # 2. uuid not in self.index and ruuid in self.index but not in store.index -> save
+        # 3. uuid in self.index but not in store.index -> save
+        # 4. uuid in self.index and in store.index -> return
+        # 5. uuid not in self.index but ruuid in self.index and in store.index -> return
+        # B. int
+        # 1. obj not in self.index and obj._reversed not in self.index -> save
+        # 2. obj not in self.index and obj._reversed in self.index but not in store.index -> save
+        # 3. obj in self.index but not in store.index -> save
+        # 4. obj in self.index and in store.index -> return
+        # 5. obj not in self.index but obj._reversed in self.index and in store.index -> return
+        if self.reference_by_uuid:
 
-        if hasattr(obj, '_idx'):
-            if obj._store is self:
-                # is a proxy of a saved object so do nothing
-                return obj._idx
-            else:
-                # it is stored but not in this store so we try storing the
-                # full snapshot which might be still in cache or memory
-                # if that is not the case it will be stored again. This can
-                # happen when you load from one store save to another. And load
-                # again after some time while the cache has been changed and try
-                # to save again the loaded object. We will not explicitly store
-                # a table that matches objects between different storages.
-                return self.save(obj.__subject__)
+            if obj in self.index:
+                # has could have been saved
+                s_idx = self.index[obj]
+                store_idx = self.variables['store'][s_idx]
+
+                if not store_idx  == -1:
+                    # let's see if the store has it stored
+                    store = self.store_list[store_idx]
+                    if s_idx in store.index:
+                        # found it so return the correct reference
+                        return self.reference(obj)
+                    elif:
+
+                else:
+                    # if set to -1 then only an empty snapshot has been saved for CV purposes, etc
+                    pass
+
+            if hasattr(obj, '_idx'):
+                if obj._store is self:
+                    # is a proxy of a saved object so do nothing
+                    return obj._idx
+                else:
+                    # it is stored but not in this store so we try storing the
+                    # full snapshot which might be still in cache or memory
+                    # if that is not the case it will be stored again. This can
+                    # happen when you load from one store save to another. And load
+                    # again after some time while the cache has been changed and try
+                    # to save again the loaded object. We will not explicitly store
+                    # a table that matches objects between different storages.
+                    return self.save(obj.__subject__)
+        else:
+            if obj in self.index:
+                # has could have been saved
+                s_idx = self.index[obj]
+                store_idx = self.variables['store'][s_idx]
+
+                if not store_idx  == -1:
+                    # let's see if the store has it stored
+                    store = self.store_list[store_idx]
+                    if s_idx in store.index:
+                        # found it so return the correct reference
+                        return self.reference(obj)
+                    elif
+
+                else:
+                    # if set to -1 then only an empty snapshot has been saved for CV purposes, etc
+                    pass
+
+            if hasattr(obj, '_idx'):
+                if obj._store is self:
+                    # is a proxy of a saved object so do nothing
+                    return obj._idx
+                else:
+                    # it is stored but not in this store so we try storing the
+                    # full snapshot which might be still in cache or memory
+                    # if that is not the case it will be stored again. This can
+                    # happen when you load from one store save to another. And load
+                    # again after some time while the cache has been changed and try
+                    # to save again the loaded object. We will not explicitly store
+                    # a table that matches objects between different storages.
+                    return self.save(obj.__subject__)
 
         if not isinstance(obj, self.content_class):
             raise ValueError(
@@ -618,7 +689,7 @@ class SnapshotWrapperStore(ObjectStore):
         self.reserve_idx(n_idx)
 
         try:
-            self._save(obj, n_idx)
+            store = self._save(obj, n_idx)
 
             # store the name in the cache
             if hasattr(self, 'cache'):

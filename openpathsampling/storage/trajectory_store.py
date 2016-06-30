@@ -11,11 +11,11 @@ class TrajectoryStore(ObjectStore):
 
     def _save(self, trajectory, idx):
         self.vars['snapshots'][idx] = trajectory
-        snapshot_store = self.storage.snapshots
+        store = self.storage.snapshots
 
         for frame, snapshot in enumerate(trajectory.iter_proxies()):
             if type(snapshot) is not LoaderProxy:
-                loader = snapshot_store.proxy(snapshot)
+                loader = store.proxy(snapshot)
                 trajectory[frame] = loader
 
     def _load(self, idx):

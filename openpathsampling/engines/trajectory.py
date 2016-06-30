@@ -209,7 +209,7 @@ class Trajectory(list, StorableObject):
             return []
 
     @property
-    def spatial(self):
+    def n_spatial(self):
         if self.topology is None:
             n_spatial = self[0].coordinates.shape[1]
         else:

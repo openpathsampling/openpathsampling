@@ -7,6 +7,7 @@ import chaindict as cd
 from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache, ObjectJSON, create_to_dict
 
 import openpathsampling.engines as peng
+from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
     """
@@ -523,7 +524,7 @@ class CV_MDTraj_Function(CV_Function):
     def _eval(self, items):
         trajectory = peng.Trajectory(items)
 
-        t = trajectory.md()
+        t = trajectory_to_mdtraj(trajectory)
         return self.cv_callable(t, **self.kwargs)
 
     @property
@@ -602,7 +603,7 @@ class CV_MSMB_Featurizer(CV_Generator):
         trajectory = peng.Trajectory(items)
 
         # create an MDtraj trajectory out of it
-        ptraj = trajectory.md()
+        ptraj = trajectory_to_mdtraj(trajectory)
 
         # run the featurizer
         return self._instance.partial_transform(ptraj)
@@ -694,7 +695,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
     def _eval(self, items):
         trajectory = peng.Trajectory(items)
 
-        t = trajectory.md(self.topology.md)
+        t = trajectory_to_mdtraj(trajectory, self.topology.md())
         return self._instance.transform(t)
 
     def to_dict(self):
