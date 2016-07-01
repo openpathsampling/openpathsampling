@@ -310,7 +310,7 @@ class NetCDFPlus(netCDF4.Dataset):
             if current > 1024:
                 output_prefix = prefix
                 current /= 1024.0
-        return "{0:.2f}{1}B".format(current, prefix)
+        return "{0:.2f}{1}B".format(current, output_prefix)
 
     def _setup_class(self):
         """
