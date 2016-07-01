@@ -91,8 +91,9 @@ class testPathHistogram(object):
                              bin_widths=(0.5, 0.5),
                              interpolate=True, per_traj=False)
         hist.add_trajectory(traj)
-        # TODO: add asserts
-        raise SkipTest
+        assert_equal(len(hist._histogram.keys()), 2)
+        assert_equal(hist._histogram[(0,0)], 3)
+        assert_equal(hist._histogram[(0,1)], 1)
 
     def test_add_with_weight(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0), 

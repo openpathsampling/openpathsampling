@@ -58,7 +58,7 @@ class PathHistogram(SparseHistogram):
         manhattan_distance = sum(abs_dx)
         bin_list = [new_bin]
         # if the manhattan_distance is 1, we're adjacent
-        if manhattan_distance == 1:
+        if manhattan_distance <= 1:
             return bin_list
         # otherwise, use one of the interpolation algos to find bins
         if self.interpolate == "subdivide":
@@ -108,7 +108,7 @@ class PathHistogram(SparseHistogram):
 
         # how much work we have to do depends on what's already adjacent
         if start_bin == end_bin:
-            return end_bin
+            return [end_bin]
         elif manhattan_dist_start == 1 and manhattan_dist_end == 1:
             return [start_bin, mid_bin, end_bin]
         # if we're in the same bin, only have one direction to go
