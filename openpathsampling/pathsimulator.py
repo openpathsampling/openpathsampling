@@ -349,8 +349,8 @@ class FullBootstrapping(PathSimulator):
     calc_name = "FullBootstrapping"
 
     def __init__(self, transition, snapshot, storage=None, engine=None,
-                 extra_interfaces=None, forbidden_states=None,
-                 initial_max_length=None):
+                 extra_interfaces=None, extra_ensembles=None,
+                 forbidden_states=None, initial_max_length=None):
         super(FullBootstrapping, self).__init__(storage)
         self.engine = engine
         paths.EngineMover.default_engine = engine  # set the default
@@ -383,11 +383,13 @@ class FullBootstrapping(PathSimulator):
                 self.first_traj_ensemble
             )
 
+        if extra_ensembles is None:
+            extra_ensembles = []
         self.extra_ensembles = [
             paths.TISEnsemble(transition.stateA, transition.stateB, iface,
                               transition.orderparameter)
             for iface in extra_interfaces
-        ]
+        ] + extra_ensembles
 
         self.transition_shooters = [
             paths.OneWayShootingMover(selector=paths.UniformSelector(), 
