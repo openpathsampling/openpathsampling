@@ -19,7 +19,8 @@ class Cache(object):
         return '%s(%d/%d of %s/%s)' % (
             self.__class__.__name__,
             size[0], size[1],
-            'Inf' if maximum[0] < 0 else str(maximum[0]), 'Inf' if maximum[1] < 0 else str(maximum[1])
+            'Inf' if maximum[0] < 0 else str(maximum[0]),
+            'Inf' if maximum[1] < 0 else str(maximum[1])
         )
 
     def __getitem__(self, item):
@@ -323,3 +324,145 @@ class WeakKeyCache(weakref.WeakKeyDictionary, Cache):
     @property
     def size(self):
         return 0, -1
+
+
+class LRUChunkLoadingCache(Cache):
+    """
+    Implements a cache that keeps weak references to all elements
+
+    In addition it uses a simple Least Recently Used Cache to make sure a portion
+    of the last used elements are still present. Usually this number is 100.
+
+    """
+
+    def __init__(self, chunksize=100, max_chunks=100, variable=None):
+
+        super(LRUChunkLoadingCache, self).__init__()
+        self.max_chunks = max_chunks
+        self.chunksize = chunksize
+        self.variable = variable
+
+        self._chunkdict = OrderedDict()
+        self._firstchunk = 0
+        self._lastchunk = []
+        if variable is not None:
+            self._size = len(self.variable)
+        else:
+            self._size = 0
+
+        self._lastchunk_idx = self._size / self.chunksize
+
+    @property
+    def count(self):
+        return sum(map(len, self._chunkdict)), 0
+
+    @property
+    def size(self):
+        return self.max_chunks * self.chunksize, 0
+
+    def clear(self):
+        self._chunkdict.clear()
+
+    def load_chunk(self, chunk_idx):
+        if chunk_idx >= self._lastchunk_idx:
+            self._size = len(self.variable)
+            self._lastchunk_idx = self._size / self.chunksize
+
+        if chunk_idx < self._lastchunk_idx:
+            if chunk_idx not in self._chunkdict:
+                # chunk not cached, load full
+                left = chunk_idx * self.chunksize
+                right = min(len(self.variable), left + self.chunksize)
+                self._chunkdict[chunk_idx] = self.variable[left:right]
+
+                self._check_size_limit()
+
+            elif len(self._chunkdict[chunk_idx]) < self.chunksize:
+                # incomplete chunk, load rest
+                chunk = self._chunkdict[chunk_idx]
+
+                left = chunk_idx * self.chunksize + len(chunk)
+                right = min(len(self.variable), (chunk_idx + 1) * self.chunksize)
+
+                if right > left:
+                    chunk.append(self.variable[left:right])
+
+    def _update_chunk_order(self, chunk_idx):
+        if chunk_idx != self._firstchunk:
+            chunk = self._chunkdict.popitem(last=False)
+            self._chunkdict[chunk_idx] = chunk
+            self._firstchunk = chunk_idx
+
+    def __getitem__(self, item):
+        chunksize = self.chunksize
+        chunk_idx = item / chunksize
+        if chunk_idx in self._chunkdict:
+            try:
+                obj = self._chunkdict[chunk_idx][item % chunksize]
+                self._update_chunk_order(chunk_idx)
+                return obj
+            except KeyError:
+                pass
+
+        self.load_chunk(chunk_idx)
+
+        return self._chunkdict[chunk_idx][item % chunksize]
+
+    def load_max(self):
+        map(self.load_chunk,
+            range(0, min(1 + (len(self.variable) - 1) / self.chunksize, self.max_chunks)))
+
+    def __setitem__(self, key, value, **kwargs):
+        chunk_idx = key / self.chunksize
+        chunk = self._chunkdict.get(chunk_idx, [])
+
+        left = chunk_idx * self.chunksize + len(chunk)
+        right = key - 1
+
+        if right > left:
+            chunk.append(self.variable[left:right])
+
+        self._update_chunk_order(chunk_idx)
+        self._check_size_limit()
+
+    def get_silent(self, item):
+        """
+        Return item from the dict if it exists, None otherwise without reordering the LRU
+
+        Parameters
+        ----------
+        item : object
+            the item index to be retrieved from the cache
+
+        Returns
+        -------
+        object of None
+            the requested object if it exists else `None`
+        """
+        return self.get(item)
+
+    def _check_size_limit(self):
+        if len(self._chunkdict) > self.max_chunks:
+            self._chunkdict.popitem(last=False)
+
+    def __contains__(self, item):
+        return any(item in chunk for chunk in self._chunkdict)
+
+    def keys(self):
+        return sum(map(lambda x: x.keys(), self._chunkdict))
+
+    def values(self):
+        return sum(map(lambda x: x.values(), self._chunkdict))
+
+    def __len__(self):
+        return sum(map(len, self._chunkdict))
+
+    def __iter__(self):
+        for chunk in self._chunkdict.itervalues():
+            for key in chunk.keys():
+                yield key
+
+    def __reversed__(self):
+        for chunk in reversed(self._chunkdict.values()):
+            for key in reversed(chunk.keys()):
+                yield key

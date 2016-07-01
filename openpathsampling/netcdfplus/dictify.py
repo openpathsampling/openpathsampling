@@ -432,9 +432,10 @@ class StorableObjectJSON(ObjectJSON):
                     # this also returns the base class name used for storage
                     # store objects only if they are not creatable. If so they will only be created in their
                     # top instance and we use the simplify from the super class ObjectJSON
-                    store.save(obj)
-                    print obj, store, store.index
-                    return {'_idx': store.index[obj], '_obj': store.prefix}
+                    idx = store.save(obj)
+                    if idx is None:
+                        raise RuntimeError('cannot store idx None in store %s' % store)
+                    return {'_idx': idx, '_obj': store.prefix}
 
         return super(StorableObjectJSON, self).simplify(obj, base_type)
 

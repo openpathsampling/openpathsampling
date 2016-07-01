@@ -1,11 +1,15 @@
 import abc
-from uuid import UUID
-
 from openpathsampling.netcdfplus import ObjectStore, LoaderProxy, StorableObject
 from openpathsampling.netcdfplus.objects import UUIDDict, IndexedObjectStore
 import openpathsampling.engines as peng
 
 from collections import OrderedDict
+from uuid import UUID
+
+from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, WeakLRUCache
+
+from openpathsampling.engines import BaseSnapshot
+
 
 
 # =============================================================================================
@@ -265,7 +269,9 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
             a snapshot class that this Store is supposed to store
 
         """
-        super(BaseSnapshotIndexedStore, self).__init__(peng.BaseSnapshot, json=False)
+
+        # Using a store with None as type will not interfere with the main snapshotstore
+        super(BaseSnapshotIndexedStore, self).__init__(None, json=False)
         self.descriptor = descriptor
         self._dimensions = descriptor.dimensions
         self._cls = self.descriptor.snapshot_class
@@ -290,7 +296,7 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
 
     def __repr__(self):
         return "store.%s[%s(%s)]" % (
-            self.prefix, self._cls.__name__, self.content_class.__name__)
+            self.prefix, self._cls.__name__, 'BaseSnapshot')
 
     def to_dict(self):
         return {
@@ -504,41 +510,13 @@ class SnapshotWrapperStore(ObjectStore):
         self._treat_missing_snapshot_type = value
 
     def _load(self, idx):
-        store = self.vars['store'][idx]
-        return store[idx]
+        store_idx = self.vars['store'][idx]
 
-    def _save(self, obj, idx):
-        try:
-            store, store_idx = self.type_list[obj.engine.descriptor]
-            store[idx] = obj
-            self.vars['store'][idx] = store_idx
-            return store
-
-        except KeyError:
-            # Apparently there is no store yet to handle the given type of snapshot
-            if self.treat_missing_snapshot_type == 'create':
-                # we just create space for it
-                store, store_idx = self.add_type(obj.engine.descriptor)
-                store[idx] = obj
-                self.vars['store'][idx] = store_idx
-                return store
-
-            elif self.treat_missing_snapshot_type == 'ignore':
-                # we keep silent about it
-                self.vars['store'][idx] = -1
-                return None
-            else:
-                # we fail with cannot store
-                raise RuntimeError(
-                    (
-                        'The store cannot hold snapshots of the given type : '
-                        'class "%s" and dimensions %s. Try adding the snapshot type '
-                        'using .add_type(snapshot).'
-                    ) % (
-                        obj.__class__.__name__,
-                        obj.engine.descriptor.dimensions
-                    )
-                )
+        if store_idx < 0:
+            raise ValueError('IDX "' + idx + '" not found in storage')
+        else:
+            store = self.store_list[store_idx]
+            return store[idx]
 
     def initialize(self):
         super(SnapshotWrapperStore, self).initialize()
@@ -596,83 +574,42 @@ class SnapshotWrapperStore(ObjectStore):
             self.type_list[store.descriptor] = (store, idx)
             self.store_list.append(store)
 
-    def save(self, obj, idx=None):
-        # Cases to cover
-        # A. uuid
-        # 1. uuid not in self.index and ruuid not in self.index -> save
-        # 2. uuid not in self.index and ruuid in self.index but not in store.index -> save
-        # 3. uuid in self.index but not in store.index -> save
-        # 4. uuid in self.index and in store.index -> return
-        # 5. uuid not in self.index but ruuid in self.index and in store.index -> return
-        # B. int
-        # 1. obj not in self.index and obj._reversed not in self.index -> save
-        # 2. obj not in self.index and obj._reversed in self.index but not in store.index -> save
-        # 3. obj in self.index but not in store.index -> save
-        # 4. obj in self.index and in store.index -> return
-        # 5. obj not in self.index but obj._reversed in self.index and in store.index -> return
+        self.load_indices()
+
+    def load_indices(self):
         if self.reference_by_uuid:
+            for idx, uuid in enumerate(self.vars['uuid'][:]):
+                self.index[uuid] = idx * 2
 
+    def save(self, obj, idx=None):
+        n_idx = None
+
+        if self.reference_by_uuid:
             if obj in self.index:
-                # has could have been saved
-                s_idx = self.index[obj]
-                store_idx = self.variables['store'][s_idx]
-
-                if not store_idx  == -1:
-                    # let's see if the store has it stored
-                    store = self.store_list[store_idx]
-                    if s_idx in store.index:
-                        # found it so return the correct reference
-                        return self.reference(obj)
-                    elif:
-
-                else:
-                    # if set to -1 then only an empty snapshot has been saved for CV purposes, etc
-                    pass
-
-            if hasattr(obj, '_idx'):
-                if obj._store is self:
-                    # is a proxy of a saved object so do nothing
-                    return obj._idx
-                else:
-                    # it is stored but not in this store so we try storing the
-                    # full snapshot which might be still in cache or memory
-                    # if that is not the case it will be stored again. This can
-                    # happen when you load from one store save to another. And load
-                    # again after some time while the cache has been changed and try
-                    # to save again the loaded object. We will not explicitly store
-                    # a table that matches objects between different storages.
-                    return self.save(obj.__subject__)
+                n_idx = self.index[obj]
         else:
-            if obj in self.index:
-                # has could have been saved
-                s_idx = self.index[obj]
-                store_idx = self.variables['store'][s_idx]
-
-                if not store_idx  == -1:
-                    # let's see if the store has it stored
-                    store = self.store_list[store_idx]
-                    if s_idx in store.index:
-                        # found it so return the correct reference
-                        return self.reference(obj)
-                    elif
-
-                else:
-                    # if set to -1 then only an empty snapshot has been saved for CV purposes, etc
-                    pass
-
             if hasattr(obj, '_idx'):
                 if obj._store is self:
                     # is a proxy of a saved object so do nothing
                     return obj._idx
                 else:
-                    # it is stored but not in this store so we try storing the
-                    # full snapshot which might be still in cache or memory
-                    # if that is not the case it will be stored again. This can
-                    # happen when you load from one store save to another. And load
-                    # again after some time while the cache has been changed and try
-                    # to save again the loaded object. We will not explicitly store
-                    # a table that matches objects between different storages.
                     return self.save(obj.__subject__)
+
+            if obj in self.index:
+                n_idx = self.index[obj]
+
+            elif obj._reversed is not None:
+                # if the object has no reversed present, then the reversed does not
+                # exist yet and hence it cannot be in the index, so no checking
+                if obj._reversed in self.index:
+                    n_idx = self.index[obj._reversed] ^ 1
+
+        if n_idx is not None:
+            store_idx = self.variables['store'][n_idx / 2]
+            if not store_idx == -1:
+                store = self.store_list[store_idx]
+                if n_idx in store.index:
+                    return self.reference(obj)
 
         if not isinstance(obj, self.content_class):
             raise ValueError(
@@ -680,28 +617,266 @@ class SnapshotWrapperStore(ObjectStore):
                 'might need to use another store.' % (self.content_class, obj.__class__.__name__)
             )
 
-        n_idx = self.free()
+        if n_idx is None:
+            n_idx = self.free()
 
-        # mark as saved so circular dependencies will not result in infinite loops
-        self.index[obj] = n_idx
+            self._save(obj, n_idx)
+            self._set_id(n_idx, obj)
+        else:
+            self._put_in_store(self.store_list[store_idx], store_idx, obj, n_idx)
 
-        # make sure in nested saving that an IDX is not used twice!
-        self.reserve_idx(n_idx)
-
-        try:
-            store = self._save(obj, n_idx)
-
-            # store the name in the cache
-            if hasattr(self, 'cache'):
-                self.cache[n_idx] = obj
-
-        except:
-            # in case we did not succeed remove the mark as being saved
-            del self.index[obj]
-            self.release_idx(n_idx)
-            raise
-
-        self.release_idx(n_idx)
-        self._set_id(n_idx, obj)
+        self.cache[n_idx] = obj
 
         return self.reference(obj)
+
+    def _put_in_store(self, store, store_idx, obj, idx):
+        store[idx / 2] = obj
+        self.vars['store'][idx] = store_idx
+        self.index[obj] = idx
+
+    def _save(self, obj, idx):
+        try:
+            store, store_idx = self.type_list[obj.engine.descriptor]
+            self._put_in_store(store, store_idx, obj, idx)
+            return store
+
+        except KeyError:
+            # Apparently there is no store yet to handle the given type of snapshot
+            if self.treat_missing_snapshot_type == 'create':
+                # we just create space for it
+                store, store_idx = self.add_type(obj.engine.descriptor)
+                self._put_in_store(store, store_idx, obj, idx)
+                return store
+
+            elif self.treat_missing_snapshot_type == 'ignore':
+                # we keep silent about it
+                self.vars['store'][idx] = -1
+                return None
+            else:
+                # we fail with cannot store
+                raise RuntimeError(
+                    (
+                        'The store cannot hold snapshots of the given type : '
+                        'class "%s" and dimensions %s. Try adding the snapshot type '
+                        'using .add_type(snapshot).'
+                    ) % (
+                        obj.__class__.__name__,
+                        obj.engine.descriptor.dimensions
+                    )
+                )
+
+    def free(self):
+        """
+        Return the number of the next free index for this store
+
+        Returns
+        -------
+        index : int
+            the number of the next free index in the storage.
+            Used to store a new object.
+        """
+
+        # start at first free position in the storage
+        idx = len(self)
+
+        # and skip also reserved potential stored ones
+        while idx in self._free:
+            # we need to skip 2 for the reversible pairs instead of one
+            idx += 2
+
+        return idx
+
+    def get_uuid_index(self, obj):
+        n_idx = None
+
+        if self.reference_by_uuid:
+            if obj in self.index:
+                n_idx = self.index[obj]
+        else:
+            if hasattr(obj, '_idx'):
+                if obj._store is self:
+                    # is a proxy of a saved object so do nothing
+                    return obj._idx
+
+            if obj in self.index:
+                n_idx = self.index[obj]
+
+            elif obj._reversed is not None:
+                if obj._reversed in self.index:
+                    n_idx = self.index[obj._reversed] ^ 1
+
+        if n_idx is None:
+            # if the obj is not know, add it to the file and index, but
+            # store only a reference and not the full object
+            # this can later be done using .save(obj)
+            n_idx = self.free()
+            self.variables['store'][n_idx / 2] = -1
+            self.index[obj] = n_idx
+            self._set_id(n_idx, obj)
+
+    def add_feature(self, name, template):
+        params = NetCDFPlus.get_value_parameters(template)
+        shape = params['dimensions']
+
+        if shape is None:
+            chunksizes = None
+        else:
+            chunksizes = tuple(params['dimensions'])
+
+        cache = SnapshotValueStore()
+
+        var_name = 'snapshot'
+
+        self.storage.create_store(var_name, cache, False)
+
+        # we are not using the .initialize function here since we
+        # only have one variable and only here know its shape
+        self.storage.create_dimension(cache.prefix, 0)
+
+        if shape is not None:
+            shape = tuple([0] + list(shape))
+            chunksizes = tuple([1] + list(chunksizes))
+        else:
+            shape = tuple([0])
+            chunksizes = tuple([1])
+
+        cache.create_variable(
+            'value',
+            var_type=params['var_type'],
+            dimensions=shape,
+            chunksizes=chunksizes,
+            simtk_unit=params['simtk_unit'],
+        )
+
+        cache.set_caching(WeakLRUCache(100000))
+        cache.create_variable('index', 'index')
+
+        self.set_cache_store(cv)
+
+
+class SnapshotValueStore(ObjectStore):
+    def __init__(self):
+        super(SnapshotValueStore, self).__init__(None)
+        self.uuid_index = None
+
+    def create_int_index(self):
+        return dict()
+
+    def register(self, storage, prefix):
+        super(SnapshotValueStore, self).register(storage, prefix)
+        self.uuid_index = self.storage.snapshots
+
+    # =============================================================================
+    # LOAD/SAVE DECORATORS FOR CACHE HANDLING
+    # =============================================================================
+
+    def load(self, idx):
+        """
+        Returns an object from the storage.
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the object to be loaded
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the loaded object
+        """
+
+        # we want to load by uuid and it was not in cache.
+        if idx in self.index:
+            n_idx = self.index[idx]
+        else:
+            if self.fallback_store is not None:
+                return self.fallback_store.load(idx)
+            elif self.storage.fallback is not None:
+                return self.storage.fallback.stores[self.name].load(idx)
+            else:
+                raise ValueError('str %s not found in storage or fallback' % idx)
+
+        if n_idx < 0:
+            return None
+
+        # if it is in the cache, return it
+        try:
+            obj = self.cache[n_idx]
+            return obj
+
+        except KeyError:
+            pass
+
+        obj = self.vars['value'][n_idx]
+
+        self.index[idx] = n_idx
+        self.cache[n_idx] = obj
+
+        return obj
+
+    def __setitem__(self, idx, value):
+        """
+        Saves an object to the storage.
+
+        Parameters
+        ----------
+        idx : :py:class:`openpathsampling.engines.BaseSnapshot`
+            the object to be stored
+        value : anything that can be stored
+            this includes storable objects, python numbers, numpy.arrays,
+            strings, etc.
+
+        """
+
+        if idx in self.index:
+            # has been saved so quit and do nothing
+            return
+
+        pos = self.uuid_index[idx]
+
+        if pos is not None:
+
+            n_idx = self.free()
+            self.vars['value'][n_idx] = value
+            self.vars['index'][n_idx] = pos
+
+            self.index[idx] = n_idx
+            self.cache[n_idx] = value
+
+    def sync(self, cv):
+        if not self.reference_by_uuid:
+            # for uuids this cannot happen
+            # necessary if we compute cvs that are not stored
+            pass
+
+    def restore(self):
+        if self.reference_by_uuid:
+            uuid_ref = self.uuid_ref
+            for pos, idx in enumerate(self.vars['index'][:]):
+                self.index[uuid_ref[idx]] = pos
+        else:
+            for pos, idx in enumerate(self.vars['index'][:]):
+                self.index[idx] = pos
+
+    def initialize(self):
+        pass
+
+    def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
+        try:
+            if isinstance(item, BaseSnapshot):
+                return self.load(item)
+            elif type(item) is list:
+                return [self.load(idx) for idx in item]
+            elif item is Ellipsis:
+                return self.iterator()
+        except KeyError:
+            return None
+
+    def get(self, item):
+        if item in self.index:
+            return self[item]
+        else:
+            return None

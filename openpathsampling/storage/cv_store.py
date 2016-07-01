@@ -132,10 +132,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
         )
 
         cache.set_caching(WeakLRUCache(100000))
-
         cache.create_variable('index', 'index')
-
-        print var_name
 
         self.set_cache_store(cv)
 
@@ -362,9 +359,9 @@ class ReversibleObjectDictStore(ObjectDictStore):
             return self.storage.snapshots.idx(idx)
 
 
-class KeyStore(ObjectStore):
+class IntValueStore(ObjectStore):
     def __init__(self, cv):
-        super(KeyStore, self).__init__(None)
+        super(IntValueStore, self).__init__(None)
 
         self.cv = cv
         self._storable = None
