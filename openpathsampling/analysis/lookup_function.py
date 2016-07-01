@@ -214,6 +214,12 @@ class VoxelLookupFunction(object):
         self.bin_widths = bin_widths
         self.counter = counter
 
+    def keys(self):
+        return self.counter.keys()
+
+    def values(self):
+        return self.counter.values()
+
     def __call__(self, value):
         val_bin = tuple(np.floor((value - self.left_bin_edges) /
                                  self.bin_widths))

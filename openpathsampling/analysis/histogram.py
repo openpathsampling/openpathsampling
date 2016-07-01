@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import scipy
 import matplotlib.pyplot as plt
 import math
 from lookup_function import LookupFunction, VoxelLookupFunction
@@ -104,7 +105,7 @@ class SparseHistogram(object):
             weights = [1.0]*len(data)
 
         part_hist = sum((collections.Counter({self.map_to_bins(d) : w})
-                        for (d, w) in zip (data, weights)),
+                         for (d, w) in zip (data, weights)),
                         collections.Counter({}))
 
         self._histogram += part_hist
@@ -134,7 +135,7 @@ class SparseHistogram(object):
             type of values to return; 'l' gives left bin edges, 'r' gives
             right bin edges, 'm' gives midpoint of the bin, and 'p' is not
             implemented, but will give vertices of the patch for the bin
-        
+
         Returns
         -------
         np.array :
@@ -146,7 +147,7 @@ class SparseHistogram(object):
                                                 bin_edge_type)
 
     def __call__(self, bin_edge_type="m"):
-        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges, 
+        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges,
                                    bin_widths=self.bin_widths,
                                    counter=self._histogram)
 
@@ -173,7 +174,7 @@ class SparseHistogram(object):
         norm = 1.0 / (self.count * scale)
         counter = collections.Counter({k : self._histogram[k] * norm
                                        for k in self._histogram.keys()})
-        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges, 
+        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges,
                                    bin_widths=self.bin_widths,
                                    counter=counter)
 
@@ -189,7 +190,7 @@ class SparseHistogram(object):
 
         Returns
         -------
-        bool : 
+        bool :
             True if these were set up with equivalent parameters, False
             otherwise
         """
@@ -240,7 +241,7 @@ class Histogram(SparseHistogram):
             if n_bins is not None:
                 self.n_bins = n_bins
                 self.bin_width = (max_bin-min_bin)/(self.n_bins)
-            self.bins = [min_bin + self.bin_width*i 
+            self.bins = [min_bin + self.bin_width*i
                          for i in range(self.n_bins+1)]
         else:
             if n_bins is not None:
@@ -370,10 +371,10 @@ class Histogram(SparseHistogram):
             return 0
         if maximum is not None:
             cumul_hist *= maximum / total
-            
+
         xvals = self.xvals(bin_edge)
         return LookupFunction(xvals, cumul_hist)
-    
+
     def reverse_cumulative(self, maximum=1.0, bin_edge="l"):
         """Cumulative from the right: number of values greater than bin value.
 
@@ -391,7 +392,7 @@ class Histogram(SparseHistogram):
             return 0
         if maximum is not None:
             cumul_hist *= maximum / total
-        
+
         xvals = self.xvals(bin_edge)
         return LookupFunction(xvals, cumul_hist)
 
@@ -449,7 +450,7 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
 
 def write_histograms(fname, hists):
     """Writes all histograms in list `hists` to file named `fname`
-    
+
     If the filename is the empty string, then output is to stdout.
     Assumes that all files should have the same bins.
     """
@@ -459,3 +460,64 @@ def write_histograms(fname, hists):
 # stdin and output an appropriate histogram depending on some options. Then
 # it is both a useful script and a library class!
 
+def plot_2d_histogram(histogram, normed=True, xticklabels=None,
+                      yticklabels=None, **kwargs):
+    """Plot a 2D sparse histogram
+
+    Parameters
+    ----------
+    histogram : SparseHistogram
+        the histogram to plot
+    normed : bool
+        whether to plot the (raw probability) normalized version or the
+        unnormalized version
+
+    """
+    # get the counter we'll use, set up
+    if normed:  # TODO: allow non-raw normalization too
+        hist_fcn = histogram.normalized(raw_probability=True)
+    else:
+        hist_fcn = histogram()
+    counter = hist_fcn.counter
+    bin_widths = histogram.bin_widths
+    left_bin_edges = histogram.left_bin_edges
+    if len(bin_widths) != 2:  # pragma: no cover
+        raise RuntimeError("This isn't a 2D histogram!")
+
+    # misc things we need for axes
+    (x, y) = zip(*counter.keys())
+    n_x = int(max(x) - min(min(x),0)) + 1
+    n_y = int(max(y) - min(min(y),0)) + 1
+    x_vals = np.asarray(x) * bin_widths[0] + left_bin_edges[0]
+    y_vals = np.asarray(y) * bin_widths[1] + left_bin_edges[1]
+    x_range = np.arange(min(x_vals), max(x_vals)+bin_widths[0]+0.1,
+                        bin_widths[0])
+    y_range = np.arange(min(y_vals), max(y_vals)+bin_widths[1]+0.1,
+                        bin_widths[1])
+
+    # dataframe for out data
+    mtx = scipy.sparse.dok_matrix((n_x, n_y))
+    for (k, v) in counter.items():
+        mtx[k[0],k[1]] = v
+        df = pd.SparseDataFrame(mtx.todense(), index=x_range[:-1],
+                                columns=y_range[:-1])
+
+    # set the tick labels we'll actually use
+    # TODO: smarter defaults here
+    if xticklabels is None:
+        xlabels = x_range
+    else:
+        xlabels = [x if x in xticklabels else "" for x in x_range]
+    if yticklabels is None:
+        ylabels = y_range
+    else:
+        ylabels = [y if y in yticklabels else "" for y in y_range]
+
+    # make the plot
+    (fig, ax) = plt.subplots()
+    heatmap = ax.pcolor(df.transpose(), **kwargs)
+    # ax.set_xticks(np.arange(len(x_range))+0.5)
+    # ax.set_yticks(np.arange(len(y_range))+0.5)
+    ax.set_xticklabels(xlabels, minor=False)
+    ax.set_yticklabels(ylabels, minor=False)
+    return ax

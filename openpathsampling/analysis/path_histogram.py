@@ -52,6 +52,7 @@ class PathHistogram(SparseHistogram):
             the bin that old_pt is found in)
         """
         # bins for this do not include the bin of the old point
+        # TODO: add a way to have this handle periodic variables as well
         old_bin = self.map_to_bins(old_pt)
         new_bin = self.map_to_bins(new_pt)
         abs_dx = abs(np.asarray(new_bin) - np.asarray(old_bin))
@@ -212,6 +213,7 @@ class PathHistogram(SparseHistogram):
         if self._histogram is None:
             self._histogram = Counter({})
         self._histogram += local_hist
+        self.count += weight
 
 
 class PathDensityHistogram(PathHistogram):
