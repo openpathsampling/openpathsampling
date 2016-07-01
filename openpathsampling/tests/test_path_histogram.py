@@ -83,6 +83,15 @@ class testPathHistogram(object):
             assert_equal(hist._histogram[val], 1.0)
         for val in [(1,2), (1,6)]:
             assert_equal(hist._histogram[val], 0.0)
+
+    def test_interp_same_cell(self):
+        # check interpolation if successive frames in same cell
+        traj = [(0.1, 0.3), (0.2, 0.2), (0.4, 0.6), (0.3, 0.1)]
+        hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
+                             bin_widths=(0.5, 0.5),
+                             interpolate=True, per_traj=False)
+        hist.add_trajectory(traj)
+        # TODO: add asserts
         raise SkipTest
 
     def test_add_with_weight(self):

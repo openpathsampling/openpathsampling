@@ -107,7 +107,9 @@ class PathHistogram(SparseHistogram):
                                      np.asarray(mid_bin)))
 
         # how much work we have to do depends on what's already adjacent
-        if manhattan_dist_start == 1 and manhattan_dist_end == 1:
+        if start_bin == end_bin:
+            return end_bin
+        elif manhattan_dist_start == 1 and manhattan_dist_end == 1:
             return [start_bin, mid_bin, end_bin]
         # if we're in the same bin, only have one direction to go
         elif mid_bin == start_bin:
