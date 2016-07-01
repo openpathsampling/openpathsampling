@@ -461,7 +461,7 @@ def write_histograms(fname, hists):
 # it is both a useful script and a library class!
 
 def plot_2d_histogram(histogram, normed=True, xticklabels=None,
-                      yticklabels=None, **kwargs):
+                      yticklabels=None, xlim=None, ylim=None, **kwargs):
     """Plot a 2D sparse histogram
 
     Parameters
@@ -485,39 +485,56 @@ def plot_2d_histogram(histogram, normed=True, xticklabels=None,
         raise RuntimeError("This isn't a 2D histogram!")
 
     # misc things we need for axes
+    val_to_bin = lambda x, dof : (x - left_bin_edges[dof]) / bin_widths[dof]
+    bin_to_val = lambda n, dof : n * bin_widths[dof] + left_bin_edges[dof]
+    max_xtick = max(xticklabels) if xticklabels is not None else float('-inf')
+    max_ytick = max(yticklabels) if yticklabels is not None else float('-inf')
+
     (x, y) = zip(*counter.keys())
-    n_x = int(max(x) - min(min(x),0)) + 1
-    n_y = int(max(y) - min(min(y),0)) + 1
-    x_vals = np.asarray(x) * bin_widths[0] + left_bin_edges[0]
-    y_vals = np.asarray(y) * bin_widths[1] + left_bin_edges[1]
-    x_range = np.arange(min(x_vals), max(x_vals)+bin_widths[0]+0.1,
-                        bin_widths[0])
-    y_range = np.arange(min(y_vals), max(y_vals)+bin_widths[1]+0.1,
-                        bin_widths[1])
+    min_xbin = min(min(x), left_bin_edges[0]/bin_widths[0])
+    min_ybin = min(min(y), left_bin_edges[1]/bin_widths[1])
+    max_xbin = max(max(x), val_to_bin(max_xtick, 0))
+    max_ybin = max(max(y), val_to_bin(max_ytick, 1))
 
-    # dataframe for out data
-    mtx = scipy.sparse.dok_matrix((n_x, n_y))
+    # bin ranges are integers: use to set size of DataFrame, etc
+    xbin_range = np.arange(min_xbin-left_bin_edges[0]/bin_widths[0], max_xbin+1)
+    ybin_range = np.arange(min_ybin-left_bin_edges[1]/bin_widths[1], max_ybin+1)
+
+    if xticklabels is not None:
+        xticks = [val_to_bin(float(tic), 0) for tic in xticklabels]
+    if yticklabels is not None:
+        yticks = [val_to_bin(float(tic), 1) for tic in yticklabels]
+
+    # dataframe for our data
+    df = pd.DataFrame(index=xbin_range, columns=ybin_range)
     for (k, v) in counter.items():
-        mtx[k[0],k[1]] = v
-        df = pd.SparseDataFrame(mtx.todense(), index=x_range[:-1],
-                                columns=y_range[:-1])
+        df.set_value(k[0],k[1], v)
+    df = df.fillna(0.0)
 
-    # set the tick labels we'll actually use
-    # TODO: smarter defaults here
-    if xticklabels is None:
-        xlabels = x_range
-    else:
-        xlabels = [x if x in xticklabels else "" for x in x_range]
-    if yticklabels is None:
-        ylabels = y_range
-    else:
-        ylabels = [y if y in yticklabels else "" for y in y_range]
-
-    # make the plot
-    (fig, ax) = plt.subplots()
+    fig, ax = plt.subplots()
     heatmap = ax.pcolor(df.transpose(), **kwargs)
-    # ax.set_xticks(np.arange(len(x_range))+0.5)
-    # ax.set_yticks(np.arange(len(y_range))+0.5)
-    ax.set_xticklabels(xlabels, minor=False)
-    ax.set_yticklabels(ylabels, minor=False)
+    if xticklabels is None:
+        xticks = ax.axes.get_xticks()
+        xticklabels = ["{:4.2f}".format(tic * bin_widths[0] + left_bin_edges[0]) for tic in xticks]
+    if yticklabels is None:
+        yticks = ax.axes.get_yticks()
+        yticklabels = ["{:4.2f}".format(tic * bin_widths[0] + left_bin_edges[0]) for tic in yticks]
+
+    formatted_xticks = ["{:4.2f}".format(float(x)) for x in xticklabels]
+    formatted_yticks = ["{:4.2f}".format(float(y)) for y in yticklabels]
+    ax.axes.set_xticks(xticks)
+    ax.axes.set_xticklabels(formatted_xticks)
+    ax.axes.set_yticks(yticks)
+    ax.axes.set_yticklabels(formatted_yticks)
+    if xlim is None:
+        plt.xlim(0,len(xbin_range))
+    else:
+        plt.xlim(val_to_bin(xlim[0], 0), val_to_bin(xlim[1], 0))
+    if ylim is None:
+        plt.ylim(0,len(ybin_range))
+    else:
+        plt.ylim(val_to_bin(ylim[0], 1), val_to_bin(ylim[1], 1))
+
+    plt.colorbar(heatmap, ax=ax)
+
     return ax

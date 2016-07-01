@@ -99,7 +99,10 @@ class PathHistogram(SparseHistogram):
         if np.all(abs(np.asarray(end_bin) - np.asarray(start_bin)) == 1):
             left_edges = self.left_bin_edges + self.bin_widths * end_bin
             test_array = (left_edges - start_pt) / delta
-            if np.allclose(test_array, test_array[0]):
+            
+            if np.allclose(test_array, test_array[0], atol=1e-6):
+                return [start_bin, end_bin]
+            elif np.allclose(delta, [0.0]*len(delta), atol=1e-6):
                 return [start_bin, end_bin]
 
         manhattan_dist_start = sum(abs(np.asarray(mid_bin) - 
