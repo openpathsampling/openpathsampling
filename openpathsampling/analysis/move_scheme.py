@@ -663,8 +663,8 @@ class MoveScheme(StorableNamedObject):
                 str(n_trials) + " ({:.2%})\n".format(acceptance))
         return line
 
-    def move_acceptance(self, storage):
-        for step in storage.steps:
+    def move_acceptance(self, steps):
+        for step in steps:
             delta = step.change
             for m in delta:
                 acc = 1 if m.accepted else 0
@@ -675,9 +675,9 @@ class MoveScheme(StorableNamedObject):
                 except KeyError:
                     self._mover_acceptance[key] = [acc, 1]
 
-    def move_summary(self, storage, movers=None, output=sys.stdout, depth=0):
+    def move_summary(self, steps, movers=None, output=sys.stdout, depth=0):
         """
-        Provides a summary of the movers in `storage` based on this transition.
+        Provides a summary of the movers in `steps`.
 
         The summary includes the number of moves attempted and the
         acceptance rate. In some cases, extra lines are printed for each of
@@ -685,8 +685,8 @@ class MoveScheme(StorableNamedObject):
 
         Parameters
         ----------
-        storage : Storage
-            The storage object
+        steps : iterable of :class:`.MDStep`
+            steps to analyze
         movers : None or string or list of PathMover
             If None, provides a short summary of the keys in self.mover. If
             a string, provides a short summary using that string as a key in
@@ -716,12 +716,12 @@ class MoveScheme(StorableNamedObject):
             stats[groupname] = [0, 0]
 
         if self._mover_acceptance == { }:
-            self.move_acceptance(storage)
+            self.move_acceptance(steps)
 
         n_no_move_trials = sum([self._mover_acceptance[k][1]
                                 for k in self._mover_acceptance.keys()
                                 if k[0] is None])
-        tot_trials = len(storage.steps) - n_no_move_trials
+        tot_trials = len(steps) - n_no_move_trials
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:

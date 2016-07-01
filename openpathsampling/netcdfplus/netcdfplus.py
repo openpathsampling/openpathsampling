@@ -28,6 +28,16 @@ class NetCDFPlus(netCDF4.Dataset):
     """
     support_simtk_unit = True
 
+    @property
+    def _netcdfplus_version_(self):
+        try:
+            import openpathsampling.netcdfplus.version as v
+            version = v.short_version
+        except:
+            version = '0.1.0'
+
+        return version
+
     _type_conversion = {
         'float': np.float32,
         'int': np.int32,
@@ -239,6 +249,11 @@ class NetCDFPlus(netCDF4.Dataset):
         if mode == 'w':
             logger.info("Setup netCDF file and create variables")
 
+            self.setncattr('format', 'netcdf+')
+            self.setncattr('ncplus_version', self._netcdfplus_version_)
+
+            self.write_meta()
+
             # add shared scalar dimension for everyone
             self.create_dimension('scalar', 1)
             self.create_dimension('pair', 2)
@@ -263,6 +278,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
+
+            self.check_version()
 
             # open the store that contains all stores
             self.register_store('stores', NamedObjectStore(ObjectStore))
@@ -311,6 +328,41 @@ class NetCDFPlus(netCDF4.Dataset):
                 output_prefix = prefix
                 current /= 1024.0
         return "{0:.2f}{1}B".format(current, prefix)
+
+    @staticmethod
+    def _cmp_version(v1, v2):
+        q1 = v1.split('-')[0].split('.')
+        q2 = v2.split('-')[0].split('.')
+        for v1, v2 in zip(q1, q2):
+            if int(v1) > int(v2):
+                return +1
+            elif int(v1) < int(v2):
+                return -1
+
+        return 0
+
+    def check_version(self):
+        try:
+            s1 = self.getncattr('ncplus_version')
+        except AttributeError:
+            logger.info('Using netcdfplus Pre 1.0 version. No version detected using 0.0.0')
+            s1 = '0.0.0'
+
+        s2 = self._netcdfplus_version_
+
+        cp = self._cmp_version(s1, s2)
+
+        if cp != 0:
+            logger.info('Loading different netcdf version. Installed version is '
+                        '%s and loaded version is %s' % (s2, s1))
+            if cp > 0:
+                logger.info('Loaded version is newer consider upgrading your conda package!')
+            else:
+                logger.info('Loaded version is older. Should be no problem other then '
+                            'missing features and information')
+
+    def write_meta(self):
+        pass
 
     def _setup_class(self):
         """
@@ -415,7 +467,10 @@ class NetCDFPlus(netCDF4.Dataset):
         return "Storage @ '" + self.filename + "'"
 
     def __getattr__(self, item):
-        return self.__dict__[item]
+        try:
+            return self.__dict__[item]
+        except KeyError:
+            return self.__class__.__dict__[item]
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
