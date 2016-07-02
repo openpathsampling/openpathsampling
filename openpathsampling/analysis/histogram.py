@@ -460,6 +460,82 @@ def write_histograms(fname, hists):
 # stdin and output an appropriate histogram depending on some options. Then
 # it is both a useful script and a library class!
 
+def labels_for_bins(histogram, dof, bin_numbers, label_format="{:}"):
+    """Generate tick labels given bin numbers.
+
+    Axes for a plot based on a pandas dataframe use bin numbers. This
+    converts a list of such bin numbers to the float values for the bins, as
+    formatted strings.
+    """
+    bin_width = histogram.bin_widths[dof]
+    left_bin_edge = histogram.left_bin_edges[dof]
+    bin_to_val = lambda n : n * bin_width + left_bin_edge
+    return [label_format.format(bin_to_val(n)) for n in bin_numbers]
+
+def ticks_for_labels(histogram, dof, ticklabels):
+    bin_width = histogram.bin_widths[dof]
+    left_bin_edge = histogram.left_bin_edges[dof]
+    val_to_bin = lambda x : (x - left_bin_edge) / bin_width
+    return [val_to_bin(float(label)) for label in ticklabels]
+
+def plot_limits(histogram, dof, minimum, maximum):
+    bin_width = histogram.bin_widths[dof]
+    left_bin_edge = histogram.left_bin_edges[dof]
+    val_to_bin = lambda x : (x - left_bin_edge) / bin_width
+    return (val_to_bin(minimum), val_to_bin(maximum))
+
+def histogram_ticks(histogram, dof, ticklabels=None, intticks=None,
+                    domain=None, label_format="{:4.2f}"):
+    """Generate information about axis labeling.
+
+    Parameters
+    ----------
+    histogram : :class:`.SparseHistogram`
+        histogram to label
+    dof : int
+        the degree of freedom (zero-indexed)
+    ticklabels : list of float-castable
+        the labels for the axis ticks
+    intticks : list of int
+        locations according to a pandas dataframe for the ticks; to be
+        converted from pandas row/column number to value
+    domain : 2-tuple of float-castable
+        the limits (lower, upper) for the domain
+
+    Returns
+    -------
+    dict : 
+        entry 'values' goes into plt.set_xticks(values); entry 'labels' goes
+        into plt.set_xticklabels(label); and entries 'min_val' and 'max_val'
+        go into plt.xlim(min_val, max_val)
+    """
+    if ticklabels is None and intticks is None:
+        pass # TODO: can we even run this?
+    if ticklabels is not None and intticks is not None:
+        pass # TODO: does this make any sense?
+    bin_width = histogram.bin_widths[dof]
+    left_bin_edge = histogram.left_bin_edges[dof]
+    val_to_bin = lambda x : (x - left_bin_edge) / bin_width
+    bin_to_val = lambda n : n * bin_width + left_bin_edge
+
+    if ticklabels is not None:
+        float_ticks = [float(tic) for tic in ticklabels]
+        bin_ticks = [val_to_bin(tic) for tic in float_ticks]
+
+    max_tick = max(float_ticks) if ticklabels is not None else float("-inf")
+
+    vals = zip(*counter.keys())[dof]
+    min_bin = min(min(vals), left_bin_edge / bin_width)
+    max_min = max(max(vals), val_to_bin(max_tick))
+
+    bin_range = np.arange(min_bin - left_bin_edge/bin_width, max_bin+1)
+
+    if intticks is not None:
+        bin_ticks = intticks
+
+    
+    pass
+
 def plot_2d_histogram(histogram, normed=True, xticklabels=None,
                       yticklabels=None, xlim=None, ylim=None, **kwargs):
     """Plot a 2D sparse histogram

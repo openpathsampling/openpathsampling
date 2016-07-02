@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import collections
 class LookupFunction(object):
     """
     Interpolation between datapoints.
@@ -220,7 +221,42 @@ class VoxelLookupFunction(object):
     def values(self):
         return self.counter.values()
 
+    def bin_to_left_edge(self, bin_num):
+        return bin_num * self.bin_widths + self.left_bin_edges
+
+    def val_to_bin(self, val):
+        return (val - self.left_bin_edges) / self.bin_widths
+
+    @property
+    def counter_by_bin_edges(self):
+        return collections.Counter(
+            {tuple(self.bin_to_left_edge(k)) : self.counter[k] 
+             for k in self.counter.keys()}
+        )
+
+    def plottable_2d(self, x, y):
+        return zip(*[self.val_to_bin(v) for v in zip(x, y)])
+
+    def df_2d(self, x_range=None, y_range=None, bin_numbers=False):
+        if len(self.left_bin_edges) != 2:
+            raise RuntimeError("Can't make 2D dataframe from non-2D data!")
+        if bin_numbers:
+            counter = self.counter
+            if x_range is not None:
+                index = range(x_range[0], x_range[1]+1)
+            if y_range is not None:
+                index = range(y_range[0], y_range[1]+1)
+        else:
+            index = None
+            columns = None
+            counter = self.counter
+        df = pd.DataFrame(index=index, columns=columns)
+        for (k,v) in counter.items():
+            df.set_value(k[0], k[1], v)
+        df = df.sort_index(0).sort_index(1)
+        return df
+
     def __call__(self, value):
-        val_bin = tuple(np.floor((value - self.left_bin_edges) /
-                                 self.bin_widths))
+        val_bin = tuple(np.floor(self.val_to_bin(value)))
         return self.counter[val_bin]
+
