@@ -2156,6 +2156,26 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         )
         return minus_samp
 
+    def populate_minus_ensemble_from_set(self, samples, minus_replica_id,
+                                         engine):
+        partials = [s.trajectory for s in samples 
+                    if self._segment_ensemble(s.trajectory)]
+        if len(partials) == 0:
+            # TODO: add support for trying to run backwards
+            raise RuntimeError("No trajectories can be extended")
+
+	good_sample = False
+	while not good_sample:
+            partial_traj = partials[0]
+            # I think it should be impossible to RuntimeError in this
+            samp = self.populate_minus_ensemble(
+                partial_traj=partial_traj,
+                minus_replica_id=minus_replica_id,
+                engine=engine
+            )
+	    good_sample = samp.ensemble(samp.trajectory)
+        return samp
+
 class TISEnsemble(SequentialEnsemble):
     """An ensemble for TIS (or AMS).
 
