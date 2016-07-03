@@ -1,5 +1,3 @@
-
-
 import svgwrite as svg
 from svgwrite.container import Group
 import openpathsampling as paths
@@ -32,7 +30,19 @@ class TreeRenderer(svg.Drawing):
 
     @staticmethod
     def css_class(css_class):
+        """
+        Generate a string that can be passed to the SVG class attribute
 
+        Parameters
+        ----------
+        css_class : list of str
+            the class names as a list
+
+        Returns
+        -------
+        str
+            the actual string
+        """
         return ' '.join(css_class)
 
     def x(self, x):
@@ -679,7 +689,7 @@ class PathTreeBuilder(Builder):
         is highlighed using the given color
     op : :obj:`openpathsampling.CollectiveVariable`-like
         a function that returns a value when passed a snapshot. The value will be put on single snapshots.
-
+    
     """
     def __init__(self):
         super(PathTreeBuilder, self).__init__(['movers'])
@@ -691,97 +701,31 @@ class PathTreeBuilder(Builder):
         self.states = {}
         self.op = None
 
-        self._samples = None
+        self._generator = None
         self._plot_sample_list = None
 
         self.reset_options()
         self.coloring = None
 
-    @staticmethod
-    def from_ancestors(sample):
-        """
-        Create a PathTreeBuilder from a list of ancestors of a sample.
-
-        Parameters
-        ----------
-        sample : list of :obj:`openpathsampling.Sample`
-            the sample from which to trace the ancestors
-
-        Returns
-        -------
-        :obj:`PathTreeBuilder`
-            the pathtreebuilder to render the path tree
-
-        """
-        pt = PathTreeBuilder()
-        pt.samples = SampleList.from_ancestors(sample)
-        return pt
-
-    @staticmethod
-    def from_steps(steps, replica, accepted=True):
-        """
-        Create a PathTreeBuilder from the path of a replica in a list of steps
-
-        Parameters
-        ----------
-        steps : ist of :obj:`openpathsampling.MCStep`
-            the steps to be analyzed
-        replica: int
-            the replica ID to trace
-        accepted : bool, default: True
-            if `True` only the accepted samples will be traced, otherwise also
-            rejected samples will be included. Rejected samples are shown
-            in light coloring
-
-        Returns
-        -------
-        :obj:`PathTreeBuilder`
-            the pathtreebuilder to render the path tree
-
-        """
-        pt = PathTreeBuilder()
-        pt.samples = StepSampleList(steps, replica, accepted)
-        pt.reset_options()
-        return pt
-
-    @staticmethod
-    def from_samples(samples):
-        """
-        Create a PathTreeBuilder from a list of samples.
-
-        Parameters
-        ----------
-        samples : list of :obj:`openpathsampling.Sample`
-            the list of samples to be displayed
-
-        Returns
-        -------
-        :obj:`PathTreeBuilder`
-            the pathtreebuilder to render the path tree
-
-        """
-        pt = PathTreeBuilder()
-        pt.samples = samples
-        return pt
-
     @property
-    def samples(self):
+    def generator(self):
         """
         :obj:`SampleList` : a `SampleList` object containing the list of samples
         to be plotted
         """
-        return self._samples
+        return self._generator
 
-    @samples.setter
-    def samples(self, samples):
-        if isinstance(samples, SampleList):
-            self._samples = samples
-        else:
-            self._samples = SampleList(samples)
+    @generator.setter
+    def generator(self, generator):
+        self._generator = generator
+
+    @property
+    def samples(self):
+        return iter(self._generator)
 
     def render(self):
         # make sure we are up-to-date
-        self.samples.analyze()
+        self.generator.analyze()
 
         doc = TreeRenderer(self.css_style)
         self.doc = doc
@@ -797,7 +741,7 @@ class PathTreeBuilder(Builder):
         else:
             doc.horizontal_gap = opts.css['horizontal_gap']
 
-        matrix = self.samples.matrix
+        matrix = self.generator.matrix
 
         # Loops over samples the first time to determine all necessary information
 
@@ -806,12 +750,12 @@ class PathTreeBuilder(Builder):
 
         self._plot_sample_list = []
 
-        for num, sample in enumerate(self.samples):
+        for num, sample in enumerate(self.generator):
 
             pos_y += 1
             draw_pos_y[num] = pos_y
 
-            info = self.samples[sample]
+            info = self.generator[sample]
 
             mover_type = 'unknown'
             mover = sample.mover
@@ -853,18 +797,26 @@ class PathTreeBuilder(Builder):
 
             css_class = [] + view_options['css_class']
 
-            if level > 0 and opts.css['show_auxiliary']:
-                css_class += ['level']
+            step_accepted = True
+            move_accepted = True
 
-            if isinstance(self.samples, StepSampleList):
+            if isinstance(self.generator, SampleListGenerator):
                 # we have steps available to use these to figure out, if a step was rejected
-                step = self.samples.get_step(sample)
+                step = self.generator.get_step(sample)
                 if step is not None:
                     step_accepted = step.change.accepted
-            else:
-                step_accepted = True
 
-            if not step_accepted and opts.css['show_rejected']:
+                change = self.generator.get_change(sample)
+                if change is not None:
+                    move_accepted = change.accepted
+
+            if not step_accepted and opts.css['mark_transparent'] == 'rejected':
+                css_class += ['rejected']
+
+            if level > 0 and opts.css['mark_transparent'] == 'auxiliary':
+                css_class += ['rejected']
+
+            if not move_accepted and opts.css['mark_transparent'] == 'submove':
                 css_class += ['rejected']
 
             data = {
@@ -876,7 +828,7 @@ class PathTreeBuilder(Builder):
                 'fw_css_class': fw_css_class,
                 'label_position': label_position,
                 'mover_type': mover_type,
-                'mover_accepted': sample.mover.accepted,
+                'mover_accepted': move_accepted,
                 'step_accepted': step_accepted
             }
 
@@ -918,7 +870,7 @@ class PathTreeBuilder(Builder):
         # collect all parts of the legend separately
         legend_parts = []
 
-        for part in opts.ui['legends']:
+        for part in reversed(opts.ui['legends']):
             if type(part) is str:
                 method_name = 'part_legend_' + part
                 if hasattr(self, method_name):
@@ -1011,7 +963,7 @@ class PathTreeBuilder(Builder):
 
         for pos_y, data in enumerate(self._plot_sample_list):
             sample = data['sample']
-            info = self.samples[sample]
+            info = self.generator[sample]
 
             shift = info['shift']
             length = info['length']
@@ -1039,7 +991,7 @@ class PathTreeBuilder(Builder):
         group = doc.g()
 
         draw_pos_y = {}
-        matrix = self.samples.matrix
+        matrix = self.generator.matrix
 
         for pos_y, data in enumerate(self._plot_sample_list):
             num = data['sample_idx']
@@ -1047,7 +999,7 @@ class PathTreeBuilder(Builder):
 
             draw_pos_y[num] = pos_y
 
-            info = self.samples[sample]
+            info = self.generator[sample]
 
             new_sample = info['new']
             shift = info['shift']
@@ -1093,7 +1045,7 @@ class PathTreeBuilder(Builder):
         doc = self.doc
         group = doc.g()
 
-        matrix = self.samples.matrix
+        matrix = self.generator.matrix
 
         # TRAJECTORY PARTS
 
@@ -1109,7 +1061,7 @@ class PathTreeBuilder(Builder):
             num = data['sample_idx']
             sample = data['sample']
 
-            info = self.samples[sample]
+            info = self.generator[sample]
 
             new_sample = info['new']
             shift = info['shift']
@@ -1235,27 +1187,28 @@ class PathTreeBuilder(Builder):
 
         # STATE COLORING
 
-        for color, op in self.states.iteritems():
-            xp = None
-            for pos_y, data in enumerate(self._plot_sample_list):
-                num = data['sample_idx']
+        if self.states is not None:
+            for color, op in self.states.iteritems():
+                xp = None
+                for pos_y, data in enumerate(self._plot_sample_list):
+                    num = data['sample_idx']
 
-                left = None
-                for xp in matrix.get_x_range(num):
-                    if xp in vis_blocks[num] and bool(op(matrix[num, xp])):
-                        if left is None:
-                            left = xp
-                    else:
-                        if left is not None:
-                            group.add(
-                                doc.shade(left, pos_y, xp - left, color=color)
-                            )
-                            left = None
+                    left = None
+                    for xp in matrix.get_x_range(num):
+                        if xp in vis_blocks[num] and bool(op(matrix[num, xp])):
+                            if left is None:
+                                left = xp
+                        else:
+                            if left is not None:
+                                group.add(
+                                    doc.shade(left, pos_y, xp - left, color=color)
+                                )
+                                left = None
 
-                if left is not None:
-                    group.add(
-                        doc.shade(left, pos_y, xp - left + 1, color=color)
-                    )
+                    if left is not None:
+                        group.add(
+                            doc.shade(left, pos_y, xp - left + 1, color=color)
+                        )
 
         return group
 
@@ -1315,7 +1268,7 @@ class PathTreeBuilder(Builder):
 
     def part_legend_correlation(self):
         doc = self.doc
-        time_symmetric = self.samples.time_symmetric
+        time_symmetric = self.generator.time_symmetric
 
         part = doc.g(class_='legend')
         part.add(
@@ -1366,8 +1319,8 @@ class PathTreeBuilder(Builder):
 
         for pos_y, data in enumerate(self._plot_sample_list):
             sample = data['sample']
-            if isinstance(self.samples, StepSampleList):
-                step = self.samples.get_step(sample)
+            if isinstance(self.generator, SampleListGenerator):
+                step = self.generator.get_step(sample)
                 if step is None:
                     # apparently this sample was not generate by any step we know
                     txt = '*'
@@ -1510,8 +1463,52 @@ class PathTreeBuilder(Builder):
             'repeated_snapshots': True
         })
 
-        if self.samples and self.samples.steps:
+        if self.generator and self.generator.steps:
             self.options.ui['legends'] = ['step', 'correlation']
+
+    def reset(self):
+        """
+        Revert to default options and remove all ther setting as well
+
+        """
+        self.reset_options()
+        self.states = {}
+        self.op = None
+        self.coloring = None
+
+        if self._generator is not None:
+            self._generator.set_default_settings()
+
+
+class PathTree(PathTreeBuilder):
+    def __init__(self, steps, generator=None):
+        super(PathTree, self).__init__()
+
+        self.steps = steps
+        self.generator = generator
+        self.reset_options()
+
+    @property
+    def generator(self):
+        return self._generator
+
+    @generator.setter
+    def generator(self, generator):
+        self._generator = generator
+        if generator is not None:
+            self._generator.steps = self.steps
+            self._generator.update_tree_options(self)
+
+    @property
+    def steps(self):
+        return self._steps
+
+    @steps.setter
+    def steps(self, steps):
+        self._steps = StepList(steps)
+        if self.generator is not None:
+            self.generator.steps = self.steps
+
 
 
 class SnapshotMatrix(object):
@@ -1628,6 +1625,21 @@ class SnapshotMatrix(object):
         return new_y_pos
 
 
+class SampleSelector(object):
+    """
+    A Function that can construct a series of samples within the scope of a list of MC steps
+
+    If you want to plot a list of samples and study their evolution you usually do that within
+    the context of MC steps they were generated in. You do not have to because you can generate
+    samples without a step, but that is rather the exception. Therefore you construct the
+    PathTreeBuilder with a list of steps as basis.
+
+    To select the way in which you want to pick a list of samples from the ones appearing in
+    these steps you use a SampleSelector, like `ReplicaEvolution(replica_id, accepted)`,
+    `SampleAncestors(child_sample)`, `EnsembleEvolution(ensemble, accepted)`
+    """
+
+
 class SampleList(OrderedDict):
     """
     A timely ordered series of `Sample` objects.
@@ -1703,6 +1715,13 @@ class SampleList(OrderedDict):
                 self[s] = {}
         else:
             self[samples] = {}
+
+        self.analyze()
+
+    def set_default_settings(self):
+        self._time_symmetric = True
+        self._flip_time_direction = False
+        self._trace_missing = False
 
         self.analyze()
 
@@ -1847,7 +1866,6 @@ class SampleList(OrderedDict):
                     samples.append(rep_trials[-1])
 
             return samples
-
 
     def without_redundant(self):
         """
@@ -2236,58 +2254,21 @@ class SampleList(OrderedDict):
         return self[-1]
 
 
-class StepSampleList(SampleList):
-    """
-    An ordered list of `Sample`s analyzed in the context of a list of `MCStep`s
-
-    You often want to analyze the evolution of Replicas during a simulation. This object
-    will mimick a list of Samples generated from steps to your liking
-    """
-
-    def __init__(self, steps, replica, accepted=True):
-        super(StepSampleList, self).__init__([])
-        self.steps = steps
+class StepList(list):
+    def __init__(self, steps):
+        list.__init__(self, steps)
 
         self._create_step_sample_list()
-
-        self._replica = replica
-        self._accepted = accepted
-        self._update_sample()
 
     def _create_step_sample_list(self):
         # TODO: This will someday be replaced by a `sample.step` property
         self._sample_step_list = dict()
-        for step in self.steps:
+        self._sample_change_list = dict()
+        for step in self:
             for ch in step.change:
                 for s in ch.samples:
                     self._sample_step_list[s] = step
-
-        self.analyze()
-
-    def _update_sample(self):
-        self.set_samples(SampleList._get_samples_from_steps(
-            self.steps,
-            self._replica,
-            self._accepted
-        ))
-
-    @property
-    def replica(self):
-        return self._replica
-
-    @replica.setter
-    def replica(self, value):
-        self._replica = value
-        self._update_sample()
-
-    @property
-    def accepted(self):
-        return self._accepted
-
-    @accepted.setter
-    def accepted(self, value):
-        self._accepted = value
-        self._update_sample()
+                    self._sample_change_list[s] = ch
 
     def get_step(self, sample):
         """
@@ -2310,6 +2291,248 @@ class StepSampleList(SampleList):
         """
 
         return self._sample_step_list.get(sample)
+
+    def get_mccycle(self, sample):
+        """
+        Return the MC cycle in which a sample was generated
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the generating `MCStep` from
+
+        Returns
+        -------
+        int
+            the cycle number in which the sample was generated
+
+        """
+
+        return self._sample_step_list.get(sample).mccycle
+
+    def get_change(self, sample):
+        """
+        Return the (sub-)change in which a sample was generated
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the generating `MCStep` from
+
+        Returns
+        -------
+        :obj:`PathMoveChange`
+            the move change in which the sample was generated
+
+        """
+
+        return self._sample_change_list.get(sample)
+
+    @property
+    def samples(self):
+        return self._sample_step_list.keys()
+
+
+class SampleListGenerator(SampleList):
+    """
+    An ordered list of `Sample`s analyzed in the context of a list of `MCStep`s
+
+    You often want to analyze the evolution of Replicas during a simulation. This object
+    will mimick a list of Samples generated from steps to your liking
+    """
+
+    def __init__(self):
+        super(SampleListGenerator, self).__init__([])
+        self.steps = None
+
+    @property
+    def steps(self):
+        return self._steps
+
+    @steps.setter
+    def steps(self, steps):
+        self._steps = steps
+        if steps is not None:
+            self._update_sample()
+
+    def _update_sample(self):
+        pass
+
+    def update_tree_options(self, tree):
+        pass
+
+    def get_mccycle(self, sample):
+        """
+        Return the MC cycle in which a sample was generated
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the generating `MCStep` from
+
+        Returns
+        -------
+        int
+            the cycle number in which the sample was generated
+
+        """
+
+        return self.steps.get_mccycle(sample)
+
+    def get_step(self, sample):
+        """
+        Return the step in which a sample was generated
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the generating `MCStep` from
+
+        Returns
+        -------
+        :obj:`MCStep`
+            the step in which the sample was generated
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely generated in
+        one move and thus during one step
+        """
+
+        return self.steps.get_step(sample)
+
+    def get_change(self, sample):
+        """
+        Return the (sub-)change in which a sample was generated
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the generating `MCStep` from
+
+        Returns
+        -------
+        :obj:`PathMoveChange`
+            the move change in which the sample was generated
+
+        """
+
+        return self.steps.get_change(sample)
+
+
+class ReplicaEvolution(SampleListGenerator):
+    """
+    An ordered list of `Sample`s analyzed in the context of a list of `MCStep`s
+
+    You often want to analyze the evolution of Replicas during a simulation. This object
+    will mimick a list of Samples generated from steps to your liking
+    """
+
+    def __init__(self, replica, accepted=True):
+        super(ReplicaEvolution, self).__init__()
+        self._replica = replica
+        self._accepted = accepted
+
+    def _update_sample(self):
+        self.set_samples(SampleList._get_samples_from_steps(
+            self.steps,
+            self._replica,
+            self._accepted
+        ))
+
+        self.analyze()
+
+    @property
+    def replica(self):
+        return self._replica
+
+    @replica.setter
+    def replica(self, value):
+        self._replica = value
+        self._update_sample()
+
+    @property
+    def accepted(self):
+        return self._accepted
+
+    @accepted.setter
+    def accepted(self, value):
+        self._accepted = value
+        self._update_sample()
+
+    def update_tree_options(self, tree):
+        tree.options.css['mark_transparent'] = 'rejected'
+
+
+class SampleAncestors(SampleListGenerator):
+    def __init__(self, sample):
+        super(SampleAncestors, self).__init__()
+        self._sample = sample
+
+    @property
+    def sample(self):
+        return self._sample
+
+    @sample.setter
+    def sample(self, value):
+        self._sample = value
+        self._update_sample()
+
+    def _update_sample(self):
+
+        sample = self.sample
+        l = []
+
+        while sample is not None and (not self.steps or sample in self.steps.samples):
+            l.append(sample)
+            sample = sample.parent
+
+        self.set_samples(SampleList(reversed(l)))
+
+    def update_tree_options(self, tree):
+        tree.options.css['mark_transparent'] = 'auxiliary'
+
+
+class EnsembleEvolution(SampleListGenerator):
+    """
+    An ordered list of `Sample`s analyzed in the context of a list of `MCStep`s
+
+    You often want to analyze the evolution of Replicas during a simulation. This object
+    will mimick a list of Samples generated from steps to your liking
+    """
+
+    def __init__(self, ensemble, accepted=True):
+        super(EnsembleEvolution, self).__init__()
+        self._ensemble = ensemble
+        self._accepted = accepted
+
+    def _update_sample(self):
+        self.set_samples([
+            step.active[self.ensemble] for step in self.steps
+            if not self.accepted or step.change.accepted
+        ])
+
+    @property
+    def ensemble(self):
+        return self._ensemble
+
+    @ensemble.setter
+    def ensemble(self, value):
+        self._ensemble = value
+        self._update_sample()
+
+    @property
+    def accepted(self):
+        return self._accepted
+
+    @accepted.setter
+    def accepted(self, value):
+        self._accepted = value
+        self._update_sample()
+
+    def update_tree_options(self, tree):
+        tree.options.css['mark_transparent'] = 'rejected'
+
 
 # TODO: Move this to extra file and load using 'pkgutil' or so
 vis_css = r"""
