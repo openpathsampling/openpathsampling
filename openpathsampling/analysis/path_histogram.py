@@ -271,3 +271,10 @@ class PathDensityHistogram(PathHistogram):
 
         return self._histogram.copy()
 
+    def map_to_float_bins(self, trajectory):
+        # in case we actually want super's version
+        if isinstance(trajectory, paths.Trajectory):
+            cv_traj = zip(*[cv(trajectory) for cv in self.cvs])
+        else:
+            cv_traj = trajectory
+        return super(PathDensityHistogram, self).map_to_float_bins(cv_traj)

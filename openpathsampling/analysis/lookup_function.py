@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import collections
+
 class LookupFunction(object):
     """
     Interpolation between datapoints.
@@ -234,10 +235,8 @@ class VoxelLookupFunction(object):
              for k in self.counter.keys()}
         )
 
-    def plottable_2d(self, x, y):
-        return zip(*[self.val_to_bin(v) for v in zip(x, y)])
-
-    def df_2d(self, x_range=None, y_range=None, bin_numbers=False):
+    def df_2d(self, x_range=None, y_range=None, bin_numbers=True):
+        bin_widths = self.bin_widths
         if len(self.left_bin_edges) != 2:
             raise RuntimeError("Can't make 2D dataframe from non-2D data!")
         if bin_numbers:
@@ -245,11 +244,12 @@ class VoxelLookupFunction(object):
             if x_range is not None:
                 index = range(x_range[0], x_range[1]+1)
             if y_range is not None:
-                index = range(y_range[0], y_range[1]+1)
+                columns = range(y_range[0], y_range[1]+1)
         else:
-            index = None
-            columns = None
-            counter = self.counter
+            counter = self.counter_by_bin_edges
+            x, y = zip(*counter.keys())
+            index = np.arange(min(x), max(x)+bin_widths[0], bin_widths[0])
+            columns = np.arange(min(y), max(y)+bin_widths[1], bin_widths[1])
         df = pd.DataFrame(index=index, columns=columns)
         for (k,v) in counter.items():
             df.set_value(k[0], k[1], v)

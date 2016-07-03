@@ -69,6 +69,9 @@ class SparseHistogram(object):
 
         return newhist
 
+    def map_to_float_bins(self, trajectory):
+        return (np.asarray(trajectory) - self.left_bin_edges) / self.bin_widths
+
     def map_to_bins(self, data):
         """
         Parameters
@@ -533,11 +536,93 @@ def histogram_ticks(histogram, dof, ticklabels=None, intticks=None,
     if intticks is not None:
         bin_ticks = intticks
 
-    
-    pass
+class HistogramPlotter2D(object):
+    def __init__(self, histogram, label_format="{:}"):
+        self.histogram = histogram
+        self.label_format = label_format
+        pass
+
+    @staticmethod
+    def df_range_1d(hist, tics=None, lims=None):
+	if tics is None:
+	    tics = []
+	if lims is None:
+	    lims = []
+	hist = list(hist)
+	tics = list(tics)
+	lims = list(lims)
+	return (int(min(hist + tics + lims)), int(max(hist + tics + lims)))
+
+    @staticmethod
+    def limits(df_range, lims=None):
+        if lims is None:
+            lims = (0, df_range[1]-df_range[0])
+        return lims
+
+    def to_bins(self, alist, dof):
+        left_edge = self.histogram.left_bin_edges[dof]
+        bin_width = self.histogram.bin_widths[dof]
+        result = None
+        if alist is not None:
+            result = (np.asarray(alist) - left_edge) / bin_width
+        return result
+
+    def plot(self, normed=True, xticklabels=None, yticklabels=None,
+             xlim=None, ylim=None, **kwargs):
+        hist_fcn = self.histogram.normalized(raw_probability=True)
+        left_bin_edges = self.histogram.left_bin_edges
+        bin_widths = self.histogram.bin_widths
+
+        # convert to bin-based units
+
+        x, y = zip(*self.histogram._histogram.keys())
+
+        xticks = self.to_bins(xticklabels, 0)
+        xlim = self.to_bins(xlim, 0)
+        x_range = self.df_range_1d(x, xticks, xlim)
+        xlim = self.limits(x_range, xlim)
+
+        yticks = self.to_bins(yticklabels, 1)
+        ylim = self.to_bins(ylim, 1)
+        y_range = self.df_range_1d(y, yticks, ylim)
+        ylim = self.limits(y_range, ylim)
+
+        df = hist_fcn.df_2d(x_range=x_range, y_range=y_range)
+
+        self.df = df
+        self.x_range = x_range
+        self.y_range = y_range
+        self.xlim = xlim
+        self.ylim = ylim
+
+	df_index_to_val = lambda n : (
+            (n + x_range[0]) * bin_widths[0] + left_bin_edges[0]
+        )
+	df_column_to_val = lambda n : (
+            (n + y_range[0]) * bin_widths[1] + left_bin_edges[1] 
+        )
+
+	mesh = plt.pcolormesh(df.fillna(0.0).transpose(), cmap="Blues")
+	mesh.axes.set_xticklabels(
+            [self.label_format.format(df_index_to_val(n)) 
+             for n in mesh.axes.get_xticks()]
+        )
+	mesh.axes.set_yticklabels(
+            [self.label_format.format(df_column_to_val(n)) 
+             for n in mesh.axes.get_yticks()]
+        )
+	plt.xlim(xlim[0], xlim[1])
+	plt.ylim(ylim[0], ylim[1])
+	plt.colorbar()
+        return mesh
+
+    def plot_trajectory(self, trajectory):
+        pass
+
 
 def plot_2d_histogram(histogram, normed=True, xticklabels=None,
-                      yticklabels=None, xlim=None, ylim=None, **kwargs):
+                      yticklabels=None, xlim=None, ylim=None,
+                      label_format="{:}", **kwargs):
     """Plot a 2D sparse histogram
 
     Parameters
@@ -555,6 +640,7 @@ def plot_2d_histogram(histogram, normed=True, xticklabels=None,
     else:
         hist_fcn = histogram()
     counter = hist_fcn.counter
+
     bin_widths = histogram.bin_widths
     left_bin_edges = histogram.left_bin_edges
     if len(bin_widths) != 2:  # pragma: no cover
@@ -588,7 +674,7 @@ def plot_2d_histogram(histogram, normed=True, xticklabels=None,
     df = df.fillna(0.0)
 
     fig, ax = plt.subplots()
-    heatmap = ax.pcolor(df.transpose(), **kwargs)
+    heatmap = ax.pcolormesh(df.transpose(), **kwargs)
     if xticklabels is None:
         xticks = ax.axes.get_xticks()
         xticklabels = ["{:4.2f}".format(tic * bin_widths[0] + left_bin_edges[0]) for tic in xticks]
