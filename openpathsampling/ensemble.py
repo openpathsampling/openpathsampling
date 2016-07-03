@@ -2141,9 +2141,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             raise RuntimeError(
                 "Invalid input trajectory for minus extension. (Not A-to-A?)"
             )
-        extension = engine.generate(last_frame,
-                                    [self.can_append])
+        fwd_extend_ens = PrefixTrajectoryEnsemble(self, partial_traj)
+        extension = engine.generate(last_frame, 
+                                    [fwd_extend_ens.can_append])
         first_minus = paths.Trajectory(partial_traj + extension[1:])
+        assert self(first_minus)
         minus_samp = paths.Sample(
             replica=minus_replica_id,
             trajectory=first_minus,
