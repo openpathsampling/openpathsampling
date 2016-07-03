@@ -207,7 +207,7 @@ class TreeRenderer(svg.Drawing):
                 r=self.w(padding)
             ))
             group.add(self.line(
-                start=self.xy(x - 0 * width, y - 0.5 + gap),
+                start=self.xy(x - 1.0 * width, y - 0.5 + gap),
                 end=self.xy(x + width, y - 0.5 + gap)
             ))
 
@@ -217,7 +217,7 @@ class TreeRenderer(svg.Drawing):
                 r=self.w(padding)
             ))
             group.add(self.line(
-                start=self.xy(x - 0 * width, y + w - 1.0 + 0.5 - gap),
+                start=self.xy(x - 1.0 * width, y + w - 1.0 + 0.5 - gap),
                 end=self.xy(x + width, y + w - 1.0 + 0.5 - gap)
             ))
 
@@ -636,6 +636,26 @@ class MoveTreeBuilder(Builder):
         return doc
 
 
+def _create_simple_legend(title, fnc):
+    def _legend_fnc(self):
+        doc = self.doc
+
+        part = doc.g(class_='legend')
+        part.add(
+            doc.label(0, 0, title)
+        )
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            sample = data['sample']
+            part.add(
+                doc.label(0, 1 + pos_y, str(
+                    fnc(sample)))
+            )
+
+        return part
+    return _legend_fnc
+
+
 class PathTreeBuilder(Builder):
     """
     Builder class to visualize the time evolution of a list of samples
@@ -672,6 +692,7 @@ class PathTreeBuilder(Builder):
         self.op = None
 
         self._samples = None
+        self._plot_sample_list = None
 
         self.reset_options()
         self.coloring = None
@@ -719,7 +740,8 @@ class PathTreeBuilder(Builder):
 
         """
         pt = PathTreeBuilder()
-        pt.samples = SampleList.from_steps(steps, replica, accepted)
+        pt.samples = StepSampleList(steps, replica, accepted)
+        pt.reset_options()
         return pt
 
     @staticmethod
@@ -758,7 +780,7 @@ class PathTreeBuilder(Builder):
             self._samples = SampleList(samples)
 
     def render(self):
-        # make sure we are uptodate
+        # make sure we are up-to-date
         self.samples.analyze()
 
         doc = TreeRenderer(self.css_style)
@@ -775,14 +797,7 @@ class PathTreeBuilder(Builder):
         else:
             doc.horizontal_gap = opts.css['horizontal_gap']
 
-        time_symmetric = self.samples.time_symmetric
-
-        group = doc.g(
-            class_='tree'
-        )
-
         matrix = self.samples.matrix
-        vis_blocks = {}
 
         # Loops over samples the first time to determine all necessary information
 
@@ -838,8 +853,19 @@ class PathTreeBuilder(Builder):
 
             css_class = [] + view_options['css_class']
 
-            if level > 0:
+            if level > 0 and opts.css['show_auxiliary']:
                 css_class += ['level']
+
+            if isinstance(self.samples, StepSampleList):
+                # we have steps available to use these to figure out, if a step was rejected
+                step = self.samples.get_step(sample)
+                if step is not None:
+                    step_accepted = step.change.accepted
+            else:
+                step_accepted = True
+
+            if not step_accepted and opts.css['show_rejected']:
+                css_class += ['rejected']
 
             data = {
                 'sample': sample,
@@ -848,15 +874,138 @@ class PathTreeBuilder(Builder):
                 'view_options': view_options,
                 'bw_css_class': bw_css_class,
                 'fw_css_class': fw_css_class,
-                'label_postiion': label_position,
-                'mover_type': mover_type
+                'label_position': label_position,
+                'mover_type': mover_type,
+                'mover_accepted': sample.mover.accepted,
+                'step_accepted': step_accepted
             }
 
             self._plot_sample_list.append(data)
 
         # start plotting all parts from here
 
-        # TRAJECTORY LABELS
+        tree_group = doc.g(
+            class_='tree'
+        )
+
+        _doc_parts = [
+            self.part_trajectory_label(),
+            self.part_shooting_hooks(),
+            self.part_snapshot_blocks()
+        ]
+
+        # finish snapshot block on the right
+
+        min_x, max_x = min(matrix.matrix_x.keys()), max(matrix.matrix_x.keys())
+        min_y, max_y = 0, pos_y
+
+        tree_group.translate(32 + doc.w(1 - min_x), doc.h(1))
+
+        for part in _doc_parts:
+            tree_group.add(part)
+
+        # +--------------------------------------------------------------------
+        # +  LEGEND
+        # +--------------------------------------------------------------------
+
+        legend_group = doc.g(
+            class_='legend'
+        )
+        # use different x-scaling for the legend
+        tree_scale = opts.css['scale_x']
+        doc.scale_x = 32
+
+        # collect all parts of the legend separately
+        legend_parts = []
+
+        for part in opts.ui['legends']:
+            if type(part) is str:
+                method_name = 'part_legend_' + part
+                if hasattr(self, method_name):
+                    legend_parts.append(getattr(self, method_name)())
+            else:
+                legend_parts.append(part(self))
+
+        # add all the legend parts
+
+        for num, part in enumerate(legend_parts):
+            part.translate(- doc.scale_x * num)
+            legend_group.add(part)
+
+        legend_columns = len(legend_parts)
+
+
+        # +--------------------------------------------------------------------
+        # +  BUILD FINAL IMAGE
+        # +--------------------------------------------------------------------
+
+        left_x = (-0.5 - legend_columns) * doc.scale_x
+        width = 64 + tree_scale * (max_x - min_x + 2) - left_x
+        height = doc.scale_y * (max_y + 3.0)
+        top_y = -1.5 * doc.scale_y
+
+        # build the full figure
+        group_all = doc.g()
+        group_all.add(tree_group)
+        group_all.add(legend_group)
+
+        # INFO BOX PER SNAPSHOT (still experimental)
+
+        if opts.ui['info']:
+            group_all.add(self.part_info_box())
+
+        group_all.add(self.part_hovering_blocks(left_x, width))
+
+        zoom = opts.css['zoom']
+        group_all.scale(zoom)
+
+        doc.add(group_all)
+
+        # set the overall OPS tree class
+        doc['class'] = 'opstree'
+
+        # adjust view box to fit full image
+        doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
+            left_x * zoom,
+            top_y * zoom,
+            width * zoom,
+            height * zoom
+        )
+
+        # set width
+        w_opt = opts.css['width']
+        if w_opt == 'inherit':
+            # inherit will use the actual size in pixels
+            doc['width'] = width * zoom
+        else:
+            doc['width'] = w_opt
+
+        return doc
+
+    def part_hovering_blocks(self, left, width):
+        doc = self.doc
+        group = doc.g()
+
+        # +--------------------------------------------------------------------
+        # +  HOVERING TABLE LINE PLOT
+        # +--------------------------------------------------------------------
+
+        css_class = ['tableline']
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            group.add(
+                doc.rect(
+                    class_=doc.css_class(css_class),
+                    insert=(left, doc.y(1 + pos_y - 0.45)),
+                    size=(width, doc.scale_y * 0.9)
+                )
+            )
+
+        return group
+
+    def part_trajectory_label(self):
+        doc = self.doc
+        group = doc.g()
 
         trj_format = self._create_naming_function(self.options.format['trajectory_label'])
 
@@ -883,11 +1032,20 @@ class PathTreeBuilder(Builder):
                               css_class=css_class + ['right'])
                 )
 
-        # SHOOTING HOOKS
+        return group
+
+    def part_shooting_hooks(self):
+        doc = self.doc
+        group = doc.g()
+
+        draw_pos_y = {}
+        matrix = self.samples.matrix
 
         for pos_y, data in enumerate(self._plot_sample_list):
             num = data['sample_idx']
             sample = data['sample']
+
+            draw_pos_y[num] = pos_y
 
             info = self.samples[sample]
 
@@ -910,22 +1068,32 @@ class PathTreeBuilder(Builder):
                 fw_x = shift + length - 1 - length_fw
 
                 if 0 < length_bw:
-                    root_y = draw_pos_y[matrix.root(num, bw_x)]
+                    root_y = draw_pos_y.get(matrix.root(num, bw_x))
 
                     if root_y is not None and root_y < pos_y:
                         group.add(
-                            doc.vertical_connector(bw_x, root_y, pos_y,
-                                                   css_class=css_class + [bw_css_class, 'connection'])
+                            doc.vertical_connector(
+                                bw_x, root_y, pos_y,
+                                css_class=css_class + [bw_css_class, 'connection'])
                         )
 
                 if 0 < length_fw:
-                    root_y = draw_pos_y[matrix.root(num, fw_x)]
+                    root_y = draw_pos_y.get(matrix.root(num, fw_x))
 
                     if root_y is not None and root_y < pos_y:
                         group.add(
-                            doc.vertical_connector(fw_x + 1, root_y, pos_y,
-                                                   css_class=css_class + [fw_css_class, 'connection'])
+                            doc.vertical_connector(
+                                fw_x + 1, root_y, pos_y,
+                                css_class=css_class + [fw_css_class, 'connection'])
                         )
+
+        return group
+
+    def part_snapshot_blocks(self):
+        doc = self.doc
+        group = doc.g()
+
+        matrix = self.samples.matrix
 
         # TRAJECTORY PARTS
 
@@ -934,6 +1102,8 @@ class PathTreeBuilder(Builder):
         trj_format = self._create_naming_function(opts.format['trajectory_label'])
         smp_format = self._create_naming_function(opts.format['sample_label'])
         snp_format = self._create_naming_function(opts.format['snapshot_label'])
+
+        vis_blocks = {}
 
         for pos_y, data in enumerate(self._plot_sample_list):
             num = data['sample_idx']
@@ -998,7 +1168,7 @@ class PathTreeBuilder(Builder):
                     parts.append('reversed')
                 else:
                     if length_bw == 0 and length_fw == 0:
-                        # all snaps are repeated to treat differently
+                        # all snaps are repeated so potentially treat differently
                         parts.append('full')
                     else:
                         parts.append('overlap')
@@ -1063,222 +1233,154 @@ class PathTreeBuilder(Builder):
                 if not hidden:
                     self._update_vis_block(vis_blocks, num, shift, region)
 
-        # COLORED SNAPSHOTS
+        # STATE COLORING
 
-        if hasattr(self, 'states') and self.states:
-            for color, op in self.states.iteritems():
-                xp = None
-                for pos_y, data in enumerate(self._plot_sample_list):
-                    num = data['sample_idx']
-
-                    left = None
-                    for xp in matrix.get_x_range(num):
-                        if xp in vis_blocks[num] and bool(op(matrix[num, xp])):
-                            if left is None:
-                                left = xp
-                        else:
-                            if left is not None:
-                                group.add(
-                                    doc.shade(left, pos_y, xp - left, color=color)
-                                )
-                                left = None
-
-                    if left is not None:
-                        group.add(
-                            doc.shade(left, pos_y, xp - left + 1, color=color)
-                        )
-
-        # finish snapshot block on the right
-
-        min_x, max_x = min(matrix.matrix_x.keys()), max(matrix.matrix_x.keys())
-        min_y, max_y = 0, pos_y
-
-        group.translate(32 + doc.w(1 - min_x), doc.h(1))
-
-        tree_group = group
-
-        # +--------------------------------------------------------------------
-        # +  LEGEND
-        # +--------------------------------------------------------------------
-
-        group = doc.g(
-            class_='legend'
-        )
-        # use different x-scaling for the legend
-        tree_scale = opts.css['scale_x']
-        doc.scale_x = 32
-
-        # INFO BOX PER SNAPSHOT (still experimental)
-
-        if opts.ui['info']:
-            group.add(
-                doc.label(0, -1, 'Information', css_class=['infobox'])
-            )
-
-            doc.defs.add(doc.script(
-                content='''
-                   box = $('.opstree .infobox text')[0];
-                   var kernel = IPython.notebook.kernel;
-                   $('.opstree .block').each(
-                    function() {
-                    json = JSON.parse($(this)[0].firstChild.textContent);
-                     $(this).data(json);
-                    }
-                   );
-                   $('.opstree .block').hover(
-                    function(){
-                      box.textContent =
-                      'Snapshot(' + $(this).data('snp') + ')' + ' ' +
-                      'Trajectoy(' + $(this).data('trj') + ')';
-                     },
-                     function(){
-                      box.textContent = '';
-                     });
-            '''))
-
-        # collect all parts of the legend separately
-        legend_parts = []
-
-        # SAMPLE INDEX
-
-        if opts.ui['sample']:
-            part = doc.g(class_='legend')
-            part.add(
-                doc.label(0, 0, 'smp')
-            )
-
+        for color, op in self.states.iteritems():
+            xp = None
             for pos_y, data in enumerate(self._plot_sample_list):
-                sample = data['sample']
-                part.add(
-                    doc.label(0, 1 + pos_y, str(
-                        smp_format(sample)))
-                )
+                num = data['sample_idx']
 
-            legend_parts.append(part)
-
-        # STEP NUMBER
-
-        if opts.ui['steps']:
-            part = doc.g(class_='legend')
-            part.add(
-                doc.label(0, 0, 'smp')
-            )
-
-            for pos_y, data in enumerate(self._plot_sample_list):
-                sample = data['sample']
-                part.add(
-                    doc.label(0, 1 + pos_y, str(
-                        smp_format(sample)))
-                )
-
-            legend_parts.append(part)
-
-        # CORRELATION PLOT
-
-        if opts.ui['correlation']:
-            part = doc.g(class_='legend')
-            part.add(
-                doc.label(0, 0, 'cor')
-            )
-
-            old_tc = 1
-            prev = self._plot_sample_list[0]['sample']
-
-            for pos_y, data in enumerate(self._plot_sample_list):
-                sample = data['sample']
-
-                if pos_y > 0:
-                    if not paths.Trajectory.is_correlated(
-                            sample.trajectory,
-                            prev,
-                            time_reversal=time_symmetric
-                    ):
-                        part.add(
-                            doc.vertical_region(
-                                0,
-                                old_tc,
-                                1 + pos_y - old_tc,
-                                css_class=['correlation']
+                left = None
+                for xp in matrix.get_x_range(num):
+                    if xp in vis_blocks[num] and bool(op(matrix[num, xp])):
+                        if left is None:
+                            left = xp
+                    else:
+                        if left is not None:
+                            group.add(
+                                doc.shade(left, pos_y, xp - left, color=color)
                             )
-                        )
+                            left = None
 
-                        old_tc = 1 + pos_y
-                        prev = sample.trajectory
+                if left is not None:
+                    group.add(
+                        doc.shade(left, pos_y, xp - left + 1, color=color)
+                    )
 
-            part.add(
-                doc.vertical_region(
-                    0,
-                    old_tc,
-                    1 + len(self._plot_sample_list) - old_tc,
-                    extend_bottom=False,
-                    css_class=['correlation']))
+        return group
 
-            legend_parts.append(part)
+    def part_info_box(self):
+        doc = self.doc
+        group = doc.g()
 
-        # add all the legend parts
+        group.add(
+            doc.label(0, -1, 'Information', css_class=['infobox'])
+        )
 
-        for num, part in enumerate(legend_parts):
-            part.translate(- doc.scale_x * num)
-            group.add(part)
+        doc.defs.add(doc.script(
+            content='''
+               box = $('.opstree .infobox text')[0];
+               var kernel = IPython.notebook.kernel;
+               $('.opstree .block').each(
+                function() {
+                json = JSON.parse($(this)[0].firstChild.textContent);
+                 $(this).data(json);
+                }
+               );
+               $('.opstree .block').hover(
+                function(){
+                  box.textContent =
+                  'Snapshot(' + $(this).data('snp') + ')' + ' ' +
+                  'Trajectoy(' + $(this).data('trj') + ')';
+                 },
+                 function(){
+                  box.textContent = '';
+                 });
+        '''))
 
-        # compute actual size of the image
+        return group
 
-        columns = len(legend_parts)
+    part_legend_ensemble = _create_simple_legend('ens', lambda sample: sample.ensemble.name)
+    part_legend_replica = _create_simple_legend('repl', lambda sample: sample.replica)
+    part_legend_bias = _create_simple_legend('bias', lambda sample: sample.bias)
 
-        left_x = (-0.5 - columns) * doc.scale_x
-        width = 64 + tree_scale * (max_x - min_x + 2) - left_x
-        height = doc.scale_y * (max_y + 3.0)
-        top_y = -1.5 * doc.scale_y
+    def part_legend_sample(self):
 
-        # +--------------------------------------------------------------------
-        # +  HOVERING TABLE LINE PLOT
-        # +--------------------------------------------------------------------
+        doc = self.doc
+        smp_format = self._create_naming_function(self.options.format['sample_label'])
 
-        css_class = ['tableline']
+        part = doc.g(class_='legend')
+        part.add(
+            doc.label(0, 0, 'smp')
+        )
 
         for pos_y, data in enumerate(self._plot_sample_list):
-            group.add(
-                doc.rect(
-                    class_=doc.css_class(css_class),
-                    insert=doc.xy(-0.5 - columns, 1 + pos_y - 0.45),
-                    size=(
-                        width,
-                        doc.scale_y * 0.9
-                    )
-                )
+            sample = data['sample']
+            part.add(
+                doc.label(0, 1 + pos_y, str(
+                    smp_format(sample)))
             )
 
-        # build the full figure
-        group_all = doc.g()
-        group_all.add(group)
-        group_all.add(tree_group)
+        return part
 
-        zoom = opts.css['zoom']
+    def part_legend_correlation(self):
+        doc = self.doc
+        time_symmetric = self.samples.time_symmetric
 
-        group_all.scale(zoom)
-
-        doc.add(group_all)
-
-        # set the overall OPS tree class
-        doc['class'] = 'opstree'
-
-        # adjust view box to fit full image
-        doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
-            left_x * zoom,
-            top_y * zoom,
-            width * zoom,
-            height * zoom
+        part = doc.g(class_='legend')
+        part.add(
+            doc.label(0, 0, 'cor')
         )
 
-        # set width
-        w_opt = opts.css['width']
-        if w_opt == 'inherit':
-            # inherit will use the actual size in pixels
-            doc['width'] = width * zoom
-        else:
-            doc['width'] = w_opt
+        old_tc = 1
+        prev = self._plot_sample_list[0]['sample']
 
-        return doc
+        for pos_y, data in enumerate(self._plot_sample_list):
+            sample = data['sample']
+
+            if pos_y > 0:
+                if not paths.Trajectory.is_correlated(
+                        sample.trajectory,
+                        prev,
+                        time_reversal=time_symmetric
+                ):
+                    part.add(
+                        doc.vertical_region(
+                            0,
+                            old_tc,
+                            1 + pos_y - old_tc,
+                            css_class=['correlation']
+                        )
+                    )
+
+                    old_tc = 1 + pos_y
+                    prev = sample.trajectory
+
+        part.add(
+            doc.vertical_region(
+                0,
+                old_tc,
+                1 + len(self._plot_sample_list) - old_tc,
+                extend_bottom=False,
+                css_class=['correlation']))
+
+        return part
+
+    def part_legend_step(self):
+        doc = self.doc
+
+        part = doc.g(class_='legend')
+        part.add(
+            doc.label(0, 0, 'step')
+        )
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            sample = data['sample']
+            if isinstance(self.samples, StepSampleList):
+                step = self.samples.get_step(sample)
+                if step is None:
+                    # apparently this sample was not generate by any step we know
+                    txt = '*'
+                else:
+                    txt = str(step.mccycle)
+            else:
+                txt = '?'
+
+            part.add(
+                doc.label(0, 1 + pos_y, txt)
+            )
+
+        return part
 
     def _create_naming_function(self, fnc):
         opts = self.options
@@ -1384,20 +1486,17 @@ class PathTreeBuilder(Builder):
             }
         })
         self.options.ui.update({
-            'step': True,
-            'correlation': True,
-            'sample': True,
+            'legends': ['sample', 'correlation'],
             'cv': True,
-            'info': False
-        })
-        self.options.analysis.update({
+            'info': False,
         })
         self.options.css.update({
             'scale_x': 5,
             'scale_y': 15,
             'zoom': 1.0,
             'horizontal_gap': False,
-            'width': '100%'
+            'width': '100%',
+            'mark_transparent': 'rejected'
         })
         self.options.format.update({
             'default_label': lambda x: hex(id(x))[-5:] + ' ',
@@ -1410,6 +1509,9 @@ class PathTreeBuilder(Builder):
             'new_snapshots': True,
             'repeated_snapshots': True
         })
+
+        if self.samples and self.samples.steps:
+            self.options.ui['legends'] = ['step', 'correlation']
 
 
 class SnapshotMatrix(object):
@@ -2143,16 +2245,17 @@ class StepSampleList(SampleList):
     """
 
     def __init__(self, steps, replica, accepted=True):
-        self.steps = steps
         super(StepSampleList, self).__init__([])
-
-        self._replica = replica
-        self._accepted = accepted
+        self.steps = steps
 
         self._create_step_sample_list()
 
+        self._replica = replica
+        self._accepted = accepted
+        self._update_sample()
+
     def _create_step_sample_list(self):
-        # TODO: This will sometime be replace by a `sample.step` property
+        # TODO: This will someday be replaced by a `sample.step` property
         self._sample_step_list = dict()
         for step in self.steps:
             for ch in step.change:
@@ -2161,23 +2264,30 @@ class StepSampleList(SampleList):
 
         self.analyze()
 
+    def _update_sample(self):
+        self.set_samples(SampleList._get_samples_from_steps(
+            self.steps,
+            self._replica,
+            self._accepted
+        ))
+
     @property
     def replica(self):
-        self.analyze()
         return self._replica
 
     @replica.setter
     def replica(self, value):
         self._replica = value
+        self._update_sample()
 
     @property
     def accepted(self):
-        self.analyze()
         return self._accepted
 
     @accepted.setter
     def accepted(self, value):
         self._accepted = value
+        self._update_sample()
 
     def get_step(self, sample):
         """
@@ -2199,7 +2309,7 @@ class StepSampleList(SampleList):
         one move and thus during one step
         """
 
-        return self._sample_step_list[sample]
+        return self._sample_step_list.get(sample)
 
 # TODO: Move this to extra file and load using 'pkgutil' or so
 vis_css = r"""
@@ -2299,10 +2409,10 @@ vis_css = r"""
     stroke-dasharray: 3 3;
 }
 .opstree .rejected {
-    opacity: 0.3;
+    opacity: 0.25;
 }
 .opstree .level {
-    opacity: 0.5;
+    opacity: 0.25;
 }
 .opstree .orange {
     fill: orange;
