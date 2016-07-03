@@ -2160,6 +2160,23 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     def populate_minus_ensemble_from_set(self, samples, minus_replica_id,
                                          engine):
+        """
+        Generate a sample for this minus ensemble by extending trajectory.
+
+        Parameters
+        ----------
+        samples : iterable of :class:`.Sample`
+            samples with trajectories that might be extended
+        minus_replica_id : int or str
+            replica ID for the return sample
+        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
+            engine to use for MD extension
+
+        Returns
+        -------
+        :class:`.Sample` :
+            a sample for this minus ensemble
+        """
         partials = [s.trajectory for s in samples 
                     if self._segment_ensemble(s.trajectory)]
         if len(partials) == 0:

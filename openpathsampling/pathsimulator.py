@@ -340,6 +340,8 @@ class FullBootstrapping(PathSimulator):
     extra_interfaces : list of :class:`.Volume`
         additional interfaces to make into TIS ensembles (beyond those in
         the transition)
+    extra_ensembles : list of :class:`.Ensemble`
+        additional ensembles to sample after the TIS ensembles
     forbidden_states : list of :class:`.Volume`
         regions that are disallowed during the initial trajectory. Note that
         these region *are* allowed during the interface sampling
