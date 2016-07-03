@@ -39,7 +39,7 @@ def sample_from_trajectories(ensemble, trajectories, used_trajectories=None,
     """
     sample = None
     selected = None
-    if used_trajectories is None:
+    if used_trajectories is None:  # pragma: no cover
         used_trajectories = []
     possible = [traj for traj in trajectories if ensemble(traj)]
     if avoid_reuse:
@@ -358,7 +358,8 @@ class MoveScheme(StorableNamedObject):
         ensembles a, b, and c would return [a, b, c], or equivalently, [[a],
         [b], [c]]. Single-replica TIS would return [[a, b, c]].
         """
-        # here we give the canonical order from network
+        # basically, take the find_used_ensembles and return them in the
+        # canonical order from network.all_ensembles
         used_ensembles = self.find_used_ensembles(root)
         output_ensembles = [ens for ens in self.network.all_ensembles
                             if ens in used_ensembles]
@@ -381,6 +382,11 @@ class MoveScheme(StorableNamedObject):
         sampleset : :class:`.SampleSet`, optional
             if given, add samples to this sampleset. Default is None, which
             means that this will start a new sampleset.
+        avoid_reuse : bool
+            if True (default), use a trajectory that hasn't been used
+            already, if possible (otherwise use the first trajectory that
+            satisfies the ensemble). If False, always use the first
+            trajectory in trajectories that satisfies the ensemble
 
         Returns
         -------
