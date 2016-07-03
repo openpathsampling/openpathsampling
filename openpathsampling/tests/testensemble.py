@@ -2,7 +2,8 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises)
 from nose.plugins.skip import SkipTest
 from test_helpers import (CallIdentity, prepend_exception_message,
-                          make_1d_traj, raises_with_message_like)
+                          make_1d_traj, raises_with_message_like,
+                          CalvinistDynamics)
 
 import openpathsampling as paths
 import openpathsampling.engines.openmm as peng
@@ -2305,6 +2306,52 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl3.strict_can_prepend,
                               non_default, False)
+        
+    def test_populate_minus_ensemble_from_set(self):
+        # set up ensA and ensB
+        ensA = paths.TISEnsemble(vol1, vol3, vol1, op)
+        ensB = paths.TISEnsemble(vol1, vol3, vol2, op)
+        # set up trajA and trajB
+        trajA = make_1d_traj([0.25, 1.0, 1.5, 2.1])
+        trajB = ttraj['upper_in_cross_in']
+
+        sset = paths.SampleSet([
+            paths.Sample(replica=0, ensemble=ensA, trajectory=trajA),
+            paths.Sample(replica=1, ensemble=ensB, trajectory=trajB)
+        ])
+        sset.sanity_check()
+
+        # test with first trajectory
+        predestined_snaps = [trajB[-1]]+ttraj['upper_out_in']
+        predestined_traj = [s.xyz[0][0] for s in predestined_snaps]
+        engine = CalvinistDynamics(predestined_traj)
+        sample = self.minus_nl2.populate_minus_ensemble_from_set(
+            samples=sset, minus_replica_id=-1, engine=engine
+        )
+
+        assert_equal(sample.ensemble(sample.trajectory), True)
+        assert_equal(sample.ensemble, self.minus_nl2)
+        assert_equal(sample.replica, -1)
+        assert_equal(len(sample.trajectory), 5)
+        expected = trajB + ttraj['upper_out_in']
+        for (t, b) in zip(sample.trajectory, expected):
+            assert_equal(t.xyz[0][0], b.xyz[0][0])
+
+        # test with a different trajectory
+        predestined_snaps = [trajB[-1]]+ttraj['upper_in_out_in']
+        predestined_traj = [s.xyz[0][0] for s in predestined_snaps]
+        engine = CalvinistDynamics(predestined_traj)
+        sample = self.minus_nl2.populate_minus_ensemble_from_set(
+            samples=sset, minus_replica_id=-1, engine=engine
+        )
+
+        assert_equal(sample.ensemble(sample.trajectory), True)
+        assert_equal(sample.ensemble, self.minus_nl2)
+        assert_equal(sample.replica, -1)
+        assert_equal(len(sample.trajectory), 6)
+        expected = trajB + ttraj['upper_in_out_in']
+        for (t, b) in zip(sample.trajectory, expected):
+            assert_equal(t.xyz[0][0], b.xyz[0][0])
 
 
 # TODO: this whole class should become a single test in SeqEns
