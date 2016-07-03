@@ -31,8 +31,9 @@ class TreeRenderer(svg.Drawing):
         self.horizontal_gap = 0.05
 
     @staticmethod
-    def c(cls):
-        return ' '.join(cls)
+    def css_class(css_class):
+
+        return ' '.join(css_class)
 
     def x(self, x):
         return self.w(x)
@@ -52,28 +53,28 @@ class TreeRenderer(svg.Drawing):
     def wh(self, w, h):
         return self.w(w), self.h(h)
 
-    def connector(self, x, y, text="", cls=None):
-        if cls is None:
-            cls = list()
+    def connector(self, x, y, text="", css_class=None):
+        if css_class is None:
+            css_class = list()
 
-        cls += ['connector']
+        css_class += ['connector']
 
-        return self.block(x, y, text, False, False, True, True, cls=cls)
+        return self.block(x, y, text, False, False, True, True, css_class=css_class)
 
     def block(self, x, y, text="",
               extend_right=True, extend_left=True,
               extend_top=False, extend_bottom=False,
-              w=1.0, color=None, cls=None, data=None):
+              w=1.0, color=None, css_class=None, data=None):
 
-        if cls is None:
-            cls = list()
+        if css_class is None:
+            css_class = list()
 
-        cls += ['block']
+        css_class += ['block']
 
         padding = self.horizontal_gap
 
         group = self.g(
-            class_=self.c(cls)
+            class_=self.css_class(css_class)
         )
 
         if color is not None:
@@ -120,12 +121,12 @@ class TreeRenderer(svg.Drawing):
         return group
 
     def horizontal_region(self, x, y, w=1.0, text="",
-                          extend_right=False, extend_left=False, cls=None):
+                          extend_right=False, extend_left=False, css_class=None):
 
-        if cls is None:
-            cls = list()
+        if css_class is None:
+            css_class = list()
 
-        cls += ['h-region']
+        css_class += ['h-region']
 
         if w == 0:
             return []
@@ -133,7 +134,7 @@ class TreeRenderer(svg.Drawing):
         padding = self.horizontal_gap
 
         group = Group(
-            class_=self.c(cls)
+            class_=self.css_class(css_class)
         )
 
         group.add(self.line(
@@ -181,18 +182,18 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def vertical_region(self, x, y, w=1.0, text="", extend_top=True, extend_bottom=True, cls=None):
-        if cls is None:
-            cls = list()
+    def vertical_region(self, x, y, w=1.0, text="", extend_top=True, extend_bottom=True, css_class=None):
+        if css_class is None:
+            css_class = list()
 
-        cls += ['v-region']
+        css_class += ['v-region']
 
         padding = self.horizontal_gap
         width = 0.2
         gap = 0.0
 
         group = Group(
-            class_=self.c(cls)
+            class_=self.css_class(css_class)
         )
 
         group.add(self.line(
@@ -227,11 +228,11 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def shade(self, x, y, w, cls=None, color=None):
-        if cls is None:
-            cls = list()
+    def shade(self, x, y, w, css_class=None, color=None):
+        if css_class is None:
+            css_class = list()
 
-        cls += ['shade']
+        css_class += ['shade']
 
         adds = {}
 
@@ -239,7 +240,7 @@ class TreeRenderer(svg.Drawing):
             adds = {'fill': color}
 
         group = self.g(
-            class_=self.c(cls)
+            class_=self.css_class(css_class)
         )
 
         group.add(self.rect(
@@ -268,56 +269,56 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def vertical_connector(self, x, y1, y2, cls=None):
-        if cls is None:
-            cls = list()
+    def vertical_connector(self, x, y1, y2, css_class=None):
+        if css_class is None:
+            css_class = list()
 
-        cls += ['v-connector']
+        css_class += ['v-connector']
 
         padding = self.horizontal_gap
 
         return self.line(
-            class_=self.c(cls),
+            class_=self.css_class(css_class),
             start=self.xy(x - 0.5, y1 + padding),
             end=self.xy(x - 0.5, y2 - padding)
         )
 
-    def vertical_hook(self, x1, y1, x2, y2, cls=None):
-        if cls is None:
-            cls = list()
+    def vertical_hook(self, x1, y1, x2, y2, css_class=None):
+        if css_class is None:
+            css_class = list()
 
-        cls += ['v-hook']
+        css_class += ['v-hook']
 
         padding = self.horizontal_gap
 
         return self.line(
-            class_=self.c(cls),
+            class_=self.css_class(css_class),
             start=self.xy(x1, y1 + padding + 0.3),
             end=self.xy(x2, y2 - padding - 0.3)
         )
 
-    def horizontal_connector(self, x1, x2, y, cls=None):
-        if cls is None:
-            cls = list()
+    def horizontal_connector(self, x1, x2, y, css_class=None):
+        if css_class is None:
+            css_class = list()
 
-        cls += ['h-connector']
+        css_class += ['h-connector']
 
         padding = self.horizontal_gap
 
         return self.line(
-            class_=self.c(cls),
+            class_=self.css_class(css_class),
             start=self.xy(x1 + 0.5 + padding, y),
             end=self.xy(x2 - 0.5, y)
         )
 
-    def label(self, x, y, text, cls=None):
-        if cls is None:
-            cls = list()
+    def label(self, x, y, text, css_class=None):
+        if css_class is None:
+            css_class = list()
 
-        cls += ['label']
+        css_class += ['label']
 
         group = self.g(
-            class_=self.c(cls)
+            class_=self.css_class(css_class)
         )
 
         group.translate(self.x(x), self.y(y))
@@ -339,14 +340,14 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def vertical_label(self, x, y, text, cls=None):
-        if cls is None:
-            cls = list()
+    def vertical_label(self, x, y, text, css_class=None):
+        if css_class is None:
+            css_class = list()
 
-        cls += ['v-label']
+        css_class += ['v-label']
 
         group = self.g(
-            class_=self.c(cls)
+            class_=self.css_class(css_class)
         )
 
         group.translate(x, y)
@@ -360,12 +361,12 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def rectangle(self, x, y, w, h, cls=None):
-        if cls is None:
-            cls = list()
+    def rectangle(self, x, y, w, h, css_class=None):
+        if css_class is None:
+            css_class = list()
 
         return self.rect(
-            class_=self.c(cls),
+            class_=self.css_class(css_class),
             insert=self.xy(x, y),
             size=self.wh(w, h),
         )
@@ -499,7 +500,7 @@ class MoveTreeBuilder(Builder):
                         x_pos,
                         yp,
                         sub_name,
-                        cls=['name'] + [sub_type.__name__]
+                        css_class=['name'] + [sub_type.__name__]
                     )
                 )
             else:
@@ -557,7 +558,7 @@ class MoveTreeBuilder(Builder):
                     ens_idx,
                     -1,
                     '[' + txt + '] ' + label,
-                    cls=['head']
+                    css_class=['head']
                 )
             )
             group.add(
@@ -588,7 +589,7 @@ class MoveTreeBuilder(Builder):
                         doc.connector(
                             ens_idx,
                             yp - 0.15,
-                            cls=['input']
+                            css_class=['input']
                         )
                     )
                     show = True
@@ -598,7 +599,7 @@ class MoveTreeBuilder(Builder):
                         doc.connector(
                             ens_idx,
                             yp + 0.15,
-                            cls=['output'])
+                            css_class=['output'])
                     )
                     show = True
     
@@ -608,7 +609,7 @@ class MoveTreeBuilder(Builder):
                             ens_idx,
                             yp,
                             txt,
-                            cls=['unknown']
+                            css_class=['unknown']
                         )
                     )
 
@@ -757,8 +758,9 @@ class PathTreeBuilder(Builder):
             self._samples = SampleList(samples)
 
     def render(self):
+        # make sure we are uptodate
         self.samples.analyze()
-        samples = self.samples
+
         doc = TreeRenderer(self.css_style)
         self.doc = doc
 
@@ -766,38 +768,14 @@ class PathTreeBuilder(Builder):
 
         doc.scale_x = opts.css['scale_x']
         doc.scale_y = opts.css['scale_y']
+
+        # TODO: Might remove this option. Could be useful for teaching purposes
         if type(opts.css['horizontal_gap']) is bool:
             doc.horizontal_gap = 0.05 if opts.css['horizontal_gap'] else 0.0
         else:
             doc.horizontal_gap = opts.css['horizontal_gap']
 
-        assume_reversed_as_same = self.samples.time_symmetric
-
-        trj_format = opts.format['trajectory_label'] or opts.format['default_label'] or (lambda obj: '')
-        smp_format = opts.format['sample_label'] or opts.format['default_label'] or (lambda obj: '')
-        snp_format = opts.format['snapshot_label'] or opts.format['default_label'] or (lambda obj: '')
-
-        if opts.ui['info']:
-            doc.defs.add(doc.script(
-                content='''
-                   box = $('.opstree .infobox text')[0];
-                   var kernel = IPython.notebook.kernel;
-                   $('.opstree .block').each(
-                    function() {
-                    json = JSON.parse($(this)[0].firstChild.textContent);
-                     $(this).data(json);
-                    }
-                   );
-                   $('.opstree .block').hover(
-                    function(){
-                      box.textContent =
-                      'Snapshot(' + $(this).data('snp') + ')' + ' ' +
-                      'Trajectoy(' + $(this).data('trj') + ')';
-                     },
-                     function(){
-                      box.textContent = '';
-                     });
-            '''))
+        time_symmetric = self.samples.time_symmetric
 
         group = doc.g(
             class_='tree'
@@ -806,17 +784,19 @@ class PathTreeBuilder(Builder):
         matrix = self.samples.matrix
         vis_blocks = {}
 
-        # Loops over samples and plot these
+        # Loops over samples the first time to determine all necessary information
 
         pos_y = -1
-
         draw_pos_y = {}
 
-        for num, sample in enumerate(samples):
+        self._plot_sample_list = []
+
+        for num, sample in enumerate(self.samples):
+
             pos_y += 1
             draw_pos_y[num] = pos_y
 
-            info = samples[sample]
+            info = self.samples[sample]
 
             mover_type = 'unknown'
             mover = sample.mover
@@ -827,26 +807,11 @@ class PathTreeBuilder(Builder):
                 mover_type = getattr(mover, '_visualization_class')
 
             new_sample = info['new']
-            shift = info['shift']
             time_direction = info['time_direction']
-            length = info['length']
             level = info['level']
 
-            if not new_sample:
-                length_fw = info['length_fw']
-                length_bw = info['length_bw']
-                overlap_reversed = info['overlap_reversed']
-
-                bw_x = shift + length_bw
-                fw_x = shift + length - 1 - length_fw
-
-            else:
-                overlap_reversed = False
-                length_bw = 0
-                length_fw = 0
-
-            bw_cls = 'bw'
-            fw_cls = 'fw'
+            bw_css_class = 'bw'
+            fw_css_class = 'fw'
 
             view_options = {}
             view_options.update(opts.movers['default'])
@@ -865,37 +830,92 @@ class PathTreeBuilder(Builder):
                 draw_pos_y[num] = None
                 continue
 
+            label_position = view_options['label_position']
+
             if time_direction == -1:
-                bw_cls, fw_cls = fw_cls, bw_cls
-                view_options['label_position'] = 'left' if view_options['label_position'] == 'right' else 'right'
+                bw_css_class, fw_css_class = fw_css_class, bw_css_class
+                label_position = 'left' if view_options['label_position'] == 'right' else 'right'
+
+            css_class = [] + view_options['css_class']
+
+            if level > 0:
+                css_class += ['level']
+
+            data = {
+                'sample': sample,
+                'sample_idx': num,
+                'css_class': css_class,
+                'view_options': view_options,
+                'bw_css_class': bw_css_class,
+                'fw_css_class': fw_css_class,
+                'label_postiion': label_position,
+                'mover_type': mover_type
+            }
+
+            self._plot_sample_list.append(data)
+
+        # start plotting all parts from here
+
+        # TRAJECTORY LABELS
+
+        trj_format = self._create_naming_function(self.options.format['trajectory_label'])
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            sample = data['sample']
+            info = self.samples[sample]
+
+            shift = info['shift']
+            length = info['length']
+
+            view_options = data['view_options']
+            label_position = data['label_position']
+            css_class = data['css_class']
 
             traj_str = str(trj_format(sample.trajectory)) + view_options['suffix'].upper()
 
-            cls = [] + view_options['cls']
-
-            if level > 0:
-                cls += ['level']
-
-            if view_options['label_position'] == 'left':
+            if label_position == 'left':
                 group.add(
-                    doc.label(shift, pos_y, traj_str, cls=cls + ['left'])
+                    doc.label(shift, pos_y, traj_str, css_class=css_class + ['left'])
                 )
-            elif view_options['label_position'] == 'right':
+            elif label_position == 'right':
                 group.add(
                     doc.label(shift + length - 1, pos_y, traj_str,
-                              cls=cls + ['right'])
+                              css_class=css_class + ['right'])
                 )
 
-            # draw shooting hooks
+        # SHOOTING HOOKS
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            num = data['sample_idx']
+            sample = data['sample']
+
+            info = self.samples[sample]
+
+            new_sample = info['new']
+            shift = info['shift']
+            length = info['length']
+
+            length_fw = info['length_fw']
+            length_bw = info['length_bw']
+
+            bw_css_class = data['bw_css_class']
+            fw_css_class = data['fw_css_class']
+
+            css_class = data['css_class']
+
+            # SHOOTING HOOKS
 
             if not new_sample:
+                bw_x = shift + length_bw
+                fw_x = shift + length - 1 - length_fw
+
                 if 0 < length_bw:
                     root_y = draw_pos_y[matrix.root(num, bw_x)]
 
                     if root_y is not None and root_y < pos_y:
                         group.add(
                             doc.vertical_connector(bw_x, root_y, pos_y,
-                                                   cls=cls + [bw_cls, 'connection'])
+                                                   css_class=css_class + [bw_css_class, 'connection'])
                         )
 
                 if 0 < length_fw:
@@ -904,10 +924,40 @@ class PathTreeBuilder(Builder):
                     if root_y is not None and root_y < pos_y:
                         group.add(
                             doc.vertical_connector(fw_x + 1, root_y, pos_y,
-                                                   cls=cls + [fw_cls, 'connection'])
+                                                   css_class=css_class + [fw_css_class, 'connection'])
                         )
 
-            # draw actual parts of the trajectory as single snapshots, a block of snapshots or a line
+        # TRAJECTORY PARTS
+
+        opts = self.options
+
+        trj_format = self._create_naming_function(opts.format['trajectory_label'])
+        smp_format = self._create_naming_function(opts.format['sample_label'])
+        snp_format = self._create_naming_function(opts.format['snapshot_label'])
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            num = data['sample_idx']
+            sample = data['sample']
+
+            info = self.samples[sample]
+
+            new_sample = info['new']
+            shift = info['shift']
+            length = info['length']
+
+            length_fw = info['length_fw']
+            length_bw = info['length_bw']
+            overlap_reversed = info['overlap_reversed']
+
+            bw_css_class = data['bw_css_class']
+            fw_css_class = data['fw_css_class']
+
+            view_options = data['view_options']
+
+            css_class = data['css_class']
+
+            # draw actual parts of the sample as
+            # single snapshots, a block of snapshots or a line
 
             parts = []
 
@@ -919,9 +969,9 @@ class PathTreeBuilder(Builder):
                 'reversed': (length_bw, length - length_fw),
                 'new': (0, length)
             }
-            clss = {
-                'fw': [fw_cls],
-                'bw': [bw_cls],
+            css_classs = {
+                'fw': [fw_css_class],
+                'bw': [bw_css_class],
                 'reversed': ['reversed'],
                 'full': ['full'],
                 'overlap': ['overlap'],
@@ -958,14 +1008,14 @@ class PathTreeBuilder(Builder):
             for part in parts:
                 hidden = False
                 vis_type = view_options[vis_types[part]]
-                add_cls = clss[part]
+                add_css_class = css_classs[part]
                 region = regions[part]
 
                 if vis_type == 'line':
                     label = view_options['label'] or view_options['name']
                     group.add(
                         doc.horizontal_region(shift + region[0], pos_y, region[1] - region[0],
-                                              label, cls=cls + add_cls)
+                                              label, css_class=css_class + add_css_class)
                     )
                 elif vis_type == 'block':
                     group.add(
@@ -975,7 +1025,7 @@ class PathTreeBuilder(Builder):
                             view_options['label'],
                             w=region[1] - region[0],
                             extend_left=False,
-                            cls=cls + add_cls
+                            css_class=css_class + add_css_class
                         ))
                 elif vis_type == 'single':
                     for pos in range(region[0], region[1]):
@@ -1003,7 +1053,7 @@ class PathTreeBuilder(Builder):
                                 txt,
                                 extend_left=pos > 0,
                                 extend_right=pos < length - 1,
-                                cls=cls + add_cls,
+                                css_class=css_class + add_css_class,
                                 data=data,
                                 color=self.coloring(snapshot) if self.coloring else None
                             ))
@@ -1013,18 +1063,13 @@ class PathTreeBuilder(Builder):
                 if not hidden:
                     self._update_vis_block(vis_blocks, num, shift, region)
 
-        min_x, max_x = min(matrix.matrix_x.keys()), max(matrix.matrix_x.keys())
-        min_y, max_y = 0, pos_y
-
-        # mark snapshot volumes with colors
+        # COLORED SNAPSHOTS
 
         if hasattr(self, 'states') and self.states:
             for color, op in self.states.iteritems():
                 xp = None
-                for num in range(len(samples)):
-                    yp = draw_pos_y[num]
-                    if yp is None:
-                        continue
+                for pos_y, data in enumerate(self._plot_sample_list):
+                    num = data['sample_idx']
 
                     left = None
                     for xp in matrix.get_x_range(num):
@@ -1034,112 +1079,176 @@ class PathTreeBuilder(Builder):
                         else:
                             if left is not None:
                                 group.add(
-                                    doc.shade(left, yp, xp - left, color=color)
+                                    doc.shade(left, pos_y, xp - left, color=color)
                                 )
                                 left = None
 
                     if left is not None:
                         group.add(
-                            doc.shade(left, yp, xp - left + 1, color=color)
+                            doc.shade(left, pos_y, xp - left + 1, color=color)
                         )
+
+        # finish snapshot block on the right
+
+        min_x, max_x = min(matrix.matrix_x.keys()), max(matrix.matrix_x.keys())
+        min_y, max_y = 0, pos_y
 
         group.translate(32 + doc.w(1 - min_x), doc.h(1))
 
         tree_group = group
 
-        # draw left side legend from here
+        # +--------------------------------------------------------------------
+        # +  LEGEND
+        # +--------------------------------------------------------------------
 
         group = doc.g(
             class_='legend'
         )
-
-        if opts.ui['info']:
-            group.add(
-                doc.label(0, -1, 'Information', cls=['infobox'])
-            )
-
-        columns = 0
+        # use different x-scaling for the legend
         tree_scale = opts.css['scale_x']
         doc.scale_x = 32
 
-        if opts.ui['correlation']:
-            columns += 1
-            cor_x = -columns
-        else:
-            cor_x = None
+        # INFO BOX PER SNAPSHOT (still experimental)
+
+        if opts.ui['info']:
+            group.add(
+                doc.label(0, -1, 'Information', css_class=['infobox'])
+            )
+
+            doc.defs.add(doc.script(
+                content='''
+                   box = $('.opstree .infobox text')[0];
+                   var kernel = IPython.notebook.kernel;
+                   $('.opstree .block').each(
+                    function() {
+                    json = JSON.parse($(this)[0].firstChild.textContent);
+                     $(this).data(json);
+                    }
+                   );
+                   $('.opstree .block').hover(
+                    function(){
+                      box.textContent =
+                      'Snapshot(' + $(this).data('snp') + ')' + ' ' +
+                      'Trajectoy(' + $(this).data('trj') + ')';
+                     },
+                     function(){
+                      box.textContent = '';
+                     });
+            '''))
+
+        # collect all parts of the legend separately
+        legend_parts = []
+
+        # SAMPLE INDEX
 
         if opts.ui['sample']:
-            columns += 1
-            smp_x = -columns
-        else:
-            smp_x = None
-
-        if smp_x is not None:
-            group.add(
-                doc.label(smp_x, 0, 'smp')
+            part = doc.g(class_='legend')
+            part.add(
+                doc.label(0, 0, 'smp')
             )
 
-        if cor_x is not None:
-            group.add(
-                doc.label(cor_x, 0, 'cor')
-            )
-
-        old_tc = 1
-
-        width = 64 + tree_scale * (max_x - min_x + 2) - doc.scale_x * (-0.5 - columns)
-        height = doc.scale_y * (max_y + 3.0)
-        left_x = (-0.5 - columns) * doc.scale_x
-        top_y = -1.5 * doc.scale_y
-
-        if len(samples) > 0:
-            prev = samples[0].trajectory
-            cls = ['tableline']
-
-            for num, s in enumerate(samples):
-                pos_y = draw_pos_y[num]
-                if pos_y is None:
-                    continue
-
-                group.add(
-                    doc.rect(
-                        class_=doc.c(cls),
-                        insert=doc.xy(-0.5 - columns, 1 + pos_y - 0.45),
-                        size=(
-                            width,
-                            doc.scale_y * 0.9
-                        )
-                    )
+            for pos_y, data in enumerate(self._plot_sample_list):
+                sample = data['sample']
+                part.add(
+                    doc.label(0, 1 + pos_y, str(
+                        smp_format(sample)))
                 )
+
+            legend_parts.append(part)
+
+        # STEP NUMBER
+
+        if opts.ui['steps']:
+            part = doc.g(class_='legend')
+            part.add(
+                doc.label(0, 0, 'smp')
+            )
+
+            for pos_y, data in enumerate(self._plot_sample_list):
+                sample = data['sample']
+                part.add(
+                    doc.label(0, 1 + pos_y, str(
+                        smp_format(sample)))
+                )
+
+            legend_parts.append(part)
+
+        # CORRELATION PLOT
+
+        if opts.ui['correlation']:
+            part = doc.g(class_='legend')
+            part.add(
+                doc.label(0, 0, 'cor')
+            )
+
+            old_tc = 1
+            prev = self._plot_sample_list[0]['sample']
+
+            for pos_y, data in enumerate(self._plot_sample_list):
+                sample = data['sample']
+
                 if pos_y > 0:
-                    if not paths.Trajectory.is_correlated(s.trajectory, prev, time_reversal=assume_reversed_as_same):
-                        if cor_x is not None:
-                            group.add(
-                                doc.vertical_region(
-                                    cor_x,
-                                    old_tc,
-                                    1 + pos_y - old_tc,
-                                    cls=['correlation']
-                                )
+                    if not paths.Trajectory.is_correlated(
+                            sample.trajectory,
+                            prev,
+                            time_reversal=time_symmetric
+                    ):
+                        part.add(
+                            doc.vertical_region(
+                                0,
+                                old_tc,
+                                1 + pos_y - old_tc,
+                                css_class=['correlation']
                             )
+                        )
 
                         old_tc = 1 + pos_y
-                        prev = s.trajectory
+                        prev = sample.trajectory
 
-                if smp_x is not None:
-                    group.add(
-                        doc.label(smp_x, 1 + pos_y, str(
-                            smp_format(s)))
-                    )
-
-        if cor_x is not None:
-            group.add(
+            part.add(
                 doc.vertical_region(
-                    cor_x,
+                    0,
                     old_tc,
-                    1 + len(samples) - old_tc,
+                    1 + len(self._plot_sample_list) - old_tc,
                     extend_bottom=False,
-                    cls=['correlation']))
+                    css_class=['correlation']))
 
+            legend_parts.append(part)
+
+        # add all the legend parts
+
+        for num, part in enumerate(legend_parts):
+            part.translate(- doc.scale_x * num)
+            group.add(part)
+
+        # compute actual size of the image
+
+        columns = len(legend_parts)
+
+        left_x = (-0.5 - columns) * doc.scale_x
+        width = 64 + tree_scale * (max_x - min_x + 2) - left_x
+        height = doc.scale_y * (max_y + 3.0)
+        top_y = -1.5 * doc.scale_y
+
+        # +--------------------------------------------------------------------
+        # +  HOVERING TABLE LINE PLOT
+        # +--------------------------------------------------------------------
+
+        css_class = ['tableline']
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            group.add(
+                doc.rect(
+                    class_=doc.css_class(css_class),
+                    insert=doc.xy(-0.5 - columns, 1 + pos_y - 0.45),
+                    size=(
+                        width,
+                        doc.scale_y * 0.9
+                    )
+                )
+            )
+
+        # build the full figure
         group_all = doc.g()
         group_all.add(group)
         group_all.add(tree_group)
@@ -1164,11 +1273,16 @@ class PathTreeBuilder(Builder):
         # set width
         w_opt = opts.css['width']
         if w_opt == 'inherit':
+            # inherit will use the actual size in pixels
             doc['width'] = width * zoom
         else:
             doc['width'] = w_opt
 
         return doc
+
+    def _create_naming_function(self, fnc):
+        opts = self.options
+        return fnc or opts.format['default_label'] or (lambda obj: '')
 
     @staticmethod
     def _update_vis_block(vis_block, pos_y, shift, region):
@@ -1198,63 +1312,63 @@ class PathTreeBuilder(Builder):
             'ReplicaExchangeMover': {
                 'name': 'RepEx',
                 'suffix': 'x',
-                'cls': ['repex'],
+                'css_class': ['repex'],
                 'hide': True
             },
             'BackwardShootMover': {
                 'name': 'Backward',
                 'suffix': 'b',
-                'cls': ['shooting']
+                'css_class': ['shooting']
             },
             'ForwardShootMover': {
                 'name': 'Forward',
                 'suffix': 'f',
                 'label_position': 'right',
-                'cls': ['shooting']
+                'css_class': ['shooting']
             },
             'BackwardExtendMover': {
                 'name': 'Extend',
                 'suffix': 'b',
                 'overlap': 'line',  # this will repeat the part where the extension is started
-                'cls': ['extend']
+                'css_class': ['extend']
             },
             'ForwardExtendMover': {
                 'name': 'Extend',
                 'suffix': 'f',
                 'overlap': 'line',  # this will repeat the part where the extension is started
                 'label_position': 'right',
-                'cls': ['extend']
+                'css_class': ['extend']
             },
             'FinalSubtrajectorySelectMover': {
                 'name': 'Truncate',
                 'suffix': 't',
                 'label_position': 'right',
-                'cls': ['extend']
+                'css_class': ['extend']
             },
             'FirstSubtrajectorySelectMover': {
                 'name': 'Truncate',
                 'suffix': 't',
-                'cls': ['extend']
+                'css_class': ['extend']
             },
             'EnsembleHopMover': {
                 'name': 'Hop',
                 'suffix': 'h',
-                'cls': ['hop']
+                'css_class': ['hop']
             },
             'PathReversalMover': {
                 'name': 'Reversal',
                 'suffix': 'r',
-                'cls': ['reversal']
+                'css_class': ['reversal']
             },
             'new': {
                 'name': 'New',
                 'suffix': '+',
-                'cls': ['unknown']
+                'css_class': ['unknown']
             },
             'unknown': {
                 'name': '???',
                 'suffix': '?',
-                'cls': ['repex']
+                'css_class': ['repex']
             },
             'default': {
                 'name': '---',
@@ -1265,7 +1379,7 @@ class PathTreeBuilder(Builder):
                 'label': '',
                 'suffix': '?',
                 'label_position': 'left',
-                'cls': [],
+                'css_class': [],
                 'hide': False
             }
         })
@@ -1423,7 +1537,10 @@ class SampleList(OrderedDict):
     Examples would be the history of samples that lead to a specific samples (heritage)
     or the history of samples in a specific ensemble or of a given replica.
 
-    Last it provides some useful filters that make sense for samples.
+    It provides some useful filters that make sense for samples. And you can add a list of
+    steps as context, where the samples where generated in. I analyzing the evolution of a
+    path you do not need the context. It is mostly for error checking and inspecting moves,
+    while analyzing in the step context allow you to analyze decorrelation of paths.
 
     Attributes
     ----------
@@ -1435,28 +1552,49 @@ class SampleList(OrderedDict):
         a much clearer picture and shows the redundancy of snapshots when reversing
         trajectories. Use with care it will distort the sense of time from left to right
         in the generated picture
+    trace_missing : bool, default: `False`
+        if `True` this will mean that alignment between trajectories will be traced using
+        the `.parent` property even if a sample is not contained in the sample list itself.
+        Imagine you are looking only at the evolution of a particular replica after a
+        complete MC step. These steps might involve several shooting moves that will
+        completely deorrelate between a sample and its listed predecessor. Usually the closest
+        parent is used as a reference and overlapping parts will be aligned. If the closest
+        parent does not have overlap (because of being completely decorrelated) we cannot simply
+        align. In that case you might create a new hidden samplelist tracing the parents to
+        the closest parent to determine the relative shift. This is done, if `trace_missing` is
+        `True`. If `False` two such samples will be treated as unrelated and the new is placed at
+        position zero as is the very first sample in the list.
+
+        Notes
+        -----
+        This is a special `OrderedDict` of the form `{ samp1: information, samp2: information }`.
+        So, if you get by integer you will get the sample at the position, while getting a
+        sample directly will act as a regular dict. So this will actually work and return the
+        information of the third sample in the list.
+
+        >>> sl = SampleList()
+        >>> print sl[sl[3]]
+
+        It seemed to make sense to provide a possibility to access a specific index in an
+        OrderedDict, which is not possible in the base implementation.
 
     """
 
-    def __init__(self, samples, time_symmetric=None, flip_time_direction=None, trace_missing=None):
+    def __init__(
+            self,
+            samples,
+            time_symmetric=True,
+            flip_time_direction=False,
+            trace_missing=False
+    ):
         OrderedDict.__init__(self)
 
-        if time_symmetric is None:
-            self._time_symmetric = True
-        else:
-            self._time_symmetric = time_symmetric
-
-        if flip_time_direction is None:
-            self._flip_time_direction = False
-        else:
-            self._flip_time_direction = flip_time_direction
-
-        if flip_time_direction is None:
-            self._trace_missing = False
-        else:
-            self._trace_missing = trace_missing
+        self._time_symmetric = time_symmetric
+        self._flip_time_direction = flip_time_direction
+        self._trace_missing = trace_missing
 
         self._matrix = []
+        self._steps = None
 
         if hasattr(samples, '__iter__'):
             for s in samples:
@@ -1470,6 +1608,15 @@ class SampleList(OrderedDict):
         """
         Keep only samples where the filter function returns True
 
+        Parameters
+        ----------
+        filter_func : callable
+            a function that is called on all sample, data pairs. If `True` is returned the
+            sample is kept, otherwise the sample will be removed from the list. The function
+            can be called with either `filter_func(sample, data_dict)` or `filter_func(sample),
+            depending on how many parameters the function accepts. data dict is the information
+            contained in `sample_list[sample]`
+
         """
         try:
             # see, if the filter function accepts two parameters
@@ -1480,6 +1627,20 @@ class SampleList(OrderedDict):
             self.set_samples([
                 samp for samp in self if filter_func(samp)
             ])
+
+    @property
+    def steps(self):
+        """
+        list of `openpathsampling.MCStep` : The list of steps giving the context for the samples.
+            Currently samples do no contain information about the context / step they were
+            generated in.
+
+        """
+        return self._steps
+
+    @steps.setter
+    def steps(self, value):
+        self._steps = value
 
     @staticmethod
     def filter_redundant_moves(samp, data):
@@ -1502,7 +1663,8 @@ class SampleList(OrderedDict):
         Parameters
         ----------
         samples : list of :obj:`openpathsampling.Sample`
-            the list of samples to be inspected
+            the list of samples to be inspected. This will trigger reevaluation of the
+            current list of samples
 
         """
         self.clear()
@@ -1545,28 +1707,23 @@ class SampleList(OrderedDict):
         Parameters
         ----------
         steps : list of :obj:`openpathsampling.MCStep`
-            the list of simulation steps to be inspected and turned into a list of samples
+            the list of simulation steps to be inspected and turned into a
+            list of samples
         replica : int
             the replica ID to be traced
         accepted : bool
-            if `True` only accepted samples will be included in the list. Otherwise it will also
-            contain trial samples
+            if `True` only accepted samples will be included in the list.
+            Otherwise it will also contain trial samples
 
         Returns
         -------
         :obj:`SampleList`
             the generated list of samples
 
-        Notes
-        -----
-        This is a special ordered dict of the form `{ samp1: information, samp2: information }`. So if you
-        get by integer to will get the sample at the position while getting a sample will act as a regular
-        dict. So this will actually work and return the information of the third sample in the list.
-
-        >>> sl = SampleList()
-        >>> print sl[sl[3]]
         """
-        return SampleList(SampleList._get_samples_from_steps(steps, replica, accepted))
+        sl = SampleList(SampleList._get_samples_from_steps(steps, replica, accepted))
+        sl.steps = steps
+        return sl
 
     @staticmethod
     def _get_samples_from_steps(steps, replica, accepted):
@@ -1588,6 +1745,7 @@ class SampleList(OrderedDict):
                     samples.append(rep_trials[-1])
 
             return samples
+
 
     def without_redundant(self):
         """
@@ -1734,6 +1892,23 @@ class SampleList(OrderedDict):
     def analyze(self):
         """
         Perform the analysis of the samples.
+
+        It will loop through the list of samples and determine the overlap with its
+        parent. Note that at this point there is no move that can create a sample from
+        more than one initial one. So it is enough to assume that a sample has a single
+        parent, its origin that is determined by the mover.
+
+        Since the parent is unique we will base the alignment upon the position of the
+        parent or (if samples are missing) on the closest ancestor.
+        The alignment will be chosen such that parts that exist in both trajectories are
+        placed on top. If we chose `time_symmetric` this will also be true if the trajectories
+        are reversed.
+
+        If you set `flip_time_direction = True` samples might be displayed in reverse order
+        to perfectly align reversed ones. This means that in a plot the direction of time
+        but not of correlation will change. Imagine have samples between state A and B and
+        you start with A -> B then this will keep the initial direction in a plot although
+        a time reversal move will go from B -> A while being perfectly reversed.
 
         Should be called automatically when relevant changes are detected.
         """
@@ -1958,6 +2133,73 @@ class SampleList(OrderedDict):
         """
         return self[-1]
 
+
+class StepSampleList(SampleList):
+    """
+    An ordered list of `Sample`s analyzed in the context of a list of `MCStep`s
+
+    You often want to analyze the evolution of Replicas during a simulation. This object
+    will mimick a list of Samples generated from steps to your liking
+    """
+
+    def __init__(self, steps, replica, accepted=True):
+        self.steps = steps
+        super(StepSampleList, self).__init__([])
+
+        self._replica = replica
+        self._accepted = accepted
+
+        self._create_step_sample_list()
+
+    def _create_step_sample_list(self):
+        # TODO: This will sometime be replace by a `sample.step` property
+        self._sample_step_list = dict()
+        for step in self.steps:
+            for ch in step.change:
+                for s in ch.samples:
+                    self._sample_step_list[s] = step
+
+        self.analyze()
+
+    @property
+    def replica(self):
+        self.analyze()
+        return self._replica
+
+    @replica.setter
+    def replica(self, value):
+        self._replica = value
+
+    @property
+    def accepted(self):
+        self.analyze()
+        return self._accepted
+
+    @accepted.setter
+    def accepted(self, value):
+        self._accepted = value
+
+    def get_step(self, sample):
+        """
+        Return the step in which a sample was generated
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the generating `MCStep` from
+
+        Returns
+        -------
+        :obj:`MCStep`
+            the step in which the sample was generated
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely generated in
+        one move and thus during one step
+        """
+
+        return self._sample_step_list[sample]
 
 # TODO: Move this to extra file and load using 'pkgutil' or so
 vis_css = r"""
