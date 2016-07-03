@@ -508,9 +508,9 @@ class MoveTreeBuilder(Builder):
         l = [(mover, level, replica_states)]
         subs = mover.sub_replica_state(replica_states)
         map(
-            lambda x, y, z : l.extend(MoveTreeBuilder._get_sub_used(x, y, z)),
+            lambda x, y, z: l.extend(MoveTreeBuilder._get_sub_used(x, y, z)),
             mover.submovers, subs, [1 + level] * len(mover.submovers)
-            )
+        )
         return l
 
     def render(self):
@@ -528,7 +528,8 @@ class MoveTreeBuilder(Builder):
             class_='tree'
         )
 
-        tree = path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])
+        tree = path.depth_pre_order(
+            lambda this: this, only_canonical=self.options.analysis['only_canonical'])
         total = len(tree)
 
         for yp, (level, sub_mp) in enumerate(tree):
@@ -625,7 +626,8 @@ class MoveTreeBuilder(Builder):
         # assert(Counter(dict(initial_rs)) >= self.pathmover.in_out_matrix.minimal)
 
         for yp, (level, sub_mp) in enumerate(
-                path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
+                path.depth_pre_order(
+                    lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
             sub = subs[yp]
 
             if level > max_level:
@@ -639,11 +641,15 @@ class MoveTreeBuilder(Builder):
             # in_ens = sub_mp.input_ensembles
             # out_ens = sub_mp.output_ensembles
 
-            possible_ins = [i.ins for i in sub_io_set if any(s >= i.ins for s in possible_input_replica_states)]
-            possible_outs = [i.outs for i in sub_io_set if any(s >= i.ins for s in possible_input_replica_states)]
+            possible_ins = [
+                i.ins for i in sub_io_set
+                if any(s >= i.ins for s in possible_input_replica_states)]
+            possible_outs = [
+                i.outs for i in sub_io_set
+                if any(s >= i.ins for s in possible_input_replica_states)]
 
-            in_ens = reduce(lambda a, b : a | b, possible_ins, Counter())
-            out_ens = reduce(lambda a, b : a | b, possible_outs, Counter())
+            in_ens = reduce(lambda a, b: a | b, possible_ins, Counter())
+            out_ens = reduce(lambda a, b: a | b, possible_outs, Counter())
 
             for ens_idx, ens in enumerate(self.ensembles):
                 txt = chr(ens_idx + 65)
@@ -739,11 +745,13 @@ class PathTreeBuilder(Builder):
     Attributes
     ----------
     states : dict, 'svg_color': :obj:`openpathsampling.Volume`-like
-        a dictionary listing a color that fulfills the SVG specification like `#888`, `gold` or `rgb(12,32,59)`
-        referencing a volume like object that will return a bool when passed a snapshot. If true then the snapshot
+        a dictionary listing a color that fulfills the SVG specification like
+        `#888`, `gold` or `rgb(12,32,59)` referencing a volume like object that
+        will return a bool when passed a snapshot. If true then the snapshot
         is highlighed using the given color
     op : :obj:`openpathsampling.CollectiveVariable`-like
-        a function that returns a value when passed a snapshot. The value will be put on single snapshots.
+        a function that returns a value when passed a snapshot. The value will
+        be put on single snapshots.
     
     """
     def __init__(self):
@@ -1563,7 +1571,6 @@ class PathTree(PathTreeBuilder):
         self._steps = StepList(steps)
         if self.generator is not None:
             self.generator.steps = self.steps
-
 
 
 class SnapshotMatrix(object):
