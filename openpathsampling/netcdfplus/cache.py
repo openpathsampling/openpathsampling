@@ -385,7 +385,8 @@ class LRUChunkLoadingCache(Cache):
 
     def _update_chunk_order(self, chunk_idx):
         if chunk_idx != self._firstchunk:
-            chunk = self._chunkdict.popitem(last=False)
+            chunk = self._chunkdict[chunk_idx]
+            del self._chunkdict[chunk_idx]
             self._chunkdict[chunk_idx] = chunk
             self._firstchunk = chunk_idx
 

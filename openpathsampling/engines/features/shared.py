@@ -115,9 +115,7 @@ class StaticContainerStore(ObjectStore):
     def _save(self, configuration, idx):
         # Store configuration.
         self.vars['coordinates'][idx] = configuration.coordinates
-
-        if configuration.box_vectors is not None:
-            self.vars['box_vectors'][idx] = configuration.box_vectors
+        self.vars['box_vectors'][idx] = configuration.box_vectors
 
     def get(self, indices):
         return [self.load(idx) for idx in indices]
@@ -127,7 +125,6 @@ class StaticContainerStore(ObjectStore):
         box_vectors = self.vars["box_vectors"][idx]
 
         configuration = StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
-        configuration.topology = self.storage.topology
 
         return configuration
 

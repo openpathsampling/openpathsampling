@@ -108,17 +108,17 @@ class testRandomizeVelocities(object):
         self.snap_2x3D = paths.engines.toy.Snapshot(
             coordinates=np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
             velocities=np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]]),
-            topology=topology_2x3D
+            engine=paths.engines.toy.Engine({}, topology_2x3D)
         )
         self.snap_3x1D = paths.engines.toy.Snapshot(
             coordinates=np.array([[0.0], [0.0], [0.0]]),
             velocities=np.array([[0.0], [0.0], [0.0]]),
-            topology=topology_3x1D
+            engine=paths.engines.toy.Engine({}, topology_3x1D)
         )
         self.snap_1x2D = paths.engines.toy.Snapshot(
             coordinates=np.array([[0.0, 0.0]]),
             velocities=np.array([[0.0, 0.0]]),
-            topology=topology_1x2D
+            engine=paths.engines.toy.Engine({}, topology_1x2D)
         )
 
     def test_call(self):

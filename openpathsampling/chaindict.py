@@ -57,6 +57,8 @@ class ChainDict(object):
 
     def __getitem__(self, items):
         # first apply the own _get functions to compute
+        # print 'get %d items using %s' % (len(items), self.__class__.__name__)
+
         results = self._get_list(items)
 
         if self._post is not None:
@@ -64,7 +66,8 @@ class ChainDict(object):
             if len(nones) == 0:
                 return results
             else:
-                rep = self._post[[p for p in nones]]
+                # print 'found %d nones calling %s' % (len(nones), self._post.__class__.__name__)
+                rep = self._post[nones]
                 self._set_list(nones, rep)
 
                 it = iter(rep)
@@ -477,6 +480,7 @@ class StoredDict(ChainDict):
 
     def _set(self, item, value):
         if value is not None:
+            # print 'Storing %s in %s' % (str(value), str(item))
             self.value_store[item] = value
 
     def _set_list(self, items, values):
@@ -487,3 +491,9 @@ class StoredDict(ChainDict):
 
     def _get_list(self, items):
         return map(self._get, items)
+
+    def sync(self):
+        pass
+
+    def cache_all(self):
+        pass

@@ -1,6 +1,6 @@
 import numpy as np
 
-from openpathsampling.engines import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import ToySnapshot as Snapshot
 
 
@@ -28,14 +28,18 @@ class ToyEngine(DynamicsEngine):
         options['n_atoms'] = 1
 
         snapshot_dimensions = {
-            'atoms': topology.n_atoms,
+            'atom': topology.n_atoms,
             'spatial': topology.n_spatial
         }
 
-        super(ToyEngine, self).__init__(
-            options=options,
+        descriptor = SnapshotDescriptor.construct(
             snapshot_class=Snapshot,
             snapshot_dimensions=snapshot_dimensions
+        )
+
+        super(ToyEngine, self).__init__(
+            options=options,
+            descriptor=descriptor
         )
 
         self.topology = topology
@@ -46,9 +50,9 @@ class ToyEngine(DynamicsEngine):
         self.positions = None
         self.velocities = None
 
-        self._mass = topology.masses
+        self._mass = np.array(topology.masses)
         self._pes = topology.pes
-
+        self._minv = 1.0 / self._mass
 
     @property
     def pes(self):

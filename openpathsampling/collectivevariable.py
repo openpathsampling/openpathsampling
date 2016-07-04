@@ -68,7 +68,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         super(CollectiveVariable, self).__init__(post=self._single_dict > self._cache_dict)
 
-    def set_cache_store(self, key_store, value_store, backward_store=None):
+    def set_cache_store(self, value_store):
         """
         Attach store variables to the collective variables.
 
@@ -96,8 +96,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         """
         self._store_dict = cd.StoredDict(value_store)
-        self._store_dict._post = self._cache_dict
-        self._single_dict._post = self._store_dict
+        hook_store = self._single_dict
+        self._store_dict._post = hook_store._post
+        hook_store._post = self._store_dict
 
     # This is important since we subclass from list and lists are not hashable
     # but CVs should be

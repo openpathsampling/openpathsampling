@@ -330,10 +330,7 @@ class ReversibleObjectDictStore(ObjectDictStore):
 
     def _load(self, idx):
         op = self.vars['json'][idx]
-        if op.cv_time_reversible:
-            op.set_cache_store(self.key_store, self.cache_var(idx), self.cache_var(idx))
-        else:
-            op.set_cache_store(self.key_store, self.cache_var(idx), self.cache_bw(idx))
+        op.set_cache_store(self.cache_var(idx))
 
         return op
 

@@ -225,15 +225,17 @@ class testTPSNetwork(object):
             os.remove(fname)
 
         topol = peng.Topology(n_spatial=1, masses=[1.0], pes=None)
+        engine = peng.Engine({}, topol)
         self.template = peng.Snapshot(coordinates=np.array([[0.0]]),
                                        velocities=np.array([[0.0]]),
-                                       topology=topol)
+                                       engine=engine)
 
         states = [self.stateA, self.stateB, self.stateC]
         network_a = TPSNetwork(initial_states=states, final_states=states)
         assert_equal(len(network_a.sampling_transitions), 1)
         assert_equal(len(network_a.transitions), 6)
-        storage_w = paths.storage.Storage(fname, "w", self.template)
+        storage_w = paths.storage.Storage(fname, "w")
+        storage_w.snapshots.save(self.template)
         storage_w.save(network_a)
         storage_w.sync_all()
 
