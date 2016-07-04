@@ -792,8 +792,6 @@ class ObjectStore(StorableNamedObject):
 
         """
 
-        # print 'save', self.name, self.index.get(obj)
-
         if obj in self.index:
             # has been saved so quit and do nothing
             if not self.index[obj] == -1:
@@ -1591,7 +1589,6 @@ class IndexedObjectStore(ObjectStore):
         :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the loaded object
         """
-        print 'loading', idx, self.index
 
         # we want to load by uuid and it was not in cache.
         if idx in self.index:
@@ -1659,7 +1656,7 @@ class IndexedObjectStore(ObjectStore):
         except:
             logger.debug('Problem saving %d !' % n_idx)
             # in case we did not succeed remove the mark as being saved
-            del self.index[obj]
+            del self.index[idx]
             self.release_idx(n_idx)
             raise
 
@@ -1669,13 +1666,8 @@ class IndexedObjectStore(ObjectStore):
         return idx
 
     def restore(self):
-        print 'restore'
-        print self.variables['index'][:]
-        print len(self.variables['index'])
         for pos, idx in enumerate(self.vars['index'][:]):
             self.index[idx] = pos
-
-        print 'Index', self.index
 
     def initialize(self):
         super(IndexedObjectStore, self).initialize()

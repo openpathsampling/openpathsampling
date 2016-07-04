@@ -143,8 +143,6 @@ class BaseSnapshotStore(ObjectStore):
 
             obj.__uuid__ = uuid
 
-            print uuid
-
     def load_indices(self):
         if self.reference_by_uuid:
             for idx, uuid in enumerate(self.vars['uuid'][:]):
@@ -342,8 +340,6 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
         if idx & 1:
             obj = obj.reversed
 
-        print 'got', obj
-
         return obj
 
     def _load(self, idx):
@@ -517,7 +513,6 @@ class FeatureSnapshotIndexedStore(BaseSnapshotIndexedStore):
         super(FeatureSnapshotIndexedStore, self).initialize()
 
         for dim, size in self._dimensions.iteritems():
-            print 'add dimension', self.prefix + dim
             self.storage.create_dimension(self.prefix + dim, size)
 
         for feature in self.classes:
@@ -560,13 +555,10 @@ class SnapshotWrapperStore(ObjectStore):
             raise ValueError('IDX "' + idx + '" not found in storage')
         else:
             store = self.store_list[store_idx]
-            # print len(store), idx
-            # print 'I', store.vars['index'][:]
-            # print store[idx]
             return store[idx]
 
     def __len__(self):
-        return super(SnapshotWrapperStore, self).__len__() * 2
+        return len(self.storage.dimensions[self.prefix]) * 2
 
     def initialize(self):
         super(SnapshotWrapperStore, self).initialize()
@@ -658,9 +650,7 @@ class SnapshotWrapperStore(ObjectStore):
                 # if the object has no reversed present, then the reversed does not
                 # exist yet and hence it cannot be in the index, so no checking
                 if obj._reversed in self.index:
-                    print obj._reversed, self.index.keys(), self.index[obj._reversed]
                     n_idx = self.index[obj._reversed] ^ 1
-                    print 'n', n_idx
 
         if n_idx is not None:
             store_idx = self.variables['store'][n_idx / 2]
@@ -687,7 +677,7 @@ class SnapshotWrapperStore(ObjectStore):
 
     def _put_in_store(self, store, store_idx, obj, idx):
         store[idx / 2] = obj
-        self.vars['store'][idx] = store_idx
+        self.vars['store'][idx / 2] = store_idx
         self.index[obj] = idx
 
     def _save(self, obj, idx):
@@ -706,7 +696,7 @@ class SnapshotWrapperStore(ObjectStore):
 
             elif self.treat_missing_snapshot_type == 'ignore':
                 # we keep silent about it
-                self.vars['store'][idx] = -1
+                self.vars['store'][idx / 2] = -1
                 return None
             else:
                 # we fail with cannot store
@@ -731,6 +721,7 @@ class SnapshotWrapperStore(ObjectStore):
             the number of the next free index in the storage.
             Used to store a new object.
         """
+
 
         # start at first free position in the storage
         idx = len(self)
@@ -837,6 +828,10 @@ class SnapshotWrapperStore(ObjectStore):
                 uuid = StorableObject.ruuid(uuid)
 
             obj.__uuid__ = uuid
+
+    def _set_id(self, idx, obj):
+        if self.reference_by_uuid:
+            self.vars['uuid'][idx / 2] = obj.__uuid__
 
     def idx(self, obj):
         """

@@ -25,8 +25,13 @@ def make_1d_traj(coordinates, velocities=None, engine=None):
     if velocities is None:
         velocities = [0.0]*len(coordinates)
     if engine is None:
-        engine = peng.tools.TopologyEngine(toys.Topology(n_atoms=1, n_spatial=3,
-                                 masses=[1.0, 1.0, 1.0], pes=None))
+        engine = toys.Engine(
+            {},
+            toys.Topology(
+                n_spatial=3,
+                masses=[1.0, 1.0, 1.0], pes=None
+            )
+        )
     traj = []
     for (pos, vel) in zip(coordinates, velocities):
         snap = toys.Snapshot(

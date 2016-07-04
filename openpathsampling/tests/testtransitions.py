@@ -57,7 +57,8 @@ class testFixedLengthTPSTransition(object):
         filename = data_filename("transitions.nc")
         if os.path.isfile(filename):
             os.remove(filename)
-        storage = paths.Storage(filename, "w", self.good_traj[0])
+        storage = paths.Storage(filename, "w")
+        storage.snapshots.save(self.good_traj[0])
 
         storage.save(self.transition)
         assert_equal(len(storage.transitions), 1)

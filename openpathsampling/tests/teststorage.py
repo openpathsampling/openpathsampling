@@ -215,29 +215,15 @@ class testStorage(object):
         assert(os.path.isfile(self.filename))
 
         store.snapshots.save(self.template_snapshot)
-
-        print len(store.snapshots)
-        print len(store.dimensions['snapshots'])
-
         rev = self.template_snapshot.reversed
-
-        print store.snapshots.index.keys()
 
         # save the reversed one
         store.snapshots.save(rev)
-
-        print len(store.snapshots)
-        print len(store.dimensions['snapshots'])
-        print store.snapshots.index.keys()
-
-        print 'I', store.idx(rev)
 
         # check that the reversed one has index 1 and not 3!
         assert(store.idx(rev) == 1)
 
         # and we have exactly one snapshot
-        print len(store.snapshots)
-
         assert(len(store.snapshots) == 2)
         assert(len(store.dimensions['snapshots']) == 1)
         store.close()
