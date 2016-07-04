@@ -2141,9 +2141,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             raise RuntimeError(
                 "Invalid input trajectory for minus extension. (Not A-to-A?)"
             )
-        extension = engine.generate(last_frame,
-                                    [self.can_append])
+        fwd_extend_ens = PrefixTrajectoryEnsemble(self, partial_traj)
+        extension = engine.generate(last_frame, 
+                                    [fwd_extend_ens.can_append])
         first_minus = paths.Trajectory(partial_traj + extension[1:])
+        assert self(first_minus)
         minus_samp = paths.Sample(
             replica=minus_replica_id,
             trajectory=first_minus,
@@ -2155,6 +2157,43 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
              "X" : ~self.innermost_vol})
         )
         return minus_samp
+
+    def populate_minus_ensemble_from_set(self, samples, minus_replica_id,
+                                         engine):
+        """
+        Generate a sample for this minus ensemble by extending trajectory.
+
+        Parameters
+        ----------
+        samples : iterable of :class:`.Sample`
+            samples with trajectories that might be extended
+        minus_replica_id : int or str
+            replica ID for the return sample
+        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
+            engine to use for MD extension
+
+        Returns
+        -------
+        :class:`.Sample` :
+            a sample for this minus ensemble
+        """
+        partials = [s.trajectory for s in samples 
+                    if self._segment_ensemble(s.trajectory)]
+        if len(partials) == 0:
+            # TODO: add support for trying to run backwards
+            raise RuntimeError("No trajectories can be extended")
+
+	good_sample = False
+	while not good_sample:
+            partial_traj = partials[0]
+            # I think it should be impossible to RuntimeError in this
+            samp = self.populate_minus_ensemble(
+                partial_traj=partial_traj,
+                minus_replica_id=minus_replica_id,
+                engine=engine
+            )
+	    good_sample = samp.ensemble(samp.trajectory)
+        return samp
 
 class TISEnsemble(SequentialEnsemble):
     """An ensemble for TIS (or AMS).
