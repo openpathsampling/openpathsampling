@@ -475,30 +475,9 @@ class HistogramPlotter2D(object):
         self.ylim = ylim
         self.label_format = label_format
 
-        x, y = zip(*self.histogram._histogram.keys())
-        self.xticks_, self.xrange_, self.xlim_ = self.axis_input(
-            hist=x, ticklabels=xticklabels, lims=xlim, dof=0
+        self.xticks_, self.xlim_, self.yticks_, self.ylim_ = axes_setup(
+            xtickslabels, yticklables, xlim, ylim
         )
-        self.yticks_, self.yrange_, self.ylim_ = self.axis_input(
-            hist=y, ticklabels=yticklabels, lims=ylim, dof=1
-        )
-
-    @staticmethod
-    def df_range_1d(hist, tics=None, lims=None):
-	if tics is None:
-	    tics = []
-	if lims is None:
-	    lims = []
-	hist = list(hist)
-	tics = list(tics)
-	lims = list(lims)
-	return (int(min(hist + tics + lims)), int(max(hist + tics + lims)))
-
-    @staticmethod
-    def limits(df_range, lims=None):
-        if lims is None:
-            lims = (0, df_range[1]-df_range[0])
-        return lims
 
     def to_bins(self, alist, dof):
         left_edge = self.histogram.left_bin_edges[dof]
@@ -511,15 +490,15 @@ class HistogramPlotter2D(object):
     def axis_input(self, hist, ticklabels, lims, dof):
         ticks_ = self.to_bins(ticklabels, dof)
         lims_ = self.to_bins(lims, dof)
-        range_ = self.df_range_1d(hist, ticks_, lims_)
-        lims_ = self.limits(range_, lims_)
+        ticks = [] if ticks_ is None else list(ticks_)
+        lims = [] if lims_ is None else list(lims_)
+        range_ = (int(min(list(hist) + ticks + lims)),
+                  int(max(list(hist) + ticks + lims)))
+        if lims_ is None:
+            lims = (0, range_[1] - range_[0])
         return (ticks_, range_, lims_)
 
-    def plot(self, normed=None, xticklabels=None, yticklabels=None,
-             xlim=None, ylim=None, **kwargs):
-
-        if normed is None:
-            normed = self.normed
+    def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
         if xticklabels is None:
             xticklabels = self.xticklabels
         if yticklabels is None:
@@ -528,40 +507,53 @@ class HistogramPlotter2D(object):
             xlim = self.xlim
         if ylim is None:
             ylim = self.ylim
-
         x, y = zip(*self.histogram._histogram.keys())
-        xticks_, self.xrange_, xlim_ = self.axis_input(
-            hist=x, ticklabels=xticklabels, lims=xlim, dof=0
-        )
-        yticks_, self.yrange_, ylim_ = self.axis_input(
-            hist=y, ticklabels=yticklabels, lims=ylim, dof=1
+        xticks_, xrange_, xlim_ = self.axis_input(x, xticklabels, xlim, dof=0)
+        yticks_, yrange_, ylim_ = self.axis_input(y, yticklabels, ylim, dof=1)
+        self.xrange_ = xrange_
+        self.yrange_ = yrange_
+        return (xticks_, xlim_, yticks_, ylim_)
+
+    def ticks_and_labels(self, ticks, ax, dof):
+        if dof == 0:
+            ax_ticks = ax.get_xticks()
+            minval = self.xrange_[0]
+            bw = self.histogram.bin_widths[0]
+            edge = self.histogram.left_bin_edges[0]
+        elif dof == 1:
+            ax_ticks = ax.get_yticks()
+            minval = self.yrange_[0]
+            bw = self.histogram.bin_widths[1]
+            edge = self.histogram.left_bin_edges[1]
+        else:
+            raise RuntimeError("Bad DOF: "+ str(dof))
+        to_val = lambda n : (n + minval) * bw + edge
+        ticks = ticks if ticks is not None else ax_ticks
+        labels = [self.label_format.format(to_val(n)) for n in ticks]
+        return (ticks, labels)
+
+    def plot(self, normed=None, xticklabels=None, yticklabels=None,
+             xlim=None, ylim=None, **kwargs):
+        if normed is None:
+            normed = self.normed
+
+        xticks_, xlim_, yticks_, ylim_ = self.axes_setup(
+            xticklabels, yticklabels, xlim, ylim
         )
 
         hist_fcn = self.histogram.normalized(raw_probability=True)
         df = hist_fcn.df_2d(x_range=self.xrange_, y_range=self.yrange_)
         self.df = df
 
-        bin_widths = self.histogram.bin_widths
-        left_bin_edges = self.histogram.left_bin_edges
-	df_index_to_val = lambda n : (
-            (n + self.xrange_[0]) * bin_widths[0] + left_bin_edges[0]
-        )
-	df_column_to_val = lambda n : (
-            (n + self.yrange_[0]) * bin_widths[1] + left_bin_edges[1] 
-        )
-
 	mesh = plt.pcolormesh(df.fillna(0.0).transpose(), **kwargs)
-        ax = mesh.axes
-        xticks = xticks_ if xticks_ is not None else ax.get_xticks()
-        yticks = yticks_ if yticks_ is not None else ax.get_yticks()
+
+        (xticks, xlabels) = self.ticks_and_labels(xticks_, mesh.axes, dof=0)
+        (yticks, ylabels) = self.ticks_and_labels(yticks_, mesh.axes, dof=1)
+
         ax.set_xticks(xticks)
         ax.set_yticks(yticks)
-	ax.set_xticklabels(
-            [self.label_format.format(df_index_to_val(n)) for n in xticks]
-        )
-	ax.set_yticklabels(
-            [self.label_format.format(df_column_to_val(n)) for n in yticks]
-        )
+	ax.set_xticklabels(xlabels)
+	ax.set_yticklabels(ylabels)
 	plt.xlim(xlim_[0], xlim_[1])
 	plt.ylim(ylim_[0], ylim_[1])
 	plt.colorbar()
