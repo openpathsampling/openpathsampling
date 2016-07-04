@@ -76,7 +76,7 @@ class ObjectDictStore(UniqueNamedObjectStore):
         self.vars['json'][idx] = objectdict
 
         if objectdict.cv_store_cache:
-            self.create_cache(objectdict)
+            self.storage.snapshots.add_cv(objectdict, objectdict(self.storage.snapshots[0]))
 
     def cache_var_name(self, idx):
         """

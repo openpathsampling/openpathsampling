@@ -6,7 +6,7 @@ import openpathsampling.engines as peng
 from collections import OrderedDict
 from uuid import UUID
 
-from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, WeakLRUCache
+from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, WeakLRUCache, LRUChunkLoadingCache
 
 from openpathsampling.engines import BaseSnapshot
 
@@ -714,7 +714,9 @@ class SnapshotWrapperStore(ObjectStore):
             self.index[obj] = n_idx
             self._set_id(n_idx, obj)
 
-    def add_feature(self, name, template):
+    def add_cv(self, cv, template, chunksize=100):
+
+        # determine value type and shape
         params = NetCDFPlus.get_value_parameters(template)
         shape = params['dimensions']
 
@@ -725,7 +727,13 @@ class SnapshotWrapperStore(ObjectStore):
 
         cache = SnapshotValueStore()
 
-        var_name = 'snapshot'
+        # make sure the cv is saved
+        # if cv not in self.storage.cvs.index:
+        #     self.storage.cvs.save(cv)
+
+        print self.storage.cvs.index
+
+        var_name = 'cv' + str(self.storage.cvs.index[cv])
 
         self.storage.create_store(var_name, cache, False)
 
@@ -734,12 +742,13 @@ class SnapshotWrapperStore(ObjectStore):
         self.storage.create_dimension(cache.prefix, 0)
 
         if shape is not None:
-            shape = tuple([0] + list(shape))
-            chunksizes = tuple([1] + list(chunksizes))
+            shape = tuple(list(shape))
+            chunksizes = tuple([chunksize] + list(chunksizes))
         else:
-            shape = tuple([0])
-            chunksizes = tuple([1])
+            shape = tuple()
+            chunksizes = tuple([chunksize])
 
+        # create the variable
         cache.create_variable(
             'value',
             var_type=params['var_type'],
@@ -748,10 +757,22 @@ class SnapshotWrapperStore(ObjectStore):
             simtk_unit=params['simtk_unit'],
         )
 
-        cache.set_caching(WeakLRUCache(100000))
         cache.create_variable('index', 'index')
+        # self.storage.create_variable_delegate(var_name + '_value')
+        # self.storage.create_variable_delegate(var_name + '_index')
 
-        self.set_cache_store(cv)
+        setattr(cache, 'value', self.storage.vars[var_name + '_value'])
+
+        cache.set_caching(LRUChunkLoadingCache(
+            chunksize=chunksize,
+            max_chunks=1000,
+            variable=cache.value
+        ))
+
+        # self.set_cache_store(cv)
+
+    def create_uuid_index(self):
+        return UUIDReversalDict()
 
 
 class SnapshotValueStore(ObjectStore):
@@ -764,7 +785,7 @@ class SnapshotValueStore(ObjectStore):
 
     def register(self, storage, prefix):
         super(SnapshotValueStore, self).register(storage, prefix)
-        self.uuid_index = self.storage.snapshots
+        self.uuid_index = self.storage.snapshots.index
 
     # =============================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
@@ -841,6 +862,7 @@ class SnapshotValueStore(ObjectStore):
             self.vars['index'][n_idx] = pos
 
             self.index[idx] = n_idx
+            print n_idx,  value
             self.cache[n_idx] = value
 
     def sync(self, cv):

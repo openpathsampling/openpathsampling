@@ -313,10 +313,6 @@ class WeakKeyCache(weakref.WeakKeyDictionary, Cache):
     Implements a cache that keeps weak references to all elements
     """
 
-    def __init__(self, *args, **kwargs):
-        weakref.WeakKeyDictionary.__init__(*args, **kwargs)
-        Cache.__init__(self)
-
     @property
     def count(self):
         return 0, len(self)
@@ -414,13 +410,19 @@ class LRUChunkLoadingCache(Cache):
 
     def __setitem__(self, key, value, **kwargs):
         chunk_idx = key / self.chunksize
-        chunk = self._chunkdict.get(chunk_idx, [])
+        if chunk_idx in self._chunkdict:
+            chunk = self._chunkdict[chunk_idx]
+        else:
+            chunk = []
+            self._chunkdict[chunk_idx] = chunk
 
         left = chunk_idx * self.chunksize + len(chunk)
         right = key - 1
 
         if right > left:
             chunk.append(self.variable[left:right])
+
+        chunk.append(value)
 
         self._update_chunk_order(chunk_idx)
         self._check_size_limit()

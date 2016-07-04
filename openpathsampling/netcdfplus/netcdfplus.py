@@ -105,6 +105,9 @@ class NetCDFPlus(netCDF4.Dataset):
         def __repr__(self):
             return repr(self.variable)
 
+        def __len__(self):
+            return len(self.variable)
+
     class KeyDelegate(object):
         """
         Value delegate for objects that implement __getitem__ and __setitem__
@@ -962,7 +965,7 @@ class NetCDFPlus(netCDF4.Dataset):
             self.vars[var_name] = NetCDFPlus.ValueDelegate(var, getter, setter, store)
 
         else:
-            raise ValueError("Variable '%s' is already taken!")
+            raise ValueError("Variable '%s' is already taken!" % var_name)
 
     def create_variable(self, var_name,
                         var_type,

@@ -38,8 +38,16 @@ class LoaderProxy(object):
         self._subject = weakref.ref(ref)
         return ref
 
+    # the next two are only used for Snapshots to not load a snapshot, if the reversed is requested
     @property
     def reversed(self):
+        if self._store.reference_by_uuid:
+            return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
+        else:
+            return LoaderProxy(self._store, self._idx ^ 1)
+
+    @property
+    def _reversed(self):
         if self._store.reference_by_uuid:
             return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
         else:

@@ -4,7 +4,7 @@
 
 import openpathsampling as paths
 import chaindict as cd
-from openpathsampling.netcdfplus import StorableNamedObject, WeakLRUCache, ObjectJSON, create_to_dict
+from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, ObjectJSON, create_to_dict
 
 import openpathsampling.engines as peng
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
@@ -61,8 +61,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.cv_time_reversible = cv_time_reversible
 
         self._single_dict = cd.ExpandSingle()
-        self._cache_dict = cd.ReversibleCacheChainDict(
-                WeakLRUCache(1000, weak_type='key'),
+        self._cache_dict = cd.PlainReversibleCacheChainDict(
+                WeakKeyCache(),
                 reversible=cv_time_reversible
         )
 

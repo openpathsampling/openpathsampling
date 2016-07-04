@@ -407,6 +407,36 @@ class ReversibleCacheChainDict(CacheChainDict):
             self.cache[item.reversed] = value
 
 
+class PlainReversibleCacheChainDict(CacheChainDict):
+    """
+    Return Values from a cache filled from returned values of the underlying ChainDicts and
+    """
+    def __init__(self, cache, reversible=False):
+        """
+        Parameters
+        ----------
+        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+            the cache to be used to store the data
+        """
+        super(PlainReversibleCacheChainDict, self).__init__(cache)
+        self.reversible = reversible
+
+    def _get(self, item):
+        if item is None:
+            return None
+
+        try:
+            return self.cache[item]
+        except KeyError:
+            if item._reversed is not None:
+                try:
+                    return self.cache[item._reversed]
+                except:
+                    return None
+            else:
+                return None
+
+
 class LRUChainDict(CacheChainDict):
     """
     Uses an LRUCache to cache values
