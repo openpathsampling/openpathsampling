@@ -219,6 +219,8 @@ class PathHistogram(SparseHistogram):
         self.count += weight
 
 
+#TODO: some of this might be moved to a more generic TrajectoryHistogram,
+#      allowing reuse between PathDensityHistogram and FreeEnergyHistogram
 class PathDensityHistogram(PathHistogram):
     """Histogram for path density plot.
 
@@ -265,6 +267,7 @@ class PathDensityHistogram(PathHistogram):
         if weights is None:
             weights = [1.0] * len(trajectories)
 
+        # TODO: add something so that we don't recalc the same traj twice
         for (traj, w) in zip(trajectories, weights):
             cv_traj = [cv(traj) for cv in self.cvs]
             self.add_trajectory(zip(*cv_traj), w)
@@ -272,7 +275,24 @@ class PathDensityHistogram(PathHistogram):
         return self._histogram.copy()
 
     def map_to_float_bins(self, trajectory):
-        # in case we actually want super's version
+        """Map trajectory to the bin value, without rounding bin number.
+
+        Unlike the :class:`.SparseHistogram` version, this allows input of
+        either a :class:`.Trajectory` (which is then mapped according to the
+        PathDensityHistogram's collective variables), or a list of numbers,
+        which is assumed to be the proper CV trajectory (and is the input
+        for the sparse histogram version, too).
+
+        Parameters
+        ----------
+        trajectory : list of array-like or :class:`.Trajectory`
+            input trajectory or input CV-based trajectory
+
+        Returns
+        -------
+        list of array-like :
+            un-rounded bin value for each frame in the input trajectory
+        """
         if isinstance(trajectory, paths.Trajectory):
             cv_traj = zip(*[cv(trajectory) for cv in self.cvs])
         else:
