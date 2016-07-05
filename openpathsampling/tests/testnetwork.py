@@ -237,7 +237,8 @@ class testMISTISNetwork(testMultipleStateTIS):
         if os.path.isfile(fname):
             os.remove(fname)
         template = self.traj['AA'][0]
-        storage_w = paths.Storage(fname, "w", template)
+        storage_w = paths.Storage(fname, "w")
+        storage_w.snapshots.save(template)
         storage_w.save(self.mistis)
         storage_w.sync_all()
 
