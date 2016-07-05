@@ -223,10 +223,10 @@ class VoxelLookupFunction(object):
         return self.counter.values()
 
     def bin_to_left_edge(self, bin_num):
-        return bin_num * self.bin_widths + self.left_bin_edges
+        return np.asarray(bin_num) * self.bin_widths + self.left_bin_edges
 
     def val_to_bin(self, val):
-        return (val - self.left_bin_edges) / self.bin_widths
+        return (np.asarray(val) - self.left_bin_edges) / self.bin_widths
 
     @property
     def counter_by_bin_edges(self):
@@ -235,21 +235,29 @@ class VoxelLookupFunction(object):
              for k in self.counter.keys()}
         )
 
-    def df_2d(self, x_range=None, y_range=None, bin_numbers=True):
+    def df_2d(self, x_range=None, y_range=None):
+        """
+        Return a pandas.DataFrame for 2D lookup functions. Error if not 2D.
+
+        Parameters
+        ----------
+        xrange
+        yrange
+
+        Returns
+        -------
+        pandas.DataFrame :
+            Values of the lookup function for each bin. The index and
+            columns are bin numbers.
+        """
         bin_widths = self.bin_widths
         if len(self.left_bin_edges) != 2:
             raise RuntimeError("Can't make 2D dataframe from non-2D data!")
-        if bin_numbers:
-            counter = self.counter
-            if x_range is not None:
-                index = range(x_range[0], x_range[1]+1)
-            if y_range is not None:
-                columns = range(y_range[0], y_range[1]+1)
-        else:
-            counter = self.counter_by_bin_edges
-            x, y = zip(*counter.keys())
-            index = np.arange(min(x), max(x)+bin_widths[0], bin_widths[0])
-            columns = np.arange(min(y), max(y)+bin_widths[1], bin_widths[1])
+        counter = self.counter
+        if x_range is not None:
+            index = range(x_range[0], x_range[1]+1)
+        if y_range is not None:
+            columns = range(y_range[0], y_range[1]+1)
         df = pd.DataFrame(index=index, columns=columns)
         for (k,v) in counter.items():
             df.set_value(k[0], k[1], v)

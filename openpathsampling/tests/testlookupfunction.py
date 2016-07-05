@@ -1,11 +1,14 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal, 
-                        assert_almost_equal, raises)
+                        assert_almost_equal, raises, assert_in)
 from nose.plugins.skip import SkipTest
 from test_helpers import assert_items_almost_equal
+import collections
 
 import logging
 
-from openpathsampling.analysis import LookupFunction, LookupFunctionGroup
+from openpathsampling.analysis import (
+    LookupFunction, LookupFunctionGroup, VoxelLookupFunction
+)
 
 class testLookupFunctionGroup(object):
     def setup(self):
@@ -66,3 +69,48 @@ class testLookupFunctionGroup(object):
         luf = LookupFunction([0.0, 1.0, 2.0], [0.5, 1.5, 2.5])
         self.group.append(luf)
         assert_almost_equal(self.group(1.0), 1.15)
+
+
+class testVoxelLookupFunction(object):
+    def setup(self):
+        counter = collections.Counter({(0,0): 1.0, (0,2): 2.0, (1,4): 4.0,
+                                       (-1,-1): 5.0})
+        self.lookup = VoxelLookupFunction(left_bin_edges=(-1.0, 1.0), 
+                                          bin_widths=(0.5, 0.25), 
+                                          counter=counter)
+
+    def test_keys(self):
+        keys = [(0,0), (0,2), (1,4), (-1,-1)]
+        assert_equal(len(self.lookup.keys()), len(keys))
+        for key in self.lookup.keys():
+            assert_in(key, keys)
+
+    def test_values(self):
+        values = [1.0, 2.0, 4.0, 5.0]
+        assert_equal(len(self.lookup.values()), len(values))
+        for val in self.lookup.values():
+            assert_in(val, values)
+
+    def test_bin_to_left_edge(self):
+        assert_items_equal(self.lookup.bin_to_left_edge((0,0)), (-1.0, 1.0))
+        assert_items_equal(self.lookup.bin_to_left_edge((2,-1)), (0.0, 0.75))
+
+    def test_val_to_bin(self):
+        result_bin = self.lookup.val_to_bin((-0.25, 2.0))
+        assert_equal(len(result_bin), 2)
+        assert_items_equal(result_bin, [1.5, 4.0])
+
+    def test_counter_by_bin_edges(self):
+        bin_edge_counter = self.lookup.counter_by_bin_edges
+        expected = {(-1.0, 1.0): 1.0, (-1.0,1.5): 2.0, (-0.5, 2.0): 4.0,
+                    (-1.5, 0.75): 5.0}
+        assert_equal(len(expected), len(bin_edge_counter))
+        for k in expected.keys():
+            assert_equal(bin_edge_counter[k], expected[k])
+
+    def test_df_2d(self):
+        raise SkipTest
+
+    def test_call(self):
+        raise SkipTest
+
