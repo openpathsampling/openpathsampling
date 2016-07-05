@@ -14,6 +14,14 @@ import collections
 from openpathsampling.analysis import (Histogram, SparseHistogram,
                                        HistogramPlotter2D)
 
+class MockAxes(object):
+    def __init__(self, xticks, yticks):
+        self.xticks = xticks
+        self.yticks = yticks
+
+    def get_xticks(self): return self.xticks
+    def get_yticks(self): return self.yticks
+
 class testHistogram(object):
     def setup(self):
         self.data = [1.0, 1.1, 1.2, 1.3, 2.0, 1.4, 2.3, 2.5, 3.1, 3.5]
@@ -209,9 +217,26 @@ class testHistogramPlotter2D(object):
         assert_items_equal(xr, (-5.0, 2.0))
         assert_items_equal(xl, (-5.0, 0.0))
 
-    def test_axes_setup(self):
-        raise SkipTest
-
     def test_ticks_and_labels(self):
-        raise SkipTest
+        # mock axes, make sure they work as expected
+        fake_ax = MockAxes([-1.0, 0.0, 1.0], [-6.0, 0.0, 6.0])
+        assert_items_equal(fake_ax.get_xticks(), [-1.0, 0.0, 1.0])
+        assert_items_equal(fake_ax.get_yticks(), [-6.0, 0.0, 6.0])
+
+        old_format = self.plotter.label_format
+        self.plotter.label_format = "{:4.2f}"
+
+        xticks, xlabels = self.plotter.ticks_and_labels(
+            ticks=[-2.0, -1.0, 0.0, 1.0, 2.0], ax=fake_ax, dof=0
+        )
+        assert_items_almost_equal(xticks, [-2.0, -1.0, 0.0, 1.0, 2.0])
+        assert_items_equal(xlabels, ["-1.00", "-0.50", "0.00", "0.50", "1.00"])
+
+        yticks, ylabels = self.plotter.ticks_and_labels(
+            ticks=None, ax=fake_ax, dof=1
+        )
+        assert_items_almost_equal(yticks, [-6.0, 0.0, 6.0])
+        assert_items_equal(ylabels, ["-1.90", "-0.10", "1.70"])
+
+        self.plotter.label_format = old_format
 

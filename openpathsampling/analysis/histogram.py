@@ -525,7 +525,7 @@ class HistogramPlotter2D(object):
             minval = self.yrange_[0]
             bw = self.histogram.bin_widths[1]
             edge = self.histogram.left_bin_edges[1]
-        else:
+        else:  # pragma: no cover
             raise RuntimeError("Bad DOF: "+ str(dof))
         to_val = lambda n : (n + minval) * bw + edge
         ticks = ticks if ticks is not None else ax_ticks
