@@ -807,29 +807,45 @@ class SnapshotWrapperStore(ObjectStore):
 
         self.storage.create_store(var_name, store, False)
 
-        # we are not using the .initialize function here since we
-        # only have one variable and only here know its shape
-        self.storage.create_dimension(store.prefix, 0)
+        if True:
+            # we are not using the .initialize function here since we
+            # only have one variable and only here know its shape
+            self.storage.create_dimension(store.prefix, 0)
 
-        if shape is not None:
-            shape = tuple(list(shape))
-            chunksizes = tuple([chunksize] + list(chunksizes))
+            if shape is not None:
+                shape = tuple(list(shape))
+                chunksizes = tuple([chunksize] + list(chunksizes))
+            else:
+                shape = tuple()
+                chunksizes = tuple([chunksize])
+
+            # create the variable
+            store.create_variable(
+                'value',
+                var_type=params['var_type'],
+                dimensions=shape,
+                chunksizes=chunksizes,
+                simtk_unit=params['simtk_unit'],
+            )
+
+            store.create_variable('index', 'index')
+
         else:
-            shape = tuple()
-            chunksizes = tuple([chunksize])
+            if shape is not None:
+                shape = tuple(['snapshots'] + list(shape))
+                chunksizes = tuple([chunksize] + list(chunksizes))
+            else:
+                shape = tuple(['snapshots'])
+                chunksizes = tuple([chunksize])
 
-        # create the variable
-        store.create_variable(
-            'value',
-            var_type=params['var_type'],
-            dimensions=shape,
-            chunksizes=chunksizes,
-            simtk_unit=params['simtk_unit'],
-        )
-
-        store.create_variable('index', 'index')
-        # self.storage.create_variable_delegate(var_name + '_value')
-        # self.storage.create_variable_delegate(var_name + '_index')
+            # create the variable
+            store.storage.create_variable(
+                var_name + '_value',
+                var_type=params['var_type'],
+                dimensions=shape,
+                chunksizes=chunksizes,
+                simtk_unit=params['simtk_unit'],
+            )
 
         setattr(store, 'value', self.storage.vars[var_name + '_value'])
 
@@ -1024,9 +1040,10 @@ class SnapshotValueStore(ObjectStore):
 
         n_idx = self.free()
         self.vars['value'][n_idx] = value
-        self.vars['index'][n_idx] = pos
+        if True:  # only if not complete
+            self.vars['index'][n_idx] = pos
+            self.index[idx] = n_idx
 
-        self.index[idx] = n_idx
         self.cache[n_idx] = value
 
     def sync(self, cv):
@@ -1036,12 +1053,15 @@ class SnapshotValueStore(ObjectStore):
             pass
 
     def restore(self):
-        if self.reference_by_uuid:
-            for pos, idx in enumerate(self.vars['index'][:]):
-                self.index[idx] = pos
-        else:
-            for pos, idx in enumerate(self.vars['index'][:]):
-                self.index[idx] = pos
+        if True:  # if partial
+            if self.reference_by_uuid:
+                for pos, idx in enumerate(self.vars['index'][:]):
+                    self.index[idx] = pos
+            else:
+                for pos, idx in enumerate(self.vars['index'][:]):
+                    self.index[idx] = pos
+        else:  # if complete
+            self.index = IdentityIndex(self)
 
     def initialize(self):
         pass
@@ -1065,3 +1085,17 @@ class SnapshotValueStore(ObjectStore):
             return self[item]
         else:
             return None
+
+
+class IdentityIndex(object):
+    def __init__(self, store):
+        self.store = store
+
+    def __getitem__(self, item):
+        return item
+
+    def __setitem__(self, key, value):
+        pass
+
+    def __contains__(self, item):
+        return item < len(self.store)
