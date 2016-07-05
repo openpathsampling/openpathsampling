@@ -1144,9 +1144,19 @@ class NamedObjectStore(ObjectStore):
             logger.debug("Nameable object has not been initialized correctly. Has None in _name")
             raise AttributeError('_name needs to be a string for nameable objects.')
 
-        reference = super(NamedObjectStore, self).save(obj)
-
+        obj_fixed = obj._name_fixed
+        obj_name = obj._name
+        # we fix the name just in case we try in recursive saving to store one object
+        # twice with different names. Storing with the same name is fine then!
         obj.fix_name()
+
+        try:
+            reference = super(NamedObjectStore, self).save(obj)
+        except:
+            # if saving did not work unlock the name if is was previously un-fixed
+            obj._name_fixed = obj_fixed
+            obj._name = obj_name
+            raise
 
         n_idx = self.index[obj]
         self.storage.variables[self.prefix + '_name'][n_idx] = name
@@ -1306,8 +1316,8 @@ class UniqueNamedObjectStore(NamedObjectStore):
                 # no new name and not fixed. Just check if current name is taken
                 if self.is_name_locked(name):
                     err.append(
-                        ('Current name "%s" is already taken in unique name store. '
-                         'Try renaming object or saving using other name.') % name
+                        ('Current name "%s" is already taken in unique name store %s. '
+                         'Try renaming object or saving using other name.') % (name, self.name)
                     )
 
         if len(err) > 0:

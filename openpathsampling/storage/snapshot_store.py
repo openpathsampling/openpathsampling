@@ -530,7 +530,8 @@ class SnapshotWrapperStore(ObjectStore):
         super(SnapshotWrapperStore, self).__init__(peng.BaseSnapshot, json=False)
 
         self.type_list = {}
-        self.store_list = []
+        self.store_snapshot_list = []
+        self.store_cv_list = []
         self.cv_list = {}
 
         self._treat_missing_snapshot_type = 'create'
@@ -554,7 +555,7 @@ class SnapshotWrapperStore(ObjectStore):
         if store_idx < 0:
             raise ValueError('IDX "' + idx + '" not found in storage')
         else:
-            store = self.store_list[store_idx]
+            store = self.store_snapshot_list[store_idx]
             return store[idx]
 
     def __len__(self):
@@ -594,7 +595,7 @@ class SnapshotWrapperStore(ObjectStore):
         self.storage.stores.save(store)
 
         self.type_list[descriptor] = (store, store_idx)
-        self.store_list.append(store)
+        self.store_snapshot_list.append(store)
         self.storage.vars['snapshottype'][store_idx] = store
 
         self.storage.finalize_stores()
@@ -620,7 +621,10 @@ class SnapshotWrapperStore(ObjectStore):
     def restore(self):
         for idx, store in enumerate(self.storage.vars['snapshottype']):
             self.type_list[store.descriptor] = (store, idx)
-            self.store_list.append(store)
+            self.store_snapshot_list.append(store)
+
+        for idx, store in enumerate(self.storage.vars['cvcache']):
+            self.cv_list[store.cv] = (store, idx)
 
         self.load_indices()
 
@@ -669,7 +673,7 @@ class SnapshotWrapperStore(ObjectStore):
             self._save(obj, n_idx)
             self._set_id(n_idx, obj)
         else:
-            self._put_in_store(self.store_list[store_idx], store_idx, obj, n_idx)
+            self._put_in_store(self.store_snapshot_list[store_idx], store_idx, obj, n_idx)
 
         self.cache[n_idx] = obj
 
@@ -763,6 +767,9 @@ class SnapshotWrapperStore(ObjectStore):
 
     def add_cv(self, cv, template, chunksize=100):
 
+        if cv in self.cv_list:
+            return self.cv_list[cv]
+
         # determine value type and shape
         params = NetCDFPlus.get_value_parameters(template)
         shape = params['dimensions']
@@ -772,7 +779,7 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             chunksizes = tuple(params['dimensions'])
 
-        cache = SnapshotValueStore(cv.cv_time_reversible)
+        store = SnapshotValueStore(cv)
 
         # make sure the cv is saved
         # if cv not in self.storage.cvs.index:
@@ -780,11 +787,15 @@ class SnapshotWrapperStore(ObjectStore):
 
         var_name = 'cv' + str(self.storage.cvs.index[cv])
 
-        self.storage.create_store(var_name, cache, False)
+        print var_name
+
+        self.storage.create_store(var_name, store, False)
+
+        print 'No possible'
 
         # we are not using the .initialize function here since we
         # only have one variable and only here know its shape
-        self.storage.create_dimension(cache.prefix, 0)
+        self.storage.create_dimension(store.prefix, 0)
 
         if shape is not None:
             shape = tuple(list(shape))
@@ -794,7 +805,7 @@ class SnapshotWrapperStore(ObjectStore):
             chunksizes = tuple([chunksize])
 
         # create the variable
-        cache.create_variable(
+        store.create_variable(
             'value',
             var_type=params['var_type'],
             dimensions=shape,
@@ -802,21 +813,25 @@ class SnapshotWrapperStore(ObjectStore):
             simtk_unit=params['simtk_unit'],
         )
 
-        cache.create_variable('index', 'index')
+        store.create_variable('index', 'index')
         # self.storage.create_variable_delegate(var_name + '_value')
         # self.storage.create_variable_delegate(var_name + '_index')
 
-        setattr(cache, 'value', self.storage.vars[var_name + '_value'])
+        setattr(store, 'value', self.storage.vars[var_name + '_value'])
 
-        cache.set_caching(LRUChunkLoadingCache(
+        store.set_caching(LRUChunkLoadingCache(
             chunksize=chunksize,
             max_chunks=1000,
-            variable=cache.value
+            variable=store.value
         ))
 
-        cv.set_cache_store(cache)
+        store_idx = int(len(self.storage.dimensions['cvcache']))
+        self.cv_list[cv] = (store, store_idx)
+        self.storage.vars['cvcache'][store_idx] = store
 
-        # self.set_cache_store(cv)
+        cv.set_cache_store(store)
+
+        return store, store_idx
 
     def create_uuid_index(self):
         return UUIDReversalDict()
@@ -858,14 +873,14 @@ class SnapshotWrapperStore(ObjectStore):
 
 
 class SnapshotValueStore(ObjectStore):
-    def __init__(self, time_reversible):
+    def __init__(self, cv):
         super(SnapshotValueStore, self).__init__(None)
         self.uuid_index = None
-        self.time_reversible = time_reversible
+        self.cv = cv
 
     def to_dict(self):
         return {
-            'time_reversible': self.time_reversible
+            'cv': self.cv
         }
 
     def create_uuid_index(self):
@@ -899,7 +914,7 @@ class SnapshotValueStore(ObjectStore):
         else:
             pos = idx
 
-        if self.time_reversible:
+        if self.cv.time_reversible:
             pos -= pos % 2
 
         # we want to load by uuid and it was not in cache.
@@ -939,7 +954,7 @@ class SnapshotValueStore(ObjectStore):
 
         """
 
-        if self.time_reversible:
+        if self.cv.time_reversible:
             if idx in self.index:
                 # has been saved so quit and do nothing
                 return

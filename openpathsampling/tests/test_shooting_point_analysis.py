@@ -120,10 +120,7 @@ class testShootingPointAnalysis(object):
         randomizer = paths.NoModification()
         self.filename = data_filename("shooting_analysis.nc")
         self.storage = paths.Storage(self.filename, 
-                                     mode="w", 
-                                     template=self.snap0)
-
-        print self.snap0.__dict__
+                                     mode="w")
 
         self.simulation = paths.CommittorSimulation(
             storage=self.storage,
