@@ -682,7 +682,10 @@ class HistogramPlotter2D(object):
             xticklabels, yticklabels, xlim, ylim
         )
 
-        hist_fcn = self.histogram.normalized(raw_probability=True)
+        if normed:
+            hist_fcn = self.histogram.normalized(raw_probability=True)
+        else:
+            hist_fcn = self.histogram()
         df = hist_fcn.df_2d(x_range=self.xrange_, y_range=self.yrange_)
         self.df = df
 
