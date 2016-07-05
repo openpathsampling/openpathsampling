@@ -536,6 +536,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         self._treat_missing_snapshot_type = 'create'
 
+        self.only_mention = False
 
     @property
     def treat_missing_snapshot_type(self):
@@ -553,7 +554,7 @@ class SnapshotWrapperStore(ObjectStore):
         store_idx = self.vars['store'][idx / 2]
 
         if store_idx < 0:
-            raise ValueError('IDX "' + idx + '" not found in storage')
+            raise KeyError('IDX "' + idx + '" not found in storage')
         else:
             store = self.store_snapshot_list[store_idx]
             return store[idx]
@@ -658,8 +659,15 @@ class SnapshotWrapperStore(ObjectStore):
                     n_idx = self.index[obj._reversed] ^ 1
 
         if n_idx is not None:
+            # snapshot is mentioned
             store_idx = self.variables['store'][n_idx / 2]
             if not store_idx == -1:
+                # and stored
+                return self.reference(obj)
+
+        else:
+            if self.only_mention:
+                # only mention but not really store snapshots
                 return self.reference(obj)
 
         if not isinstance(obj, self.content_class):
@@ -674,21 +682,26 @@ class SnapshotWrapperStore(ObjectStore):
             self._save(obj, n_idx)
             self._set_id(n_idx, obj)
         else:
-            self._put_in_store(self.store_snapshot_list[store_idx], store_idx, obj, n_idx)
+            self._mark_in_store(store_idx, obj, n_idx)
+            self._put_in_store(self.store_snapshot_list[store_idx], obj, n_idx)
 
         self.cache[n_idx] = obj
 
         return self.reference(obj)
 
-    def _put_in_store(self, store, store_idx, obj, idx):
-        store[idx / 2] = obj
+    def _mark_in_store(self, store_idx, obj, idx):
         self.vars['store'][idx / 2] = store_idx
         self.index[obj] = idx
+
+    @staticmethod
+    def _put_in_store(store, obj, idx):
+        store[idx / 2] = obj
 
     def _save(self, obj, idx):
         try:
             store, store_idx = self.type_list[obj.engine.descriptor]
-            self._put_in_store(store, store_idx, obj, idx)
+            self._mark_in_store(store_idx, obj, idx)
+            self._put_in_store(store, obj, idx)
             return store
 
         except KeyError:
@@ -696,7 +709,8 @@ class SnapshotWrapperStore(ObjectStore):
             if self.treat_missing_snapshot_type == 'create':
                 # we just create space for it
                 store, store_idx = self.add_type(obj.engine.descriptor)
-                self._put_in_store(store, store_idx, obj, idx)
+                self._mark_in_store(store_idx, obj, idx)
+                self._put_in_store(store, obj, idx)
                 return store
 
             elif self.treat_missing_snapshot_type == 'ignore':
@@ -847,6 +861,36 @@ class SnapshotWrapperStore(ObjectStore):
     def _set_id(self, idx, obj):
         if self.reference_by_uuid:
             self.vars['uuid'][idx / 2] = obj.__uuid__
+
+    def complete_cv(self, cv):
+        """
+        Will fill in all missing values for a CV and store these.
+
+        Parameters
+        ----------
+        cv
+
+        Returns
+        -------
+
+        """
+        if self.reference_by_uuid:
+            if 'partial':
+                uuids = self.vars['uuid'][:]
+                stores = self.vars['store'][:]
+                cv_store, cv_index = self.cv_list[cv]
+                for pos, store in enumerate(stores):
+                    uuid = uuids[pos]
+                    if store >= 0:
+                        cv_store[uuid] = cv(self.load(uuid))
+            elif 'complete':
+                pass
+        else:
+            stores = self.vars['store'][:]
+            cv_store, cv_index = self.cv_list[cv]
+            for pos, store in enumerate(stores):
+                if store >= 0:
+                    cv_store[pos] = cv(self[pos])
 
     def idx(self, obj):
         """
