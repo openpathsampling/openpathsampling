@@ -132,5 +132,7 @@ class testVoxelLookupFunction(object):
         luf.df_2d()
 
     def test_call(self):
-        raise SkipTest
+        assert_equal(self.lookup((0.0, 0.0)), 0.0)   # no bin
+        assert_equal(self.lookup((-0.5, 2.0)), 4.0)  # bin edge
+        assert_equal(self.lookup((-0.4, 2.1)), 4.0)  # in bin
 
