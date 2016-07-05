@@ -254,6 +254,8 @@ class VoxelLookupFunction(object):
         if len(self.left_bin_edges) != 2:
             raise RuntimeError("Can't make 2D dataframe from non-2D data!")
         counter = self.counter
+        index = None
+        columns = None
         if x_range is not None:
             index = range(x_range[0], x_range[1]+1)
         if y_range is not None:

@@ -1,6 +1,7 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal, 
                         assert_almost_equal, raises, assert_in)
 from nose.plugins.skip import SkipTest
+from numpy import isnan
 from test_helpers import assert_items_almost_equal
 import collections
 
@@ -109,7 +110,26 @@ class testVoxelLookupFunction(object):
             assert_equal(bin_edge_counter[k], expected[k])
 
     def test_df_2d(self):
-        raise SkipTest
+        df1 = self.lookup.df_2d()
+        assert_items_equal(df1.index, [-1, 0, 1])
+        assert_items_equal(df1.columns, [-1, 0, 2, 4])
+        assert_equal(df1.get_value(-1, -1), 5.0)
+        assert_equal(isnan(df1.get_value(0, 4)), True)
+
+        df2 = self.lookup.df_2d(x_range=(-1, 3), y_range=(-1, 4))
+        assert_items_equal(df2.index, [-1, 0, 1, 2, 3])
+        assert_items_equal(df2.columns, [-1, 0, 1, 2, 3, 4])
+        assert_equal(df2.get_value(-1, -1), 5.0)
+        assert_equal(isnan(df2.get_value(0, 4)), True)
+        assert_equal(isnan(df2.get_value(2, 3)), True)
+
+    @raises(RuntimeError)
+    def test_df_2d_not_2d(self):
+        counter = collections.Counter({(0,0,0): 1.0})
+        luf = VoxelLookupFunction(left_bin_edges=(0,0,0),
+                                  bin_widths=(1,1,1),
+                                  counter=counter)
+        luf.df_2d()
 
     def test_call(self):
         raise SkipTest
