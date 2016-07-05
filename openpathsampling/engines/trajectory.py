@@ -285,6 +285,49 @@ class Trajectory(list, StorableObject):
 
         return ObjectIterator()
 
+    def index_symmetric(self, value):
+        """
+        Return index of a snapshot or its reversed is in a trajectory
+
+        """
+        try:
+            fw = self.index(value)
+        except ValueError:
+            fw = None
+            pass
+
+        try:
+            bw = self.index(value.reversed)
+        except ValueError:
+            bw = None
+            pass
+
+        if fw is None:
+            if bw is None:
+                raise ValueError('%r or its reversed is not found in trajectory.')
+            else:
+                return bw
+        else:
+            if bw is None:
+                return fw
+            else:
+                return min(fw, bw)
+
+    def contains_symmetric(self, item):
+        """
+        Test whether a snapshot or its reversed is in a trajectory
+
+        Returns
+        -------
+        bool
+
+        """
+        fw = item in self
+        if not fw:
+            return item.reversed in self
+        else:
+            return True
+
     def get_as_proxy(self, item):
         """
         Get an actual contained element
@@ -447,7 +490,7 @@ class Trajectory(list, StorableObject):
     # ANALYSIS FUNCTIONS
     # =============================================================================================
 
-    def is_correlated(self, other):
+    def is_correlated(self, other, time_reversal=False):
         """
         Checks if two trajectories share a common snapshot
 
@@ -461,10 +504,9 @@ class Trajectory(list, StorableObject):
         bool
             returns True if at least one snapshot appears in both trajectories
         """
-        return bool(self.shared_configurations(other))
+        return bool(self.shared_configurations(other, time_reversal=time_reversal))
 
-
-    def shared_configurations(self, other):
+    def shared_configurations(self, other, time_reversal=False):
         """
         Returns a set of shared snapshots
 
@@ -478,10 +520,12 @@ class Trajectory(list, StorableObject):
         set of :class:`openpathsampling.snapshot.Snapshot`
             the set of common snapshots
         """
-        return set([snap for snap in self]) & set([snap for snap in other])
+        if not time_reversal:
+            return set([snap for snap in self]) & set([snap for snap in other])
+        else:
+            return set([snap for snap in self]) & (set([snap for snap in other]) | set([snap.reversed for snap in other]))
 
-
-    def shared_subtrajectory(self, other):
+    def shared_subtrajectory(self, other, time_reversal=False):
         """
         Returns a subtrajectory which only contains frames present in other
 
@@ -495,7 +539,7 @@ class Trajectory(list, StorableObject):
         :class:`openpathsampling.trajectory.Trajectory`
             the shared subtrajectory
         """
-        shared = self.shared_configurations(other)
+        shared = self.shared_configurations(other, time_reversal=time_reversal)
         return Trajectory([snap for snap in self if snap in shared])
 
     def unique_subtrajectory(self, other):

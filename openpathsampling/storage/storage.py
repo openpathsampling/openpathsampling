@@ -7,23 +7,32 @@ Created on 06.07.2014
 import logging
 
 import openpathsampling as paths
+from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, \
+    ImmutableDictStore, NamedObjectStore
 import openpathsampling.engines as peng
-from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, ImmutableDictStore, \
-    NamedObjectStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-# =============================================================================================
+# ==============================================================================
 # OPS SPECIFIC STORAGE
-# =============================================================================================
+# ==============================================================================
 
 class Storage(NetCDFPlus):
     """
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories
     """
+
+    @property
+    def _ops_version_(self):
+        try:
+            version = paths.version.short_version
+        except:
+            version = '0.1.0'
+
+        return version
 
     USE_FEATURE_SNAPSHOTS = True
 
@@ -71,14 +80,15 @@ class Storage(NetCDFPlus):
             for obj in self.kinetics:
                 storage2.kinetics._save(obj, self.kinetics.index[obj])
 
-        # All other should be copied one to one. We do this explicitly although we could just copy all
-        # and exclude configurations and momenta, but this seems cleaner
+        # All other should be copied one to one. We do this explicitly
+        # although we could just copy all and exclude configurations and
+        # momenta, but this seems cleaner
 
         for storage_name in [
             'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
             'shootingpointselectors', 'engines', 'volumes',
-            'samplesets', 'ensembles', 'transitions', 'steps', 'pathmovechanges',
-            'samples', 'snapshots', 'pathsimulators', 'cvs'
+            'samplesets', 'ensembles', 'transitions', 'steps',
+            'pathmovechanges', 'samples', 'snapshots', 'pathsimulators', 'cvs'
         ]:
             self.clone_store(storage_name, storage2)
 
@@ -101,7 +111,8 @@ class Storage(NetCDFPlus):
 
         Notes
         -----
-        This is mostly used to restart with a fresh file. Same setup, no results.
+        This is mostly used to restart with a fresh file. Same setup,
+        no results.
         """
         storage2 = Storage(filename=filename, template=self.template, mode='w')
 
@@ -187,7 +198,10 @@ class Storage(NetCDFPlus):
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
-        self.create_store('pathmovechanges', paths.storage.PathMoveChangeStore())
+        self.create_store(
+            'pathmovechanges',
+            paths.storage.PathMoveChangeStore()
+        )
         self.create_store('steps', paths.storage.MCStepStore())
 
         self.create_store('cvs', paths.storage.ReversibleObjectDictStore(
@@ -222,10 +236,13 @@ class Storage(NetCDFPlus):
 
         self.create_store('tag', ImmutableDictStore())
 
+    def write_meta(self):
+        self.setncattr('storage_format', 'openpathsampling')
+        self.setncattr('storage_version', paths.version.version)
+
     def _initialize(self):
         # Set global attributes.
         setattr(self, 'title', 'OpenPathSampling Storage')
-        setattr(self, 'ConventionVersion', '0.2')
 
         self.set_caching_mode()
 
@@ -252,8 +269,8 @@ class Storage(NetCDFPlus):
         Parameters
         ----------
         mode : str
-            One of the following values is allowed "default``\ , ``production``\ ,
-            ``analysis``\ , ``off``\ , ``lowmemory`` and ``memtest``
+            One of the following values is allowed `default`, `production`,
+            `analysis`, `off`, `lowmemory` and `memtest`
 
         """
 
@@ -267,8 +284,8 @@ class Storage(NetCDFPlus):
         }
 
         if mode in available_cache_sizes:
-            # We need cache sizes as a function. Otherwise we will reuse the same
-            # caches for each storage and that will cause problems! Lots of...
+            # We need cache sizes as a function. Otherwise we will reuse the
+            # same caches for each storage and that will cause problems!
             cache_sizes = available_cache_sizes[mode]()
         else:
             raise ValueError(
@@ -280,6 +297,32 @@ class Storage(NetCDFPlus):
             if hasattr(self, store_name):
                 store = getattr(self, store_name)
                 store.set_caching(caching)
+
+    def check_version(self):
+        super(Storage, self).check_version()
+        try:
+            s1 = self.getncattr('storage_version')
+        except AttributeError:
+            logger.info(
+                'Using openpathsampling Pre 1.0 version. '
+                'No version detected using 0.0.0'
+            )
+            s1 = '0.0.0'
+
+        s2 = self._ops_version_
+
+        cp = self._cmp_version(s1, s2)
+
+        if cp != 0:
+            logger.info('Loading different OPS storage version. '
+                        'Installed version is %s and loaded version is %s'
+                        % (s2, s1))
+            if cp > 0:
+                logger.info('Loaded version is newer consider upgrading OPS '
+                            'conda package!')
+            else:
+                logger.info('Loaded version is older. Should be no problem '
+                            'other then missing features and information')
 
     @staticmethod
     def default_cache_sizes():
@@ -315,7 +358,8 @@ class Storage(NetCDFPlus):
         """
         Cache sizes for very low memory
 
-        This uses even less caching than production runs. Mostly used for debugging.
+        This uses even less caching than production runs.
+        Mostly used for debugging.
         """
 
         return {
@@ -345,8 +389,8 @@ class Storage(NetCDFPlus):
         """
         Cache Sizes for memtest debugging sessions
 
-        Memtest will cache everything weak to measure if there is some object left in
-        memory that should have been disposed of.
+        Memtest will cache everything weak to measure if there is some object
+        left in memory that should have been disposed of.
 
         """
         return {
@@ -527,7 +571,8 @@ class StorageView(object):
 
     class StepDelegate(object):
         """
-        A delegate that will alter the ``iter()`` behaviour of the underlying store
+        A delegate that will alter the ``iter()`` behaviour of the
+        underlying store
 
         Attributes
         ----------

@@ -14,6 +14,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
+
 @lazy_loading_attributes('movepath')
 class SampleSet(StorableObject):
     '''
@@ -591,3 +592,11 @@ class Sample(StorableObject):
             return 0.0
 
         return self.bias
+
+    @property
+    def heritage(self):
+        samp = self
+        while samp.parent is not None:
+            # just one sample so use this
+            yield samp
+            samp = samp.parent
