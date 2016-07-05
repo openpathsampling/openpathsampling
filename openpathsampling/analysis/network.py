@@ -542,14 +542,30 @@ class MISTISNetwork(TISNetwork):
         The distinction between the three types of transitions in the object
         are a bit subtle, but important. The `input_transitions` are, of
         course, the transitions given in the input. These are A->B
-        transitions. The `sampling_transitions` are what are used in
-        sampling. These are A->any transitions. Finally, the 
+        transitions, but would allow any other state. The
+        `sampling_transitions` are what are used in sampling. These are
+        A->any transitions if strict sampling is off, or "A->B & not_others"
+        if strict sampling is on. Finally, the regular `transitions` are the
+        transitions that are used for analysis (use the sampling ensembles
+        for the interfaces, but also A->B).
+
+    Parameters
+    ----------
+    trans_info : list of tuple
+        Details of each interface set. 4-tuple in the order (initial_state,
+        interfaces, orderparameter, final_state) where initial_state and
+        final_state are Volumes, interfaces is a list of Volumes, and
+        orderparameter is a CollectiveVariable
+    strict_sampling : bool
+        whether the final state from the tuple is the *only* allowed final
+        state in the sampling; default False
     """
     # NOTE: input_transitions are in addition to the sampling_transitions
     # and the transitions (analysis transitions)
-    def __init__(self, trans_info):
+    def __init__(self, trans_info, strict_sampling=False):
         super(MISTISNetwork, self).__init__()
         self.trans_info = trans_info
+        self.strict_sampling = strict_sampling
         states_A, interfaces, orderparams, states_B = zip(*trans_info)
         self.initial_states = list(set(states_A))
         self.final_states = list(set(states_B))
@@ -579,6 +595,7 @@ class MISTISNetwork(TISNetwork):
             self.build_sampling_transitions(self.input_transitions.values())
         self._sampling_transitions = self.x_sampling_transitions
 
+
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
 
@@ -592,7 +609,8 @@ class MISTISNetwork(TISNetwork):
             'x_sampling_transitions' : self.x_sampling_transitions,
             'transition_to_sampling' : self.transition_to_sampling,
             'input_transitions' : self.input_transitions,
-            'trans_info' : self.trans_info
+            'trans_info' : self.trans_info,
+            'strict_sampling' : self.strict_sampling
         }
         return ret_dict
 
@@ -604,7 +622,7 @@ class MISTISNetwork(TISNetwork):
         network.transition_to_sampling = dct['transition_to_sampling']
         network.input_transitions = dct['input_transitions']
         network.x_sampling_transitions = dct['x_sampling_transitions']
-        network.__init__(dct['trans_info'])
+        network.__init__(dct['trans_info'], dct['strict_sampling'])
         return network
 
 
@@ -632,33 +650,46 @@ class MISTISNetwork(TISNetwork):
             all_in_pairs = []
 
         # build sampling transitions
-
-        # TODO: really, I'd like to FORBID all other states (change the
-        # ensemble to intersection with AllOutXEnsemble(other_states)), but
-        # for now, let's accept all other states -- the key is to stop the
-        # trajectory.  Forbidding all other states can be done once building
-        # the movers is better separated.
         all_states = paths.join_volumes(self.initial_states + self.final_states)
+        all_states_set = set(self.initial_states + self.final_states)
         self.transition_to_sampling = {}
         for transition in transitions:
             stateA = transition.stateA
             stateB = transition.stateB
+            if self.strict_sampling:
+                final_state = stateB
+                other_states = paths.join_volumes(all_states_set -
+                                                  set([stateA, stateB]))
+                ensemble_to_intersect = paths.AllOutXEnsemble(other_states)
+            else:
+                final_state = all_states
+                ensemble_to_intersect = paths.FullEnsemble()
+            # TODO: fix following for strict_sampling
             if transition not in all_in_pairs:
+                # if we don't have a pair partner, use all interfaces
                 sample_trans = paths.TISTransition(
                     stateA=stateA,
-                    stateB=all_states,
+                    stateB=final_state,
                     interfaces=transition.interfaces,
                     orderparameter=transition.orderparameter
                 )
             else:
+                # if we do have a pair partner, outermost is MS-interface
                 sample_trans = paths.TISTransition(
                     stateA=stateA,
-                    stateB=all_states,
+                    stateB=final_state,
                     interfaces=transition.interfaces[:-1],
                     orderparameter=transition.orderparameter
                 )
+            new_ensembles = [e & ensemble_to_intersect 
+                             for e in sample_trans.ensembles]
+            if self.strict_sampling:
+                for (old, new) in zip(new_ensembles, sample_trans.ensembles):
+                    old.name = new.name + " strict"
+            sample_trans.ensembles = new_ensembles
             sample_trans.named("Sampling " + str(stateA) + "->" + str(stateB))
             self.transition_to_sampling[transition] = sample_trans
+
         self.x_sampling_transitions = self.transition_to_sampling.values()
 
         # build non-transition interfaces 
