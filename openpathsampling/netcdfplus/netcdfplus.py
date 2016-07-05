@@ -309,6 +309,8 @@ class NetCDFPlus(netCDF4.Dataset):
                         self.units[str(variable_name)] = unit
 
             # register all stores that are listed in self.stores
+            print self.variables['stores_uuid'][:]
+            print self.stores.index
             for store in self.stores:
                 logger.debug("Register store %s in the storage" % store.name)
                 self.register_store(store.name, store)

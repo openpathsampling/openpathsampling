@@ -786,12 +786,7 @@ class SnapshotWrapperStore(ObjectStore):
         #     self.storage.cvs.save(cv)
 
         var_name = 'cv' + str(self.storage.cvs.index[cv])
-
-        print var_name
-
         self.storage.create_store(var_name, store, False)
-
-        print 'No possible'
 
         # we are not using the .initialize function here since we
         # only have one variable and only here know its shape
@@ -877,6 +872,7 @@ class SnapshotValueStore(ObjectStore):
         super(SnapshotValueStore, self).__init__(None)
         self.uuid_index = None
         self.cv = cv
+        self._time_reversible = cv.cv_time_reversible
 
     def to_dict(self):
         return {
@@ -914,7 +910,7 @@ class SnapshotValueStore(ObjectStore):
         else:
             pos = idx
 
-        if self.cv.time_reversible:
+        if self._time_reversible:
             pos -= pos % 2
 
         # we want to load by uuid and it was not in cache.
@@ -954,7 +950,7 @@ class SnapshotValueStore(ObjectStore):
 
         """
 
-        if self.cv.time_reversible:
+        if self._time_reversible:
             if idx in self.index:
                 # has been saved so quit and do nothing
                 return
