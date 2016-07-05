@@ -464,9 +464,43 @@ def write_histograms(fname, hists):
 # it is both a useful script and a library class!
 
 class HistogramPlotter2D(object):
+    """
+    Convenience tool for plotting 2D histograms and plotting data atop them.
+
+    The difficulty is that matplotlib uses the row/column *numbers* of a
+    pandas.DataFrame as the actual internal axis. This class carries all the
+    information to properly plot things (even mapping to CVs, if the
+    histogram supports that).
+
+    The descriptions below will discuss "real space," "bin space," and
+    "frame space." Real space refers to the actual values of the input data.
+    Bin space refers to the bins that come out of that for histogramming
+    (made into continuous parameters). Frame space is bin space shifted such
+    that the lowest bin values are 0.
+
+    Parameters
+    ----------
+    histogram : :class:`.SparseHistogram`
+        input histogram to plot
+    normed : bool
+        whether to normalize the histogram (using raw_probability=True)
+    xticklabels : list of float
+        the desired locations for plot xticks, in real space
+    yticklabels : list of float
+        the desired locations for plot yticks, in real space
+    xlim : 2-tuple of (float, float)
+        horizontal (x-value) range of (minimum, maximum) bounds for
+        displaying the plot
+    ylim : 2-tuple of (float, float)
+        vertical (y-value) range of (minimum, maximum) bounds for
+        displaying the plot
+    label_format : string
+        Python format-style string for formatting tick labels. Default is
+        '{:}'.
+    """
     def __init__(self, histogram, normed=True, xticklabels=None,
-                 yticklabels=None, xlim=None, ylim=None, label_format="{:}",
-                 **kwargs):
+                 yticklabels=None, xlim=None, ylim=None,
+                 label_format="{:}"):
         self.histogram = histogram
         self.normed = normed
         self.xticklabels = xticklabels
@@ -480,6 +514,20 @@ class HistogramPlotter2D(object):
         )
 
     def to_bins(self, alist, dof):
+        """Convert real-space values to bin-space values for a given dof
+
+        Parameters
+        ----------
+        alist : list of float
+            input in real-space
+        dof : integer (0 or 1)
+            degree of freedom; 0 is x, 1 is y
+
+        Returns
+        -------
+        list of float :
+            the outputs in bin-space
+        """
         left_edge = self.histogram.left_bin_edges[dof]
         bin_width = self.histogram.bin_widths[dof]
         result = None
@@ -488,6 +536,28 @@ class HistogramPlotter2D(object):
         return result
 
     def axis_input(self, hist, ticklabels, lims, dof):
+        """Get ticks, range, and limits for a given DOF
+
+        Parameters
+        ----------
+        hist : list of float
+            input data from the histogram (bin-space)
+        ticklabels : list of float or None
+            user-set tick labels for this DOF (real-space)
+        lims : 2-tuple (float, float) or None
+            user-set plot limits for this DOF
+        dof : integer (0 or 1)
+            degree of freedom; 0 is x, 1 is y
+
+        Returns
+        -------
+        ticks_ : list of float or None
+            user-set ticks in bin-space
+        range_ : list of float
+            range for the pandas.DataFrame (bin-space)
+        lims_ : 2-tuple (float, float)
+            range for plot visualization (bin-space)
+        """
         ticks_ = self.to_bins(ticklabels, dof)
         lims_ = self.to_bins(lims, dof)
         ticks = [] if ticks_ is None else list(ticks_)
@@ -499,6 +569,35 @@ class HistogramPlotter2D(object):
         return (ticks_, range_, lims_)
 
     def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
+        """Set up both x-axis and y-axis for plotting.
+
+        Also sets self.xrange_ and self.yrange_, which are the (bin-space)
+        bounds for the pandas.DataFrame.
+
+        Parameters
+        ----------
+        xticklabels : list of float
+            the desired locations for plot xticks, in real space
+        yticklabels : list of float
+            the desired locations for plot yticks, in real space
+        xlim : 2-tuple of (float, float)
+            horizontal (x-value) range of (minimum, maximum) bounds for
+            displaying the plot
+        ylim : 2-tuple of (float, float)
+            vertical (y-value) range of (minimum, maximum) bounds for
+            displaying the plot
+
+        Returns
+        -------
+        xticks_ : list of float or None
+            user-set xticks in bin-space
+        yticks_ : list of float or None
+            user-set yticks in bin-space
+        xlim_ : 2-tuple (float, float)
+            range in x for plot visualization (bin-space)
+        ylim_ : 2-tuple (float, float)
+            range in y for plot visualization (bin-space)
+        """
         if xticklabels is None:
             xticklabels = self.xticklabels
         if yticklabels is None:
@@ -515,6 +614,24 @@ class HistogramPlotter2D(object):
         return (xticks_, xlim_, yticks_, ylim_)
 
     def ticks_and_labels(self, ticks, ax, dof):
+        """Obtain the plot ticks and tick labels for given dof.
+
+        Parameters
+        ----------
+        ticks : list of float or None
+            user-set input (bin-space) for tick locations
+        ax : matplotlib.Axes
+            axes from the plot
+        dof : integer (0 or 1)
+            degree of freedom; 0 is x, 1 is y
+
+        Returns
+        -------
+        ticks : list of float
+            tick locations (bin-space, suitable for matplotlib)
+        labels : list of string
+            labels for the ticks
+        """
         if dof == 0:
             ax_ticks = ax.get_xticks()
             minval = self.xrange_[0]
@@ -534,6 +651,30 @@ class HistogramPlotter2D(object):
 
     def plot(self, normed=None, xticklabels=None, yticklabels=None,
              xlim=None, ylim=None, **kwargs):
+        """Plot the histogram.
+
+        Parameters
+        ----------
+        normed : bool
+            whether to normalize the histogram (using raw_probability=True)
+        xticklabels : list of float
+            the desired locations for plot xticks, in real space
+        yticklabels : list of float
+            the desired locations for plot yticks, in real space
+        xlim : 2-tuple of (float, float)
+            horizontal (x-value) range of (minimum, maximum) bounds for
+            displaying the plot
+        ylim : 2-tuple of (float, float)
+            vertical (y-value) range of (minimum, maximum) bounds for
+            displaying the plot
+        kwargs : 
+            additional arguments to pass to plt.pcolormesh
+
+        Returns
+        -------
+        PolyCollection :
+            return value of plt.pcolormesh
+        """
         if normed is None:
             normed = self.normed
 
@@ -560,6 +701,16 @@ class HistogramPlotter2D(object):
         return mesh
 
     def plot_trajectory(self, trajectory, *args, **kwargs):
+        """Plot a trajectory (or CV trajectory) on the axes.
+
+        Additional arguments pass to plt.plot.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory` or list of 2-tuple
+            list to plot; paths.Trajectory allowed if the histogram can
+            convert it to CVs.
+        """
         x, y = zip(*self.histogram.map_to_float_bins(trajectory))
         px = np.asarray(x) - self.xrange_[0]
         py = np.asarray(y) - self.yrange_[0]
