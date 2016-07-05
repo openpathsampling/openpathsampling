@@ -624,7 +624,8 @@ class SnapshotWrapperStore(ObjectStore):
             self.store_snapshot_list.append(store)
 
         for idx, store in enumerate(self.storage.vars['cvcache']):
-            self.cv_list[store.cv] = (store, idx)
+            cv = self.storage.cvs._load(int(store.name[2:]))
+            self.cv_list[cv] = (store, idx)
 
         self.load_indices()
 
@@ -779,13 +780,17 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             chunksizes = tuple(params['dimensions'])
 
-        store = SnapshotValueStore(cv)
+        cv_ref = self.storage.cvs.reference(cv)
+        cv_idx = self.storage.cvs.index[cv]
+
+        store = SnapshotValueStore(cv_ref)
 
         # make sure the cv is saved
         # if cv not in self.storage.cvs.index:
         #     self.storage.cvs.save(cv)
 
-        var_name = 'cv' + str(self.storage.cvs.index[cv])
+        var_name = 'cv' + str(cv_idx)
+
         self.storage.create_store(var_name, store, False)
 
         # we are not using the .initialize function here since we
@@ -868,15 +873,14 @@ class SnapshotWrapperStore(ObjectStore):
 
 
 class SnapshotValueStore(ObjectStore):
-    def __init__(self, cv):
+    def __init__(self, cv_time_reversible):
         super(SnapshotValueStore, self).__init__(None)
         self.uuid_index = None
-        self.cv = cv
-        self._time_reversible = cv.cv_time_reversible
+        self.cv_time_reversible = cv_time_reversible
 
     def to_dict(self):
         return {
-            'cv': self.cv
+            'cv_time_reversible': self.cv_time_reversible
         }
 
     def create_uuid_index(self):
@@ -910,7 +914,7 @@ class SnapshotValueStore(ObjectStore):
         else:
             pos = idx
 
-        if self._time_reversible:
+        if self.cv_time_reversible:
             pos -= pos % 2
 
         # we want to load by uuid and it was not in cache.
@@ -950,7 +954,7 @@ class SnapshotValueStore(ObjectStore):
 
         """
 
-        if self._time_reversible:
+        if self.cv_time_reversible:
             if idx in self.index:
                 # has been saved so quit and do nothing
                 return
