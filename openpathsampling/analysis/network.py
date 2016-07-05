@@ -277,8 +277,15 @@ class TISNetwork(TransitionNetwork):
         flux_dictionary : dict of 2-tuple to float
             keys are in the form (state, interface), and values are the
             associated flux
+
+        Raises
+        ------
+        KeyError
+            If the flux for one of the transitions isn't in the dictionary.
         """
-        for trans in self.transitions:
+        # for now, if you don't have all the fluxes needed, it raises a
+        # KeyError
+        for trans in self.transitions.values():
             trans._flux = flux_dictionary[(trans.stateA, trans.interfaces[0])]
 
 

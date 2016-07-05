@@ -91,6 +91,17 @@ class testMSTISNetwork(testMultipleStateTIS):
             (self.stateC, self.ifacesC, self.xval)
         ])
 
+    def test_set_fluxes(self):
+        flux_dict = {(self.stateA, self.ifacesA[0]): 2.0,
+                     (self.stateB, self.ifacesB[0]): 4.0,
+                     (self.stateC, self.ifacesC[0]): 5.0}
+        self.mstis.set_fluxes(flux_dict)
+        for trans in self.mstis.transitions:
+            myflux = {self.stateA : 2.0,
+                      self.stateB : 4.0,
+                      self.stateC : 5.0}[trans[0]]
+            assert_equal(self.mstis.transitions[trans]._flux, myflux)
+
     def test_all_states(self):
         assert_equal(set(self.mstis.all_states), 
                      set([self.stateA, self.stateB, self.stateC]))
@@ -166,6 +177,16 @@ class testMISTISNetwork(testMultipleStateTIS):
         assert_equal(len(self.mistis.input_transitions), 3)
         assert_equal(len(self.mistis.transitions), 3)
         # TODO: add more checks here
+
+    def test_set_fluxes(self):
+        flux_dict = {(self.stateA, self.ifacesA[0]): 2.0, # same flux 2x
+                     (self.stateB, self.ifacesB[0]): 4.0}
+        self.mistis.set_fluxes(flux_dict)
+        for (A, B) in self.mistis.transitions:
+            if A == self.stateA:
+                assert_equal(self.mistis.transitions[(A,B)]._flux, 2.0)
+            elif A == self.stateB:
+                assert_equal(self.mistis.transitions[(A,B)]._flux, 4.0)
 
     def test_trajectories_nonstrict(self):
         fromA = [trans for trans in self.mistis.sampling_transitions
