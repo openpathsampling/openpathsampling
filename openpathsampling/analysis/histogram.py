@@ -475,8 +475,8 @@ class HistogramPlotter2D(object):
         self.ylim = ylim
         self.label_format = label_format
 
-        self.xticks_, self.xlim_, self.yticks_, self.ylim_ = axes_setup(
-            xtickslabels, yticklables, xlim, ylim
+        self.xticks_, self.xlim_, self.yticks_, self.ylim_ = self.axes_setup(
+            xticklabels, yticklabels, xlim, ylim
         )
 
     def to_bins(self, alist, dof):
@@ -495,7 +495,7 @@ class HistogramPlotter2D(object):
         range_ = (int(min(list(hist) + ticks + lims)),
                   int(max(list(hist) + ticks + lims)))
         if lims_ is None:
-            lims = (0, range_[1] - range_[0])
+            lims_ = (0, range_[1] - range_[0])
         return (ticks_, range_, lims_)
 
     def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
@@ -550,10 +550,10 @@ class HistogramPlotter2D(object):
         (xticks, xlabels) = self.ticks_and_labels(xticks_, mesh.axes, dof=0)
         (yticks, ylabels) = self.ticks_and_labels(yticks_, mesh.axes, dof=1)
 
-        ax.set_xticks(xticks)
-        ax.set_yticks(yticks)
-	ax.set_xticklabels(xlabels)
-	ax.set_yticklabels(ylabels)
+        mesh.axes.set_xticks(xticks)
+        mesh.axes.set_yticks(yticks)
+	mesh.axes.set_xticklabels(xlabels)
+	mesh.axes.set_yticklabels(ylabels)
 	plt.xlim(xlim_[0], xlim_[1])
 	plt.ylim(ylim_[0], ylim_[1])
 	plt.colorbar()
