@@ -219,7 +219,7 @@ Operating System :: MacOS
         'networkx',
         'matplotlib'],
     'url': 'http://www.openpathsampling.org',
-    'version': '0.1.0'}
+    'version': '0.9.0'}
 
 setup_keywords = build_keyword_dictionary(preferences)
 
