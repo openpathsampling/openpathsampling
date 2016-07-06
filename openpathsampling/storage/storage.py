@@ -204,10 +204,7 @@ class Storage(NetCDFPlus):
         )
         self.create_store('steps', paths.storage.MCStepStore())
 
-        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(
-            paths.CollectiveVariable,
-            peng.BaseSnapshot
-        ))
+        self.create_store('cvs', paths.storage.CVStore())
 
         # normal objects
 

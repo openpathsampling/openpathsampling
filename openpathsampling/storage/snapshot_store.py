@@ -633,6 +633,9 @@ class SnapshotWrapperStore(ObjectStore):
             for idx, uuid in enumerate(self.vars['uuid'][:]):
                 self.index[uuid] = idx * 2
 
+    def get_cv_cache(self, idx):
+        return self.storage.stores['cv' + str(idx)].value
+
     def save(self, obj, idx=None):
         n_idx = None
 
@@ -786,8 +789,25 @@ class SnapshotWrapperStore(ObjectStore):
             self.index[obj] = n_idx
             self._set_id(n_idx, obj)
 
-    def add_cv(self, cv, template, chunksize=100):
+    @staticmethod
+    def _get_cv_name(cv_idx):
+        return 'cv' + str(cv_idx)
 
+    def add_cv(self, cv, template, chunksize=100, allow_partial=False):
+        """
+
+        Parameters
+        ----------
+        cv : :obj:`openpathsampling.CollectiveVariable`
+        template : :obj:`openpathsampling.engines.BaseSnapshot`
+        chunksize : int
+        allow_partial : bool
+
+        Returns
+        -------
+        :obj:`openpathsampling.netcdfplus.ObjectStore`
+        int
+        """
         if cv in self.cv_list:
             return self.cv_list[cv]
 
@@ -800,16 +820,10 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             chunksizes = tuple(params['dimensions'])
 
-        cv_ref = self.storage.cvs.reference(cv)
         cv_idx = self.storage.cvs.index[cv]
+        store = SnapshotValueStore(cv.cv_time_reversible, allow_partial)
 
-        store = SnapshotValueStore(cv_ref)
-
-        # make sure the cv is saved
-        # if cv not in self.storage.cvs.index:
-        #     self.storage.cvs.save(cv)
-
-        var_name = 'cv' + str(cv_idx)
+        var_name = SnapshotWrapperStore._get_cv_name(cv_idx)
 
         self.storage.create_store(var_name, store, False)
 
@@ -942,11 +956,18 @@ class SnapshotWrapperStore(ObjectStore):
             except:
                 raise KeyError(obj)
 
+    def cache_all_cvs(self):
+        for store, idx in self.cv_list.values():
+            store.fill_cache()
+
 
 class SnapshotValueStore(ObjectStore):
     def __init__(self, cv_time_reversible, allow_partial=False):
         super(SnapshotValueStore, self).__init__(None)
         self.uuid_index = None
+        if not cv_time_reversible and not allow_partial:
+            raise RuntimeError('Only time_reversible CVs can currently be stored using mode "complete"')
+
         self.cv_time_reversible = cv_time_reversible
         self.allow_partial = allow_partial
 
@@ -1089,6 +1110,9 @@ class SnapshotValueStore(ObjectStore):
             self.index[idx] = n_idx
 
         self.cache[n_idx] = value
+
+    def fill_cache(self):
+        self.cache.load_max()
 
     def sync(self, cv):
         if self.allow_partial:

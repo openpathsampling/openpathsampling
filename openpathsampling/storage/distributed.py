@@ -21,7 +21,7 @@ class TrajectoryStorage(Storage):
         self.create_store('trajectories', paths.storage.TrajectoryStore())
         self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
 
-        self.create_store('cvs', paths.storage.ReversibleObjectDictStore(
+        self.create_store('cvs', paths.storage.CVStore(
             paths.CollectiveVariable,
             peng.BaseSnapshot
         ))
