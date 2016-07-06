@@ -97,6 +97,7 @@ if not release:
     try:
         a.write(cnt % {
             'version': prefs['version'],
+            'short_version': prefs['version'],
             'full_version': full_version,
             'git_revision': git_version,
             'isrelease': str(prefs['released'])
