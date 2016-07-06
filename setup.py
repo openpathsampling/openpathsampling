@@ -97,7 +97,6 @@ if not release:
     try:
         a.write(cnt % {
             'version': prefs['version'],
-            'short_version': prefs['version'],
             'full_version': full_version,
             'git_revision': git_version,
             'isrelease': str(prefs['released'])
@@ -222,10 +221,10 @@ Operating System :: MacOS
     'version': '0.1.0'}
 
 setup_keywords = build_keyword_dictionary(preferences)
-write_version_py(preferences)
 
 
 def main():
+    write_version_py(preferences)
     setup(**setup_keywords)
     pass
 
