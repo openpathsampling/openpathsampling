@@ -398,12 +398,15 @@ class LRUChunkLoadingCache(Cache):
                 obj = self._chunkdict[chunk_idx][item % chunksize]
                 self._update_chunk_order(chunk_idx)
                 return obj
-            except KeyError:
+            except IndexError:
                 pass
 
         self.load_chunk(chunk_idx)
 
-        return self._chunkdict[chunk_idx][item % chunksize]
+        try:
+            return self._chunkdict[chunk_idx][item % chunksize]
+        except IndexError:
+            raise KeyError(item)
 
     def load_max(self):
         map(self.load_chunk,

@@ -1,6 +1,6 @@
-
 import chaindict as cd
-from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, ObjectJSON, create_to_dict
+from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, \
+    ObjectJSON, create_to_dict
 
 import openpathsampling.engines as peng
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
@@ -50,7 +50,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def __init__(
             self,
             name,
-            cv_time_reversible=False
+            cv_time_reversible=True
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
@@ -65,6 +65,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.diskcache_allow_partial = False
         self.diskcache_auto_complete = True
         self.diskcache_chunksize = 100
+        self.diskcache_template = None
 
         self.cv_time_reversible = cv_time_reversible
 
@@ -74,17 +75,30 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             reversible=cv_time_reversible
         )
         self._store_dict = None
+        self._eval_dict = None
 
         super(CollectiveVariable, self).__init__(post=self._single_dict > self._cache_dict)
 
-    def with_disk_cache(self, chunksize=100, allow_partial=False, auto_complete=True):
+    def enable_diskcache(self):
         self.diskcache_enabled = True
-        self.diskcache_allow_partial = allow_partial
-        self.diskcache_chunksize = chunksize
-        self.diskcache_auto_complete = auto_complete
+        return self
+
+    def with_diskcache(self, template=None, chunksize=None, allow_partial=None, auto_complete=None):
+        self.diskcache_enabled = True
+        if template:
+            self.diskcache_template = template
+        if chunksize:
+            self.diskcache_allow_partial = allow_partial
+
+        if allow_partial:
+            self.diskcache_chunksize = chunksize
+
+        if auto_complete:
+            self.diskcache_auto_complete = auto_complete
+
         return self
     
-    def without_disk_cache(self):
+    def disable_diskcache(self):
         self.diskcache_enabled = False
         return self
 
@@ -99,19 +113,12 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         Parameters
         ----------
         value_store : :class:`openpathsampling.netcdfplus.ObjectStore`
-            the store / variable that references the output (value) objects
-
-        Notes
-        -----
-        Currently the backward feature is exclusively for
-        :class:`openpathsampling.snapshot.BaseSnapshot` which implement a
-        reversed object. If `None` backward will equal forward which will
-        effectively mean that the store treats forward and backward the
-        same.
+            the store / variable that holds the output values / objects
 
         """
         self._store_dict = cd.StoredDict(value_store)
-        hook_store = self._single_dict
+        # hook_store = self._single_dict
+        hook_store = self._cache_dict
         self._store_dict._post = hook_store._post
         hook_store._post = self._store_dict
 
@@ -181,16 +188,12 @@ class CV_Volume(CollectiveVariable):
         )
         self.volume = volume
 
-        # CVs that are computed from other CVs should not be cached. This is usually
-        # fast and redundant
-        self.diskcache_enabled = False
-
-        self._callable_dict = cd.Function(
+        self._eval_dict = cd.Function(
             self._eval,
             requires_lists=False
         )
 
-        self._post = self._post > self._callable_dict
+        self._post = self._post > self._eval_dict
 
     def _eval(self, items):
         return bool(self.volume(items))
@@ -212,7 +215,7 @@ class CV_Callable(CollectiveVariable):
             self,
             name,
             cv_callable,
-            cv_time_reversible=False,
+            cv_time_reversible=True,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
             cv_scalarize_numpy_singletons=False,
@@ -225,10 +228,11 @@ class CV_Callable(CollectiveVariable):
         cv_callable : callable (function or class with __call__)
             The callable to be used
         cv_time_reversible
-        cv_requires_lists : If `True` the internal function  always a list of elements instead
-            of single values. It also means that if you call the CV with a list of snapshots a list
-            of snapshot objects will be passed. If `False` a list of Snapshots like a trajectory will
-            be passed one by one.
+        cv_requires_lists : If `True` the internal function  always a list of
+            elements instead of single values. It also means that if you call
+            the CV with a list of snapshots a list of snapshot objects will be
+            passed. If `False` a list of Snapshots like a trajectory will
+            be passed snapshot by snapshot.
         kwargs : **kwargs
             a dictionary with named arguments which should be used
             with `c`. Either for class creation or for calling the function
@@ -287,23 +291,17 @@ class CV_Callable(CollectiveVariable):
 
         self.cv_callable = cv_callable
 
-        # default settings if we should create a disk cache
-        self.diskcache_enabled = True
-        self.diskcache_allow_partial = False
-        self.diskcache_auto_complete = True
-        self.diskcache_chunksize = 100
-
         if kwargs is None:
             kwargs = dict()
         self.kwargs = kwargs
 
-        self._callable_dict = cd.Function(
+        self._eval_dict = cd.Function(
             self._eval,
             self.cv_requires_lists,
             self.cv_scalarize_numpy_singletons
         )
 
-        post = self._post > self._callable_dict
+        post = self._post > self._eval_dict
 
         if cv_wrap_numpy_array:
             # noinspection PyTypeChecker
@@ -340,8 +338,9 @@ class CV_Callable(CollectiveVariable):
             if self.cv_callable is None or other.cv_callable is None:
                 return False
 
-            if hasattr(self.cv_callable.func_code, 'op_code') and hasattr(other.cv_callable.func_code, 'op_code') and \
-                            self.cv_callable.func_code.op_code != other.cv_callable.func_code.op_code:
+            if hasattr(self.cv_callable.func_code, 'op_code') \
+                    and hasattr(other.cv_callable.func_code, 'op_code') \
+                    and self.cv_callable.func_code.op_code != other.cv_callable.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
 
@@ -365,7 +364,7 @@ class CV_Function(CV_Callable):
             self,
             name,
             f,
-            cv_time_reversible=False,
+            cv_time_reversible=True,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
             cv_scalarize_numpy_singletons=False,
@@ -412,7 +411,7 @@ class CV_Function(CV_Callable):
 
 
 class CV_Generator(CV_Callable):
-    r"""Turn a callable class or other function that generate a callable object into a `CollectiveVariable`.
+    """Turn a callable class or other function that generates a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
     will be created using the given \**kwargs.
@@ -422,7 +421,7 @@ class CV_Generator(CV_Callable):
             self,
             name,
             generator,
-            cv_time_reversible=False,
+            cv_time_reversible=True,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
             cv_scalarize_numpy_singletons=False,
@@ -596,7 +595,6 @@ class CV_MSMB_Featurizer(CV_Generator):
         super(CV_Generator, self).__init__(
             name,
             cv_callable=featurizer,
-            diskcache_enabled=diskcache_enabled,
             cv_time_reversible=True,
             cv_requires_lists=True,
             cv_wrap_numpy_array=cv_wrap_numpy_array,

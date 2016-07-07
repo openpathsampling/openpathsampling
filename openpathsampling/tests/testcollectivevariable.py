@@ -13,6 +13,8 @@ from openpathsampling.netcdfplus import NetCDFPlus
 
 from msmbuilder.featurizer import AtomPairsFeaturizer
 
+import openpathsampling as paths
+
 
 class testCV_Function(object):
 
@@ -58,3 +60,63 @@ class testCV_Function(object):
         assert params['var_type'] == 'numpy.float32'
         assert params['simtk_unit'] is None
         assert params['dimensions'] == tuple([2])
+
+    def test_storage_cv_function(self):
+        import os
+
+        for use_uuid in [True, False]:
+
+            print ''
+            print '==========================================================='
+            print 'UUID', use_uuid
+            print '==========================================================='
+
+            fname = data_filename("cv_storage_test.nc")
+            if os.path.isfile(fname):
+                os.remove(fname)
+
+            traj = paths.Trajectory(list(self.traj))
+            template = traj[0]
+
+            storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
+            storage_w.snapshots.save(template)
+
+            cv1 = paths.CV_Function('f1', lambda snap : snap.coordinates[0]).with_diskcache()
+
+            storage_w.save(cv1)
+
+
+            storage_w.trajectories.save(traj)
+            storage_w.close()
+            # storage_w.sync_all()
+
+            storage_r = paths.AnalysisStorage(fname)
+            rcv1 = storage_r.cvs['f1']
+
+            assert(rcv1._store_dict)
+
+            cv_cache = rcv1._store_dict.value_store
+
+            assert(cv_cache.auto_complete)
+            assert(not cv_cache.allow_partial)
+
+            values = cv_cache.vars['value']
+
+            print values[:]
+            print storage_r.snapshots.index
+
+            print cv_cache.__dict__
+
+            for idx, snap in enumerate(traj):
+                print cv_cache.snapshot_index.get(snap), cv1(snap), cv1(snap.reversed)
+
+
+                assert_close_unit(cv_cache[snap], cv1(snap))
+                assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
+
+            print values
+
+            storage_r.close()
+
+            if os.path.isfile(fname):
+                os.remove(fname)

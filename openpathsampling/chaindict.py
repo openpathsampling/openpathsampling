@@ -479,11 +479,13 @@ class StoredDict(ChainDict):
         self.value_store = value_store
 
     def _set(self, item, value):
+        return
         if value is not None:
             # print 'Storing %s in %s' % (str(value), str(item))
             self.value_store[item] = value
 
     def _set_list(self, items, values):
+        return
         map(self._set, items, values)
 
     def _get(self, item):

@@ -1,5 +1,4 @@
-from openpathsampling.netcdfplus import UniqueNamedObjectStore, ObjectStore
-from openpathsampling.engines import BaseSnapshot
+from openpathsampling.netcdfplus import UniqueNamedObjectStore
 from openpathsampling import CollectiveVariable
 
 
@@ -12,8 +11,11 @@ class CVStore(UniqueNamedObjectStore):
             CollectiveVariable
         )
 
-    def _save(self, objectdict, idx):
-        self.vars['json'][idx] = objectdict
+    def _save(self, cv, idx):
+        self.vars['json'][idx] = cv
+
+        if cv.diskcache_enabled:
+            self.add_storage_caching(cv)
 
     def _load(self, idx):
         op = self.vars['json'][idx]
@@ -26,17 +28,27 @@ class CVStore(UniqueNamedObjectStore):
     def add_storage_caching(
             self,
             cv,
-            allow_partial=False,
-            template=None):
+            template=None,
+            allow_partial=None,
+            auto_complete=None,
+            chunksize=None):
 
         if template is None:
-            if len(self.storage.snapshots) > 0:
-                template = cv(self.storage.snapshots[0])
+            if cv.diskcache_template is not None:
+                template = cv.diskcache_template
+            elif len(self.storage.snapshots) > 0:
+                template = self.storage.snapshots[0]
             else:
                 raise RuntimeError('Need either at least one stored snapshot or a '
-                                   'template snapshot to determine type and shapte of the CV.')
+                                   'template snapshot to determine type and shape of the CV.')
 
-        self.storage.snapshots.add_cv(cv, cv(template), allow_partial=allow_partial)
+        self.storage.snapshots.add_cv(
+            cv,
+            template,
+            allow_partial=allow_partial,
+            auto_complete=auto_complete,
+            chunksize=chunksize
+        )
 
     def cache_store(self, cv):
         """
