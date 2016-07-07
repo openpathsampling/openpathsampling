@@ -472,7 +472,6 @@ class SnapshotWrapperStore(ObjectStore):
         return self.reference(obj)
 
     def _complete_cv(self, obj, pos):
-        print pos, obj, 'cv'
         for cv, (cv_store, cv_idx) in self.cv_list.items():
             if cv_store.auto_complete:
                 value = cv._cache_dict._get(obj)
@@ -687,14 +686,10 @@ class SnapshotWrapperStore(ObjectStore):
             else:
                 indices = range(0, len(self), 2)
 
-            print 'indices', indices
-
             for pos, idx in enumerate(indices):
 
                 proxy = LoaderProxy(self.storage.snapshots, idx)
                 value = cv._cache_dict._get(proxy)
-
-                print pos, idx, proxy, value
 
                 if value is None:
                     # not in cache so compute it if possible
@@ -711,8 +706,6 @@ class SnapshotWrapperStore(ObjectStore):
 
                     store.vars['value'][n_idx] = value
                     store.cache[n_idx] = value
-
-        print store.vars['value'][:]
 
         cv.set_cache_store(store)
         return store, store_idx
@@ -796,9 +789,9 @@ class SnapshotWrapperStore(ObjectStore):
             else:
                 pos = obj._idx
         else:
-            if self.reference_by_uuid:
-                pos = self.index.get(obj)
-            else:
+            pos = self.index.get(obj)
+
+            if pos is None and not self.reference_by_uuid:
                 if obj._reversed:
                     pos = self.index.get(obj._reversed)
                     if pos is None:
@@ -841,10 +834,7 @@ class SnapshotValueStore(ObjectStore):
         return dict()
 
     def create_int_index(self):
-        if self.allow_partial:
-            return super(SnapshotValueStore, self).create_int_index()
-        else:
-            return dict()
+        return dict()
 
     def register(self, storage, prefix):
         super(SnapshotValueStore, self).register(storage, prefix)

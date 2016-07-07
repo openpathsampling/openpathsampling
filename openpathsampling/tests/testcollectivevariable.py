@@ -20,7 +20,7 @@ class testCV_Function(object):
 
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = peng.trajectory_from_mdtraj(self.mdtraj)
+        self.traj = peng.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
 
     def teardown(self):
         pass
@@ -64,12 +64,11 @@ class testCV_Function(object):
     def test_storage_cv_function(self):
         import os
 
-        for use_uuid in [True, False]:
+        for use_uuid, allow_partial in [(True, True), (False, True), (True, False), (False, False)]:
 
-            print ''
-            print '==========================================================='
-            print 'UUID', use_uuid
-            print '==========================================================='
+            # print '==========================================================='
+            # print 'UUID', use_uuid, 'PARTIAL', allow_partial
+            # print '==========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
@@ -81,16 +80,16 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_Function('f1', lambda snap : snap.coordinates[0]).with_diskcache()
+            cv1 = paths.CV_Function('f1', lambda snap : snap.coordinates[0]).with_diskcache(
+                allow_partial=allow_partial
+            )
 
             storage_w.save(cv1)
 
-
             storage_w.trajectories.save(traj)
             storage_w.close()
-            # storage_w.sync_all()
 
-            storage_r = paths.AnalysisStorage(fname)
+            storage_r = paths.Storage(fname, 'r')
             rcv1 = storage_r.cvs['f1']
 
             assert(rcv1._store_dict)
@@ -98,23 +97,26 @@ class testCV_Function(object):
             cv_cache = rcv1._store_dict.value_store
 
             assert(cv_cache.auto_complete)
-            assert(not cv_cache.allow_partial)
+            assert(cv_cache.allow_partial == allow_partial)
 
-            values = cv_cache.vars['value']
+            for idx, snap in enumerate(storage_r.trajectories[0]):
+                # if hasattr(snap, '_idx'):
+                #     print 'IDX', snap._idx
+                #
+                # print 'ITEMS', storage_r.snapshots.index.items()
+                # print snap, type(snap), snap.__dict__
+                #
+                # print 'POS', cv_cache.snapshot_pos(snap),
+                # print 'POS', storage_r.snapshots.pos(snap),
+                # print 'POS', storage_r.snapshots.index[snap],
+                #
+                # print cv1(snap),
+                # print cv1(snap.reversed)
+                # print cv_cache[snap]
 
-            print values[:]
-            print storage_r.snapshots.index
-
-            print cv_cache.__dict__
-
-            for idx, snap in enumerate(traj):
-                print cv_cache.snapshot_index.get(snap), cv1(snap), cv1(snap.reversed)
-
-
-                assert_close_unit(cv_cache[snap], cv1(snap))
-                assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
-
-            print values
+                if not allow_partial or cv_cache[snap] is not None:
+                    assert_close_unit(cv_cache[snap], cv1(snap))
+                    assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
 
             storage_r.close()
 

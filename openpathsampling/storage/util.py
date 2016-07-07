@@ -50,9 +50,6 @@ def split_md_storage(filename, update_cvs=True):
 
     storage_main.snapshots.cache.clear()
 
-    print storage_main.snapshots.cache
-    print storage_main.statics.index
-
     if update_cvs:
         # make we now how to load snapshots if necessary
         storage_main.fallback = storage_from
@@ -63,11 +60,8 @@ def split_md_storage(filename, update_cvs=True):
 #            storage_main.cvs.create_cache(cv)
 
         for cv in cvs:
-            print cv, cv.__dict__
-#            storage_from.cvs.cache_transfer(cv, storage_main)
             q = storage_from.snapshots.all()[10:11]
             s = list.__getitem__(q, 0)
-            print s, type(s), s.__dict__, s.coordinates
             cv(q)
             storage_main.cvs.sync(cv)
 

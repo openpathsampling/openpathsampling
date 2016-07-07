@@ -22,7 +22,6 @@ class LeapfrogVerletIntegrator(ToyIntegrator):
         self.dt = dt
 
     def _momentum_update(self, sys, mydt):
-        print sys, sys.__dict__
         sys.velocities -= sys.pes.dVdx(sys)*sys._minv*mydt
 
     def _position_update(self, sys, mydt):

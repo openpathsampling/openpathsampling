@@ -87,12 +87,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.diskcache_enabled = True
         if template:
             self.diskcache_template = template
-        if chunksize:
-            self.diskcache_allow_partial = allow_partial
-
         if allow_partial:
+            self.diskcache_allow_partial = allow_partial
+        if chunksize:
             self.diskcache_chunksize = chunksize
-
         if auto_complete:
             self.diskcache_auto_complete = auto_complete
 
