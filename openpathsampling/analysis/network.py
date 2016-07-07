@@ -264,16 +264,30 @@ class TISNetwork(TransitionNetwork):
     # differences are in setup, not analysis
     def __init__(self):
         super(TISNetwork, self).__init__()
-        # this should check to build the replica exchange network. If the
-        # number of neighbors at any station is more than 2, we can't do
-        # "normal" replica flow -- instead produce a network graph. Or,
-        # actually, ALWAYS produce a network graph (although this will be a
-        # feature to implement later)
 
     def from_transitions(self, transitions, interfaces=None):
         # this will have to be disabled until I can do something
         # better with it
         pass
+
+    def set_fluxes(self, flux_dictionary):
+        """
+        Parameters
+        ----------
+        flux_dictionary : dict of 2-tuple to float
+            keys are in the form (state, interface), and values are the
+            associated flux
+
+        Raises
+        ------
+        KeyError
+            If the flux for one of the transitions isn't in the dictionary.
+        """
+        # for now, if you don't have all the fluxes needed, it raises a
+        # KeyError
+        for trans in self.transitions.values():
+            trans._flux = flux_dictionary[(trans.stateA, trans.interfaces[0])]
+
 
     @property
     def minus_ensembles(self):

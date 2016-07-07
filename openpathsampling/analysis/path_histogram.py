@@ -52,13 +52,14 @@ class PathHistogram(SparseHistogram):
             the bin that old_pt is found in)
         """
         # bins for this do not include the bin of the old point
+        # TODO: add a way to have this handle periodic variables as well
         old_bin = self.map_to_bins(old_pt)
         new_bin = self.map_to_bins(new_pt)
         abs_dx = abs(np.asarray(new_bin) - np.asarray(old_bin))
         manhattan_distance = sum(abs_dx)
         bin_list = [new_bin]
         # if the manhattan_distance is 1, we're adjacent
-        if manhattan_distance == 1:
+        if manhattan_distance <= 1:
             return bin_list
         # otherwise, use one of the interpolation algos to find bins
         if self.interpolate == "subdivide":
@@ -98,7 +99,10 @@ class PathHistogram(SparseHistogram):
         if np.all(abs(np.asarray(end_bin) - np.asarray(start_bin)) == 1):
             left_edges = self.left_bin_edges + self.bin_widths * end_bin
             test_array = (left_edges - start_pt) / delta
-            if np.allclose(test_array, test_array[0]):
+            
+            if np.allclose(test_array, test_array[0], atol=1e-6):
+                return [start_bin, end_bin]
+            elif np.allclose(delta, [0.0]*len(delta), atol=1e-6):
                 return [start_bin, end_bin]
 
         manhattan_dist_start = sum(abs(np.asarray(mid_bin) - 
@@ -107,7 +111,9 @@ class PathHistogram(SparseHistogram):
                                      np.asarray(mid_bin)))
 
         # how much work we have to do depends on what's already adjacent
-        if manhattan_dist_start == 1 and manhattan_dist_end == 1:
+        if start_bin == end_bin:
+            return [end_bin]
+        elif manhattan_dist_start == 1 and manhattan_dist_end == 1:
             return [start_bin, mid_bin, end_bin]
         # if we're in the same bin, only have one direction to go
         elif mid_bin == start_bin:
@@ -210,8 +216,11 @@ class PathHistogram(SparseHistogram):
         if self._histogram is None:
             self._histogram = Counter({})
         self._histogram += local_hist
+        self.count += weight
 
 
+#TODO: some of this might be moved to a more generic TrajectoryHistogram,
+#      allowing reuse between PathDensityHistogram and FreeEnergyHistogram
 class PathDensityHistogram(PathHistogram):
     """Histogram for path density plot.
 
@@ -258,9 +267,34 @@ class PathDensityHistogram(PathHistogram):
         if weights is None:
             weights = [1.0] * len(trajectories)
 
+        # TODO: add something so that we don't recalc the same traj twice
         for (traj, w) in zip(trajectories, weights):
             cv_traj = [cv(traj) for cv in self.cvs]
             self.add_trajectory(zip(*cv_traj), w)
 
         return self._histogram.copy()
 
+    def map_to_float_bins(self, trajectory):
+        """Map trajectory to the bin value, without rounding bin number.
+
+        Unlike the :class:`.SparseHistogram` version, this allows input of
+        either a :class:`.Trajectory` (which is then mapped according to the
+        PathDensityHistogram's collective variables), or a list of numbers,
+        which is assumed to be the proper CV trajectory (and is the input
+        for the sparse histogram version, too).
+
+        Parameters
+        ----------
+        trajectory : list of array-like or :class:`.Trajectory`
+            input trajectory or input CV-based trajectory
+
+        Returns
+        -------
+        list of array-like :
+            un-rounded bin value for each frame in the input trajectory
+        """
+        if isinstance(trajectory, paths.Trajectory):
+            cv_traj = zip(*[cv(trajectory) for cv in self.cvs])
+        else:
+            cv_traj = trajectory
+        return super(PathDensityHistogram, self).map_to_float_bins(cv_traj)

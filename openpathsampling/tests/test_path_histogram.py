@@ -5,7 +5,8 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (
-    true_func, assert_equal_array_array, make_1d_traj, data_filename
+    true_func, assert_equal_array_array, make_1d_traj, data_filename,
+    assert_items_almost_equal
 )
 
 import openpathsampling as paths
@@ -83,7 +84,17 @@ class testPathHistogram(object):
             assert_equal(hist._histogram[val], 1.0)
         for val in [(1,2), (1,6)]:
             assert_equal(hist._histogram[val], 0.0)
-        raise SkipTest
+
+    def test_interp_same_cell(self):
+        # check interpolation if successive frames in same cell
+        traj = [(0.1, 0.3), (0.2, 0.2), (0.4, 0.6), (0.3, 0.1)]
+        hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
+                             bin_widths=(0.5, 0.5),
+                             interpolate=True, per_traj=False)
+        hist.add_trajectory(traj)
+        assert_equal(len(hist._histogram.keys()), 2)
+        assert_equal(hist._histogram[(0,0)], 3)
+        assert_equal(hist._histogram[(0,1)], 1)
 
     def test_add_with_weight(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0), 
@@ -187,3 +198,22 @@ class testPathDensityHistogram(object):
             assert_equal(counter[bin_label], 1.0)
         for bin_label in [(1,1,1), (2,2,2), (-1,0,0), (0,-1,0)]:
             assert_equal(counter[bin_label], 0.0)
+
+    def test_map_to_float_bins_trajectory(self):
+        hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
+                                    self.bin_widths)
+        bin_traj = hist.map_to_float_bins(self.traj2)
+        # cv_traj = [[0.6, 0.564642473395035, 0.36],
+        #            [0.7, 0.644217687237691, 0.49]]
+        assert_items_almost_equal(bin_traj[0], [2.4, 1.12928494679007, 0.9])
+        assert_items_almost_equal(bin_traj[1], [2.8, 1.28843537447538, 1.225])
+
+    def test_map_to_float_bins_cvtraj(self):
+        hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
+                                    self.bin_widths)
+        cv_traj = [[0.6, 0.564642473395035, 0.36],
+                   [0.7, 0.644217687237691, 0.49]]
+        bin_traj = hist.map_to_float_bins(cv_traj)
+        assert_items_almost_equal(bin_traj[0], [2.4, 1.12928494679007, 0.9])
+        assert_items_almost_equal(bin_traj[1], [2.8, 1.28843537447538, 1.225])
+

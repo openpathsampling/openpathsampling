@@ -30,12 +30,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
     @property
     def _netcdfplus_version_(self):
-        try:
-            import openpathsampling.netcdfplus.version as v
-            version = v.short_version
-        except:
-            version = '0.1.0'
-
+        import openpathsampling.netcdfplus.version as v
+        version = v.short_version
         return version
 
     _type_conversion = {
