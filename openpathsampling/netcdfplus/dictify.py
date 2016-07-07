@@ -292,7 +292,11 @@ class ObjectJSON(object):
                     err += '\n\n'
                 err += 'The function you try to save requires the following modules to ' + \
                        'be installed: ' + str(unsafe_modules) + ' which are not marked as safe! '
-                err += 'You can change the list of safe modules in `CV_function._safe_modules` or '
+                err += 'You can change the list of safe modules using '
+                err += '\n\n        CV_function._safe_modules.extend(['
+                err += '\n' + ',\n'.join(map(lambda x: ' ' * 12 + x, unsafe_modules))
+                err += '\n        ])'
+                err += '\n\n'
                 err += 'include the import statement in your function like'
                 err += '\n\n' + '\n'.join([' ' * 8 + 'import ' + v for v in unsafe_modules])
 
