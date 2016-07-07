@@ -867,6 +867,8 @@ class SnapshotValueStore(ObjectStore):
                         return None
 
                     pos ^= 1
+                else:
+                    return None
 
         if self.time_reversible:
             pos /= 2

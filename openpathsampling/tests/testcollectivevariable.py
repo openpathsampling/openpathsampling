@@ -79,9 +79,9 @@ class testCV_Function(object):
 
         for use_uuid, allow_partial in [(True, True), (False, True), (True, False), (False, False)]:
 
-            print '==========================================================='
-            print 'UUID', use_uuid, 'PARTIAL', allow_partial
-            print '==========================================================='
+            # print '==========================================================='
+            # print 'UUID', use_uuid, 'PARTIAL', allow_partial
+            # print '==========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
@@ -102,17 +102,20 @@ class testCV_Function(object):
             # let's mess up the order in which we save
             storage_w.trajectories.save(traj[6:])
             storage_w.snapshots.save(traj[3].reversed)
+            storage_w.trajectories.save(traj.reversed)
+
+            # this should be ignored
+            storage_w.trajectories.save(traj)
 
             ll = [list.__getitem__(traj.reversed, nn) for nn in range(len(traj))]
 
-            print 'ITEMS', storage_w.snapshots.index.items()
-
-            print ll
-            print map(type, ll)
-
-            print map(storage_w.snapshots.pos, traj)
-            print map(storage_w.snapshots.pos, traj.reversed)
-            storage_w.trajectories.save(traj.reversed)
+            # print 'ITEMS', storage_w.snapshots.index.items()
+            #
+            # print ll
+            # print map(type, ll)
+            #
+            # print map(storage_w.snapshots.pos, traj)
+            # print map(storage_w.snapshots.pos, traj.reversed)
             storage_w.close()
 
             storage_r = paths.Storage(fname, 'r')
@@ -129,40 +132,40 @@ class testCV_Function(object):
                 # if hasattr(snap, '_idx'):
                 #     print 'IDX', snap._idx
 
-                print 'ITEMS', storage_r.snapshots.index.items()
+                # print 'ITEMS', storage_r.snapshots.index.items()
                 # print snap, type(snap), snap.__dict__
 
-                print snap.__uuid__
-                print snap.reversed.__uuid__
-                print snap.create_reversed().__uuid__
-
-                print 'POS', cv_cache.snapshot_pos(snap),
-                print 'POS', storage_r.snapshots.pos(snap),
-                print 'POS', storage_r.snapshots.index[snap]
-
-                print 'POS', cv_cache.snapshot_pos(snap.reversed),
-                print 'POS', storage_r.snapshots.pos(snap.reversed),
+                # print snap.__uuid__
+                # print snap.reversed.__uuid__
+                # print snap.create_reversed().__uuid__
+                #
+                # print 'POS', cv_cache.snapshot_pos(snap),
+                # print 'POS', storage_r.snapshots.pos(snap),
+                # print 'POS', storage_r.snapshots.index[snap]
+                #
+                # print 'POS', cv_cache.snapshot_pos(snap.reversed),
+                # print 'POS', storage_r.snapshots.pos(snap.reversed),
                 # print 'POS', storage_r.snapshots.index[snap.reversed]
 
 
-                if len(cv_cache.cache._chunkdict) > 0:
+                # if len(cv_cache.cache._chunkdict) > 0:
+                #
+                #     if allow_partial:
+                #         print cv_cache.index
+                #         print cv_cache.vars['value'][:]
+                #
+                #     for n, v in enumerate(cv_cache.cache._chunkdict[0]):
+                #         print n, v
+                #
+                # print cv1(snap)
+                # print cv1(snap.reversed)
+                # print cv_cache[snap]
+                #
+                # print cv_cache[snap.reversed]
 
-                    if allow_partial:
-                        print cv_cache.index
-                        print cv_cache.vars['value'][:]
-
-                    for n, v in enumerate(cv_cache.cache._chunkdict[0]):
-                        print n, v
-
-                print cv1(snap)
-                print cv1(snap.reversed)
-                print cv_cache[snap]
-
-                print cv_cache[snap.reversed]
-
-                # if not allow_partial or cv_cache[snap] is not None:
-                #     assert_close_unit(cv_cache[snap], cv1(snap))
-                #     assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
+                if not allow_partial or cv_cache[snap] is not None:
+                    assert_close_unit(cv_cache[snap], cv1(snap))
+                    assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
 
             storage_r.close()
 
