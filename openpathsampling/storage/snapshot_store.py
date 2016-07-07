@@ -1,19 +1,11 @@
 import abc
+from collections import OrderedDict
+
 from openpathsampling.netcdfplus import StorableObject
 from openpathsampling.netcdfplus.objects import UUIDDict, IndexedObjectStore
+from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, LRUChunkLoadingCache
 import openpathsampling.engines as peng
 
-from collections import OrderedDict
-from uuid import UUID
-
-from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, LRUChunkLoadingCache
-
-from openpathsampling.engines import BaseSnapshot
-
-
-# =============================================================================================
-# ABSTRACT BASE CLASS FOR SNAPSHOTS
-# =============================================================================================
 
 class UUIDReversalDict(UUIDDict):
     @staticmethod
@@ -29,35 +21,58 @@ class UUIDReversalDict(UUIDDict):
         OrderedDict.__delitem__(self, self.rev_id(key))
 
 
-class BaseSnapshotStore(ObjectStore):
+# =============================================================================================
+# ABSTRACT BASE CLASS FOR SNAPSHOTS
+# =============================================================================================
+
+class BaseSnapshotStore(IndexedObjectStore):
     """
     An ObjectStore for Snapshots in netCDF files.
     """
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, snapshot_class):
+    def __init__(self, descriptor):
         """
 
         Attributes
         ----------
-        snapshot_class : openpathsampling.BaseSnapshot
-            a snapshot class that this Store is supposed to store
+        descriptor : openpathsampling.engines.SnapshotDescriptor
+            a descriptor knowing the snapshot class and a dictionary of
+            dimensions and their lengths.
 
         """
-        super(BaseSnapshotStore, self).__init__(peng.BaseSnapshot, json=False)
-        self.snapshot_class = snapshot_class
-        self._use_lazy_reversed = False
-        if hasattr(snapshot_class, '__features__'):
-            if '_reversed' in snapshot_class.__features__.lazy:
-                self._use_lazy_reversed = True
+
+        # Using a store with None as type will not interfere with the main snapshotstore
+        super(BaseSnapshotStore, self).__init__(None, json=False)
+        self.descriptor = descriptor
+        self._dimensions = descriptor.dimensions
+        self._cls = self.descriptor.snapshot_class
+
+        # self._use_lazy_reversed = False
+        # if hasattr(snapshot_class, '__features__'):
+        #     if '_reversed' in snapshot_class.__features__.lazy:
+        #         self._use_lazy_reversed = True
 
     def create_uuid_index(self):
         return UUIDReversalDict()
 
+    @property
+    def reference_by_uuid(self):
+        # This one does explicitly use integer indices
+        return False
+
+    @property
+    def snapshot_class(self):
+        return self._cls
+
+    @property
+    def dimensions(self):
+        return self.descriptor['dimensions']
+
     def __repr__(self):
         return "store.%s[%s(%s)]" % (
-            self.prefix, self.snapshot_class.__name__, self.content_class.__name__)
+            self.prefix, self._cls.__name__, 'BaseSnapshot')
 
     @staticmethod
     def paired_idx(idx):
@@ -82,221 +97,6 @@ class BaseSnapshotStore(ObjectStore):
             the other part of the paired index
         """
         return idx ^ 1
-
-    def to_dict(self):
-        return {
-            'snapshot_class': self.snapshot_class
-        }
-
-    def _load(self, idx):
-        """
-        Load a snapshot from the storage.
-
-        Parameters
-        ----------
-        idx : int
-            the integer index of the snapshot to be loaded
-
-        Returns
-        -------
-        snapshot : :obj:`BaseSnapshot`
-            the loaded snapshot instance
-        """
-
-        # check if the reversed is in the cache
-        try:
-            return self.cache[BaseSnapshotStore.paired_idx(idx)].reversed
-        except KeyError:
-            pass
-
-        # if not load and return it
-        st_idx = int(idx / 2)
-
-        obj = self.snapshot_class.__new__(self.snapshot_class)
-        self.snapshot_class.init_empty(obj)
-
-        self._get(st_idx, obj)
-        if idx & 1:
-            obj = obj.reversed
-
-        # obj._reversed = LoaderProxy(self, BaseSnapshotStore.paired_idx(idx))
-        return obj
-
-    @abc.abstractmethod
-    def _set(self, idx, snapshot):
-        pass
-
-    @abc.abstractmethod
-    def _get(self, idx, snapshot):
-        pass
-
-    def _set_id(self, idx, obj):
-        if self.reference_by_uuid:
-            self.vars['uuid'][int(idx / 2)] = obj.__uuid__
-
-    def _get_id(self, idx, obj):
-        if self.reference_by_uuid:
-            uuid = self.vars['uuid'][int(idx / 2)]
-            if idx & 1:
-                uuid = StorableObject.ruuid(uuid)
-
-            obj.__uuid__ = uuid
-
-    def load_indices(self):
-        if self.reference_by_uuid:
-            for idx, uuid in enumerate(self.vars['uuid'][:]):
-                self.index[uuid] = idx * 2
-
-    def _save(self, snapshot, idx):
-        """
-        Add the current state of the snapshot in the database.
-
-        Parameters
-        ----------
-        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
-            the snapshot to be saved
-        idx : int or None
-            if idx is not None the index will be used for saving in the storage.
-            This might overwrite already existing trajectories!
-
-        Notes
-        -----
-        This also saves all contained frames in the snapshot if not done yet.
-        A single Snapshot object can only be saved once!
-        """
-
-        st_idx = int(idx / 2)
-
-        if snapshot._reversed is not None:
-            if not self.reference_by_uuid and snapshot._reversed in self.index:
-                # seems we have already stored this snapshot but didn't know about it
-                raise RuntimeWarning('This should never happen! Please report a bug!')
-            else:
-                # mark reversed as stored
-                self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
-
-        self._set(st_idx, snapshot)
-
-        if snapshot._reversed is not None:
-            # mark reversed as stored
-            self.index[snapshot._reversed] = BaseSnapshotStore.paired_idx(idx)
-
-    def save(self, obj, idx=None):
-        if self.reference_by_uuid:
-            ruuid = str(UUID(int=int(obj.__uuid__)))
-
-            if ruuid in self.index:
-                # has been saved so quit and do nothing
-                return obj.__uuid__
-
-        if obj._reversed is not None:
-            if not self.reference_by_uuid and obj._reversed in self.index:
-                # the reversed copy has been saved so quit and return the paired idx
-                self.index[obj] = BaseSnapshotStore.paired_idx(self.index[obj._reversed])
-
-        return super(BaseSnapshotStore, self).save(obj, idx)
-
-    def all(self):
-        if self.reference_by_uuid:
-            return peng.Trajectory(map(self.proxy, self.index))
-        else:
-            return peng.Trajectory(map(self.proxy, range(len(self))))
-
-    def __len__(self):
-        return 2 * super(BaseSnapshotStore, self).__len__()
-
-    def duplicate(self, snapshot):
-        """
-        Store a duplicate of the snapshot as new
-
-        Parameters
-        ----------
-        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
-
-        Returns
-        -------
-        int
-            the index used for storing it in the store. This is the save as used by
-            save.
-
-        Notes
-        -----
-        This will circumvent the caching and indexing completely. This would be equivalent
-        of creating a copy of the current snapshot and store this one and throw the copy
-        away, leaving the given snapshot untouched. This allows you to treat the snapshot
-        as mutual.
-
-        The use becomes more obvious when applying to storing trajectories. The only way
-        to make use of this feature is using the returned `idx`
-
-        >>> idx = store.duplicate(snap)
-        >>> loaded = store[idx]  # return a duplicated as new object
-        >>> proxy = paths.LoaderProxy(store, idx) # use the duplicate without loading
-
-        """
-        idx = self.free()
-        st_idx = int(idx / 2)
-        self._set(st_idx, snapshot)
-
-        return idx
-
-    def idx(self, obj):
-        try:
-            return self.index[obj]
-        except KeyError:
-            pass
-
-        try:
-            return BaseSnapshotStore.paired_idx(self.index[obj.reversed])
-        except KeyError:
-            return None
-
-
-class BaseSnapshotIndexedStore(IndexedObjectStore):
-    """
-    An ObjectStore for Snapshots in netCDF files.
-    """
-
-    __metaclass__ = abc.ABCMeta
-
-    def __init__(self, descriptor):
-        """
-
-        Attributes
-        ----------
-        descriptor : openpathsampling.engines.SnapshotDescriptor
-            a descriptor knowing the snapshot class and a dictionary of
-            dimensions and their lengths.
-
-        """
-
-        # Using a store with None as type will not interfere with the main snapshotstore
-        super(BaseSnapshotIndexedStore, self).__init__(None, json=False)
-        self.descriptor = descriptor
-        self._dimensions = descriptor.dimensions
-        self._cls = self.descriptor.snapshot_class
-
-        # self._use_lazy_reversed = False
-        # if hasattr(snapshot_class, '__features__'):
-        #     if '_reversed' in snapshot_class.__features__.lazy:
-        #         self._use_lazy_reversed = True
-
-    @property
-    def reference_by_uuid(self):
-        # This one does explicitly use integer indices
-        return False
-
-    @property
-    def snapshot_class(self):
-        return self._cls
-
-    @property
-    def dimensions(self):
-        return self.descriptor['dimensions']
-
-    def __repr__(self):
-        return "store.%s[%s(%s)]" % (
-            self.prefix, self._cls.__name__, 'BaseSnapshot')
 
     def to_dict(self):
         return {
@@ -345,7 +145,7 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
 
         Returns
         -------
-        snapshot : :obj:`BaseSnapshot`
+        snapshot : :obj:`openpathsampling.engines.BaseSnapshot`
             the loaded snapshot instance
         """
 
@@ -356,31 +156,6 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
         self._cls.init_empty(obj)
         self._get(st_idx, obj)
         return obj
-
-    @abc.abstractmethod
-    def _set(self, idx, snapshot):
-        pass
-
-    @abc.abstractmethod
-    def _get(self, idx, snapshot):
-        pass
-
-    def _set_id(self, idx, obj):
-        if self.reference_by_uuid:
-            self.vars['uuid'][int(idx / 2)] = obj.__uuid__
-
-    def _get_id(self, idx, obj):
-        if self.reference_by_uuid:
-            uuid = self.vars['uuid'][int(idx / 2)]
-            if idx & 1:
-                uuid = StorableObject.ruuid(uuid)
-
-            obj.__uuid__ = uuid
-
-    def load_indices(self):
-        if self.reference_by_uuid:
-            for pos, idx in enumerate(self.vars['index'][:]):
-                self.index[idx] = pos
 
     def _save(self, snapshot, idx):
         """
@@ -402,6 +177,31 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
 
         self._set(idx, snapshot)
 
+    @abc.abstractmethod
+    def _get(self, idx, snapshot):
+        pass
+
+    @abc.abstractmethod
+    def _set(self, idx, snapshot):
+        pass
+
+    def _get_id(self, idx, obj):
+        if self.reference_by_uuid:
+            uuid = self.vars['uuid'][int(idx / 2)]
+            if idx & 1:
+                uuid = StorableObject.ruuid(uuid)
+
+            obj.__uuid__ = uuid
+
+    def _set_id(self, idx, obj):
+        if self.reference_by_uuid:
+            self.vars['uuid'][int(idx / 2)] = obj.__uuid__
+
+    def load_indices(self):
+        if self.reference_by_uuid:
+            for pos, idx in enumerate(self.vars['index'][:]):
+                self.index[idx] = pos
+
     def all(self):
         return peng.Trajectory(map(self.proxy, range(len(self))))
 
@@ -411,7 +211,7 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
 
         Parameters
         ----------
-        snapshot :class:`openpathsampling.snapshots.AbstractSnapshot`
+        snapshot : :class:`openpathsampling.engines.BaseSnapshot`
 
         Returns
         -------
@@ -443,6 +243,7 @@ class BaseSnapshotIndexedStore(IndexedObjectStore):
     def idx(self, obj):
         return self.index[obj]
 
+
 # =============================================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
 # =============================================================================================
@@ -452,8 +253,8 @@ class FeatureSnapshotStore(BaseSnapshotStore):
     An ObjectStore for Snapshots in netCDF files.
     """
 
-    def __init__(self, snapshot_class):
-        super(FeatureSnapshotStore, self).__init__(snapshot_class)
+    def __init__(self, descriptor):
+        super(FeatureSnapshotStore, self).__init__(descriptor)
 
     @property
     def classes(self):
@@ -471,38 +272,6 @@ class FeatureSnapshotStore(BaseSnapshotStore):
 
     def initialize(self):
         super(FeatureSnapshotStore, self).initialize()
-
-        for feature in self.classes:
-            if hasattr(feature, 'netcdfplus_init'):
-                feature.netcdfplus_init(self)
-
-
-class FeatureSnapshotIndexedStore(BaseSnapshotIndexedStore):
-    """
-    An ObjectStore for Snapshots in netCDF files.
-    """
-
-    def __init__(self, descriptor):
-        super(FeatureSnapshotIndexedStore, self).__init__(
-            descriptor
-    )
-
-    @property
-    def classes(self):
-        return self.snapshot_class.__features__.classes
-
-    @property
-    def storables(self):
-        return self.snapshot_class.__features__.storables
-
-    def _set(self, idx, snapshot):
-        [self.write(attr, idx, snapshot) for attr in self.storables]
-
-    def _get(self, idx, snapshot):
-        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.storables]
-
-    def initialize(self):
-        super(FeatureSnapshotIndexedStore, self).initialize()
 
         for dim, size in self._dimensions.iteritems():
             self.storage.create_dimension(self.prefix + dim, size)
@@ -581,7 +350,7 @@ class SnapshotWrapperStore(ObjectStore):
         if descriptor in self.type_list:
             return self.type_list[descriptor]
 
-        store = FeatureSnapshotIndexedStore(descriptor)
+        store = FeatureSnapshotStore(descriptor)
 
         store_idx = int(len(self.storage.dimensions['snapshottype']))
         store_name = 'snapshot' + str(store_idx)
@@ -634,7 +403,11 @@ class SnapshotWrapperStore(ObjectStore):
                 self.index[uuid] = idx * 2
 
     def get_cv_cache(self, idx):
-        return self.storage.stores['cv' + str(idx)].value
+        store_name = SnapshotWrapperStore._get_cv_name(idx)
+        if store_name in self.storage.stores.name_idx:
+            return self.storage.stores[store_name].value
+        else:
+            return None
 
     def save(self, obj, idx=None):
         n_idx = None
@@ -686,7 +459,7 @@ class SnapshotWrapperStore(ObjectStore):
             n_idx = self.free()
 
             self._save(obj, n_idx)
-            self._complete_cv(obj, n_idx, False)
+            self._complete_cv(obj, n_idx)
             self._set_id(n_idx, obj)
         else:
             self.vars['store'][n_idx / 2] = store_idx
@@ -793,7 +566,7 @@ class SnapshotWrapperStore(ObjectStore):
     def _get_cv_name(cv_idx):
         return 'cv' + str(cv_idx)
 
-    def add_cv(self, cv, template, chunksize=100, allow_partial=False):
+    def add_cv(self, cv, template):
         """
 
         Parameters
@@ -811,6 +584,10 @@ class SnapshotWrapperStore(ObjectStore):
         if cv in self.cv_list:
             return self.cv_list[cv]
 
+        allow_partial = cv.diskcache_allow_partial
+        auto_complete = cv.diskcache_auto_complete
+        time_reversible = cv.cv_time_reversible
+
         # determine value type and shape
         params = NetCDFPlus.get_value_parameters(template)
         shape = params['dimensions']
@@ -821,7 +598,11 @@ class SnapshotWrapperStore(ObjectStore):
             chunksizes = tuple(params['dimensions'])
 
         cv_idx = self.storage.cvs.index[cv]
-        store = SnapshotValueStore(cv.cv_time_reversible, allow_partial)
+        store = SnapshotValueStore(
+            cv_time_reversible=time_reversible,
+            allow_partial=allow_partial,
+            auto_complete=auto_complete
+        )
 
         var_name = SnapshotWrapperStore._get_cv_name(cv_idx)
 
@@ -950,10 +731,10 @@ class SnapshotWrapperStore(ObjectStore):
         """
         try:
             return self.index[obj]
-        except:
+        except KeyError:
             try:
                 return self.index[obj._reversed] ^ 1
-            except:
+            except KeyError:
                 raise KeyError(obj)
 
     def cache_all_cvs(self):
@@ -962,7 +743,12 @@ class SnapshotWrapperStore(ObjectStore):
 
 
 class SnapshotValueStore(ObjectStore):
-    def __init__(self, cv_time_reversible, allow_partial=False):
+    def __init__(
+            self,
+            cv_time_reversible=True,
+            allow_partial=False,
+            auto_complete=True
+    ):
         super(SnapshotValueStore, self).__init__(None)
         self.uuid_index = None
         if not cv_time_reversible and not allow_partial:
@@ -970,15 +756,23 @@ class SnapshotValueStore(ObjectStore):
 
         self.cv_time_reversible = cv_time_reversible
         self.allow_partial = allow_partial
+        self.auto_complete = auto_complete
 
     def to_dict(self):
         return {
             'cv_time_reversible': self.cv_time_reversible,
-            'allow_partial': self.allow_partial
+            'allow_partial': self.allow_partial,
+            'auto_complete': self.auto_complete
         }
 
     def create_uuid_index(self):
         return dict()
+
+    def create_int_index(self):
+        if self.allow_partial:
+            return super(SnapshotValueStore, self).create_int_index()
+        else:
+            return None
 
     def register(self, storage, prefix):
         super(SnapshotValueStore, self).register(storage, prefix)
@@ -988,15 +782,6 @@ class SnapshotValueStore(ObjectStore):
             self.index = IdentityIndex(self)
 
     def __len__(self):
-        """
-        Return the number of stored objects
-
-        Returns
-        -------
-        int
-            number of stored objects
-
-        """
         return len(self.variables['value'])
 
     # =============================================================================
@@ -1004,20 +789,6 @@ class SnapshotValueStore(ObjectStore):
     # =============================================================================
 
     def load(self, idx):
-        """
-        Returns an object from the storage.
-
-        Parameters
-        ----------
-        idx : int
-            the integer index of the object to be loaded
-
-        Returns
-        -------
-        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
-            the loaded object
-        """
-
         if self.reference_by_uuid:
             pos = self.uuid_index[idx]
         else:
@@ -1055,19 +826,6 @@ class SnapshotValueStore(ObjectStore):
         return obj
 
     def __setitem__(self, idx, value):
-        """
-        Saves an object to the storage.
-
-        Parameters
-        ----------
-        idx : :py:class:`openpathsampling.engines.BaseSnapshot`
-            the object to be stored
-        value : anything that can be stored
-            this includes storable objects, python numbers, numpy.arrays,
-            strings, etc.
-
-        """
-
         if self.reference_by_uuid:
             pos = self.uuid_index.get(idx)
             if pos is None:
@@ -1114,13 +872,6 @@ class SnapshotValueStore(ObjectStore):
     def fill_cache(self):
         self.cache.load_max()
 
-    def sync(self, cv):
-        if self.allow_partial:
-            if not self.reference_by_uuid:
-                # for uuids this cannot happen
-                # necessary if we compute cvs that are not stored
-                pass
-
     def restore(self):
         if self.allow_partial:  # only if partial storage is used
             if self.reference_by_uuid:
@@ -1130,18 +881,13 @@ class SnapshotValueStore(ObjectStore):
                 for pos, idx in enumerate(self.vars['index'][:]):
                     self.index[idx] = pos
 
-        else:  # if complete storage is used
-            self.index = IdentityIndex(self)
-
     def initialize(self):
         pass
 
     def __getitem__(self, item):
-        """
-        Enable numpy style selection of object in the store
-        """
+        # enable numpy style selection of objects in the store
         try:
-            if isinstance(item, BaseSnapshot):
+            if isinstance(item, peng.BaseSnapshot):
                 return self.load(item)
             elif type(item) is list:
                 return [self.load(idx) for idx in item]
@@ -1158,17 +904,3 @@ class SnapshotValueStore(ObjectStore):
                 return None
         else:
             return self[item]
-
-
-class IdentityIndex(object):
-    def __init__(self, store):
-        self.store = store
-
-    def __getitem__(self, item):
-        return item
-
-    def __setitem__(self, key, value):
-        pass
-
-    def __contains__(self, item):
-        return item < len(self.store)

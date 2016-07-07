@@ -1,7 +1,7 @@
 from storage import Storage, AnalysisStorage
 from snapshot_store import (
-    BaseSnapshotStore, FeatureSnapshotStore, FeatureSnapshotIndexedStore,
-    BaseSnapshotIndexedStore, SnapshotWrapperStore)
+    BaseSnapshotStore, FeatureSnapshotStore, FeatureSnapshotStore,
+    BaseSnapshotStore, SnapshotWrapperStore)
 from trajectory_store import TrajectoryStore
 from sample_store import SampleStore, SampleSetStore
 from cv_store import CVStore

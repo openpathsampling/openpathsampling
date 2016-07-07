@@ -1,13 +1,14 @@
-###############################################################
-# | CLASS Order Parameter
-###############################################################
 
-import openpathsampling as paths
 import chaindict as cd
 from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, ObjectJSON, create_to_dict
 
 import openpathsampling.engines as peng
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
+
+
+# ============================================================
+#  CLASS CollectiveVariable
+# ============================================================
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
     """
@@ -22,17 +23,11 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         If `True` (default) the CV assumes that reversed snapshots have the same value. This is the
         default case when CVs do not depend on momenta reversal. This will speed up computation of
         CVs by about a factor of two. In rare cases you might want to set this to `False`
-    cv_store_cache : bool
-        If `True` this CV has a cache on disk attached in form of a table in a netcdf file.
-        If set to `False` (default) then there will be no storage created when the cv is stored
-        automatically. You can do this later on using function in the cv_store.
-
 
     Attributes
     ----------
     name
     cv_time_reversible
-    cv_store_cache
 
     _single_dict : :class:`openpathsampling.chaindict.ChainDict`
         The ChainDict that takes care of using only a single element instead of
@@ -43,10 +38,18 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
     """
 
+    # do not store the settings for the disk cache. These are independent and stored in the
+    # cache itself
+    _excluded_attr = [
+        'diskcache_enabled',
+        'diskcache_allow_partial',
+        'diskcache_chunksize',
+        'diskcache_auto_complete'
+    ]
+
     def __init__(
             self,
             name,
-            cv_store_cache=False,
             cv_time_reversible=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
@@ -57,16 +60,33 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         self.name = name
 
-        self.cv_store_cache = cv_store_cache
+        # default settings if we should create a disk cache
+        self.diskcache_enabled = False
+        self.diskcache_allow_partial = False
+        self.diskcache_auto_complete = True
+        self.diskcache_chunksize = 100
+
         self.cv_time_reversible = cv_time_reversible
 
         self._single_dict = cd.ExpandSingle()
         self._cache_dict = cd.PlainReversibleCacheChainDict(
-                WeakKeyCache(),
-                reversible=cv_time_reversible
+            WeakKeyCache(),
+            reversible=cv_time_reversible
         )
+        self._store_dict = None
 
         super(CollectiveVariable, self).__init__(post=self._single_dict > self._cache_dict)
+
+    def with_disk_cache(self, chunksize=100, allow_partial=False, auto_complete=True):
+        self.diskcache_enabled = True
+        self.diskcache_allow_partial = allow_partial
+        self.diskcache_chunksize = chunksize
+        self.diskcache_auto_complete = auto_complete
+        return self
+    
+    def without_disk_cache(self):
+        self.diskcache_enabled = False
+        return self
 
     def set_cache_store(self, value_store):
         """
@@ -74,17 +94,12 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         If used the collective variable will automatically sync values with
         the store and load from it if necessary. If the CV is created with
-        `cv_store_cache = True`. This will be done during CV creation.
+        `diskcache_enabled = True`. This will be done during CV creation.
 
         Parameters
         ----------
-        key_store : :class:`openpathsampling.netcdfplus.ObjectStore`
-            the store that references the key objects used as keys in the
-            collective variable (the input for the cv function)
         value_store : :class:`openpathsampling.netcdfplus.ObjectStore`
             the store / variable that references the output (value) objects
-        backward_store : :class:`openpathsampling.netcdfplus.ObjectStore` or None
-            the optional backward store for reversed objects
 
         Notes
         -----
@@ -109,7 +124,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         Sync this CV with the attached storages
 
         """
-        if hasattr(self, '_store_dict'):
+        if self._store_dict:
             self._store_dict.sync()
 
     def cache_all(self):
@@ -117,7 +132,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         Sync this CV with attached storages
 
         """
-        if hasattr(self, '_store_dict'):
+        if self._store_dict:
             self._store_dict.cache_all()
 
     def __eq__(self, other):
@@ -137,7 +152,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         return NotImplemented
 
-    to_dict = create_to_dict(['name', 'cv_time_reversible', 'cv_store_cache'])
+    to_dict = create_to_dict(['name', 'cv_time_reversible'])
 
 
 class CV_Volume(CollectiveVariable):
@@ -149,7 +164,7 @@ class CV_Volume(CollectiveVariable):
     volume
     """
 
-    def __init__(self, name, volume, cv_store_cache=True):
+    def __init__(self, name, volume):
         """
         Parameters
         ----------
@@ -162,24 +177,25 @@ class CV_Volume(CollectiveVariable):
 
         super(CV_Volume, self).__init__(
             name,
-            cv_store_cache=cv_store_cache,
             cv_time_reversible=True
         )
         self.volume = volume
 
+        # CVs that are computed from other CVs should not be cached. This is usually
+        # fast and redundant
+        self.diskcache_enabled = False
+
         self._callable_dict = cd.Function(
             self._eval,
-            False,
-            False
+            requires_lists=False
         )
 
         self._post = self._post > self._callable_dict
 
     def _eval(self, items):
-        result = bool(self.volume(items))
-        return result
+        return bool(self.volume(items))
 
-    to_dict = create_to_dict(['name', 'cv_store_cache', 'volume'])
+    to_dict = create_to_dict(['name', 'volume'])
 
 
 class CV_Callable(CollectiveVariable):
@@ -196,7 +212,6 @@ class CV_Callable(CollectiveVariable):
             self,
             name,
             cv_callable,
-            cv_store_cache=True,
             cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
@@ -209,7 +224,6 @@ class CV_Callable(CollectiveVariable):
         name
         cv_callable : callable (function or class with __call__)
             The callable to be used
-        cv_store_cache
         cv_time_reversible
         cv_requires_lists : If `True` the internal function  always a list of elements instead
             of single values. It also means that if you call the CV with a list of snapshots a list
@@ -265,7 +279,6 @@ class CV_Callable(CollectiveVariable):
 
         super(CV_Callable, self).__init__(
             name,
-            cv_store_cache=cv_store_cache,
             cv_time_reversible=cv_time_reversible
         )
         self.cv_requires_lists = cv_requires_lists
@@ -273,6 +286,12 @@ class CV_Callable(CollectiveVariable):
         self.cv_scalarize_numpy_singletons = cv_scalarize_numpy_singletons
 
         self.cv_callable = cv_callable
+
+        # default settings if we should create a disk cache
+        self.diskcache_enabled = True
+        self.diskcache_allow_partial = False
+        self.diskcache_auto_complete = True
+        self.diskcache_chunksize = 100
 
         if kwargs is None:
             kwargs = dict()
@@ -346,7 +365,6 @@ class CV_Function(CV_Callable):
             self,
             name,
             f,
-            cv_store_cache=True,
             cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
@@ -359,7 +377,6 @@ class CV_Function(CV_Callable):
         name : str
         f : (callable) function
             The function to be used
-        cv_store_cache
         cv_time_reversible
         cv_requires_lists
         cv_wrap_numpy_array
@@ -378,7 +395,6 @@ class CV_Function(CV_Callable):
         super(CV_Function, self).__init__(
             name,
             cv_callable=f,
-            cv_store_cache=cv_store_cache,
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
@@ -406,7 +422,6 @@ class CV_Generator(CV_Callable):
             self,
             name,
             generator,
-            cv_store_cache=True,
             cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
@@ -423,7 +438,6 @@ class CV_Generator(CV_Callable):
         cv_return_shape
         cv_return_simtk_unit
         cv_requires_lists
-        cv_store_cache
         kwargs
             additional arguments which should be given to `c` (for example, the
             atoms which define a specific distance/angle). Finally an instance
@@ -439,7 +453,6 @@ class CV_Generator(CV_Callable):
         super(CV_Generator, self).__init__(
             name,
             cv_callable=generator,
-            cv_store_cache=cv_store_cache,
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
@@ -485,7 +498,6 @@ class CV_MDTraj_Function(CV_Function):
     def __init__(self,
                  name,
                  f,
-                 cv_store_cache=True,
                  cv_time_reversible=True,
                  cv_requires_lists=True,
                  cv_wrap_numpy_array=True,
@@ -497,7 +509,6 @@ class CV_MDTraj_Function(CV_Function):
         ----------
         name : str
         f
-        cv_store_cache
         cv_time_reversible
         cv_requires_lists
         cv_wrap_numpy_array
@@ -512,7 +523,6 @@ class CV_MDTraj_Function(CV_Function):
         super(CV_MDTraj_Function, self).__init__(
             name,
             f,
-            cv_store_cache=cv_store_cache,
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
@@ -546,7 +556,6 @@ class CV_MSMB_Featurizer(CV_Generator):
             self,
             name,
             featurizer,
-            cv_store_cache=True,
             cv_wrap_numpy_array=True,
             cv_scalarize_numpy_singletons=True,
             **kwargs
@@ -563,7 +572,6 @@ class CV_MSMB_Featurizer(CV_Generator):
             atoms which define a specific distance/angle). Finally an instance
             `instance = cls(\**kwargs)` is create when the CV is created and
             using the CV will call `instance(snapshots)`
-        cv_store_cache
         cv_requires_lists
         cv_scalarize_numpy_singletons
 
@@ -588,7 +596,7 @@ class CV_MSMB_Featurizer(CV_Generator):
         super(CV_Generator, self).__init__(
             name,
             cv_callable=featurizer,
-            cv_store_cache=cv_store_cache,
+            diskcache_enabled=diskcache_enabled,
             cv_time_reversible=True,
             cv_requires_lists=True,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
@@ -614,7 +622,6 @@ class CV_MSMB_Featurizer(CV_Generator):
             'name': self.name,
             'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
             'kwargs': self.kwargs,
-            'cv_store_cache': self.cv_store_cache,
             'cv_wrap_numpy_array': self.cv_wrap_numpy_array,
             'cv_scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
         }
@@ -634,7 +641,6 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
             name,
             featurizer,
             topology,
-            cv_store_cache=True,
             **kwargs
     ):
         """
@@ -653,7 +659,6 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
         cv_return_shape
         cv_return_simtk_unit
         cv_requires_lists
-        cv_store_cache
         scalarize_numpy_singletons : bool, default: True
             If `True` then arrays of length 1 will be treated as array with one dimension less.
             e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
@@ -687,7 +692,6 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
             cv_callable=featurizer,
             cv_time_reversible=True,
             cv_requires_lists=True,
-            cv_store_cache=cv_store_cache,
             cv_wrap_numpy_array=True,
             cv_scalarize_numpy_singletons=True,
             **kwargs
@@ -704,6 +708,5 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
             'name': self.name,
             'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
             'topology': self.topology,
-            'cv_store_cache': self.cv_store_cache,
             'kwargs': self.kwargs
         }
