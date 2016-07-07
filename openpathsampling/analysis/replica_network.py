@@ -12,74 +12,28 @@ class ReplicaNetwork(object):
     """
     Analysis tool for networks of replica exchanges.
     """
-    def __init__(self, repex_movers=None, ensembles=None, storage=None):
+    def __init__(self, scheme, steps, replicas=None):
+        if replicas is None:
+            replicas = steps[0].active.replica_list()
+        try:
+            self.n_replicas = len(replicas)
+        except TypeError:
+            replicas = [replicas]
+            self.n_replicas = 1
+        self.replicas = replicas
+        self.scheme = scheme
+        self.ensembles = scheme.network.all_ensembles
+
+        self.ensemble_to_number = {}
+        self.ensemble_to_string = {}
         self.analysis = { } 
         self.traces = { } 
         self.transitions = { }
-        self.all_ensembles = []
-        self.all_replicas = []
-        self.ensemble_to_number = {}
-        self.ensemble_to_string = {}
-        if repex_movers is None and ensembles is None and storage is None:
-            raise RuntimeError("Must define either repex_movers or ensembles")
-        self.storage = storage
-        if self.storage is not None:
-            self.check_storage(self.storage)
 
-        if repex_movers is None and ensembles is None:
-            ensembles = self.all_ensembles
+        self.initial_order()
+        self.analyze_traces(steps)
+        self.analyze_exchanges(steps)
 
-        # TODO: add support for repex_mover and ensembles
-        # Currently we analyze everything in storage; this would allow us to
-        # limit that analysis to a subset of moves
-        #if ensembles is None:
-        #    tmp_ensembles = []
-        #    for mover in repex_movers:
-        #        tmp_ensembles.extend(mover.ensembles)
-        #    sort_ens = sorted(tmp_ensembles)
-        #    ensembles = [sort_ens[0]]
-        #    for ens in sort_ens[1:]:
-        #        if ens != ensembles[-1]:
-        #            ensembles.append(ens)
-
-        #if repex_movers is None:
-        #    repex_movers = []
-        #    for mover in storage.pathmovers:
-        #        if isinstance(mover, paths.ReplicaExchangeMover):
-        #            pass
-
-        #self.repex_movers = repex_movers
-        self.ensembles = ensembles
-
-
-    def check_storage(self, storage):
-        """Checks whether we have a valid storage to look at.
-
-        If storage is given as a parameter, it overwrites the instance
-        variable.
-        """
-        if storage != None:
-            if storage != self.storage:
-                self.analysis = { }
-                self.traces = { } 
-                self.all_replicas = []
-                self.all_ensembles = []
-                self.ensemble_to_number = {}
-                self.ensemble_to_string = {}
-            self.storage = storage
-        if self.storage == None:
-            raise RuntimeError("No storage given for analysis")
-        if self.all_replicas == [] or self.all_ensembles == []:
-            reps_ens = get_all_ensembles_and_replicas(storage)
-            self.all_replicas = reps_ens['replicas']
-            self.all_ensembles = reps_ens['ensembles']
-        if self.ensemble_to_number == {} or self.ensemble_to_string == {}:
-            # set the default labels here
-            self.initial_order()
-            sset0 = self.storage.samplesets[0]
-            labels = {e : str(sset0[e].replica) for e in self.all_ensembles}
-            self.set_labels(labels)
-        return self.storage
 
     def set_labels(self, ens2str=None):
         """
@@ -119,13 +73,13 @@ class ReplicaNetwork(object):
         ----------
         index_order : list of Ensembles
             the ensembles in the desired order. Defaults order in
-            self.all_ensembles
+            self.ensembles
         """
         # dictionaries to be used to translate between orderings (these are
         # the defaults)
         if index_order == None:
-            ensemble_to_number = {ens : self.all_ensembles.index(ens) 
-                                  for ens in self.all_ensembles}
+            ensemble_to_number = {ens : self.ensembles.index(ens) 
+                                  for ens in self.ensembles}
         else:
             ensemble_to_number = {ens : index_order.index(ens) 
                                   for ens in index_order}
@@ -136,19 +90,16 @@ class ReplicaNetwork(object):
         self.n_ensembles = len(self.ensemble_to_number)
         return ensemble_to_number
 
-    def analyze_exchanges(self, storage, force=False):
-        # TODO: convert this into something that yields ((repA, repB),
-        # accepted): separate obtaining those tuples from adding up the
-        # number of trials and acceptances -- this will make the rest of the
-        # code usable for non-OPS purposes
-        storage = self.check_storage(storage)
+    def analyze_exchanges(self, steps=None, force=False):
         if force == False and self.analysis != { }:
             return (self.analysis['n_trials'], self.analysis['n_accepted'])
+        if steps is None:
+            raise RuntimeError("No steps given to analyze!")
         n_trials = 0
         self.analysis['n_trials'] = {}
         self.analysis['n_accepted'] = {}
         prev = None
-        for step in storage.steps:
+        for step in steps:
             pmc = step.change
 
             if pmc.canonical.mover is not None and pmc.canonical.mover.is_ensemble_change_mover:
@@ -174,22 +125,21 @@ class ReplicaNetwork(object):
         return (self.analysis['n_trials'], self.analysis['n_accepted'])
 
 
-    def analyze_traces(self, storage, force=False):
+    def analyze_traces(self, steps, force=False):
         """
         Calculates all the traces (fixed replica or fixed ensemble).
 
         Populates the dictionary at self.traces.
         """
-        self.check_storage(storage)
         if force == False and self.traces != { }:
             return self.traces
-        for ensemble in [s.ensemble for s in self.storage.steps[0].active]:
+        for ensemble in [s.ensemble for s in steps[0].active]:
             self.traces[ensemble] = condense_repeats(
-                trace_replicas_for_ensemble(ensemble, self.storage)
+                trace_replicas_for_ensemble(ensemble, steps)
             )
-        for replica in [s.replica for s in self.storage.steps[0].active]:
+        for replica in [s.replica for s in steps[0].active]:
             self.traces[replica] = condense_repeats(
-                trace_ensembles_for_replica(replica, self.storage)
+                trace_ensembles_for_replica(replica, steps)
             )
         return self.traces
 
@@ -262,13 +212,13 @@ class ReplicaNetwork(object):
         return (matrix, df)
 
 
-    def transition_matrix(self, storage=None, index_order=None, force=False):
+    def transition_matrix(self, steps=None, index_order=None, force=False):
         """
         Create the transition matrix.
 
         Parameters
         ----------
-        storage : paths.Storage
+        steps : iterable of :class:`.MCStep`
             input data
         index_order : list of ensembles or None
             see `reorder_matrix`
@@ -280,7 +230,7 @@ class ReplicaNetwork(object):
         pandas.DataFrame
             transition matrix
         """
-        (n_try, n_acc) = self.analyze_exchanges(storage, force)
+        (n_try, n_acc) = self.analyze_exchanges(steps, force)
         data = []
         for k in n_try.keys():
             try:
@@ -297,13 +247,13 @@ class ReplicaNetwork(object):
         return df
 
 
-    def mixing_matrix(self, storage=None, index_order=None, force=False):
+    def mixing_matrix(self, steps=None, index_order=None, force=False):
         """
         Create the mixing matrix.
 
         Parameters
         ----------
-        storage : paths.Storage
+        steps : iterable of :class:`.MCStep`
             input data
         index_order : list of ensembles or None
             see `reorder_matrix`
@@ -315,7 +265,7 @@ class ReplicaNetwork(object):
         pandas.DataFrame
             mixing matrix
         """
-        (n_try, n_acc) = self.analyze_exchanges(storage, force)
+        (n_try, n_acc) = self.analyze_exchanges(steps, force)
         data = []
         for k in n_try.keys():
             try:
@@ -335,7 +285,7 @@ class ReplicaNetwork(object):
         return df
 
 
-    def transitions_from_traces(self, storage=None, force=False):
+    def transitions_from_traces(self, steps=None, force=False):
         """
         Calculate the transitions based on the trace of a given replica.
 
@@ -343,14 +293,14 @@ class ReplicaNetwork(object):
 
         Parameters
         ----------
-        storage : paths.Storage
+        steps : iterable of :class:`.MCStep`
             input data
         force : bool (False)
             if True, recalculate cached values
         """
-        traces = self.analyze_traces(storage, force)
+        traces = self.analyze_traces(steps, force)
         transitions = {}
-        for replica in [s.replica for s in self.storage.samplesets[0]]:
+        for replica in [s.replica for s in steps[0].active]:
             trace = traces[replica]
             hops = [(trace[i][0], trace[i+1][0]) for i in range(len(trace)-1)]
 
@@ -363,7 +313,7 @@ class ReplicaNetwork(object):
         return transitions
 
 
-    def flow(self, bottom, top, storage=None, force=False):
+    def flow(self, bottom, top, steps=None, force=False):
         """
         Replica "flow" between ensembles `bottom` and `top`.
 
@@ -378,7 +328,7 @@ class ReplicaNetwork(object):
             "bottom" ensemble for this flow calculation
         top : paths.Ensemble
             "top" ensemble for this flow calculation
-        storage : paths.Storage
+        steps : iterable of :class:`.MCStep`
             input data
         force : bool (False)
             if True, recalculate cached values
@@ -389,10 +339,10 @@ class ReplicaNetwork(object):
             Katzgraber, Trebst, Huse, and Troyer. J. Stat. Mech. 2006,
             P03018 (2006). doi:10.1088/1742-5468/2006/03/P03018
         """
-        traces = self.analyze_traces(storage, force)
-        n_up = { ens : 0 for ens in self.all_ensembles }
-        n_visit = { ens : 0 for ens in self.all_ensembles } 
-        for replica in self.all_replicas:
+        traces = self.analyze_traces(steps, force)
+        n_up = { ens : 0 for ens in self.ensembles }
+        n_visit = { ens : 0 for ens in self.ensembles } 
+        for replica in self.replicas:
             trace = self.traces[replica]
             direction = 0
             for (loc, count) in trace:
@@ -407,9 +357,9 @@ class ReplicaNetwork(object):
         self._flow_up = n_up
         self._flow_count = n_visit
         return {e : float(n_up[e])/n_visit[e] if n_visit[e] > 0 else 0.0
-                for e in self.all_ensembles}
+                for e in self.ensembles}
 
-    def trips(self, bottom, top, storage=None, force=False):
+    def trips(self, bottom, top, steps=None, force=False):
         """
         Calculate round trips, up trips, and down trips.
 
@@ -423,8 +373,8 @@ class ReplicaNetwork(object):
             ensemble to be considered the "bottom" for these trips
         top : paths.Ensemble
             ensemble to be considered the "top" for these trips
-        storage : paths.Storage
-            storage file
+        steps : iterable of :class:`.MCStep`
+            input data
         force : bool (False)
             if True, recalculate cached
 
@@ -434,11 +384,11 @@ class ReplicaNetwork(object):
             keys "up", "down", "round", pointing to values which are a list
             of the lengths of each trip of that type
         """
-        traces = self.analyze_traces(storage, force)
+        traces = self.analyze_traces(steps, force)
         down_trips = []
         up_trips = []
         round_trips = []
-        for replica in self.all_replicas:
+        for replica in self.replicas:
             trace = traces[replica]
             direction = None
             trip_counter = 0
@@ -476,39 +426,6 @@ class ReplicaNetwork(object):
 
         return {'down' : down_trips, 'up' : up_trips, 'round' : round_trips}
 
-def get_all_ensembles_and_replicas(storage, first_sampleset=True):
-    """
-    Retrieve all ensembles and replicas used in SampleSets
-
-    Parameters
-    ----------
-    storage : paths.Storage
-        storage file
-    first_sampleset : bool (True)
-        if True, assume that all relevant information is in the first
-        SampleSet. If False, search through all saved SampleSets.
-
-    Returns
-    -------
-    dict
-        keys: 'ensembles', 'replicas', each containing a list
-    """
-    if first_sampleset:
-        ensembles = [s.ensemble for s in storage.steps[0].active]
-        replicas = [s.replica for s in storage.steps[0].active]
-    else:
-        # This approach uses dicts so we don't have to hunt for the key; the
-        # value assigned is arbitrarily 1. Still has to loop over
-        # nsets*nsamples, but that's better than nsets*nsamples*nensembles
-        ensembles_dict = {}
-        replicas_dict = {}
-        for sset in storage.sampleset:
-            for s in sset:
-                ensembles[s.ensemble] = 1
-                replicas[s.replica] = 1
-        ensembles = ensembles_dict.keys()
-        replicas = replicas_dict.keys()
-    return { 'ensembles' : ensembles, 'replicas' : replicas }
 
 class ReplicaNetworkGraph(object):
     """
@@ -521,10 +438,8 @@ class ReplicaNetworkGraph(object):
     storage : paths.Storage
         file for data
     """
-    def __init__(self, repx_network, storage=None):
-        if storage is None:
-            storage = repx_network.storage
-        (n_try, n_acc) = repx_network.analyze_exchanges(storage)
+    def __init__(self, repx_network):
+        (n_try, n_acc) = repx_network.analyze_exchanges()
         self.graph = nx.Graph()
         n_accs_adj = {}
         for k in n_try.keys():
@@ -587,7 +502,7 @@ class ReplicaNetworkGraph(object):
 
 # TODO: convert these into functions that do the trace for all
 # replicas/ensembles in one loop
-def trace_ensembles_for_replica(replica, storage):
+def trace_ensembles_for_replica(replica, steps):
     """
     List of which ensemble a given replica was in at each MC step.
 
@@ -595,8 +510,8 @@ def trace_ensembles_for_replica(replica, storage):
     ----------
     replica : 
         replica ID
-    storage : paths.Storage
-        storage file
+    steps : iterable of :class:`.MCStep`
+        input data
 
     Returns
     -------
@@ -604,13 +519,12 @@ def trace_ensembles_for_replica(replica, storage):
         list of ensembles
     """
     trace = []
-    storage.samples.cache_all()
-    for step in storage.steps:
+    for step in steps:
         sset = step.active
         trace.append(sset[replica].ensemble)
     return trace
 
-def trace_replicas_for_ensemble(ensemble, storage):
+def trace_replicas_for_ensemble(ensemble, steps):
     """
     List of which replica a given ensemble held at each MC step.
 
@@ -618,8 +532,8 @@ def trace_replicas_for_ensemble(ensemble, storage):
     ----------
     ensemble : paths.Ensemble
         selected ensemble
-    storage : paths.Storage
-        storage file
+    steps : iterable of :class:`.MCStep`
+        MC steps to analyze (nonsense if not contiguous
 
     Returns
     -------
@@ -627,8 +541,7 @@ def trace_replicas_for_ensemble(ensemble, storage):
         list of replica IDs
     """
     trace = []
-    storage.samples.cache_all()
-    for step in storage.steps:
+    for step in steps:
         sset = step.active
         trace.append(sset[ensemble].replica)
     return trace

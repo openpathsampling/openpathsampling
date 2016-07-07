@@ -46,7 +46,7 @@ def items_equal(truth, beauty):
 
 def assert_items_almost_equal(truth, beauty, tol=10e-7):
     for (t,b) in zip(truth, beauty):
-        assert_equal( (t-b)<tol, True)
+        assert_equal( abs(t-b) - tol < 0.0, True)
 
 
 def assert_equal_array_array(truth, beauty):
@@ -104,7 +104,7 @@ class CalvinistDynamics(DynamicsEngine):
                 frame_val = frame.coordinates[0][0]
                 snap_val = self._current_snap.coordinates[0][0]
                 # print "looking for " + str(snap_val) + " (" + str(frame_val) + ") " + str(snap_val==frame_val)
-                if frame_val == snap_val:
+                if abs(frame_val - snap_val) < 1e-7:
                     self.frame_index = self.predestination.index(frame)
                     break
 
@@ -117,6 +117,7 @@ class CalvinistDynamics(DynamicsEngine):
             self._current_snap = self.predestination[self.frame_index-1].reversed
             self.frame_index -= 1
 
+        # print self._current_snap.xyz[0][0]
         return self._current_snap
 
     def stop(self, trajectory):
