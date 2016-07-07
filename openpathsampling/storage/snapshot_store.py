@@ -439,7 +439,10 @@ class SnapshotWrapperStore(ObjectStore):
             store_idx = self.variables['store'][n_idx / 2]
             if not store_idx == -1:
                 # and stored
-                return self.reference(obj)
+                if self.reference_by_uuid:
+                    return self.reference(obj)
+                else:
+                    return n_idx
 
         else:
             if self.only_mention:
@@ -717,6 +720,9 @@ class SnapshotWrapperStore(ObjectStore):
         if self.reference_by_uuid:
             uuid = self.vars['uuid'][int(idx / 2)]
             if idx & 1:
+                if obj._reversed:
+                    obj._reversed.__uuid__ = uuid
+
                 uuid = StorableObject.ruuid(uuid)
 
             obj.__uuid__ = uuid
@@ -851,7 +857,16 @@ class SnapshotValueStore(ObjectStore):
         pos = self.snapshot_pos(idx)
 
         if pos is None:
-            return None
+            if self.reference_by_uuid:
+                return None
+            else:
+                if idx._reversed:
+                    pos = self.snapshot_pos(idx._reversed)
+
+                    if pos is None:
+                        return None
+
+                    pos ^= 1
 
         if self.time_reversible:
             pos /= 2

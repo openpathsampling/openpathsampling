@@ -21,7 +21,8 @@ import os
 class testCV_Function(object):
     def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = peng.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
+        self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
+        self.traj_simple = peng.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
 
         if os.path.isfile("myfile.nc"):
             os.remove("myfile.nc")
@@ -43,7 +44,7 @@ class testCV_Function(object):
         dihedral_op = op.CV_MDTraj_Function("psi", md.compute_dihedrals, indices= [psi_atoms])
 
         md_dihed = md.compute_dihedrals(self.mdtraj, indices=[psi_atoms])
-        my_dihed =  dihedral_op(self.traj)
+        my_dihed =  dihedral_op(self.traj_topology)
 
         np.testing.assert_allclose(md_dihed.reshape(md_dihed.shape[:-1]), my_dihed, rtol=10**-6, atol=10**-10)
 
@@ -55,7 +56,7 @@ class testCV_Function(object):
 
         md_distances = md.compute_distances(self.mdtraj, atom_pairs)
 
-        my_distances = atom_pair_op(self.traj)
+        my_distances = atom_pair_op(self.traj_topology)
 
         np.testing.assert_allclose(md_distances, my_distances, rtol=10**-6, atol=10**-10)
 
@@ -67,7 +68,7 @@ class testCV_Function(object):
         # little trick. We just predent the atom_pairs_op is a function we want to use
         # it cannot be stored though, but for from_template it is enough
 
-        params = NetCDFPlus.get_value_parameters(atom_pair_op(self.traj[0]))
+        params = NetCDFPlus.get_value_parameters(atom_pair_op(self.traj_topology[0]))
 
         assert params['var_type'] == 'numpy.float32'
         assert params['simtk_unit'] is None
@@ -78,15 +79,15 @@ class testCV_Function(object):
 
         for use_uuid, allow_partial in [(True, True), (False, True), (True, False), (False, False)]:
 
-            # print '==========================================================='
-            # print 'UUID', use_uuid, 'PARTIAL', allow_partial
-            # print '==========================================================='
+            print '==========================================================='
+            print 'UUID', use_uuid, 'PARTIAL', allow_partial
+            print '==========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
                 os.remove(fname)
 
-            traj = paths.Trajectory(list(self.traj))
+            traj = paths.Trajectory(list(self.traj_simple))
             template = traj[0]
 
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
@@ -98,7 +99,20 @@ class testCV_Function(object):
 
             storage_w.save(cv1)
 
-            storage_w.trajectories.save(traj)
+            # let's mess up the order in which we save
+            storage_w.trajectories.save(traj[6:])
+            storage_w.snapshots.save(traj[3].reversed)
+
+            ll = [list.__getitem__(traj.reversed, nn) for nn in range(len(traj))]
+
+            print 'ITEMS', storage_w.snapshots.index.items()
+
+            print ll
+            print map(type, ll)
+
+            print map(storage_w.snapshots.pos, traj)
+            print map(storage_w.snapshots.pos, traj.reversed)
+            storage_w.trajectories.save(traj.reversed)
             storage_w.close()
 
             storage_r = paths.Storage(fname, 'r')
@@ -111,24 +125,44 @@ class testCV_Function(object):
             assert(cv_cache.auto_complete)
             assert(cv_cache.allow_partial == allow_partial)
 
-            for idx, snap in enumerate(storage_r.trajectories[0]):
+            for idx, snap in enumerate(storage_r.trajectories[1]):
                 # if hasattr(snap, '_idx'):
                 #     print 'IDX', snap._idx
-                #
-                # print 'ITEMS', storage_r.snapshots.index.items()
-                # print snap, type(snap), snap.__dict__
-                #
-                # print 'POS', cv_cache.snapshot_pos(snap),
-                # print 'POS', storage_r.snapshots.pos(snap),
-                # print 'POS', storage_r.snapshots.index[snap],
-                #
-                # print cv1(snap),
-                # print cv1(snap.reversed)
-                # print cv_cache[snap]
 
-                if not allow_partial or cv_cache[snap] is not None:
-                    assert_close_unit(cv_cache[snap], cv1(snap))
-                    assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
+                print 'ITEMS', storage_r.snapshots.index.items()
+                # print snap, type(snap), snap.__dict__
+
+                print snap.__uuid__
+                print snap.reversed.__uuid__
+                print snap.create_reversed().__uuid__
+
+                print 'POS', cv_cache.snapshot_pos(snap),
+                print 'POS', storage_r.snapshots.pos(snap),
+                print 'POS', storage_r.snapshots.index[snap]
+
+                print 'POS', cv_cache.snapshot_pos(snap.reversed),
+                print 'POS', storage_r.snapshots.pos(snap.reversed),
+                # print 'POS', storage_r.snapshots.index[snap.reversed]
+
+
+                if len(cv_cache.cache._chunkdict) > 0:
+
+                    if allow_partial:
+                        print cv_cache.index
+                        print cv_cache.vars['value'][:]
+
+                    for n, v in enumerate(cv_cache.cache._chunkdict[0]):
+                        print n, v
+
+                print cv1(snap)
+                print cv1(snap.reversed)
+                print cv_cache[snap]
+
+                print cv_cache[snap.reversed]
+
+                # if not allow_partial or cv_cache[snap] is not None:
+                #     assert_close_unit(cv_cache[snap], cv1(snap))
+                #     assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
 
             storage_r.close()
 

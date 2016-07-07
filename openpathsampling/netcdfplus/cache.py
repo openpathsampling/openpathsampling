@@ -369,7 +369,8 @@ class LRUChunkLoadingCache(Cache):
                 # chunk not cached, load full
                 left = chunk_idx * self.chunksize
                 right = min(len(self.variable), left + self.chunksize)
-                self._chunkdict[chunk_idx] = self.variable[left:right]
+                self._chunkdict[chunk_idx] = []
+                self._chunkdict[chunk_idx].extend(self.variable[left:right])
 
                 self._check_size_limit()
 
@@ -381,7 +382,8 @@ class LRUChunkLoadingCache(Cache):
                 right = min(len(self.variable), (chunk_idx + 1) * self.chunksize)
 
                 if right > left:
-                    chunk.append(self.variable[left:right])
+                    chunk.extend(self.variable[left:right])
+                    print chunk
 
     def _update_chunk_order(self, chunk_idx):
         if chunk_idx != self._firstchunk:
@@ -421,10 +423,10 @@ class LRUChunkLoadingCache(Cache):
             self._chunkdict[chunk_idx] = chunk
 
         left = chunk_idx * self.chunksize + len(chunk)
-        right = key - 1
+        right = key
 
         if right > left:
-            chunk.append(self.variable[left:right])
+            chunk.extend(self.variable[left:right])
 
         chunk.append(value)
 
