@@ -118,7 +118,7 @@ class testCV_Function(object):
             # print map(storage_w.snapshots.pos, traj.reversed)
             storage_w.close()
 
-            storage_r = paths.Storage(fname, 'r')
+            storage_r = paths.AnalysisStorage(fname)
             rcv1 = storage_r.cvs['f1']
 
             assert(rcv1._store_dict)
