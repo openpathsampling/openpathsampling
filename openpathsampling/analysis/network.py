@@ -264,16 +264,30 @@ class TISNetwork(TransitionNetwork):
     # differences are in setup, not analysis
     def __init__(self):
         super(TISNetwork, self).__init__()
-        # this should check to build the replica exchange network. If the
-        # number of neighbors at any station is more than 2, we can't do
-        # "normal" replica flow -- instead produce a network graph. Or,
-        # actually, ALWAYS produce a network graph (although this will be a
-        # feature to implement later)
 
     def from_transitions(self, transitions, interfaces=None):
         # this will have to be disabled until I can do something
         # better with it
         pass
+
+    def set_fluxes(self, flux_dictionary):
+        """
+        Parameters
+        ----------
+        flux_dictionary : dict of 2-tuple to float
+            keys are in the form (state, interface), and values are the
+            associated flux
+
+        Raises
+        ------
+        KeyError
+            If the flux for one of the transitions isn't in the dictionary.
+        """
+        # for now, if you don't have all the fluxes needed, it raises a
+        # KeyError
+        for trans in self.transitions.values():
+            trans._flux = flux_dictionary[(trans.stateA, trans.interfaces[0])]
+
 
     @property
     def minus_ensembles(self):
@@ -291,7 +305,7 @@ class TISNetwork(TransitionNetwork):
 #def join_mis_minus(minuses):
     #pass
 
-#def msouter_state_switching(mstis, storage):
+#def msouter_state_switching(mstis, steps):
 
 class MSTISNetwork(TISNetwork):
     """
@@ -466,14 +480,14 @@ class MSTISNetwork(TISNetwork):
         return mystr
 
 
-    def rate_matrix(self, storage, force=False):
+    def rate_matrix(self, steps, force=False):
         """
         Calculate the matrix of all rates.
 
         Parameters
         ----------
-        storage : Storage
-            object containing storage to be analyzed
+        steps : iterable of :class:`.MCStep`
+            steps to be analyzed
         force : bool (False)
             if True, cached results are overwritten
 
@@ -494,9 +508,9 @@ class MSTISNetwork(TISNetwork):
                 if trans_hist.hist_args == {}:
                     trans_hist.hist_args = self.hist_args[histname]
         
-            transition.total_crossing_probability(storage=storage,
+            transition.total_crossing_probability(steps=steps,
                                                   force=force)
-            transition.minus_move_flux(storage=storage, force=force)
+            transition.minus_move_flux(steps=steps, force=force)
             for stateB in self.from_state.keys():
                 if stateA != stateB:
                     analysis_trans = self.transitions[(stateA, stateB)]
@@ -504,7 +518,7 @@ class MSTISNetwork(TISNetwork):
 
 
         for trans in self.transitions.values():
-            rate = trans.rate(storage)
+            rate = trans.rate(steps)
             self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
             #print trans.stateA.name, trans.stateB.name, 
             #print rate
@@ -512,7 +526,7 @@ class MSTISNetwork(TISNetwork):
         return self._rate_matrix
 
 
-#def multiple_set_minus_switching(mistis, storage):
+#def multiple_set_minus_switching(mistis, steps):
 
 class MISTISNetwork(TISNetwork):
     """
@@ -537,14 +551,30 @@ class MISTISNetwork(TISNetwork):
         The distinction between the three types of transitions in the object
         are a bit subtle, but important. The `input_transitions` are, of
         course, the transitions given in the input. These are A->B
-        transitions. The `sampling_transitions` are what are used in
-        sampling. These are A->any transitions. Finally, the 
+        transitions, but would allow any other state. The
+        `sampling_transitions` are what are used in sampling. These are
+        A->any transitions if strict sampling is off, or "A->B & not_others"
+        if strict sampling is on. Finally, the regular `transitions` are the
+        transitions that are used for analysis (use the sampling ensembles
+        for the interfaces, but also A->B).
+
+    Parameters
+    ----------
+    trans_info : list of tuple
+        Details of each interface set. 4-tuple in the order (initial_state,
+        interfaces, orderparameter, final_state) where initial_state and
+        final_state are Volumes, interfaces is a list of Volumes, and
+        orderparameter is a CollectiveVariable
+    strict_sampling : bool
+        whether the final state from the tuple is the *only* allowed final
+        state in the sampling; default False
     """
     # NOTE: input_transitions are in addition to the sampling_transitions
     # and the transitions (analysis transitions)
-    def __init__(self, trans_info):
+    def __init__(self, trans_info, strict_sampling=False):
         super(MISTISNetwork, self).__init__()
         self.trans_info = trans_info
+        self.strict_sampling = strict_sampling
         states_A, interfaces, orderparams, states_B = zip(*trans_info)
         self.initial_states = list(set(states_A))
         self.final_states = list(set(states_B))
@@ -555,7 +585,7 @@ class MISTISNetwork(TISNetwork):
         unnamed_states = [s for s in list_all_states if not s.is_named]
         name_index = 0
         for state in unnamed_states:
-            while index_to_string(name_index) in all_names:
+            while index_to_string(name_index) in all_state_names:
                 name_index += 1
             state.named(index_to_string(name_index))
             name_index += 1
@@ -574,6 +604,7 @@ class MISTISNetwork(TISNetwork):
             self.build_sampling_transitions(self.input_transitions.values())
         self._sampling_transitions = self.x_sampling_transitions
 
+
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
 
@@ -587,7 +618,8 @@ class MISTISNetwork(TISNetwork):
             'x_sampling_transitions' : self.x_sampling_transitions,
             'transition_to_sampling' : self.transition_to_sampling,
             'input_transitions' : self.input_transitions,
-            'trans_info' : self.trans_info
+            'trans_info' : self.trans_info,
+            'strict_sampling' : self.strict_sampling
         }
         return ret_dict
 
@@ -599,7 +631,7 @@ class MISTISNetwork(TISNetwork):
         network.transition_to_sampling = dct['transition_to_sampling']
         network.input_transitions = dct['input_transitions']
         network.x_sampling_transitions = dct['x_sampling_transitions']
-        network.__init__(dct['trans_info'])
+        network.__init__(dct['trans_info'], dct['strict_sampling'])
         return network
 
 
@@ -624,33 +656,46 @@ class MISTISNetwork(TISNetwork):
                                                 self.transition_pairs))
 
         # build sampling transitions
-
-        # TODO: really, I'd like to FORBID all other states (change the
-        # ensemble to intersection with AllOutXEnsemble(other_states)), but
-        # for now, let's accept all other states -- the key is to stop the
-        # trajectory.  Forbidding all other states can be done once building
-        # the movers is better separated.
         all_states = paths.join_volumes(self.initial_states + self.final_states)
+        all_states_set = set(self.initial_states + self.final_states)
         self.transition_to_sampling = {}
         for transition in transitions:
             stateA = transition.stateA
             stateB = transition.stateB
+            if self.strict_sampling:
+                final_state = stateB
+                other_states = paths.join_volumes(all_states_set -
+                                                  set([stateA, stateB]))
+                ensemble_to_intersect = paths.AllOutXEnsemble(other_states)
+            else:
+                final_state = all_states
+                ensemble_to_intersect = paths.FullEnsemble()
+            # TODO: fix following for strict_sampling
             if transition not in all_in_pairs:
+                # if we don't have a pair partner, use all interfaces
                 sample_trans = paths.TISTransition(
                     stateA=stateA,
-                    stateB=all_states,
+                    stateB=final_state,
                     interfaces=transition.interfaces,
                     orderparameter=transition.orderparameter
                 )
             else:
+                # if we do have a pair partner, outermost is MS-interface
                 sample_trans = paths.TISTransition(
                     stateA=stateA,
-                    stateB=all_states,
+                    stateB=final_state,
                     interfaces=transition.interfaces[:-1],
                     orderparameter=transition.orderparameter
                 )
+            new_ensembles = [e & ensemble_to_intersect 
+                             for e in sample_trans.ensembles]
+            if self.strict_sampling:
+                for (old, new) in zip(new_ensembles, sample_trans.ensembles):
+                    old.name = new.name + " strict"
+            sample_trans.ensembles = new_ensembles
             sample_trans.named("Sampling " + str(stateA) + "->" + str(stateB))
             self.transition_to_sampling[transition] = sample_trans
+
         self.x_sampling_transitions = self.transition_to_sampling.values()
 
         # build non-transition interfaces 
@@ -703,7 +748,7 @@ class MISTISNetwork(TISNetwork):
             self.transitions[(stateA, stateB)] = analysis_trans
 
 
-    def rate_matrix(self, storage, force=False):
+    def rate_matrix(self, steps, force=False):
         self._rate_matrix = pd.DataFrame(columns=self.final_states,
                                          index=self.initial_states)
         for trans in self.transitions.values():
@@ -712,7 +757,7 @@ class MISTISNetwork(TISNetwork):
                 trans_hist = trans.ensemble_histogram_info[histname]
                 if trans_hist.hist_args == {}:
                     trans_hist.hist_args = self.hist_args[histname]
-            tcp = trans.total_crossing_probability(storage=storage,
+            tcp = trans.total_crossing_probability(steps=steps,
                                                    force=force)
             if trans._flux is None:
                 logger.warning("No flux for transition " + str(trans.name)
@@ -721,7 +766,7 @@ class MISTISNetwork(TISNetwork):
                 # we give NaN so we can calculate the condition transition
                 # probability automatically
 
-            rate = trans.rate(storage)
+            rate = trans.rate(steps)
             self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
 
         return self._rate_matrix

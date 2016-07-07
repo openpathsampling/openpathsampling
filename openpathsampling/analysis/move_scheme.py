@@ -12,8 +12,53 @@ except ImportError:
     has_pandas=False
 
 
-
 import sys
+
+def sample_from_trajectories(ensemble, trajectories, used_trajectories=None,
+                             avoid_reuse=True):
+    """
+    Generates a sample for the given ensemble and one of the trajectories.
+
+    Parameters
+    ----------
+    ensemble : :class:`.Ensemble`
+        the ensemble for the sample
+    trajectories : list of :class:`.Trajectory`
+        the trajectories to consider filling the sample with
+    used_trajectories : list of :class:`.Trajectory`
+        trajectories which are already in use
+    avoid_reuse : bool
+        if True (default), only use a trajectory in used_trajectories if
+        no other trajectory satisfies the ensemble. If False, use the first
+        trajectory in trajectories which satisfies the ensemble
+
+    Returns
+    -------
+    :class:`.Sample` or None :
+        the sample created, or None if no sample could be created
+    """
+    sample = None
+    selected = None
+    if used_trajectories is None:  # pragma: no cover
+        used_trajectories = []
+    possible = [traj for traj in trajectories if ensemble(traj)]
+    if avoid_reuse:
+        for traj in possible:
+            if traj not in used_trajectories:
+                selected = traj
+                break
+
+    if selected is None and len(possible) > 0:
+        # either not avoid_reuse or all possibilities already used
+        selected = possible[0]  # take the first one
+
+    if selected is not None:
+        sample = paths.Sample(replica=None,
+                              trajectory=selected,
+                              ensemble=ensemble)
+    return sample
+
+
 
 class MoveScheme(StorableNamedObject):
     """
@@ -304,7 +349,7 @@ class MoveScheme(StorableNamedObject):
         we need. The list returned by this is of a particular format: it
         should be thought of as a list of lists of ensembles. Call this the
         "list" and the "sublists". At least one member of each sublist is
-        required, and if a "sublist" is actually, an ensemble, it is treated
+        required, and if a "sublist" is actually an ensemble, it is treated
         as a sublist of one. So returning [a, b, [c, d], e] is equivalent to
         returning [[a], [b], [c, d], [e]], and is interpreted as "initial
         conditions are ensembles a, b, e, and one of either c or d".
@@ -313,13 +358,22 @@ class MoveScheme(StorableNamedObject):
         ensembles a, b, and c would return [a, b, c], or equivalently, [[a],
         [b], [c]]. Single-replica TIS would return [[a, b, c]].
         """
-        return list(self.find_used_ensembles(root))
+        # basically, take the find_used_ensembles and return them in the
+        # canonical order from network.all_ensembles
+        used_ensembles = self.find_used_ensembles(root)
+        output_ensembles = [ens for ens in self.network.all_ensembles
+                            if ens in used_ensembles]
+        return output_ensembles
 
 
     def initial_conditions_from_trajectories(self, trajectories,
-                                             sampleset=None):
+                                             sampleset=None,
+                                             avoid_reuse=True):
         """
         Create a SampleSet with as many initial samples as possible.
+
+        The goal of this is to give the initial SampleSet that would be
+        desired. 
 
         Parameters
         ----------
@@ -328,6 +382,11 @@ class MoveScheme(StorableNamedObject):
         sampleset : :class:`.SampleSet`, optional
             if given, add samples to this sampleset. Default is None, which
             means that this will start a new sampleset.
+        avoid_reuse : bool
+            if True (default), use a trajectory that hasn't been used
+            already, if possible (otherwise use the first trajectory that
+            satisfies the ensemble). If False, always use the first
+            trajectory in trajectories that satisfies the ensemble
 
         Returns
         -------
@@ -346,39 +405,42 @@ class MoveScheme(StorableNamedObject):
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
 
+        used_trajectories = [s.trajectory for s in sampleset]
+
         for ens_list in ensembles_to_fill:
             if type(ens_list) is not list:
                 ens_list = [ens_list]
             sample = None
             for ens in ens_list:
                 if ens in sampleset.ensemble_list():
-                    break  # we've already got one!
-                sample = None
+                    break  # We've already got one. It's very nice
                 # fill only the first in ens_list that can be filled
                 # 1. try forward
-                for traj in trajectories:
-                    if ens(traj):
-                        sample = paths.Sample(replica=None, 
-                                              trajectory=traj,
-                                              ensemble=ens)
-                        break  # take the first such trajectory
-                if sample is not None:
-                    break  # take the first ensemble that works
-                
+                possible = [traj for traj in trajectories if ens(traj)]
+                sample = sample_from_trajectories(
+                    ensemble=ens,
+                    trajectories=trajectories,
+                    used_trajectories=used_trajectories,
+                    avoid_reuse=avoid_reuse
+                )
+
                 # 2. try reversed
-                for traj in trajectories:
-                    if ens(traj.reversed):
-                        sample = paths.Sample(replica=None,
-                                              trajectory=traj.reversed,
-                                              ensemble=ens)
-                        break  # take the first such trajectory
-                if sample is not None:
-                    break  # take the first ensemble that works
+                if sample is None:
+                    all_reversed = [traj.reversed for traj in trajectories]
+                    sample = sample_from_trajectories(
+                        ensemble=ens,
+                        trajectories=all_reversed,
+                        used_trajectories=used_trajectories,
+                        avoid_reuse=avoid_reuse
+                    )
 
                 # 3. hypothetically, try extending (future)
+
             # now, if we've found a sample, add it
             if sample is not None:
                 sampleset.append_as_new_replica(sample)
+                used_trajectories.append(sample.trajectory)
+
         return sampleset
 
     def check_initial_conditions(self, sampleset):
@@ -663,8 +725,8 @@ class MoveScheme(StorableNamedObject):
                 str(n_trials) + " ({:.2%})\n".format(acceptance))
         return line
 
-    def move_acceptance(self, storage):
-        for step in storage.steps:
+    def move_acceptance(self, steps):
+        for step in steps:
             delta = step.change
             for m in delta:
                 acc = 1 if m.accepted else 0
@@ -675,9 +737,9 @@ class MoveScheme(StorableNamedObject):
                 except KeyError:
                     self._mover_acceptance[key] = [acc, 1]
 
-    def move_summary(self, storage, movers=None, output=sys.stdout, depth=0):
+    def move_summary(self, steps, movers=None, output=sys.stdout, depth=0):
         """
-        Provides a summary of the movers in `storage` based on this transition.
+        Provides a summary of the movers in `steps`.
 
         The summary includes the number of moves attempted and the
         acceptance rate. In some cases, extra lines are printed for each of
@@ -685,8 +747,8 @@ class MoveScheme(StorableNamedObject):
 
         Parameters
         ----------
-        storage : Storage
-            The storage object
+        steps : iterable of :class:`.MDStep`
+            steps to analyze
         movers : None or string or list of PathMover
             If None, provides a short summary of the keys in self.mover. If
             a string, provides a short summary using that string as a key in
@@ -716,12 +778,12 @@ class MoveScheme(StorableNamedObject):
             stats[groupname] = [0, 0]
 
         if self._mover_acceptance == { }:
-            self.move_acceptance(storage)
+            self.move_acceptance(steps)
 
         n_no_move_trials = sum([self._mover_acceptance[k][1]
                                 for k in self._mover_acceptance.keys()
                                 if k[0] is None])
-        tot_trials = len(storage.steps) - n_no_move_trials
+        tot_trials = len(steps) - n_no_move_trials
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
