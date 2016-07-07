@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import scipy
 import matplotlib.pyplot as plt
 import math
 from lookup_function import LookupFunction, VoxelLookupFunction
@@ -68,6 +69,9 @@ class SparseHistogram(object):
 
         return newhist
 
+    def map_to_float_bins(self, trajectory):
+        return (np.asarray(trajectory) - self.left_bin_edges) / self.bin_widths
+
     def map_to_bins(self, data):
         """
         Parameters
@@ -104,7 +108,7 @@ class SparseHistogram(object):
             weights = [1.0]*len(data)
 
         part_hist = sum((collections.Counter({self.map_to_bins(d) : w})
-                        for (d, w) in zip (data, weights)),
+                         for (d, w) in zip (data, weights)),
                         collections.Counter({}))
 
         self._histogram += part_hist
@@ -134,7 +138,7 @@ class SparseHistogram(object):
             type of values to return; 'l' gives left bin edges, 'r' gives
             right bin edges, 'm' gives midpoint of the bin, and 'p' is not
             implemented, but will give vertices of the patch for the bin
-        
+
         Returns
         -------
         np.array :
@@ -146,7 +150,7 @@ class SparseHistogram(object):
                                                 bin_edge_type)
 
     def __call__(self, bin_edge_type="m"):
-        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges, 
+        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges,
                                    bin_widths=self.bin_widths,
                                    counter=self._histogram)
 
@@ -173,7 +177,7 @@ class SparseHistogram(object):
         norm = 1.0 / (self.count * scale)
         counter = collections.Counter({k : self._histogram[k] * norm
                                        for k in self._histogram.keys()})
-        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges, 
+        return VoxelLookupFunction(left_bin_edges=self.left_bin_edges,
                                    bin_widths=self.bin_widths,
                                    counter=counter)
 
@@ -189,7 +193,7 @@ class SparseHistogram(object):
 
         Returns
         -------
-        bool : 
+        bool :
             True if these were set up with equivalent parameters, False
             otherwise
         """
@@ -240,7 +244,7 @@ class Histogram(SparseHistogram):
             if n_bins is not None:
                 self.n_bins = n_bins
                 self.bin_width = (max_bin-min_bin)/(self.n_bins)
-            self.bins = [min_bin + self.bin_width*i 
+            self.bins = [min_bin + self.bin_width*i
                          for i in range(self.n_bins+1)]
         else:
             if n_bins is not None:
@@ -370,10 +374,10 @@ class Histogram(SparseHistogram):
             return 0
         if maximum is not None:
             cumul_hist *= maximum / total
-            
+
         xvals = self.xvals(bin_edge)
         return LookupFunction(xvals, cumul_hist)
-    
+
     def reverse_cumulative(self, maximum=1.0, bin_edge="l"):
         """Cumulative from the right: number of values greater than bin value.
 
@@ -391,7 +395,7 @@ class Histogram(SparseHistogram):
             return 0
         if maximum is not None:
             cumul_hist *= maximum / total
-        
+
         xvals = self.xvals(bin_edge)
         return LookupFunction(xvals, cumul_hist)
 
@@ -449,7 +453,7 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
 
 def write_histograms(fname, hists):
     """Writes all histograms in list `hists` to file named `fname`
-    
+
     If the filename is the empty string, then output is to stdout.
     Assumes that all files should have the same bins.
     """
@@ -459,3 +463,258 @@ def write_histograms(fname, hists):
 # stdin and output an appropriate histogram depending on some options. Then
 # it is both a useful script and a library class!
 
+class HistogramPlotter2D(object):
+    """
+    Convenience tool for plotting 2D histograms and plotting data atop them.
+
+    The difficulty is that matplotlib uses the row/column *numbers* of a
+    pandas.DataFrame as the actual internal axis. This class carries all the
+    information to properly plot things (even mapping to CVs, if the
+    histogram supports that).
+
+    The descriptions below will discuss "real space," "bin space," and
+    "frame space." Real space refers to the actual values of the input data.
+    Bin space refers to the bins that come out of that for histogramming
+    (made into continuous parameters). Frame space is bin space shifted such
+    that the lowest bin values are 0.
+
+    Parameters
+    ----------
+    histogram : :class:`.SparseHistogram`
+        input histogram to plot
+    normed : bool
+        whether to normalize the histogram (using raw_probability=True)
+    xticklabels : list of float
+        the desired locations for plot xticks, in real space
+    yticklabels : list of float
+        the desired locations for plot yticks, in real space
+    xlim : 2-tuple of (float, float)
+        horizontal (x-value) range of (minimum, maximum) bounds for
+        displaying the plot
+    ylim : 2-tuple of (float, float)
+        vertical (y-value) range of (minimum, maximum) bounds for
+        displaying the plot
+    label_format : string
+        Python format-style string for formatting tick labels. Default is
+        '{:}'.
+    """
+    def __init__(self, histogram, normed=True, xticklabels=None,
+                 yticklabels=None, xlim=None, ylim=None,
+                 label_format="{:}"):
+        self.histogram = histogram
+        self.normed = normed
+        self.xticklabels = xticklabels
+        self.yticklabels = yticklabels
+        self.xlim = xlim
+        self.ylim = ylim
+        self.label_format = label_format
+
+        self.xticks_, self.xlim_, self.yticks_, self.ylim_ = self.axes_setup(
+            xticklabels, yticklabels, xlim, ylim
+        )
+
+    def to_bins(self, alist, dof):
+        """Convert real-space values to bin-space values for a given dof
+
+        Parameters
+        ----------
+        alist : list of float
+            input in real-space
+        dof : integer (0 or 1)
+            degree of freedom; 0 is x, 1 is y
+
+        Returns
+        -------
+        list of float :
+            the outputs in bin-space
+        """
+        left_edge = self.histogram.left_bin_edges[dof]
+        bin_width = self.histogram.bin_widths[dof]
+        result = None
+        if alist is not None:
+            result = (np.asarray(alist) - left_edge) / bin_width
+        return result
+
+    def axis_input(self, hist, ticklabels, lims, dof):
+        """Get ticks, range, and limits for a given DOF
+
+        Parameters
+        ----------
+        hist : list of float
+            input data from the histogram (bin-space)
+        ticklabels : list of float or None
+            user-set tick labels for this DOF (real-space)
+        lims : 2-tuple (float, float) or None
+            user-set plot limits for this DOF
+        dof : integer (0 or 1)
+            degree of freedom; 0 is x, 1 is y
+
+        Returns
+        -------
+        ticks_ : list of float or None
+            user-set ticks in bin-space
+        range_ : list of float
+            range for the pandas.DataFrame (bin-space)
+        lims_ : 2-tuple (float, float)
+            range for plot visualization (bin-space)
+        """
+        ticks_ = self.to_bins(ticklabels, dof)
+        lims_ = self.to_bins(lims, dof)
+        ticks = [] if ticks_ is None else list(ticks_)
+        lims = [] if lims_ is None else list(lims_)
+        range_ = (int(min(list(hist) + ticks + lims)),
+                  int(max(list(hist) + ticks + lims)))
+        if lims_ is None:
+            lims_ = (0, range_[1] - range_[0])
+        return (ticks_, range_, lims_)
+
+    def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
+        """Set up both x-axis and y-axis for plotting.
+
+        Also sets self.xrange_ and self.yrange_, which are the (bin-space)
+        bounds for the pandas.DataFrame.
+
+        Parameters
+        ----------
+        xticklabels : list of float
+            the desired locations for plot xticks, in real space
+        yticklabels : list of float
+            the desired locations for plot yticks, in real space
+        xlim : 2-tuple of (float, float)
+            horizontal (x-value) range of (minimum, maximum) bounds for
+            displaying the plot
+        ylim : 2-tuple of (float, float)
+            vertical (y-value) range of (minimum, maximum) bounds for
+            displaying the plot
+
+        Returns
+        -------
+        xticks_ : list of float or None
+            user-set xticks in bin-space
+        yticks_ : list of float or None
+            user-set yticks in bin-space
+        xlim_ : 2-tuple (float, float)
+            range in x for plot visualization (bin-space)
+        ylim_ : 2-tuple (float, float)
+            range in y for plot visualization (bin-space)
+        """
+        if xticklabels is None:
+            xticklabels = self.xticklabels
+        if yticklabels is None:
+            yticklabels = self.yticklabels
+        if xlim is None:
+            xlim = self.xlim
+        if ylim is None:
+            ylim = self.ylim
+        x, y = zip(*self.histogram._histogram.keys())
+        xticks_, xrange_, xlim_ = self.axis_input(x, xticklabels, xlim, dof=0)
+        yticks_, yrange_, ylim_ = self.axis_input(y, yticklabels, ylim, dof=1)
+        self.xrange_ = xrange_
+        self.yrange_ = yrange_
+        return (xticks_, xlim_, yticks_, ylim_)
+
+    def ticks_and_labels(self, ticks, ax, dof):
+        """Obtain the plot ticks and tick labels for given dof.
+
+        Parameters
+        ----------
+        ticks : list of float or None
+            user-set input (bin-space) for tick locations
+        ax : matplotlib.Axes
+            axes from the plot
+        dof : integer (0 or 1)
+            degree of freedom; 0 is x, 1 is y
+
+        Returns
+        -------
+        ticks : list of float
+            tick locations (bin-space, suitable for matplotlib)
+        labels : list of string
+            labels for the ticks
+        """
+        if dof == 0:
+            ax_ticks = ax.get_xticks()
+            minval = self.xrange_[0]
+            bw = self.histogram.bin_widths[0]
+            edge = self.histogram.left_bin_edges[0]
+        elif dof == 1:
+            ax_ticks = ax.get_yticks()
+            minval = self.yrange_[0]
+            bw = self.histogram.bin_widths[1]
+            edge = self.histogram.left_bin_edges[1]
+        else:  # pragma: no cover
+            raise RuntimeError("Bad DOF: "+ str(dof))
+        to_val = lambda n : (n + minval) * bw + edge
+        ticks = ticks if ticks is not None else ax_ticks
+        labels = [self.label_format.format(to_val(n)) for n in ticks]
+        return (ticks, labels)
+
+    def plot(self, normed=None, xticklabels=None, yticklabels=None,
+             xlim=None, ylim=None, **kwargs):
+        """Plot the histogram.
+
+        Parameters
+        ----------
+        normed : bool
+            whether to normalize the histogram (using raw_probability=True)
+        xticklabels : list of float
+            the desired locations for plot xticks, in real space
+        yticklabels : list of float
+            the desired locations for plot yticks, in real space
+        xlim : 2-tuple of (float, float)
+            horizontal (x-value) range of (minimum, maximum) bounds for
+            displaying the plot
+        ylim : 2-tuple of (float, float)
+            vertical (y-value) range of (minimum, maximum) bounds for
+            displaying the plot
+        kwargs : 
+            additional arguments to pass to plt.pcolormesh
+
+        Returns
+        -------
+        PolyCollection :
+            return value of plt.pcolormesh
+        """
+        if normed is None:
+            normed = self.normed
+
+        xticks_, xlim_, yticks_, ylim_ = self.axes_setup(
+            xticklabels, yticklabels, xlim, ylim
+        )
+
+        if normed:
+            hist_fcn = self.histogram.normalized(raw_probability=True)
+        else:
+            hist_fcn = self.histogram()
+        df = hist_fcn.df_2d(x_range=self.xrange_, y_range=self.yrange_)
+        self.df = df
+
+	mesh = plt.pcolormesh(df.fillna(0.0).transpose(), **kwargs)
+
+        (xticks, xlabels) = self.ticks_and_labels(xticks_, mesh.axes, dof=0)
+        (yticks, ylabels) = self.ticks_and_labels(yticks_, mesh.axes, dof=1)
+
+        mesh.axes.set_xticks(xticks)
+        mesh.axes.set_yticks(yticks)
+	mesh.axes.set_xticklabels(xlabels)
+	mesh.axes.set_yticklabels(ylabels)
+	plt.xlim(xlim_[0], xlim_[1])
+	plt.ylim(ylim_[0], ylim_[1])
+	plt.colorbar()
+        return mesh
+
+    def plot_trajectory(self, trajectory, *args, **kwargs):
+        """Plot a trajectory (or CV trajectory) on the axes.
+
+        Additional arguments pass to plt.plot.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory` or list of 2-tuple
+            list to plot; paths.Trajectory allowed if the histogram can
+            convert it to CVs.
+        """
+        x, y = zip(*self.histogram.map_to_float_bins(trajectory))
+        px = np.asarray(x) - self.xrange_[0]
+        py = np.asarray(y) - self.yrange_[0]
+        plt.plot(px, py, *args, **kwargs)
