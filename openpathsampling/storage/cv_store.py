@@ -30,7 +30,6 @@ class CVStore(UniqueNamedObjectStore):
             cv,
             template=None,
             allow_partial=None,
-            auto_complete=None,
             chunksize=None):
 
         if template is None:
@@ -46,7 +45,6 @@ class CVStore(UniqueNamedObjectStore):
             cv,
             template,
             allow_partial=allow_partial,
-            auto_complete=auto_complete,
             chunksize=chunksize
         )
 

@@ -77,6 +77,8 @@ class testCV_Function(object):
     def test_storage_cv_function(self):
         import os
 
+        # test all combinations of (1) with and without UUIDs, (2) using partial yes, no
+        # all of these must work
         for use_uuid, allow_partial in [(True, True), (False, True), (True, False), (False, False)]:
 
             # print '==========================================================='
@@ -99,16 +101,20 @@ class testCV_Function(object):
 
             storage_w.save(cv1)
 
-            # let's mess up the order in which we save
-            storage_w.trajectories.save(traj[6:])
-            storage_w.snapshots.save(traj[3].reversed)
+            # let's mess up the order in which we save and include reversed ones as well
+            assert(len(storage_w.snapshots) == 2)
+            storage_w.trajectories.save(traj[3:])
+            assert(len(storage_w.snapshots) == 16)
+            storage_w.snapshots.save(traj[1].reversed)
+            assert(len(storage_w.snapshots) == 18)
             storage_w.trajectories.save(traj.reversed)
+            assert(len(storage_w.snapshots) == 20)
 
-            # this should be ignored
+            # this should be ignored for all is saved already
             storage_w.trajectories.save(traj)
 
-            ll = [list.__getitem__(traj.reversed, nn) for nn in range(len(traj))]
-
+            # ll = [list.__getitem__(traj.reversed, nn) for nn in range(len(traj))]
+            #
             # print 'ITEMS', storage_w.snapshots.index.items()
             #
             # print ll
@@ -125,7 +131,6 @@ class testCV_Function(object):
 
             cv_cache = rcv1._store_dict.value_store
 
-            assert(cv_cache.auto_complete)
             assert(cv_cache.allow_partial == allow_partial)
 
             for idx, snap in enumerate(storage_r.trajectories[1]):
@@ -147,7 +152,6 @@ class testCV_Function(object):
                 # print 'POS', storage_r.snapshots.pos(snap.reversed),
                 # print 'POS', storage_r.snapshots.index[snap.reversed]
 
-
                 # if len(cv_cache.cache._chunkdict) > 0:
                 #
                 #     if allow_partial:
@@ -168,6 +172,152 @@ class testCV_Function(object):
                     assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
 
             storage_r.close()
+
+            if os.path.isfile(fname):
+                os.remove(fname)
+
+    def test_storage_sync_and_complete(self):
+        import os
+
+        # test all combinations of (1) with and without UUIDs, (2) using partial yes, no
+        # all of these must work
+
+        allow_partial = True
+
+        # print
+        # print
+
+        for use_uuid in [True, False]:
+
+            # print '==========================================================='
+            # print 'UUID', use_uuid
+            # print '==========================================================='
+
+            fname = data_filename("cv_storage_test.nc")
+            if os.path.isfile(fname):
+                os.remove(fname)
+
+            traj = paths.Trajectory(list(self.traj_simple))
+            template = traj[0]
+
+            storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
+            storage_w.snapshots.save(template)
+
+            cv1 = paths.CV_Function('f1', lambda snap : snap.coordinates[0]).with_diskcache(
+                allow_partial=allow_partial
+            )
+
+            # let's mess up the order in which we save and include reversed ones as well
+            assert(len(storage_w.snapshots) == 2)
+            storage_w.trajectories.save(traj[3:])
+            assert(len(storage_w.snapshots) == 16)
+            storage_w.snapshots.save(traj[1].reversed)
+            assert(len(storage_w.snapshots) == 18)
+            storage_w.trajectories.save(traj.reversed)
+            assert(len(storage_w.snapshots) == 20)
+
+            storage_w.save(cv1)
+
+            store = storage_w.cvs.cache_store(cv1)
+            assert(len(store.vars['value']) == 0)
+
+            storage_w.snapshots.complete_cv(cv1)
+            assert(len(store.vars['value']) == 10)
+
+            # check if stored values match computed ones
+            for idx, value in zip(store.variables['index'][:], store.vars['value']):
+                if use_uuid:
+                    snap = storage_w.snapshots[storage_w.snapshots.vars['uuid'][idx]]
+                else:
+                    # * 2 because we use a symmetric cv
+                    snap = storage_w.snapshots[int(idx) * 2]
+
+                assert_close_unit(cv1(snap), value)
+
+            storage_w.close()
+
+            if os.path.isfile(fname):
+                os.remove(fname)
+
+    def test_storage_sync(self):
+        import os
+
+        # test all combinations of (1) with and without UUIDs, (2) using partial yes, no
+        # all of these must work
+
+        allow_partial = True
+
+        # print
+        # print
+
+        for use_uuid in [True, False]:
+
+            # print '==========================================================='
+            # print 'UUID', use_uuid
+            # print '==========================================================='
+
+            fname = data_filename("cv_storage_test.nc")
+            if os.path.isfile(fname):
+                os.remove(fname)
+
+            traj = paths.Trajectory(list(self.traj_simple))
+            template = traj[0]
+
+            storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
+            storage_w.snapshots.save(template)
+
+            cv1 = paths.CV_Function('f1', lambda snap : snap.coordinates[0]).with_diskcache(
+                allow_partial=allow_partial
+            )
+
+            # let's mess up the order in which we save and include reversed ones as well
+            assert(len(storage_w.snapshots) == 2)
+            storage_w.trajectories.save(traj[6:])
+            assert(len(storage_w.snapshots) == 10)
+            storage_w.snapshots.save(traj[1].reversed)
+            assert(len(storage_w.snapshots) == 12)
+
+            storage_w.save(cv1)
+
+            store = storage_w.cvs.cache_store(cv1)
+            assert(len(store.vars['value']) == 0)
+            storage_w.snapshots.sync_cv(cv1)
+
+            # nothing added to the cache so no changes
+            assert(len(store.vars['value']) == 1)
+
+            # fill the cache
+            _ = cv1(traj)
+
+            storage_w.snapshots.sync_cv(cv1)
+
+            # should match the number of stored snapshots
+            assert(len(store.vars['value']) == 6)
+
+            # save the rest
+            storage_w.trajectories.save(traj.reversed)
+            assert(len(storage_w.snapshots) == 20)
+
+            # should still be unchanged
+            assert(len(store.vars['value']) == 6)
+
+            # this should store the remaining CV values
+
+            storage_w.snapshots.sync_cv(cv1)
+            assert(len(store.vars['value']) == 10)
+
+            # check if the values match
+            for idx, value in zip(store.variables['index'][:], store.vars['value']):
+                if use_uuid:
+
+                    snap = storage_w.snapshots[storage_w.snapshots.vars['uuid'][idx]]
+                else:
+                    # * 2 because we use a symmetric cv
+                    snap = storage_w.snapshots[int(idx) * 2]
+
+                assert_close_unit(cv1(snap), value)
+
+            storage_w.close()
 
             if os.path.isfile(fname):
                 os.remove(fname)

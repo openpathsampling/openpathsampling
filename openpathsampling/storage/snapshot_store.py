@@ -462,7 +462,7 @@ class SnapshotWrapperStore(ObjectStore):
             n_idx = self.free()
 
             self._save(obj, n_idx)
-            self._complete_cv(obj, n_idx)
+            self._auto_complete_single_snapshot(obj, n_idx)
             self._set_id(n_idx, obj)
         else:
             self.vars['store'][n_idx / 2] = store_idx
@@ -474,9 +474,9 @@ class SnapshotWrapperStore(ObjectStore):
 
         return self.reference(obj)
 
-    def _complete_cv(self, obj, pos):
+    def _auto_complete_single_snapshot(self, obj, pos):
         for cv, (cv_store, cv_idx) in self.cv_list.items():
-            if cv_store.auto_complete:
+            if not cv_store.allow_partial:
                 value = cv._cache_dict._get(obj)
                 if value is None:
                     # not in cache so compute it if possible
@@ -496,6 +496,101 @@ class SnapshotWrapperStore(ObjectStore):
 
                         cv_store.vars['value'][n_idx] = value
                         cv_store.cache[n_idx] = value
+
+    def complete_cv(self, cv):
+        """
+        Compute all missing values of a CV and store them
+
+
+        Parameters
+        ----------
+        cv : :obj:`openpathsampling.CollectiveVariable`
+
+
+        """
+        cv_store = self.cv_list[cv][0]
+
+        if cv_store.allow_partial:
+            # for complete this does not make sense
+
+            # TODO: Make better looping over this to not have to load
+            # all the indices at once
+            if self.reference_by_uuid:
+                indices = self.vars['uuid'][:]
+            else:
+                indices = range(0, len(self), 2)
+
+            # print 'IDX', indices
+            # print 'STORED', cv_store.index.keys()
+
+            for pos, idx in enumerate(indices):
+                if not cv_store.time_reversible:
+                    pos *= 2
+
+                if pos in cv_store.index:
+                    # this value is stored so skip it
+                    continue
+
+                proxy = LoaderProxy(self.storage.snapshots, idx)
+
+                # get from cache first, this is fastest
+                value = cv._cache_dict._get(proxy)
+
+                if value is None:
+                    # not in cache so compute it if possible
+                    if cv._eval_dict:
+                        value = cv._eval_dict([proxy])[0]
+                    else:
+                        value = None
+
+                if value is not None:
+                    # if we have a value, store and cache it under a new position
+                    n_idx = cv_store.free()
+
+                    cv_store.vars['value'][n_idx] = value
+                    cv_store.vars['index'][n_idx] = pos
+                    cv_store.index[pos] = n_idx
+                    cv_store.cache[n_idx] = value
+                # else:
+                #     print 'Cannot compute', idx, pos
+
+    def sync_cv(self, cv):
+        """
+        Store all cached values of a CV in the diskcache
+
+        Parameters
+        ----------
+        cv : :obj:`openpathsampling.CollectiveVariable`
+
+
+        """
+        cv_store = self.cv_list[cv][0]
+
+        # for complete this does not make sense
+        if cv_store.allow_partial:
+
+            # loop all objects in the fast CV cache
+            for obj, value in cv._cache_dict.cache.iteritems():
+                if value is not None:
+                    pos = self.pos(obj)
+
+                    # if the snapshot is not saved, nothing we can do
+                    if pos is None:
+                        continue
+
+                    if cv_store.time_reversible:
+                        pos /= 2
+
+                    if pos in cv_store.index:
+                        # this value is stored so skip it
+                        continue
+
+                    n_idx = cv_store.free()
+
+                    cv_store.vars['value'][n_idx] = value
+                    cv_store.vars['index'][n_idx] = pos
+                    cv_store.index[pos] = n_idx
+                    cv_store.cache[n_idx] = value
 
     def _save(self, obj, idx):
         try:
@@ -573,7 +668,7 @@ class SnapshotWrapperStore(ObjectStore):
     def _get_cv_name(cv_idx):
         return 'cv' + str(cv_idx)
 
-    def add_cv(self, cv, template, allow_partial=None, auto_complete=None, chunksize=None):
+    def add_cv(self, cv, template, allow_partial=None, chunksize=None):
         """
 
         Parameters
@@ -582,7 +677,6 @@ class SnapshotWrapperStore(ObjectStore):
         template : :obj:`openpathsampling.engines.BaseSnapshot`
         chunksize : int
         allow_partial : bool
-        auto_complete : bool
 
         Returns
         -------
@@ -594,8 +688,6 @@ class SnapshotWrapperStore(ObjectStore):
 
         if allow_partial is None:
             allow_partial = cv.diskcache_allow_partial
-        if auto_complete is None:
-            auto_complete = cv.diskcache_auto_complete
         if chunksize is None:
             chunksize = cv.diskcache_chunksize
         if template is None:
@@ -611,9 +703,6 @@ class SnapshotWrapperStore(ObjectStore):
             # in complete mode we need to force chunksize one to match it to snapshots
             chunksize = 1
 
-            # and autocomplete is on in complete
-            auto_complete = True
-
         # determine value type and shape
         params = NetCDFPlus.get_value_parameters(cv(template))
         shape = params['dimensions']
@@ -627,7 +716,6 @@ class SnapshotWrapperStore(ObjectStore):
         store = SnapshotValueStore(
             time_reversible=time_reversible,
             allow_partial=allow_partial,
-            auto_complete=auto_complete,
             chunksize=chunksize
         )
 
@@ -731,36 +819,6 @@ class SnapshotWrapperStore(ObjectStore):
         if self.reference_by_uuid:
             self.vars['uuid'][idx / 2] = obj.__uuid__
 
-    def complete_cv(self, cv):
-        """
-        Will fill in all missing values for a CV and store these.
-
-        Parameters
-        ----------
-        cv
-
-        Returns
-        -------
-
-        """
-        if self.reference_by_uuid:
-            if 'partial':
-                uuids = self.vars['uuid'][:]
-                stores = self.vars['store'][:]
-                cv_store, cv_index = self.cv_list[cv]
-                for pos, store in enumerate(stores):
-                    uuid = uuids[pos]
-                    if store >= 0:
-                        cv_store[uuid] = cv(self.load(uuid))
-            elif 'complete':
-                pass
-        else:
-            stores = self.vars['store'][:]
-            cv_store, cv_index = self.cv_list[cv]
-            for pos, store in enumerate(stores):
-                if store >= 0:
-                    cv_store[pos] = cv(self[pos])
-
     def idx(self, obj):
         """
         Return the index in this store for a given object
@@ -815,7 +873,6 @@ class SnapshotValueStore(ObjectStore):
             self,
             time_reversible=True,
             allow_partial=False,
-            auto_complete=True,
             chunksize=100
     ):
         super(SnapshotValueStore, self).__init__(None)
@@ -826,14 +883,14 @@ class SnapshotValueStore(ObjectStore):
 
         self.time_reversible = time_reversible
         self.allow_partial = allow_partial
-        self.auto_complete = auto_complete
         self.chunksize = chunksize
+
+        self.snapshot_pos = None
 
     def to_dict(self):
         return {
             'time_reversible': self.time_reversible,
-            'allow_partial': self.allow_partial,
-            'auto_complete': self.auto_complete
+            'allow_partial': self.allow_partial
         }
 
     def create_uuid_index(self):
