@@ -75,10 +75,6 @@ class DynamicsEngine(StorableNamedObject):
         # Better would be a link to the topology directly. This is needed to create
         # mdtraj.Trajectory() objects
 
-        # TODO: Remove this and put the logic outside of the engine. The engine in trajectory is only
-        # used to get the solute indices which should depend on the topology anyway
-        # Trajectory.engine = self
-
         self._check_options(options)
 
         # as default set a newly generated engine as the default engine
@@ -173,7 +169,12 @@ class DynamicsEngine(StorableNamedObject):
                 except:
                     raise
                 else:
-                    return result  # miraculously fixed
+                    # alternately, trust the fixed result with
+                    # return result  # miraculously fixed
+                    raise AttributeError(
+                        "Unknown problem occurred in property" + 
+                        str(p.fget.func_name)
+                    )
             # for now, items in dict that fail with AttributeError will just
             # give the default message; to change, add something here like:
             # raise AttributeError("Something went wrong with " + str(item))
