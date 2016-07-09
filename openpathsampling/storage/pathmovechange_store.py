@@ -126,8 +126,9 @@ class PathMoveChangeStore(ObjectStore):
             if self.reference_by_uuid:
                 samples_idxs = self.storage.to_uuid_chunks(samples_idxs)
                 obj.samples = [self.storage.samples[UUID(idx)] for idx in samples_idxs]
+                obj.details = self.storage.details.proxy(str(details_idx))
             else:
                 obj.samples = [self.storage.samples[int(idx)] for idx in samples_idxs]
+                obj.details = self.storage.details.proxy(int(details_idx))
 
-        obj.details = self.storage.details.proxy(details_idx)
         return obj

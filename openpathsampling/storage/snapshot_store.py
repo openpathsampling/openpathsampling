@@ -6,6 +6,12 @@ from openpathsampling.netcdfplus.objects import UUIDDict, IndexedObjectStore
 from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, LRUChunkLoadingCache
 import openpathsampling.engines as peng
 
+import logging
+from uuid import UUID
+
+logger = logging.getLogger(__name__)
+init_log = logging.getLogger('openpathsampling.initialization')
+
 
 class UUIDReversalDict(UUIDDict):
     @staticmethod
@@ -317,6 +323,83 @@ class SnapshotWrapperStore(ObjectStore):
 
         self._treat_missing_snapshot_type = value
 
+    def load(self, idx):
+        """
+        Returns an object from the storage.
+
+        Parameters
+        ----------
+        idx : int
+            the integer index of the object to be loaded
+
+        Returns
+        -------
+        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            the loaded object
+        """
+
+        if type(idx) is UUID:
+            # we want to load by uuid and it was not in cache.
+            if idx in self.index:
+                n_idx = int(self.index[idx])
+            else:
+                if self.fallback_store is not None:
+                    return self.fallback_store.load(idx)
+                elif self.storage.fallback is not None:
+                    return self.storage.fallback.stores[self.name].load(idx)
+                else:
+                    raise ValueError('str %s not found in storage or fallback' % idx)
+
+        elif type(idx) is not int:
+            raise ValueError(
+                'indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__
+            )
+        else:
+            n_idx = int(idx)
+
+        if n_idx < 0:
+            return None
+
+        # if it is in the cache, return it
+        try:
+            obj = self.cache[n_idx]
+            logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
+            return obj
+
+        except KeyError:
+            try:
+                obj = self.cache[n_idx ^ 1].reversed
+                logger.debug('Found IDX #' + str(idx) + ' reversed in cache. Not loading!')
+                return obj
+            except:
+                pass
+
+        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
+
+        if n_idx >= len(self):
+            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
+            return None
+        elif n_idx < 0:
+            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0. This should never happen!!!')
+            raise RuntimeError('Loading of negative int should result in no object. This should never happen!')
+        else:
+            obj = self._load(n_idx)
+
+        logger.debug('Calling load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+
+        if obj is not None:
+            self._get_id(n_idx, obj)
+
+            # update cache there might have been a change due to naming
+            self.index[obj] = n_idx
+            self.cache[n_idx] = obj
+
+            logger.debug('Try loading UUID object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+
+        logger.debug('Finished load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+
+        return obj
+
     def _load(self, idx):
         store_idx = self.vars['store'][idx / 2]
 
@@ -324,7 +407,11 @@ class SnapshotWrapperStore(ObjectStore):
             raise KeyError('IDX "' + idx + '" not found in storage')
         else:
             store = self.store_snapshot_list[store_idx]
-            return store[idx]
+            snap = store[idx]
+
+
+
+            return snap
 
     def __len__(self):
         return len(self.storage.dimensions[self.prefix]) * 2
@@ -778,6 +865,8 @@ class SnapshotWrapperStore(ObjectStore):
 
         setattr(store, 'value', self.storage.vars[store_name + '_value'])
 
+        store.initialize()
+
         store_idx = int(len(self.storage.dimensions['cvcache']))
         self.cv_list[cv] = (store, store_idx)
         self.storage.vars['cvcache'][store_idx] = store
@@ -794,6 +883,8 @@ class SnapshotWrapperStore(ObjectStore):
 
                 proxy = LoaderProxy(self.storage.snapshots, idx)
                 value = cv._cache_dict._get(proxy)
+
+                print value, cv._eval_dict([proxy])[0]
 
                 if value is None:
                     # not in cache so compute it if possible
@@ -859,7 +950,10 @@ class SnapshotWrapperStore(ObjectStore):
             if self.reference_by_uuid:
                 pos = self.index.get(obj)
             else:
-                pos = obj._idx
+                if obj._store is self:
+                    pos = obj._idx
+                else:
+                    return None
         else:
             pos = self.index.get(obj)
 

@@ -408,14 +408,7 @@ class ObjectStore(StorableNamedObject):
                 idx = item.__uuid__
         else:
             if tt is int:
-                idx = self.vars['uuid'][item]
-            elif tt is UUID:
                 idx = item
-            elif tt is str:
-                if tt[0] == '-':
-                    return None
-
-                idx = UUID(item)
             else:
                 idx = self.index.get(item)
 

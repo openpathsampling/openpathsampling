@@ -350,7 +350,7 @@ class LRUChunkLoadingCache(Cache):
 
     @property
     def count(self):
-        return sum(map(len, self._chunkdict)), 0
+        return sum(map(len, self._chunkdict.itervalues())), 0
 
     @property
     def size(self):
