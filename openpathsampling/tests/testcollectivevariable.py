@@ -13,15 +13,29 @@ from openpathsampling.netcdfplus import NetCDFPlus
 
 from msmbuilder.featurizer import AtomPairsFeaturizer
 
+import openpathsampling as paths
+from openpathsampling.tests.test_helpers import make_1d_traj
+import os
+
 
 class testCV_Function(object):
-
-    def setUp(self):
+    def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj = peng.trajectory_from_mdtraj(self.mdtraj)
 
+        if os.path.isfile("myfile.nc"):
+            os.remove("myfile.nc")
+
     def teardown(self):
-        pass
+        if os.path.isfile("myfile.nc"):
+            os.remove("myfile.nc")
+
+    def test_pickle_external_cv(self):
+        template = make_1d_traj([0.0])[0]
+        cv = paths.CV_Function("x", lambda snap : snap.coordinates[0][0])
+        storage = paths.Storage("myfile.nc", "w", template)
+        storage.save(cv)
+        storage.close()
 
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
