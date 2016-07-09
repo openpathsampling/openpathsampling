@@ -1,7 +1,8 @@
 from openpathsampling.pathmovechange import PathMoveChange
-from openpathsampling.netcdfplus import StorableObject, LoaderProxy, ObjectStore
+from openpathsampling.netcdfplus import StorableObject, ObjectStore
 
 from uuid import UUID
+
 
 class PathMoveChangeStore(ObjectStore):
     def __init__(self):
@@ -45,14 +46,12 @@ class PathMoveChangeStore(ObjectStore):
         self.create_variable('cls', 'str')
 
         self.create_variable('subchanges', 'obj.pathmovechanges',
-                           dimensions=('...'),
-                           chunksizes=(10240,)
-                           )
+                             dimensions='...',
+                             chunksizes=(10240,))
 
         self.create_variable('samples', 'obj.samples',
-                           dimensions=('...'),
-                           chunksizes=(10240,)
-                           )
+                             dimensions='...',
+                             chunksizes=(10240,))
 
     def all(self):
         self.cache_all()
@@ -117,7 +116,7 @@ class PathMoveChangeStore(ObjectStore):
         obj = cls.__new__(cls)
         if self.reference_by_uuid:
             if mover_idx[0] == '-':
-                PathMoveChange.__init__(obj, mover=None)
+                PathMoveChange.__init__(obj)
             else:
                 PathMoveChange.__init__(obj, mover=self.storage.pathmovers[UUID(mover_idx)])
         else:
