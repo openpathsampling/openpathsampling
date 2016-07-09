@@ -877,9 +877,9 @@ class SnapshotWrapperStore(ObjectStore):
 
     def all(self):
         if self.reference_by_uuid:
-            return peng.Trajectory(map(self.proxy, range(len(self))))
-        else:
             return peng.Trajectory(map(self.proxy, self.vars['uuid'][:]))
+        else:
+            return peng.Trajectory(map(self.proxy, range(len(self))))
 
 class SnapshotValueStore(ObjectStore):
     def __init__(
@@ -899,6 +899,7 @@ class SnapshotValueStore(ObjectStore):
         self.chunksize = chunksize
 
         self.snapshot_pos = None
+        self._len = 0
 
     def to_dict(self):
         return {
@@ -952,7 +953,7 @@ class SnapshotValueStore(ObjectStore):
             if n_idx < 0:
                 return None
         else:
-            if pos < len(self):
+            if pos < self._len:
                 n_idx = pos
             else:
                 return None
@@ -985,8 +986,10 @@ class SnapshotValueStore(ObjectStore):
                 return
 
             n_idx = self.free()
+            self.cache.update_size(n_idx)
+
         else:
-            if pos < len(self):
+            if pos < self._len:
                 return
 
             n_idx = idx
@@ -998,6 +1001,7 @@ class SnapshotValueStore(ObjectStore):
 
         self.vars['value'][n_idx] = value
         self.cache[n_idx] = value
+        self._len = max(self._len, n_idx + 1)
 
     def fill_cache(self):
         self.cache.load_max()
@@ -1007,6 +1011,7 @@ class SnapshotValueStore(ObjectStore):
             for pos, idx in enumerate(self.vars['index'][:]):
                 self.index[idx] = pos
 
+        self._len = len(self)
         self.initialize_cache()
 
     def initialize(self):
@@ -1018,6 +1023,7 @@ class SnapshotValueStore(ObjectStore):
             max_chunks=1000,
             variable=self.vars['value']
         )
+        self.cache.update_size()
 
     def __getitem__(self, item):
         # enable numpy style selection of objects in the store

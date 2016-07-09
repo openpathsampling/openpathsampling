@@ -546,8 +546,9 @@ class AnalysisStorage(Storage):
 
         """
 
-        for cv, (cv_store, cv_store_idx) in storage.snapshots.cv_list.items():
-            cv_store.cache.load_max()
+        with AnalysisStorage.CacheTimer('Cached all CVs'):
+            for cv, (cv_store, cv_store_idx) in storage.snapshots.cv_list.items():
+                cv_store.cache.load_max()
 
         stores_to_cache = ['cvs',
                            'samples',
@@ -561,14 +562,14 @@ class AnalysisStorage(Storage):
 
         for store_name in stores_to_cache:
             store = getattr(storage, store_name)
-            with AnalysisStorage.CacheTimer(store):
+            with AnalysisStorage.CacheTimer('Cache all objects', store):
                 store.cache_all()
 
 #        storage.trajectories.cache_all()
 
     class CacheTimer(object):
         def __init__(self, context, store=None):
-            self.store = None
+            self.store = store
             self.context = context
 
         def __enter__(self):
@@ -582,7 +583,6 @@ class AnalysisStorage(Storage):
                             (self.context, self.store.name, len(self.store), dtime))
             else:
                 logger.info('%s in %d ms' % (self.context, dtime))
-
 
 
 class StorageView(object):

@@ -431,13 +431,19 @@ class PlainReversibleCacheChainDict(CacheChainDict):
         try:
             return self.cache[item]
         except KeyError:
-            if item._reversed is not None:
+            if self.reversible and item._reversed is not None:
                 try:
                     return self.cache[item._reversed]
                 except:
                     return None
             else:
                 return None
+
+    # def _set(self, item, value):
+    #     # do not cache proxies these will just clutter the cache and
+    #     # will usually not be reused
+    #     if not hasattr(item, '_idx'):
+    #         self.cache[item] = value
 
 
 class LRUChainDict(CacheChainDict):

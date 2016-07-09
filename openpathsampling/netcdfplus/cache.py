@@ -359,16 +359,21 @@ class LRUChunkLoadingCache(Cache):
     def clear(self):
         self._chunkdict.clear()
 
-    def load_chunk(self, chunk_idx):
-        if chunk_idx >= self._lastchunk_idx:
+    def update_size(self, size=None):
+        if size is None:
             self._size = len(self.variable)
-            self._lastchunk_idx = self._size / self.chunksize
+        else:
+            self._size = size
 
-        if chunk_idx < self._lastchunk_idx:
+        self._lastchunk_idx = (self._size - 1) / self.chunksize
+
+    def load_chunk(self, chunk_idx):
+
+        if chunk_idx <= self._lastchunk_idx:
             if chunk_idx not in self._chunkdict:
                 # chunk not cached, load full
                 left = chunk_idx * self.chunksize
-                right = min(len(self.variable), left + self.chunksize)
+                right = min(self._size, left + self.chunksize)
                 self._chunkdict[chunk_idx] = []
                 self._chunkdict[chunk_idx].extend(self.variable[left:right])
 
@@ -379,7 +384,7 @@ class LRUChunkLoadingCache(Cache):
                 chunk = self._chunkdict[chunk_idx]
 
                 left = chunk_idx * self.chunksize + len(chunk)
-                right = min(len(self.variable), (chunk_idx + 1) * self.chunksize)
+                right = min(self._size, (chunk_idx + 1) * self.chunksize)
 
                 if right > left:
                     chunk.extend(self.variable[left:right])
@@ -411,8 +416,9 @@ class LRUChunkLoadingCache(Cache):
             raise KeyError(item)
 
     def load_max(self):
+        self.update_size()
         map(self.load_chunk,
-            range(0, min(1 + (len(self.variable) - 1) / self.chunksize, self.max_chunks)))
+            range(0, min(1 + (self._size - 1) / self.chunksize, self.max_chunks)))
 
     def __setitem__(self, key, value, **kwargs):
         chunk_idx = key / self.chunksize
@@ -432,6 +438,9 @@ class LRUChunkLoadingCache(Cache):
 
         self._update_chunk_order(chunk_idx)
         self._check_size_limit()
+
+        if key >= self._size:
+            self.update_size(key + 1)
 
     def get_silent(self, item):
         """
