@@ -1,6 +1,8 @@
 from openpathsampling.pathmovechange import PathMoveChange
 from openpathsampling.netcdfplus import StorableObject, LoaderProxy, ObjectStore
 
+from uuid import UUID
+
 class PathMoveChangeStore(ObjectStore):
     def __init__(self):
         super(PathMoveChangeStore, self).__init__(
@@ -61,11 +63,13 @@ class PathMoveChangeStore(ObjectStore):
 
         """
         if not self._cached_all:
-
-            dummy = self[:]
-            return
-
-            idxs = range(len(self))
+            # _ = self[:]
+            # return
+            poss = range(len(self))
+            if self.reference_by_uuid:
+                uuids = self.vars['uuid']
+            else:
+                uuids = poss
 
             cls_names = self.variables['cls'][:]
             samples_idxss = self.variables['samples'][:]
@@ -74,7 +78,8 @@ class PathMoveChangeStore(ObjectStore):
             details_idxs = self.variables['details'][:]
 
             [self._add_empty_to_cache(*v) for v in zip(
-                idxs,
+                poss,
+                uuids,
                 cls_names,
                 samples_idxss,
                 mover_idxs,
@@ -86,31 +91,44 @@ class PathMoveChangeStore(ObjectStore):
 
             self._cached_all = True
 
-    def _add_empty_to_cache(self, idx, cls_name, samples_idxs, mover_idx, details_idx):
+    def _add_empty_to_cache(self, pos, uuid, cls_name, samples_idxs, mover_idx, details_idx):
 
-        if idx not in self.cache:
+        if pos not in self.cache:
             obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx, details_idx)
 
-            self._get_id(idx, obj)
-            self.index[obj] = idx
-            self.cache[idx] = obj
+            if self.reference_by_uuid:
+                obj.__uuid__ = uuid
+            self._get_id(pos, obj)
+            self.index[obj] = pos
+            self.cache[pos] = obj
 
     def _load_partial_subchanges(self, obj, subchanges_idxs):
         if len(subchanges_idxs) > 0:
-            obj.subchanges = [self.load(int(idx)) for idx in subchanges_idxs]
+            if self.reference_by_uuid:
+                subchanges_idxs = self.storage.to_uuid_chunks(subchanges_idxs)
+                obj.subchanges = [self.load(UUID(idx)) for idx in subchanges_idxs]
+            else:
+                obj.subchanges = [self.load(int(idx)) for idx in subchanges_idxs]
 
         return obj
 
     def _load_partial_samples(self, cls_name, samples_idxs, mover_idx, details_idx):
         cls = self.class_list[cls_name]
         obj = cls.__new__(cls)
-        PathMoveChange.__init__(obj, mover=self.storage.pathmovers[mover_idx])
-
         if self.reference_by_uuid:
-            samples_idxs = self.storage.to_uuid_chunks(samples_idxs)
+            if mover_idx[0] == '-':
+                PathMoveChange.__init__(obj, mover=None)
+            else:
+                PathMoveChange.__init__(obj, mover=self.storage.pathmovers[UUID(mover_idx)])
+        else:
+            PathMoveChange.__init__(obj, mover=self.storage.pathmovers[int(mover_idx)])
 
         if len(samples_idxs) > 0:
-            obj.samples = [self.storage.samples[idx] for idx in samples_idxs]
+            if self.reference_by_uuid:
+                samples_idxs = self.storage.to_uuid_chunks(samples_idxs)
+                obj.samples = [self.storage.samples[UUID(idx)] for idx in samples_idxs]
+            else:
+                obj.samples = [self.storage.samples[int(idx)] for idx in samples_idxs]
 
         obj.details = self.storage.details.proxy(details_idx)
         return obj

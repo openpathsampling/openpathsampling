@@ -54,6 +54,12 @@ class ToyEngine(DynamicsEngine):
         self._pes = topology.pes
         self._minv = 1.0 / self._mass
 
+    def to_dict(self):
+        return {
+            'options': self.options,
+            'topology': self.topology
+        }
+
     @property
     def pes(self):
         return self._pes

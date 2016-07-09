@@ -393,16 +393,34 @@ class ObjectStore(StorableNamedObject):
         if item is None:
             return None
 
-        if type(item) is int or type(item) is UUID:
-            idx = item
+        tt = type(item)
+        if self.reference_by_uuid:
+            if tt is int:
+                idx = self.vars['uuid'][item]
+            elif tt is UUID:
+                idx = item
+            elif tt in [str, unicode]:
+                if item[0] == '-':
+                    return None
+
+                idx = UUID(item)
+            else:
+                idx = item.__uuid__
         else:
-            idx = self.reference(item)
+            if tt is int:
+                idx = self.vars['uuid'][item]
+            elif tt is UUID:
+                idx = item
+            elif tt is str:
+                if tt[0] == '-':
+                    return None
 
-        if idx is None:
-            return item
+                idx = UUID(item)
+            else:
+                idx = self.index.get(item)
 
-        # if self.reference_by_uuid and type(idx) is int:
-        #     idx = self._get_uuid(idx)
+                if idx is None:
+                    return item
 
         return LoaderProxy(self, idx)
 

@@ -15,22 +15,68 @@ class CVStore(UniqueNamedObjectStore):
         self.vars['json'][idx] = cv
 
         if cv.diskcache_enabled:
-            self.add_storage_caching(cv)
+            self.add_diskcache(cv)
 
     def _load(self, idx):
         op = self.vars['json'][idx]
+
         cache_store = self.storage.snapshots.get_cv_cache(idx)
-        if cache_store:
+
+        if cache_store is not None:
             op.set_cache_store(cache_store)
+            op.diskcache_enabled = True
+            op.diskcache_chunksize = cache_store.chunksize
+            op.allow_partial = cache_store.allow_partial
 
         return op
 
-    def add_storage_caching(
+    def sync(self, cv):
+        """
+        This will update the stored cache of the collective variable. It is
+        different from saving in that the object is only created if it is
+        saved (and the object caching will prevent additional creation)
+
+        Parameters
+        ----------
+        cv : :class:`openpathsampling.CollectiveVariable` or `None`
+            the objectdict to store. if `None` is given (default) then
+            all collective variables are synced
+
+        """
+        self.storage.snapshots.sync_cv(cv)
+
+    def complete(self, cv):
+        self.storage.snapshots.complete_cv(cv)
+
+    def sync_all(self):
+        map(self.sync, self)
+
+    def complete_all(self):
+        map(self.complete, self)
+
+    def add_diskcache(
             self,
             cv,
             template=None,
             allow_partial=None,
             chunksize=None):
+        """
+        Return the storage.vars[''] variable that contains the values
+
+        Parameters
+        ----------
+        cv : :class:`openpathsampling.CollectiveVariable`
+            the objectdict you request the attached variable store
+        template : :obj:`openpathsampling.engines.BaseSnapshot`
+            an optional snapshot to be used to compute a test value of the CV. This will
+            determine the type and shape of the
+        allow_partial : bool
+            if `True` the added store can hold a part of all values. Useful if the values are
+            large and/or complex and you do not need them for all snapshots
+        chunksize : int
+            for partial storage you can set a chunksize and speedup
+        """
+
 
         if template is None:
             if cv.diskcache_template is not None:
@@ -65,6 +111,19 @@ class CVStore(UniqueNamedObjectStore):
         return self.storage.snapshots.cv_list[cv][0]
 
     def has_cache(self, cv):
+        """
+        Test weather a CV has a diskstore attached
+
+        Parameters
+        ----------
+        cv : :obj:`openpathsampling.CollectiveVariable`
+            the CV you want to check
+
+        Returns
+        -------
+        bool
+            `True` if the CV has a diskstore attached
+        """
         return cv in self.storage.snapshots.cv_list
 
     def set_cache_store(self, cv):
@@ -83,35 +142,23 @@ class CVStore(UniqueNamedObjectStore):
                                   'for the cache cannot be attached.' +
                                  'Save your CV first and retry.') % self.storage)
 
-    def sync(self, objectdict=None):
+    def cache_all(self):
         """
-        This will update the stored cache of the collective variable. It is
-        different from saving in that the object is only created if it is
-        saved (and the object caching will prevent additional creation)
+        Fill the caches of all CVs
+
+        """
+        map(self.fill_cache, self)
+
+    def fill_cache(self, cv):
+        """
+        Fill the cache of a specific CV
 
         Parameters
         ----------
-        objectdict : :class:`openpathsampling.CollectiveVariable` or `None`
-            the objectdict to store. if `None` is given (default) then
-            all collective variables are synced
-
-        See also
-        --------
-        CollectiveVariable.sync
+        cv : :obj:`openpathsampling.CollectiveVariable`
+            the CV from which you want the cache to be filled
 
         """
-        if objectdict is None:
-            for cv in self:
-                self.sync(cv)
-
-            return
-
-        objectdict.sync()
-
-    def cache_all(self):
-        """
-        Fill the cache of all cvs
-
-        """
-
-        self.storage.snapshots.cache_all_cvs()
+        store = self.storage.snapshots.cv_list.get(cv)
+        if store is not None:
+            store.fill_cache()

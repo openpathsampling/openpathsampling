@@ -1123,7 +1123,7 @@ class NetCDFPlus(netCDF4.Dataset):
             setattr(ncvar, 'var_vlen', 'True')
         else:
             ncvar = ncfile.createVariable(
-                var_name, nc_type, dimensions, chunksizes=chunksizes
+                var_name, nc_type, dimensions, chunksizes=chunksizes,
             )
 
         setattr(ncvar, 'var_type', var_type)

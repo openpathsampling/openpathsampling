@@ -14,6 +14,8 @@ import openpathsampling.engines as peng
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+import time
+
 
 # ==============================================================================
 # OPS SPECIFIC STORAGE
@@ -190,6 +192,8 @@ class Storage(NetCDFPlus):
 
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
+        self.create_store('cvs', paths.storage.CVStore())
+
         self.create_store('snapshots', paths.storage.SnapshotWrapperStore())
 
         self.create_store('samples', paths.storage.SampleStore())
@@ -200,7 +204,6 @@ class Storage(NetCDFPlus):
         )
         self.create_store('steps', paths.storage.MCStepStore())
 
-        self.create_store('cvs', paths.storage.CVStore())
 
         # normal objects
 
@@ -252,7 +255,7 @@ class Storage(NetCDFPlus):
         Under most circumstances, you want to sync ``self.cvs`` and ``self`` at
         the same time. This just makes it easier to do that.
         """
-        self.cvs.sync()
+        self.cvs.sync_all()
         self.sync()
 
     def set_caching_mode(self, mode='default'):
@@ -542,15 +545,44 @@ class AnalysisStorage(Storage):
             The storage the caching should act upon.
 
         """
-        storage.samples.cache_all()
-        storage.samplesets.cache_all()
-        storage.cvs.cache_all()
-        storage.volumes.cache_all()
-        storage.ensembles.cache_all()
-        storage.pathmovers.cache_all()
-        storage.pathmovechanges.cache_all()
-        storage.steps.cache_all()
+
+        for cv, (cv_store, cv_store_idx) in storage.snapshots.cv_list.items():
+            cv_store.cache.load_max()
+
+        stores_to_cache = ['cvs',
+                           'samples',
+                           'samplesets',
+                           'volumes',
+                           'ensembles',
+                           'pathmovers',
+                           'pathmovechanges',
+                           'steps',
+                           ]
+
+        for store_name in stores_to_cache:
+            store = getattr(storage, store_name)
+            with AnalysisStorage.CacheTimer(store):
+                store.cache_all()
+
 #        storage.trajectories.cache_all()
+
+    class CacheTimer(object):
+        def __init__(self, context, store=None):
+            self.store = None
+            self.context = context
+
+        def __enter__(self):
+            self.time = time.time()
+            return
+
+        def __exit__(self, type, value, traceback):
+            dtime = (time.time() - self.time) * 1000
+            if self.store:
+                logger.info('%s of store `%s` [%d] in %d ms' %
+                            (self.context, self.store.name, len(self.store), dtime))
+            else:
+                logger.info('%s in %d ms' % (self.context, dtime))
+
 
 
 class StorageView(object):

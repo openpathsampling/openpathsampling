@@ -391,8 +391,17 @@ class SnapshotWrapperStore(ObjectStore):
             self.type_list[store.descriptor] = (store, idx)
             self.store_snapshot_list.append(store)
 
+        if self.reference_by_uuid:
+            self.storage.cvs.load_indices()
+
         for idx, store in enumerate(self.storage.vars['cvcache']):
-            cv = self.storage.cvs._load(int(store.name[2:]))
+            cv_store_idx = int(store.name[2:])
+
+            if self.reference_by_uuid:
+                cv = self.storage.cvs[self.storage.cvs.vars['uuid'][cv_store_idx]]
+            else:
+                cv = self.storage.cvs[cv_store_idx]
+
             self.cv_list[cv] = (store, idx)
 
         self.load_indices()
@@ -404,8 +413,10 @@ class SnapshotWrapperStore(ObjectStore):
 
     def get_cv_cache(self, idx):
         store_name = SnapshotWrapperStore._get_cv_name(idx)
+
         if store_name in self.storage.stores.name_idx:
-            return self.storage.stores[store_name]
+            store = self.storage.stores[store_name]
+            return store
         else:
             return None
 
@@ -482,8 +493,6 @@ class SnapshotWrapperStore(ObjectStore):
                     # not in cache so compute it if possible
                     if cv._eval_dict:
                         value = cv._eval_dict([obj])[0]
-                    else:
-                        value = None
 
                 if value is not None:
                     if cv_store.allow_partial:
@@ -508,6 +517,9 @@ class SnapshotWrapperStore(ObjectStore):
 
 
         """
+        if cv not in self.cv_list:
+            return
+
         cv_store = self.cv_list[cv][0]
 
         if cv_store.allow_partial:
@@ -520,9 +532,6 @@ class SnapshotWrapperStore(ObjectStore):
             else:
                 indices = range(0, len(self), 2)
 
-            # print 'IDX', indices
-            # print 'STORED', cv_store.index.keys()
-
             for pos, idx in enumerate(indices):
                 if not cv_store.time_reversible:
                     pos *= 2
@@ -531,7 +540,9 @@ class SnapshotWrapperStore(ObjectStore):
                     # this value is stored so skip it
                     continue
 
-                proxy = LoaderProxy(self.storage.snapshots, idx)
+#                proxy = LoaderProxy(self.storage.snapshots, idx)
+
+                proxy = self.storage.snapshots[idx]
 
                 # get from cache first, this is fastest
                 value = cv._cache_dict._get(proxy)
@@ -551,8 +562,6 @@ class SnapshotWrapperStore(ObjectStore):
                     cv_store.vars['index'][n_idx] = pos
                     cv_store.index[pos] = n_idx
                     cv_store.cache[n_idx] = value
-                # else:
-                #     print 'Cannot compute', idx, pos
 
     def sync_cv(self, cv):
         """
@@ -564,6 +573,10 @@ class SnapshotWrapperStore(ObjectStore):
 
 
         """
+
+        if cv not in self.cv_list:
+            return
+
         cv_store = self.cv_list[cv][0]
 
         # for complete this does not make sense
@@ -790,13 +803,8 @@ class SnapshotWrapperStore(ObjectStore):
                         value = None
 
                 if value is not None:
-                    if time_reversible:
-                        n_idx = pos / 2
-                    else:
-                        n_idx = pos
-
-                    store.vars['value'][n_idx] = value
-                    store.cache[n_idx] = value
+                    store.vars['value'][pos] = value
+                    store.cache[pos] = value
 
         cv.set_cache_store(store)
         return store, store_idx
@@ -867,6 +875,11 @@ class SnapshotWrapperStore(ObjectStore):
 
         return pos
 
+    def all(self):
+        if self.reference_by_uuid:
+            return peng.Trajectory(map(self.proxy, range(len(self))))
+        else:
+            return peng.Trajectory(map(self.proxy, self.vars['uuid'][:]))
 
 class SnapshotValueStore(ObjectStore):
     def __init__(
@@ -994,14 +1007,17 @@ class SnapshotValueStore(ObjectStore):
             for pos, idx in enumerate(self.vars['index'][:]):
                 self.index[idx] = pos
 
-        self.set_caching(LRUChunkLoadingCache(
+        self.initialize_cache()
+
+    def initialize(self):
+        self.initialize_cache()
+
+    def initialize_cache(self):
+        self.cache = LRUChunkLoadingCache(
             chunksize=self.chunksize,
             max_chunks=1000,
             variable=self.vars['value']
-        ))
-
-    def initialize(self):
-        pass
+        )
 
     def __getitem__(self, item):
         # enable numpy style selection of objects in the store
