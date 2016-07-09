@@ -34,7 +34,7 @@ class testBiasEnsembleTable(object):
         bias_table[ensembles[0]] = 1.0
         bias_table[ensembles[1]] = 0.5
         bias_table[ensembles[2]] = 0.2
-        self.bias = BiasEnsembleTable(bias_table)
+        self.bias = BiasEnsembleTable.ratios_from_dictionary(bias_table)
         # samples, moves, changes
         traj = make_1d_traj([-0.55, -0.45, -0.35, -0.25, -0.15, -0.26,
                              -0.36, -0.46, -0.56])
