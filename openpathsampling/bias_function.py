@@ -38,6 +38,8 @@ class BiasEnsembleTable(BiasFunction):
         super(BiasEnsembleTable, self).__init__() 
         self.dataframe = dataframe
         self.ensembles_to_ids = ensembles_to_ids
+        self.ids_to_ensembles = {self.ensembles_to_ids[e] : e
+                                 for e in self.ensembles_to_ids}
 
     def __add__(self, other):
         # the following craziness is to get the ensembles listed in the

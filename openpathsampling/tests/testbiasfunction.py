@@ -20,15 +20,17 @@ class testBiasEnsembleTable(object):
     def setup(self):
         # create the network
         xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
+        self.stateA = paths.CVRangeVolume(xval, -1.0, -0.5)
         self.stateB = paths.CVRangeVolume(xval, 0.5, float("inf"))
-        ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), 
+        ifacesA = vf.CVRangeVolumeSet(xval, float(-1.0), 
                                       [-0.5, -0.4, -0.3, -0.2])
         self.network = paths.MISTISNetwork([
             (self.stateA, ifacesA, xval, self.stateB)
         ])
         transition = self.network.transitions[(self.stateA, self.stateB)]
         ensembles = transition.ensembles
+        self.xval = xval
+        self.ifacesA = ifacesA
         # create the biases
         bias_table = {}
         bias_table[ensembles[0]] = 1.0
@@ -130,6 +132,46 @@ class testBiasEnsembleTable(object):
         # assert_almost_equal(
             # self.bias.probability_new_to_old(change_210, self.sample_set), 0.2
         # )
+        raise SkipTest
+
+    def test_add_biases(self):
+        # this is where we combine multiple biases into one
+        xval2 = paths.CV_Function(name="xB", f=lambda s : 0.5-s.xyz[0][0])
+        ifacesB = vf.CVRangeVolumeSet(xval2, float("-inf"),
+                                      [0.0, 0.1, 0.2, 0.3])
+        xval3 = paths.CV_Function(name="xC", f=lambda s : s.xyz[0][0]-2.0)
+        stateC = paths.CVRangeVolume(self.xval, -3.0, 2.0)
+        ifacesC = vf.CVRangeVolumeSet(xval3, -1.0, [0.0, 0.1, 0.2, 0.3])
+        network = paths.MISTISNetwork([
+            (self.stateA, self.ifacesA, self.xval, self.stateB),
+            (self.stateB, ifacesB, xval2, self.stateA),
+            (stateC, ifacesC, xval3, self.stateA)
+        ])
+        ens_A = network.transitions[(self.stateA, self.stateB)].ensembles
+        ens_B = network.transitions[(self.stateB, self.stateA)].ensembles
+        ens_C = network.transitions[(stateC, self.stateA)].ensembles
+        ms_outer = network.special_ensembles['ms_outer'].keys()[0]
+        dict_A = {ens_A[0]: 1.0,
+                  ens_A[1]: 0.5,
+                  ens_A[2]: 0.2,
+                  ms_outer: 0.1}
+        dict_B = {ens_B[0]: 1.0,
+                  ens_B[1]: 0.6,
+                  ens_B[2]: 0.3,
+                  ms_outer: 0.15}
+        dict_C = {ens_B[0]: 1.0,
+                  ens_B[1]: 0.8,
+                  ens_B[2]: 0.2}
+
+        bias_A = BiasEnsembleTable.ratios_from_dictionary(dict_A)
+        bias_B = BiasEnsembleTable.ratios_from_dictionary(dict_B)
+        bias_C = BiasEnsembleTable.ratios_from_dictionary(dict_C)
+        bias_AB = bias_A + bias_B
+        # TODO: tests for values
+
+        bias_ABC = bias_A + bias_B + bias_C
+        # TODO: tests for values
+        
         raise SkipTest
 
 
