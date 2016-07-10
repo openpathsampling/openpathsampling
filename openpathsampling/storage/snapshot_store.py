@@ -612,8 +612,8 @@ class SnapshotWrapperStore(ObjectStore):
         if cv_store.allow_partial:
             # for complete this does not make sense
 
-            # TODO: Make better looping over this to not have to load
-            # all the indices at once
+            # TODO: Make better looping over this to not have to load all the indices at once
+            # can be problematic for 10M+ stored snapshots
             if self.reference_by_uuid:
                 indices = self.vars['uuid'][:]
             else:
@@ -623,32 +623,61 @@ class SnapshotWrapperStore(ObjectStore):
                 if not cv_store.time_reversible:
                     pos *= 2
 
-                if pos in cv_store.index:
-                    # this value is stored so skip it
-                    continue
+                proxy = None
 
-#                proxy = LoaderProxy(self.storage.snapshots, idx)
+                if pos not in cv_store.index:
+                    # this value is not stored to go ahead
 
-                proxy = self.storage.snapshots[idx]
+                    proxy = self.storage.snapshots[idx]
 
-                # get from cache first, this is fastest
-                value = cv._cache_dict._get(proxy)
+                    # get from cache first, this is fastest
+                    value = cv._cache_dict._get(proxy)
 
-                if value is None:
-                    # not in cache so compute it if possible
-                    if cv._eval_dict:
-                        value = cv._eval_dict([proxy])[0]
-                    else:
-                        value = None
+                    if value is None:
+                        # not in cache so compute it if possible
+                        if cv._eval_dict:
+                            value = cv._eval_dict([proxy])[0]
+                        else:
+                            value = None
 
-                if value is not None:
-                    # if we have a value, store and cache it under a new position
-                    n_idx = cv_store.free()
+                    if value is not None:
+                        # if we have a value, store and cache it under a new position
+                        n_idx = cv_store.free()
 
-                    cv_store.vars['value'][n_idx] = value
-                    cv_store.vars['index'][n_idx] = pos
-                    cv_store.index[pos] = n_idx
-                    cv_store.cache[n_idx] = value
+                        cv_store.vars['value'][n_idx] = value
+                        cv_store.vars['index'][n_idx] = pos
+                        cv_store.index[pos] = n_idx
+                        cv_store.cache[n_idx] = value
+
+                if not cv_store.time_reversible:
+                    pos += 1
+                    if pos not in cv_store.index:
+                        if proxy is None:
+                            proxy = self.storage.snapshots[idx]
+
+                        if proxy._reversed is not None:
+                            proxy = proxy._reversed
+                        else:
+                            proxy = proxy.reversed
+
+                        # get from cache first, this is fastest
+                        value = cv._cache_dict._get(proxy)
+
+                        if value is None:
+                            # not in cache so compute it if possible
+                            if cv._eval_dict:
+                                value = cv._eval_dict([proxy])[0]
+                            else:
+                                value = None
+
+                        if value is not None:
+                            # if we have a value, store and cache it under a new position
+                            n_idx = cv_store.free()
+
+                            cv_store.vars['value'][n_idx] = value
+                            cv_store.vars['index'][n_idx] = pos
+                            cv_store.index[pos] = n_idx
+                            cv_store.cache[n_idx] = value
 
     def sync_cv(self, cv):
         """
