@@ -3,7 +3,8 @@ from collections import OrderedDict
 
 from openpathsampling.netcdfplus import StorableObject, LoaderProxy
 from openpathsampling.netcdfplus.objects import UUIDDict, IndexedObjectStore
-from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, LRUChunkLoadingCache
+from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, \
+    LRUChunkLoadingCache
 import openpathsampling.engines as peng
 
 import logging
@@ -27,9 +28,9 @@ class UUIDReversalDict(UUIDDict):
         OrderedDict.__delitem__(self, self.rev_id(key))
 
 
-# =============================================================================================
+# ==============================================================================
 # ABSTRACT BASE CLASS FOR SNAPSHOTS
-# =============================================================================================
+# ==============================================================================
 
 class BaseSnapshotStore(IndexedObjectStore):
     """
@@ -49,7 +50,8 @@ class BaseSnapshotStore(IndexedObjectStore):
 
         """
 
-        # Using a store with None as type will not interfere with the main snapshotstore
+        # Using a store with None as type will not interfere with the main
+        # `SnapshotWrapperStore`
         super(BaseSnapshotStore, self).__init__(None, json=False)
         self.descriptor = descriptor
         self._dimensions = descriptor.dimensions
@@ -86,11 +88,11 @@ class BaseSnapshotStore(IndexedObjectStore):
         Return the paired index
 
         Snapshots are stored in pairs (2n, 2n+1) where one is the reversed copy.
-        This make storing CVs easier. This function allows to get the paired index
-        or the index of snapshot.reversed
+        This make storing CVs easier. This function allows to get the paired
+        index or the index of snapshot.reversed
 
-        The implementation uses the trick that all you have to do is flip the lowest bit
-        that determines even or odd.
+        The implementation uses the trick that all you have to do is flip the
+        lowest bit that determines even or odd.
 
         Parameters
         ----------
@@ -222,22 +224,22 @@ class BaseSnapshotStore(IndexedObjectStore):
         Returns
         -------
         int
-            the index used for storing it in the store. This is the save as used by
-            save.
+            the index used for storing it in the store. This is the
+            save as used by save.
 
         Notes
         -----
-        This will circumvent the caching and indexing completely. This would be equivalent
-        of creating a copy of the current snapshot and store this one and throw the copy
-        away, leaving the given snapshot untouched. This allows you to treat the snapshot
-        as mutual.
+        This will circumvent the caching and indexing completely. This would be
+        equivalent of creating a copy of the current snapshot and store this one
+        and throw the copy away, leaving the given snapshot untouched. This
+        allows you to treat the snapshot as mutual.
 
-        The use becomes more obvious when applying to storing trajectories. The only way
-        to make use of this feature is using the returned `idx`
+        The use becomes more obvious when applying to storing trajectories.
+        The only way to make use of this feature is using the returned `idx`
 
         >>> idx = store.duplicate(snap)
         >>> loaded = store[idx]  # return a duplicated as new object
-        >>> proxy = paths.LoaderProxy(store, idx) # use the duplicate without loading
+        >>> proxy = paths.LoaderProxy(store, idx) # use duplicate w/o loading
 
         """
         idx = self.free()
@@ -250,9 +252,9 @@ class BaseSnapshotStore(IndexedObjectStore):
         return self.index[obj]
 
 
-# =============================================================================================
+# ==============================================================================
 # FEATURE BASED SINGLE CLASS FOR ALL SNAPSHOT TYPES
-# =============================================================================================
+# ==============================================================================
 
 class FeatureSnapshotStore(BaseSnapshotStore):
     """
@@ -274,7 +276,8 @@ class FeatureSnapshotStore(BaseSnapshotStore):
         [self.write(attr, idx, snapshot) for attr in self.storables]
 
     def _get(self, idx, snapshot):
-        [setattr(snapshot, attr, self.vars[attr][idx]) for attr in self.storables]
+        [setattr(snapshot, attr, self.vars[attr][idx])
+         for attr in self.storables]
 
     def initialize(self):
         super(FeatureSnapshotStore, self).initialize()
@@ -294,7 +297,10 @@ class SnapshotWrapperStore(ObjectStore):
     A Store to store arbitrary snapshots
     """
     def __init__(self):
-        super(SnapshotWrapperStore, self).__init__(peng.BaseSnapshot, json=False)
+        super(SnapshotWrapperStore, self).__init__(
+            peng.BaseSnapshot,
+            json=False
+        )
 
         self.type_list = {}
         self.store_snapshot_list = []
@@ -348,11 +354,13 @@ class SnapshotWrapperStore(ObjectStore):
                 elif self.storage.fallback is not None:
                     return self.storage.fallback.stores[self.name].load(idx)
                 else:
-                    raise ValueError('str %s not found in storage or fallback' % idx)
+                    raise ValueError(
+                        'str %s not found in storage or fallback' % idx)
 
         elif type(idx) is not int:
             raise ValueError(
-                'indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__
+                ('indices of type "%s" are not allowed in named storage '
+                 '(only str and int)') % type(idx).__name__
             )
         else:
             n_idx = int(idx)
@@ -369,23 +377,34 @@ class SnapshotWrapperStore(ObjectStore):
         except KeyError:
             try:
                 obj = self.cache[n_idx ^ 1].reversed
-                logger.debug('Found IDX #' + str(idx) + ' reversed in cache. Not loading!')
+                logger.debug('Found IDX #' + str(idx) +
+                             ' reversed in cache. Not loading!')
                 return obj
-            except:
+            except KeyError:
                 pass
 
-        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
+        logger.debug(
+            'Calling load object of type ' + self.content_class.__name__ +
+            ' and IDX #' + str(idx))
 
         if n_idx >= len(self):
-            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
+            logger.warning(
+                'Trying to load from IDX #' + str(n_idx) +
+                ' > number of object ' + str(len(self)))
             return None
         elif n_idx < 0:
-            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0. This should never happen!!!')
-            raise RuntimeError('Loading of negative int should result in no object. This should never happen!')
+            logger.warning(
+                'Trying to load negative IDX #' + str(n_idx) +
+                ' < 0. This should never happen!!!')
+            raise RuntimeError(
+                'Loading of negative int should result in no object. '
+                'This should never happen!')
         else:
             obj = self._load(n_idx)
 
-        logger.debug('Calling load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+        logger.debug(
+            'Calling load object of type %s and IDX # %d ... DONE' %
+            (self.content_class.__name__, n_idx))
 
         if obj is not None:
             self._get_id(n_idx, obj)
@@ -394,9 +413,13 @@ class SnapshotWrapperStore(ObjectStore):
             self.index[obj] = n_idx
             self.cache[n_idx] = obj
 
-            logger.debug('Try loading UUID object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+            logger.debug(
+                'Try loading UUID object of type %s and IDX # %d ... DONE' %
+                (self.content_class.__name__, n_idx))
 
-        logger.debug('Finished load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+        logger.debug(
+            'Finished load object of type %s and IDX # %d ... DONE' %
+            (self.content_class.__name__, n_idx))
 
         return obj
 
@@ -408,9 +431,6 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             store = self.store_snapshot_list[store_idx]
             snap = store[idx]
-
-
-
             return snap
 
     def __len__(self):
@@ -424,7 +444,10 @@ class SnapshotWrapperStore(ObjectStore):
         self.storage.create_dimension('snapshottype')
         self.storage.create_dimension('cvcache')
 
-        self.storage.create_variable('snapshottype', 'obj.stores', 'snapshottype')
+        self.storage.create_variable(
+            'snapshottype',
+            'obj.stores',
+            'snapshottype')
         self.storage.create_variable('cvcache', 'obj.stores', 'cvcache')
 
     def add_type(self, descriptor):
@@ -482,12 +505,12 @@ class SnapshotWrapperStore(ObjectStore):
             self.storage.cvs.load_indices()
 
         for idx, store in enumerate(self.storage.vars['cvcache']):
-            cv_store_idx = int(store.name[2:])
+            cv_st_idx = int(store.name[2:])
 
             if self.reference_by_uuid:
-                cv = self.storage.cvs[self.storage.cvs.vars['uuid'][cv_store_idx]]
+                cv = self.storage.cvs[self.storage.cvs.vars['uuid'][cv_st_idx]]
             else:
-                cv = self.storage.cvs[cv_store_idx]
+                cv = self.storage.cvs[cv_st_idx]
 
             self.cv_list[cv] = (store, idx)
 
@@ -525,7 +548,7 @@ class SnapshotWrapperStore(ObjectStore):
                 n_idx = self.index[obj]
 
             elif obj._reversed is not None:
-                # if the object has no reversed present, then the reversed does not
+                # if the object has no reversed present, the reversed does not
                 # exist yet and hence it cannot be in the index, so no checking
                 if obj._reversed in self.index:
                     n_idx = self.index[obj._reversed] ^ 1
@@ -552,8 +575,10 @@ class SnapshotWrapperStore(ObjectStore):
 
         if not isinstance(obj, self.content_class):
             raise ValueError(
-                'This store can only store object of base type "%s". Given obj is of type "%s". You'
-                'might need to use another store.' % (self.content_class, obj.__class__.__name__)
+                ('This store can only store object of base type "%s". '
+                 'Given obj is of type "%s". You'
+                 'might need to use another store.') %
+                (self.content_class, obj.__class__.__name__)
             )
 
         if n_idx is None:
@@ -612,7 +637,8 @@ class SnapshotWrapperStore(ObjectStore):
         if cv_store.allow_partial:
             # for complete this does not make sense
 
-            # TODO: Make better looping over this to not have to load all the indices at once
+            # TODO: Make better looping over this to not have
+            # to load all the indices at once
             # can be problematic for 10M+ stored snapshots
             if self.reference_by_uuid:
                 indices = self.vars['uuid'][:]
@@ -641,7 +667,6 @@ class SnapshotWrapperStore(ObjectStore):
                             value = None
 
                     if value is not None:
-                        # if we have a value, store and cache it under a new position
                         n_idx = cv_store.free()
 
                         cv_store.vars['value'][n_idx] = value
@@ -671,7 +696,6 @@ class SnapshotWrapperStore(ObjectStore):
                                 value = None
 
                         if value is not None:
-                            # if we have a value, store and cache it under a new position
                             n_idx = cv_store.free()
 
                             cv_store.vars['value'][n_idx] = value
@@ -730,10 +754,11 @@ class SnapshotWrapperStore(ObjectStore):
             return store
 
         except KeyError:
-            # Apparently there is no store yet to handle the given type of snapshot
+            # there is no store yet to handle the given type of snapshot
             mode = self.treat_missing_snapshot_type
             if mode == 'create' or \
-                    (mode == 'single' and len(self.storage.dimensions['snapshottype']) == 0):
+                    (mode == 'single' and
+                             len(self.storage.dimensions['snapshottype']) == 0):
                 # we just create space for it
                 store, store_idx = self.add_type(obj.engine.descriptor)
                 self.vars['store'][idx / 2] = store_idx
@@ -750,8 +775,8 @@ class SnapshotWrapperStore(ObjectStore):
                 raise RuntimeError(
                     (
                         'The store cannot hold snapshots of the given type : '
-                        'class "%s" and dimensions %s. Try adding the snapshot type '
-                        'using .add_type(snapshot).'
+                        'class "%s" and dimensions %s. Try adding the '
+                        'snapshot type using .add_type(snapshot).'
                     ) % (
                         obj.__class__.__name__,
                         obj.engine.descriptor.dimensions
@@ -825,11 +850,11 @@ class SnapshotWrapperStore(ObjectStore):
         time_reversible = cv.cv_time_reversible
 
         if not time_reversible:
-            # in the rare case of not time_reversible we need to store partial for now
+            # in the rare case of not time_reversible we use store partial
             allow_partial = True
 
         if not allow_partial:
-            # in complete mode we need to force chunksize one to match it to snapshots
+            # in complete mode we force chunk size one to match it to snapshots
             chunksize = 1
 
         # determine value type and shape
@@ -958,7 +983,8 @@ class SnapshotWrapperStore(ObjectStore):
         Returns
         -------
         int or None
-            The integer index of the given object or None if it is not stored yet
+            The integer index of the given object or None if it is not
+            stored yet
         """
         try:
             return self.index[obj]
@@ -1002,6 +1028,7 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             return peng.Trajectory(map(self.proxy, range(len(self))))
 
+
 class SnapshotValueStore(ObjectStore):
     def __init__(
             self,
@@ -1013,7 +1040,8 @@ class SnapshotValueStore(ObjectStore):
         self.snapshot_index = None
         if not time_reversible and not allow_partial:
             raise RuntimeError(
-                'Only time_reversible CVs can currently be stored using mode "complete"')
+                'Only time_reversible CVs can currently be '
+                'stored using mode "complete"')
 
         self.time_reversible = time_reversible
         self.allow_partial = allow_partial
@@ -1041,9 +1069,9 @@ class SnapshotValueStore(ObjectStore):
     def __len__(self):
         return len(self.variables['value'])
 
-    # =============================================================================
+    # ==========================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
-    # =============================================================================
+    # ==========================================================================
 
     def load(self, idx):
         pos = self.snapshot_pos(idx)

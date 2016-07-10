@@ -90,10 +90,12 @@ class PathMoveChangeStore(ObjectStore):
 
             self._cached_all = True
 
-    def _add_empty_to_cache(self, pos, uuid, cls_name, samples_idxs, mover_idx, details_idx):
+    def _add_empty_to_cache(self, pos, uuid, cls_name, samples_idxs,
+                            mover_idx, details_idx):
 
         if pos not in self.cache:
-            obj = self._load_partial_samples(cls_name, samples_idxs, mover_idx, details_idx)
+            obj = self._load_partial_samples(cls_name, samples_idxs,
+                                             mover_idx, details_idx)
 
             if self.reference_by_uuid:
                 obj.__uuid__ = uuid
@@ -105,30 +107,39 @@ class PathMoveChangeStore(ObjectStore):
         if len(subchanges_idxs) > 0:
             if self.reference_by_uuid:
                 subchanges_idxs = self.storage.to_uuid_chunks(subchanges_idxs)
-                obj.subchanges = [self.load(UUID(idx)) for idx in subchanges_idxs]
+                obj.subchanges = \
+                    [self.load(UUID(idx)) for idx in subchanges_idxs]
             else:
-                obj.subchanges = [self.load(int(idx)) for idx in subchanges_idxs]
+                obj.subchanges = \
+                    [self.load(int(idx)) for idx in subchanges_idxs]
 
         return obj
 
-    def _load_partial_samples(self, cls_name, samples_idxs, mover_idx, details_idx):
+    def _load_partial_samples(self, cls_name, samples_idxs,
+                              mover_idx, details_idx):
         cls = self.class_list[cls_name]
         obj = cls.__new__(cls)
         if self.reference_by_uuid:
             if mover_idx[0] == '-':
                 PathMoveChange.__init__(obj)
             else:
-                PathMoveChange.__init__(obj, mover=self.storage.pathmovers[UUID(mover_idx)])
+                PathMoveChange.__init__(
+                    obj,
+                    mover=self.storage.pathmovers[UUID(mover_idx)])
         else:
-            PathMoveChange.__init__(obj, mover=self.storage.pathmovers[int(mover_idx)])
+            PathMoveChange.__init__(
+                obj,
+                mover=self.storage.pathmovers[int(mover_idx)])
 
         if len(samples_idxs) > 0:
             if self.reference_by_uuid:
                 samples_idxs = self.storage.to_uuid_chunks(samples_idxs)
-                obj.samples = [self.storage.samples[UUID(idx)] for idx in samples_idxs]
+                obj.samples = \
+                    [self.storage.samples[UUID(idx)] for idx in samples_idxs]
                 obj.details = self.storage.details.proxy(str(details_idx))
             else:
-                obj.samples = [self.storage.samples[int(idx)] for idx in samples_idxs]
+                obj.samples = \
+                    [self.storage.samples[int(idx)] for idx in samples_idxs]
                 obj.details = self.storage.details.proxy(int(details_idx))
 
         return obj
