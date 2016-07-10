@@ -37,8 +37,8 @@ class StorableObject(object):
         return StorableObject.ruuid(self.__uuid__)
 
     @staticmethod
-    def ruuid(id):
-        return uuid.UUID(int=int(id) ^ 1)
+    def ruuid(uid):
+        return uuid.UUID(int=int(uid) ^ 1)
 
     def __init__(self):
         self.__uuid__ = StorableObject.get_uuid()
@@ -48,16 +48,16 @@ class StorableObject(object):
         """
         (De-)Activate observing creation of storable objects
 
-        This can be used to track which storable objects are still alive and hence look for memory leaks
-        and inspect caching. Use :meth:`openpathsampling.netcdfplus.base.StorableObject.count_weaks` to get
-        the current summary of created objects
+        This can be used to track which storable objects are still alive and
+        hence look for memory leaks and inspect caching. Use
+        :meth:`openpathsampling.netcdfplus.base.StorableObject.count_weaks`
+        to get the current summary of created objects
 
         Parameters
         ----------
         active : bool
-            if `True` then observing is enabled. `False` disables observing. Per default observing is
-            disabled.
-
+            if `True` then observing is enabled. `False` disables observing.
+            Per default observing is disabled.
 
         See Also
         --------
@@ -80,19 +80,18 @@ class StorableObject(object):
         if not active:
             del StorableObject.__init__
 
-
     @staticmethod
     def count_weaks():
         """
-        Return the counts of how many objects of storable type are still in memory
+        Return number of objects subclassed from StorableObject still in memory
 
         This includes objects not yet recycled by the garbage collector.
 
         Returns
         -------
         dict of str : int
-            the dictionary which assigns the base class name of each references objects the
-            integer number of objects still present
+            the dictionary which assigns the base class name of each references
+            objects the integer number of objects still present
 
         """
         summary = dict()
@@ -107,10 +106,10 @@ class StorableObject(object):
         """
         Return the index which is used for the object in the given store.
 
-        Once you store a storable object in a store it gets assigned a unique number
-        that can be used to retrieve the object back from the store. This
-        function will ask the given store if the object is stored if so what the used
-        index is.
+        Once you store a storable object in a store it gets assigned a unique
+        number that can be used to retrieve the object back from the store. This
+        function will ask the given store if the object is stored if so what
+        the used index is.
 
         Parameters
         ----------
@@ -147,21 +146,24 @@ class StorableObject(object):
 
         Parameters
         ----------
-        store : :class:`openpathsampling.netcdfplus.objects.ObjectStore` or :class:`openpathsampling.netcdfplus.netcdfplus.NetCDFStorage`
-            the store or storage to be saved in. if a storage is given then the default store for
-            the given object base type is determined and the appropriate store is used.
+        store : :class:`openpathsampling.netcdfplus.ObjectStore` or \
+        :class:`openpathsampling.netcdfplus.netcdfplus.NetCDFPlus`
+            the store or storage to be saved in. if a storage is given then
+            the default store for the given object base type is determined and
+            the appropriate store is used.
 
         Returns
         -------
         int or None
-            the integer index used to save the object or `None` if the object has already been saved.
+            the integer index used to save the object or `None` if the object
+            has already been saved.
         """
         store.save(self)
 
     @classmethod
     def base(cls):
         """
-        Return the most parent class that is actually derived from Storable(Named)Object
+        Return the most parent class actually derived from StorableObject
 
         Important to determine which store should be used for storage
 
@@ -172,7 +174,8 @@ class StorableObject(object):
         """
         if cls._base is None:
             if cls is not StorableObject and cls is not StorableNamedObject:
-                if StorableObject in cls.__bases__ or StorableNamedObject in cls.__bases__:
+                if StorableObject in cls.__bases__ \
+                        or StorableNamedObject in cls.__bases__:
                     cls._base = cls
                 else:
                     if hasattr(cls.__base__, 'base'):
@@ -223,7 +226,7 @@ class StorableObject(object):
             list of subclasses of a storable object
         """
         return cls.__subclasses__() + \
-               [g for s in cls.__subclasses__() for g in s.descendants()]
+            [g for s in cls.__subclasses__() for g in s.descendants()]
 
     @staticmethod
     def objects():
@@ -233,7 +236,8 @@ class StorableObject(object):
         Returns
         -------
         dict of str : type
-            a dictionary of all subclassed objects from StorableObject. The name points to the class.
+            a dictionary of all subclassed objects from StorableObject.
+            The name points to the class
         """
         subclasses = StorableObject.descendants()
 
@@ -242,12 +246,13 @@ class StorableObject(object):
     @classmethod
     def args(cls):
         """
-        Return a list of args of the __init__ function of a class
+        Return a list of args of the `__init__` function of a class
 
         Returns
         -------
         list of str
-            the list of argument names. No information about defaults is included.
+            the list of argument names. No information about defaults is
+            included.
 
         """
         try:
@@ -304,14 +309,17 @@ class StorableObject(object):
         """
         if dct is None:
             dct = {}
-        try:
+
+        if hasattr(cls, 'args'):
+            args = cls.args()
+            init_dct = {key: dct[key] for key in dct if key in args}
+            non_init_dct = {key: dct[key] for key in dct if key not in args}
+        else:
+            args = {}
             init_dct = dct
             non_init_dct = {}
-            if hasattr(cls, 'args'):
-                args = cls.args()
-                init_dct = {key: dct[key] for key in dct if key in args}
-                non_init_dct = {key: dct[key] for key in dct if key not in args}
 
+        try:
             obj = cls(**init_dct)
 
             if cls._restore_non_initial_attr:
@@ -326,13 +334,24 @@ class StorableObject(object):
             return obj
 
         except TypeError as e:
-            #TODO: Better exception
-            print dct
-            print cls.__name__
-            print e
-            print args
-            print init_dct
-            print non_init_dct
+            if init_dct and args:
+                err = (
+                    'Could not reconstruct the object of class `%s`. '
+                    '\nStored parameters: %s \n'
+                    '\nCall parameters: %s \n'
+                    '\nSignature parameters: %s \n'
+                    '\nActual message: %s'
+
+                ) % (
+                    cls.__name__,
+                    str(dct),
+                    str(init_dct),
+                    str(args),
+                    str(e)
+                )
+            else:
+                err = e
+            raise TypeError(err)
 
 
 class StorableNamedObject(StorableObject):
@@ -391,12 +410,16 @@ class StorableNamedObject(StorableObject):
     @name.setter
     def name(self, name):
         if self._name_fixed:
-            raise ValueError('Objects cannot be renamed to "%s" after is has been saved, it is already named "%s"' % (
-                name, self._name))
+            raise ValueError((
+                'Objects cannot be renamed to `%s` after is has been saved, '
+                'it is already named `%s`') %
+                (name, self._name))
         else:
             if name != self._name:
                 self._name = name
-                logger.debug('Nameable object is renamed from "%s" to "%s"' % (self._name, name))
+                logger.debug(
+                    'Nameable object is renamed from `%s` to `%s`' %
+                    (self._name, name))
 
     @property
     def is_named(self):
@@ -414,15 +437,19 @@ class StorableNamedObject(StorableObject):
         be used when naming things algorithmically: directly setting the
         .name attribute could override a user-defined name.
 
+        Parameters
+        ----------
+        name : str
+            the name to be used for the object. Can only be set once
+
         Examples
         --------
         >>> import openpathsampling as p
         >>> full = p.FullVolume().named('myFullVolume')
+
         """
 
-        if self._name == "":
-            self._name = name
-
+        self.name = name
         return self
 
 
