@@ -314,7 +314,7 @@ class ObjectStore(StorableNamedObject):
         Add iteration over all elements in the storage
         """
         if self.reference_by_uuid:
-            # we want to iterater in the order object were saved!
+            # we want to iterator in the order object were saved!
             for uuid in self.index:
                 yield self.load(uuid)
         else:

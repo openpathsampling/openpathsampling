@@ -705,7 +705,7 @@ class NetCDFPlus(netCDF4.Dataset):
             if variable.startswith(storage_name + '_'):
                 copied_storages += 1
                 if variable not in new_storage.variables:
-                    # collectivevariables have additional variables
+                    # collective variables have additional variables
                     # in the storage that need to be copied
                     var = self.variables[variable]
                     new_storage.createVariable(
@@ -1194,7 +1194,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         dimensions = tuple(dimensions)
 
-        # if chunksizes are strings then replace it by
+        # if chunk sizes are strings then replace it by
         # the actual size of the dimension
         if chunksizes is not None:
             chunksizes = list(chunksizes)

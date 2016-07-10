@@ -194,21 +194,6 @@ class ObjectJSON(object):
             return obj
 
     @staticmethod
-    def unitsytem_to_list(unit_system):
-        """
-        Turn a simtk.UnitSystem() into a list of strings representing the unitsystem for serialization
-        """
-        return [u.name for u in unit_system.units]
-
-    @staticmethod
-    def unit_system_from_list(unit_system_list):
-        """
-        Create a simtk.UnitSystem() from a serialialized list of strings representing the unitsystem
-        """
-        return units.UnitSystem(
-            [getattr(units, unit_name).iter_base_or_scaled_units().next()[0] for unit_name in unit_system_list])
-
-    @staticmethod
     def unit_to_symbol(unit):
         return str(1.0 * unit).split()[1]
 
