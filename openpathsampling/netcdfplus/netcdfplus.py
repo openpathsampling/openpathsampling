@@ -66,8 +66,8 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Value delegate for objects that implement __getitem__ and __setitem__
 
-        It will basically just wrap values that are used in a dict like structure
-        with getter and setter function to allow easier conversion
+        It will basically just wrap values that are used in a dict like
+        structure with getter and setter function to allow easier conversion
 
         delegate[x] is equivalent to delegate.getter(delegate.variable[x])
 
@@ -76,9 +76,11 @@ class NetCDFPlus(netCDF4.Dataset):
         variable : dict-like
             the dict to be wrapped
         getter : function
-            the function applied to results from running the __getitem__ on the variable
+            the function applied to results from running the __getitem__
+            on the variable
         setter : function
-            the function applied to the value to be stored using __setitem__ on the variable
+            the function applied to the value to be stored using __setitem__
+            on the variable
         store : openpathsampling.netcdfplus.ObjectStore
             a reference to an object store used for convenience in some cases
 
@@ -118,8 +120,9 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Value delegate for objects that implement __getitem__ and __setitem__
 
-        It will basically just wrap keys for objects that are used in a dict like structure
-        with getter and setter function to allow easier conversion
+        It will basically just wrap keys for objects that are used in a dict
+        like structure with getter and setter function to allow easier
+        conversion
 
         delegate[x] is equivalent to delegate[x.idx(store)]
 
@@ -138,31 +141,36 @@ class NetCDFPlus(netCDF4.Dataset):
 
         def __setitem__(self, key, value):
             if hasattr(key, '__iter__'):
-                idxs = [item if type(item) is int else self.store.index[item] for item in key]
+                idxs = [item if type(item) is int else self.store.index[item]
+                        for item in key]
                 sorted_idxs = list(set(idxs))
                 sorted_values = [value[idxs.index(val)] for val in sorted_idxs]
                 self.variable[sorted_idxs] = sorted_values
 
             else:
-                self.variable[key if type(key) is int else self.store.index[key]] = value
+                self.variable[
+                    key if type(key) is int else self.store.index[key]
+                ] = value
 
         def __getitem__(self, key):
             if hasattr(key, '__iter__'):
-                idxs = [item if type(item) is int else self.store.index[item] for item in key]
+                idxs = [item if type(item) is int else self.store.index[item]
+                        for item in key]
                 sorted_idxs = sorted(list(set(idxs)))
 
                 sorted_values = self.variable[sorted_idxs]
                 return [sorted_values[sorted_idxs.index(idx)] for idx in idxs]
             else:
-                return self.variable[key if type(key) is int else self.store.index[key]]
+                return self.variable[
+                    key if type(key) is int else self.store.index[key]]
 
     @property
     def objects(self):
         """
         Return a dictionary of all objects stored.
 
-        This is similar to the netcdf `.variables` for all stored variables. This
-        allows to write `storage.objects['samples'][idx]` like we
+        This is similar to the netcdf `.variables` for all stored variables.
+        This allows to write `storage.objects['samples'][idx]` like we
         write `storage.variables['ensemble_json'][idx]`
         """
         return self._stores
@@ -184,12 +192,16 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if type(obj) is type or type(obj) is abc.ABCMeta:
             if obj not in self._obj_store:
-                raise ValueError('Objects of class "%s" are not storable in this store.' % obj.__name__)
+                raise ValueError(
+                    'Objects of class "%s" are not storable in this store.' %
+                    obj.__name__)
 
             return self._obj_store[obj]
         else:
             if obj.__class__ not in self._obj_store:
-                raise ValueError('Objects of class "%s" are not storable in this store.' % obj.__class__.__name__)
+                raise ValueError(
+                    'Objects of class "%s" are not storable in this store.' %
+                    obj.__class__.__name__)
 
             return self._obj_store[obj.__class__]
 
@@ -219,7 +231,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         Notes
         -----
-        A single file can be opened by multiple storages, but only one can be used for writing
+        A single file can be opened by multiple storages, but only one can be
+        used for writing
 
         """
 
@@ -228,18 +241,30 @@ class NetCDFPlus(netCDF4.Dataset):
 
         exists = os.path.isfile(filename)
         if exists and mode == 'a':
-            logger.info("Open existing netCDF file '%s' for appending - appending existing file", filename)
+            logger.info(
+                "Open existing netCDF file '%s' for appending - "
+                "appending existing file", filename)
         elif exists and mode == 'w':
-            logger.info("Create new netCDF file '%s' for writing - deleting existing file", filename)
+            logger.info(
+                "Create new netCDF file '%s' for writing - "
+                "deleting existing file", filename)
         elif not exists and mode == 'a':
-            logger.info("Create new netCDF file '%s' for appending - appending non-existing file", filename)
+            logger.info(
+                "Create new netCDF file '%s' for appending - "
+                "appending non-existing file", filename)
         elif not exists and mode == 'w':
-            logger.info("Create new netCDF file '%s' for writing - creating new file", filename)
+            logger.info(
+                "Create new netCDF file '%s' for writing - "
+                "creating new file", filename)
         elif not exists and mode == 'r':
-            logger.info("Open existing netCDF file '%s' for reading - file does not exist", filename)
+            logger.info(
+                "Open existing netCDF file '%s' for reading - "
+                "file does not exist", filename)
             raise RuntimeError("File '%s' does not exist." % filename)
         elif exists and mode == 'r':
-            logger.info("Open existing netCDF file '%s' for reading - reading from existing file", filename)
+            logger.info(
+                "Open existing netCDF file '%s' for reading - "
+                "reading from existing file", filename)
 
         self.filename = filename
         self.fallback = fallback
@@ -281,8 +306,9 @@ class NetCDFPlus(netCDF4.Dataset):
             # call the subclass specific initialization
             self._initialize()
 
-            # this will create all variables in the storage for all new added stores
-            # this is often already call inside of _initialize. If not we just make sure
+            # this will create all variables in the storage for all new
+            # added stores this is often already call inside of _initialize.
+            # If not we just make sure
             self.finalize_stores()
 
             logger.info("Finished setting up netCDF file")
@@ -313,7 +339,8 @@ class NetCDFPlus(netCDF4.Dataset):
                 if self.support_simtk_unit:
                     import simtk.unit as u
                     if hasattr(variable, 'unit_simtk'):
-                        unit_dict = self.simplifier.from_json(getattr(variable, 'unit_simtk'))
+                        unit_dict = self.simplifier.from_json(
+                            getattr(variable, 'unit_simtk'))
                         if unit_dict is not None:
                             unit = self.simplifier.unit_from_dict(unit_dict)
                         else:
@@ -331,7 +358,8 @@ class NetCDFPlus(netCDF4.Dataset):
             self.update_delegates()
             self._restore_storages()
 
-            # call the subclass specific restore in case there is more stuff the prepare
+            # call the subclass specific restore in case there is more stuff
+            # to prepare
             self._restore()
 
         self.sync()
@@ -372,7 +400,9 @@ class NetCDFPlus(netCDF4.Dataset):
         try:
             s1 = self.getncattr('ncplus_version')
         except AttributeError:
-            logger.info('Using netcdfplus Pre 1.0 version. No version detected using 0.0.0')
+            logger.info(
+                'Using netcdfplus Pre 1.0 version. '
+                'No version detected using 0.0.0')
             s1 = '0.0.0'
 
         s2 = self._netcdfplus_version_
@@ -380,13 +410,17 @@ class NetCDFPlus(netCDF4.Dataset):
         cp = self._cmp_version(s1, s2)
 
         if cp != 0:
-            logger.info('Loading different netcdf version. Installed version is '
+            logger.info('Loading different netcdf version. '
+                        'Installed version is '
                         '%s and loaded version is %s' % (s2, s1))
             if cp > 0:
-                logger.info('Loaded version is newer consider upgrading your conda package!')
+                logger.info(
+                    'Loaded version is newer consider upgrading your '
+                    'conda package!')
             else:
-                logger.info('Loaded version is older. Should be no problem other then '
-                            'missing features and information')
+                logger.info(
+                    'Loaded version is older. Should be no problem other then '
+                    'missing features and information')
 
     def write_meta(self):
         pass
@@ -412,6 +446,9 @@ class NetCDFPlus(netCDF4.Dataset):
             the name of the store inside this storage
         store : :class:`openpathsampling.netcdf.ObjectStore`
             the store to be added to this storage
+        register_attr : bool
+            if `True` the store will be added to the storage as an
+             attribute with name `name`
 
         """
         self.register_store(name, store, register_attr=register_attr)
@@ -422,10 +459,11 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Run initializations for all added stores.
 
-        This will make sure that all previously added stores are now useable. If you add more stores you need to
-        call this again. The reason this is done at all is that stores might reference each other and so no
-        unique order of creation can be found. Thus you first create stores with all their dependencies and then
-        finalize all of them together.
+        This will make sure that all previously added stores are now useable.
+        If you add more stores you need to call this again. The reason this is
+        done at all is that stores might reference each other and so no
+        unique order of creation can be found. Thus you first create stores
+        with all their dependencies and then finalize all of them together.
         """
         for store in self._stores.values():
             if not store.is_created():
@@ -444,7 +482,8 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Add a object store to the file
 
-        An object store is a special type of variable that allows to store python objects
+        An object store is a special type of variable that allows to store
+        python objects
 
         Parameters
         ----------
@@ -471,7 +510,8 @@ class NetCDFPlus(netCDF4.Dataset):
             self._objects[store.content_class] = store
 
             self._obj_store[store.content_class] = store
-            self._obj_store.update({cls: store for cls in store.content_class.descendants()})
+            self._obj_store.update(
+                {cls: store for cls in store.content_class.descendants()})
 
     def _initialize(self):
         """
@@ -547,7 +587,10 @@ class NetCDFPlus(netCDF4.Dataset):
         list of type
             list of base classes that can be stored using `storage.save(obj)`
         """
-        return [store.content_class for store in self.objects.values() if store.content_class is not None]
+        return [
+            store.content_class
+            for store in self.objects.values()
+            if store.content_class is not None]
 
     def save(self, obj, idx=None):
         """
@@ -576,8 +619,8 @@ class NetCDFPlus(netCDF4.Dataset):
             return [self.save(part, idx) for part in obj]
 
         elif obj.__class__ in self._obj_store:
-            # to store we just check if the base_class is present in the storages
-            # also we assume that if a class has no base_cls
+            # to store we just check if the base_class is present in the
+            # storages also we assume that if a class has no base_cls
             store = self.find_store(obj)
             store_idx = self.stores.index[store]
             return store, store_idx, store.save(obj, idx)
@@ -602,7 +645,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         Notes
         -----
-        this only works in storages with uuids otherwise load directly from the sub-stores
+        this only works in storages with uuids otherwise load directly from the
+        substores
         """
 
         if self.reference_by_uuid:
@@ -612,7 +656,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
             raise KeyError("UUID %s not found in storage" % uuid)
         else:
-            raise RuntimeError("Can only load directly from stores that support UUIDs.")
+            raise RuntimeError(
+                "Can only load directly from stores that support UUIDs.")
 
     def idx(self, obj):
         """
@@ -660,7 +705,8 @@ class NetCDFPlus(netCDF4.Dataset):
             if variable.startswith(storage_name + '_'):
                 copied_storages += 1
                 if variable not in new_storage.variables:
-                    # collectivevariables have additional variables in the storage that need to be copied
+                    # collectivevariables have additional variables
+                    # in the storage that need to be copied
                     var = self.variables[variable]
                     new_storage.createVariable(
                         variable,
@@ -675,14 +721,17 @@ class NetCDFPlus(netCDF4.Dataset):
                             getattr(self.variables[variable], attr)
                         )
 
-                    new_storage.variables[variable][:] = self.variables[variable][:]
+                    new_storage.variables[variable][:] = \
+                        self.variables[variable][:]
                 else:
                     for idx in range(0, len(self.variables[variable])):
-                        new_storage.variables[variable][idx] = self.variables[variable][idx]
+                        new_storage.variables[variable][idx] = \
+                            self.variables[variable][idx]
 
         if copied_storages == 0:
             raise RuntimeWarning(
-                'Potential error in storage name. No storage variables copied from ' +
+                'Potential error in storage name. ' +
+                'No storage variables copied from ' +
                 storage_name
             )
 
@@ -702,7 +751,6 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         if dim_name not in self.dimensions:
             self.createDimension(dim_name, size)
-
 
     def cache_image(self):
         """
@@ -1084,7 +1132,8 @@ class NetCDFPlus(netCDF4.Dataset):
                 new_dimensions[dimensions[ix]] = dim
 
         if dimensions[-1] == '...':
-            # last dimension is simply [] so we allow arbitrary length and remove the last dimension
+            # last dimension is simply [] so we allow arbitrary length
+            # and remove the last dimension
             variable_length = True
             dimensions = dimensions[:-1]
         else:
@@ -1102,7 +1151,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         dimensions = tuple(dimensions)
 
-        # if chunksizes are strings then replace by the actual size of the dimension
+        # if chunksizes are strings then replace it by
+        # the actual size of the dimension
         if chunksizes is not None:
             chunksizes = list(chunksizes)
             for ix, dim in enumerate(chunksizes):
@@ -1142,7 +1192,9 @@ class NetCDFPlus(netCDF4.Dataset):
                 unit_instance = getattr(u, simtk_unit)
                 symbol = unit_instance.get_symbol()
             else:
-                raise NotImplementedError('Unit by abbreviated string representation is not yet supported')
+                raise NotImplementedError(
+                    'Unit by abbreviated string representation '
+                    'is not yet supported')
 
             json_unit = self.simplifier.unit_to_json(unit_instance)
 
@@ -1160,11 +1212,13 @@ class NetCDFPlus(netCDF4.Dataset):
             if type(dimensions) is str:
                 dim_names = [dimensions]
             else:
-                dim_names = map(lambda p: '#ix{0}:{1}'.format(*p), enumerate(dimensions))
+                dim_names = map(
+                    lambda p: '#ix{0}:{1}'.format(*p),
+                    enumerate(dimensions))
 
             idx_desc = '[' + ']['.join(dim_names) + ']'
-            description = var_name + idx_desc + ' is ' + description.format(idx=dim_names[0],
-                                                                            ix=dim_names)
+            description = var_name + idx_desc + ' is ' + \
+                          description.format(idx=dim_names[0], ix=dim_names)
 
             # Define long (human-readable) names for variables.
             setattr(ncvar, "long_str", description)
@@ -1227,7 +1281,8 @@ class NetCDFPlus(netCDF4.Dataset):
             if hasattr(test_value, '__len__'):
                 dimensions = len(test_value)
                 test_type = test_value[0]
-                if NetCDFPlus.support_simtk_unit and type(test_type) is u.Quantity:
+                if NetCDFPlus.support_simtk_unit and type(test_type) \
+                        is u.Quantity:
                     for val in test_value:
                         if type(val._value) is not type(test_value._value):
                             # all values must be of same type

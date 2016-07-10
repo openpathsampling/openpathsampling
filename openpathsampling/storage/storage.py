@@ -5,6 +5,7 @@ Created on 06.07.2014
 """
 
 import logging
+import time
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, \
@@ -13,8 +14,6 @@ import openpathsampling.engines as peng
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
-
-import time
 
 
 # ==============================================================================
@@ -135,7 +134,13 @@ class Storage(NetCDFPlus):
     def topology(self):
         return self.template.topology
 
-    def __init__(self, filename, mode=None, template=None, use_uuid=True, fallback=None):
+    def __init__(
+            self,
+            filename,
+            mode=None,
+            template=None,
+            use_uuid=True,
+            fallback=None):
         """
         Create a netCDF+ storage for OPS Objects
 
@@ -152,11 +157,15 @@ class Storage(NetCDFPlus):
         """
 
         self._template = template
-        super(Storage, self).__init__(filename, mode, use_uuid=use_uuid, fallback=fallback)
+        super(Storage, self).__init__(
+            filename,
+            mode,
+            use_uuid=use_uuid,
+            fallback=fallback)
 
     def split_snapshots(self):
         """
-        Creates two copies of the current storage. One containing trajectories and the other the rest
+        Split into two stored with trajectories and the rest
         """
 
         filename = '.'.join(self.filename.split('.')[:-1])
@@ -164,8 +173,8 @@ class Storage(NetCDFPlus):
         filename_main = filename + '_main.nc'
         filename_data = filename + '_frames.nc'
 
-        storage_main = Storage(filename=filename_main, template=self.template, mode='w')
-        storage_data = Storage(filename=filename_data, template=self.template, mode='w')
+        storage_main = Storage(filename=filename_main, mode='w')
+        storage_data = Storage(filename=filename_data, mode='w')
 
         map(storage_data.trajectories.save, self.trajectories)
         map(storage_main.trajectories.remember, self.trajectories)
@@ -177,7 +186,9 @@ class Storage(NetCDFPlus):
             'samplesets', 'ensembles', 'transitions', 'pathmovechanges',
             'samples', 'pathsimulators', 'cvs'
         ]:
-            map(getattr(storage_main, storage_name).save, getattr(self, storage_name))
+            map(
+                getattr(storage_main, storage_name).save,
+                getattr(self, storage_name))
 
         storage_main.close()
         storage_data.close()
@@ -189,7 +200,6 @@ class Storage(NetCDFPlus):
         """
 
         # objects with special storages
-
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
         self.create_store('cvs', paths.storage.CVStore())
@@ -204,9 +214,7 @@ class Storage(NetCDFPlus):
         )
         self.create_store('steps', paths.storage.MCStepStore())
 
-
         # normal objects
-
         self.create_store('details', ObjectStore(paths.Details))
         self.create_store('topologies', NamedObjectStore(peng.Topology))
         self.create_store('pathmovers', NamedObjectStore(paths.PathMover))
@@ -242,7 +250,8 @@ class Storage(NetCDFPlus):
 
         self.set_caching_mode()
 
-        # since we want to store stuff we need to finalize stores that have not been initialized yet
+        # since we want to store stuff we need to finalize stores that have not
+        # been initialized yet
         self.finalize_stores()
 
     def _restore(self):
@@ -547,7 +556,8 @@ class AnalysisStorage(Storage):
         """
 
         with AnalysisStorage.CacheTimer('Cached all CVs'):
-            for cv, (cv_store, cv_store_idx) in storage.snapshots.cv_list.items():
+            for cv, (cv_store, cv_store_idx) in \
+                    storage.snapshots.cv_list.items():
                 cv_store.cache.load_max()
 
         stores_to_cache = ['cvs',
@@ -579,8 +589,9 @@ class AnalysisStorage(Storage):
         def __exit__(self, type, value, traceback):
             dtime = (time.time() - self.time) * 1000
             if self.store:
-                logger.info('%s of store `%s` [%d] in %d ms' %
-                            (self.context, self.store.name, len(self.store), dtime))
+                logger.info(
+                    '%s of store `%s` [%d] in %d ms' %
+                    (self.context, self.store.name, len(self.store), dtime))
             else:
                 logger.info('%s in %d ms' % (self.context, dtime))
 
