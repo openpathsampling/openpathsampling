@@ -1,20 +1,22 @@
-__author__ = 'Jan-Hendrik Prinz'
-
 import collections
 import numpy as np
 
-from openpathsampling.netcdfplus import LRUCache, LoaderProxy
+from openpathsampling.netcdfplus import LoaderProxy
+
+__author__ = 'Jan-Hendrik Prinz'
 
 
 class ChainDict(object):
     """
-    A dictionary-like structure with a logic to generate values and pass unknown values to other instances
+    A dict-like structure with a logic to fill missing values from other dicts
 
-    The default ChainDict requires a list of keys. If you want to allow also single values you need to
-    add a ChainDict that interprets single and iterables like ExpandSingle.
+    The default ChainDict requires a list of keys. If you want to allow also
+    single values you need to add a ChainDict that interprets single and
+    iterables like ExpandSingle.
 
-    The default for unknown keys is None. This is necessary to pass on what is unknown.
-    Everything that is not known in the current instance is passed on to .post
+    The default for unknown keys is None. This is necessary to pass on what
+    is unknown. Everything that is not known in the current instance is
+    passed on to .post
 
     Examples
     --------
@@ -40,7 +42,8 @@ class ChainDict(object):
     eval, 2
     [1,4]
 
-    First time the function is called and the cache filled. Second time the cache is used.
+    First time the function is called and the cache filled. Second time
+    the cache is used.
 
     >>> combo_cd[[1,2]]
     [1,4]
@@ -66,12 +69,12 @@ class ChainDict(object):
             if len(nones) == 0:
                 return results
             else:
-                # print 'found %d nones calling %s' % (len(nones), self._post.__class__.__name__)
                 rep = self._post[nones]
                 self._set_list(nones, rep)
 
                 it = iter(rep)
-                return [it.next() if p[1] is None else p[1] for p in zip(items, results)]
+                return [it.next() if p[1] is None else p[1]
+                        for p in zip(items, results)]
 
         return results
 
@@ -104,7 +107,8 @@ class ChainDict(object):
         Default implementation is to not store anything.
         This is mostly used in caching and stores
         """
-        [self._set(item, value) for item, value in zip(items, values) if values is not None]
+        [self._set(item, value) for item, value in zip(items, values)
+         if values is not None]
 
     def _get(self, item):
         """
@@ -205,7 +209,8 @@ class ChainDict(object):
             the string representation
 
         """
-        return ' > '.join(map(lambda x : x.__class__.__name__, self.passing_chain))
+        return ' > '.join(
+            map(lambda x: x.__class__.__name__, self.passing_chain))
 
 
 class Wrap(ChainDict):
@@ -232,7 +237,7 @@ class Wrap(ChainDict):
 
 
 class MergeNumpy(ChainDict):
-    """All returned values from underlying ChainDicts will be turned into a numpy array
+    """Wrap returned values in a numpy array
     """
 
     def __getitem__(self, items):
@@ -254,17 +259,18 @@ class ExpandSingle(ChainDict):
             return self._post[[items]][0]
         if hasattr(items, '__iter__'):
             try:
-                dummy = len(items)
+                _ = len(items)
             except AttributeError:
                 # no length means unbound iterator and we cannot handle these
-                raise AttributeError('Iterators that do not have __len__ implemented are not supported. ' +
-                                'You can wrap your iterator in list() if you know that it will finish.')
+                raise AttributeError(
+                    'Iterators that do not have __len__ implemented are not '
+                    'supported. You can wrap your iterator in list() if you '
+                    'know that it will finish.')
 
             try:
                 return self._post[items.as_proxies()]
             except AttributeError:
-                # turn possible iterators into list since we have to do it anyway.
-                # Iterators do not work
+                # turn possible iterators into a list if possible
                 return self._post[list(items)]
 
         else:
@@ -303,19 +309,24 @@ class Function(ChainDict):
 
     This works effective like a function called with square brackets
     """
-    def __init__(self, fnc, requires_lists=True, scalarize_numpy_singletons=False):
+    def __init__(
+            self,
+            fnc,
+            requires_lists=True,
+            scalarize_numpy_singletons=False):
         """
         Parameters
         ----------
         fnc : function
             the function to be evaluated to return values to keys
         requires_lists : bool
-            if `True` we assume that it is faster to pass lists to this function instead
-            of evaluating each key separately
+            if `True` we assume that it is faster to pass lists to this
+            function instead of evaluating each key separately
         scalarize_numpy_singletons : bool
-            if `True` eventual numpy objects that have length one in their last dimension, will
-            be flattened by the last dimension. This is often useful if you have function that
-            will by default return a list of results. In case your function does so, you can
+            if `True` eventual numpy objects that have length one in their
+            last dimension, will be flattened by the last dimension. This
+            is often useful if you have function that will by default return
+            a list of results. In case your function does so, you can
             treat it as returning a scalar.
 
         """
@@ -352,7 +363,7 @@ class Function(ChainDict):
         else:
             results = [self._eval(obj) for obj in items]
             if self.scalarize_numpy_singletons and results[0].shape[-1] == 1:
-                results = map(lambda x : x.reshape(x.shape[:-1]), results)
+                results = map(lambda x: x.reshape(x.shape[:-1]), results)
 
         return results
 
@@ -369,13 +380,13 @@ class Function(ChainDict):
 
 class CacheChainDict(ChainDict):
     """
-    Return Values from a cache filled from returned values of the underlying ChainDicts and
+    Return Values from a cache filled from underlying CDs
     """
     def __init__(self, cache):
         """
         Parameters
         ----------
-        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
+        cache : :obj:`openpathsampling.netcdfplus.cache.Cache` or dict
             the cache to be used to store the data
         """
         super(CacheChainDict, self).__init__()
@@ -399,7 +410,7 @@ class CacheChainDict(ChainDict):
 
 class ReversibleCacheChainDict(CacheChainDict):
     """
-    Return Values from a cache filled from returned values of the underlying ChainDicts and
+    Return Values from a cache filled from the underlying CD
     """
     def __init__(self, cache, reversible=False):
         """
@@ -409,26 +420,6 @@ class ReversibleCacheChainDict(CacheChainDict):
             the cache to be used to store the data
         """
         super(ReversibleCacheChainDict, self).__init__(cache)
-        self.reversible = reversible
-
-    def _set(self, item, value):
-        self.cache[item] = value
-        if self.reversible:
-            self.cache[item.reversed] = value
-
-
-class PlainReversibleCacheChainDict(CacheChainDict):
-    """
-    Return Values from a cache filled from returned values of the underlying ChainDicts and
-    """
-    def __init__(self, cache, reversible=False):
-        """
-        Parameters
-        ----------
-        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
-            the cache to be used to store the data
-        """
-        super(PlainReversibleCacheChainDict, self).__init__(cache)
         self.reversible = reversible
 
     def _get(self, item):
@@ -441,52 +432,23 @@ class PlainReversibleCacheChainDict(CacheChainDict):
             if self.reversible and item._reversed is not None:
                 try:
                     return self.cache[item._reversed]
-                except:
+                except KeyError:
                     return None
             else:
                 return None
 
-    # def _set(self, item, value):
-    #     # do not cache proxies these will just clutter the cache and
-    #     # will usually not be reused
-    #     if not hasattr(item, '_idx'):
-    #         self.cache[item] = value
-
-
-class LRUChainDict(CacheChainDict):
-    """
-    Uses an LRUCache to cache values
-    """
-    def __init__(self, size_limit=1000000):
-        """
-
-        Parameters
-        ----------
-        size_limit : int
-            the maximal allowed number of objects in the cache
-
-        """
-        super(LRUChainDict, self).__init__(LRUCache(size_limit))
-
 
 class StoredDict(ChainDict):
     """
-    ChainDict that has a store attached and returns existing values from the store
+    ChainDict that has a store attached and returns existing store values
     """
     def __init__(self, value_store):
         """
         Parameters
         ----------
-        key_store : storage.Store
-            the store that references usable keys
         value_store : storage.Variable
-            the store that references the store variable to store the values by index
-        main_cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
-            the main cache used for non-stored objects so that the StoredDict can access
-            values for these objects, too, if the objects has been saved in the meantime.
-        cache : :class:`openpathsampling.netcdfplus.cache.Cache` or dict
-            the cache used to access stored values faster. If `None` (default) an
-            :class:`openpathsampling.netcdfplus.cache.LRUCache` with 1000000 (1M) entries is used.
+            the store that references the store variable to store the values
+            by index
         """
         super(StoredDict, self).__init__()
         self.value_store = value_store
