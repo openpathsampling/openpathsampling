@@ -75,6 +75,8 @@ class ChainDict(object):
 
         return results
 
+    __call__ = __getitem__
+
     def __setitem__(self, key, value):
         if isinstance(key, collections.Iterable):
             self._set_list(key, value)
@@ -124,9 +126,6 @@ class ChainDict(object):
         list of object
         """
         return [self._get(item) for item in items]
-
-    def __call__(self, items):
-        return self[items]
 
     def __gt__(self, other):
         """
@@ -226,6 +225,8 @@ class Wrap(ChainDict):
     def __getitem__(self, items):
         return self._post[items]
 
+    __call__ = __getitem__
+
     def __setitem__(self, key, value):
         self._post[key] = value
 
@@ -236,6 +237,8 @@ class MergeNumpy(ChainDict):
 
     def __getitem__(self, items):
         return np.array(self._post[items])
+
+    __call__ = __getitem__
 
     def __setitem__(self, key, value):
         self._post[key] = value
@@ -267,6 +270,8 @@ class ExpandSingle(ChainDict):
         else:
             return self._post[[items]][0]
 
+    __call__ = __getitem__
+
     def __setitem__(self, key, value):
         self._post[key] = value
 
@@ -285,6 +290,8 @@ class Transform(ChainDict):
 
     def __getitem__(self, item):
         return self._post[self.transform(item)]
+
+    __call__ = __getitem__
 
     def __setitem__(self, key, value):
         self._post[self.transform(key)] = value

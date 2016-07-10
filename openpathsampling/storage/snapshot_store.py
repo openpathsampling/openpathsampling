@@ -884,8 +884,6 @@ class SnapshotWrapperStore(ObjectStore):
                 proxy = LoaderProxy(self.storage.snapshots, idx)
                 value = cv._cache_dict._get(proxy)
 
-                print value, cv._eval_dict([proxy])[0]
-
                 if value is None:
                     # not in cache so compute it if possible
                     if cv._eval_dict:
@@ -1133,9 +1131,9 @@ class SnapshotValueStore(ObjectStore):
 
     def get(self, item):
         if self.allow_partial:
-            if item in self.index:
+            try:
                 return self[item]
-            else:
+            except KeyError:
                 return None
         else:
             return self[item]
