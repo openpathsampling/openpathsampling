@@ -24,7 +24,8 @@ from nose.plugins.skip import SkipTest
 class testStorage(object):
     def setUp(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
-        self.traj = peng.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
+        self.traj = peng.trajectory_from_mdtraj(
+            self.mdtraj, simple_topology=True)
 
         self.filename = data_filename("storage_test.nc")
         self.filename_clone = data_filename("storage_test_clone.nc")
@@ -74,19 +75,6 @@ class testStorage(object):
             self.simplifier.to_json(self.template_snapshot.topology),
             self.simplifier.to_json(loaded_topology)
         )
-
-        store.close()
-
-    def test_stored_template(self):
-        raise SkipTest
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-        store.close()
-
-        store = Storage(filename=self.filename, mode='a')
-        loaded_template = store.template
-
-        compare_snapshot(loaded_template, self.template_snapshot, True)
 
         store.close()
 
@@ -141,75 +129,6 @@ class testStorage(object):
         compare_snapshot(loaded_r, self.toy_template.reversed)
 
         store.close()
-
-    def test_clone(self):
-        raise SkipTest
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-
-        copy = self.template_snapshot.copy()
-        store.save(copy)
-
-        store.save(self.traj)
-
-        store.clone(filename=self.filename_clone)
-
-        # clone the storage and reduce the number of atoms to only solute
-
-        store2 = Storage(filename=self.filename_clone, mode='a')
-
-        # do some tests, if this is still the same data
-
-        compare_snapshot(
-            store2.snapshots.load(0),
-            store.snapshots.load(0),
-            True
-        )
-
-        compare_snapshot(
-            store2.snapshots.load(1),
-            store.snapshots.load(1),
-            True
-        )
-        store.close()
-        store2.close()
-
-    def test_clone_empty(self):
-        raise SkipTest
-
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
-
-        copy = self.template_snapshot.copy()
-        store.save(copy)
-
-        store.save(self.traj)
-        store.clone_empty(filename=self.filename_clone)
-
-        # clone the storage and reduce the number of atoms to only solute
-
-        store2 = Storage(filename=self.filename_clone, mode='a')
-
-        # do some tests, if this is still the same data
-
-        compare_snapshot(
-            store2.snapshots.load(0),
-            store.snapshots.load(0),
-            True
-        )
-
-        # check if the reversed copy also works
-        compare_snapshot(
-            store2.snapshots.load(1),
-            store.snapshots.load(1),
-            True
-        )
-
-        assert_equal(len(store2.snapshots), 2)
-        assert_equal(len(store2.trajectories), 0)
-
-        store.close()
-        store2.close()
 
     def test_reverse_bug(self):
         store = Storage(filename=self.filename,

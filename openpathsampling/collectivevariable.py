@@ -6,9 +6,9 @@ import openpathsampling.engines as peng
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 
 
-# ============================================================
+# ==============================================================================
 #  CLASS CollectiveVariable
-# ============================================================
+# ==============================================================================
 
 class CollectiveVariable(cd.Wrap, StorableNamedObject):
     """
@@ -20,9 +20,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         A descriptive name of the collectivevariable. It is used in the string
         representation.
     cv_time_reversible : bool
-        If `True` (default) the CV assumes that reversed snapshots have the same value. This is the
-        default case when CVs do not depend on momenta reversal. This will speed up computation of
-        CVs by about a factor of two. In rare cases you might want to set this to `False`
+        If `True` (default) the CV assumes that reversed snapshots have the
+        same value. This is the default case when CVs do not depend on momenta
+        reversal. This will speed up computation of CVs by about a factor of
+        two. In rare cases you might want to set this to `False`
 
     Attributes
     ----------
@@ -31,15 +32,15 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
     _single_dict : :class:`openpathsampling.chaindict.ChainDict`
         The ChainDict that takes care of using only a single element instead of
-        an iterable. In the case of a single object. It will be wrapped in a list
-        and later only the single element will be returned
+        an iterable. In the case of a single object. It will be wrapped in a
+        list and later only the single element will be returned
     _cache_dict : :class:`openpathsampling.chaindict.ChainDict`
         The ChainDict that will cache calculated values for fast access
 
     """
 
-    # do not store the settings for the disk cache. These are independent and stored in the
-    # cache itself
+    # do not store the settings for the disk cache. These are independent
+    # and stored in the cache itself
     _excluded_attr = [
         'diskcache_enabled',
         'diskcache_allow_partial',
@@ -75,7 +76,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self._store_dict = None
         self._eval_dict = None
 
-        super(CollectiveVariable, self).__init__(post=self._single_dict > self._cache_dict)
+        super(CollectiveVariable, self).__init__(
+            post=self._single_dict > self._cache_dict)
 
     def enable_diskcache(self):
         self.diskcache_enabled = True
@@ -177,8 +179,7 @@ class CV_Volume(CollectiveVariable):
         """
 
         super(CV_Volume, self).__init__(
-            name,
-            cv_time_reversible=True
+            name
         )
         self.volume = volume
 
@@ -196,7 +197,7 @@ class CV_Volume(CollectiveVariable):
 
 
 class CV_Callable(CollectiveVariable):
-    """Turn any callable object `cv_callable` into a storable `CollectiveVariable`.
+    """Turn any callable object into a storable `CollectiveVariable`.
 
     Attributes
     ----------
@@ -227,6 +228,16 @@ class CV_Callable(CollectiveVariable):
             the CV with a list of snapshots a list of snapshot objects will be
             passed. If `False` a list of Snapshots like a trajectory will
             be passed snapshot by snapshot.
+        cv_wrap_numpy_array : bool, default: False
+            if `True` the returned array will be wrapped with a
+            `numpy.array()` which will convert a list of numpy arrays into a
+            single large numpy.array. This is useful for post-processing of
+            larger data since numpy arrays are easier to manipulate.
+        cv_scalarize_numpy_singletons : bool, default: True
+            If `True` then arrays of length 1 will be treated as array with one
+            dimension less. e.g. [[1], [2], [3]] will be turned into [1, 2, 3].
+            This is often useful, when you use en external function to get only
+            a single value.
         kwargs : **kwargs
             a dictionary with named arguments which should be used
             with `c`. Either for class creation or for calling the function
@@ -261,18 +272,19 @@ class CV_Callable(CollectiveVariable):
         1. import necessary modules inside of your function
         2. create constants inside your function
         3. if variables from the global scope are used these need to be stored
-           with the function and this can only be done if they are passed as arguments
-           to the function and added as kwargs to the CV_Function
+           with the function and this can only be done if they are passed as
+           arguments to the function and added as kwargs to the CV_Function
 
         >>> import openpathsampling.engines as peng
         >>> def func(snapshot, indices):
         >>>     import mdtraj as md
-        >>>     return md.compute_dihedrals(peng.Trajectory([snapshot]).md(), indices=indices)
+        >>>     return md.compute_dihedrals(
+        >>>         peng.Trajectory([snapshot]).md(), indices=indices)
 
         >>> cv = CV_Function('my_cv', func, indices=[[4, 6, 8, 10]])
 
-        The function will also check if non-standard modules are imported, which are now
-        numpy, math, msmbuilder, pandas and mdtraj
+        The function will also check if non-standard modules are imported,
+        which are now `numpy`, `math`, `msmbuilder`, `pandas` and `mdtraj`
         """
 
         super(CV_Callable, self).__init__(
@@ -309,7 +321,8 @@ class CV_Callable(CollectiveVariable):
         dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
         dct['cv_wrap_numpy_array'] = self.cv_wrap_numpy_array
-        dct['cv_scalarize_numpy_singletons'] = self.cv_scalarize_numpy_singletons
+        dct['cv_scalarize_numpy_singletons'] = \
+            self.cv_scalarize_numpy_singletons
         dct['kwargs'] = self.kwargs
         return dct
 
@@ -334,7 +347,8 @@ class CV_Callable(CollectiveVariable):
 
             if hasattr(self.cv_callable.func_code, 'op_code') \
                     and hasattr(other.cv_callable.func_code, 'op_code') \
-                    and self.cv_callable.func_code.op_code != other.cv_callable.func_code.op_code:
+                    and self.cv_callable.func_code.op_code != \
+                    other.cv_callable.func_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
 
@@ -375,13 +389,14 @@ class CV_Function(CV_Callable):
         cv_wrap_numpy_array
         cv_scalarize_numpy_singletons
         kwargs
-            a dictionary of named arguments which should be given to `cv_callable` (for example, the
-            atoms which define a specific distance/angle). Finally
-            `cv_callable(snapshots, **kwargs)` is called
+            a dictionary of named arguments which should be given to
+            `cv_callable` (for example, the atoms which define a specific
+            distance/angle). Finally `cv_callable(snapshots, **kwargs)` is
+            called
 
         See also
         --------
-        openpathsampling.CV_Callable
+        `openpathsampling.CV_Callable`
 
         """
 
@@ -405,7 +420,7 @@ class CV_Function(CV_Callable):
 
 
 class CV_Generator(CV_Callable):
-    """Turn a callable class or other function that generates a callable object into a CV
+    """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
     will be created using the given \**kwargs.
@@ -427,10 +442,10 @@ class CV_Generator(CV_Callable):
         name
         generator : callable class
             a class where instances have a `__call__` attribute
-        cv_return_type
-        cv_return_shape
-        cv_return_simtk_unit
+        cv_time_reversible
         cv_requires_lists
+        cv_wrap_numpy_array
+        cv_scalarize_numpy_singletons
         kwargs
             additional arguments which should be given to `c` (for example, the
             atoms which define a specific distance/angle). Finally an instance
@@ -473,8 +488,8 @@ class CV_MDTraj_Function(CV_Function):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
     This is identical to CV_Function except that the function is called with
-    an mdraj.Trajetory object instead of the :class:`openpathsampling.Trajectory` one using
-    `f(traj.md(), \**kwargs)`
+    an mdraj.Trajetory object instead of the
+    :class:`openpathsampling.Trajectory` one using `f(traj.md(), \**kwargs)`
 
     Examples
     --------
@@ -507,9 +522,10 @@ class CV_MDTraj_Function(CV_Function):
         cv_wrap_numpy_array
         cv_scalarize_numpy_singletons
         scalarize_numpy_singletons : bool, default: True
-            If `True` then arrays of length 1 will be treated as array with one dimension less.
-            e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
-            use en external function from mdtraj to get only a single value.
+            If `True` then arrays of length 1 will be treated as array with one
+            dimension less. e.g. `[[1], [2], [3]]` will be turned into
+            `[1, 2, 3]`. This is often useful, when you use en external function
+            from mdtraj to get only a single value.
 
         """
 
@@ -561,11 +577,11 @@ class CV_MSMB_Featurizer(CV_Generator):
         featurizer : msmbuilder.Featurizer, callable
             the featurizer used as a callable class
         kwargs
-            a dictionary of named arguments which should be given to `c` (for example, the
-            atoms which define a specific distance/angle). Finally an instance
-            `instance = cls(\**kwargs)` is create when the CV is created and
-            using the CV will call `instance(snapshots)`
-        cv_requires_lists
+            a dictionary of named arguments which should be given to `c`
+            (for example, the atoms which define a specific distance/angle).
+            Finally an instance `instance = cls(\**kwargs)` is create when the
+            CV is created and using the CV will call `instance(snapshots)`
+        cv_wrap_numpy_array
         cv_scalarize_numpy_singletons
 
         Notes
@@ -589,7 +605,6 @@ class CV_MSMB_Featurizer(CV_Generator):
         super(CV_Generator, self).__init__(
             name,
             cv_callable=featurizer,
-            cv_time_reversible=True,
             cv_requires_lists=True,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
             cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
@@ -620,11 +635,11 @@ class CV_MSMB_Featurizer(CV_Generator):
 
 
 class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
-    """Make `CollectiveVariable` from `fcn` that takes mdtraj.trajectory as input.
+    """Make a CV from a function that takes mdtraj.trajectory as input.
 
     This is identical to CV_Class except that the function is called with
-    an mdraj.Trajetory object instead of the openpathsampling.Trajectory one using
-    `fnc(traj.md(), **kwargs)`
+    an mdraj.Trajetory object instead of the openpathsampling.Trajectory
+    one using `fnc(traj.md(), **kwargs)`
 
     """
 
@@ -640,21 +655,16 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
         Parameters
         ----------
         name
-        c : msmbuilder.Featurizer
-            the featurizer used as a callable class
+        featurizer : `pyemma.coordinates.featurizer`
+            the pyemma featurizer used as a callable class
+        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+            the mdtraj topology wrapper from OPS that is used to initialize
+            the featurizer in `pyemma.coordinates.featurizer(topology)`
         **kwargs : **kwargs
-            a dictionary of named arguments which should be given to `c` (for example, the
-            atoms which define a specific distance/angle). Finally an instance
-            `instance = cls(**kwargs)` is create when the CV is created and
-            using the CV will call `instance(snapshots)`
-        cv_return_type
-        cv_return_shape
-        cv_return_simtk_unit
-        cv_requires_lists
-        scalarize_numpy_singletons : bool, default: True
-            If `True` then arrays of length 1 will be treated as array with one dimension less.
-            e.g. [ [1], [2], [3] ] will be turned into [1, 2, 3]. This is often useful, when you
-            use en external function to get only a single value.
+            a dictionary of named arguments which should be given to `c`
+            (for example, the atoms which define a specific distance/angle).
+            Finally an instance `instance = cls(**kwargs)` is create when the
+            CV is created and using the CV will call `instance(snapshots)`
 
         Notes
         -----
@@ -682,7 +692,6 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
         super(CV_Generator, self).__init__(
             name,
             cv_callable=featurizer,
-            cv_time_reversible=True,
             cv_requires_lists=True,
             cv_wrap_numpy_array=True,
             cv_scalarize_numpy_singletons=True,
