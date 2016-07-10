@@ -1,5 +1,5 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
+                        assert_almost_equal, raises, assert_in)
 
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
@@ -159,21 +159,26 @@ class testBiasEnsembleTable(object):
                   ens_B[1]: 0.6,
                   ens_B[2]: 0.3,
                   ms_outer: 0.15}
-        dict_C = {ens_B[0]: 1.0,
-                  ens_B[1]: 0.8,
-                  ens_B[2]: 0.2}
+        dict_C = {ens_C[0]: 1.0,
+                  ens_C[1]: 0.8,
+                  ens_C[2]: 0.2}
 
         bias_A = BiasEnsembleTable.ratios_from_dictionary(dict_A)
         bias_B = BiasEnsembleTable.ratios_from_dictionary(dict_B)
         bias_C = BiasEnsembleTable.ratios_from_dictionary(dict_C)
         bias_AB = bias_A + bias_B
-        print {k.name: bias_AB.ensembles_to_ids[k] for k in
-               bias_AB.ensembles_to_ids}
-        #assert_equal(bias_AB.ensembles_to_ids,
-                     #{ens_A[0]: 0, ens_A[1]: 1, ens_A[2]: 2,
-                      #ens_B[0]: 3, ens_B[1]: 4, ens_B[2]: 5,
-                      #ms_outer: 6})
-        # TODO: tests for values
+        # check the ensembles_to_ids
+        assert_equal(len(bias_AB.ensembles_to_ids), 7)
+        for ens in ens_A:
+            assert_in(bias_AB.ensembles_to_ids[ens], [0, 1, 2])
+        for ens in ens_B:
+            assert_in(bias_AB.ensembles_to_ids[ens], [3, 4, 5])
+        assert_equal(bias_AB.ensembles_to_ids[ms_outer], 6)
+
+        # check some values
+
+
+         #TODO: tests for values
 
         bias_ABC = bias_A + bias_B + bias_C
         # TODO: tests for values
