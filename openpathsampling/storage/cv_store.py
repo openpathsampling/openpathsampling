@@ -68,15 +68,15 @@ class CVStore(UniqueNamedObjectStore):
         cv : :class:`openpathsampling.CollectiveVariable`
             the objectdict you request the attached variable store
         template : :obj:`openpathsampling.engines.BaseSnapshot`
-            an optional snapshot to be used to compute a test value of the CV. This will
-            determine the type and shape of the
+            an optional snapshot to be used to compute a test value of the CV.
+            This will determine the type and shape of the
         allow_partial : bool
-            if `True` the added store can hold a part of all values. Useful if the values are
-            large and/or complex and you do not need them for all snapshots
+            if `True` the added store can hold a part of all values. Useful if
+            the values are large and/or complex and you do not need them for all
+            snapshots
         chunksize : int
             for partial storage you can set a chunksize and speedup
         """
-
 
         if template is None:
             if cv.diskcache_template is not None:
@@ -84,8 +84,9 @@ class CVStore(UniqueNamedObjectStore):
             elif len(self.storage.snapshots) > 0:
                 template = self.storage.snapshots[0]
             else:
-                raise RuntimeError('Need either at least one stored snapshot or a '
-                                   'template snapshot to determine type and shape of the CV.')
+                raise RuntimeError(
+                    'Need either at least one stored snapshot or a '
+                    'template snapshot to determine type and shape of the CV.')
 
         self.storage.snapshots.add_cv(
             cv,
@@ -138,9 +139,10 @@ class CVStore(UniqueNamedObjectStore):
         if self.has_cache(cv):
             cv.set_cache_store(self.cache_store(cv))
         else:
-            raise RuntimeWarning(('Your object is not stored in "%s" yet and hence a store ' +
-                                  'for the cache cannot be attached.' +
-                                 'Save your CV first and retry.') % self.storage)
+            raise RuntimeWarning(
+                ('Your object is not stored in "%s" yet and hence a store ' +
+                 'for the cache cannot be attached.' +
+                 'Save your CV first and retry.') % self.storage)
 
     def cache_all(self):
         """
