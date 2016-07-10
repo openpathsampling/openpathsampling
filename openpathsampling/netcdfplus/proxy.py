@@ -39,7 +39,6 @@ class LoaderProxy(object):
         self._subject = weakref.ref(ref)
         return ref
 
-    # the next two are only used for Snapshots to not load a snapshot, if the reversed is requested
     @property
     def reversed(self):
         if self._store.reference_by_uuid:
@@ -135,12 +134,13 @@ def lazy_loading_attributes(*attributes):
     """
     Set attributes in the decorated class to be handled as lazy loaded objects.
 
-    An attribute that is added here will be turned into a special descriptor that
-    will dynamically load an objects if it is represented internally as a LoaderProxy
-    object and will return the real object, not the proxy!
+    An attribute that is added here will be turned into a special descriptor
+    that will dynamically load an objects if it is represented internally as a
+    LoaderProxy object and will return the real object, not the proxy!
 
     The second thing you can do is that saving using the `.write()` command will
-    automatically remove the real object and turn the stored object into a proxy.
+    automatically remove the real object and turn the stored object into
+    a proxy
 
     Examples
     --------
@@ -153,11 +153,12 @@ def lazy_loading_attributes(*attributes):
 
     It will not return the proxy. This is completely hidden.
 
-    If you want to use the intelligent saving that will remove the reference to the
-    object you can do
+    If you want to use the intelligent saving that will remove the reference
+    to the object you can do
     >>> sample_store.write('parent', index, my_sample)
 
-    After this call the attribute `my_sample.parent` will be turned into a proxy.
+    After this call the attribute `my_sample.parent` will be turned into
+    a proxy
 
     """
     def _decorator(cls):

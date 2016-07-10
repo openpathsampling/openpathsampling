@@ -19,11 +19,11 @@ class UUIDReversalDict(UUIDDict):
     def rev_id(obj):
         return StorableObject.ruuid(UUIDReversalDict.id(obj))
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value, **kwargs):
         OrderedDict.__setitem__(self, self.id(key), value)
         OrderedDict.__setitem__(self, self.rev_id(key), value ^ 1)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key, **kwargs):
         OrderedDict.__delitem__(self, self.id(key))
         OrderedDict.__delitem__(self, self.rev_id(key))
 
