@@ -11,7 +11,7 @@ import logging
 from openpathsampling import VolumeFactory as vf
 
 quiet_loggers = ["initialization", "ensemble", "netcdfplus.objects",
-                 "netcdfplus.netcdfplus", "pathmover"]
+                 "netcdfplus.netcdfplus", "pathmover", "netcdfplus.base"]
 for logger in quiet_loggers:
     logging.getLogger("openpathsampling."+logger).setLevel(logging.CRITICAL)
 
@@ -167,6 +167,12 @@ class testBiasEnsembleTable(object):
         bias_B = BiasEnsembleTable.ratios_from_dictionary(dict_B)
         bias_C = BiasEnsembleTable.ratios_from_dictionary(dict_C)
         bias_AB = bias_A + bias_B
+        print {k.name: bias_AB.ensembles_to_ids[k] for k in
+               bias_AB.ensembles_to_ids}
+        #assert_equal(bias_AB.ensembles_to_ids,
+                     #{ens_A[0]: 0, ens_A[1]: 1, ens_A[2]: 2,
+                      #ens_B[0]: 3, ens_B[1]: 4, ens_B[2]: 5,
+                      #ms_outer: 6})
         # TODO: tests for values
 
         bias_ABC = bias_A + bias_B + bias_C
