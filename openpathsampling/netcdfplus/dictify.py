@@ -46,6 +46,8 @@ class ObjectJSON(object):
         self.unit_system = unit_system
         self.class_list = dict()
         self.allowed_storable_types = dict()
+        self.type_names = {}
+        self.type_classes = {}
 
         self.update_class_list()
 
@@ -100,21 +102,21 @@ class ObjectJSON(object):
 
             if len(simple) < len(obj):
                 # other keys than int or str
-                result = {'_dict':
-                              [
-                                self.simplify(tuple([key, o]))
-                                for key, o in obj.iteritems()
-                                if key not in self.excluded_keys
-                              ]
-                          }
+                result = {
+                    '_dict': [
+                        self.simplify(tuple([key, o]))
+                        for key, o in obj.iteritems()
+                        if key not in self.excluded_keys
+                    ]
+                }
 
             else:
                 # simple enough, do it the old way
                 # FASTER VERSION NORMALLY
-                result = {key: self.simplify(o)
-                          for key, o in obj.iteritems()
-                          if key not in self.excluded_keys
-                          }
+                result = {
+                    key: self.simplify(o) for key, o in obj.iteritems()
+                    if key not in self.excluded_keys
+                }
 
                 # SLOWER VERSION FOR DEBUGGING
                 # result = {}
@@ -168,7 +170,7 @@ class ObjectJSON(object):
                 return {
                     self.build(key): self.build(o)
                     for key, o in self.build(obj['_dict'])
-                    }
+                }
 
             elif '_import' in obj:
                 module = obj['_import']
@@ -185,7 +187,7 @@ class ObjectJSON(object):
                 return {
                     key: self.build(o)
                     for key, o in obj.iteritems()
-                    }
+                }
 
         elif type(obj) is list:
             return [self.build(o) for o in obj]
@@ -268,10 +270,12 @@ class ObjectJSON(object):
                        ',\n'.join(map(lambda x: ' ' * 20 + x + '=' + x, global_vars)) + ')' + '\n'
                 err += '\n    and change your function definition like this'
                 err += '\n\n        def ' + c.func_name + '(snapshot, ...,  ' + \
-                       '\n' + ',\n'.join(map(lambda x : ' ' * 16 + x, global_vars)) + '):'
+                       '\n' + ',\n'.join(map(lambda x: ' ' * 16 + x, global_vars)) + '):'
 
-            unsafe_modules = [module for module in import_vars
-                                   if module not in ObjectJSON.safe_modules]
+            unsafe_modules = [
+                module for module in import_vars
+                if module not in ObjectJSON.safe_modules
+            ]
 
             if len(unsafe_modules) > 0:
                 if len(err) > 0:
@@ -352,7 +356,7 @@ class ObjectJSON(object):
             a list of co_names used in this function when calling op
         """
 
-        #TODO: Clean this up. It now works only for codes that use co_names
+        # TODO: Clean this up. It now works only for codes that use co_names
         opcodes = code.func_code.co_code
         i = 0
         ret = []
