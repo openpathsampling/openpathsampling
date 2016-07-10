@@ -3,36 +3,32 @@ import openpathsampling as paths
 
 def split_md_storage(filename, update_cvs=True):
     """
-    Creates two copies of the current storage. One containing trajectories and the other the rest
+    Split storage into two files; trajectories and the rest
 
-    Currently this makes only sense for storage with snapshots that use additional stores.
-    Otherwise we need to store the full snapshots for CVs anyway and nothing is gained.
+    Currently this makes only sense for storage with snapshots that use
+    additional stores. Otherwise we need to store the full snapshots for
+    CVs anyway and nothing is gained.
 
     """
-
-    import openpathsampling.engines.openmm as peng
 
     storage_from = paths.AnalysisStorage(
         filename=filename
     )
-
-    if not issubclass(storage_from.snapshots.snapshot.snapshot_class, peng.Snapshot):
-        raise RuntimeError('Split only makes sense (for now) for storages with openmm.Snapshots')
 
     filename_base = '.'.join(filename.split('.')[:-1])
 
     filename_main = filename_base + '_main.nc'
     filename_data = filename_base + '_frames.nc'
 
+    # `use_uuid=True`, otherwise we cannot later recombine the two!
     storage_main = paths.Storage(filename=filename_main, mode='w')
     storage_data = paths.Storage(filename=filename_data, mode='w')
 
+    # this will tell the data storage not to save snapshots only a reference
+    storage_data.snapshots.only_mention = True
+
     # save trajectories to data
     map(storage_data.trajectories.save, storage_from.trajectories)
-
-    # mark all kinetics and statics as already saved in main to prevent auto save there
-    map(storage_main.kinetics.remember, storage_from.kinetics)
-    map(storage_main.statics.remember, storage_from.statics)
 
     for storage_name in [
         'steps',
@@ -41,28 +37,22 @@ def split_md_storage(filename, update_cvs=True):
         'samplesets', 'ensembles', 'transitions', 'pathmovechanges',
         'samples', 'pathsimulators', 'cvs'
     ]:
-        map(getattr(storage_main, storage_name).save, getattr(storage_from, storage_name))
-
-    storage_main.statics.index.clear()
-    storage_main.kinetics.index.clear()
-    storage_main.statics.cache.clear()
-    storage_main.kinetics.cache.clear()
-
-    storage_main.snapshots.cache.clear()
+        map(
+            getattr(storage_main, storage_name).save,
+            getattr(storage_from, storage_name)
+        )
 
     if update_cvs:
-        # make we now how to load snapshots if necessary
+        # tell the main store to load from the data storage if we need to
         storage_main.fallback = storage_from
         cvs = storage_from.cvs[:]
 
         for cv in cvs:
             storage_main.cvs.set_cache_store(cv)
-#            storage_main.cvs.create_cache(cv)
 
         for cv in cvs:
-            q = storage_from.snapshots.all()[10:11]
-            s = list.__getitem__(q, 0)
-            cv(q)
+            q = storage_from.snapshots.all()
+            data = cv(q)
             storage_main.cvs.sync(cv)
 
     storage_main.close()

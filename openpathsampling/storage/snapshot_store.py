@@ -1182,7 +1182,7 @@ class SnapshotValueStore(ObjectStore):
             elif type(item) is list:
                 return [self.load(idx) for idx in item]
             elif item is Ellipsis:
-                return self.iterator()
+                return iter(self)
         except KeyError:
             return None
 

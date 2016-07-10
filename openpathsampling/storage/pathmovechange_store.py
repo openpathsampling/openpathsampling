@@ -53,17 +53,11 @@ class PathMoveChangeStore(ObjectStore):
                              dimensions='...',
                              chunksizes=(10240,))
 
-    def all(self):
-        self.cache_all()
-        return self
-
     def cache_all(self):
         """Load all samples as fast as possible into the cache
 
         """
         if not self._cached_all:
-            # _ = self[:]
-            # return
             poss = range(len(self))
             if self.reference_by_uuid:
                 uuids = self.vars['uuid']

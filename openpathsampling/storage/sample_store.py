@@ -11,7 +11,7 @@ class SampleStore(VariableStore):
         )
 
     def by_ensemble(self, ensemble):
-        return [sample for sample in self.iterator()
+        return [sample for sample in self
                 if sample.ensemble == ensemble]
 
     def initialize(self):

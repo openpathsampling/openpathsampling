@@ -30,10 +30,10 @@ class UUIDDict(OrderedDict):
     def __getitem__(self, item):
         return OrderedDict.__getitem__(self, self.id(item))
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value, **kwargs):
         OrderedDict.__setitem__(self, self.id(key), value)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key, **kwargs):
         OrderedDict.__delitem__(self, self.id(key))
 
     def __contains__(self, item):
@@ -50,16 +50,16 @@ class ObjectStore(StorableNamedObject):
 
     Attributes
     ----------
-    content_class : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+    content_class : :obj:`openpathsampling.netcdfplus.base.StorableObject`
         a reference to the class type to be stored using this Storage. Must be
-        subclassed from :py:func:`openpathsampling.netcdfplus.base.StorableObject`
+        subclassed from :obj:`openpathsampling.netcdfplus.base.StorableObject`
     json : string
         if already computed a JSON Serialized string of the object
     cache : :py:class:`openpathsampling.netcdfplus.cache.Cache`
         a dictionary that holds references to all stored elements by index
         or string for named objects. This is only used for cached access
-        if caching is not `False`. Must be of type :py:func:`openpathsampling.netcdfplus.base.StorableObject`
-        or subclassed.
+        if caching is not `False`. Must be of type
+        :obj:`openpathsampling.netcdfplus.base.StorableObject` or subclassed.
 
     """
 
@@ -91,12 +91,13 @@ class ObjectStore(StorableNamedObject):
         ----------
         content_class
         json : bool or str `json` or `jsonobj`
-            if `False` the store will not create a json variable for serialization
-            if `True` the store will use the json pickling to store objects and a
-            single storable object will be serialized and not referenced. If a string
-            is given the string is taken as the variable type of the json variable.
-            Here only two values are allowed: `jsonobj` (equivalent to `True`) or
-            `json` which will also reference directly given storable objects.
+            if `False` the store will not create a json variable for
+            serialization if `True` the store will use the json pickling to
+            store objects and a single storable object will be serialized and
+            not referenced. If a string is given the string is taken as the
+            variable type of the json variable. Here only two values are
+            allowed: `jsonobj` (equivalent to `True`) or `json` which will
+            also reference directly given storable objects.
 
         nestable : bool
             if `True` this marks the content_class to be saved as nested dict
@@ -110,23 +111,28 @@ class ObjectStore(StorableNamedObject):
         with a reasonable maximum number of objects that depends on the typical
         number of objects to cache and their size
 
-        The class that takes care of storing data in a file is called a `Storage`,
-        so the netCDF+ subclassed `Storage` is a storage. The classes that know how
-        to load and save an object from the storage are called `Store`,
-        like ObjectStore, SampleStore, etc...
+        The class that takes care of storing data in a file is called a
+        `Storage`, so the netCDF+ subclassed `Storage` is a storage.
+        The classes that know how to load and save an object from the storage
+        are called `Store`, like ObjectStore, SampleStore, etc...
 
-        The difference between `json` and `jsonobj` is sutble. Consider storing a
-        complex object. Then there are two ways to do that. 1. `json`: Store a reference to
-        the object (provided) it is stored and 2. `jsonobj`: serialize the object and only use
-        references for contained objects. All inner objects will always be stored using
-        references. The only exception is using nestable. Consider objects that contain references
-        to objects of the same type, like e.g. operations in an equation (2*3 + 3). Each operation represents
-        a value but each operation needs values to operate on. To save such an object you have
-        again two options: 1. `nestable=False`. Store all single objects and always reference
-        the contained objects. For an equation that would mean to store several objects
-        `op1 = plus(op2, 3), op2 = times(2, 3)`. Since this is correct though not intuitive you can
-        also use 2. `nestable=True`. Store all the serialized objects nested into one object (string).
-        For our example this corresponds to `plus(times(2,3), 3)`.
+        The difference between `json` and `jsonobj` is subtle. Consider
+        storing a complex object. Then there are two ways to do that.
+        1. `json`: Store a reference to the object (provided) it is stored and
+        2. `jsonobj`: serialize the object and only use references for contained
+        objects. All inner objects will always be stored using references.
+        The only exception is using nestable. Consider objects that contain
+        references to objects of the same type, like e.g. operations in an
+        equation (2*3 + 3). Each operation represents a value but each
+        operation needs values to operate on. To save such an object you have
+        again two options:
+        1. `nestable=False`. Store all single objects and always reference
+        the contained objects. For an equation that would mean to store several
+        objects `op1 = plus(op2, 3), op2 = times(2, 3)`. Since this is correct
+        though not intuitive you can also use
+        2. `nestable=True`. Store all the serialized objects nested into one
+        object (string). For our example this corresponds to
+        `plus(times(2,3), 3)`.
 
         """
 
@@ -140,7 +146,8 @@ class ObjectStore(StorableNamedObject):
         self.nestable = nestable
         self._created = False
 
-        # This will not be stored since its information is contained in the dimension names
+        # This will not be stored since its information is contained in the
+        # dimension names
         self._dimension_prefix_store = None
 
         self.variables = dict()
@@ -152,10 +159,15 @@ class ObjectStore(StorableNamedObject):
         if json in [True, False, 'json', 'jsonobj']:
             self.json = json
         else:
-            raise ValueError('Valid settings for json are only True, False, `json` or `jsonobj`.')
+            raise ValueError(
+                'Valid settings for json are only True, False, `json` or '
+                '`jsonobj`.')
 
-        if self.content_class is not None and not issubclass(self.content_class, StorableObject):
-            raise ValueError('Content class "%s" must be subclassed from StorableObject.' % self.content_class.__name__)
+        if self.content_class is not None \
+                and not issubclass(self.content_class, StorableObject):
+            raise ValueError(
+                'Content class "%s" must be subclassed from StorableObject.' %
+                self.content_class.__name__)
 
         self.fallback_store = None
 
@@ -227,7 +239,9 @@ class ObjectStore(StorableNamedObject):
         """
 
         if self._storage is None:
-            raise RuntimeError('A storage needs to be added to this store to be used! Use .register() to do so.')
+            raise RuntimeError(
+                'A storage needs to be added to this store to be used! '
+                'Use .register() to do so.')
 
         return self._storage
 
@@ -245,11 +259,11 @@ class ObjectStore(StorableNamedObject):
     @property
     def simplifier(self):
         """
-        Return the attached simplifier instance used to create JSON serialization
+        Return the simplifier instance used to create JSON serialization
 
         Returns
         -------
-        :class:`openpathsampling.netcdfplus.base.dictify.StorableObjectJSON`
+        :class:`openpathsampling.netcdfplus.dictify.StorableObjectJSON`
             the simplifier object used in the associated storage
 
         """
@@ -261,7 +275,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        caching : :class:`openpathsampling.netcdf.Cache`
+        caching : :class:`openpathsampling.netcdfplus.Cache`
 
         """
         if caching is None:
@@ -283,14 +297,15 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+        obj : :class:`openpathsampling.netcdfplus.base.StorableObject`
             the object that can be stored in this store for which its index is
             to be returned
 
         Returns
         -------
-        int or None
-            The integer index of the given object or None if it is not stored yet
+        int or `None`
+            The integer index of the given object or `None` if it is not
+            stored yet
         """
         return self.index[obj]
 
@@ -306,7 +321,6 @@ class ObjectStore(StorableNamedObject):
             for idx in range(len(self)):
                 yield self.load(idx)
 
-
     def __len__(self):
         """
         Return the number of stored objects
@@ -318,50 +332,6 @@ class ObjectStore(StorableNamedObject):
 
         """
         return len(self.storage.dimensions[self.prefix])
-
-    def iterator(this, iter_range=None):
-        """
-        Return an iterator over all objects in the storage
-
-        Parameters
-        ----------
-        iter_range : slice or None
-            if this is not `None` it confines the iterator to objects specified
-            in the slice
-
-        Returns
-        -------
-        :func:`Iterator()`
-            The iterator that iterates the objects in the store
-
-        """
-
-        class ObjectIterator:
-            def __init__(self):
-                self.storage = this
-                self.iter_range = iter_range
-                if iter_range is None:
-                    self.idx = 0
-                    self.end = len(self.storage)
-                else:
-                    self.idx = iter_range.start
-                    self.end = iter_range.stop
-
-            def __iter__(self):
-                return self
-
-            def next(self):
-                if self.idx < self.end:
-                    obj = self.storage.load(self.idx)
-                    if self.iter_range is not None and self.iter_range.step is not None:
-                        self.idx += self.iter_range.step
-                    else:
-                        self.idx += 1
-                    return obj
-                else:
-                    raise StopIteration()
-
-        return ObjectIterator()
 
     def write(self, variable, idx, obj, attribute=None):
         if attribute is None:
@@ -382,9 +352,9 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        item : :py:class:`openpathsampling.netcdfplus.base.StorableObject` or int
-            The item or index that points to an object in this store and to which
-            a proxy is requested.
+        item : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+            or int The item or index that points to an object in this store
+            and to which a proxy is requested.
 
         Returns
         -------
@@ -399,7 +369,7 @@ class ObjectStore(StorableNamedObject):
                 idx = self.vars['uuid'][item]
             elif tt is UUID:
                 idx = item
-            elif tt in [str, unicode]:
+            elif isinstance(tt, (str, unicode)):
                 if item[0] == '-':
                     return None
 
@@ -425,18 +395,19 @@ class ObjectStore(StorableNamedObject):
             if type(item) is int or type(item) is str or type(item) is UUID:
                 return self.load(item)
             elif type(item) is slice:
-                return [self.load(idx) for idx in range(*item.indices(len(self)))]
+                return [self.load(idx)
+                        for idx in range(*item.indices(len(self)))]
             elif type(item) is list:
                 return [self.load(idx) for idx in item]
             elif item is Ellipsis:
-                return self.iterator()
+                return iter(self)
         except KeyError:
             return None
 
     def get(self, item):
         try:
             return self[item]
-        except:
+        except KeyError:
             return None
 
     def _load(self, idx):
@@ -458,7 +429,6 @@ class ObjectStore(StorableNamedObject):
         if not self._cached_all:
             idxs = range(len(self))
             jsons = self.variables['json'][:]
-
 
             [self.add_single_to_cache(i, j) for i, j in zip(
                 idxs,
@@ -570,7 +540,14 @@ class ObjectStore(StorableNamedObject):
     # INITIALISATION UTILITY FUNCTIONS
     # ==============================================================================
 
-    def create_variable(self, name, var_type, dimensions=None, chunksizes=None, **kwargs):
+    def create_variable(
+            self,
+            name,
+            var_type,
+            dimensions=None,
+            chunksizes=None,
+            **kwargs
+    ):
         """
         Create a new variable in the netCDF storage. This is just a helper
         function to structure the code better.
@@ -581,12 +558,13 @@ class ObjectStore(StorableNamedObject):
             The name of the variable to be created
         var_type : str
             The string representing the type of the data stored in the variable.
-            Allowed are strings of native python types in which case the variables
-            will be treated as python or a string of the form 'numpy.type' which
-            will refer to the numpy data types. Numpy is preferred sinec the api
-            to netCDF uses numpy and thus it is faster. Possible input strings are
-            `int`, `float`, `long`, `str`, `numpy.float32`, `numpy.float64`,
-            `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64`
+            Allowed are strings of native python types in which case the
+            variables will be treated as python or a string of the form
+            'numpy.type' which will refer to the numpy data types. Numpy is
+            preferred since the api to netCDF uses numpy and thus it is faster.
+            Possible input strings are `int`, `float`, `long`, `str`,
+            `numpy.float32`, `numpy.float64`, `numpy.int8`, `numpy.int16`,
+            `numpy.int32`, `numpy.int64`
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
@@ -604,7 +582,8 @@ class ObjectStore(StorableNamedObject):
             A tuple of ints per number of dimensions. This specifies in what
             block sizes a variable is stored. Usually for object related stuff
             we want to store everything of one object at once so this is often
-            (1, ..., ...). A single int is interpreted as a tuple with one entry.
+            (1, ..., ...). A single int is interpreted as a tuple with one
+            entry.
         """
 
         # add the main dimension to the var_type
@@ -625,19 +604,27 @@ class ObjectStore(StorableNamedObject):
 
         if chunksizes is None and len(dimensions) == 1:
             chunksizes = (1, )
-        elif chunksizes is not None and dimensions[-1] == '...' and len(dimensions) == len(chunksizes) + 2:
+        elif chunksizes is not None and dimensions[-1] == '...' \
+                and len(dimensions) == len(chunksizes) + 2:
             chunksizes = tuple([1] + list(chunksizes))
-        elif chunksizes is not None and dimensions[-1] != '...' and len(dimensions) == len(chunksizes) + 1:
+        elif chunksizes is not None and dimensions[-1] != '...' \
+                and len(dimensions) == len(chunksizes) + 1:
             chunksizes = tuple([1] + list(chunksizes))
 
         if self.dimension_prefix:
             dimensions = tuple(
                 [dimensions[0]] +
-                [self.dimension_prefix + dim if type(dim) is str and dim != '...' else dim for dim in dimensions[1:]]
+                [
+                    self.dimension_prefix + dim if type(dim) is str and
+                    dim != '...' else dim for dim in dimensions[1:]
+                ]
             )
             chunksizes = tuple(
                 [chunksizes[0]] +
-                [self.dimension_prefix + chs if type(chs) is str else chs for chs in chunksizes[1:]]
+                [
+                    self.dimension_prefix + chs
+                    if type(chs) is str else chs for chs in chunksizes[1:]
+                ]
             )
 
         self.storage.create_variable(
@@ -659,21 +646,23 @@ class ObjectStore(StorableNamedObject):
         """
         Select which store or none should be used to prefix dimension names
 
-        If you want to create multiple instances of a store and these should have
-        differently long dimensions you need unique names for these. This way you can
-        select a store and the dimensions will be prefixed with the stores prefix
+        If you want to create multiple instances of a store and these should
+        have differently long dimensions you need unique names for these. This
+        way you can select a store and the dimensions will be prefixed with the
+        stores prefix
 
         Parameters
         ----------
         prefix_store : :obj:`openpathsampling.netcdf.ObjectStore`
-            the store from which to use its prefix / name to prefix dimension names
+            the store from which to use its prefix / name to prefix
+            dimension names
 
         """
         self._dimension_prefix_store = prefix_store
 
-    # =============================================================================
+    # ==========================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
-    # =============================================================================
+    # ==========================================================================
 
     def load(self, idx):
         """
@@ -700,11 +689,13 @@ class ObjectStore(StorableNamedObject):
                 elif self.storage.fallback is not None:
                     return self.storage.fallback.stores[self.name].load(idx)
                 else:
-                    raise ValueError('str %s not found in storage or fallback' % idx)
+                    raise ValueError(
+                        'str %s not found in storage or fallback' % idx)
 
         elif type(idx) is not int:
-            raise ValueError(
-                'indices of type "%s" are not allowed in named storage (only str and int)' % type(idx).__name__
+            raise ValueError((
+                'indices of type "%s" are not allowed in named storage '
+                '(only str and int)') % type(idx).__name__
             )
         else:
             n_idx = int(idx)
@@ -721,18 +712,28 @@ class ObjectStore(StorableNamedObject):
         except KeyError:
             pass
 
-        logger.debug('Calling load object of type ' + self.content_class.__name__ + ' and IDX #' + str(idx))
+        logger.debug(
+            'Calling load object of type `%s` @ IDX #%d' %
+            (self.content_class.__name__, n_idx))
 
         if n_idx >= len(self):
-            logger.warning('Trying to load from IDX #' + str(n_idx) + ' > number of object ' + str(len(self)))
+            logger.warning(
+                'Trying to load from IDX #%d > number of object %d' %
+                (n_idx, len(self)))
             return None
         elif n_idx < 0:
-            logger.warning('Trying to load negative IDX #' + str(n_idx) + ' < 0. This should never happen!!!')
-            raise RuntimeError('Loading of negative int should result in no object. This should never happen!')
+            logger.warning((
+                'Trying to load negative IDX #%d < 0. '
+                'This should never happen!!!') % n_idx)
+            raise RuntimeError(
+                'Loading of negative int should result in no object. '
+                'This should never happen!')
         else:
             obj = self._load(n_idx)
 
-        logger.debug('Calling load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+        logger.debug(
+            'Calling load object of type %s and IDX # %d ... DONE' %
+            (self.content_class.__name__, n_idx))
 
         if obj is not None:
             self._get_id(n_idx, obj)
@@ -741,9 +742,13 @@ class ObjectStore(StorableNamedObject):
             self.index[obj] = n_idx
             self.cache[n_idx] = obj
 
-            logger.debug('Try loading UUID object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+            logger.debug(
+                'Try loading UUID object of type %s and IDX # %d ... DONE' %
+                (self.content_class.__name__, n_idx))
 
-        logger.debug('Finished load object of type %s and IDX # %d ... DONE' % (self.content_class.__name__, n_idx))
+        logger.debug(
+            'Finished load object of type %s and IDX # %d ... DONE' %
+            (self.content_class.__name__, n_idx))
 
         return obj
 
@@ -757,13 +762,13 @@ class ObjectStore(StorableNamedObject):
         """
         Tell a store that an obj should be assumed as stored
 
-        This is useful, if you do not want to store an object in a specific store. Especially to make sure
-        snapshots are not stored multiple times
+        This is useful, if you do not want to store an object in a specific
+        store. Especially to make sure snapshots are not stored multiple times
 
         Parameters
         ----------
         obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
-            the object to the fake stored
+            the object to be fake stored
 
         """
 
@@ -793,7 +798,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+        obj : :class:`openpathsampling.netcdfplus.base.StorableObject`
             the object to be stored
         idx : int or string or `None`
             the index to be used for storing. This is highly discouraged since
@@ -810,7 +815,7 @@ class ObjectStore(StorableNamedObject):
 
             # numbers other than -1 are reserved for other things
 
-        if hasattr(obj, '_idx'):
+        if isinstance(obj, LoaderProxy):
             if obj._store is self:
                 # is a proxy of a saved object so do nothing
                 return obj._idx
@@ -825,14 +830,15 @@ class ObjectStore(StorableNamedObject):
                 return self.save(obj.__subject__)
 
         if not isinstance(obj, self.content_class):
-            raise ValueError(
-                'This store can only store object of base type "%s". Given obj is of type "%s". You'
-                'might need to use another store.' % (self.content_class, obj.__class__.__name__)
+            raise ValueError((
+                'This store can only store object of base type "%s". Given '
+                'obj is of type "%s". You might need to use another store.')
+                % (self.content_class, obj.__class__.__name__)
             )
 
         n_idx = self.free()
 
-        # mark as saved so circular dependencies will not result in infinite loops
+        # mark as saved so circular dependencies will not cause infinite loops
         self.index[obj] = n_idx
 
         # make sure in nested saving that an IDX is not used twice!
@@ -862,7 +868,8 @@ class ObjectStore(StorableNamedObject):
         """
         Enable saving using __setitem__
 
-        This only supports writing `store[...] = value`. Not sure if this is ever used.
+        This only supports writing `store[...] = value`. Not sure if this is
+        ever used.
 
         """
         if key is Ellipsis:
@@ -911,18 +918,12 @@ class ObjectStore(StorableNamedObject):
         Returns
         -------
         :py:class:`openpathsampling.netcdfplus.base.StorableObject`
-            the last object with a given uuid. This is to mimic immutable object. Once you
-            (re-)save with the same uuid you replace the old one and hence you leed to load the last
-            stored one.
+            the last object with a given uuid. This is to mimic an immutable
+            object. Once you (re-)save with the same uuid you replace the old
+            one and hence you leed to load the last stored one.
 
         """
         return self.load(uuid)
-
-    # def _set_uuid(self, idx, uuid):
-    #     self.storage.variables[self.prefix + '_uuid'][idx] = uuid
-    #
-    # def _get_uuid(self, idx):
-    #     return UUID(self.storage.variables[self.prefix + '_uuid'][idx])
 
     def _set_id(self, idx, obj):
         if self.reference_by_uuid:
@@ -935,14 +936,20 @@ class ObjectStore(StorableNamedObject):
 
 class NamedObjectStore(ObjectStore):
     def __init__(self, content_class, json=True, nestable=False):
-        super(NamedObjectStore, self).__init__(content_class=content_class, json=json, nestable=nestable)
+        super(NamedObjectStore, self).__init__(
+            content_class=content_class,
+            json=json,
+            nestable=nestable
+        )
 
         self._names_loaded = False
         self._name_idx = dict()
 
-        if self.content_class is not None and not issubclass(self.content_class, StorableNamedObject):
-            raise ValueError(
-                'Content class "%s" must be subclassed from StorableNamedObject.' %
+        if self.content_class is not None \
+                and not issubclass(self.content_class, StorableNamedObject):
+            raise ValueError((
+                'Content class "%s" must be subclassed from '
+                'StorableNamedObject.') %
                 self.content_class.__name__
             )
 
@@ -987,8 +994,8 @@ class NamedObjectStore(ObjectStore):
         Returns
         -------
         dict of str : set
-            A dictionary that has all stored names as keys and the values are a set of indices where an
-            object with this name is found.
+            A dictionary that has all stored names as keys and the values are a
+            set of indices where an object with this name is found.
 
         """
 
@@ -1005,7 +1012,8 @@ class NamedObjectStore(ObjectStore):
         This allows to load by name for named objects
         """
         if not self._names_loaded:
-            for idx, name in enumerate(self.storage.variables[self.prefix + "_name"][:]):
+            for idx, name in enumerate(
+                    self.storage.variables[self.prefix + "_name"][:]):
                 self._update_name_in_cache(name, idx)
 
             self._names_loaded = True
@@ -1032,9 +1040,9 @@ class NamedObjectStore(ObjectStore):
         Returns
         -------
         :py:class:`openpathsampling.netcdfplus.base.StorableObject`
-            the last object with a given name. This is to mimic immutable object. Once you
-            (re-)save with the same name you replace the old one and hence you leed to load the last
-            stored one.
+            the last object with a given name. This is to mimic immutable
+            objects. Once you (re-)save with the same name you replace the
+            old one and hence you leed to load the last stored one.
 
         """
         return self.load(name)
@@ -1061,9 +1069,9 @@ class NamedObjectStore(ObjectStore):
         if len(self.name_idx[name]) > 0:
             return self[sorted(list(self.name_idx[name]))]
 
-    # =============================================================================
+    # ==========================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
-    # =============================================================================
+    # ==========================================================================
 
     def load(self, idx):
         """
@@ -1092,7 +1100,9 @@ class NamedObjectStore(ObjectStore):
             # we want to load by name and it was not in cache.
             if idx in self.name_idx:
                 if len(self.name_idx[idx]) > 1:
-                    logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
+                    logger.debug((
+                        'Found name "%s" multiple (%d) times in storage! '
+                        'Loading last!') % (
                         idx, len(self.cache[idx])))
 
                 n_idx = sorted(list(self.name_idx[idx]))[-1]
@@ -1103,8 +1113,9 @@ class NamedObjectStore(ObjectStore):
             pass
 
         elif type(idx) is not int:
-            raise ValueError(
-                'indices of type "%s" are not allowed in named storage (only str and int)' %
+            raise ValueError((
+                'indices of type "%s" are not allowed in named '
+                'storage (only str and int)') %
                 type(idx).__name__
             )
 
@@ -1112,7 +1123,6 @@ class NamedObjectStore(ObjectStore):
 
         if obj is not None:
             n_idx = self.index[obj]
-            v = self.storage.variables[self.prefix + '_name']
             setattr(obj, '_name',
                     self.storage.variables[self.prefix + '_name'][n_idx])
             # make sure that you cannot change the name of loaded objects
@@ -1142,7 +1152,8 @@ class NamedObjectStore(ObjectStore):
         is_str = type(idx) is str
 
         if not is_str and idx is not None:
-            raise ValueError('Unsupported index type (only str or None allowed).')
+            raise ValueError(
+                'Unsupported index type (only str or None allowed).')
 
         name = obj._name
 
@@ -1152,19 +1163,23 @@ class NamedObjectStore(ObjectStore):
 
         if name is None:
             # this should not happen!
-            logger.debug("Nameable object has not been initialized correctly. Has None in _name")
-            raise AttributeError('_name needs to be a string for nameable objects.')
+            logger.debug(
+                "Nameable object has not been initialized correctly. "
+                "Has None in _name")
+            raise AttributeError(
+                '_name needs to be a string for nameable objects.')
 
         obj_fixed = obj._name_fixed
         obj_name = obj._name
-        # we fix the name just in case we try in recursive saving to store one object
-        # twice with different names. Storing with the same name is fine then!
+        # we fix the name just in case we try in recursive saving to store
+        # one object twice with different names. Storing with the same name
+        # is fine!
         obj.fix_name()
 
         try:
             reference = super(NamedObjectStore, self).save(obj)
         except:
-            # if saving did not work unlock the name if is was previously un-fixed
+            # if saving did not work unlock the name if is was un-fixed before
             obj._name_fixed = obj_fixed
             obj._name = obj_name
             raise
@@ -1178,12 +1193,15 @@ class NamedObjectStore(ObjectStore):
 
 class UniqueNamedObjectStore(NamedObjectStore):
 
-    # =============================================================================
+    # ==========================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
-    # =============================================================================
+    # ==========================================================================
 
     def __init__(self, content_class, json=True, nestable=False):
-        super(UniqueNamedObjectStore, self).__init__(content_class=content_class, json=json, nestable=nestable)
+        super(UniqueNamedObjectStore, self).__init__(
+            content_class=content_class,
+            json=json,
+            nestable=nestable)
 
         self._free_name = set()
 
@@ -1251,7 +1269,8 @@ class UniqueNamedObjectStore(NamedObjectStore):
         is_str = type(idx) is str
 
         if not is_str and idx is not None:
-            raise ValueError('Unsupported index type (only str or None allowed).')
+            raise ValueError(
+                'Unsupported index type (only str or None allowed).')
 
         name = obj._name
         fixed = obj._name_fixed
@@ -1260,7 +1279,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
         if is_str:
             if fixed:
                 if name != idx:
-                    # saving fixed under different name is not possible. Get a reasonable error message
+                    # saving fixed under different name is not possible.
                     if obj in self:
                         err.append(
                             ('Cannot rename object to "%s". '
@@ -1274,24 +1293,29 @@ class UniqueNamedObjectStore(NamedObjectStore):
 
                         if self.is_name_locked(name):
                             err.append(
-                                ('Current name "%s" is also already taken in unique name store. '
-                                 'This means you cannot save object "%s" at all. '
-                                 'In general this should not happen to unsaved objects unless '
-                                 'you fixed the name of the object yourself. Check your code '
-                                 'for the generation of objects of the same name.') %
+                                ('Current name "%s" is also already taken in '
+                                 'unique name store. This means you cannot '
+                                 'save object "%s" at all. '
+                                 'In general this should not happen to unsaved '
+                                 'objects unless you fixed the name of the '
+                                 'object yourself. Check your code '
+                                 'for the generation of objects of the same '
+                                 'name.') %
                                 (name, obj)
                             )
                         else:
                             err.append(
-                                ('Current name "%s" is still free. Saving without giving a specific name '
-                                 'should work. If that is what you want to do.') % name
+                                ('Current name "%s" is still free. Saving '
+                                 'without giving a specific name '
+                                 'should work. If that is what you want '
+                                 'to do.') % name
                             )
                 else:
-                    # already fixed, but with same name. So that is fine. Check if already stored
+                    # already fixed, but with same name. Okay. Check if stored
                     if obj in self.index:
                         return self.reference(obj)
             else:
-                # name is not fixed yet. So check, if we can save or whether name is already taken
+                # name is not fixed yet. Check, if we can save or name is taken
                 if self.is_name_locked(idx):
                     err.append(
                         ('New name "%s" already taken in unique name store. ' +
@@ -1299,13 +1323,14 @@ class UniqueNamedObjectStore(NamedObjectStore):
                     )
 
                     if self.is_name_locked(name):
-                        err.append(
-                            'Current name "%s" already taken in unique name store. ' % name
+                        err.append((
+                            'Current name "%s" already taken in unique '
+                            'name store. ') % name
                         )
                     else:
                         err.append(
-                            ('Current name "%s" is still free. Saving without giving a specific name '
-                             'should work') % name
+                            ('Current name "%s" is still free. Saving without '
+                             'giving a specific name should work') % name
                         )
         else:
             if fixed:
@@ -1316,25 +1341,27 @@ class UniqueNamedObjectStore(NamedObjectStore):
                 # if not stored yet check if we could
                 if self.is_name_locked(name):
                     err.append(
-                        ('Current name "%s" is already taken in unique name store. '
-                         'This means you cannot save object "%s" at all. '
-                         'In general this should not happen to unsaved objects unless '
-                         'you fixed the name of the object yourself. Check your code '
-                         'for the generation of objects of the same name.') %
+                        ('Current name "%s" is already taken in unique name '
+                         'store. This means you cannot save object "%s" at '
+                         'all. In general this should not happen to unsaved '
+                         'objects unless you fixed the name of the object '
+                         'yourself. Check your code for the generation of '
+                         'objects of the same name.') %
                         (name, obj)
                     )
             else:
                 # no new name and not fixed. Just check if current name is taken
                 if self.is_name_locked(name):
                     err.append(
-                        ('Current name "%s" is already taken in unique name store %s. '
-                         'Try renaming object or saving using other name.') % (name, self.name)
+                        ('Current name "%s" is already taken in unique name '
+                         'store %s. Try renaming object or saving using other '
+                         'name.') % (name, self.name)
                     )
 
         if len(err) > 0:
             raise RuntimeWarning('/n'.join(err))
 
-        # no errors, so reserve the name for nested saving and actually call save
+        # no errors, reserve the name for nested saving and actually call save
         self.reserve_name(name)
 
         try:
@@ -1385,8 +1412,8 @@ class VariableStore(ObjectStore):
         Parameters
         ----------
         part : list of int or `None`
-            If `None` (default) all samples will be loaded. Otherwise the list of indices
-            in `part` will be loaded into the cache
+            If `None` (default) all samples will be loaded. Otherwise the
+            list of indices in `part` will be loaded into the cache
 
         """
         if part is None:
@@ -1409,7 +1436,8 @@ class VariableStore(ObjectStore):
 
     def add_to_cache(self, idx, data):
         if idx not in self.cache:
-            attr = {var: self.vars[var].getter(data[nn]) for nn, var in enumerate(self.var_names)}
+            attr = {var: self.vars[var].getter(data[nn])
+                    for nn, var in enumerate(self.var_names)}
             obj = self.content_class(**attr)
             self._get_id(idx, obj)
 
@@ -1434,9 +1462,9 @@ class DictStore(NamedObjectStore):
         Parameters
         ----------
         idx : str
-            a string (name) of the objects. This will always return the last object
-            found with the specified name. If immutable is true for the store it
-            assures that there is only a single object per name
+            a string (name) of the objects. This will always return the
+            last object found with the specified name. If immutable is true
+            for the store it assures that there is only a single object per name
 
         Returns
         -------
@@ -1454,44 +1482,54 @@ class DictStore(NamedObjectStore):
 
             if idx in self.name_idx:
                 if len(self.name_idx[idx]) > 1:
-                    logger.debug('Found name "%s" multiple (%d) times in storage! Loading last!' % (
+                    logger.debug((
+                        'Found name "%s" multiple (%d) times in storage! '
+                        'Loading last!') % (
                         idx, len(self.name_idx[idx])))
 
                 n_idx = sorted(list(self.name_idx[idx]))[-1]
 
-                logger.debug('Found name "%s" in storage! Loading IDX %d!' % (idx, n_idx))
+                logger.debug(
+                    'Found name "%s" in storage! Loading IDX %d!' %
+                    (idx, n_idx))
 
         elif type(idx) is int:
             n_idx = idx
         else:
-            raise ValueError('Unsupported index type (only str and int allowed).')
+            raise ValueError(
+                'Unsupported index type (only str and int allowed).')
 
         # turn into python int if it was a numpy int (in some rare cases!)
         n_idx = int(n_idx)
 
-        logger.debug('Calling load object of type ' + str(self.content_class) + ' and IDX #' + str(idx))
+        logger.debug(
+            'Calling load object of type `%s` and @ IDX #%d' %
+            (str(self.content_class), n_idx))
 
         if n_idx >= len(self):
             logger.warning(
                 'Trying to load from IDX #' + str(n_idx) +
                 ' > number of objects ' + str(len(self))
             )
-            raise RuntimeError('Loading of too large int should be attempted. '
-                               'Problem in name cache. This should never happen!')
+            raise RuntimeError(
+                'Loading of too large int should be attempted. '
+                'Problem in name cache. This should never happen!')
         elif n_idx < 0:
             logger.warning(
                 'Trying to load negative IDX #' + str(n_idx) + ' < 0. '
                 'This should never happen!!!'
             )
             raise RuntimeError(
-                'Loading of negative int should result in no object. This should never happen!'
+                'Loading of negative int should result in no object. '
+                'This should never happen!'
             )
         else:
 
             logger.debug('Loading named object from index IDX # %d' % n_idx)
             obj = self._load(n_idx)
 
-            logger.debug('Loading named object from index IDX # %d.. DONE' % n_idx)
+            logger.debug(
+                'Loading named object from index IDX # %d.. DONE' % n_idx)
 
         return obj
 
@@ -1507,31 +1545,38 @@ class DictStore(NamedObjectStore):
         obj : :py:class:`openpathsampling.netcdfplus.base.StorableObject`
             the object to be stored
         idx : string or `None`
-            the string index to be used for storing. Objects will not be replaced but stored again with the
-            same name. When loading the last stored object under the idx is retrieved. Effectively mimicking
-            a mutual dict with versioning. We usually encourage for most cases to use
-            the immutual dict class :class:`openpathsampling.netcdf.ImmutableDictStore` instead to avoid
-            ambiguity in stored objects.
+            the string index to be used for storing. Objects will not be
+            replaced but stored again with the same name. When loading the
+            last stored object under the idx is retrieved. Effectively mimicking
+            a mutual dict with versioning. We usually encourage for most cases
+            to use the immutual dict class
+            :class:`openpathsampling.netcdfplus.ImmutableDictStore` instead
+            to avoid ambiguity in stored objects.
 
         See Also
         --------
-        :class:`openpathsampling.netcdf.ImmutableDictStore`
+        :class:`openpathsampling.netcdfplus.ImmutableDictStore`
 
         """
 
         if idx is None:
             # a DictStore needs a specific name
-            raise ValueError('Saving in a DictStore without specifying a string key is not allowed. ')
+            raise ValueError(
+                'Saving in a DictStore without specifying a '
+                'string key is not allowed. ')
 
         if type(idx) is not str:
             # key needs to be a string
-            raise ValueError('Index "%s" for DictStore needs to be a string! ' % idx)
+            raise ValueError(
+                'Index `%s` for DictStore needs to be a string! ' % idx)
 
         n_idx = int(self.free())
         # make sure in nested saving that an IDX is not used twice!
         self.reserve_idx(n_idx)
 
-        logger.debug('Saving ' + str(type(obj)) + ' with name "' + idx + '"using IDX #' + str(n_idx))
+        logger.debug(
+            'Saving `%s` with name `%s` @ IDX #%d' %
+            (str(obj.__class__), idx, n_idx))
         self._save(obj, n_idx)
 
         self.storage.variables[self.prefix + '_name'][n_idx] = idx
@@ -1580,7 +1625,8 @@ class ImmutableDictStore(DictStore):
         if idx in self.name_idx:
             # immutable means no duplicates, so quit
             raise RuntimeWarning(
-                'Cannot re-save existing key "%s" in immutable dict store.' % idx
+                'Cannot re-save existing key "%s" in '
+                'immutable dict store.' % idx
             )
 
         return super(ImmutableDictStore, self).save(obj, idx)
@@ -1588,13 +1634,15 @@ class ImmutableDictStore(DictStore):
 
 class IndexedObjectStore(ObjectStore):
     """
-    This has a prefilled .index which knows at which position a certain index is stored.
-    This way you can circumvent holes and keep the file smaller
+    ObjectStore storing objects in arbitrary order
+
+    This has a prefilled .index which knows at which position a certain
+    index is stored. This way you can circumvent holes and keep the file smaller
     """
 
-    # =============================================================================
+    # ==========================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
-    # =============================================================================
+    # ==========================================================================
 
     def load(self, idx):
         """
@@ -1658,7 +1706,7 @@ class IndexedObjectStore(ObjectStore):
 
         n_idx = self.free()
 
-        # mark as saved so circular dependencies will not result in infinite loops
+        # mark as saved so circular dependencies will not cause infinite loops
         self.index[idx] = n_idx
 
         # make sure in nested saving that an IDX is not used twice!
@@ -1697,23 +1745,3 @@ class IndexedObjectStore(ObjectStore):
             'index',
             'index'
         )
-
-    def __getitem__(self, item):
-        """
-        Enable numpy style selection of object in the store
-        """
-        try:
-            if type(item) is int:
-                return self.load(item)
-            elif type(item) is list:
-                return [self.load(idx) for idx in item]
-            elif item is Ellipsis:
-                return self.iterator()
-        except KeyError:
-            return None
-
-    def get(self, item):
-        if item in self.index:
-            return self[item]
-        else:
-            return None
