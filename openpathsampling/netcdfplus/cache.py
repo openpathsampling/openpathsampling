@@ -5,12 +5,24 @@ __author__ = 'Jan-Hendrik Prinz'
 
 
 class Cache(object):
+    """
+    A cache like dict
+    """
     @property
     def count(self):
+        """
+        int : the number of strong references
+        int : the number of weak references
+        """
         return len(self), 0
 
     @property
     def size(self):
+        """
+        int : the maximal number of strong references, -1 if infinite
+        int : the maximal number of weak references, -1 if infinite
+
+        """
         return -1, -1
 
     def __str__(self):
@@ -30,12 +42,37 @@ class Cache(object):
         pass
 
     def get(self, item, default=None):
+        """
+        get value by key if it exists, None else
+
+        Parameters
+        ----------
+        item : `object`
+            key to select element in cache
+        default : `object`
+            return value if item is not present in cache
+
+        Returns
+        -------
+        `object` or `None`
+            cached value at key item if present, returns default otherwise
+        """
         try:
             return self[item]
         except KeyError:
             return default
 
     def transfer(self, old_cache):
+        """
+        Transfer values between caches
+
+        Useful if during run-time a cache is replaced by another instance
+
+        Parameters
+        ----------
+        old_cache : the cache from which this cache is to be filled
+
+        """
         size = self.size
         if size[0] == -1 or size[1] == -1:
             for key in reversed(list(old_cache)):
@@ -52,8 +89,13 @@ class Cache(object):
 
         return self
 
+    get_silent = get
+
 
 class NoCache(Cache):
+    """
+    A virtual cache the contains no elements
+    """
     def __init__(self):
         super(NoCache, self).__init__()
 
@@ -88,6 +130,9 @@ class NoCache(Cache):
 
 
 class MaxCache(dict, Cache):
+    """
+    A dictionary, can hold infinite strong references
+    """
     def __init__(self):
         super(MaxCache, self).__init__()
         Cache.__init__(self)
@@ -105,7 +150,7 @@ class LRUCache(Cache):
     """
     Implements a simple Least Recently Used Cache
 
-    Very simple using collections.OrderedDict. The size can be change during
+    Very simple using collections.OrderedDict. The size can be changed during
     run-time
     """
 
@@ -166,8 +211,9 @@ class WeakLRUCache(Cache):
     """
     Implements a cache that keeps weak references to all elements
 
-    In addition it uses a simple Least Recently Used Cache to make sure a portion
-    of the last used elements are still present. Usually this number is 100.
+    In addition it uses a simple Least Recently Used Cache to make sure a
+    portion of the last used elements are still present. Usually this
+    number is 100.
 
     """
 
@@ -238,7 +284,7 @@ class WeakLRUCache(Cache):
 
     def get_silent(self, item):
         """
-        Return item from the dict if it exists, None otherwise without reordering the LRU
+        Return item from the without reordering the LRU
 
         Parameters
         ----------
@@ -247,7 +293,7 @@ class WeakLRUCache(Cache):
 
         Returns
         -------
-        object of None
+        `object` or `None`
             the requested object if it exists else `None`
         """
         if item is None:
@@ -324,15 +370,11 @@ class WeakKeyCache(weakref.WeakKeyDictionary, Cache):
 
 class LRUChunkLoadingCache(Cache):
     """
-    Implements a cache that keeps weak references to all elements
-
-    In addition it uses a simple Least Recently Used Cache to make sure a portion
-    of the last used elements are still present. Usually this number is 100.
+    Implements a cache that keeps references loaded in chunks
 
     """
 
     def __init__(self, chunksize=100, max_chunks=100, variable=None):
-
         super(LRUChunkLoadingCache, self).__init__()
         self.max_chunks = max_chunks
         self.chunksize = chunksize
@@ -360,6 +402,19 @@ class LRUChunkLoadingCache(Cache):
         self._chunkdict.clear()
 
     def update_size(self, size=None):
+        """
+        Update the knowledge of the size of the attached store
+
+        Parameters
+        ----------
+        size : int
+            the new size to be used. If `None` (default) the size is taken
+            from the store directly using `len(store)`
+
+        Returns
+        -------
+
+        """
         if size is None:
             self._size = len(self.variable)
         else:
@@ -368,7 +423,17 @@ class LRUChunkLoadingCache(Cache):
         self._lastchunk_idx = (self._size - 1) / self.chunksize
 
     def load_chunk(self, chunk_idx):
+        """
+        Load a specific chunk
 
+        Parameters
+        ----------
+        chunk_idx : int
+            the integer index of the chunk to be loaded from the attached
+            store. This might cause the last used chunk to be removed if the
+            maximal number of allowed chunks is reached
+
+        """
         if chunk_idx <= self._lastchunk_idx:
             if chunk_idx not in self._chunkdict:
                 # chunk not cached, load full
@@ -416,9 +481,16 @@ class LRUChunkLoadingCache(Cache):
             raise KeyError(item)
 
     def load_max(self):
+        """
+        Fill the cache with as many chunks as possible
+
+        """
         self.update_size()
         map(self.load_chunk,
-            range(0, min(1 + (self._size - 1) / self.chunksize, self.max_chunks)))
+            range(0, min(
+                1 + (self._size - 1) / self.chunksize,
+                self.max_chunks
+            )))
 
     def __setitem__(self, key, value, **kwargs):
         chunk_idx = key / self.chunksize
@@ -441,22 +513,6 @@ class LRUChunkLoadingCache(Cache):
 
         if key >= self._size:
             self.update_size(key + 1)
-
-    def get_silent(self, item):
-        """
-        Return item from the dict if it exists, None otherwise without reordering the LRU
-
-        Parameters
-        ----------
-        item : object
-            the item index to be retrieved from the cache
-
-        Returns
-        -------
-        object of None
-            the requested object if it exists else `None`
-        """
-        return self.get(item)
 
     def _check_size_limit(self):
         if len(self._chunkdict) > self.max_chunks:
