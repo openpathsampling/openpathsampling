@@ -4,6 +4,8 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
+import numpy as np
+
 import openpathsampling as paths
 from openpathsampling.bias_function import *
 
@@ -175,14 +177,48 @@ class testBiasEnsembleTable(object):
             assert_in(bias_AB.ensembles_to_ids[ens], [3, 4, 5])
         assert_equal(bias_AB.ensembles_to_ids[ms_outer], 6)
 
-        # check some values
+        # check values
+        df_A = bias_A.dataframe
+        df_B = bias_B.dataframe
+        df_AB = bias_AB.dataframe
+        col_A_msouter = bias_A.ensembles_to_ids[ms_outer]
+        col_B_msouter = bias_B.ensembles_to_ids[ms_outer]
+        col_AB_msouter = bias_AB.ensembles_to_ids[ms_outer]
 
+        for ens1 in ens_A:
+            idx_A = bias_A.ensembles_to_ids[ens1]
+            idx_AB = bias_AB.ensembles_to_ids[ens1]
+            for ens2 in ens_A:
+                col_A = bias_A.ensembles_to_ids[ens2]
+                col_AB = bias_AB.ensembles_to_ids[ens2]
+                val_A = df_A.loc[idx_A, col_A]
+                val_AB = df_AB.loc[idx_AB, col_AB]
+                assert_equal(val_A, val_AB)
+            for ens2 in ens_B:
+                col_AB = bias_AB.ensembles_to_ids[ens2]
+                assert_equal(np.isnan(df_AB.loc[idx_AB, col_AB]), True)
+            assert_equal(df_A.loc[idx_A, col_A_msouter],
+                         df_AB.loc[idx_AB, col_AB_msouter])
+            assert_equal(df_A.loc[col_A_msouter, idx_A],
+                         df_AB.loc[col_AB_msouter, idx_AB])
 
-         #TODO: tests for values
+        for ens1 in ens_B:
+            idx_B = bias_B.ensembles_to_ids[ens1]
+            idx_AB = bias_AB.ensembles_to_ids[ens1]
+            for ens2 in ens_B:
+                col_B = bias_B.ensembles_to_ids[ens2]
+                col_AB = bias_AB.ensembles_to_ids[ens2]
+                val_B = df_B.loc[idx_B, col_B]
+                val_AB = df_AB.loc[idx_AB, col_AB]
+                assert_equal(val_B, val_AB)
+            for ens2 in ens_A:
+                col_AB = bias_AB.ensembles_to_ids[ens2]
+                assert_equal(np.isnan(df_AB.loc[idx_AB, col_AB]), True)
+            assert_equal(df_B.loc[idx_B, col_B_msouter],
+                         df_AB.loc[idx_AB, col_AB_msouter])
+            assert_equal(df_B.loc[col_B_msouter, idx_B],
+                         df_AB.loc[col_AB_msouter, idx_AB])
 
+        # just to make sure no errors raise when there are NaNs in table
         bias_ABC = bias_A + bias_B + bias_C
-        # TODO: tests for values
-        
-        raise SkipTest
-
 
