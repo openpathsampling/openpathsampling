@@ -81,9 +81,9 @@ class testCV_Function(object):
         # all of these must work
         for use_uuid, allow_partial in [(True, True), (False, True), (True, False), (False, False)]:
 
-            # print '==========================================================='
-            # print 'UUID', use_uuid, 'PARTIAL', allow_partial
-            # print '==========================================================='
+            print '==========================================================='
+            print 'UUID', use_uuid, 'PARTIAL', allow_partial
+            print '==========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
@@ -133,6 +133,20 @@ class testCV_Function(object):
 
             assert(cv_cache.allow_partial == allow_partial)
 
+            print len(storage_r.trajectories)
+
+            print storage_r.trajectories[1]
+            for snap in storage_r.trajectories[1].iter_proxies():
+                print snap, type(snap)
+                print snap._idx
+                print snap._store
+                print snap.__subject__
+
+            print storage_r.snapshots.index
+            print storage_r.stores['snapshot0'].index
+
+            print 'end'
+
             for idx, snap in enumerate(storage_r.trajectories[1]):
                 # if hasattr(snap, '_idx'):
                 #     print 'IDX', snap._idx
@@ -166,6 +180,8 @@ class testCV_Function(object):
                 # print cv_cache[snap]
                 #
                 # print cv_cache[snap.reversed]
+
+                print idx, snap, snap.__dict__
 
                 if not allow_partial or cv_cache[snap] is not None:
                     assert_close_unit(cv_cache[snap], cv1(snap))

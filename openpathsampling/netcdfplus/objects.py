@@ -1681,6 +1681,10 @@ class IndexedObjectStore(ObjectStore):
 
         return obj
 
+    @property
+    def reference_by_uuid(self):
+        return False
+
     def create_int_index(self):
         return dict()
 

@@ -57,19 +57,6 @@ class BaseSnapshotStore(IndexedObjectStore):
         self._dimensions = descriptor.dimensions
         self._cls = self.descriptor.snapshot_class
 
-        # self._use_lazy_reversed = False
-        # if hasattr(snapshot_class, '__features__'):
-        #     if '_reversed' in snapshot_class.__features__.lazy:
-        #         self._use_lazy_reversed = True
-
-    def create_uuid_index(self):
-        return UUIDReversalDict()
-
-    @property
-    def reference_by_uuid(self):
-        # This one does explicitly use integer indices
-        return False
-
     @property
     def snapshot_class(self):
         return self._cls
@@ -164,6 +151,43 @@ class BaseSnapshotStore(IndexedObjectStore):
         self._cls.init_empty(obj)
         self._get(st_idx, obj)
         return obj
+
+    def save(self, obj, idx=None):
+        pos = idx / 2
+
+        if pos in self.index:
+            # has been saved so quit and do nothing
+            return idx
+
+        n_idx = self.free()
+
+        # mark as saved so circular dependencies will not cause infinite loops
+        self.index[pos] = n_idx
+
+        # make sure in nested saving that an IDX is not used twice!
+        self.reserve_idx(n_idx)
+
+        logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
+
+        try:
+            self._save(obj, n_idx)
+            self.vars['index'][n_idx] = pos
+
+            # store the name in the cache
+            if hasattr(self, 'cache'):
+                self.cache[n_idx] = obj
+
+        except:
+            logger.debug('Problem saving %d !' % n_idx)
+            # in case we did not succeed remove the mark as being saved
+            del self.index[pos]
+            self.release_idx(n_idx)
+            raise
+
+        self.release_idx(n_idx)
+        self._set_id(n_idx, obj)
+
+        return idx
 
     def _save(self, snapshot, idx):
         """
@@ -591,11 +615,49 @@ class SnapshotWrapperStore(ObjectStore):
             self.vars['store'][n_idx / 2] = store_idx
             self.index[obj] = n_idx
             store = self.store_snapshot_list[store_idx]
-            store[n_idx / 2] = obj
+            store[n_idx] = obj
 
         self.cache[n_idx] = obj
 
         return self.reference(obj)
+
+    def _save(self, obj, idx):
+        try:
+            store, store_idx = self.type_list[obj.engine.descriptor]
+            self.vars['store'][idx / 2] = store_idx
+            self.index[obj] = idx
+            store[idx] = obj
+            return store
+
+        except KeyError:
+            # there is no store yet to handle the given type of snapshot
+            mode = self.treat_missing_snapshot_type
+            if mode == 'create' or \
+                    (mode == 'single' and
+                             len(self.storage.dimensions['snapshottype']) == 0):
+                # we just create space for it
+                store, store_idx = self.add_type(obj.engine.descriptor)
+                self.vars['store'][idx / 2] = store_idx
+                self.index[obj] = idx
+                store[idx / 2] = obj
+                return store
+
+            elif self.treat_missing_snapshot_type == 'ignore':
+                # we keep silent about it
+                self.vars['store'][idx / 2] = -1
+                return None
+            else:
+                # we fail with cannot store
+                raise RuntimeError(
+                    (
+                        'The store cannot hold snapshots of the given type : '
+                        'class "%s" and dimensions %s. Try adding the '
+                        'snapshot type using .add_type(snapshot).'
+                    ) % (
+                        obj.__class__.__name__,
+                        obj.engine.descriptor.dimensions
+                    )
+                )
 
     def _auto_complete_single_snapshot(self, obj, pos):
         for cv, (cv_store, cv_idx) in self.cv_list.items():
@@ -744,44 +806,6 @@ class SnapshotWrapperStore(ObjectStore):
                     cv_store.vars['index'][n_idx] = pos
                     cv_store.index[pos] = n_idx
                     cv_store.cache[n_idx] = value
-
-    def _save(self, obj, idx):
-        try:
-            store, store_idx = self.type_list[obj.engine.descriptor]
-            self.vars['store'][idx / 2] = store_idx
-            self.index[obj] = idx
-            store[idx / 2] = obj
-            return store
-
-        except KeyError:
-            # there is no store yet to handle the given type of snapshot
-            mode = self.treat_missing_snapshot_type
-            if mode == 'create' or \
-                    (mode == 'single' and
-                             len(self.storage.dimensions['snapshottype']) == 0):
-                # we just create space for it
-                store, store_idx = self.add_type(obj.engine.descriptor)
-                self.vars['store'][idx / 2] = store_idx
-                self.index[obj] = idx
-                store[idx / 2] = obj
-                return store
-
-            elif self.treat_missing_snapshot_type == 'ignore':
-                # we keep silent about it
-                self.vars['store'][idx / 2] = -1
-                return None
-            else:
-                # we fail with cannot store
-                raise RuntimeError(
-                    (
-                        'The store cannot hold snapshots of the given type : '
-                        'class "%s" and dimensions %s. Try adding the '
-                        'snapshot type using .add_type(snapshot).'
-                    ) % (
-                        obj.__class__.__name__,
-                        obj.engine.descriptor.dimensions
-                    )
-                )
 
     def free(self):
         idx = len(self)
@@ -936,6 +960,11 @@ class SnapshotWrapperStore(ObjectStore):
             for pos, idx in enumerate(indices):
 
                 proxy = LoaderProxy(self.storage.snapshots, idx)
+
+                print pos, idx
+                print proxy.__subject__
+                print proxy.__dict__
+
                 value = cv._cache_dict._get(proxy)
 
                 if value is None:
