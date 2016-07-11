@@ -235,18 +235,18 @@ class OpenMMEngine(DynamicsEngine):
         self.check_snapshot_type(snapshot)
 
         if snapshot is not self._current_snapshot:
-            if snapshot.coordinates is not None:
-                self.simulation.context.setPositions(snapshot.coordinates)
+            # if snapshot.coordinates is not None:
+            self.simulation.context.setPositions(snapshot.coordinates)
 
-            if snapshot.box_vectors is not None:
-                self.simulation.context.setPeriodicBoxVectors(
-                    snapshot.box_vectors[0],
-                    snapshot.box_vectors[1],
-                    snapshot.box_vectors[2]
-                )
+            # if snapshot.box_vectors is not None:
+            self.simulation.context.setPeriodicBoxVectors(
+                snapshot.box_vectors[0],
+                snapshot.box_vectors[1],
+                snapshot.box_vectors[2]
+            )
 
-            if snapshot.velocities is not None:
-                self.simulation.context.setVelocities(snapshot.velocities)
+            # if snapshot.velocities is not None:
+            self.simulation.context.setVelocities(snapshot.velocities)
 
             # After the updates cache the new snapshot
             self._current_snapshot = snapshot
@@ -260,4 +260,3 @@ class OpenMMEngine(DynamicsEngine):
         self.simulation.minimizeEnergy()
         # make sure that we get the minimized structure on request
         self._current_snapshot = None
-

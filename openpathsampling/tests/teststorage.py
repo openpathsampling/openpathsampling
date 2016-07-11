@@ -78,6 +78,59 @@ class testStorage(object):
 
         store.close()
 
+    def test_store_snapshots(self):
+        fname = data_filename("cv_storage_test.nc")
+        if os.path.isfile(fname):
+            os.remove(fname)
+
+        traj = paths.Trajectory(list(self.traj))
+        template = traj[0]
+
+        for use_uuid, use_cache in [(True, True), (False, True), (True, False), (False, False)]:
+            storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
+            storage_w.snapshots.save(template)
+
+            # let's mess up the order in which we save and include reversed ones as well
+            assert(len(storage_w.snapshots) == 2)
+            assert(len(storage_w.trajectories) == 0)
+            storage_w.snapshots.save(traj[8].reversed)
+            print len(storage_w.snapshots)
+            assert(len(storage_w.snapshots) == 4)
+            assert(len(storage_w.trajectories) == 0)
+            storage_w.trajectories.save(traj[6:])
+            assert(len(storage_w.snapshots) == 10)
+            assert(len(storage_w.trajectories) == 1)
+            storage_w.trajectories.save(traj.reversed)
+            assert(len(storage_w.snapshots) == 20)
+            assert(len(storage_w.trajectories) == 2)
+
+            # this will store traj under pos IDX #2
+            storage_w.trajectories.save(traj)
+            assert(len(storage_w.snapshots) == 20)
+            assert(len(storage_w.trajectories) == 3)
+
+            # we saved in this order [0f, 8r, 6f, 7f, 9f, 1r, 2r, 3r, 4r, 5r ]
+            # these are indices      [ 0, 17, 12, 14, 18,  3,  5,  7,  9, 11 ]
+
+            storage_w.close()
+            if use_cache:
+                storage_r = paths.AnalysisStorage(fname)
+            else:
+                storage_r = paths.Storage(fname, 'r')
+                storage_r.snapshots.set_caching(False)
+                storage_r.stores['snapshot0'].set_caching(False)
+
+            # check if the loaded trajectory is reproduced
+            for s1, s2 in zip(traj, storage_r.trajectories[2]):
+                compare_snapshot(s1, s2, True)
+
+            # load from hidden and see, if the hidden store looks as expected
+            for s1, s2 in zip(
+                    traj,
+                    storage_r.stores['snapshot0'][
+                        [ 0, 17, 12, 14, 18,  3,  5,  7,  9, 11 ]]):
+                compare_snapshot(s1, s2, True)
+
     def test_load_save(self):
         store = Storage(filename=self.filename, mode='w', use_uuid=False)
         assert(os.path.isfile(self.filename))
