@@ -8,6 +8,8 @@ from simtk.openmm.app import Simulation
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import Snapshot
 
+import numpy as np
+
 logger = logging.getLogger(__name__)
 
 
@@ -206,9 +208,9 @@ class OpenMMEngine(DynamicsEngine):
                                                      getEnergy=True)
 
             snapshot = Snapshot.construct(
-                coordinates=state.getPositions(asNumpy=True),
-                box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
-                velocities=state.getVelocities(asNumpy=True),
+                coordinates=np.copy(state.getPositions(asNumpy=True)),
+                box_vectors=np.copy(state.getPeriodicBoxVectors(asNumpy=True)),
+                velocities=np.copy(state.getVelocities(asNumpy=True)),
                 engine=self
             )
 

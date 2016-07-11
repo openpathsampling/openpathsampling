@@ -612,6 +612,8 @@ class SnapshotWrapperStore(ObjectStore):
             self._auto_complete_single_snapshot(obj, n_idx)
             self._set_id(n_idx, obj)
         else:
+            if n_idx >= len(self):
+                raise ValueError('n_idx too large')
             self.vars['store'][n_idx / 2] = store_idx
             self.index[obj] = n_idx
             store = self.store_snapshot_list[store_idx]
@@ -621,12 +623,12 @@ class SnapshotWrapperStore(ObjectStore):
 
         return self.reference(obj)
 
-    def _save(self, obj, idx):
+    def _save(self, obj, n_idx):
         try:
             store, store_idx = self.type_list[obj.engine.descriptor]
-            self.vars['store'][idx / 2] = store_idx
-            self.index[obj] = idx
-            store[idx] = obj
+            self.vars['store'][n_idx / 2] = store_idx
+            self.index[obj] = n_idx
+            store[n_idx] = obj
             return store
 
         except KeyError:
@@ -637,14 +639,14 @@ class SnapshotWrapperStore(ObjectStore):
                              len(self.storage.dimensions['snapshottype']) == 0):
                 # we just create space for it
                 store, store_idx = self.add_type(obj.engine.descriptor)
-                self.vars['store'][idx / 2] = store_idx
-                self.index[obj] = idx
-                store[idx / 2] = obj
+                self.vars['store'][n_idx / 2] = store_idx
+                self.index[obj] = n_idx
+                store[n_idx] = obj
                 return store
 
             elif self.treat_missing_snapshot_type == 'ignore':
                 # we keep silent about it
-                self.vars['store'][idx / 2] = -1
+                self.vars['store'][n_idx / 2] = -1
                 return None
             else:
                 # we fail with cannot store
@@ -960,11 +962,6 @@ class SnapshotWrapperStore(ObjectStore):
             for pos, idx in enumerate(indices):
 
                 proxy = LoaderProxy(self.storage.snapshots, idx)
-
-                print pos, idx
-                print proxy.__subject__
-                print proxy.__dict__
-
                 value = cv._cache_dict._get(proxy)
 
                 if value is None:

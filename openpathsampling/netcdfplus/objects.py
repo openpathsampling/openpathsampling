@@ -344,7 +344,11 @@ class ObjectStore(StorableNamedObject):
 
         if var.var_type.startswith('lazy'):
             proxy = var.store.proxy(val)
-            setattr(obj, attribute, proxy)
+            if isinstance(obj, LoaderProxy):
+                # for a loader proxy apply it to the real object
+                setattr(obj.__subject__, attribute, proxy)
+            else:
+                setattr(obj, attribute, proxy)
 
     def proxy(self, item):
         """
