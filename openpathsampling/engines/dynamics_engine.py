@@ -173,7 +173,8 @@ class DynamicsEngine(StorableNamedObject):
                     # return result  # miraculously fixed
                     raise AttributeError(
                         "Unknown problem occurred in property" + 
-                        str(p.fget.func_name)
+                        str(p.fget.func_name) + ": Second attempt returned"
+                        + str(result)
                     )
             # for now, items in dict that fail with AttributeError will just
             # give the default message; to change, add something here like:
