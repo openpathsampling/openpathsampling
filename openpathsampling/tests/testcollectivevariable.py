@@ -77,13 +77,13 @@ class testCV_Function(object):
     def test_storage_cv_function(self):
         import os
 
-        # test all combinations of (1) with and without UUIDs, (2) using partial yes, no
-        # all of these must work
+        # test all combinations of (1) with and without UUIDs,
+        # (2) using partial yes, no all of these must work
         for use_uuid, allow_partial in [(True, True), (False, True), (True, False), (False, False)]:
 
-            print '==========================================================='
-            print 'UUID', use_uuid, 'PARTIAL', allow_partial
-            print '==========================================================='
+            # print '==========================================================='
+            # print 'UUID', use_uuid, 'PARTIAL', allow_partial
+            # print '==========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
@@ -95,13 +95,17 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_Function('f1', lambda snap : snap.coordinates[0]).with_diskcache(
+            cv1 = paths.CV_Function(
+                'f1',
+                lambda x: x.coordinates[0]
+            ).with_diskcache(
                 allow_partial=allow_partial
             )
 
             storage_w.save(cv1)
 
-            # let's mess up the order in which we save and include reversed ones as well
+            # let's mess up the order in which we save and
+            # include reversed ones as well
             assert(len(storage_w.snapshots) == 2)
             storage_w.trajectories.save(traj[3:])
             assert(len(storage_w.snapshots) == 16)
@@ -112,16 +116,6 @@ class testCV_Function(object):
 
             # this should be ignored for all is saved already
             storage_w.trajectories.save(traj)
-
-            # ll = [list.__getitem__(traj.reversed, nn) for nn in range(len(traj))]
-            #
-            # print 'ITEMS', storage_w.snapshots.index.items()
-            #
-            # print ll
-            # print map(type, ll)
-            #
-            # print map(storage_w.snapshots.pos, traj)
-            # print map(storage_w.snapshots.pos, traj.reversed)
             storage_w.close()
 
             storage_r = paths.AnalysisStorage(fname)
@@ -132,20 +126,6 @@ class testCV_Function(object):
             cv_cache = rcv1._store_dict.value_store
 
             assert(cv_cache.allow_partial == allow_partial)
-
-            print len(storage_r.trajectories)
-
-            print storage_r.trajectories[1]
-            for snap in storage_r.trajectories[1].iter_proxies():
-                print snap, type(snap)
-                print snap._idx
-                print snap._store
-                print snap.__subject__
-
-            print storage_r.snapshots.index
-            print storage_r.stores['snapshot0'].index
-
-            print 'end'
 
             for idx, snap in enumerate(storage_r.trajectories[1]):
                 # if hasattr(snap, '_idx'):
@@ -180,8 +160,6 @@ class testCV_Function(object):
                 # print cv_cache[snap]
                 #
                 # print cv_cache[snap.reversed]
-
-                print idx, snap, snap.__dict__
 
                 if not allow_partial or cv_cache[snap] is not None:
                     assert_close_unit(cv_cache[snap], cv1(snap))

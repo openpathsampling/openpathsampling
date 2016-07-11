@@ -1,6 +1,7 @@
-'''
+"""
 @author David W.H. Swenson
-'''
+@author Jan-Hendrik Prinz
+"""
 import os
 
 import mdtraj as md
@@ -62,14 +63,17 @@ class testStorage(object):
 
     def test_stored_topology(self):
         raise SkipTest
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
+        store = Storage(
+            filename=self.filename,
+            mode='w')
         assert(os.path.isfile(self.filename))
         store.close()
 
         store = Storage(filename=self.filename, mode='a')
         loaded_topology = store.template.topology
 
-        # check if poth topologies have the same JSON string (this also tests the simplifier for topologies
+        # check if poth topologies have the same JSON string
+        # this also tests the simplifier for topologies
 
         assert_equal(
             self.simplifier.to_json(self.template_snapshot.topology),
@@ -86,33 +90,64 @@ class testStorage(object):
         traj = paths.Trajectory(list(self.traj))
         template = traj[0]
 
-        for use_uuid, use_cache in [(True, True), (False, True), (True, False), (False, False)]:
+        for use_uuid, use_cache in [
+                (True, True), (False, True), (True, False), (False, False)]:
+            # print '=========================================================='
+            # print 'UUID', use_uuid, 'CACHE', use_cache
+            # print '=========================================================='
+
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            # let's mess up the order in which we save and include reversed ones as well
+            # let's mess up the order in which we save and include
+            # reversed ones as well
+
             assert(len(storage_w.snapshots) == 2)
             assert(len(storage_w.trajectories) == 0)
+            assert(len(storage_w.stores['snapshot0']) == 1)
             storage_w.snapshots.save(traj[8].reversed)
-            print len(storage_w.snapshots)
             assert(len(storage_w.snapshots) == 4)
             assert(len(storage_w.trajectories) == 0)
+            assert(len(storage_w.stores['snapshot0']) == 2)
             storage_w.trajectories.save(traj[6:])
             assert(len(storage_w.snapshots) == 10)
             assert(len(storage_w.trajectories) == 1)
+            assert(len(storage_w.stores['snapshot0']) == 5)
+
+            # do really store
+            storage_w.snapshots.only_mention = True
+
+            # this will store traj under pos IDX #2
             storage_w.trajectories.save(traj.reversed)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 2)
+            assert(len(storage_w.stores['snapshot0']) == 5)
 
-            # this will store traj under pos IDX #2
+            storage_w.trajectories.save(traj.reversed)
+            assert(len(storage_w.snapshots) == 20)
+            assert(len(storage_w.trajectories) == 2)
+            assert(len(storage_w.stores['snapshot0']) == 5)
+
+
+            storage_w.snapshots.only_mention = False
+            # this will store traj under pos IDX #3
+            storage_w.trajectories.save(traj)
+
+            assert(len(storage_w.snapshots) == 20)
+            assert(len(storage_w.trajectories) == 3)
+            assert(len(storage_w.stores['snapshot0']) == 10)
+
+            # this will store traj under pos IDX #3
             storage_w.trajectories.save(traj)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 3)
+            assert(len(storage_w.stores['snapshot0']) == 10)
 
-            # we saved in this order [0f, 8r, 6f, 7f, 9f, 1r, 2r, 3r, 4r, 5r ]
+            # we saved in this order [0f, 8r, 6f, 7f, 9f, 5r, 4r, 3r, 2r, 1r ]
             # these are indices      [ 0, 17, 12, 14, 18,  3,  5,  7,  9, 11 ]
 
             storage_w.close()
+
             if use_cache:
                 storage_r = paths.AnalysisStorage(fname)
             else:
@@ -124,12 +159,33 @@ class testStorage(object):
             for s1, s2 in zip(traj, storage_r.trajectories[2]):
                 compare_snapshot(s1, s2, True)
 
+            eff_traj = [
+                traj[0],
+                traj[8].reversed,
+                traj[6],
+                traj[7],
+                traj[9],
+                traj[5].reversed,
+                traj[4].reversed,
+                traj[3].reversed,
+                traj[2].reversed,
+                traj[1].reversed,
+            ]
+
             # load from hidden and see, if the hidden store looks as expected
-            for s1, s2 in zip(
-                    traj,
-                    storage_r.stores['snapshot0'][
-                        [ 0, 17, 12, 14, 18,  3,  5,  7,  9, 11 ]]):
+            # we open every second snapshot from the hidden store because the
+            # ones in between correspond to the reversed ones
+
+            hidden_snapshots = storage_r.stores['snapshot0'][:]
+            for idx in range(10):
+                s1 = eff_traj[idx]
+                s1r = s1.reversed
+                s2 = hidden_snapshots[2 * idx]
+                s2r = hidden_snapshots[2 * idx + 1]
                 compare_snapshot(s1, s2, True)
+                compare_snapshot(s1r, s2r, True)
+
+            storage_r.close()
 
     def test_load_save(self):
         store = Storage(filename=self.filename, mode='w', use_uuid=False)
@@ -143,7 +199,9 @@ class testStorage(object):
         loaded_r = store.snapshots[1]
 
         compare_snapshot(loaded_template, self.template_snapshot, True)
-        compare_snapshot(loaded_template.reversed, self.template_snapshot.reversed, True)
+        compare_snapshot(
+            loaded_template.reversed,
+            self.template_snapshot.reversed, True)
         compare_snapshot(loaded_r, self.template_snapshot.reversed)
 
         store.close()
@@ -160,7 +218,9 @@ class testStorage(object):
         loaded_r = store.snapshots[self.template_snapshot.reversed.__uuid__]
 
         compare_snapshot(loaded_template, self.template_snapshot, True)
-        compare_snapshot(loaded_template.reversed, self.template_snapshot.reversed, True)
+        compare_snapshot(
+            loaded_template.reversed,
+            self.template_snapshot.reversed, True)
         compare_snapshot(loaded_r, self.template_snapshot.reversed)
 
         store.close()
@@ -178,7 +238,9 @@ class testStorage(object):
         loaded_r = store.snapshots[1]
 
         compare_snapshot(loaded_template, self.toy_template, True)
-        compare_snapshot(loaded_template.reversed, self.toy_template.reversed, True)
+        compare_snapshot(
+            loaded_template.reversed,
+            self.toy_template.reversed, True)
         compare_snapshot(loaded_r, self.toy_template.reversed)
 
         store.close()
@@ -203,7 +265,8 @@ class testStorage(object):
         store.close()
 
     def test_version(self):
-        store = Storage(filename=self.filename, template=self.template_snapshot, mode='w')
-        assert(os.path.isfile(self.filename))
+        store = Storage(
+            filename=self.filename, mode='w')
 
+        assert(os.path.isfile(self.filename))
         assert(store.storage_version == paths.version.version)
