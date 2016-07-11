@@ -373,12 +373,13 @@ class ObjectStore(StorableNamedObject):
                 idx = self.vars['uuid'][item]
             elif tt is UUID:
                 idx = item
-            elif isinstance(tt, (str, unicode)):
+            elif tt in [str, unicode]:
                 if item[0] == '-':
                     return None
 
                 idx = UUID(item)
             else:
+                print type(tt), isinstance(tt, str)
                 idx = item.__uuid__
         else:
             if tt is int:
