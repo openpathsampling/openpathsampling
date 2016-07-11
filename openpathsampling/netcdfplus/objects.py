@@ -379,7 +379,6 @@ class ObjectStore(StorableNamedObject):
 
                 idx = UUID(item)
             else:
-                print type(tt), isinstance(tt, str)
                 idx = item.__uuid__
         else:
             if tt is int:
