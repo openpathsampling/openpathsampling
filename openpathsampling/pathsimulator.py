@@ -64,7 +64,6 @@ class PathSimulator(StorableNamedObject):
     def __init__(self, storage):
         super(PathSimulator, self).__init__()
         self.storage = storage
-        # self.engine = engine
         self.save_frequency = 1
         self.step = 0
         initialization_logging(
@@ -112,6 +111,8 @@ class PathSimulator(StorableNamedObject):
         if self.storage is not None:
             self.storage.steps.save(mcstep)
             self.storage.sync_all()
+
+        return mcstep
 
 
 class BootstrapPromotionMove(SubPathMover):
