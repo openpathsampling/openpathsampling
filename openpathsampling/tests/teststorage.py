@@ -109,30 +109,28 @@ class testStorage(object):
             assert(len(storage_w.snapshots) == 4)
             assert(len(storage_w.trajectories) == 0)
             assert(len(storage_w.stores['snapshot0']) == 2)
+            # this will store traj[6:] under pos IDX #0
             storage_w.trajectories.save(traj[6:])
             assert(len(storage_w.snapshots) == 10)
             assert(len(storage_w.trajectories) == 1)
             assert(len(storage_w.stores['snapshot0']) == 5)
 
-            # do really store
-            storage_w.snapshots.only_mention = True
+            traj_rev = traj.reversed
 
-            # this will store traj under pos IDX #2
-            storage_w.trajectories.save(traj.reversed)
+            # this will store traj_rev under pos IDX #1
+            storage_w.trajectories.mention(traj_rev)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 2)
             assert(len(storage_w.stores['snapshot0']) == 5)
 
-            storage_w.trajectories.save(traj.reversed)
+            # this will not do anything since traj is already saved
+            storage_w.trajectories.save(traj_rev)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 2)
             assert(len(storage_w.stores['snapshot0']) == 5)
 
-
-            storage_w.snapshots.only_mention = False
-            # this will store traj under pos IDX #3
-            storage_w.trajectories.save(traj)
-
+            # this will store a new traj.reversed under IDX #2
+            storage_w.trajectories.save(traj.reversed)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 3)
             assert(len(storage_w.stores['snapshot0']) == 10)
@@ -140,7 +138,13 @@ class testStorage(object):
             # this will store traj under pos IDX #3
             storage_w.trajectories.save(traj)
             assert(len(storage_w.snapshots) == 20)
-            assert(len(storage_w.trajectories) == 3)
+            assert(len(storage_w.trajectories) == 4)
+            assert(len(storage_w.stores['snapshot0']) == 10)
+
+            # this will not store since traj is already stored
+            storage_w.trajectories.save(traj)
+            assert(len(storage_w.snapshots) == 20)
+            assert(len(storage_w.trajectories) == 4)
             assert(len(storage_w.stores['snapshot0']) == 10)
 
             # we saved in this order [0f, 8r, 6f, 7f, 9f, 5r, 4r, 3r, 2r, 1r ]
@@ -156,7 +160,7 @@ class testStorage(object):
                 storage_r.stores['snapshot0'].set_caching(False)
 
             # check if the loaded trajectory is reproduced
-            for s1, s2 in zip(traj, storage_r.trajectories[2]):
+            for s1, s2 in zip(traj, storage_r.trajectories[3]):
                 compare_snapshot(s1, s2, True)
 
             eff_traj = [
