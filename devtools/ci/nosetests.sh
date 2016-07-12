@@ -4,7 +4,7 @@ echo travis_fold:start:nosetests
 echo Run nose tests ...
 
 testfail=0
-nosetests -v -s --with-coverage || testfail=1
+nosetests -v -s --with-coverage --coverage-package openpathsampling || testfail=1
 coveralls
 echo travis_fold:end:nosetests
 
