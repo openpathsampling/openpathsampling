@@ -110,19 +110,20 @@ class BaseSnapshotStore(IndexedObjectStore):
         if n_idx < 0:
             return None
 
-        # if it is in the cache, return it
-        try:
-            obj = self.cache[n_idx]
-            if idx & 1:
-                obj = obj.reversed
-
-            return obj
-
-        except KeyError:
-            pass
+        # # if it is in the cache, return it
+        # try:
+        #     obj = self.cache[n_idx]
+        #     if idx & 1:
+        #         obj = obj.reversed
+        #
+        #     return obj
+        #
+        # except KeyError:
+        #     pass
 
         obj = self._load(n_idx)
-        self.cache[n_idx] = obj
+
+        # self.cache[n_idx] = obj
 
         if idx & 1:
             obj = obj.reversed
@@ -450,8 +451,6 @@ class SnapshotWrapperStore(ObjectStore):
 
         if obj is not None:
             self._get_id(n_idx, obj)
-
-            # update cache there might have been a change due to naming
             self.index[obj] = n_idx
             self.cache[n_idx] = obj
 
@@ -466,10 +465,16 @@ class SnapshotWrapperStore(ObjectStore):
         return obj
 
     def _load(self, idx):
-        store_idx = self.vars['store'][idx / 2]
+        store_idx = int(self.variables['store'][idx / 2])
 
         if store_idx < 0:
-            raise KeyError('IDX "' + idx + '" not found in storage')
+            if self.fallback_store is not None:
+                return self.fallback_store.load(idx)
+            elif self.storage.fallback is not None:
+                return self.storage.fallback.snapshots.load(idx)
+            else:
+                raise KeyError(
+                    'str %s not found in storage or fallback' % idx)
         else:
             store = self.store_snapshot_list[store_idx]
             snap = store[idx]
@@ -633,6 +638,7 @@ class SnapshotWrapperStore(ObjectStore):
                 # only mention but not really store snapshots
                 self.vars['store'][n_idx / 2] = -1
                 self.index[obj] = n_idx
+                self._auto_complete_single_snapshot(obj, n_idx)
                 self._set_id(n_idx, obj)
 
             if self.reference_by_uuid:
@@ -1096,6 +1102,20 @@ class SnapshotWrapperStore(ObjectStore):
             return peng.Trajectory(map(self.proxy, self.vars['uuid'][:]))
         else:
             return peng.Trajectory(map(self.proxy, range(len(self))))
+
+    def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
+        if type(item) is int or type(item) is str or type(item) is UUID:
+            return self.load(item)
+        elif type(item) is slice:
+            return [self.load(idx)
+                    for idx in range(*item.indices(len(self)))]
+        elif type(item) is list:
+            return [self.load(idx) for idx in item]
+        elif item is Ellipsis:
+            return iter(self)
 
 
 class SnapshotValueStore(ObjectStore):
