@@ -497,11 +497,11 @@ class Trajectory(list, StorableObject):
             the set of common snapshots
         """
         if not time_reversal:
-            return set([snap for snap in self]) & set([snap for snap in other])
+            return set(self.as_proxies()) & set(other.as_proxies())
         else:
-            return set([snap for snap in self]) & \
-                (set([snap for snap in other]) |
-                 set([snap.reversed for snap in other]))
+            return set(self.as_proxies()) & \
+                (set(other.as_proxies()) |
+                 set([snap.reversed for snap in other.as_proxies()]))
 
     def shared_subtrajectory(self, other, time_reversal=False):
         """
@@ -518,7 +518,7 @@ class Trajectory(list, StorableObject):
             the shared subtrajectory
         """
         shared = self.shared_configurations(other, time_reversal=time_reversal)
-        return Trajectory([snap for snap in self if snap in shared])
+        return Trajectory([snap for snap in self.iter_proxies() if snap in shared])
 
     def unique_subtrajectory(self, other):
         """

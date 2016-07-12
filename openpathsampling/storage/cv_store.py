@@ -83,6 +83,7 @@ class CVStore(UniqueNamedObjectStore):
                 template = cv.diskcache_template
             elif len(self.storage.snapshots) > 0:
                 template = self.storage.snapshots[0]
+
             else:
                 raise RuntimeError(
                     'Need either at least one stored snapshot or a '

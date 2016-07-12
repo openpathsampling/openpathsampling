@@ -701,7 +701,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
     def _eval(self, items):
         trajectory = peng.Trajectory(items)
 
-        t = trajectory_to_mdtraj(trajectory, self.topology.md())
+        t = trajectory_to_mdtraj(trajectory, self.topology.md)
         return self._instance.transform(t)
 
     def to_dict(self):

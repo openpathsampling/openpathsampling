@@ -208,9 +208,9 @@ class OpenMMEngine(DynamicsEngine):
                                                      getEnergy=True)
 
             snapshot = Snapshot.construct(
-                coordinates=np.copy(state.getPositions(asNumpy=True)),
-                box_vectors=np.copy(state.getPeriodicBoxVectors(asNumpy=True)),
-                velocities=np.copy(state.getVelocities(asNumpy=True)),
+                coordinates=state.getPositions(asNumpy=True),
+                box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
+                velocities=state.getVelocities(asNumpy=True),
                 engine=self
             )
 

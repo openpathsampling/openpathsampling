@@ -110,19 +110,20 @@ class BaseSnapshotStore(IndexedObjectStore):
         if n_idx < 0:
             return None
 
-        # if it is in the cache, return it
-        try:
-            obj = self.cache[n_idx]
-            if idx & 1:
-                obj = obj.reversed
-
-            return obj
-
-        except KeyError:
-            pass
+        # # if it is in the cache, return it
+        # try:
+        #     obj = self.cache[n_idx]
+        #     if idx & 1:
+        #         obj = obj.reversed
+        #
+        #     return obj
+        #
+        # except KeyError:
+        #     pass
 
         obj = self._load(n_idx)
-        self.cache[n_idx] = obj
+
+        # self.cache[n_idx] = obj
 
         if idx & 1:
             obj = obj.reversed
@@ -272,8 +273,26 @@ class BaseSnapshotStore(IndexedObjectStore):
 
         return idx
 
-    def idx(self, obj):
-        return self.index[obj]
+    def __iter__(self):
+        for idx in range(0, len(self) * 2, 2):
+            yield self[idx]
+
+    def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
+        try:
+            if type(item) is int or type(item) is str or type(item) is UUID:
+                return self.load(item)
+            elif type(item) is slice:
+                return [self.load(idx)
+                        for idx in range(*item.indices(2 * len(self)))]
+            elif type(item) is list:
+                return [self.load(idx) for idx in item]
+            elif item is Ellipsis:
+                return iter(self)
+        except KeyError:
+            return None
 
 
 # ==============================================================================
@@ -432,8 +451,6 @@ class SnapshotWrapperStore(ObjectStore):
 
         if obj is not None:
             self._get_id(n_idx, obj)
-
-            # update cache there might have been a change due to naming
             self.index[obj] = n_idx
             self.cache[n_idx] = obj
 
@@ -448,10 +465,16 @@ class SnapshotWrapperStore(ObjectStore):
         return obj
 
     def _load(self, idx):
-        store_idx = self.vars['store'][idx / 2]
+        store_idx = int(self.variables['store'][idx / 2])
 
         if store_idx < 0:
-            raise KeyError('IDX "' + idx + '" not found in storage')
+            if self.fallback_store is not None:
+                return self.fallback_store.load(idx)
+            elif self.storage.fallback is not None:
+                return self.storage.fallback.snapshots.load(idx)
+            else:
+                raise KeyError(
+                    'str %s not found in storage or fallback' % idx)
         else:
             store = self.store_snapshot_list[store_idx]
             snap = store[idx]
@@ -554,6 +577,27 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             return None
 
+    def mention(self, snapshot):
+        """
+        Save a shallow copy
+
+        Parameters
+        ----------
+        snapshot : `openpathsampling.engines.BaseSnapshot`
+            the snapshot to be shallow stored
+
+        Returns
+        -------
+        int or `UUID`
+            the reference to find the shallow! object
+
+        """
+        current_mention = self.only_mention
+        self.only_mention = True
+        ref = self.save(snapshot)
+        self.only_mention = current_mention
+        return ref
+
     def save(self, obj, idx=None):
         n_idx = None
 
@@ -577,11 +621,9 @@ class SnapshotWrapperStore(ObjectStore):
                 if obj._reversed in self.index:
                     n_idx = self.index[obj._reversed] ^ 1
 
-        store_idx = None
-
         if n_idx is not None:
             # snapshot is mentioned
-            store_idx = self.variables['store'][n_idx / 2]
+            store_idx = int(self.variables['store'][n_idx / 2])
             if not store_idx == -1:
                 # and stored
                 if self.reference_by_uuid:
@@ -589,13 +631,20 @@ class SnapshotWrapperStore(ObjectStore):
                 else:
                     return n_idx
 
-        else:
-            if self.only_mention:
+        if self.only_mention:
+            if n_idx is None:
+                n_idx = self.free()
+
                 # only mention but not really store snapshots
                 self.vars['store'][n_idx / 2] = -1
-                n_idx = self.free()
+                self.index[obj] = n_idx
+                self._auto_complete_single_snapshot(obj, n_idx)
                 self._set_id(n_idx, obj)
+
+            if self.reference_by_uuid:
                 return self.reference(obj)
+            else:
+                return n_idx
 
         if not isinstance(obj, self.content_class):
             raise ValueError(
@@ -612,16 +661,16 @@ class SnapshotWrapperStore(ObjectStore):
             self._auto_complete_single_snapshot(obj, n_idx)
             self._set_id(n_idx, obj)
         else:
-            if n_idx >= len(self):
-                raise ValueError('n_idx too large')
+            store, store_idx = self.type_list[obj.engine.descriptor]
             self.vars['store'][n_idx / 2] = store_idx
-            self.index[obj] = n_idx
-            store = self.store_snapshot_list[store_idx]
             store[n_idx] = obj
 
         self.cache[n_idx] = obj
 
-        return self.reference(obj)
+        if self.reference_by_uuid:
+            return self.reference(obj)
+        else:
+            return n_idx
 
     def _save(self, obj, n_idx):
         try:
@@ -1053,6 +1102,20 @@ class SnapshotWrapperStore(ObjectStore):
             return peng.Trajectory(map(self.proxy, self.vars['uuid'][:]))
         else:
             return peng.Trajectory(map(self.proxy, range(len(self))))
+
+    def __getitem__(self, item):
+        """
+        Enable numpy style selection of object in the store
+        """
+        if type(item) is int or type(item) is str or type(item) is UUID:
+            return self.load(item)
+        elif type(item) is slice:
+            return [self.load(idx)
+                    for idx in range(*item.indices(len(self)))]
+        elif type(item) is list:
+            return [self.load(idx) for idx in item]
+        elif item is Ellipsis:
+            return iter(self)
 
 
 class SnapshotValueStore(ObjectStore):
