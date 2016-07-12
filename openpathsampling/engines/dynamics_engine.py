@@ -162,8 +162,40 @@ class DynamicsEngine(StorableNamedObject):
             self.options = {}
 
     def __getattr__(self, item):
+        # first, check for errors that might be shadowed in properties
+        if item in self.__class__.__dict__:
+            # we should have this attribute
+            p = self.__class__.__dict__[item]
+            if isinstance(p, property):
+                # re-run, raise the error inside the property
+                try:
+                    result = p.fget(self)
+                except:
+                    raise
+                else:
+                    # alternately, trust the fixed result with
+                    # return result  # miraculously fixed
+                    raise AttributeError(
+                        "Unknown problem occurred in property" + 
+                        str(p.fget.func_name) + ": Second attempt returned"
+                        + str(result)
+                    )
+            # for now, items in dict that fail with AttributeError will just
+            # give the default message; to change, add something here like:
+            # raise AttributeError("Something went wrong with " + str(item))
+
         # default is to look for an option and return it's value
-        return self.options[item]
+        try:
+            return self.options[item]
+        except KeyError:
+            # convert KeyError to AttributeError
+            default_msg = "'{0}' has no attribute '{1}'"
+            raise AttributeError(
+                (default_msg + ", nor does its options dictionary").format(
+                    self.__class__.__name__,
+                    item
+                )
+            )
 
     @property
     def dimensions(self):
