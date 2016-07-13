@@ -1518,6 +1518,9 @@ class ConditionalSequentialMover(SequentialMover):
     ConditionalSequentialMover only works if there is a *single* active
     sample per replica.
     """
+    def _get_in_ensembles(self):
+        return [self.submovers[0].input_ensembles]
+
     def move(self, globalstate):
         logger.debug("Starting conditional sequential move")
 
