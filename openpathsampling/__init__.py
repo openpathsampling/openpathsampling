@@ -1,3 +1,35 @@
+# start by importing version, because for some weird reason, I sometimes get
+# networkx as over-riding the version here (no idea why...)
+try:
+    # should work if installed through normal means: setup.py-based with
+    # pip, conda, easy_install, etc.
+    import version
+except ImportError:  # pragma: no cover
+    import os
+    # should work if someone just set the $PYTHONPATH to include OPS
+    directory = os.path.dirname(os.path.realpath(__file__))
+    prev_dir = os.path.split(directory)[0]
+    setupfile = os.path.join(prev_dir, "setup.py")
+
+    if not os.path.exists(setupfile):
+        # now we're screwed
+        raise ImportError("Unable to identify OPS version. " + 
+			  "OPS probably not installed correctly.")
+
+    # continue force-setting version based on `setup.py`
+    import imp  # may be Py2 only!
+    ops_setup = imp.load_source("ops_setup", setupfile)
+    version = imp.new_module("openpathsampling.version")
+
+    version.version = ops_setup.preferences['version']
+    version.short_version = ops_setup.preferences['version']
+    version.git_version  = ops_setup.get_git_version()
+    version.full_version = ops_setup.preferences['version']
+    if not ops_setup.preferences['released']:
+        version.full_version += ".dev-" + version.git_version[:7]
+    isrelease = str(ops_setup.preferences['released'])
+        
+        
 from analysis.move_scheme import (
     MoveScheme, DefaultScheme, LockedMoveScheme, OneWayShootingMoveScheme
 )
@@ -10,6 +42,8 @@ from analysis.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
     FixedLengthTPSNetwork
 )
+
+from analysis.path_histogram import PathDensityHistogram
 
 from analysis.replica_network import (
     ReplicaNetwork, trace_ensembles_for_replica,
@@ -105,7 +139,4 @@ def git_HEAD():  # pragma: no cover
     return check_output(["git", "-C", git_dir, "rev-parse", "HEAD"])[:-1]
     # chops the newline at the end
 
-try:
-    import version
-except ImportError:  # pragma: no cover
-    pass
+

@@ -40,7 +40,7 @@ class StorableObject(object):
         :meth:`openpathsampling.netcdfplus.base.StorableObject.count_weaks`
 
         """
-        if StorableObject.observe_objects is not active:
+        if StorableObject.observe_objects is active:
             return
 
         if active:

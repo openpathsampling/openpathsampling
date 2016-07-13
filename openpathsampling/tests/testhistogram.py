@@ -11,7 +11,16 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 import collections
 
-from openpathsampling.analysis import Histogram, SparseHistogram
+from openpathsampling.analysis import (Histogram, SparseHistogram,
+                                       HistogramPlotter2D)
+
+class MockAxes(object):
+    def __init__(self, xticks, yticks):
+        self.xticks = xticks
+        self.yticks = yticks
+
+    def get_xticks(self): return self.xticks
+    def get_yticks(self): return self.yticks
 
 class testHistogram(object):
     def setup(self):
@@ -165,3 +174,69 @@ class testSparseHistogram(object):
         assert_almost_equal(normed_fcn((0.25, 0.65)), 0.5/0.15)
         assert_almost_equal(normed_fcn((0.01, 0.09)), 0.25/0.15)
         assert_almost_equal(normed_fcn((0.61, 0.89)), 0.25/0.15)
+
+
+class testHistogramPlotter2D(object):
+    def setup(self):
+        data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
+        histo = SparseHistogram(bin_widths=(0.5, 0.3),
+                                left_bin_edges=(0.0, -0.1))
+        histo.histogram(data)
+        self.plotter = HistogramPlotter2D(histo)
+
+    def test_to_bins(self):
+        vals = [-0.1, 0.5, 0.8]
+        xbins = self.plotter.to_bins(vals, 0)
+        assert_items_almost_equal(xbins, [-0.2, 1.0, 1.6])
+        ybins = self.plotter.to_bins(vals, 1)
+        assert_items_almost_equal(ybins, [0.0, 2.0, 3.0])
+        assert_equal(self.plotter.to_bins(None, 0), None)
+
+    def test_axis_input(self):
+        xt, xr, xl = self.plotter.axis_input(hist=[-1.0, 1.0, 2.0],
+                                             ticklabels=None,
+                                             lims=None,
+                                             dof=0)
+        assert_equal(xt, None)
+        assert_items_equal(xr, (-1.0, 2.0))
+        assert_items_equal(xl, (0, 3))
+
+        xt, xr, xl = self.plotter.axis_input(hist=[-1.0, 1.0, 2.0],
+                                             ticklabels=[-1.0, 0.0, 1.0],
+                                             lims=None,
+                                             dof=0)
+        assert_items_equal(xt, [-2.0, 0.0, 2.0])
+        assert_items_equal(xr, (-2.0, 2.0))
+        assert_items_equal(xl, (0, 4.0))
+
+        xt, xr, xl = self.plotter.axis_input(hist=[-1.0, 1.0, 2.0],
+                                             ticklabels=[-1.0, 0.0, 1.0],
+                                             lims=(-2.5, 0.0),
+                                             dof=0)
+        assert_items_equal(xt, [-2.0, 0.0, 2.0])
+        assert_items_equal(xr, (-5.0, 2.0))
+        assert_items_equal(xl, (-5.0, 0.0))
+
+    def test_ticks_and_labels(self):
+        # mock axes, make sure they work as expected
+        fake_ax = MockAxes([-1.0, 0.0, 1.0], [-6.0, 0.0, 6.0])
+        assert_items_equal(fake_ax.get_xticks(), [-1.0, 0.0, 1.0])
+        assert_items_equal(fake_ax.get_yticks(), [-6.0, 0.0, 6.0])
+
+        old_format = self.plotter.label_format
+        self.plotter.label_format = "{:4.2f}"
+
+        xticks, xlabels = self.plotter.ticks_and_labels(
+            ticks=[-2.0, -1.0, 0.0, 1.0, 2.0], ax=fake_ax, dof=0
+        )
+        assert_items_almost_equal(xticks, [-2.0, -1.0, 0.0, 1.0, 2.0])
+        assert_items_equal(xlabels, ["-1.00", "-0.50", "0.00", "0.50", "1.00"])
+
+        yticks, ylabels = self.plotter.ticks_and_labels(
+            ticks=None, ax=fake_ax, dof=1
+        )
+        assert_items_almost_equal(yticks, [-6.0, 0.0, 6.0])
+        assert_items_equal(ylabels, ["-1.90", "-0.10", "1.70"])
+
+        self.plotter.label_format = old_format
+
