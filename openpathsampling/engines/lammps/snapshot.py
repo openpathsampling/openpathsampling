@@ -48,7 +48,7 @@ class Snapshot(BaseSnapshot):
     KineticContainer = features.KineticContainer
 
     @staticmethod
-    def construct(coordinates=None, box_vectors=None, velocities=None, engine=None):
+    def construct(coordinates=None, box_vectors=None, velocities=None, topology=None):
         """
         Construct a new snapshot from numpy arrays
 
@@ -72,4 +72,4 @@ class Snapshot(BaseSnapshot):
         statics = Snapshot.StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
         kinetics = Snapshot.KineticContainer(velocities=velocities)
 
-        return Snapshot(engine=engine, statics=statics, kinetics=kinetics)
+        return Snapshot(topology=topology, statics=statics, kinetics=kinetics)

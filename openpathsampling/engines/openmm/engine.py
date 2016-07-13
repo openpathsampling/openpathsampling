@@ -201,7 +201,7 @@ class OpenMMEngine(DynamicsEngine):
             coordinates=state.getPositions(asNumpy=True),
             box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
             velocities=state.getVelocities(asNumpy=True),
-            topology=self.topology
+            engine=self
         )
 
         return snapshot

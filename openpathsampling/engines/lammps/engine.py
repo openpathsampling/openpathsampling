@@ -2,10 +2,13 @@ import numpy as np
 import simtk.unit as u
 
 import openpathsampling as paths
+from openpathsampling.engines import DynamicsEngine
+from snapshot import Snapshot
 
 from lammps import lammps
 
-class LammpsEngine(paths.DynamicsEngine):
+
+class LammpsEngine(DynamicsEngine):
     """OpenMM dynamics engine based on a openmmtools.testsystem object.
 
     This is only to allow to use the examples from openmmtools.testsystems
@@ -37,16 +40,18 @@ class LammpsEngine(paths.DynamicsEngine):
         self.command('compute thermo_ke all ke')
         self.command('run 1')
 
-
         if template is None:
             template = self._get_snapshot(True)
+
+        descriptor =
 
         super(LammpsEngine, self).__init__(
             options=options,
             template=template
         )
 
-        # set no cached snapshot, means it will be constructed from the openmm context
+        # set no cached snapshot, means it will be constructed
+        # from the openmm context
         self._current_snapshot = None
         self._current_momentum = None
         self._current_configuration = None
@@ -81,50 +86,31 @@ class LammpsEngine(paths.DynamicsEngine):
         xy = lmp.extract_global("xy", 1)
         xz = lmp.extract_global("xz", 1)
         yz = lmp.extract_global("yz", 1)
-        bv = np.array([[xhi-xlo, 0.0, 0.0], [xy, yhi-ylo, 0.0], [xz, yz, zhi - zlo]])
+        bv = np.array(
+            [[xhi - xlo, 0.0, 0.0], [xy, yhi - ylo, 0.0], [xz, yz, zhi - zlo]])
         n_atoms = lmp.get_natoms()
         n_spatial = len(x) / n_atoms
 
-        configuration = paths.Configuration(
-            coordinates = np.ctypeslib.array(x).reshape((n_atoms, -1)) * u.dimensionless,
-            potential_energy = pe * u.dimensionless,
-            box_vectors = bv * u.dimensionless
-        )
-        momentum = paths.Momentum(
-            velocities = np.ctypeslib.array(v).reshape((n_atoms, -1)) * u.dimensionless,
-            kinetic_energy = ke * u.dimensionless
+        snapshot = Snapshot.construct(
+            engine=self,
+            coordinates=np.ctypeslib.array(x).reshape(
+                (n_atoms, -1)),
+            box_vectors=bv,
+            velocities=np.ctypeslib.array(v).reshape(
+                (n_atoms, -1))
         )
 
-        if topology is None:
-            snap = paths.Snapshot(
-                configuration = configuration,
-                momentum = momentum,
-                topology = self.topology
-            )
-        elif topology is True:
-            snap = paths.Snapshot(
-                configuration = configuration,
-                momentum = momentum,
-                topology = paths.Topology(n_atoms=n_atoms, n_spatial=n_spatial)
-            )
-        else:
-            snap = paths.Snapshot(
-                configuration = configuration,
-                momentum = momentum,
-                topology = topology
-            )
-
-        return snap
+        return snapshot
 
     def _put_coordinates(self, nparray):
         lmp = self._lmp
         lmparray = np.ctypeslib.as_ctypes(nparray.ravel())
-        lmp.scatter_atoms("x",1,3, lmparray)
+        lmp.scatter_atoms("x", 1, 3, lmparray)
 
     def _put_velocities(self, nparray):
         lmp = self._lmp
         lmparray = np.ctypeslib.as_ctypes(nparray.ravel())
-        lmp.scatter_atoms("v",1,3, lmparray)
+        lmp.scatter_atoms("v", 1, 3, lmparray)
 
     @property
     def lammps(self):
@@ -132,9 +118,9 @@ class LammpsEngine(paths.DynamicsEngine):
 
     def to_dict(self):
         return {
-            'inputs' : self.inputs,
-            'template' : self.template,
-            'options' : self.options
+            'inputs': self.inputs,
+            'template': self.template,
+            'options': self.options
         }
 
     @classmethod
