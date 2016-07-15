@@ -596,9 +596,13 @@ class Ensemble(StorableNamedObject):
         indices = self.iter_valid_slices(trajectory, max_length,
                                          min_length, overlap, reverse)
 
-        return [
-            trajectory[part]
-            for part in itertools.islice(indices, n_results)]
+        if n_results > 0:
+            return [
+                trajectory[part]
+                for part in itertools.islice(indices, n_results)]
+        else:
+            return [trajectory[part] for part in indices]
+
 
     @property
     def extendable_sub_ensembles(self):
