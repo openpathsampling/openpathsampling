@@ -268,6 +268,22 @@ class DynamicsEngine(StorableNamedObject):
         return self.generate(snapshot, ensemble.can_prepend, direction=-1)
 
     def extend_forward(self, trajectory, ensemble):
+        """
+        Extend a given trajectory by forward simulation into a new ensemble
+
+        Parameters
+        ----------
+        trajectory : `openpathsampling.Trajectory`
+            the trajectory to be extended
+        ensemble : `openpathsampling.Ensemble`
+            the ensemble giving the stop condition
+
+        Returns
+        -------
+        `openpathsampling.Trajectory`
+            the extended trajectory
+
+        """
         return trajectory[:-1] + \
             self.generate(
                 trajectory[-1],
@@ -279,6 +295,22 @@ class DynamicsEngine(StorableNamedObject):
             )
 
     def extend_backward(self, trajectory, ensemble):
+        """
+        Extend a given trajectory by backward simulation into a new ensemble
+
+        Parameters
+        ----------
+        trajectory : `openpathsampling.Trajectory`
+            the trajectory to be extended
+        ensemble : `openpathsampling.Ensemble`
+            the ensemble giving the stop condition
+
+        Returns
+        -------
+        `openpathsampling.Trajectory`
+            the extended trajectory
+
+        """
         return self.generate(
             trajectory[0].reversed,
             [paths.SuffixTrajectoryEnsemble(
