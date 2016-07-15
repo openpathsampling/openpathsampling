@@ -204,8 +204,7 @@ class OpenMMEngine(DynamicsEngine):
             # TODO: Add caching for this and mark if changed
 
             state = self.simulation.context.getState(getPositions=True,
-                                                     getVelocities=True,
-                                                     getEnergy=True)
+                                                     getVelocities=True)
 
             snapshot = Snapshot.construct(
                 coordinates=state.getPositions(asNumpy=True),
@@ -215,10 +214,7 @@ class OpenMMEngine(DynamicsEngine):
             )
 
         except AttributeError as e:
-            raise ValueError('No attribute' + str(e))
-        except:
-            print "Unexpected error:", sys.exc_info()[0]
-            raise
+            raise ValueError('No attribute error: ' + str(e))
 
         return snapshot
 

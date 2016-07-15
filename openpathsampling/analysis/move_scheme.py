@@ -555,7 +555,14 @@ class MoveScheme(StorableNamedObject):
             for ens in extra:
                 msg += "*  " + ens.name + "\n"
         return msg
-    
+
+    def generate_initial_sampleset(self, samples, engine):
+        return paths.SampleSet.generate_from_sampleset(
+            self.list_initial_ensembles(),
+            samples,
+            engine
+        )
+
     def build_balance_partners(self):
         """
         Create list of balance partners for all movers in groups.

@@ -1,5 +1,6 @@
 import logging
 import itertools
+import random
 
 import pandas as pd
 
@@ -61,7 +62,6 @@ class TransitionNetwork(StorableNamedObject):
             return self._sampling_transitions
         except AttributeError:
             return None
-
 
 
 class GeneralizedTPSNetwork(TransitionNetwork):
@@ -301,6 +301,26 @@ class TISNetwork(TransitionNetwork):
     def all_states(self):
         return list(set(self.initial_states + self.final_states))
 
+    def get_state(self, snapshot):
+        """
+        Find which core state a snapshot is in, if any
+
+        Parameters
+        ----------
+        snapshot : `openpathsampling.engines.BaseSnapshot`
+            the snapshot to be tested
+
+        Returns
+        -------
+        `openpathsampling.Volume`
+            the volume object defining the state
+        """
+        for state in self.all_states:
+            if state(snapshot):
+                return state
+
+        return None
+
 
 #def join_mis_minus(minuses):
     #pass
@@ -525,6 +545,128 @@ class MSTISNetwork(TISNetwork):
 
         return self._rate_matrix
 
+    def generate_inter_state_samples(self, snapshot, engine):
+        vol_all = reduce(lambda x, y: x | y, self.states)
+        states_missing = list(self.states)  # we want a copy
+
+        # all inter-core trajectories
+        core2core = paths.SequentialEnsemble(
+            [
+                paths.OptionalEnsemble(paths.AllInXEnsemble(vol_all)),
+                paths.AllOutXEnsemble(vol_all),
+                paths.SingleFrameEnsemble(
+                    paths.AllInXEnsemble(vol_all)
+                )
+            ]
+        )
+
+        # core X -> core X trajectories
+        core2core_list = {
+            state: paths.SequentialEnsemble([
+                paths.SingleFrameEnsemble(
+                    paths.AllInXEnsemble(state)),
+                paths.AllOutXEnsemble(state),
+                paths.SingleFrameEnsemble(
+                    paths.AllInXEnsemble(state))
+            ]) for state in self.states
+        }
+
+        # start at template
+        last_traj = []
+        count = 0
+
+        start_snap = snapshot
+        samp_list = []
+        start_snap_state = {state: [] for state in self.states}
+        total_length = 0
+
+        paths.tools.refresh_output(
+            '       TOTAL FRAMES [%6d] // missing: [ %s ]\n'
+            '----------------------------\n'
+            '%s' % (
+                total_length,
+                ' '.join([s.name for s in states_missing]),
+                '\n'.join(last_traj[-10:])
+            )
+        )
+
+
+        all_states_found = False
+
+        while not all_states_found:
+            new_traj_part = engine.generate_forward(
+                start_snap,
+                core2core
+            )
+
+            # look through all missing states
+            part_ensemble = None
+            to_delete = []
+            for idx, state in enumerate(states_missing):
+                if core2core_list[state](new_traj_part):
+                    # found X -> X path so stop looking for state X
+                    part_ensemble = core2core_list[state]
+                    to_delete = [state]
+                    break
+
+            states_missing = sorted(list(set(states_missing) - set(to_delete)))
+
+            last_traj.append(
+                '[%4d] %3s -> %3s   [%6d]' % (
+                    count,
+                    self.get_state(new_traj_part[0]).name
+                    if self.get_state(new_traj_part[0]) else '',
+                    self.get_state(new_traj_part[-1]).name,
+                    len(new_traj_part)
+                )
+            )
+
+            samp_list.append(
+                paths.Sample(
+                    replica=0,
+                    trajectory=new_traj_part,
+                    ensemble=part_ensemble,
+                )
+            )
+
+            all_states_found = not states_missing
+
+            # the last frame as a potential starting point
+            last_frame = new_traj_part[-1].reversed
+            start_snap_state[self.get_state(last_frame)].append(last_frame)
+
+            # pick a starting point either from the last position or
+            # from a state that has been visited but where we have no X->X path
+            starting_points = \
+                [last_frame] + \
+                sum([points for state, points in start_snap_state.items()
+                     if state in states_missing], [])
+
+            start_snap = random.choice(starting_points)
+
+            total_length += len(new_traj_part)
+
+            # update output
+            paths.tools.refresh_output(
+                '       TOTAL FRAMES [%6d] // missing: [ %s ]\n'
+                '----------------------------\n'
+                '%s' % (
+                    total_length,
+                    ' '.join([s.name for s in states_missing]),
+                    '\n'.join(last_traj[-10:])
+                )
+            )
+
+            count += 1
+
+        return samp_list
+
+    def generate_initial_sampleset(self, samples, engine):
+        return paths.SampleSet.generate_from_sampleset(
+            self.all_ensembles,
+            samples,
+            engine
+        )
 
 #def multiple_set_minus_switching(mistis, steps):
 

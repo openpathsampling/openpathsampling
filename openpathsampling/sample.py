@@ -377,9 +377,69 @@ class SampleSet(StorableObject):
                 ))
                 repid += 1
         return SampleSet(samples)
-        
 
+    @staticmethod
+    def generate_from_samples(ensembles, samples, engine):
+        sset = paths.SampleSet([])
 
+        trajectories = [samp.trajectory for samp in samples]
+
+        for idx, ens in enumerate(ensembles):
+            # use negative replica IDs for minus ensembles
+
+            if len(sset) == 0:
+                replica_id = 0
+            elif isinstance(ens, paths.MinusInterfaceEnsemble):
+                replica_id = min(sset.replicas) - 1
+            else:
+                replica_id = max(sset.replicas) + 1
+
+            paths.tools.refresh_output(
+                '[%d] Generating for `%s` Rep ID #%d - '
+                'still missing %d ensembles' % (
+                    idx,
+                    ens.name,
+                    replica_id,
+                    len(ensembles) - idx,
+                ))
+
+            new_sample = ens.generate_sample_from_initial(
+                trajectories,
+                replica_id,
+                engine
+            )
+
+            assert(ens(new_sample))
+            sset = sset.apply_samples([new_sample])
+
+        paths.tools.refresh_output(
+            'Successfully generated initial sampleset with %d samples' % (
+                len(sset)
+            ))
+
+        # check if we generated a valid sample set
+        sset.sanity_check()
+
+        return sset
+
+    def copy_without_parents(self):
+        """
+        Return a copy of the sample set where all samples.parents are removed
+
+        Useful, if you are not interested in the heritage of the sample and
+        store a clean set of samples
+        """
+        return SampleSet(
+            [Sample(
+                replica=s.replica,
+                trajectory=s.trajectory,
+                ensemble=s.ensemble,
+                bias=s.bias,
+                details=s.details,
+                parent=None,
+                mover=s.mover
+            ) for s in self]
+        )
 
     # @property
     # def ensemble_dict(self):

@@ -14,6 +14,8 @@ from openpathsampling.netcdfplus import StorableNamedObject
 from snapshot import BaseSnapshot, SnapshotDescriptor
 from trajectory import Trajectory
 
+import openpathsampling as paths
+
 logger = logging.getLogger(__name__)
 
 # =============================================================================
@@ -231,7 +233,7 @@ class DynamicsEngine(StorableNamedObject):
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the trajectory we've generated so far
-        continue_conditions : list of function(Trajectory)
+        continue_conditions : (list of) function(Trajectory)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
 
@@ -242,9 +244,13 @@ class DynamicsEngine(StorableNamedObject):
         """
         stop = False
         if continue_conditions is not None:
-            for condition in continue_conditions:
-                can_continue = condition(trajectory, trusted)
-                stop = stop or not can_continue
+            if isinstance(continue_conditions, list):
+                for condition in continue_conditions:
+                    can_continue = condition(trajectory, trusted)
+                    stop = stop or not can_continue
+            else:
+                stop = not continue_conditions(trajectory, trusted)
+
         return stop
 
     def generate_forward(self, snapshot, ensemble):
@@ -260,6 +266,27 @@ class DynamicsEngine(StorableNamedObject):
         """
 
         return self.generate(snapshot, ensemble.can_prepend, direction=-1)
+
+    def extend_forward(self, trajectory, ensemble):
+        return trajectory[:-1] + \
+            self.generate(
+                trajectory[-1],
+                [paths.PrefixTrajectoryEnsemble(
+                    ensemble,
+                    trajectory
+                ).strict_can_append],
+                direction=+1
+            )
+
+    def extend_backward(self, trajectory, ensemble):
+        return self.generate(
+            trajectory[0].reversed,
+            [paths.SuffixTrajectoryEnsemble(
+                ensemble,
+                trajectory
+            ).strict_can_prepend],
+            direction=-1
+        ).reversed + trajectory[1:]
 
     def generate(self, snapshot, running=None, direction=+1):
         r"""
