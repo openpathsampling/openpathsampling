@@ -568,7 +568,6 @@ class CV_MDTraj_Function(CV_Function):
         }
 
 
-
 class CV_MSMB_Featurizer(CV_Generator):
     """
     A CollectiveVariable that uses an MSMBuilder3 featurizer
