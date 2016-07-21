@@ -379,23 +379,27 @@ class SampleSet(StorableObject):
         return SampleSet(samples)
 
     @staticmethod
-    def generate_from_samples(ensembles, samples, engine):
+    def generate_from_trajectories(ensembles, trajectories, engine=None):
         """
         Generate a SampleSet from extending und truncation in a set of samples
 
         Parameters
         ----------
         ensembles : list of `openpathsampling.Ensemble`
-        samples : list of `openpathsampling.Sample`
+        trajectories : (list of) `openpathsampling.Trajectory` like
+            a list of trajectories (or samples as these contain a trajectory)
+            to be used as a pool of initial trajectories to generate samples
+            for all ensembles given
         engine : list of `openpathsampling.DynamicsEngine`
+            an optional engine. If given the method also tries to generate
+            samples by extending suitable subparts of trajectories.
 
         Returns
         -------
-        list of `openpathsampling.Sample`
+        `openpathsampling.SampleSet`
+            the new sampleset containing samples for each ensemble given
         """
         sset = paths.SampleSet([])
-
-        trajectories = [samp.trajectory for samp in samples]
 
         for idx, ens in enumerate(ensembles):
             # use negative replica IDs for minus ensembles

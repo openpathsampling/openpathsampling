@@ -648,6 +648,14 @@ class Ensemble(StorableNamedObject):
             trajectories = [trajectories.trajectory]
         elif isinstance(trajectories, paths.SampleSet):
             trajectories = [s.trajectory for s in trajectories]
+        elif isinstance(trajectories, list):
+            if len(trajectories) > 0:
+                trajectories = [
+                    obj.trajectory if isinstance(obj, paths.Sample) else obj
+                    for obj in trajectories
+                ]
+            else:
+                raise ValueError('Need at least one trajectory!')
 
         # try self first
 
