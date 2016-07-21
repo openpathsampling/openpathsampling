@@ -4,7 +4,7 @@ import simtk.unit as u
 
 from snapshot import Snapshot
 from topology import Topology, MDTrajTopology
-from openpathsampling.engines import Trajectory, DynamicsEngine, NoEngine, SnapshotDescriptor
+from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
 __author__ = 'Jan-Hendrik Prinz'
 
@@ -79,6 +79,9 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
     ----------
     pdb_file : str
         The filename of the .pdb file to be used
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
 
     Returns
     -------
@@ -112,6 +115,9 @@ def topology_from_pdb(pdb_file, simple_topology=False):
     ----------
     pdb_file : str
         The filename of the .pdb file to be used
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
 
     Returns
     -------
@@ -137,6 +143,9 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
     ----------
     testsystem : openmmtools.Topology
         The filename of the .pdb file to be used
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
 
     Returns
     -------
@@ -176,6 +185,9 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     ----------
     mdtrajectory : mdtraj.Trajectory
         Input mdtraj.Trajectory
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
 
     Returns
     -------
