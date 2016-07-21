@@ -7,6 +7,5 @@ from sample_store import SampleStore, SampleSetStore
 from cv_store import CVStore
 from pathmovechange_store import PathMoveChangeStore
 from mcstep_store import MCStepStore
-from remote import RemoteMasterStorage, RemoteClientStorage
 from distributed import DistributedUUIDStorage, TrajectoryStorage
 from util import join_md_storage, split_md_storage

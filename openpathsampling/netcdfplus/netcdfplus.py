@@ -9,6 +9,8 @@ from proxy import LoaderProxy
 
 from objects import NamedObjectStore, ObjectStore
 
+from collections import OrderedDict
+
 import numpy as np
 import netCDF4
 import os.path
@@ -429,7 +431,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         Sets the basic properties for the storage
         """
-        self._stores = {}
+        self._stores = OrderedDict()
         self._objects = {}
         self._obj_store = {}
         self._storages_base_cls = {}
