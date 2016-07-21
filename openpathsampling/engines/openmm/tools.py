@@ -278,7 +278,7 @@ def to_openmm_topology(obj):
         return None
 
 
-def trajectory_to_mdtraj(trajectory, md_topology=None):
+def trajectory_to_mdtraj(trajectory, md_topology):
     """
     Construct a `mdtraj.Trajectory` object from an :obj:`Trajectory` object
 
@@ -293,13 +293,6 @@ def trajectory_to_mdtraj(trajectory, md_topology=None):
         the constructed Trajectory instance
     """
 
-    if md_topology is None:
-        if len(trajectory) == 0:
-            raise ValueError('Either provide a topology object or at least one frame.')
-
-        md_topology = trajectory[0].engine.topology.md
-
-    # this is pretty cool to create a numpy array from the contained information
     # TODO: Use units to make sure we did not rescale accidentally!
     output = trajectory.xyz
 

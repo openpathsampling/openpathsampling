@@ -506,6 +506,7 @@ class CV_MDTraj_Function(CV_Function):
     def __init__(self,
                  name,
                  f,
+                 topology,
                  cv_time_reversible=True,
                  cv_requires_lists=True,
                  cv_wrap_numpy_array=True,
@@ -517,6 +518,9 @@ class CV_MDTraj_Function(CV_Function):
         ----------
         name : str
         f
+        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+            the mdtraj topology wrapper from OPS that is used to initialize
+            the featurizer in `pyemma.coordinates.featurizer(topology)`
         cv_time_reversible
         cv_requires_lists
         cv_wrap_numpy_array
@@ -539,17 +543,30 @@ class CV_MDTraj_Function(CV_Function):
             **kwargs
         )
 
-        self._topology = None
+        self.topology = topology
 
     def _eval(self, items):
         trajectory = peng.Trajectory(items)
 
-        t = trajectory_to_mdtraj(trajectory)
+        t = trajectory_to_mdtraj(trajectory, self.topology.md)
         return self.cv_callable(t, **self.kwargs)
 
     @property
     def mdtraj_function(self):
         return self.cv_callable
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'f': ObjectJSON.callable_to_dict(self.f),
+            'topology': self.topology,
+            'kwargs': self.kwargs,
+            'cv_time_reversible': self.cv_time_reversible,
+            'cv_requires_lists': self.cv_requires_lists,
+            'cv_wrap_numpy_array': self.cv_wrap_numpy_array,
+            'cv_scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
+        }
+
 
 
 class CV_MSMB_Featurizer(CV_Generator):
@@ -565,6 +582,7 @@ class CV_MSMB_Featurizer(CV_Generator):
             self,
             name,
             featurizer,
+            topology,
             cv_wrap_numpy_array=True,
             cv_scalarize_numpy_singletons=True,
             **kwargs
@@ -576,6 +594,9 @@ class CV_MSMB_Featurizer(CV_Generator):
         name
         featurizer : msmbuilder.Featurizer, callable
             the featurizer used as a callable class
+        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+            the mdtraj topology wrapper from OPS that is used to initialize
+            the featurizer in `pyemma.coordinates.featurizer(topology)`
         kwargs
             a dictionary of named arguments which should be given to `c`
             (for example, the atoms which define a specific distance/angle).
@@ -601,6 +622,7 @@ class CV_MSMB_Featurizer(CV_Generator):
                 md_kwargs[key] = md_kwargs[key].md()
 
         self._instance = featurizer(**md_kwargs)
+        self.topology = topology
 
         super(CV_Generator, self).__init__(
             name,
@@ -619,7 +641,7 @@ class CV_MSMB_Featurizer(CV_Generator):
         trajectory = peng.Trajectory(items)
 
         # create an MDtraj trajectory out of it
-        ptraj = trajectory_to_mdtraj(trajectory)
+        ptraj = trajectory_to_mdtraj(trajectory, self.topology.md)
 
         # run the featurizer
         return self._instance.partial_transform(ptraj)
@@ -628,6 +650,7 @@ class CV_MSMB_Featurizer(CV_Generator):
         return {
             'name': self.name,
             'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
+            'topology': self.topology,
             'kwargs': self.kwargs,
             'cv_wrap_numpy_array': self.cv_wrap_numpy_array,
             'cv_scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
@@ -661,8 +684,9 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
             the mdtraj topology wrapper from OPS that is used to initialize
             the featurizer in `pyemma.coordinates.featurizer(topology)`
         **kwargs : **kwargs
-            a dictionary of named arguments which should be given to `c`
-            (for example, the atoms which define a specific distance/angle).
+            a dictionary of named arguments which should be given to the
+            `featurizer` (for example, the atoms which define a specific
+            distance/angle).
             Finally an instance `instance = cls(**kwargs)` is create when the
             CV is created and using the CV will call `instance(snapshots)`
 

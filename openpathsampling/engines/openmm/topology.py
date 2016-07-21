@@ -69,10 +69,11 @@ class OpenMMSystemTopology(Topology):
     """A Topology that is based on an openmm.system object
 
     """
-    def __init__(self, openmm_system, subsets = None):
+    def __init__(self, openmm_system, subsets=None):
+        super(OpenMMSystemTopology, self).__init__(
+            n_atoms=int(self.system.getNumParticles())
+        )
         self.system = openmm_system
-        self.n_atoms = int(self.system.getNumParticles())
-        self.n_spatial = 3
         if subsets is None:
             self.subsets = {}
         else:
