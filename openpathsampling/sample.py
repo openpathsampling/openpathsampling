@@ -420,7 +420,7 @@ class SampleSet(StorableObject):
                     len(ensembles) - idx,
                 ))
 
-            new_sample = ens.generate_sample_from_trajectories(
+            new_sample = ens.sample_from_trajectories(
                 trajectories,
                 replica_id,
                 engine

@@ -59,7 +59,6 @@ def sample_from_trajectories(ensemble, trajectories, used_trajectories=None,
     return sample
 
 
-
 class MoveScheme(StorableNamedObject):
     """
     Creates a move decision tree based on `MoveStrategy` instances.

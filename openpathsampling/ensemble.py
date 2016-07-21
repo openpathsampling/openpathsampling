@@ -470,6 +470,125 @@ class Ensemble(StorableNamedObject):
 
                     start = end - min_length
 
+    def iter_extendable_slices(
+            self,
+            trajectory,
+            max_length=None,
+            min_length=1,
+            overlap=1,
+            reverse=False
+    ):
+        """
+        Return an iterator over maxiaml slices of extendable subtrajectories
+
+        In comparison to the iter_valid_slices this will return maximal
+        subtrajectories that can potentially be extended into samples of the
+        ensemble. Shorter subparts will also always work. Where we always
+        use strict_can_append. So for forward extentable ensembles you can
+        cut at the end and for backward extendable ones you can cut at the
+        beginning.
+
+        Parameters
+        ----------
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
+            the actual trajectory to be splitted into ensemble parts
+        max_length : int > 0, optional
+            if set this determines the maximal size to be tested (is mainly
+            used in the recursion)
+        min_length : int > 0, optional
+            if set this determines the minimal size to be tested (in lazy
+            mode might no
+        overlap : int >= 0, optional
+            determines the allowed overlap of all trajectories to be found.
+            A value of x means that two sub-trajectorie can share up to x
+            frames at the beginning and x frames at the end.  Default is 1
+        reverse : bool
+            if `True` this will start searching from the end of the trajectory.
+            Otherwise (default) it will start at the beginning.
+
+        Returns
+        -------
+        list of `slice`
+            Returns a list of index-slices for sub-trajectories in
+            trajectory that are in the ensemble.
+        """
+        length = len(trajectory)
+
+        if max_length is None:
+            max_length = length
+
+        max_length = min(length, max_length)
+        min_length = max(1, min_length)
+
+        logger.debug("Looking for subtrajectories in " + str(trajectory))
+        old_tt_len = 0
+
+        if not reverse:
+            start = 0
+            end = start + min_length
+
+            while start <= length - min_length and end <= length:
+                # print start, end
+                tt = trajectory[start:end]
+
+                if len(tt) != old_tt_len + 1:
+                    can_append_tt = self.strict_can_append(tt)
+                else:
+                    can_append_tt = self.strict_can_append(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if end < length and can_append_tt:
+                    end += 1
+                    if end - start > max_length + 1:
+                        start += 1
+                        end = start + min_length
+                else:
+                    if end - start <= max_length + 1:
+                        yield slice(start, end - 1)
+                        pad = min(overlap, end - start - 1)
+                        start = end - pad
+                        if end == length:
+                            # This means we have reached the end and should stop
+                            # All other possible subtraj can only be contained
+                            # in already existing ones
+                            start = length
+                    else:
+                        start += 1
+                    end = start + min_length
+
+        else:
+            end = length
+            start = end - min_length
+
+            while start >= 0 and end >= min_length:
+                tt = trajectory[start:end]
+
+                if len(tt) != old_tt_len + 1:
+                    can_prepend_tt = self.can_prepend(tt)
+                else:
+                    can_prepend_tt = self.can_prepend(tt, trusted=True)
+                old_tt_len = len(tt)
+
+                if start > 0 and can_prepend_tt:
+                    start -= 1
+                    if end - start > max_length + 1:
+                        end -= 1
+                        start = end - min_length
+                else:
+                    if end - start <= max_length + 1:
+                        yield slice(start, end - 1)
+                        pad = min(overlap, end - start - 1)
+                        end = start + pad
+                        if start == 0:
+                            # This means we have reached the end and should stop
+                            # All other possible subtraj can only be contained
+                            # in already existing ones
+                            end = 0
+                    else:
+                        end -= 1
+
+                    start = end - min_length
+
     def find_first_subtrajectory(self, trajectory):
         """
         Return the first sub-trajectory that matches the ensemble
@@ -608,7 +727,7 @@ class Ensemble(StorableNamedObject):
     def extendable_sub_ensembles(self):
         return []
 
-    def generate_sample_from_trajectories(
+    def sample_from_trajectories(
             self, trajectories, replica_id, engine=None):
         """
         Generate a sample in the ensemble by using parts of `trajectories`
@@ -716,6 +835,198 @@ class Ensemble(StorableNamedObject):
             raise RuntimeWarning(
                 "Could not generate valid sample. You might try with "
                 "specifying an engine."
+            )
+
+    def sample_from_trajectories(
+            self, trajectories, replica_id, engine=None):
+        """
+        Generate a sample in the ensemble by using parts of `trajectories`
+
+        This will take an initial trajectory look for useable subparts and
+        try to extend them into a valid sample. This works by taking information
+        from an ensemble what are resonable subparts, this is returned by a
+        function `.extendable_sub_ensembles()` which is only defined for
+        complex ensembles like Minus or TIS ensemble.
+
+        As an example the minus could extend from the segment ensemble or even
+        a segment + parts completely in the inner ensemble. Of course the
+        ensemble itself is always valid.
+
+        The function tries to find extendable subparts from largest to smallest
+        ones, starting with the ensemble itself and ending with small subparts
+
+        If a list of trajectories is provided it will be attempt to find a
+        valid trajectory using all the trajectory parts.
+
+        Parameters
+        ----------
+        trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
+            single trajectory of list of trajectories to be used to create a
+            sample in this ensemble
+        replica_id : int or str
+            replica ID for this sample
+        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
+            engine to use for MD extension
+        """
+
+        sub_ensembles = self.extendable_sub_ensembles
+
+        if isinstance(trajectories, paths.Trajectory):
+            trajectories = [trajectories]
+        elif isinstance(trajectories, paths.Sample):
+            trajectories = [trajectories.trajectory]
+        elif isinstance(trajectories, paths.SampleSet):
+            trajectories = [s.trajectory for s in trajectories]
+        elif isinstance(trajectories, list):
+            if len(trajectories) > 0:
+                trajectories = [
+                    obj.trajectory if isinstance(obj, paths.Sample) else obj
+                    for obj in trajectories
+                ]
+            else:
+                raise ValueError('Need at least one trajectory!')
+
+        # try self first
+
+        for idx, traj in enumerate(trajectories):
+            part = self.find_first_subtrajectory(traj)
+            if part is not None:
+                return paths.Sample(
+                    replica=replica_id,
+                    trajectory=part,
+                    ensemble=self
+                )
+
+            # try reversed
+            part = self.find_first_subtrajectory(traj.reversed)
+            if part is not None:
+                return paths.Sample(
+                    replica=replica_id,
+                    trajectory=part,
+                    ensemble=self
+                )
+
+        # try sub_ensembles and extending
+
+        if engine is not None:
+            for sub_ensemble in sub_ensembles:
+                for idx, traj in enumerate(trajectories):
+                    for traj_parts in [
+                        sub_ensemble.iter_split(traj),
+                        sub_ensemble.iter_split(traj.reversed)
+                    ]:
+
+                        for part in traj_parts:
+                            if self.strict_can_append(part):
+                                # seems we could extend forward
+                                part = engine.extend_forward(
+                                    part,
+                                    self
+                                )
+
+                            if self.strict_can_prepend(part):
+                                # and extend backward
+                                part = engine.extend_backward(
+                                    part,
+                                    self
+                                )
+
+                            if self(part):  # make sure we found a sample
+                                return paths.Sample(
+                                    replica=replica_id,
+                                    trajectory=part,
+                                    ensemble=self
+                                )
+
+            raise RuntimeWarning(
+                "Could not generate valid sample. You might try again."
+            )
+        else:
+            raise RuntimeWarning(
+                "Could not generate valid sample. You might try with "
+                "specifying an engine."
+            )
+
+    def extend_from_trajectories(
+            self, trajectories, replica_id, engine):
+        """
+        Generate a sample in the ensemble by extending parts of `trajectories`
+
+        This will take an initial trajectory look for useable subparts and
+        try to extend them into a valid sample. This works by taking information
+        from an ensemble what are resonable subparts, this is returned by a
+        function `.extendable_sub_ensembles()` which is only defined for
+        complex ensembles like Minus or TIS ensemble.
+
+        As an example the minus could extend from the segment ensemble or even
+        a segment + parts completely in the inner ensemble. Of course the
+        ensemble itself is always valid.
+
+        The function tries to find extendable subparts from largest to smallest
+        ones, starting with the ensemble itself and ending with small subparts
+
+        If a list of trajectories is provided it will be attempt to find a
+        valid trajectory using all the trajectory parts.
+
+        Parameters
+        ----------
+        trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
+            single trajectory of list of trajectories to be used to create a
+            sample in this ensemble
+        replica_id : int or str
+            replica ID for this sample
+        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
+            engine to use for MD extension
+        """
+
+        sub_ensembles = self.extendable_sub_ensembles
+
+        if isinstance(trajectories, paths.Trajectory):
+            trajectories = [trajectories]
+        elif isinstance(trajectories, paths.Sample):
+            trajectories = [trajectories.trajectory]
+        elif isinstance(trajectories, paths.SampleSet):
+            trajectories = [s.trajectory for s in trajectories]
+        elif isinstance(trajectories, list):
+            if len(trajectories) > 0:
+                trajectories = [
+                    obj.trajectory if isinstance(obj, paths.Sample) else obj
+                    for obj in trajectories
+                ]
+            else:
+                raise ValueError('Need at least one trajectory!')
+
+        for sub_ensemble in sub_ensembles:
+            for idx, traj in enumerate(trajectories):
+                for traj_parts in [
+                    sub_ensemble.iter_split(traj),
+                    sub_ensemble.iter_split(traj.reversed)
+                ]:
+
+                    for part in traj_parts:
+                        if self.strict_can_append(part):
+                            # seems we could extend forward
+                            part = engine.extend_forward(
+                                part,
+                                self
+                            )
+
+                        if self.strict_can_prepend(part):
+                            # and extend backward
+                            part = engine.extend_backward(
+                                part,
+                                self
+                            )
+
+                        if self(part):  # make sure we found a sample
+                            return paths.Sample(
+                                replica=replica_id,
+                                trajectory=part,
+                                ensemble=self
+                            )
+
+            raise RuntimeWarning(
+                "Could not generate valid sample. You might try again."
             )
 
     def __str__(self):
