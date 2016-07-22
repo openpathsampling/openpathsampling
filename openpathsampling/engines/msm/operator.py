@@ -36,11 +36,18 @@ class Lengths(object):
     def lengths(self):
         return []
 
+    def matrix_mult(self, matrix):
+        return matrix
 
 class SetLengths(Lengths):
     def __init__(self, length_set):
         super(SetLengths, self).__init__()
         self.length_set = length_set
+
+    def matrix_mult(self, matrix):
+        return np.sum([
+            np.linalg.matrix_power(matrix, pw) for pw in self.length_set
+        ])
 
     def __nonzero__(self):
         return bool(self.length_set)
@@ -142,8 +149,10 @@ class MultiLengths(Lengths):
         return self.length_list
 
     def __nonzero__(self):
-        return any(self.length_list)
-
+        if len(self.length_list) > 0:
+            return any(self.length_list)
+        else:
+            return False
 
     def __and__(self, other):
         if other < self:
@@ -163,6 +172,11 @@ class MultiLengths(Lengths):
 
         return MultiLengths([
             l | self for l in other.length_list
+        ])
+
+    def matrix_mult(self, matrix):
+        return np.sum([
+            l.matrix_mult(matrix) for l in self.length_list
         ])
 
 
@@ -225,8 +239,32 @@ class IntLengths(Lengths):
     def lengths(self):
         return [self.length]
 
+    def matrix_mult(self, matrix):
+        return np.linalg.matrix_power(matrix, self.length)
+
 
 class SliceLengths(Lengths):
+    def __init__(self, length_slice):
+        super(SliceLengths, self).__init__()
+        self.length_slice = length_slice
+
+    def matrix_mult(self, matrix):
+        start = self.length_slice.start
+        if start is None:
+            start = 0
+
+        stop = self.length_slice.stop
+        if stop is None:
+            return np.dot(
+                np.linalg.matrix_power(matrix, start),
+                np.linalg.inv(np.identity(len(matrix)) - matrix)
+            )
+        else:
+            return np.dot(
+                np.linalg.matrix_power(matrix, start) -
+                np.linalg.matrix_power(matrix, stop),
+                np.linalg.inv(np.identity(len(matrix)) - matrix)
+            )
 
     def __nonzero__(self):
         if self.length_slice.stop is None:
@@ -236,29 +274,34 @@ class SliceLengths(Lengths):
         else:
             return self.length_slice.start < self.length_slice.stop
 
-    def __init__(self, length_slice):
-        super(SliceLengths, self).__init__()
-        self.length_slice = length_slice
-
     def __contains__(self, item):
         if isinstance(item, int):
-            if (self.length_slice.start is None or self.length_slice.start <= item) and \
-                (self.length_slice.stop is None or self.length_slice.stop > item):
-                    return True
+            if (
+                    self.length_slice.start is None or
+                    self.length_slice.start <= item) and \
+                (
+                    self.length_slice.stop is None or
+                    self.length_slice.stop > item):
+                return True
 
             return False
         elif isinstance(item, slice):
             if item.start is None and item.stop is None:
-                return self.length_slice.start is None and self.length_slice.stop is None
+                return self.length_slice.start is None and \
+                    self.length_slice.stop is None
             elif item.start is None:
-                return self.length_slice.start is None and self.length_slice.stop >= item.stop
+                return self.length_slice.start is None and \
+                    self.length_slice.stop >= item.stop
             elif item.stop is None:
-                return self.length_slice.stop is None and self.length_slice.start <= item.start
+                return self.length_slice.stop is None and \
+                    self.length_slice.start <= item.start
             else:
-                return self.length_slice.start <= item.start and self.length_slice.stop >= item.stop
+                return self.length_slice.start <= item.start and \
+                    self.length_slice.stop >= item.stop
 
         elif isinstance(item, set):
-            return self.length_slice.start <= min(item) and self.length_slice.stop > max(item)
+            return self.length_slice.start <= min(item) and \
+                self.length_slice.stop > max(item)
 
     def __and__(self, other):
         if other < self:
@@ -341,11 +384,10 @@ class SliceLengths(Lengths):
 
 class EmptyLengths(Lengths):
     def __init__(self):
-        super(EmptyLengths, self).__init__(None)
+        super(EmptyLengths, self).__init__()
 
     def __nonzero__(self):
         return False
-
 
     def __and__(self, other):
         return self
@@ -363,7 +405,7 @@ class EmptyLengths(Lengths):
 
 class AllLengths(SliceLengths):
     def __init__(self):
-        super(AllLengths, self).__init__(None, None)
+        super(AllLengths, self).__init__(slice(None, None))
 
     def __nonzero__(self):
         return True
@@ -457,7 +499,7 @@ class O(object):
         return None
 
     def __call__(self, model):
-        np.dot(np.dot(model.init, self.as_matrix(model), model.one))
+        np.dot(np.dot(model.init, self.as_matrix(model)), model.one)
         return None
 
 
@@ -513,10 +555,6 @@ class State(O):
     def as_matrix(self, model):
         single_step = np.sum(model.basis[self.block.states])
 
-        return None
-
-    def __call__(self, model):
-        np.dot(np.dot(model.init, self.as_matrix(model), model.one))
         return None
 
 
