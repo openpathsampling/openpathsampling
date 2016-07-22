@@ -1,16 +1,7 @@
 import numpy as np
 
 
-class MSM(object):
-    def __init__(self, matrix):
-        self.matrix = matrix
-
-
-
 class Lengths(object):
-    # def __init__(self, inverted=False):
-    #     self.inverted = inverted
-
     def __and__(self, other):
         return self
 
@@ -38,6 +29,7 @@ class Lengths(object):
 
     def matrix_mult(self, matrix):
         return matrix
+
 
 class SetLengths(Lengths):
     def __init__(self, length_set):
@@ -513,9 +505,10 @@ class State(O):
     of steps
     """
 
-    def __init__(self, block, length):
+    def __init__(self, block, length, inverted=False):
         self.block = block
         self.length = length
+        self.inverted = inverted
 
     def __add__(self, other):
         """
@@ -542,7 +535,15 @@ class State(O):
 
     def __and__(self, other):
         if isinstance(other, State):
-            return State(self.block & other.block, self.length & other.length)
+            if self.inverted or other.inverted:
+            elif self.inverted:
+                return other & self
+            elif other.inverted:
+                return Diff(
+                    self,
+                    State(other.block - self.block, self.length & other.length)
+            else:
+                return State(self.block & other.block, self.length & other.length)
         else:
             raise ValueError('& and | only work for States')
 
@@ -555,8 +556,10 @@ class State(O):
     def as_matrix(self, model):
         single_step = np.sum(model.basis[self.block.states])
 
-        return None
+        return self.length.matrix_mult(single_step)
 
+    def __invert__(self):
+        return State(self.block, self.length, ~ self.inverted)
 
 class Chain(O):
     def __init__(self, oos):
@@ -624,7 +627,8 @@ class OOM(object):
 #   -> State({A : 1.0}, len=1)
 
 # TIS = Sequential([Single(All(A)), AllOutA & PartOutI, Single(all(A or B))])
-#   -> Seq([ Length(1) & AllInXVolume(), AllOutAB & PartOutI, Length(1) & AllInXVolume(AB) ])
+#   -> Seq([ Length(1) & AllInXVolume(), AllOutAB & PartOutI,
+# Length(1) & AllInXVolume(AB) ])
 #   -> Seq([ State(A, 1), State(notAB, None) & not State(I, None), State(AB, 1])
 #   -> Seq([ (A, 1), (notAB, None) & not (I, None), (AB, 1) ])
 #   -> Seq([ (A, 1), (notAB, None) - (I & not AB, None), (AB, 1) ])
@@ -632,7 +636,8 @@ class OOM(object):
 
 
 # MINUS = Sequential([Single(All(A)), AllOutA & PartOutI, Single(all(A or B))])
-#   -> Seq([ Length(1) & AllInXVolume(), AllOutAB & PartOutI, Length(1) & AllInXVolume(AB) ])
+#   -> Seq([ Length(1) & AllInXVolume(), AllOutAB & PartOutI,
+# Length(1) & AllInXVolume(AB) ])
 #   -> Seq([ State(A, 1), State(notAB, None) & not State(I, None), State(AB, 1])
 #   -> Seq([ (A, 1), (notAB, None) & not (I, None), (AB, 1) ])
 #   -> Seq([ (A, 1), (notAB, None) - (I & not AB, None), (AB, 1) ])
@@ -649,4 +654,3 @@ class OOM(object):
 
 # State(X, L) & State(Y, K) -> State(Y & X, L & K)
 # State(X, L) | State(Y, K) -> State(Y | X, L | K)
-

@@ -20,8 +20,8 @@ class Block(Volume):
             self.states = range(*q.indices(q.stop))
         elif type(states) is bool:
             self.states = states
-        else:
-            self.states = frozenset(states)
+
+        self.states = frozenset(states)
 
     def __call__(self, snapshot):
         if type(self.states) is bool:
@@ -45,3 +45,14 @@ class Block(Volume):
             return self.states == other.states
 
         return False
+
+    def __and__(self, other):
+        if isinstance(self, Block):
+            return Block()
+
+    def __or__(self, other):
+        if isinstance(self, Block):
+
+    def __sub__(self, other):
+        if isinstance(self, Block):
+
