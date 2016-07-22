@@ -334,10 +334,10 @@ class SliceLengths(Lengths):
         elif isinstance(other, MultiLengths):
             return other | self
 
-
     @property
     def lengths(self):
         return [self.length_slice]
+
 
 class EmptyLengths(Lengths):
     def __init__(self):
@@ -382,22 +382,16 @@ class OneLength(IntLengths):
     def __init__(self):
         super(OneLength, self).__init__(1)
 
-    def __and__(self, other):
-        if not isinstance(other, EmptyLengths)
-            return
-
-        return NotImplemented
-
-    def __or__(self, other):
-        return other
 
 class FixedLength(IntLengths):
     def __init__(self, length):
         super(FixedLength, self).__init__(length)
 
+
 class RangeLength(SliceLengths):
     def __init__(self, min_length, max_length):
         super(RangeLength, self).__init__(slice(min_length, max_length))
+
 
 class UnionLength(MultiLengths):
     def __init__(self, lengths):
@@ -414,10 +408,6 @@ class O(object):
     of steps
     """
 
-    def __init__(self, block, length):
-        self.block = block
-        self.length = length
-
     def __sub__(self, other):
         """
         Full Difference. Self & other = other
@@ -431,6 +421,7 @@ class O(object):
 
         """
 
+        return Diff(self, other)
 
     def __add__(self, other):
         """
@@ -444,7 +435,7 @@ class O(object):
         -------
 
         """
-        return Joined()
+        return Union([self, other])
 
     def __mul__(self, other):
         """
@@ -457,13 +448,10 @@ class O(object):
         -------
 
         """
-        return Chain([self, other])
-
-    def __and__(self, other):
-        return O(self.block & other.block, self.length & other.length)
-
-    def __or__(self, other):
-        return O(self.block | other.block, self.length | other.length)
+        if isinstance(other, Chain):
+            return Chain([self] + other.oos)
+        else:
+            return Chain([self, other])
 
     def as_matrix(self, model):
         return None
@@ -473,50 +461,91 @@ class O(object):
         return None
 
 
-class Single(O):
-    def __init__(self, states):
-        super(Single, self).__init__()
-        self.states = states
+class State(O):
+    """
+    Define that a trajectory of a length in `lengths` was observed in the
+    `states` distribution
 
-    def as_matrix(self, model):
+    Example: If I say lengths: slice(None,None), states = [stateA: 100%] it
+    means you assume that you were with 100% in stateA for an arbitrary number
+    of steps
+    """
+
+    def __init__(self, block, length):
+        self.block = block
+        self.length = length
+
+    def __add__(self, other):
         """
-        Use a linear combination to return tau_state for lengths
+        Disjoint union observations. Self & other = empty
 
         Parameters
         ----------
-        model
+        other
 
         Returns
         -------
 
         """
-        return
+        if isinstance(other, State):
+            if self.block == other.block:
+                if not self.length & other.length:
+                    return State(self.block, self.length | other.length)
 
+            if self.length == other.length:
+                if not self.block & other.block:
+                    return State(self.block | other.block, self.length)
 
-class Multi(O):
-    def __init__(self, obs, lengths):
-        super(Multi, self).__init__()
-        self.lengths = lengths
+        super(State, self).__add__(other)
+
+    def __and__(self, other):
+        if isinstance(other, State):
+            return State(self.block & other.block, self.length & other.length)
+        else:
+            raise ValueError('& and | only work for States')
+
+    def __or__(self, other):
+        if isinstance(other, State):
+            return State(self.block | other.block, self.length | other.length)
+        else:
+            raise ValueError('& and | only work for States')
+
+    def as_matrix(self, model):
+        single_step = np.sum(model.basis[self.block.states])
+
+        return None
+
+    def __call__(self, model):
+        np.dot(np.dot(model.init, self.as_matrix(model), model.one))
+        return None
 
 
 class Chain(O):
     def __init__(self, oos):
-        super(Chain, self).__init__(None, None)
+        super(Chain, self).__init__()
         self.oos = oos
 
     def as_matrix(self, model):
-        """
-        Product
+        return reduce(np.dot, (o.as_matrix() for o in self.oos))
 
-        Parameters
-        ----------
-        model
 
-        Returns
-        -------
+class Union(O):
+    def __init__(self, oos):
+        super(Union, self).__init__()
+        self.oos = oos
 
-        """
-        return None
+    def as_matrix(self, model):
+        return reduce(np.sum, (o.as_matrix() for o in self.oos))
+
+
+class Diff(O):
+    def __init__(self, o1, o2):
+        super(Diff, self).__init__()
+        self.o1 = o1
+        self.o2 = o2
+
+    def as_matrix(self, model):
+        return self.o1.as_matrix(model) - self.o2.as_matrix(model)
 
 
 class OOM(object):
@@ -534,9 +563,9 @@ class OOM(object):
         this.states = msm.states
         this.init = np.ones(_size) / _size
         this.one = np.ones(_size)
-        this.basis = [
+        this.basis = np.array(
             np.diagonal(a) for a in msm
-        ]
+        )
 
         return this
 
@@ -545,6 +574,7 @@ class OOM(object):
 
     def observe_state(self, state):
         pass
+
 
 # oo = SequentialEnsemble([...]).oo
 # oo(OOM.from_msm(msm)) = 0.2
@@ -571,7 +601,7 @@ class OOM(object):
 #   -> Seq([ (A, 1), (notAB, None) - (I, None), (AB, 1) ])
 
 # State(X, None) & not State(Y, None) -> State(X, None) - State(Y - X, None)
-# State(X, L) & not State(Y, K) -> State(X, L) - State(Y - X, K - L)
+# State(X, L) & not State(Y, K) -> State(X, L) - State(Y - X, L & K)
 
 # State(X, L) | not State(Y, K) -> State(X, L) + 1.0 - State(X | Y, K | L)
 
