@@ -190,6 +190,9 @@ class Ensemble(StorableNamedObject):
         '''
         super(Ensemble, self).__init__()
 
+        self._min_length = None
+        self._max_length = None
+
     def __eq__(self, other):
         if self is other:
             return True
@@ -642,6 +645,36 @@ class Ensemble(StorableNamedObject):
             if type(self.frames) is int:
                 return trajectory.frames > self.frames and trajectory.frames >= -self.frames
 
+    def ensemble_probability(self):
+        """
+        Return the probability of finding these paths given an msm
+
+        Returns
+        -------
+        double
+            the minimal probability
+        double
+            the maximal probability
+
+        """
+        raise NotImplementedError('This is not implemented for this ensemble')
+
+
+    def path_probability(self):
+        """
+        Return the probability of finding these paths given an msm
+
+        Returns
+        -------
+        double
+            the minimal probability
+        double
+            the maximal probability
+
+        """
+        raise NotImplementedError('This is not implemented for this ensemble')
+
+
 
 class EmptyEnsemble(Ensemble):
     '''
@@ -677,9 +710,13 @@ class EmptyEnsemble(Ensemble):
     def __str__(self):
         return 'empty'
 
-    def oom_matrix(self, oom):
+    def ensemble_probability(self):
+        return 0.0, 0.0
+
+    @property
+    def path_probability(self):
         # Zero matrix
-        return None
+        return 0.0
 
 
 class FullEnsemble(Ensemble):
@@ -726,9 +763,13 @@ class FullEnsemble(Ensemble):
     def __str__(self):
         return 'all'
 
-    def oom_matrix(self, oom):
+    def ensemble_probability(self):
+        return (1.0, 1.0)
+
+    @property
+    def path_probability(self):
         # Full matrix
-        return None
+        return 1.0
 
 
 class NegatedEnsemble(Ensemble):
@@ -753,6 +794,15 @@ class NegatedEnsemble(Ensemble):
 
     def __str__(self):
         return 'not ' + str(self.ensemble)
+
+    def ensemble_probability(self):
+        res = self.ensemble.ensemble_proability()
+        return (1.0 - res[1], 1.0 - res[0])
+
+    @property
+    def path_probability(self):
+        # Full matrix
+        return 1.0 - self.ensemble.path_probability
 
 
 class EnsembleCombination(Ensemble):
@@ -928,12 +978,23 @@ class UnionEnsemble(EnsembleCombination):
                                             fnc=lambda a,b : a or b,
                                             str_fnc='{0}\nor\n{1}')
 
+    def ensemble_probability(self):
+        e1 = self.ensemble1.ensemble_probability()
+        e2 = self.ensemble2.ensemble_probability()
+        return max(e1[0], e2[0]), min(1.0, e1[1] + e2[1])
+
 
 class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2,
                                                    fnc=lambda a,b : a and b,
                                                    str_fnc='{0}\nand\n{1}')
+
+    def ensemble_probability(self):
+        e1 = self.ensemble1.ensemble_probability()
+        e2 = self.ensemble2.ensemble_probability()
+        return max(0.0, e1[0] + e2[0] - 1.0), min(e1[1], e2[1])
+
 
 
 class SymmetricDifferenceEnsemble(EnsembleCombination):
@@ -952,6 +1013,11 @@ class RelativeComplementEnsemble(EnsembleCombination):
     # return ens1 & ~ens2
     def __init__(self, ensemble1, ensemble2):
         super(RelativeComplementEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and not b, str_fnc = '{0}\nand not\n{1}')
+
+    def ensemble_probability(self):
+        e1 = self.ensemble1.ensemble_probability()
+        e2 = self.ensemble2.ensemble_probability()
+        return max(0.0, e1[0] - e2[1]), e1[1] - max(0.0, e1[1] + e2[0] - 1.0)
 
 
 class SequentialEnsemble(Ensemble):
@@ -1514,6 +1580,9 @@ class SequentialEnsemble(Ensemble):
         sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
         return head+sequence_str+tail
 
+    def ensemble_probability(self):
+        return reduce(lambda a, b: a * b,
+                    [ens.ensemble_probability() for self.ensembles])
 
 
 class LengthEnsemble(Ensemble):
@@ -1532,6 +1601,13 @@ class LengthEnsemble(Ensemble):
 
         super(LengthEnsemble, self).__init__()
         self.length = length
+
+        if type(length) is int:
+            self._max_length = length
+            self._min_length = length
+        else:
+            self._min_length = length.start
+            self._max_length = length.stop - 1
         pass
     
     def __call__(self, trajectory, trusted=None):
@@ -1725,6 +1801,8 @@ class AllOutXEnsemble(AllInXEnsemble):
     def __invert__(self):
         return PartInXEnsemble(self.volume, self.trusted)
 
+    def oo(self):
+        return
 
 class PartInXEnsemble(VolumeEnsemble):
     '''
