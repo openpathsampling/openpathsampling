@@ -5,6 +5,7 @@
 # from several files.
 import math
 import pandas as pd
+import numpy as np
 
 import logging
 logger = logging.getLogger(__name__)
@@ -15,6 +16,17 @@ logger = logging.getLogger(__name__)
 class WHAM(object):
     """
     Weighted Histogram Analysis Method
+
+    Note
+    ----
+    Several parts of the docstrings mention F&S, which is intended to refer
+    the reader to reference [1], in particular pages 184-187 in the 2nd
+    edition (section called "Self-Consistent Histogram Method").
+
+    Reference
+    ---------
+    [1] Daan Frenkel and Berend Smit. Understanding Molecular Simulation:
+        From Algorithms to Applications. 2nd Edition. 2002.
     """
 
     def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.05):
@@ -77,6 +89,7 @@ class WHAM(object):
                     raise Warning("Inequal number of histograms for WHAM")
                 else:
                     self.nhists = len(self.hists[key])
+        self.input_df = df.sort_index()
 
 
 
@@ -181,6 +194,127 @@ class WHAM(object):
         if self.lnZ == [0.0]*len(self.lnZ):
             self.lnZ = [1.0]*len(self.lnZ)
         logger.debug("guess_lnZ: "+str(self.lnZ))
+
+    def pandas_prep_reverse_cumulative(self, df, cutoff=None, tol=None):
+        """
+        Created cleaned dataframe for further analysis.
+
+        This version assumes that the input is the result of a reversed
+        cumulative histogram. That means that it cleans leading input where
+        the initial 
+
+        Returns
+        -------
+        cleaned_df
+        """
+        if cutoff is None:
+            cutoff = self.cutoff
+        if tol is None:
+            tol = self.tol
+
+        # clear things that don't pass the cutoff
+        raw_cutoff = cutoff*df.max(axis=0)
+        cleaned_df = df.apply(
+            lambda s : [x if x > raw_cutoff[s.name] else 0.0 for x in s]
+        )
+
+        # clear duplicates of leading values
+        cleaned_df = cleaned_df.apply(
+            lambda s : [
+                s.iloc[i] if abs(s.iloc[i] - s.iloc[i+1]) > tol else 0.0
+                for i in range(len(s)-1)
+            ] + [s.iloc[-1]]
+        )
+
+        return cleaned_df
+
+
+    def pandas_unweighting_tis(self, cleaned_df):
+        """
+        Calculates the "unweighting" values for each histogram.
+
+        In TIS, this is just 1 if there is a non-zero entry in cleaned_df,
+        and 0 otherwise.
+        """
+        unweighting = cleaned_df.copy().applymap(
+            lambda x : 1.0 if x > 0.0 else 0.0
+        )
+        return unweighting
+
+
+    def pandas_sum_k_Hk_Q(self, cleaned_df):
+        """
+        Returns
+        -------
+        sum_k_Hk_Q 
+            called `sum_hist` in other codes, or :math:`\sum_k H_k(Q)` in
+            F&S. This is the sum over histograms of values for a given
+            histogram bin.
+        """
+        return cleaned_df.sum(axis=1)
+
+    def pandas_weighted_counts_tis(self, unweighting, n_entries):
+        """
+        Returns
+        -------
+        pd.Panel :
+            weighted counts matrix, with 
+        """
+        weighted_counts = pd.DataFrame(index=unweighting.index,
+                                       columns=unweighting.columns)
+        for j in unweighting.columns:
+            for k in unweighting.index:
+                val = 1 if unweighting.loc[k, j] > 0 else 0
+                weighted_counts.set_value(k, j, val * n_entries[j])
+        return weighted_counts
+
+
+    def pandas_generate_lnZ(self, lnZ, unweighting, weighted_counts,
+                            sum_k_Hk_Q, tol=None):
+        """
+        Parameters
+        ----------
+        lnZ : list-like, one per histogram
+            initial guess for ln(Z_i) for each histogram i
+        unweighting : matrix-like, 
+            the unweighting matrix for each histogram point. For TIS, this
+            is 1 if the (cleaned) DF has an entry; 0 otherwise. In F&S, this
+            is :math:`\exp(-\\beta W_i)`.
+        n_entries : 
+            the list of counts of entries. In other codes, this is `nt`. In
+            F&S, this is :math:`M_k`.
+        sum_k_Hk_Q :
+            see 
+        """
+        if tol is None:
+            tol = self.tol
+        diff = self.tol + 1  # always start above the tolerance
+        iteration = 0
+        hists = weighted_counts.columns
+        bins = weighted_counts.index
+        lnZ_old = pd.Series(data=lnZ, index=hists)
+        while diff > tol and iteration < self.max_iter:
+            Z_old = np.exp(lnZ_old)
+            Z_new = pd.Series(index=hists).fillna(0.0)
+            for hist_i in hists:
+                for val in bins:
+                    local_w_i = unweighting.loc[val, hist_i]
+                    if local_w_i > 0:
+                        # if statement allows us to skip if the weight is 0
+                        # this will be \sum_j x_j M_j / Z_j^{(old)}
+                        # sum_w_over_Z = sum([
+                            # weighted_counts.loc[val, hist_j] / Z_old[hist_j]
+                            # for hist_j in hists
+                        # ])
+                        sum_w_over_Z = 0.0
+                        for hist_j in hists:
+                            local_wcount_j = weighted_counts.loc[val, hist_j]
+                            sum_w_over_Z += local_wcount_j / Z_old[hist_j]
+
+                        Z_new[hist_i] += (local_w_i * sum_k_Hk_Q[val]
+                                          / sum_w_over_Z)
+
+            lnZ_new = np.log(Z_new)
 
 
     # wham iterations; returns the WHAM lnZ weights
