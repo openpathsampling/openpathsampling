@@ -52,8 +52,7 @@ class WHAM(object):
         self.nhists = 0
         self.keys = []
 
-    # loads files into the dictionary
-    def load_files(self,fnames):
+    def load_files(self,fnames):  # pragma: no cover
         """Load a file or files into the internal structures.
 
         Requires either pandas or something else with pandas-like read_table
@@ -69,9 +68,7 @@ class WHAM(object):
                                        usecols=[0,1]))
         df = pd.concat(frames, axis=1)
         self.load_from_dataframe(df)
-        #xvals, yvals = read_acf(fname)
-        #add_series_to_set(xvals, yvals, self.hists)
-        #self.nhists += 1
+
 
     def load_from_dataframe(self, df):
         """Loads from a pandas-compatible data frame.
@@ -253,6 +250,16 @@ class WHAM(object):
         """
         return cleaned_df.sum(axis=1)
 
+
+    def pandas_n_entries(self, cleaned_df):
+        """
+        n_entries : 
+            the list of counts of entries. In other codes, this is `nt`. In
+            F&S, this is :math:`M_k`.
+        """
+        return cleaned_df.sum(axis=0)
+
+
     def pandas_weighted_counts_tis(self, unweighting, n_entries):
         """
         Returns
@@ -260,12 +267,8 @@ class WHAM(object):
         pd.Panel :
             weighted counts matrix, with 
         """
-        weighted_counts = pd.DataFrame(index=unweighting.index,
-                                       columns=unweighting.columns)
-        for j in unweighting.columns:
-            for k in unweighting.index:
-                val = 1 if unweighting.loc[k, j] > 0 else 0
-                weighted_counts.set_value(k, j, val * n_entries[j])
+        weighted_counts = unweighting.apply(lambda s : [x * n_entries[s.name]
+                                                        for x in s])
         return weighted_counts
 
 
@@ -280,9 +283,6 @@ class WHAM(object):
             the unweighting matrix for each histogram point. For TIS, this
             is 1 if the (cleaned) DF has an entry; 0 otherwise. In F&S, this
             is :math:`\exp(-\\beta W_i)`.
-        n_entries : 
-            the list of counts of entries. In other codes, this is `nt`. In
-            F&S, this is :math:`M_k`.
         sum_k_Hk_Q :
             see 
         """
@@ -315,6 +315,26 @@ class WHAM(object):
                                           / sum_w_over_Z)
 
             lnZ_new = np.log(Z_new)
+
+            # get error
+            diff=0
+            diff = sum(abs(lnZ_old - lnZ_new))
+            lnZ_old = lnZ_new - lnZ_new.iloc[0]
+
+            iteration += 1
+
+            # check status (mainly for debugging)
+            sampling = 1 #+ self.max_iter # DEBUG
+            if (iteration % sampling == 0):
+                logger.debug("niteration = " + str(iteration))
+                logger.debug("  diff = " + str(diff))
+                logger.debug("   lnZ = " + str(lnZ_old))
+                logger.debug("lnZnew = " + str(lnZ_new))
+
+        logger.info("iterations=" + str(iteration) + " diff=" + str(diff))
+        logger.info("       lnZ=" + str(lnZ_old))
+        self.convergence = (iteration, diff)
+        return lnZ_old
 
 
     # wham iterations; returns the WHAM lnZ weights
@@ -413,8 +433,7 @@ class WHAM(object):
         return hist
 
 
-
-def parsing(parseargs):
+def parsing(parseargs):  # pragma: no cover
     import optparse
     parser = optparse.OptionParser()
     parser.add_option("--tol", type="float", default=1e-12)
@@ -423,14 +442,14 @@ def parsing(parseargs):
     opts, args = parser.parse_args(parseargs)
     return opts, args
 
-def print_dict(adict):
+def print_dict(adict):  # pragma: no cover
     keys = adict.keys()
     keys.sort()
     for key in keys:
         print key, adict[key]
 
 import sys, os
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     opts, args = parsing(sys.argv[1:])
     wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
     wham.load_files(args)
