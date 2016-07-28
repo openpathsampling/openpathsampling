@@ -9,9 +9,6 @@ import numpy as np
 
 import logging
 logger = logging.getLogger(__name__)
-#from read_acf import read_acf
-#from series_stats import add_series_to_set
-#from crossing_probability import series_set_crossing_lambdas
 
 class WHAM(object):
     """
@@ -45,13 +42,21 @@ class WHAM(object):
         self.tol = tol
         self.max_iter = max_iter
         self.cutoff = cutoff
+
         self.hists = { }
-        self.lnZ = []
-        self.sum_hist = []
-        self.nt = []
         self.nhists = 0
         self.keys = []
+
         self.sample_every = max_iter + 1
+        self._float_format = "10.8"
+
+    @property
+    def float_format(self):
+        return lambda x : "{:" + self._float_format + "f}".format(x)
+
+    @float_format.setter
+    def float_format(self, value):
+        self._float_format = value
 
     def load_files(self,fnames):  # pragma: no cover
         """Load a file or files into the internal structures.
@@ -91,110 +96,8 @@ class WHAM(object):
                 else:
                     self.nhists = len(self.hists[key])
         self.input_df = df.sort_index()
+        return self.input_df
 
-
-
-    # modifies the dictionary to ignore outside the window
-    def prep(self):
-        # find the max; calculate nt
-        self.keys = sorted(self.hists.keys())
-        for i in range(self.nhists):
-            max_i=0
-            self.nt.append(0.0)
-            for key in self.keys:
-                if (self.hists[key][i] > max_i):
-                    max_i = self.hists[key][i]
-
-            for k in range(len(self.keys)):
-                key = self.keys[k]
-                if (self.hists[key][i] < self.cutoff * max_i):
-                    self.hists[key][i] = 0
-                self.nt[i] += self.hists[key][i]
-
-        # calculate sum_hist
-        kill_keys = []
-        for k in range(len(self.keys)):
-            key = self.keys[k]
-            self.sum_hist.append(0.0)
-            self.sum_hist[k] = math.fsum(self.hists[key])
-            if (self.sum_hist[k] == 0.0):
-                kill_keys.append(key)
-        
-        # remove keys with sum_hist==0
-        for deadkey in kill_keys:
-            self.sum_hist.remove(0.0)
-            self.keys.remove(deadkey)
-
-        logger.debug("keys="+str(self.keys))
-        logger.debug("sum_hist="+str(self.sum_hist))
-        #print self.nt
-        #print math.fsum(self.nt), math.fsum(self.sum_hist)
-
-        return
-
-    def clean_leading_ones(self):
-        """
-        Removes leading ones from input cumulative histograms.
-        """
-        keys = sorted(self.hists.keys())
-        for s in range(self.nhists):
-            i=1 # ignore the line of zeros before 
-            i=0 # new version doesn't have extra line of zeros
-            while ((i < len(keys)-1) and
-                   (abs(self.hists[keys[i]][s] - 1.0) < self.tol) and
-                   (abs(self.hists[keys[i+1]][s] - 1.0) < self.tol)):
-                self.hists[keys[i]][s] = 0.0
-                i += 1
-        return
-
-    def pre_guess(self):
-        # taken from
-        # $DYNQ/scripts/crossing_probability.py:series_set_crossing_lambdas
-        lambda_i = { }
-        prev_set = self.hists[min(self.hists.keys())]
-        prev_lambda = 0
-        for lmbda in sorted(self.hists.keys()):
-            for i in range(len(self.hists[lmbda])):
-                if (abs(prev_set[i]-1.0) < self.tol and 
-                        abs(self.hists[lmbda][i]-1.0) > self.tol):
-                    lambda_i[i] = prev_lambda
-            prev_lambda = lmbda
-            prev_set = self.hists[lmbda]
-        lambda_i[len(lambda_i)] = max(self.hists.keys())
-        return lambda_i
-
-    def guess_lnZ(self):
-        """
-        Prepares a guess of ln(Z) based on crossing probabilities.
-
-        A trivial guess should also work, but this isn't very expensive.
-        """
-
-        lambda_i = self.pre_guess()
-        scaling = 1.0
-        crossing_prob = []
-        for key in sorted(lambda_i.keys()):
-            #print key, lambda_i[key], self.hists[lambda_i[key]] #DEBUG
-            if (key > 1):
-                crossing_prob.append(self.hists[lambda_i[key-1]][key-2])
-            elif (key > 0):
-                crossing_prob.append(1.0)
-
-        scaled = []
-        scaling = 1.0
-        #print crossing_prob #DEBUG
-        for val in crossing_prob:
-            # absolute to keep if from breaking; only a problem if there
-            # isn't actually enough data, though
-            if abs(scaling)*val > 0:
-                self.lnZ.append(math.log(abs(scaling)*val))
-            else:
-                self.lnZ.append(1e-16)
-            scaled.append(scaling*val)
-            scaling *= val
-        if self.lnZ == [0.0]*len(self.lnZ):
-            self.lnZ = [1.0]*len(self.lnZ)
-        logger.debug("guess_lnZ: "+str(self.lnZ))
 
     def pandas_prep_reverse_cumulative(self, df, cutoff=None, tol=None):
         """
@@ -356,83 +259,6 @@ class WHAM(object):
         return diff
 
 
-    # wham iterations; returns the WHAM lnZ weights
-    def generate_lnZ(self):
-        diff = self.tol+1
-        iteration = 0
-        while (diff > self.tol) and (iteration < self.max_iter):
-            lnZnew = []
-            for histnum in range(self.nhists):
-                newZi=0
-                for k in range(len(self.keys)):
-                    key = self.keys[k]
-                    if (self.hists[key][histnum] > 0):
-                        mysum = 0
-                        for j in range(self.nhists):
-                            weight = 0.0
-                            if (self.hists[key][j] > 0):
-                                weight = 1.0
-                            mysum += weight*self.nt[j]/math.exp(self.lnZ[j])
-                        newZi += self.sum_hist[k] / mysum
-
-                lnZnew.append(math.log(newZi))
-
-            # get error
-            diff=0
-            for histnum in range(self.nhists):
-                diff += abs(self.lnZ[histnum] - lnZnew[histnum])
-                self.lnZ[histnum] = lnZnew[histnum] - lnZnew[0]
-
-            iteration += 1
-
-            # check status (mainly for debugging)
-            sampling = 1 + self.max_iter # DEBUG
-            if (iteration % sampling == 0):
-                logger.debug("niteration = " + str(iteration))
-                logger.debug("  diff = " + str(diff))
-                logger.debug("   lnZ = " + str(self.lnZ))
-                logger.debug("lnZnew = " + str(lnZnew))
-
-        logger.info("iterations=" + str(iteration) + "diff=" + str(diff))
-        logger.info("       lnZ=" + str(self.lnZ))
-        self.convergence = (iteration, diff)
-
-
-    def wham_histogram(self):
-
-        final_hist ={}
-        for key in self.keys:
-            final_hist[key] = []
-            for histnum in range(self.nhists):
-                orig = self.hists[key][histnum]
-                final_hist[key].append( orig*math.exp(self.lnZ[histnum]) / \
-                        self.nt[histnum])
-
-        # generate (unnormalized) final hist
-        wham_hist = {}
-        for k in range(len(self.keys)):
-            key = self.keys[k]
-            mysum=0
-            for histnum in range(self.nhists):
-                weight = 0
-                if (self.hists[key][histnum] > 0):
-                    weight = 1
-                mysum += weight*self.nt[histnum] / math.exp(self.lnZ[histnum])
-            if (mysum > 0):
-                wham_hist[key] = self.sum_hist[k] / mysum
-            else:
-                wham_hist[key] = 0 # raise a red flag
-
-        # normalize hist
-        norm=0
-        for key in self.keys:
-            if (wham_hist[key] > norm):
-                norm = wham_hist[key]
-
-        for key in self.keys:
-            wham_hist[key] /= norm
-
-        return wham_hist
 
     def output_histogram(self, lnZ, sum_k_Hk_Q, weighted_counts):
         Z = np.exp(lnZ)
@@ -484,30 +310,8 @@ class WHAM(object):
                 e.args = tuple([arg0] + list(e.args[1:]))
                 raise e
 
-        # print lnZ
-        # print sum_k_Hk_Q
-        # print weighted_counts
-
         hist = self.output_histogram(lnZ, sum_k_Hk_Q, weighted_counts)
         return self.normalize_cumulative(hist)
-
-
-    def wham_bam_histogram(self):
-        self.guess_lnZ()
-        self.prep()
-        try:
-            self.generate_lnZ()
-        except IndexError as e:
-            failmsg = "Does your input to WHAM have enough data?"
-            if not e.args:
-                e.args = [failmsg]
-            else:
-                arg0 = e.args[0]+"\n"+failmsg
-                e.args = tuple([arg0] + list(e.args[1:]))
-                raise e
-
-        hist = self.wham_histogram()
-        return hist
 
 
 def parsing(parseargs):  # pragma: no cover
@@ -517,19 +321,16 @@ def parsing(parseargs):  # pragma: no cover
     parser.add_option("--max_iter", type="int", default=1000000)
     parser.add_option("--cutoff", type="float", default=0.05)
     parser.add_option("--pstats", type="string", default=None)
+    parser.add_option("--float_format", type=string, default="10.8")
     opts, args = parser.parse_args(parseargs)
     return opts, args
 
-def print_dict(adict):  # pragma: no cover
-    keys = adict.keys()
-    keys.sort()
-    for key in keys:
-        print key, adict[key]
 
 import sys, os
 if __name__ == "__main__":  # pragma: no cover
     opts, args = parsing(sys.argv[1:])
     wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
+    wham.float_format = opts.float_format
     df = wham.load_files(args)
     # wham.sample_every = 10
 
