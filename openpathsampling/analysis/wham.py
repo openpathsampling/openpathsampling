@@ -3,7 +3,6 @@
 # wham.py
 # The Weighted Histogram Analysis Method (WHAM) for combining histograms
 # from several files.
-import math
 import pandas as pd
 import numpy as np
 
@@ -75,28 +74,8 @@ class WHAM(object):
             fnames = [fnames]
         df = pd.concat(frames, axis=1)
         df.columns=fnames
-        self.load_from_dataframe(df)
+        # self.load_from_dataframe(df)
         return df
-
-
-    def load_from_dataframe(self, df):
-        """Loads from a pandas-compatible data frame.
-
-        The data frame does not need to be from pandas, but needs to quack
-        like it is. In particular, it needs a .index property which gives
-        the list of row keys, and a .loc[key] property which gives the row
-        associated with a given key.
-        """
-        self.keys = list(df.index)
-        for key in self.keys:
-            self.hists[key] = list(df.loc[key])
-            if len(self.hists[key]) != self.nhists:
-                if self.nhists != 0:
-                    raise Warning("Inequal number of histograms for WHAM")
-                else:
-                    self.nhists = len(self.hists[key])
-        self.input_df = df.sort_index()
-        return self.input_df
 
 
     def prep_reverse_cumulative(self, df, cutoff=None, tol=None):
@@ -246,18 +225,18 @@ class WHAM(object):
         self.convergence = (iteration, diff)
         return lnZ_old
 
+
     def get_diff(self, lnZ_old, lnZ_new, iteration):
         # get error
         diff=0
         diff = sum(abs(lnZ_old - lnZ_new))
         # check status (mainly for debugging)
-        if (iteration % self.sample_every == 0):
+        if (iteration % self.sample_every == 0):  # pragma: no cover
             logger.debug("niteration = " + str(iteration))
             logger.debug("  diff = " + str(diff))
             logger.debug("   lnZ = " + str(lnZ_old))
             logger.debug("lnZnew = " + str(lnZ_new))
         return diff
-
 
 
     def output_histogram(self, lnZ, sum_k_Hk_Q, weighted_counts):
@@ -321,7 +300,7 @@ def parsing(parseargs):  # pragma: no cover
     parser.add_option("--max_iter", type="int", default=1000000)
     parser.add_option("--cutoff", type="float", default=0.05)
     parser.add_option("--pstats", type="string", default=None)
-    parser.add_option("--float_format", type=string, default="10.8")
+    parser.add_option("--float_format", type="string", default="10.8")
     opts, args = parser.parse_args(parseargs)
     return opts, args
 
