@@ -163,6 +163,7 @@ class testStorage(object):
             for s1, s2 in zip(traj, storage_r.trajectories[3]):
                 compare_snapshot(s1, s2, True)
 
+            # this is the expected order in which it is saved
             eff_traj = [
                 traj[0],
                 traj[8].reversed,
