@@ -51,6 +51,7 @@ class WHAM(object):
         self.nt = []
         self.nhists = 0
         self.keys = []
+        self.sample_every = max_iter + 1
 
     def load_files(self,fnames):  # pragma: no cover
         """Load a file or files into the internal structures.
@@ -62,12 +63,15 @@ class WHAM(object):
         try:
             for fname in fnames:
                 frames.append(pd.read_table(fname, index_col=0, sep=" ",
-                                            usecols=[0,1]))
+                                            usecols=[0,1], header=None))
         except TypeError:
-            frame.append(pd.read_table(fnames, index_col=0, sep=" ",
-                                       usecols=[0,1]))
+            frames.append(pd.read_table(fnames, index_col=0, sep=" ",
+                                        usecols=[0,1], header=None))
+            fnames = [fnames]
         df = pd.concat(frames, axis=1)
+        df.columns=fnames
         self.load_from_dataframe(df)
+        return df
 
 
     def load_from_dataframe(self, df):
@@ -210,19 +214,22 @@ class WHAM(object):
             tol = self.tol
 
         # clear things that don't pass the cutoff
-        raw_cutoff = cutoff*df.max(axis=0)
+        hist_max = df.max(axis=0)
+        raw_cutoff = cutoff*hist_max
         cleaned_df = df.apply(
             lambda s : [x if x > raw_cutoff[s.name] else 0.0 for x in s]
         )
 
         # clear duplicates of leading values
+        test_f = lambda val1, val2, val_max : (
+            abs(val1 - val2) > tol or abs(val1 - val_max) > tol
+        )
         cleaned_df = cleaned_df.apply(
             lambda s : [
-                s.iloc[i] if abs(s.iloc[i] - s.iloc[i+1]) > tol else 0.0
+                s.iloc[i] if test_f(s.iloc[i], s.iloc[i+1], s.max()) else 0.0
                 for i in range(len(s)-1)
             ] + [s.iloc[-1]]
         )
-
         return cleaned_df
 
 
@@ -292,45 +299,61 @@ class WHAM(object):
         iteration = 0
         hists = weighted_counts.columns
         bins = weighted_counts.index
+        # TODO: probably faster if we make wc this a sparse matrix
+        wc = weighted_counts.as_matrix()
+        unw = unweighting.as_matrix()
         lnZ_old = pd.Series(data=lnZ, index=hists)
+        Z_new = pd.Series(index=hists)
+        sum_k_Hk_byQ = sum_k_Hk_Q.as_matrix()
         while diff > tol and iteration < self.max_iter:
             Z_old = np.exp(lnZ_old)
-            Z_new = pd.Series(index=hists).fillna(0.0)
-            for hist_i in hists:
-                for val in bins:
-                    local_w_i = unweighting.loc[val, hist_i]
-                    if local_w_i > 0:
+            reciprocal_Z_old = (1.0 / Z_old).as_matrix()
+            for i in range(len(hists)):
+                hist_i = hists[i]
+                Z_new_i = 0.0
+
+                w_i = unw[:,i]
+                numerator_byQ = np.multiply(w_i, sum_k_Hk_byQ)
+                sum_over_Z_byQ = wc.dot(reciprocal_Z_old)
+                addends_k = np.divide(numerator_byQ, sum_over_Z_byQ)
+                Z_new_i = np.nansum(addends_k)
+
+                # for val_q in range(len(bins)):
+                    # local_w_i = unw[val_q, i] #unweighting.iloc[val_q, i]
+                    # if local_w_i > 0:
                         # if statement allows us to skip if the weight is 0
                         # this will be \sum_j x_j M_j / Z_j^{(old)}
-                        sum_w_over_Z = sum([
-                            weighted_counts.loc[val, hist_j] / Z_old[hist_j]
-                            for hist_j in hists
-                        ])
+                        # sum_w_over_Z = np.dot(wc[val_q], reciprocal_Z_old)
+                        # sum_w_over_Z = sum([
+                            # (wc[val_q, hist_j] / Z_old.iloc[hist_j])
+                            # for hist_j in range(len(hists))
+                        # ])
 
-                        Z_new[hist_i] += (local_w_i * sum_k_Hk_Q[val]
-                                          / sum_w_over_Z)
+                        # Z_new_i += (local_w_i * sum_k_Hk_Q.iloc[val_q] / sum_w_over_Z)
+                Z_new[hist_i] = Z_new_i
 
             lnZ_new = np.log(Z_new)
 
-            # get error
-            diff=0
-            diff = sum(abs(lnZ_old - lnZ_new))
-            lnZ_old = lnZ_new - lnZ_new.iloc[0]
-
             iteration += 1
-
-            # check status (mainly for debugging)
-            sampling = 1 #+ self.max_iter # DEBUG
-            if (iteration % sampling == 0):
-                logger.debug("niteration = " + str(iteration))
-                logger.debug("  diff = " + str(diff))
-                logger.debug("   lnZ = " + str(lnZ_old))
-                logger.debug("lnZnew = " + str(lnZ_new))
+            diff = self.get_diff(lnZ_old, lnZ_new, iteration)
+            lnZ_old = lnZ_new - lnZ_new.iloc[0]
 
         logger.info("iterations=" + str(iteration) + " diff=" + str(diff))
         logger.info("       lnZ=" + str(lnZ_old))
         self.convergence = (iteration, diff)
         return lnZ_old
+
+    def get_diff(self, lnZ_old, lnZ_new, iteration):
+        # get error
+        diff=0
+        diff = sum(abs(lnZ_old - lnZ_new))
+        # check status (mainly for debugging)
+        if (iteration % self.sample_every == 0):
+            logger.debug("niteration = " + str(iteration))
+            logger.debug("  diff = " + str(diff))
+            logger.debug("   lnZ = " + str(lnZ_old))
+            logger.debug("lnZnew = " + str(lnZ_new))
+        return diff
 
 
     # wham iterations; returns the WHAM lnZ weights
@@ -426,7 +449,7 @@ class WHAM(object):
 
     @staticmethod
     def normalize_cumulative(series):
-        return series/max(series)
+        return series/series.max()
 
     def pandas_guess_lnZ_crossing_probability(self, cleaned_df):
         df = cleaned_df.apply(lambda s : s/s.max())
@@ -461,6 +484,10 @@ class WHAM(object):
                 e.args = tuple([arg0] + list(e.args[1:]))
                 raise e
 
+        # print lnZ
+        # print sum_k_Hk_Q
+        # print weighted_counts
+
         hist = self.output_histogram(lnZ, sum_k_Hk_Q, weighted_counts)
         return self.normalize_cumulative(hist)
 
@@ -489,6 +516,7 @@ def parsing(parseargs):  # pragma: no cover
     parser.add_option("--tol", type="float", default=1e-12)
     parser.add_option("--max_iter", type="int", default=1000000)
     parser.add_option("--cutoff", type="float", default=0.05)
+    parser.add_option("--pstats", type="string", default=None)
     opts, args = parser.parse_args(parseargs)
     return opts, args
 
@@ -502,11 +530,19 @@ import sys, os
 if __name__ == "__main__":  # pragma: no cover
     opts, args = parsing(sys.argv[1:])
     wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
-    wham.load_files(args)
+    df = wham.load_files(args)
+    # wham.sample_every = 10
 
-    wham.clean_leading_ones()
-    wham_hist = wham.wham_bam_histogram()
+    if opts.pstats is not None:
+        import cProfile
+        import time
+        start = time.time()
+        cProfile.run("print wham.pandas_wham_bam_histogram(df)", opts.pstats)
+        print time.time() - start
+    else:
+        wham_hist = wham.pandas_wham_bam_histogram(df)
+        print wham_hist.to_string(header=False, 
+                                  float_format=lambda x : "{:10.8f}".format(x))
 
-    print_dict(wham_hist)
 
 
