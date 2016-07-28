@@ -99,7 +99,7 @@ class WHAM(object):
         return self.input_df
 
 
-    def pandas_prep_reverse_cumulative(self, df, cutoff=None, tol=None):
+    def prep_reverse_cumulative(self, df, cutoff=None, tol=None):
         """
         Created cleaned dataframe for further analysis.
 
@@ -136,7 +136,7 @@ class WHAM(object):
         return cleaned_df
 
 
-    def pandas_unweighting_tis(self, cleaned_df):
+    def unweighting_tis(self, cleaned_df):
         """
         Calculates the "unweighting" values for each histogram.
 
@@ -149,7 +149,7 @@ class WHAM(object):
         return unweighting
 
 
-    def pandas_sum_k_Hk_Q(self, cleaned_df):
+    def sum_k_Hk_Q(self, cleaned_df):
         """
         Returns
         -------
@@ -161,7 +161,7 @@ class WHAM(object):
         return cleaned_df.sum(axis=1)
 
 
-    def pandas_n_entries(self, cleaned_df):
+    def n_entries(self, cleaned_df):
         """
         n_entries : 
             the list of counts of entries. In other codes, this is `nt`. In
@@ -170,7 +170,7 @@ class WHAM(object):
         return cleaned_df.sum(axis=0)
 
 
-    def pandas_weighted_counts_tis(self, unweighting, n_entries):
+    def weighted_counts_tis(self, unweighting, n_entries):
         """
         Returns
         -------
@@ -182,7 +182,7 @@ class WHAM(object):
         return weighted_counts
 
 
-    def pandas_generate_lnZ(self, lnZ, unweighting, weighted_counts,
+    def generate_lnZ(self, lnZ, unweighting, weighted_counts,
                             sum_k_Hk_Q, tol=None):
         """
         Parameters
@@ -277,7 +277,7 @@ class WHAM(object):
     def normalize_cumulative(series):
         return series/series.max()
 
-    def pandas_guess_lnZ_crossing_probability(self, cleaned_df):
+    def guess_lnZ_crossing_probability(self, cleaned_df):
         df = cleaned_df.apply(lambda s : s/s.max())
         # pandas magic, see http://stackoverflow.com/questions/18327624
         first_nonzero = df.apply(lambda s: s[s == 1.0].index[0])
@@ -290,17 +290,17 @@ class WHAM(object):
                               index=guess_nextZ_over_Z.index)
         return guess_lnZ
 
-    def pandas_wham_bam_histogram(self, input_df):
-        cleaned = self.pandas_prep_reverse_cumulative(input_df)
-        guess = self.pandas_guess_lnZ_crossing_probability(cleaned)
-        sum_k_Hk_Q = self.pandas_sum_k_Hk_Q(cleaned)
-        n_entries = self.pandas_n_entries(cleaned)
-        unweighting = self.pandas_unweighting_tis(cleaned)
-        weighted_counts = self.pandas_weighted_counts_tis(unweighting,
+    def wham_bam_histogram(self, input_df):
+        cleaned = self.prep_reverse_cumulative(input_df)
+        guess = self.guess_lnZ_crossing_probability(cleaned)
+        sum_k_Hk_Q = self.sum_k_Hk_Q(cleaned)
+        n_entries = self.n_entries(cleaned)
+        unweighting = self.unweighting_tis(cleaned)
+        weighted_counts = self.weighted_counts_tis(unweighting,
                                                           n_entries)
         try:
-            lnZ = self.pandas_generate_lnZ(guess, unweighting,
-                                           weighted_counts, sum_k_Hk_Q)
+            lnZ = self.generate_lnZ(guess, unweighting, weighted_counts,
+                                    sum_k_Hk_Q)
         except IndexError as e:
             failmsg = "Does your input to WHAM have enough data?"
             if not e.args:
@@ -338,10 +338,10 @@ if __name__ == "__main__":  # pragma: no cover
         import cProfile
         import time
         start = time.time()
-        cProfile.run("print wham.pandas_wham_bam_histogram(df)", opts.pstats)
+        cProfile.run("print wham.wham_bam_histogram(df)", opts.pstats)
         print time.time() - start
     else:
-        wham_hist = wham.pandas_wham_bam_histogram(df)
+        wham_hist = wham.wham_bam_histogram(df)
         print wham_hist.to_string(header=False, 
                                   float_format=lambda x : "{:10.8f}".format(x))
 
