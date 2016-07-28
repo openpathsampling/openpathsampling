@@ -16,7 +16,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testWHAM(object):
     def setup(self):
-        self.exact = [1.0, 0.5, 0.25, 0.125, 0.0625, 0.3125]
+        self.exact = [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625]
         self.iface1 = [2.0, 1.0, 0.5, 0.25, 0.125, 0.0625, 0.0]
         self.iface2 = [1.0, 1.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
         self.iface3 = [3.0, 3.0, 3.0, 3.0, 3.0, 1.5, 0.75]
@@ -24,6 +24,11 @@ class testWHAM(object):
         # self.iface1 = [1.0, 0.5, 0.25, 0.125, 0.0625, 0.0, 0.0]
         # self.iface2 = [1.0, 1.0, 1.0, 0.5, 0.25, 0.125, 0.0625]
         # self.iface3 = [1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.25]
+
+        # self.iface1 = [2.0, 0.5, 0.125, 0.0]
+        # self.iface2 = [1.0, 1.0, 0.25, 0.0625]
+        # self.iface3 = [3.0, 3.0, 3.0, 0.75]
+        # self.index = [0.0, 0.2, 0.4, 0.6]
 
         self.columns = ["Interface 1", "Interface 2", "Interface 3"]
         self.index = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6]
@@ -92,6 +97,10 @@ class testWHAM(object):
     def test_generate_lnZ(self):
         guess = [1.0, 1.0, 1.0]
         expected_lnZ = np.log([1.0, 1.0/4.0, 7.0/120.0])
+        # TODO: I'm not sure the last is log(7/120) 
+        # however, I got the same result out of the old version, too, and
+        # this does combine into the correct result in the end (see
+        # test_output_histogram)
         unweighting = self.wham.pandas_unweighting_tis(self.cleaned)
         sum_k_Hk_Q = self.wham.pandas_sum_k_Hk_Q(self.cleaned)
         weighted_counts = self.wham.pandas_weighted_counts_tis(
@@ -101,8 +110,39 @@ class testWHAM(object):
         lnZ = self.wham.pandas_generate_lnZ(guess, unweighting,
                                             weighted_counts, sum_k_Hk_Q)
         np.testing.assert_allclose(lnZ.as_matrix(), expected_lnZ)
-        raise SkipTest  # TODO: I'm not sure the last is log(7/120) 
-        # (however, I got the same result out of the old version, too)
+
+    def test_output_histogram(self):
+        sum_k_Hk_Q = self.wham.pandas_sum_k_Hk_Q(self.cleaned)
+        n_entries = self.wham.pandas_n_entries(self.cleaned)
+        unweighting = self.wham.pandas_unweighting_tis(self.cleaned)
+        weighted_counts = self.wham.pandas_weighted_counts_tis(unweighting,
+                                                               n_entries)
+        lnZ = pd.Series(data=np.log([1.0, 1.0/4.0, 7.0/120.0]),
+                        index=n_entries.index)
+        wham_hist = self.wham.output_histogram(lnZ, sum_k_Hk_Q,
+                                               weighted_counts)
+        normed = self.wham.normalize_cumulative(wham_hist)
+        np.testing.assert_allclose(normed.as_matrix(), np.array(self.exact))
 
 
+    def test_guess_lnZ_crossing_probability(self):
+        input_data = np.array([[2.0, 1.0, 5.0],
+                               [1.0, 1.0, 5.0],
+                               [0.5, 1.0, 5.0],
+                               [0.1, 0.2, 5.0],
+                               [0.0, 0.04, 1.0],
+                               [0.0, 0.02, 0.2]])
+        input_df = pd.DataFrame(data=input_data,
+                                index=self.index[0:6],
+                                columns=self.columns[0:6])
+        cleaned = self.wham.pandas_prep_reverse_cumulative(input_df)
+        guess_lnZ = self.wham.pandas_guess_lnZ_crossing_probability(cleaned)
+        expected_Z = np.array([1.0, 0.25, 0.25*0.2])
+        np.testing.assert_allclose(guess_lnZ.as_matrix(), np.log(expected_Z))
 
+    def test_wham_bam_histogram(self):
+        wham_hist = self.wham.pandas_wham_bam_histogram(self.input_df)
+        np.testing.assert_allclose(wham_hist.as_matrix(), self.exact)
+
+    def test_wham_bam_histogram_incomplete_data(self):
+        raise SkipTest

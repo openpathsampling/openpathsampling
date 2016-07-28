@@ -302,14 +302,10 @@ class WHAM(object):
                     if local_w_i > 0:
                         # if statement allows us to skip if the weight is 0
                         # this will be \sum_j x_j M_j / Z_j^{(old)}
-                        # sum_w_over_Z = sum([
-                            # weighted_counts.loc[val, hist_j] / Z_old[hist_j]
-                            # for hist_j in hists
-                        # ])
-                        sum_w_over_Z = 0.0
-                        for hist_j in hists:
-                            local_wcount_j = weighted_counts.loc[val, hist_j]
-                            sum_w_over_Z += local_wcount_j / Z_old[hist_j]
+                        sum_w_over_Z = sum([
+                            weighted_counts.loc[val, hist_j] / Z_old[hist_j]
+                            for hist_j in hists
+                        ])
 
                         Z_new[hist_i] += (local_w_i * sum_k_Hk_Q[val]
                                           / sum_w_over_Z)
@@ -414,6 +410,60 @@ class WHAM(object):
             wham_hist[key] /= norm
 
         return wham_hist
+
+    def output_histogram(self, lnZ, sum_k_Hk_Q, weighted_counts):
+        Z = np.exp(lnZ)
+        Z0_over_Zi = Z.iloc[0] / Z
+        output = pd.Series(index=sum_k_Hk_Q.index, name="WHAM")
+        for val in sum_k_Hk_Q.index:
+            sum_w_over_Z = sum([
+                weighted_counts.loc[val, hist_i] * Z0_over_Zi[hist_i]
+                for hist_i in Z.index
+            ])
+            output[val] = sum_k_Hk_Q[val] / sum_w_over_Z
+
+        return output
+
+    @staticmethod
+    def normalize_cumulative(series):
+        return series/max(series)
+
+    def pandas_guess_lnZ_crossing_probability(self, cleaned_df):
+        df = cleaned_df.apply(lambda s : s/s.max())
+        # pandas magic, see http://stackoverflow.com/questions/18327624
+        first_nonzero = df.apply(lambda s: s[s == 1.0].index[0])
+        df = df.loc[first_nonzero]
+        guess_nextZ_over_Z = df.apply(lambda s: s.nlargest(2).iloc[1])
+        guess_Z_data = [1.0]
+        for i in range(len(guess_nextZ_over_Z)-1):
+            guess_Z_data.append(guess_Z_data[-1] * guess_nextZ_over_Z.iloc[i])
+        guess_lnZ = pd.Series(data=np.log(np.array(guess_Z_data)),
+                              index=guess_nextZ_over_Z.index)
+        return guess_lnZ
+
+    def pandas_wham_bam_histogram(self, input_df):
+        cleaned = self.pandas_prep_reverse_cumulative(input_df)
+        guess = self.pandas_guess_lnZ_crossing_probability(cleaned)
+        sum_k_Hk_Q = self.pandas_sum_k_Hk_Q(cleaned)
+        n_entries = self.pandas_n_entries(cleaned)
+        unweighting = self.pandas_unweighting_tis(cleaned)
+        weighted_counts = self.pandas_weighted_counts_tis(unweighting,
+                                                          n_entries)
+        try:
+            lnZ = self.pandas_generate_lnZ(guess, unweighting,
+                                           weighted_counts, sum_k_Hk_Q)
+        except IndexError as e:
+            failmsg = "Does your input to WHAM have enough data?"
+            if not e.args:
+                e.args = [failmsg]
+            else:
+                arg0 = e.args[0]+"\n"+failmsg
+                e.args = tuple([arg0] + list(e.args[1:]))
+                raise e
+
+        hist = self.output_histogram(lnZ, sum_k_Hk_Q, weighted_counts)
+        return self.normalize_cumulative(hist)
+
 
     def wham_bam_histogram(self):
         self.guess_lnZ()
