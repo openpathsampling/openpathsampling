@@ -16,13 +16,13 @@ class WHAM(object):
     Note
     ----
     Several parts of the docstrings mention F&S, which is intended to refer
-    the reader to reference [1], in particular pages 184-187 in the 2nd
+    the reader to reference [1]_, in particular pages 184-187 in the 2nd
     edition (section called "Self-Consistent Histogram Method").
 
     Reference
     ---------
-    [1] Daan Frenkel and Berend Smit. Understanding Molecular Simulation:
-        From Algorithms to Applications. 2nd Edition. 2002.
+    .. [1] Daan Frenkel and Berend Smit. Understanding Molecular Simulation:
+       From Algorithms to Applications. 2nd Edition. 2002.
     """
 
     def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.05):
@@ -37,20 +37,23 @@ class WHAM(object):
             maximum number of iterations
         cutoff : float
             windowing cutoff
+
+        Attributes
+        ----------
+        sample_every : int
+            frequency (in iterations) to report debug information
+
         """
         self.tol = tol
         self.max_iter = max_iter
         self.cutoff = cutoff
-
-        self.hists = { }
-        self.nhists = 0
-        self.keys = []
 
         self.sample_every = max_iter + 1
         self._float_format = "10.8"
 
     @property
     def float_format(self):
+        """Float output format. Example: 10.8 (default)"""
         return lambda x : "{:" + self._float_format + "f}".format(x)
 
     @float_format.setter
@@ -62,7 +65,19 @@ class WHAM(object):
 
         Requires either pandas or something else with pandas-like read_table
         and concat functions.
+
+        Parameters
+        ----------
+        fnames : string or list of string
+            file(s) to read in; each gives a column of the dataframe, with
+            common indexes (keys)
+
+        Returns
+        -------
+        pd.DataFrame
+            dataframe with each input histogram in a column
         """
+        # TODO: add some validation of formatting
         frames = []
         try:
             for fname in fnames:
@@ -74,7 +89,6 @@ class WHAM(object):
             fnames = [fnames]
         df = pd.concat(frames, axis=1)
         df.columns=fnames
-        # self.load_from_dataframe(df)
         return df
 
 
@@ -85,6 +99,7 @@ class WHAM(object):
         This version assumes that the input is the result of a reversed
         cumulative histogram. That means that it cleans leading input where
         the initial 
+        
 
         Returns
         -------
