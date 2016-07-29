@@ -1,11 +1,14 @@
 import openpathsampling as paths
 
 class InterfaceSet(paths.StorableNamedObject):
-    def __init__(self, volumes, cv=None, lambdas=None, direction=1):
+    def __init__(self, volumes, cv=None, lambdas=None):
         self.volumes = volumes
         self.cv = cv
         self.lambdas = lambdas
-        self.direction = direction
+        try:
+            self.direction = lambdas[-1] >= lambdas[0]
+        except TypeError:
+            self.direction = 0
 
         vlambdas = lambdas
         if vlambdas is None:
@@ -16,9 +19,20 @@ class InterfaceSet(paths.StorableNamedObject):
     def get_lambda(self, vol):
         return self._lambda_dict[vol]
 
-    # TODO: add various magics (contains, iter, etc) so that this acts like
-    # a list over its volume objects. Append will have to be different
-    # (requires lambda as well as a volume).
+    def __len__(self):
+        return len(self.volumes)
+
+    def __getitem__(self, key):
+        return self.volumes[key]
+
+    def __iter__(self):
+        return iter(self.volumes)
+
+    def __contains__(self, item):
+        return item in self.volumes
+
+    def __reversed__(self):
+        return self.volumes.__reversed__()
 
 
 class GenericVolumeInterfaceSet(InterfaceSet):
@@ -27,11 +41,13 @@ class GenericVolumeInterfaceSet(InterfaceSet):
             intersect_with = paths.FullVolume()
         self.intersect_with = intersect_with
 
-        minvs, maxvs = self._prep_minvals_maxvals(minvals, maxvals)
         direction = self._determine_direction(minvals, maxvals)
+        minvs, maxvs = self._prep_minvals_maxvals(minvals, maxvals,
+                                                  direction)
         lambdas = {1: maxvs, -1: minvs, 0: None}[direction]
         volumes = [self.intersect_with & volume_func(minv, maxv)
                    for (minv, maxv) in (minvs, maxvs)]
+        super(self, GenericVolumeInterfaceSet).__init__(volumes, cv, lambdas)
 
         if direction == 0:
             self.volume_func = volume_func
