@@ -70,9 +70,7 @@ class testStorage(object):
         store.close()
 
         store = Storage(filename=self.filename, mode='a')
-        loaded_topology = store.template.topology
-
-        # check if poth topologies have the same JSON string
+        loaded_topology = store.template.topology        # check if poth topologies have the same JSON string
         # this also tests the simplifier for topologies
 
         assert_equal(
@@ -183,7 +181,6 @@ class testStorage(object):
 
             hidden_snapshots = storage_r.stores['snapshot0'][:]
             for idx in range(10):
-                print idx
                 s1 = eff_traj[idx]
                 s1r = s1.reversed
                 s2 = hidden_snapshots[2 * idx]
