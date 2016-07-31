@@ -25,6 +25,10 @@ class testInterfaceSet(object):
                                                 self.lambdas)
         self.no_lambda_set = paths.InterfaceSet(self.volumes, self.cv)
 
+    def test_direction(self):
+        assert_equal(self.interface_set.direction, 1)
+        assert_equal(self.no_lambda_set.direction, 0)
+
     def test_get_lambda(self):
         for (v, l) in zip(self.volumes, self.lambdas):
             assert_equal(self.interface_set.get_lambda(v), l)
@@ -51,26 +55,28 @@ class testInterfaceSet(object):
 
 
 class testGenericVolumeInterfaceSet(object):
-    def test_determine_direction(self):
+    def test_sanitize_input(self):
         # this is just to make the rest a little more readable
-        determine_direction = GenericVolumeInterfaceSet._determine_direction
-        assert_equal(1, determine_direction(float("-inf"), [0.0, 0.1, 0.2]))
-        assert_equal(-1, determine_direction([0.2, 0.1, 0.0], float("inf")))
-        assert_equal(0, determine_direction([-0.1, -0.2], [0.1, 0.2]))
-        assert_equal(1, determine_direction([0.0, 0.0], [0.1, 0.2]))
-        assert_equal(-1, determine_direction([-0.1, -0.2], [0.0, 0.0]))
+        sanitize = GenericVolumeInterfaceSet._sanitize_input
+        assert_equal(([float("-inf")]*3, [0.0, 0.1, 0.2], 1),
+                     sanitize(float("-inf"), [0.0, 0.1, 0.2]))
+        assert_equal(([0.2, 0.1, 0.0], [float("inf")]*3, -1),
+                     sanitize([0.2, 0.1, 0.0], float("inf")))
+        assert_equal(([-0.1, -0.2], [0.1, 0.2], 0),
+                     sanitize([-0.1, -0.2], [0.1, 0.2]))
+        assert_equal(([0.0, 0.0], [0.1, 0.2], 1),
+                     sanitize([0.0, 0.0], [0.1, 0.2]))
+        assert_equal(([-0.1, -0.2], [0.0, 0.0], -1),
+                     sanitize([-0.1, -0.2], [0.0, 0.0]))
         # and the idiot case:
-        assert_equal(0, determine_direction([-0.1, -0.1], [0.1, 0.1]))
+        assert_equal(([-0.1, -0.1], [0.1, 0.1], 0),
+                     sanitize([-0.1, -0.1], [0.1, 0.1]))
 
     @raises(RuntimeError)
-    def test_bad_determine_direction(self):
-        GenericVolumeInterfaceSet._determine_direction([0.0, -0.1], 
-                                                       [0.1, 0.2, 0.3])
+    def test_bad_sanitize(self):
+        GenericVolumeInterfaceSet._sanitize_input([0.0, -0.1],
+                                                  [0.1, 0.2, 0.3])
         
-
-    def test_prep_minvals_maxvals(self):
-        raise SkipTest
-
 
 class testVolumeInterfaceSet(object):
     def setup(self):

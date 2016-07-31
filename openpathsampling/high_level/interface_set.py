@@ -4,6 +4,9 @@ import openpathsampling.netcdfplus as netcdfplus
 class InterfaceSet(netcdfplus.StorableNamedObject):
     """List of volumes representing a set of interfaces, plus metadata.
 
+    Implements (immutable) list API, such that the InterfaceSet can act like
+    a list of the interface volumes.
+
     Parameters
     ----------
     volumes : list of :class:`.Volume`
@@ -61,15 +64,18 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
 
 class GenericVolumeInterfaceSet(InterfaceSet):
     """Abstract class for InterfaceSets for CVRange-based volumes
+
+    Parameters
+    ----------
+    cv : :class:`.CollectiveVariable`
+        the collective variable for this
     """
     def __init__(self, cv, minvals, maxvals, intersect_with, volume_func):
         if intersect_with is None:
             intersect_with = paths.FullVolume()
         self.intersect_with = intersect_with
 
-        direction = self._determine_direction(minvals, maxvals)
-        minvs, maxvs = self._prep_minvals_maxvals(minvals, maxvals,
-                                                  direction)
+        minvs, maxvs, direction = self._sanitize_input(minvals, maxvals)
         lambdas = {1: maxvs, -1: minvs, 0: None}[direction]
         volumes = [self.intersect_with & volume_func(minv, maxv)
                    for (minv, maxv) in (minvs, maxvs)]
@@ -83,44 +89,42 @@ class GenericVolumeInterfaceSet(InterfaceSet):
             self.volume_func = lambda minv : volume_func(minv, maxvals)
 
     @staticmethod
-    def _determine_direction(minvals, maxvals):
+    def _sanitize_input(minvals, maxvals):
+        direction = 0
         try:
             len_min = len(minvals)
         except TypeError:
             len_min = 1
+            minvals = [minvals]
         try:
             len_max = len(maxvals)
         except TypeError:
             len_max = 1
+            maxvals = [maxvals]
         if len_min == len_max:
-            result = 0
             # check if all elements of each list matches its first element
-            if len_min > 1 and minvals.count(minvals[0]) == len_min:
-                result += 1
-            if len_max > 1 and maxvals.count(maxvals[0]) == len_max:
-                result += -1
+            if minvals.count(minvals[0]) == len_min:
+                direction += 1
+            if maxvals.count(maxvals[0]) == len_max:
+                direction += -1
             # this approach means that if multiple vals are equal (for some
             # drunken reason, you decided to have a bunch of equivalent
             # volumes?) we return that we can't tell the direction
-            return result
         elif len_max > len_min == 1:
-            return 1
+            direction = 1
         elif len_min > len_max == 1:
-            return -1
+            direction = -1
         else:
             raise RuntimeError("Can't reconcile array lengths: " 
                                + str(minvals) + ", " + str(maxvals))
-                        
 
-    @staticmethod
-    def _prep_minvals_maxvals(minvals, maxvals, direction):
         minvs = minvals
         maxvs = maxvals
-        if direction > 0:
-            minvs = [minvs]*len(maxvs)
-        elif direction < 0:
-            maxvs = [maxvs]*len(maxvs)
-        return minvs, maxvs
+        if len_min == 1:
+            minvs = minvs*len(maxvs)
+        if len_max == 1:
+            maxvs = maxvs*len(minvs)
+        return minvs, maxvs, direction
 
     def new_interface(self, lambda_i):
         return self.intersect_with & self.volume_func(lambda_i)
