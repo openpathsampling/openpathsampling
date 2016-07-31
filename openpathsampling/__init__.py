@@ -76,6 +76,10 @@ from ensemble import (
     OptionalEnsemble, join_ensembles
 )
 
+from high_level.interface_set import (
+    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
+)
+
 from live_visualization import LiveVisualization
 
 from pathmovechange import (
