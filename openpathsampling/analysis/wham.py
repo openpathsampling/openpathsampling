@@ -99,11 +99,19 @@ class WHAM(object):
         This version assumes that the input is the result of a reversed
         cumulative histogram. That means that it cleans leading input where
         the initial 
+
+        Parameters
+        ----------
+        df : pandas.DataFrame
+        cutoff : float
+        tol : float
         
 
         Returns
         -------
-        cleaned_df
+        pandas.DataFrame
+            version of the dataframe with leading constant values removed
+            and without
         """
         if cutoff is None:
             cutoff = self.cutoff
@@ -136,6 +144,14 @@ class WHAM(object):
 
         In TIS, this is just 1 if there is a non-zero entry in cleaned_df,
         and 0 otherwise.
+
+        Parameters
+        ----------
+        cleaned_df : pandas.DataFrame
+        
+        Returns
+        -------
+        pandas.DataFrame
         """
         unweighting = cleaned_df.copy().applymap(
             lambda x : 1.0 if x > 0.0 else 0.0
@@ -206,28 +222,43 @@ class WHAM(object):
             Z_old = np.exp(lnZ_old)
             reciprocal_Z_old = (1.0 / Z_old).as_matrix()
             for i in range(len(hists)):
-                hist_i = hists[i]
-                Z_new_i = 0.0
+                # this is equation 7.3.10 in F&S
+                # Z_i^{(new)} = 
+                #    \int \dd{Q} w_{i,Q}
+                #    \times \frac{\sum_{j=1}^n H_j(Q)}
+                #                {\sum_{k=1}^n w_{k,Q} M_k / Z_k^{(old)}}
+                # where F&S explicitly use w_{i,Q} = e^{-\beta W_i}
+                #
+                # Matching terms from F&S to our variables:
+                #   w_i = w_{i,Q} = $e^{-\beta W_i}$
+                #       * this is a column (len == n_bins) from a matrix
+                #         size n_hists \times n_bins
+                #       * from "unweighting", which is Boltzmann in umbrella
+                #         sampling (F&S), but 1 or 0 in TIS
+                #       * see unweighting_tis: not entirely clear why this
+                #         is a matrix, not an vector length n_hists
+                #   sum_k_Hk_byQ = $\sum_{j=1}^n H_j(Q)$
+                #       * this is a function of Q, thus len == n_bins
+                #   wc = w_{k,Q} * M_k = $e^{-\beta W_k} M_k$
+                #       * note that this is element-wise multiplication
+                #       * matrix, size n_hists \times n_bins
+                #   reciprocal_Z_old = $1/Z_k^{(old)}$
+                #       * vector, len == n_hists
+                #
+                # Note that we do all of this with matrix/vector
+                # multiplication, which numpy can do very quickly.
 
                 w_i = unw[:,i]
+
+                # numerator: w_{i,Q} * sum_k_Hk_byQ
                 numerator_byQ = np.multiply(w_i, sum_k_Hk_byQ)
+
+                # denominator: wc * Z^{-1}
                 sum_over_Z_byQ = wc.dot(reciprocal_Z_old)
+
+                # divide each entry, and add them (integrate over Q in F&S)
                 addends_k = np.divide(numerator_byQ, sum_over_Z_byQ)
-                Z_new_i = np.nansum(addends_k)
-
-                # for val_q in range(len(bins)):
-                    # local_w_i = unw[val_q, i] #unweighting.iloc[val_q, i]
-                    # if local_w_i > 0:
-                        # if statement allows us to skip if the weight is 0
-                        # this will be \sum_j x_j M_j / Z_j^{(old)}
-                        # sum_w_over_Z = np.dot(wc[val_q], reciprocal_Z_old)
-                        # sum_w_over_Z = sum([
-                            # (wc[val_q, hist_j] / Z_old.iloc[hist_j])
-                            # for hist_j in range(len(hists))
-                        # ])
-
-                        # Z_new_i += (local_w_i * sum_k_Hk_Q.iloc[val_q] / sum_w_over_Z)
-                Z_new[hist_i] = Z_new_i
+                Z_new[hists[i]] = np.nansum(addends_k)
 
             lnZ_new = np.log(Z_new)
 
@@ -326,8 +357,8 @@ if __name__ == "__main__":  # pragma: no cover
     wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
     wham.float_format = opts.float_format
     df = wham.load_files(args)
-    # wham.sample_every = 10
 
+    # keep around some stuff to allow us to do benchmarking and profiling
     if opts.pstats is not None:
         import cProfile
         import time
