@@ -1,6 +1,18 @@
 import openpathsampling as paths
+import openpathsampling.netcdfplus as netcdfplus
 
-class InterfaceSet(paths.StorableNamedObject):
+class InterfaceSet(netcdfplus.StorableNamedObject):
+    """List of volumes representing a set of interfaces, plus metadata.
+
+    Parameters
+    ----------
+    volumes : list of :class:`.Volume`
+        volumes representing the interfaces
+    cv : :class:`.CollectiveVariable`
+        order parameter for this interface set
+    lambdas : list
+        values associated with the CV at each interface
+    """
     def __init__(self, volumes, cv=None, lambdas=None):
         self.volumes = volumes
         self.cv = cv
@@ -16,8 +28,20 @@ class InterfaceSet(paths.StorableNamedObject):
         self._lambda_dict = {vol: lmbda 
                              for (vol, lmbda) in zip(volumes, vlambdas)}
 
-    def get_lambda(self, vol):
-        return self._lambda_dict[vol]
+    def get_lambda(self, volume):
+        """Lambda (value of the CV) associated with a given interface volume
+
+        Parameters
+        ----------
+        volume : :class:`.Volume`
+            the interface volume
+
+        Returns
+        -------
+        float or int
+            the value of the CV associated with the interface
+        """
+        return self._lambda_dict[volume]
 
     def __len__(self):
         return len(self.volumes)
@@ -36,6 +60,8 @@ class InterfaceSet(paths.StorableNamedObject):
 
 
 class GenericVolumeInterfaceSet(InterfaceSet):
+    """Abstract class for InterfaceSets for CVRange-based volumes
+    """
     def __init__(self, cv, minvals, maxvals, intersect_with, volume_func):
         if intersect_with is None:
             intersect_with = paths.FullVolume()
@@ -67,11 +93,24 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         except TypeError:
             len_max = 1
         if len_min == len_max:
-            return 0
-        elif len_max > len_min:
+            result = 0
+            # check if all elements of each list matches its first element
+            if len_min > 1 and minvals.count(minvals[0]) == len_min:
+                result += 1
+            if len_max > 1 and maxvals.count(maxvals[0]) == len_max:
+                result += -1
+            # this approach means that if multiple vals are equal (for some
+            # drunken reason, you decided to have a bunch of equivalent
+            # volumes?) we return that we can't tell the direction
+            return result
+        elif len_max > len_min == 1:
             return 1
-        else:
+        elif len_min > len_max == 1:
             return -1
+        else:
+            raise RuntimeError("Can't reconcile array lengths: " 
+                               + str(minvals) + ", " + str(maxvals))
+                        
 
     @staticmethod
     def _prep_minvals_maxvals(minvals, maxvals, direction):
