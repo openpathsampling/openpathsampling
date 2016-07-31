@@ -23,11 +23,15 @@ class testInterfaceSet(object):
                                                             self.lambdas)
         self.interface_set = paths.InterfaceSet(self.volumes, self.cv,
                                                 self.lambdas)
+        self.decreasing = paths.InterfaceSet(list(reversed(self.volumes)),
+                                             self.cv,
+                                             list(reversed(self.lambdas)))
         self.no_lambda_set = paths.InterfaceSet(self.volumes, self.cv)
 
     def test_direction(self):
         assert_equal(self.interface_set.direction, 1)
         assert_equal(self.no_lambda_set.direction, 0)
+        assert_equal(self.decreasing.direction, -1)
 
     def test_get_lambda(self):
         for (v, l) in zip(self.volumes, self.lambdas):
@@ -80,28 +84,56 @@ class testGenericVolumeInterfaceSet(object):
 
 class testVolumeInterfaceSet(object):
     def setup(self):
-        pass
+        self.cv = paths.CV_Function(name="x", f=lambda s: s.xyz[0][0])
+        self.increasing_set = paths.VolumeInterfaceSet(cv=self.cv,
+                                                       minvals=float("-inf"),
+                                                       maxvals=[0.0, 0.1])
+        self.decreasing_set = paths.VolumeInterfaceSet(cv=self.cv,
+                                                       minvals=[0.0, -0.1],
+                                                       maxvals=float("inf"))
+        self.weird_set = paths.VolumeInterfaceSet(cv=self.cv,
+                                                  minvals=[-0.1, -0.2],
+                                                  maxvals=[0.1, 0.2])
 
-    def test_get_lambda(self):
-        raise SkipTest
-
-    def test_list_behavior(self):
-        raise SkipTest
+    def test_initialization(self):
+        assert_equal(len(self.increasing_set), 2)
+        assert_equal(self.increasing_set.direction, 1)
+        assert_equal(self.increasing_set.lambdas, [0.0, 0.1])
+        assert_equal(len(self.decreasing_set), 2)
+        assert_equal(self.decreasing_set.direction, -1)
+        assert_equal(self.decreasing_set.lambdas, [0.0, -0.1])
+        assert_equal(len(self.weird_set), 2)
+        assert_equal(self.weird_set.direction, 0)
+        assert_equal(self.weird_set.lambdas, None)
 
     def test_new_interface(self):
-        raise SkipTest
+        new_iface = self.increasing_set.new_interface(0.25)
+        expected = paths.CVRangeVolume(self.cv, float("-inf"), 0.25)
+        assert_equal(expected, new_iface)
+
+    @raises(TypeError)
+    def test_bad_new_interface(self):
+        self.weird_set.new_interface(0.25)
     
 
 class testPeriodicVolumeInterfaceSet(object):
     def setup(self):
-        pass
+        self.cv = paths.CV_Function(name="x", f=lambda s: s.xyz[0][0])
+        self.increasing_set = paths.PeriodicVolumeInterfaceSet(
+            cv=self.cv,
+            minvals=0.0,
+            maxvals=[100, 150, 200-360],
+            period_min=-180,
+            period_max=180
+        )
 
-    def test_get_lambda(self):
-        raise SkipTest
-
-    def test_list_behavior(self):
-        raise SkipTest
+    def test_initialization(self):
+        assert_equal(self.increasing_set.direction, 1)
+        assert_equal(len(self.increasing_set), 3)
+        assert_equal(self.increasing_set.lambdas, [100, 150, -160])
 
     def test_new_interface(self):
-        raise SkipTest
+        new_iface = self.increasing_set.new_interface(-140)
+        expected = paths.CVRangeVolumePeriodic(self.cv, 0.0, -140, -180, 180)
+        assert_equal(new_iface, expected)
     

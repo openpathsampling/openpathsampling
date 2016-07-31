@@ -16,13 +16,25 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
     lambdas : list
         values associated with the CV at each interface
     """
-    def __init__(self, volumes, cv=None, lambdas=None):
+    def __init__(self, volumes, cv=None, lambdas=None, direction=None):
         self.volumes = volumes
         self.cv = cv
         self.lambdas = lambdas
-        try:
-            self.direction = lambdas[-1] >= lambdas[0]
-        except TypeError:
+        self.direction = direction
+        if direction is None and lambdas is not None:
+            # we guess based on the values of lambda
+            # if they aren't monotone, we can't tell and return 0
+            count = len(lambdas)-1
+            increasing = sum([lambdas[i+1] >= lambdas[i] 
+                              for i in range(len(lambdas)-1)]) == count
+            decreasing = sum([lambdas[i+1] <= lambdas[i] 
+                              for i in range(len(lambdas)-1)]) == count
+
+            if increasing:
+                self.direction = 1
+            elif decreasing:
+                self.direction = -1
+        if self.direction is None:
             self.direction = 0
 
         vlambdas = lambdas
@@ -90,8 +102,9 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         minvs, maxvs, direction = self._sanitize_input(minvals, maxvals)
         lambdas = {1: maxvs, -1: minvs, 0: None}[direction]
         volumes = [self.intersect_with & volume_func(minv, maxv)
-                   for (minv, maxv) in (minvs, maxvs)]
-        super(self, GenericVolumeInterfaceSet).__init__(volumes, cv, lambdas)
+                   for (minv, maxv) in zip(minvs, maxvs)]
+        super(GenericVolumeInterfaceSet, self).__init__(volumes, cv,
+                                                        lambdas, direction)
 
         if direction == 0:
             self.volume_func = volume_func
@@ -175,8 +188,16 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         -------
         :class:`.Volume`
             new interface volume
+
+        Raises
+        ------
+        TypeError
+            If the volume_func requires both a minimum and a maximum value
+            of lambda. Message will say "<lambda>() takes exactly 2
+            arguments (1 given)".
         """
         return self.intersect_with & self.volume_func(lambda_i)
+
 
 
 class VolumeInterfaceSet(GenericVolumeInterfaceSet):
@@ -195,7 +216,7 @@ class VolumeInterfaceSet(GenericVolumeInterfaceSet):
     """
     def __init__(self, cv, minvals, maxvals, intersect_with=None):
         volume_func = lambda minv, maxv: paths.CVRangeVolume(cv, minv, maxv)
-        super(self, VolumeInterfaceSet).__init__(cv, minvals, maxvals,
+        super(VolumeInterfaceSet, self).__init__(cv, minvals, maxvals,
                                                  intersect_with,
                                                  volume_func)
 
@@ -223,8 +244,9 @@ class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
         volume_func = lambda minv, maxv: paths.CVRangeVolumePeriodic(
             cv, minv, maxv, period_min, period_max
         )
-        super(self, VolumeInterfaceSet).__init__(cv, minvals, maxvals,
-                                                 intersect_with,
-                                                 volume_func)
+        super(PeriodicVolumeInterfaceSet, self).__init__(cv, minvals,
+                                                         maxvals,
+                                                         intersect_with,
+                                                         volume_func)
 
 
