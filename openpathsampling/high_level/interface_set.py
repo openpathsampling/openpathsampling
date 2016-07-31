@@ -63,12 +63,24 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
 
 
 class GenericVolumeInterfaceSet(InterfaceSet):
-    """Abstract class for InterfaceSets for CVRange-based volumes
+    """Abstract class for InterfaceSets for CVRange-based volumes.
+
+    Subclasses act as factories for interface volumes, as well as holding
+    the metadata about them.
 
     Parameters
     ----------
     cv : :class:`.CollectiveVariable`
-        the collective variable for this
+        the collective variable for this interface set
+    minvals : float or int or list of float or list of int
+        the minimum value(s) for the interface set
+    maxvals : float or int or list of float or list of int
+        the maximum value(s) for the interface set
+    intersect_with : :class:`.Volume`
+        output volumes will be intersected (`&`) with this.
+    volume_func : callable, returns :class:.`Volume`, takes minval, maxval
+        the function to create the interface volume based on the CV.
+        Typically the differentiating factor of subclasses.
     """
     def __init__(self, cv, minvals, maxvals, intersect_with, volume_func):
         if intersect_with is None:
@@ -90,6 +102,26 @@ class GenericVolumeInterfaceSet(InterfaceSet):
 
     @staticmethod
     def _sanitize_input(minvals, maxvals):
+        """Normalizes the input of minvals and maxvals.
+
+        Parameters
+        ----------
+        minvals : float or int or list of float or list of int
+            the minimum value(s) for the interface set
+        maxvals : float or int or list of float or list of int
+            the maximum value(s) for the interface set
+
+        Returns
+        -------
+        minvals : list
+            minimum values as a list
+        maxvals : list
+            maximum values as a list
+        direction : 1, -1, or 0
+            whether the maximum value are increasing (1), the minimum values
+            are decreasing (-1), or it is unclear (0). "Unclear" can happen
+            if both are changing or if neither are changing.
+        """
         direction = 0
         try:
             len_min = len(minvals)
@@ -127,10 +159,40 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         return minvs, maxvs, direction
 
     def new_interface(self, lambda_i):
+        """Creates a new interface at lambda_i.
+
+        Note
+        ----
+        This only returns the interface; it does *not* add it to this
+        interface set.
+
+        Parameters
+        ----------
+        lambda_i : float or int
+            the value of the CV to associated with the new interface.
+
+        Returns
+        -------
+        :class:`.Volume`
+            new interface volume
+        """
         return self.intersect_with & self.volume_func(lambda_i)
 
 
 class VolumeInterfaceSet(GenericVolumeInterfaceSet):
+    """InterfaceSet based on CVRangeVolume.
+
+    Parameters
+    ----------
+    cv : :class:`.CollectiveVariable`
+        the collective variable for this interface set
+    minvals : float or int or list of float or list of int
+        the minimum value(s) for the interface set
+    maxvals : float or int or list of float or list of int
+        the maximum value(s) for the interface set
+    intersect_with : :class:`.Volume`
+        output volumes will be intersected (`&`) with this.
+    """
     def __init__(self, cv, minvals, maxvals, intersect_with=None):
         volume_func = lambda minv, maxv: paths.CVRangeVolume(cv, minv, maxv)
         super(self, VolumeInterfaceSet).__init__(cv, minvals, maxvals,
@@ -139,6 +201,23 @@ class VolumeInterfaceSet(GenericVolumeInterfaceSet):
 
 
 class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
+    """InterfaceSet based on CVRangeVolumePeriodic.
+
+    Parameters
+    ----------
+    cv : :class:`.CollectiveVariable`
+        the collective variable for this interface set
+    minvals : float or int or list of float or list of int
+        the minimum value(s) for the interface set
+    maxvals : float or int or list of float or list of int
+        the maximum value(s) for the interface set
+    period_min : float (optional)
+        minimum of the periodic domain
+    period_max : float (optional)
+        maximum of the periodic domain
+    intersect_with : :class:`.Volume`
+        output volumes will be intersected (`&`) with this.
+    """
     def __init__(self, cv, minvals, maxvals, period_min=None,
                  period_max=None, intersect_with=None):
         volume_func = lambda minv, maxv: paths.CVRangeVolumePeriodic(
