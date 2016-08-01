@@ -45,6 +45,7 @@ packages:
   - openpathsampling.storage
   - openpathsampling.tests
   - openpathsampling.analysis
+  - openpathsampling.high_level
   - openpathsampling.netcdfplus
   - openpathsampling.engines
   - openpathsampling.engines.features
