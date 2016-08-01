@@ -14,6 +14,8 @@ import __builtin__
 
 from base import StorableObject
 
+from openpathsampling.tools import word_wrap
+
 __author__ = 'Jan-Hendrik Prinz'
 
 
@@ -31,7 +33,7 @@ class ObjectJSON(object):
         np.uint8, np.uint16, np.uint32, np.uint64,
     ]
 
-    allowed_imports = [
+    safe_modules = [
         'numpy',
         'math',
         'pandas',
@@ -58,7 +60,7 @@ class ObjectJSON(object):
     def simplify(self, obj, base_type=''):
         if obj.__class__.__name__ == 'module':
             # store an imported module
-            if obj.__name__.split('.')[0] in self.allowed_imports:
+            if obj.__name__.split('.')[0] in self.safe_modules:
                 return {'_import': obj.__name__}
             else:
                 raise RuntimeError('The module reference "%s" you want to store is not allowed!' % obj.__name__)
@@ -169,7 +171,7 @@ class ObjectJSON(object):
 
             elif '_import' in obj:
                 module = obj['_import']
-                if module.split('.')[0] in self.allowed_imports:
+                if module.split('.')[0] in self.safe_modules:
                     imp = importlib.import_module(module)
                     return imp
                 else:
@@ -240,78 +242,74 @@ class ObjectJSON(object):
             the dict representation of the callable
         """
         f_module = c.__module__
-        is_local = f_module == '__main__'
-        is_loaded = f_module.split('.')[0] == 'openpathsampling'
-        is_class = isinstance(c, (type, types.ClassType))
-        if not is_class:
-            if is_local or is_loaded:
-                # this is a local function, let's see if we can save it
-                if ObjectJSON.allow_marshal and callable(c):
-                    # use marshal
-                    global_vars = ObjectJSON._find_var(c, opcode.opmap['LOAD_GLOBAL'])
-                    import_vars = ObjectJSON._find_var(c, opcode.opmap['IMPORT_NAME'])
+        root_module = f_module.split('.')[0]
 
-                    builtins = dir(__builtin__)
+        # is_class = isinstance(c, (type, types.ClassType))
 
-                    global_vars = list(set([
-                                               var for var in global_vars if var not in builtins
-                                               ]))
+        # try saving known external classes of functions, e.g. msmbuilder featurizer
+        if root_module in ObjectJSON.safe_modules:
+            # only store the function/class and the module
+            return {
+                '_module': c.__module__,
+                '_name': c.__name__
+            }
 
-                    import_vars = list(set(import_vars))
+        # if the easy way did not work, let's see if we can save it using the bytecode
+        if ObjectJSON.allow_marshal and callable(c):
+            # use marshal
+            global_vars = ObjectJSON._find_var(c, opcode.opmap['LOAD_GLOBAL'])
+            import_vars = ObjectJSON._find_var(c, opcode.opmap['IMPORT_NAME'])
 
-                    if len(global_vars) > 0:
-                        err = 'The function you try to save relies on globally set variables' + \
-                              '\nand these cannot be saved since storage has no access to the' + \
-                              '\nglobal scope. This includes imports!'
-                        err += '\nWe require that the following globals: ' + str(global_vars) + ' either'
-                        err += '\n(1) be replaced by constants'
-                        err += '\n(2) be defined inside your function,' + \
-                               '\n' + '\n'.join(map(lambda x: '    ' + x + '= ...', global_vars))
-                        err += '\n(3) imports need to be "re"-imported inside your function' + \
-                               '\n' + '\n'.join(map(lambda x: '    import ' + x, global_vars))
-                        err += '\n(4) be passed as an external parameter (does not work for imports!), like in '
-                        err += '\n        my_cv = CV_Function("cv_name", ' + c.func_name + ', ' + \
-                               ', '.join(map(lambda x: x + '=' + x, global_vars)) + ')'
-                        err += '\n    and change your function definition like this'
-                        err += '\n        def ' + c.func_name + '(snapshot, ...,  ' + \
-                               ', '.join(global_vars) + '):'
+            builtins = dir(__builtin__)
 
-                        print err
+            global_vars = list(set([var for var in global_vars if var not in builtins]))
+            import_vars = list(set(import_vars))
 
-                        raise RuntimeError('Cannot store function! Dependency on global variables')
+            err = ''
 
-                        # print [obj._idx for obj in global_vars if hasattr(obj, '_idx')]
-                        # print [obj for obj in global_vars]
+            if len(global_vars) > 0:
+                err += 'The function you try to save relies on globally set variables ' + \
+                       'and these cannot be saved since storage has no access to the ' + \
+                       'global scope which includes imports! \n\n'
+                err += 'We require that the following globals: ' + str(global_vars) + ' either\n'
+                err += '\n1. be replaced by constants'
+                err += '\n2. be defined inside your function,' + \
+                       '\n\n' + '\n'.join(map(lambda x: ' ' * 8 + x + '= ...', global_vars)) + '\n'
+                err += '\n3. imports need to be "re"-imported inside your function' + \
+                       '\n\n' + '\n'.join(map(lambda x: ' ' * 8 + 'import ' + x, global_vars)) + '\n'
+                err += '\n4. be passed as an external parameter (not for imports!)'
+                err += '\n\n        my_cv = CV_Function("cv_name", ' + c.func_name + ', \n' + \
+                       ',\n'.join(map(lambda x: ' ' * 20 + x + '=' + x, global_vars)) + ')' + '\n'
+                err += '\n    and change your function definition like this'
+                err += '\n\n        def ' + c.func_name + '(snapshot, ...,  ' + \
+                       '\n' + ',\n'.join(map(lambda x : ' ' * 16 + x, global_vars)) + '):'
 
-                    not_allowed_modules = [module for module in import_vars
-                                           if module not in ObjectJSON.allowed_imports]
+            unsafe_modules = [module for module in import_vars
+                                   if module not in ObjectJSON.safe_modules]
 
-                    if len(not_allowed_modules) > 0:
-                        err = 'The function you try to save requires the following modules to ' + \
-                              '\nbe installed: ' + str(not_allowed_modules) + ' which are not marked as safe!'
-                        err += '\nYou can change the list of safe modules in "CV_function._allowed_modules"'
-                        err += '\nYou can also include the import startement in your function like'
-                        err += '\n' + '\n'.join(['import ' + v for v in not_allowed_modules])
+            if len(unsafe_modules) > 0:
+                if len(err) > 0:
+                    err += '\n\n'
+                err += 'The function you try to save requires the following modules to ' + \
+                       'be installed: ' + str(unsafe_modules) + ' which are not marked as safe! '
+                err += 'You can change the list of safe modules using '
+                err += '\n\n        CV_function._safe_modules.extend(['
+                err += '\n' + ',\n'.join(map(lambda x: ' ' * 12 + x, unsafe_modules))
+                err += '\n        ])'
+                err += '\n\n'
+                err += 'include the import statement in your function like'
+                err += '\n\n' + '\n'.join([' ' * 8 + 'import ' + v for v in unsafe_modules])
 
-                        print err
+            if len(err) > 0:
+                raise RuntimeError('Cannot store function! \n\n' +
+                                   word_wrap(err, 60))
 
-                        raise RuntimeError('Cannot store function! Not allowed modules used.')
-
-                    return {
-                        '_marshal': base64.b64encode(
-                            marshal.dumps(c.func_code)),
-                        '_global_vars': global_vars,
-                        '_module_vars': import_vars
-                    }
-
-        if not is_local:
-            # save the external class, e.g. msmbuilder featurizer
-            if f_module.split('.')[0] in ObjectJSON.allowed_imports:
-                # only store the function and the module
-                return {
-                    '_module': c.__module__,
-                    '_name': c.__name__
-                }
+            return {
+                '_marshal': base64.b64encode(
+                    marshal.dumps(c.func_code)),
+                '_global_vars': global_vars,
+                '_module_vars': import_vars
+            }
 
         raise RuntimeError('Locally defined classes are not storable yet')
 
@@ -344,7 +342,7 @@ class ObjectJSON(object):
             elif '_module' in c_dict:
                 module = c_dict['_module']
                 packages = module.split('.')
-                if packages[0] in ObjectJSON.allowed_imports:
+                if packages[0] in ObjectJSON.safe_modules:
                     imp = importlib.import_module(module)
                     c = getattr(imp, c_dict['_name'])
 
