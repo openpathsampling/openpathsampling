@@ -29,9 +29,12 @@ class testMultipleStateTIS(object):
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
 
-        ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
-        ifacesB = vf.CVRangeVolumeSet(xval, [-0.2, -0.15, -0.1], [0.2, 0.15, 0.1])
-        ifacesC = vf.CVRangeVolumeSet(xval, [0.5, 0.4, 0.3], float("inf"))
+        ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
+                                           [-0.5, -0.4, -0.3])
+        ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
+                                           [0.2, 0.15, 0.1])
+        ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
+                                           float("inf"))
 
 
         self.xval = xval
@@ -86,9 +89,9 @@ class testMSTISNetwork(testMultipleStateTIS):
     def setup(self):
         super(testMSTISNetwork, self).setup()
         self.mstis = MSTISNetwork([
-            (self.stateA, self.ifacesA, self.xval),
-            (self.stateB, self.ifacesB, self.xval),
-            (self.stateC, self.ifacesC, self.xval)
+            (self.stateA, self.ifacesA),#, self.xval),
+            (self.stateB, self.ifacesB),#, self.xval),
+            (self.stateC, self.ifacesC)#, self.xval)
         ])
 
     def test_set_fluxes(self):
@@ -151,13 +154,16 @@ class testMSTISNetwork(testMultipleStateTIS):
         self.stateB.name = "A"
         self.stateC._name = ""
         xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
-        ifacesB = vf.CVRangeVolumeSet(xval, [-0.2, -0.15, -0.1], [0.2, 0.15, 0.1])
-        ifacesC = vf.CVRangeVolumeSet(xval, [0.5, 0.4, 0.3], float("inf"))
+        ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
+                                           [-0.5, -0.4, -0.3])
+        ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
+                                           [0.2, 0.15, 0.1])
+        ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
+                                           float("inf"))
         new_network = MSTISNetwork([
-            (self.stateA, ifacesA, xval),
-            (self.stateB, ifacesB, xval),
-            (self.stateC, ifacesC, xval)
+            (self.stateA, ifacesA),
+            (self.stateB, ifacesB),
+            (self.stateC, ifacesC)
         ])
         assert_equal(self.stateA.name, "B")
         assert_equal(self.stateB.name, "A")
@@ -167,9 +173,9 @@ class testMISTISNetwork(testMultipleStateTIS):
     def setup(self):
         super(testMISTISNetwork, self).setup()
         self.mistis = MISTISNetwork([
-            (self.stateA, self.ifacesA, self.xval, self.stateB),
-            (self.stateB, self.ifacesB, self.xval, self.stateA),
-            (self.stateA, self.ifacesA, self.xval, self.stateC)
+            (self.stateA, self.ifacesA, self.stateB),
+            (self.stateB, self.ifacesB, self.stateA),
+            (self.stateA, self.ifacesA, self.stateC)
         ])
 
     def test_initialization(self):
@@ -218,9 +224,9 @@ class testMISTISNetwork(testMultipleStateTIS):
 
     def test_trajectories_strict(self):
         strict = MISTISNetwork([
-            (self.stateA, self.ifacesA, self.xval, self.stateB),
-            (self.stateB, self.ifacesB, self.xval, self.stateA),
-            (self.stateA, self.ifacesA, self.xval, self.stateC)
+            (self.stateA, self.ifacesA, self.stateB),
+            (self.stateB, self.ifacesB, self.stateA),
+            (self.stateA, self.ifacesA, self.stateC)
         ], strict_sampling=True)
         transAB = [trans for trans in strict.sampling_transitions
                  if (trans.stateA == self.stateA and 
