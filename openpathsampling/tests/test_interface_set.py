@@ -46,6 +46,11 @@ class testInterfaceSet(object):
         for i in range(4):
             assert_equal(self.volumes[i], self.interface_set[i])
             assert_equal(self.volumes[i] in self.interface_set, True)
+        # getitem for slices
+        sliced = self.interface_set[0:2]
+        for vol in sliced:
+            assert_equal(sliced.get_lambda(vol),
+                         self.interface_set.get_lambda(vol))
         # special case of -1 needs to work (used frequently!)
         assert_equal(self.volumes[-1], self.interface_set[-1])
         # iter

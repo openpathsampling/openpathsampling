@@ -1,5 +1,6 @@
 import openpathsampling as paths
 import openpathsampling.netcdfplus as netcdfplus
+import copy
 
 class InterfaceSet(netcdfplus.StorableNamedObject):
     """List of volumes representing a set of interfaces, plus metadata.
@@ -62,11 +63,21 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
         """
         return self._lambda_dict[volume]
 
+    def _slice_dict(self, slicer):
+        dct = self.to_dict()
+        dct['volumes'] = self.volumes[slicer]
+        dct['lambdas'] = self.lambdas[slicer]
+        return dct
+
     def __len__(self):
         return len(self.volumes)
 
     def __getitem__(self, key):
-        return self.volumes[key]
+        result = self.volumes[key]
+        if type(result) is list:
+            return self.from_dict(self._slice_dict(key))
+        else:
+            return result
 
     def __iter__(self):
         return iter(self.volumes)
@@ -112,6 +123,12 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         super(GenericVolumeInterfaceSet, self).__init__(volumes, cv,
                                                         lambdas, direction)
         self._set_volume_func(volume_func)
+
+    def _slice_dict(self, slicer):
+        dct = super(GenericVolumeInterfaceSet, self)._slice_dict(slicer)
+        dct['minvals'] = self.minvals[slicer]
+        dct['maxvals'] = self.maxvals[slicer]
+        return dct
 
     def _set_volume_func(self, volume_func):
         if self.direction == 0:
