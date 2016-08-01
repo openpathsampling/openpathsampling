@@ -43,6 +43,7 @@ package_data: []
 packages:
   - openpathsampling
   - openpathsampling.storage
+  - openpathsampling.storage.stores
   - openpathsampling.tests
   - openpathsampling.analysis
   - openpathsampling.high_level

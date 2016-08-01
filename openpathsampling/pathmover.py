@@ -1256,6 +1256,7 @@ class RandomChoiceMover(SelectionMover):
     def _selector(self, globalstate):
         return self.weights
 
+
 class RandomAllowedChoiceMover(RandomChoiceMover):
     """
     Chooses a random mover from its movers which have existing samples.
