@@ -60,8 +60,11 @@ from analysis.single_trajectory_analysis import (
     TrajectorySegmentContainer
 )
 
-from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
-    CV_Volume, CollectiveVariable
+from collectivevariable import (
+    CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer,
+    CV_Volume, CollectiveVariable, CV_CoordinateGenerator,
+    CV_CoordinateFunction, CV_Callable, CV_PyEMMA_Featurizer,
+    CV_Generator)
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,

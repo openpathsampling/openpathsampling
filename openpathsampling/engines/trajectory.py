@@ -10,9 +10,9 @@ import simtk.unit as u
 from openpathsampling.netcdfplus import StorableObject
 
 
-# =============================================================================================
-# SIMULATION TRAJECTORY
-# =============================================================================================
+# ==============================================================================
+# TRAJECTORY
+# ==============================================================================
 
 
 class Trajectory(list, StorableObject):
@@ -29,7 +29,7 @@ class Trajectory(list, StorableObject):
         Parameters
         ----------
 
-        trajectory : :class:`openpathsampling.trajectory.Trajectory` or list of :class:`openpathsampling.snapshot.BaseSnapshot`
+        trajectory : :obj:`Trajectory` or list of :obj:`openpathsampling.engines.BaseSnapshot`
             if specified, make a deep copy of specified trajectory
         """
 
@@ -37,26 +37,26 @@ class Trajectory(list, StorableObject):
         list.__init__(self)
         StorableObject.__init__(self)
 
-        self.path_probability = None  # For future uses
-
         if trajectory is not None:
-            # Try to make a copy out of whatever container we were provided
-            if hasattr(trajectory, 'atom_indices'):
-                self.atom_indices = trajectory.atom_indices
-            else:
-                self.atom_indices = None
             if type(trajectory) is Trajectory:
                 self.extend(trajectory.iter_proxies())
             else:
                 self.extend(trajectory)
-        else:
-            self.atom_indices = None
 
     def extend(self, iterable):
         if type(iterable) is Trajectory:
             list.extend(self, iterable.iter_proxies())
         else:
             list.extend(self, iterable)
+
+    def to_dict(self):
+        return {
+            'snapshots': self.as_proxies()
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls(dct['snapshots'])
 
     def __str__(self):
         return 'Trajectory[' + str(len(self)) + ']'
@@ -88,8 +88,8 @@ class Trajectory(list, StorableObject):
     def reversed(self):
         """
         Returns a reversed (shallow) copy of the trajectory itself. Effectively
-        creates a new Trajectory object and then fills it with shallow reversed copies
-        of the contained snapshots.
+        creates a new Trajectory object and then fills it with shallow reversed
+        copies of the contained snapshots.
 
         Returns
         -------
@@ -156,14 +156,17 @@ class Trajectory(list, StorableObject):
         """
         if len(self) > 0:
             snapshot_class = self[0].__class__
-            if hasattr(snapshot_class, item):
+            if hasattr(snapshot_class, item) or \
+                    hasattr(snapshot_class, '__features__') \
+                    and item in snapshot_class.__features__.variables:
                 first = getattr(self[0], item)
                 if type(first) is u.Quantity:
                     inner = first._value
                     if type(inner) is np.ndarray:
                         dtype = inner.dtype
 
-                        out = np.empty(tuple([len(self)] + list(inner.shape)), dtype=dtype)
+                        out = np.empty(tuple([len(self)] +
+                                             list(inner.shape)), dtype=dtype)
 
                         for idx, s in enumerate(list.__iter__(self)):
                             np.copyto(out[idx], getattr(s, item)._value)
@@ -179,7 +182,8 @@ class Trajectory(list, StorableObject):
                 elif type(first) is np.ndarray:
                     dtype = first.dtype
 
-                    out = np.empty(tuple([len(self)] + list(first.shape)), dtype=dtype)
+                    out = np.empty(tuple([len(self)] +
+                                         list(first.shape)), dtype=dtype)
 
                     for idx, s in enumerate(list.__iter__(self)):
                         np.copyto(out[idx], getattr(s, item))
@@ -209,7 +213,7 @@ class Trajectory(list, StorableObject):
             return []
 
     @property
-    def spatial(self):
+    def n_spatial(self):
         if self.topology is None:
             n_spatial = self[0].coordinates.shape[1]
         else:
@@ -230,25 +234,22 @@ class Trajectory(list, StorableObject):
         Notes
         -----        
         If a trajectory has been subsetted then this returns only the number
-        of the view otherwise if equals the number of atoms in the snapshots stored
+        of the view otherwise if equals the number of atoms in the snapshots
+        stored
         
         """
 
-        if self.atom_indices is None:
-            n_atoms = self[0].xyz.shape[0]
-        else:
-            n_atoms = len(self.atom_indices)
+        n_atoms = self[0].xyz.shape[0]
         return n_atoms
 
-    # =============================================================================================
+    # ==========================================================================
     # LIST INHERITANCE FUNCTIONS
-    # =============================================================================================
+    # ==========================================================================
 
     def __getslice__(self, *args, **kwargs):
         ret = list.__getslice__(self, *args, **kwargs)
         if type(ret) is list:
             ret = Trajectory(ret)
-            ret.atom_indices = self.atom_indices
 
         return ret
 
@@ -256,7 +257,7 @@ class Trajectory(list, StorableObject):
         return object.__hash__(self)
 
     def __getitem__(self, index):
-        # Allow for numpy style of selecting several indices using a list as index parameter
+        # Allow for numpy style selection using lists
         if hasattr(index, '__iter__'):
             ret = [list.__getitem__(self, i) for i in index]
         else:
@@ -264,35 +265,18 @@ class Trajectory(list, StorableObject):
 
         if type(ret) is list:
             ret = Trajectory(ret)
-            ret.atom_indices = self.atom_indices
         elif hasattr(ret, '_idx'):
             ret = ret.__subject__
 
         return ret
 
-    def __reversed__(this):
-        class ObjectIterator:
-            def __init__(self):
-                self.trajectory = this
-                self.idx = len(this)
-                self.length = 0
-
-            def __iter__(self):
-                return self
-
-            def next(self):
-                if self.idx > self.length:
-                    self.idx -= 1
-                    snapshot = self.trajectory[self.idx]
-                    return snapshot.reversed
-                else:
-                    raise StopIteration()
-
-        return ObjectIterator()
+    def __reversed__(self):
+        for snap_idx in range(len(self) - 1, -1, -1):
+            yield self[snap_idx].reversed
 
     def index_symmetric(self, value):
         """
-        Return index of a snapshot or its reversed is in a trajectory
+        Return index of a snapshot or its reversed inside a trajectory
 
         """
         try:
@@ -309,7 +293,8 @@ class Trajectory(list, StorableObject):
 
         if fw is None:
             if bw is None:
-                raise ValueError('%r or its reversed is not found in trajectory.')
+                raise KeyError(
+                    '%r or its reversed is not found in trajectory.')
             else:
                 return bw
         else:
@@ -338,13 +323,14 @@ class Trajectory(list, StorableObject):
         Get an actual contained element
 
         This will also return lazy proxy objects and not the referenced ones
-        as does __iter__, __reversed__ or __getitem__. Useful for faster access to the elements
+        as does __iter__, __reversed__ or __getitem__. Useful for faster access
+        to the elements
 
         This is equal to use list.__getitem__(trajectory, item)
 
         Returns
         -------
-        :class:`openpathsampling.snapshot.Snapshot` or :class:`openpathsampling.netcdfplus.proxy.LoaderProxy`
+        :obj:`Snapshot` or :obj:`openpathsampling.netcdfplus.proxy.LoaderProxy`
         """
         return list.__getitem__(self, item)
 
@@ -353,11 +339,12 @@ class Trajectory(list, StorableObject):
         Returns all contains all actual elements
 
         This will also return lazy proxy objects and not the references ones
-        as does __iter__, __reversed__ or __getitme__. Useful for faster access to the elements
+        as does __iter__, __reversed__ or __getitme__. Useful for faster access
+        to the elements
 
         Returns
         -------
-        list of :class:`openpathsampling.snapshot.Snapshot` or :class:`openpathsampling.netcdfplus.proxy.LoaderProxy`
+        list of :obj:`Snapshot` or :obj:`openpathsampling.netcdfplus.LoaderProxy`
 
         """
         return list(self.iter_proxies())
@@ -367,28 +354,25 @@ class Trajectory(list, StorableObject):
         Returns an iterator over all actual elements
 
         This will also return lazy proxy objects and not the references ones
-        as does __iter__, __reversed__ or __getitme__. Useful for faster access to the elements
+        as does __iter__, __reversed__ or __getitme__. Useful for faster
+        access to the elements
 
         Returns
         -------
-        Iterator() over list of :class:`openpathsampling.snapshot.Snapshot` or :class:`openpathsampling.netcdfplus.proxy.LoaderProxy`
+        Iterator() over list of :class:`openpathsampling.snapshot.Snapshot`
+        or :class:`openpathsampling.netcdfplus.proxy.LoaderProxy`
 
 
         """
         return list.__iter__(self)
 
-    def __iter__(this):
+    def __iter__(self):
         """
         Return an iterator over all snapshots in the storage
 
-        This will always give real :class:`openpathsampling.snapshot.Snapshot` objects and never proxies to snapshots.
+        This will always give real :class:`openpathsampling.snapshot.Snapshot`
+        objects and never proxies to snapshots.
         If you prefer proxies (if available) use `.iteritems()`
-
-        Parameters
-        ----------
-        iter_range : slice or None
-            if this is not `None` it confines the iterator to objects specified
-            in the slice
 
         Returns
         -------
@@ -397,33 +381,17 @@ class Trajectory(list, StorableObject):
 
         """
 
-        class ObjectIterator:
-            def __init__(self):
-                self.trajectory = this
-                self.idx = 0
-                self.length = len(this)
-
-            def __iter__(self):
-                return self
-
-            def next(self):
-                if self.idx < self.length:
-                    obj = self.trajectory[self.idx]
-                    self.idx += 1
-                    return obj
-                else:
-                    raise StopIteration()
-
-        return ObjectIterator()
+        for snap_idx in range(len(self)):
+            yield self[snap_idx]
 
     def __add__(self, other):
         t = Trajectory(self)
         t.extend(other)
         return t
 
-    # =============================================================================================
+    # ==========================================================================
     # PATH ENSEMBLE FUNCTIONS
-    # =============================================================================================
+    # ==========================================================================
 
     def summarize_by_volumes(self, label_dict):
         """Summarize trajectory based on number of continuous frames in volumes.
@@ -453,7 +421,8 @@ class Trajectory(list, StorableObject):
                 if vol(frame):
                     in_state.append(key)
             if len(in_state) > 1:
-                raise RuntimeError("Volumes given to summarize_by_volumes not disjoint")
+                raise RuntimeError(
+                    "Volumes given to summarize_by_volumes not disjoint")
             if len(in_state) == 0:
                 current_vol = None
             else:
@@ -491,107 +460,9 @@ class Trajectory(list, StorableObject):
         summary = self.summarize_by_volumes(label_dict)
         return delimiter.join([str(s[0]) for s in summary])
 
-    def pathHamiltonian(self):
-        """
-        Compute the generalized path Hamiltonian of the trajectory.
-
-        Returns
-        -------        
-        H : simtk.unit.Quantity with units of energy
-            the generalized path Hamiltonian
-
-        References
-        ----------       
-        For a description of the path Hamiltonian, see [1]:
-
-        [1] Chodera JD, Swope WC, Noe F, Prinz JH, Shirts MR, and Pande VS. Dynamical reweighting:
-        Improved estimates of dynamical properties from simulations at multiple temperatures.    
-        """
-
-        nsnapshots = len(self)
-        if nsnapshots > 0:
-            H = self[0].total_energy
-            for snapshot_index in range(1, nsnapshots - 1):
-                H += self[snapshot_index].kinetic_energy
-        else:
-            H = 0
-
-        return H
-
-    def computeActivity(self, atom_indices=None):
-        """
-        Compute the (timeless!) activity of a given trajectory, defined in Ref. [1] as
-
-        .. math::
-
-            K[x(t)] / delta_t = delta_t \sum_{t=0}^{t_obs} \sum_{j=1}^N [r_j(t+delta_t) - r_j(t)]^2 / delta_t
-
-        RETURNS
-        -------
-
-        K : simtk.unit
-            activity K[x(t)] for the specified trajectory
-        
-        NOTES
-        -----
-        
-        Can we avoid dividing and multipying by nanometers to speed up?
-
-        """
-
-        # Determine number of frames in trajectory.
-        nframes = len(self)
-
-        # Compute activity of component A.
-        K = 0.0
-
-        if atom_indices is None:
-            atom_indices = slice(None)
-
-        for frame_index in range(nframes - 1):
-            # Compute displacement of all atoms.
-            delta_r = self[frame_index + 1].coordinates - self[frame_index].coordinates
-            # Compute contribution to activity K.
-            K += ((delta_r[atom_indices, :] / u.nanometers) ** 2).sum()
-
-        return K * (u.nanometers ** 2)
-
-    def logEquilibriumTrajectoryProbability(self):
-        """
-        Compute the (temperatureless!) log equilibrium probability
-
-        Up to an unknown additive constant of an unbiased trajectory evolved
-        according to Verlet dynamics with Andersen thermostatting.
-
-        Parameters
-        ----------
-        trajectory : openpathsampling.Trajectory
-            the trajectory
-
-        Returns
-        -------        
-        log_q : float
-            the log equilibrium probability of the trajectory divided by the
-            inverse temperature beta
-        
-        NOTES
-        -----
-        This might be better places into the trajectory class. The trajectory
-        should know the system and ensemble? and so it is not necessarily
-        TPS specific
-
-        """
-
-        nsnapshots = len(self)
-        log_q = - self[0].total_energy
-        for snapshot_index in range(1, nsnapshots - 1):
-            log_q += - self[snapshot_index].kinetic_energy
-
-        return log_q
-
-    # =============================================================================================
+    # ==========================================================================
     # ANALYSIS FUNCTIONS
-    # =============================================================================================
+    # ==========================================================================
 
     def is_correlated(self, other, time_reversal=False):
         """
@@ -607,7 +478,9 @@ class Trajectory(list, StorableObject):
         bool
             returns True if at least one snapshot appears in both trajectories
         """
-        return bool(self.shared_configurations(other, time_reversal=time_reversal))
+        return bool(self.shared_configurations(
+            other,
+            time_reversal=time_reversal))
 
     def shared_configurations(self, other, time_reversal=False):
         """
@@ -624,9 +497,11 @@ class Trajectory(list, StorableObject):
             the set of common snapshots
         """
         if not time_reversal:
-            return set([snap for snap in self]) & set([snap for snap in other])
+            return set(self.as_proxies()) & set(other.as_proxies())
         else:
-            return set([snap for snap in self]) & (set([snap for snap in other]) | set([snap.reversed for snap in other]))
+            return set(self.as_proxies()) & \
+                (set(other.as_proxies()) |
+                 set([snap.reversed for snap in other.as_proxies()]))
 
     def shared_subtrajectory(self, other, time_reversal=False):
         """
@@ -643,7 +518,7 @@ class Trajectory(list, StorableObject):
             the shared subtrajectory
         """
         shared = self.shared_configurations(other, time_reversal=time_reversal)
-        return Trajectory([snap for snap in self if snap in shared])
+        return Trajectory([snap for snap in self.iter_proxies() if snap in shared])
 
     def unique_subtrajectory(self, other):
         """
@@ -682,59 +557,13 @@ class Trajectory(list, StorableObject):
         if isinstance(subtrajectories, Trajectory):
             return [self.index(s) for s in subtrajectories]
         else:
-            return [[self.index(s) for s in subtrj] for subtrj in subtrajectories]
+            return [[self.index(s) for s in subtrj]
+                    for subtrj in subtrajectories]
 
 
-    # =============================================================================================
+    # ==========================================================================
     # UTILITY FUNCTIONS
-    # =============================================================================================
-
-    def subset(self, atom_indices):
-        """
-        Reduce the view of the trajectory to a subset of atoms specified.
-
-        This is only a view, no data will be changed or copied.
-        
-        Returns
-        -------        
-        :class:`openpathsampling.trajectory.Trajectory`
-            the trajectory showing the subsets of atoms
-        """
-
-        t = Trajectory(self)
-        t.atom_indices = atom_indices
-        return t
-
-    @property
-    def solute(self):
-        """
-        Reduce the view of the trajectory to a subset of solute atoms
-        specified in the associated DynamicsEngine
-        
-        Returns
-        -------        
-        :class:`openpathsampling.trajectory.Trajectory`
-            the trajectory showing the subsets of solute atoms
-        """
-
-        # TODO: To remove the dependency of the dynamics engine we need to get the information
-        # TODO: about the solute_indices from somewhere else, preferrably the topology?
-
-        if Trajectory.engine is None:
-            raise ValueError("No engine specified to get solute_indices from !")
-
-        return self.subset(Trajectory.engine.solute_indices)
-
-    def full(self):
-        """
-        Return a view of the trajectory with all atoms
-
-        Returns
-        -------
-        :class:`openpathsampling.trajectory.Trajectory`
-            the trajectory showing the subsets of solute atoms
-        """
-        return self.subset(None)
+    # ==========================================================================
 
     def md(self, topology=None):
         """
@@ -778,8 +607,5 @@ class Trajectory(list, StorableObject):
         if len(self) > 0 and self[0].topology is not None:
             # if no topology is defined
             topology = self[0].topology
-
-            if self.atom_indices is not None:
-                topology = topology.subset(self.atom_indices)
 
         return topology

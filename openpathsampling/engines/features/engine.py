@@ -17,5 +17,10 @@ def netcdfplus_init(store):
 
 
 @property
+def descriptor(snapshot):
+    return snapshot.engine.descriptor
+
+
+@property
 def topology(snapshot):
     return snapshot.engine.topology
