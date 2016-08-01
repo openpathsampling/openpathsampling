@@ -80,6 +80,8 @@ from high_level.interface_set import (
     InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
 )
 
+from high_level.ms_outer_interface import MSOuterTISInterface
+
 from live_visualization import LiveVisualization
 
 from pathmovechange import (
