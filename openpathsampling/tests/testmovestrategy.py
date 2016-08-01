@@ -53,8 +53,8 @@ class MoveStrategyTestSetup(object):
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
                                                [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
+            (self.stateA, interfacesA),
+            (self.stateB, interfacesB)
         ])
 
 

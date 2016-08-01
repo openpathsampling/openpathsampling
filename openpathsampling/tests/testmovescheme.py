@@ -32,8 +32,8 @@ class testMoveScheme(object):
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
                                                [-0.5, -0.3, -0.1, 0.0])
         network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
+            (self.stateA, interfacesA),
+            (self.stateB, interfacesB)
         ])
         self.scheme = MoveScheme(network)
 
@@ -365,8 +365,8 @@ class testDefaultScheme(object):
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
                                                [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
+            (self.stateA, interfacesA),
+            (self.stateB, interfacesB)
         ])
     
     def test_default_scheme(self):
@@ -591,8 +591,8 @@ class testLockedMoveScheme(object):
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
                                                [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
+            (self.stateA, interfacesA),
+            (self.stateB, interfacesB)
         ])
         self.basic_scheme = DefaultScheme(self.network)
         self.root_mover = self.basic_scheme.move_decision_tree()
@@ -650,8 +650,8 @@ class testOneWayShootingMoveScheme(object):
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
                                                [-0.5, -0.3, -0.1, 0.0])
         self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
+            (self.stateA, interfacesA),
+            (self.stateB, interfacesB)
         ])
 
     def test_scheme(self):

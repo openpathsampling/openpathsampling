@@ -41,9 +41,9 @@ class testFullBootstrapping(object):
         )
 
         network = paths.MISTISNetwork([
-            (self.stateA, interfacesAB, self.cv, self.stateB),
-            (self.stateB, interfacesBC, self.cv, self.stateC),
-            (self.stateB, interfacesBA, cv_neg, self.stateA)
+            (self.stateA, interfacesAB, self.stateB),
+            (self.stateB, interfacesBC, self.stateC),
+            (self.stateB, interfacesBA, self.stateA)
         ])
         self.tisAB = network.input_transitions[(self.stateA, self.stateB)]
         self.tisBC = network.input_transitions[(self.stateB, self.stateC)]
