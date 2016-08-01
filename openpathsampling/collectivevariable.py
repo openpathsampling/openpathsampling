@@ -810,7 +810,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
 
         featurizer(self._instance, **md_kwargs)
 
-        super(CV_CoordinateGenerator, self).__init__(
+        super(CV_Generator, self).__init__(
             name,
             cv_callable=featurizer,
             cv_requires_lists=True,
