@@ -22,7 +22,11 @@ class testCV_Function(object):
     def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
-        self.traj_simple = peng.trajectory_from_mdtraj(self.mdtraj, simple_topology=True)
+        self.traj_simple = peng.trajectory_from_mdtraj(
+            self.mdtraj,
+            simple_topology=True)
+
+        self.topology = self.traj_topology[0].engine.topology
 
         if os.path.isfile("myfile.nc"):
             os.remove("myfile.nc")
@@ -33,42 +37,58 @@ class testCV_Function(object):
 
     def test_pickle_external_cv(self):
         template = make_1d_traj([0.0])[0]
-        cv = paths.CV_Function("x", lambda snap : snap.coordinates[0][0])
+        cv = paths.CV_Function("x", lambda snap: snap.coordinates[0][0])
         storage = paths.Storage("myfile.nc", "w", template)
         storage.save(cv)
         storage.close()
 
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
-        psi_atoms = [6,8,14,16]
-        dihedral_op = op.CV_MDTraj_Function("psi", md.compute_dihedrals, indices= [psi_atoms])
+        psi_atoms = [6, 8, 14, 16]
+        dihedral_op = op.CV_MDTraj_Function(
+            "psi",
+            md.compute_dihedrals,
+            topology=self.topology,
+            indices=[psi_atoms])
 
         md_dihed = md.compute_dihedrals(self.mdtraj, indices=[psi_atoms])
-        my_dihed =  dihedral_op(self.traj_topology)
+        my_dihed = dihedral_op(self.traj_topology)
 
-        np.testing.assert_allclose(md_dihed.reshape(md_dihed.shape[:-1]), my_dihed, rtol=10**-6, atol=10**-10)
+        np.testing.assert_allclose(
+            md_dihed.reshape(md_dihed.shape[:-1]),
+            my_dihed, rtol=10 ** -6, atol=10 ** -10)
 
     def test_atom_pair_featurizer(self):
         """ Create an atom pair collectivevariable using MSMSBuilder3 """
 
-        atom_pairs = [[0,1], [10,14]]
-        atom_pair_op = op.CV_MSMB_Featurizer("atom_pairs", AtomPairsFeaturizer, pair_indices=atom_pairs)
+        atom_pairs = [[0, 1], [10, 14]]
+        atom_pair_op = op.CV_MSMB_Featurizer(
+            "atom_pairs",
+            AtomPairsFeaturizer,
+            topology=self.topology,
+            pair_indices=atom_pairs)
 
         md_distances = md.compute_distances(self.mdtraj, atom_pairs)
 
         my_distances = atom_pair_op(self.traj_topology)
 
-        np.testing.assert_allclose(md_distances, my_distances, rtol=10**-6, atol=10**-10)
+        np.testing.assert_allclose(md_distances, my_distances, rtol=10 ** -6,
+                                   atol=10 ** -10)
 
     def test_return_parameters_from_template(self):
 
-        atom_pairs = [[0,1], [10,14]]
-        atom_pair_op = op.CV_MSMB_Featurizer("atom_pairs", AtomPairsFeaturizer, pair_indices=atom_pairs)
+        atom_pairs = [[0, 1], [10, 14]]
+        atom_pair_op = op.CV_MSMB_Featurizer(
+            "atom_pairs",
+            AtomPairsFeaturizer,
+            topology=self.topology,
+            pair_indices=atom_pairs)
 
-        # little trick. We just predent the atom_pairs_op is a function we want to use
-        # it cannot be stored though, but for from_template it is enough
+        # little trick. We just predent the atom_pairs_op is a function we want
+        # to use it cannot be stored though, but for from_template it is enough
 
-        params = NetCDFPlus.get_value_parameters(atom_pair_op(self.traj_topology[0]))
+        params = NetCDFPlus.get_value_parameters(
+            atom_pair_op(self.traj_topology[0]))
 
         assert params['var_type'] == 'numpy.float32'
         assert params['simtk_unit'] is None
@@ -79,11 +99,12 @@ class testCV_Function(object):
 
         # test all combinations of (1) with and without UUIDs,
         # (2) using partial yes, no all of these must work
-        for use_uuid, allow_partial in [(True, True), (False, True), (True, False), (False, False)]:
+        for use_uuid, allow_partial in [(True, True), (False, True),
+                                        (True, False), (False, False)]:
 
-            # print '==========================================================='
+            # print '=========================================================='
             # print 'UUID', use_uuid, 'PARTIAL', allow_partial
-            # print '==========================================================='
+            # print '=========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
@@ -95,7 +116,7 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_Function(
+            cv1 = paths.CV_CoordinateFunction(
                 'f1',
                 lambda x: x.coordinates[0]
             ).with_diskcache(
@@ -106,13 +127,13 @@ class testCV_Function(object):
 
             # let's mess up the order in which we save and
             # include reversed ones as well
-            assert(len(storage_w.snapshots) == 2)
+            assert (len(storage_w.snapshots) == 2)
             storage_w.trajectories.save(traj[3:])
-            assert(len(storage_w.snapshots) == 16)
+            assert (len(storage_w.snapshots) == 16)
             storage_w.snapshots.save(traj[1].reversed)
-            assert(len(storage_w.snapshots) == 18)
+            assert (len(storage_w.snapshots) == 18)
             storage_w.trajectories.save(traj.reversed)
-            assert(len(storage_w.snapshots) == 20)
+            assert (len(storage_w.snapshots) == 20)
 
             # this should be ignored for all is saved already
             storage_w.trajectories.save(traj)
@@ -125,7 +146,7 @@ class testCV_Function(object):
 
             cv_cache = rcv1._store_dict.value_store
 
-            assert(cv_cache.allow_partial == allow_partial)
+            assert (cv_cache.allow_partial == allow_partial)
 
             for idx, snap in enumerate(storage_r.trajectories[1]):
                 # if hasattr(snap, '_idx'):
@@ -163,7 +184,9 @@ class testCV_Function(object):
 
                 if not allow_partial or cv_cache[snap] is not None:
                     assert_close_unit(cv_cache[snap], cv1(snap))
-                    assert_close_unit(cv_cache[snap.reversed], cv1(snap.reversed))
+                    assert_close_unit(
+                        cv_cache[snap.reversed],
+                        cv1(snap.reversed))
 
             storage_r.close()
 
@@ -173,8 +196,8 @@ class testCV_Function(object):
     def test_storage_sync_and_complete(self):
         import os
 
-        # test all combinations of (1) with and without UUIDs, (2) using partial yes, no
-        # all of these must work
+        # test all combinations of (1) with and without UUIDs,
+        # (2) using partial yes, no all of these must work
 
         allow_partial = True
 
@@ -183,9 +206,9 @@ class testCV_Function(object):
 
         for use_uuid in [True, False]:
 
-            # print '==========================================================='
+            # print '=========================================================='
             # print 'UUID', use_uuid
-            # print '==========================================================='
+            # print '=========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
@@ -197,31 +220,38 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_Function('f1', lambda snap : snap.coordinates[0]).with_diskcache(
+            cv1 = paths.CV_CoordinateFunction(
+                'f1',
+                lambda snapshot: snapshot.coordinates[0]
+            ).with_diskcache(
                 allow_partial=allow_partial
             )
 
-            # let's mess up the order in which we save and include reversed ones as well
-            assert(len(storage_w.snapshots) == 2)
+            # let's mess up the order in which we save and include
+            # reversed ones as well
+            assert (len(storage_w.snapshots) == 2)
             storage_w.trajectories.save(traj[3:])
-            assert(len(storage_w.snapshots) == 16)
+            assert (len(storage_w.snapshots) == 16)
             storage_w.snapshots.save(traj[1].reversed)
-            assert(len(storage_w.snapshots) == 18)
+            assert (len(storage_w.snapshots) == 18)
             storage_w.trajectories.save(traj.reversed)
-            assert(len(storage_w.snapshots) == 20)
+            assert (len(storage_w.snapshots) == 20)
 
             storage_w.save(cv1)
 
             store = storage_w.cvs.cache_store(cv1)
-            assert(len(store.vars['value']) == 0)
+            assert (len(store.vars['value']) == 0)
 
             storage_w.snapshots.complete_cv(cv1)
-            assert(len(store.vars['value']) == 10)
+            assert (len(store.vars['value']) == 10)
 
             # check if stored values match computed ones
-            for idx, value in zip(store.variables['index'][:], store.vars['value']):
+            for idx, value in zip(
+                    store.variables['index'][:],
+                    store.vars['value']):
                 if use_uuid:
-                    snap = storage_w.snapshots[storage_w.snapshots.vars['uuid'][idx]]
+                    snap = storage_w.snapshots[
+                        storage_w.snapshots.vars['uuid'][idx]]
                 else:
                     # * 2 because we use a symmetric cv
                     snap = storage_w.snapshots[int(idx) * 2]
@@ -236,8 +266,8 @@ class testCV_Function(object):
     def test_storage_sync(self):
         import os
 
-        # test all combinations of (1) with and without UUIDs, (2) using partial yes, no
-        # all of these must work
+        # test all combinations of (1) with and without UUIDs,
+        # (2) using partial yes; all of these must work
 
         allow_partial = True
 
@@ -246,9 +276,9 @@ class testCV_Function(object):
 
         for use_uuid in [True, False]:
 
-            # print '==========================================================='
+            # print '=========================================================='
             # print 'UUID', use_uuid
-            # print '==========================================================='
+            # print '=========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
@@ -260,25 +290,28 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_Function('f1', lambda snap : snap.coordinates[0]).with_diskcache(
-                allow_partial=allow_partial
-            )
+            cv1 = paths.CV_CoordinateFunction(
+                'f1',
+                lambda snapshot: snapshot.coordinates[0]
+            ).with_diskcache(
+                allow_partial=allow_partial)
 
-            # let's mess up the order in which we save and include reversed ones as well
-            assert(len(storage_w.snapshots) == 2)
+            # let's mess up the order in which we save and
+            # include reversed ones as well
+            assert (len(storage_w.snapshots) == 2)
             storage_w.trajectories.save(traj[6:])
-            assert(len(storage_w.snapshots) == 10)
+            assert (len(storage_w.snapshots) == 10)
             storage_w.snapshots.save(traj[1].reversed)
-            assert(len(storage_w.snapshots) == 12)
+            assert (len(storage_w.snapshots) == 12)
 
             storage_w.save(cv1)
 
             store = storage_w.cvs.cache_store(cv1)
-            assert(len(store.vars['value']) == 0)
+            assert (len(store.vars['value']) == 0)
             storage_w.snapshots.sync_cv(cv1)
 
             # nothing added to the cache so no changes
-            assert(len(store.vars['value']) == 1)
+            assert (len(store.vars['value']) == 1)
 
             # fill the cache
             _ = cv1(traj)
@@ -286,25 +319,28 @@ class testCV_Function(object):
             storage_w.snapshots.sync_cv(cv1)
 
             # should match the number of stored snapshots
-            assert(len(store.vars['value']) == 6)
+            assert (len(store.vars['value']) == 6)
 
             # save the rest
             storage_w.trajectories.save(traj.reversed)
-            assert(len(storage_w.snapshots) == 20)
+            assert (len(storage_w.snapshots) == 20)
 
             # should still be unchanged
-            assert(len(store.vars['value']) == 6)
+            assert (len(store.vars['value']) == 6)
 
             # this should store the remaining CV values
 
             storage_w.snapshots.sync_cv(cv1)
-            assert(len(store.vars['value']) == 10)
+            assert (len(store.vars['value']) == 10)
 
             # check if the values match
-            for idx, value in zip(store.variables['index'][:], store.vars['value']):
+            for idx, value in zip(
+                    store.variables['index'][:],
+                    store.vars['value']):
                 if use_uuid:
 
-                    snap = storage_w.snapshots[storage_w.snapshots.vars['uuid'][idx]]
+                    snap = storage_w.snapshots[
+                        storage_w.snapshots.vars['uuid'][idx]]
                 else:
                     # * 2 because we use a symmetric cv
                     snap = storage_w.snapshots[int(idx) * 2]

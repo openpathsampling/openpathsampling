@@ -199,6 +199,8 @@ class Storage(NetCDFPlus):
                           NamedObjectStore(paths.TransitionNetwork))
         self.create_store('schemes',
                           NamedObjectStore(paths.MoveScheme))
+        self.create_store('interfacesets',
+                          NamedObjectStore(paths.InterfaceSet))
 
         # stores where nestable could make sense but is disabled
 

@@ -10,6 +10,8 @@ from collections import OrderedDict
 
 from objects import NamedObjectStore, ObjectStore
 
+from collections import OrderedDict
+
 import numpy as np
 import netCDF4
 import os.path

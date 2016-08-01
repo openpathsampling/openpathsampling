@@ -160,7 +160,7 @@ class BaseSnapshotStore(IndexedObjectStore):
             # has been saved so quit and do nothing
             return idx
 
-        n_idx = self.free()
+        n_idx = self.free() / 2
 
         # mark as saved so circular dependencies will not cause infinite loops
         self.index[pos] = n_idx
@@ -274,7 +274,7 @@ class BaseSnapshotStore(IndexedObjectStore):
         return idx
 
     def __iter__(self):
-        for idx in range(0, len(self) * 2, 2):
+        for idx in range(0, len(self), 2):
             yield self[idx]
 
     def __getitem__(self, item):
@@ -286,13 +286,16 @@ class BaseSnapshotStore(IndexedObjectStore):
                 return self.load(item)
             elif type(item) is slice:
                 return [self.load(idx)
-                        for idx in range(*item.indices(2 * len(self)))]
+                        for idx in range(*item.indices(len(self)))]
             elif type(item) is list:
                 return [self.load(idx) for idx in item]
             elif item is Ellipsis:
                 return iter(self)
         except KeyError:
             return None
+
+    def __len__(self):
+        return len(self.storage.dimensions[self.prefix]) * 2
 
 
 # ==============================================================================

@@ -70,9 +70,7 @@ class testStorage(object):
         store.close()
 
         store = Storage(filename=self.filename, mode='a')
-        loaded_topology = store.template.topology
-
-        # check if poth topologies have the same JSON string
+        loaded_topology = store.template.topology        # check if poth topologies have the same JSON string
         # this also tests the simplifier for topologies
 
         assert_equal(
@@ -104,16 +102,16 @@ class testStorage(object):
 
             assert(len(storage_w.snapshots) == 2)
             assert(len(storage_w.trajectories) == 0)
-            assert(len(storage_w.stores['snapshot0']) == 1)
+            assert(len(storage_w.stores['snapshot0']) == 2)
             storage_w.snapshots.save(traj[8].reversed)
             assert(len(storage_w.snapshots) == 4)
             assert(len(storage_w.trajectories) == 0)
-            assert(len(storage_w.stores['snapshot0']) == 2)
+            assert(len(storage_w.stores['snapshot0']) == 4)
             # this will store traj[6:] under pos IDX #0
             storage_w.trajectories.save(traj[6:])
             assert(len(storage_w.snapshots) == 10)
             assert(len(storage_w.trajectories) == 1)
-            assert(len(storage_w.stores['snapshot0']) == 5)
+            assert(len(storage_w.stores['snapshot0']) == 10)
 
             traj_rev = traj.reversed
 
@@ -121,31 +119,31 @@ class testStorage(object):
             storage_w.trajectories.mention(traj_rev)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 2)
-            assert(len(storage_w.stores['snapshot0']) == 5)
+            assert(len(storage_w.stores['snapshot0']) == 10)
 
             # this will not do anything since traj is already saved
             storage_w.trajectories.save(traj_rev)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 2)
-            assert(len(storage_w.stores['snapshot0']) == 5)
+            assert(len(storage_w.stores['snapshot0']) == 10)
 
             # this will store a new traj.reversed under IDX #2
             storage_w.trajectories.save(traj.reversed)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 3)
-            assert(len(storage_w.stores['snapshot0']) == 10)
+            assert(len(storage_w.stores['snapshot0']) == 20)
 
             # this will store traj under pos IDX #3
             storage_w.trajectories.save(traj)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 4)
-            assert(len(storage_w.stores['snapshot0']) == 10)
+            assert(len(storage_w.stores['snapshot0']) == 20)
 
             # this will not store since traj is already stored
             storage_w.trajectories.save(traj)
             assert(len(storage_w.snapshots) == 20)
             assert(len(storage_w.trajectories) == 4)
-            assert(len(storage_w.stores['snapshot0']) == 10)
+            assert(len(storage_w.stores['snapshot0']) == 20)
 
             # we saved in this order [0f, 8r, 6f, 7f, 9f, 5r, 4r, 3r, 2r, 1r ]
             # these are indices      [ 0, 17, 12, 14, 18,  3,  5,  7,  9, 11 ]
@@ -163,6 +161,7 @@ class testStorage(object):
             for s1, s2 in zip(traj, storage_r.trajectories[3]):
                 compare_snapshot(s1, s2, True)
 
+            # this is the expected order in which it is saved
             eff_traj = [
                 traj[0],
                 traj[8].reversed,
@@ -209,6 +208,63 @@ class testStorage(object):
         compare_snapshot(loaded_r, self.template_snapshot.reversed)
 
         store.close()
+
+    def test_mention_only(self):
+        storage_w = paths.Storage(self.filename, "w", use_uuid=True)
+
+        template = self.template_snapshot
+
+        storage_w.snapshots.add_type(template)
+
+        test_snap = self.traj[2]
+
+        # only touch a new snapshot
+        storage_w.snapshots.only_mention = True
+        storage_w.snapshots.save(test_snap)
+
+        # check that the snapshot is there
+        assert(len(storage_w.snapshots) == 4)
+        # in the memory uuid index
+        assert(test_snap.__uuid__ in storage_w.snapshots.index)
+        # and stored
+        assert(test_snap.__uuid__ == storage_w.snapshots.vars['uuid'][1])
+
+        # but no real snapshot has been stored
+        # print len(storage_w.objects['snapshot0'])
+        assert(len(storage_w.objects['snapshot0']) == 2)
+
+        # switch on normal saving
+        storage_w.snapshots.only_mention = False
+
+        test_snap = self.traj[4]
+        storage_w.snapshots.mention(test_snap)
+
+        # check that the snapshot is there
+        assert(len(storage_w.snapshots) == 6)
+        # in the memory uuid index
+        assert(test_snap.__uuid__ in storage_w.snapshots.index)
+        # and stored
+        assert(test_snap.__uuid__ == storage_w.snapshots.vars['uuid'][2])
+
+        # but no real snapshot has been stored
+        assert(len(storage_w.objects['snapshot0']) == 2)
+
+        # try to now add it
+        storage_w.snapshots.save(test_snap)
+
+        # check that the snapshot is not stored again (only 3 snapshots)
+        assert(len(storage_w.snapshots) == 6)
+        assert(len(storage_w.objects['snapshot0']) == 4)
+
+        # print storage_w.objects['snapshot0'][1].coordinates
+        # print template.coordinates
+        # print storage_w.objects['snapshot0'][0].coordinates
+        # print test_snap.coordinates
+        # print storage_w.objects['snapshot0'].vars['statics'][0].coordinates
+        # print storage_w.objects['snapshot0'].vars['statics'][1].coordinates
+        # print storage_w.objects['snapshot0'].index
+
+        compare_snapshot(storage_w.objects['snapshot0'][4], test_snap)
 
     def test_load_save_uuid(self):
         store = Storage(filename=self.filename, mode='w')
