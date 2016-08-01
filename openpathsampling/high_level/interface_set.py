@@ -17,6 +17,7 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
         values associated with the CV at each interface
     """
     def __init__(self, volumes, cv=None, lambdas=None, direction=None):
+        super(InterfaceSet, self).__init__()
         self.volumes = volumes
         self.cv = cv
         self.lambdas = lambdas
@@ -37,11 +38,14 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
         if self.direction is None:
             self.direction = 0
 
-        vlambdas = lambdas
+        self._set_lambda_dict()
+
+    def _set_lambda_dict(self):
+        vlambdas = self.lambdas
         if vlambdas is None:
-            vlambdas = [None]*len(volumes)
+            vlambdas = [None]*len(self.volumes)
         self._lambda_dict = {vol: lmbda 
-                             for (vol, lmbda) in zip(volumes, vlambdas)}
+                             for (vol, lmbda) in zip(self.volumes, vlambdas)}
 
     def get_lambda(self, volume):
         """Lambda (value of the CV) associated with a given interface volume
@@ -98,6 +102,8 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         if intersect_with is None:
             intersect_with = paths.FullVolume()
         self.intersect_with = intersect_with
+        self.minvals = minvals
+        self.maxvals = maxvals
 
         minvs, maxvs, direction = self._sanitize_input(minvals, maxvals)
         lambdas = {1: maxvs, -1: minvs, 0: None}[direction]
@@ -105,13 +111,34 @@ class GenericVolumeInterfaceSet(InterfaceSet):
                    for (minv, maxv) in zip(minvs, maxvs)]
         super(GenericVolumeInterfaceSet, self).__init__(volumes, cv,
                                                         lambdas, direction)
+        self._set_volume_func(volume_func)
 
-        if direction == 0:
+    def _set_volume_func(self, volume_func):
+        if self.direction == 0:
             self.volume_func = volume_func
-        elif direction > 0:
-            self.volume_func = lambda maxv : volume_func(minvals, maxv)
-        elif direction < 0:
-            self.volume_func = lambda minv : volume_func(minv, maxvals)
+        elif self.direction > 0:
+            self.volume_func = lambda maxv : volume_func(self.minvals, maxv)
+        elif self.direction < 0:
+            self.volume_func = lambda minv : volume_func(minv, self.maxvals)
+
+    def to_dict(self):
+        return {'cv': self.cv,
+                'minvals': self.minvals,
+                'maxvals': self.maxvals,
+                'intersect_with': self.intersect_with,
+                'lambdas': self.lambdas,
+                'direction': self.direction,
+                'volumes': self.volumes}
+
+    def _load_from_dict(self, dct):
+        self.cv = dct['cv']
+        self.minvals = dct['minvals']
+        self.maxvals = dct['maxvals']
+        self.intersect_with = dct['intersect_with']
+        self.lambdas = dct['lambdas']
+        self.direction = dct['direction']
+        self.volumes = dct['volumes']
+        self._set_lambda_dict()
 
     @staticmethod
     def _sanitize_input(minvals, maxvals):
@@ -220,6 +247,16 @@ class VolumeInterfaceSet(GenericVolumeInterfaceSet):
                                                  intersect_with,
                                                  volume_func)
 
+    @staticmethod
+    def from_dict(dct):
+        interface_set = VolumeInterfaceSet.__new__(VolumeInterfaceSet)
+        interface_set._load_from_dict(dct)
+        volume_func = lambda minv, maxv: paths.CVRangeVolume(
+            interface_set.cv, minv, maxv
+        )
+        interface_set._set_volume_func(volume_func)
+        return interface_set
+
 
 class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
     """InterfaceSet based on CVRangeVolumePeriodic.
@@ -244,9 +281,30 @@ class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
         volume_func = lambda minv, maxv: paths.CVRangeVolumePeriodic(
             cv, minv, maxv, period_min, period_max
         )
+        self.period_min = period_min
+        self.period_max = period_max
         super(PeriodicVolumeInterfaceSet, self).__init__(cv, minvals,
                                                          maxvals,
                                                          intersect_with,
                                                          volume_func)
 
+    def to_dict(self):
+        dct = super(PeriodicVolumeInterfaceSet, self).to_dict()
+        dct['period_min'] = self.period_min
+        dct['period_max'] = self.period_max
+        return dct
+
+    @staticmethod
+    def from_dict(dct):
+        interface_set = PeriodicVolumeInterfaceSet.__new__(
+            PeriodicVolumeInterfaceSet
+        )
+        interface_set._load_from_dict(dct)
+        interface_set.period_min = dct['period_min']
+        interface_set.period_max = dct['period_max']
+        volume_func = lambda minv, maxv: paths.CVRangeVolumePeriodic(
+            interface_set.cv, minv, maxv, self.period_min, self.period_max
+        )
+        interface_set._set_volume_func(volume_func)
+        return interface_set
 

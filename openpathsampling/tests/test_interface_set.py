@@ -114,7 +114,30 @@ class testVolumeInterfaceSet(object):
     @raises(TypeError)
     def test_bad_new_interface(self):
         self.weird_set.new_interface(0.25)
-    
+
+    def test_storage(self):
+        import os
+        fname = data_filename("interface_set_storage_test.nc")
+        if os.path.isfile(fname):
+            os.remove(fname)
+        template = make_1d_traj([0.0])[0]
+        storage_w = paths.Storage(fname, "w", template)
+        storage_w.save(self.increasing_set)
+        storage_w.sync_all()
+
+        storage_r = paths.AnalysisStorage(fname)
+        reloaded = storage_r.interfacesets[0]
+
+        assert_items_equal(reloaded.lambdas, self.increasing_set.lambdas)
+        for (truth, beauty) in zip(self.increasing_set, reloaded):
+            assert_equal(truth, beauty)
+
+        for (v, l) in zip(reloaded.volumes, reloaded.lambdas):
+            assert_equal(reloaded.get_lambda(v), l)
+
+        if os.path.isfile(fname):
+            os.remove(fname)
+
 
 class testPeriodicVolumeInterfaceSet(object):
     def setup(self):
@@ -137,3 +160,27 @@ class testPeriodicVolumeInterfaceSet(object):
         expected = paths.CVRangeVolumePeriodic(self.cv, 0.0, -140, -180, 180)
         assert_equal(new_iface, expected)
     
+    def test_storage(self):
+        import os
+        fname = data_filename("interface_set_storage_test.nc")
+        if os.path.isfile(fname):
+            os.remove(fname)
+        template = make_1d_traj([0.0])[0]
+        storage_w = paths.Storage(fname, "w", template)
+        storage_w.save(self.increasing_set)
+        storage_w.sync_all()
+
+        storage_r = paths.AnalysisStorage(fname)
+        reloaded = storage_r.interfacesets[0]
+
+        assert_items_equal(reloaded.lambdas, self.increasing_set.lambdas)
+        assert_equal(reloaded.period_min, self.increasing_set.period_min)
+        assert_equal(reloaded.period_max, self.increasing_set.period_max)
+        for (truth, beauty) in zip(self.increasing_set, reloaded):
+            assert_equal(truth, beauty)
+
+        for (v, l) in zip(reloaded.volumes, reloaded.lambdas):
+            assert_equal(reloaded.get_lambda(v), l)
+
+        if os.path.isfile(fname):
+            os.remove(fname)
