@@ -147,17 +147,17 @@ class testToyEngine(object):
             masses = sys_mass,
             pes = pes
         )
-        template = toy.Snapshot(
-            coordinates=init_pos.copy(),
-            velocities=init_pos.copy(),
-            topology=topology
-        )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
         sim = toy.Engine(options=options,
-                        template=template
+                        topology=topology
                        )
+        template = toy.Snapshot(
+            coordinates=init_pos.copy(),
+            velocities=init_pos.copy(),
+            engine=sim
+        )
 
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
@@ -169,7 +169,7 @@ class testToyEngine(object):
             os.remove('toy_tmp.nc')
 
     def test_sanity(self):
-        assert_items_equal(self.sim.mass, sys_mass)
+        assert_items_equal(self.sim._mass, sys_mass)
         assert_items_equal(self.sim._minv, [1.0/m_i for m_i in sys_mass])
         assert_equal(self.sim.nsteps_per_frame, 10)
 
@@ -244,17 +244,18 @@ class testLeapfrogVerletIntegrator(object):
             masses = sys_mass,
             pes = pes
         )
-        template = toy.Snapshot(
-            coordinates=init_pos.copy(),
-            velocities=init_pos.copy(),
-            topology=topology
-        )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
         sim = toy.Engine(options=options,
-                        template=template
+                        topology=topology
                        )
+
+        template = toy.Snapshot(
+            coordinates=init_pos.copy(),
+            velocities=init_pos.copy(),
+            engine=sim
+        )
 
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
@@ -297,17 +298,18 @@ class testLangevinBAOABIntegrator(object):
             masses = sys_mass,
             pes = pes
         )
-        template = toy.Snapshot(
-            coordinates=init_pos.copy(),
-            velocities=init_pos.copy(),
-            topology=topology
-        )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
         sim = toy.Engine(options=options,
-                        template=template
+                        topology=topology
                        )
+
+        template = toy.Snapshot(
+            coordinates=init_pos.copy(),
+            velocities=init_pos.copy(),
+            engine=sim
+        )
 
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()

@@ -1,19 +1,29 @@
 import numpy as np
 from shared import StaticContainerStore
 import mdtraj
+from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['statics']
 lazy = ['statics']
 
 storables = ['statics']
 
+dimensions = ['atom', 'spatial']
+
 
 def netcdfplus_init(store):
-    store.storage.create_store('statics', StaticContainerStore())
+    static_store = StaticContainerStore()
+    static_store.set_caching(WeakLRUCache(10000))
+
+    name = store.prefix + 'statics'
+
+    static_store.set_dimension_prefix_store(store)
+
+    store.storage.create_store(name, static_store, False)
 
     store.create_variable(
         'statics',
-        'lazyobj.statics',
+        'lazyobj.' + name,
         description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
         chunksizes=(1,)
     )

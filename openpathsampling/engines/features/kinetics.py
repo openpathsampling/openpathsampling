@@ -1,20 +1,31 @@
 from shared import KineticContainerStore
+from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['kinetics', 'is_reversed']
 lazy = ['kinetics']
 flip = ['is_reversed']
 
+dimensions = ['atom', 'spatial']
+
 
 def netcdfplus_init(store):
-    store.storage.create_store('kinetics', KineticContainerStore())
+    kinetic_store = KineticContainerStore()
+    kinetic_store.set_caching(WeakLRUCache(10000))
 
-    store.create_variable('kinetics', 'lazyobj.kinetics',
+    name = store.prefix + 'kinetics'
+
+    # tell the KineticContainerStore to base its dimensions on names prefixed with the store name
+    kinetic_store.set_dimension_prefix_store(store)
+
+    store.storage.create_store(name, kinetic_store, False)
+    store.create_variable('kinetics', 'lazyobj.' + name,
                         description="the snapshot index (0..n_momentum-1) 'frame' of snapshot '{idx}'.",
                         )
 
     store.create_variable('is_reversed', 'bool',
                         description="the indicator if momenta should be flipped.",
                         )
+
 
 @property
 def velocities(self):

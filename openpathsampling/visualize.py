@@ -1599,7 +1599,7 @@ class SnapshotMatrix(object):
             self.matrix_y[y_pos][x_pos] = value
 
         elif type(value) is paths.Trajectory:
-            for pos, snapshot in enumerate(value):
+            for pos, snapshot in enumerate(value.as_proxies()):
                 self[y_pos, x_pos + pos] = snapshot
 
             self.shift[y_pos] = x_pos
@@ -1636,19 +1636,19 @@ class SnapshotMatrix(object):
 
             pos = new_y_pos
 
-            if snapshot is x[pos]:
+            if snapshot == x[pos]:
                 return False
 
         return True
 
     def _snapshot_is(self, snap1, snap2):
         if not self.time_symmetric:
-            return snap1 is snap2
+            return snap1 == snap2
         else:
-            if snap1 is snap2:
+            if snap1 == snap2:
                 return True
             else:
-                return snap1.reversed is snap2
+                return snap1.reversed == snap2
 
     def root(self, y_pos, x_pos):
         snapshot = self[y_pos, x_pos]
@@ -2123,8 +2123,8 @@ class SampleList(OrderedDict):
                 parent_traj = parent.trajectory
 
                 if time_direction == -1:
-                    traj = paths.Trajectory(list(reversed(list(traj))))
-                    parent_traj = paths.Trajectory(list(reversed(list(parent_traj))))
+                    traj = paths.Trajectory(list(reversed(traj.as_proxies())))
+                    parent_traj = paths.Trajectory(list(reversed(parent_traj.as_proxies())))
 
                 overlap = parent_traj.shared_subtrajectory(traj, time_reversal=self.time_symmetric)
                 overlap_length = len(overlap)
@@ -2182,8 +2182,8 @@ class SampleList(OrderedDict):
                     'overlap_reversed': False
                 }
             else:
-                new_fw = self._trajectory_index(traj, overlap[-1])
-                new_bw = self._trajectory_index(traj, overlap[0])
+                new_fw = self._trajectory_index(traj, overlap.get_as_proxy(-1))
+                new_bw = self._trajectory_index(traj, overlap.get_as_proxy(0))
 
                 overlap_reversed = False
 
@@ -2195,7 +2195,7 @@ class SampleList(OrderedDict):
                     if flip_time_direction:
                         # reverse the time and adjust the shifting
 
-                        traj = paths.Trajectory(list(reversed(list(traj))))
+                        traj = paths.Trajectory(list(reversed(traj.as_proxies())))
                         time_direction *= -1
                         overlap_reversed = False
                         new_fw, new_bw = length - 1 - new_bw, length - 1 - new_fw
@@ -2204,7 +2204,7 @@ class SampleList(OrderedDict):
                         # after
                         overlap_length = 0
 
-                traj_shift = parent_shift + self._trajectory_index(parent_traj, overlap[0]) - new_bw
+                traj_shift = parent_shift + self._trajectory_index(parent_traj, overlap.get_as_proxy(0)) - new_bw
 
                 self[sample] = {
                     'shift': traj_shift,

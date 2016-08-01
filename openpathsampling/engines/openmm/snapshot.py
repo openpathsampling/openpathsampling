@@ -12,7 +12,7 @@ import features
     features.velocities,
     features.coordinates,
     features.box_vectors,
-    features.topology
+    features.engine
 ])
 class MDSnapshot(BaseSnapshot):
     """
@@ -27,7 +27,7 @@ class MDSnapshot(BaseSnapshot):
 #         features.velocities,
 #         features.coordinates,
 #         features.box_vectors,
-#         features.topology
+#         features.engine
 #     ],
 #     description="A fast MDSnapshot",
 #     base_class=BaseSnapshot
@@ -37,7 +37,7 @@ class MDSnapshot(BaseSnapshot):
 @features.base.attach_features([
     features.statics,
     features.kinetics,
-    features.topology  # for compatibility
+    features.engine
 ])
 class Snapshot(BaseSnapshot):
     """
@@ -48,12 +48,22 @@ class Snapshot(BaseSnapshot):
     KineticContainer = features.KineticContainer
 
     @staticmethod
-    def construct(coordinates=None, box_vectors=None, velocities=None, topology=None):
+    def construct(
+            coordinates=None,
+            box_vectors=None,
+            velocities=None,
+            statics=None,
+            kinetics=None,
+            engine=None):
         """
         Construct a new snapshot from numpy arrays
 
-        This will create the container objects and return a Snapshot object. Mostly a helper
-        to allow for easier creation.
+        This will create the container objects and return a Snapshot object.
+        Mostly a helper to allow for easier creation.
+
+        You can either use coordinates and velocities and/or statics and
+        kinetics objects. If both are present the more complex (statics
+        and kinetics) will be used
 
         Parameters
         ----------
@@ -63,13 +73,31 @@ class Snapshot(BaseSnapshot):
             the box vectors
         velocities : numpy.array, shape = (atoms, spatial)
             the atomic velocities
+        statics : `openpathsampling.engines.openmm.StaticContainer`
+
+        engine : :obj:`openpathsampling.engines.DynamicsEngine`
+            the engine that should be referenced as the one used to
+            generate the object
 
         Returns
         -------
         :obj:`Snapshot`
             the created `Snapshot` object
         """
-        statics = Snapshot.StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
-        kinetics = Snapshot.KineticContainer(velocities=velocities)
+        if statics is None:
+            statics = Snapshot.StaticContainer(
+                coordinates=coordinates,
+                box_vectors=box_vectors)
 
-        return Snapshot(topology=topology, statics=statics, kinetics=kinetics)
+        if kinetics is None:
+            kinetics = Snapshot.KineticContainer(velocities=velocities)
+
+        return Snapshot(
+            engine=engine,
+            statics=statics,
+            kinetics=kinetics
+        )
+
+    @property
+    def topology(self):
+        return self.engine.topology

@@ -1,6 +1,6 @@
 import numpy as np
 
-from openpathsampling.engines import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import ToySnapshot as Snapshot
 
 
@@ -16,25 +16,49 @@ class ToyEngine(DynamicsEngine):
     base_snapshot_type = Snapshot
 
     default_options = {
-                      'integ' : None,
-                      'n_frames_max' : 5000,
-                      'nsteps_per_frame' : 10
+        'integ': None,
+        'n_frames_max': 5000,
+        'nsteps_per_frame': 10
     }
 
-    def __init__(self, options, template):
+    def __init__(self, options, topology):
         if 'n_spatial' not in options:
-            options['n_spatial'] = template.topology.n_spatial
+            options['n_spatial'] = topology.n_spatial
 
         options['n_atoms'] = 1
 
+        snapshot_dimensions = {
+            'atom': topology.n_atoms,
+            'spatial': topology.n_spatial
+        }
+
+        descriptor = SnapshotDescriptor.construct(
+            snapshot_class=Snapshot,
+            snapshot_dimensions=snapshot_dimensions
+        )
+
         super(ToyEngine, self).__init__(
-                                        options=options)
+            options=options,
+            descriptor=descriptor
+        )
 
-        self.template = template
-        self.mass = template.topology.masses
-        self._pes = template.topology.pes
+        self.topology = topology
 
-        self.current_snapshot = self.template
+        self._mass = None
+        self._minv = None
+
+        self.positions = None
+        self.velocities = None
+
+        self._mass = np.array(topology.masses)
+        self._pes = topology.pes
+        self._minv = 1.0 / self._mass
+
+    def to_dict(self):
+        return {
+            'options': self.options,
+            'topology': self.topology
+        }
 
     @property
     def pes(self):
@@ -68,7 +92,7 @@ class ToyEngine(DynamicsEngine):
         return Snapshot(
             coordinates=np.array([snap_pos]),
             velocities=np.array([snap_vel]),
-            topology=self.template.topology
+            engine=self
         )
 
     @current_snapshot.setter

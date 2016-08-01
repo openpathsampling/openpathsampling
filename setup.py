@@ -192,6 +192,7 @@ Operating System :: MacOS
     'packages': [
         'openpathsampling',
         'openpathsampling.storage',
+        'openpathsampling.storage.stores',
         'openpathsampling.tests',
         'openpathsampling.analysis',
         'openpathsampling.netcdfplus',
