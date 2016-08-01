@@ -89,9 +89,9 @@ class testMSTISNetwork(testMultipleStateTIS):
     def setup(self):
         super(testMSTISNetwork, self).setup()
         self.mstis = MSTISNetwork([
-            (self.stateA, self.ifacesA, self.xval),
-            (self.stateB, self.ifacesB, self.xval),
-            (self.stateC, self.ifacesC, self.xval)
+            (self.stateA, self.ifacesA),#, self.xval),
+            (self.stateB, self.ifacesB),#, self.xval),
+            (self.stateC, self.ifacesC)#, self.xval)
         ])
 
     def test_set_fluxes(self):
@@ -161,9 +161,9 @@ class testMSTISNetwork(testMultipleStateTIS):
         ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
                                            float("inf"))
         new_network = MSTISNetwork([
-            (self.stateA, ifacesA, xval),
-            (self.stateB, ifacesB, xval),
-            (self.stateC, ifacesC, xval)
+            (self.stateA, ifacesA),
+            (self.stateB, ifacesB),
+            (self.stateC, ifacesC)
         ])
         assert_equal(self.stateA.name, "B")
         assert_equal(self.stateB.name, "A")
@@ -173,9 +173,9 @@ class testMISTISNetwork(testMultipleStateTIS):
     def setup(self):
         super(testMISTISNetwork, self).setup()
         self.mistis = MISTISNetwork([
-            (self.stateA, self.ifacesA, self.xval, self.stateB),
-            (self.stateB, self.ifacesB, self.xval, self.stateA),
-            (self.stateA, self.ifacesA, self.xval, self.stateC)
+            (self.stateA, self.ifacesA, self.stateB),
+            (self.stateB, self.ifacesB, self.stateA),
+            (self.stateA, self.ifacesA, self.stateC)
         ])
 
     def test_initialization(self):
@@ -224,9 +224,9 @@ class testMISTISNetwork(testMultipleStateTIS):
 
     def test_trajectories_strict(self):
         strict = MISTISNetwork([
-            (self.stateA, self.ifacesA, self.xval, self.stateB),
-            (self.stateB, self.ifacesB, self.xval, self.stateA),
-            (self.stateA, self.ifacesA, self.xval, self.stateC)
+            (self.stateA, self.ifacesA, self.stateB),
+            (self.stateB, self.ifacesB, self.stateA),
+            (self.stateA, self.ifacesA, self.stateC)
         ], strict_sampling=True)
         transAB = [trans for trans in strict.sampling_transitions
                  if (trans.stateA == self.stateA and 

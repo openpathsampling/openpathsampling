@@ -356,10 +356,10 @@ class MSTISNetwork(TISNetwork):
         Parameters
         ----------
         trans_info : list of tuple
-            Details of each state-based ensemble set. 3-tuple in the order
-            (state, interfaces, orderparameter) where state is a Volume,
-            interfaces is a list of Volumes, and orderparameters is a
-            CollectiveVariable
+            Details of each state-based ensemble set. 2-tuple in the order
+            (state, interface_set) where state is a Volume, and
+            interface_set is an InterfaceSet (with associated
+            CollectiveVariable)
         """
         super(MSTISNetwork, self).__init__()
         self.trans_info = trans_info
@@ -414,11 +414,12 @@ class MSTISNetwork(TISNetwork):
 
         Parameters
         ----------
-        trans_info : list of 4-tuples
+        trans_info : list of 2-tuples
             See description in __init__.
 
         """
-        states, interfaces, orderparams = zip(*trans_info)
+        states, interfaces = zip(*trans_info)
+        orderparams = [iface_set.cv for iface_set in interfaces]
         # NAMING STATES (give default names)
         all_states = paths.volume.join_volumes(states).named("all states")
         all_names = list(set([s.name for s in states]))
@@ -433,7 +434,8 @@ class MSTISNetwork(TISNetwork):
         # BUILDING ENSEMBLES
         outer_ensembles = []
         self.states = states
-        for (state, ifaces, op) in trans_info:
+        for (state, ifaces) in trans_info:
+            op = ifaces.cv
             state_index = states.index(state)
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
@@ -575,7 +577,8 @@ class MISTISNetwork(TISNetwork):
         super(MISTISNetwork, self).__init__()
         self.trans_info = trans_info
         self.strict_sampling = strict_sampling
-        states_A, interfaces, orderparams, states_B = zip(*trans_info)
+        states_A, interfaces, states_B = zip(*trans_info)
+        orderparams = [iface_set.cv for iface_set in interfaces]
         self.initial_states = list(set(states_A))
         self.final_states = list(set(states_B))
         list_all_states = list(set(self.initial_states + self.final_states))
@@ -594,9 +597,9 @@ class MISTISNetwork(TISNetwork):
         if not hasattr(self, "input_transitions"):
             self.input_transitions = {
                 (stateA, stateB) :
-                paths.TISTransition(stateA, stateB, interface, orderparam,
+                paths.TISTransition(stateA, stateB, interface, interface.cv,
                                     name=stateA.name+"->"+stateB.name)
-                for (stateA, interface, orderparam, stateB) in self.trans_info
+                for (stateA, interface, stateB) in self.trans_info
             }
 
         if not hasattr(self, 'x_sampling_transitions'):
