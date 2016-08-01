@@ -3,7 +3,9 @@ from svgwrite.container import Group
 import openpathsampling as paths
 
 import json
-from collections import namedtuple, OrderedDict
+from collections import namedtuple, OrderedDict, Counter
+
+import openpathsampling.pathmover as pm
 
 
 # TODO: Move TreeRenderer and Builder to a different file ???
@@ -69,7 +71,7 @@ class TreeRenderer(svg.Drawing):
 
         css_class += ['connector']
 
-        return self.block(x, y, text, False, False, True, True, css_class=css_class)
+        return self.block(x, y, text, False, False, False, False, css_class=css_class)
 
     def block(self, x, y, text="",
               extend_right=True, extend_left=True,
@@ -441,7 +443,7 @@ class MoveTreeBuilder(Builder):
 
     This is useful to get an idea which parts of the ensemble affect which part of ensembles
     """
-    def __init__(self, pathmover=None, ensembles=None):
+    def __init__(self, pathmover=None, ensembles=None, initial=None):
         super(MoveTreeBuilder, self).__init__()
 
         self.p_x = dict()
@@ -450,6 +452,7 @@ class MoveTreeBuilder(Builder):
 
         self.ensembles = []
         self.pathmover = None
+        self.initial = None
 
         self.traj_ens_x = dict()
         self.traj_ens_y = dict()
@@ -466,16 +469,49 @@ class MoveTreeBuilder(Builder):
         self.doc = None
 
         if pathmover is not None:
-            self.set_mover(pathmover)
+            self.pathmover = pathmover
 
         if ensembles is not None:
-            self.set_ensembles(ensembles)
+            self.ensembles = ensembles
 
-    def set_ensembles(self, ensembles):
-        self.ensembles = ensembles
+        if initial is not None:
+            self.initial = initial
 
-    def set_mover(self, pathmover):
-        self.pathmover = pathmover
+    @staticmethod
+    def from_scheme(scheme):
+        """
+        Initaliza a new `MoveTreeBuilder` from the date in a `MoveScheme`
+
+        Parameters
+        ----------
+        scheme : :obj:`openpathsampling.MoveScheme`
+
+        Returns
+        -------
+        :obj:`MoveTreeBuilder`
+        """
+        try:
+            # inp is a move scheme
+            input_ensembles = scheme.list_initial_ensembles()
+        except AttributeError:
+            # inp is a path mover
+            input_ensembles = scheme.input_ensembles
+
+        return MoveTreeBuilder(
+            pathmover=scheme.root_mover,
+            ensembles=list(scheme.find_used_ensembles()) + list(scheme.find_hidden_ensembles()),
+            initial=input_ensembles
+        )
+
+    @staticmethod
+    def _get_sub_used(mover, replica_states, level):
+        l = [(mover, level, replica_states)]
+        subs = mover.sub_replica_state(replica_states)
+        map(
+            lambda x, y, z: l.extend(MoveTreeBuilder._get_sub_used(x, y, z)),
+            mover.submovers, subs, [1 + level] * len(mover.submovers)
+        )
+        return l
 
     def render(self):
         doc = TreeRenderer(self.css_style)
@@ -492,7 +528,8 @@ class MoveTreeBuilder(Builder):
             class_='tree'
         )
 
-        tree = path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])
+        tree = path.depth_pre_order(
+            lambda this: this, only_canonical=self.options.analysis['only_canonical'])
         total = len(tree)
 
         for yp, (level, sub_mp) in enumerate(tree):
@@ -582,13 +619,37 @@ class MoveTreeBuilder(Builder):
 
         max_level = 0
 
+        initial_rs = paths.pathmover.ReplicaStateSet.from_ensembles(self.initial)
+        subs = MoveTreeBuilder._get_sub_used(self.pathmover, initial_rs, 0)
+
+        # this checks if the mover can actually be run without problems
+        # assert(Counter(dict(initial_rs)) >= self.pathmover.in_out_matrix.minimal)
+
         for yp, (level, sub_mp) in enumerate(
-                path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
+                path.depth_pre_order(
+                    lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
+            sub = subs[yp]
+
             if level > max_level:
                 max_level = level
 
-            in_ens = sub_mp.input_ensembles
-            out_ens = sub_mp.output_ensembles
+            possible_input_replica_states = [Counter(dict(s)) for s in sub[2]]
+            sub_io_set = sub_mp.in_out
+
+            # minimal_input_replica_states = sub_io_set.minimal
+
+            # in_ens = sub_mp.input_ensembles
+            # out_ens = sub_mp.output_ensembles
+
+            possible_ins = [
+                i.ins for i in sub_io_set
+                if any(s >= i.ins for s in possible_input_replica_states)]
+            possible_outs = [
+                i.outs for i in sub_io_set
+                if any(s >= i.ins for s in possible_input_replica_states)]
+
+            in_ens = reduce(lambda a, b: a | b, possible_ins, Counter())
+            out_ens = reduce(lambda a, b: a | b, possible_outs, Counter())
 
             for ens_idx, ens in enumerate(self.ensembles):
                 txt = chr(ens_idx + 65)
@@ -684,11 +745,13 @@ class PathTreeBuilder(Builder):
     Attributes
     ----------
     states : dict, 'svg_color': :obj:`openpathsampling.Volume`-like
-        a dictionary listing a color that fulfills the SVG specification like `#888`, `gold` or `rgb(12,32,59)`
-        referencing a volume like object that will return a bool when passed a snapshot. If true then the snapshot
+        a dictionary listing a color that fulfills the SVG specification like
+        `#888`, `gold` or `rgb(12,32,59)` referencing a volume like object that
+        will return a bool when passed a snapshot. If true then the snapshot
         is highlighed using the given color
     op : :obj:`openpathsampling.CollectiveVariable`-like
-        a function that returns a value when passed a snapshot. The value will be put on single snapshots.
+        a function that returns a value when passed a snapshot. The value will
+        be put on single snapshots.
     
     """
     def __init__(self):
@@ -1508,7 +1571,6 @@ class PathTree(PathTreeBuilder):
         self._steps = StepList(steps)
         if self.generator is not None:
             self.generator.steps = self.steps
-
 
 
 class SnapshotMatrix(object):
