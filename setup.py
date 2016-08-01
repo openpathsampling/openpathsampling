@@ -195,6 +195,7 @@ Operating System :: MacOS
         'openpathsampling.tests',
         'openpathsampling.analysis',
         'openpathsampling.netcdfplus',
+        'openpathsampling.high_level',
         'openpathsampling.engines',
         'openpathsampling.engines.features',
         'openpathsampling.engines.openmm',
