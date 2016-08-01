@@ -73,10 +73,27 @@ def make_list_of_pairs(l):
     # part to work.
     return outlist
 
+# ------------------------------------------------------------------------------
+#   Replica In-Out-Logic
+# ------------------------------------------------------------------------------
+
+# The following classes are used to inspect the effects of a PathMover
+# on the input SampleSet w.r.t. the output SampleSet
+# As an example: A ReplicaExchangePathMover will switch one replica from
+# ens1 and exchange it with one replica from ens2. We could express this
+# as ens1 -> ens2 and ens2 -> ens1. Every mover can be expressed in this
+# way with possible multiple occurrances of a move of a replica
+
 
 class ReplicaStateSet(set):
     """
     Represents a set of possible state of replicas
+
+    See Also
+    --------
+    `ReplicaState`, `InOut`, `InOutSet`
+
+
     """
 
     @staticmethod
@@ -132,7 +149,8 @@ class ReplicaStateSet(set):
             the constructed set of replica states
 
         """
-        return ReplicaStateSet({ReplicaState.from_ensemble_dict(ensembles_dict)})
+        return ReplicaStateSet(
+            {ReplicaState.from_ensemble_dict(ensembles_dict)})
 
     def _reduce(self, func):
         return reduce(func, map(lambda x: Counter(dict(x)), self), Counter())
@@ -160,10 +178,33 @@ class ReplicaState(frozenset):
     represent the minimal necessary number of samples per ensemble and `current`
     is the current state of the sampleset then `necessary <= current` checks if
     the requirements are met
+
+    Replica states allow comparison with inclusion using `>` and `<`. So, if
+    all ensembles from A are also present in B and all of the multiplicities of
+    A are smaller than that of B then A < B
+
+    See Also
+    --------
+    `ReplicaStateSet`, `InOut`, `InOutSet`
+
     """
 
     @staticmethod
     def from_sampleset(sampleset):
+        """
+        Construct a `ReplicaState` from a sampleset
+
+        Parameters
+        ----------
+        sampleset : `openpathsampling.SampleSet`
+            the sampleset to be condensed into a ReplicaState
+
+        Returns
+        -------
+        `ReplicaState`
+            the replicastate representing the multiplicity in ensembles
+            present in the sampleset
+        """
         d = {}
         for sample in sampleset:
             d[sample.ensemble] = d.get(sample.ensemble, 0) + 1
@@ -172,6 +213,22 @@ class ReplicaState(frozenset):
 
     @staticmethod
     def from_ensembles(ensembles):
+        """
+        Construct a `ReplicaState` from a list of ensembles
+
+        Parameters
+        ----------
+        ensembles :list of  `openpathsampling.Ensemble`
+            the list of ensembles to be turned into a ReplicaState
+
+        Returns
+        -------
+        `ReplicaState`
+            the replicastate representing the multiplicity in ensembles
+            present in the sampleset. In this case each ensemble is used
+            with multiplicity one.
+        """
+
         d = {}
         for ens in ensembles:
             d[ens] = 1
@@ -180,6 +237,22 @@ class ReplicaState(frozenset):
 
     @staticmethod
     def from_ensemble_dict(ensemble_dict):
+        """
+        Construct a `ReplicaState` from a ensemble dictionary
+
+        Parameters
+        ----------
+        ensemble_dict : dict(`openpathsampling.Ensemble`: int)
+            the dictionary turned into a replica state. keys are the
+            ensembles used and the value is the multiplicity
+
+        Returns
+        -------
+        `ReplicaState`
+            the replicastate representing the multiplicity in ensembles
+            present in the sampleset
+        """
+
         return ReplicaState(ensemble_dict.items())
 
     def __str__(self):
@@ -187,11 +260,27 @@ class ReplicaState(frozenset):
 
         s = []
         for ens in ensemble_list:
-            s += ["{:>30} ({:>11}) : {:>3}".format(ens[0].name, hex(id(ens[0])), ens[1])]
+            s += ["{:>30} ({:>11}) : {:>3}".format(
+                ens[0].name, hex(id(ens[0])), ens[1])]
 
         return '\n'.join(s)
 
     def filter(self, ensembles):
+        """
+        Filter a replica state by a list of ensembles
+
+        Parameters
+        ----------
+        ensembles : list of `openpathsampling.Ensembles`
+            the list of ensembles which represent the filter. Only ensembles
+            that are als in `ensembles` we be kept with their respective
+            multipliity
+
+        Returns
+        -------
+        `ReplicaState`
+            the reduced filtered replica state
+        """
         return ReplicaState({s for s in self if s[0] in ensembles})
 
     def __gt__(self, other):
@@ -204,6 +293,11 @@ class ReplicaState(frozenset):
 class InOutSet(set):
     """
     Represents a set of possible in-out relations
+
+    See Also
+    --------
+    `ReplicaState`, `ReplicaStateSet`, `InOut`
+
     """
 
     def __add__(self, other):
@@ -230,12 +324,6 @@ class InOutSet(set):
 
     @property
     def ins_minimal(self):
-        """
-
-        Returns
-        -------
-
-        """
         c = Counter()
         for s in self:
             if s.essential:
@@ -258,7 +346,8 @@ class InOutSet(set):
         Returns
         -------
         :obj:'collections.Counter`
-            a Counter object representing the maximal replica state used for input
+            a Counter object representing the maximal replica state used
+            for input
 
         Notes
         -----
@@ -304,17 +393,18 @@ class InOutSet(set):
     @property
     def is_constant(self):
         """
-        Check whether the move will leave the number of samples per ensemle unchanged
+        Check whether the move will keep the number of samples per ensemble
 
         Returns
         -------
+        bool
 
         """
         return all([s.ins == s.outs for s in self])
 
     def filter(self, ensembles):
         """
-        Return a InOutSet with relations limited to within a given set of ensembles
+        Return InOutSet with relations within a given set of ensembles
 
         Parameters
         ----------
@@ -340,7 +430,8 @@ class InOutSet(set):
         Returns
         -------
         `ReplicaStateSet`
-            the set of possible replica states being produced by this in-out-relation
+            the set of possible replica states being produced by this
+            in-out-relation
         """
         ret = set()
 
@@ -379,8 +470,9 @@ class InOut(frozenset):
         return frozenset.__new__(cls, args[0])
 
     def __init__(self, relations=None, essential=None):
-        # note that frozenset uses __new__ to input data. The next line is only for
-        # making sure all the rest is set correctly. __init__ will NOT set the content!
+        # note that frozenset uses __new__ to input data. The next line is
+        # only for making sure all the rest is set correctly.
+        # __init__ will NOT set the content!
         frozenset.__init__(self, relations)
 
         if essential is None:
@@ -449,7 +541,8 @@ class InOut(frozenset):
         -------
 
         """
-        return InOut([s for s in self if s[0][0] in ensembles and s[0][1] in ensembles])
+        return InOut(
+            [s for s in self if s[0][0] in ensembles and s[0][1] in ensembles])
 
     # def in_ensembles(self, ensembles):
     #     return not bool(self.ensembles - set(ensembles))
@@ -467,8 +560,9 @@ class InOut(frozenset):
 
         # do this for all inner ensembles
         for e in ens:
-            # now we have `froms -> e -> tos` as all possibilities with one connection
-            # and we need to form all possible pair combinations with zero, one, ... pairs
+            # now we have `froms -> e -> tos` as all possibilities with
+            # one connection and we need to form all possible pair combinations
+            # with zero, one, ... pairs
             froms = sum([[s[0]] * mat1[s] for s in mat1 if s[1] is e], [])
             tos = sum([[s[1]] * mat2[s] for s in mat2 if s[0] is e], [])
 
@@ -476,11 +570,14 @@ class InOut(frozenset):
 
         if self.essential and other.essential:
             return InOutSet(
-                map(lambda x: InOut(sum(zip(*x)[0], Counter()).items(), all(zip(*x)[1])),
+                map(lambda x: InOut(
+                    sum(zip(*x)[0], Counter()).items(), all(zip(*x)[1])),
                     product(*parts)))
         else:
             return InOutSet(
-                map(lambda x: InOut(sum(zip(*x)[0], Counter()).items(), False), product(*parts)))
+                map(lambda x: InOut(
+                    sum(zip(*x)[0], Counter()).items(), False),
+                    product(*parts)))
 
     def _fromto(self, froms, e, tos):
         frees = [(f, e) for f in froms] + [(e, t) for t in tos]
