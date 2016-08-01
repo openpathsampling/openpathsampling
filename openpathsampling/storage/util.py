@@ -1,7 +1,7 @@
 import openpathsampling as paths
 
 
-def split_md_storage(filename, update_cvs=True):
+def split_md_storage(filename):
     """
     Split storage into two files; trajectories and the rest
 
@@ -56,7 +56,7 @@ def split_md_storage(filename, update_cvs=True):
     st_from.close()
 
 
-def join_steps_md_storage(filename_main, filename_data=None):
+def join_md_storage(filename_main, filename_data=None):
     if filename_data is None:
         filename_data = filename_main[:-7] + 'frames.nc'
 

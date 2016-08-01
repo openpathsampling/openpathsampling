@@ -50,7 +50,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     def __init__(
             self,
             name,
-            cv_time_reversible=True
+            cv_time_reversible=False
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
@@ -59,14 +59,17 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         StorableNamedObject.__init__(self)
 
         self.name = name
+        self.cv_time_reversible = cv_time_reversible
 
         # default settings if we should create a disk cache
         self.diskcache_enabled = False
-        self.diskcache_allow_partial = False
-        self.diskcache_chunksize = 100
         self.diskcache_template = None
-
-        self.cv_time_reversible = cv_time_reversible
+        if self.cv_time_reversible:
+            self.diskcache_allow_partial = False
+            self.diskcache_chunksize = 100
+        else:
+            self.diskcache_allow_partial = True
+            self.diskcache_chunksize = 1
 
         self._single_dict = cd.ExpandSingle()
         self._cache_dict = cd.ReversibleCacheChainDict(
@@ -179,7 +182,8 @@ class CV_Volume(CollectiveVariable):
         """
 
         super(CV_Volume, self).__init__(
-            name
+            name,
+            cv_time_reversible=True
         )
         self.volume = volume
 
@@ -210,13 +214,13 @@ class CV_Callable(CollectiveVariable):
             self,
             name,
             cv_callable,
-            cv_time_reversible=True,
+            cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
             cv_scalarize_numpy_singletons=False,
             **kwargs
     ):
-        r"""
+        """
         Parameters
         ----------
         name
@@ -372,7 +376,7 @@ class CV_Function(CV_Callable):
             self,
             name,
             f,
-            cv_time_reversible=True,
+            cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
             cv_scalarize_numpy_singletons=False,
@@ -419,6 +423,55 @@ class CV_Function(CV_Callable):
         return self.cv_callable(items, **self.kwargs)
 
 
+class CV_SymmetricFunction(CV_Function):
+    """Turn any function into a `CollectiveVariable`.
+
+    Attributes
+    ----------
+    cv_callable
+    """
+
+    def __init__(
+            self,
+            name,
+            f,
+            cv_requires_lists=False,
+            cv_wrap_numpy_array=False,
+            cv_scalarize_numpy_singletons=False,
+            **kwargs
+    ):
+        """
+        Parameters
+        ----------
+        name
+        f
+        cv_requires_lists
+        cv_wrap_numpy_array
+        cv_scalarize_numpy_singletons
+        kwargs
+
+        See also
+        --------
+        `openpathsampling.CV_Callable`
+
+        """
+
+        super(CV_Function, self).__init__(
+            name,
+            cv_callable=f,
+            cv_time_reversible=True,
+            cv_requires_lists=cv_requires_lists,
+            cv_wrap_numpy_array=cv_wrap_numpy_array,
+            cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
+            **kwargs
+        )
+
+    def to_dict(self):
+        dct = super(CV_SymmetricFunction, self).to_dict()
+        del dct['cv_time_reversible']
+        return dct
+
+
 class CV_Generator(CV_Callable):
     """Turn a callable class or function generating a callable object into a CV
 
@@ -430,7 +483,7 @@ class CV_Generator(CV_Callable):
             self,
             name,
             generator,
-            cv_time_reversible=True,
+            cv_time_reversible=False,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
             cv_scalarize_numpy_singletons=False,
@@ -484,7 +537,55 @@ class CV_Generator(CV_Callable):
         return [self._instance(snap) for snap in trajectory]
 
 
-class CV_MDTraj_Function(CV_Function):
+class CV_SymmetricGenerator(CV_Generator):
+    """Turn a callable class or function generating a callable object into a CV
+
+    The class instance will be called with snapshots. The instance itself
+    will be created using the given \**kwargs.
+    """
+
+    def __init__(
+            self,
+            name,
+            generator,
+            cv_requires_lists=False,
+            cv_wrap_numpy_array=False,
+            cv_scalarize_numpy_singletons=False,
+            **kwargs
+    ):
+        r"""
+        Parameters
+        ----------
+        name
+        generator
+        cv_requires_lists
+        cv_wrap_numpy_array
+        cv_scalarize_numpy_singletons
+        kwargs
+
+        Notes
+        -----
+        Right now you cannot store user-defined classes. Only classes
+        from external packages can be used.
+        """
+
+        super(CV_SymmetricGenerator, self).__init__(
+            name,
+            cv_callable=generator,
+            cv_time_reversible=True,
+            cv_requires_lists=cv_requires_lists,
+            cv_wrap_numpy_array=cv_wrap_numpy_array,
+            cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
+            **kwargs
+        )
+
+    def to_dict(self):
+        dct = super(CV_SymmetricGenerator, self).to_dict()
+        del dct['cv_time_reversible']
+        return dct
+
+
+class CV_MDTraj_Function(CV_SymmetricFunction):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
     This is identical to CV_Function except that the function is called with
@@ -507,7 +608,6 @@ class CV_MDTraj_Function(CV_Function):
                  name,
                  f,
                  topology,
-                 cv_time_reversible=True,
                  cv_requires_lists=True,
                  cv_wrap_numpy_array=True,
                  cv_scalarize_numpy_singletons=True,
@@ -521,7 +621,6 @@ class CV_MDTraj_Function(CV_Function):
         topology : :obj:`openpathsampling.engines.openmm.MDTopology`
             the mdtraj topology wrapper from OPS that is used to initialize
             the featurizer in `pyemma.coordinates.featurizer(topology)`
-        cv_time_reversible
         cv_requires_lists
         cv_wrap_numpy_array
         cv_scalarize_numpy_singletons
@@ -536,7 +635,6 @@ class CV_MDTraj_Function(CV_Function):
         super(CV_MDTraj_Function, self).__init__(
             name,
             f,
-            cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
             cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
@@ -561,14 +659,13 @@ class CV_MDTraj_Function(CV_Function):
             'f': ObjectJSON.callable_to_dict(self.f),
             'topology': self.topology,
             'kwargs': self.kwargs,
-            'cv_time_reversible': self.cv_time_reversible,
             'cv_requires_lists': self.cv_requires_lists,
             'cv_wrap_numpy_array': self.cv_wrap_numpy_array,
             'cv_scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
         }
 
 
-class CV_MSMB_Featurizer(CV_Generator):
+class CV_MSMB_Featurizer(CV_SymmetricGenerator):
     """
     A CollectiveVariable that uses an MSMBuilder3 featurizer
 
@@ -626,6 +723,7 @@ class CV_MSMB_Featurizer(CV_Generator):
         super(CV_Generator, self).__init__(
             name,
             cv_callable=featurizer,
+            cv_time_reversible=True,
             cv_requires_lists=True,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
             cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
@@ -712,7 +810,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
 
         featurizer(self._instance, **md_kwargs)
 
-        super(CV_Generator, self).__init__(
+        super(CV_SymmetricGenerator, self).__init__(
             name,
             cv_callable=featurizer,
             cv_requires_lists=True,

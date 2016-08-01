@@ -116,7 +116,7 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_Function(
+            cv1 = paths.CV_SymmetricFunction(
                 'f1',
                 lambda x: x.coordinates[0]
             ).with_diskcache(
@@ -220,8 +220,10 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_Function('f1', lambda snapshot: snapshot.coordinates[
-                0]).with_diskcache(
+            cv1 = paths.CV_SymmetricFunction(
+                'f1',
+                lambda snapshot: snapshot.coordinates[0]
+            ).with_diskcache(
                 allow_partial=allow_partial
             )
 
@@ -288,7 +290,7 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_Function(
+            cv1 = paths.CV_SymmetricFunction(
                 'f1',
                 lambda snapshot: snapshot.coordinates[0]
             ).with_diskcache(
