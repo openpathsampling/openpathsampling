@@ -423,7 +423,7 @@ class CV_Function(CV_Callable):
         return self.cv_callable(items, **self.kwargs)
 
 
-class CV_SymmetricFunction(CV_Function):
+class CV_CoordinateFunction(CV_Function):
     """Turn any function into a `CollectiveVariable`.
 
     Attributes
@@ -467,7 +467,7 @@ class CV_SymmetricFunction(CV_Function):
         )
 
     def to_dict(self):
-        dct = super(CV_SymmetricFunction, self).to_dict()
+        dct = super(CV_CoordinateFunction, self).to_dict()
         del dct['cv_time_reversible']
         return dct
 
@@ -537,7 +537,7 @@ class CV_Generator(CV_Callable):
         return [self._instance(snap) for snap in trajectory]
 
 
-class CV_SymmetricGenerator(CV_Generator):
+class CV_CoordinateGenerator(CV_Generator):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
@@ -569,7 +569,7 @@ class CV_SymmetricGenerator(CV_Generator):
         from external packages can be used.
         """
 
-        super(CV_SymmetricGenerator, self).__init__(
+        super(CV_CoordinateGenerator, self).__init__(
             name,
             cv_callable=generator,
             cv_time_reversible=True,
@@ -580,12 +580,12 @@ class CV_SymmetricGenerator(CV_Generator):
         )
 
     def to_dict(self):
-        dct = super(CV_SymmetricGenerator, self).to_dict()
+        dct = super(CV_CoordinateGenerator, self).to_dict()
         del dct['cv_time_reversible']
         return dct
 
 
-class CV_MDTraj_Function(CV_SymmetricFunction):
+class CV_MDTraj_Function(CV_CoordinateFunction):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
     This is identical to CV_Function except that the function is called with
@@ -665,7 +665,7 @@ class CV_MDTraj_Function(CV_SymmetricFunction):
         }
 
 
-class CV_MSMB_Featurizer(CV_SymmetricGenerator):
+class CV_MSMB_Featurizer(CV_CoordinateGenerator):
     """
     A CollectiveVariable that uses an MSMBuilder3 featurizer
 
@@ -810,7 +810,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
 
         featurizer(self._instance, **md_kwargs)
 
-        super(CV_SymmetricGenerator, self).__init__(
+        super(CV_CoordinateGenerator, self).__init__(
             name,
             cv_callable=featurizer,
             cv_requires_lists=True,
