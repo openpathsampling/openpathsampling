@@ -4,6 +4,7 @@ omit =
     */site-packages/nose/*
     */openpathsampling/tests/*
     */mdtraj/*
+    */setup.py
 exclude_lines = 
     pragma: no cover
     def __repr__
