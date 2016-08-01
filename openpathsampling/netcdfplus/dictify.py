@@ -6,6 +6,7 @@ import numpy as np
 from simtk import unit as units
 import yaml
 import abc
+from uuid import UUID
 
 import marshal
 import types
@@ -21,7 +22,8 @@ __author__ = 'Jan-Hendrik Prinz'
 
 class ObjectJSON(object):
     """
-    A simple implementation of a pickle algorithm to create object that can be converted to json and back
+    A simple implementation of a pickle algorithm to create object that can be
+    converted to json and back
     """
 
     allow_marshal = True
@@ -45,17 +47,24 @@ class ObjectJSON(object):
         self.unit_system = unit_system
         self.class_list = dict()
         self.allowed_storable_types = dict()
+        self.type_names = {}
+        self.type_classes = {}
 
         self.update_class_list()
 
     def update_class_list(self):
         self.class_list = StorableObject.objects()
-        self.type_names = {cls.__name__: cls for cls in self.allowed_storable_atomic_types}
+        self.type_names = {
+            cls.__name__: cls for cls in self.allowed_storable_atomic_types}
         self.type_names.update(self.class_list)
-        self.type_classes = {cls: name for name, cls in self.type_names.iteritems()}
+        self.type_classes = {
+            cls: name for name, cls in self.type_names.iteritems()}
 
     def simplify_object(self, obj):
-        return {'_cls': obj.__class__.__name__, '_dict': self.simplify(obj.to_dict(), obj.base_cls_name)}
+        return {
+            '_cls': obj.__class__.__name__,
+            '_dict': self.simplify(obj.to_dict(), obj.base_cls_name)
+        }
 
     def simplify(self, obj, base_type=''):
         if obj.__class__.__name__ == 'module':
@@ -63,7 +72,9 @@ class ObjectJSON(object):
             if obj.__name__.split('.')[0] in self.safe_modules:
                 return {'_import': obj.__name__}
             else:
-                raise RuntimeError('The module reference "%s" you want to store is not allowed!' % obj.__name__)
+                raise RuntimeError((
+                    'The module reference "%s" you want to store is '
+                    'not allowed!') % obj.__name__)
         elif type(obj) is type or type(obj) is abc.ABCMeta:
             # store a storable number type
             if obj in self.type_classes:
@@ -75,16 +86,29 @@ class ObjectJSON(object):
             if obj.__class__ is units.Quantity:
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
-                    return {'_value': obj.value_in_unit_system(self.unit_system),
-                            '_units': self.unit_to_dict(obj.unit.in_unit_system(self.unit_system))}
+                    return {
+                        '_value': self.simplify(
+                            obj.value_in_unit_system(self.unit_system)),
+                        '_units': self.unit_to_dict(
+                            obj.unit.in_unit_system(self.unit_system))
+                    }
                 else:
-                    return {'_value': obj / obj.unit, '_units': self.unit_to_dict(obj.unit)}
+                    return {
+                        '_value': self.simplify(obj / obj.unit, base_type),
+                        '_units': self.unit_to_dict(obj.unit)
+                    }
             elif obj.__class__ is np.ndarray:
                 # this is maybe not the best way to store large numpy arrays!
-                return {'_numpy': self.simplify(obj.shape), '_dtype': str(obj.dtype), '_data': base64.b64encode(obj)}
+                return {
+                    '_numpy': self.simplify(obj.shape),
+                    '_dtype': str(obj.dtype),
+                    '_data': base64.b64encode(obj)
+                }
             elif hasattr(obj, 'to_dict'):
-                # the object knows how to dismantle itself into a json string so use this
-                return {'_cls': obj.__class__.__name__, '_dict': self.simplify(obj.to_dict(), base_type)}
+                # the object knows how to dismantle itself into a json string
+                return {
+                    '_cls': obj.__class__.__name__,
+                    '_dict': self.simplify(obj.to_dict(), base_type)}
             else:
                 return None
         elif type(obj) is list:
@@ -95,25 +119,25 @@ class ObjectJSON(object):
             # we want to support storable objects as keys so we need to wrap
             # dicts with care and store them using tuples
 
-            simple = [key for key in obj.keys() if type(key) is str or type(key) is int]
+            simple = [
+                key for key in obj.keys()
+                if type(key) is str or type(key) is int]
 
             if len(simple) < len(obj):
                 # other keys than int or str
-                result = {'_dict':
-                              [
-                                self.simplify(tuple([key, o]))
-                                for key, o in obj.iteritems()
-                                if key not in self.excluded_keys
-                              ]
-                          }
-
+                result = {
+                    '_dict': [
+                        self.simplify(tuple([key, o]))
+                        for key, o in obj.iteritems()
+                        if key not in self.excluded_keys
+                    ]}
             else:
                 # simple enough, do it the old way
                 # FASTER VERSION NORMALLY
-                result = {key: self.simplify(o)
-                          for key, o in obj.iteritems()
-                          if key not in self.excluded_keys
-                          }
+                result = {
+                    key: self.simplify(o) for key, o in obj.iteritems()
+                    if key not in self.excluded_keys
+                }
 
                 # SLOWER VERSION FOR DEBUGGING
                 # result = {}
@@ -127,7 +151,8 @@ class ObjectJSON(object):
 
             return result
         elif type(obj) is slice:
-            return {'_slice': [obj.start, obj.stop, obj.step]}
+            return {
+                '_slice': [obj.start, obj.stop, obj.step]}
         else:
             oo = obj
             return oo
@@ -135,23 +160,31 @@ class ObjectJSON(object):
     def build(self, obj):
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
-                return obj['_value'] * self.unit_from_dict(obj['_units'])
+                return self.build(
+                    obj['_value']) * self.unit_from_dict(obj['_units'])
 
             elif '_slice' in obj:
                 return slice(*obj['_slice'])
 
             elif '_numpy' in obj:
-                return np.frombuffer(base64.decodestring(obj['_data']), dtype=np.dtype(obj['_dtype'])).reshape(
-                    self.build(obj['_numpy']))
+                return np.frombuffer(
+                    base64.decodestring(obj['_data']),
+                    dtype=np.dtype(obj['_dtype'])).reshape(
+                        self.build(obj['_numpy'])
+                )
 
             elif '_cls' in obj and '_dict' in obj:
                 if obj['_cls'] not in self.class_list:
                     self.update_class_list()
                     if obj['_cls'] not in self.class_list:
                         # updating did not help, so there is nothing we can do.
-                        raise ValueError('Cannot create obj of class "' + obj['_cls'] + '".\n' +
-                                         'Class is not registered as creatable! You might have to define\n' +
-                                         'the class locally and call update_storable_classes() on your storage.')
+                        raise ValueError((
+                            'Cannot create obj of class `%s`.\n' +
+                            'Class is not registered as creatable! '
+                            'You might have to define\n' +
+                            'the class locally and call '
+                            '`update_storable_classes()` on your storage.') %
+                            obj['_cls'])
 
                 attributes = self.build(obj['_dict'])
                 return self.class_list[obj['_cls']].from_dict(attributes)
@@ -160,14 +193,14 @@ class ObjectJSON(object):
                 return tuple([self.build(o) for o in obj['_tuple']])
 
             elif '_type' in obj:
-                # return a type of a built-in type that represents a type in netcdf
+                # return a type of a _built-in_ `netcdfplus` type
                 return self.type_names.get(obj['_type'])
 
             elif '_dict' in obj:
                 return {
                     self.build(key): self.build(o)
                     for key, o in self.build(obj['_dict'])
-                    }
+                }
 
             elif '_import' in obj:
                 module = obj['_import']
@@ -184,7 +217,7 @@ class ObjectJSON(object):
                 return {
                     key: self.build(o)
                     for key, o in obj.iteritems()
-                    }
+                }
 
         elif type(obj) is list:
             return [self.build(o) for o in obj]
@@ -193,27 +226,13 @@ class ObjectJSON(object):
             return obj
 
     @staticmethod
-    def unitsytem_to_list(unit_system):
-        """
-        Turn a simtk.UnitSystem() into a list of strings representing the unitsystem for serialization
-        """
-        return [u.name for u in unit_system.units]
-
-    @staticmethod
-    def unit_system_from_list(unit_system_list):
-        """
-        Create a simtk.UnitSystem() from a serialialized list of strings representing the unitsystem
-        """
-        return units.UnitSystem(
-            [getattr(units, unit_name).iter_base_or_scaled_units().next()[0] for unit_name in unit_system_list])
-
-    @staticmethod
     def unit_to_symbol(unit):
         return str(1.0 * unit).split()[1]
 
     @staticmethod
     def unit_to_dict(unit):
-        unit_dict = {p.name: int(fac) for p, fac in unit.iter_base_or_scaled_units()}
+        unit_dict = {
+            p.name: int(fac) for p, fac in unit.iter_base_or_scaled_units()}
         return unit_dict
 
     @staticmethod
@@ -246,7 +265,7 @@ class ObjectJSON(object):
 
         # is_class = isinstance(c, (type, types.ClassType))
 
-        # try saving known external classes of functions, e.g. msmbuilder featurizer
+        # try saving known external classes of functions, e.g. `msmbuilder`
         if root_module in ObjectJSON.safe_modules:
             # only store the function/class and the module
             return {
@@ -254,7 +273,7 @@ class ObjectJSON(object):
                 '_name': c.__name__
             }
 
-        # if the easy way did not work, let's see if we can save it using the bytecode
+        # if the easy way did not work, try saving it using bytecode
         if ObjectJSON.allow_marshal and callable(c):
             # use marshal
             global_vars = ObjectJSON._find_var(c, opcode.opmap['LOAD_GLOBAL'])
@@ -262,43 +281,65 @@ class ObjectJSON(object):
 
             builtins = dir(__builtin__)
 
-            global_vars = list(set([var for var in global_vars if var not in builtins]))
+            global_vars = list(set(
+                [var for var in global_vars if var not in builtins]))
             import_vars = list(set(import_vars))
 
             err = ''
 
             if len(global_vars) > 0:
-                err += 'The function you try to save relies on globally set variables ' + \
-                       'and these cannot be saved since storage has no access to the ' + \
-                       'global scope which includes imports! \n\n'
-                err += 'We require that the following globals: ' + str(global_vars) + ' either\n'
+                err += 'The function you try to save relies on globally set ' \
+                       'variables and these cannot be saved since storage ' \
+                       'has no access to the global scope which includes ' \
+                       'imports! \n\n'
+                err += 'We require that the following globals: ' + \
+                       str(global_vars) + ' either\n'
                 err += '\n1. be replaced by constants'
                 err += '\n2. be defined inside your function,' + \
-                       '\n\n' + '\n'.join(map(lambda x: ' ' * 8 + x + '= ...', global_vars)) + '\n'
-                err += '\n3. imports need to be "re"-imported inside your function' + \
-                       '\n\n' + '\n'.join(map(lambda x: ' ' * 8 + 'import ' + x, global_vars)) + '\n'
-                err += '\n4. be passed as an external parameter (not for imports!)'
-                err += '\n\n        my_cv = CV_Function("cv_name", ' + c.func_name + ', \n' + \
-                       ',\n'.join(map(lambda x: ' ' * 20 + x + '=' + x, global_vars)) + ')' + '\n'
+                       '\n\n' + '\n'.join(
+                           map(lambda x: ' ' * 8 + x + '= ...', global_vars)
+                       ) + '\n'
+                err += '\n3. imports need to be "re"-imported inside your ' \
+                       'function' + \
+                       '\n\n' + '\n'.join(
+                           map(lambda x: ' ' * 8 + 'import ' + x, global_vars)
+                       ) + '\n'
+                err += '\n4. be passed as an external parameter ' \
+                       '(not for imports!)'
+                err += '\n\n        my_cv = CV_Function("cv_name", ' + \
+                       c.func_name + ', \n' + \
+                       ',\n'.join(
+                           map(lambda x: ' ' * 20 + x + '=' + x, global_vars)
+                       ) + ')' + '\n'
                 err += '\n    and change your function definition like this'
-                err += '\n\n        def ' + c.func_name + '(snapshot, ...,  ' + \
-                       '\n' + ',\n'.join(map(lambda x : ' ' * 16 + x, global_vars)) + '):'
+                err += '\n\n        def ' + \
+                       c.func_name + '(snapshot, ...,  ' + \
+                       '\n' + ',\n'.join(
+                           map(lambda x: ' ' * 16 + x, global_vars)
+                       ) + '):'
 
-            unsafe_modules = [module for module in import_vars
-                                   if module not in ObjectJSON.safe_modules]
+            unsafe_modules = [
+                module for module in import_vars
+                if module not in ObjectJSON.safe_modules
+            ]
 
             if len(unsafe_modules) > 0:
                 if len(err) > 0:
                     err += '\n\n'
-                err += 'The function you try to save requires the following modules to ' + \
-                       'be installed: ' + str(unsafe_modules) + ' which are not marked as safe! '
+
+                err += 'The function you try to save requires the following' \
+                       ' modules to be installed: ' + str(unsafe_modules) + \
+                       ' which are not marked as safe! '
                 err += 'You can change the list of safe modules using '
                 err += '\n\n        CV_function._safe_modules.extend(['
-                err += '\n' + ',\n'.join(map(lambda x: ' ' * 12 + x, unsafe_modules))
+                err += '\n' + ',\n'.join(
+                       map(lambda x: ' ' * 12 + x, unsafe_modules)
+                )
                 err += '\n        ])'
                 err += '\n\n'
                 err += 'include the import statement in your function like'
-                err += '\n\n' + '\n'.join([' ' * 8 + 'import ' + v for v in unsafe_modules])
+                err += '\n\n' + '\n'.join(
+                    [' ' * 8 + 'import ' + v for v in unsafe_modules])
 
             if len(err) > 0:
                 raise RuntimeError('Cannot store function! \n\n' +
@@ -351,7 +392,7 @@ class ObjectJSON(object):
     @staticmethod
     def _find_var(code, op):
         """
-        Helper function to search in python bytecode for a specific function call
+        Helper function to search in python bytecode for specific function calls
 
         Parameters
         ----------
@@ -366,7 +407,7 @@ class ObjectJSON(object):
             a list of co_names used in this function when calling op
         """
 
-        #TODO: Clean this up. It now works only for codes that use co_names
+        # TODO: Clean this up. It now works only for codes that use co_names
         opcodes = code.func_code.co_code
         i = 0
         ret = []
@@ -387,17 +428,26 @@ class ObjectJSON(object):
         return json.dumps(simplified)
 
     def to_json_object(self, obj):
-        if hasattr(obj, 'base_cls') and type(obj) is not type and type(obj) is not abc.ABCMeta:
+        if hasattr(obj, 'base_cls') \
+                and type(obj) is not type and type(obj) is not abc.ABCMeta:
             simplified = self.simplify_object(obj)
         else:
             simplified = self.simplify(obj)
         try:
             json_str = json.dumps(simplified)
-        except TypeError:
-            print obj.__class__.__name__
-            print obj.__dict__
-            print simplified
-            raise ValueError('Not possible to turn object into json')
+        except TypeError as e:
+            err = (
+                'Cannot convert object of type `%s` to json. '
+                '\n__dict__: %s\n'
+                '\nsimplified: %s\n'
+                '\nError: %s'
+            ) % (
+                obj.__class__.__name__,
+                obj.__dict__,
+                simplified,
+                str(e)
+            )
+            raise ValueError(err)
 
         return json_str
 
@@ -427,10 +477,16 @@ class StorableObjectJSON(ObjectJSON):
                 store = self.storage._obj_store[obj.__class__]
                 if not store.nestable or obj.base_cls_name != base_type:
                     # this also returns the base class name used for storage
-                    # store objects only if they are not creatable. If so they will only be created in their
-                    # top instance and we use the simplify from the super class ObjectJSON
-                    self.storage.save(obj)
-                    return {'_idx': store.index[obj], '_obj': store.prefix}
+                    # store objects only if they are not creatable. If so they
+                    # will only be created in their top instance and we use
+                    # the simplify from the super class ObjectJSON
+                    idx = store.save(obj)
+                    if idx is None:
+                        raise RuntimeError(
+                            'cannot store idx None in store %s' % store)
+                    return {
+                        '_idx': idx,
+                        '_obj': store.prefix}
 
         return super(StorableObjectJSON, self).simplify(obj, base_type)
 
@@ -447,3 +503,42 @@ class StorableObjectJSON(ObjectJSON):
                 return result
 
         return super(StorableObjectJSON, self).build(obj)
+
+
+class UUIDObjectJSON(ObjectJSON):
+    def __init__(self, storage, unit_system=None):
+        super(UUIDObjectJSON, self).__init__(unit_system)
+        self.excluded_keys = ['json']
+        self.storage = storage
+
+    def simplify(self, obj, base_type=''):
+        if obj is self.storage:
+            return {'_storage': 'self'}
+        if obj.__class__.__module__ != '__builtin__':
+            if obj.__class__ in self.storage._obj_store:
+                store = self.storage._obj_store[obj.__class__]
+                if not store.nestable or obj.base_cls_name != base_type:
+                    # this also returns the base class name used for storage
+                    # store objects only if they are not creatable. If so
+                    # they will only be created in their top instance and we
+                    # use the simplify from the super class ObjectJSON
+                    store.save(obj)
+                    return {
+                        '_uuid': str(obj.__uuid__),
+                        '_obj': store.prefix}
+
+        return super(UUIDObjectJSON, self).simplify(obj, base_type)
+
+    def build(self, obj):
+        if type(obj) is dict:
+            if '_storage' in obj:
+                if obj['_storage'] == 'self':
+                    return self.storage
+
+            if '_uuid' in obj:
+                store = self.storage._stores[obj['_obj']]
+                result = store.load(UUID(obj['_uuid']))
+
+                return result
+
+        return super(UUIDObjectJSON, self).build(obj)

@@ -134,17 +134,17 @@ class testShootingMover(object):
         integ = toys.LeapfrogVerletIntegrator(dt=0.1)
         pes = toys.LinearSlope(m=[0.0], c=[0.0])
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
-        self.toy_snap = toys.Snapshot(coordinates=np.array([[0.3]]),
-                                      velocities=np.array([[0.1]]),
-                                      topology=topology)
         self.toy_engine = toys.Engine(options={'integ': integ,
                                                'n_frames_max': 1000,
                                                'nsteps_per_frame': 5},
-                                      template=self.toy_snap)
+                                      topology=topology)
+        self.toy_snap = toys.Snapshot(coordinates=np.array([[0.3]]),
+                                      velocities=np.array([[0.1]]),
+                                      engine=self.toy_engine)
         self.toy_traj = paths.Trajectory([
             toys.Snapshot(coordinates=np.array([[0.01*k - 0.005]]),
                           velocities=np.array([[0.1]]),
-                          topology=topology)
+                          engine=self.toy_engine)
             for k in range(67)
         ])
         self.toy_samp = SampleSet([Sample(trajectory=self.toy_traj, 

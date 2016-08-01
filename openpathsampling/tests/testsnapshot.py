@@ -57,4 +57,4 @@ class testSnapshotCopy(object):
         assert_allclose(new_snap.coordinates, snap.coordinates)
         assert_true(new_snap.box_vectors is snap.box_vectors)
         assert_true(new_snap.box_vectors is None)
-        assert_true(new_snap.topology is snap.topology)
+        assert_true(new_snap.engine is snap.engine)

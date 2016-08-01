@@ -7,3 +7,4 @@ from snapshot import ToySnapshot
 from snapshot import ToySnapshot as Snapshot
 
 from topology import ToyTopology as Topology
+from openpathsampling.engines import NoEngine, SnapshotDescriptor

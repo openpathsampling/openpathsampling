@@ -425,7 +425,7 @@ class TISTransition(Transition):
         n_try = 0
         for samp in samples:
             if samp.ensemble is ensemble:
-                if self.stateB(samp.trajectory[-1]):
+                if self.stateB(samp.trajectory.get_as_proxy(-1)):
                     n_acc += 1
                 n_try += 1
         ctp = float(n_acc)/n_try

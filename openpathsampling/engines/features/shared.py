@@ -3,7 +3,7 @@ import copy
 import numpy as np
 from simtk import unit as u
 
-from openpathsampling.netcdfplus import StorableObject, ObjectStore
+from openpathsampling.netcdfplus import StorableObject, ObjectStore, WeakLRUCache
 
 
 # =============================================================================
@@ -95,6 +95,12 @@ class StaticContainer(StorableObject):
                                box_vectors=self.box_vectors
                                )
 
+    def to_dict(self):
+        return {
+            'coordinates': self.coordinates,
+            'box_vectors': self.box_vectors
+        }
+
 
 class StaticContainerStore(ObjectStore):
     """
@@ -109,9 +115,7 @@ class StaticContainerStore(ObjectStore):
     def _save(self, configuration, idx):
         # Store configuration.
         self.vars['coordinates'][idx] = configuration.coordinates
-
-        if configuration.box_vectors is not None:
-            self.vars['box_vectors'][idx] = configuration.box_vectors
+        self.vars['box_vectors'][idx] = configuration.box_vectors
 
     def get(self, indices):
         return [self.load(idx) for idx in indices]
@@ -121,7 +125,6 @@ class StaticContainerStore(ObjectStore):
         box_vectors = self.vars["box_vectors"][idx]
 
         configuration = StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
-        configuration.topology = self.storage.topology
 
         return configuration
 
@@ -152,33 +155,22 @@ class StaticContainerStore(ObjectStore):
         return self.storage.variables[self.prefix + '_coordinates'][frame_indices, atom_indices, :].astype(
             np.float32).copy()
 
-    def _init(self):
-        super(StaticContainerStore, self)._init()
-        n_atoms = self.storage.n_atoms
-        n_spatial = self.storage.n_spatial
-
-        snapshot = self.storage.template
-
-        unit = None
-
-        if snapshot.coordinates is not None:
-            if hasattr(snapshot.coordinates, 'unit'):
-                unit = snapshot.coordinates.unit
+    def initialize(self):
+        super(StaticContainerStore, self).initialize()
 
         self.create_variable('coordinates', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="coordinate of atom '{ix[1]}' in dimension " +
                                        "'{ix[2]}' of configuration '{ix[0]}'.",
-                           chunksizes=(1, n_atoms, n_spatial),
-                           simtk_unit=unit
+                           chunksizes=(1, 'atom', 'spatial'),
+                           simtk_unit=u.nanometers
                            )
 
         self.create_variable('box_vectors', 'numpy.float32',
                            dimensions=('spatial', 'spatial'),
-                           chunksizes=(1, n_spatial, n_spatial),
-                           simtk_unit=unit
+                           chunksizes=(1, 'spatial', 'spatial'),
+                           simtk_unit=u.nanometers
                            )
-
 
 # =============================================================================
 # SIMULATION MOMENTUM / VELOCITY
@@ -228,6 +220,11 @@ class KineticContainer(StorableObject):
         this = KineticContainer(velocities=self.velocities)
 
         return this
+
+    def to_dict(self):
+        return {
+            'velocities': self.velocities
+        }
 
 
 class KineticContainerStore(ObjectStore):
@@ -294,28 +291,17 @@ class KineticContainerStore(ObjectStore):
 
         return self.velocities_as_numpy(frame_indices, atom_indices)
 
-    def _init(self):
+    def initialize(self):
         """
         Initializes the associated storage to index momentums in it
         """
 
-        super(KineticContainerStore, self)._init()
-
-        n_atoms = self.storage.n_atoms
-        n_spatial = self.storage.n_spatial
-
-        snapshot = self.storage.template
-
-        unit = None
-
-        if snapshot.coordinates is not None:
-            if hasattr(snapshot.coordinates, 'unit'):
-                unit = snapshot.coordinates.unit
+        super(KineticContainerStore, self).initialize()
 
         self.create_variable('velocities', 'numpy.float32',
                            dimensions=('atom', 'spatial'),
                            description="the velocity of atom 'atom' in dimension " +
                                        "'coordinate' of momentum 'momentum'.",
-                           chunksizes=(1, n_atoms, n_spatial),
-                           simtk_unit=unit
+                           chunksizes=(1, 'atom', 'spatial'),
+                           simtk_unit=u.nanometers / u.picoseconds
                            )
