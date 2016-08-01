@@ -77,7 +77,7 @@ class Storage(NetCDFPlus):
 
         for storage_name in [
             'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
-            'shootingpointselectors', 'engines', 'volumes',
+            'shootingpointselectors', 'engines', 'volumes', 'interfacesets',
             'samplesets', 'ensembles', 'transitions', 'steps',
             'pathmovechanges', 'samples', 'snapshots', 'pathsimulators', 'cvs'
         ]:
@@ -109,7 +109,7 @@ class Storage(NetCDFPlus):
 
         for storage_name in [
             'pathmovers', 'topologies', 'networks',
-            'shootingpointselectors', 'engines', 'volumes',
+            'shootingpointselectors', 'engines', 'volumes', 'interfacesets',
             'ensembles', 'transitions', 'pathsimulators'
         ]:
             self.clone_store(storage_name, storage2)
@@ -186,6 +186,8 @@ class Storage(NetCDFPlus):
                           NamedObjectStore(paths.TransitionNetwork))
         self.create_store('schemes',
                           NamedObjectStore(paths.MoveScheme))
+        self.create_store('interfacesets',
+                          NamedObjectStore(paths.InterfaceSet))
 
         # stores where nestable could make sense but is disabled
 
