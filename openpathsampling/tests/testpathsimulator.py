@@ -30,13 +30,13 @@ class testFullBootstrapping(object):
         self.stateA = paths.CVRangeVolume(self.cv, -1.0, 0.0)
         self.stateB = paths.CVRangeVolume(self.cv, 1.0, 2.0)
         self.stateC = paths.CVRangeVolume(self.cv, 3.0, 4.0)
-        interfacesAB = paths.VolumeFactory.CVRangeVolumeSet(
+        interfacesAB = paths.VolumeInterfaceSet(
             self.cv, -1.0, [0.0, 0.2, 0.4]
         )
-        interfacesBC = paths.VolumeFactory.CVRangeVolumeSet(
+        interfacesBC = paths.VolumeInterfaceSet(
             self.cv, 1.0, [2.0, 2.2, 2.4]
         )
-        interfacesBA = paths.VolumeFactory.CVRangeVolumeSet(
+        interfacesBA = paths.VolumeInterfaceSet(
             cv_neg, -1.0, [-1.0, -0.8, -0.6]
         )
 

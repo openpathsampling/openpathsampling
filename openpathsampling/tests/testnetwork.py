@@ -29,9 +29,12 @@ class testMultipleStateTIS(object):
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
 
-        ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
-        ifacesB = vf.CVRangeVolumeSet(xval, [-0.2, -0.15, -0.1], [0.2, 0.15, 0.1])
-        ifacesC = vf.CVRangeVolumeSet(xval, [0.5, 0.4, 0.3], float("inf"))
+        ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
+                                           [-0.5, -0.4, -0.3])
+        ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
+                                           [0.2, 0.15, 0.1])
+        ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
+                                           float("inf"))
 
 
         self.xval = xval
@@ -151,9 +154,12 @@ class testMSTISNetwork(testMultipleStateTIS):
         self.stateB.name = "A"
         self.stateC._name = ""
         xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        ifacesA = vf.CVRangeVolumeSet(xval, float("-inf"), [-0.5, -0.4, -0.3])
-        ifacesB = vf.CVRangeVolumeSet(xval, [-0.2, -0.15, -0.1], [0.2, 0.15, 0.1])
-        ifacesC = vf.CVRangeVolumeSet(xval, [0.5, 0.4, 0.3], float("inf"))
+        ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
+                                           [-0.5, -0.4, -0.3])
+        ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
+                                           [0.2, 0.15, 0.1])
+        ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
+                                           float("inf"))
         new_network = MSTISNetwork([
             (self.stateA, ifacesA, xval),
             (self.stateB, ifacesB, xval),
