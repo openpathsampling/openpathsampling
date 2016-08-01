@@ -30,20 +30,20 @@ class testFullBootstrapping(object):
         self.stateA = paths.CVRangeVolume(self.cv, -1.0, 0.0)
         self.stateB = paths.CVRangeVolume(self.cv, 1.0, 2.0)
         self.stateC = paths.CVRangeVolume(self.cv, 3.0, 4.0)
-        interfacesAB = paths.VolumeFactory.CVRangeVolumeSet(
+        interfacesAB = paths.VolumeInterfaceSet(
             self.cv, -1.0, [0.0, 0.2, 0.4]
         )
-        interfacesBC = paths.VolumeFactory.CVRangeVolumeSet(
+        interfacesBC = paths.VolumeInterfaceSet(
             self.cv, 1.0, [2.0, 2.2, 2.4]
         )
-        interfacesBA = paths.VolumeFactory.CVRangeVolumeSet(
+        interfacesBA = paths.VolumeInterfaceSet(
             cv_neg, -1.0, [-1.0, -0.8, -0.6]
         )
 
         network = paths.MISTISNetwork([
-            (self.stateA, interfacesAB, self.cv, self.stateB),
-            (self.stateB, interfacesBC, self.cv, self.stateC),
-            (self.stateB, interfacesBA, cv_neg, self.stateA)
+            (self.stateA, interfacesAB, self.stateB),
+            (self.stateB, interfacesBC, self.stateC),
+            (self.stateB, interfacesBA, self.stateA)
         ])
         self.tisAB = network.input_transitions[(self.stateA, self.stateB)]
         self.tisBC = network.input_transitions[(self.stateB, self.stateC)]
