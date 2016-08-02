@@ -37,7 +37,6 @@ class OpenMMEngine(DynamicsEngine):
             topology,
             system,
             integrator,
-            platforms=None,
             openmm_properties=None,
             options=None):
         """
@@ -50,11 +49,6 @@ class OpenMMEngine(DynamicsEngine):
             the openmm system object
         integrator : simtk.openmm.Integrator
             the openmm integrator object
-        platforms : list of str
-            representing the list of allowed platforms choices and the order in
-            which a platform is tried by default. The actual used platform
-            depends on which are available and if you override it during
-            initialization
         openmm_properties : dict
             optional setting for creating the openmm simuation object. Typical
             keys include GPU floating point precision
@@ -82,12 +76,6 @@ class OpenMMEngine(DynamicsEngine):
         self.system = system
         self.integrator = integrator
         self.topology = topology
-
-        if platforms is None:
-            # try OpenCL first and use CPU as fallback
-            platforms = ['OpenCL', 'CPU']
-
-        self.platforms = platforms
 
         dimensions = {
             'atom': topology.n_atoms,
@@ -120,7 +108,6 @@ class OpenMMEngine(DynamicsEngine):
     def from_new_options(
             self,
             integrator=None,
-            platforms=None,
             openmm_properties=None,
             options=None):
         """
@@ -130,9 +117,6 @@ class OpenMMEngine(DynamicsEngine):
         ----------
         integrator : simtk.openmm.Integrator
             the openmm integrator object
-        platforms : list of str
-            representing the list of allowed platforms choices and the order in
-            which a platform is tried by default.
         openmm_properties : dict
             optional setting for creating the openmm simuation object. Typical
             keys include GPU floating point precision
@@ -165,9 +149,6 @@ class OpenMMEngine(DynamicsEngine):
         if options is not None:
             new_options.update(options)
 
-        if platforms is None:
-            platforms = self.platforms
-
         new_properties = False
         if openmm_properties is None:
             new_properties = True
@@ -177,12 +158,11 @@ class OpenMMEngine(DynamicsEngine):
             self.topology,
             self.system,
             integrator,
-            platforms,
             openmm_properties=openmm_properties,
             options=new_options)
 
-        if integrator is self.integrator and \
-                self.platform in platforms and \
+        if self._simulation is not None and \
+                integrator is self.integrator and \
                 not new_properties:
 
             # apparently we use a simulation object which is the same as the
@@ -220,6 +200,7 @@ class OpenMMEngine(DynamicsEngine):
 
         """
 
+        logger.info('Removed existing OpenMM engine.')
         self._simulation = None
 
     def initialize(self, platform=None):
@@ -241,25 +222,18 @@ class OpenMMEngine(DynamicsEngine):
         """
 
         if self._simulation is None:
-
-            if platform is None:
-                # determine first platform that is available
-                available_platforms = self.available_platforms()
-                if set(available_platforms) & set(self.platforms):
-                    platform = next(
-                        p for p in self.platforms if p in available_platforms)
-                else:
-                    raise RuntimeError(
-                        'None of the specificed platforms %s are available %s' %
-                        (self.platforms, available_platforms)
-                    )
-
             if type(platform) is str:
                 self._simulation = simtk.openmm.app.Simulation(
                     topology=self.topology.md.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
                     platform=simtk.openmm.Platform.getPlatformByName(platform)
+                )
+            elif platform is None:
+                self._simulation = simtk.openmm.app.Simulation(
+                    topology=self.topology.md.to_openmm(),
+                    system=self.system,
+                    integrator=self.integrator
                 )
             else:
                 self._simulation = simtk.openmm.app.Simulation(
@@ -268,6 +242,10 @@ class OpenMMEngine(DynamicsEngine):
                     integrator=self.integrator,
                     platform=platform
                 )
+
+            logger.info(
+                'Initialized OpenMM engine using platform `%s`' %
+                self.platform)
 
     @staticmethod
     def available_platforms():
@@ -310,8 +288,6 @@ class OpenMMEngine(DynamicsEngine):
 
     def _build_current_snapshot(self):
         try:
-            # TODO: Add caching for this and mark if changed
-
             state = self.simulation.context.getState(getPositions=True,
                                                      getVelocities=True)
 
