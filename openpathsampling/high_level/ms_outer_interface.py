@@ -22,8 +22,10 @@ class MSOuterTISInterface(netcdfplus.StorableNamedObject):
 
     @staticmethod
     def from_lambdas(interface_sets_lambdas):
+        interface_sets = interface_sets_lambdas.keys()
+        lambdas = interface_sets_lambdas.values()
         volumes = [iface_set.new_interface(interface_sets_lambdas[iface_set])
-                   for iface_set in interface_sets_lambdas.keys()]
+                   for iface_set in interface_sets]
         return MSOuterTISInterface(interface_sets, volumes, lambdas)
 
     def make_ensemble(self, network, forbidden=None):
