@@ -1,5 +1,4 @@
 import logging
-import sys
 
 import simtk.openmm
 import simtk.unit as u
@@ -8,15 +7,14 @@ from simtk.openmm.app import Simulation
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import Snapshot
 
-import numpy as np
-
 logger = logging.getLogger(__name__)
 
 
 class OpenMMEngine(DynamicsEngine):
-    """OpenMM dynamics engine based on using an 'simtk.openmm` system and integrator object.
+    """OpenMM dynamics engine based on 'simtk.openmm` system and integrator.
 
-    The engine will create a :class:`simtk.openmm.app.Simulation` instance and uses this to generate new frames.
+    The engine will create a :class:`simtk.openmm.app.Simulation` instance
+    and uses this to generate new frames.
 
     """
 
@@ -34,33 +32,45 @@ class OpenMMEngine(DynamicsEngine):
 
     base_snapshot_type = Snapshot
 
-    #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
-    def __init__(self, topology, system, integrator, options=None, properties=None):
+    # TODO: Deal with cases where we load a GPU based engine,
+    # but the platform is not available
+    def __init__(self, topology, system, integrator, options=None,
+                 properties=None):
         """
         Parameters
         ----------
-        template : openpathsampling.Snapshot
-            a template snapshots which provides the topology object to be used to create the openmm engine
+        topology : openpathsampling.engines.openmm.MDTopology
+            a template snapshots which provides the topology object to be used
+            to create the openmm engine
         system : simtk.openmm.app.System
             the openmm system object
         integrator : simtk.openmm.Integrator
             the openmm integrator object
         options : dict
-            a dictionary that provides additional settings for the OPS engine. Allowed are
-                'n_steps_per_frame' : int, default: 10, the number of integration steps per returned snapshot
-                'n_frames_max' : int or None, default: 5000, the maximal number of frames allowed for a returned
-                trajectory object
-                `platform` : str, default: `fastest`, the openmm specification for the platform to be used, also 'fastest' is allowed
-                which will pick the currently fastest one available
+            a dictionary that provides additional settings for the OPS engine.
+            Allowed are
+
+                'n_steps_per_frame' : int, default: 10
+                    the number of integration steps per returned snapshot
+                'n_frames_max' : int or None, default: 5000,
+                    the maximal number of frames allowed for a returned
+                    trajectory object
+                `platform` : str, default: `fastest`,
+                    the openmm specification for the platform to be used,
+                    also 'fastest' is allowed   which will pick the currently
+                    fastest one available
 
         Notes
         -----
-        the `n_frames_max` does not limit Trajectory objects in length. It only limits the maximal lenght of returned
-        trajectory objects when this engine is used.
-        picking `fasted` as platform will not save `fastest` as the platform but rather replace the platform with the
-        currently fastest one (usually `OpenCL` or `CUDA` for GPU and `CPU` otherwise). If you load this engine it will
-        assume the same engine and not the currently fastest one, so you might have to create a replacement that uses
-        another engine.
+        the `n_frames_max` does not limit Trajectory objects in length. It only
+        limits the maximal lenght of returned trajectory objects when this
+        engine is used. picking `fasted` as platform will not save `fastest` as
+        the platform but rather replace the platform with the currently
+        fastest one (usually `OpenCL` or `CUDA` for GPU and `CPU` otherwise).
+
+        If you load this engine it will assume the same engine and not the
+        currently fastest one, so you might have to create a replacement that
+        uses another engine.
         """
 
         self.system = system
@@ -102,7 +112,7 @@ class OpenMMEngine(DynamicsEngine):
 
         self.properties = properties
 
-        # set no cached snapshot, means it will be constructed from the openmm context
+        # set no cached snapshot
         self._current_snapshot = None
         self._current_momentum = None
         self._current_configuration = None
@@ -115,21 +125,40 @@ class OpenMMEngine(DynamicsEngine):
         integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
 
         return {
-            'system_xml' : system_xml,
-            'integrator_xml' : integrator_xml,
-            'topology' : self.topology,
-            'options' : self.options,
-            'properties' : self.properties
+            'system_xml': system_xml,
+            'integrator_xml': integrator_xml,
+            'topology': self.topology,
+            'options': self.options,
+            'properties': self.properties
         }
 
     def from_new_options(self, integrator=None, options=None):
         """
-        Create a new engine with the same system, but different options and/or integrator
+        Create a new engine from existing, but different optionsor integrator
+
+        Parameters
+        ----------
+        integrator : simtk.openmm.Integrator
+            the openmm integrator object
+        options : dict
+            a dictionary that provides additional settings for the OPS engine.
+            Allowed are
+
+                'n_steps_per_frame' : int, default: 10
+                    the number of integration steps per returned snapshot
+                'n_frames_max' : int or None, default: 5000,
+                    the maximal number of frames allowed for a returned
+                    trajectory object
+                `platform` : str, default: `fastest`,
+                    the openmm specification for the platform to be used,
+                    also 'fastest' is allowed   which will pick the currently
+                    fastest one available
+
 
         Notes
         -----
-        This can be used to quickly set up simulations at various temperatures or change the
-        step sizes, etc...
+        This can be used to quickly set up simulations at various temperatures
+        or change the step sizes.
 
         """
         if integrator is None:
@@ -141,12 +170,15 @@ class OpenMMEngine(DynamicsEngine):
         if options is not None:
             new_options.update(options)
 
-        new_engine = OpenMMEngine(self.topology, self.system, integrator, new_options)
+        new_engine = OpenMMEngine(self.topology, self.system, integrator,
+                                  new_options)
 
-        if integrator is self.integrator and new_engine.options['platform'] == self.options['platform']:
-            # apparently we use a simulation object which is the same as the new one
-            # since we do not change the platform or change the integrator
-            # it means if it exists we copy the simulation object
+        if integrator is self.integrator and \
+                new_engine.options['platform'] == self.options['platform']:
+            # apparently we use a simulation object which is the same as the
+            # new one since we do not change the platform or
+            # change the integrator it means if it exists we copy the
+            # simulation object
 
             new_engine._simulation = self._simulation
 
@@ -165,9 +197,10 @@ class OpenMMEngine(DynamicsEngine):
 
         Notes
         -----
-        This step is OpenMM specific and will actually create the openmm.Simulation object used
-        to run the simulations. The object will be created automatically the first time the
-        engine is used. This way we will not create unnecessay Engines in memory during analysis.
+        This step is OpenMM specific and will actually create the openmm.
+        Simulation object used to run the simulations. The object will be
+        created automatically the first time the engine is used. This way we
+        will not create unnecessay Engines in memory during analysis.
 
         """
 
