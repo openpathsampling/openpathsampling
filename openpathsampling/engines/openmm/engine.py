@@ -32,10 +32,14 @@ class OpenMMEngine(DynamicsEngine):
 
     base_snapshot_type = Snapshot
 
-    # TODO: Deal with cases where we load a GPU based engine,
-    # but the platform is not available
-    def __init__(self, topology, system, integrator, options=None,
-                 properties=None):
+    def __init__(
+            self,
+            topology,
+            system,
+            integrator,
+            platforms=None,
+            options=None,
+            properties=None):
         """
         Parameters
         ----------
@@ -46,6 +50,11 @@ class OpenMMEngine(DynamicsEngine):
             the openmm system object
         integrator : simtk.openmm.Integrator
             the openmm integrator object
+        platforms : list of str
+            representing the list of allowed platforms choices and the order in
+            which a platform is tried by default. The actual used platform
+            depends on which are available and if you override it during
+            initialization
         options : dict
             a dictionary that provides additional settings for the OPS engine.
             Allowed are
@@ -63,19 +72,19 @@ class OpenMMEngine(DynamicsEngine):
         Notes
         -----
         the `n_frames_max` does not limit Trajectory objects in length. It only
-        limits the maximal lenght of returned trajectory objects when this
-        engine is used. picking `fasted` as platform will not save `fastest` as
-        the platform but rather replace the platform with the currently
-        fastest one (usually `OpenCL` or `CUDA` for GPU and `CPU` otherwise).
-
-        If you load this engine it will assume the same engine and not the
-        currently fastest one, so you might have to create a replacement that
-        uses another engine.
+        limits the maximal length of returned trajectory objects when this
+        engine is used.
         """
 
         self.system = system
         self.integrator = integrator
         self.topology = topology
+
+        if platforms is None:
+            # try OpenCL first and use CPU as fallback
+            platforms = ['OpenCL', 'CPU']
+
+        self.platforms = platforms
 
         dimensions = {
             'atom': topology.n_atoms,
@@ -92,21 +101,6 @@ class OpenMMEngine(DynamicsEngine):
             descriptor=descriptor
         )
 
-        if self.options['platform'] == 'fastest':
-
-            speed = 0.0
-            platform = None
-
-            # determine the fastest platform
-            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
-                pf = simtk.openmm.Platform.getPlatform(platform_idx)
-                if pf.getSpeed() > speed:
-                    speed = pf.getSpeed()
-                    platform = pf.getName()
-
-            if platform is not None:
-                self.options['platform'] = platform
-
         if properties is None:
             properties = dict()
 
@@ -120,19 +114,11 @@ class OpenMMEngine(DynamicsEngine):
 
         self._simulation = None
 
-    def to_dict(self):
-        system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
-        integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
-
-        return {
-            'system_xml': system_xml,
-            'integrator_xml': integrator_xml,
-            'topology': self.topology,
-            'options': self.options,
-            'properties': self.properties
-        }
-
-    def from_new_options(self, integrator=None, options=None):
+    def from_new_options(
+            self,
+            integrator=None,
+            platforms=None,
+            options=None):
         """
         Create a new engine from existing, but different optionsor integrator
 
@@ -140,6 +126,9 @@ class OpenMMEngine(DynamicsEngine):
         ----------
         integrator : simtk.openmm.Integrator
             the openmm integrator object
+        platforms : list of str
+            representing the list of allowed platforms choices and the order in
+            which a platform is tried by default.
         options : dict
             a dictionary that provides additional settings for the OPS engine.
             Allowed are
@@ -149,11 +138,10 @@ class OpenMMEngine(DynamicsEngine):
                 'n_frames_max' : int or None, default: 5000,
                     the maximal number of frames allowed for a returned
                     trajectory object
-                `platform` : str, default: `fastest`,
+                `platforms` : list of str,
                     the openmm specification for the platform to be used,
-                    also 'fastest' is allowed   which will pick the currently
+                    also 'fastest' is allowed which will pick the currently
                     fastest one available
-
 
         Notes
         -----
@@ -170,11 +158,19 @@ class OpenMMEngine(DynamicsEngine):
         if options is not None:
             new_options.update(options)
 
-        new_engine = OpenMMEngine(self.topology, self.system, integrator,
-                                  new_options)
+        if platforms is None:
+            platforms = self.platforms
+
+        new_engine = OpenMMEngine(
+            self.topology,
+            self.system,
+            integrator,
+            platforms,
+            new_options)
 
         if integrator is self.integrator and \
-                new_engine.options['platform'] == self.options['platform']:
+                self.platform in platforms:
+
             # apparently we use a simulation object which is the same as the
             # new one since we do not change the platform or
             # change the integrator it means if it exists we copy the
@@ -185,15 +181,31 @@ class OpenMMEngine(DynamicsEngine):
         return new_engine
 
     @property
+    def platform(self):
+        """
+        str : Return the name of the currently used platform
+
+        """
+        if self._simulation is not None:
+            return self._simulation.context.getPlatform().getName()
+        else:
+            return None
+
+    @property
     def simulation(self):
         if self._simulation is None:
             self.initialize()
 
         return self._simulation
 
-    def initialize(self):
+    def initialize(self, platform=None):
         """
         Create the final OpenMMEngine
+
+        Parameters
+        ----------
+        platform : str or `simtk.openmm.Platform`
+            either a string with a name of the platform a platform object
 
         Notes
         -----
@@ -205,12 +217,52 @@ class OpenMMEngine(DynamicsEngine):
         """
 
         if self._simulation is None:
-            self._simulation = simtk.openmm.app.Simulation(
-                topology=self.topology.md.to_openmm(),
-                system=self.system,
-                integrator=self.integrator,
-                platform=simtk.openmm.Platform.getPlatformByName(self.platform)
-            )
+
+            if platform is None:
+                # determine first platform that is available
+                available_platforms = self.available_platforms()
+                if set(available_platforms) & set(self.platforms):
+                    platform = next(
+                        p for p in self.platforms if p in available_platforms)
+                else:
+                    raise RuntimeError(
+                        'None of the specificed platforms %s are available %s' %
+                        (self.platforms, available_platforms)
+                    )
+
+            if type(platform) is str:
+                self._simulation = simtk.openmm.app.Simulation(
+                    topology=self.topology.md.to_openmm(),
+                    system=self.system,
+                    integrator=self.integrator,
+                    platform=simtk.openmm.Platform.getPlatformByName(platform)
+                )
+            else:
+                self._simulation = simtk.openmm.app.Simulation(
+                    topology=self.topology.md.to_openmm(),
+                    system=self.system,
+                    integrator=self.integrator,
+                    platform=platform
+                )
+
+    @staticmethod
+    def available_platforms():
+        return [
+            simtk.openmm.Platform.getPlatform(platform_idx).getName()
+            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms())
+        ]
+
+    def to_dict(self):
+        system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
+        integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
+
+        return {
+            'system_xml': system_xml,
+            'integrator_xml': integrator_xml,
+            'topology': self.topology,
+            'options': self.options,
+            'properties': self.properties
+        }
 
     @classmethod
     def from_dict(cls, dct):
