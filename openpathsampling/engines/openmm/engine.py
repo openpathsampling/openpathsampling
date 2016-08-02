@@ -38,8 +38,8 @@ class OpenMMEngine(DynamicsEngine):
             system,
             integrator,
             platforms=None,
-            options=None,
-            properties=None):
+            openmm_properties=None,
+            options=None):
         """
         Parameters
         ----------
@@ -55,6 +55,9 @@ class OpenMMEngine(DynamicsEngine):
             which a platform is tried by default. The actual used platform
             depends on which are available and if you override it during
             initialization
+        openmm_properties : dict
+            optional setting for creating the openmm simuation object. Typical
+            keys include GPU floating point precision
         options : dict
             a dictionary that provides additional settings for the OPS engine.
             Allowed are
@@ -101,10 +104,10 @@ class OpenMMEngine(DynamicsEngine):
             descriptor=descriptor
         )
 
-        if properties is None:
-            properties = dict()
+        if openmm_properties is None:
+            openmm_properties = {}
 
-        self.properties = properties
+        self.openmm_properties = openmm_properties
 
         # set no cached snapshot
         self._current_snapshot = None
@@ -118,6 +121,7 @@ class OpenMMEngine(DynamicsEngine):
             self,
             integrator=None,
             platforms=None,
+            openmm_properties=None,
             options=None):
         """
         Create a new engine from existing, but different optionsor integrator
@@ -129,6 +133,9 @@ class OpenMMEngine(DynamicsEngine):
         platforms : list of str
             representing the list of allowed platforms choices and the order in
             which a platform is tried by default.
+        openmm_properties : dict
+            optional setting for creating the openmm simuation object. Typical
+            keys include GPU floating point precision
         options : dict
             a dictionary that provides additional settings for the OPS engine.
             Allowed are
@@ -161,15 +168,22 @@ class OpenMMEngine(DynamicsEngine):
         if platforms is None:
             platforms = self.platforms
 
+        new_properties = False
+        if openmm_properties is None:
+            new_properties = True
+            openmm_properties = self.openmm_properties
+
         new_engine = OpenMMEngine(
             self.topology,
             self.system,
             integrator,
             platforms,
-            new_options)
+            openmm_properties=openmm_properties,
+            options=new_options)
 
         if integrator is self.integrator and \
-                self.platform in platforms:
+                self.platform in platforms and \
+                not new_properties:
 
             # apparently we use a simulation object which is the same as the
             # new one since we do not change the platform or
@@ -197,6 +211,16 @@ class OpenMMEngine(DynamicsEngine):
             self.initialize()
 
         return self._simulation
+
+    def reset(self):
+        """
+        Remove the simulation object and allow recreation.
+
+        If you want to explicitely change the used platform, etc.
+
+        """
+
+        self._simulation = None
 
     def initialize(self, platform=None):
         """
@@ -261,7 +285,7 @@ class OpenMMEngine(DynamicsEngine):
             'integrator_xml': integrator_xml,
             'topology': self.topology,
             'options': self.options,
-            'properties': self.properties
+            'properties': self.openmm_properties
         }
 
     @classmethod
@@ -277,7 +301,7 @@ class OpenMMEngine(DynamicsEngine):
             system=simtk.openmm.XmlSerializer.deserialize(system_xml),
             integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
             options=options,
-            properties=properties
+            openmm_properties=properties
         )
 
     @property
