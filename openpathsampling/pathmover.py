@@ -1629,6 +1629,7 @@ class RandomSubtrajectorySelectMover(SubtrajectorySelectMover):
         `None` every number of subtrajectories > 0 is okay.
         Otherwise the move is only accepted if exactly n_l subtrajectories
         are found.
+    """
 
     def _choose(self, trajectory_list):
         return random.choice(trajectory_list)

@@ -22,12 +22,12 @@ class testBiasEnsembleTable(object):
     def setup(self):
         # create the network
         xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(xval, -1.0, -0.5)
-        self.stateB = paths.CVRangeVolume(xval, 0.5, float("inf"))
-        ifacesA = vf.CVRangeVolumeSet(xval, float(-1.0), 
-                                      [-0.5, -0.4, -0.3, -0.2])
+        self.stateA = paths.CVRangeVolume(xval, -1.0, -0.5).named("A")
+        self.stateB = paths.CVRangeVolume(xval, 0.5, float("inf")).named("B")
+        ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0), 
+                                           [-0.5, -0.4, -0.3, -0.2])
         self.network = paths.MISTISNetwork([
-            (self.stateA, ifacesA, xval, self.stateB)
+            (self.stateA, ifacesA, self.stateB)
         ])
         transition = self.network.transitions[(self.stateA, self.stateB)]
         ensembles = transition.ensembles
@@ -139,15 +139,15 @@ class testBiasEnsembleTable(object):
     def test_add_biases(self):
         # this is where we combine multiple biases into one
         xval2 = paths.CV_Function(name="xB", f=lambda s : 0.5-s.xyz[0][0])
-        ifacesB = vf.CVRangeVolumeSet(xval2, float("-inf"),
-                                      [0.0, 0.1, 0.2, 0.3])
+        ifacesB = paths.VolumeInterfaceSet(xval2, float("-inf"),
+                                           [0.0, 0.1, 0.2, 0.3])
         xval3 = paths.CV_Function(name="xC", f=lambda s : s.xyz[0][0]-2.0)
         stateC = paths.CVRangeVolume(self.xval, -3.0, 2.0)
-        ifacesC = vf.CVRangeVolumeSet(xval3, -1.0, [0.0, 0.1, 0.2, 0.3])
+        ifacesC = paths.VolumeInterfaceSet(xval3, -1.0, [0.0, 0.1, 0.2, 0.3])
         network = paths.MISTISNetwork([
-            (self.stateA, self.ifacesA, self.xval, self.stateB),
-            (self.stateB, ifacesB, xval2, self.stateA),
-            (stateC, ifacesC, xval3, self.stateA)
+            (self.stateA, self.ifacesA, self.stateB),
+            (self.stateB, ifacesB, self.stateA),
+            (stateC, ifacesC, self.stateA)
         ])
         ens_A = network.transitions[(self.stateA, self.stateB)].ensembles
         ens_B = network.transitions[(self.stateB, self.stateA)].ensembles

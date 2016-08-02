@@ -99,7 +99,7 @@ class BiasEnsembleTable(BiasFunction):
                                     value=orig_value)
             for ens_to in both:
                 self_to_id = self.ensembles_to_ids[ens_to]
-                other_to_id = self.ensembles_to_ids[ens_to]
+                other_to_id = other.ensembles_to_ids[ens_to]
                 try:
                     self_value = self.dataframe.loc[self_from_id,
                                                     self_to_id]
@@ -115,7 +115,10 @@ class BiasEnsembleTable(BiasFunction):
                 if self_value is not None and other_value is not None:
                     if self_value != other_value:
                         msg = "Biases have differing value for same entry:"
-                        msg = " {:} != {:}".format(self_value, other_value)
+                        msg += " {:} != {:}\n".format(self_value, other_value)
+                        msg += str(self.dataframe) + "\n"
+                        msg += str(other.dataframe) + "\n"
+                        msg += ens_from.name + "=>" + ens_to.name
                         raise ValueError(msg)
                 value = self_value if self_value is not None else other_value
                 if value is not None:
