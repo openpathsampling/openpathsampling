@@ -151,6 +151,7 @@ class MSOuterTISInterface(netcdfplus.StorableNamedObject):
         else:
             ensemble_to_intersect = paths.AllOutXEnsemble(forbidden)
 
+        # TODO: maybe we should crash if given transitions aren't relevant?
         relevant_transitions = self.relevant_transitions(transitions)
 
         outer_ensembles = []
@@ -158,6 +159,9 @@ class MSOuterTISInterface(netcdfplus.StorableNamedObject):
             initial = trans.stateA
             final = trans.stateB
             volume = self.volume_for_interface_set(trans.interfaces)
+            # TODO: move following to a logger.debug
+            #print initial.name, final.name,\
+                    #self.lambda_for_interface_set(trans.interfaces)
             outer_ensembles.append(
                 ensemble_to_intersect & paths.TISEnsemble(initial, final,
                                                           volume)
