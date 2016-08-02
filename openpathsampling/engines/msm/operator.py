@@ -8,10 +8,10 @@ class Lengths(object):
     def __or__(self, other):
         return self
 
-    def __lt__(self, other):
+    def __gt__(self, other):
         return all(l in self for l in other.lengths)
 
-    def __gt__(self, other):
+    def __lt__(self, other):
         return all(l in other for l in self.lengths)
 
     def __eq__(self, other):
@@ -23,9 +23,16 @@ class Lengths(object):
     def __nonzero__(self):
         return self > EmptyLengths()
 
+    def __neq__(self):
+        return self
+
     @property
     def lengths(self):
         return []
+
+    @property
+    def parts(self):
+        return [self]
 
     def matrix_mult(self, matrix):
         return matrix
@@ -36,6 +43,9 @@ class SetLengths(Lengths):
         super(SetLengths, self).__init__()
         self.length_set = length_set
 
+    def __str__(self):
+        return 'L' + str(self.length_set)
+
     def matrix_mult(self, matrix):
         return np.sum([
             np.linalg.matrix_power(matrix, pw) for pw in self.length_set
@@ -43,6 +53,22 @@ class SetLengths(Lengths):
 
     def __nonzero__(self):
         return bool(self.length_set)
+
+    def __neg__(self):
+        mi = min(self.length_set)
+        ma = max(self.length_set)
+
+        if mi > 0:
+            return MultiLengths([
+                SliceLengths(slice(0, mi)),
+                set(range(mi, ma + 1)) - self.length_set,
+                SliceLengths(slice(ma + 1, None))
+            ])
+        else:
+            return MultiLengths([
+                set(range(mi, ma + 1)) - self.length_set,
+                SliceLengths(slice(ma + 1, None))
+            ])
 
     def __and__(self, other):
         if other < self:
@@ -86,7 +112,8 @@ class SetLengths(Lengths):
                     SetLengths(
                         self.length_set -
                         set(range(
-                            *other.length_slice.indices(other.length_slice.stop)))),
+                            *other.length_slice.indices(
+                                other.length_slice.stop)))),
                     other
                 ])
             else:
@@ -97,7 +124,8 @@ class SetLengths(Lengths):
                         SetLengths(
                             self.length_set -
                             set(range(
-                                *other.length_slice.indices(max(self.length_set))))),
+                                *other.length_slice.indices(
+                                    1 + max(self.length_set))))),
                         other
                     ])
         elif isinstance(other, SetLengths):
@@ -127,22 +155,29 @@ class SetLengths(Lengths):
 class MultiLengths(Lengths):
     def __init__(self, length_list):
         super(MultiLengths, self).__init__()
-        self.length_list = [l for l in length_list if l]
+        self._parts = [l for l in length_list if l]
 
     def __contains__(self, item):
-        for l in self.length_list:
+        for l in self.parts:
             if item in l:
                 return True
 
         return False
 
+    def __neg__(self):
+        return reduce(lambda x, y: x & y, self._parts)
+
+    @property
+    def parts(self):
+        return self._parts
+
     @property
     def lengths(self):
-        return self.length_list
+        return sum(map(lambda p: p.lengths, self._parts), [])
 
     def __nonzero__(self):
-        if len(self.length_list) > 0:
-            return any(self.length_list)
+        if len(self.parts) > 0:
+            return any(self._parts)
         else:
             return False
 
@@ -153,7 +188,7 @@ class MultiLengths(Lengths):
             return self
 
         return MultiLengths([
-            l & self for l in other.length_list
+            other & l for l in self.parts
         ])
 
     def __or__(self, other):
@@ -168,8 +203,12 @@ class MultiLengths(Lengths):
 
     def matrix_mult(self, matrix):
         return np.sum([
-            l.matrix_mult(matrix) for l in self.length_list
+            l.matrix_mult(matrix) for l in self._parts
         ])
+
+    def __str__(self):
+        return 'L[' + ','.join(
+            map(lambda x: str(x)[1:], self._parts)) + ']'
 
 
 class IntLengths(Lengths):
@@ -177,8 +216,22 @@ class IntLengths(Lengths):
         super(IntLengths, self).__init__()
         self.length = length
 
+    def __str__(self):
+        return 'L(%d)' % self.length
+
     def __nonzero__(self):
         return True
+
+    def __neg__(self):
+        if self.length > 0:
+            return MultiLengths([
+                SliceLengths(slice(0, self.length)),
+                SliceLengths(slice(self.length + 1, None))
+            ])
+        else:
+            return MultiLengths([
+                SliceLengths(slice(self.length + 1, None))
+            ])
 
     def __contains__(self, item):
         if isinstance(item, int):
@@ -213,7 +266,10 @@ class IntLengths(Lengths):
             return SetLengths({other.length, self.length})
 
         elif isinstance(other, SliceLengths):
-            if self.length < other.length_slice.start or (other.length_slice.stop is not None and self.length > other.length_slice.stop - 1):
+            if self.length < other.length_slice.start or (
+                    other.length_slice.stop is not None and
+                    self.length > other.length_slice.stop - 1
+            ):
                 return MultiLengths([
                     self,
                     other
@@ -240,6 +296,10 @@ class SliceLengths(Lengths):
         super(SliceLengths, self).__init__()
         self.length_slice = length_slice
 
+    def __str__(self):
+        return 'L[%s, ..., %s)' % \
+            (str(self.length_slice.start), str(self.length_slice.stop))
+
     def matrix_mult(self, matrix):
         start = self.length_slice.start
         if start is None:
@@ -257,6 +317,27 @@ class SliceLengths(Lengths):
                 np.linalg.matrix_power(matrix, stop),
                 np.linalg.inv(np.identity(len(matrix)) - matrix)
             )
+
+    def __neg__(self):
+        mi = self.length_slice.start
+        ma = self.length_slice.stop
+
+        if mi is not None and mi > 0 and ma is not None:
+            return MultiLengths([
+                SliceLengths(slice(0, mi)),
+                SliceLengths(slice(ma + 1, None))
+            ])
+        elif mi is not None and mi > 0:
+            return MultiLengths([
+                SliceLengths(slice(0, mi))
+            ])
+
+        elif ma is not None:
+            return MultiLengths([
+                SliceLengths(slice(ma + 1, None))
+            ])
+        else:
+            return EmptyLengths()
 
     def __nonzero__(self):
         if self.length_slice.stop is None:
@@ -317,7 +398,7 @@ class SliceLengths(Lengths):
             elif self.length_slice.start is None:
                 start = other.length_slice.start
             else:
-                start = min(self.length_slice.start, other.length_slice.start)
+                start = max(self.length_slice.start, other.length_slice.start)
 
             if start is not None and stop is not None:
                 stop = max(start, stop)
@@ -329,10 +410,12 @@ class SliceLengths(Lengths):
             return other & self
 
     def __or__(self, other):
+
         if other < self:
             return self
         elif other > self:
             return other
+
 
         if isinstance(other, IntLengths):
             return other | self
@@ -394,13 +477,22 @@ class EmptyLengths(Lengths):
     def lengths(self):
         return []
 
+    def __str__(self):
+        return 'L{}'
+
+    def __neg__(self):
+        return AllLengths()
+
 
 class AllLengths(SliceLengths):
     def __init__(self):
-        super(AllLengths, self).__init__(slice(None, None))
+        super(AllLengths, self).__init__(slice(None))
 
     def __nonzero__(self):
         return True
+
+    def __neg__(self):
+        return EmptyLengths()
 
     def __and__(self, other):
         return other
@@ -410,6 +502,9 @@ class AllLengths(SliceLengths):
 
     def __contains__(self, item):
         return True
+
+    def __str__(self):
+        return 'L{...}'
 
 
 class OneLength(IntLengths):
@@ -510,6 +605,13 @@ class State(O):
         self.length = length
         self.inverted = inverted
 
+    def __str__(self):
+        return 'S[%s,%s,%s]' % (
+            str(self.block),
+            str(self.length),
+            str(self.inverted)
+        )
+
     def __add__(self, other):
         """
         Disjoint union observations. Self & other = empty
@@ -531,19 +633,29 @@ class State(O):
                 if not self.block & other.block:
                     return State(self.block | other.block, self.length)
 
-        super(State, self).__add__(other)
+            return Union([
+                self,
+                other,
+                State(
+                    self.block & other.block, self.length & other.length, True)
+            ])
+
+        return super(State, self).__add__(other)
 
     def __and__(self, other):
         if isinstance(other, State):
-            if self.inverted or other.inverted:
+            if self.inverted and other.inverted:
+                return State(
+                    self.block | other.block, self.length | other.length, True)
             elif self.inverted:
                 return other & self
             elif other.inverted:
                 return Diff(
                     self,
-                    State(other.block - self.block, self.length & other.length)
+                    State(other.block - self.block, self.length & other.length))
             else:
-                return State(self.block & other.block, self.length & other.length)
+                return State(
+                    self.block & other.block, self.length & other.length)
         else:
             raise ValueError('& and | only work for States')
 
@@ -560,6 +672,7 @@ class State(O):
 
     def __invert__(self):
         return State(self.block, self.length, ~ self.inverted)
+
 
 class Chain(O):
     def __init__(self, oos):

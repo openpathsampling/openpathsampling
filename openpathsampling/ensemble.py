@@ -1582,7 +1582,7 @@ class SequentialEnsemble(Ensemble):
 
     def ensemble_probability(self):
         return reduce(lambda a, b: a * b,
-                    [ens.ensemble_probability() for self.ensembles])
+            [ens.ensemble_probability() for ens in self.ensembles])
 
 
 class LengthEnsemble(Ensemble):
