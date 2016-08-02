@@ -65,8 +65,14 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
 
     def _slice_dict(self, slicer):
         dct = self.to_dict()
-        dct['volumes'] = self.volumes[slicer]
-        dct['lambdas'] = self.lambdas[slicer]
+        try:
+            dct['volumes'] = self.volumes[slicer]
+        except TypeError:
+            dct['volumes'] = self.volumes
+        try:
+            dct['lambdas'] = self.lambdas[slicer]
+        except TypeError:
+            dct['lambdas'] = self.lambdas
         return dct
 
     def __len__(self):
@@ -126,8 +132,14 @@ class GenericVolumeInterfaceSet(InterfaceSet):
 
     def _slice_dict(self, slicer):
         dct = super(GenericVolumeInterfaceSet, self)._slice_dict(slicer)
-        dct['minvals'] = self.minvals[slicer]
-        dct['maxvals'] = self.maxvals[slicer]
+        try:
+            dct['minvals'] = self.minvals[slicer]
+        except TypeError:
+            dct['minvals'] = self.minvals
+        try:
+            dct['maxvals'] = self.maxvals[slicer]
+        except TypeError:
+            dct['maxvals'] = self.maxvals
         return dct
 
     def _set_volume_func(self, volume_func):
@@ -271,6 +283,7 @@ class VolumeInterfaceSet(GenericVolumeInterfaceSet):
         volume_func = lambda minv, maxv: paths.CVRangeVolume(
             interface_set.cv, minv, maxv
         )
+        super(InterfaceSet, interface_set).__init__()
         interface_set._set_volume_func(volume_func)
         return interface_set
 
@@ -322,6 +335,7 @@ class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
         volume_func = lambda minv, maxv: paths.CVRangeVolumePeriodic(
             interface_set.cv, minv, maxv, self.period_min, self.period_max
         )
+        super(InterfaceSet, interface_set).__init__()
         interface_set._set_volume_func(volume_func)
         return interface_set
 
