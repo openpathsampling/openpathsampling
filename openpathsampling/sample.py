@@ -508,6 +508,12 @@ class Sample(StorableObject):
         else:
             return [] # empty iterator
 
+    def as_proxies(self):
+        if self.trajectory is not None:
+            return self.trajectory.as_proxies()
+        else:
+            return [] # empty iterator
+
     def __iter__(self):
         """
         Return an iterator over all snapshots in the samples trajectory

@@ -92,19 +92,27 @@ class testShootingPointAnalysis(object):
         import openpathsampling.engines.toy as toys
         pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        descriptor = peng.SnapshotDescriptor.construct(
+            toys.Snapshot,
+            {
+                'atom': 1,
+                'spatial': 1
+            }
+        )
+        engine = peng.NoEngine(descriptor)
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
-                                   topology=topology)
+                                   engine=engine)
         self.snap1 = toys.Snapshot(coordinates=np.array([[0.1]]),
                                    velocities=np.array([[1.0]]),
-                                   topology=topology)
+                                   engine=engine)
         integrator = toys.LeapfrogVerletIntegrator(0.1)
         options = {
             'integ': integrator,
             'n_frames_max': 10000,
             'nsteps_per_frame': 5
         }
-        self.engine = toys.Engine(options=options, template=self.snap0)
+        self.engine = toys.Engine(options=options, topology=topology)
         cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
         self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
         self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
@@ -112,8 +120,7 @@ class testShootingPointAnalysis(object):
         randomizer = paths.NoModification()
         self.filename = data_filename("shooting_analysis.nc")
         self.storage = paths.Storage(self.filename, 
-                                     mode="w", 
-                                     template=self.snap0)
+                                     mode="w")
 
         self.simulation = paths.CommittorSimulation(
             storage=self.storage,
