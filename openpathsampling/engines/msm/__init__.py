@@ -4,6 +4,6 @@ from snapshot import MSMSnapshot as MicroState
 from snapshot import MSMSnapshot as Snapshot
 from volume import Block
 from pathsimulator import StepSampling
-from operator import *
+import nn
 
 from openpathsampling.engines import NoEngine, SnapshotDescriptor

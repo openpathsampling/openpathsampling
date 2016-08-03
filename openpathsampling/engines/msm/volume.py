@@ -36,9 +36,9 @@ class Block(Volume):
         Returns a string representation of the volume
         """
         if len(self.states) > 10:
-            s =  'State[%d, ..., %d]' % (min(self.states), max(self.states))
+            s = 'State[%d, ..., %d]' % (min(self.states), max(self.states))
         elif len(self.states) > 0:
-            s =  'State[%s]' % (','.join(map(str, self.states)))
+            s = 'State[%s]' % (','.join(map(str, self.states)))
         else:
             s = 'State[]'
 
