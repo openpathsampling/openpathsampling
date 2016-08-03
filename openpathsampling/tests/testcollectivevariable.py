@@ -18,7 +18,7 @@ from openpathsampling.tests.test_helpers import make_1d_traj
 import os
 
 
-class testCV_Function(object):
+class test_FunctionCV(object):
     def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
@@ -37,7 +37,7 @@ class testCV_Function(object):
 
     def test_pickle_external_cv(self):
         template = make_1d_traj([0.0])[0]
-        cv = paths.CV_Function("x", lambda snap: snap.coordinates[0][0])
+        cv = paths.FunctionCV("x", lambda snap: snap.coordinates[0][0])
         storage = paths.Storage("myfile.nc", "w", template)
         storage.save(cv)
         storage.close()
@@ -45,7 +45,7 @@ class testCV_Function(object):
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
         psi_atoms = [6, 8, 14, 16]
-        dihedral_op = op.CV_MDTraj_Function(
+        dihedral_op = op.MDTrajFunctionCV(
             "psi",
             md.compute_dihedrals,
             topology=self.topology,
@@ -62,7 +62,7 @@ class testCV_Function(object):
         """ Create an atom pair collectivevariable using MSMSBuilder3 """
 
         atom_pairs = [[0, 1], [10, 14]]
-        atom_pair_op = op.CV_MSMB_Featurizer(
+        atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
             AtomPairsFeaturizer,
             topology=self.topology,
@@ -78,7 +78,7 @@ class testCV_Function(object):
     def test_return_parameters_from_template(self):
 
         atom_pairs = [[0, 1], [10, 14]]
-        atom_pair_op = op.CV_MSMB_Featurizer(
+        atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
             AtomPairsFeaturizer,
             topology=self.topology,
@@ -116,7 +116,7 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_CoordinateFunction(
+            cv1 = paths.CoordinateFunctionCV(
                 'f1',
                 lambda x: x.coordinates[0]
             ).with_diskcache(
@@ -220,7 +220,7 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_CoordinateFunction(
+            cv1 = paths.CoordinateFunctionCV(
                 'f1',
                 lambda snapshot: snapshot.coordinates[0]
             ).with_diskcache(
@@ -290,7 +290,7 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_CoordinateFunction(
+            cv1 = paths.CoordinateFunctionCV(
                 'f1',
                 lambda snapshot: snapshot.coordinates[0]
             ).with_diskcache(

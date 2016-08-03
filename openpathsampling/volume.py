@@ -465,8 +465,8 @@ class VoronoiVolume(Volume):
     
     Parameters
     ----------
-    collectivevariable : CV_Multi_RMSD
-        must be an CV_Multi_RMSD collectivevariable that returns several RMSDs
+    collectivevariable : MultiRMSDCV
+        must be an MultiRMSDCV collectivevariable that returns several RMSDs
     state : int
         the index of the center for the chosen voronoi cell
 

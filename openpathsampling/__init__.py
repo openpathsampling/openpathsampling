@@ -65,10 +65,10 @@ from bias_function import (
 )
 
 from collectivevariable import (
-    CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer,
-    CV_Volume, CollectiveVariable, CV_CoordinateGenerator,
-    CV_CoordinateFunction, CV_Callable, CV_PyEMMA_Featurizer,
-    CV_Generator)
+    FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
+    InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
+    CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
+    GeneratorCV)
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
@@ -86,6 +86,8 @@ from ensemble import (
 from high_level.interface_set import (
     InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
 )
+
+from high_level.ms_outer_interface import MSOuterTISInterface
 
 from live_visualization import LiveVisualization
 
