@@ -16,7 +16,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testInterfaceSet(object):
     def setup(self):
-        self.cv = paths.CV_Function(name="x", f=lambda s: s.xyz[0][0])
+        self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0])
         self.lambdas = [0.0, 0.1, 0.2, 0.3]
         self.volumes = paths.VolumeFactory.CVRangeVolumeSet(self.cv, 
                                                             float("-inf"),
@@ -84,7 +84,7 @@ class testGenericVolumeInterfaceSet(object):
 
 class testVolumeInterfaceSet(object):
     def setup(self):
-        self.cv = paths.CV_Function(name="x", f=lambda s: s.xyz[0][0])
+        self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0])
         self.increasing_set = paths.VolumeInterfaceSet(cv=self.cv,
                                                        minvals=float("-inf"),
                                                        maxvals=[0.0, 0.1])
@@ -141,7 +141,7 @@ class testVolumeInterfaceSet(object):
 
 class testPeriodicVolumeInterfaceSet(object):
     def setup(self):
-        self.cv = paths.CV_Function(name="x", f=lambda s: s.xyz[0][0])
+        self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0])
         self.increasing_set = paths.PeriodicVolumeInterfaceSet(
             cv=self.cv,
             minvals=0.0,
