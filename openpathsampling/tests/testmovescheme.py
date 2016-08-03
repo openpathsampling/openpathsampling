@@ -23,8 +23,8 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testMoveScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
@@ -359,8 +359,8 @@ class testMoveScheme(object):
 
 class testDefaultScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
@@ -588,8 +588,8 @@ class testDefaultScheme(object):
 
 class testLockedMoveScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
@@ -650,8 +650,8 @@ class testLockedMoveScheme(object):
 
 class testOneWayShootingMoveScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 

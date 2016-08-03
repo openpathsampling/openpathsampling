@@ -16,7 +16,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testTrajectorySegmentContainer(object):
     def setup(self):
-        op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
         self.vol3 = paths.CVRangeVolume(op, 2.0, 2.5)
 
@@ -88,7 +88,7 @@ class testTrajectorySegmentContainer(object):
 
 class testSingleTrajectoryAnalysis(object):
     def setup(self):
-        op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
         vol2 = paths.CVRangeVolume(op, -0.1, 0.7)
         vol3 = paths.CVRangeVolume(op, 2.0, 2.5)

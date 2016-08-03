@@ -24,7 +24,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 class testMultipleStateTIS(object):
     # generic class to set up states and ifaces
     def setup(self):
-        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
@@ -170,7 +170,7 @@ class testMSTISNetwork(testMultipleStateTIS):
         self.stateA.name = "B"
         self.stateB.name = "A"
         self.stateC._name = ""
-        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
                                            [-0.5, -0.4, -0.3])
         ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
@@ -320,7 +320,7 @@ class testMISTISNetwork(testMultipleStateTIS):
 class testTPSNetwork(object):
     def setup(self):
         from test_helpers import CallIdentity
-        xval = paths.CV_Function("xval", lambda snap: snap.xyz[0][0])
+        xval = paths.FunctionCV("xval", lambda snap: snap.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))

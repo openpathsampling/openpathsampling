@@ -87,7 +87,7 @@ def setUp():
     global lower, upper, op, vol1, vol2, vol3, ttraj
     lower = 0.1
     upper = 0.5
-    op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+    op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
     vol1 = paths.CVRangeVolume(op, lower, upper).named('stateA')
     vol2 = paths.CVRangeVolume(op, -0.1, 0.7).named('interface0')
     vol3 = paths.CVRangeVolume(op, 2.0, 2.5).named('stateB')
@@ -593,7 +593,7 @@ class testSequentialEnsemble(EnsembleTest):
     def test_seqens_order_combo(self):
         # regression test for #229
         import numpy as np
-        op = paths.CV_Function(name="x", f=lambda snap : snap.xyz[0][0])
+        op = paths.FunctionCV(name="x", f=lambda snap : snap.xyz[0][0])
         bigvol = paths.CVRangeVolume(collectivevariable=op,
                                     lambda_min=-100.0, lambda_max=100.0)
 
@@ -1966,7 +1966,7 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
 
 class testSuffixTrajectoryEnsemble(EnsembleTest):
     def setUp(self):
-        xval = paths.CV_Function("x", lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV("x", lambda s : s.xyz[0][0])
         vol = paths.CVRangeVolume(xval, 0.1, 0.5)
         self.inX = AllInXEnsemble(vol)
         self.outX = AllOutXEnsemble(vol)
