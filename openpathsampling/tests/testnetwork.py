@@ -31,10 +31,20 @@ class testMultipleStateTIS(object):
 
         ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
                                            [-0.5, -0.4, -0.3])
-        ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
-                                           [0.2, 0.15, 0.1])
+        ifacesB = paths.VolumeInterfaceSet(xval, [-0.1, -0.15, -0.2],
+                                           [0.1, 0.15, 0.2])
         ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
                                            float("inf"))
+
+        ms_outer_info = [
+            (iface, paths.CVRangeVolume(xval, minv, maxv))
+            for (iface, minv, maxv) in [(ifacesA, float("-inf"), -0.3),
+                                        (ifacesB, -0.2, 0.2),
+                                        (ifacesC, 0.5, float("inf"))]
+        ]
+        ms_outer_ifaces, ms_outer_volumes = zip(*ms_outer_info)
+        self.ms_outer = paths.MSOuterTISInterface(ms_outer_ifaces,
+                                                  ms_outer_volumes)
 
 
         self.xval = xval

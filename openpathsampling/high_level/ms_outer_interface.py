@@ -40,6 +40,8 @@ class MSOuterTISInterface(netcdfplus.StorableNamedObject):
         super(MSOuterTISInterface, self).__init__()
         self.volumes = volumes
         self.interface_sets = interface_sets
+        if lambdas is None:
+            lambdas = [None]*len(volumes)
         self.lambdas = lambdas
         self._interface_set_to_volume = {
             i_set: vol for (i_set, vol) in zip(interface_sets, volumes)
