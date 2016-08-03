@@ -373,6 +373,8 @@ class MSTISNetwork(TISNetwork):
             (state, interface_set) where state is a Volume, and
             interface_set is an InterfaceSet (with associated
             CollectiveVariable)
+        ms_outers : MSOuterTISInterface or list of MSOuterTISInterface
+            mutliple state outer interfaces for this network
         """
         super(MSTISNetwork, self).__init__(trans_info, ms_outers)
         # build sampling transitions
@@ -566,10 +568,11 @@ class MISTISNetwork(TISNetwork):
     Parameters
     ----------
     trans_info : list of tuple
-        Details of each interface set. 4-tuple in the order (initial_state,
-        interfaces, orderparameter, final_state) where initial_state and
-        final_state are Volumes, interfaces is a list of Volumes, and
-        orderparameter is a CollectiveVariable
+        Details of each interface set. 3-tuple in the order (initial_state,
+        interfaces, final_state) where initial_state and final_state are
+        Volumes, and interfaces is an InterfaceSet
+    ms_outers : MSOuterTISInterface or list of MSOuterTISInterface
+        mutliple state outer interfaces for this network
     strict_sampling : bool
         whether the final state from the tuple is the *only* allowed final
         state in the sampling; default False
