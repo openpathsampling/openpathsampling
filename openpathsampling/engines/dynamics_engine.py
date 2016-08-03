@@ -203,8 +203,9 @@ class DynamicsEngine(StorableNamedObject):
             # raise AttributeError("Something went wrong with " + str(item))
 
         # see, if the attribute is actually a dimension
-        if item in self.dimensions:
-            return self.dimensions[item]
+        if self.descriptor is not None:
+            if item in self.descriptor.dimensions:
+                return self.descriptor.dimensions[item]
 
         # fallback is to look for an option and return it's value
         try:
@@ -351,7 +352,7 @@ class DynamicsEngine(StorableNamedObject):
 
         logger.info("Starting trajectory")
         log_freq = 10  # TODO: set this from a singleton class
-        while stop == False:
+        while not stop:
             if self.options.get('n_frames_max', None) is not None:
                 if len(trajectory) >= self.options['n_frames_max']:
                     break
