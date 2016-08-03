@@ -395,8 +395,17 @@ class EnsembleHopStrategy(ReplicaExchangeStrategy):
             elif n_ens == 1:
                 hop_list.extend([[sig[0][0], sig[1][0]]])
 
-        hops = [paths.EnsembleHopMover(hop[0], hop[1], bias=self.bias)
-                for hop in hop_list]
+        hops = []
+        for hop in hop_list:
+            if self.bias is not None:
+                bias = self.bias.bias_probability(hop[0], hop[1])
+            else:
+                bias = None
+            hopper = paths.EnsembleHopMover(hop[0], hop[1], bias=bias)
+            hopper.named("EnsembleHop " + str(hop[0].name) + "->" +
+                         str(hop[1].name))
+            hops.append(hopper)
+
         return hops
 
 
@@ -740,13 +749,6 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         return root_chooser
 
 
-class SingleReplicaStrategy(MoveStrategy):
-    """
-    Converts ReplicaExchange to EnsembleHop, and changes overall structure
-    to SRTIS approach.
-    """
-    pass
-
 class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
     """
     Global strategy to organize by ensemble first. Needed for SRTIS.
@@ -942,4 +944,49 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
         root_chooser.named("RootMover")
         scheme.root_mover = root_chooser
         return root_chooser
+
+class PoorSingleReplicaStrategy(OrganizeByEnsembleStrategy):
+    """
+    Organizes by ensemble, then readjusts the weights to have a bunch of
+    null moves.
+    """
+    def __init__(self, ensembles=None, group=None, replace=True):
+        super(PoorSingleReplicaStrategy, self).__init__(
+            ensembles=ensembles, group=group, replace=replace
+        )
+        self.null_mover = paths.IdentityPathMover()
+
+    def chooser_mover_weights(self, scheme, ensemble, mover_weights):
+        # this is where I'll have to pad with the null_mover
+        if scheme.choice_probability == {}:
+            msg = "Set choice probability before chooser_mover_weights"
+            raise RuntimeError(msg)
+
+        weights = {}
+        for sig in [s for s in mover_weights if s[2] == ensemble]:
+            group = sig[0]
+            ens_sig = sig[1]
+            #ens = sig[2]
+            # there can be only one
+            mover = [m for m in scheme.movers[group]
+                     if m.ensemble_signature == ens_sig][0]
+            weights[mover] = scheme.choice_probability[mover]
+
+        sum_weights = sum(weights.values())
+        weights[self.null_mover] = 1.0 - sum_weights
+        return weights
+
+
+    def make_movers(self, scheme):
+        old_root = super(PoorSingleReplicaStrategy, self).make_movers(scheme)
+        root = paths.RandomAllowedChoiceMover(
+            movers=old_root.movers,
+            weights=old_root.weights
+        )
+        scheme.real_choice_probability = {
+            m : scheme.choice_probability[m] / float(len(root.movers))
+            for m in scheme.choice_probability.keys()
+        }
+        return root
+
 

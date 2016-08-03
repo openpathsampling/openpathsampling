@@ -73,6 +73,14 @@ class DynamicsEngine(StorableNamedObject):
         self.descriptor = descriptor
         self._check_options(options)
 
+    @property
+    def current_snapshot(self):
+        return None
+
+    @current_snapshot.setter
+    def current_snapshot(self, snap):
+        pass
+
     def to_dict(self):
         return {
             'options': self.options,
@@ -81,8 +89,9 @@ class DynamicsEngine(StorableNamedObject):
 
     def _check_options(self, options=None):
         """
-        This will register all variables in the options dict as a member variable if
-        they are present in either the DynamicsEngine.default_options or this
+        This will register all variables in the options dict as a member
+        variable if they are present in either the
+        `DynamicsEngine.default_options` or this
         classes default_options, no multiple inheritance is supported!
         It will use values with the priority in the following order
         - DynamicsEngine.default_options
@@ -101,11 +110,11 @@ class DynamicsEngine(StorableNamedObject):
 
         Notes
         -----
-        Options are what is necessary to recreate the engine, but not
-        runtime variables or independent variables like the actual
-        initialization status, the runners or an attached storage.  If there
-        are non-default options present they will be ignored (no error
-        thrown)
+        Options are what is necessary to recreate the engine, but not runtime
+        variables or independent variables like the actual initialization
+        status, the runners or an attached storage.
+        If there are non-default options present they will be ignored
+        (no error thrown)
         """
         # start with default options from a dynamics engine
         my_options = {}
@@ -134,30 +143,37 @@ class DynamicsEngine(StorableNamedObject):
                 if variable in my_options:
                     if type(my_options[variable]) is type(default_value):
                         if type(my_options[variable]) is u.Unit:
-                            if my_options[variable].unit.is_compatible(default_value):
+                            if my_options[variable].unit.is_compatible(
+                                    default_value):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('Unit of option "' + str(variable) + '" (' + str(
-                                    my_options[variable].unit) + ') not compatible to "' + str(
-                                    default_value.unit) + '"')
+                                raise ValueError(
+                                    'Unit of option "' + str(variable) + '" (' +
+                                    str(my_options[variable].unit) +
+                                    ') not compatible to "' +
+                                    str(default_value.unit) +
+                                    '"')
 
                         elif type(my_options[variable]) is list:
-                            if type(my_options[variable][0]) is type(default_value[0]):
+                            if type(my_options[variable][0]) is \
+                                    type(default_value[0]):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('List elements for option "' + str(
-                                    variable) + '" must be of type "' + str(
-                                    type(default_value[0])) + '"')
+                                raise \
+                                    ValueError('List elements for option "' +
+                                    str(variable) + '" must be of type "' +
+                                    str(type(default_value[0])) + '"')
                         else:
                             okay_options[variable] = my_options[variable]
-                    elif isinstance(type(my_options[variable]), type(default_value)):
+                    elif isinstance(my_options[variable], type(default_value)):
                         okay_options[variable] = my_options[variable]
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
                     else:
-                        raise ValueError('Type of option "' + str(variable) + '" (' + str(
-                            type(my_options[variable])) + ') is not "' + str(
-                            type(default_value)) + '"')
+                        raise ValueError(
+                            'Type of option "' + str(variable) + '" (' +
+                            str(type(my_options[variable])) + ') is not "' +
+                            str(type(default_value)) + '"')
 
             self.options = okay_options
         else:
@@ -186,7 +202,12 @@ class DynamicsEngine(StorableNamedObject):
             # give the default message; to change, add something here like:
             # raise AttributeError("Something went wrong with " + str(item))
 
-        # default is to look for an option and return it's value
+        # see, if the attribute is actually a dimension
+        if self.descriptor is not None:
+            if item in self.descriptor.dimensions:
+                return self.descriptor.dimensions[item]
+
+        # fallback is to look for an option and return it's value
         try:
             return self.options[item]
         except KeyError:
@@ -201,7 +222,10 @@ class DynamicsEngine(StorableNamedObject):
 
     @property
     def dimensions(self):
-        return self.snapshot_dimensions
+        if self.descriptor is None:
+            return {}
+        else:
+            return self.descriptor.dimensions
 
     def set_as_default(self):
         import openpathsampling as paths
@@ -236,10 +260,13 @@ class DynamicsEngine(StorableNamedObject):
         continue_conditions : list of function(Trajectory)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
+        trusted : bool
+            If `True` (default) the stopping conditions are evaluated
+            as trusted.
 
         Returns
         -------
-        boolean:
+        bool
             true if the dynamics should be stopped; false otherwise
         """
         stop = False
@@ -272,14 +299,15 @@ class DynamicsEngine(StorableNamedObject):
         ----------
         snapshot : :class:`openpathsampling.snapshot.Snapshot`
             initial coordinates and velocities in form of a Snapshot object
-        running : (list of) function(:class:`openpathsampling.trajectory.Trajectory`)
+        running : (list of)
+        function(:class:`openpathsampling.trajectory.Trajectory`)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
         direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
             If +1 then this will integrate forward, if -1 it will reversed the
-            momenta of the given snapshot and then prepending generated snapshots
-            with reversed momenta. This will generate a _reversed_ trajectory that
-            effectively ends in the initial snapshot
+            momenta of the given snapshot and then prepending generated
+            snapshots with reversed momenta. This will generate a _reversed_
+            trajectory that effectively ends in the initial snapshot
 
         Returns
         -------    
@@ -295,7 +323,8 @@ class DynamicsEngine(StorableNamedObject):
         """
 
         if direction == 0:
-            raise RuntimeError('direction must be positive (FORWARD) or negative (BACKWARD).')
+            raise RuntimeError(
+                'direction must be positive (FORWARD) or negative (BACKWARD).')
 
         try:
             iter(running)
@@ -323,7 +352,7 @@ class DynamicsEngine(StorableNamedObject):
 
         logger.info("Starting trajectory")
         log_freq = 10  # TODO: set this from a singleton class
-        while stop == False:
+        while not stop:
             if self.options.get('n_frames_max', None) is not None:
                 if len(trajectory) >= self.options['n_frames_max']:
                     break

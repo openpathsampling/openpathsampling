@@ -27,7 +27,7 @@ class OpenMMEngine(DynamicsEngine):
     }
 
     _default_options = {
-        'nsteps_per_frame': 10,
+        'n_steps_per_frame': 10,
         'n_frames_max': 5000,
         'platform': 'fastest'
     }
@@ -68,8 +68,8 @@ class OpenMMEngine(DynamicsEngine):
         self.topology = topology
 
         dimensions = {
-            'atom': topology.n_atoms,
-            'spatial': topology.n_spatial
+            'n_atoms': topology.n_atoms,
+            'n_spatial': topology.n_spatial
         }
 
         descriptor = SnapshotDescriptor.construct(
@@ -197,7 +197,7 @@ class OpenMMEngine(DynamicsEngine):
 
     @property
     def snapshot_timestep(self):
-        return self.nsteps_per_frame * self.simulation.integrator.getStepSize()
+        return self.n_steps_per_frame * self.simulation.integrator.getStepSize()
 
     def _build_current_snapshot(self):
         try:
@@ -254,7 +254,7 @@ class OpenMMEngine(DynamicsEngine):
             self._current_snapshot = snapshot
 
     def generate_next_frame(self):
-        self.simulation.step(self.nsteps_per_frame)
+        self.simulation.step(self.n_steps_per_frame)
         self._current_snapshot = None
         return self.current_snapshot
 
