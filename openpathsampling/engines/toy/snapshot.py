@@ -36,6 +36,7 @@ class ToySnapshot(BaseSnapshot):
 #         features.coordinates,
 #         features.engine
 #     ],
-#     description="Simulation snapshot. Only references to coordinates and velocities",
+#     description="Simulation snapshot. Only references to coordinates and "
+#                 "velocities",
 #     base_class=BaseSnapshot
 # )

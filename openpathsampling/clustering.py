@@ -21,7 +21,8 @@ class Object(object):
 
 class VoronoiTesselation(object):
     '''
-    Hold the MSM Clustering description and the associated state assignments to decide if a trajectory has hit a core
+    Hold the MSM Clustering description and the associated state assignments to
+    decide if a trajectory has hit a core
     
     Notes
     -----
@@ -43,8 +44,6 @@ class VoronoiTesselation(object):
         self.atom_indices = None
         self.snapshot_distances = None
         self.snapshot_indices = None
-    
-    ################################################################################
 
     def update_cluster_from_storage(self):
         '''
