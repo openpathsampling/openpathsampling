@@ -98,11 +98,12 @@ class testMultipleStateTIS(object):
 class testMSTISNetwork(testMultipleStateTIS):
     def setup(self):
         super(testMSTISNetwork, self).setup()
-        self.mstis = MSTISNetwork([
-            (self.stateA, self.ifacesA),#, self.xval),
-            (self.stateB, self.ifacesB),#, self.xval),
-            (self.stateC, self.ifacesC)#, self.xval)
-        ])
+        self.mstis = MSTISNetwork(
+            [(self.stateA, self.ifacesA),
+            (self.stateB, self.ifacesB),
+            (self.stateC, self.ifacesC)],
+            ms_outers=self.ms_outer
+        )
 
     def test_set_fluxes(self):
         flux_dict = {(self.stateA, self.ifacesA[0]): 2.0,

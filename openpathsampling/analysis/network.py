@@ -358,7 +358,7 @@ class MSTISNetwork(TISNetwork):
         )
         return network
 
-    def __init__(self, trans_info):
+    def __init__(self, trans_info, ms_outers=None):
         """
         Creates MSTISNetwork, including interfaces.
 
@@ -372,11 +372,19 @@ class MSTISNetwork(TISNetwork):
         """
         super(MSTISNetwork, self).__init__()
         self.trans_info = trans_info
+        try:
+            _ = len(ms_outers)
+        except TypeError:
+            if ms_outers is not None:
+                ms_outers = [ms_outers]
+        self.ms_outer_objects = ms_outers
         # build sampling transitions
         if not hasattr(self, "from_state"):
             self.special_ensembles = {}
             self.from_state = {}
             self.build_fromstate_transitions(trans_info)
+            # TODO
+            # only add ms_outer in here, otherwise it is already set
 
         self._sampling_transitions = self.from_state.values()
 
