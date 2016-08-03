@@ -136,7 +136,7 @@ class testShootingMover(object):
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
         self.toy_engine = toys.Engine(options={'integ': integ,
                                                'n_frames_max': 1000,
-                                               'nsteps_per_frame': 5},
+                                               'n_steps_per_frame': 5},
                                       topology=topology)
         self.toy_snap = toys.Snapshot(coordinates=np.array([[0.3]]),
                                       velocities=np.array([[0.1]]),

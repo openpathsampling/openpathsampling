@@ -8,7 +8,7 @@ lazy = ['statics']
 
 storables = ['statics']
 
-dimensions = ['atom', 'spatial']
+dimensions = ['n_atom', 'n_spatial']
 
 
 def netcdfplus_init(store):
@@ -24,9 +24,9 @@ def netcdfplus_init(store):
     store.create_variable(
         'statics',
         'lazyobj.' + name,
-        description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
-        chunksizes=(1,)
-    )
+        description="the snapshot index (0..n_configuration-1) of "
+                    "snapshot '{idx}'.",
+        chunksizes=(1,))
 
 
 @property
@@ -35,8 +35,8 @@ def coordinates(snapshot):
     Returns
     -------
     coordinates: numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
-        the atomic coordinates of the configuration. The coordinates are wrapped in a
-        simtk.unit.Unit.
+        the atomic coordinates of the configuration. The coordinates are
+        wrapped in a `simtk.unit.Unit`.
     """
 
     if snapshot.statics is not None:

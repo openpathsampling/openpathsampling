@@ -67,13 +67,16 @@ class Snapshot(BaseSnapshot):
 
         Parameters
         ----------
-        coordinates : numpy.array, shape = (atoms, spatial)
+        coordinates : numpy.array, shape = (n_atoms, n_spatial)
             the atomic coordinates
-        box_vectors : numpy.array, shape = (spatial, spatial)
+        box_vectors : numpy.array, shape = (n_spatial, n_spatial)
             the box vectors
-        velocities : numpy.array, shape = (atoms, spatial)
+        velocities : numpy.array, shape = (n_atoms, n_spatial)
             the atomic velocities
         statics : `openpathsampling.engines.openmm.StaticContainer`
+            the statics container if it already exists
+        kinetics : `openpathsampling.engines.openmm.KineticContainer`
+            the kinetics container if it already exists
 
         engine : :obj:`openpathsampling.engines.DynamicsEngine`
             the engine that should be referenced as the one used to

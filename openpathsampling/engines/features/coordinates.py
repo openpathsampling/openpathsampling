@@ -8,16 +8,16 @@ coordinates : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
 variables = ['coordinates']
 numpy = ['coordinates']
 
-dimensions = ['atom', 'spatial']
+dimensions = ['n_atom', 'n_spatial']
 
 
 def netcdfplus_init(store):
-    store.create_variable('coordinates', 'numpy.float32',
-                        dimensions=('atom', 'spatial'),
-                        description="coordinate of atom '{ix[1]}' in dimension " +
-                                   "'{ix[2]}' of configuration '{ix[0]}'.",
-                        chunksizes=(1, 'atom', 'spatial')
-                        )
+    store.create_variable(
+        'coordinates', 'numpy.float32',
+        dimensions=('n_atom', 'n_spatial'),
+        description="coordinate of atom '{ix[1]}' in dimension " +
+                   "'{ix[2]}' of configuration '{ix[0]}'.",
+        chunksizes=(1, 'n_atom', 'n_spatial'))
 
 
 @property

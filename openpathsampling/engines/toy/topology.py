@@ -27,7 +27,7 @@ class ToyTopology(Topology):
         return SnapshotDescriptor.construct(
             ToySnapshot,
             {
-                'atom': self.n_atoms,
-                'spatial': self.n_spatial
+                'n_atom': self.n_atoms,
+                'n_spatial': self.n_spatial
             }
         )
