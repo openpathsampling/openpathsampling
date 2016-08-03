@@ -161,7 +161,7 @@ class testToyEngine(object):
 
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
-        sim.nsteps_per_frame = 10
+        sim.n_steps_per_frame = 10
         self.sim = sim
 
     def teardown(self):
@@ -171,7 +171,7 @@ class testToyEngine(object):
     def test_sanity(self):
         assert_items_equal(self.sim._mass, sys_mass)
         assert_items_equal(self.sim._minv, [1.0/m_i for m_i in sys_mass])
-        assert_equal(self.sim.nsteps_per_frame, 10)
+        assert_equal(self.sim.n_steps_per_frame, 10)
 
     def test_snapshot_timestep(self):
         assert_equal(self.sim.snapshot_timestep, 0.02)
@@ -260,7 +260,7 @@ class testLeapfrogVerletIntegrator(object):
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
 
-        sim.nsteps_per_frame = 10
+        sim.n_steps_per_frame = 10
         self.sim = sim
 
     def test_momentum_update(self):
@@ -314,7 +314,7 @@ class testLangevinBAOABIntegrator(object):
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
 
-        sim.nsteps_per_frame = 10
+        sim.n_steps_per_frame = 10
         self.sim = sim
 
     def test_OU_update(self):

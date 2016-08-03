@@ -51,7 +51,7 @@ class testOpenMMEngine(object):
 
         # Engine options
         options = {
-            'nsteps_per_frame': 2,
+            'n_steps_per_frame': 2,
             'platform': 'CPU',
             'solute_indices': range(22),
             'n_frames_max': 5,
