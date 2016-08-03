@@ -72,6 +72,7 @@ class DynamicsEngine(StorableNamedObject):
 
         self.descriptor = descriptor
         self._check_options(options)
+        self.current_snapshot = None
 
     def to_dict(self):
         return {
@@ -184,7 +185,11 @@ class DynamicsEngine(StorableNamedObject):
             # give the default message; to change, add something here like:
             # raise AttributeError("Something went wrong with " + str(item))
 
-        # default is to look for an option and return it's value
+        # see, if the attribute is actually a dimension
+        if item in self.dimensions:
+            return self.dimensions[item]
+
+        # fallback is to look for an option and return it's value
         try:
             return self.options[item]
         except KeyError:
@@ -199,7 +204,10 @@ class DynamicsEngine(StorableNamedObject):
 
     @property
     def dimensions(self):
-        return self.snapshot_dimensions
+        if self.descriptor is None:
+            return {}
+        else:
+            return self.descriptor.dimensions
 
     def set_as_default(self):
         import openpathsampling as paths
@@ -234,10 +242,13 @@ class DynamicsEngine(StorableNamedObject):
         continue_conditions : list of function(Trajectory)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
+        trusted : bool
+            If `True` (default) the stopping conditions are evaluated
+            as trusted.
 
         Returns
         -------
-        boolean:
+        bool
             true if the dynamics should be stopped; false otherwise
         """
         stop = False
