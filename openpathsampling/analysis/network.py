@@ -436,8 +436,10 @@ class MSTISNetwork(TISNetwork):
             state.named(index_to_string(name_index))
             name_index += 1
 
+        outer_info = []  # TEMP
+
         # BUILDING ENSEMBLES
-        outer_ensembles = []
+        # outer_ensembles = []
         self.states = states
         for (state, ifaces) in trans_info:
             op = ifaces.cv
@@ -463,22 +465,35 @@ class MSTISNetwork(TISNetwork):
             except KeyError:
                 self.special_ensembles['minus'] = {this_minus : [this_trans]}
 
+            # TEMP: remove this statement later
+            outer_info.append((this_trans.interfaces,
+                               ifaces[-1],
+                               ifaces.get_lambda(ifaces[-1])))
 
-            outer_ensemble = paths.TISEnsemble(
-                initial_states=state,
-                final_states=all_states,
-                interface=ifaces[-1]
-            )
-            outer_ensemble.named("outer " + str(state))
-            outer_ensembles.append(outer_ensemble)
+            # outer_ensemble = paths.TISEnsemble(
+                # initial_states=state,
+                # final_states=all_states,
+                # interface=ifaces[-1]
+            # )
+            # outer_ensemble.named("outer " + str(state))
+            # outer_ensembles.append(outer_ensemble)
 
-        ms_outer = paths.ensemble.join_ensembles(outer_ensembles)
+        # ms_outer = paths.ensemble.join_ensembles(outer_ensembles)
         transition_outers = self.from_state.values()
-        try:
-            self.special_ensembles['ms_outer'][ms_outer] = transition_outers
-        except KeyError:
-            self.special_ensembles['ms_outer'] = {ms_outer : transition_outers}
+        outer_ifaces, outer_volumes, outer_lambdas = zip(*outer_info)
+        ms_outer_object = paths.MSOuterTISInterface(outer_ifaces, outer_volumes,
+                                                    outer_lambdas)
+        self.add_ms_outer_interface(ms_outer_object, transition_outers)
 
+
+    def add_ms_outer_interface(self, ms_outer, transitions, forbidden=None):
+        relevant = ms_outer.relevant_transitions(transitions)
+        ensemble = ms_outer.make_ensemble(relevant, forbidden)
+        dct = {ensemble: relevant}
+        try:
+            self.special_ensembles['ms_outer'].update(dct)
+        except KeyError:
+            self.special_ensembles['ms_outer'] = dct
 
     def __str__(self):
         mystr = "Multiple State TIS Network:\n"
