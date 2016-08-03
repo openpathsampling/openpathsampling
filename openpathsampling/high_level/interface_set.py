@@ -1,5 +1,6 @@
 import openpathsampling as paths
 import openpathsampling.netcdfplus as netcdfplus
+import copy
 
 class InterfaceSet(netcdfplus.StorableNamedObject):
     """List of volumes representing a set of interfaces, plus metadata.
@@ -62,11 +63,24 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
         """
         return self._lambda_dict[volume]
 
+    def _slice_dict(self, slicer):
+        dct = self.to_dict()
+        dct['volumes'] = self.volumes[slicer]
+        try:
+            dct['lambdas'] = self.lambdas[slicer]
+        except TypeError:
+            dct['lambdas'] = self.lambdas
+        return dct
+
     def __len__(self):
         return len(self.volumes)
 
     def __getitem__(self, key):
-        return self.volumes[key]
+        result = self.volumes[key]
+        if type(result) is list:
+            return self.from_dict(self._slice_dict(key))
+        else:
+            return result
 
     def __iter__(self):
         return iter(self.volumes)
@@ -112,6 +126,18 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         super(GenericVolumeInterfaceSet, self).__init__(volumes, cv,
                                                         lambdas, direction)
         self._set_volume_func(volume_func)
+
+    def _slice_dict(self, slicer):
+        dct = super(GenericVolumeInterfaceSet, self)._slice_dict(slicer)
+        try:
+            dct['minvals'] = self.minvals[slicer]
+        except TypeError:
+            dct['minvals'] = self.minvals
+        try:
+            dct['maxvals'] = self.maxvals[slicer]
+        except TypeError:
+            dct['maxvals'] = self.maxvals
+        return dct
 
     def _set_volume_func(self, volume_func):
         if self.direction == 0:
@@ -254,6 +280,7 @@ class VolumeInterfaceSet(GenericVolumeInterfaceSet):
         volume_func = lambda minv, maxv: paths.CVRangeVolume(
             interface_set.cv, minv, maxv
         )
+        super(InterfaceSet, interface_set).__init__()
         interface_set._set_volume_func(volume_func)
         return interface_set
 
@@ -305,6 +332,7 @@ class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
         volume_func = lambda minv, maxv: paths.CVRangeVolumePeriodic(
             interface_set.cv, minv, maxv, self.period_min, self.period_max
         )
+        super(InterfaceSet, interface_set).__init__()
         interface_set._set_volume_func(volume_func)
         return interface_set
 

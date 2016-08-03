@@ -31,10 +31,11 @@ class testMultipleStateTIS(object):
 
         ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
                                            [-0.5, -0.4, -0.3])
-        ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
-                                           [0.2, 0.15, 0.1])
+        ifacesB = paths.VolumeInterfaceSet(xval, [-0.1, -0.15, -0.2],
+                                           [0.1, 0.15, 0.2])
         ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
                                            float("inf"))
+
 
 
         self.xval = xval
@@ -88,11 +89,27 @@ class testMultipleStateTIS(object):
 class testMSTISNetwork(testMultipleStateTIS):
     def setup(self):
         super(testMSTISNetwork, self).setup()
-        self.mstis = MSTISNetwork([
-            (self.stateA, self.ifacesA),#, self.xval),
-            (self.stateB, self.ifacesB),#, self.xval),
-            (self.stateC, self.ifacesC)#, self.xval)
-        ])
+
+        ifacesA = self.ifacesA[:-1]
+        ifacesB = self.ifacesB[:-1]
+        ifacesC = self.ifacesC[:-1]
+
+        ms_outer_info = [
+            (iface, paths.CVRangeVolume(self.xval, minv, maxv))
+            for (iface, minv, maxv) in [(ifacesA, float("-inf"), -0.3),
+                                        (ifacesB, -0.2, 0.2),
+                                        (ifacesC, 0.5, float("inf"))]
+        ]
+        ms_outer_ifaces, ms_outer_volumes = zip(*ms_outer_info)
+        ms_outer_obj = paths.MSOuterTISInterface(ms_outer_ifaces,
+                                                 ms_outer_volumes)
+
+        self.mstis = MSTISNetwork(
+            [(self.stateA, ifacesA),
+             (self.stateB, ifacesB),
+             (self.stateC, ifacesC)],
+            ms_outers=ms_outer_obj
+        )
 
     def test_set_fluxes(self):
         flux_dict = {(self.stateA, self.ifacesA[0]): 2.0,
@@ -172,17 +189,38 @@ class testMSTISNetwork(testMultipleStateTIS):
 class testMISTISNetwork(testMultipleStateTIS):
     def setup(self):
         super(testMISTISNetwork, self).setup()
-        self.mistis = MISTISNetwork([
-            (self.stateA, self.ifacesA, self.stateB),
-            (self.stateB, self.ifacesB, self.stateA),
-            (self.stateA, self.ifacesA, self.stateC)
-        ])
+
+        ifacesA = self.ifacesA[:-1]
+        ifacesB = self.ifacesB[:-1]
+
+        ms_outer = paths.MSOuterTISInterface(
+            interface_sets=[ifacesA, ifacesB],
+            volumes=[self.ifacesA[-1], self.ifacesB[-1]]
+        )
+
+        self.mistis = MISTISNetwork(
+            [(self.stateA, ifacesA, self.stateB),
+             (self.stateB, ifacesB, self.stateA),
+             (self.stateA, self.ifacesA, self.stateC)],
+            ms_outers=[ms_outer]
+        )
 
     def test_initialization(self):
         assert_equal(len(self.mistis.sampling_transitions), 3)
         assert_equal(len(self.mistis.input_transitions), 3)
         assert_equal(len(self.mistis.transitions), 3)
+        transitions = self.mistis.transitions
+        assert_equal(len(transitions[self.stateA, self.stateB].ensembles), 2)
+        assert_equal(len(transitions[self.stateB, self.stateA].ensembles), 2)
+        assert_equal(len(transitions[self.stateA, self.stateC].ensembles), 3)
         # TODO: add more checks here
+
+    def test_ms_outers(self):
+        ms_outer_ens = self.mistis.ms_outers[0]
+        for traj_label in ['AB', 'BA']:
+            assert_equal(ms_outer_ens(self.traj[traj_label]), True)
+        for traj_label in ['CB', 'CA']:
+            assert_equal(ms_outer_ens(self.traj[traj_label]), False)
 
     def test_set_fluxes(self):
         flux_dict = {(self.stateA, self.ifacesA[0]): 2.0, # same flux 2x
