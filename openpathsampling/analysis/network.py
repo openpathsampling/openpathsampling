@@ -297,6 +297,15 @@ class TISNetwork(TransitionNetwork):
     def ms_outers(self):
         return self.special_ensembles['ms_outer'].keys()
 
+    def add_ms_outer_interface(self, ms_outer, transitions, forbidden=None):
+        relevant = ms_outer.relevant_transitions(transitions)
+        ensemble = ms_outer.make_ensemble(relevant, forbidden)
+        dct = {ensemble: relevant}
+        try:
+            self.special_ensembles['ms_outer'].update(dct)
+        except KeyError:
+            self.special_ensembles['ms_outer'] = dct
+
     @property
     def all_states(self):
         return list(set(self.initial_states + self.final_states))
@@ -484,16 +493,6 @@ class MSTISNetwork(TISNetwork):
         ms_outer_object = paths.MSOuterTISInterface(outer_ifaces, outer_volumes,
                                                     outer_lambdas)
         self.add_ms_outer_interface(ms_outer_object, transition_outers)
-
-
-    def add_ms_outer_interface(self, ms_outer, transitions, forbidden=None):
-        relevant = ms_outer.relevant_transitions(transitions)
-        ensemble = ms_outer.make_ensemble(relevant, forbidden)
-        dct = {ensemble: relevant}
-        try:
-            self.special_ensembles['ms_outer'].update(dct)
-        except KeyError:
-            self.special_ensembles['ms_outer'] = dct
 
     def __str__(self):
         mystr = "Multiple State TIS Network:\n"
@@ -684,6 +683,8 @@ class MISTISNetwork(TISNetwork):
         else:
             all_in_pairs = []
 
+        outer_info = {}  # TMP
+
         # build sampling transitions
         all_states = paths.join_volumes(self.initial_states + self.final_states)
         all_states_set = set(self.initial_states + self.final_states)
@@ -716,6 +717,18 @@ class MISTISNetwork(TISNetwork):
                     interfaces=transition.interfaces[:-1],
                     orderparameter=transition.orderparameter
                 )
+                # TMP
+                ifaces = transition.interfaces
+                local_outer_info = (sample_trans.interfaces,
+                                    ifaces[-1],
+                                    ifaces.get_lambda(ifaces[-1]))
+                key = frozenset([transition.stateA, transition.stateB])
+                try:
+                    outer_info[key].append(local_outer_info)
+                except KeyError:
+                    outer_info[key] = [local_outer_info]
+
+
             new_ensembles = [e & ensemble_to_intersect 
                              for e in sample_trans.ensembles]
             if self.strict_sampling:
@@ -728,17 +741,33 @@ class MISTISNetwork(TISNetwork):
         self.x_sampling_transitions = self.transition_to_sampling.values()
 
         # build non-transition interfaces 
+        for pair in outer_info.keys():
+            info = outer_info[pair]
+            outer_ifaces, outer_volumes, outer_lambdas = zip(*info)
+            ms_outer_object = paths.MSOuterTISInterface(outer_ifaces,
+                                                        outer_volumes,
+                                                        outer_lambdas)
+            relevant = ms_outer_object.relevant_transitions(
+                self.x_sampling_transitions
+            )
+            if self.strict_sampling:
+                forbidden = all_states_set - pair
+                self.add_ms_outer_interface(ms_outer_object, relevant,
+                                            forbidden)
+
+            else:
+                self.add_ms_outer_interface(ms_outer_object, relevant)
 
         # combining the MS-outer interfaces
-        for pair in self.transition_pairs:
-            this_outer = paths.ensemble.join_ensembles(
-                [pair[0].ensembles[-1], pair[1].ensembles[-1]]
-            )
-            s_pair = [self.transition_to_sampling[p] for p in pair]
-            try:
-                self.special_ensembles['ms_outer'][this_outer] = list(s_pair)
-            except KeyError:
-                self.special_ensembles['ms_outer'] = {this_outer : list(s_pair)}
+        # for pair in self.transition_pairs:
+            # this_outer = paths.ensemble.join_ensembles(
+                # [pair[0].ensembles[-1], pair[1].ensembles[-1]]
+            # )
+            # s_pair = [self.transition_to_sampling[p] for p in pair]
+            # try:
+                # self.special_ensembles['ms_outer'][this_outer] = list(s_pair)
+            # except KeyError:
+                # self.special_ensembles['ms_outer'] = {this_outer : list(s_pair)}
 
         
         # combining the minus interfaces
