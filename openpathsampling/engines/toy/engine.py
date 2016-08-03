@@ -1,6 +1,6 @@
 import numpy as np
 
-from openpathsampling.engines import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import ToySnapshot as Snapshot
 
 
@@ -16,37 +16,61 @@ class ToyEngine(DynamicsEngine):
     base_snapshot_type = Snapshot
 
     default_options = {
-                      'integ' : None,
-                      'n_frames_max' : 5000,
-                      'nsteps_per_frame' : 10
+        'integ': None,
+        'n_frames_max': 5000,
+        'n_steps_per_frame': 10
     }
 
-    def __init__(self, options, template):
+    def __init__(self, options, topology):
         if 'n_spatial' not in options:
-            options['n_spatial'] = template.topology.n_spatial
+            options['n_spatial'] = topology.n_spatial
 
         options['n_atoms'] = 1
 
+        snapshot_dimensions = {
+            'n_atoms': topology.n_atoms,
+            'n_spatial': topology.n_spatial
+        }
+
+        descriptor = SnapshotDescriptor.construct(
+            snapshot_class=Snapshot,
+            snapshot_dimensions=snapshot_dimensions
+        )
+
         super(ToyEngine, self).__init__(
-                                        options=options)
+            options=options,
+            descriptor=descriptor
+        )
 
-        self.template = template
-        self.mass = template.topology.masses
-        self._pes = template.topology.pes
+        self.topology = topology
 
-        self.current_snapshot = self.template
+        self._mass = None
+        self._minv = None
+
+        self.positions = None
+        self.velocities = None
+
+        self._mass = np.array(topology.masses)
+        self._pes = topology.pes
+        self._minv = 1.0 / self._mass
+
+    def to_dict(self):
+        return {
+            'options': self.options,
+            'topology': self.topology
+        }
 
     @property
     def pes(self):
         return self._pes
 
     @property
-    def nsteps_per_frame(self):
-        return self.options['nsteps_per_frame']
+    def n_steps_per_frame(self):
+        return self.options['n_steps_per_frame']
 
-    @nsteps_per_frame.setter
-    def nsteps_per_frame(self, value):
-        self.options['nsteps_per_frame'] = value
+    @n_steps_per_frame.setter
+    def n_steps_per_frame(self, value):
+        self.options['n_steps_per_frame'] = value
 
     @property
     def mass(self):
@@ -59,7 +83,7 @@ class ToyEngine(DynamicsEngine):
 
     @property
     def snapshot_timestep(self):
-        return self.nsteps_per_frame * self.integ.dt
+        return self.n_steps_per_frame * self.integ.dt
 
     @property
     def current_snapshot(self):
@@ -68,7 +92,7 @@ class ToyEngine(DynamicsEngine):
         return Snapshot(
             coordinates=np.array([snap_pos]),
             velocities=np.array([snap_vel]),
-            topology=self.template.topology
+            engine=self
         )
 
     @current_snapshot.setter
@@ -81,5 +105,5 @@ class ToyEngine(DynamicsEngine):
         self.velocities = vels[0]
 
     def generate_next_frame(self):
-        self.integ.step(self, self.nsteps_per_frame)
+        self.integ.step(self, self.n_steps_per_frame)
         return self.current_snapshot

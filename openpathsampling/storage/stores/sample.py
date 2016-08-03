@@ -6,14 +6,16 @@ class SampleStore(VariableStore):
     def __init__(self):
         super(SampleStore, self).__init__(
             Sample,
-            ['trajectory', 'ensemble', 'replica', 'parent', 'details', 'bias', 'mover']
+            ['trajectory', 'ensemble', 'replica', 'parent',
+             'details', 'bias', 'mover']
         )
 
     def by_ensemble(self, ensemble):
-        return [sample for sample in self.iterator() if sample.ensemble == ensemble]
+        return [sample for sample in self
+                if sample.ensemble == ensemble]
 
-    def _init(self):
-        super(SampleStore, self)._init()
+    def initialize(self):
+        super(SampleStore, self).initialize()
 
         # New short-hand definition
         self.create_variable('trajectory', 'obj.trajectories')
@@ -32,7 +34,6 @@ class SampleSetStore(VariableStore):
             ['samples', 'movepath']
         )
 
-
     def sample_indices(self, idx):
         """
         Load sample indices for sample_set with ID 'idx' from the storage
@@ -50,18 +51,21 @@ class SampleSetStore(VariableStore):
 
         return self.variables['samples'][idx].tolist()
 
-    def _init(self, units=None):
+    def initialize(self):
         """
         Initialize the associated storage to allow for sampleset storage
 
         """
-        super(SampleSetStore, self)._init()
+        super(SampleSetStore, self).initialize()
 
-        self.create_variable('samples', 'obj.samples',
-                           dimensions='...',
-                           description="sampleset[sampleset][frame] is the sample index " +
-                                       "(0..nspanshots-1) of frame 'frame' of sampleset 'sampleset'.",
-                           chunksizes=(1024,)
-                           )
+        self.create_variable(
+            'samples',
+            'obj.samples',
+            dimensions='...',
+            description="sampleset[sampleset][frame] is the sample index "
+                        "(0..nspanshots-1) of frame 'frame' of sampleset "
+                        "'sampleset'.",
+            chunksizes=(1024,)
+        )
 
         self.create_variable('movepath', 'lazyobj.pathmovechanges')

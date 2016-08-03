@@ -3,7 +3,9 @@ from svgwrite.container import Group
 import openpathsampling as paths
 
 import json
-from collections import namedtuple, OrderedDict
+from collections import namedtuple, OrderedDict, Counter
+
+import openpathsampling.pathmover as pm
 
 
 # TODO: Move TreeRenderer and Builder to a different file ???
@@ -69,7 +71,7 @@ class TreeRenderer(svg.Drawing):
 
         css_class += ['connector']
 
-        return self.block(x, y, text, False, False, True, True, css_class=css_class)
+        return self.block(x, y, text, False, False, False, False, css_class=css_class)
 
     def block(self, x, y, text="",
               extend_right=True, extend_left=True,
@@ -441,7 +443,7 @@ class MoveTreeBuilder(Builder):
 
     This is useful to get an idea which parts of the ensemble affect which part of ensembles
     """
-    def __init__(self, pathmover=None, ensembles=None):
+    def __init__(self, pathmover=None, ensembles=None, initial=None):
         super(MoveTreeBuilder, self).__init__()
 
         self.p_x = dict()
@@ -450,6 +452,7 @@ class MoveTreeBuilder(Builder):
 
         self.ensembles = []
         self.pathmover = None
+        self.initial = None
 
         self.traj_ens_x = dict()
         self.traj_ens_y = dict()
@@ -466,16 +469,49 @@ class MoveTreeBuilder(Builder):
         self.doc = None
 
         if pathmover is not None:
-            self.set_mover(pathmover)
+            self.pathmover = pathmover
 
         if ensembles is not None:
-            self.set_ensembles(ensembles)
+            self.ensembles = ensembles
 
-    def set_ensembles(self, ensembles):
-        self.ensembles = ensembles
+        if initial is not None:
+            self.initial = initial
 
-    def set_mover(self, pathmover):
-        self.pathmover = pathmover
+    @staticmethod
+    def from_scheme(scheme):
+        """
+        Initaliza a new `MoveTreeBuilder` from the date in a `MoveScheme`
+
+        Parameters
+        ----------
+        scheme : :obj:`openpathsampling.MoveScheme`
+
+        Returns
+        -------
+        :obj:`MoveTreeBuilder`
+        """
+        try:
+            # inp is a move scheme
+            input_ensembles = scheme.list_initial_ensembles()
+        except AttributeError:
+            # inp is a path mover
+            input_ensembles = scheme.input_ensembles
+
+        return MoveTreeBuilder(
+            pathmover=scheme.root_mover,
+            ensembles=list(scheme.find_used_ensembles()) + list(scheme.find_hidden_ensembles()),
+            initial=input_ensembles
+        )
+
+    @staticmethod
+    def _get_sub_used(mover, replica_states, level):
+        l = [(mover, level, replica_states)]
+        subs = mover.sub_replica_state(replica_states)
+        map(
+            lambda x, y, z: l.extend(MoveTreeBuilder._get_sub_used(x, y, z)),
+            mover.submovers, subs, [1 + level] * len(mover.submovers)
+        )
+        return l
 
     def render(self):
         doc = TreeRenderer(self.css_style)
@@ -492,7 +528,8 @@ class MoveTreeBuilder(Builder):
             class_='tree'
         )
 
-        tree = path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])
+        tree = path.depth_pre_order(
+            lambda this: this, only_canonical=self.options.analysis['only_canonical'])
         total = len(tree)
 
         for yp, (level, sub_mp) in enumerate(tree):
@@ -582,13 +619,37 @@ class MoveTreeBuilder(Builder):
 
         max_level = 0
 
+        initial_rs = paths.pathmover.ReplicaStateSet.from_ensembles(self.initial)
+        subs = MoveTreeBuilder._get_sub_used(self.pathmover, initial_rs, 0)
+
+        # this checks if the mover can actually be run without problems
+        # assert(Counter(dict(initial_rs)) >= self.pathmover.in_out_matrix.minimal)
+
         for yp, (level, sub_mp) in enumerate(
-                path.depth_pre_order(lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
+                path.depth_pre_order(
+                    lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
+            sub = subs[yp]
+
             if level > max_level:
                 max_level = level
 
-            in_ens = sub_mp.input_ensembles
-            out_ens = sub_mp.output_ensembles
+            possible_input_replica_states = [Counter(dict(s)) for s in sub[2]]
+            sub_io_set = sub_mp.in_out
+
+            # minimal_input_replica_states = sub_io_set.minimal
+
+            # in_ens = sub_mp.input_ensembles
+            # out_ens = sub_mp.output_ensembles
+
+            possible_ins = [
+                i.ins for i in sub_io_set
+                if any(s >= i.ins for s in possible_input_replica_states)]
+            possible_outs = [
+                i.outs for i in sub_io_set
+                if any(s >= i.ins for s in possible_input_replica_states)]
+
+            in_ens = reduce(lambda a, b: a | b, possible_ins, Counter())
+            out_ens = reduce(lambda a, b: a | b, possible_outs, Counter())
 
             for ens_idx, ens in enumerate(self.ensembles):
                 txt = chr(ens_idx + 65)
@@ -684,11 +745,13 @@ class PathTreeBuilder(Builder):
     Attributes
     ----------
     states : dict, 'svg_color': :obj:`openpathsampling.Volume`-like
-        a dictionary listing a color that fulfills the SVG specification like `#888`, `gold` or `rgb(12,32,59)`
-        referencing a volume like object that will return a bool when passed a snapshot. If true then the snapshot
+        a dictionary listing a color that fulfills the SVG specification like
+        `#888`, `gold` or `rgb(12,32,59)` referencing a volume like object that
+        will return a bool when passed a snapshot. If true then the snapshot
         is highlighed using the given color
     op : :obj:`openpathsampling.CollectiveVariable`-like
-        a function that returns a value when passed a snapshot. The value will be put on single snapshots.
+        a function that returns a value when passed a snapshot. The value will
+        be put on single snapshots.
     
     """
     def __init__(self):
@@ -1510,7 +1573,6 @@ class PathTree(PathTreeBuilder):
             self.generator.steps = self.steps
 
 
-
 class SnapshotMatrix(object):
     def __init__(self, sample_list):
         self.sample_list = sample_list
@@ -1537,7 +1599,7 @@ class SnapshotMatrix(object):
             self.matrix_y[y_pos][x_pos] = value
 
         elif type(value) is paths.Trajectory:
-            for pos, snapshot in enumerate(value):
+            for pos, snapshot in enumerate(value.as_proxies()):
                 self[y_pos, x_pos + pos] = snapshot
 
             self.shift[y_pos] = x_pos
@@ -1574,19 +1636,19 @@ class SnapshotMatrix(object):
 
             pos = new_y_pos
 
-            if snapshot is x[pos]:
+            if snapshot == x[pos]:
                 return False
 
         return True
 
     def _snapshot_is(self, snap1, snap2):
         if not self.time_symmetric:
-            return snap1 is snap2
+            return snap1 == snap2
         else:
-            if snap1 is snap2:
+            if snap1 == snap2:
                 return True
             else:
-                return snap1.reversed is snap2
+                return snap1.reversed == snap2
 
     def root(self, y_pos, x_pos):
         snapshot = self[y_pos, x_pos]
@@ -2061,8 +2123,8 @@ class SampleList(OrderedDict):
                 parent_traj = parent.trajectory
 
                 if time_direction == -1:
-                    traj = paths.Trajectory(list(reversed(list(traj))))
-                    parent_traj = paths.Trajectory(list(reversed(list(parent_traj))))
+                    traj = paths.Trajectory(list(reversed(traj.as_proxies())))
+                    parent_traj = paths.Trajectory(list(reversed(parent_traj.as_proxies())))
 
                 overlap = parent_traj.shared_subtrajectory(traj, time_reversal=self.time_symmetric)
                 overlap_length = len(overlap)
@@ -2120,8 +2182,8 @@ class SampleList(OrderedDict):
                     'overlap_reversed': False
                 }
             else:
-                new_fw = self._trajectory_index(traj, overlap[-1])
-                new_bw = self._trajectory_index(traj, overlap[0])
+                new_fw = self._trajectory_index(traj, overlap.get_as_proxy(-1))
+                new_bw = self._trajectory_index(traj, overlap.get_as_proxy(0))
 
                 overlap_reversed = False
 
@@ -2133,7 +2195,7 @@ class SampleList(OrderedDict):
                     if flip_time_direction:
                         # reverse the time and adjust the shifting
 
-                        traj = paths.Trajectory(list(reversed(list(traj))))
+                        traj = paths.Trajectory(list(reversed(traj.as_proxies())))
                         time_direction *= -1
                         overlap_reversed = False
                         new_fw, new_bw = length - 1 - new_bw, length - 1 - new_fw
@@ -2142,7 +2204,7 @@ class SampleList(OrderedDict):
                         # after
                         overlap_length = 0
 
-                traj_shift = parent_shift + self._trajectory_index(parent_traj, overlap[0]) - new_bw
+                traj_shift = parent_shift + self._trajectory_index(parent_traj, overlap.get_as_proxy(0)) - new_bw
 
                 self[sample] = {
                     'shift': traj_shift,

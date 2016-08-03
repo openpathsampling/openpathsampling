@@ -6,7 +6,7 @@ from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_true)
 
-from openpathsampling.collectivevariable import CV_Function
+from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import LengthEnsemble
@@ -117,7 +117,7 @@ class testShootingMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
                                       -0.1, 0.2, 0.4, 0.6, 0.8])
-        op = CV_Function("myid", f=lambda snap : snap.coordinates[0][0])
+        op = FunctionCV("myid", f=lambda snap : snap.coordinates[0][0])
         self.stateA = CVRangeVolume(op, -100, 0.0)
         self.stateB = CVRangeVolume(op, 0.65, 100)
         self.tps = ef.A2BEnsemble(self.stateA, self.stateB)
@@ -134,17 +134,17 @@ class testShootingMover(object):
         integ = toys.LeapfrogVerletIntegrator(dt=0.1)
         pes = toys.LinearSlope(m=[0.0], c=[0.0])
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
-        self.toy_snap = toys.Snapshot(coordinates=np.array([[0.3]]),
-                                      velocities=np.array([[0.1]]),
-                                      topology=topology)
         self.toy_engine = toys.Engine(options={'integ': integ,
                                                'n_frames_max': 1000,
-                                               'nsteps_per_frame': 5},
-                                      template=self.toy_snap)
+                                               'n_steps_per_frame': 5},
+                                      topology=topology)
+        self.toy_snap = toys.Snapshot(coordinates=np.array([[0.3]]),
+                                      velocities=np.array([[0.1]]),
+                                      engine=self.toy_engine)
         self.toy_traj = paths.Trajectory([
             toys.Snapshot(coordinates=np.array([[0.01*k - 0.005]]),
                           velocities=np.array([[0.1]]),
-                          topology=topology)
+                          engine=self.toy_engine)
             for k in range(67)
         ])
         self.toy_samp = SampleSet([Sample(trajectory=self.toy_traj, 
@@ -260,7 +260,7 @@ class testOneWayShootingMover(testShootingMover):
 
 class testPathReversalMover(object):
     def setup(self):
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         volA = CVRangeVolume(op, -100, 0.0)
@@ -328,7 +328,7 @@ class testReplicaIDChangeMover(object):
 
 class testReplicaExchangeMover(object):
     def setup(self):
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         state1 = CVRangeVolume(op, -100, 0.0)
@@ -472,7 +472,7 @@ class testRandomAllowedChoiceMover(object):
                                      ])
         self.dyn.initialized = True
         # SampleMover.engine = self.dyn
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
         stateA = CVRangeVolume(op, -100, 0.0)
         stateB = CVRangeVolume(op, 0.65, 100)
@@ -928,7 +928,7 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 
 class testMinusMover(object):
     def setup(self):
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         volA = CVRangeVolume(op, -100, 0.0)
@@ -1148,7 +1148,7 @@ class testMinusMover(object):
 
 class testSingleReplicaMinusMover(object):
     def setup(self):
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         volA = CVRangeVolume(op, -100, 0.0)

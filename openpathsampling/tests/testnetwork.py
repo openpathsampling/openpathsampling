@@ -24,7 +24,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 class testMultipleStateTIS(object):
     # generic class to set up states and ifaces
     def setup(self):
-        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
@@ -153,7 +153,7 @@ class testMSTISNetwork(testMultipleStateTIS):
         self.stateA.name = "B"
         self.stateB.name = "A"
         self.stateC._name = ""
-        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
                                            [-0.5, -0.4, -0.3])
         ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
@@ -264,7 +264,8 @@ class testMISTISNetwork(testMultipleStateTIS):
         if os.path.isfile(fname):
             os.remove(fname)
         template = self.traj['AA'][0]
-        storage_w = paths.Storage(fname, "w", template)
+        storage_w = paths.Storage(fname, "w")
+        storage_w.snapshots.save(template)
         storage_w.save(self.mistis)
         storage_w.sync_all()
 
@@ -281,7 +282,7 @@ class testMISTISNetwork(testMultipleStateTIS):
 class testTPSNetwork(object):
     def setup(self):
         from test_helpers import CallIdentity
-        xval = paths.CV_Function("xval", lambda snap: snap.xyz[0][0])
+        xval = paths.FunctionCV("xval", lambda snap: snap.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
@@ -361,15 +362,19 @@ class testTPSNetwork(object):
         fname = data_filename("tps_network_storage_test.nc")
         if os.path.isfile(fname):
             os.remove(fname)
+
         topol = peng.Topology(n_spatial=1, masses=[1.0], pes=None)
+        engine = peng.Engine({}, topol)
         self.template = peng.Snapshot(coordinates=np.array([[0.0]]),
                                        velocities=np.array([[0.0]]),
-                                       topology=topol)
+                                       engine=engine)
+
         states = [self.stateA, self.stateB, self.stateC]
         network_a = TPSNetwork(initial_states=states, final_states=states)
         assert_equal(len(network_a.sampling_transitions), 1)
         assert_equal(len(network_a.transitions), 6)
-        storage_w = paths.storage.Storage(fname, "w", self.template)
+        storage_w = paths.storage.Storage(fname, "w")
+        storage_w.snapshots.save(self.template)
         storage_w.save(network_a)
         storage_w.sync_all()
 

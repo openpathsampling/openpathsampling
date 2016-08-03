@@ -51,7 +51,7 @@ class testOpenMMEngine(object):
 
         # Engine options
         options = {
-            'nsteps_per_frame': 2,
+            'n_steps_per_frame': 2,
             'platform': 'CPU',
             'solute_indices': range(22),
             'n_frames_max': 5,
@@ -59,15 +59,15 @@ class testOpenMMEngine(object):
         }
 
         self.engine = peng.Engine(
-            template,
+            template.topology,
             system,
             integrator,
             options
         )
 
         context = self.engine.simulation.context
-        zero_array = np.zeros((self.engine.n_atoms, 3))
-        context.setPositions(self.engine.template.coordinates)
+        zero_array = np.zeros((template.topology.n_atoms, 3))
+        context.setPositions(template.coordinates)
         context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
 
     def teardown(self):
@@ -87,7 +87,7 @@ class testOpenMMEngine(object):
                                  vel)
 
     def test_snapshot_set(self):
-        pdb_pos = (self.engine.template.coordinates / u.nanometers)
+        pdb_pos = (template.coordinates / u.nanometers)
         testvel = []
         testpos = []
         for i in range(len(pdb_pos)):
