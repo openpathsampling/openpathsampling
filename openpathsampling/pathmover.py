@@ -1075,6 +1075,8 @@ class SampleMover(PathMover):
             random_value=rand
         )
 
+        logger.info("Trial was " + ("accepted" if accepted else "rejected"))
+
         return accepted, details
 
     @property
@@ -1232,7 +1234,7 @@ class EngineMover(SampleMover):
         initial_snapshot = trajectory[shooting_index]  # .copy()
         run_f = paths.PrefixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[0:shooting_index]
-                                               ).can_append
+                                              ).can_append
         partial_trajectory = self.engine.generate(initial_snapshot,
                                                   running=[run_f])
         trial_trajectory = (trajectory[0:shooting_index] +
@@ -1243,7 +1245,7 @@ class EngineMover(SampleMover):
         initial_snapshot = trajectory[shooting_index].reversed  # _copy()
         run_f = paths.SuffixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[shooting_index + 1:]
-                                               ).can_prepend
+                                              ).can_prepend
         partial_trajectory = self.engine.generate(initial_snapshot,
                                                   running=[run_f])
         trial_trajectory = (partial_trajectory.reversed +
@@ -1616,6 +1618,17 @@ class RandomSubtrajectorySelectMover(SubtrajectorySelectMover):
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
 
+    Parameters
+    ----------
+    ensemble : openpathsampling.Ensemble
+        the set of allows samples to chose from
+    subensemble : openpathsampling.Ensemble
+        the subensemble to be searched for
+    n_l : int or None
+        the number of subtrajectories that need to be found. If
+        `None` every number of subtrajectories > 0 is okay.
+        Otherwise the move is only accepted if exactly n_l subtrajectories
+        are found.
     """
 
     def _choose(self, trajectory_list):
@@ -1775,22 +1788,26 @@ class EnsembleHopMover(SampleMover):
         logger.debug("  selected replica: " + str(replica))
         logger.debug("  initial ensemble: " + repr(rep_sample.ensemble))
 
-        logger.info(
-            "Hop starts from legal ensemble: " + str(ens_from(trajectory)))
-        logger.info("Hop ends in legal ensemble: " + str(ens_to(trajectory)))
+        logger.info("Hop starts from legal ensemble: "+str(ens_from(trajectory)))
+        logger.info("Hop ends in legal ensemble: "+str(ens_to(trajectory)))
 
         sample_details = SampleDetails()
 
+        # TODO: remove this and generalize!!!
         if type(self.bias) is float:
             bias = self.bias
+            logger.info("Using fixed bias " + str(bias))
         elif type(self.bias) is dict:
             # special dict
             ens = self.bias['ensembles']
             e1 = ens.index(ens_from)
             e2 = ens.index(ens_to)
             bias = float(self.bias['values'][e1, e2])
+            logger.info("Using dict bias " + str(bias))
         else:
             bias = 1.0
+            logger.info("Using default bias: self.bias == " + str(self.bias))
+                    
 
         trial = paths.Sample(
             replica=replica,
@@ -1951,6 +1968,12 @@ class RandomAllowedChoiceMover(RandomChoiceMover):
     from sub movers that actually can succeed because they have samples in all
     required input_ensembles
 
+    Attributes
+    ----------
+    movers : list of PathMover
+        the PathMovers to choose from
+    weights : list of floats
+        the relative weight of each PathMover (does not need to be normalized)
     """
 
     def _selector(self, globalstate):
@@ -1982,6 +2005,10 @@ class FirstAllowedMover(SelectionMover):
     This will pick the first mover from the list where all ensembles
     from input_ensembles are found.
 
+    Attributes
+    ----------
+    movers : list of PathMover
+        the PathMovers to choose from
     """
 
     def _selector(self, globalstate):
@@ -2014,6 +2041,10 @@ class LastAllowedMover(SelectionMover):
     This will pick the last mover from the list where all ensembles
     from input_ensembles are found.
 
+    Attributes
+    ----------
+    movers : list of PathMover
+        the PathMovers to choose from
     """
 
     def _selector(self, globalstate):
@@ -2105,8 +2136,7 @@ class ConditionalMover(PathMover):
             else:
                 resultclause = paths.EmptyPathMoveChange()
 
-        return paths.SequentialPathMoveChange(
-            [ifclause, resultclause], mover=self)
+        return paths.SequentialPathMoveChange([ifclause, resultclause], mover=self)
 
 
 class SequentialMover(PathMover):
@@ -2207,10 +2237,10 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         subglobal = paths.SampleSet(globalstate)
         pathmovechanges = []
         for mover in self.movers:
-            logger.info(
-                str(self.name) +
-                " starting mover index " + str(self.movers.index(mover)) +
-                " (" + mover.name + ")")
+            logger.info(str(self.name)
+                        + " starting mover index " + str(self.movers.index(mover))
+                        + " (" + mover.name + ")"
+                       )
             # Run the sub mover
             movepath = mover.move(subglobal)
             samples = movepath.results
@@ -2325,6 +2355,8 @@ class SubPathMover(PathMover):
         ----------
         mover : :class:`openpathsampling.PathMover`
             the submover to be delegated to
+        ensembles : nested list of :class:`openpathsampling.Ensemble` or None
+            the ensemble specification
         """
         super(SubPathMover, self).__init__()
         self.mover = mover
@@ -2387,8 +2419,7 @@ class EnsembleFilterMover(SubPathMover):
         # side is needed
 
         filtered_globalstate = paths.SampleSet([
-            samp for samp in globalstate if
-            samp.ensemble in self.ensembles
+            samp for samp in globalstate if samp.ensemble in self.ensembles
         ])
         subchange = self.mover.move(filtered_globalstate)
         change = paths.FilterByEnsemblePathMoveChange(
@@ -2599,6 +2630,11 @@ class SingleReplicaMinusMover(MinusMover):
             innermost_ensembles = list(innermost_ensembles)
         except TypeError:
             innermost_ensembles = [innermost_ensembles]
+
+        if bias is None: bias = "" # TODO temp for storage until real bias
+        self.bias = bias
+        self.minus_ensemble = minus_ensemble
+        self.innermost_ensembles = innermost_ensembles
 
         # TODO: Until we have automated detailed balance calculations, I
         # think this will only be valid in the case of only one innermost

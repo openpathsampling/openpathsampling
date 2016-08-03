@@ -388,15 +388,20 @@ class MSTISNetwork(TISNetwork):
             fromA = self.from_state[stateA]
             other_states = self.states[:state_index]+self.states[state_index+1:]
             for stateB in other_states:
+                strA = stateA.name if stateA.is_named else str(stateA)
+                strB = stateB.name if stateB.is_named else str(stateB)
                 trans = paths.TISTransition(
                     stateA=stateA,
                     stateB=stateB,
                     interfaces=fromA.interfaces,
-                    name=str(stateA) + "->" + str(stateB),
+                    name=strA + "->" + strB,
                     orderparameter=fromA.orderparameter
                 )
                 # override created stuff
                 trans.ensembles = fromA.ensembles
+                for i in range(len(trans.ensembles)):
+                    trans.ensembles[i].named(trans.name + "[" + str(i) + "]")
+                                             
                 trans.minus_ensemble = fromA.minus_ensemble
                 self.transitions[(stateA, stateB)] = trans
 
@@ -640,23 +645,29 @@ class MISTISNetwork(TISNetwork):
 
     def build_sampling_transitions(self, transitions):
         # identify transition pairs
+        transition_pair_set_dict = {}
         for initial in self.initial_states:
-            transition_pair_dict = {}
             for t1 in [t for t in transitions if t.stateA==initial]:
-                reverse_trans = None
-                for t2 in transitions:
-                    if t2.stateA==t1.stateB and t2.stateB==t1.stateA:
-                        transition_pair_dict[t1] = t2
-            # TODO: speed this up with a set?
-            for key in transition_pair_dict.keys():
-                value = transition_pair_dict[key]
-                if value in transition_pair_dict.keys():
-                    del transition_pair_dict[value]
-        self.transition_pairs = [(k, transition_pair_dict[k]) 
-                                 for k in transition_pair_dict.keys()]
+                t_reverse = [
+                    t for t in transitions 
+                    if t.stateA == t1.stateB and t.stateB == t1.stateA
+                ]
+                if len(t_reverse) == 1:
+                    key = frozenset([t1.stateA, t1.stateB])
+                    new_v = [t1, t_reverse[0]]
+                    if key not in transition_pair_set_dict.keys():
+                        transition_pair_set_dict[key] = new_v
+                elif len(t_reverse) > 1:  # pragma: no cover
+                    raise RuntimeError("More than one reverse transition")
+                # if len(t_reverse) is 0, we just pass
 
-        all_in_pairs = reduce(list.__add__, map(lambda x: list(x), 
-                                                self.transition_pairs))
+        self.transition_pairs = transition_pair_set_dict.values()
+
+        if len(self.transition_pairs) > 0:
+            all_in_pairs = reduce(list.__add__, map(lambda x: list(x), 
+                                                    self.transition_pairs))
+        else:
+            all_in_pairs = []
 
         # build sampling transitions
         all_states = paths.join_volumes(self.initial_states + self.final_states)
