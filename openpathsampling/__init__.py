@@ -31,7 +31,7 @@ except ImportError:  # pragma: no cover
         
         
 from analysis.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, OneWayShootingMoveScheme
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme, OneWayShootingMoveScheme
 )
 
 from analysis.tis_analysis import (
@@ -58,6 +58,10 @@ from analysis.shooting_point_analysis import (
 from analysis.single_trajectory_analysis import (
     SingleTrajectoryAnalysis,
     TrajectorySegmentContainer
+)
+
+from bias_function import (
+    BiasFunction, BiasLookupFunction, BiasEnsembleTable
 )
 
 from collectivevariable import (
@@ -110,7 +114,8 @@ from pathmover import (
     FirstSubtrajectorySelectMover, MultipleSetMinusMover,
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
-    LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover
+    LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover,
+    IdentityPathMover, RandomAllowedChoiceMover
 )
 
 from pathsimulator import (

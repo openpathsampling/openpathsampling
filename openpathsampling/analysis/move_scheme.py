@@ -80,6 +80,7 @@ class MoveScheme(StorableNamedObject):
         self.strategies = {}
         self.balance_partners = {}
         self.choice_probability = {}
+        self._real_choice_probability = {} # used as override, e.g., in SRTIS
         self.root_mover = None
 
         self._mover_acceptance = {} # used in analysis
@@ -89,6 +90,7 @@ class MoveScheme(StorableNamedObject):
             'movers' : self.movers,
             'network' : self.network,
             'choice_probability' : self.choice_probability,
+            'real_choice_probability' : self.real_choice_probability,
             'balance_partners' : self.balance_partners,
             'root_mover' : self.root_mover,
         }
@@ -100,9 +102,21 @@ class MoveScheme(StorableNamedObject):
         scheme.__init__(dct['network'])
         scheme.movers = dct['movers']
         scheme.choice_probability = dct['choice_probability']
+        scheme._real_choice_probability = dct['real_choice_probability']
         scheme.balance_partners = dct['balance_partners']
         scheme.root_mover = dct['root_mover']
         return scheme
+
+    @property
+    def real_choice_probability(self):
+        if self._real_choice_probability == {}:
+            return self.choice_probability
+        else:
+            return self._real_choice_probability
+
+    @real_choice_probability.setter
+    def real_choice_probability(self, value):
+        self._real_choice_probability = value
 
     def append(self, strategies, levels=None, force=False):
         """
@@ -641,7 +655,8 @@ class MoveScheme(StorableNamedObject):
             expected number of steps to get `n_attempts` of `mover`
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.choice_probability[m] for m in movers])
+        total_probability = sum([self.real_choice_probability[m] 
+                                 for m in movers])
         return (n_attempts / total_probability)
 
     def n_trials_for_steps(self, mover, n_steps):
@@ -667,7 +682,8 @@ class MoveScheme(StorableNamedObject):
             expected number of trials of `mover` in `n_steps` MC steps
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.choice_probability[m] for m in movers])
+        total_probability = sum([self.real_choice_probability[m] 
+                                 for m in movers])
         return (total_probability * n_steps)
 
 
@@ -716,7 +732,7 @@ class MoveScheme(StorableNamedObject):
         try:
             acceptance = float(n_accepted) / n_trials
         except ZeroDivisionError:
-            acceptance = "nan"
+            acceptance = float("nan")
 
         line = ("* "*indentation + str(move_name) +
                 " ran " + "{:.3%}".format(float(n_trials)/n_total_trials) +
@@ -794,8 +810,9 @@ class MoveScheme(StorableNamedObject):
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
             try:
-                expected_frequency[groupname] = sum([self.choice_probability[m] 
-                                                     for m in group])
+                expected_frequency[groupname] = sum(
+                    [self.real_choice_probability[m] for m in group]
+                )
             except KeyError:
                 expected_frequency[groupname] = float('nan')
 
@@ -905,6 +922,23 @@ class LockedMoveScheme(MoveScheme):
     @movers.setter
     def movers(self, vals):
         self._movers = vals
+
+
+class SRTISScheme(DefaultScheme):
+    """
+    This gives exactly the DefaultMoveScheme, but as an SRTIS setup.
+    """
+    def __init__(self, network, bias=None, engine=None):
+        super(SRTISScheme, self).__init__(network, engine)
+        sr_minus_strat = strategies.SingleReplicaMinusMoveStrategy(
+            engine=engine
+        )
+        sr_minus_strat.level = strategies.levels.SUPERGROUP # GROUP?
+        # maybe this should be the default for that strategy anyway? using it
+        # at mover-level seems less likely than group-level
+        self.append([strategies.PoorSingleReplicaStrategy(),
+                     strategies.EnsembleHopStrategy(bias=bias),
+                     sr_minus_strat])
 
 
 class OneWayShootingMoveScheme(MoveScheme):
