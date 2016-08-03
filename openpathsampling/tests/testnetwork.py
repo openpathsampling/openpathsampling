@@ -36,15 +36,6 @@ class testMultipleStateTIS(object):
         ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
                                            float("inf"))
 
-        ms_outer_info = [
-            (iface, paths.CVRangeVolume(xval, minv, maxv))
-            for (iface, minv, maxv) in [(ifacesA, float("-inf"), -0.3),
-                                        (ifacesB, -0.2, 0.2),
-                                        (ifacesC, 0.5, float("inf"))]
-        ]
-        ms_outer_ifaces, ms_outer_volumes = zip(*ms_outer_info)
-        self.ms_outer = paths.MSOuterTISInterface(ms_outer_ifaces,
-                                                  ms_outer_volumes)
 
 
         self.xval = xval
@@ -98,11 +89,26 @@ class testMultipleStateTIS(object):
 class testMSTISNetwork(testMultipleStateTIS):
     def setup(self):
         super(testMSTISNetwork, self).setup()
+
+        ifacesA = self.ifacesA[:-1]
+        ifacesB = self.ifacesB[:-1]
+        ifacesC = self.ifacesC[:-1]
+
+        ms_outer_info = [
+            (iface, paths.CVRangeVolume(self.xval, minv, maxv))
+            for (iface, minv, maxv) in [(ifacesA, float("-inf"), -0.3),
+                                        (ifacesB, -0.2, 0.2),
+                                        (ifacesC, 0.5, float("inf"))]
+        ]
+        ms_outer_ifaces, ms_outer_volumes = zip(*ms_outer_info)
+        ms_outer_obj = paths.MSOuterTISInterface(ms_outer_ifaces,
+                                                 ms_outer_volumes)
+
         self.mstis = MSTISNetwork(
-            [(self.stateA, self.ifacesA),
-            (self.stateB, self.ifacesB),
-            (self.stateC, self.ifacesC)],
-            ms_outers=self.ms_outer
+            [(self.stateA, ifacesA),
+             (self.stateB, ifacesB),
+             (self.stateC, ifacesC)],
+            ms_outers=ms_outer_obj
         )
 
     def test_set_fluxes(self):

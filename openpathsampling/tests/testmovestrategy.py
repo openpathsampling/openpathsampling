@@ -49,13 +49,16 @@ class MoveStrategyTestSetup(object):
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
-                                               [-0.5, -0.3, -0.1, 0.0])
+                                               [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
-                                               [-0.5, -0.3, -0.1, 0.0])
-        self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA),
-            (self.stateB, interfacesB)
-        ])
+                                               [-0.5, -0.3, -0.1])
+        self.network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
 
 
 class testMoveStrategy(MoveStrategyTestSetup):

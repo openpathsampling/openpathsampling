@@ -383,8 +383,10 @@ class MSTISNetwork(TISNetwork):
             self.special_ensembles = {}
             self.from_state = {}
             self.build_fromstate_transitions(trans_info)
-            # TODO
-            # only add ms_outer in here, otherwise it is already set
+            if self.ms_outer_objects is not None:
+                for ms_outer in self.ms_outer_objects:
+                    all_transitions = self.from_state.values()
+                    self.add_ms_outer_interface(ms_outer, all_transitions)
 
         self._sampling_transitions = self.from_state.values()
 
@@ -468,7 +470,7 @@ class MSTISNetwork(TISNetwork):
             this_trans = paths.TISTransition(
                 stateA=state, 
                 stateB=union_others,
-                interfaces=ifaces[:-1],
+                interfaces=ifaces,
                 name="Out " + state.name,
                 orderparameter=op
             )
@@ -483,9 +485,9 @@ class MSTISNetwork(TISNetwork):
                 self.special_ensembles['minus'] = {this_minus : [this_trans]}
 
             # TEMP: remove this statement later
-            outer_info.append((this_trans.interfaces,
-                               ifaces[-1],
-                               ifaces.get_lambda(ifaces[-1])))
+            # outer_info.append((this_trans.interfaces,
+                               # ifaces[-1],
+                               # ifaces.get_lambda(ifaces[-1])))
 
             # outer_ensemble = paths.TISEnsemble(
                 # initial_states=state,
@@ -496,11 +498,11 @@ class MSTISNetwork(TISNetwork):
             # outer_ensembles.append(outer_ensemble)
 
         # ms_outer = paths.ensemble.join_ensembles(outer_ensembles)
-        transition_outers = self.from_state.values()
-        outer_ifaces, outer_volumes, outer_lambdas = zip(*outer_info)
-        ms_outer_object = paths.MSOuterTISInterface(outer_ifaces, outer_volumes,
-                                                    outer_lambdas)
-        self.add_ms_outer_interface(ms_outer_object, transition_outers)
+        # transition_outers = self.from_state.values()
+        # outer_ifaces, outer_volumes, outer_lambdas = zip(*outer_info)
+        # ms_outer_object = paths.MSOuterTISInterface(outer_ifaces, outer_volumes,
+                                                    # outer_lambdas)
+        # self.add_ms_outer_interface(ms_outer_object, transition_outers)
 
     def __str__(self):
         mystr = "Multiple State TIS Network:\n"
