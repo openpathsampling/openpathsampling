@@ -113,7 +113,7 @@ class testShootingPointAnalysis(object):
             'nsteps_per_frame': 5
         }
         self.engine = toys.Engine(options=options, topology=topology)
-        cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
         self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
 

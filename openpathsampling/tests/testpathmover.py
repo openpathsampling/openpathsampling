@@ -6,7 +6,7 @@ from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_true)
 
-from openpathsampling.collectivevariable import CV_Function
+from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import LengthEnsemble
@@ -117,7 +117,7 @@ class testShootingMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
                                       -0.1, 0.2, 0.4, 0.6, 0.8])
-        op = CV_Function("myid", f=lambda snap : snap.coordinates[0][0])
+        op = FunctionCV("myid", f=lambda snap : snap.coordinates[0][0])
         self.stateA = CVRangeVolume(op, -100, 0.0)
         self.stateB = CVRangeVolume(op, 0.65, 100)
         self.tps = ef.A2BEnsemble(self.stateA, self.stateB)
@@ -260,7 +260,7 @@ class testOneWayShootingMover(testShootingMover):
 
 class testPathReversalMover(object):
     def setup(self):
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         volA = CVRangeVolume(op, -100, 0.0)
@@ -328,7 +328,7 @@ class testReplicaIDChangeMover(object):
 
 class testReplicaExchangeMover(object):
     def setup(self):
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         state1 = CVRangeVolume(op, -100, 0.0)
@@ -472,7 +472,7 @@ class testRandomAllowedChoiceMover(object):
                                      ])
         self.dyn.initialized = True
         # SampleMover.engine = self.dyn
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
         stateA = CVRangeVolume(op, -100, 0.0)
         stateB = CVRangeVolume(op, 0.65, 100)
@@ -928,7 +928,7 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 
 class testMinusMover(object):
     def setup(self):
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         volA = CVRangeVolume(op, -100, 0.0)
@@ -1148,7 +1148,7 @@ class testMinusMover(object):
 
 class testSingleReplicaMinusMover(object):
     def setup(self):
-        op = CV_Function("myid", f=lambda snap :
+        op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
         volA = CVRangeVolume(op, -100, 0.0)
