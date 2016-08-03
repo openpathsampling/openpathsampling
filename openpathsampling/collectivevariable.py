@@ -277,7 +277,7 @@ class CallableCV(CollectiveVariable):
         2. create constants inside your function
         3. if variables from the global scope are used these need to be stored
            with the function and this can only be done if they are passed as
-           arguments to the function and added as kwargs to the CV_Function
+           arguments to the function and added as kwargs to the FunctionCV
 
         >>> import openpathsampling.engines as peng
         >>> def func(snapshot, indices):
@@ -588,7 +588,7 @@ class CoordinateGeneratorCV(GeneratorCV):
 class MDTrajFunctionCV(CoordinateFunctionCV):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
-    This is identical to CV_Function except that the function is called with
+    This is identical to FunctionCV except that the function is called with
     an mdraj.Trajetory object instead of the
     :class:`openpathsampling.Trajectory` one using `f(traj.md(), \**kwargs)`
 
@@ -599,7 +599,7 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
     >>> import mdtraj as md
     >>> traj = 'peng.Trajectory()'
     >>> psi_atoms = [7,9,15,17]
-    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
+    >>> psi_orderparam = FunctionCV("psi", md.compute_dihedrals,
     >>>                              indices=[[2,4,6,8]])
     >>> print psi_orderparam( traj )
     """

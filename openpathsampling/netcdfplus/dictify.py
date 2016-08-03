@@ -306,7 +306,7 @@ class ObjectJSON(object):
                        ) + '\n'
                 err += '\n4. be passed as an external parameter ' \
                        '(not for imports!)'
-                err += '\n\n        my_cv = CV_Function("cv_name", ' + \
+                err += '\n\n        my_cv = FunctionCV("cv_name", ' + \
                        c.func_name + ', \n' + \
                        ',\n'.join(
                            map(lambda x: ' ' * 20 + x + '=' + x, global_vars)
