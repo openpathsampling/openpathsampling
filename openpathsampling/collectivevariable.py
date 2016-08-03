@@ -400,7 +400,7 @@ class FunctionCV(CallableCV):
 
         See also
         --------
-        `openpathsampling.CV_Callable`
+        `openpathsampling.CallableCV`
 
         """
 
@@ -452,7 +452,7 @@ class CoordinateFunctionCV(FunctionCV):
 
         See also
         --------
-        `openpathsampling.CV_Callable`
+        `openpathsampling.CallableCV`
 
         """
 
@@ -757,9 +757,9 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
 class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
     """Make a CV from a function that takes mdtraj.trajectory as input.
 
-    This is identical to CV_Class except that the function is called with
-    an mdraj.Trajetory object instead of the openpathsampling.Trajectory
-    one using `fnc(traj.md(), **kwargs)`
+    This is identical to `CoordinateGeneratorCV` except that the function is
+    called with an mdraj.Trajetory object instead of the
+    openpathsampling.Trajectory one using `fnc(traj.md(), **kwargs)`
 
     """
 

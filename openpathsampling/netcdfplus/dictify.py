@@ -331,7 +331,7 @@ class ObjectJSON(object):
                        ' modules to be installed: ' + str(unsafe_modules) + \
                        ' which are not marked as safe! '
                 err += 'You can change the list of safe modules using '
-                err += '\n\n        CV_function._safe_modules.extend(['
+                err += '\n\n        FunctionCV._safe_modules.extend(['
                 err += '\n' + ',\n'.join(
                        map(lambda x: ' ' * 12 + x, unsafe_modules)
                 )
