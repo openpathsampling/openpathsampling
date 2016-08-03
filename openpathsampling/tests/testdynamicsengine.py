@@ -4,6 +4,7 @@ from nose.tools import (assert_equal, assert_not_equal, raises)
 from nose.plugins.skip import SkipTest
 from test_helpers import make_1d_traj, raises_with_message_like
 
+
 class StupidEngine(paths.engines.DynamicsEngine):
     _default_options = {'random_option': False}
 
@@ -19,12 +20,22 @@ class StupidEngine(paths.engines.DynamicsEngine):
             raise AttributeError("Internal error")
         return self.attempted
 
+
 class testDynamicsEngine(object):
     def setup(self):
         options = {'n_frames_max' : 100, 'random_option' : True}
-        template = make_1d_traj([1.0])[0]
-        self.engine = paths.engines.DynamicsEngine(options, template)
-        self.stupid = StupidEngine(options, template)
+
+        snapshot_dimensions = {
+            'n_atoms': 1,
+            'n_spatial': 1
+        }
+
+        descriptor = paths.engines.snapshot.SnapshotDescriptor.construct(
+            snapshot_class=paths.engines.toy.Snapshot,
+            snapshot_dimensions=snapshot_dimensions
+        )
+        self.engine = paths.engines.DynamicsEngine(options, descriptor)
+        self.stupid = StupidEngine(options, descriptor)
 
     def test_getattr_from_options(self):
         assert_equal(self.stupid.random_option, True)
@@ -44,3 +55,9 @@ class testDynamicsEngine(object):
                               ", nor does its options dictionary")
     def test_getattr_does_not_exist(self):
         self.stupid.foo
+
+    def test_getattr_dimension(self):
+        assert(self.engine.n_atoms == 1)
+        assert (self.engine.n_spatial == 1)
+        assert(self.stupid.n_atoms == 1)
+        assert (self.stupid.n_spatial == 1)

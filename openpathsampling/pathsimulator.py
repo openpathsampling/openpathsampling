@@ -85,13 +85,13 @@ class PathSimulator(StorableNamedObject):
             self.storage.sync_all()
 
     @abc.abstractmethod
-    def run(self, nsteps):
+    def run(self, n_steps):
         """
         Run the simulator for a number of steps
 
         Parameters
         ----------
-        nsteps : int
+        n_steps : int
             number of step to be run
         """
         pass
@@ -229,7 +229,7 @@ class Bootstrapping(PathSimulator):
                                               )
 
 
-    def run(self, nsteps):
+    def run(self, n_steps):
         bootstrapmove = self._bootstrapmove
 
         cvs = []
@@ -245,9 +245,9 @@ class Bootstrapping(PathSimulator):
             self.save_initial()
 
         failsteps = 0
-        # if we fail nsteps times in a row, kill the job
+        # if we fail n_steps times in a row, kill the job
 
-        while ens_num < len(self.ensembles) - 1 and failsteps < nsteps:
+        while ens_num < len(self.ensembles) - 1 and failsteps < n_steps:
             self.step += 1
             logger.info("Step: " + str(self.step)
                         + "   Ensemble: " + str(ens_num)
@@ -521,14 +521,14 @@ class PathSampling(PathSimulator):
         self.visualize_frequency = 1
         self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
-    def run_until(self, nsteps):
+    def run_until(self, n_steps):
         if self.storage is not None:
             if len(self.storage.steps) > 0:
                 self.step = len(self.storage.steps)
-        nsteps_to_run = nsteps - self.step
-        self.run(nsteps_to_run)
+        n_steps_to_run = n_steps - self.step
+        self.run(n_steps_to_run)
 
-    def run(self, nsteps):
+    def run(self, n_steps):
         mcstep = None
 
         cvs = list()
@@ -543,7 +543,7 @@ class PathSampling(PathSimulator):
                 self.storage.save(self.move_scheme)
             self.save_initial()
 
-        for nn in range(nsteps):
+        for nn in range(n_steps):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
             refresh=True

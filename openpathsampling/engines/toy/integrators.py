@@ -27,7 +27,7 @@ class LeapfrogVerletIntegrator(ToyIntegrator):
     def _position_update(self, sys, mydt):
         sys.positions += sys.velocities * mydt
 
-    def step(self, sys, nsteps):
+    def step(self, sys, n_steps):
         self._position_update(sys, 0.5*self.dt)
         self._momentum_update(sys, self.dt)
         self._position_update(sys, 0.5*self.dt)
@@ -78,7 +78,7 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
         sys.velocities = (self._c1 * sys.velocities +
                           self._c3 * np.sqrt(sys._minv) * R)
 
-    def step(self, sys, nsteps):
+    def step(self, sys, n_steps):
         self._momentum_update(sys, 0.5*self.dt)
         self._position_update(sys, 0.5*self.dt)
         self._OU_update(sys, self.dt)
