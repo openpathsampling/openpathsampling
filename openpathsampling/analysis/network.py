@@ -262,7 +262,14 @@ class TISNetwork(TransitionNetwork):
     # TIS-based networks
     # TODO: most of the analysis stuff should end up in here; the bigger
     # differences are in setup, not analysis
-    def __init__(self):
+    def __init__(self, trans_info, ms_outers):
+        self.trans_info = trans_info
+        try:
+            _ = len(ms_outers)
+        except TypeError:
+            if ms_outers is not None:
+                ms_outers = [ms_outers]
+        self.ms_outer_objects = ms_outers
         super(TISNetwork, self).__init__()
 
     def from_transitions(self, transitions, interfaces=None):
@@ -370,14 +377,7 @@ class MSTISNetwork(TISNetwork):
             interface_set is an InterfaceSet (with associated
             CollectiveVariable)
         """
-        super(MSTISNetwork, self).__init__()
-        self.trans_info = trans_info
-        try:
-            _ = len(ms_outers)
-        except TypeError:
-            if ms_outers is not None:
-                ms_outers = [ms_outers]
-        self.ms_outer_objects = ms_outers
+        super(MSTISNetwork, self).__init__(trans_info, ms_outers)
         # build sampling transitions
         if not hasattr(self, "from_state"):
             self.special_ensembles = {}
@@ -602,9 +602,8 @@ class MISTISNetwork(TISNetwork):
     """
     # NOTE: input_transitions are in addition to the sampling_transitions
     # and the transitions (analysis transitions)
-    def __init__(self, trans_info, strict_sampling=False):
-        super(MISTISNetwork, self).__init__()
-        self.trans_info = trans_info
+    def __init__(self, trans_info, ms_outers=None, strict_sampling=False):
+        super(MISTISNetwork, self).__init__(trans_info, ms_outers)
         self.strict_sampling = strict_sampling
         states_A, interfaces, states_B = zip(*trans_info)
         orderparams = [iface_set.cv for iface_set in interfaces]
@@ -634,6 +633,20 @@ class MISTISNetwork(TISNetwork):
         if not hasattr(self, 'x_sampling_transitions'):
             self.special_ensembles = {}
             self.build_sampling_transitions(self.input_transitions.values())
+            if self.ms_outer_objects is not None:
+                for ms_outer in self.ms_outer_objects:
+                    all_transitions = self.x_sampling_transitions
+                    if not self.strict_sampling:
+                        self.add_ms_outer_interface(ms_outer, all_transitions)
+                    else:
+                        relevant = ms_outer.relevant_transitions(all_transitions)
+                        allowed = set(sum([[t.stateA, t.stateB] 
+                                           for t in relevant], []))
+                        forbidden = set(list_all_states) - allowed
+                        self.add_ms_outer_interface(ms_outer,
+                                                    all_transitions,
+                                                    forbidden)
+
         self._sampling_transitions = self.x_sampling_transitions
 
 
@@ -711,32 +724,32 @@ class MISTISNetwork(TISNetwork):
                 final_state = all_states
                 ensemble_to_intersect = paths.FullEnsemble()
             # TODO: fix following for strict_sampling
-            if transition not in all_in_pairs:
+            # if transition not in all_in_pairs:
                 # if we don't have a pair partner, use all interfaces
-                sample_trans = paths.TISTransition(
-                    stateA=stateA,
-                    stateB=final_state,
-                    interfaces=transition.interfaces,
-                    orderparameter=transition.orderparameter
-                )
-            else:
+            sample_trans = paths.TISTransition(
+                stateA=stateA,
+                stateB=final_state,
+                interfaces=transition.interfaces,
+                orderparameter=transition.orderparameter
+            )
+            # else:
                 # if we do have a pair partner, outermost is MS-interface
-                sample_trans = paths.TISTransition(
-                    stateA=stateA,
-                    stateB=final_state,
-                    interfaces=transition.interfaces[:-1],
-                    orderparameter=transition.orderparameter
-                )
+                # sample_trans = paths.TISTransition(
+                    # stateA=stateA,
+                    # stateB=final_state,
+                    # interfaces=transition.interfaces[:-1],
+                    # orderparameter=transition.orderparameter
+                # )
                 # TMP
-                ifaces = transition.interfaces
-                local_outer_info = (sample_trans.interfaces,
-                                    ifaces[-1],
-                                    ifaces.get_lambda(ifaces[-1]))
-                key = frozenset([transition.stateA, transition.stateB])
-                try:
-                    outer_info[key].append(local_outer_info)
-                except KeyError:
-                    outer_info[key] = [local_outer_info]
+                # ifaces = transition.interfaces
+                # local_outer_info = (sample_trans.interfaces,
+                                    # ifaces[-1],
+                                    # ifaces.get_lambda(ifaces[-1]))
+                # key = frozenset([transition.stateA, transition.stateB])
+                # try:
+                    # outer_info[key].append(local_outer_info)
+                # except KeyError:
+                    # outer_info[key] = [local_outer_info]
 
 
             new_ensembles = [e & ensemble_to_intersect 
@@ -760,13 +773,13 @@ class MISTISNetwork(TISNetwork):
             relevant = ms_outer_object.relevant_transitions(
                 self.x_sampling_transitions
             )
-            if self.strict_sampling:
-                forbidden = all_states_set - pair
-                self.add_ms_outer_interface(ms_outer_object, relevant,
-                                            forbidden)
+            # if self.strict_sampling:
+                # forbidden = all_states_set - pair
+                # self.add_ms_outer_interface(ms_outer_object, relevant,
+                                            # forbidden)
 
-            else:
-                self.add_ms_outer_interface(ms_outer_object, relevant)
+            # else:
+                # self.add_ms_outer_interface(ms_outer_object, relevant)
 
         # combining the MS-outer interfaces
         # for pair in self.transition_pairs:
