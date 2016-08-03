@@ -5,7 +5,7 @@
 """
 
 from openpathsampling.engines import BaseSnapshot, SnapshotFactory
-import openpathsampling.engines.features as feats
+from openpathsampling.engines import features as feats
 
 
 @feats.attach_features([
