@@ -714,17 +714,6 @@ class MISTISNetwork(TISNetwork):
 
         self.x_sampling_transitions = self.transition_to_sampling.values()
 
-        # build non-transition interfaces 
-        for pair in outer_info.keys():
-            info = outer_info[pair]
-            outer_ifaces, outer_volumes, outer_lambdas = zip(*info)
-            ms_outer_object = paths.MSOuterTISInterface(outer_ifaces,
-                                                        outer_volumes,
-                                                        outer_lambdas)
-            relevant = ms_outer_object.relevant_transitions(
-                self.x_sampling_transitions
-            )
-        
         # combining the minus interfaces
         for initial in self.initial_states:
             innermosts = []
