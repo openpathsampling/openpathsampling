@@ -165,7 +165,7 @@ class testCommittorSimulation(object):
         options = {
             'integ': integrator,
             'n_frames_max': 100000,
-            'nsteps_per_frame': 5
+            'n_steps_per_frame': 5
         }
         self.engine = toys.Engine(options=options, topology=topology)
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
@@ -337,7 +337,7 @@ class testDirectSimulation(object):
         options = {
             'integ': integrator,
             'n_frames_max': 100000,
-            'nsteps_per_frame': 2
+            'n_steps_per_frame': 2
         }
         self.engine = toys.Engine(options=options, topology=topology)
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
