@@ -2786,7 +2786,7 @@ class TISEnsemble(SequentialEnsemble):
         ]
 
     def __init__(self, initial_states, final_states, interface,
-                 orderparameter=None):
+                 orderparameter=None, lambda_i=None):
         # regularize to list of volumes
         # without orderparameter, some info can't be obtained
         try:
@@ -2813,6 +2813,7 @@ class TISEnsemble(SequentialEnsemble):
         self.interface = interface
         #        self.name = interface.name
         self.orderparameter = orderparameter
+        self.lambda_i = lambda_i
 
     def trajectory_summary(self, trajectory):
         initial_state_i = None
@@ -2938,10 +2939,11 @@ class EnsembleFactory(object):
         ])
 
     @staticmethod
-    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter):
-        myset = []
-        for vol in volumes_x:
-            myset.append(
-                paths.TISEnsemble(volume_a, volume_b, vol, orderparameter)
-            )
+    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter,
+                       lambdas=None):
+        if lambdas is None:
+            lambdas = [None] * len(volumes_x)
+        myset = [paths.TISEnsemble(volume_a, volume_b, vol, orderparameter,
+                                   lambda_i)
+                 for (vol, lambda_i) in zip(volumes_x, lambdas)]
         return myset
