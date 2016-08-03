@@ -162,10 +162,10 @@ class StaticContainerStore(ObjectStore):
 
         self.create_variable(
             'coordinates', 'numpy.float32',
-            dimensions=('n_atom', 'n_spatial'),
+            dimensions=('n_atoms', 'n_spatial'),
             description="coordinate of atom '{ix[1]}' in dimension " +
                         "'{ix[2]}' of configuration '{ix[0]}'.",
-            chunksizes=(1, 'n_atom', 'n_spatial'),
+            chunksizes=(1, 'n_atoms', 'n_spatial'),
             simtk_unit=u.nanometers)
 
         self.create_variable(
@@ -305,8 +305,8 @@ class KineticContainerStore(ObjectStore):
 
         self.create_variable(
             'velocities', 'numpy.float32',
-            dimensions=('n_atom', 'n_spatial'),
+            dimensions=('n_atoms', 'n_spatial'),
             description="the velocity of atom 'atom' in dimension " +
                         "'coordinate' of momentum 'momentum'.",
-            chunksizes=(1, 'n_atom', 'n_spatial'),
+            chunksizes=(1, 'n_atoms', 'n_spatial'),
             simtk_unit=u.nanometers / u.picoseconds)

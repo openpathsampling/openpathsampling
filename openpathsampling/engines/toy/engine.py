@@ -28,7 +28,7 @@ class ToyEngine(DynamicsEngine):
         options['n_atoms'] = 1
 
         snapshot_dimensions = {
-            'n_atom': topology.n_atoms,
+            'n_atoms': topology.n_atoms,
             'n_spatial': topology.n_spatial
         }
 

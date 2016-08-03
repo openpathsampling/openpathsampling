@@ -5,7 +5,7 @@ variables = ['kinetics', 'is_reversed']
 lazy = ['kinetics']
 flip = ['is_reversed']
 
-dimensions = ['n_atom', 'n_spatial']
+dimensions = ['n_atoms', 'n_spatial']
 
 
 def netcdfplus_init(store):

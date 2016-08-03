@@ -95,7 +95,7 @@ class testShootingPointAnalysis(object):
         descriptor = peng.SnapshotDescriptor.construct(
             toys.Snapshot,
             {
-                'n_atom': 1,
+                'n_atoms': 1,
                 'n_spatial': 1
             }
         )

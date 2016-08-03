@@ -68,7 +68,7 @@ class OpenMMEngine(DynamicsEngine):
         self.topology = topology
 
         dimensions = {
-            'n_atom': topology.n_atoms,
+            'n_atoms': topology.n_atoms,
             'n_spatial': topology.n_spatial
         }
 
