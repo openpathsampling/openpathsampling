@@ -43,7 +43,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     # and stored in the cache itself
     _excluded_attr = [
         'diskcache_enabled',
-        'diskcache_allow_partial',
+        'diskcache_allow_incomplete',
         'diskcache_chunksize'
     ]
 
@@ -65,10 +65,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.diskcache_enabled = False
         self.diskcache_template = None
         if self.cv_time_reversible:
-            self.diskcache_allow_partial = False
+            self.diskcache_allow_incomplete = False
             self.diskcache_chunksize = 100
         else:
-            self.diskcache_allow_partial = True
+            self.diskcache_allow_incomplete = True
             self.diskcache_chunksize = 1
 
         self._single_dict = cd.ExpandSingle()
@@ -86,12 +86,12 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.diskcache_enabled = True
         return self
 
-    def with_diskcache(self, template=None, chunksize=None, allow_partial=None):
+    def with_diskcache(self, template=None, chunksize=None, allow_incomplete=None):
         self.diskcache_enabled = True
         if template:
             self.diskcache_template = template
-        if allow_partial:
-            self.diskcache_allow_partial = allow_partial
+        if allow_incomplete:
+            self.diskcache_allow_incomplete = allow_incomplete
         if chunksize:
             self.diskcache_chunksize = chunksize
 
