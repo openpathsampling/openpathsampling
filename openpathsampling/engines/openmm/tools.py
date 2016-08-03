@@ -17,8 +17,8 @@ class TopologyEngine(NoEngine):
         descriptor = SnapshotDescriptor.construct(
             Snapshot,
             {
-                'atom': topology.n_atoms,
-                'spatial': topology.n_spatial
+                'n_atoms': topology.n_atoms,
+                'n_spatial': topology.n_spatial
             }
         )
 

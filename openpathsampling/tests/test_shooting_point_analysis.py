@@ -95,8 +95,8 @@ class testShootingPointAnalysis(object):
         descriptor = peng.SnapshotDescriptor.construct(
             toys.Snapshot,
             {
-                'atom': 1,
-                'spatial': 1
+                'n_atoms': 1,
+                'n_spatial': 1
             }
         )
         engine = peng.NoEngine(descriptor)
@@ -110,10 +110,10 @@ class testShootingPointAnalysis(object):
         options = {
             'integ': integrator,
             'n_frames_max': 10000,
-            'nsteps_per_frame': 5
+            'n_steps_per_frame': 5
         }
         self.engine = toys.Engine(options=options, topology=topology)
-        cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
         self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
 
