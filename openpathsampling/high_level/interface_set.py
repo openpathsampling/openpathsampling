@@ -65,10 +65,7 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
 
     def _slice_dict(self, slicer):
         dct = self.to_dict()
-        try:
-            dct['volumes'] = self.volumes[slicer]
-        except TypeError:
-            dct['volumes'] = self.volumes
+        dct['volumes'] = self.volumes[slicer]
         try:
             dct['lambdas'] = self.lambdas[slicer]
         except TypeError:
