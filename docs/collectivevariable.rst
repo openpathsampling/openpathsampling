@@ -15,26 +15,35 @@ basic orderparamters
    :toctree: api/generated/
 
    CollectiveVariable
-   CV_Function
+   FunctionCV
+   CoordinateFunctionCV
+   GeneratorCV
+   CoordinateGeneratorCV
 
 simple collectivevariables
 --------------------------
 .. autosummary::
    :toctree: api/generated/
 
-   CV_Volume
-
+   InVolumeCV
 
 mdtraj orderparamters
 ---------------------
 .. autosummary::
    :toctree: api/generated/
 
-   CV_MDTraj_Function
+   MDTrajFunctionCV
 
 msmbuilder3 collectivevariables
 -------------------------------
 .. autosummary::
    :toctree: api/generated/
 
-   CV_MSMB_Featurizer
+   MSMBFeaturizerCV
+
+PyEMMA collectivevariables
+--------------------------
+.. autosummary::
+   :toctree: api/generated/
+
+   PyEMMAFeaturizerCV

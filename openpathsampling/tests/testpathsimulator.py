@@ -25,8 +25,8 @@ class testAbstract(object):
 
 class testFullBootstrapping(object):
     def setup(self):
-        self.cv = paths.CV_Function("Id", lambda snap: snap.xyz[0][0])
-        cv_neg = paths.CV_Function("Neg", lambda snap: -snap.xyz[0][0])
+        self.cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
+        cv_neg = paths.FunctionCV("Neg", lambda snap: -snap.xyz[0][0])
         self.stateA = paths.CVRangeVolume(self.cv, -1.0, 0.0)
         self.stateB = paths.CVRangeVolume(self.cv, 1.0, 2.0)
         self.stateC = paths.CVRangeVolume(self.cv, 3.0, 4.0)
@@ -165,13 +165,13 @@ class testCommittorSimulation(object):
         options = {
             'integ': integrator,
             'n_frames_max': 100000,
-            'nsteps_per_frame': 5
+            'n_steps_per_frame': 5
         }
         self.engine = toys.Engine(options=options, topology=topology)
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
-        cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
         self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
         self.state_labels = {"Left" : self.left,
@@ -337,13 +337,13 @@ class testDirectSimulation(object):
         options = {
             'integ': integrator,
             'n_frames_max': 100000,
-            'nsteps_per_frame': 2
+            'n_steps_per_frame': 2
         }
         self.engine = toys.Engine(options=options, topology=topology)
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
-        cv = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.cv = cv
         self.center = paths.CVRangeVolume(cv, -0.2, 0.2)
         self.interface = paths.CVRangeVolume(cv, -0.3, 0.3)
@@ -436,8 +436,8 @@ class testDirectSimulation(object):
         # interface beta); `X_b` (outside interface beta, not outside
         # interface alpha); and `X_ab` (outside interface alpha and beta).
         cv1 = self.cv
-        cv2 = paths.CV_Function("abs_sin", 
-                                lambda snap : np.abs(np.sin(snap.xyz[0][0])))
+        cv2 = paths.FunctionCV("abs_sin",
+                               lambda snap : np.abs(np.sin(snap.xyz[0][0])))
         state = paths.CVRangeVolume(cv1, -np.pi/8.0, np.pi/8.0)
         other_state = paths.CVRangeVolume(cv1, -5.0/8.0*np.pi, -3.0/8.0*np.pi)
         alpha = paths.CVRangeVolume(cv1, float("-inf"), 3.0/8.0*np.pi)
