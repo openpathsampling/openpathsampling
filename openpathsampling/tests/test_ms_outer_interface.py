@@ -63,14 +63,10 @@ class testMSOuterTISInterface(object):
             assert_equal(by_lambda.lambda_for_interface_set(iface_set),
                          explicit.lambda_for_interface_set(iface_set))
 
-        for (v1, v2) in zip(explicit.volumes, by_lambda.volumes):
-            assert_equal(v1, v2)
-
-        for (l1, l2) in zip(explicit.lambdas, by_lambda.lambdas):
-            assert_equal(l1, l2)
-
-        assert_items_equal(explicit.interface_sets,
-                           by_lambda.interface_sets)
+        assert_equal(len(explicit.volumes), len(by_lambda.volumes))
+        assert_equal(len(explicit.lambdas), len(by_lambda.lambdas))
+        assert_items_equal(set(explicit.interface_sets),
+                           set(by_lambda.interface_sets))
 
 
     def test_volume_for_interface_set(self):
