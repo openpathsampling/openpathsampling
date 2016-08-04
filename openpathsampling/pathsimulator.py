@@ -322,7 +322,7 @@ class Bootstrapping(PathSimulator):
 
 class FullBootstrapping(PathSimulator):
     """
-    Takes a snapshot as input; gives you back a sample set with trajectories
+    Takes a snapshot as input; gives you back a sampleset with trajectories
     for every ensemble in the transition.
 
     This includes

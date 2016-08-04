@@ -405,7 +405,7 @@ class MoveScheme(StorableNamedObject):
         Returns
         -------
         :class:`.SampleSet`
-            sample set with samples for every initial ensemble for this
+            sampleset with samples for every initial ensemble for this
             scheme that could be satisfied by the given trajectories
 
         See Also
@@ -476,7 +476,7 @@ class MoveScheme(StorableNamedObject):
             ensembles needed by the move scheme and missing in the sample
             set, in the format used by `list_initial_ensembles`
         extra : list of :class:`.Ensemble`
-            ensembles in the sample set that are not used by the 
+            ensembles in the sampleset that are not used by the
 
         See Also
         --------
