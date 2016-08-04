@@ -43,7 +43,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     # and stored in the cache itself
     _excluded_attr = [
         'diskcache_enabled',
-        'diskcache_allow_partial',
+        'diskcache_allow_incomplete',
         'diskcache_chunksize'
     ]
 
@@ -65,10 +65,10 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.diskcache_enabled = False
         self.diskcache_template = None
         if self.cv_time_reversible:
-            self.diskcache_allow_partial = False
+            self.diskcache_allow_incomplete = False
             self.diskcache_chunksize = 100
         else:
-            self.diskcache_allow_partial = True
+            self.diskcache_allow_incomplete = True
             self.diskcache_chunksize = 1
 
         self._single_dict = cd.ExpandSingle()
@@ -86,12 +86,12 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.diskcache_enabled = True
         return self
 
-    def with_diskcache(self, template=None, chunksize=None, allow_partial=None):
+    def with_diskcache(self, template=None, chunksize=None, allow_incomplete=None):
         self.diskcache_enabled = True
         if template:
             self.diskcache_template = template
-        if allow_partial:
-            self.diskcache_allow_partial = allow_partial
+        if allow_incomplete:
+            self.diskcache_allow_incomplete = allow_incomplete
         if chunksize:
             self.diskcache_chunksize = chunksize
 
@@ -161,7 +161,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     to_dict = create_to_dict(['name', 'cv_time_reversible'])
 
 
-class CV_Volume(CollectiveVariable):
+class InVolumeCV(CollectiveVariable):
     """ Turn a `Volume` into a collective variable
 
     Attributes
@@ -181,7 +181,7 @@ class CV_Volume(CollectiveVariable):
 
         """
 
-        super(CV_Volume, self).__init__(
+        super(InVolumeCV, self).__init__(
             name,
             cv_time_reversible=True
         )
@@ -200,7 +200,7 @@ class CV_Volume(CollectiveVariable):
     to_dict = create_to_dict(['name', 'volume'])
 
 
-class CV_Callable(CollectiveVariable):
+class CallableCV(CollectiveVariable):
     """Turn any callable object into a storable `CollectiveVariable`.
 
     Attributes
@@ -277,7 +277,7 @@ class CV_Callable(CollectiveVariable):
         2. create constants inside your function
         3. if variables from the global scope are used these need to be stored
            with the function and this can only be done if they are passed as
-           arguments to the function and added as kwargs to the CV_Function
+           arguments to the function and added as kwargs to the FunctionCV
 
         >>> import openpathsampling.engines as peng
         >>> def func(snapshot, indices):
@@ -285,13 +285,13 @@ class CV_Callable(CollectiveVariable):
         >>>     return md.compute_dihedrals(
         >>>         peng.Trajectory([snapshot]).md(), indices=indices)
 
-        >>> cv = CV_Function('my_cv', func, indices=[[4, 6, 8, 10]])
+        >>> cv = FunctionCV('my_cv', func, indices=[[4, 6, 8, 10]])
 
         The function will also check if non-standard modules are imported,
         which are now `numpy`, `math`, `msmbuilder`, `pandas` and `mdtraj`
         """
 
-        super(CV_Callable, self).__init__(
+        super(CallableCV, self).__init__(
             name,
             cv_time_reversible=cv_time_reversible
         )
@@ -320,7 +320,7 @@ class CV_Callable(CollectiveVariable):
         self._post = post
 
     def to_dict(self):
-        dct = super(CV_Callable, self).to_dict()
+        dct = super(CallableCV, self).to_dict()
         callable_argument = self.__class__.args()[2]
         dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
@@ -364,7 +364,7 @@ class CV_Callable(CollectiveVariable):
         return items
 
 
-class CV_Function(CV_Callable):
+class FunctionCV(CallableCV):
     """Turn any function into a `CollectiveVariable`.
 
     Attributes
@@ -400,11 +400,11 @@ class CV_Function(CV_Callable):
 
         See also
         --------
-        `openpathsampling.CV_Callable`
+        `openpathsampling.CallableCV`
 
         """
 
-        super(CV_Function, self).__init__(
+        super(FunctionCV, self).__init__(
             name,
             cv_callable=f,
             cv_time_reversible=cv_time_reversible,
@@ -423,7 +423,7 @@ class CV_Function(CV_Callable):
         return self.cv_callable(items, **self.kwargs)
 
 
-class CV_CoordinateFunction(CV_Function):
+class CoordinateFunctionCV(FunctionCV):
     """Turn any function into a `CollectiveVariable`.
 
     Attributes
@@ -452,11 +452,11 @@ class CV_CoordinateFunction(CV_Function):
 
         See also
         --------
-        `openpathsampling.CV_Callable`
+        `openpathsampling.CallableCV`
 
         """
 
-        super(CV_Function, self).__init__(
+        super(FunctionCV, self).__init__(
             name,
             cv_callable=f,
             cv_time_reversible=True,
@@ -467,12 +467,12 @@ class CV_CoordinateFunction(CV_Function):
         )
 
     def to_dict(self):
-        dct = super(CV_CoordinateFunction, self).to_dict()
+        dct = super(CoordinateFunctionCV, self).to_dict()
         del dct['cv_time_reversible']
         return dct
 
 
-class CV_Generator(CV_Callable):
+class GeneratorCV(CallableCV):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
@@ -511,7 +511,7 @@ class CV_Generator(CV_Callable):
         from external packages can be used.
         """
 
-        super(CV_Generator, self).__init__(
+        super(GeneratorCV, self).__init__(
             name,
             cv_callable=generator,
             cv_time_reversible=cv_time_reversible,
@@ -537,7 +537,7 @@ class CV_Generator(CV_Callable):
         return [self._instance(snap) for snap in trajectory]
 
 
-class CV_CoordinateGenerator(CV_Generator):
+class CoordinateGeneratorCV(GeneratorCV):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
@@ -569,7 +569,7 @@ class CV_CoordinateGenerator(CV_Generator):
         from external packages can be used.
         """
 
-        super(CV_CoordinateGenerator, self).__init__(
+        super(CoordinateGeneratorCV, self).__init__(
             name,
             cv_callable=generator,
             cv_time_reversible=True,
@@ -580,15 +580,15 @@ class CV_CoordinateGenerator(CV_Generator):
         )
 
     def to_dict(self):
-        dct = super(CV_CoordinateGenerator, self).to_dict()
+        dct = super(CoordinateGeneratorCV, self).to_dict()
         del dct['cv_time_reversible']
         return dct
 
 
-class CV_MDTraj_Function(CV_CoordinateFunction):
+class MDTrajFunctionCV(CoordinateFunctionCV):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
-    This is identical to CV_Function except that the function is called with
+    This is identical to FunctionCV except that the function is called with
     an mdraj.Trajetory object instead of the
     :class:`openpathsampling.Trajectory` one using `f(traj.md(), \**kwargs)`
 
@@ -599,7 +599,7 @@ class CV_MDTraj_Function(CV_CoordinateFunction):
     >>> import mdtraj as md
     >>> traj = 'peng.Trajectory()'
     >>> psi_atoms = [7,9,15,17]
-    >>> psi_orderparam = CV_Function("psi", md.compute_dihedrals,
+    >>> psi_orderparam = FunctionCV("psi", md.compute_dihedrals,
     >>>                              indices=[[2,4,6,8]])
     >>> print psi_orderparam( traj )
     """
@@ -632,7 +632,7 @@ class CV_MDTraj_Function(CV_CoordinateFunction):
 
         """
 
-        super(CV_MDTraj_Function, self).__init__(
+        super(MDTrajFunctionCV, self).__init__(
             name,
             f,
             cv_requires_lists=cv_requires_lists,
@@ -665,7 +665,7 @@ class CV_MDTraj_Function(CV_CoordinateFunction):
         }
 
 
-class CV_MSMB_Featurizer(CV_CoordinateGenerator):
+class MSMBFeaturizerCV(CoordinateGeneratorCV):
     """
     A CollectiveVariable that uses an MSMBuilder3 featurizer
 
@@ -720,7 +720,7 @@ class CV_MSMB_Featurizer(CV_CoordinateGenerator):
         self._instance = featurizer(**md_kwargs)
         self.topology = topology
 
-        super(CV_Generator, self).__init__(
+        super(GeneratorCV, self).__init__(
             name,
             cv_callable=featurizer,
             cv_time_reversible=True,
@@ -754,12 +754,12 @@ class CV_MSMB_Featurizer(CV_CoordinateGenerator):
         }
 
 
-class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
+class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
     """Make a CV from a function that takes mdtraj.trajectory as input.
 
-    This is identical to CV_Class except that the function is called with
-    an mdraj.Trajetory object instead of the openpathsampling.Trajectory
-    one using `fnc(traj.md(), **kwargs)`
+    This is identical to `CoordinateGeneratorCV` except that the function is
+    called with an mdraj.Trajetory object instead of the
+    openpathsampling.Trajectory one using `fnc(traj.md(), **kwargs)`
 
     """
 
@@ -810,7 +810,7 @@ class CV_PyEMMA_Featurizer(CV_MSMB_Featurizer):
 
         featurizer(self._instance, **md_kwargs)
 
-        super(CV_Generator, self).__init__(
+        super(GeneratorCV, self).__init__(
             name,
             cv_callable=featurizer,
             cv_requires_lists=True,

@@ -18,7 +18,7 @@ from openpathsampling.tests.test_helpers import make_1d_traj
 import os
 
 
-class testCV_Function(object):
+class test_FunctionCV(object):
     def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
@@ -37,7 +37,7 @@ class testCV_Function(object):
 
     def test_pickle_external_cv(self):
         template = make_1d_traj([0.0])[0]
-        cv = paths.CV_Function("x", lambda snap: snap.coordinates[0][0])
+        cv = paths.FunctionCV("x", lambda snap: snap.coordinates[0][0])
         storage = paths.Storage("myfile.nc", "w", template)
         storage.save(cv)
         storage.close()
@@ -45,7 +45,7 @@ class testCV_Function(object):
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
         psi_atoms = [6, 8, 14, 16]
-        dihedral_op = op.CV_MDTraj_Function(
+        dihedral_op = op.MDTrajFunctionCV(
             "psi",
             md.compute_dihedrals,
             topology=self.topology,
@@ -62,7 +62,7 @@ class testCV_Function(object):
         """ Create an atom pair collectivevariable using MSMSBuilder3 """
 
         atom_pairs = [[0, 1], [10, 14]]
-        atom_pair_op = op.CV_MSMB_Featurizer(
+        atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
             AtomPairsFeaturizer,
             topology=self.topology,
@@ -78,7 +78,7 @@ class testCV_Function(object):
     def test_return_parameters_from_template(self):
 
         atom_pairs = [[0, 1], [10, 14]]
-        atom_pair_op = op.CV_MSMB_Featurizer(
+        atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
             AtomPairsFeaturizer,
             topology=self.topology,
@@ -99,11 +99,11 @@ class testCV_Function(object):
 
         # test all combinations of (1) with and without UUIDs,
         # (2) using partial yes, no all of these must work
-        for use_uuid, allow_partial in [(True, True), (False, True),
+        for use_uuid, allow_incomplete in [(True, True), (False, True),
                                         (True, False), (False, False)]:
 
             # print '=========================================================='
-            # print 'UUID', use_uuid, 'PARTIAL', allow_partial
+            # print 'UUID', use_uuid, 'PARTIAL', allow_incomplete
             # print '=========================================================='
 
             fname = data_filename("cv_storage_test.nc")
@@ -116,11 +116,11 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_CoordinateFunction(
+            cv1 = paths.CoordinateFunctionCV(
                 'f1',
                 lambda x: x.coordinates[0]
             ).with_diskcache(
-                allow_partial=allow_partial
+                allow_incomplete=allow_incomplete
             )
 
             storage_w.save(cv1)
@@ -146,7 +146,7 @@ class testCV_Function(object):
 
             cv_cache = rcv1._store_dict.value_store
 
-            assert (cv_cache.allow_partial == allow_partial)
+            assert (cv_cache.allow_incomplete == allow_incomplete)
 
             for idx, snap in enumerate(storage_r.trajectories[1]):
                 # if hasattr(snap, '_idx'):
@@ -169,7 +169,7 @@ class testCV_Function(object):
 
                 # if len(cv_cache.cache._chunkdict) > 0:
                 #
-                #     if allow_partial:
+                #     if allow_incomplete:
                 #         print cv_cache.index
                 #         print cv_cache.vars['value'][:]
                 #
@@ -182,7 +182,7 @@ class testCV_Function(object):
                 #
                 # print cv_cache[snap.reversed]
 
-                if not allow_partial or cv_cache[snap] is not None:
+                if not allow_incomplete or cv_cache[snap] is not None:
                     assert_close_unit(cv_cache[snap], cv1(snap))
                     assert_close_unit(
                         cv_cache[snap.reversed],
@@ -199,7 +199,7 @@ class testCV_Function(object):
         # test all combinations of (1) with and without UUIDs,
         # (2) using partial yes, no all of these must work
 
-        allow_partial = True
+        allow_incomplete = True
 
         # print
         # print
@@ -220,11 +220,11 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_CoordinateFunction(
+            cv1 = paths.CoordinateFunctionCV(
                 'f1',
                 lambda snapshot: snapshot.coordinates[0]
             ).with_diskcache(
-                allow_partial=allow_partial
+                allow_incomplete=allow_incomplete
             )
 
             # let's mess up the order in which we save and include
@@ -269,7 +269,7 @@ class testCV_Function(object):
         # test all combinations of (1) with and without UUIDs,
         # (2) using partial yes; all of these must work
 
-        allow_partial = True
+        allow_incomplete = True
 
         # print
         # print
@@ -290,11 +290,11 @@ class testCV_Function(object):
             storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
             storage_w.snapshots.save(template)
 
-            cv1 = paths.CV_CoordinateFunction(
+            cv1 = paths.CoordinateFunctionCV(
                 'f1',
                 lambda snapshot: snapshot.coordinates[0]
             ).with_diskcache(
-                allow_partial=allow_partial)
+                allow_incomplete=allow_incomplete)
 
             # let's mess up the order in which we save and
             # include reversed ones as well

@@ -21,7 +21,7 @@ for logger in quiet_loggers:
 class testBiasEnsembleTable(object):
     def setup(self):
         # create the network
-        xval = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(xval, -1.0, -0.5).named("A")
         self.stateB = paths.CVRangeVolume(xval, 0.5, float("inf")).named("B")
         ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0), 
@@ -138,17 +138,21 @@ class testBiasEnsembleTable(object):
 
     def test_add_biases(self):
         # this is where we combine multiple biases into one
-        xval2 = paths.CV_Function(name="xB", f=lambda s : 0.5-s.xyz[0][0])
+        ifacesA = self.ifacesA[:-1]
+        xval2 = paths.FunctionCV(name="xB", f=lambda s : 0.5-s.xyz[0][0])
         ifacesB = paths.VolumeInterfaceSet(xval2, float("-inf"),
-                                           [0.0, 0.1, 0.2, 0.3])
-        xval3 = paths.CV_Function(name="xC", f=lambda s : s.xyz[0][0]-2.0)
+                                           [0.0, 0.1, 0.2])
+        xval3 = paths.FunctionCV(name="xC", f=lambda s : s.xyz[0][0]-2.0)
         stateC = paths.CVRangeVolume(self.xval, -3.0, 2.0)
         ifacesC = paths.VolumeInterfaceSet(xval3, -1.0, [0.0, 0.1, 0.2, 0.3])
-        network = paths.MISTISNetwork([
-            (self.stateA, self.ifacesA, self.stateB),
-            (self.stateB, ifacesB, self.stateA),
-            (stateC, ifacesC, self.stateA)
-        ])
+        network = paths.MISTISNetwork(
+            [(self.stateA, ifacesA, self.stateB),
+             (self.stateB, ifacesB, self.stateA),
+             (stateC, ifacesC, self.stateA)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {ifacesA: -0.2, ifacesB: 0.3}
+            )
+        )
         ens_A = network.transitions[(self.stateA, self.stateB)].ensembles
         ens_B = network.transitions[(self.stateB, self.stateA)].ensembles
         ens_C = network.transitions[(stateC, self.stateA)].ensembles
