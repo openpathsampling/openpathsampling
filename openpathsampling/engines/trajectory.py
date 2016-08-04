@@ -254,7 +254,12 @@ class Trajectory(list, StorableObject):
         return ret
 
     def __hash__(self):
-        return object.__hash__(self)
+        if len(self) == 0:
+            return hash(tuple())
+        else:
+            return hash(
+                (list.__getitem__(self, 0), len(self),
+                 list.__getitem__(self, -1)))
 
     def __getitem__(self, index):
         # Allow for numpy style selection using lists

@@ -898,20 +898,19 @@ class Ensemble(StorableNamedObject):
 
         for idx, traj in enumerate(trajectories):
             if unique == 'first':
-                part = self.find_first_subtrajectory(traj)
-                if part is not None:
-                    return paths.Sample(
-                        trajectory=part,
-                        ensemble=self
-                    ), idx
+                parts = self.iter_split(traj)
             elif unique == 'shortest':
                 parts = self.split(traj)
                 if len(parts) > 0:
-                    shortest = sorted(parts)[0]
-                    return paths.Sample(
-                        trajectory=shortest,
-                        ensemble=self
-                    ), idx
+                    parts = sorted(parts)
+            else:
+                parts = []
+
+            for part in parts:
+                return paths.Sample(
+                    trajectory=part,
+                    ensemble=self
+                ), idx
 
         return None, None
 

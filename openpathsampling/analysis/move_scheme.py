@@ -6,6 +6,8 @@ import move_strategy
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
+from openpathsampling.tools import refresh_output
+
 try:
     import pandas as pd
     has_pandas = True
@@ -405,7 +407,7 @@ class MoveScheme(StorableNamedObject):
         # if we avoid we move the used ones to the back of the list
         # if we remove we remove the used ones
         for s in sample_set:
-            traj = s.traj
+            traj = s.trajectory
             if traj in trajectories:
                 idx = trajectories.index(traj)
                 self._update_traj_list(trajectories, idx, reuse_strategy)
@@ -417,7 +419,7 @@ class MoveScheme(StorableNamedObject):
         # list will create a copy so removing item will not affect the loop
 
         # 1. look in the existing sample_set
-        for idx, ens_list in enumerate(list(ensembles_to_fill)):
+        for idx, ens_list in reversed(list(enumerate(ensembles_to_fill))):
             if type(ens_list) is not list:
                 ens_list = [ens_list]
 
@@ -438,7 +440,7 @@ class MoveScheme(StorableNamedObject):
                 ('extend_sample_from_trajectories', {
                     'level': 1,
                     'unique': 'shortest',
-                    'max_attempts': 5})
+                    'attempts': 5})
             ]
 
         for strategy, options in strategies:
@@ -448,27 +450,44 @@ class MoveScheme(StorableNamedObject):
 
                 options['engine'] = engine
 
-            for idx, ens_list in enumerate(list(ensembles_to_fill)):
+            for idx, ens_list in sorted(list(enumerate(ensembles_to_fill))):
                 if type(ens_list) is not list:
                     ens_list = [ens_list]
 
                 for ens in ens_list:
 
                     # fill only the first in ens_list that can be filled
-                    sample, trj_idx = ens.sample_from_trajectories(
+
+                    if not hasattr(ens, strategy):
+                        break
+
+                    fnc = getattr(ens, strategy)
+
+                    refresh_output(
+                        'Trying `%s` in ensemble `%s' % (
+                            strategy, ens.name
+                        ))
+
+                    sample, trj_idx = fnc(
                         trajectories=trajectories,
-                        strategy=strategy,
                         **options
                     )
 
-                    # now, if we've found a sample, add it
+                    # now, if we've found a sample, add it and
+                    # make sure we chose a proper replica ID
                     if sample is not None:
                         if ens.replica_sign > 0:
-                            replica_idx = \
-                                max(0, max(sample_set.replicas()) + 1)
+                            if len(sample_set) == 0:
+                                replica_idx = 0
+                            else:
+                                replica_idx = \
+                                    max(0, max(sample_set.replicas) + 1)
                         else:
-                            replica_idx = \
-                                min(min(sample_set.replicas()) - 1, - 1)
+                            if len(sample_set) == 0:
+                                replica_idx = -1
+                            else:
+                                replica_idx = \
+                                    min(min(sample_set.replicas) - 1, - 1)
 
                         sample.replica = replica_idx
 
