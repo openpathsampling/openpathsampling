@@ -36,7 +36,7 @@ collective variable-based volumes
     :toctree: api/generated/
 
     CVDefinedVolume
-    CVRangeVolumePeriodic
+    PeriodicCVDefinedVolume
 
 voronoi cell volumes
 --------------------

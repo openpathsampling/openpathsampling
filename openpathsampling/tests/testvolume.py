@@ -152,18 +152,18 @@ class testCVRangeVolume(object):
 
 class testCVRangeVolumePeriodic(object):
     def setUp(self):
-        self.pvolA = volume.CVRangeVolumePeriodic(op_id, -100, 75)
-        self.pvolA_ = volume.CVRangeVolumePeriodic(op_id, 75, -100)
-        self.pvolB = volume.CVRangeVolumePeriodic(op_id, 50, 100)
-        self.pvolC = volume.CVRangeVolumePeriodic(op_id, -100, -50)
-        self.pvolD = volume.CVRangeVolumePeriodic(op_id, -100, 100)
-        self.pvolE = volume.CVRangeVolumePeriodic(op_id, -150, 150)
+        self.pvolA = volume.PeriodicCVDefinedVolume(op_id, -100, 75)
+        self.pvolA_ = volume.PeriodicCVDefinedVolume(op_id, 75, -100)
+        self.pvolB = volume.PeriodicCVDefinedVolume(op_id, 50, 100)
+        self.pvolC = volume.PeriodicCVDefinedVolume(op_id, -100, -50)
+        self.pvolD = volume.PeriodicCVDefinedVolume(op_id, -100, 100)
+        self.pvolE = volume.PeriodicCVDefinedVolume(op_id, -150, 150)
     
     def test_normal(self):
         """min<max and both within periodic domain"""
         lambda_min = -150
         lambda_max = 70
-        vol = volume.CVRangeVolumePeriodic(op_id,
+        vol = volume.PeriodicCVDefinedVolume(op_id,
                                           lambda_min, lambda_max, -180,180)
         assert_equal(vol._period_len, 360)
         assert_equal(vol._period_shift, -180)
@@ -185,7 +185,7 @@ class testCVRangeVolumePeriodic(object):
         """min<max, no periodic domain defined"""
         lambda_min = -150
         lambda_max = 70
-        vol = volume.CVRangeVolumePeriodic(op_id,
+        vol = volume.PeriodicCVDefinedVolume(op_id,
                                           lambda_min, lambda_max)
         assert_equal(vol.__str__(),
             "{x|Id(x) [periodic] in [-150.0, 70.0]}")
@@ -203,7 +203,7 @@ class testCVRangeVolumePeriodic(object):
         """max<min and both within periodic domain"""
         lambda_min = 70
         lambda_max = -150
-        vol = volume.CVRangeVolumePeriodic(op_id,
+        vol = volume.PeriodicCVDefinedVolume(op_id,
                                           lambda_min, lambda_max, -180,180)
         assert_equal(vol.__str__(),
             "{x|(Id(x) - -180) % 360 + -180 in [-180, -150] union [70, 180]}")
@@ -222,7 +222,7 @@ class testCVRangeVolumePeriodic(object):
         """max<min, no periodic domain defined"""
         lambda_min = 70
         lambda_max = -150
-        vol = volume.CVRangeVolumePeriodic(op_id,
+        vol = volume.PeriodicCVDefinedVolume(op_id,
                                           lambda_min, lambda_max)
         # out of state
         assert_equal(False, vol(lambda_min-1.0))
@@ -238,7 +238,7 @@ class testCVRangeVolumePeriodic(object):
         '''max in next periodic domain'''
         lambda_min = 70
         lambda_max = 210
-        vol = volume.CVRangeVolumePeriodic(op_id,
+        vol = volume.PeriodicCVDefinedVolume(op_id,
                                           lambda_min, lambda_max, -180,180)
         assert_equal(vol.lambda_max, -150)
         # assuming that's true, so is everything else
@@ -246,11 +246,11 @@ class testCVRangeVolumePeriodic(object):
     @raises(Exception)
     def test_volume_bigger_than_bounds(self):
         '''max-min > pbc_range raises Exception'''
-        vol = volume.CVRangeVolumePeriodic(op_id, 90, 720, -180, 180)
+        vol = volume.PeriodicCVDefinedVolume(op_id, 90, 720, -180, 180)
 
     def test_volume_equals_bounds(self):
         '''max-min == pbc_range allows all points'''
-        vol = volume.CVRangeVolumePeriodic(op_id, 0, 360, -180, 180)
+        vol = volume.PeriodicCVDefinedVolume(op_id, 0, 360, -180, 180)
         assert_equal(vol.__str__(),
             "{x|(Id(x) - -180) % 360 + -180 in [-180, 180]}")
         assert_equal(True, vol(0))
@@ -260,7 +260,7 @@ class testCVRangeVolumePeriodic(object):
 
     def test_periodic_and_combos(self):
         assert_equal((self.pvolA & self.pvolB),
-                     volume.CVRangeVolumePeriodic(op_id, 50, 75))
+                     volume.PeriodicCVDefinedVolume(op_id, 50, 75))
         assert_equal((self.pvolA & self.pvolB)(60), True)
         assert_equal((self.pvolA & self.pvolB)(80), False)
         assert_equal((self.pvolB & self.pvolC), volume.EmptyVolume())
@@ -273,8 +273,8 @@ class testCVRangeVolumePeriodic(object):
         # go to special case
         assert_equal((self.pvolE & self.pvolA_),
                      volume.UnionVolume(
-                         volume.CVRangeVolumePeriodic(op_id, -150,-100),
-                         volume.CVRangeVolumePeriodic(op_id, 75, 150)
+                         volume.PeriodicCVDefinedVolume(op_id, -150,-100),
+                         volume.PeriodicCVDefinedVolume(op_id, 75, 150)
                      )
                     )
         # go to super if needed
@@ -300,11 +300,11 @@ class testCVRangeVolumePeriodic(object):
         assert_equal(self.pvolA ^ self.pvolA, volume.EmptyVolume())
         assert_equal(self.pvolE ^ self.pvolD,
                      volume.UnionVolume(
-                         volume.CVRangeVolumePeriodic(op_id, -150, -100),
-                         volume.CVRangeVolumePeriodic(op_id, 100, 150)))
+                         volume.PeriodicCVDefinedVolume(op_id, -150, -100),
+                         volume.PeriodicCVDefinedVolume(op_id, 100, 150)))
         assert_equal(self.pvolB ^ self.pvolC, self.pvolB | self.pvolC)
         assert_equal(self.pvolB ^ self.pvolD,
-                     volume.CVRangeVolumePeriodic(op_id, -100, 50))
+                     volume.PeriodicCVDefinedVolume(op_id, -100, 50))
 
     def test_periodic_not_combos(self):
         assert_equal(~self.pvolA, self.pvolA_)
@@ -319,17 +319,17 @@ class testCVRangeVolumePeriodic(object):
         assert_equal(self.pvolA - self.pvolA_, self.pvolA)
         assert_equal(self.pvolA_ - self.pvolA, self.pvolA_)
         assert_equal(self.pvolD - self.pvolA,
-                     volume.CVRangeVolumePeriodic(op_id, 75, 100))
+                     volume.PeriodicCVDefinedVolume(op_id, 75, 100))
         assert_equal((self.pvolD - self.pvolA)(80), True)
         assert_equal((self.pvolD - self.pvolA)(50), False)
         assert_equal(self.pvolB - self.pvolC, self.pvolB)
         assert_equal(self.pvolA - self.pvolA, volume.EmptyVolume())
         assert_equal(self.pvolE - self.pvolD,
                      volume.UnionVolume(
-                         volume.CVRangeVolumePeriodic(op_id, -150, -100),
-                         volume.CVRangeVolumePeriodic(op_id, 100, 150)))
+                         volume.PeriodicCVDefinedVolume(op_id, -150, -100),
+                         volume.PeriodicCVDefinedVolume(op_id, 100, 150)))
         assert_equal(self.pvolE - self.pvolA_,
-                     volume.CVRangeVolumePeriodic(op_id, -100, 75))
+                     volume.PeriodicCVDefinedVolume(op_id, -100, 75))
 
 
 class testVolumeFactory(object):
@@ -366,8 +366,8 @@ class testVolumeFactory(object):
     def test_CVRangeVolumePeriodicSet(self):
         mins = [-1.5, -3.5]
         maxs = [2.0, 4.0]
-        lv0 = volume.CVRangeVolumePeriodic(op_id, mins[0], maxs[0])
-        lv1 = volume.CVRangeVolumePeriodic(op_id, mins[1], maxs[1])
+        lv0 = volume.PeriodicCVDefinedVolume(op_id, mins[0], maxs[0])
+        lv1 = volume.PeriodicCVDefinedVolume(op_id, mins[1], maxs[1])
         assert_equal(
             [lv0, lv1],
             volume.VolumeFactory.CVRangeVolumePeriodicSet(op_id, mins, maxs)

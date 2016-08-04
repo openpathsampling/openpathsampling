@@ -366,7 +366,7 @@ class CVDefinedVolume(Volume):
         return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.collectivevariable.name)
 
 
-class CVRangeVolumePeriodic(CVDefinedVolume):
+class PeriodicCVDefinedVolume(CVDefinedVolume):
     """
     As with `CVDefinedVolume`, but for a periodic order parameter.
 
@@ -385,7 +385,7 @@ class CVRangeVolumePeriodic(CVDefinedVolume):
     _excluded_attr = ['wrap']
     def __init__(self, collectivevariable, lambda_min = 0.0, lambda_max = 1.0,
                                        period_min = None, period_max = None):
-        super(CVRangeVolumePeriodic, self).__init__(collectivevariable,
+        super(PeriodicCVDefinedVolume, self).__init__(collectivevariable,
                                                     lambda_min, lambda_max)        
         self.period_min = period_min
         self.period_max = period_max
@@ -410,7 +410,7 @@ class CVRangeVolumePeriodic(CVDefinedVolume):
 
     # next few functions add support for range logic
     def _copy_with_new_range(self, lmin, lmax):
-        return CVRangeVolumePeriodic(self.collectivevariable, lmin, lmax,
+        return PeriodicCVDefinedVolume(self.collectivevariable, lmin, lmax,
                                     self.period_min, self.period_max)
 
     @staticmethod
@@ -426,7 +426,7 @@ class CVRangeVolumePeriodic(CVDefinedVolume):
 
     def __invert__(self):
         # consists of swapping max and min
-        return CVRangeVolumePeriodic(self.collectivevariable,
+        return PeriodicCVDefinedVolume(self.collectivevariable,
                                     self.lambda_max, self.lambda_min,
                                     self.period_min, self.period_max
                                    )
@@ -569,6 +569,6 @@ class VolumeFactory(object):
         minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
         myset = []
         for i in range(len(maxvals)):
-            myset.append(CVRangeVolumePeriodic(op, minvals[i], maxvals[i],
+            myset.append(PeriodicCVDefinedVolume(op, minvals[i], maxvals[i],
                                               period_min, period_max))
         return myset

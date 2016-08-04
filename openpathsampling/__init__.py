@@ -136,7 +136,7 @@ from storage.storage import Storage, AnalysisStorage
 
 from volume import (
     Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
-    EmptyVolume, FullVolume, CVDefinedVolume, CVRangeVolumePeriodic,
+    EmptyVolume, FullVolume, CVDefinedVolume, PeriodicCVDefinedVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )

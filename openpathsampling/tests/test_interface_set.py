@@ -162,7 +162,7 @@ class testPeriodicVolumeInterfaceSet(object):
 
     def test_new_interface(self):
         new_iface = self.increasing_set.new_interface(-140)
-        expected = paths.CVRangeVolumePeriodic(self.cv, 0.0, -140, -180, 180)
+        expected = paths.PeriodicCVDefinedVolume(self.cv, 0.0, -140, -180, 180)
         assert_equal(new_iface, expected)
     
     def test_storage(self):
