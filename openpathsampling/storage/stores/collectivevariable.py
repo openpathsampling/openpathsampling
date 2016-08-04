@@ -26,7 +26,7 @@ class CVStore(UniqueNamedObjectStore):
             op.set_cache_store(cache_store)
             op.diskcache_enabled = True
             op.diskcache_chunksize = cache_store.chunksize
-            op.allow_partial = cache_store.allow_partial
+            op.allow_incomplete = cache_store.allow_incomplete
 
         return op
 
@@ -58,7 +58,7 @@ class CVStore(UniqueNamedObjectStore):
             self,
             cv,
             template=None,
-            allow_partial=None,
+            allow_incomplete=None,
             chunksize=None):
         """
         Return the storage.vars[''] variable that contains the values
@@ -70,7 +70,7 @@ class CVStore(UniqueNamedObjectStore):
         template : :obj:`openpathsampling.engines.BaseSnapshot`
             an optional snapshot to be used to compute a test value of the CV.
             This will determine the type and shape of the
-        allow_partial : bool
+        allow_incomplete : bool
             if `True` the added store can hold a part of all values. Useful if
             the values are large and/or complex and you do not need them for all
             snapshots
@@ -92,7 +92,7 @@ class CVStore(UniqueNamedObjectStore):
         self.storage.snapshots.add_cv(
             cv,
             template,
-            allow_partial=allow_partial,
+            allow_incomplete=allow_incomplete,
             chunksize=chunksize
         )
 
