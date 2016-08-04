@@ -116,7 +116,7 @@ class MoveChange(TreeMixin, StorableObject):
         Return a collapsed set of samples with non used samples removed
 
         This is the minimum required set of samples to keep the `MoveChange`
-        correct and allow to target sample set to be correctly created.
+        correct and allow to target sampleset to be correctly created.
         These are the samples used by `.closed`
 
         Examples

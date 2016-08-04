@@ -271,7 +271,7 @@ class SampleSet(StorableObject):
 
     def __add__(self, other):
         """
-        Add the move path to the Sample and return the new sample set
+        Add the move path to the Sample and return the new sampleset
         """
         if isinstance(other, paths.MoveChange):
             return self.apply_samples(other.results)
@@ -327,7 +327,7 @@ class SampleSet(StorableObject):
         """Return SampleSet using `new_ensembles` as ensembles.
 
         This creates a SampleSet which replaces the ensembles in the old
-        sample set with equivalent ensembles from a given list. The string
+        sampleset with equivalent ensembles from a given list. The string
         description of the ensemble is used as a test.
 
         Note that this assumes that there are no one-to-many or many-to-one
