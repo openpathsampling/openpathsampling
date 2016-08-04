@@ -503,16 +503,16 @@ class testRandomAllowedChoiceMover(object):
         self.mover = RandomAllowedChoiceMover([self.shooter, self.pathrev])
 
     def test_move_single_replica(self):
-        sampleset = SampleSet([self.samp1])
-        change = self.mover.move(sampleset)
+        sample_set = SampleSet([self.samp1])
+        change = self.mover.move(sample_set)
         subchange = change.subchange
         assert_equal(subchange.mover, self.pathrev)
         assert_equal(subchange.accepted, True)
         assert_equal(change.accepted, True)
         assert_equal(len(subchange.samples), 1)
 
-        sampleset = SampleSet([self.samp2])
-        change = self.mover.move(sampleset)
+        sample_set = SampleSet([self.samp2])
+        change = self.mover.move(sample_set)
         subchange = change.subchange
         assert_equal(subchange.mover, self.shooter)
         assert_equal(subchange.accepted, True)
@@ -520,10 +520,10 @@ class testRandomAllowedChoiceMover(object):
 
 
     def test_move_multiple_replicas(self):
-        sampleset = SampleSet([self.samp1, self.samp2])
+        sample_set = SampleSet([self.samp1, self.samp2])
         count = {}
         for i in range(100):
-            change = self.mover.move(sampleset)
+            change = self.mover.move(sample_set)
             subchange = change.subchange
             assert_equal(change.accepted, True)
             assert_equal(subchange.accepted, True)
@@ -543,14 +543,14 @@ class testRandomAllowedChoiceMover(object):
 
 
     def test_move_multiple_replicas_weighted_ensembles(self):
-        sampleset = SampleSet([self.samp1, self.samp2])
+        sample_set = SampleSet([self.samp1, self.samp2])
         ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
         # weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
         weighted_mover = RandomAllowedChoiceMover([self.pathrev,
                                                    self.shooter], [1.0, 2.0])
         count = {}
         for i in range(100):
-            change = weighted_mover.move(sampleset)
+            change = weighted_mover.move(sample_set)
             subchange = change.subchange
             assert_equal(change.accepted, True)
             assert_equal(subchange.accepted, True)
