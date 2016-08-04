@@ -193,6 +193,7 @@ class Ensemble(StorableNamedObject):
     __metaclass__ = abc.ABCMeta
 
     use_shortcircuit = True
+    replica_sign = +1
 
     def __init__(self):
         """
@@ -835,6 +836,125 @@ class Ensemble(StorableNamedObject):
                 "Could not generate valid sample. You might try with "
                 "specifying an engine."
             )
+
+    def sample_from_trajectory(
+            self,
+            trajectory,
+            strategy=None,
+            attempts=5,
+            engine=None
+    ):
+        """
+        Generates a sample for the given ensemble and one of the trajectories.
+
+        Parameters
+        ----------
+        trajectories : list of :class:`.Trajectory`
+            the trajectories to consider filling the sample with
+        used_trajectories : list of :class:`.Trajectory`
+            trajectories which are already in use
+        avoid_reuse : bool
+            if True (default), only use a trajectory in used_trajectories if
+            no other trajectory satisfies the ensemble. If False, use the first
+            trajectory in trajectories which satisfies the ensemble
+
+        Returns
+        -------
+        :class:`.Sample` or None :
+            the sample created, or None if no sample could be created
+        """
+
+        sample = None
+        selected = None
+        for strategy in strategies:
+            if strategy == 'self':
+                if self(trajectory):
+                    selected = trajectory
+                    break
+            elif strategy == 'split':
+                selected = self.find_first_subtrajectory(trajectory)
+
+            elif strategy == 'extend' and \
+                engine is not None and \
+                    hasattr(self, 'extendable_sub_ensembles'):
+                        for sub_ensemble in self.extendable_sub_ensembles:
+                            for idx, traj in enumerate(trajectories):
+                                for traj_parts in [
+                                    sub_ensemble.iter_split(traj),
+                                    sub_ensemble.iter_split(traj.reversed)
+                                ]:
+
+                                    for part in traj_parts:
+                                        if self.strict_can_append(part):
+                                            # seems we could extend forward
+                                            part = engine.extend_forward(
+                                                part,
+                                                self
+                                            )
+
+                                        if self.strict_can_prepend(part):
+                                            # and extend backward
+                                            part = engine.extend_backward(
+                                                part,
+                                                self
+                                            )
+
+                                        if self(
+                                                part):  # make sure we found a sample
+                                            return paths.Sample(
+                                                replica=replica_id,
+                                                trajectory=part,
+                                                ensemble=self
+                                            )
+
+        if selected is not None:
+            sample = paths.Sample(
+                trajectory=selected,
+                ensemble=self)
+
+        return sample
+
+
+    def sample_from_trajectories(self, trajectories, used_trajectories=None):
+        """
+        Generates a sample for the given ensemble and one of the trajectories.
+
+        Parameters
+        ----------
+        trajectories : list of :class:`.Trajectory`
+            the trajectories to consider filling the sample with
+        used_trajectories : list of :class:`.Trajectory`
+            trajectories which are already in use
+        avoid_reuse : bool
+            if True (default), only use a trajectory in used_trajectories if
+            no other trajectory satisfies the ensemble. If False, use the first
+            trajectory in trajectories which satisfies the ensemble
+
+        Returns
+        -------
+        :class:`.Sample` or None :
+            the sample created, or None if no sample could be created
+        """
+        sample = None
+        selected = None
+        if used_trajectories is None:  # pragma: no cover
+            used_trajectories = []
+        possible = [traj for traj in trajectories if self(traj)]
+        if used_trajectories:
+            for traj in possible:
+                if traj not in used_trajectories:
+                    selected = traj
+                    break
+
+        if selected is None and len(possible) > 0:
+            # either not avoid_reuse or all possibilities already used
+            selected = possible[0]  # take the first one
+
+        if selected is not None:
+            sample = paths.Sample(
+                trajectory=selected,
+                ensemble=self)
+        return sample
 
     def sample_from_trajectories(
             self, trajectories, replica_id, engine=None):
@@ -2576,6 +2696,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     # them being used in __init__ instead of the self-made ones
 
     _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
+    replica_sign = -1
 
     def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
         if n_l < 2:

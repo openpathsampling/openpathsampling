@@ -1,7 +1,8 @@
 import openpathsampling as paths
 
 from move_strategy import levels as strategy_levels
-import move_strategy as strategies
+# import move_strategy as move_strategy
+import move_strategy
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
@@ -14,51 +15,6 @@ except ImportError:
 
 
 import sys
-
-
-def sample_from_trajectories(ensemble, trajectories, used_trajectories=None,
-                             avoid_reuse=True):
-    """
-    Generates a sample for the given ensemble and one of the trajectories.
-
-    Parameters
-    ----------
-    ensemble : :class:`.Ensemble`
-        the ensemble for the sample
-    trajectories : list of :class:`.Trajectory`
-        the trajectories to consider filling the sample with
-    used_trajectories : list of :class:`.Trajectory`
-        trajectories which are already in use
-    avoid_reuse : bool
-        if True (default), only use a trajectory in used_trajectories if
-        no other trajectory satisfies the ensemble. If False, use the first
-        trajectory in trajectories which satisfies the ensemble
-
-    Returns
-    -------
-    :class:`.Sample` or None :
-        the sample created, or None if no sample could be created
-    """
-    sample = None
-    selected = None
-    if used_trajectories is None:  # pragma: no cover
-        used_trajectories = []
-    possible = [traj for traj in trajectories if ensemble(traj)]
-    if avoid_reuse:
-        for traj in possible:
-            if traj not in used_trajectories:
-                selected = traj
-                break
-
-    if selected is None and len(possible) > 0:
-        # either not avoid_reuse or all possibilities already used
-        selected = possible[0]  # take the first one
-
-    if selected is not None:
-        sample = paths.Sample(
-            trajectory=selected,
-            ensemble=ensemble)
-    return sample
 
 
 class MoveScheme(StorableNamedObject):
@@ -272,9 +228,10 @@ class MoveScheme(StorableNamedObject):
         """
         if root is None:
             if self.root_mover is None:
-                self.root = self.move_decision_tree()
+                self.root_mover = self.move_decision_tree()
+
             root = self.root_mover
-        movers = root.map_pre_order(lambda x : x)
+        movers = root.map_pre_order(lambda x: x)
         mover_ensemble_dict = {}
         for m in movers:
             input_sig = m.input_ensembles
@@ -356,7 +313,6 @@ class MoveScheme(StorableNamedObject):
                        "decision tree").format(fcn_name=fcn_name)
             raise RuntimeWarning(warnstr)
 
-
     def list_initial_ensembles(self, root=None):
         """
         Returns a list of initial ensembles for this move scheme.
@@ -381,9 +337,8 @@ class MoveScheme(StorableNamedObject):
                             if ens in used_ensembles]
         return output_ensembles
 
-
     def initial_conditions_from_trajectories(self, trajectories,
-                                             sampleset=None,
+                                             sample_set=None,
                                              avoid_reuse=True):
         """
         Create a SampleSet with as many initial samples as possible.
@@ -395,7 +350,7 @@ class MoveScheme(StorableNamedObject):
         ----------
         trajectories : list of :class:`.Trajectory` or :class:`.Trajectory`
             the input trajectories to use
-        sampleset : :class:`.SampleSet`, optional
+        sample_set : :class:`.SampleSet`, optional
             if given, add samples to this sampleset. Default is None, which
             means that this will start a new sampleset.
         avoid_reuse : bool
@@ -414,50 +369,95 @@ class MoveScheme(StorableNamedObject):
         --------
         list_initial_ensembles
         """
-        ensembles_to_fill = self.list_initial_ensembles()
-        if sampleset is None:
-            sampleset = paths.SampleSet([])
+        if sample_set is None:
+            sample_set = paths.SampleSet([])
 
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
+        elif isinstance(trajectories, paths.Sample):
+            trajectories = [trajectories.trajectory]
+        elif isinstance(trajectories, paths.SampleSet):
+            trajectories = [s.trajectory for s in trajectories]
+        elif isinstance(trajectories, list):
+            if len(trajectories) > 0:
+                trajectories = [
+                    obj.trajectory if isinstance(obj, paths.Sample) else obj
+                    for obj in trajectories
+                ]
+            else:
+                raise ValueError('Need at least one trajectory!')
+        else:
+            # we see what happens
+            pass
 
-        used_trajectories = [s.trajectory for s in sampleset]
+        reuse_strategy = 'avoid'
 
-        for ens_list in ensembles_to_fill:
+        # let's always try the short trajectories first
+        trajectories = sorted(trajectories, key=len)
+
+        # we will try forward/backward interleaved
+        trajectories = [
+            direction for traj in trajectories
+            for direction in [traj, traj.reversed]]
+
+        # if we start with an existing sample set look at what we got
+        # if we avoid we move the used ones to the back of the list
+        # if we remove we remove the used ones
+        for s in sample_set:
+            traj = s.traj
+            if traj in trajectories:
+                idx = trajectories.index(traj)
+                self._update_traj_list(trajectories, idx, reuse_strategy)
+
+        existing_ensembles = sample_set.ensemble_list()
+        ensembles_to_fill = self.list_initial_ensembles()
+
+        # loop all ensemble categories from which we need one sample
+        # list will create a copy so removing item will not affect the loop
+        for idx, ens_list in enumerate(list(ensembles_to_fill)):
+            if type(ens_list) is not list:
+                ens_list = [ens_list]
+
+            # try to generate a sample for each category
+            # try different strategies to get a sample
+
+            # 1. look in the existing sample_set
+            if set(ens_list) & set(existing_ensembles):
+                # remove the complete category
+                del ensembles_to_fill[idx]
+                continue  # We've already got one. It's very nice
+
+        # loop over remaining ensembles to fill
+        for idx, ens_list in enumerate(list(ensembles_to_fill)):
             if type(ens_list) is not list:
                 ens_list = [ens_list]
             sample = None
+
+            # 2. try forward and backward
             for ens in ens_list:
-                if ens in sampleset.ensemble_list():
-                    break  # We've already got one. It's very nice
+
                 # fill only the first in ens_list that can be filled
-                # 1. try forward
-                possible = [traj for traj in trajectories if ens(traj)]
-                sample = sample_from_trajectories(
-                    ensemble=ens,
+                sample, trj_idx = ens.sample_from_trajectories(
                     trajectories=trajectories,
-                    used_trajectories=used_trajectories,
-                    avoid_reuse=avoid_reuse
+                    strategy='self'
                 )
-
-                # 2. try reversed
-                if sample is None:
-                    all_reversed = [traj.reversed for traj in trajectories]
-                    sample = sample_from_trajectories(
-                        ensemble=ens,
-                        trajectories=all_reversed,
-                        used_trajectories=used_trajectories,
-                        avoid_reuse=avoid_reuse
-                    )
-
-                # 3. hypothetically, try extending (future)
 
             # now, if we've found a sample, add it
             if sample is not None:
-                sampleset.append_as_new_replica(sample)
-                used_trajectories.append(sample.trajectory)
+                sample_set.append_as_new_replica(sample)
+                self._update_traj_list(trajectories, idx, reuse_strategy)
 
-        return sampleset
+        return sample_set
+
+    @staticmethod
+    def _update_traj_list(trajectories, idx, reuse_strategy='avoid'):
+        if reuse_strategy == 'avoid':
+            used = trajectories[idx]
+            del trajectories[idx]
+            trajectories.append(used)
+        elif reuse_strategy == 'remove':
+            del trajectories[idx]
+
 
     def check_initial_conditions(self, sampleset):
         """
@@ -852,11 +852,11 @@ class DefaultScheme(MoveScheme):
     def __init__(self, network, engine=None):
         super(DefaultScheme, self).__init__(network)
         n_ensembles = len(network.sampling_ensembles)
-        self.append(strategies.NearestNeighborRepExStrategy())
-        self.append(strategies.OneWayShootingStrategy(engine=engine))
-        self.append(strategies.PathReversalStrategy())
-        self.append(strategies.MinusMoveStrategy(engine=engine))
-        global_strategy = strategies.OrganizeByMoveGroupStrategy()
+        self.append(move_strategy.NearestNeighborRepExStrategy())
+        self.append(move_strategy.OneWayShootingStrategy(engine=engine))
+        self.append(move_strategy.PathReversalStrategy())
+        self.append(move_strategy.MinusMoveStrategy(engine=engine))
+        global_strategy = move_strategy.OrganizeByMoveGroupStrategy()
         self.append(global_strategy)
 
         try:
@@ -867,18 +867,18 @@ class DefaultScheme(MoveScheme):
             pass
         else:
             for ms in msouters.keys():
-                self.append(strategies.OneWayShootingStrategy(
+                self.append(move_strategy.OneWayShootingStrategy(
                     ensembles=[ms],
                     group="ms_outer_shooting",
                     engine=engine
                 ))
-                self.append(strategies.PathReversalStrategy(
+                self.append(move_strategy.PathReversalStrategy(
                     ensembles=[ms],
                     replace=False
                 ))
                 ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
                 pairs = [[ms, neighb] for neighb in ms_neighbors]
-                self.append(strategies.SelectedPairsRepExStrategy(
+                self.append(move_strategy.SelectedPairsRepExStrategy(
                     ensembles=pairs
                 ))
 
@@ -944,14 +944,14 @@ class SRTISScheme(DefaultScheme):
     """
     def __init__(self, network, bias=None, engine=None):
         super(SRTISScheme, self).__init__(network, engine)
-        sr_minus_strat = strategies.SingleReplicaMinusMoveStrategy(
+        sr_minus_strat = move_strategy.SingleReplicaMinusMoveStrategy(
             engine=engine
         )
-        sr_minus_strat.level = strategies.levels.SUPERGROUP # GROUP?
+        sr_minus_strat.level = move_strategy.levels.SUPERGROUP # GROUP?
         # maybe this should be the default for that strategy anyway? using it
         # at mover-level seems less likely than group-level
-        self.append([strategies.PoorSingleReplicaStrategy(),
-                     strategies.EnsembleHopStrategy(bias=bias),
+        self.append([move_strategy.PoorSingleReplicaStrategy(),
+                     move_strategy.EnsembleHopStrategy(bias=bias),
                      sr_minus_strat])
 
 
@@ -963,8 +963,8 @@ class OneWayShootingMoveScheme(MoveScheme):
     """
     def __init__(self, network, selector=None, ensembles=None, engine=None):
         super(OneWayShootingMoveScheme, self).__init__(network)
-        self.append(strategies.OneWayShootingStrategy(selector=selector, 
-                                                      ensembles=ensembles,
-                                                      engine=engine))
-        self.append(strategies.OrganizeByMoveGroupStrategy())
+        self.append(move_strategy.OneWayShootingStrategy(selector=selector,
+                                                         ensembles=ensembles,
+                                                         engine=engine))
+        self.append(move_strategy.OrganizeByMoveGroupStrategy())
 
