@@ -374,6 +374,9 @@ class testDefaultScheme(object):
                 {interfacesA: 0.0, interfacesB: 0.0}
             )
         )
+        self.no_ms_outer = paths.MSTISNetwork(
+            [(self.stateA, interfacesA), (self.stateB, interfacesB)]
+        )
     
     def test_default_scheme(self):
         scheme = DefaultScheme(self.network)
@@ -386,7 +389,6 @@ class testDefaultScheme(object):
             'Ms_outer_shootingChooser' : paths.OneWayShootingMover
         }
         names = chooser_type_dict.keys()
-
         assert_equal(len(root.movers), len(names))
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
@@ -416,6 +418,39 @@ class testDefaultScheme(object):
         for choosername in names:
             for mover in root.movers[name_dict[choosername]].movers:
                 assert_equal(type(mover), chooser_type_dict[choosername])
+
+    def test_default_scheme_no_ms_outer(self):
+        scheme = DefaultScheme(self.no_ms_outer)
+        root = scheme.move_decision_tree()
+        chooser_type_dict = {
+            'ShootingChooser' : paths.OneWayShootingMover,
+            'PathreversalChooser' : paths.PathReversalMover,
+            'RepexChooser' : paths.ReplicaExchangeMover,
+            'MinusChooser' : paths.MinusMover
+        }
+        names = chooser_type_dict.keys()
+        assert_equal(len(root.movers), len(names))
+
+        name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
+        for name in names:
+            assert_in(name, name_dict.keys())
+
+        n_normal_repex = 4
+        n_msouter_repex = 0
+        n_repex = n_normal_repex + n_msouter_repex
+
+        assert_equal(
+            len(root.movers[name_dict['ShootingChooser']].movers), 6
+        )
+        assert_equal(
+            len(root.movers[name_dict['PathreversalChooser']].movers), 6
+        )
+        assert_equal(
+            len(root.movers[name_dict['RepexChooser']].movers), n_repex
+        )
+        assert_equal(
+            len(root.movers[name_dict['MinusChooser']].movers), 2
+        )
 
 
     def test_default_sanity(self):
