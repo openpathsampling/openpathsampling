@@ -569,7 +569,7 @@ class PathSampling(PathSimulator):
                         1.0 / time_per_step
                     )
                     + "Expected time to finish: %d seconds\n" % (
-                        1.0 * (nsteps - nn) * time_per_step
+                        1.0 * (n_steps - nn) * time_per_step
                     ),
                     refresh=refresh
                 )
@@ -591,7 +591,6 @@ class PathSampling(PathSimulator):
                 active=new_sampleset,
                 change=movepath
             )
-
 
             if self.storage is not None:
                 for cv in cvs:
@@ -615,6 +614,7 @@ class PathSampling(PathSimulator):
             "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
             refresh=False
         )
+
 
 class CommittorSimulation(PathSimulator):
     def __init__(self, storage, engine=None, states=None, randomizer=None,

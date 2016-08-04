@@ -11,10 +11,12 @@ import simtk.unit as u
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
-from snapshot import BaseSnapshot, SnapshotDescriptor
+from snapshot import BaseSnapshot
 from trajectory import Trajectory
 
 import openpathsampling as paths
+
+from delayedinterrupt import DelayedInterrupt
 
 logger = logging.getLogger(__name__)
 
@@ -230,8 +232,8 @@ class DynamicsEngine(StorableNamedObject):
             return self.descriptor.dimensions
 
     def set_as_default(self):
-        import openpathsampling as paths
-        paths.EngineMover.engine = self
+        import openpathsampling as p
+        p.EngineMover.engine = self
 
     @property
     def default_options(self):
@@ -440,6 +442,100 @@ class DynamicsEngine(StorableNamedObject):
         self.stop(trajectory)
         logger.info("Finished trajectory, length: %d", frame)
         return trajectory
+
+    def iter_generate(self, initial, running=None, direction=+1, intervals=10):
+        r"""
+        Return a generator that will generate a trajectory, returning the
+        current trajectory in given intervals
+
+        Parameters
+        ----------
+        initial : :class:`openpathsampling.Snapshot` or
+        :class:`openpathsampling.Trajectory`
+            initial coordinates and velocities in form of a Snapshot object
+            or a trajectory
+        running : (list of)
+        function(:class:`openpathsampling.trajectory.Trajectory`)
+            callable function of a 'Trajectory' that returns True or False.
+            If one of these returns False the simulation is stopped.
+        direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
+            If +1 then this will integrate forward, if -1 it will reversed the
+            momenta of the given snapshot and then prepending generated
+            snapshots with reversed momenta. This will generate a _reversed_
+            trajectory that effectively ends in the initial snapshot
+        intervals : int
+            number steps after which the current status is returned
+
+        Yields
+        ------
+        trajectory : :class:`openpathsampling.trajectory.Trajectory`
+            generated trajectory of initial conditions, including initial
+            coordinate set
+
+        Notes
+        -----
+        If the returned trajectory has length n_frames_max it can still happen
+        that it stopped because of the stopping criterion. You need to check
+        in that case.
+        """
+
+        if direction == 0:
+            raise RuntimeError(
+                'direction must be positive (FORWARD) or negative (BACKWARD).')
+
+        try:
+            iter(running)
+        except TypeError:
+            running = [running]
+
+        if hasattr(initial, '__iter__'):
+            trajectory = Trajectory(initial)
+        else:
+            trajectory = Trajectory([initial])
+
+        if direction > 0:
+            self.current_snapshot = trajectory[-1]
+        elif direction < 0:
+            # backward simulation needs reversed snapshots
+            self.current_snapshot = trajectory[0].reversed
+
+        self.start()
+
+        frame = 0
+        # maybe we should stop before we even begin?
+        stop = self.stop_conditions(trajectory=trajectory,
+                                    continue_conditions=running,
+                                    trusted=False)
+
+        while not stop:
+            if frame % intervals == 0:
+                # return the current status
+                yield trajectory
+
+            # Do integrator x steps
+            try:
+                with DelayedInterrupt():
+                    snapshot = self.generate_next_frame()
+                    frame += 1
+
+                    # Store snapshot and add it to the trajectory. Stores also
+                    # final frame the last time
+                    if direction > 0:
+                        trajectory.append(snapshot)
+                    elif direction < 0:
+                        trajectory.prepend(snapshot.reversed)
+
+            except KeyboardInterrupt():
+                # make sure we will report the last state for
+                yield trajectory
+                raise
+
+            # Check if we should stop. If not, continue simulation
+            stop = self.stop_conditions(trajectory=trajectory,
+                                        continue_conditions=running)
+
+        self.stop(trajectory)
+        yield trajectory
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')

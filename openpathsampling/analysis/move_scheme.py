@@ -570,7 +570,7 @@ class MoveScheme(StorableNamedObject):
         return msg
 
     def generate_initial_sampleset(self, samples, engine):
-        return paths.SampleSet.generate_from_sampleset(
+        return paths.SampleSet.generate_from_trajectories(
             self.list_initial_ensembles(),
             samples,
             engine

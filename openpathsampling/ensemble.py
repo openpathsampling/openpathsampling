@@ -759,8 +759,6 @@ class Ensemble(StorableNamedObject):
             engine to use for MD extension
         """
 
-        sub_ensembles = self.extendable_sub_ensembles
-
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
         elif isinstance(trajectories, paths.Sample):
@@ -799,34 +797,35 @@ class Ensemble(StorableNamedObject):
         # try sub_ensembles and extending
 
         if engine is not None:
-            for sub_ensemble in sub_ensembles:
-                for idx, traj in enumerate(trajectories):
-                    for traj_parts in [
-                        sub_ensemble.iter_split(traj),
-                        sub_ensemble.iter_split(traj.reversed)
-                    ]:
+            if hasattr(self, 'extendable_sub_ensembles'):
+                for sub_ensemble in self.extendable_sub_ensembles:
+                    for idx, traj in enumerate(trajectories):
+                        for traj_parts in [
+                            sub_ensemble.iter_split(traj),
+                            sub_ensemble.iter_split(traj.reversed)
+                        ]:
 
-                        for part in traj_parts:
-                            if self.strict_can_append(part):
-                                # seems we could extend forward
-                                part = engine.extend_forward(
-                                    part,
-                                    self
-                                )
+                            for part in traj_parts:
+                                if self.strict_can_append(part):
+                                    # seems we could extend forward
+                                    part = engine.extend_forward(
+                                        part,
+                                        self
+                                    )
 
-                            if self.strict_can_prepend(part):
-                                # and extend backward
-                                part = engine.extend_backward(
-                                    part,
-                                    self
-                                )
+                                if self.strict_can_prepend(part):
+                                    # and extend backward
+                                    part = engine.extend_backward(
+                                        part,
+                                        self
+                                    )
 
-                            if self(part):  # make sure we found a sample
-                                return paths.Sample(
-                                    replica=replica_id,
-                                    trajectory=part,
-                                    ensemble=self
-                                )
+                                if self(part):  # make sure we found a sample
+                                    return paths.Sample(
+                                        replica=replica_id,
+                                        trajectory=part,
+                                        ensemble=self
+                                    )
 
             raise RuntimeWarning(
                 "Could not generate valid sample. You might try again."
