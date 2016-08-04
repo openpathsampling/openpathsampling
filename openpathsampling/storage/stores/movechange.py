@@ -1,4 +1,4 @@
-from openpathsampling.pathmovechange import MoveChange
+from openpathsampling.movechange import MoveChange
 from openpathsampling.netcdfplus import StorableObject, ObjectStore
 
 from uuid import UUID
@@ -17,12 +17,12 @@ class MoveChangeStore(ObjectStore):
     def to_dict(self):
         return {}
 
-    def _save(self, pathmovechange, idx):
-        self.vars['samples'][idx] = pathmovechange.samples
-        self.vars['subchanges'][idx] = pathmovechange.subchanges
-        self.write('details', idx, pathmovechange)
-        self.vars['mover'][idx] = pathmovechange.mover
-        self.vars['cls'][idx] = pathmovechange.__class__.__name__
+    def _save(self, movechange, idx):
+        self.vars['samples'][idx] = movechange.samples
+        self.vars['subchanges'][idx] = movechange.subchanges
+        self.write('details', idx, movechange)
+        self.vars['mover'][idx] = movechange.mover
+        self.vars['cls'][idx] = movechange.__class__.__name__
 
     def _load(self, idx):
         cls_name = self.vars['cls'][idx]
@@ -45,7 +45,7 @@ class MoveChangeStore(ObjectStore):
         self.create_variable('mover', 'obj.pathmovers')
         self.create_variable('cls', 'str')
 
-        self.create_variable('subchanges', 'obj.pathmovechanges',
+        self.create_variable('subchanges', 'obj.movechanges',
                              dimensions='...',
                              chunksizes=(10240,))
 

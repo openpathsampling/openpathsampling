@@ -91,7 +91,7 @@ from high_level.ms_outer_interface import MSOuterTISInterface
 
 from live_visualization import LiveVisualization
 
-from pathmovechange import (
+from movechange import (
     EmptyMoveChange, ConditionalSequentialMoveChange,
     MoveChange, PartialAcceptanceSequentialMoveChange,
     RandomChoiceMoveChange, SampleMoveChange,

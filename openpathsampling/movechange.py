@@ -72,7 +72,7 @@ class MoveChange(TreeMixin, StorableObject):
     @property
     def subchange(self):
         """
-        Return the single/only sub-pathmovechange if there is only one.
+        Return the single/only sub-movechange if there is only one.
 
         Returns
         -------

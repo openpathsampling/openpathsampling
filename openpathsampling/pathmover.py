@@ -2197,7 +2197,7 @@ class SequentialMover(PathMover):
         logger.debug("Starting sequential move")
 
         subglobal = globalstate
-        pathmovechanges = []
+        movechanges = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step " + str(mover))
@@ -2206,9 +2206,9 @@ class SequentialMover(PathMover):
             movepath = mover.move(subglobal)
             samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
-            pathmovechanges.append(movepath)
+            movechanges.append(movepath)
 
-        return paths.SequentialMoveChange(pathmovechanges, mover=self)
+        return paths.SequentialMoveChange(movechanges, mover=self)
 
 
 class PartialAcceptanceSequentialMover(SequentialMover):
@@ -2235,7 +2235,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     def move(self, globalstate):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(globalstate)
-        pathmovechanges = []
+        movechanges = []
         for mover in self.movers:
             logger.info(str(self.name)
                         + " starting mover index " + str(self.movers.index(mover))
@@ -2245,13 +2245,13 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             movepath = mover.move(subglobal)
             samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
-            pathmovechanges.append(movepath)
+            movechanges.append(movepath)
             if not movepath.accepted:
                 break
 
         logger.debug("==== FINISHING " + self.name + " ====")
         return paths.PartialAcceptanceSequentialMoveChange(
-            pathmovechanges, mover=self)
+            movechanges, mover=self)
 
 
 class ConditionalSequentialMover(SequentialMover):
@@ -2272,7 +2272,7 @@ class ConditionalSequentialMover(SequentialMover):
         logger.debug("Starting conditional sequential move")
 
         subglobal = globalstate
-        pathmovechanges = []
+        movechanges = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step " + str(mover))
@@ -2281,13 +2281,13 @@ class ConditionalSequentialMover(SequentialMover):
             movepath = mover.move(subglobal)
             samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
-            pathmovechanges.append(movepath)
+            movechanges.append(movepath)
 
             if not movepath.accepted:
                 break
 
         return paths.ConditionalSequentialMoveChange(
-            pathmovechanges, mover=self)
+            movechanges, mover=self)
 
 
 class ReplicaIDChangeMover(PathMover):

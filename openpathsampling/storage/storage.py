@@ -106,7 +106,7 @@ class Storage(NetCDFPlus):
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
         self.create_store(
-            'pathmovechanges',
+            'movechanges',
             paths.storage.MoveChangeStore()
         )
         self.create_store('steps', paths.storage.MCStepStore())
@@ -248,7 +248,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': True,
             'volumes': True,
             'ensembles': True,
-            'pathmovechanges': False,
+            'movechanges': False,
             'transitions': True,
             'networks': True,
             'details': False,
@@ -279,7 +279,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': True,
             'volumes': True,
             'ensembles': True,
-            'pathmovechanges': False,
+            'movechanges': False,
             'transitions': True,
             'networks': True,
             'details': False,
@@ -310,7 +310,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': WeakLRUCache(10),
             'volumes': WeakLRUCache(10),
             'ensembles': WeakLRUCache(10),
-            'pathmovechanges': WeakLRUCache(10),
+            'movechanges': WeakLRUCache(10),
             'transitions': WeakLRUCache(10),
             'networks': WeakLRUCache(10),
             'details': WeakLRUCache(10),
@@ -342,7 +342,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': True,
             'volumes': True,
             'ensembles': True,
-            'pathmovechanges': WeakLRUCache(250000),
+            'movechanges': WeakLRUCache(250000),
             'transitions': True,
             'networks': True,
             'details': False,
@@ -373,7 +373,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': False,
             'volumes': False,
             'ensembles': False,
-            'pathmovechanges': False,
+            'movechanges': False,
             'transitions': False,
             'networks': False,
             'details': False,
@@ -406,7 +406,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': False,
             'volumes': False,
             'ensembles': False,
-            'pathmovechanges': False,
+            'movechanges': False,
             'transitions': False,
             'networks': False,
             'details': False,
@@ -464,7 +464,7 @@ class AnalysisStorage(Storage):
                            'volumes',
                            'ensembles',
                            'pathmovers',
-                           'pathmovechanges',
+                           'movechanges',
                            'steps',
                            ]
 
