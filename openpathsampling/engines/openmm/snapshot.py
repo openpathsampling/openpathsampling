@@ -12,7 +12,7 @@ import features
     features.velocities,
     features.coordinates,
     features.box_vectors,
-    features.topology
+    features.engine
 ])
 class MDSnapshot(BaseSnapshot):
     """
@@ -27,7 +27,7 @@ class MDSnapshot(BaseSnapshot):
 #         features.velocities,
 #         features.coordinates,
 #         features.box_vectors,
-#         features.topology
+#         features.engine
 #     ],
 #     description="A fast MDSnapshot",
 #     base_class=BaseSnapshot
@@ -37,7 +37,7 @@ class MDSnapshot(BaseSnapshot):
 @features.base.attach_features([
     features.statics,
     features.kinetics,
-    features.topology  # for compatibility
+    features.engine
 ])
 class Snapshot(BaseSnapshot):
     """
@@ -48,28 +48,59 @@ class Snapshot(BaseSnapshot):
     KineticContainer = features.KineticContainer
 
     @staticmethod
-    def construct(coordinates=None, box_vectors=None, velocities=None, engine=None):
+    def construct(
+            coordinates=None,
+            box_vectors=None,
+            velocities=None,
+            statics=None,
+            kinetics=None,
+            engine=None):
         """
         Construct a new snapshot from numpy arrays
 
-        This will create the container objects and return a Snapshot object. Mostly a helper
-        to allow for easier creation.
+        This will create the container objects and return a Snapshot object.
+        Mostly a helper to allow for easier creation.
+
+        You can either use coordinates and velocities and/or statics and
+        kinetics objects. If both are present the more complex (statics
+        and kinetics) will be used
 
         Parameters
         ----------
-        coordinates : numpy.array, shape = (atoms, spatial)
+        coordinates : numpy.array, shape = (n_atoms, n_spatial)
             the atomic coordinates
-        box_vectors : numpy.array, shape = (spatial, spatial)
+        box_vectors : numpy.array, shape = (n_spatial, n_spatial)
             the box vectors
-        velocities : numpy.array, shape = (atoms, spatial)
+        velocities : numpy.array, shape = (n_atoms, n_spatial)
             the atomic velocities
+        statics : `openpathsampling.engines.openmm.StaticContainer`
+            the statics container if it already exists
+        kinetics : `openpathsampling.engines.openmm.KineticContainer`
+            the kinetics container if it already exists
+
+        engine : :obj:`openpathsampling.engines.DynamicsEngine`
+            the engine that should be referenced as the one used to
+            generate the object
 
         Returns
         -------
         :obj:`Snapshot`
             the created `Snapshot` object
         """
-        statics = Snapshot.StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
-        kinetics = Snapshot.KineticContainer(velocities=velocities)
+        if statics is None:
+            statics = Snapshot.StaticContainer(
+                coordinates=coordinates,
+                box_vectors=box_vectors)
 
-        return Snapshot(engine=engine, statics=statics, kinetics=kinetics)
+        if kinetics is None:
+            kinetics = Snapshot.KineticContainer(velocities=velocities)
+
+        return Snapshot(
+            engine=engine,
+            statics=statics,
+            kinetics=kinetics
+        )
+
+    @property
+    def topology(self):
+        return self.engine.topology

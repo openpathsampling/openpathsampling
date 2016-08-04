@@ -9,12 +9,14 @@ variables = ['velocities']
 minus = ['velocities']
 numpy = ['velocities']
 
+dimensions = ['n_atoms', 'n_spatial']
+
 
 def netcdfplus_init(store):
 
-    store.create_variable('velocities', 'numpy.float32',
-                        dimensions=('atom', 'spatial'),
-                        description="the velocity of atom 'atom' in dimension " +
-                                   "'coordinate' of momentum 'momentum'.",
-                        chunksizes=(1, 'atom', 'spatial')
-                        )
+    store.create_variable(
+        'velocities', 'numpy.float32',
+        dimensions=('n_atoms', 'n_spatial'),
+        description="the velocity of atom 'atom' in dimension " +
+                    "'coordinate' of momentum 'momentum'.",
+        chunksizes=(1, 'n_atoms', 'n_spatial'))

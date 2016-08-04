@@ -262,7 +262,14 @@ class TISNetwork(TransitionNetwork):
     # TIS-based networks
     # TODO: most of the analysis stuff should end up in here; the bigger
     # differences are in setup, not analysis
-    def __init__(self):
+    def __init__(self, trans_info, ms_outers):
+        self.trans_info = trans_info
+        try:
+            _ = len(ms_outers)
+        except TypeError:
+            if ms_outers is not None:
+                ms_outers = [ms_outers]
+        self.ms_outer_objects = ms_outers
         super(TISNetwork, self).__init__()
 
     def from_transitions(self, transitions, interfaces=None):
@@ -297,13 +304,19 @@ class TISNetwork(TransitionNetwork):
     def ms_outers(self):
         return self.special_ensembles['ms_outer'].keys()
 
+    def add_ms_outer_interface(self, ms_outer, transitions, forbidden=None):
+        relevant = ms_outer.relevant_transitions(transitions)
+        ensemble = ms_outer.make_ensemble(relevant, forbidden)
+        dct = {ensemble: relevant}
+        try:
+            self.special_ensembles['ms_outer'].update(dct)
+        except KeyError:
+            self.special_ensembles['ms_outer'] = dct
+
     @property
     def all_states(self):
         return list(set(self.initial_states + self.final_states))
 
-
-#def join_mis_minus(minuses):
-    #pass
 
 #def msouter_state_switching(mstis, steps):
 
@@ -349,25 +362,30 @@ class MSTISNetwork(TISNetwork):
         )
         return network
 
-    def __init__(self, trans_info):
+    def __init__(self, trans_info, ms_outers=None):
         """
         Creates MSTISNetwork, including interfaces.
 
         Parameters
         ----------
         trans_info : list of tuple
-            Details of each state-based ensemble set. 3-tuple in the order
-            (state, interfaces, orderparameter) where state is a Volume,
-            interfaces is a list of Volumes, and orderparameters is a
-            CollectiveVariable
+            Details of each state-based ensemble set. 2-tuple in the order
+            (state, interface_set) where state is a Volume, and
+            interface_set is an InterfaceSet (with associated
+            CollectiveVariable)
+        ms_outers : MSOuterTISInterface or list of MSOuterTISInterface
+            mutliple state outer interfaces for this network
         """
-        super(MSTISNetwork, self).__init__()
-        self.trans_info = trans_info
+        super(MSTISNetwork, self).__init__(trans_info, ms_outers)
         # build sampling transitions
         if not hasattr(self, "from_state"):
             self.special_ensembles = {}
             self.from_state = {}
             self.build_fromstate_transitions(trans_info)
+            if self.ms_outer_objects is not None:
+                for ms_outer in self.ms_outer_objects:
+                    all_transitions = self.from_state.values()
+                    self.add_ms_outer_interface(ms_outer, all_transitions)
 
         self._sampling_transitions = self.from_state.values()
 
@@ -388,19 +406,23 @@ class MSTISNetwork(TISNetwork):
             fromA = self.from_state[stateA]
             other_states = self.states[:state_index]+self.states[state_index+1:]
             for stateB in other_states:
+                strA = stateA.name if stateA.is_named else str(stateA)
+                strB = stateB.name if stateB.is_named else str(stateB)
                 trans = paths.TISTransition(
                     stateA=stateA,
                     stateB=stateB,
                     interfaces=fromA.interfaces,
-                    name=str(stateA) + "->" + str(stateB),
+                    name=strA + "->" + strB,
                     orderparameter=fromA.orderparameter
                 )
                 # override created stuff
                 trans.ensembles = fromA.ensembles
+                for i in range(len(trans.ensembles)):
+                    trans.ensembles[i].named(trans.name + "[" + str(i) + "]")
+                                             
                 trans.minus_ensemble = fromA.minus_ensemble
                 self.transitions[(stateA, stateB)] = trans
 
-#    def disallow(self, stateA, stateB):
 
     def build_fromstate_transitions(self, trans_info):
         """
@@ -414,11 +436,12 @@ class MSTISNetwork(TISNetwork):
 
         Parameters
         ----------
-        trans_info : list of 4-tuples
+        trans_info : list of 2-tuples
             See description in __init__.
 
         """
-        states, interfaces, orderparams = zip(*trans_info)
+        states, interfaces = zip(*trans_info)
+        orderparams = [iface_set.cv for iface_set in interfaces]
         # NAMING STATES (give default names)
         all_states = paths.volume.join_volumes(states).named("all states")
         all_names = list(set([s.name for s in states]))
@@ -431,9 +454,9 @@ class MSTISNetwork(TISNetwork):
             name_index += 1
 
         # BUILDING ENSEMBLES
-        outer_ensembles = []
         self.states = states
-        for (state, ifaces, op) in trans_info:
+        for (state, ifaces) in trans_info:
+            op = ifaces.cv
             state_index = states.index(state)
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
@@ -442,7 +465,7 @@ class MSTISNetwork(TISNetwork):
             this_trans = paths.TISTransition(
                 stateA=state, 
                 stateB=union_others,
-                interfaces=ifaces[:-1],
+                interfaces=ifaces,
                 name="Out " + state.name,
                 orderparameter=op
             )
@@ -455,22 +478,6 @@ class MSTISNetwork(TISNetwork):
                 self.special_ensembles['minus'][this_minus] = [this_trans]
             except KeyError:
                 self.special_ensembles['minus'] = {this_minus : [this_trans]}
-
-
-            outer_ensemble = paths.TISEnsemble(
-                initial_states=state,
-                final_states=all_states,
-                interface=ifaces[-1]
-            )
-            outer_ensemble.named("outer " + str(state))
-            outer_ensembles.append(outer_ensemble)
-
-        ms_outer = paths.ensemble.join_ensembles(outer_ensembles)
-        transition_outers = self.from_state.values()
-        try:
-            self.special_ensembles['ms_outer'][ms_outer] = transition_outers
-        except KeyError:
-            self.special_ensembles['ms_outer'] = {ms_outer : transition_outers}
 
 
     def __str__(self):
@@ -561,21 +568,22 @@ class MISTISNetwork(TISNetwork):
     Parameters
     ----------
     trans_info : list of tuple
-        Details of each interface set. 4-tuple in the order (initial_state,
-        interfaces, orderparameter, final_state) where initial_state and
-        final_state are Volumes, interfaces is a list of Volumes, and
-        orderparameter is a CollectiveVariable
+        Details of each interface set. 3-tuple in the order (initial_state,
+        interfaces, final_state) where initial_state and final_state are
+        Volumes, and interfaces is an InterfaceSet
+    ms_outers : MSOuterTISInterface or list of MSOuterTISInterface
+        mutliple state outer interfaces for this network
     strict_sampling : bool
         whether the final state from the tuple is the *only* allowed final
         state in the sampling; default False
     """
     # NOTE: input_transitions are in addition to the sampling_transitions
     # and the transitions (analysis transitions)
-    def __init__(self, trans_info, strict_sampling=False):
-        super(MISTISNetwork, self).__init__()
-        self.trans_info = trans_info
+    def __init__(self, trans_info, ms_outers=None, strict_sampling=False):
+        super(MISTISNetwork, self).__init__(trans_info, ms_outers)
         self.strict_sampling = strict_sampling
-        states_A, interfaces, orderparams, states_B = zip(*trans_info)
+        states_A, interfaces, states_B = zip(*trans_info)
+        orderparams = [iface_set.cv for iface_set in interfaces]
         self.initial_states = list(set(states_A))
         self.final_states = list(set(states_B))
         list_all_states = list(set(self.initial_states + self.final_states))
@@ -594,14 +602,28 @@ class MISTISNetwork(TISNetwork):
         if not hasattr(self, "input_transitions"):
             self.input_transitions = {
                 (stateA, stateB) :
-                paths.TISTransition(stateA, stateB, interface, orderparam,
+                paths.TISTransition(stateA, stateB, interface, interface.cv,
                                     name=stateA.name+"->"+stateB.name)
-                for (stateA, interface, orderparam, stateB) in self.trans_info
+                for (stateA, interface, stateB) in self.trans_info
             }
 
         if not hasattr(self, 'x_sampling_transitions'):
             self.special_ensembles = {}
             self.build_sampling_transitions(self.input_transitions.values())
+            if self.ms_outer_objects is not None:
+                for ms_outer in self.ms_outer_objects:
+                    all_transitions = self.x_sampling_transitions
+                    if not self.strict_sampling:
+                        self.add_ms_outer_interface(ms_outer, all_transitions)
+                    else:
+                        relevant = ms_outer.relevant_transitions(all_transitions)
+                        allowed = set(sum([[t.stateA, t.stateB] 
+                                           for t in relevant], []))
+                        forbidden = set(list_all_states) - allowed
+                        self.add_ms_outer_interface(ms_outer,
+                                                    all_transitions,
+                                                    forbidden)
+
         self._sampling_transitions = self.x_sampling_transitions
 
 
@@ -637,23 +659,29 @@ class MISTISNetwork(TISNetwork):
 
     def build_sampling_transitions(self, transitions):
         # identify transition pairs
+        transition_pair_set_dict = {}
         for initial in self.initial_states:
-            transition_pair_dict = {}
             for t1 in [t for t in transitions if t.stateA==initial]:
-                reverse_trans = None
-                for t2 in transitions:
-                    if t2.stateA==t1.stateB and t2.stateB==t1.stateA:
-                        transition_pair_dict[t1] = t2
-            # TODO: speed this up with a set?
-            for key in transition_pair_dict.keys():
-                value = transition_pair_dict[key]
-                if value in transition_pair_dict.keys():
-                    del transition_pair_dict[value]
-        self.transition_pairs = [(k, transition_pair_dict[k]) 
-                                 for k in transition_pair_dict.keys()]
+                t_reverse = [
+                    t for t in transitions 
+                    if t.stateA == t1.stateB and t.stateB == t1.stateA
+                ]
+                if len(t_reverse) == 1:
+                    key = frozenset([t1.stateA, t1.stateB])
+                    new_v = [t1, t_reverse[0]]
+                    if key not in transition_pair_set_dict.keys():
+                        transition_pair_set_dict[key] = new_v
+                elif len(t_reverse) > 1:  # pragma: no cover
+                    raise RuntimeError("More than one reverse transition")
+                # if len(t_reverse) is 0, we just pass
 
-        all_in_pairs = reduce(list.__add__, map(lambda x: list(x), 
-                                                self.transition_pairs))
+        self.transition_pairs = transition_pair_set_dict.values()
+
+        if len(self.transition_pairs) > 0:
+            all_in_pairs = reduce(list.__add__, map(lambda x: list(x), 
+                                                    self.transition_pairs))
+        else:
+            all_in_pairs = []
 
         # build sampling transitions
         all_states = paths.join_volumes(self.initial_states + self.final_states)
@@ -670,23 +698,14 @@ class MISTISNetwork(TISNetwork):
             else:
                 final_state = all_states
                 ensemble_to_intersect = paths.FullEnsemble()
-            # TODO: fix following for strict_sampling
-            if transition not in all_in_pairs:
-                # if we don't have a pair partner, use all interfaces
-                sample_trans = paths.TISTransition(
-                    stateA=stateA,
-                    stateB=final_state,
-                    interfaces=transition.interfaces,
-                    orderparameter=transition.orderparameter
-                )
-            else:
-                # if we do have a pair partner, outermost is MS-interface
-                sample_trans = paths.TISTransition(
-                    stateA=stateA,
-                    stateB=final_state,
-                    interfaces=transition.interfaces[:-1],
-                    orderparameter=transition.orderparameter
-                )
+
+            sample_trans = paths.TISTransition(
+                stateA=stateA,
+                stateB=final_state,
+                interfaces=transition.interfaces,
+                orderparameter=transition.orderparameter
+            )
+
             new_ensembles = [e & ensemble_to_intersect 
                              for e in sample_trans.ensembles]
             if self.strict_sampling:
@@ -698,20 +717,6 @@ class MISTISNetwork(TISNetwork):
 
         self.x_sampling_transitions = self.transition_to_sampling.values()
 
-        # build non-transition interfaces 
-
-        # combining the MS-outer interfaces
-        for pair in self.transition_pairs:
-            this_outer = paths.ensemble.join_ensembles(
-                [pair[0].ensembles[-1], pair[1].ensembles[-1]]
-            )
-            s_pair = [self.transition_to_sampling[p] for p in pair]
-            try:
-                self.special_ensembles['ms_outer'][this_outer] = list(s_pair)
-            except KeyError:
-                self.special_ensembles['ms_outer'] = {this_outer : list(s_pair)}
-
-        
         # combining the minus interfaces
         for initial in self.initial_states:
             innermosts = []

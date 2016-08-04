@@ -21,18 +21,23 @@ from openpathsampling.engines import Topology
 
 from openpathsampling.engines import DynamicsEngine
 
-def make_1d_traj(coordinates, velocities=None, topology=None):
+def make_1d_traj(coordinates, velocities=None, engine=None):
     if velocities is None:
         velocities = [0.0]*len(coordinates)
-    if topology is None:
-        topology = toys.Topology(n_atoms=1, n_spatial=3, 
-                                 masses=[1.0, 1.0, 1.0], pes=None)
+    if engine is None:
+        engine = toys.Engine(
+            {},
+            toys.Topology(
+                n_spatial=3,
+                masses=[1.0, 1.0, 1.0], pes=None
+            )
+        )
     traj = []
     for (pos, vel) in zip(coordinates, velocities):
         snap = toys.Snapshot(
             coordinates=np.array([[pos, 0, 0]]),
             velocities=np.array([[vel, 0, 0]]),
-            topology=topology
+            engine=engine
         )
         traj.append(snap)
     return paths.Trajectory(traj)
@@ -79,13 +84,14 @@ class MoverWithSignature(paths.PathMover):
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
-        template = toys.Snapshot(topology=topology)
+        engine = peng.tools.TopologyEngine(topology)
+        template = toys.Snapshot(engine=engine)
 
         super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
                                                 template=template)
         self.predestination = make_1d_traj(coordinates=predestination,
                                            velocities=[1.0]*len(predestination),
-                                           topology=topology
+                                           engine=engine
                                           )
         self.frame_index = None
 
@@ -204,6 +210,7 @@ def compare_snapshot(snapshot1, snapshot2, check_reversed=False):
         assert_close_unit(snapshot1.reversed.coordinates, snapshot1.coordinates, rtol=1e-7, atol=0)
         assert_close_unit(snapshot2.reversed.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
 
+
 class RandomMDEngine(DynamicsEngine):
     _default_options = {}
 
@@ -211,11 +218,9 @@ class RandomMDEngine(DynamicsEngine):
         self.options = {
         }
 
-        super(RandomMDEngine, self).__init__(
-            options={},
-            template=template
-        )
+        super(RandomMDEngine, self).__init__()
 
+        self.template = template
         self.initialized = True
 
     def _build_current_snapshot(self):
@@ -233,7 +238,7 @@ class RandomMDEngine(DynamicsEngine):
         return peng.Snapshot.construct(coordinates = coordinates,
                         box_vectors = tmp.box_vectors,
                         velocities = velocities,
-                        topology = self.topology
+                        engine=self
                        )
 
     @property

@@ -1,11 +1,14 @@
 import logging
+import sys
 
 import simtk.openmm
 import simtk.unit as u
 from simtk.openmm.app import Simulation
 
-from openpathsampling.engines import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import Snapshot
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +27,15 @@ class OpenMMEngine(DynamicsEngine):
     }
 
     _default_options = {
-        'nsteps_per_frame': 10,
+        'n_steps_per_frame': 10,
         'n_frames_max': 5000,
         'platform': 'fastest'
     }
 
     base_snapshot_type = Snapshot
 
-    #TODO: Planned to move topology to be part of engine and not snapshot
     #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
-    def __init__(self, template, system, integrator, options=None, properties=None):
+    def __init__(self, topology, system, integrator, options=None, properties=None):
         """
         Parameters
         ----------
@@ -63,10 +65,21 @@ class OpenMMEngine(DynamicsEngine):
 
         self.system = system
         self.integrator = integrator
+        self.topology = topology
+
+        dimensions = {
+            'n_atoms': topology.n_atoms,
+            'n_spatial': topology.n_spatial
+        }
+
+        descriptor = SnapshotDescriptor.construct(
+            Snapshot,
+            dimensions
+        )
 
         super(OpenMMEngine, self).__init__(
             options=options,
-            template=template
+            descriptor=descriptor
         )
 
         if self.options['platform'] == 'fastest':
@@ -97,6 +110,18 @@ class OpenMMEngine(DynamicsEngine):
 
         self._simulation = None
 
+    def to_dict(self):
+        system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
+        integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
+
+        return {
+            'system_xml' : system_xml,
+            'integrator_xml' : integrator_xml,
+            'topology' : self.topology,
+            'options' : self.options,
+            'properties' : self.properties
+        }
+
     def from_new_options(self, integrator=None, options=None):
         """
         Create a new engine with the same system, but different options and/or integrator
@@ -116,7 +141,7 @@ class OpenMMEngine(DynamicsEngine):
         if options is not None:
             new_options.update(options)
 
-        new_engine = OpenMMEngine(self.template, self.system, integrator, new_options)
+        new_engine = OpenMMEngine(self.topology, self.system, integrator, new_options)
 
         if integrator is self.integrator and new_engine.options['platform'] == self.options['platform']:
             # apparently we use a simulation object which is the same as the new one
@@ -148,38 +173,22 @@ class OpenMMEngine(DynamicsEngine):
 
         if self._simulation is None:
             self._simulation = simtk.openmm.app.Simulation(
-                topology=self.template.topology.md.to_openmm(),
+                topology=self.topology.md.to_openmm(),
                 system=self.system,
                 integrator=self.integrator,
                 platform=simtk.openmm.Platform.getPlatformByName(self.platform)
             )
 
-    @property
-    def platform(self):
-        return self.options['platform']
-
-    def to_dict(self):
-        system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
-        integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
-
-        return {
-            'system_xml' : system_xml,
-            'integrator_xml' : integrator_xml,
-            'template' : self.template,
-            'options' : self.options,
-            'properties' : self.properties
-        }
-
     @classmethod
     def from_dict(cls, dct):
         system_xml = dct['system_xml']
         integrator_xml = dct['integrator_xml']
-        template = dct['template']
+        topology = dct['topology']
         options = dct['options']
         properties = dct['properties']
 
         return OpenMMEngine(
-            template=template,
+            topology=topology,
             system=simtk.openmm.XmlSerializer.deserialize(system_xml),
             integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
             options=options,
@@ -188,21 +197,28 @@ class OpenMMEngine(DynamicsEngine):
 
     @property
     def snapshot_timestep(self):
-        return self.nsteps_per_frame * self.simulation.integrator.getStepSize()
+        return self.n_steps_per_frame * self.simulation.integrator.getStepSize()
 
     def _build_current_snapshot(self):
-        # TODO: Add caching for this and mark if changed
+        try:
+            # TODO: Add caching for this and mark if changed
 
-        state = self.simulation.context.getState(getPositions=True,
-                                                 getVelocities=True,
-                                                 getEnergy=True)
+            state = self.simulation.context.getState(getPositions=True,
+                                                     getVelocities=True,
+                                                     getEnergy=True)
 
-        snapshot = Snapshot.construct(
-            coordinates=state.getPositions(asNumpy=True),
-            box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
-            velocities=state.getVelocities(asNumpy=True),
-            engine=self
-        )
+            snapshot = Snapshot.construct(
+                coordinates=state.getPositions(asNumpy=True),
+                box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
+                velocities=state.getVelocities(asNumpy=True),
+                engine=self
+            )
+
+        except AttributeError as e:
+            raise ValueError('No attribute' + str(e))
+        except:
+            print "Unexpected error:", sys.exc_info()[0]
+            raise
 
         return snapshot
 
@@ -221,24 +237,24 @@ class OpenMMEngine(DynamicsEngine):
         self.check_snapshot_type(snapshot)
 
         if snapshot is not self._current_snapshot:
-            if snapshot.coordinates is not None:
-                self.simulation.context.setPositions(snapshot.coordinates)
+            # if snapshot.coordinates is not None:
+            self.simulation.context.setPositions(snapshot.coordinates)
 
-            if snapshot.box_vectors is not None:
-                self.simulation.context.setPeriodicBoxVectors(
-                    snapshot.box_vectors[0],
-                    snapshot.box_vectors[1],
-                    snapshot.box_vectors[2]
-                )
+            # if snapshot.box_vectors is not None:
+            self.simulation.context.setPeriodicBoxVectors(
+                snapshot.box_vectors[0],
+                snapshot.box_vectors[1],
+                snapshot.box_vectors[2]
+            )
 
-            if snapshot.velocities is not None:
-                self.simulation.context.setVelocities(snapshot.velocities)
+            # if snapshot.velocities is not None:
+            self.simulation.context.setVelocities(snapshot.velocities)
 
             # After the updates cache the new snapshot
             self._current_snapshot = snapshot
 
     def generate_next_frame(self):
-        self.simulation.step(self.nsteps_per_frame)
+        self.simulation.step(self.n_steps_per_frame)
         self._current_snapshot = None
         return self.current_snapshot
 
@@ -246,4 +262,3 @@ class OpenMMEngine(DynamicsEngine):
         self.simulation.minimizeEnergy()
         # make sure that we get the minimized structure on request
         self._current_snapshot = None
-

@@ -44,18 +44,21 @@ class testStrategyLevels(object):
 
 class MoveStrategyTestSetup(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
-        ])
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        self.network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
 
 
 class testMoveStrategy(MoveStrategyTestSetup):
@@ -1009,6 +1012,7 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
 
 
 class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
+    StrategyClass = OrganizeByEnsembleStrategy
     def setup(self):
         super(testOrganizeByEnsembleStrategy, self).setup()
         scheme = MoveScheme(self.network)
@@ -1051,7 +1055,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
                 for e in sig[0]:
                     mover_weights[(groupname, sig, e)] = 1.0
         mover_weights[('shooting', ens0_sig, ens0)] = 2.0
-        strategy = OrganizeByEnsembleStrategy()
+        strategy = self.StrategyClass()
 
         choice_prob = strategy.choice_probability(scheme, ensemble_weights,
                                                   mover_weights)
@@ -1122,9 +1126,9 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
         minus = self.network.minus_ensembles[0]
-        strategy = OrganizeByEnsembleStrategy()
+        strategy = self.StrategyClass()
 
-        (ensemble_weights, mover_weights)= strategy.default_weights(scheme)
+        (ensemble_weights, mover_weights) = strategy.default_weights(scheme)
 
         for ens in [ens0, ens1, ens2, minus]:
             chooser_mweights = strategy.chooser_mover_weights(scheme, ens, 
@@ -1146,7 +1150,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         ens1 = self.network.sampling_transitions[0].ensembles[1]
         ens2 = self.network.sampling_transitions[0].ensembles[2]
         minus = self.network.minus_ensembles[0]
-        strategy = OrganizeByEnsembleStrategy()
+        strategy = self.StrategyClass()
 
         (ensemble_weights, mover_weights)= strategy.default_weights(scheme)
 
@@ -1212,7 +1216,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             find_mover(scheme, 'pathreversal', sig2) : 2.0/27.0
         }
 
-        strategy = OrganizeByEnsembleStrategy()
+        strategy = self.StrategyClass()
         (ens_w, mover_w) = strategy.weights_from_choice_probability(
             scheme, choice_probability
         )
@@ -1223,7 +1227,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
     def test_make_movers(self):
         scheme = self.scheme
-        strategy = OrganizeByEnsembleStrategy()
+        strategy = self.StrategyClass()
         root = strategy.make_movers(scheme)
 
         choosers = root.movers
@@ -1241,7 +1245,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         scheme.append(OrganizeByMoveGroupStrategy())
         root_1a = scheme.move_decision_tree()
         choice_prob_1a = scheme.choice_probability
-        scheme.append(OrganizeByEnsembleStrategy(), force=True)
+        scheme.append(self.StrategyClass(), force=True)
         root_1b = scheme.move_decision_tree(rebuild=True)
         choice_prob_1b = scheme.choice_probability
         assert(choice_prob_1a is not choice_prob_1b)
@@ -1256,7 +1260,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
         # Organize by ensemble, switch to move group, switch back
         scheme.strategies = {}
-        scheme.append(OrganizeByEnsembleStrategy(), force=True)
+        scheme.append(self.StrategyClass(), force=True)
         root_2a = scheme.move_decision_tree(rebuild=True)
         choice_prob_2a = scheme.choice_probability
         scheme.append(OrganizeByMoveGroupStrategy(), force=True)
@@ -1265,7 +1269,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         assert(choice_prob_2a is not choice_prob_2b)
         for m in choice_prob_2a:
             assert_almost_equal(choice_prob_2a[m], choice_prob_2b[m])
-        scheme.append(OrganizeByEnsembleStrategy(), force=True)
+        scheme.append(self.StrategyClass(), force=True)
         root_2c = scheme.move_decision_tree(rebuild=True)
         choice_prob_2c = scheme.choice_probability
         assert(choice_prob_1a is not choice_prob_1c)
@@ -1275,3 +1279,52 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         # Org strategy 1 and org strategy 2 are different
         for m in choice_prob_1a:
             assert(abs(choice_prob_1a[m] - choice_prob_2a[m]) > 0.001)
+
+class testPoorSingleReplicaStrategy(testOrganizeByEnsembleStrategy):
+    StrategyClass = PoorSingleReplicaStrategy
+
+    def test_chooser_mover_weights(self):
+        scheme = self.scheme
+        ens0 = self.network.sampling_transitions[0].ensembles[0]
+        ens1 = self.network.sampling_transitions[0].ensembles[1]
+        ens2 = self.network.sampling_transitions[0].ensembles[2]
+        minus = self.network.minus_ensembles[0]
+        strategy = self.StrategyClass()
+
+        (ensemble_weights, mover_weights) = strategy.default_weights(scheme)
+        (ens_w, mov_w) = strategy.get_weights(scheme, scheme.movers,
+                                              strategy.ensemble_weights,
+                                              strategy.mover_weights)
+        scheme.choice_probability = strategy.choice_probability(scheme, 
+                                                                ens_w, mov_w)
+        for ens in [ens0, ens1, ens2, minus]:
+            chooser_mweights = strategy.chooser_mover_weights(scheme, ens, 
+                                                              mover_weights)
+            if ens in [ens0, ens1]:
+                assert_equal(len(chooser_mweights), 5)
+            elif ens is minus:
+                assert_equal(len(chooser_mweights), 2)
+            elif ens is ens2:
+                assert_equal(len(chooser_mweights), 4)
+
+            real_movers = [m for m in chooser_mweights.keys() 
+                           if m != strategy.null_mover]
+            for m in real_movers:
+                assert_equal(scheme.choice_probability[m], chooser_mweights[m])
+            assert_almost_equal(sum(chooser_mweights.values()), 1.0)
+
+    def test_make_movers(self):
+        scheme = self.scheme
+        strategy = self.StrategyClass()
+        root = strategy.make_movers(scheme)
+
+        assert_equal(len(root.movers), 4)
+
+        for mover in scheme.choice_probability.keys():
+            assert_almost_equal(
+                scheme.choice_probability[mover] * 0.25,
+                scheme.real_choice_probability[mover]
+            )
+
+
+

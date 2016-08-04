@@ -23,18 +23,21 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testMoveScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
-        ])
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
         self.scheme = MoveScheme(network)
 
     def test_append_individuals_default_levels(self):
@@ -356,18 +359,24 @@ class testMoveScheme(object):
 
 class testDefaultScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
-        ])
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        self.network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
+        self.no_ms_outer = paths.MSTISNetwork(
+            [(self.stateA, interfacesA), (self.stateB, interfacesB)]
+        )
     
     def test_default_scheme(self):
         scheme = DefaultScheme(self.network)
@@ -380,7 +389,6 @@ class testDefaultScheme(object):
             'Ms_outer_shootingChooser' : paths.OneWayShootingMover
         }
         names = chooser_type_dict.keys()
-
         assert_equal(len(root.movers), len(names))
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
@@ -410,6 +418,39 @@ class testDefaultScheme(object):
         for choosername in names:
             for mover in root.movers[name_dict[choosername]].movers:
                 assert_equal(type(mover), chooser_type_dict[choosername])
+
+    def test_default_scheme_no_ms_outer(self):
+        scheme = DefaultScheme(self.no_ms_outer)
+        root = scheme.move_decision_tree()
+        chooser_type_dict = {
+            'ShootingChooser' : paths.OneWayShootingMover,
+            'PathreversalChooser' : paths.PathReversalMover,
+            'RepexChooser' : paths.ReplicaExchangeMover,
+            'MinusChooser' : paths.MinusMover
+        }
+        names = chooser_type_dict.keys()
+        assert_equal(len(root.movers), len(names))
+
+        name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
+        for name in names:
+            assert_in(name, name_dict.keys())
+
+        n_normal_repex = 4
+        n_msouter_repex = 0
+        n_repex = n_normal_repex + n_msouter_repex
+
+        assert_equal(
+            len(root.movers[name_dict['ShootingChooser']].movers), 6
+        )
+        assert_equal(
+            len(root.movers[name_dict['PathreversalChooser']].movers), 6
+        )
+        assert_equal(
+            len(root.movers[name_dict['RepexChooser']].movers), n_repex
+        )
+        assert_equal(
+            len(root.movers[name_dict['MinusChooser']].movers), 2
+        )
 
 
     def test_default_sanity(self):
@@ -582,18 +623,21 @@ class testDefaultScheme(object):
 
 class testLockedMoveScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
-        ])
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        self.network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
         self.basic_scheme = DefaultScheme(self.network)
         self.root_mover = self.basic_scheme.move_decision_tree()
 
@@ -641,18 +685,21 @@ class testLockedMoveScheme(object):
 
 class testOneWayShootingMoveScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
-        ])
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        self.network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
 
     def test_scheme(self):
         scheme = OneWayShootingMoveScheme(self.network)

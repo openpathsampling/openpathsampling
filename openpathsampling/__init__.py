@@ -31,7 +31,7 @@ except ImportError:  # pragma: no cover
         
         
 from analysis.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, OneWayShootingMoveScheme
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme, OneWayShootingMoveScheme
 )
 
 from analysis.tis_analysis import (
@@ -60,8 +60,15 @@ from analysis.single_trajectory_analysis import (
     TrajectorySegmentContainer
 )
 
-from collectivevariable import CV_Function, CV_MDTraj_Function, CV_MSMB_Featurizer, \
-    CV_Volume, CollectiveVariable
+from bias_function import (
+    BiasFunction, BiasLookupFunction, BiasEnsembleTable
+)
+
+from collectivevariable import (
+    FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
+    InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
+    CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
+    GeneratorCV)
 
 from ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
@@ -75,6 +82,12 @@ from ensemble import (
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
     OptionalEnsemble, join_ensembles
 )
+
+from high_level.interface_set import (
+    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
+)
+
+from high_level.ms_outer_interface import MSOuterTISInterface
 
 from live_visualization import LiveVisualization
 
@@ -103,7 +116,8 @@ from pathmover import (
     FirstSubtrajectorySelectMover, MultipleSetMinusMover,
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
-    LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover
+    LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover,
+    IdentityPathMover, RandomAllowedChoiceMover
 )
 
 from pathsimulator import (
