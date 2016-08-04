@@ -495,11 +495,15 @@ class MoveTreeBuilder(Builder):
             input_ensembles = scheme.list_initial_ensembles()
         except AttributeError:
             # inp is a path mover
+            # ??? this is nonsense in from_scheme, isn't it? you would get
+            # error on the thing you return below ~~~DWHS
             input_ensembles = scheme.input_ensembles
 
+        hidden = list(scheme.find_hidden_ensembles())
+        # using network.all_ensembles forces a correct ordering
         return MoveTreeBuilder(
             pathmover=scheme.root_mover,
-            ensembles=list(scheme.find_used_ensembles()) + list(scheme.find_hidden_ensembles()),
+            ensembles=scheme.network.all_ensembles + hidden,
             initial=input_ensembles
         )
 
