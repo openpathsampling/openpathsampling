@@ -100,6 +100,7 @@ class MoveScheme(StorableNamedObject):
     @classmethod
     def from_dict(cls, dct):
         scheme = cls.__new__(cls)
+        # noinspection PyArgumentList
         scheme.__init__(dct['network'])
         scheme.movers = dct['movers']
         scheme.choice_probability = dct['choice_probability']
@@ -881,12 +882,13 @@ class DefaultScheme(MoveScheme):
                     ensembles=pairs
                 ))
 
+
 class LockedMoveScheme(MoveScheme):
     def __init__(self, root_mover, network=None, root_accepted=None):
         super(LockedMoveScheme, self).__init__(network)
         self.root_mover = root_mover
 
-    def append(self, strategies, levels=None):
+    def append(self, strategies, levels=None, force=False):
         raise TypeError("Locked schemes cannot append strategies")
 
     def build_move_decision_tree(self):
