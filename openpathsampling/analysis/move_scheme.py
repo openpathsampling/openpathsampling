@@ -7,12 +7,14 @@ from openpathsampling.netcdfplus import StorableNamedObject
 
 try:
     import pandas as pd
-    has_pandas=True
+    has_pandas = True
 except ImportError:
-    has_pandas=False
+    has_pandas = False
+    pd = None
 
 
 import sys
+
 
 def sample_from_trajectories(ensemble, trajectories, used_trajectories=None,
                              avoid_reuse=True):
@@ -53,9 +55,9 @@ def sample_from_trajectories(ensemble, trajectories, used_trajectories=None,
         selected = possible[0]  # take the first one
 
     if selected is not None:
-        sample = paths.Sample(replica=None,
-                              trajectory=selected,
-                              ensemble=ensemble)
+        sample = paths.Sample(
+            trajectory=selected,
+            ensemble=ensemble)
     return sample
 
 
