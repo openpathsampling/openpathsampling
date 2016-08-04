@@ -1,13 +1,13 @@
-from openpathsampling.pathmovechange import PathMoveChange
+from openpathsampling.pathmovechange import MoveChange
 from openpathsampling.netcdfplus import StorableObject, ObjectStore
 
 from uuid import UUID
 
 
-class PathMoveChangeStore(ObjectStore):
+class MoveChangeStore(ObjectStore):
     def __init__(self):
-        super(PathMoveChangeStore, self).__init__(
-            PathMoveChange,
+        super(MoveChangeStore, self).__init__(
+            MoveChange,
             json=False
         )
 
@@ -29,7 +29,7 @@ class PathMoveChangeStore(ObjectStore):
 
         cls = self.class_list[cls_name]
         obj = cls.__new__(cls)
-        PathMoveChange.__init__(obj, mover=self.vars['mover'][idx])
+        MoveChange.__init__(obj, mover=self.vars['mover'][idx])
 
         obj.samples = self.vars['samples'][idx]
         obj.subchanges = self.vars['subchanges'][idx]
@@ -38,7 +38,7 @@ class PathMoveChangeStore(ObjectStore):
         return obj
 
     def initialize(self, units=None):
-        super(PathMoveChangeStore, self).initialize()
+        super(MoveChangeStore, self).initialize()
 
         # New short-hand definition
         self.create_variable('details', 'lazyobj.details')
@@ -115,13 +115,13 @@ class PathMoveChangeStore(ObjectStore):
         obj = cls.__new__(cls)
         if self.reference_by_uuid:
             if mover_idx[0] == '-':
-                PathMoveChange.__init__(obj)
+                MoveChange.__init__(obj)
             else:
-                PathMoveChange.__init__(
+                MoveChange.__init__(
                     obj,
                     mover=self.storage.pathmovers[UUID(mover_idx)])
         else:
-            PathMoveChange.__init__(
+            MoveChange.__init__(
                 obj,
                 mover=self.storage.pathmovers[int(mover_idx)])
 

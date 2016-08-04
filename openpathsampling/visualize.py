@@ -538,7 +538,7 @@ class MoveTreeBuilder(Builder):
             sub_type = sub_mp.__class__
             sub_name = sub_type.__name__[:-5]
 
-            if sub_type is paths.SamplePathMoveChange:
+            if sub_type is paths.SampleMoveChange:
                 group.add(
                     doc.block(level, yp))
 
@@ -2383,7 +2383,7 @@ class StepList(list):
 
         Returns
         -------
-        :obj:`PathMoveChange`
+        :obj:`MoveChange`
             the move change in which the sample was generated
 
         """
@@ -2474,7 +2474,7 @@ class SampleListGenerator(SampleList):
 
         Returns
         -------
-        :obj:`PathMoveChange`
+        :obj:`MoveChange`
             the move change in which the sample was generated
 
         """

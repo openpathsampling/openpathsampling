@@ -35,7 +35,7 @@ class MCStep(StorableObject):
         the initial (pre) sampleset
     active : SampleSet
         the final (post) sampleset
-    change : PathMoveChange
+    change : MoveChange
         the pathmovechange describing the transition from pre to post
     """
     def __init__(self,
@@ -106,7 +106,7 @@ class PathSimulator(StorableNamedObject):
             mccycle=self.step,
             previous=None,
             active=self.globalstate,
-            change=paths.EmptyPathMoveChange()
+            change=paths.EmptyMoveChange()
         )
 
         if self.storage is not None:

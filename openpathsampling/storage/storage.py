@@ -181,7 +181,7 @@ class Storage(NetCDFPlus):
         self.create_store('samplesets', paths.storage.SampleSetStore())
         self.create_store(
             'pathmovechanges',
-            paths.storage.PathMoveChangeStore()
+            paths.storage.MoveChangeStore()
         )
         self.create_store('steps', paths.storage.MCStepStore())
 
