@@ -17,11 +17,11 @@ class Identity2(CallIdentity):
 def setUp():
     global op_id, volA, volB, volC, volD, volA2
     op_id = CallIdentity()
-    volA = volume.CVRangeVolume(op_id, -0.5, 0.5)
-    volB = volume.CVRangeVolume(op_id, 0.25, 0.75)
-    volC = volume.CVRangeVolume(op_id, -0.75, -0.25)
-    volD = volume.CVRangeVolume(op_id, -0.75, 0.75)
-    volA2 = volume.CVRangeVolume(Identity2(), -0.5, 0.5)
+    volA = volume.CVDefinedVolume(op_id, -0.5, 0.5)
+    volB = volume.CVDefinedVolume(op_id, 0.25, 0.75)
+    volC = volume.CVDefinedVolume(op_id, -0.75, -0.25)
+    volD = volume.CVDefinedVolume(op_id, -0.75, 0.75)
+    volA2 = volume.CVDefinedVolume(Identity2(), -0.5, 0.5)
 
 
 class testEmptyVolume(object):
@@ -100,7 +100,7 @@ class testCVRangeVolume(object):
 
 
     def test_and_combinations(self):
-        assert_equal((volA & volB), volume.CVRangeVolume(op_id, 0.25, 0.5))
+        assert_equal((volA & volB), volume.CVDefinedVolume(op_id, 0.25, 0.5))
         assert_equal((volA & volB)(0.45), True)
         assert_equal((volA & volB)(0.55), False)
         assert_equal((volB & volC), volume.EmptyVolume())
@@ -112,7 +112,7 @@ class testCVRangeVolume(object):
                     )
 
     def test_or_combinations(self):
-        assert_equal((volA | volB), volume.CVRangeVolume(op_id, -0.5, 0.75))
+        assert_equal((volA | volB), volume.CVDefinedVolume(op_id, -0.5, 0.75))
         assert_equal((volB | volC), 
                      volume.UnionVolume(volB, volC))
         assert_equal((volB | volC)(0.0), False)
@@ -126,21 +126,21 @@ class testCVRangeVolume(object):
     def test_xor_combinations(self):
         assert_equal((volA ^ volB),
                      volume.UnionVolume(
-                         volume.CVRangeVolume(op_id, -0.5, 0.25),
-                         volume.CVRangeVolume(op_id, 0.5, 0.75)
+                         volume.CVDefinedVolume(op_id, -0.5, 0.25),
+                         volume.CVDefinedVolume(op_id, 0.5, 0.75)
                      ))
         assert_equal((volA ^ volA2),
                      volume.SymmetricDifferenceVolume(volA, volA2))
 
     def test_sub_combinations(self):
-        assert_equal((volA - volB), volume.CVRangeVolume(op_id, -0.5, 0.25))
+        assert_equal((volA - volB), volume.CVDefinedVolume(op_id, -0.5, 0.25))
         assert_equal((volB - volC), volB)
         assert_equal((volA - volD), volume.EmptyVolume())
-        assert_equal((volB - volA), volume.CVRangeVolume(op_id, 0.5, 0.75))
+        assert_equal((volB - volA), volume.CVDefinedVolume(op_id, 0.5, 0.75))
         assert_equal((volD - volA),
                      volume.UnionVolume(
-                         volume.CVRangeVolume(op_id, -0.75, -0.5),
-                         volume.CVRangeVolume(op_id, 0.5, 0.75)
+                         volume.CVDefinedVolume(op_id, -0.75, -0.5),
+                         volume.CVDefinedVolume(op_id, 0.5, 0.75)
                      )
                     )
         assert_equal((volA2 - volA),
@@ -356,8 +356,8 @@ class testVolumeFactory(object):
     def test_CVRangeVolumeSet(self):
         mins = [-1.5, -3.5]
         maxs = [2.0, 4.0]
-        lv0 = volume.CVRangeVolume(op_id, mins[0], maxs[0])
-        lv1 = volume.CVRangeVolume(op_id, mins[1], maxs[1])
+        lv0 = volume.CVDefinedVolume(op_id, mins[0], maxs[0])
+        lv1 = volume.CVDefinedVolume(op_id, mins[1], maxs[1])
         assert_equal(
             [lv0, lv1],
             volume.VolumeFactory.CVRangeVolumeSet(op_id, mins, maxs)

@@ -25,8 +25,8 @@ class testMoveScheme(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
@@ -361,8 +361,8 @@ class testDefaultScheme(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
@@ -625,8 +625,8 @@ class testLockedMoveScheme(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
@@ -687,8 +687,8 @@ class testOneWayShootingMoveScheme(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
