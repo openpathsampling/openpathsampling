@@ -850,24 +850,28 @@ class DefaultScheme(MoveScheme):
         global_strategy = strategies.OrganizeByMoveGroupStrategy()
         self.append(global_strategy)
 
-        msouters = self.network.special_ensembles['ms_outer']
-        for ms in msouters.keys():
-            self.append(strategies.OneWayShootingStrategy(
-                ensembles=[ms],
-                group="ms_outer_shooting",
-                engine=engine
-            ))
-            self.append(strategies.PathReversalStrategy(
-                ensembles=[ms],
-                replace=False
-            ))
-            ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
-            pairs = [[ms, neighb] for neighb in ms_neighbors]
-            self.append(strategies.SelectedPairsRepExStrategy(
-                ensembles=pairs
-            ))
-        #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
-        #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
+        try:
+            msouters = self.network.special_ensembles['ms_outer']
+        except KeyError:
+            # if no ms_outer, ignore the ms_outer setup for now; later we
+            # might default to a state swap
+            pass
+        else:
+            for ms in msouters.keys():
+                self.append(strategies.OneWayShootingStrategy(
+                    ensembles=[ms],
+                    group="ms_outer_shooting",
+                    engine=engine
+                ))
+                self.append(strategies.PathReversalStrategy(
+                    ensembles=[ms],
+                    replace=False
+                ))
+                ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
+                pairs = [[ms, neighb] for neighb in ms_neighbors]
+                self.append(strategies.SelectedPairsRepExStrategy(
+                    ensembles=pairs
+                ))
 
 class LockedMoveScheme(MoveScheme):
     def __init__(self, root_mover, network=None, root_accepted=None):
