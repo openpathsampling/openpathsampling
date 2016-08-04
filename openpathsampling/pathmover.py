@@ -107,13 +107,13 @@ class ReplicaStateSet(set):
     """
 
     @staticmethod
-    def from_sampleset(sampleset):
+    def from_sampleset(sample_set):
         """
         Construct a set of a single state from a `SampleSet`
 
         Parameters
         ----------
-        sampleset : :obj:`openpathsampling.SampleSet`
+        sample_set : :obj:`openpathsampling.SampleSet`
             The sampleset turned into a single set replica state
 
         Returns
@@ -122,7 +122,7 @@ class ReplicaStateSet(set):
             the constructed set of replica states
 
         """
-        return ReplicaStateSet({ReplicaState.from_sampleset(sampleset)})
+        return ReplicaStateSet({ReplicaState.from_sampleset(sample_set)})
 
     @staticmethod
     def from_ensembles(ensembles):
@@ -186,7 +186,7 @@ class ReplicaState(frozenset):
 
     This is useful to check if certain requirements are met. When `necessary`
     represent the minimal necessary number of samples per ensemble and `current`
-    is the current state of the sampleset then `necessary <= current` checks if
+    is the current state of the sample_set then `necessary <= current` checks if
     the requirements are met
 
     Replica states allow comparison with inclusion using `>` and `<`. So, if
@@ -200,13 +200,13 @@ class ReplicaState(frozenset):
     """
 
     @staticmethod
-    def from_sampleset(sampleset):
+    def from_sampleset(sample_set):
         """
         Construct a `ReplicaState` from a sampleset
 
         Parameters
         ----------
-        sampleset : `openpathsampling.SampleSet`
+        sample_set : `openpathsampling.SampleSet`
             the sampleset to be condensed into a ReplicaState
 
         Returns
@@ -216,7 +216,7 @@ class ReplicaState(frozenset):
             present in the sampleset
         """
         d = {}
-        for sample in sampleset:
+        for sample in sample_set:
             d[sample.ensemble] = d.get(sample.ensemble, 0) + 1
 
         return ReplicaState(d.items())
