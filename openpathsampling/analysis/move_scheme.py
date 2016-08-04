@@ -339,7 +339,8 @@ class MoveScheme(StorableNamedObject):
 
     def initial_conditions_from_trajectories(self, trajectories,
                                              sample_set=None,
-                                             avoid_reuse=True):
+                                             strategies=None,
+                                             engine=None):
         """
         Create a SampleSet with as many initial samples as possible.
 
@@ -353,11 +354,11 @@ class MoveScheme(StorableNamedObject):
         sample_set : :class:`.SampleSet`, optional
             if given, add samples to this sampleset. Default is None, which
             means that this will start a new sampleset.
-        avoid_reuse : bool
-            if True (default), use a trajectory that hasn't been used
-            already, if possible (otherwise use the first trajectory that
-            satisfies the ensemble). If False, always use the first
-            trajectory in trajectories that satisfies the ensemble
+        strategies : dict
+            a dict that specifies the options used when ensemble functions
+            are used to create a new sample.
+        engine : :class:`openpathsampling.engines.DyanmicsEngine`
+            the engine used for extending moves
 
         Returns
         -------
@@ -414,6 +415,8 @@ class MoveScheme(StorableNamedObject):
 
         # loop all ensemble categories from which we need one sample
         # list will create a copy so removing item will not affect the loop
+
+        # 1. look in the existing sample_set
         for idx, ens_list in enumerate(list(ensembles_to_fill)):
             if type(ens_list) is not list:
                 ens_list = [ens_list]
@@ -421,31 +424,57 @@ class MoveScheme(StorableNamedObject):
             # try to generate a sample for each category
             # try different strategies to get a sample
 
-            # 1. look in the existing sample_set
             if set(ens_list) & set(existing_ensembles):
                 # remove the complete category
                 del ensembles_to_fill[idx]
                 continue  # We've already got one. It's very nice
 
-        # loop over remaining ensembles to fill
-        for idx, ens_list in enumerate(list(ensembles_to_fill)):
-            if type(ens_list) is not list:
-                ens_list = [ens_list]
-            sample = None
+        # 2. try strategies
+        if strategies is None:
+            strategies = [
+                ('get_sample_from_trajectories', {}),
+                ('split_sample_from_trajectories', {
+                    'unique': 'shortest'}),
+                ('extend_sample_from_trajectories', {
+                    'level': 1,
+                    'unique': 'shortest',
+                    'max_attempts': 5})
+            ]
 
-            # 2. try forward and backward
-            for ens in ens_list:
+        for strategy, options in strategies:
+            if strategy == 'extend_sample_from_trajectories':
+                if engine is None:
+                    break
 
-                # fill only the first in ens_list that can be filled
-                sample, trj_idx = ens.sample_from_trajectories(
-                    trajectories=trajectories,
-                    strategy='self'
-                )
+                options['engine'] = engine
 
-            # now, if we've found a sample, add it
-            if sample is not None:
-                sample_set.append_as_new_replica(sample)
-                self._update_traj_list(trajectories, idx, reuse_strategy)
+            for idx, ens_list in enumerate(list(ensembles_to_fill)):
+                if type(ens_list) is not list:
+                    ens_list = [ens_list]
+
+                for ens in ens_list:
+
+                    # fill only the first in ens_list that can be filled
+                    sample, trj_idx = ens.sample_from_trajectories(
+                        trajectories=trajectories,
+                        strategy=strategy,
+                        **options
+                    )
+
+                    # now, if we've found a sample, add it
+                    if sample is not None:
+                        if ens.replica_sign > 0:
+                            replica_idx = \
+                                max(0, max(sample_set.replicas()) + 1)
+                        else:
+                            replica_idx = \
+                                min(min(sample_set.replicas()) - 1, - 1)
+
+                        sample.replica = replica_idx
+
+                        sample_set.append(sample)
+                        self._update_traj_list(
+                            trajectories, trj_idx, reuse_strategy)
 
         return sample_set
 
@@ -457,7 +486,6 @@ class MoveScheme(StorableNamedObject):
             trajectories.append(used)
         elif reuse_strategy == 'remove':
             del trajectories[idx]
-
 
     def check_initial_conditions(self, sampleset):
         """
