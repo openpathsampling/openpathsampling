@@ -13,37 +13,37 @@ class WHAM(object):
     """
     Weighted Histogram Analysis Method
 
-    Note
-    ----
-    Several parts of the docstrings mention F&S, which is intended to refer
-    the reader to reference [1]_, in particular pages 184-187 in the 2nd
-    edition (section called "Self-Consistent Histogram Method").
+    Notes
+    -----
+        Several parts of the docstrings mention F&S, which is intended to
+        refer the reader to reference [1]_, in particular pages 184-187 in
+        the 2nd edition (section called "Self-Consistent Histogram Method").
+
+        Other terminology: n_hists refers to the number of histograms,
+        n_bins refers to the number of bins per histogram. Thus the input is
+        a matrix of n_bins rows and n_hists columns.
+
 
     Reference
     ---------
     .. [1] Daan Frenkel and Berend Smit. Understanding Molecular Simulation:
        From Algorithms to Applications. 2nd Edition. 2002.
+
+    Parameters
+    ----------
+    tol : float
+        tolerance for convergence or equality. default 10e-10
+    max_iter : int
+        maximum number of iterations. Default 1000000
+    cutoff : float
+        windowing cutoff, as fraction of maximum value. Default 0.05
+
+    Attributes
+    ----------
+    sample_every : int
+        frequency (in iterations) to report debug information
     """
-
     def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.05):
-        """
-        Initialize (empty) WHAM calculation object.
-
-        Parameters
-        ----------
-        tol : float
-            tolerance for convergence
-        max_iter : int
-            maximum number of iterations
-        cutoff : float
-            windowing cutoff
-
-        Attributes
-        ----------
-        sample_every : int
-            frequency (in iterations) to report debug information
-
-        """
         self.tol = tol
         self.max_iter = max_iter
         self.cutoff = cutoff
@@ -103,15 +103,19 @@ class WHAM(object):
         Parameters
         ----------
         df : pandas.DataFrame
+            input dataframe
         cutoff : float
+            windowing cutoff, as fraction of maximum value
         tol : float
+            tolerance for two values being "equal"
         
 
         Returns
         -------
         pandas.DataFrame
             version of the dataframe with leading constant values removed
-            and without
+            and without anything under the cutoff. This is often referred to
+            as the "cleaned input dataframe" in other functions
         """
         if cutoff is None:
             cutoff = self.cutoff
@@ -145,13 +149,19 @@ class WHAM(object):
         In TIS, this is just 1 if there is a non-zero entry in cleaned_df,
         and 0 otherwise.
 
+        (NB: it isn't quite clear to me why this is a matrix instead of a
+        vector, but the previous code accounted for a dependence on the
+        bin of the histogram)
+
         Parameters
         ----------
         cleaned_df : pandas.DataFrame
+            cleaned input dataframe 
         
         Returns
         -------
         pandas.DataFrame
+            unweighting values for the input dataframe
         """
         unweighting = cleaned_df.copy().applymap(
             lambda x : 1.0 if x > 0.0 else 0.0
@@ -160,32 +170,59 @@ class WHAM(object):
 
 
     def sum_k_Hk_Q(self, cleaned_df):
-        """
+        """Sum over histograms for each histogram bin. Length is n_bins
+
+        Called `sum_hist` in other codes, or :math:`\sum_k H_k(Q)` in F&S.
+        This is the sum over histograms of values for a given histogram bin.
+
+        Parameters
+        ----------
+        cleaned_df : pandas.DataFrame
+            cleaned input dataframe
+
         Returns
         -------
-        sum_k_Hk_Q 
-            called `sum_hist` in other codes, or :math:`\sum_k H_k(Q)` in
-            F&S. This is the sum over histograms of values for a given
-            histogram bin.
+        pandas.Series
+            sum over histograms for each bin (length is n_bins)
         """
         return cleaned_df.sum(axis=1)
 
 
     def n_entries(self, cleaned_df):
-        """
-        n_entries : 
-            the list of counts of entries. In other codes, this is `nt`. In
-            F&S, this is :math:`M_k`.
+        """List of counts of entries per histogram. Length is n_hists
+
+        The list of counts of entries. In other codes, this is `nt`. In F&S,
+        this is :math:`M_k`.
+
+        Parameters
+        ----------
+        cleaned_df : pandas.DataFrame
+            cleaned input dataframe
+
+        Returns
+        -------
+        pandas.Series
+            List of counts of entries per histogram (length n_hists)
         """
         return cleaned_df.sum(axis=0)
 
 
     def weighted_counts_tis(self, unweighting, n_entries):
         """
+        Product of unweighting and n_entries.
+
+        In F&S, this is :math:`e^{-\\beta W_k} M_k`. This value appears as
+        part of a sum in the WHAM iteration equation (F&S 2nd edition
+        Eq. 7.3.10). The product can be pre-calculated, which is what we do
+        here.
+
+        As for this being a matrix (not a vector), see note on
+        :meth:`.unweighting`.
+
         Returns
         -------
-        pd.Panel :
-            weighted counts matrix, with 
+        pandas.DataFrame
+            weighted counts matrix, size n_hists by n_dims
         """
         weighted_counts = unweighting.apply(lambda s : [x * n_entries[s.name]
                                                         for x in s])
@@ -195,16 +232,29 @@ class WHAM(object):
     def generate_lnZ(self, lnZ, unweighting, weighted_counts,
                             sum_k_Hk_Q, tol=None):
         """
+        Perform the WHAM iteration to estimate ln(Z_i) for each histogram.
+
         Parameters
         ----------
-        lnZ : list-like, one per histogram
+        lnZ : pandas.Series, one per histogram (length n_hists)
             initial guess for ln(Z_i) for each histogram i
-        unweighting : matrix-like, 
+        unweighting : pandas.DataFrame, n_bins by n_hists
             the unweighting matrix for each histogram point. For TIS, this
             is 1 if the (cleaned) DF has an entry; 0 otherwise. In F&S, this
-            is :math:`\exp(-\\beta W_i)`.
-        sum_k_Hk_Q :
-            see 
+            is :math:`\exp(-\\beta W_i)`. See :meth:`.unweighting`.
+        weighted_counts : pandas.DataFrame, n_bins by n_hists
+            the weighted matrix multiplied by the counts per histogram. See
+            :meth:`.weighted_counts_tis`.
+        sum_k_Hk_Q : pandas.Series, one per bin (length n_bins)
+            Sum over histograms for each histogram bin. See
+            :meth:`.sum_k_Hk_Q`.
+        tol : float
+            convergence tolerance
+
+        Returns
+        -------
+        pandas.Series
+            the resulting WHAM calculation for ln(Z_i) for each histogram i
         """
         if tol is None:
             tol = self.tol
@@ -222,6 +272,7 @@ class WHAM(object):
             Z_old = np.exp(lnZ_old)
             reciprocal_Z_old = (1.0 / Z_old).as_matrix()
             for i in range(len(hists)):
+                #############################################################
                 # this is equation 7.3.10 in F&S
                 # Z_i^{(new)} = 
                 #    \int \dd{Q} w_{i,Q}
@@ -247,6 +298,7 @@ class WHAM(object):
                 #
                 # Note that we do all of this with matrix/vector
                 # multiplication, which numpy can do very quickly.
+                #############################################################
 
                 w_i = unw[:,i]
 
@@ -273,6 +325,24 @@ class WHAM(object):
 
 
     def get_diff(self, lnZ_old, lnZ_new, iteration):
+        """Calculate the difference for this iteration.
+
+        Also outputs debug information, if desired.
+
+        Parameters
+        ----------
+        lnZ_old : pandas.Series
+            previous value of ln(Z_i)
+        lnZ_new : pandas.Series
+            new value of ln(Z_i)
+        iteration : int
+            iteration number
+
+        Returns
+        -------
+        float
+            difference between old and new to use for convergence testing
+        """
         # get error
         diff=0
         diff = sum(abs(lnZ_old - lnZ_new))
@@ -286,6 +356,24 @@ class WHAM(object):
 
 
     def output_histogram(self, lnZ, sum_k_Hk_Q, weighted_counts):
+        """Recombine the data into a joined histogram
+
+        Parameters
+        ----------
+        lnZ : pandas.Series, one per histogram (length n_hists)
+            value of ln(Z_i) for each histogram i
+        sum_k_Hk_Q : pandas.Series, one per bin (length n_bins)
+            Sum over histograms for each histogram bin. See
+            :meth:`.sum_k_Hk_Q`.
+        weighted_counts : pandas.DataFrame, n_bins by n_hists
+            the weighted matrix multiplied by the counts per histogram. See
+            :meth:`.weighted_counts_tis`.
+
+        Returns
+        -------
+        pandas.Series
+            the WHAM-reweighted combined histogram, unnormalized
+        """
         Z = np.exp(lnZ)
         Z0_over_Zi = Z.iloc[0] / Z
         output = pd.Series(index=sum_k_Hk_Q.index, name="WHAM")
@@ -300,9 +388,22 @@ class WHAM(object):
 
     @staticmethod
     def normalize_cumulative(series):
+        """Normalize to maximum value"""
         return series/series.max()
 
     def guess_lnZ_crossing_probability(self, cleaned_df):
+        """Guess ln(Z_i) based on crossing probabilities
+
+        Parameters
+        ----------
+        cleaned_df : pandas.DataFrame
+            cleaned input dataframe representing crossing probabilities
+
+        Returns
+        -------
+        pandas.Series
+            initial guess for values of ln(Z_i) for each histogram
+        """
         df = cleaned_df.apply(lambda s : s/s.max())
         # pandas magic, see http://stackoverflow.com/questions/18327624
         first_nonzero = df.apply(lambda s: s[s == 1.0].index[0])
@@ -316,6 +417,20 @@ class WHAM(object):
         return guess_lnZ
 
     def wham_bam_histogram(self, input_df):
+        """
+        Perform the entire wham process.
+
+        Parameters
+        ----------
+        input_df : pandas.DataFrame
+            input dataframe
+
+        Returns
+        -------
+        pandas.Series
+            the WHAM-reweighted combined histogram, normalized so max value
+            is 1
+        """
         cleaned = self.prep_reverse_cumulative(input_df)
         guess = self.guess_lnZ_crossing_probability(cleaned)
         sum_k_Hk_Q = self.sum_k_Hk_Q(cleaned)
@@ -340,6 +455,7 @@ class WHAM(object):
 
 
 def parsing(parseargs):  # pragma: no cover
+    # TODO: switch to argparse. 
     import optparse
     parser = optparse.OptionParser()
     parser.add_option("--tol", type="float", default=1e-12)
