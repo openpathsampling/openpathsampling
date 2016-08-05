@@ -929,12 +929,12 @@ class Ensemble(StorableNamedObject):
                 parts = self.iter_split(traj)
             elif unique == 'shortest':
                 parts = sorted(self.split(traj), key=len)
-
-                refresh_output(
-                    'Found %d slices of lengths %s\n' % (
-                        len(parts),
-                        str(set(map(len, parts)))
-                    ), refresh=False)
+                if len(parts) > 0:
+                    refresh_output(
+                        'Found %d slices of lengths %s\n' % (
+                            len(parts),
+                            str(set(map(len, parts)))
+                        ), refresh=False)
             else:
                 parts = []
 
@@ -1021,10 +1021,11 @@ class Ensemble(StorableNamedObject):
                 traj_parts = sub_ensemble.iter_split(traj)
             elif unique == 'shortest':
                 traj_parts = sorted(sub_ensemble.split(traj), key=len)
-                refresh_output(
-                    'Found %d extendable subparts\n' % (
-                        len(traj_parts)
-                    ), refresh=False)
+                if len(traj_parts) > 0:
+                    refresh_output(
+                        'Found %d extendable subparts\n' % (
+                            len(traj_parts)
+                        ), refresh=False)
             else:
                 traj_parts = []
 

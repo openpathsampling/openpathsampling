@@ -447,6 +447,11 @@ class MoveScheme(StorableNamedObject):
                 strategies[idx] = (strategy, dict())
 
         for strategy, options in strategies:
+            refresh_output(
+                'Trying strategy `%s`\n' % (
+                    strategy
+                ), refresh=False)
+
             if strategy == 'extend_sample_from_trajectories':
                 if engine is None:
                     break
@@ -460,11 +465,6 @@ class MoveScheme(StorableNamedObject):
                 for ens in ens_list:
 
                     # fill only the first in ens_list that can be filled
-
-                    refresh_output(
-                        'Ensemble `%s` trying `%s`\n' % (
-                            ens.name, strategy
-                        ), refresh=False)
 
                     if strategy == 'get':
                         sample = ens.get_sample_from_trajectories(
