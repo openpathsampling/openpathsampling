@@ -727,7 +727,7 @@ class Ensemble(StorableNamedObject):
 
     @property
     def extendable_sub_ensembles(self):
-        return []
+        return {}
 
     def sample_from_trajectories(
             self, trajectories, replica_id, engine=None):
@@ -934,6 +934,12 @@ class Ensemble(StorableNamedObject):
             else:
                 parts = []
 
+            refresh_output(
+                'Found %d slices of lengths %s\n' % (
+                    len(parts),
+                    str(set(map(len, parts)))
+                ), refresh=False)
+
             for part in parts:
                 if part not in used_trajectories:
                     return paths.Sample(
@@ -957,8 +963,8 @@ class Ensemble(StorableNamedObject):
             trajectories,
             engine,
             unique='first',
-            level=0,
-            attempts=2):
+            level='complex',
+            attempts=3):
         """
         Generate a sample in the ensemble by extending parts of `trajectories`
 
@@ -983,12 +989,6 @@ class Ensemble(StorableNamedObject):
         trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             single trajectory of list of trajectories to be used to create a
             sample in this ensemble
-        used_trajectories : (list of)
-        :class:`openpathsampling.trajectory.Trajectory`
-            trajectories not taken into account in the first attempt
-        reuse_strategy : str
-            if `avoid` then in a second attempt the used trajectories are
-            tried
         engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
             engine to use for MD extension
         unique : str
@@ -1006,7 +1006,7 @@ class Ensemble(StorableNamedObject):
 
         sub_ensembles = self.extendable_sub_ensembles
 
-        if len(sub_ensembles) <= level:
+        if level not in sub_ensembles:
             return None
 
         sub_ensemble = sub_ensembles[level]
@@ -1021,8 +1021,15 @@ class Ensemble(StorableNamedObject):
             else:
                 traj_parts = []
 
-            for part in traj_parts:
+            refresh_output(
+                'Found %d extendable subparts\n' % (
+                    len(traj_parts)
+                ), refresh=False)
+
+            for orig in traj_parts:
                 for attempt in range(attempts):
+                    part = paths.Trajectory(orig)
+
                     refresh_output(
                         'Attempt [%d] : Extending from initial length %d\n' % (
                             attempt + 1,
@@ -2649,11 +2656,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     @property
     def extendable_sub_ensembles(self):
-        # we use the A-X-A-A, and A-X-A and the one from TISEnsemble
+        # A-X-A and the one from TISEnsemble
 
         state_vol = self.state_vol
 
-        sub_ensembles = []
+        sub_ensembles = {}
 
         inA = AllInXEnsemble(state_vol)
         outA = AllOutXEnsemble(state_vol)
@@ -2679,97 +2686,100 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             SingleFrameEnsemble(inA)
         ]
 
-        for n_l in range(self.n_l - 1, -1, -1):
-            # add ens with less loops
-            sub_ensembles.append(
-                SequentialEnsemble(start + loop * n_l + end))
+        # do not add higher orders, you would
+        # for n_l in range(self.n_l - 2, 0, -1):
+        #     # add ens with less loops
+        #     sub_ensembles.append(
+        #         SequentialEnsemble(start + loop * n_l + end))
+
+        sub_ensembles['complex'] = \
+            SequentialEnsemble(start + end)
 
         # and the simplest possible just crossing from in_state to outside
-        sub_ensembles.append(
-            LengthEnsemble(2) &
+        sub_ensembles['minimal'] = \
+            LengthEnsemble(2) & \
             SequentialEnsemble([
                 SingleFrameEnsemble(AllInXEnsemble(state_vol)),
                 SingleFrameEnsemble(AllOutXEnsemble(state_vol))
             ])
-        )
 
         return sub_ensembles
 
-    def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
-        """
-        Generate a sample for the minus ensemble by extending `partial_traj`
+    # def populate_minus_ensemble(self, partial_traj, minus_replica_id, engine):
+    #     """
+    #     Generate a sample for the minus ensemble by extending `partial_traj`
+    #
+    #     Parameters
+    #     ----------
+    #     partial_traj : :class:`openpathsampling.trajectory.Trajectory`
+    #         trajectory to extend
+    #     minus_replica_id : int or str
+    #         replica ID for this sample
+    #     engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
+    #         engine to use for MD extension
+    #     """
+    #     last_frame = partial_traj[-1]
+    #     if not self._segment_ensemble(partial_traj):
+    #         raise RuntimeError(
+    #             "Invalid input trajectory for minus extension. (Not A-to-A?)"
+    #         )
+    #     fwd_extend_ens = PrefixTrajectoryEnsemble(self, partial_traj)
+    #     extension = engine.generate(last_frame,
+    #                                 [fwd_extend_ens.can_append])
+    #     first_minus = paths.Trajectory(partial_traj + extension[1:])
+    #     assert self(first_minus)
+    #     minus_samp = paths.Sample(
+    #         replica=minus_replica_id,
+    #         trajectory=first_minus,
+    #         ensemble=self
+    #     )
+    #     logger.info(first_minus.summarize_by_volumes_str(
+    #         {"A": self.state_vol,
+    #          "I": ~self.state_vol & self.innermost_vol,
+    #          "X": ~self.innermost_vol})
+    #     )
+    #     return minus_samp
 
-        Parameters
-        ----------
-        partial_traj : :class:`openpathsampling.trajectory.Trajectory`
-            trajectory to extend
-        minus_replica_id : int or str
-            replica ID for this sample
-        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
-            engine to use for MD extension
-        """
-        last_frame = partial_traj[-1]
-        if not self._segment_ensemble(partial_traj):
-            raise RuntimeError(
-                "Invalid input trajectory for minus extension. (Not A-to-A?)"
-            )
-        fwd_extend_ens = PrefixTrajectoryEnsemble(self, partial_traj)
-        extension = engine.generate(last_frame,
-                                    [fwd_extend_ens.can_append])
-        first_minus = paths.Trajectory(partial_traj + extension[1:])
-        assert self(first_minus)
-        minus_samp = paths.Sample(
-            replica=minus_replica_id,
-            trajectory=first_minus,
-            ensemble=self
-        )
-        logger.info(first_minus.summarize_by_volumes_str(
-            {"A": self.state_vol,
-             "I": ~self.state_vol & self.innermost_vol,
-             "X": ~self.innermost_vol})
-        )
-        return minus_samp
-
-    def populate_minus_ensemble_from_set(self, samples, minus_replica_id,
-                                         engine):
-        """
-        Generate a sample for this minus ensemble by extending trajectory.
-
-        Parameters
-        ----------
-        samples : iterable of :class:`.Sample`
-            samples with trajectories that might be extended
-        minus_replica_id : int or str
-            replica ID for the return sample
-        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
-            engine to use for MD extension
-
-        Returns
-        -------
-        :class:`.Sample` :
-            a sample for this minus ensemble
-        """
-        partials = [s.trajectory for s in samples
-                    if self._segment_ensemble(s.trajectory)]
-        if len(partials) == 0:
-            # TODO: add support for trying to run backwards
-            raise RuntimeError("No trajectories can be extended")
-
-        samp = None
-
-        good_sample = False
-        while not good_sample:
-            partial_traj = partials[0]
-            # I think it should be impossible to RuntimeError in this
-            samp = self.populate_minus_ensemble(
-                partial_traj=partial_traj,
-                minus_replica_id=minus_replica_id,
-                engine=engine
-            )
-
-            good_sample = samp.ensemble(samp.trajectory)
-
-        return samp
+    # def populate_minus_ensemble_from_set(self, samples, minus_replica_id,
+    #                                      engine):
+    #     """
+    #     Generate a sample for this minus ensemble by extending trajectory.
+    #
+    #     Parameters
+    #     ----------
+    #     samples : iterable of :class:`.Sample`
+    #         samples with trajectories that might be extended
+    #     minus_replica_id : int or str
+    #         replica ID for the return sample
+    #     engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
+    #         engine to use for MD extension
+    #
+    #     Returns
+    #     -------
+    #     :class:`.Sample` :
+    #         a sample for this minus ensemble
+    #     """
+    #     partials = [s.trajectory for s in samples
+    #                 if self._segment_ensemble(s.trajectory)]
+    #     if len(partials) == 0:
+    #         # TODO: add support for trying to run backwards
+    #         raise RuntimeError("No trajectories can be extended")
+    #
+    #     samp = None
+    #
+    #     good_sample = False
+    #     while not good_sample:
+    #         partial_traj = partials[0]
+    #         # I think it should be impossible to RuntimeError in this
+    #         samp = self.populate_minus_ensemble(
+    #             partial_traj=partial_traj,
+    #             minus_replica_id=minus_replica_id,
+    #             engine=engine
+    #         )
+    #
+    #         good_sample = samp.ensemble(samp.trajectory)
+    #
+    #     return samp
 
 
 class TISEnsemble(SequentialEnsemble):
@@ -2792,21 +2802,23 @@ class TISEnsemble(SequentialEnsemble):
         CV to be used as order parameter for this
     """
 
-    # @property
-    # def extendable_sub_ensembles(self):
-    #     # this is tricky. The only extentable subensembles are (In, Out)
-    #
-    #     states = list(set(self.initial_states + self.final_states))
-    #
-    #     volume = paths.volume.join_volumes(states)
-    #
-    #     return [
-    #         LengthEnsemble(2) &
-    #         SequentialEnsemble([
-    #             SingleFrameEnsemble(AllInXEnsemble(volume)),
-    #             SingleFrameEnsemble(AllOutXEnsemble(volume))
-    #         ])
-    #     ]
+    @property
+    def extendable_sub_ensembles(self):
+        # this is tricky. The only extendable sub-ensembles are (In, Out)
+        # at the crossing of leaving or entering the core
+
+        # pick only the initial ones like for A-X-AB pick A
+        states = list(set(self.initial_states))
+
+        volume = paths.volume.join_volumes(states)
+
+        return { 'minimal':
+            LengthEnsemble(2) &
+            SequentialEnsemble([
+                SingleFrameEnsemble(AllInXEnsemble(volume)),
+                SingleFrameEnsemble(AllOutXEnsemble(volume))
+            ])
+        }
 
     def __init__(self, initial_states, final_states, interface,
                  orderparameter=None, lambda_i=None):
