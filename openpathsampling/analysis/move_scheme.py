@@ -412,8 +412,8 @@ class MoveScheme(StorableNamedObject):
             if traj in trajectories:
                 used_trajectories.add(traj)
 
-        existing_ensembles = list(reversed(sample_set.ensemble_list()))
-        ensembles_to_fill = self.list_initial_ensembles()
+        existing_ensembles = sample_set.ensemble_list()
+        ensembles_to_fill = list(reversed(self.list_initial_ensembles()))
 
         # loop all ensemble categories from which we need one sample
         # list will create a copy so removing item will not affect the loop
@@ -462,9 +462,9 @@ class MoveScheme(StorableNamedObject):
                     # fill only the first in ens_list that can be filled
 
                     refresh_output(
-                        'Trying `%s` in ensemble `%s`' % (
-                            strategy, ens.name
-                        ))
+                        'Ensemble `%s` trying `%s`\n' % (
+                            ens.name, strategy
+                        ), refresh=False)
 
                     if strategy == 'get':
                         sample = ens.get_sample_from_trajectories(
@@ -507,6 +507,13 @@ class MoveScheme(StorableNamedObject):
                                     min(min(sample_set.replicas) - 1, - 1)
 
                         sample.replica = replica_idx
+
+                        refresh_output(
+                            'Ensemble `%s` found sample replica %d, length %d\n'
+                            % (
+                                ens.name, sample.replica, len(sample)
+                            ), refresh=False)
+
                         sample_set.append(sample)
                         # found a sample in this category so remove it for
                         # other tries

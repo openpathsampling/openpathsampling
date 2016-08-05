@@ -10,6 +10,8 @@ import itertools
 from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
+from openpathsampling.tools import refresh_output
+
 import abc
 
 logger = logging.getLogger(__name__)
@@ -1013,7 +1015,7 @@ class Ensemble(StorableNamedObject):
 
         for idx, traj in enumerate(trajectories):
             if unique == 'first':
-                traj_parts = sub_ensemble.iter_split(traj)
+                traj_parts = list(sub_ensemble.iter_split(traj))
             elif unique == 'shortest':
                 traj_parts = sorted(sub_ensemble.split(traj))
             else:
@@ -1021,6 +1023,12 @@ class Ensemble(StorableNamedObject):
 
             for part in traj_parts:
                 for attempt in range(attempts):
+                    refresh_output(
+                        'Attempt [%d] : Extending from initial length %d\n' % (
+                            attempt + 1,
+                            len(part)
+                        ), refresh=False)
+
                     if self.strict_can_append(part):
                         # seems we could extend forward
                         part = engine.extend_forward(
@@ -2784,21 +2792,21 @@ class TISEnsemble(SequentialEnsemble):
         CV to be used as order parameter for this
     """
 
-    @property
-    def extendable_sub_ensembles(self):
-        # this is tricky. The only extentable subensembles are (In, Out)
-
-        states = list(set(self.initial_states + self.final_states))
-
-        volume = paths.volume.join_volumes(states)
-
-        return [
-            LengthEnsemble(2) &
-            SequentialEnsemble([
-                SingleFrameEnsemble(AllInXEnsemble(volume)),
-                SingleFrameEnsemble(AllOutXEnsemble(volume))
-            ])
-        ]
+    # @property
+    # def extendable_sub_ensembles(self):
+    #     # this is tricky. The only extentable subensembles are (In, Out)
+    #
+    #     states = list(set(self.initial_states + self.final_states))
+    #
+    #     volume = paths.volume.join_volumes(states)
+    #
+    #     return [
+    #         LengthEnsemble(2) &
+    #         SequentialEnsemble([
+    #             SingleFrameEnsemble(AllInXEnsemble(volume)),
+    #             SingleFrameEnsemble(AllOutXEnsemble(volume))
+    #         ])
+    #     ]
 
     def __init__(self, initial_states, final_states, interface,
                  orderparameter=None, lambda_i=None):
