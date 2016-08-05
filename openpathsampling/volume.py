@@ -248,8 +248,8 @@ class CVDefinedVolume(Volume):
         '''
         super(CVDefinedVolume, self).__init__()
         self.collectivevariable = collectivevariable
-        self.lambda_min = float(lambda_min)
-        self.lambda_max = float(lambda_max)
+        self.lambda_min = lambda_min.__float__()
+        self.lambda_max = lambda_max.__float__()
 
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
@@ -359,7 +359,7 @@ class CVDefinedVolume(Volume):
             return super(CVDefinedVolume, self).__sub__(other)
 
     def __call__(self, snapshot):
-        l = float(self.collectivevariable(snapshot))
+        l = self.collectivevariable(snapshot).__float__()
         return l >= self.lambda_min and l <= self.lambda_max
 
     def __str__(self):
