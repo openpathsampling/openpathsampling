@@ -856,7 +856,10 @@ class Ensemble(StorableNamedObject):
         return trajectories
 
     def get_sample_from_trajectories(
-            self, trajectories):
+            self, trajectories,
+            used_trajectories=None,
+            reuse_strategy='avoid'
+    ):
         """
         Generate a sample in the ensemble by testing `trajectories`
 
@@ -865,22 +868,39 @@ class Ensemble(StorableNamedObject):
         trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             single trajectory of list of trajectories to be used to create a
             sample in this ensemble
+        used_trajectories : (list of)
+        :class:`openpathsampling.trajectory.Trajectory`
+            trajectories not taken into account in the first attempt
+        reuse_strategy : str
+            if `avoid` then in a second attempt the used trajectories are
+            tried
         """
 
         trajectories = self._to_list_of_trajectories(trajectories)
 
         for idx, traj in enumerate(trajectories):
-            part = self.find_first_subtrajectory(traj)
-            if part is not None:
-                return paths.Sample(
-                    trajectory=part,
-                    ensemble=self
-                ), idx
+            if traj not in used_trajectories:
+                if self(traj):
+                    return paths.Sample(
+                        trajectory=traj,
+                        ensemble=self
+                    )
 
-        return None, None
+        if reuse_strategy == 'avoid' and used_trajectories is not None:
+            for part in used_trajectories:
+                if self(part):
+                    return paths.Sample(
+                        trajectory=part,
+                        ensemble=self
+                    )
+
+        return None
 
     def split_sample_from_trajectories(
-            self, trajectories, unique='first'):
+            self, trajectories,
+            used_trajectories=None,
+            reuse_strategy='avoid',
+            unique='first'):
         """
         Generate a sample in the ensemble by searching for sub-parts
 
@@ -889,6 +909,12 @@ class Ensemble(StorableNamedObject):
         trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             single trajectory of list of trajectories to be used to create a
             sample in this ensemble
+        used_trajectories : (list of)
+        :class:`openpathsampling.trajectory.Trajectory`
+            trajectories not taken into account in the first attempt
+        reuse_strategy : str
+            if `avoid` then in a second attempt the used trajectories are
+            tried
         unique : str
             If `first` the first found subtrajectory is selected. If
             `shortest` then from all subparts the shortest one is used.
@@ -907,15 +933,30 @@ class Ensemble(StorableNamedObject):
                 parts = []
 
             for part in parts:
-                return paths.Sample(
-                    trajectory=part,
-                    ensemble=self
-                ), idx
+                if part not in used_trajectories:
+                    return paths.Sample(
+                        trajectory=part,
+                        ensemble=self
+                    )
 
-        return None, None
+        # if that did not work retry already used ones
+        if reuse_strategy == 'avoid' and used_trajectories is not None:
+            for part in used_trajectories:
+                if self(part):
+                    return paths.Sample(
+                        trajectory=part,
+                        ensemble=self
+                    )
+
+        return None
 
     def extend_sample_from_trajectories(
-            self, trajectories, engine, unique='first', level=0, attempts=2):
+            self,
+            trajectories,
+            engine,
+            unique='first',
+            level=0,
+            attempts=2):
         """
         Generate a sample in the ensemble by extending parts of `trajectories`
 
@@ -940,6 +981,12 @@ class Ensemble(StorableNamedObject):
         trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             single trajectory of list of trajectories to be used to create a
             sample in this ensemble
+        used_trajectories : (list of)
+        :class:`openpathsampling.trajectory.Trajectory`
+            trajectories not taken into account in the first attempt
+        reuse_strategy : str
+            if `avoid` then in a second attempt the used trajectories are
+            tried
         engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
             engine to use for MD extension
         unique : str
@@ -953,12 +1000,12 @@ class Ensemble(StorableNamedObject):
             the number of attemps on a trajectory to extend
         """
         if not hasattr(self, 'extendable_sub_ensembles'):
-            return None, None
+            return None
 
         sub_ensembles = self.extendable_sub_ensembles
 
         if len(sub_ensembles) <= level:
-            return None, None
+            return None
 
         sub_ensemble = sub_ensembles[level]
 
@@ -966,12 +1013,14 @@ class Ensemble(StorableNamedObject):
 
         for idx, traj in enumerate(trajectories):
             if unique == 'first':
-                traj_parts = sub_ensemble.iter_split(traj),
+                traj_parts = sub_ensemble.iter_split(traj)
+            elif unique == 'shortest':
+                traj_parts = sorted(sub_ensemble.split(traj))
             else:
-                traj_parts = sorted(list(sub_ensemble.iter_split(traj)))
+                traj_parts = []
 
-            for attempt in range(attempts):
-                for part in traj_parts:
+            for part in traj_parts:
+                for attempt in range(attempts):
                     if self.strict_can_append(part):
                         # seems we could extend forward
                         part = engine.extend_forward(
@@ -990,9 +1039,9 @@ class Ensemble(StorableNamedObject):
                         return paths.Sample(
                             trajectory=part,
                             ensemble=self
-                        ), idx
+                        )
 
-        return None, None
+        return None
 
     def __str__(self):
         """
