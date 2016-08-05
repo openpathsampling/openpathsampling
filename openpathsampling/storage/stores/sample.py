@@ -68,4 +68,4 @@ class SampleSetStore(VariableStore):
             chunksizes=(1024,)
         )
 
-        self.create_variable('movepath', 'lazyobj.pathmovechanges')
+        self.create_variable('movepath', 'lazyobj.movechanges')

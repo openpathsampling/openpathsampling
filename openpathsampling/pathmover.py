@@ -632,17 +632,17 @@ class PathMover(TreeMixin, StorableNamedObject):
     
     Notes
     -----
-    A pathmover takes a SampleSet() and returns PathMoveChange() that is
+    A pathmover takes a SampleSet() and returns MoveChange() that is
     used to change the old SampleSet() to the new one.
 
-    SampleSet1 + PathMoveChange1 => SampleSet2
+    SampleSet1 + MoveChange1 => SampleSet2
 
-    A PathMoveChange is effectively a list of Samples. The change acts upon
+    A MoveChange is effectively a list of Samples. The change acts upon
     a SampleSet by replacing existing Samples in the same ensemble
     sequentially.
 
     SampleSet({samp1(ens1), samp2(ens2), samp3(ens3)}) +
-        PathMoveChange([samp4(ens2)])
+        MoveChange([samp4(ens2)])
         => SampleSet({samp1(ens1), samp4(ens2), samp3(ens3)})
 
     Note, that a SampleSet is an unordered list (or a set). Hence the ordering
@@ -982,13 +982,13 @@ class PathMover(TreeMixin, StorableNamedObject):
         
         Returns
         -------        
-        samples : PathMoveChange
-            the PathMoveChange instance describing the change from the old to
+        samples : MoveChange
+            the MoveChange instance describing the change from the old to
             the new SampleSet
 
         """
 
-        return paths.EmptyPathMoveChange()  # pragma: no cover
+        return paths.EmptyMoveChange()  # pragma: no cover
 
     def __str__(self):
         if self.name == self.__class__.__name__:
@@ -1008,7 +1008,7 @@ class IdentityPathMover(PathMover):
     """
 
     def move(self, sample_set):
-        return paths.EmptyPathMoveChange()
+        return paths.EmptyMoveChange()
 
 
 ###############################################################################
@@ -1112,13 +1112,13 @@ class SampleMover(PathMover):
 
         # 5. and return a PMC
         if accepted:
-            return paths.AcceptedSamplePathMoveChange(
+            return paths.AcceptedSampleMoveChange(
                 samples=trials,
                 mover=self,
                 details=details
             )
         else:
-            return paths.RejectedSamplePathMoveChange(
+            return paths.RejectedSampleMoveChange(
                 samples=trials,
                 mover=self,
                 details=details
@@ -1918,7 +1918,7 @@ class SelectionMover(PathMover):
         details.probability = weights[idx] / sum(weights)
         details.weights = weights
 
-        path = paths.RandomChoicePathMoveChange(
+        path = paths.RandomChoiceMoveChange(
             mover.move(sample_set),
             mover=self,
             details=details
@@ -2073,7 +2073,7 @@ class ConditionalMover(PathMover):
     """
     An if-then-else structure for PathMovers.
 
-    Returns a SequentialPathMoveChange of the if_move movepath and the then_move
+    Returns a SequentialMoveChange of the if_move movepath and the then_move
     movepath (if if_move is accepted) or the else_move movepath (if if_move
     is rejected).
     """
@@ -2129,14 +2129,14 @@ class ConditionalMover(PathMover):
             if self.then_mover is not None:
                 resultclause = self.then_mover.move(subglobal)
             else:
-                resultclause = paths.EmptyPathMoveChange()
+                resultclause = paths.EmptyMoveChange()
         else:
             if self.else_mover is not None:
                 resultclause = self.else_mover.move(subglobal)
             else:
-                resultclause = paths.EmptyPathMoveChange()
+                resultclause = paths.EmptyMoveChange()
 
-        return paths.SequentialPathMoveChange([ifclause, resultclause], mover=self)
+        return paths.SequentialMoveChange([ifclause, resultclause], mover=self)
 
 
 class SequentialMover(PathMover):
@@ -2197,7 +2197,7 @@ class SequentialMover(PathMover):
         logger.debug("Starting sequential move")
 
         subglobal = sample_set
-        pathmovechanges = []
+        movechanges = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step " + str(mover))
@@ -2206,9 +2206,9 @@ class SequentialMover(PathMover):
             movepath = mover.move(subglobal)
             samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
-            pathmovechanges.append(movepath)
+            movechanges.append(movepath)
 
-        return paths.SequentialPathMoveChange(pathmovechanges, mover=self)
+        return paths.SequentialMoveChange(movechanges, mover=self)
 
 
 class PartialAcceptanceSequentialMover(SequentialMover):
@@ -2235,7 +2235,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     def move(self, sample_set):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(sample_set)
-        pathmovechanges = []
+        movechanges = []
         for mover in self.movers:
             logger.info(str(self.name)
                         + " starting mover index " + str(self.movers.index(mover))
@@ -2245,13 +2245,13 @@ class PartialAcceptanceSequentialMover(SequentialMover):
             movepath = mover.move(subglobal)
             samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
-            pathmovechanges.append(movepath)
+            movechanges.append(movepath)
             if not movepath.accepted:
                 break
 
         logger.debug("==== FINISHING " + self.name + " ====")
-        return paths.PartialAcceptanceSequentialPathMoveChange(
-            pathmovechanges, mover=self)
+        return paths.PartialAcceptanceSequentialMoveChange(
+            movechanges, mover=self)
 
 
 class ConditionalSequentialMover(SequentialMover):
@@ -2272,7 +2272,7 @@ class ConditionalSequentialMover(SequentialMover):
         logger.debug("Starting conditional sequential move")
 
         subglobal = sample_set
-        pathmovechanges = []
+        movechanges = []
 
         for mover in self.movers:
             logger.debug("Starting sequential move step " + str(mover))
@@ -2281,13 +2281,13 @@ class ConditionalSequentialMover(SequentialMover):
             movepath = mover.move(subglobal)
             samples = movepath.results
             subglobal = subglobal.apply_samples(samples)
-            pathmovechanges.append(movepath)
+            movechanges.append(movepath)
 
             if not movepath.accepted:
                 break
 
-        return paths.ConditionalSequentialPathMoveChange(
-            pathmovechanges, mover=self)
+        return paths.ConditionalSequentialMoveChange(
+            movechanges, mover=self)
 
 
 class ReplicaIDChangeMover(PathMover):
@@ -2338,7 +2338,7 @@ class ReplicaIDChangeMover(PathMover):
         setattr(details, 'rep_from', rep_from)
         setattr(details, 'rep_to', rep_to)
 
-        return paths.AcceptedSamplePathMoveChange(
+        return paths.AcceptedSampleMoveChange(
             samples=[new_sample],
             mover=self,
             details=details
@@ -2383,7 +2383,7 @@ class SubPathMover(PathMover):
 
     def move(self, sample_set):
         subchange = self.mover.move(sample_set)
-        change = paths.SubPathMoveChange(
+        change = paths.SubMoveChange(
             subchange=subchange,
             mover=self
         )
@@ -2422,7 +2422,7 @@ class EnsembleFilterMover(SubPathMover):
             samp for samp in sample_set if samp.ensemble in self.ensembles
         ])
         subchange = self.mover.move(filtered_globalstate)
-        change = paths.FilterByEnsemblePathMoveChange(
+        change = paths.FilterByEnsembleMoveChange(
             subchange=subchange,
             mover=self
         )
@@ -2694,7 +2694,7 @@ class PathSimulatorMover(SubPathMover):
             step=step
         )
 
-        return paths.PathSimulatorPathMoveChange(
+        return paths.PathSimulatorMoveChange(
             self.mover.move(sample_set),
             mover=self,
             details=details

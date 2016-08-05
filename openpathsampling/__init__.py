@@ -91,15 +91,15 @@ from high_level.ms_outer_interface import MSOuterTISInterface
 
 from live_visualization import LiveVisualization
 
-from pathmovechange import (
-    EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
-    PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
-    RandomChoicePathMoveChange, SamplePathMoveChange,
-    SequentialPathMoveChange, KeepLastSamplePathMoveChange,
-    FilterSamplesPathMoveChange,
-    PathSimulatorPathMoveChange, AcceptedSamplePathMoveChange,
-    RejectedSamplePathMoveChange, SubPathMoveChange,
-    FilterByEnsemblePathMoveChange
+from movechange import (
+    EmptyMoveChange, ConditionalSequentialMoveChange,
+    MoveChange, PartialAcceptanceSequentialMoveChange,
+    RandomChoiceMoveChange, SampleMoveChange,
+    SequentialMoveChange, KeepLastSampleMoveChange,
+    FilterSamplesMoveChange,
+    PathSimulatorMoveChange, AcceptedSampleMoveChange,
+    RejectedSampleMoveChange, SubMoveChange,
+    FilterByEnsembleMoveChange
 )
 
 from pathmover import Details, MoveDetails, SampleDetails

@@ -273,7 +273,7 @@ class SampleSet(StorableObject):
         """
         Add the move path to the Sample and return the new sampleset
         """
-        if isinstance(other, paths.PathMoveChange):
+        if isinstance(other, paths.MoveChange):
             return self.apply_samples(other.results)
         elif type(other) is list:
             okay = True
@@ -283,7 +283,7 @@ class SampleSet(StorableObject):
 
             return self.apply_samples(other)
         else:
-            raise ValueError('Only lists of Sample or PathMoveChanges allowed.')
+            raise ValueError('Only lists of Sample or MoveChanges allowed.')
 
     def append_as_new_replica(self, sample):
         """
