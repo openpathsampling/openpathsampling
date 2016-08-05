@@ -159,6 +159,14 @@ class testCVRangeVolume(object):
         assert(vol(-0.25 * u.nanometers))
         assert(not vol(-0.75 * u.nanometers))
 
+        vol = volume.PeriodicCVDefinedVolume(
+            op_id,
+            -30 * u.nanometers, 90 * u.nanometers,
+            -180 * u.nanometers, 180 * u.nanometers)
+
+        assert (vol(50 * u.nanometers))
+        assert (not vol(-70 * u.nanometers))
+
 
 class testCVRangeVolumePeriodic(object):
     def setUp(self):

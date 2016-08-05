@@ -406,7 +406,16 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
 
     def do_wrap(self, value):
         """Wraps `value` into the periodic domain."""
-        return ((value-self._period_shift) % self._period_len) + self._period_shift
+        val = value - self._period_shift
+        if val > val * 0:
+            return value - int(val / self._period_len) * self._period_len
+        else:
+            wrapped = value + int((self._period_len - val) / self._period_len) \
+                * self._period_len
+            if wrapped >= self._period_len:
+                wrapped -= self._period_len
+
+            return wrapped
 
     # next few functions add support for range logic
     def _copy_with_new_range(self, lmin, lmax):
@@ -423,7 +432,6 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
     def range_sub(amin, amax, bmin, bmax):
         return range_logic.periodic_range_sub(amin, amax, bmin, bmax)
 
-
     def __invert__(self):
         # consists of swapping max and min
         return PeriodicCVDefinedVolume(self.collectivevariable,
@@ -432,7 +440,7 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
                                    )
 
     def __call__(self, snapshot):
-        l = float(self.collectivevariable(snapshot))
+        l = self.collectivevariable(snapshot).__float__()
         if self.wrap:
             l = self.do_wrap(l)
         if self.lambda_min > self.lambda_max:
