@@ -22,8 +22,8 @@ class testBiasEnsembleTable(object):
     def setup(self):
         # create the network
         xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(xval, -1.0, -0.5).named("A")
-        self.stateB = paths.CVRangeVolume(xval, 0.5, float("inf")).named("B")
+        self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
+        self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
         ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0), 
                                            [-0.5, -0.4, -0.3, -0.2])
         self.network = paths.MISTISNetwork([
@@ -143,7 +143,7 @@ class testBiasEnsembleTable(object):
         ifacesB = paths.VolumeInterfaceSet(xval2, float("-inf"),
                                            [0.0, 0.1, 0.2])
         xval3 = paths.FunctionCV(name="xC", f=lambda s : s.xyz[0][0]-2.0)
-        stateC = paths.CVRangeVolume(self.xval, -3.0, 2.0)
+        stateC = paths.CVDefinedVolume(self.xval, -3.0, 2.0)
         ifacesC = paths.VolumeInterfaceSet(xval3, -1.0, [0.0, 0.1, 0.2, 0.3])
         network = paths.MISTISNetwork(
             [(self.stateA, ifacesA, self.stateB),
