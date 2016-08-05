@@ -515,6 +515,8 @@ class MoveScheme(StorableNamedObject):
                             ), refresh=False)
 
                         sample_set.append(sample)
+                        if reuse_strategy != 'all':
+                            used_trajectories.add(sample.trajectory)
                         # found a sample in this category so remove it for
                         # other tries
                         del ensembles_to_fill[idx]

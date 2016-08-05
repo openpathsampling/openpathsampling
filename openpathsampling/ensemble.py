@@ -902,7 +902,7 @@ class Ensemble(StorableNamedObject):
             self, trajectories,
             used_trajectories=None,
             reuse_strategy='avoid',
-            unique='first'):
+            unique='shortest'):
         """
         Generate a sample in the ensemble by searching for sub-parts
 
@@ -928,17 +928,15 @@ class Ensemble(StorableNamedObject):
             if unique == 'first':
                 parts = self.iter_split(traj)
             elif unique == 'shortest':
-                parts = self.split(traj)
-                if len(parts) > 0:
-                    parts = sorted(parts)
+                parts = sorted(self.split(traj), key=len)
+
+                refresh_output(
+                    'Found %d slices of lengths %s\n' % (
+                        len(parts),
+                        str(set(map(len, parts)))
+                    ), refresh=False)
             else:
                 parts = []
-
-            refresh_output(
-                'Found %d slices of lengths %s\n' % (
-                    len(parts),
-                    str(set(map(len, parts)))
-                ), refresh=False)
 
             for part in parts:
                 if part not in used_trajectories:
@@ -962,9 +960,9 @@ class Ensemble(StorableNamedObject):
             self,
             trajectories,
             engine,
-            unique='first',
+            unique='shortest',
             level='complex',
-            attempts=3):
+            attempts=2):
         """
         Generate a sample in the ensemble by extending parts of `trajectories`
 
@@ -994,10 +992,15 @@ class Ensemble(StorableNamedObject):
         unique : str
             If `first` the first found subtrajectory is selected. If
             `shortest` then from all subparts the shortest one is used.
-        level : int
-            extending might work on several levels of subparts. This picks
-            the level of subparts. Smaller number indicate larger subparts.
-            Usually only `level=0` should work
+        level : str
+            there are two levels you chose and not all are implemented for
+            an ensemble. Picking `complex` will use the largest (most complex)
+            sub-ensemble that makes sense. Like in the case of a Minus move
+            this is the segment ensemble. The other choice is `minimal` which
+            choses the minimal necessary subtrajectory extending makes sense
+            from. For TIS or Minus Ensembles this will be crossing from the
+            (initial) core to the outside. You should try `complex` first and
+            then `minimal`. `complex` should be much faster.
         attempts : int
             the number of attemps on a trajectory to extend
         """
@@ -1015,16 +1018,15 @@ class Ensemble(StorableNamedObject):
 
         for idx, traj in enumerate(trajectories):
             if unique == 'first':
-                traj_parts = list(sub_ensemble.iter_split(traj))
+                traj_parts = sub_ensemble.iter_split(traj)
             elif unique == 'shortest':
-                traj_parts = sorted(sub_ensemble.split(traj))
+                traj_parts = sorted(sub_ensemble.split(traj), key=len)
+                refresh_output(
+                    'Found %d extendable subparts\n' % (
+                        len(traj_parts)
+                    ), refresh=False)
             else:
                 traj_parts = []
-
-            refresh_output(
-                'Found %d extendable subparts\n' % (
-                    len(traj_parts)
-                ), refresh=False)
 
             for orig in traj_parts:
                 for attempt in range(attempts):
@@ -2623,12 +2625,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         for vol in self.innermost_vols:
             self.innermost_vol = self.innermost_vol & vol
         self.greedy = greedy
-        inA = AllInXEnsemble(state_vol)
-        outA = AllOutXEnsemble(state_vol)
-        outX = AllOutXEnsemble(self.innermost_vol)
-        inX = AllInXEnsemble(self.innermost_vol)
-        leaveX = PartOutXEnsemble(self.innermost_vol)
-        interstitial = outA & inX
+        in_a = AllInXEnsemble(state_vol)
+        out_a = AllOutXEnsemble(state_vol)
+        in_x = AllInXEnsemble(self.innermost_vol)
+        leave_x = PartOutXEnsemble(self.innermost_vol)
+        interstitial = out_a & in_x
         segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
                              for inner in self.innermost_vols]
 
@@ -2636,17 +2637,17 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         # interstitial = AllInXEnsemble(self.innermost_vol - state_vol)
         start = [
-            SingleFrameEnsemble(inA),
+            SingleFrameEnsemble(in_a),
             OptionalEnsemble(interstitial),
         ]
         loop = [
-            outA & leaveX,
-            inX  # & hitA # redundant due to stop req for previous outA
+            out_a & leave_x,
+            in_x  # & hitA # redundant due to stop req for previous outA
         ]
         end = [
-            outA & leaveX,
+            out_a & leave_x,
             OptionalEnsemble(interstitial),
-            SingleFrameEnsemble(inA)
+            SingleFrameEnsemble(in_a)
         ]
         ensembles = start + loop * (n_l - 1) + end
 
@@ -2662,28 +2663,28 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         sub_ensembles = {}
 
-        inA = AllInXEnsemble(state_vol)
-        outA = AllOutXEnsemble(state_vol)
-        inX = AllInXEnsemble(self.innermost_vol)
-        leaveX = PartOutXEnsemble(self.innermost_vol)
-        interstitial = outA & inX
+        in_a = AllInXEnsemble(state_vol)
+        out_a = AllOutXEnsemble(state_vol)
+        in_x = AllInXEnsemble(self.innermost_vol)
+        leave_x = PartOutXEnsemble(self.innermost_vol)
+        interstitial = out_a & in_x
         segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
                              for inner in self.innermost_vols]
 
         self._segment_ensemble = join_ensembles(segment_ensembles)
 
         start = [
-            SingleFrameEnsemble(inA),
+            SingleFrameEnsemble(in_a),
             OptionalEnsemble(interstitial),
         ]
-        loop = [
-            outA & leaveX,
-            inX  # & hitA # redundant due to stop req for previous outA
-        ]
+        # loop = [
+        #     out_a & leave_x,
+        #     in_x  # & hitA # redundant due to stop req for previous outA
+        # ]
         end = [
-            outA & leaveX,
+            out_a & leave_x,
             OptionalEnsemble(interstitial),
-            SingleFrameEnsemble(inA)
+            SingleFrameEnsemble(in_a)
         ]
 
         # do not add higher orders, you would
@@ -2812,7 +2813,8 @@ class TISEnsemble(SequentialEnsemble):
 
         volume = paths.volume.join_volumes(states)
 
-        return { 'minimal':
+        return {
+            'minimal':
             LengthEnsemble(2) &
             SequentialEnsemble([
                 SingleFrameEnsemble(AllInXEnsemble(volume)),
