@@ -114,8 +114,8 @@ class testShootingPointAnalysis(object):
         }
         self.engine = toys.Engine(options=options, topology=topology)
         cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
-        self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
-        self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
+        self.left = paths.CVDefinedVolume(cv, float("-inf"), -1.0)
+        self.right = paths.CVDefinedVolume(cv, 1.0, float("inf"))
 
         randomizer = paths.NoModification()
         self.filename = data_filename("shooting_analysis.nc")

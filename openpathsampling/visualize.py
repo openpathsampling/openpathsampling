@@ -495,11 +495,15 @@ class MoveTreeBuilder(Builder):
             input_ensembles = scheme.list_initial_ensembles()
         except AttributeError:
             # inp is a path mover
+            # ??? this is nonsense in from_scheme, isn't it? you would get
+            # error on the thing you return below ~~~DWHS
             input_ensembles = scheme.input_ensembles
 
+        hidden = list(scheme.find_hidden_ensembles())
+        # using network.all_ensembles forces a correct ordering
         return MoveTreeBuilder(
             pathmover=scheme.root_mover,
-            ensembles=list(scheme.find_used_ensembles()) + list(scheme.find_hidden_ensembles()),
+            ensembles=scheme.network.all_ensembles + hidden,
             initial=input_ensembles
         )
 
@@ -538,7 +542,7 @@ class MoveTreeBuilder(Builder):
             sub_type = sub_mp.__class__
             sub_name = sub_type.__name__[:-5]
 
-            if sub_type is paths.SamplePathMoveChange:
+            if sub_type is paths.SampleMoveChange:
                 group.add(
                     doc.block(level, yp))
 
@@ -2383,7 +2387,7 @@ class StepList(list):
 
         Returns
         -------
-        :obj:`PathMoveChange`
+        :obj:`MoveChange`
             the move change in which the sample was generated
 
         """
@@ -2474,7 +2478,7 @@ class SampleListGenerator(SampleList):
 
         Returns
         -------
-        :obj:`PathMoveChange`
+        :obj:`MoveChange`
             the move change in which the sample was generated
 
         """

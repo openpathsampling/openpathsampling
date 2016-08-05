@@ -366,7 +366,7 @@ class MoveScheme(StorableNamedObject):
         Returns
         -------
         :class:`.SampleSet`
-            sample set with samples for every initial ensemble for this
+            sampleset with samples for every initial ensemble for this
             scheme that could be satisfied by the given trajectories
 
         See Also
@@ -536,7 +536,7 @@ class MoveScheme(StorableNamedObject):
 
         Parameters
         ----------
-        sampleset : :class:`.SampleSet`
+        sample_set : :class:`.SampleSet`
             proposed set of initial conditions for this movescheme
 
         Returns
@@ -545,7 +545,7 @@ class MoveScheme(StorableNamedObject):
             ensembles needed by the move scheme and missing in the sample
             set, in the format used by `list_initial_ensembles`
         extra : list of :class:`.Ensemble`
-            ensembles in the sample set that are not used by the 
+            ensembles in the sampleset that are not used by the
 
         See Also
         --------
@@ -554,7 +554,7 @@ class MoveScheme(StorableNamedObject):
         initial_conditions_report
         """
         ensembles_to_fill = self.list_initial_ensembles()
-        samples = paths.SampleSet(sampleset)  # to make a copy
+        samples = paths.SampleSet(sample_set)  # to make a copy
         ensembles_filled = samples.ensemble_list()
         missing = []
         for ens_list in ensembles_to_fill:
@@ -572,13 +572,13 @@ class MoveScheme(StorableNamedObject):
         # missing, extra
         return (missing, samples.ensemble_list())
 
-    def assert_initial_conditions(self, sampleset, allow_extras=False):
+    def assert_initial_conditions(self, sample_set, allow_extras=False):
         """
         Assertion that the given sampleset is good for initial conditions.
 
         Parameters
         ----------
-        sampleset : :class:`.SampleSet`
+        sample_set : :class:`.SampleSet`
             proposed set of initial conditions for this movescheme
         allow_extras : bool
             whether extra ensembles are allowed, default False, meaning the
@@ -594,7 +594,7 @@ class MoveScheme(StorableNamedObject):
         check_initial_conditions
         initial_conditions_report
         """
-        (missing, extras) = self.check_initial_conditions(sampleset)
+        (missing, extras) = self.check_initial_conditions(sample_set)
         msg = ""
         if len(missing) > 0:
             msg += "Missing ensembles: " + str(missing) + "\n"
@@ -603,7 +603,7 @@ class MoveScheme(StorableNamedObject):
         if msg != "":
             raise AssertionError("Bad initial conditions.\n" + msg)
 
-    def initial_conditions_report(self, sampleset):
+    def initial_conditions_report(self, sample_set):
         """
         String report on whether the given SampleSet gives good initial
         conditions.
@@ -613,7 +613,7 @@ class MoveScheme(StorableNamedObject):
 
         Parameters
         ----------
-        sampleset : :class:`.SampleSet`
+        sample_set : :class:`.SampleSet`
             proposed set of initial conditions for this movescheme
 
         Returns
@@ -622,7 +622,7 @@ class MoveScheme(StorableNamedObject):
             a human-readable string describing if (and which) ensembles are
             missing
         """
-        (missing, extra) = self.check_initial_conditions(sampleset)
+        (missing, extra) = self.check_initial_conditions(sample_set)
         msg = ""
         if len(missing) == 0:
             msg += "No missing ensembles.\n"
@@ -978,6 +978,7 @@ class LockedMoveScheme(MoveScheme):
         # things that LockedMoveScheme overrides
         ret_dict['movers'] = self._movers
         ret_dict['choice_probability'] = self._choice_probability
+        ret_dict['real_choice_probability'] = self._real_choice_probability
         return ret_dict
 
     @property

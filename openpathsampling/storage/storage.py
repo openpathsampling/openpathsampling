@@ -48,80 +48,6 @@ class Storage(NetCDFPlus):
 
         return self._template
 
-    # def clone(self, filename):
-    #     """
-    #     Creates a copy of the netCDF file and allows to reduce the used atoms.
-    #
-    #     Parameters
-    #     ----------
-    #     filename : str
-    #         the name of the cloned storage
-    #
-    #     Notes
-    #     -----
-    #     This is mostly used to remove water but keep the data intact.
-    #
-    #     """
-    #
-    #     storage2 = Storage(filename=filename, template=self.template, mode='w')
-    #
-    #     # Copy all configurations and momenta to new file in reduced form
-    #     # use ._save instead of .save to override immutability checks etc...
-    #
-    #     if self.reference_by_uuid:
-    #         map(storage2.statics.save, self.statics)
-    #         map(storage2.kinetics.save, self.kinetics)
-    #     else:
-    #         for obj in self.statics:
-    #             storage2.statics._save(obj, self.statics.index[obj])
-    #         for obj in self.kinetics:
-    #             storage2.kinetics._save(obj, self.kinetics.index[obj])
-    #
-    #     # All other should be copied one to one. We do this explicitly
-    #     # although we could just copy all and exclude configurations and
-    #     # momenta, but this seems cleaner
-    #
-    #     for storage_name in [
-    #         'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
-    #         'shootingpointselectors', 'engines', 'volumes',
-    #         'samplesets', 'ensembles', 'transitions', 'steps',
-    #         'pathmovechanges', 'samples', 'snapshots', 'pathsimulators', 'cvs'
-    #     ]:
-    #         self.clone_store(storage_name, storage2)
-    #
-    #     storage2.close()
-    #
-    # # TODO: Need to copy cvs without caches!
-    # def clone_empty(self, filename):
-    #     """
-    #     Creates a copy of the netCDF file and replicates only the static parts
-    #
-    #     Static parts are ensembles, volumes, engines, path movers, shooting
-    #     point selectors.  We do not need to reconstruct collective variables
-    #     since these need to be created again completely and then the
-    #     necessary arrays in the file will be created automatically anyway.
-    #
-    #     Parameters
-    #     ----------
-    #     filename : str
-    #         the name of the cloned storage
-    #
-    #     Notes
-    #     -----
-    #     This is mostly used to restart with a fresh file. Same setup,
-    #     no results.
-    #     """
-    #     storage2 = Storage(filename=filename, template=self.template, mode='w')
-    #
-    #     for storage_name in [
-    #         'pathmovers', 'topologies', 'networks',
-    #         'shootingpointselectors', 'engines', 'volumes',
-    #         'ensembles', 'transitions', 'pathsimulators'
-    #     ]:
-    #         self.clone_store(storage_name, storage2)
-    #
-    #     storage2.close()
-
     @property
     def n_atoms(self):
         return self.topology.n_atoms
@@ -181,8 +107,8 @@ class Storage(NetCDFPlus):
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
         self.create_store(
-            'pathmovechanges',
-            paths.storage.PathMoveChangeStore()
+            'movechanges',
+            paths.storage.MoveChangeStore()
         )
         self.create_store('steps', paths.storage.MCStepStore())
 
@@ -271,7 +197,7 @@ class Storage(NetCDFPlus):
                 str(available_cache_sizes.keys())
             )
 
-        for store_name, caching in cache_sizes.iteritems():
+        for store_name, caching in cache_sizes.items():
             if hasattr(self, store_name):
                 store = getattr(self, store_name)
                 store.set_caching(caching)
@@ -323,7 +249,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': True,
             'volumes': True,
             'ensembles': True,
-            'pathmovechanges': False,
+            'movechanges': False,
             'transitions': True,
             'networks': True,
             'details': False,
@@ -354,7 +280,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': True,
             'volumes': True,
             'ensembles': True,
-            'pathmovechanges': False,
+            'movechanges': False,
             'transitions': True,
             'networks': True,
             'details': False,
@@ -385,7 +311,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': WeakLRUCache(10),
             'volumes': WeakLRUCache(10),
             'ensembles': WeakLRUCache(10),
-            'pathmovechanges': WeakLRUCache(10),
+            'movechanges': WeakLRUCache(10),
             'transitions': WeakLRUCache(10),
             'networks': WeakLRUCache(10),
             'details': WeakLRUCache(10),
@@ -417,7 +343,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': True,
             'volumes': True,
             'ensembles': True,
-            'pathmovechanges': WeakLRUCache(250000),
+            'movechanges': WeakLRUCache(250000),
             'transitions': True,
             'networks': True,
             'details': False,
@@ -448,7 +374,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': False,
             'volumes': False,
             'ensembles': False,
-            'pathmovechanges': False,
+            'movechanges': False,
             'transitions': False,
             'networks': False,
             'details': False,
@@ -481,7 +407,7 @@ class Storage(NetCDFPlus):
             'pathsimulators': False,
             'volumes': False,
             'ensembles': False,
-            'pathmovechanges': False,
+            'movechanges': False,
             'transitions': False,
             'networks': False,
             'details': False,
@@ -539,7 +465,7 @@ class AnalysisStorage(Storage):
                            'volumes',
                            'ensembles',
                            'pathmovers',
-                           'pathmovechanges',
+                           'movechanges',
                            'steps',
                            ]
 
@@ -567,64 +493,3 @@ class AnalysisStorage(Storage):
                     (self.context, self.store.name, len(self.store), dtime))
             else:
                 logger.info('%s in %d ms' % (self.context, dtime))
-
-
-# class StorageView(object):
-#     """
-#     A View on a storage that only changes the iteration over steps.
-#
-#     Can be used for bootstrapping on subsets of steps and pass this object
-#     to analysis routines.
-#
-#     """
-#
-#     class StepDelegate(object):
-#         """
-#         A delegate that will alter the ``iter()`` behaviour of the
-#         underlying store
-#
-#         Attributes
-#         ----------
-#         store : dict-like
-#             the dict to be wrapped
-#         store : :class:`openpathsampling.netcdfplus.ObjectStore`
-#             a reference to an object store used
-#
-#         """
-#
-#         def __init__(self, store, step_range):
-#             self.store = store
-#             self.step_range = step_range
-#
-#         def __iter__(self):
-#             for idx in self.step_range:
-#                 yield self.store[idx]
-#
-#         def __getitem__(self, item):
-#             return self.store[item]
-#
-#         def __setitem__(self, key, value):
-#             self.store[key] = value
-#
-#     def __init__(self, storage, step_range):
-#         """
-#         Parameters
-#         ----------
-#
-#         storage : :class:`openpathsampling.storage.Storage`
-#             The storage the view is watching
-#         step_range : iterable
-#             An iterable object that species the step indices to be iterated over
-#             when using the view
-#
-#         """
-#         self._storage = storage
-#
-#         for store in self._storage.objects:
-#             setattr(self, store.prefix, store)
-#
-#         self.variables = self._storage.variables
-#         self.units = self._storage.units
-#         self.vars = self._storage.vars
-#
-#         self.steps = StorageView.StepDelegate(self._storage.steps, step_range)
