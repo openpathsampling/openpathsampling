@@ -891,6 +891,10 @@ class Ensemble(StorableNamedObject):
         if reuse_strategy == 'avoid' and used_trajectories is not None:
             for part in used_trajectories:
                 if self(part):
+                    # move the used one to the back of the list to
+                    # not reuse it directly
+                    del used_trajectories[used_trajectories.index(part)]
+                    used_trajectories.append(part)
                     return paths.Sample(
                         trajectory=part,
                         ensemble=self
@@ -925,18 +929,7 @@ class Ensemble(StorableNamedObject):
         trajectories = self._to_list_of_trajectories(trajectories)
 
         for idx, traj in enumerate(trajectories):
-            if unique == 'first':
-                parts = self.iter_split(traj)
-            elif unique == 'shortest':
-                parts = sorted(self.split(traj), key=len)
-                if len(parts) > 0:
-                    refresh_output(
-                        'Found %d slices of lengths %s\n' % (
-                            len(parts),
-                            str(set(map(len, parts)))
-                        ), refresh=False)
-            else:
-                parts = []
+            parts = self._get_trajectory_parts_in_order(traj, unique)
 
             for part in parts:
                 if part not in used_trajectories:
@@ -949,6 +942,10 @@ class Ensemble(StorableNamedObject):
         if reuse_strategy == 'avoid' and used_trajectories is not None:
             for part in used_trajectories:
                 if self(part):
+                    # move the used one to the back of the list to
+                    # not reuse it directly
+                    del used_trajectories[used_trajectories.index(part)]
+                    used_trajectories.append(part)
                     return paths.Sample(
                         trajectory=part,
                         ensemble=self
@@ -956,11 +953,53 @@ class Ensemble(StorableNamedObject):
 
         return None
 
+    def _get_trajectory_parts_in_order(self, traj, unique='first'):
+        if unique == 'first':
+            # this returns an iterator and can thus be faster
+            parts = self.iter_split(traj)
+        elif unique == 'shortest':
+            parts = sorted(self.split(traj), key=len)
+        elif unique == 'median':
+            # resort the found trajectories so that the middle one is
+            # first, then the one right to it, then the one before, etc
+            # e.g. [0,1,2,3,4,5,6,7,8,9] is rearranges into
+            # [5,4,6,3,7,2,8,1,9,0]
+            ordered = sorted(self.split(traj), key=len)
+            parts = list([p for p2 in zip(
+                ordered[len(ordered) / 2:],
+                reversed(ordered[:len(ordered) / 2])
+            ) for p in p2])
+
+            if len(ordered) & 1:
+                parts.append(ordered[-1])
+
+        elif unique == 'longest':
+            parts = sorted(self.split(traj), key=len, reverse=True)
+        else:
+            parts = []
+
+        try:
+            if len(parts) > 0:
+                lens = map(len, parts)
+                refresh_output(
+                    ('Found %d slices of lengths [%d, ..., %d, ..., %d] '
+                     'ordered by `%s`\n') % (
+                        len(parts),
+                        min(lens),
+                        sorted(lens)[len(parts) / 2],
+                        max(lens),
+                        unique
+                    ), refresh=False)
+        except TypeError:
+            pass
+
+        return parts
+
     def extend_sample_from_trajectories(
             self,
             trajectories,
             engine,
-            unique='shortest',
+            unique='median',
             level='complex',
             attempts=2):
         """
@@ -1017,17 +1056,8 @@ class Ensemble(StorableNamedObject):
         trajectories = self._to_list_of_trajectories(trajectories)
 
         for idx, traj in enumerate(trajectories):
-            if unique == 'first':
-                traj_parts = sub_ensemble.iter_split(traj)
-            elif unique == 'shortest':
-                traj_parts = sorted(sub_ensemble.split(traj), key=len)
-                if len(traj_parts) > 0:
-                    refresh_output(
-                        'Found %d extendable subparts\n' % (
-                            len(traj_parts)
-                        ), refresh=False)
-            else:
-                traj_parts = []
+            traj_parts = sub_ensemble._get_trajectory_parts_in_order(
+                traj, unique)
 
             for orig in traj_parts:
                 for attempt in range(attempts):

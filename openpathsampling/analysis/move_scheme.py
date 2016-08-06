@@ -373,6 +373,14 @@ class MoveScheme(StorableNamedObject):
         --------
         list_initial_ensembles
         """
+
+        implemented_strategies = [
+            'get',              # look for existing trajectories
+            'split',            # look for existing sub-trajectories
+            'extend-complex',   # try to extend long sub-trajectories
+            'extend-minimal'    # try to extend short sub-trajectories
+        ]
+
         if sample_set is None:
             sample_set = paths.SampleSet([])
 
@@ -402,7 +410,7 @@ class MoveScheme(StorableNamedObject):
             direction for traj in trajectories
             for direction in [traj, traj.reversed]]
 
-        used_trajectories = set()
+        used_trajectories = []
 
         # if we start with an existing sample set look at what we got
         # if we avoid we move the used ones to the back of the list
@@ -410,33 +418,26 @@ class MoveScheme(StorableNamedObject):
         for s in sample_set:
             traj = s.trajectory
             if traj in trajectories:
-                used_trajectories.add(traj)
+                used_trajectories.append(traj)
 
+        used_trajectories = sorted(used_trajectories, key=len)
         existing_ensembles = sample_set.ensemble_list()
-        ensembles_to_fill = list(reversed(self.list_initial_ensembles()))
-
-        # loop all ensemble categories from which we need one sample
-        # list will create a copy so removing item will not affect the loop
-
-        # TODO: What if ensemble categories are overlapping? Can that happen?
-        # and if so, how do we assign existing ensembles with their multiplicity
-        # because that can be a difficult talk to do
 
         # 1. look in the existing sample_set
-        for idx, ens_list in reversed(list(enumerate(ensembles_to_fill))):
-            if type(ens_list) is not list:
-                ens_list = [ens_list]
+        ensembles_to_fill, extra_ensembles = \
+            self.check_initial_conditions(sample_set)
 
-            # try to generate a sample for each category
-            # try different strategies to get a sample
-
-            if set(ens_list) & set(existing_ensembles):
-                # remove the complete category
-                del ensembles_to_fill[idx]
-                continue  # We've already got one. It's very nice
+        # we reverse because we want to be able to remove elements
+        # from the list as we discover samples. This is easier to do
+        # when the list is traversed backwards since indices to not
+        # change, hence we reverse the list of ensemble and then traverse it
+        # in reversed order
+        ensembles_to_fill = \
+            list(reversed(ensembles_to_fill))
 
         # 2. try strategies
         if strategies is None:
+            # this is the default
             strategies = [
                 'get',
                 'split'
@@ -446,23 +447,34 @@ class MoveScheme(StorableNamedObject):
             if type(strategy) is str:
                 strategies[idx] = (strategy, dict())
 
+            if strategies[idx][0] not in implemented_strategies:
+                raise RuntimeError(
+                    'Strategy `%s` is not known. Chose from %s.' % (
+                        strategies[idx][0],
+                        implemented_strategies
+                    )
+                )
+
         for strategy, options in strategies:
             refresh_output(
-                'Trying strategy `%s`\n' % (
-                    strategy
+                '## Trying strategy `%s` still missing %d samples\n' % (
+                    strategy,
+                    len(ensembles_to_fill)
                 ), refresh=False)
-
-            if strategy == 'extend_sample_from_trajectories':
-                if engine is None:
-                    break
-
-                options['engine'] = engine
 
             for idx, ens_list in reversed(list(enumerate(ensembles_to_fill))):
                 if type(ens_list) is not list:
                     ens_list = [ens_list]
 
                 for ens in ens_list:
+                    # create the list of options to be passed on
+                    opts = {key: value for key, value in options.items()
+                            if key not in ['exclude']}
+
+                    # exclude contains the Ensemble classes to be ignored
+                    if 'exclude' in options:
+                        if isinstance(ens, options['exclude']):
+                            continue
 
                     # fill only the first in ens_list that can be filled
 
@@ -471,21 +483,30 @@ class MoveScheme(StorableNamedObject):
                             trajectories=trajectories,
                             used_trajectories=used_trajectories,
                             reuse_strategy=reuse_strategy,
-                            **options
+                            **opts
                         )
                     elif strategy == 'split':
                         sample = ens.split_sample_from_trajectories(
                             trajectories=trajectories,
                             used_trajectories=used_trajectories,
                             reuse_strategy=reuse_strategy,
-                            **options
+                            **opts
                         )
-                    elif strategy == 'extend':
+                    elif strategy == 'extend-complex':
                         if hasattr(ens, 'extend_sample_from_trajectories'):
                             sample = ens.extend_sample_from_trajectories(
                                 trajectories=trajectories,
                                 engine=engine,
-                                **options
+                                level='complex',
+                                **opts
+                            )
+                    elif strategy == 'extend-minimal':
+                        if hasattr(ens, 'extend_sample_from_trajectories'):
+                            sample = ens.extend_sample_from_trajectories(
+                                trajectories=trajectories,
+                                engine=engine,
+                                level='minimal',
+                                **opts
                             )
                     else:
                         sample = None
@@ -516,7 +537,14 @@ class MoveScheme(StorableNamedObject):
 
                         sample_set.append(sample)
                         if reuse_strategy != 'all':
-                            used_trajectories.add(sample.trajectory)
+                            used_trajectories.append(sample.trajectory)
+
+                            # we want the list of used_trajectories to be
+                            # sorted. Short ones first. So if we have to chose
+                            # from the used_ones, use the shortest one
+                            used_trajectories = sorted(
+                                used_trajectories, key=len)
+
                         # found a sample in this category so remove it for
                         # other tries
                         del ensembles_to_fill[idx]

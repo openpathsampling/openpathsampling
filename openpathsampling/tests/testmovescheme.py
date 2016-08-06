@@ -454,7 +454,6 @@ class testDefaultScheme(object):
             len(root.movers[name_dict['MinusChooser']].movers), 2
         )
 
-
     def test_default_sanity(self):
         scheme = DefaultScheme(self.network)
         root = scheme.move_decision_tree()
@@ -480,7 +479,6 @@ class testDefaultScheme(object):
         for group in scheme.movers.values():
             for mover in group:
                 assert_equal(scheme.balance_partners[mover], [mover])
-
 
     def test_default_choice_probability(self):
         scheme = DefaultScheme(self.network)
@@ -536,19 +534,20 @@ class testDefaultScheme(object):
         assert_equal(len(init_cond_1), 7)
         assert_equal(init_cond_1[transAB.ensembles[0]].trajectory, traj1)
         assert_equal(init_cond_1[transAB.ensembles[1]].trajectory, traj1)
-        assert_equal(init_cond_1[transAB.ensembles[2]].trajectory, traj2)
+        assert_equal(init_cond_1[transAB.ensembles[2]].trajectory, traj3)
         for ens in transBA.ensembles:
             assert_equal(init_cond_1[ens].trajectory, traj3.reversed)
         assert_equal(init_cond_1[ms_outer_ens].trajectory, traj3)
 
         init_cond_2 = scheme.initial_conditions_from_trajectories(
-            trajectories=all_trajs, reuse_strategy='all', strategies=['get']
+            trajectories=all_trajs, reuse_strategy='avoid', strategies=['get']
         )
         init_cond_2.sanity_check()
         assert_equal(len(init_cond_2), 7)
         assert_equal(init_cond_2[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(init_cond_2[transAB.ensembles[1]].trajectory, traj2)
-        assert_equal(init_cond_2[transAB.ensembles[2]].trajectory, traj3)
+        assert_equal(init_cond_2[transAB.ensembles[1]].trajectory, traj1)
+        print init_cond_2[transAB.ensembles[2]].trajectory.coordinates
+        assert_equal(init_cond_2[transAB.ensembles[2]].trajectory, traj1)
         for ens in transBA.ensembles:
             assert_equal(init_cond_2[ens].trajectory, traj3.reversed)
         assert_equal(init_cond_2[ms_outer_ens].trajectory, traj3)
