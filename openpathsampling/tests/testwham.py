@@ -134,7 +134,7 @@ class testWHAM(object):
                                [0.0, 0.02, 0.2]])
         input_df = pd.DataFrame(data=input_data,
                                 index=self.index[0:6],
-                                columns=self.columns[0:6])
+                                columns=self.columns)
         cleaned = self.wham.prep_reverse_cumulative(input_df)
         guess_lnZ = self.wham.guess_lnZ_crossing_probability(cleaned)
         expected_Z = np.array([1.0, 0.25, 0.25*0.2])
@@ -145,4 +145,14 @@ class testWHAM(object):
         np.testing.assert_allclose(wham_hist.as_matrix(), self.exact)
 
     def test_wham_bam_histogram_incomplete_data(self):
+        bad_data = np.array([[1.0, 1.0, 1.0],
+                             [0.5, 1.0, 1.0],
+                             [0.0, 1.0, 1.0],
+                             [0.0, 0.5, 1.0],
+                             [0.0, 0.1, 0.2]])
+        bad_df = pd.DataFrame(data=bad_data,
+                              index=self.index[0:5],
+                              columns=self.columns)
+        wham_hist = self.wham.wham_bam_histogram(bad_df)
+        print wham_hist
         raise SkipTest
