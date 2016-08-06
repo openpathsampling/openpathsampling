@@ -526,7 +526,7 @@ class MoveScheme(StorableNamedObject):
 
         return sample_set
 
-    def check_initial_conditions(self, sampleset):
+    def check_initial_conditions(self, sample_set):
         """
         Check for missing or extra ensembles for initial conditions.
 

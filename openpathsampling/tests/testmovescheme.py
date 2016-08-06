@@ -15,6 +15,8 @@ from openpathsampling.analysis.move_strategy import (
     OrganizeByMoveGroupStrategy, AllSetRepExStrategy
 )
 
+import openpathsampling.analysis.move_strategy as strategies
+
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
@@ -528,7 +530,7 @@ class testDefaultScheme(object):
         ms_outer_ens = self.network.special_ensembles['ms_outer'].keys()[0]
 
         init_cond_1 = scheme.initial_conditions_from_trajectories(
-            trajectories=all_trajs, avoid_reuse=False
+            trajectories=all_trajs, reuse_strategy='all', strategies=['get']
         )
         init_cond_1.sanity_check()
         assert_equal(len(init_cond_1), 7)
@@ -540,7 +542,7 @@ class testDefaultScheme(object):
         assert_equal(init_cond_1[ms_outer_ens].trajectory, traj3)
 
         init_cond_2 = scheme.initial_conditions_from_trajectories(
-            trajectories=all_trajs, avoid_reuse=True
+            trajectories=all_trajs, reuse_strategy='all', strategies=['get']
         )
         init_cond_2.sanity_check()
         assert_equal(len(init_cond_2), 7)
