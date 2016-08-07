@@ -433,6 +433,7 @@ class SampleSet(StorableObject):
 
         # let's always try the short trajectories first
         trajectories = sorted(trajectories, key=len)
+        # print map(lambda x: hex(id(x)), trajectories)
 
         # we will try forward/backward interleaved
         trajectories = [
@@ -450,6 +451,9 @@ class SampleSet(StorableObject):
                 used_trajectories.append(traj)
 
         used_trajectories = sorted(used_trajectories, key=len)
+
+        # print map(lambda x: hex(id(x)), used_trajectories)
+
 
         # 1. look in the existing sample_set
         ensembles_to_fill, extra_ensembles = self.check_ensembles(ensembles)

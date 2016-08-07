@@ -551,14 +551,20 @@ class testDefaultScheme(object):
         assert_equal(init_cond_2[transAB.ensembles[2]].trajectory, traj3)
         for ens in transBA.ensembles:
             assert_equal(init_cond_2[ens].trajectory, traj3.reversed)
-        assert_equal(init_cond_2[ms_outer_ens].trajectory, traj3)
 
+        # due to sorting of length in used_trajectories the result in the
+        # outer ensemble can be either traj3 or its reversed
+        assert(
+            init_cond_2[ms_outer_ens].trajectory == traj3 or
+            init_cond_2[ms_outer_ens].trajectory == traj3.reversed)
+
+        # this one avoids reversed copies
         init_cond_3 = scheme.initial_conditions_from_trajectories([traj1])
         init_cond_3.sanity_check()
         assert_equal(len(init_cond_3), 2)
         assert_equal(init_cond_3[transAB.ensembles[0]].trajectory, traj1)
         assert_equal(
-            init_cond_3[transAB.ensembles[1]].trajectory, traj1.reversed)
+            init_cond_3[transAB.ensembles[1]].trajectory, traj1)
 
         init_cond_4 = scheme.initial_conditions_from_trajectories([traj2],
                                                                   init_cond_3)
@@ -566,7 +572,7 @@ class testDefaultScheme(object):
         assert_equal(len(init_cond_4), 3)
         assert_equal(init_cond_4[transAB.ensembles[0]].trajectory, traj1)
         assert_equal(
-            init_cond_4[transAB.ensembles[1]].trajectory, traj1.reversed)
+            init_cond_4[transAB.ensembles[1]].trajectory, traj1)
         assert_equal(init_cond_4[transAB.ensembles[2]].trajectory, traj2)
 
         init_cond_5 = scheme.initial_conditions_from_trajectories(traj3)
