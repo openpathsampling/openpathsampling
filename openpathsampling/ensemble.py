@@ -838,25 +838,6 @@ class Ensemble(StorableNamedObject):
                 "specifying an engine."
             )
 
-    @staticmethod
-    def _to_list_of_trajectories(trajectories):
-        if isinstance(trajectories, paths.Trajectory):
-            trajectories = [trajectories]
-        elif isinstance(trajectories, paths.Sample):
-            trajectories = [trajectories.trajectory]
-        elif isinstance(trajectories, paths.SampleSet):
-            trajectories = [s.trajectory for s in trajectories]
-        elif isinstance(trajectories, list):
-            if len(trajectories) > 0:
-                trajectories = [
-                    obj.trajectory if isinstance(obj, paths.Sample) else obj
-                    for obj in trajectories
-                ]
-            else:
-                raise ValueError('Need at least one trajectory!')
-
-        return trajectories
-
     def get_sample_from_trajectories(
             self, trajectories,
             used_trajectories=None,
@@ -878,7 +859,7 @@ class Ensemble(StorableNamedObject):
             tried
         """
 
-        trajectories = self._to_list_of_trajectories(trajectories)
+        trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
 
         for idx, traj in enumerate(trajectories):
             if traj not in used_trajectories:
@@ -926,7 +907,7 @@ class Ensemble(StorableNamedObject):
             `shortest` then from all subparts the shortest one is used.
         """
 
-        trajectories = self._to_list_of_trajectories(trajectories)
+        trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
 
         for idx, traj in enumerate(trajectories):
             parts = self._get_trajectory_parts_in_order(traj, unique)
@@ -1053,7 +1034,7 @@ class Ensemble(StorableNamedObject):
 
         sub_ensemble = sub_ensembles[level]
 
-        trajectories = self._to_list_of_trajectories(trajectories)
+        trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
 
         for idx, traj in enumerate(trajectories):
             traj_parts = sub_ensemble._get_trajectory_parts_in_order(

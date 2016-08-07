@@ -8,7 +8,7 @@ import mdtraj as md
 import simtk.unit as u
 
 from openpathsampling.netcdfplus import StorableObject
-
+import openpathsampling as paths
 
 # ==============================================================================
 # TRAJECTORY
@@ -614,3 +614,20 @@ class Trajectory(list, StorableObject):
             topology = self[0].topology
 
         return topology
+
+    @staticmethod
+    def _to_list_of_trajectories(trajectories):
+        if isinstance(trajectories, Trajectory):
+            trajectories = [trajectories]
+        elif isinstance(trajectories, paths.Sample):
+            trajectories = [trajectories.trajectory]
+        elif isinstance(trajectories, paths.SampleSet):
+            trajectories = [s.trajectory for s in trajectories]
+        elif isinstance(trajectories, list):
+            if len(trajectories) > 0:
+                trajectories = [
+                    obj.trajectory if isinstance(obj, paths.Sample) else obj
+                    for obj in trajectories
+                    ]
+
+        return trajectories
