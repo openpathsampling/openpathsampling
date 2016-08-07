@@ -417,6 +417,19 @@ class WHAM(object):
         return guess_lnZ
 
     def check_cleaned_overlaps(self, cleaned_df):
+        """
+        Check that all the histograms have sufficient overlaps.
+
+        Parameters
+        ----------
+        cleaned_df : pandas.DataFrame
+            cleaned input dataframe representing crossing probabilities
+
+        Raises
+        ------
+        RuntimeError
+            if the input doesn't have enough of an overlap
+        """
         for col_idx in range(1,len(cleaned_df.columns)):
             col = cleaned_df.columns[col_idx]
             prev_col = cleaned_df.columns[col_idx - 1]
