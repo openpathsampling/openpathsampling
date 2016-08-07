@@ -396,8 +396,10 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
     """
 
     _excluded_attr = ['wrap']
-    def __init__(self, collectivevariable, lambda_min = 0.0, lambda_max = 1.0,
-                                       period_min = None, period_max = None):
+
+    def __init__(
+            self, collectivevariable, lambda_min=0.0, lambda_max=1.0,
+            period_min=None, period_max=None):
         super(PeriodicCVDefinedVolume, self).__init__(collectivevariable,
                                                     lambda_min, lambda_max)        
         self.period_min = period_min
@@ -419,7 +421,16 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
 
     def do_wrap(self, value):
         """Wraps `value` into the periodic domain."""
+
+        # this looks strange and mimics the modulo operation `%` while
+        # being folly compatible for simtk numbers and plain python as well
+        # ints and floats. I think we usually have floats, but the tests
+        # from dwhswenson use ints and it should work with both
         val = value - self._period_shift
+
+        # little trick to check for positivity without knowing the the units
+        # or if it actually has units
+
         if val > val * 0:
             return value - int(val / self._period_len) * self._period_len
         else:
