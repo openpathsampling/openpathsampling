@@ -352,7 +352,7 @@ class CVDefinedVolume(Volume):
         if (type(other) is type(self) and 
                 self.collectivevariable == other.collectivevariable):
             # taking the shortcut here
-            return ((self | other) - (self & other))
+            return (self | other) - (self & other)
         else:
             return super(CVDefinedVolume, self).__xor__(other)
 
@@ -367,12 +367,10 @@ class CVDefinedVolume(Volume):
 
     def __call__(self, snapshot):
         l = self.collectivevariable(snapshot).__float__()
-        if self.lambda_min != float('nan') and \
-                self.lambda_min != float('-inf') and self.lambda_min > l:
+        if self.lambda_min != float('-inf') and self.lambda_min > l:
             return False
 
-        if self.lambda_max != float('nan') and \
-                self.lambda_min != float('inf') and self.lambda_max < l:
+        if self.lambda_min != float('inf') and self.lambda_max < l:
             return False
 
         return True
@@ -475,7 +473,7 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
         if self.lambda_min > self.lambda_max:
             return l >= self.lambda_min or l <= self.lambda_max
         else:
-            return l >= self.lambda_min and l <= self.lambda_max
+            return self.lambda_min <= l <= self.lambda_max
 
     def __str__(self):
         if self.wrap:
@@ -545,7 +543,7 @@ class VoronoiVolume(Volume):
         
         return min_idx
 
-    def __call__(self, snapshot, state = None):
+    def __call__(self, snapshot, state=None):
         '''
         Returns `True` if snapshot belongs to voronoi cell in state
         
@@ -570,6 +568,7 @@ class VoronoiVolume(Volume):
             state = self.state
         
         return self.cell(snapshot) == state
+
 
 class VolumeFactory(object):
     @staticmethod
