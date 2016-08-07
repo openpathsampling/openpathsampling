@@ -23,7 +23,7 @@ class MCStep(StorableObject):
 
     It references all objects created and used in a MC step. The used mover,
     and simulator as well as the initial and final sampleset, the step
-    number and the generated pathmovechange.
+    number and the generated movechange.
 
     Attributes
     ----------
@@ -35,8 +35,8 @@ class MCStep(StorableObject):
         the initial (pre) sampleset
     active : SampleSet
         the final (post) sampleset
-    change : PathMoveChange
-        the pathmovechange describing the transition from pre to post
+    change : MoveChange
+        the movechange describing the transition from pre to post
     """
     def __init__(self,
                  simulation=None,
@@ -106,7 +106,7 @@ class PathSimulator(StorableNamedObject):
             mccycle=self.step,
             previous=None,
             active=self.sample_set,
-            change=paths.EmptyPathMoveChange()
+            change=paths.EmptyMoveChange()
         )
 
         if self.storage is not None:

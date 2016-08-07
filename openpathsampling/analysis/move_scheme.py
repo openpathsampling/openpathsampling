@@ -901,6 +901,7 @@ class LockedMoveScheme(MoveScheme):
         # things that LockedMoveScheme overrides
         ret_dict['movers'] = self._movers
         ret_dict['choice_probability'] = self._choice_probability
+        ret_dict['real_choice_probability'] = self._real_choice_probability
         return ret_dict
 
     @property
