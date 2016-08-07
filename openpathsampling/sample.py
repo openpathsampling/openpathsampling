@@ -454,6 +454,7 @@ class SampleSet(StorableObject):
 
         # print map(lambda x: hex(id(x)), used_trajectories)
 
+        ensembles = [[x] if type(x) is not list else x for x in ensembles]
 
         # 1. look in the existing sample_set
         ensembles_to_fill, extra_ensembles = self.check_ensembles(ensembles)
@@ -486,16 +487,31 @@ class SampleSet(StorableObject):
                     )
                 )
 
-        for strategy, options in strategies:
-            refresh_output(
-                '## Trying strategy `%s` still missing %d samples\n' % (
-                    strategy,
-                    len(ensembles_to_fill)
-                ), refresh=False)
+        found_samples_str = ''
+        for pos, ens_list in enumerate(ensembles):
+            found_samples_str += '.' if ens_list in ensembles_to_fill else '+'
 
+        for str_idx, (strategy, options) in enumerate(strategies):
             for idx, ens_list in reversed(list(enumerate(ensembles_to_fill))):
+                pos = ensembles.index(ens_list)
+
+                found_samples_str = \
+                    found_samples_str[:pos] + \
+                    '?' + found_samples_str[pos + 1:]
+
+                refresh_output((
+                    '# trying strategy #%d `%s`: still missing %d samples\n'
+                    '%s\n'
+                ) % (
+                        str_idx + 1,
+                        strategy,
+                        len(ensembles_to_fill),
+                        found_samples_str
+                    ))
                 if type(ens_list) is not list:
                     ens_list = [ens_list]
+
+                found = False
 
                 for ens in ens_list:
                     # create the list of options to be passed on
@@ -545,6 +561,7 @@ class SampleSet(StorableObject):
                     # now, if we've found a sample, add it and
                     # make sure we chose a proper replica ID
                     if sample is not None:
+                        found = True
                         if ens.replica_sign > 0:
                             if len(self) == 0:
                                 replica_idx = 0
@@ -565,7 +582,7 @@ class SampleSet(StorableObject):
                             'replica %d, length %d\n')
                             % (
                                 ens.name, sample.replica, len(sample)
-                            ), refresh=False)
+                            ))
 
                         self.append(sample)
                         if reuse_strategy != 'all':
@@ -587,6 +604,19 @@ class SampleSet(StorableObject):
 
                         # do not try other ensembles in this category
                         break
+
+                found_samples_str = \
+                    found_samples_str[:pos] + \
+                    (str(str_idx + 1)[0] if found else '.') + \
+                    found_samples_str[pos + 1:]
+
+        refresh_output((
+            '# finished generating: still missing %d samples\n'
+            '%s\n'
+        ) % (
+            len(ensembles_to_fill),
+            found_samples_str
+        ))
 
         return self
 

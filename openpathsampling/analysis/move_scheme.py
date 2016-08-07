@@ -375,25 +375,12 @@ class MoveScheme(StorableNamedObject):
         See Also
         --------
         list_initial_ensembles
+        check_initial_conditions
+        assert_initial_conditions
         """
 
         if sample_set is None:
             sample_set = paths.SampleSet([])
-
-        if strategies is None:
-            # this is the default strategy
-            # TODO: We could set these for each Network separately, but
-            # this should more or less work for most cases
-            strategies = [
-                 # 1. split and pick shortest except for MinusMove
-                 ('split', {'unique': 'shortest',
-                            'exclude': paths.MinusInterfaceEnsemble}),
-                 # 2. split and pick median for remaining
-                 ('split', {'unique': 'median'}),
-                 # 3. try extend minus from segments A-X-A
-                 'extend-complex',
-                 # 4. try extend minus from crossings A-X
-                 'extend-minimal']
 
         return sample_set.generate_from_trajectories(
             self.list_initial_ensembles(),
