@@ -55,8 +55,8 @@ from analysis.shooting_point_analysis import (
     ShootingPointAnalysis, SnapshotByCoordinateDict
 )
 
-from analysis.single_trajectory_analysis import (
-    SingleTrajectoryAnalysis,
+from analysis.trajectory_transition_analysis import (
+    TrajectoryTransitionAnalysis,
     TrajectorySegmentContainer
 )
 

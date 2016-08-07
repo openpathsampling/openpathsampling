@@ -390,9 +390,9 @@ class TISTransition(Transition):
                 fcn="reverse_cumulative"
             ).sort_index(axis=1)
             wham = WHAM()
-            wham.load_from_dataframe(df)
-            wham.clean_leading_ones()
-            tcp = wham.wham_bam_histogram()
+            # wham.load_from_dataframe(df)
+            # wham.clean_leading_ones()
+            tcp = wham.wham_bam_histogram(df).to_dict()
         elif method == "mbar":
             pass
         else:
