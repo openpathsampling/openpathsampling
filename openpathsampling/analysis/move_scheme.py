@@ -339,7 +339,7 @@ class MoveScheme(StorableNamedObject):
     def initial_conditions_from_trajectories(self, trajectories,
                                              sample_set=None,
                                              strategies=None,
-                                             reuse_strategy='avoid',
+                                             reuse_strategy='avoid-symmetric',
                                              engine=None):
         """
         Create a SampleSet with as many initial samples as possible.
@@ -358,9 +358,11 @@ class MoveScheme(StorableNamedObject):
             a dict that specifies the options used when ensemble functions
             are used to create a new sample.
         reuse_strategy : str
-            if `avoid` then reusing the same same trajectory twice is avoided
+            if `avoid` then reusing the same same trajectory twice is avoided.
+            `avoid-symmetric` will also remove reversed copies
             if possible. `all` will not attempt to avoid already existing ones.
-            `once` will strictly not reuse a trajectory.
+            `once` will strictly not reuse a trajectory and `once-symmetric`
+            will also not use reversed copies.
         engine : :class:`openpathsampling.engines.DyanmicsEngine`
             the engine used for extending moves
 

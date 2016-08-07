@@ -452,7 +452,7 @@ class SampleSet(StorableObject):
         used_trajectories = sorted(used_trajectories, key=len)
 
         # 1. look in the existing sample_set
-        ensembles_to_fill = self.check_ensembles(ensembles)
+        ensembles_to_fill, extra_ensembles = self.check_ensembles(ensembles)
 
         # we reverse because we want to be able to remove elements
         # from the list as we discover samples. This is easier to do
@@ -519,7 +519,7 @@ class SampleSet(StorableObject):
                             reuse_strategy=reuse_strategy,
                             **opts
                         )
-                    elif strategy == 'extend-complex':
+                    elif strategy == 'extend-complex' and engine:
                         if hasattr(ens, 'extend_sample_from_trajectories'):
                             sample = ens.extend_sample_from_trajectories(
                                 trajectories=trajectories,
@@ -527,7 +527,7 @@ class SampleSet(StorableObject):
                                 level='complex',
                                 **opts
                             )
-                    elif strategy == 'extend-minimal':
+                    elif strategy == 'extend-minimal' and engine:
                         if hasattr(ens, 'extend_sample_from_trajectories'):
                             sample = ens.extend_sample_from_trajectories(
                                 trajectories=trajectories,
@@ -564,7 +564,11 @@ class SampleSet(StorableObject):
 
                         self.append(sample)
                         if reuse_strategy != 'all':
+                            # we mark the trajectory and its reversed as used
                             used_trajectories.append(sample.trajectory)
+                            if reuse_strategy.endswith('symmetric'):
+                                used_trajectories.append(
+                                    sample.trajectory.reversed)
 
                             # we want the list of used_trajectories to be
                             # sorted. Short ones first. So if we have to chose
@@ -627,67 +631,6 @@ class SampleSet(StorableObject):
 
         # missing, extra
         return missing, samples.ensemble_list()
-
-    @staticmethod
-    def generate_from_trajectories(ensembles, trajectories, engine=None):
-        """
-        Generate a SampleSet from extending und truncation in a set of samples
-
-        Parameters
-        ----------
-        ensembles : list of `openpathsampling.Ensemble`
-        trajectories : (list of) `openpathsampling.Trajectory` like
-            a list of trajectories (or samples as these contain a trajectory)
-            to be used as a pool of initial trajectories to generate samples
-            for all ensembles given
-        engine : list of `openpathsampling.DynamicsEngine`
-            an optional engine. If given the method also tries to generate
-            samples by extending suitable subparts of trajectories.
-
-        Returns
-        -------
-        `openpathsampling.SampleSet`
-            the new sampleset containing samples for each ensemble given
-        """
-        sset = paths.SampleSet([])
-
-        for idx, ens in enumerate(ensembles):
-            # use negative replica IDs for minus ensembles
-
-            if len(sset) == 0:
-                replica_id = 0
-            elif isinstance(ens, paths.MinusInterfaceEnsemble):
-                replica_id = min(sset.replicas) - 1
-            else:
-                replica_id = max(sset.replicas) + 1
-
-            paths.tools.refresh_output(
-                '[%d] Generating for `%s` Rep ID #%d - '
-                'still missing %d ensembles' % (
-                    idx,
-                    ens.name,
-                    replica_id,
-                    len(ensembles) - idx,
-                ))
-
-            new_sample = ens.sample_from_trajectories(
-                trajectories,
-                replica_id,
-                engine
-            )
-
-            assert(ens(new_sample))
-            sset = sset.apply_samples([new_sample])
-
-        paths.tools.refresh_output(
-            'Successfully generated initial sampleset with %d samples' % (
-                len(sset)
-            ))
-
-        # check if we generated a valid sample set
-        sset.sanity_check()
-
-        return sset
 
     def copy_without_parents(self):
         """

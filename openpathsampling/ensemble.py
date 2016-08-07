@@ -729,119 +729,10 @@ class Ensemble(StorableNamedObject):
     def extendable_sub_ensembles(self):
         return {}
 
-    def sample_from_trajectories(
-            self, trajectories, replica_id, engine=None):
-        """
-        Generate a sample in the ensemble by using parts of `trajectories`
-
-        This will take an initial trajectory look for useable subparts and
-        try to extend them into a valid sample. This works by taking information
-        from an ensemble what are resonable subparts, this is returned by a
-        function `.extendable_sub_ensembles()` which is only defined for
-        complex ensembles like Minus or TIS ensemble.
-
-        As an example the minus could extend from the segment ensemble or even
-        a segment + parts completely in the inner ensemble. Of course the
-        ensemble itself is always valid.
-
-        The function tries to find extendable subparts from largest to smallest
-        ones, starting with the ensemble itself and ending with small subparts
-
-        If a list of trajectories is provided it will be attempt to find a
-        valid trajectory using all the trajectory parts.
-
-        Parameters
-        ----------
-        trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
-            single trajectory of list of trajectories to be used to create a
-            sample in this ensemble
-        replica_id : int or str
-            replica ID for this sample
-        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
-            engine to use for MD extension
-        """
-
-        if isinstance(trajectories, paths.Trajectory):
-            trajectories = [trajectories]
-        elif isinstance(trajectories, paths.Sample):
-            trajectories = [trajectories.trajectory]
-        elif isinstance(trajectories, paths.SampleSet):
-            trajectories = [s.trajectory for s in trajectories]
-        elif isinstance(trajectories, list):
-            if len(trajectories) > 0:
-                trajectories = [
-                    obj.trajectory if isinstance(obj, paths.Sample) else obj
-                    for obj in trajectories
-                ]
-            else:
-                raise ValueError('Need at least one trajectory!')
-
-        # try self first
-
-        for idx, traj in enumerate(trajectories):
-            part = self.find_first_subtrajectory(traj)
-            if part is not None:
-                return paths.Sample(
-                    replica=replica_id,
-                    trajectory=part,
-                    ensemble=self
-                )
-
-            # try reversed
-            part = self.find_first_subtrajectory(traj.reversed)
-            if part is not None:
-                return paths.Sample(
-                    replica=replica_id,
-                    trajectory=part,
-                    ensemble=self
-                )
-
-        # try sub_ensembles and extending
-
-        if engine is not None:
-            if hasattr(self, 'extendable_sub_ensembles'):
-                for sub_ensemble in self.extendable_sub_ensembles:
-                    for idx, traj in enumerate(trajectories):
-                        for traj_parts in [
-                            sub_ensemble.iter_split(traj),
-                            sub_ensemble.iter_split(traj.reversed)
-                        ]:
-
-                            for part in traj_parts:
-                                if self.strict_can_append(part):
-                                    # seems we could extend forward
-                                    part = engine.extend_forward(
-                                        part,
-                                        self
-                                    )
-
-                                if self.strict_can_prepend(part):
-                                    # and extend backward
-                                    part = engine.extend_backward(
-                                        part,
-                                        self
-                                    )
-
-                                if self(part):  # make sure we found a sample
-                                    return paths.Sample(
-                                        replica=replica_id,
-                                        trajectory=part,
-                                        ensemble=self
-                                    )
-
-            raise RuntimeWarning(
-                "Could not generate valid sample. You might try again."
-            )
-        else:
-            raise RuntimeWarning(
-                "Could not generate valid sample. You might try with "
-                "specifying an engine."
-            )
-
     def get_sample_from_trajectories(
             self, trajectories,
             used_trajectories=None,
-            reuse_strategy='avoid'
+            reuse_strategy='avoid-symmetric'
     ):
         """
         Generate a sample in the ensemble by testing `trajectories`
@@ -869,24 +760,12 @@ class Ensemble(StorableNamedObject):
                         ensemble=self
                     )
 
-        if reuse_strategy == 'avoid' and used_trajectories is not None:
-            for part in used_trajectories:
-                if self(part):
-                    # move the used one to the back of the list to
-                    # not reuse it directly
-                    del used_trajectories[used_trajectories.index(part)]
-                    used_trajectories.append(part)
-                    return paths.Sample(
-                        trajectory=part,
-                        ensemble=self
-                    )
-
-        return None
+        return self._handle_used_trajectories(used_trajectories, reuse_strategy)
 
     def split_sample_from_trajectories(
             self, trajectories,
             used_trajectories=None,
-            reuse_strategy='avoid',
+            reuse_strategy='avoid-symmetric',
             unique='shortest'):
         """
         Generate a sample in the ensemble by searching for sub-parts
@@ -919,62 +798,7 @@ class Ensemble(StorableNamedObject):
                         ensemble=self
                     )
 
-        # if that did not work retry already used ones
-        if reuse_strategy == 'avoid' and used_trajectories is not None:
-            for part in used_trajectories:
-                if self(part):
-                    # move the used one to the back of the list to
-                    # not reuse it directly
-                    del used_trajectories[used_trajectories.index(part)]
-                    used_trajectories.append(part)
-                    return paths.Sample(
-                        trajectory=part,
-                        ensemble=self
-                    )
-
-        return None
-
-    def _get_trajectory_parts_in_order(self, traj, unique='first'):
-        if unique == 'first':
-            # this returns an iterator and can thus be faster
-            parts = self.iter_split(traj)
-        elif unique == 'shortest':
-            parts = sorted(self.split(traj), key=len)
-        elif unique == 'median':
-            # resort the found trajectories so that the middle one is
-            # first, then the one right to it, then the one before, etc
-            # e.g. [0,1,2,3,4,5,6,7,8,9] is rearranges into
-            # [5,4,6,3,7,2,8,1,9,0]
-            ordered = sorted(self.split(traj), key=len)
-            parts = list([p for p2 in zip(
-                ordered[len(ordered) / 2:],
-                reversed(ordered[:len(ordered) / 2])
-            ) for p in p2])
-
-            if len(ordered) & 1:
-                parts.append(ordered[-1])
-
-        elif unique == 'longest':
-            parts = sorted(self.split(traj), key=len, reverse=True)
-        else:
-            parts = []
-
-        try:
-            if len(parts) > 0:
-                lens = map(len, parts)
-                refresh_output(
-                    ('Found %d slices of lengths [%d, ..., %d, ..., %d] '
-                     'ordered by `%s`\n') % (
-                        len(parts),
-                        min(lens),
-                        sorted(lens)[len(parts) / 2],
-                        max(lens),
-                        unique
-                    ), refresh=False)
-        except TypeError:
-            pass
-
-        return parts
+        return self._handle_used_trajectories(used_trajectories, reuse_strategy)
 
     def extend_sample_from_trajectories(
             self,
@@ -1069,6 +893,69 @@ class Ensemble(StorableNamedObject):
                             trajectory=part,
                             ensemble=self
                         )
+
+        return None
+
+    def _get_trajectory_parts_in_order(self, traj, unique='first'):
+        if unique == 'first':
+            # this returns an iterator and can thus be faster
+            parts = self.iter_split(traj)
+        elif unique == 'shortest':
+            parts = sorted(self.split(traj), key=len)
+        elif unique == 'median':
+            # resort the found trajectories so that the middle one is
+            # first, then the one right to it, then the one before, etc
+            # e.g. [0,1,2,3,4,5,6,7,8,9] is rearranges into
+            # [5,4,6,3,7,2,8,1,9,0]
+            ordered = sorted(self.split(traj), key=len)
+            parts = list([p for p2 in zip(
+                ordered[len(ordered) / 2:],
+                reversed(ordered[:len(ordered) / 2])
+            ) for p in p2])
+
+            if len(ordered) & 1:
+                parts.append(ordered[-1])
+
+        elif unique == 'longest':
+            parts = sorted(self.split(traj), key=len, reverse=True)
+        else:
+            parts = []
+
+        try:
+            if len(parts) > 0:
+                lens = map(len, parts)
+                refresh_output(
+                    ('Found %d slices of lengths [%d, ..., %d, ..., %d] '
+                     'ordered by `%s`\n') % (
+                        len(parts),
+                        min(lens),
+                        sorted(lens)[len(parts) / 2],
+                        max(lens),
+                        unique
+                    ), refresh=False)
+        except TypeError:
+            pass
+
+        return parts
+
+    def _handle_used_trajectories(self, used_trajectories, reuse_strategy):
+        if reuse_strategy.startswith('avoid') \
+                and used_trajectories is not None:
+            for part in used_trajectories:
+                if self(part):
+                    # move the used one to the back of the list to
+                    # not reuse it directly
+                    del used_trajectories[used_trajectories.index(part)]
+                    used_trajectories.append(part)
+                    if reuse_strategy == 'avoid-symmetric':
+                        del used_trajectories[
+                            used_trajectories.index(part.reversed)]
+                        used_trajectories.append(part.reversed)
+
+                    return paths.Sample(
+                        trajectory=part,
+                        ensemble=self
+                    )
 
         return None
 
