@@ -56,7 +56,7 @@ from analysis.shooting_point_analysis import (
 )
 
 from analysis.single_trajectory_analysis import (
-    SingleTrajectoryAnalysis,
+    TrajectoryTransitionAnalysis,
     TrajectorySegmentContainer
 )
 
