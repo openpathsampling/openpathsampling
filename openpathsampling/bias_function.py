@@ -7,19 +7,19 @@ import pandas as pd
 
 class BiasFunction(StorableNamedObject):
     """Generic bias functions. Everything inherits from here. Abstract."""
-    def probability_old_to_new(self, sampleset, change):
+    def probability_old_to_new(self, sample_set, change):
         raise NotImplementedError
 
-    def probability_new_to_old(self, sampleset, change):
+    def probability_new_to_old(self, sample_set, change):
         raise NotImplementedError
 
-    def get_new_old(self, sampleset, change):
+    def get_new_old(self, sample_set, change):
         """Associates changed and original samples.
 
         Returns tuple (replica, new_sample, old_sample)
         """
         # TODO: this should move to sample.py (or pmc.py?) as a free function
-        return [(s.replica, s, sampleset[s.replica]) for s in change.samples]
+        return [(s.replica, s, sample_set[s.replica]) for s in change.samples]
 
 
 class BiasLookupFunction(BiasFunction):
@@ -165,8 +165,8 @@ class BiasEnsembleTable(BiasFunction):
         # recognized as a float, but apparently it does
         return float(min(1.0, self.bias_value(from_ensemble, to_ensemble)))
 
-    def probability_old_to_new(self, sampleset, change):
-        new_old = self.get_new_old(sampleset, change)
+    def probability_old_to_new(self, sample_set, change):
+        new_old = self.get_new_old(sample_set, change)
         prob = 1.0
         for diff in new_old:
             new = diff[1]
@@ -174,8 +174,8 @@ class BiasEnsembleTable(BiasFunction):
             prob *= self.bias_value(old.ensemble, new.ensemble)
         return min(1.0, prob)
 
-    def probability_new_to_old(self, sampleset, change):
-        new_old = self.get_new_old(sampleset, change)
+    def probability_new_to_old(self, sample_set, change):
+        new_old = self.get_new_old(sample_set, change)
         prob = 1.0
         for diff in new_old:
             new = diff[1]

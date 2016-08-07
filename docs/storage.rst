@@ -27,7 +27,7 @@ stores
     :toctree: api/generated/
 
     SampleStore
-    PathMoveChangeStore
+    MoveChangeStore
     MCStepStore
     ObjectDictStore
     SampleStore

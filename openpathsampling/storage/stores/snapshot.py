@@ -715,7 +715,7 @@ class SnapshotWrapperStore(ObjectStore):
 
     def _auto_complete_single_snapshot(self, obj, pos):
         for cv, (cv_store, cv_idx) in self.cv_list.items():
-            if not cv_store.allow_partial:
+            if not cv_store.allow_incomplete:
                 value = cv._cache_dict._get(obj)
                 if value is None:
                     # not in cache so compute it if possible
@@ -723,7 +723,7 @@ class SnapshotWrapperStore(ObjectStore):
                         value = cv._eval_dict([obj])[0]
 
                 if value is not None:
-                    if cv_store.allow_partial:
+                    if cv_store.allow_incomplete:
                         cv_store[obj] = value
                     else:
                         if cv_store.time_reversible:
@@ -750,7 +750,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         cv_store = self.cv_list[cv][0]
 
-        if cv_store.allow_partial:
+        if cv_store.allow_incomplete:
             # for complete this does not make sense
 
             # TODO: Make better looping over this to not have
@@ -836,7 +836,7 @@ class SnapshotWrapperStore(ObjectStore):
         cv_store = self.cv_list[cv][0]
 
         # for complete this does not make sense
-        if cv_store.allow_partial:
+        if cv_store.allow_incomplete:
 
             # loop all objects in the fast CV cache
             for obj, value in cv._cache_dict.cache.iteritems():
@@ -900,7 +900,7 @@ class SnapshotWrapperStore(ObjectStore):
     def _get_cv_name(cv_idx):
         return 'cv' + str(cv_idx)
 
-    def add_cv(self, cv, template, allow_partial=None, chunksize=None):
+    def add_cv(self, cv, template, allow_incomplete=None, chunksize=None):
         """
 
         Parameters
@@ -908,7 +908,7 @@ class SnapshotWrapperStore(ObjectStore):
         cv : :obj:`openpathsampling.CollectiveVariable`
         template : :obj:`openpathsampling.engines.BaseSnapshot`
         chunksize : int
-        allow_partial : bool
+        allow_incomplete : bool
 
         Returns
         -------
@@ -918,8 +918,8 @@ class SnapshotWrapperStore(ObjectStore):
         if cv in self.cv_list:
             return self.cv_list[cv]
 
-        if allow_partial is None:
-            allow_partial = cv.diskcache_allow_partial
+        if allow_incomplete is None:
+            allow_incomplete = cv.diskcache_allow_incomplete
         if chunksize is None:
             chunksize = cv.diskcache_chunksize
         if template is None:
@@ -929,9 +929,9 @@ class SnapshotWrapperStore(ObjectStore):
 
         if not time_reversible:
             # in the rare case of not time_reversible we use store partial
-            allow_partial = True
+            allow_incomplete = True
 
-        if not allow_partial:
+        if not allow_incomplete:
             # in complete mode we force chunk size one to match it to snapshots
             chunksize = 1
 
@@ -947,14 +947,14 @@ class SnapshotWrapperStore(ObjectStore):
         cv_idx = self.storage.cvs.index[cv]
         store = SnapshotValueStore(
             time_reversible=time_reversible,
-            allow_partial=allow_partial,
+            allow_incomplete=allow_incomplete,
             chunksize=chunksize
         )
 
         store_name = SnapshotWrapperStore._get_cv_name(cv_idx)
         self.storage.create_store(store_name, store, False)
 
-        if store.allow_partial:
+        if store.allow_incomplete:
             # we are not using the .initialize function here since we
             # only have one variable and only here know its shape
             self.storage.create_dimension(store.prefix, 0)
@@ -1004,7 +1004,7 @@ class SnapshotWrapperStore(ObjectStore):
         self.storage.vars['cvcache'][store_idx] = store
 
         # use the cache and function of the CV to fill the store when it is made
-        if not allow_partial:
+        if not allow_incomplete:
 
             if self.reference_by_uuid:
                 indices = self.vars['uuid'][:]
@@ -1125,18 +1125,18 @@ class SnapshotValueStore(ObjectStore):
     def __init__(
             self,
             time_reversible=True,
-            allow_partial=False,
+            allow_incomplete=False,
             chunksize=100
     ):
         super(SnapshotValueStore, self).__init__(None)
         self.snapshot_index = None
-        if not time_reversible and not allow_partial:
+        if not time_reversible and not allow_incomplete:
             raise RuntimeError(
                 'Only time_reversible CVs can currently be '
                 'stored using mode "complete"')
 
         self.time_reversible = time_reversible
-        self.allow_partial = allow_partial
+        self.allow_incomplete = allow_incomplete
         self.chunksize = chunksize
 
         self.snapshot_pos = None
@@ -1145,7 +1145,7 @@ class SnapshotValueStore(ObjectStore):
     def to_dict(self):
         return {
             'time_reversible': self.time_reversible,
-            'allow_partial': self.allow_partial
+            'allow_incomplete': self.allow_incomplete
         }
 
     def create_uuid_index(self):
@@ -1185,7 +1185,7 @@ class SnapshotValueStore(ObjectStore):
         if self.time_reversible:
             pos /= 2
 
-        if self.allow_partial:
+        if self.allow_incomplete:
             # we want to load by uuid and it was not in cache.
             if pos in self.index:
                 n_idx = self.index[pos]
@@ -1222,7 +1222,7 @@ class SnapshotValueStore(ObjectStore):
         if self.time_reversible:
             pos /= 2
 
-        if self.allow_partial:
+        if self.allow_incomplete:
             if pos in self.index:
                 return
 
@@ -1235,7 +1235,7 @@ class SnapshotValueStore(ObjectStore):
 
             n_idx = idx
 
-        if self.allow_partial:
+        if self.allow_incomplete:
             # only if partial storage is used store index and update
             self.vars['index'][n_idx] = pos
             self.index[pos] = n_idx
@@ -1248,7 +1248,7 @@ class SnapshotValueStore(ObjectStore):
         self.cache.load_max()
 
     def restore(self):
-        if self.allow_partial:  # only if partial storage is used
+        if self.allow_incomplete:  # only if partial storage is used
             for pos, idx in enumerate(self.vars['index'][:]):
                 self.index[idx] = pos
 
@@ -1279,7 +1279,7 @@ class SnapshotValueStore(ObjectStore):
             return None
 
     def get(self, item):
-        if self.allow_partial:
+        if self.allow_incomplete:
             try:
                 return self[item]
             except KeyError:

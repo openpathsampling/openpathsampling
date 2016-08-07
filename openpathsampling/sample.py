@@ -271,9 +271,9 @@ class SampleSet(StorableObject):
 
     def __add__(self, other):
         """
-        Add the move path to the Sample and return the new sample set
+        Add the move path to the Sample and return the new sampleset
         """
-        if isinstance(other, paths.PathMoveChange):
+        if isinstance(other, paths.MoveChange):
             return self.apply_samples(other.results)
         elif type(other) is list:
             okay = True
@@ -283,7 +283,7 @@ class SampleSet(StorableObject):
 
             return self.apply_samples(other)
         else:
-            raise ValueError('Only lists of Sample or PathMoveChanges allowed.')
+            raise ValueError('Only lists of Sample or MoveChanges allowed.')
 
     def append_as_new_replica(self, sample):
         """
@@ -327,7 +327,7 @@ class SampleSet(StorableObject):
         """Return SampleSet using `new_ensembles` as ensembles.
 
         This creates a SampleSet which replaces the ensembles in the old
-        sample set with equivalent ensembles from a given list. The string
+        sampleset with equivalent ensembles from a given list. The string
         description of the ensemble is used as a test.
 
         Note that this assumes that there are no one-to-many or many-to-one

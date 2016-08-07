@@ -228,7 +228,7 @@ class FullVolume(Volume):
         return 'all'
 
 
-class CVRangeVolume(Volume):
+class CVDefinedVolume(Volume):
     """
     Volume defined by a range of a collective variable `collectivevariable`.
 
@@ -246,7 +246,7 @@ class CVRangeVolume(Volume):
         lambda_max: float
             the maximal allowed collectivevariable
         '''
-        super(CVRangeVolume, self).__init__()
+        super(CVDefinedVolume, self).__init__()
         self.collectivevariable = collectivevariable
         self.lambda_min = float(lambda_min)
         self.lambda_max = float(lambda_max)
@@ -267,12 +267,12 @@ class CVRangeVolume(Volume):
                      str(self.lambda_max))
 
     def _copy_with_new_range(self, lmin, lmax):
-        """Shortcut to make a CVRangeVolume with all parameters the same as
+        """Shortcut to make a CVDefinedVolume with all parameters the same as
         this one except the range. This is useful for the range logic when
         dealing with subclasses: just override this function to copy extra
         information.
         """
-        return CVRangeVolume(self.collectivevariable, lmin, lmax)
+        return CVDefinedVolume(self.collectivevariable, lmin, lmax)
 
     @staticmethod
     def range_and(amin, amax, bmin, bmax):
@@ -330,7 +330,7 @@ class CVRangeVolume(Volume):
                                 other.lambda_min, other.lambda_max)
             return self._lrange_to_Volume(lminmax)
         else:
-            return super(CVRangeVolume, self).__and__(other)
+            return super(CVDefinedVolume, self).__and__(other)
 
     def __or__(self, other):
         if (type(other) is type(self) and 
@@ -339,7 +339,7 @@ class CVRangeVolume(Volume):
                                other.lambda_min, other.lambda_max)
             return self._lrange_to_Volume(lminmax)
         else:
-            return super(CVRangeVolume, self).__or__(other)
+            return super(CVDefinedVolume, self).__or__(other)
 
     def __xor__(self, other):
         if (type(other) is type(self) and 
@@ -347,7 +347,7 @@ class CVRangeVolume(Volume):
             # taking the shortcut here
             return ((self | other) - (self & other))
         else:
-            return super(CVRangeVolume, self).__xor__(other)
+            return super(CVDefinedVolume, self).__xor__(other)
 
     def __sub__(self, other):
         if (type(other) is type(self) and 
@@ -356,7 +356,7 @@ class CVRangeVolume(Volume):
                             other.lambda_min, other.lambda_max)
             return self._lrange_to_Volume(lminmax)
         else:
-            return super(CVRangeVolume, self).__sub__(other)
+            return super(CVDefinedVolume, self).__sub__(other)
 
     def __call__(self, snapshot):
         l = float(self.collectivevariable(snapshot))
@@ -366,9 +366,9 @@ class CVRangeVolume(Volume):
         return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.collectivevariable.name)
 
 
-class CVRangeVolumePeriodic(CVRangeVolume):
+class PeriodicCVDefinedVolume(CVDefinedVolume):
     """
-    As with `CVRangeVolume`, but for a periodic order parameter.
+    As with `CVDefinedVolume`, but for a periodic order parameter.
 
     Defines a Volume containing all states where collectivevariable, a periodic
     function wrapping into the range [period_min, period_max], is in the
@@ -385,7 +385,7 @@ class CVRangeVolumePeriodic(CVRangeVolume):
     _excluded_attr = ['wrap']
     def __init__(self, collectivevariable, lambda_min = 0.0, lambda_max = 1.0,
                                        period_min = None, period_max = None):
-        super(CVRangeVolumePeriodic, self).__init__(collectivevariable,
+        super(PeriodicCVDefinedVolume, self).__init__(collectivevariable,
                                                     lambda_min, lambda_max)        
         self.period_min = period_min
         self.period_max = period_max
@@ -410,7 +410,7 @@ class CVRangeVolumePeriodic(CVRangeVolume):
 
     # next few functions add support for range logic
     def _copy_with_new_range(self, lmin, lmax):
-        return CVRangeVolumePeriodic(self.collectivevariable, lmin, lmax,
+        return PeriodicCVDefinedVolume(self.collectivevariable, lmin, lmax,
                                     self.period_min, self.period_max)
 
     @staticmethod
@@ -426,7 +426,7 @@ class CVRangeVolumePeriodic(CVRangeVolume):
 
     def __invert__(self):
         # consists of swapping max and min
-        return CVRangeVolumePeriodic(self.collectivevariable,
+        return PeriodicCVDefinedVolume(self.collectivevariable,
                                     self.lambda_max, self.lambda_min,
                                     self.period_min, self.period_max
                                    )
@@ -559,7 +559,7 @@ class VolumeFactory(object):
         minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
         myset = []
         for (min_i, max_i) in zip(minvals, maxvals):
-            volume = CVRangeVolume(op, min_i, max_i)
+            volume = CVDefinedVolume(op, min_i, max_i)
             myset.append(volume)
         return myset
 
@@ -569,6 +569,6 @@ class VolumeFactory(object):
         minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
         myset = []
         for i in range(len(maxvals)):
-            myset.append(CVRangeVolumePeriodic(op, minvals[i], maxvals[i],
+            myset.append(PeriodicCVDefinedVolume(op, minvals[i], maxvals[i],
                                               period_min, period_max))
         return myset

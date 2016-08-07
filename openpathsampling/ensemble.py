@@ -169,9 +169,9 @@ class Ensemble(StorableNamedObject):
     Examples
     --------    
     >>> EnsembleFactory.TISEnsemble(
-    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.08),
+    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.08),
     >>>     True
     >>>     )
 
