@@ -383,67 +383,21 @@ class DynamicsEngine(StorableNamedObject):
         in that case.
         """
 
-        if direction == 0:
-            raise RuntimeError(
-                'direction must be positive (FORWARD) or negative (BACKWARD).')
+        trajectory = None
+        it = self.iter_generate(
+            snapshot,
+            running,
+            direction,
+            intervals=0,
+            max_length=self.options['n_frames_max'])
 
-        try:
-            iter(running)
-        except:
-            running = [running]
+        for trajectory in it:
+            pass
 
-        trajectory = Trajectory()
-
-        if direction > 0:
-            self.current_snapshot = snapshot
-        elif direction < 0:
-            # backward simulation needs reversed snapshots
-            self.current_snapshot = snapshot.reversed
-
-        self.start()
-
-        # Store initial state for each trajectory segment in trajectory.
-        trajectory.append(snapshot)
-
-        frame = 0
-        # maybe we should stop before we even begin?
-        stop = self.stop_conditions(trajectory=trajectory,
-                                    continue_conditions=running,
-                                    trusted=False)
-
-        logger.info("Starting trajectory")
-        log_freq = 10  # TODO: set this from a singleton class
-        while not stop:
-            if self.options.get('n_frames_max', None) is not None:
-                if len(trajectory) >= self.options['n_frames_max']:
-                    break
-
-            # Do integrator x steps
-            snapshot = self.generate_next_frame()
-            frame += 1
-            if frame % log_freq == 0:
-                logger.info("Through frame: %d", frame)
-
-            # Store snapshot and add it to the trajectory. Stores also
-            # final frame the last time
-            if direction > 0:
-                trajectory.append(snapshot)
-            elif direction < 0:
-                # We are simulating forward and just build in backwards order
-                trajectory.prepend(snapshot.reversed)
-
-            # Check if we should stop. If not, continue simulation
-            stop = self.stop_conditions(trajectory=trajectory,
-                                        continue_conditions=running)
-
-        # exit the while loop once we must stop, so we call the engine's
-        # stop function (which should manage any end-of-trajectory
-        # cleanup)
-        self.stop(trajectory)
-        logger.info("Finished trajectory, length: %d", frame)
         return trajectory
 
-    def iter_generate(self, initial, running=None, direction=+1, intervals=10):
+    def iter_generate(self, initial, running=None, direction=+1,
+                      intervals=10, max_length=0):
         r"""
         Return a generator that will generate a trajectory, returning the
         current trajectory in given intervals
@@ -464,7 +418,11 @@ class DynamicsEngine(StorableNamedObject):
             snapshots with reversed momenta. This will generate a _reversed_
             trajectory that effectively ends in the initial snapshot
         intervals : int
-            number steps after which the current status is returned
+            number steps after which the current status is returned. If `0`
+            it will run until the end or a keyboard interrupt is detected
+        max_length : int
+            will limit the simulation length to a number of steps. Default is
+            `0` which will run unlimited
 
         Yields
         ------
@@ -499,6 +457,7 @@ class DynamicsEngine(StorableNamedObject):
             # backward simulation needs reversed snapshots
             self.current_snapshot = trajectory[0].reversed
 
+        logger.info("Starting trajectory")
         self.start()
 
         frame = 0
@@ -507,10 +466,15 @@ class DynamicsEngine(StorableNamedObject):
                                     continue_conditions=running,
                                     trusted=False)
 
+        log_rate = 10
+
         while not stop:
-            if frame % intervals == 0:
+            if intervals > 0 and frame % intervals == 0:
                 # return the current status
+                logger.info("Through frame: %d", frame)
                 yield trajectory
+            elif frame % log_rate == 0:
+                logger.info("Through frame: %d", frame)
 
             # Do integrator x steps
             try:
@@ -527,6 +491,7 @@ class DynamicsEngine(StorableNamedObject):
 
             except KeyboardInterrupt():
                 # make sure we will report the last state for
+                logger.info("Through frame: %d", frame)
                 yield trajectory
                 raise
 
@@ -534,7 +499,11 @@ class DynamicsEngine(StorableNamedObject):
             stop = self.stop_conditions(trajectory=trajectory,
                                         continue_conditions=running)
 
+            if frame == max_length - 1:
+                stop = True
+
         self.stop(trajectory)
+        logger.info("Finished trajectory, length: %d", frame)
         yield trajectory
 
     def generate_next_frame(self):

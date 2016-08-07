@@ -926,7 +926,6 @@ class Ensemble(StorableNamedObject):
 
             if len(ordered) & 1:
                 parts.append(ordered[-1])
-
         elif unique == 'longest':
             parts = sorted(self.split(traj), key=len, reverse=True)
         else:
