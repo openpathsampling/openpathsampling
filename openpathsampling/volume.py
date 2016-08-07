@@ -312,7 +312,7 @@ class CVDefinedVolume(Volume):
         ValueError
             if the input lrange is not an allowed value
         """
-        if lrange == None:
+        if lrange is None:
             return EmptyVolume()
         elif lrange == 1:
             return self
@@ -328,7 +328,7 @@ class CVDefinedVolume(Volume):
         else:
             raise ValueError(
                 "lrange value not understood: {0}".format(lrange)
-            ) # pragma: no cover
+            )  # pragma: no cover
 
     def __and__(self, other):
         if (type(other) is type(self) and 
@@ -367,16 +367,19 @@ class CVDefinedVolume(Volume):
 
     def __call__(self, snapshot):
         l = self.collectivevariable(snapshot).__float__()
-        if self.lambda_min != float('nan') and self.lambda_min > l:
+        if self.lambda_min != float('nan') and \
+                self.lambda_min != float('-inf') and self.lambda_min > l:
             return False
 
-        if self.lambda_max != float('nan') and self.lambda_max < l:
+        if self.lambda_max != float('nan') and \
+                self.lambda_min != float('inf') and self.lambda_max < l:
             return False
 
         return True
 
     def __str__(self):
-        return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.collectivevariable.name)
+        return '{{x|{2}(x) in [{0}, {1}]}}'.format(
+            self.lambda_min, self.lambda_max, self.collectivevariable.name)
 
 
 class PeriodicCVDefinedVolume(CVDefinedVolume):
@@ -449,9 +452,11 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
     @staticmethod
     def range_and(amin, amax, bmin, bmax):
         return range_logic.periodic_range_and(amin, amax, bmin, bmax)
+
     @staticmethod
     def range_or(amin, amax, bmin, bmax):
         return range_logic.periodic_range_or(amin, amax, bmin, bmax)
+
     @staticmethod
     def range_sub(amin, amax, bmin, bmax):
         return range_logic.periodic_range_sub(amin, amax, bmin, bmax)
