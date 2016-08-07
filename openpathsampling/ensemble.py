@@ -10,8 +10,6 @@ import itertools
 from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
-from openpathsampling.tools import refresh_output
-
 import abc
 
 logger = logging.getLogger(__name__)
@@ -731,6 +729,7 @@ class Ensemble(StorableNamedObject):
 
     def get_sample_from_trajectories(
             self, trajectories,
+            replica=0,
             used_trajectories=None,
             reuse_strategy='avoid-symmetric'
     ):
@@ -742,6 +741,8 @@ class Ensemble(StorableNamedObject):
         trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             single trajectory of list of trajectories to be used to create a
             sample in this ensemble
+        replica : int
+            the replica id for the sample to be created
         used_trajectories : (list of)
         :class:`openpathsampling.trajectory.Trajectory`
             trajectories not taken into account in the first attempt
@@ -757,13 +758,15 @@ class Ensemble(StorableNamedObject):
                 if self(traj):
                     return paths.Sample(
                         trajectory=traj,
-                        ensemble=self
+                        ensemble=self,
+                        replica=replica
                     )
 
         return self._handle_used_trajectories(used_trajectories, reuse_strategy)
 
     def split_sample_from_trajectories(
             self, trajectories,
+            replica=0,
             used_trajectories=None,
             reuse_strategy='avoid-symmetric',
             unique='shortest'):
@@ -775,6 +778,8 @@ class Ensemble(StorableNamedObject):
         trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             single trajectory of list of trajectories to be used to create a
             sample in this ensemble
+        replica : int
+            the replica id for the sample to be created
         used_trajectories : (list of)
         :class:`openpathsampling.trajectory.Trajectory`
             trajectories not taken into account in the first attempt
@@ -795,7 +800,8 @@ class Ensemble(StorableNamedObject):
                 if part not in used_trajectories:
                     return paths.Sample(
                         trajectory=part,
-                        ensemble=self
+                        ensemble=self,
+                        replica=replica
                     )
 
         return self._handle_used_trajectories(used_trajectories, reuse_strategy)
@@ -804,6 +810,7 @@ class Ensemble(StorableNamedObject):
             self,
             trajectories,
             engine,
+            replica=0,
             unique='median',
             level='complex',
             attempts=2):
@@ -833,6 +840,8 @@ class Ensemble(StorableNamedObject):
             sample in this ensemble
         engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
             engine to use for MD extension
+        replica : int
+            the replica id for the sample to be created
         unique : str
             If `first` the first found subtrajectory is selected. If
             `shortest` then from all subparts the shortest one is used.
@@ -868,11 +877,12 @@ class Ensemble(StorableNamedObject):
                 for attempt in range(attempts):
                     part = paths.Trajectory(orig)
 
-                    refresh_output(
-                        'Attempt [%d] : Extending from initial length %d\n' % (
+                    logger.info((
+                        'extend - attempt [%d] : extending from initial '
+                        'length %d\n') % (
                             attempt + 1,
                             len(part)
-                        ), refresh=False)
+                        ))
 
                     if self.strict_can_append(part):
                         # seems we could extend forward
@@ -891,7 +901,8 @@ class Ensemble(StorableNamedObject):
                     if self(part):  # make sure we found a sample
                         return paths.Sample(
                             trajectory=part,
-                            ensemble=self
+                            ensemble=self,
+                            replica=replica
                         )
 
         return None
@@ -924,15 +935,16 @@ class Ensemble(StorableNamedObject):
         try:
             if len(parts) > 0:
                 lens = map(len, parts)
-                refresh_output(
-                    ('Found %d slices of lengths [%d, ..., %d, ..., %d] '
+                logger.info(
+                    ('splitting - found %d slices of lengths '
+                     '[%d, ..., %d, ..., %d] '
                      'ordered by `%s`\n') % (
                         len(parts),
                         min(lens),
                         sorted(lens)[len(parts) / 2],
                         max(lens),
                         unique
-                    ), refresh=False)
+                    ))
         except TypeError:
             pass
 

@@ -560,8 +560,9 @@ class SampleSet(StorableObject):
 
                         sample.replica = replica_idx
 
-                        refresh_output(
-                            'Ensemble `%s` found sample replica %d, length %d\n'
+                        logger.info((
+                            'generating - ensemble `%s` found sample '
+                            'replica %d, length %d\n')
                             % (
                                 ens.name, sample.replica, len(sample)
                             ), refresh=False)
