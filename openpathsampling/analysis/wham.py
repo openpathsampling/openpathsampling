@@ -416,6 +416,24 @@ class WHAM(object):
                               index=guess_nextZ_over_Z.index)
         return guess_lnZ
 
+    def check_cleaned_overlaps(self, cleaned_df):
+        for col_idx in range(1,len(cleaned_df.columns)):
+            col = cleaned_df.columns[col_idx]
+            prev_col = cleaned_df.columns[col_idx - 1]
+
+            col_data = cleaned_df[col]
+            prev_data = cleaned_df[prev_col]
+
+            first_nonzero = col_data[col_data != 0.0].index[0]
+            if not prev_data[first_nonzero] > 0.0:
+                # use not and > to account for NaNs
+                raise RuntimeError(
+                    "Insufficient overlap to combine histograms.\n"
+                    + "This is either due to poor sampling or bad "
+                    + "interface placement.\n" + "Row: "
+                    + str(first_nonzero) + "   Column: " + str(col) + "\n"
+                    + str(cleaned_df))
+
     def wham_bam_histogram(self, input_df):
         """
         Perform the entire wham process.
@@ -432,6 +450,7 @@ class WHAM(object):
             is 1
         """
         cleaned = self.prep_reverse_cumulative(input_df)
+        self.check_cleaned_overlaps(cleaned)
         guess = self.guess_lnZ_crossing_probability(cleaned)
         sum_k_Hk_Q = self.sum_k_Hk_Q(cleaned)
         n_entries = self.n_entries(cleaned)
@@ -441,7 +460,9 @@ class WHAM(object):
         try:
             lnZ = self.generate_lnZ(guess, unweighting, weighted_counts,
                                     sum_k_Hk_Q)
-        except IndexError as e:
+        except IndexError as e:  # pragma: no cover
+            # I don't think this can happen any more, but leave it in case
+            # (Now the check_cleaned_overlaps should catch this problem.)
             failmsg = "Does your input to WHAM have enough data?"
             if not e.args:
                 e.args = [failmsg]
@@ -451,7 +472,11 @@ class WHAM(object):
                 raise e
 
         hist = self.output_histogram(lnZ, sum_k_Hk_Q, weighted_counts)
-        return self.normalize_cumulative(hist)
+        result = self.normalize_cumulative(hist)
+        if sum(pd.isnull(result)) == len(result):  # pragma: no cover
+            # last safety check
+            raise RuntimeError("WHAM result is all NaN. Reason unknown.")
+        return result
 
 
 def parsing(parseargs):  # pragma: no cover

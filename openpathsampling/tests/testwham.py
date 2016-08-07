@@ -144,15 +144,40 @@ class testWHAM(object):
         wham_hist = self.wham.wham_bam_histogram(self.input_df)
         np.testing.assert_allclose(wham_hist.as_matrix(), self.exact)
 
-    def test_wham_bam_histogram_incomplete_data(self):
-        bad_data = np.array([[1.0, 1.0, 1.0],
-                             [0.5, 1.0, 1.0],
-                             [0.0, 1.0, 1.0],
+    @raises(RuntimeError)
+    def test_check_overlaps_no_overlap_with_first(self):
+        bad_data = np.array([[1.0, 0.0, 0.0],
+                             [0.5, 0.0, 0.0],
+                             [0.0, 1.0, 0.0],
                              [0.0, 0.5, 1.0],
                              [0.0, 0.1, 0.2]])
         bad_df = pd.DataFrame(data=bad_data,
                               index=self.index[0:5],
                               columns=self.columns)
-        wham_hist = self.wham.wham_bam_histogram(bad_df)
-        print wham_hist
-        raise SkipTest
+        self.wham.check_cleaned_overlaps(bad_df)
+
+    @raises(RuntimeError)
+    def test_check_overlaps_no_overlap_with_final(self):
+        bad_data = np.array([[1.0, 0.0, 0.0],
+                             [0.5, 0.0, 0.0],
+                             [0.2, 1.0, 0.0],
+                             [0.1, 0.5, 0.0],
+                             [0.0, 0.0, 1.0],
+                             [0.0, 0.0, 0.5]])
+        bad_df = pd.DataFrame(data=bad_data,
+                              index=self.index[0:6],
+                              columns=self.columns)
+        self.wham.check_cleaned_overlaps(bad_df)
+
+    @raises(RuntimeError)
+    def test_check_overlaps_no_overlap_in_middle(self):
+        bad_data = np.array([[1.0, 0.0, 0.0, 0.0],
+                             [0.5, 1.0, 0.0, 0.0],
+                             [0.1, 0.2, 0.0, 0.0],
+                             [0.0, 0.0, 1.0, 0.0],
+                             [0.0, 0.0, 0.5, 1.0],
+                             [0.0, 0.0, 0.1, 0.2]])
+        bad_df = pd.DataFrame(data=bad_data,
+                              index=self.index[0:6],
+                              columns=self.columns + ['Interface 4'])
+        self.wham.check_cleaned_overlaps(bad_df)
