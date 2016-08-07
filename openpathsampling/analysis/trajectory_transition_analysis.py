@@ -66,7 +66,7 @@ class TrajectorySegmentContainer(object):
     # intentionally do not support __mul__ & related
     
 
-class SingleTrajectoryAnalysis(object):
+class TrajectoryTransitionAnalysis(object):
     """Analyze a trajectory or set of trajectories for transition properties.
 
     Attributes
