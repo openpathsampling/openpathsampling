@@ -141,6 +141,8 @@ from volume import (
     RelativeComplementVolume, join_volumes
 )
 
+import numerics
+
 from openpathsampling.engines import Trajectory, BaseSnapshot
 import openpathsampling.engines.openmm as openmm
 import openpathsampling.engines.toy as toy

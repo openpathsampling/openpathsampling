@@ -7,7 +7,7 @@ import collections
 
 import logging
 
-from openpathsampling.analysis import (
+from openpathsampling.numerics import (
     LookupFunction, LookupFunctionGroup, VoxelLookupFunction
 )
 
