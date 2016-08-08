@@ -247,5 +247,4 @@ class testSRTISBiasFromNetwork(object):
 
     def test_bias_from_network(self):
         bias = paths.SRTISBiasFromNetwork(self.network)
-        print bias.df
         raise SkipTest

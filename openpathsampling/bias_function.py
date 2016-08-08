@@ -187,11 +187,20 @@ class BiasEnsembleTable(BiasFunction):
 def SRTISBiasFromNetwork(network, steps=None):
     """Create an SRTIS fixed bias from an analyzed network.
 
-    If 
+    If the network has not been analyzed and `steps` is given, it will
+    calculate the rates first, and then provide the bias.
 
     Parameters
     ----------
+    network : :class:`.TISTransitionNetwork`
+        analyzed network to use to obtain a guess of the SRTIS bias
+    steps : list of :class:`.MCStep`
+        if the network has not been analyzed, use these steps to analyze it
 
+    Returns
+    -------
+    BiasEnsembleTable
+        fixed bias for SRTIS
     """
     if steps is not None:
         network.rate_matrix(steps)
@@ -199,8 +208,8 @@ def SRTISBiasFromNetwork(network, steps=None):
     has_tcp = [hasattr(t, 'tcp') for t in network.sampling_transitions]
     if sum(has_tcp) != len(network.sampling_transitions):
         raise RuntimeError(
-            "The network has no total crossing probability. "
-            + "Analyze it first!")
+            "Transition are missing total crossing probability. "
+            + "Analyze the network first!")
 
     try:
         ms_outer_ensembles = network.special_ensembles['ms_outer'].keys()
