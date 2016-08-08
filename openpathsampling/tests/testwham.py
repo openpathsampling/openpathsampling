@@ -58,6 +58,19 @@ class testWHAM(object):
         np.testing.assert_allclose(cleaned.as_matrix(),
                                    self.expected_cleaned)
 
+    def test_prep_reverse_cumulative_with_interfaces(self):
+        wham = paths.analysis.WHAM(cutoff=0.1, interfaces=[0.0, 0.2, 0.3])
+        cleaned = wham.prep_reverse_cumulative(self.input_df)
+        np.testing.assert_allclose(cleaned.as_matrix(),
+                                   np.array([[2.0, 0.0, 0.0],
+                                             [1.0, 0.0, 0.0],
+                                             [0.5, 1.0, 0.0],
+                                             [0.25, 0.5, 3.0],
+                                             [0.0, 0.25, 3.0],
+                                             [0.0, 0.125, 1.5],
+                                             [0.0, 0.0, 0.75]]))
+
+
     def test_unweighting_tis(self):
         unweighting = self.wham.unweighting_tis(self.cleaned)
         expected = np.array([[1.0, 0.0, 0.0],
