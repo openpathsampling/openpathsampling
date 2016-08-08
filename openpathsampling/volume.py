@@ -248,8 +248,15 @@ class CVDefinedVolume(Volume):
         '''
         super(CVDefinedVolume, self).__init__()
         self.collectivevariable = collectivevariable
-        self.lambda_min = float(lambda_min)
-        self.lambda_max = float(lambda_max)
+        try:
+            self.lambda_min = lambda_min.__float__()
+        except AttributeError:
+            self.lambda_min = float(lambda_min)
+
+        try:
+            self.lambda_max = lambda_max.__float__()
+        except AttributeError:
+            self.lambda_max = float(lambda_max)
 
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
@@ -305,7 +312,7 @@ class CVDefinedVolume(Volume):
         ValueError
             if the input lrange is not an allowed value
         """
-        if lrange == None:
+        if lrange is None:
             return EmptyVolume()
         elif lrange == 1:
             return self
@@ -321,7 +328,7 @@ class CVDefinedVolume(Volume):
         else:
             raise ValueError(
                 "lrange value not understood: {0}".format(lrange)
-            ) # pragma: no cover
+            )  # pragma: no cover
 
     def __and__(self, other):
         if (type(other) is type(self) and 
@@ -345,7 +352,7 @@ class CVDefinedVolume(Volume):
         if (type(other) is type(self) and 
                 self.collectivevariable == other.collectivevariable):
             # taking the shortcut here
-            return ((self | other) - (self & other))
+            return (self | other) - (self & other)
         else:
             return super(CVDefinedVolume, self).__xor__(other)
 
@@ -359,11 +366,22 @@ class CVDefinedVolume(Volume):
             return super(CVDefinedVolume, self).__sub__(other)
 
     def __call__(self, snapshot):
-        l = float(self.collectivevariable(snapshot))
-        return l >= self.lambda_min and l <= self.lambda_max
+        l = self.collectivevariable(snapshot).__float__()
+
+        # we explicitely test for infinity to allow the user to
+        # define `lambda_min/max='inf'` also when using units
+        # a simtk unit cannot be compared to a python infinite float
+        if self.lambda_min != float('-inf') and self.lambda_min > l:
+            return False
+
+        if self.lambda_min != float('inf') and self.lambda_max < l:
+            return False
+
+        return True
 
     def __str__(self):
-        return '{{x|{2}(x) in [{0}, {1}]}}'.format( self.lambda_min, self.lambda_max, self.collectivevariable.name)
+        return '{{x|{2}(x) in [{0}, {1}]}}'.format(
+            self.lambda_min, self.lambda_max, self.collectivevariable.name)
 
 
 class PeriodicCVDefinedVolume(CVDefinedVolume):
@@ -383,8 +401,10 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
     """
 
     _excluded_attr = ['wrap']
-    def __init__(self, collectivevariable, lambda_min = 0.0, lambda_max = 1.0,
-                                       period_min = None, period_max = None):
+
+    def __init__(
+            self, collectivevariable, lambda_min=0.0, lambda_max=1.0,
+            period_min=None, period_max=None):
         super(PeriodicCVDefinedVolume, self).__init__(collectivevariable,
                                                     lambda_min, lambda_max)        
         self.period_min = period_min
@@ -406,7 +426,24 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
 
     def do_wrap(self, value):
         """Wraps `value` into the periodic domain."""
-        return ((value-self._period_shift) % self._period_len) + self._period_shift
+
+        # this looks strange and mimics the modulo operation `%` while
+        # being fully compatible for simtk numbers and plain python as well
+        # working for ints and floats.
+        val = value - self._period_shift
+
+        # little trick to check for positivity without knowing the the units
+        # or if it actually has units
+
+        if val > val * 0:
+            return value - int(val / self._period_len) * self._period_len
+        else:
+            wrapped = value + int((self._period_len - val) / self._period_len) \
+                * self._period_len
+            if wrapped >= self._period_len:
+                wrapped -= self._period_len
+
+            return wrapped
 
     # next few functions add support for range logic
     def _copy_with_new_range(self, lmin, lmax):
@@ -416,13 +453,14 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
     @staticmethod
     def range_and(amin, amax, bmin, bmax):
         return range_logic.periodic_range_and(amin, amax, bmin, bmax)
+
     @staticmethod
     def range_or(amin, amax, bmin, bmax):
         return range_logic.periodic_range_or(amin, amax, bmin, bmax)
+
     @staticmethod
     def range_sub(amin, amax, bmin, bmax):
         return range_logic.periodic_range_sub(amin, amax, bmin, bmax)
-
 
     def __invert__(self):
         # consists of swapping max and min
@@ -432,13 +470,13 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
                                    )
 
     def __call__(self, snapshot):
-        l = float(self.collectivevariable(snapshot))
+        l = self.collectivevariable(snapshot).__float__()
         if self.wrap:
             l = self.do_wrap(l)
         if self.lambda_min > self.lambda_max:
             return l >= self.lambda_min or l <= self.lambda_max
         else:
-            return l >= self.lambda_min and l <= self.lambda_max
+            return self.lambda_min <= l <= self.lambda_max
 
     def __str__(self):
         if self.wrap:
@@ -508,7 +546,7 @@ class VoronoiVolume(Volume):
         
         return min_idx
 
-    def __call__(self, snapshot, state = None):
+    def __call__(self, snapshot, state=None):
         '''
         Returns `True` if snapshot belongs to voronoi cell in state
         
@@ -533,6 +571,7 @@ class VoronoiVolume(Volume):
             state = self.state
         
         return self.cell(snapshot) == state
+
 
 class VolumeFactory(object):
     @staticmethod

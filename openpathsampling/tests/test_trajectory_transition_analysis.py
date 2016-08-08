@@ -86,7 +86,7 @@ class testTrajectorySegmentContainer(object):
         assert_equal(container_B_id, id(container_B))
         
 
-class testSingleTrajectoryAnalysis(object):
+class testTrajectoryTransitionAnalysis(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
@@ -99,7 +99,7 @@ class testSingleTrajectoryAnalysis(object):
         self.stateX = ~vol1 & ~vol3
 
         transition = paths.TPSTransition(self.stateA, self.stateB)
-        self.analyzer = paths.SingleTrajectoryAnalysis(transition, dt=0.1)
+        self.analyzer = paths.TrajectoryTransitionAnalysis(transition, dt=0.1)
         self.traj_str = "aaaxaxxbxaxababaxbbbbbxxxxxxa"
         # frame numbers "0    5    0    5    0    5  8"
         self.trajectory = self._make_traj(self.traj_str)
