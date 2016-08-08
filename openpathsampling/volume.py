@@ -428,9 +428,8 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
         """Wraps `value` into the periodic domain."""
 
         # this looks strange and mimics the modulo operation `%` while
-        # being folly compatible for simtk numbers and plain python as well
-        # ints and floats. I think we usually have floats, but the tests
-        # from dwhswenson use ints and it should work with both
+        # being fully compatible for simtk numbers and plain python as well
+        # working for ints and floats.
         val = value - self._period_shift
 
         # little trick to check for positivity without knowing the the units
