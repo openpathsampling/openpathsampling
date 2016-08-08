@@ -41,32 +41,29 @@ class LoaderProxy(object):
 
     @property
     def reversed(self):
-        if self._store.reference_by_uuid:
-            return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
-        else:
-            return LoaderProxy(self._store, self._idx ^ 1)
+        return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
 
     @property
     def _reversed(self):
-        if self._store.reference_by_uuid:
-            return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
-        else:
-            return LoaderProxy(self._store, self._idx ^ 1)
+        return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
 
     def __eq__(self, other):
         if self is other:
             return True
-        elif type(other) is LoaderProxy:
-            if self._idx == other._idx:
-                if self._store.reference_by_uuid:
-                    return True
-                elif self._store is other._store:
-                    # idx comparison only work if the store is really identical
-                    return True
-        elif self.__subject__ is other:
-            return True
 
-        return False
+        return self._idx == other.__uuid__
+        #
+        # elif type(other) is LoaderProxy:
+        #     if self._idx == other._idx:
+        #         if self._store.reference_by_uuid:
+        #             return True
+        #         elif self._store is other._store:
+        #             # idx comparison only work if the store is really identical
+        #             return True
+        # elif self.__subject__ is other:
+        #     return True
+        #
+        # return False
 
     def __ne__(self, other):
         return not self == other
