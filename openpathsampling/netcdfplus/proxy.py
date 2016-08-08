@@ -51,19 +51,11 @@ class LoaderProxy(object):
         if self is other:
             return True
 
-        return self._idx == other.__uuid__
-        #
-        # elif type(other) is LoaderProxy:
-        #     if self._idx == other._idx:
-        #         if self._store.reference_by_uuid:
-        #             return True
-        #         elif self._store is other._store:
-        #             # idx comparison only work if the store is really identical
-        #             return True
-        # elif self.__subject__ is other:
-        #     return True
-        #
-        # return False
+        if hasattr(other, '__uuid__'):
+            return self.__uuid__ == other.__uuid__
+
+        return NotImplemented
+
 
     def __ne__(self, other):
         return not self == other
