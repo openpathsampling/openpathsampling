@@ -1,13 +1,13 @@
-from openpathsampling.pathmovechange import PathMoveChange
+from openpathsampling.movechange import MoveChange
 from openpathsampling.netcdfplus import StorableObject, ObjectStore
 
 from uuid import UUID
 
 
-class PathMoveChangeStore(ObjectStore):
+class MoveChangeStore(ObjectStore):
     def __init__(self):
-        super(PathMoveChangeStore, self).__init__(
-            PathMoveChange,
+        super(MoveChangeStore, self).__init__(
+            MoveChange,
             json=False
         )
 
@@ -17,19 +17,19 @@ class PathMoveChangeStore(ObjectStore):
     def to_dict(self):
         return {}
 
-    def _save(self, pathmovechange, idx):
-        self.vars['samples'][idx] = pathmovechange.samples
-        self.vars['subchanges'][idx] = pathmovechange.subchanges
-        self.write('details', idx, pathmovechange)
-        self.vars['mover'][idx] = pathmovechange.mover
-        self.vars['cls'][idx] = pathmovechange.__class__.__name__
+    def _save(self, movechange, idx):
+        self.vars['samples'][idx] = movechange.samples
+        self.vars['subchanges'][idx] = movechange.subchanges
+        self.write('details', idx, movechange)
+        self.vars['mover'][idx] = movechange.mover
+        self.vars['cls'][idx] = movechange.__class__.__name__
 
     def _load(self, idx):
         cls_name = self.vars['cls'][idx]
 
         cls = self.class_list[cls_name]
         obj = cls.__new__(cls)
-        PathMoveChange.__init__(obj, mover=self.vars['mover'][idx])
+        MoveChange.__init__(obj, mover=self.vars['mover'][idx])
 
         obj.samples = self.vars['samples'][idx]
         obj.subchanges = self.vars['subchanges'][idx]
@@ -38,14 +38,14 @@ class PathMoveChangeStore(ObjectStore):
         return obj
 
     def initialize(self, units=None):
-        super(PathMoveChangeStore, self).initialize()
+        super(MoveChangeStore, self).initialize()
 
         # New short-hand definition
         self.create_variable('details', 'lazyobj.details')
         self.create_variable('mover', 'obj.pathmovers')
         self.create_variable('cls', 'str')
 
-        self.create_variable('subchanges', 'obj.pathmovechanges',
+        self.create_variable('subchanges', 'obj.movechanges',
                              dimensions='...',
                              chunksizes=(10240,))
 
@@ -115,13 +115,13 @@ class PathMoveChangeStore(ObjectStore):
         obj = cls.__new__(cls)
         if self.reference_by_uuid:
             if mover_idx[0] == '-':
-                PathMoveChange.__init__(obj)
+                MoveChange.__init__(obj)
             else:
-                PathMoveChange.__init__(
+                MoveChange.__init__(
                     obj,
                     mover=self.storage.pathmovers[UUID(mover_idx)])
         else:
-            PathMoveChange.__init__(
+            MoveChange.__init__(
                 obj,
                 mover=self.storage.pathmovers[int(mover_idx)])
 

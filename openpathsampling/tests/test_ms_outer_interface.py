@@ -26,9 +26,9 @@ class testMSOuterTISInterface(object):
         self.interfaces_dec = paths.VolumeInterfaceSet(cv=self.cv_dec,
                                                        minvals=float("-inf"),
                                                        maxvals=self.lambdas)
-        self.stateA = paths.CVRangeVolume(self.cv_inc, float("-inf"), 0.0
+        self.stateA = paths.CVDefinedVolume(self.cv_inc, float("-inf"), 0.0
                                          ).named("A")
-        self.stateB = paths.CVRangeVolume(self.cv_dec, float("-inf"), 0.0
+        self.stateB = paths.CVDefinedVolume(self.cv_dec, float("-inf"), 0.0
                                          ).named("B")
         self.network = paths.MISTISNetwork([
             (self.stateA, self.interfaces_inc, self.stateB),
@@ -119,7 +119,7 @@ class testMSOuterTISInterface(object):
         assert_equal(ensemble(test_AXB), True)
 
     def test_make_ensemble_with_forbidden(self):
-        forbidden = paths.CVRangeVolume(self.cv_inc, 0.55, 0.65)
+        forbidden = paths.CVDefinedVolume(self.cv_inc, 0.55, 0.65)
         transitions = self.network.sampling_transitions
         # TODO: switch once network is working
         ensemble = self.post_network.make_ensemble(transitions, forbidden)
