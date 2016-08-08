@@ -150,6 +150,24 @@ class testCVRangeVolume(object):
         assert_equal(volA.__str__(), "{x|Id(x) in [-0.5, 0.5]}")
         assert_equal((~volA).__str__(), "(not {x|Id(x) in [-0.5, 0.5]})")
 
+    def test_unit_support(self):
+        import simtk.unit as u
+
+        vol = volume.CVDefinedVolume(
+            op_id, -0.5 * u.nanometers, 0.25 * u.nanometers)
+
+        assert(vol(-0.25 * u.nanometers))
+        assert(not vol(-0.75 * u.nanometers))
+
+        vol = volume.PeriodicCVDefinedVolume(
+            op_id,
+            -30 * u.nanometers, 90 * u.nanometers,
+            -180 * u.nanometers, 180 * u.nanometers)
+
+        assert (vol(50 * u.nanometers))
+        assert (not vol(-70 * u.nanometers))
+
+
 class testCVRangeVolumePeriodic(object):
     def setUp(self):
         self.pvolA = volume.PeriodicCVDefinedVolume(op_id, -100, 75)
