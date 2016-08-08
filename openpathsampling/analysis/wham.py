@@ -43,10 +43,12 @@ class WHAM(object):
     sample_every : int
         frequency (in iterations) to report debug information
     """
-    def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.05):
+    def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.05,
+                 interfaces=None):
         self.tol = tol
         self.max_iter = max_iter
         self.cutoff = cutoff
+        self.interfaces = interfaces
 
         self.sample_every = max_iter + 1
         self._float_format = "10.8"
@@ -129,16 +131,28 @@ class WHAM(object):
             lambda s : [x if x > raw_cutoff[s.name] else 0.0 for x in s]
         )
 
-        # clear duplicates of leading values
-        test_f = lambda val1, val2, val_max : (
-            abs(val1 - val2) > tol or abs(val1 - val_max) > tol
-        )
-        cleaned_df = cleaned_df.apply(
-            lambda s : [
-                s.iloc[i] if test_f(s.iloc[i], s.iloc[i+1], s.max()) else 0.0
-                for i in range(len(s)-1)
-            ] + [s.iloc[-1]]
-        )
+        if self.interfaces is not None:
+            # use the interfaces values to set things to 0
+            if type(self.interfaces) is not pd.Series:
+                self.interfaces = pd.Series(data=self.interfaces,
+                                            index=df.columns)
+            cleaned_df = cleaned_df.apply(
+                lambda s : [
+                    s.iloc[i] if s.index[i] >= self.interfaces[s.name] else 0.0
+                    for i in range(len(s))
+                ]
+            )
+        else:
+            # clear duplicates of leading values
+            test_f = lambda val1, val2, val_max : (
+                abs(val1 - val2) > tol or abs(val1 - val_max) > tol
+            )
+            cleaned_df = cleaned_df.apply(
+                lambda s : [
+                    s.iloc[i] if test_f(s.iloc[i], s.iloc[i+1], s.max()) else 0.0
+                    for i in range(len(s)-1)
+                ] + [s.iloc[-1]]
+            )
         return cleaned_df
 
 
