@@ -226,3 +226,26 @@ class testBiasEnsembleTable(object):
         # just to make sure no errors raise when there are NaNs in table
         bias_ABC = bias_A + bias_B + bias_C
 
+class testSRTISBiasFromNetwork(object):
+    def setup(self):
+        xval = paths.CoordinateFunctionCV(name="xA",
+                                          f=lambda s : s.xyz[0][0])
+        self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
+        self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
+        ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0), 
+                                           [-0.5, -0.4, -0.3, -0.2])
+        self.network = paths.MISTISNetwork([
+            (self.stateA, ifacesA, self.stateB)
+        ])
+        tcp = paths.analysis.LookupFunction(
+            ordinate=[-0.5, -0.4, -0.3, -0.2],
+            abscissa=[1.0, 0.5, 0.25, 0.125]
+        )
+        # force the TCP in
+        self.network.sampling_transitions[0].tcp = tcp
+
+
+    def test_bias_from_network(self):
+        bias = paths.SRTISBiasFromNetwork(self.network)
+        print bias.df
+        raise SkipTest

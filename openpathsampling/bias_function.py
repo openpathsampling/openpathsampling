@@ -184,3 +184,47 @@ class BiasEnsembleTable(BiasFunction):
         return min(1.0, prob)
 
 
+def SRTISBiasFromNetwork(network, steps=None):
+    """Create an SRTIS fixed bias from an analyzed network.
+
+    If 
+
+    Parameters
+    ----------
+
+    """
+    if steps is not None:
+        network.rate_matrix(steps)
+
+    has_tcp = [hasattr(t, 'tcp') for t in network.sampling_transitions]
+    if sum(has_tcp) != len(network.sampling_transitions):
+        raise RuntimeError(
+            "The network has no total crossing probability. "
+            + "Analyze it first!")
+
+    try:
+        ms_outer_ensembles = network.special_ensembles['ms_outer'].keys()
+    except KeyError:
+        ms_outer_ensembles= []
+    bias = BiasEnsembleTable(pd.DataFrame(), {})
+    for trans in network.sampling_transitions:
+        ensembles = trans.ensembles + ms_outer_ensembles
+        if network.ms_outer_objects is not None:
+            outer_lambdas = [outer.lambda_for_interface_set(trans.interfaces)
+                             for outer in network.ms_outer_objects
+                             if trans.interfaces in outer.interface_sets]
+        else:
+            outer_lambdas = []
+        try:
+            lambdas = trans.interfaces.lambdas + outer_lambdas
+        except TypeError:
+            # when trans.interfaces.lambdas is None (not a list)
+            raise RuntimeError(
+                "Can't create this bias: interface boundaries unknown")
+
+        bias += BiasEnsembleTable.ratios_from_dictionary(
+            {ens: trans.tcp(lambda_ens)
+             for (ens, lambda_ens) in zip(ensembles, lambdas)}
+        )
+    return bias
+

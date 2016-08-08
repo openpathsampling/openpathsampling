@@ -126,6 +126,8 @@ class Storage(NetCDFPlus):
                           NamedObjectStore(paths.MoveScheme))
         self.create_store('interfacesets',
                           NamedObjectStore(paths.InterfaceSet))
+        self.create_store('msouters',
+                          NamedObjectStore(paths.MSOuterTISInterface))
 
         # stores where nestable could make sense but is disabled
 
