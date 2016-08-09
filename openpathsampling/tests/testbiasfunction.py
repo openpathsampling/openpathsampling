@@ -232,19 +232,68 @@ class testSRTISBiasFromNetwork(object):
                                           f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
         self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
-        ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0), 
-                                           [-0.5, -0.4, -0.3, -0.2])
-        self.network = paths.MISTISNetwork([
-            (self.stateA, ifacesA, self.stateB)
-        ])
-        tcp = paths.analysis.LookupFunction(
-            ordinate=[-0.5, -0.4, -0.3, -0.2],
-            abscissa=[1.0, 0.5, 0.25, 0.125]
+        self.ifacesA = paths.VolumeInterfaceSet(xval, -1.0, 
+                                                [-0.5, -0.4, -0.3, -0.2])
+        self.ifacesB = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3, 0.2],
+                                                1.0)
+        self.tcp_A = paths.analysis.LookupFunction(
+            ordinate=[-0.5, -0.4, -0.3, -0.2, -0.1],
+            abscissa=[1.0, 0.5, 0.25, 0.125, 0.0625]
         )
-        # force the TCP in
-        self.network.sampling_transitions[0].tcp = tcp
+
+
+        ms_outer = paths.MSOuterTISInterface.from_lambdas(
+            {self.ifacesA : 0.1, self.ifacesB : 0.1}
+        )
+        self.network_ms = paths.MISTISNetwork(
+            [(self.stateA, self.ifacesA, self.stateB),
+             (self.stateB, self.ifacesB, self.stateA)],
+            ms_outers=[ms_outer]
+        )
 
 
     def test_bias_from_network(self):
-        bias = paths.SRTISBiasFromNetwork(self.network)
+        # force the TCP in
+        network = paths.MISTISNetwork([
+            (self.stateA, self.ifacesA, self.stateB)
+        ])
+        network.sampling_transitions[0].tcp = self.tcp_A
+        bias = paths.SRTISBiasFromNetwork(network)
+        transition = network.transitions.values()[0]  # only one
+
+        # check reciprocal of symmetric partners
+        for i in range(4):
+            for j in range(i, 4):
+                assert_equal(bias.dataframe.loc[i, j],
+                             1.0 / bias.dataframe.loc[j, i])
+
+        for i in range(len(transition.ensembles) - 1):
+            ens_to = transition.ensembles[i]
+            ens_from = transition.ensembles[i + 1]
+            assert_equal(bias.bias_value(ens_from, ens_to), 0.5)
+
+        for i in range(len(transition.ensembles) - 2):
+            ens_to = transition.ensembles[i]
+            ens_from = transition.ensembles[i + 2]
+            assert_equal(bias.bias_value(ens_from, ens_to), 0.25)
+
+    @raises(RuntimeError)
+    def test_fail_without_tcp(self):
+        network = paths.MISTISNetwork([
+            (self.stateA, self.ifacesA, self.stateB)
+        ])
+        bias = paths.SRTISBiasFromNetwork(network)
+
+    @raises(RuntimeError)
+    def test_fail_without_lambdas(self):
+        fake_ifaceA = paths.InterfaceSet(cv=self.ifacesA.cv,
+                                         volumes=self.ifacesA.volumes,
+                                         direction=self.ifacesA.direction)
+        network = paths.MISTISNetwork([
+            (self.stateA, fake_ifaceA, self.stateB)
+        ])
+        network.sampling_transitions[0].tcp = self.tcp_A
+        bias = paths.SRTISBiasFromNetwork(network)
+
+    def test_bias_from_ms_network(self):
         raise SkipTest

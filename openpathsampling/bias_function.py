@@ -289,7 +289,7 @@ def SRTISBiasFromNetwork(network, steps=None):
         except TypeError:
             # when trans.interfaces.lambdas is None (not a list)
             raise RuntimeError(
-                "Can't create this bias: interface boundaries unknown")
+                "Can't create SRTIS bias: interface boundaries unknown")
 
         bias += BiasEnsembleTable.ratios_from_dictionary(
             {ens: trans.tcp(lambda_ens)
