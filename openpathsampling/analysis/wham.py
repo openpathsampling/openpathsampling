@@ -132,13 +132,21 @@ class WHAM(object):
         )
 
         if self.interfaces is not None:
-            # use the interfaces values to set things to 0
+            # use the interfaces values to set anything before that value to
+            # zero
             if type(self.interfaces) is not pd.Series:
                 self.interfaces = pd.Series(data=self.interfaces,
                                             index=df.columns)
+            greater_almost_equal = lambda a, b : (a >= b or 
+                                                  abs(a - b) < 10e-10)
             cleaned_df = cleaned_df.apply(
                 lambda s : [
-                    s.iloc[i] if s.index[i] >= self.interfaces[s.name] else 0.0
+                    (
+                        s.iloc[i] 
+                        if greater_almost_equal(s.index[i],
+                                                self.interfaces[s.name])
+                        else 0.0
+                    )
                     for i in range(len(s))
                 ]
             )

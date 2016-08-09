@@ -119,6 +119,10 @@ class BiasEnsembleTable(BiasFunction):
                         msg += str(self.dataframe) + "\n"
                         msg += str(other.dataframe) + "\n"
                         msg += ens_from.name + "=>" + ens_to.name
+                        msg += ("  (" + str(self_from_id) + "," 
+                                + str(self_to_id) + ")  (" 
+                                + str(other_from_id) + "," 
+                                + str(other_to_id) + ")")
                         raise ValueError(msg)
                 value = self_value if self_value is not None else other_value
                 if value is not None:
@@ -153,6 +157,10 @@ class BiasEnsembleTable(BiasFunction):
 
     @property
     def df(self):
+        """Pretty-print version of internal dataframe.
+
+        Uses the names of the ensembles for printing.
+        """
         ids_to_ensembles = {self.ensembles_to_ids[e] : e
                             for e in self.ensembles_to_ids}
         df = self.dataframe.copy()
@@ -235,5 +243,18 @@ def SRTISBiasFromNetwork(network, steps=None):
             {ens: trans.tcp(lambda_ens)
              for (ens, lambda_ens) in zip(ensembles, lambdas)}
         )
+
+    # now the MS-outers need to be adjusted based on the number of
+    # interface sets they connect
+    for outer in ms_outer_ensembles:
+        outer_id = bias.ensembles_to_ids[outer]
+        outer_count = len(network.special_ensembles['ms_outer'][outer])
+        for col in bias.dataframe.columns:
+            val_from_outer = bias.dataframe.loc[outer_id, col]
+            bias.dataframe.set_value(index=outer_id, col=col,
+                                     value=val_from_outer * outer_count)
+            val_to_outer = bias.dataframe.loc[col, outer_id]
+            bias.dataframe.set_value(index=col, col=outer_id,
+                                     value=val_to_outer / outer_count)
     return bias
 
