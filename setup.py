@@ -202,7 +202,8 @@ Operating System :: MacOS
         'openpathsampling.engines.openmm',
         'openpathsampling.engines.openmm.features',
         'openpathsampling.engines.toy',
-        'openpathsampling.engines.toy.features'],
+        'openpathsampling.engines.toy.features',
+        'openpathsampling.numerics'],
     'platforms': ['Linux', 'Mac OS X', 'Windows'],
     'released': False,
     'requires': [

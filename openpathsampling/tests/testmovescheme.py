@@ -8,8 +8,8 @@ import copy
 
 import openpathsampling as paths
 from openpathsampling import VolumeFactory as vf
-from openpathsampling.analysis.move_scheme import *
-from openpathsampling.analysis.move_strategy import (
+from openpathsampling.high_level.move_scheme import *
+from openpathsampling.high_level.move_strategy import (
     levels,
     MoveStrategy, OneWayShootingStrategy, NearestNeighborRepExStrategy,
     OrganizeByMoveGroupStrategy, AllSetRepExStrategy

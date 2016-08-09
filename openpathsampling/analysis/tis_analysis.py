@@ -2,10 +2,11 @@ import logging
 
 import numpy as np
 
-from histogram import Histogram, histograms_to_pandas_dataframe
-from wham import WHAM
-from lookup_function import LookupFunction
 import openpathsampling as paths
+from openpathsampling.numerics import (
+    Histogram, histograms_to_pandas_dataframe, LookupFunction
+)
+from wham import WHAM
 from openpathsampling.netcdfplus import StorableNamedObject
 
 logger = logging.getLogger(__name__)

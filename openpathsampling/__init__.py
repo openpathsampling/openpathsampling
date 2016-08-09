@@ -30,8 +30,9 @@ except ImportError:  # pragma: no cover
     isrelease = str(ops_setup.preferences['released'])
         
         
-from analysis.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme, OneWayShootingMoveScheme
+from high_level.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
+    OneWayShootingMoveScheme
 )
 
 from analysis.tis_analysis import (
@@ -141,7 +142,9 @@ from volume import (
     RelativeComplementVolume, join_volumes
 )
 
-import numerics
+from high_level import move_strategy as strategies
+
+import openpathsampling.numerics as numerics
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
 import openpathsampling.engines.openmm as openmm
