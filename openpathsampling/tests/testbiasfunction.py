@@ -240,15 +240,9 @@ class testSRTISBiasFromNetwork(object):
             ordinate=[-0.5, -0.4, -0.3, -0.2, -0.1],
             abscissa=[1.0, 0.5, 0.25, 0.125, 0.0625]
         )
-
-
-        ms_outer = paths.MSOuterTISInterface.from_lambdas(
-            {self.ifacesA : 0.1, self.ifacesB : 0.1}
-        )
-        self.network_ms = paths.MISTISNetwork(
-            [(self.stateA, self.ifacesA, self.stateB),
-             (self.stateB, self.ifacesB, self.stateA)],
-            ms_outers=[ms_outer]
+        self.tcp_B = paths.analysis.LookupFunction(
+            ordinate=[0.5, 0.4, 0.3, 0.2, 0.1],
+            abscissa=[1.0, 0.2, 0.04, 0.008, 0.0016]
         )
 
 
@@ -296,4 +290,63 @@ class testSRTISBiasFromNetwork(object):
         bias = paths.SRTISBiasFromNetwork(network)
 
     def test_bias_from_ms_network(self):
+        ms_outer = paths.MSOuterTISInterface.from_lambdas(
+            {self.ifacesA : -0.1, self.ifacesB : 0.1}
+        )
+        network = paths.MISTISNetwork(
+            [(self.stateA, self.ifacesA, self.stateB),
+             (self.stateB, self.ifacesB, self.stateA)],
+            ms_outers=[ms_outer]
+        )
+        transition_AB = None
+        transition_BA = None
+        for t in network.sampling_transitions:
+            if t.stateA == self.stateA:
+                t.tcp = self.tcp_A
+                transition_AB = t
+            elif t.stateA == self.stateB:
+                t.tcp = self.tcp_B
+                transition_BA = t
+            else:
+                print [t.stateA, t.stateB]
+                print [self.stateA, self.stateB]
+                raise RuntimeError("Weird states in test transition")
+
+        bias = paths.SRTISBiasFromNetwork(network)
+
+        n_ensembles = len(bias.dataframe.index)
+        for i in range(n_ensembles):
+            for j in range(i, n_ensembles):
+                if not np.isnan(bias.dataframe.loc[i, j]):
+                    np.testing.assert_almost_equal(
+                        bias.dataframe.loc[i, j],
+                        1.0 / bias.dataframe.loc[j, i]
+                    )
+
+        for i in range(len(transition_AB.ensembles) - 1):
+            ens_to = transition_AB.ensembles[i]
+            ens_from = transition_AB.ensembles[i + 1]
+            assert_almost_equal(bias.bias_value(ens_from, ens_to), 0.5)
+
+        for i in range(len(transition_BA.ensembles) - 1):
+            ens_to = transition_BA.ensembles[i]
+            ens_from = transition_BA.ensembles[i + 1]
+            assert_almost_equal(bias.bias_value(ens_from, ens_to), 0.2)
+
+        for ensA in transition_AB.ensembles:
+            for ensB in transition_BA.ensembles:
+                assert_equal(np.isnan(bias.bias_value(ensA, ensB)), True)
+                assert_equal(np.isnan(bias.bias_value(ensB, ensA)), True)
+
+        assert_almost_equal(bias.bias_value(transition_BA.ensembles[-1],
+                                            network.ms_outers[0]),
+                            5.0 / 2)
+        assert_almost_equal(bias.bias_value(transition_AB.ensembles[-1],
+                                            network.ms_outers[0]),
+                            2.0 / 2)
+
+
+
+
+
         raise SkipTest
