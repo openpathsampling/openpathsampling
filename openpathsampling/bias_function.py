@@ -32,14 +32,37 @@ class BiasLookupFunction(BiasFunction):
 
 
 class BiasEnsembleTable(BiasFunction):
+    """Bias based on the ensemble; set from a table.
+
+    The rows indicate the "from" ensemble; the columns indicate the "to"
+    ensemble. The entries are the probability of accepting the move (if
+    greater than 1, take 100% probability).
+
+    Note
+    ----
+    We use the `ensembles_to_ids` dictionary to isolate the ensembles from
+    the dataframe indices, because as of Pandas 0.18, callables (like
+    ensembles) don't behave well as index/columns for dataframes.
+
+    Parameters
+    ----------
+    dataframe : pandas.DataFrame
+        dataframe with integers for index, columns
+    ensembles_to_ids : dict, keys :class:`.Ensemble`, values int
+        mapping of ensemble to the specific volume
+    """
     # TODO: bias seems kind of fixed to Metropolis acceptance criterion --
     # is that okay elsewhere?
     def __init__(self, dataframe, ensembles_to_ids):
         super(BiasEnsembleTable, self).__init__() 
         self.dataframe = dataframe
         self.ensembles_to_ids = ensembles_to_ids
-        self.ids_to_ensembles = {self.ensembles_to_ids[e] : e
-                                 for e in self.ensembles_to_ids}
+        self._ids_to_ensembles = {self.ensembles_to_ids[e] : e
+                                  for e in self.ensembles_to_ids}
+
+    @property
+    def ids_to_ensembles(self):
+        return self._ids_to_ensembles
 
     def __add__(self, other):
         # the following craziness is to get the ensembles listed in the
@@ -136,6 +159,21 @@ class BiasEnsembleTable(BiasFunction):
 
     @classmethod
     def ratios_from_dictionary(cls, ratio_dictionary):
+        """Create bias from dictionary of 1D values as ratios.
+
+        The bias for entry (from, to) is given by v_from / v_to, where
+        v_from = ratio_dictionary[from] and v_to = ratio_dictionary[to].
+
+        Parameters
+        ----------
+        ratio_dictionary : dict; keys :class:`.Ensemble`, values float
+            input data for each ensemble
+
+        Returns
+        -------
+        :class:`.BiasEnsembleTable`
+            bias table
+        """
         ensembles_to_ids = {e : ratio_dictionary.keys().index(e) 
                             for e in ratio_dictionary.keys()}
         id_based_df = pd.DataFrame(index=ensembles_to_ids.values(),
@@ -151,6 +189,20 @@ class BiasEnsembleTable(BiasFunction):
 
 
     def bias_value(self, from_ensemble, to_ensemble):
+        """Value of the bias from from_ensemble to to_ensemble.
+
+        Parameters
+        ----------
+        from_ensemble : :class:`.Ensemble`
+            ensemble to move from
+        to_ensemble : :class:`.Ensemble`
+            ensemble to move to
+
+        Returns
+        -------
+        float
+            value of the bias
+        """
         from_id = self.ensembles_to_ids[from_ensemble]
         to_id = self.ensembles_to_ids[to_ensemble]
         return self.dataframe.loc[from_id, to_id]
