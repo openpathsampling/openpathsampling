@@ -39,7 +39,10 @@ class ObjectJSON(object):
         'numpy',
         'math',
         'pandas',
-        'mdtraj'
+        'mdtraj',
+        'simtk',
+        'simtk.unit',
+        'simtk.openmm'
     ]
 
     def __init__(self, unit_system=None):
