@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import collections
+
 class LookupFunction(object):
     """
     Interpolation between datapoints.
@@ -28,6 +30,14 @@ class LookupFunction(object):
             self.pairs[x] = y
         self.sorted_ordinates = np.array(sorted(self.pairs.keys()))
         self._values = np.array([self.pairs[x] for x in self.sorted_ordinates])
+
+    @classmethod
+    def from_dict(cls, dct):
+        x = dct.keys()
+        y = dct.values()
+        print x
+        print y
+        return cls(x, y)
 
     def keys(self):
         """
@@ -193,3 +203,70 @@ class LookupFunctionGroup(LookupFunction):
     
     def append(self, item):
         self.functions.append(item)
+
+
+class VoxelLookupFunction(object):
+    """Turn sparse histogram into a lookup function.
+
+    For any data point inside a voxel, return the sparse histogram value for
+    that voxel. If no such voxel, returns 0.0. No interpolation.
+    """
+    def __init__(self, left_bin_edges, bin_widths, counter):
+        self.left_bin_edges = left_bin_edges
+        self.bin_widths = bin_widths
+        self.counter = counter
+
+    def keys(self):
+        return self.counter.keys()
+
+    def values(self):
+        return self.counter.values()
+
+    def bin_to_left_edge(self, bin_num):
+        return np.asarray(bin_num) * self.bin_widths + self.left_bin_edges
+
+    def val_to_bin(self, val):
+        return (np.asarray(val) - self.left_bin_edges) / self.bin_widths
+
+    @property
+    def counter_by_bin_edges(self):
+        return collections.Counter(
+            {tuple(self.bin_to_left_edge(k)) : self.counter[k] 
+             for k in self.counter.keys()}
+        )
+
+    def df_2d(self, x_range=None, y_range=None):
+        """
+        Return a pandas.DataFrame for 2D lookup functions. Error if not 2D.
+
+        Parameters
+        ----------
+        xrange
+        yrange
+
+        Returns
+        -------
+        pandas.DataFrame :
+            Values of the lookup function for each bin. The index and
+            columns are bin numbers.
+        """
+        bin_widths = self.bin_widths
+        if len(self.left_bin_edges) != 2:
+            raise RuntimeError("Can't make 2D dataframe from non-2D data!")
+        counter = self.counter
+        index = None
+        columns = None
+        if x_range is not None:
+            index = range(x_range[0], x_range[1]+1)
+        if y_range is not None:
+            columns = range(y_range[0], y_range[1]+1)
+        df = pd.DataFrame(index=index, columns=columns)
+        for (k,v) in counter.items():
+            df.set_value(k[0], k[1], v)
+        df = df.sort_index(0).sort_index(1)
+        return df
+
+    def __call__(self, value):
+        val_bin = tuple(np.floor(self.val_to_bin(value)))
+        return self.counter[val_bin]
+

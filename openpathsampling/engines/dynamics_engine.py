@@ -1,9 +1,9 @@
-'''
+"""
 Created on 01.07.2014
 
 @author JDC Chodera
 @author: JH Prinz
-'''
+"""
 
 import logging
 
@@ -11,52 +11,53 @@ import simtk.unit as u
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
-from snapshot import BaseSnapshot
+from snapshot import BaseSnapshot, SnapshotDescriptor
 from trajectory import Trajectory
 
 logger = logging.getLogger(__name__)
 
-#=============================================================================
+# =============================================================================
 # SOURCE CONTROL
-#=============================================================================
+# =============================================================================
 
 __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
-#=============================================================================
+
+# =============================================================================
 # Multi-State Transition Interface Sampling
-#=============================================================================
+# =============================================================================
 
 
 class DynamicsEngine(StorableNamedObject):
-    '''
+    """
     Wraps simulation tool (parameters, storage, etc.)
 
     Notes
     -----
     Should be considered an abstract class: only its subclasses can be
     instantiated.
-    '''
+    """
 
     FORWARD = 1
     BACKWARD = -1
 
     _default_options = {
-        'n_frames_max' : None,
-        'timestep' : None
+        'n_frames_max': None,
+        'timestep': None
     }
 
     units = {
-        'length' : u.Unit({}),
-        'velocity' : u.Unit({}),
-        'energy' : u.Unit({})
+        'length': u.Unit({}),
+        'velocity': u.Unit({}),
+        'energy': u.Unit({})
     }
 
     base_snapshot_type = BaseSnapshot
 
-    def __init__(self, options=None, template=None):
-        '''
+    def __init__(self, options=None, descriptor=None, template=None):
+        """
         Create an empty DynamicsEngine object
-        
+
         Notes
         -----
         The purpose of an engine is to create trajectories and keep track
@@ -65,30 +66,32 @@ class DynamicsEngine(StorableNamedObject):
         the associated storage. In the initialization this storage is
         created as well as the related Trajectory and Snapshot classes are
         initialized.
-        '''
+        """
 
         super(DynamicsEngine, self).__init__()
 
-        self.template = template
-
-        # Trajectories need to know the engine as a hack to get the topology.
-        # Better would be a link to the topology directly. This is needed to create
-        # mdtraj.Trajectory() objects
-
-        # TODO: Remove this and put the logic outside of the engine. The engine in trajectory is only
-        # used to get the solute indices which should depend on the topology anyway
-        # Trajectory.engine = self
-
+        self.descriptor = descriptor
         self._check_options(options)
 
-        # as default set a newly generated engine as the default engine
-        # self.set_as_default()
-        # REMOVED because this breaks the ability to have multiple engines
+    @property
+    def current_snapshot(self):
+        return None
 
-    def _check_options(self, options = None):
+    @current_snapshot.setter
+    def current_snapshot(self, snap):
+        pass
+
+    def to_dict(self):
+        return {
+            'options': self.options,
+            'descriptor': self.descriptor
+        }
+
+    def _check_options(self, options=None):
         """
-        This will register all variables in the options dict as a member variable if
-        they are present in either the DynamicsEngine.default_options or this
+        This will register all variables in the options dict as a member
+        variable if they are present in either the
+        `DynamicsEngine.default_options` or this
         classes default_options, no multiple inheritance is supported!
         It will use values with the priority in the following order
         - DynamicsEngine.default_options
@@ -107,9 +110,11 @@ class DynamicsEngine(StorableNamedObject):
 
         Notes
         -----
-        Options are what is necessary to recreate the engine, but not runtime variables or independent
-        variables like the actual initialization status, the runners or an attached storage.
-        If there are non-default options present they will be ignored (no error thrown)
+        Options are what is necessary to recreate the engine, but not runtime
+        variables or independent variables like the actual initialization
+        status, the runners or an attached storage.
+        If there are non-default options present they will be ignored
+        (no error thrown)
         """
         # start with default options from a dynamics engine
         my_options = {}
@@ -138,50 +143,89 @@ class DynamicsEngine(StorableNamedObject):
                 if variable in my_options:
                     if type(my_options[variable]) is type(default_value):
                         if type(my_options[variable]) is u.Unit:
-                            if my_options[variable].unit.is_compatible(default_value):
+                            if my_options[variable].unit.is_compatible(
+                                    default_value):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('Unit of option "' + str(variable) + '" (' + str(my_options[variable].unit) + ') not compatible to "' + str(default_value.unit) + '"')
+                                raise ValueError(
+                                    'Unit of option "' + str(variable) + '" (' +
+                                    str(my_options[variable].unit) +
+                                    ') not compatible to "' +
+                                    str(default_value.unit) +
+                                    '"')
 
                         elif type(my_options[variable]) is list:
-                            if type(my_options[variable][0]) is type(default_value[0]):
+                            if type(my_options[variable][0]) is \
+                                    type(default_value[0]):
                                 okay_options[variable] = my_options[variable]
                             else:
-                                raise ValueError('List elements for option "' + str(variable) + '" must be of type "' + str(type(default_value[0])) + '"')
+                                raise \
+                                    ValueError('List elements for option "' +
+                                    str(variable) + '" must be of type "' +
+                                    str(type(default_value[0])) + '"')
                         else:
                             okay_options[variable] = my_options[variable]
-                    elif isinstance(type(my_options[variable]), type(default_value)):
+                    elif isinstance(my_options[variable], type(default_value)):
                         okay_options[variable] = my_options[variable]
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
                     else:
-                        raise ValueError('Type of option "' + str(variable) + '" (' + str(type(my_options[variable])) + ') is not "' + str(type(default_value)) + '"')
+                        raise ValueError(
+                            'Type of option "' + str(variable) + '" (' +
+                            str(type(my_options[variable])) + ') is not "' +
+                            str(type(default_value)) + '"')
 
             self.options = okay_options
         else:
             self.options = {}
 
     def __getattr__(self, item):
-        # default is to look for an option and return it's value
-        return self.options[item]
+        # first, check for errors that might be shadowed in properties
+        if item in self.__class__.__dict__:
+            # we should have this attribute
+            p = self.__class__.__dict__[item]
+            if isinstance(p, property):
+                # re-run, raise the error inside the property
+                try:
+                    result = p.fget(self)
+                except:
+                    raise
+                else:
+                    # alternately, trust the fixed result with
+                    # return result  # miraculously fixed
+                    raise AttributeError(
+                        "Unknown problem occurred in property" + 
+                        str(p.fget.func_name) + ": Second attempt returned"
+                        + str(result)
+                    )
+            # for now, items in dict that fail with AttributeError will just
+            # give the default message; to change, add something here like:
+            # raise AttributeError("Something went wrong with " + str(item))
+
+        # see, if the attribute is actually a dimension
+        if self.descriptor is not None:
+            if item in self.descriptor.dimensions:
+                return self.descriptor.dimensions[item]
+
+        # fallback is to look for an option and return it's value
+        try:
+            return self.options[item]
+        except KeyError:
+            # convert KeyError to AttributeError
+            default_msg = "'{0}' has no attribute '{1}'"
+            raise AttributeError(
+                (default_msg + ", nor does its options dictionary").format(
+                    self.__class__.__name__,
+                    item
+                )
+            )
 
     @property
-    def topology(self):
-        return self.template.topology
-
-    @property
-    def n_atoms(self):
-        return self.topology.n_atoms
-
-    @property
-    def n_spatial(self):
-        return self.topology.n_spatial
-
-    def to_dict(self):
-        return {
-            'options' : self.options,
-            'template' : self.template
-        }
+    def dimensions(self):
+        if self.descriptor is None:
+            return {}
+        else:
+            return self.descriptor.dimensions
 
     def set_as_default(self):
         import openpathsampling as paths
@@ -203,7 +247,7 @@ class DynamicsEngine(StorableNamedObject):
         when you hit a stop condition."""
         pass
 
-    def stop_conditions(self, trajectory, continue_conditions=None, 
+    def stop_conditions(self, trajectory, continue_conditions=None,
                         trusted=True):
         """
         Test whether we can continue; called by generate a couple of times,
@@ -216,10 +260,13 @@ class DynamicsEngine(StorableNamedObject):
         continue_conditions : list of function(Trajectory)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
+        trusted : bool
+            If `True` (default) the stopping conditions are evaluated
+            as trusted.
 
         Returns
         -------
-        boolean:
+        bool
             true if the dynamics should be stopped; false otherwise
         """
         stop = False
@@ -228,7 +275,6 @@ class DynamicsEngine(StorableNamedObject):
                 can_continue = condition(trajectory, trusted)
                 stop = stop or not can_continue
         return stop
-
 
     def generate_forward(self, snapshot, ensemble):
         """
@@ -253,14 +299,15 @@ class DynamicsEngine(StorableNamedObject):
         ----------
         snapshot : :class:`openpathsampling.snapshot.Snapshot`
             initial coordinates and velocities in form of a Snapshot object
-        running : (list of) function(:class:`openpathsampling.trajectory.Trajectory`)
+        running : (list of)
+        function(:class:`openpathsampling.trajectory.Trajectory`)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
         direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
             If +1 then this will integrate forward, if -1 it will reversed the
-            momenta of the given snapshot and then prepending generated snapshots
-            with reversed momenta. This will generate a _reversed_ trajectory that
-            effectively ends in the initial snapshot
+            momenta of the given snapshot and then prepending generated
+            snapshots with reversed momenta. This will generate a _reversed_
+            trajectory that effectively ends in the initial snapshot
 
         Returns
         -------    
@@ -276,7 +323,8 @@ class DynamicsEngine(StorableNamedObject):
         """
 
         if direction == 0:
-            raise RuntimeError('direction must be positive (FORWARD) or negative (BACKWARD).')
+            raise RuntimeError(
+                'direction must be positive (FORWARD) or negative (BACKWARD).')
 
         try:
             iter(running)
@@ -303,9 +351,9 @@ class DynamicsEngine(StorableNamedObject):
                                     trusted=False)
 
         logger.info("Starting trajectory")
-        log_freq = 10 # TODO: set this from a singleton class
-        while stop == False:
-            if self.options.get('n_frames_max', None) is not None :
+        log_freq = 10  # TODO: set this from a singleton class
+        while not stop:
+            if self.options.get('n_frames_max', None) is not None:
                 if len(trajectory) >= self.options['n_frames_max']:
                     break
 
@@ -337,7 +385,6 @@ class DynamicsEngine(StorableNamedObject):
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
 
-
     def generate_n_frames(self, n_frames=1):
         """Generates n_frames, from but not including the current snapshot.
         
@@ -357,10 +404,9 @@ class DynamicsEngine(StorableNamedObject):
         """
         self.start()
         traj = Trajectory([self.generate_next_frame()
-                                 for i in range(n_frames)])
+                           for i in range(n_frames)])
         self.stop(traj)
         return traj
-        
 
     @classmethod
     def check_snapshot_type(cls, snapshot):
@@ -370,3 +416,14 @@ class DynamicsEngine(StorableNamedObject):
                  'You are using "%s". Make sure that this is intended.') %
                 (cls.base_snapshot_type.__name__, snapshot.__class__.__name__)
             )
+
+
+class NoEngine(DynamicsEngine):
+    _default_options = {}
+
+    def __init__(self, descriptor):
+        super(NoEngine, self).__init__()
+        self.descriptor = descriptor
+
+    def generate_next_frame(self):
+        pass

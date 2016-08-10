@@ -12,8 +12,53 @@ except ImportError:
     has_pandas=False
 
 
-
 import sys
+
+def sample_from_trajectories(ensemble, trajectories, used_trajectories=None,
+                             avoid_reuse=True):
+    """
+    Generates a sample for the given ensemble and one of the trajectories.
+
+    Parameters
+    ----------
+    ensemble : :class:`.Ensemble`
+        the ensemble for the sample
+    trajectories : list of :class:`.Trajectory`
+        the trajectories to consider filling the sample with
+    used_trajectories : list of :class:`.Trajectory`
+        trajectories which are already in use
+    avoid_reuse : bool
+        if True (default), only use a trajectory in used_trajectories if
+        no other trajectory satisfies the ensemble. If False, use the first
+        trajectory in trajectories which satisfies the ensemble
+
+    Returns
+    -------
+    :class:`.Sample` or None :
+        the sample created, or None if no sample could be created
+    """
+    sample = None
+    selected = None
+    if used_trajectories is None:  # pragma: no cover
+        used_trajectories = []
+    possible = [traj for traj in trajectories if ensemble(traj)]
+    if avoid_reuse:
+        for traj in possible:
+            if traj not in used_trajectories:
+                selected = traj
+                break
+
+    if selected is None and len(possible) > 0:
+        # either not avoid_reuse or all possibilities already used
+        selected = possible[0]  # take the first one
+
+    if selected is not None:
+        sample = paths.Sample(replica=None,
+                              trajectory=selected,
+                              ensemble=ensemble)
+    return sample
+
+
 
 class MoveScheme(StorableNamedObject):
     """
@@ -35,6 +80,7 @@ class MoveScheme(StorableNamedObject):
         self.strategies = {}
         self.balance_partners = {}
         self.choice_probability = {}
+        self._real_choice_probability = {} # used as override, e.g., in SRTIS
         self.root_mover = None
 
         self._mover_acceptance = {} # used in analysis
@@ -44,8 +90,9 @@ class MoveScheme(StorableNamedObject):
             'movers' : self.movers,
             'network' : self.network,
             'choice_probability' : self.choice_probability,
+            'real_choice_probability' : self.real_choice_probability,
             'balance_partners' : self.balance_partners,
-            'root_mover' : self.root_mover
+            'root_mover' : self.root_mover,
         }
         return ret_dict
 
@@ -55,9 +102,21 @@ class MoveScheme(StorableNamedObject):
         scheme.__init__(dct['network'])
         scheme.movers = dct['movers']
         scheme.choice_probability = dct['choice_probability']
+        scheme._real_choice_probability = dct['real_choice_probability']
         scheme.balance_partners = dct['balance_partners']
         scheme.root_mover = dct['root_mover']
         return scheme
+
+    @property
+    def real_choice_probability(self):
+        if self._real_choice_probability == {}:
+            return self.choice_probability
+        else:
+            return self._real_choice_probability
+
+    @real_choice_probability.setter
+    def real_choice_probability(self, value):
+        self._real_choice_probability = value
 
     def append(self, strategies, levels=None, force=False):
         """
@@ -304,7 +363,7 @@ class MoveScheme(StorableNamedObject):
         we need. The list returned by this is of a particular format: it
         should be thought of as a list of lists of ensembles. Call this the
         "list" and the "sublists". At least one member of each sublist is
-        required, and if a "sublist" is actually, an ensemble, it is treated
+        required, and if a "sublist" is actually an ensemble, it is treated
         as a sublist of one. So returning [a, b, [c, d], e] is equivalent to
         returning [[a], [b], [c, d], [e]], and is interpreted as "initial
         conditions are ensembles a, b, e, and one of either c or d".
@@ -313,26 +372,40 @@ class MoveScheme(StorableNamedObject):
         ensembles a, b, and c would return [a, b, c], or equivalently, [[a],
         [b], [c]]. Single-replica TIS would return [[a, b, c]].
         """
-        return list(self.find_used_ensembles(root))
+        # basically, take the find_used_ensembles and return them in the
+        # canonical order from network.all_ensembles
+        used_ensembles = self.find_used_ensembles(root)
+        output_ensembles = [ens for ens in self.network.all_ensembles
+                            if ens in used_ensembles]
+        return output_ensembles
 
 
     def initial_conditions_from_trajectories(self, trajectories,
-                                             sampleset=None):
+                                             sample_set=None,
+                                             avoid_reuse=True):
         """
         Create a SampleSet with as many initial samples as possible.
+
+        The goal of this is to give the initial SampleSet that would be
+        desired. 
 
         Parameters
         ----------
         trajectories : list of :class:`.Trajectory` or :class:`.Trajectory`
             the input trajectories to use
-        sampleset : :class:`.SampleSet`, optional
+        sample_set : :class:`.SampleSet`, optional
             if given, add samples to this sampleset. Default is None, which
             means that this will start a new sampleset.
+        avoid_reuse : bool
+            if True (default), use a trajectory that hasn't been used
+            already, if possible (otherwise use the first trajectory that
+            satisfies the ensemble). If False, always use the first
+            trajectory in trajectories that satisfies the ensemble
 
         Returns
         -------
         :class:`.SampleSet`
-            sample set with samples for every initial ensemble for this
+            sampleset with samples for every initial ensemble for this
             scheme that could be satisfied by the given trajectories
 
         See Also
@@ -340,48 +413,51 @@ class MoveScheme(StorableNamedObject):
         list_initial_ensembles
         """
         ensembles_to_fill = self.list_initial_ensembles()
-        if sampleset is None:
-            sampleset = paths.SampleSet([])
+        if sample_set is None:
+            sample_set = paths.SampleSet([])
 
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
+
+        used_trajectories = [s.trajectory for s in sample_set]
 
         for ens_list in ensembles_to_fill:
             if type(ens_list) is not list:
                 ens_list = [ens_list]
             sample = None
             for ens in ens_list:
-                if ens in sampleset.ensemble_list():
-                    break  # we've already got one!
-                sample = None
+                if ens in sample_set.ensemble_list():
+                    break  # We've already got one. It's very nice
                 # fill only the first in ens_list that can be filled
                 # 1. try forward
-                for traj in trajectories:
-                    if ens(traj):
-                        sample = paths.Sample(replica=None, 
-                                              trajectory=traj,
-                                              ensemble=ens)
-                        break  # take the first such trajectory
-                if sample is not None:
-                    break  # take the first ensemble that works
-                
+                possible = [traj for traj in trajectories if ens(traj)]
+                sample = sample_from_trajectories(
+                    ensemble=ens,
+                    trajectories=trajectories,
+                    used_trajectories=used_trajectories,
+                    avoid_reuse=avoid_reuse
+                )
+
                 # 2. try reversed
-                for traj in trajectories:
-                    if ens(traj.reversed):
-                        sample = paths.Sample(replica=None,
-                                              trajectory=traj.reversed,
-                                              ensemble=ens)
-                        break  # take the first such trajectory
-                if sample is not None:
-                    break  # take the first ensemble that works
+                if sample is None:
+                    all_reversed = [traj.reversed for traj in trajectories]
+                    sample = sample_from_trajectories(
+                        ensemble=ens,
+                        trajectories=all_reversed,
+                        used_trajectories=used_trajectories,
+                        avoid_reuse=avoid_reuse
+                    )
 
                 # 3. hypothetically, try extending (future)
+
             # now, if we've found a sample, add it
             if sample is not None:
-                sampleset.append_as_new_replica(sample)
-        return sampleset
+                sample_set.append_as_new_replica(sample)
+                used_trajectories.append(sample.trajectory)
 
-    def check_initial_conditions(self, sampleset):
+        return sample_set
+
+    def check_initial_conditions(self, sample_set):
         """
         Check for missing or extra ensembles for initial conditions.
 
@@ -391,7 +467,7 @@ class MoveScheme(StorableNamedObject):
 
         Parameters
         ----------
-        sampleset : :class:`.SampleSet`
+        sample_set : :class:`.SampleSet`
             proposed set of initial conditions for this movescheme
 
         Returns
@@ -400,7 +476,7 @@ class MoveScheme(StorableNamedObject):
             ensembles needed by the move scheme and missing in the sample
             set, in the format used by `list_initial_ensembles`
         extra : list of :class:`.Ensemble`
-            ensembles in the sample set that are not used by the 
+            ensembles in the sampleset that are not used by the
 
         See Also
         --------
@@ -409,7 +485,7 @@ class MoveScheme(StorableNamedObject):
         initial_conditions_report
         """
         ensembles_to_fill = self.list_initial_ensembles()
-        samples = paths.SampleSet(sampleset)  # to make a copy
+        samples = paths.SampleSet(sample_set)  # to make a copy
         ensembles_filled = samples.ensemble_list()
         missing = []
         for ens_list in ensembles_to_fill:
@@ -427,13 +503,13 @@ class MoveScheme(StorableNamedObject):
         # missing, extra
         return (missing, samples.ensemble_list())
 
-    def assert_initial_conditions(self, sampleset, allow_extras=False):
+    def assert_initial_conditions(self, sample_set, allow_extras=False):
         """
         Assertion that the given sampleset is good for initial conditions.
 
         Parameters
         ----------
-        sampleset : :class:`.SampleSet`
+        sample_set : :class:`.SampleSet`
             proposed set of initial conditions for this movescheme
         allow_extras : bool
             whether extra ensembles are allowed, default False, meaning the
@@ -449,7 +525,7 @@ class MoveScheme(StorableNamedObject):
         check_initial_conditions
         initial_conditions_report
         """
-        (missing, extras) = self.check_initial_conditions(sampleset)
+        (missing, extras) = self.check_initial_conditions(sample_set)
         msg = ""
         if len(missing) > 0:
             msg += "Missing ensembles: " + str(missing) + "\n"
@@ -458,7 +534,7 @@ class MoveScheme(StorableNamedObject):
         if msg != "":
             raise AssertionError("Bad initial conditions.\n" + msg)
 
-    def initial_conditions_report(self, sampleset):
+    def initial_conditions_report(self, sample_set):
         """
         String report on whether the given SampleSet gives good initial
         conditions.
@@ -468,7 +544,7 @@ class MoveScheme(StorableNamedObject):
 
         Parameters
         ----------
-        sampleset : :class:`.SampleSet`
+        sample_set : :class:`.SampleSet`
             proposed set of initial conditions for this movescheme
 
         Returns
@@ -477,7 +553,7 @@ class MoveScheme(StorableNamedObject):
             a human-readable string describing if (and which) ensembles are
             missing
         """
-        (missing, extra) = self.check_initial_conditions(sampleset)
+        (missing, extra) = self.check_initial_conditions(sample_set)
         msg = ""
         if len(missing) == 0:
             msg += "No missing ensembles.\n"
@@ -579,7 +655,8 @@ class MoveScheme(StorableNamedObject):
             expected number of steps to get `n_attempts` of `mover`
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.choice_probability[m] for m in movers])
+        total_probability = sum([self.real_choice_probability[m] 
+                                 for m in movers])
         return (n_attempts / total_probability)
 
     def n_trials_for_steps(self, mover, n_steps):
@@ -605,7 +682,8 @@ class MoveScheme(StorableNamedObject):
             expected number of trials of `mover` in `n_steps` MC steps
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.choice_probability[m] for m in movers])
+        total_probability = sum([self.real_choice_probability[m] 
+                                 for m in movers])
         return (total_probability * n_steps)
 
 
@@ -654,7 +732,7 @@ class MoveScheme(StorableNamedObject):
         try:
             acceptance = float(n_accepted) / n_trials
         except ZeroDivisionError:
-            acceptance = "nan"
+            acceptance = float("nan")
 
         line = ("* "*indentation + str(move_name) +
                 " ran " + "{:.3%}".format(float(n_trials)/n_total_trials) +
@@ -663,8 +741,8 @@ class MoveScheme(StorableNamedObject):
                 str(n_trials) + " ({:.2%})\n".format(acceptance))
         return line
 
-    def move_acceptance(self, storage):
-        for step in storage.steps:
+    def move_acceptance(self, steps):
+        for step in steps:
             delta = step.change
             for m in delta:
                 acc = 1 if m.accepted else 0
@@ -675,9 +753,9 @@ class MoveScheme(StorableNamedObject):
                 except KeyError:
                     self._mover_acceptance[key] = [acc, 1]
 
-    def move_summary(self, storage, movers=None, output=sys.stdout, depth=0):
+    def move_summary(self, steps, movers=None, output=sys.stdout, depth=0):
         """
-        Provides a summary of the movers in `storage` based on this transition.
+        Provides a summary of the movers in `steps`.
 
         The summary includes the number of moves attempted and the
         acceptance rate. In some cases, extra lines are printed for each of
@@ -685,8 +763,8 @@ class MoveScheme(StorableNamedObject):
 
         Parameters
         ----------
-        storage : Storage
-            The storage object
+        steps : iterable of :class:`.MDStep`
+            steps to analyze
         movers : None or string or list of PathMover
             If None, provides a short summary of the keys in self.mover. If
             a string, provides a short summary using that string as a key in
@@ -716,9 +794,12 @@ class MoveScheme(StorableNamedObject):
             stats[groupname] = [0, 0]
 
         if self._mover_acceptance == { }:
-            self.move_acceptance(storage)
+            self.move_acceptance(steps)
 
-        tot_trials = len(storage.steps)
+        n_no_move_trials = sum([self._mover_acceptance[k][1]
+                                for k in self._mover_acceptance.keys()
+                                if k[0] is None])
+        tot_trials = len(steps) - n_no_move_trials
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
@@ -729,8 +810,9 @@ class MoveScheme(StorableNamedObject):
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
             try:
-                expected_frequency[groupname] = sum([self.choice_probability[m] 
-                                                     for m in group])
+                expected_frequency[groupname] = sum(
+                    [self.real_choice_probability[m] for m in group]
+                )
             except KeyError:
                 expected_frequency[groupname] = float('nan')
 
@@ -768,24 +850,28 @@ class DefaultScheme(MoveScheme):
         global_strategy = strategies.OrganizeByMoveGroupStrategy()
         self.append(global_strategy)
 
-        msouters = self.network.special_ensembles['ms_outer']
-        for ms in msouters.keys():
-            self.append(strategies.OneWayShootingStrategy(
-                ensembles=[ms],
-                group="ms_outer_shooting",
-                engine=engine
-            ))
-            self.append(strategies.PathReversalStrategy(
-                ensembles=[ms],
-                replace=False
-            ))
-            ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
-            pairs = [[ms, neighb] for neighb in ms_neighbors]
-            self.append(strategies.SelectedPairsRepExStrategy(
-                ensembles=pairs
-            ))
-        #ms_outer_shoot_w = float(len(msouters)) / n_ensembles
-        #global_strategy.group_weights['ms_outer_shooting'] = ms_outer_shoot_w
+        try:
+            msouters = self.network.special_ensembles['ms_outer']
+        except KeyError:
+            # if no ms_outer, ignore the ms_outer setup for now; later we
+            # might default to a state swap
+            pass
+        else:
+            for ms in msouters.keys():
+                self.append(strategies.OneWayShootingStrategy(
+                    ensembles=[ms],
+                    group="ms_outer_shooting",
+                    engine=engine
+                ))
+                self.append(strategies.PathReversalStrategy(
+                    ensembles=[ms],
+                    replace=False
+                ))
+                ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
+                pairs = [[ms, neighb] for neighb in ms_neighbors]
+                self.append(strategies.SelectedPairsRepExStrategy(
+                    ensembles=pairs
+                ))
 
 class LockedMoveScheme(MoveScheme):
     def __init__(self, root_mover, network=None, root_accepted=None):
@@ -815,6 +901,7 @@ class LockedMoveScheme(MoveScheme):
         # things that LockedMoveScheme overrides
         ret_dict['movers'] = self._movers
         ret_dict['choice_probability'] = self._choice_probability
+        ret_dict['real_choice_probability'] = self._real_choice_probability
         return ret_dict
 
     @property
@@ -840,6 +927,23 @@ class LockedMoveScheme(MoveScheme):
     @movers.setter
     def movers(self, vals):
         self._movers = vals
+
+
+class SRTISScheme(DefaultScheme):
+    """
+    This gives exactly the DefaultMoveScheme, but as an SRTIS setup.
+    """
+    def __init__(self, network, bias=None, engine=None):
+        super(SRTISScheme, self).__init__(network, engine)
+        sr_minus_strat = strategies.SingleReplicaMinusMoveStrategy(
+            engine=engine
+        )
+        sr_minus_strat.level = strategies.levels.SUPERGROUP # GROUP?
+        # maybe this should be the default for that strategy anyway? using it
+        # at mover-level seems less likely than group-level
+        self.append([strategies.PoorSingleReplicaStrategy(),
+                     strategies.EnsembleHopStrategy(bias=bias),
+                     sr_minus_strat])
 
 
 class OneWayShootingMoveScheme(MoveScheme):

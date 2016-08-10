@@ -9,11 +9,11 @@ class MCStepStore(VariableStore):
             ['change', 'active', 'previous', 'simulation', 'mccycle']
         )
 
-    def _init(self, units=None):
-        super(MCStepStore, self)._init()
+    def initialize(self, units=None):
+        super(MCStepStore, self).initialize()
 
         # New short-hand definition
-        self.create_variable('change', 'obj.pathmovechanges')
+        self.create_variable('change', 'obj.movechanges')
         self.create_variable('active', 'obj.samplesets')
         self.create_variable('previous', 'obj.samplesets')
         self.create_variable('simulation', 'obj.pathsimulators')

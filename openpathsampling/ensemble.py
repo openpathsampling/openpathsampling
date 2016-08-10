@@ -63,6 +63,32 @@ class EnsembleCache(object):
 
     def check(self, trajectory=None, reset=None):
         """Checks and resets (if necessary) the ensemble cache.
+
+        The trajectory is considered trustworthy based on checking several
+        factors, compared to the last time the cache was checked. For
+        forward caches (direction > 0), these are
+        * the first frame has not changed
+        * the length is the same, or has changed by 1
+        * if length unchanged, the final frame is the same; if length
+          changed by 1, the penultimate frame is the old final frame
+        Similar rules apply for backward caches (direction < 0), with
+        obvious changes of "final" and "first" frames.
+
+        If the trajectory is not trustworthy, we return True (should be
+        reset).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            the trajectory to test
+        reset : bool or None
+            force a value for reset. If None, the value is determined based
+            on the test criteria.
+
+        Returns
+        -------
+        bool :
+            the value of reset
         """
         logger.debug("Checking cache....")
         #logger.debug("traj " + str([id(s) for s in trajectory]))
@@ -143,9 +169,9 @@ class Ensemble(StorableNamedObject):
     Examples
     --------    
     >>> EnsembleFactory.TISEnsemble(
-    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVRangeVolume(collectivevariable_A, 0.0, 0.08),
+    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
+    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.08),
     >>>     True
     >>>     )
 
@@ -176,8 +202,15 @@ class Ensemble(StorableNamedObject):
 
         Parameters
         ----------
+        trajectory: :class:`.Trajectory`
+            The trajectory to be checked
         trusted : boolean
-            If trusted is not None it overrides the default setting in the ensemble
+            For many ensembles, a faster algorithm can be used if we know
+            some information about the trajectory with one fewer frames.
+            The `trusted` flag tells the ensemble to use such an algorithm.
+            This is usually used in combination with an
+            :class:`.EnsembleCache` which makes short-cut calculations
+            possible.
         '''
         return False
 
@@ -226,8 +259,7 @@ class Ensemble(StorableNamedObject):
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
         trusted : bool
-            should equal pre-computed `can_append(trajectory[:-1])`. If
-            trusted=True, some ensembles can be computed more efficiently
+            If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
         
         Returns
@@ -251,8 +283,7 @@ class Ensemble(StorableNamedObject):
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             the actual trajectory to be tested
         trusted : bool
-            should equal pre-computed `can_prepend(trajectory[1:])`. If
-            trusted=True, some ensembles can be computed more efficiently
+            If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
         
         Returns
@@ -762,9 +793,9 @@ class EnsembleCombination(Ensemble):
         fname : string
             name of the functions f1 and f2. Only used in debug output.
         """
+        logger.debug("Combination is " + self.__class__.__name__)
         a = f1(trajectory, trusted)
         if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
-            logger.debug("Combination is " + self.__class__.__name__)
             logger.debug("Combination." + fname + ": " +
                          self.ensemble1.__class__.__name__ + " is " + str(a))
             ens2 = f2(trajectory, trusted)
@@ -773,7 +804,7 @@ class EnsembleCombination(Ensemble):
             logger.debug("Combination." + fname + ": " +
                          self.ensemble2.__class__.__name__ + " is " +str(ens2))
             # assert(ens2 == ens2_prime)
-            logger.debug("Combination: returning " + str(self.fnc(a,ens2)))
+            logger.debug("Combination should return " + str(self.fnc(a,ens2)))
         res_true = self.fnc(a, True)
         res_false = self.fnc(a, False)
         if res_false == res_true:
@@ -893,12 +924,16 @@ class EnsembleCombination(Ensemble):
 
 class UnionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(UnionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a or b, str_fnc = '{0}\nor\n{1}')
+        super(UnionEnsemble, self).__init__(ensemble1, ensemble2,
+                                            fnc=lambda a,b : a or b,
+                                            str_fnc='{0}\nor\n{1}')
 
 
 class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
-        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2, fnc = lambda a,b : a and b, str_fnc = '{0}\nand\n{1}')
+        super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2,
+                                                   fnc=lambda a,b : a and b,
+                                                   str_fnc='{0}\nand\n{1}')
 
 
 class SymmetricDifferenceEnsemble(EnsembleCombination):
@@ -1548,6 +1583,13 @@ class VolumeEnsemble(Ensemble):
         self.volume = volume
         self.trusted = trusted
 
+        self._use_cache = True
+        self._cache_can_append = EnsembleCache(+1)
+        self._cache_call = EnsembleCache(+1)
+        self._cache_can_prepend = EnsembleCache(-1)
+        self._cache_check_reverse = EnsembleCache(-1)
+
+
     @property
     def _volume(self):
         '''
@@ -1560,33 +1602,90 @@ class AllInXEnsemble(VolumeEnsemble):
     '''
     Ensemble of trajectories with all frames in the given volume
     '''
+    def _trusted_call(self, trajectory, cache):
+        """
+        Generalized version of the call when trusted.
 
+        This uses a cache, which has the result for the previous trajectory
+        (`trajectory[:-1]` if forward, `trajectory[1:]` if backward) in the
+        `cache.contents['previous']`.
+
+        Paramters
+        ---------
+        trajectory : paths.Trajectory
+            input trajectory to test
+        cache : paths.EnsembleCache
+            ensemble cache for this function
+
+        Returns
+        -------
+        bool :
+            result of __call__
+        """
+        frame_num = -(cache.direction + 1) / 2  # 1 -> -1; -1 -> 0
+        reset = cache.check(trajectory)
+        if reset:
+            if len(trajectory) < 2:
+                cache.contents['previous'] = None
+            else:
+                # NOTE: is it possible that we'd reset a cache more than
+                # once in a single trajectory? that could mean that this
+                # starts to scale quadratically. I can't think of a case
+                # where this is a practical concern (short-circuit logic
+                # means the recache should only happen once per trajectory
+                # for All*XEnsembles, and the call should only happen once
+                # per trajectory for Part*XEnsembles.) In any case, the fix
+                # would be to implement a more complicated cache.reset,
+                # which checks whether the previous traj was a subtraj of
+                # this one (other than one frame less). ~~~DWHS
+                if frame_num == -1:
+                    reset_value = self(trajectory[:-1], trusted=False)
+                elif frame_num == 0:
+                    reset_value = self(trajectory[1:], trusted=False)
+                else:  # pragma: no cover
+                    raise RuntimeError("Bad value for frame_num: " +
+                                       str(frame_num))
+                cache.contents['previous'] = reset_value
+
+        cached_val = cache.contents['previous']
+        if cached_val == True or cached_val is None:
+            # need to check this frame (no prev traj, or prev traj is True)
+            frame = trajectory.get_as_proxy(frame_num)
+            cache.contents['previous'] = self._volume(frame)
+            return cache.contents['previous']
+        else:
+            # cached_val is false, result must be false
+            return False
+    
     def can_append(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
-        if trusted == True:
-            return self(trajectory[slice(len(trajectory)-1, None)], trusted)
+        elif trusted and self._use_cache:
+            return self._trusted_call(trajectory, self._cache_can_append)
         else:
             return self(trajectory)
 
     def can_prepend(self, trajectory, trusted=False):
         if len(trajectory) == 0:
             return True
-        if trusted == True:
-            return self(trajectory[slice(0,1)], trusted)
+        if trusted and self._use_cache:
+            return self._trusted_call(trajectory, self._cache_can_prepend)
         else:
             return self(trajectory)
-        
-    
+
     def __call__(self, trajectory, trusted=None):
         if len(trajectory) == 0:
             return False
-        if trusted == True:
-            #print "trusted"
-            frame = trajectory.get_as_proxy(-1)
-            return self._volume(frame)
+        # TODO: We might be able to speed this up based on can_append
+        # being the same as call for this ensemble. Something like check
+        # the can_append cache instead of/as well as the call cache. May
+        # still have problems with overshooting -- but this might provide a
+        # speed-up in sequential ensemble's checking phase. ~~~DWHS
+        if trusted and self._use_cache:
+            return self._trusted_call(trajectory, self._cache_call)
         else:
-            #logger.debug("Calling volume untrusted "+repr(self))
+            logger.debug("Untrusted VolumeEnsemble "+repr(self))
+            #logger.debug("Trajectory " + repr(trajectory))
             for frame in trajectory.as_proxies():
                 if not self._volume(frame):
                     return False
@@ -1594,10 +1693,11 @@ class AllInXEnsemble(VolumeEnsemble):
 
     def check_reverse(self, trajectory, trusted=False):
         # order in this one only matters if it is trusted
-        if trusted:
+        if trusted and self._use_cache:
             #print "Rev Trusted"
-            frame = trajectory.get_as_proxy(0)
-            return self._volume(frame)
+            return self._trusted_call(trajectory, self._cache_check_reverse)
+            #frame = trajectory.get_as_proxy(0)
+            #return self._volume(frame)
         else:
             #print "Rev UnTrusted"
             return self(trajectory) # in this case, order wouldn't matter
@@ -1617,7 +1717,7 @@ class AllOutXEnsemble(AllInXEnsemble):
     '''    
     @property
     def _volume(self):
-        return ~ self.volume
+        return ~self.volume
     
     def __str__(self):
         return 'x[t] in {0} for all t'.format(self._volume)
@@ -1662,7 +1762,7 @@ class PartOutXEnsemble(PartInXEnsemble):
     @property
     def _volume(self):
         # effectively use PartInXEnsemble but with inverted volume
-        return ~ self.volume
+        return ~self.volume
 
     def __invert__(self):
         return AllInXEnsemble(self.volume, self.trusted)
@@ -2041,9 +2141,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             raise RuntimeError(
                 "Invalid input trajectory for minus extension. (Not A-to-A?)"
             )
-        extension = engine.generate(last_frame,
-                                    [self.can_append])
+        fwd_extend_ens = PrefixTrajectoryEnsemble(self, partial_traj)
+        extension = engine.generate(last_frame, 
+                                    [fwd_extend_ens.can_append])
         first_minus = paths.Trajectory(partial_traj + extension[1:])
+        assert self(first_minus)
         minus_samp = paths.Sample(
             replica=minus_replica_id,
             trajectory=first_minus,
@@ -2055,6 +2157,43 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
              "X" : ~self.innermost_vol})
         )
         return minus_samp
+
+    def populate_minus_ensemble_from_set(self, samples, minus_replica_id,
+                                         engine):
+        """
+        Generate a sample for this minus ensemble by extending trajectory.
+
+        Parameters
+        ----------
+        samples : iterable of :class:`.Sample`
+            samples with trajectories that might be extended
+        minus_replica_id : int or str
+            replica ID for the return sample
+        engine : :class:`openpathsampling.dynamicsengine.DynamicsEngine`
+            engine to use for MD extension
+
+        Returns
+        -------
+        :class:`.Sample` :
+            a sample for this minus ensemble
+        """
+        partials = [s.trajectory for s in samples 
+                    if self._segment_ensemble(s.trajectory)]
+        if len(partials) == 0:
+            # TODO: add support for trying to run backwards
+            raise RuntimeError("No trajectories can be extended")
+
+	good_sample = False
+	while not good_sample:
+            partial_traj = partials[0]
+            # I think it should be impossible to RuntimeError in this
+            samp = self.populate_minus_ensemble(
+                partial_traj=partial_traj,
+                minus_replica_id=minus_replica_id,
+                engine=engine
+            )
+	    good_sample = samp.ensemble(samp.trajectory)
+        return samp
 
 class TISEnsemble(SequentialEnsemble):
     """An ensemble for TIS (or AMS).
@@ -2074,7 +2213,7 @@ class TISEnsemble(SequentialEnsemble):
         CV to be used as order parameter for this
     """
     def __init__(self, initial_states, final_states, interface,
-                 orderparameter=None):
+                 orderparameter=None, lambda_i=None):
         # regularize to list of volumes
         # without orderparameter, some info can't be obtained
         try:
@@ -2103,6 +2242,7 @@ class TISEnsemble(SequentialEnsemble):
         self.interface = interface
 #        self.name = interface.name
         self.orderparameter = orderparameter
+        self.lambda_i = lambda_i
 
     def trajectory_summary(self, trajectory):
         initial_state_i = None
@@ -2228,11 +2368,12 @@ class EnsembleFactory():
 
 
     @staticmethod
-    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter):
-        myset = []
-        for vol in volumes_x:
-            myset.append(
-                paths.TISEnsemble(volume_a, volume_b, vol, orderparameter)
-            )
+    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter,
+                       lambdas=None):
+        if lambdas is None:
+            lambdas = [None] * len(volumes_x)
+        myset = [paths.TISEnsemble(volume_a, volume_b, vol, orderparameter,
+                                   lambda_i)
+                 for (vol, lambda_i) in zip(volumes_x, lambdas)]
         return myset
 

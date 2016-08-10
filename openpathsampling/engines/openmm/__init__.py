@@ -4,9 +4,11 @@ from tools import (
     snapshot_from_pdb,
     snapshot_from_testsystem,
     to_openmm_topology,
-    trajectory_from_mdtraj
+    trajectory_from_mdtraj,
+    trajectory_to_mdtraj
 )
 
 import features
 
 from snapshot import Snapshot, MDSnapshot
+from openpathsampling.engines import NoEngine, SnapshotDescriptor

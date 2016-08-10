@@ -14,6 +14,7 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
+
 @lazy_loading_attributes('movepath')
 class SampleSet(StorableObject):
     '''
@@ -270,9 +271,9 @@ class SampleSet(StorableObject):
 
     def __add__(self, other):
         """
-        Add the move path to the Sample and return the new sample set
+        Add the move path to the Sample and return the new sampleset
         """
-        if isinstance(other, paths.PathMoveChange):
+        if isinstance(other, paths.MoveChange):
             return self.apply_samples(other.results)
         elif type(other) is list:
             okay = True
@@ -282,7 +283,7 @@ class SampleSet(StorableObject):
 
             return self.apply_samples(other)
         else:
-            raise ValueError('Only lists of Sample or PathMoveChanges allowed.')
+            raise ValueError('Only lists of Sample or MoveChanges allowed.')
 
     def append_as_new_replica(self, sample):
         """
@@ -326,7 +327,7 @@ class SampleSet(StorableObject):
         """Return SampleSet using `new_ensembles` as ensembles.
 
         This creates a SampleSet which replaces the ensembles in the old
-        sample set with equivalent ensembles from a given list. The string
+        sampleset with equivalent ensembles from a given list. The string
         description of the ensemble is used as a test.
 
         Note that this assumes that there are no one-to-many or many-to-one
@@ -507,6 +508,12 @@ class Sample(StorableObject):
         else:
             return [] # empty iterator
 
+    def as_proxies(self):
+        if self.trajectory is not None:
+            return self.trajectory.as_proxies()
+        else:
+            return [] # empty iterator
+
     def __iter__(self):
         """
         Return an iterator over all snapshots in the samples trajectory
@@ -585,3 +592,11 @@ class Sample(StorableObject):
             return 0.0
 
         return self.bias
+
+    @property
+    def heritage(self):
+        samp = self
+        while samp.parent is not None:
+            # just one sample so use this
+            yield samp
+            samp = samp.parent

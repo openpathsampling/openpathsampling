@@ -16,9 +16,9 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testTrajectorySegmentContainer(object):
     def setup(self):
-        op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-        self.vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
-        self.vol3 = paths.CVRangeVolume(op, 2.0, 2.5)
+        op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        self.vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
+        self.vol3 = paths.CVDefinedVolume(op, 2.0, 2.5)
 
         self.trajectory = make_1d_traj(coordinates=[0.2, 0.3, 0.6, 2.1, 2.2,
                                                     0.7, 0.4, 0.35, 2.4,
@@ -86,12 +86,12 @@ class testTrajectorySegmentContainer(object):
         assert_equal(container_B_id, id(container_B))
         
 
-class testSingleTrajectoryAnalysis(object):
+class testTrajectoryTransitionAnalysis(object):
     def setup(self):
-        op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-        vol1 = paths.CVRangeVolume(op, 0.1, 0.5)
-        vol2 = paths.CVRangeVolume(op, -0.1, 0.7)
-        vol3 = paths.CVRangeVolume(op, 2.0, 2.5)
+        op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
+        vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
+        vol3 = paths.CVDefinedVolume(op, 2.0, 2.5)
         self.stateA = vol1
         self.stateB = vol3
         self.interfaceA0 = vol2
@@ -99,7 +99,7 @@ class testSingleTrajectoryAnalysis(object):
         self.stateX = ~vol1 & ~vol3
 
         transition = paths.TPSTransition(self.stateA, self.stateB)
-        self.analyzer = paths.SingleTrajectoryAnalysis(transition, dt=0.1)
+        self.analyzer = paths.TrajectoryTransitionAnalysis(transition, dt=0.1)
         self.traj_str = "aaaxaxxbxaxababaxbbbbbxxxxxxa"
         # frame numbers "0    5    0    5    0    5  8"
         self.trajectory = self._make_traj(self.traj_str)

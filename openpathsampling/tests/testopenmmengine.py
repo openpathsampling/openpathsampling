@@ -51,7 +51,7 @@ class testOpenMMEngine(object):
 
         # Engine options
         options = {
-            'nsteps_per_frame': 2,
+            'n_steps_per_frame': 2,
             'platform': 'CPU',
             'solute_indices': range(22),
             'n_frames_max': 5,
@@ -59,15 +59,15 @@ class testOpenMMEngine(object):
         }
 
         self.engine = peng.Engine(
-            template,
+            template.topology,
             system,
             integrator,
             options
         )
 
         context = self.engine.simulation.context
-        zero_array = np.zeros((self.engine.n_atoms, 3))
-        context.setPositions(self.engine.template.coordinates)
+        zero_array = np.zeros((template.topology.n_atoms, 3))
+        context.setPositions(template.coordinates)
         context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
 
     def teardown(self):
@@ -87,7 +87,7 @@ class testOpenMMEngine(object):
                                  vel)
 
     def test_snapshot_set(self):
-        pdb_pos = (self.engine.template.coordinates / u.nanometers)
+        pdb_pos = (template.coordinates / u.nanometers)
         testvel = []
         testpos = []
         for i in range(len(pdb_pos)):
@@ -96,17 +96,21 @@ class testOpenMMEngine(object):
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])
 
+        testbvecs = 5.0 * np.identity(3)
+
         self.engine.current_snapshot = peng.Snapshot.construct(
             coordinates=np.array(testpos) * u.nanometers,
-            box_vectors=np.zeros((3, 3)),
+            box_vectors=np.array(testbvecs) * u.nanometers,
             velocities=np.array(testvel) * u.nanometers / u.picoseconds
         )
         state = self.engine.simulation.context.getState(getPositions=True,
                                                         getVelocities=True)
         sim_coords = state.getPositions(asNumpy=True) / u.nanometers
+        sim_bvecs = state.getPeriodicBoxVectors(asNumpy=True) / u.nanometers
         sim_vels = state.getVelocities(asNumpy=True) / (u.nanometers/u.picoseconds)
 
         np.testing.assert_almost_equal(testpos, sim_coords, decimal=5)
+        np.testing.assert_almost_equal(testbvecs, sim_bvecs, decimal=5)
         np.testing.assert_almost_equal(testvel, sim_vels, decimal=5)
 
     def test_generate_next_frame(self):

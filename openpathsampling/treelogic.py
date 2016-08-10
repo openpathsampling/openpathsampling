@@ -54,8 +54,8 @@ class TreeMixin(object):
 
         Returns
         -------
-        PathMoveChange
-            the n-th subchange if this PathMoveChange uses underlying changes
+        MoveChange
+            the n-th subchange if this MoveChange uses underlying changes
         """
         if type(item) is int:
             return self._subnodes[item]
@@ -97,7 +97,7 @@ class TreeMixin(object):
         Returns
         -------
         int
-            the number of (Sub)PathMoveChanges in this PathMoveChange
+            the number of (Sub)MoveChanges in this MoveChange
 
         """
         if self._len is None:
@@ -429,7 +429,7 @@ class TreeMixin(object):
         """
         return [ fnc(node, **kwargs) for node in iter(self) ]
 
-    def depth_pre_order(self, fnc, level=0, **kwargs):
+    def depth_pre_order(self, fnc, level=0, only_canonical=False, **kwargs):
         """
         Traverse the tree of node in pre-order applying a function
 
@@ -444,8 +444,12 @@ class TreeMixin(object):
             optional parameters
         level : int
             the initial level
+        only_canonical : bool, default: False
+            if `True` the recursion stops at canonical movers and will hence be
+            more compact
         kwargs : named arguments
             optional arguments added to the function
+
 
         Returns
         -------
@@ -461,7 +465,10 @@ class TreeMixin(object):
         output = list()
         output.append((level, fnc(self, **kwargs)))
 
-        for mp in self._subnodes:
-            output.extend(mp.depth_pre_order(fnc, level + 1, **kwargs))
+#        print self.is_canonical, only_canonical, not only_canonical or not self.is_canonical
+
+        if not only_canonical or not self.is_canonical:
+            for mp in self._subnodes:
+                output.extend(mp.depth_pre_order(fnc, level + 1, only_canonical=only_canonical, **kwargs))
 
         return output
