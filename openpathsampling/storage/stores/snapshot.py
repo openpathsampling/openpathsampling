@@ -221,10 +221,16 @@ class BaseSnapshotStore(IndexedObjectStore):
     def _get_id(self, idx, obj):
         if self.reference_by_uuid:
             uuid = self.vars['uuid'][int(idx / 2)]
-            if idx & 1:
-                uuid = StorableObject.ruuid(uuid)
+        else:
+            if idx in self.proxy_index:
+                uuid = self.proxy_index[int(idx / 2)]
+            else:
+                return
 
-            obj.__uuid__ = uuid
+        if idx & 1:
+            uuid = StorableObject.ruuid(uuid)
+
+        obj.__uuid__ = uuid
 
     def _set_id(self, idx, obj):
         if self.reference_by_uuid:
@@ -1036,13 +1042,26 @@ class SnapshotWrapperStore(ObjectStore):
     def _get_id(self, idx, obj):
         if self.reference_by_uuid:
             uuid = self.vars['uuid'][int(idx / 2)]
-            if idx & 1:
-                if obj._reversed:
-                    obj._reversed.__uuid__ = uuid
 
+            if idx & 1:
                 uuid = StorableObject.ruuid(uuid)
 
-            obj.__uuid__ = uuid
+        else:
+            if idx in self.proxy_index:
+                uuid = self.proxy_index[idx]
+            elif idx ^ 1 in self.proxy_index:
+                uuid = StorableObject.ruuid(self.proxy_index[idx ^ 1])
+            else:
+                return
+
+        obj.__uuid__ = uuid
+        if idx & 1:
+            if obj._reversed:
+                obj._reversed.__uuid__ = uuid
+
+            uuid = StorableObject.ruuid(uuid)
+
+        obj.__uuid__ = uuid
 
     def _set_id(self, idx, obj):
         if self.reference_by_uuid:
