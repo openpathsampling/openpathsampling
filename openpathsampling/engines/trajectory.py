@@ -564,6 +564,7 @@ class Trajectory(list, StorableObject):
     # UTILITY FUNCTIONS
     # ==========================================================================
 
+    @property
     def mdtraj(self, topology=None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
