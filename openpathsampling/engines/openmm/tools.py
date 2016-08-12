@@ -287,7 +287,7 @@ def to_openmm_topology(obj):
     """
     if obj.topology is not None:
         if hasattr(obj.topology, 'md'):
-            openmm_topology = obj.topology.md.to_openmm()
+            openmm_topology = obj.topology.mdtraj.to_openmm()
             box_size_dimension = np.linalg.norm(
                 obj.box_vectors.value_in_unit(u.nanometer), axis=1)
             openmm_topology.setUnitCellDimensions(box_size_dimension)

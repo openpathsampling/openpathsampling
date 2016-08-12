@@ -646,7 +646,7 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
     def _eval(self, items):
         trajectory = peng.Trajectory(items)
 
-        t = trajectory_to_mdtraj(trajectory, self.topology.md)
+        t = trajectory_to_mdtraj(trajectory, self.topology.mdtraj)
         return self.cv_callable(t, **self.kwargs)
 
     @property
@@ -713,9 +713,9 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
         # turn Snapshot and Trajectory into md.trajectory
         for key in md_kwargs:
             if isinstance(md_kwargs[key], peng.BaseSnapshot):
-                md_kwargs[key] = md_kwargs[key].md()
+                md_kwargs[key] = md_kwargs[key].mdtraj()
             elif isinstance(md_kwargs[key], peng.Trajectory):
-                md_kwargs[key] = md_kwargs[key].md()
+                md_kwargs[key] = md_kwargs[key].mdtraj()
 
         self._instance = featurizer(**md_kwargs)
         self.topology = topology
@@ -738,7 +738,7 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
         trajectory = peng.Trajectory(items)
 
         # create an MDtraj trajectory out of it
-        ptraj = trajectory_to_mdtraj(trajectory, self.topology.md)
+        ptraj = trajectory_to_mdtraj(trajectory, self.topology.mdtraj)
 
         # run the featurizer
         return self._instance.partial_transform(ptraj)
@@ -799,14 +799,14 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
         # turn Snapshot and Trajectory into md.trajectory
         for key in md_kwargs:
             if isinstance(md_kwargs[key], peng.BaseSnapshot):
-                md_kwargs[key] = md_kwargs[key].md()
+                md_kwargs[key] = md_kwargs[key].mdtraj()
             elif isinstance(md_kwargs[key], peng.Trajectory):
-                md_kwargs[key] = md_kwargs[key].md()
+                md_kwargs[key] = md_kwargs[key].mdtraj()
 
         self.topology = topology
 
         import pyemma.coordinates
-        self._instance = pyemma.coordinates.featurizer(self.topology.md)
+        self._instance = pyemma.coordinates.featurizer(self.topology.mdtraj)
 
         featurizer(self._instance, **md_kwargs)
 
@@ -822,7 +822,7 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
     def _eval(self, items):
         trajectory = peng.Trajectory(items)
 
-        t = trajectory_to_mdtraj(trajectory, self.topology.md)
+        t = trajectory_to_mdtraj(trajectory, self.topology.mdtraj)
         return self._instance.transform(t)
 
     def to_dict(self):
