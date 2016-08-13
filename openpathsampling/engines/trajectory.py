@@ -583,7 +583,7 @@ class Trajectory(list, StorableObject):
         """
 
         if topology is None:
-            topology = self.topology.md
+            topology = self.topology.mdtraj
 
         output = self.xyz
 
