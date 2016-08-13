@@ -58,6 +58,9 @@ class testOpenMMEngine(object):
             'timestep': 2.0 * u.femtoseconds
         }
 
+        print template.topology
+        print template
+
         self.engine = peng.Engine(
             template.topology,
             system,
