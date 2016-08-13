@@ -565,7 +565,6 @@ class Trajectory(list, StorableObject):
             return [[self.index(s) for s in subtrj]
                     for subtrj in subtrajectories]
 
-
     # ==========================================================================
     # UTILITY FUNCTIONS
     # ==========================================================================
