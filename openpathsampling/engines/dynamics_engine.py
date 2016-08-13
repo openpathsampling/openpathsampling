@@ -77,6 +77,10 @@ class DynamicsEngine(StorableNamedObject):
         self.descriptor = descriptor
         self._check_options(options)
 
+        self.on_max_length = 'stop'
+        self.handle_nan = 'fail'
+        self.retries_when_nan = 5
+
     @property
     def current_snapshot(self):
         return None
@@ -447,63 +451,110 @@ class DynamicsEngine(StorableNamedObject):
             running = [running]
 
         if hasattr(initial, '__iter__'):
-            trajectory = Trajectory(initial)
+            initial = Trajectory(initial)
         else:
-            trajectory = Trajectory([initial])
+            initial = Trajectory([initial])
 
-        if direction > 0:
-            self.current_snapshot = trajectory[-1]
-        elif direction < 0:
-            # backward simulation needs reversed snapshots
-            self.current_snapshot = trajectory[0].reversed
+        valid = False
+        attempt = 0
+        trajectory = initial
 
-        logger.info("Starting trajectory")
-        self.start()
+        while not valid:
+            attempt += 1
+            trajectory = initial
 
-        frame = 0
-        # maybe we should stop before we even begin?
-        stop = self.stop_conditions(trajectory=trajectory,
-                                    continue_conditions=running,
-                                    trusted=False)
+            if direction > 0:
+                self.current_snapshot = trajectory[-1]
+            elif direction < 0:
+                # backward simulation needs reversed snapshots
+                self.current_snapshot = trajectory[0].reversed
 
-        log_rate = 10
+            logger.info("Starting trajectory")
+            self.start()
 
-        while not stop:
-            if intervals > 0 and frame % intervals == 0:
-                # return the current status
-                logger.info("Through frame: %d", frame)
-                yield trajectory
-            elif frame % log_rate == 0:
-                logger.info("Through frame: %d", frame)
-
-            # Do integrator x steps
-            try:
-                with DelayedInterrupt():
-                    snapshot = self.generate_next_frame()
-                    frame += 1
-
-                    # Store snapshot and add it to the trajectory. Stores also
-                    # final frame the last time
-                    if direction > 0:
-                        trajectory.append(snapshot)
-                    elif direction < 0:
-                        trajectory.prepend(snapshot.reversed)
-
-            except KeyboardInterrupt():
-                # make sure we will report the last state for
-                logger.info("Through frame: %d", frame)
-                yield trajectory
-                raise
-
-            # Check if we should stop. If not, continue simulation
+            frame = 0
+            # maybe we should stop before we even begin?
             stop = self.stop_conditions(trajectory=trajectory,
-                                        continue_conditions=running)
+                                        continue_conditions=running,
+                                        trusted=False)
 
-            if frame == max_length - 1:
-                stop = True
+            log_rate = 10
 
-        self.stop(trajectory)
-        logger.info("Finished trajectory, length: %d", frame)
+            has_nan = False
+
+            while not stop:
+                if intervals > 0 and frame % intervals == 0:
+                    # return the current status
+                    logger.info("Through frame: %d", frame)
+                    yield trajectory
+
+                elif frame % log_rate == 0:
+                    logger.info("Through frame: %d", frame)
+
+                # Do integrator x steps
+                try:
+                    with DelayedInterrupt():
+                        snapshot = self.generate_next_frame()
+
+                        if self.handle_nan != 'ignore' and \
+                                not self.is_valid_snapshot(snapshot):
+                            has_nan = True
+                            break
+
+                        frame += 1
+
+                        # Store snapshot and add it to the trajectory.
+                        # Stores also final frame the last time
+                        if direction > 0:
+                            trajectory.append(snapshot)
+                        elif direction < 0:
+                            trajectory.prepend(snapshot.reversed)
+
+                except KeyboardInterrupt:
+                    # make sure we will report the last state for
+                    logger.info("Through frame: %d", frame)
+                    yield trajectory
+                    raise
+                except:
+                    # any other error we start a retry
+                    has_nan = True
+                    break
+
+                # Check if we should stop. If not, continue simulation
+                stop = self.stop_conditions(trajectory=trajectory,
+                                            continue_conditions=running)
+
+                if len(trajectory) >= max_length:
+                    # hit the max length criterion
+                    on = self.on_max_length
+
+                    if on == 'fail':
+                        yield trajectory
+                        raise RuntimeError(
+                            'Hit maximal length of %d frames.' %
+                            self.options['n_frames_max']
+                        )
+                    elif on == 'ignore':
+                        # keep on going
+                        pass
+                    elif on == 'stop':
+                        logger.info('Trajectory hit max length. Stopping.')
+                        # fail gracefully
+                        stop = True
+
+            if has_nan:
+                if attempt > self.retries_when_nan:
+                    if self.handle_nan == 'fail':
+                        yield trajectory
+                        raise RuntimeError(
+                            'Failed to generate trajectory without error or '
+                            '`nan` after %d attempts' % attempt)
+            elif stop:
+                valid = True
+
+            self.stop(trajectory)
+
+        logger.info("Finished trajectory, length: %d", len(trajectory))
         yield trajectory
 
     def generate_next_frame(self):
@@ -531,6 +582,18 @@ class DynamicsEngine(StorableNamedObject):
                            for i in range(n_frames)])
         self.stop(traj)
         return traj
+
+    @staticmethod
+    def is_valid_snapshot(snapshot):
+        """
+        Test the snapshot to be valid. Usually not containing nan
+
+        Returns
+        -------
+        bool : True
+            returns `True` if the snapshot is okay to be used
+        """
+        return True
 
     @classmethod
     def check_snapshot_type(cls, snapshot):

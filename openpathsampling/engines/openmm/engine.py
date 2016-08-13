@@ -6,6 +6,7 @@ from simtk.openmm.app import Simulation
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import Snapshot
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -302,6 +303,16 @@ class OpenMMEngine(DynamicsEngine):
             raise ValueError('No attribute error: ' + str(e))
 
         return snapshot
+
+    @staticmethod
+    def is_valid_snapshot(snapshot):
+        if np.isnan(np.min(snapshot.coordinates._value)):
+            return False
+
+        if np.isnan(np.min(snapshot.velocities._value)):
+            return False
+
+        return True
 
     @property
     def current_snapshot(self):
