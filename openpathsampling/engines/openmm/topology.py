@@ -38,7 +38,7 @@ class MDTrajTopology(Topology):
         out['atoms'] = atom_data
         out['bonds'] = [(a.index, b.index) for (a, b) in self.mdtraj.bonds]
 
-        return {'md': out, 'subsets': self.subsets}
+        return {'mdtraj': out, 'subsets': self.subsets}
 
     @classmethod
     def from_dict(cls, dct):
