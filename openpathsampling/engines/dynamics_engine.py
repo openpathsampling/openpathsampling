@@ -78,7 +78,7 @@ class DynamicsEngine(StorableNamedObject):
         self._check_options(options)
 
         self.on_max_length = 'stop'
-        self.handle_nan = 'fail'
+        self.on_nan = 'fail'
         self.retries_when_nan = 5
 
     @property
@@ -496,7 +496,7 @@ class DynamicsEngine(StorableNamedObject):
                     with DelayedInterrupt():
                         snapshot = self.generate_next_frame()
 
-                        if self.handle_nan != 'ignore' and \
+                        if self.on_nan != 'ignore' and \
                                 not self.is_valid_snapshot(snapshot):
                             has_nan = True
                             break
@@ -544,7 +544,7 @@ class DynamicsEngine(StorableNamedObject):
 
             if has_nan:
                 if attempt > self.retries_when_nan:
-                    if self.handle_nan == 'fail':
+                    if self.on_nan == 'fail':
                         yield trajectory
                         raise RuntimeError(
                             'Failed to generate trajectory without error or '
