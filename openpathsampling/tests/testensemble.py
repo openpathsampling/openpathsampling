@@ -2307,7 +2307,7 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         self._test_everything(self.minus_nl3.strict_can_prepend,
                               non_default, False)
         
-    def test_populate_minus_ensemble_from_set(self):
+    def test_extend_sample_from_trajectories(self):
         # set up ensA and ensB
         ensA = paths.TISEnsemble(vol1, vol3, vol1, op)
         ensB = paths.TISEnsemble(vol1, vol3, vol2, op)
