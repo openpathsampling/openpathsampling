@@ -194,7 +194,7 @@ class Ensemble(StorableNamedObject):
         if self is other:
             return True
 
-        return NotImplemented
+        return str(self) == str(other)
 
     @abc.abstractmethod
     def __call__(self, trajectory, trusted=None):
