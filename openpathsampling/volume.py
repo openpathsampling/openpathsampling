@@ -200,6 +200,15 @@ class EmptyVolume(Volume):
     def __str__(self):
         return 'empty'
 
+    def __eq__(self, other):
+        if isinstance(other, EmptyVolume):
+            return True
+
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(EmptyVolume)
+
 
 class FullVolume(Volume):
     """Volume which all snapshots can satisfy."""
@@ -226,6 +235,15 @@ class FullVolume(Volume):
 
     def __str__(self):
         return 'all'
+
+    def __eq__(self, other):
+        if isinstance(other, FullVolume):
+            return True
+
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(FullVolume)
 
 
 class CVDefinedVolume(Volume):
