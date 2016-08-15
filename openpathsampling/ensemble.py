@@ -689,7 +689,7 @@ class EmptyEnsemble(Ensemble):
         return NotImplemented
 
     def __hash__(self):
-        return 0
+        return hash(EmptyEnsemble)
 
 
 class FullEnsemble(Ensemble):
@@ -743,7 +743,7 @@ class FullEnsemble(Ensemble):
         return NotImplemented
 
     def __hash__(self):
-        return 0
+        return hash(FullEnsemble)
 
     def oom_matrix(self, oom):
         # Full matrix
