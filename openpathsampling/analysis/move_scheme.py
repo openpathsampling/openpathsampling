@@ -339,6 +339,7 @@ class MoveScheme(StorableNamedObject):
     def initial_conditions_from_trajectories(self, trajectories,
                                              sample_set=None,
                                              strategies=None,
+                                             preconditions=None,
                                              reuse_strategy='avoid-symmetric',
                                              engine=None):
         """
@@ -385,6 +386,7 @@ class MoveScheme(StorableNamedObject):
         return sample_set.generate_from_trajectories(
             self.list_initial_ensembles(),
             trajectories,
+            preconditions,
             strategies,
             reuse_strategy,
             engine

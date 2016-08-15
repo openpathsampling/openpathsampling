@@ -517,6 +517,10 @@ class testDefaultScheme(object):
 
         all_trajs = [traj1, traj2, traj3]
 
+        def comp_init_cond(traj, expected):
+            # helper to check the results. Expected is in the form
+            #
+
         transAB = transBA = None
         for trans in self.network.sampling_transitions:
             if trans.stateA == self.stateA and trans.stateB == self.stateB:
@@ -525,63 +529,97 @@ class testDefaultScheme(object):
                 transBA = trans
             else:
                 raise RuntimeWarning("That's a weird transition!")
+
         ms_outer_ens = self.network.special_ensembles['ms_outer'].keys()[0]
 
-        init_cond_1 = scheme.initial_conditions_from_trajectories(
+        init_cond = scheme.initial_conditions_from_trajectories(
             trajectories=all_trajs, reuse_strategy='all', strategies=['get']
         )
-        init_cond_1.sanity_check()
-        assert_equal(len(init_cond_1), 7)
-        assert_equal(init_cond_1[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(init_cond_1[transAB.ensembles[1]].trajectory, traj1)
-        assert_equal(init_cond_1[transAB.ensembles[2]].trajectory, traj3)
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
+        assert_equal(init_cond[transAB.ensembles[1]].trajectory, traj1)
+        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj2)
         for ens in transBA.ensembles:
-            assert_equal(init_cond_1[ens].trajectory, traj3.reversed)
-        assert_equal(init_cond_1[ms_outer_ens].trajectory, traj3)
+            assert_equal(init_cond[ens].trajectory, traj3.reversed)
+        assert_equal(init_cond[ms_outer_ens].trajectory, traj3)
 
-        init_cond_2 = scheme.initial_conditions_from_trajectories(
-            trajectories=all_trajs, reuse_strategy='avoid', strategies=['get']
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror', 'sort-shortest'],
+            strategies=['get'],
+            reuse_strategy='all'
         )
-        init_cond_2.sanity_check()
-        assert_equal(len(init_cond_2), 7)
-        assert_equal(init_cond_2[transAB.ensembles[0]].trajectory, traj1)
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
+        assert_equal(init_cond[transAB.ensembles[1]].trajectory, traj1)
+        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj3)
+        for ens in transBA.ensembles:
+            assert_equal(init_cond[ens].trajectory, traj3.reversed)
+        assert_equal(init_cond[ms_outer_ens].trajectory, traj3)
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            reuse_strategy='avoid',
+            strategies=['get']
+        )
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
         # second shortest is traj1.reversed with same length and being valid
         assert_equal(
-            init_cond_2[transAB.ensembles[1]].trajectory, traj1.reversed)
-        assert_equal(init_cond_2[transAB.ensembles[2]].trajectory, traj3)
+            init_cond[transAB.ensembles[1]].trajectory, traj1.reversed)
+        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj3)
         for ens in transBA.ensembles:
-            assert_equal(init_cond_2[ens].trajectory, traj3.reversed)
+            assert_equal(init_cond[ens].trajectory, traj3.reversed)
 
         # due to sorting of length in used_trajectories the result in the
         # outer ensemble can be either traj3 or its reversed
         assert(
-            init_cond_2[ms_outer_ens].trajectory == traj3 or
-            init_cond_2[ms_outer_ens].trajectory == traj3.reversed)
+            init_cond[ms_outer_ens].trajectory == traj3 or
+            init_cond[ms_outer_ens].trajectory == traj3.reversed)
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            reuse_strategy='avoid',
+            strategies=['get'],
+            preconditions=['mirror', 'sort-shortest']
+        )
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
+        # second shortest is traj1.reversed with same length and being valid
+        assert_equal(
+            init_cond[transAB.ensembles[1]].trajectory, traj1.reversed)
+        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj3)
+        for ens in transBA.ensembles:
+            assert_equal(init_cond[ens].trajectory, traj3.reversed)
 
         # this one avoids reversed copies
-        init_cond_3 = scheme.initial_conditions_from_trajectories([traj1])
-        init_cond_3.sanity_check()
-        assert_equal(len(init_cond_3), 2)
-        assert_equal(init_cond_3[transAB.ensembles[0]].trajectory, traj1)
+        init_cond = scheme.initial_conditions_from_trajectories([traj1])
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 2)
+        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
         assert_equal(
-            init_cond_3[transAB.ensembles[1]].trajectory, traj1)
+            init_cond[transAB.ensembles[1]].trajectory, traj1)
 
-        init_cond_4 = scheme.initial_conditions_from_trajectories([traj2],
-                                                                  init_cond_3)
-        init_cond_4.sanity_check()
-        assert_equal(len(init_cond_4), 3)
-        assert_equal(init_cond_4[transAB.ensembles[0]].trajectory, traj1)
+        init_cond = scheme.initial_conditions_from_trajectories([traj2],
+                                                                  init_cond)
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 3)
+        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
         assert_equal(
-            init_cond_4[transAB.ensembles[1]].trajectory, traj1)
-        assert_equal(init_cond_4[transAB.ensembles[2]].trajectory, traj2)
+            init_cond[transAB.ensembles[1]].trajectory, traj1)
+        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj2)
 
-        init_cond_5 = scheme.initial_conditions_from_trajectories(traj3)
-        init_cond_5.sanity_check()
-        assert_equal(len(init_cond_5), 7)
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
         for ens in transAB.ensembles:
-            assert_equal(init_cond_5[ens].trajectory, traj3)
+            assert_equal(init_cond[ens].trajectory, traj3)
         for ens in transBA.ensembles:
-            assert_equal(init_cond_5[ens].trajectory, traj3.reversed)
+            assert_equal(init_cond[ens].trajectory, traj3.reversed)
 
     def test_check_initial_conditions(self):
         scheme = DefaultScheme(self.network)
