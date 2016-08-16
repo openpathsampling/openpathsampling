@@ -452,7 +452,7 @@ class SampleSet(StorableObject):
         ]
 
         if preconditions is None:
-            preconditions = []
+            preconditions = ['mirror']
 
         # create a list of trajectories
         trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
@@ -634,16 +634,20 @@ class SampleSet(StorableObject):
                         self.append(sample)
                         if reuse_strategy != 'all':
                             # we mark the trajectory and its reversed as used
-                            used_trajectories.append(sample.trajectory)
-                            if reuse_strategy.endswith('symmetric'):
-                                used_trajectories.append(
-                                    sample.trajectory.reversed)
+                            if sample.trajectory not in used_trajectories and (
+                                not reuse_strategy.endswith('symmetric') or
+                                sample.trajectory.reversed in used_trajectories
+                            ):
+                                used_trajectories.append(sample.trajectory)
+                            # if reuse_strategy.endswith('symmetric'):
+                            #     used_trajectories.append(
+                            #         sample.trajectory.reversed)
 
                             # we want the list of used_trajectories to be
                             # sorted. Short ones first. So if we have to chose
                             # from the used_ones, use the shortest one
-                            used_trajectories = sorted(
-                                used_trajectories, key=len)
+                            # used_trajectories = sorted(
+                            #     used_trajectories, key=len)
 
                         # found a sample in this category so remove it for
                         # other tries

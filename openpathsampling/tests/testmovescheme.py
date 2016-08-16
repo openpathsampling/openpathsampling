@@ -517,9 +517,23 @@ class testDefaultScheme(object):
 
         all_trajs = [traj1, traj2, traj3]
 
-        def comp_init_cond(traj, expected):
+        traj1r = traj1.reversed
+        traj2r = traj2.reversed
+        traj3r = traj3.reversed
+
+        def assert_init_cond(sample_set, ensembles, expected):
             # helper to check the results. Expected is in the form
-            #
+            # of a list of resulting trajectories
+            # ens is the list of ensembles to be tested in order
+
+            sample_set.sanity_check()
+
+            assert_equal(len(sample_set), len(expected))
+
+            for ensemble, traj in zip(ensembles, expected):
+                # print ensemble.name, sample_set[ensemble].trajectory.xyz[:,0,0], traj.xyz[:, 0,0],
+                # print hex(id(traj)), hex(id(sample_set[ensemble].trajectory.xyz[:,0,0]))
+                assert_equal(sample_set[ensemble].trajectory, traj)
 
         transAB = transBA = None
         for trans in self.network.sampling_transitions:
@@ -532,17 +546,32 @@ class testDefaultScheme(object):
 
         ms_outer_ens = self.network.special_ensembles['ms_outer'].keys()[0]
 
+        ensembles = transAB.ensembles + [ms_outer_ens] + transBA.ensembles
+
         init_cond = scheme.initial_conditions_from_trajectories(
-            trajectories=all_trajs, reuse_strategy='all', strategies=['get']
+            trajectories=all_trajs,
+            preconditions=[],
+            reuse_strategy='all',
+            strategies=['get']
         )
-        init_cond.sanity_check()
-        assert_equal(len(init_cond), 7)
-        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(init_cond[transAB.ensembles[1]].trajectory, traj1)
-        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj2)
-        for ens in transBA.ensembles:
-            assert_equal(init_cond[ens].trajectory, traj3.reversed)
-        assert_equal(init_cond[ms_outer_ens].trajectory, traj3)
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj1, traj1, traj2, traj3]
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror'],
+            reuse_strategy='all',
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond, ensembles,
+            [traj1, traj1, traj2] + [traj3] + [traj3r] * 3
+        )
 
         init_cond = scheme.initial_conditions_from_trajectories(
             trajectories=all_trajs,
@@ -550,76 +579,93 @@ class testDefaultScheme(object):
             strategies=['get'],
             reuse_strategy='all'
         )
-        init_cond.sanity_check()
-        assert_equal(len(init_cond), 7)
-        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(init_cond[transAB.ensembles[1]].trajectory, traj1)
-        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj3)
-        for ens in transBA.ensembles:
-            assert_equal(init_cond[ens].trajectory, traj3.reversed)
-        assert_equal(init_cond[ms_outer_ens].trajectory, traj3)
+        assert_init_cond(
+            init_cond, ensembles,
+            [traj1, traj1, traj3] + [traj3] + [traj3r] * 3
+        )
 
         init_cond = scheme.initial_conditions_from_trajectories(
             trajectories=all_trajs,
+            preconditions=[],
             reuse_strategy='avoid',
             strategies=['get']
         )
-        init_cond.sanity_check()
-        assert_equal(len(init_cond), 7)
-        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
-        # second shortest is traj1.reversed with same length and being valid
-        assert_equal(
-            init_cond[transAB.ensembles[1]].trajectory, traj1.reversed)
-        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj3)
-        for ens in transBA.ensembles:
-            assert_equal(init_cond[ens].trajectory, traj3.reversed)
 
-        # due to sorting of length in used_trajectories the result in the
-        # outer ensemble can be either traj3 or its reversed
-        assert(
-            init_cond[ms_outer_ens].trajectory == traj3 or
-            init_cond[ms_outer_ens].trajectory == traj3.reversed)
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj1, traj2, traj3, traj3]
+        )
 
         init_cond = scheme.initial_conditions_from_trajectories(
             trajectories=all_trajs,
+            preconditions=['mirror'],
             reuse_strategy='avoid',
-            strategies=['get'],
-            preconditions=['mirror', 'sort-shortest']
+            strategies=['get']
         )
-        init_cond.sanity_check()
-        assert_equal(len(init_cond), 7)
-        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
-        # second shortest is traj1.reversed with same length and being valid
-        assert_equal(
-            init_cond[transAB.ensembles[1]].trajectory, traj1.reversed)
-        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj3)
-        for ens in transBA.ensembles:
-            assert_equal(init_cond[ens].trajectory, traj3.reversed)
+
+        assert_init_cond(
+            init_cond, ensembles,
+            [traj1, traj2, traj3] + [traj3] + [traj3r] * 3
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror', 'sort-shortest'],
+            reuse_strategy='avoid',
+            strategies=['get']
+        )
+        assert_init_cond(
+            init_cond, ensembles,
+            [traj1, traj1r, traj3] + [traj3] + [traj3r] * 3
+        )
 
         # this one avoids reversed copies
-        init_cond = scheme.initial_conditions_from_trajectories([traj1])
-        init_cond.sanity_check()
-        assert_equal(len(init_cond), 2)
-        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(
-            init_cond[transAB.ensembles[1]].trajectory, traj1)
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj1],
+            preconditions=[],
+            strategies=['get']
+        )
+        assert_init_cond(
+            init_cond,
+            ensembles[:2],
+            [traj1, traj1]
+        )
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=traj2,
+            sample_set=init_cond,
+            preconditions=[],
+            strategies=['get']
+        )
 
-        init_cond = scheme.initial_conditions_from_trajectories([traj2],
-                                                                  init_cond)
-        init_cond.sanity_check()
-        assert_equal(len(init_cond), 3)
-        assert_equal(init_cond[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(
-            init_cond[transAB.ensembles[1]].trajectory, traj1)
-        assert_equal(init_cond[transAB.ensembles[2]].trajectory, traj2)
+        assert_init_cond(
+            init_cond,
+            ensembles[:3],
+            [traj1, traj1, traj2]
+        )
 
-        init_cond = scheme.initial_conditions_from_trajectories(traj3)
-        init_cond.sanity_check()
-        assert_equal(len(init_cond), 7)
-        for ens in transAB.ensembles:
-            assert_equal(init_cond[ens].trajectory, traj3)
-        for ens in transBA.ensembles:
-            assert_equal(init_cond[ens].trajectory, traj3.reversed)
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj3],
+            preconditions=[],
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj3] * 4
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj3],
+            preconditions=['mirror'],
+            strategies=['get']
+        )
+        assert_init_cond(
+            init_cond,
+            ensembles,
+            [traj3] * 4 + [traj3r] * 3
+        )
 
     def test_check_initial_conditions(self):
         scheme = DefaultScheme(self.network)
