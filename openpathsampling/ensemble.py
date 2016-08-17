@@ -768,8 +768,6 @@ class Ensemble(StorableNamedObject):
             else:
                 used_and_possible.append(traj)
 
-        print used_and_possible, used_trajectories
-
         return self._handle_used_trajectories(
             used_trajectories,
             used_and_possible,
