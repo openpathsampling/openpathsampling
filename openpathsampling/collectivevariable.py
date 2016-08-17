@@ -283,7 +283,7 @@ class CallableCV(CollectiveVariable):
         >>> def func(snapshot, indices):
         >>>     import mdtraj as md
         >>>     return md.compute_dihedrals(
-        >>>         peng.Trajectory([snapshot]).mdtraj, indices=indices)
+        >>>         peng.Trajectory([snapshot]).to_mdtraj(), indices=indices)
 
         >>> cv = FunctionCV('my_cv', func, indices=[[4, 6, 8, 10]])
 
@@ -590,7 +590,7 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
 
     This is identical to FunctionCV except that the function is called with
     an mdraj.Trajetory object instead of the
-    :class:`openpathsampling.Trajectory` one using `f(traj.mdtraj, \**kwargs)`
+    :class:`openpathsampling.Trajectory` one using `f(traj.to_mdtraj(), \**kwargs)`
 
     Examples
     --------
@@ -713,9 +713,9 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
         # turn Snapshot and Trajectory into md.trajectory
         for key in md_kwargs:
             if isinstance(md_kwargs[key], peng.BaseSnapshot):
-                md_kwargs[key] = md_kwargs[key].mdtraj
+                md_kwargs[key] = md_kwargs[key].to_mdtraj()
             elif isinstance(md_kwargs[key], peng.Trajectory):
-                md_kwargs[key] = md_kwargs[key].mdtraj
+                md_kwargs[key] = md_kwargs[key].to_mdtraj()
 
         self._instance = featurizer(**md_kwargs)
         self.topology = topology
@@ -759,7 +759,7 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
 
     This is identical to `CoordinateGeneratorCV` except that the function is
     called with an mdraj.Trajetory object instead of the
-    openpathsampling.Trajectory one using `fnc(traj.mdtraj, **kwargs)`
+    openpathsampling.Trajectory one using `fnc(traj.to_mdtraj(), **kwargs)`
 
     """
 
@@ -799,9 +799,9 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
         # turn Snapshot and Trajectory into md.trajectory
         for key in md_kwargs:
             if isinstance(md_kwargs[key], peng.BaseSnapshot):
-                md_kwargs[key] = md_kwargs[key].mdtraj
+                md_kwargs[key] = md_kwargs[key].to_mdtraj()
             elif isinstance(md_kwargs[key], peng.Trajectory):
-                md_kwargs[key] = md_kwargs[key].mdtraj
+                md_kwargs[key] = md_kwargs[key].to_mdtraj()
 
         self.topology = topology
 
