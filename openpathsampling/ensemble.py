@@ -193,6 +193,7 @@ class Ensemble(StorableNamedObject):
     def __eq__(self, other):
         if self is other:
             return True
+
         return str(self) == str(other)
 
     @abc.abstractmethod
@@ -246,14 +247,14 @@ class Ensemble(StorableNamedObject):
         # Needs to be implemented by the actual class
 
         return None
-    
+
     def can_append(self, trajectory, trusted=False):
         """
         Returns true, if the trajectory so far can still be in the ensemble
         if it is appended by a frame. To check, it assumes that the
         trajectory to length L-1 is okay. This is mainly for interactive
         usage, when a trajectory is generated.
-        
+
         Parameters
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
@@ -261,7 +262,7 @@ class Ensemble(StorableNamedObject):
         trusted : bool
             If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
-        
+
         Returns
         -------
         bool
@@ -269,7 +270,7 @@ class Ensemble(StorableNamedObject):
             trajectory forward in time at its end) `trajectory` could  still
             be in the ensemble and thus makes sense to continue a simulation
         """
-        return True        
+        return True
 
     def can_prepend(self, trajectory, trusted=False):
         """
@@ -277,7 +278,7 @@ class Ensemble(StorableNamedObject):
         if it is prepended by a frame. To check, it assumes that the
         trajectory from index 1 is okay. This is mainly for interactive
         usage, when a trajectory is generated using a backward move.
-        
+
         Parameters
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
@@ -285,7 +286,7 @@ class Ensemble(StorableNamedObject):
         trusted : bool
             If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
-        
+
         Returns
         -------
         bool
@@ -294,7 +295,7 @@ class Ensemble(StorableNamedObject):
             could  still be in the ensemble and thus makes sense to continue
             a simulation
         """
-        return True        
+        return True
 
     def strict_can_append(self, trajectory, trusted=False):
         """
@@ -575,7 +576,7 @@ class Ensemble(StorableNamedObject):
     def __str__(self):
         '''
         Returns a complete mathematical expression that defines the current ensemble in a readable form.
-        
+
         Notes
         -----
         This should be cleaned up a little
@@ -602,7 +603,7 @@ class Ensemble(StorableNamedObject):
         # elif type(other) is EmptyEnsemble:
             # return self
         # elif type(other) is FullEnsemble:
-            # return NegatedEnsemble(self)        
+            # return NegatedEnsemble(self)
         # else:
             # return SymmetricDifferenceEnsemble(self, other)
 
@@ -626,17 +627,17 @@ class Ensemble(StorableNamedObject):
             # return EmptyEnsemble()
         # else:
             # return RelativeComplementEnsemble(self, other)
-        
+
     # This is not correct for all ensembles.
     # def __invert__(self):
         # return NegatedEnsemble(self)
-        
+
     @staticmethod
     def _indent(s):
         spl = s.split('\n')
         spl = ['  ' + p for p in spl]
         return '\n'.join(spl)
-    
+
     def _lencheck(self, trajectory):
         if hasattr(self, 'frames'):
             if type(self.frames) is int:
@@ -681,6 +682,15 @@ class EmptyEnsemble(Ensemble):
         # Zero matrix
         return None
 
+    def __eq__(self, other):
+        if isinstance(other, EmptyEnsemble):
+            return True
+
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(EmptyEnsemble)
+
 
 class FullEnsemble(Ensemble):
     '''
@@ -691,7 +701,7 @@ class FullEnsemble(Ensemble):
 
     def __call__(self, trajectory, trusted=None):
         return True
-    
+
     def can_append(self, trajectory, trusted=False):
         return True
 
@@ -725,6 +735,15 @@ class FullEnsemble(Ensemble):
 
     def __str__(self):
         return 'all'
+
+    def __eq__(self, other):
+        if isinstance(other, FullEnsemble):
+            return True
+
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(FullEnsemble)
 
     def oom_matrix(self, oom):
         # Full matrix
