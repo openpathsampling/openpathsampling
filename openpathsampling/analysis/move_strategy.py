@@ -954,7 +954,7 @@ class PoorSingleReplicaStrategy(OrganizeByEnsembleStrategy):
         super(PoorSingleReplicaStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
         )
-        self.null_mover = paths.IdentityPathMover()
+        self.null_mover = paths.IdentityPathMover(counts_as_trial=True)
 
     def chooser_mover_weights(self, scheme, ensemble, mover_weights):
         # this is where I'll have to pad with the null_mover

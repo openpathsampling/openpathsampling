@@ -747,11 +747,15 @@ class MoveScheme(StorableNamedObject):
             for m in delta:
                 acc = 1 if m.accepted else 0
                 key = (m.mover, str(delta.key(m)))
+                is_trial = 1
+                # if hasattr(key[0], 'counts_as_trial'):
+                    # is_trial = 1 if key[0].counts_as_trial else 0
+
                 try:
                     self._mover_acceptance[key][0] += acc
-                    self._mover_acceptance[key][1] += 1
+                    self._mover_acceptance[key][1] += is_trial
                 except KeyError:
-                    self._mover_acceptance[key] = [acc, 1]
+                    self._mover_acceptance[key] = [acc, is_trial]
 
     def move_summary(self, steps, movers=None, output=sys.stdout, depth=0):
         """
