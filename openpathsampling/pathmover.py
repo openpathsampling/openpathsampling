@@ -513,6 +513,7 @@ class InOut(frozenset):
     """
 
     n_max_samples_per_ensemble = 1
+    use_move_type = 0
 
     def __new__(cls, *args):
         return frozenset.__new__(cls, args[0])
@@ -642,7 +643,7 @@ class InOut(frozenset):
             inouts.append((Counter(frees), False))
 
             for i1, i2 in pairs:
-                fix = (froms[i1][0], tos[i2][0], froms[i1][1] * tos[i2][1])
+                fix = (froms[i1][0], tos[i2][0], froms[i1][1] * tos[i2][1] * InOut.use_move_type)
                 r_froms = froms[:i1] + froms[i1 + 1:]
                 r_tos = tos[:i2] + tos[i2 + 1:]
                 for rest in self._fromto(r_froms, e, r_tos):
@@ -1447,8 +1448,8 @@ class ReplicaExchangeMover(SampleMover):
     def _generate_in_out(self):
         return InOutSet([
             InOut([
-                ((self.ensemble1, self.ensemble2, -1), 1),
-                ((self.ensemble2, self.ensemble1, -1), 1)
+                ((self.ensemble1, self.ensemble2, 1 * InOut.use_move_type), 1),
+                ((self.ensemble2, self.ensemble1, 1 * InOut.use_move_type), 1)
             ])
         ])
 
@@ -1533,8 +1534,8 @@ class StateSwapMover(SampleMover):
     def _generate_in_out(self):
         return InOutSet([
             InOut([
-                ((self.ensemble1, self.ensemble2, -1), 1),
-                ((self.ensemble2, self.ensemble1, -1), 1)
+                ((self.ensemble1, self.ensemble2, -1 * InOut.use_move_type), 1),
+                ((self.ensemble2, self.ensemble1, -1 * InOut.use_move_type), 1)
             ])
         ])
 
@@ -1729,7 +1730,7 @@ class PathReversalMover(SampleMover):
     def _generate_in_out(self):
         return InOutSet([
             InOut([
-                ((self.ensemble, self.ensemble, -1), 1)
+                ((self.ensemble, self.ensemble, -1 * InOut.use_move_type), 1)
             ])
         ])
 
