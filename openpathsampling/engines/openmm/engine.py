@@ -173,7 +173,7 @@ class OpenMMEngine(DynamicsEngine):
 
         if self._simulation is None:
             self._simulation = simtk.openmm.app.Simulation(
-                topology=self.topology.md.to_openmm(),
+                topology=self.topology.mdtraj.to_openmm(),
                 system=self.system,
                 integrator=self.integrator,
                 platform=simtk.openmm.Platform.getPlatformByName(self.platform)
