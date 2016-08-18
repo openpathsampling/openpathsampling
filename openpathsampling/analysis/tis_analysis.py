@@ -479,6 +479,7 @@ class TISTransition(Transition):
         logger.info("outer ensemble: " + outer_ensemble.name + " " 
                     + repr(outer_ensemble))
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
+        outer_lambda = self.interfaces.get_lambda(self.interfaces[-1])
         if outer_lambda is None:
             outer_lambda = guess_interface_lambda(outer_cross_prob)
             # lambda_bin = -1

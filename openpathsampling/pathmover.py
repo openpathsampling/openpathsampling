@@ -601,7 +601,7 @@ class InOut(frozenset):
             for i1, i2 in pairs:
                 fix = (froms[i1], tos[i2])
                 r_froms = froms[:i1] + froms[i1 + 1:]
-                r_tos = tos[:i1] + tos[i1 + 1:]
+                r_tos = tos[:i2] + tos[i2 + 1:]
                 for rest in self._fromto(r_froms, e, r_tos):
                     rest[0][fix] += 1
                     inouts.append(rest)

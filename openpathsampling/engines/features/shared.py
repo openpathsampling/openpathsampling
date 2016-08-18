@@ -52,14 +52,10 @@ class StaticContainer(StorableObject):
                 coords = self.coordinates
 
             if np.any(np.isnan(coords)):
-                try:
-                    import pandas as pd
-                except ImportError:
-                    df=""
-                else:
-                    df=str(pd.Dataframe(coords)) + "\n"
-                raise ValueError(df + "Some coordinates became 'nan'; " +
-                                 "simulation is unstable or buggy.")
+                bad_atoms = [i for i in range(len(coords))
+                             if np.any(np.isnan(coords[i]))]
+                raise ValueError("Coordinates went 'nan' for atoms: " + 
+                                 str(bad_atoms))
 
         return
 
