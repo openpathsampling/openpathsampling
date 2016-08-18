@@ -486,7 +486,7 @@ class InOutSet(set):
             } for ens1 in ensembles
         }
         for s in self:
-            for (e1, e2), v in s:
+            for (e1, e2, fix), v in s:
                 res[e1][e2] = True
 
         return res
@@ -512,7 +512,7 @@ class InOut(frozenset):
     chaingin will return a set of in-out-relations.
     """
 
-    n_max_samples_per_ensemble = 0
+    n_max_samples_per_ensemble = 1
 
     def __new__(cls, *args):
         return frozenset.__new__(cls, args[0])
@@ -611,8 +611,8 @@ class InOut(frozenset):
             # now we have `froms -> e -> tos` as all possibilities with
             # one connection and we need to form all possible pair combinations
             # with zero, one, ... pairs
-            froms = sum([[s[0]] * mat1[s] for s in mat1 if s[1] is e], [])
-            tos = sum([[s[1]] * mat2[s] for s in mat2 if s[0] is e], [])
+            froms = sum([[(s[0], s[2])] * mat1[s] for s in mat1 if s[1] is e], [])
+            tos = sum([[(s[1], s[2])] * mat2[s] for s in mat2 if s[0] is e], [])
 
             parts.append(self._fromto(froms, e, tos))
 
@@ -633,7 +633,7 @@ class InOut(frozenset):
             return outs
 
     def _fromto(self, froms, e, tos):
-        frees = [(f, e) for f in froms] + [(e, t) for t in tos]
+        frees = [(f[0], e, f[1]) for f in froms] + [(e, t[0], t[1]) for t in tos]
         pairs = list(product(range(len(froms)), range(len(tos))))
         if len(pairs) == 0:
             inouts = [(Counter(frees), True)]
@@ -642,12 +642,15 @@ class InOut(frozenset):
             inouts.append((Counter(frees), False))
 
             for i1, i2 in pairs:
-                fix = (froms[i1], tos[i2])
+                fix = (froms[i1][0], tos[i2][0], froms[i1][1] * tos[i2][1])
                 r_froms = froms[:i1] + froms[i1 + 1:]
                 r_tos = tos[:i2] + tos[i2 + 1:]
                 for rest in self._fromto(r_froms, e, r_tos):
-                    rest[0][fix] += 1
-                    inouts.append(rest)
+                    if fix[2] < 1 or fix[0] is not fix[1]:
+                        rest[0][fix] += 1
+
+                    if rest[0][fix] > 0:
+                        inouts.append(rest)
 
         return inouts
 
@@ -806,7 +809,7 @@ class PathMover(TreeMixin, StorableNamedObject):
         elif len(self.input_ensembles) == 1 and len(self.output_ensembles) == 1:
             return InOutSet([
                 InOut(
-                    [((self.input_ensembles[0], self.output_ensembles[0]), 1)]
+                    [((self.input_ensembles[0], self.output_ensembles[0], 0), 1)]
                 )])
         else:
             # Fallback could be all possibilities, but for now we ask the user!
@@ -1444,8 +1447,8 @@ class ReplicaExchangeMover(SampleMover):
     def _generate_in_out(self):
         return InOutSet([
             InOut([
-                ((self.ensemble1, self.ensemble2), 1),
-                ((self.ensemble2, self.ensemble1), 1)
+                ((self.ensemble1, self.ensemble2, -1), 1),
+                ((self.ensemble2, self.ensemble1, -1), 1)
             ])
         ])
 
@@ -1530,8 +1533,8 @@ class StateSwapMover(SampleMover):
     def _generate_in_out(self):
         return InOutSet([
             InOut([
-                ((self.ensemble1, self.ensemble2), 1),
-                ((self.ensemble2, self.ensemble1), 1)
+                ((self.ensemble1, self.ensemble2, -1), 1),
+                ((self.ensemble2, self.ensemble1, -1), 1)
             ])
         ])
 
@@ -1722,6 +1725,13 @@ class PathReversalMover(SampleMover):
 
     def _get_in_ensembles(self):
         return [self.ensemble]
+
+    def _generate_in_out(self):
+        return InOutSet([
+            InOut([
+                ((self.ensemble, self.ensemble, -1), 1)
+            ])
+        ])
 
     def __call__(self, trial):
         trajectory = trial.trajectory

@@ -320,7 +320,7 @@ class TreeRenderer(svg.Drawing):
         return self.line(
             class_=self.css_class(css_class),
             start=self.xy(x1 + 0.5 + padding, y),
-            end=self.xy(x2 - 0.5, y)
+            end=self.xy(x2 - 0.5 - 2 * padding, y)
         )
 
     def label(self, x, y, text, css_class=None):
@@ -695,6 +695,192 @@ class MoveTreeBuilder(Builder):
         doc['class'] = 'movetree'
 
         left_x = -max_level * doc.scale_x - 120
+        top_y = - 120
+        width = len(self.ensembles) * doc.scale_x - left_x + 50
+        height = (total + 1) * doc.scale_y - top_y
+
+        # adjust view box to fit full image
+        doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
+            left_x,
+            top_y,
+            width,
+            height
+        )
+        doc['width'] = width
+
+        return doc
+
+
+class EnsembleMixBuilder(Builder):
+    """
+    Builder Class for creating MoveTree Visualisations
+
+    You need to specify a :obj:`openpathsampling.PathMover` and a list of ensembles. Then it will
+    display all possible steps in the pathmover and its relation to the given list of ensembles.
+
+    This is useful to get an idea which parts of the ensemble affect which part of ensembles
+    """
+
+    def __init__(self, pathmover=None, ensembles=None, initial=None):
+        super(EnsembleMixBuilder, self).__init__()
+
+        self.p_x = dict()
+        self.p_y = dict()
+        self.obj = list()
+
+        self.ensembles = []
+        self.pathmover = None
+        self.initial = None
+
+        self.traj_ens_x = dict()
+        self.traj_ens_y = dict()
+
+        self.traj_repl_x = dict()
+        self.traj_repl_y = dict()
+
+        self.ens_x = list()
+        self.repl_x = list()
+
+        self.css_style = vis_css
+        self.options.analysis['only_canonical'] = True
+
+        self.doc = None
+
+        if pathmover is not None:
+            self.pathmover = pathmover
+
+        if ensembles is not None:
+            self.ensembles = ensembles
+
+        if initial is not None:
+            self.initial = initial
+
+    @staticmethod
+    def from_scheme(scheme):
+        """
+        Initaliza a new `MoveTreeBuilder` from the date in a `MoveScheme`
+
+        Parameters
+        ----------
+        scheme : :obj:`openpathsampling.MoveScheme`
+
+        Returns
+        -------
+        :obj:`MoveTreeBuilder`
+        """
+        try:
+            # inp is a move scheme
+            input_ensembles = scheme.list_initial_ensembles()
+        except AttributeError:
+            # inp is a path mover
+            # ??? this is nonsense in from_scheme, isn't it? you would get
+            # error on the thing you return below ~~~DWHS
+            input_ensembles = scheme.input_ensembles
+        # using network.all_ensembles forces a correct ordering
+        return EnsembleMixBuilder(
+            pathmover=scheme.root_mover,
+            ensembles=scheme.network.all_ensembles,
+            initial=input_ensembles
+        )
+
+    @staticmethod
+    def _get_sub_used(mover, replica_states, level):
+        l = [(mover, level, replica_states)]
+        subs = mover.sub_replica_state(replica_states)
+        map(
+            lambda x, y, z: l.extend(MoveTreeBuilder._get_sub_used(x, y, z)),
+            mover.submovers, subs, [1 + level] * len(mover.submovers)
+        )
+        return l
+
+    def render(self):
+        doc = TreeRenderer(self.css_style)
+        self.doc = doc
+
+        self.ens_x = [None] * len(self.ensembles)
+        self.repl_x = [None] * len(self.ensembles)
+
+        path = self.pathmover
+
+        group = doc.g(
+            class_='tree'
+        )
+
+        total = len(self.ensembles)
+
+        mat = path.in_out.mixing_matrix(self.ensembles)
+
+        group = doc.g(
+            class_='ensembles'
+        )
+
+        for yp, ens1 in enumerate(self.ensembles):
+            txt = chr(yp + 65)
+
+            label = ens1.name if hasattr(ens1, 'name') else \
+                ens1.__class__.__name__[:-8]
+
+            group.add(
+                doc.label(
+                    -1,
+                    yp,
+                    label
+                )
+            )
+
+            group.add(
+                doc.label(
+                    yp,
+                    -1,
+                    '[' + txt + '] ' + label,
+                    css_class=['head']
+                )
+            )
+            group.add(
+                doc.vertical_hook(
+                    yp,
+                    -1,
+                    yp,
+                    total
+                )
+            )
+            group.add(
+                doc.horizontal_connector(
+                    -1.35,
+                    total + 0.35,
+                    yp
+                )
+            )
+
+        for yp, ens1 in enumerate(self.ensembles):
+            for ens_idx, ens2 in enumerate(self.ensembles):
+                txt = '+'
+
+                if mat[ens1][ens2]:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp,
+                            txt,
+                            css_class=['output']
+                        )
+                    )
+                # else:
+                #     group.add(
+                #         doc.connector(
+                #             ens_idx,
+                #             yp,
+                #             css_class=['unknown']
+                #         )
+                #     )
+
+        group.translate(50, 0)
+
+        doc.add(group)
+
+        doc['class'] = 'movetree'
+
+        left_x = - 120
         top_y = - 120
         width = len(self.ensembles) * doc.scale_x - left_x + 50
         height = (total + 1) * doc.scale_y - top_y
@@ -2737,6 +2923,9 @@ vis_css = r"""
     stroke: black;
 }
 .movetree .v-hook {
+    stroke: black;
+}
+.movetree .h-connector {
     stroke: black;
 }
 .movetree .ensembles .head .shift {
