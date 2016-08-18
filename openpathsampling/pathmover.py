@@ -14,7 +14,7 @@ import numpy as np
 from ops_logging import initialization_logging
 from treelogic import TreeMixin
 
-from itertools import product
+from itertools import product, combinations, chain
 from collections import Counter
 
 import openpathsampling as paths
@@ -455,6 +455,42 @@ class InOutSet(set):
 
         return ReplicaStateSet(ret)
 
+    def filter_max_length(self, length):
+        """
+        Return InOutSet limited by maximal number of samples per ensemble
+
+        Parameters
+        ----------
+        length : int
+            the number of ensembles
+
+        Returns
+        -------
+        `InOutSet`
+        the reduced in-out-relation table
+        """
+        return InOutSet({s for s in self if max(s.ins.values()) <= length})
+
+    def mixing_matrix(self, ensembles):
+        """
+        Return a matrix of bool if a sample can move between ensembles
+
+        Returns
+        -------
+
+        """
+        res = {
+            ens1: {
+                ens2: False
+                for ens2 in ensembles
+            } for ens1 in ensembles
+        }
+        for s in self:
+            for (e1, e2), v in s:
+                res[e1][e2] = True
+
+        return res
+
 
 class InOut(frozenset):
     """
@@ -475,6 +511,8 @@ class InOut(frozenset):
     possible relations depending on the occupation state of the ensemble
     chaingin will return a set of in-out-relations.
     """
+
+    n_max_samples_per_ensemble = 0
 
     def __new__(cls, *args):
         return frozenset.__new__(cls, args[0])
@@ -579,15 +617,20 @@ class InOut(frozenset):
             parts.append(self._fromto(froms, e, tos))
 
         if self.essential and other.essential:
-            return InOutSet(
+            outs = InOutSet(
                 map(lambda x: InOut(
                     sum(zip(*x)[0], Counter()).items(), all(zip(*x)[1])),
                     product(*parts)))
         else:
-            return InOutSet(
+            outs = InOutSet(
                 map(lambda x: InOut(
                     sum(zip(*x)[0], Counter()).items(), False),
                     product(*parts)))
+
+        if InOut.n_max_samples_per_ensemble > 0:
+            return outs.filter_max_length(InOut.n_max_samples_per_ensemble)
+        else:
+            return outs
 
     def _fromto(self, froms, e, tos):
         frees = [(f, e) for f in froms] + [(e, t) for t in tos]
@@ -2176,7 +2219,19 @@ class SequentialMover(PathMover):
         return sub_change
 
     def _generate_in_out(self):
-        return InOutSet(sum([sub.in_out for sub in self.submovers], InOutSet()))
+        total = self.submovers[0].in_out
+
+        for pp in range(1, len(self.submovers)):
+            new_pos = self.submovers[pp].in_out
+            total = InOutSet(set.union(*[
+                total,
+                InOutSet(
+                    sum([total, new_pos], InOutSet())
+                ),
+                new_pos
+            ]))
+
+        return total
 
     def sub_replica_state(self, replica_states):
         ret = list()
@@ -2224,13 +2279,18 @@ class PartialAcceptanceSequentialMover(SequentialMover):
     """
 
     def _generate_in_out(self):
-        # This can get VERY big, not sure if we should really do that!
-        return InOutSet(set.union(*[
-            InOutSet(
-                sum([sub.in_out for sub in self.submovers[:length]], InOutSet())
-            )
-            for length in range(1, len(self.submovers) + 1)
-        ]))
+        total = self.submovers[0].in_out
+
+        for pp in range(1, len(self.submovers)):
+            new_pos = self.submovers[pp].in_out
+            total = InOutSet(set.union(*[
+                total,
+                InOutSet(
+                    sum([total, new_pos], InOutSet())
+                )
+            ]))
+
+        return total
 
     def move(self, sample_set):
         logger.debug("==== BEGINNING " + self.name + " ====")
@@ -2267,6 +2327,9 @@ class ConditionalSequentialMover(SequentialMover):
     ConditionalSequentialMover only works if there is a *single* active
     sample per replica.
     """
+
+    def _generate_in_out(self):
+        return InOutSet(sum([sub.in_out for sub in self.submovers], InOutSet()))
 
     def move(self, sample_set):
         logger.debug("Starting conditional sequential move")
