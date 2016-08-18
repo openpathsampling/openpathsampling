@@ -814,9 +814,14 @@ class MoveScheme(StorableNamedObject):
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
             try:
+                # if null moves don't count
                 expected_frequency[groupname] = sum(
-                    [self.real_choice_probability[m] for m in group]
+                    [self.choice_probability[m] for m in group]
                 )
+                ## if null moves count
+                # expected_frequency[groupname] = sum(
+                    # [self.real_choice_probability[m] for m in group]
+                # )
             except KeyError:
                 expected_frequency[groupname] = float('nan')
 
