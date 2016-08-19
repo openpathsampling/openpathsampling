@@ -193,7 +193,6 @@ class Ensemble(StorableNamedObject):
     __metaclass__ = abc.ABCMeta
 
     use_shortcircuit = True
-    replica_sign = +1
 
     def __init__(self):
         """
@@ -743,8 +742,7 @@ class Ensemble(StorableNamedObject):
             sample in this ensemble
         replica : int
             the replica id for the sample to be created
-        used_trajectories : (list of)
-        :class:`openpathsampling.trajectory.Trajectory`
+        used_trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             trajectories not taken into account in the first attempt
         reuse_strategy : str
             if `avoid` then in a second attempt the used trajectories are
@@ -789,8 +787,7 @@ class Ensemble(StorableNamedObject):
             sample in this ensemble
         replica : int
             the replica id for the sample to be created
-        used_trajectories : (list of)
-        :class:`openpathsampling.trajectory.Trajectory`
+        used_trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             trajectories not taken into account in the first attempt
         reuse_strategy : str
             if `avoid` then in a second attempt the used trajectories are
@@ -2571,7 +2568,6 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     # them being used in __init__ instead of the self-made ones
 
     _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
-    replica_sign = -1
 
     def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
         if n_l < 2:
@@ -2754,11 +2750,9 @@ class TISEnsemble(SequentialEnsemble):
 
     Attributes
     ----------
-    initial_states : `openpathsampling.volume.Volume` or
-    list of `openpathsampling.volume.Volume`
+    initial_states : `openpathsampling.volume.Volume` or list of `openpathsampling.volume.Volume`
         Volume(s) that only the first or last frame may be in
-    final_states : `openpathsampling.volume.Volume` or
-    list of `openpathsampling.volume.Volume`
+    final_states : `openpathsampling.volume.Volume` or list of `openpathsampling.volume.Volume`
         Volume(s) that only the last frame may be in
     interface : `openpathsampling.volume.Volume`
         Volume which the trajectory must exit to be accepted
