@@ -2326,7 +2326,7 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         predestined_traj = [s.xyz[0][0] for s in predestined_snaps]
         engine = CalvinistDynamics(predestined_traj)
         sample = self.minus_nl2.extend_sample_from_trajectories(
-            sset, replica=-1, engine=engine
+            sset, replica=-1, engine=engine, level='complex'
         )
 
         assert_equal(sample.ensemble(sample.trajectory), True)
@@ -2342,7 +2342,7 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         predestined_traj = [s.xyz[0][0] for s in predestined_snaps]
         engine = CalvinistDynamics(predestined_traj)
         sample = self.minus_nl2.extend_sample_from_trajectories(
-            sset, replica=-1, engine=engine
+            sset, replica=-1, engine=engine, level='complex'
         )
 
         assert_equal(sample.ensemble(sample.trajectory), True)
