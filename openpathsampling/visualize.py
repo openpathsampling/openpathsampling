@@ -1,3 +1,4 @@
+import openpathsampling.pathmover_inout
 import svgwrite as svg
 from svgwrite.container import Group
 import openpathsampling as paths
@@ -515,6 +516,7 @@ class MoveTreeBuilder(Builder):
         )
         return l
 
+
     def render(self):
         doc = TreeRenderer(self.css_style)
         self.doc = doc
@@ -621,7 +623,7 @@ class MoveTreeBuilder(Builder):
 
         max_level = 0
 
-        initial_rs = paths.pathmover.ReplicaStateSet.from_ensembles(self.initial)
+        initial_rs = openpathsampling.pathmover_inout.ReplicaStateSet.from_ensembles(self.initial)
         subs = MoveTreeBuilder._get_sub_used(self.pathmover, initial_rs, 0)
 
         # this checks if the mover can actually be run without problems
