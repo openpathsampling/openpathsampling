@@ -9,6 +9,7 @@ from simtk import unit as u
 from simtk.openmm import app
 
 import openpathsampling.engines.openmm as peng
+import openpathsampling.engines as dyn
 
 from test_helpers import (
     true_func, data_filename,
@@ -157,8 +158,8 @@ class testOpenMMEngine(object):
         _ = self.engine.generate(self.engine.current_snapshot, [true_func])
 
     # OpenMM CPU will throw an error and not return a snapshot with nan
-    @raises_with_message_like(RuntimeError,
-                              'Failed to generate trajectory without error ')
+    @raises_with_message_like(dyn.EngineNaNError,
+                              '`nan` in snapshot')
     def test_fail_nan(self):
         self.engine.on_max_length = 'retry'
         self.engine.options['n_max_length'] = 2
