@@ -147,7 +147,16 @@ class testOpenMMEngine(object):
         self.engine.options['n_max_length'] = 2
         _ = self.engine.generate(self.engine.current_snapshot, [true_func])
 
-    # @raises_with_message_like(RuntimeError,
+    @raises_with_message_like(RuntimeError,
+                              'Failed to generate trajectory without hitting '
+                              'max length')
+    def test_retry_length(self):
+        self.engine.on_max_length = 'retry'
+        self.engine.options['n_max_length'] = 2
+        self.engine.retries_when_max_length = 2
+        _ = self.engine.generate(self.engine.current_snapshot, [true_func])
+
+            # @raises_with_message_like(RuntimeError,
     #                           "Failed to generate trajectory without error")
     # def test_fail_length(self):
     #     self.engine.on_nan = 'fail'

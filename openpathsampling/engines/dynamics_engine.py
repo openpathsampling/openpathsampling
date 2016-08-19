@@ -430,6 +430,7 @@ class DynamicsEngine(StorableNamedObject):
         valid = False
         attempt_nan = 0
         attempt_error = 0
+        attempt_max_length = 0
         trajectory = initial
 
         final_error = None
@@ -528,6 +529,7 @@ class DynamicsEngine(StorableNamedObject):
                             'Hit maximal length of %d frames.' %
                             self.options['n_frames_max']
                         )
+                        break
                     elif on == 'ignore':
                         # keep on going
                         pass
@@ -535,6 +537,15 @@ class DynamicsEngine(StorableNamedObject):
                         logger.info('Trajectory hit max length. Stopping.')
                         # fail gracefully
                         stop = True
+                    elif on == 'retry':
+                        attempt_max_length += 1
+                        if attempt_max_length > self.retries_when_max_length:
+                            if self.on_nan == 'fail':
+                                final_error = RuntimeError(
+                                    'Failed to generate trajectory without '
+                                    'hitting max length after %d attempts' %
+                                    attempt_max_length)
+                                break
 
             if has_nan:
                 attempt_nan += 1
