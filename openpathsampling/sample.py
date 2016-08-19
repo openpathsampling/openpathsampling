@@ -384,6 +384,7 @@ class SampleSet(StorableObject):
             self,
             ensembles,
             trajectories,
+            preconditions=None,
             strategies=None,
             reuse_strategy='avoid',
             engine=None):
@@ -401,6 +402,20 @@ class SampleSet(StorableObject):
             the list of ensembles to be generated. If an element is itself a
             list then one sample for one of the ensembles in that list if
             generated
+        preconditions : list of str
+            a list of possible steps to modify the initial list of trajectories.
+            possible choices are
+
+                1.  `sort-shortest` - sorting by shortest first,
+                2.  `sort_median` - sorting by the middle one first and then in
+                    move away from the median length
+                3.  `sort-longest` - sorting by the longest first
+                4.  `reverse` - reverse the order and
+                5.  `mirror` which will add the reversed trajectories to the
+                    list in the same order
+
+            Default is `None` which means to do nothing.
+
         strategies : dict
             a dict that specifies the options used when ensemble functions
             are used to create a new sample.
@@ -428,18 +443,50 @@ class SampleSet(StorableObject):
             'extend-minimal'    # try to extend short sub-trajectories
         ]
 
+        implemented_preconditions = [
+            'sort-shortest',
+            'sort-median',
+            'sort-longest',
+            'reverse',
+            'mirror'
+        ]
+
+        if preconditions is None:
+            preconditions = ['mirror']
+
         # create a list of trajectories
         trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
 
+        for pre in preconditions:
+            if pre not in implemented_preconditions:
+                raise RuntimeError(
+                    '%s is not a valid precondition strategy. Choose from %s.' %
+                    (pre, implemented_preconditions)
+                )
+
+            if pre == 'sort-shortest':
+                trajectories = sorted(trajectories, key=len)
+            elif pre == 'sort-longest':
+                trajectories = sorted(trajectories, key=len)
+            elif pre == 'sort-median':
+                sorted_trajectories = sorted(trajectories, key=len)
+                trajectories = list([p for p2 in zip(
+                    sorted_trajectories[len(sorted_trajectories) / 2:],
+                    reversed(sorted_trajectories[:len(sorted_trajectories) / 2])
+                ) for p in p2])
+
+                if len(sorted_trajectories) & 1:
+                    trajectories.append(sorted_trajectories[-1])
+            elif pre == 'reverse':
+                trajectories = list(reversed(trajectories))
+            elif pre == 'mirror':
+                trajectories = trajectories + \
+                    [traj.reversed for traj in trajectories]
+
         # let's always try the short trajectories first
-        trajectories = sorted(trajectories, key=len)
         # print map(lambda x: hex(id(x)), trajectories)
 
         # we will try forward/backward interleaved
-        trajectories = [
-            direction for traj in trajectories
-            for direction in [traj, traj.reversed]]
-
         used_trajectories = []
 
         # if we start with an existing sample set look at what we got
@@ -555,6 +602,14 @@ class SampleSet(StorableObject):
                                 level='minimal',
                                 **opts
                             )
+                    elif strategy == 'extend-native' and engine:
+                        if hasattr(ens, 'extend_sample_from_trajectories'):
+                            sample = ens.extend_sample_from_trajectories(
+                                trajectories=trajectories,
+                                engine=engine,
+                                level='native',
+                                **opts
+                            )
                     else:
                         sample = None
 
@@ -587,16 +642,20 @@ class SampleSet(StorableObject):
                         self.append(sample)
                         if reuse_strategy != 'all':
                             # we mark the trajectory and its reversed as used
-                            used_trajectories.append(sample.trajectory)
-                            if reuse_strategy.endswith('symmetric'):
-                                used_trajectories.append(
-                                    sample.trajectory.reversed)
+                            if sample.trajectory not in used_trajectories and (
+                                not reuse_strategy.endswith('symmetric') or
+                                sample.trajectory.reversed in used_trajectories
+                            ):
+                                used_trajectories.append(sample.trajectory)
+                            # if reuse_strategy.endswith('symmetric'):
+                            #     used_trajectories.append(
+                            #         sample.trajectory.reversed)
 
                             # we want the list of used_trajectories to be
                             # sorted. Short ones first. So if we have to chose
                             # from the used_ones, use the shortest one
-                            used_trajectories = sorted(
-                                used_trajectories, key=len)
+                            # used_trajectories = sorted(
+                            #     used_trajectories, key=len)
 
                         # found a sample in this category so remove it for
                         # other tries

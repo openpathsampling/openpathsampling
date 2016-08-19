@@ -569,7 +569,7 @@ class Trajectory(list, StorableObject):
     # UTILITY FUNCTIONS
     # ==========================================================================
 
-    def md(self, topology=None):
+    def to_mdtraj(self, topology=None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
 
@@ -587,7 +587,7 @@ class Trajectory(list, StorableObject):
         """
 
         if topology is None:
-            topology = self.topology.md
+            topology = self.topology.mdtraj
 
         output = self.xyz
 
@@ -628,5 +628,9 @@ class Trajectory(list, StorableObject):
                     obj.trajectory if isinstance(obj, paths.Sample) else obj
                     for obj in trajectories
                     ]
+        elif isinstance(trajectories, paths.BaseSnapshot):
+            return paths.Trajectory([trajectories])
+        elif isinstance(trajectories, paths.BaseSnapshot):
+            return paths.Trajectory([trajectories])
 
         return trajectories

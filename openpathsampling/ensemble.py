@@ -753,16 +753,25 @@ class Ensemble(StorableNamedObject):
 
         trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
 
+        used_and_possible = []
+
         for idx, traj in enumerate(trajectories):
-            if traj not in used_trajectories:
+            if traj not in used_trajectories and (
+                    not reuse_strategy.endswith('symmetric') or
+                    traj.reversed not in used_trajectories):
                 if self(traj):
                     return paths.Sample(
                         trajectory=traj,
                         ensemble=self,
                         replica=replica
                     )
+            else:
+                used_and_possible.append(traj)
 
-        return self._handle_used_trajectories(used_trajectories, reuse_strategy)
+        return self._handle_used_trajectories(
+            used_trajectories,
+            used_and_possible,
+            reuse_strategy)
 
     def split_sample_from_trajectories(
             self, trajectories,
@@ -793,18 +802,27 @@ class Ensemble(StorableNamedObject):
 
         trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
 
+        used_and_possible = []
+
         for idx, traj in enumerate(trajectories):
             parts = self._get_trajectory_parts_in_order(traj, unique)
 
             for part in parts:
-                if part not in used_trajectories:
+                if part not in used_trajectories and (
+                        not reuse_strategy.endswith('symmetric') or
+                        part.reversed not in used_trajectories):
                     return paths.Sample(
                         trajectory=part,
                         ensemble=self,
                         replica=replica
                     )
+                else:
+                    used_and_possible.append(part)
 
-        return self._handle_used_trajectories(used_trajectories, reuse_strategy)
+        return self._handle_used_trajectories(
+            used_trajectories,
+            used_and_possible,
+            reuse_strategy)
 
     def extend_sample_from_trajectories(
             self,
@@ -812,7 +830,7 @@ class Ensemble(StorableNamedObject):
             engine,
             replica=0,
             unique='median',
-            level='complex',
+            level='native',
             attempts=2):
         """
         Generate a sample in the ensemble by extending parts of `trajectories`
@@ -846,10 +864,14 @@ class Ensemble(StorableNamedObject):
             If `first` the first found subtrajectory is selected. If
             `shortest` then from all subparts the shortest one is used.
         level : str
-            there are two levels you chose and not all are implemented for
-            an ensemble. Picking `complex` will use the largest (most complex)
+            there are three levels you chose and not all are implemented for
+            an ensemble. For all ensembles you can use `native` which will
+            simply try to extend the ensemble itself, the mose simple one, which
+            is always possible.
+            Picking `complex` will use the largest (most complex)
             sub-ensemble that makes sense. Like in the case of a Minus move
-            this is the segment ensemble. The other choice is `minimal` which
+            this is the segment ensemble.
+            The other choice is `minimal` which
             choses the minimal necessary subtrajectory extending makes sense
             from. For TIS or Minus Ensembles this will be crossing from the
             (initial) core to the outside. You should try `complex` first and
@@ -857,15 +879,19 @@ class Ensemble(StorableNamedObject):
         attempts : int
             the number of attemps on a trajectory to extend
         """
-        if not hasattr(self, 'extendable_sub_ensembles'):
-            return None
 
-        sub_ensembles = self.extendable_sub_ensembles
+        if level == 'native':
+            sub_ensemble = self
+        else:
+            if not hasattr(self, 'extendable_sub_ensembles'):
+                return None
 
-        if level not in sub_ensembles:
-            return None
+            sub_ensembles = self.extendable_sub_ensembles
 
-        sub_ensemble = sub_ensembles[level]
+            if level not in sub_ensembles:
+                return None
+
+            sub_ensemble = sub_ensembles[level]
 
         trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
 
@@ -886,17 +912,28 @@ class Ensemble(StorableNamedObject):
 
                     if self.strict_can_append(part):
                         # seems we could extend forward
-                        part = engine.extend_forward(
-                            part,
-                            self
-                        )
+
+                        part = part[:-1] + \
+                           engine.generate(
+                               part[-1],
+                               [paths.PrefixTrajectoryEnsemble(
+                                   self,
+                                   part
+                               ).strict_can_append],
+                               direction=+1
+                           )
 
                     if self.strict_can_prepend(part):
                         # and extend backward
-                        part = engine.extend_backward(
-                            part,
-                            self
-                        )
+
+                        part = engine.generate(
+                            part[0].reversed,
+                            [paths.SuffixTrajectoryEnsemble(
+                                self,
+                                part
+                            ).strict_can_prepend],
+                            direction=-1
+                        ).reversed + part[1:]
 
                     if self(part):  # make sure we found a sample
                         return paths.Sample(
@@ -949,24 +986,40 @@ class Ensemble(StorableNamedObject):
 
         return parts
 
-    def _handle_used_trajectories(self, used_trajectories, reuse_strategy):
+    def _handle_used_trajectories(
+            self,
+            used_trajectories,
+            used_and_possible,
+            reuse_strategy):
+
         if reuse_strategy.startswith('avoid') \
                 and used_trajectories is not None:
-            for part in used_trajectories:
-                if self(part):
-                    # move the used one to the back of the list to
-                    # not reuse it directly
-                    del used_trajectories[used_trajectories.index(part)]
-                    used_trajectories.append(part)
-                    if reuse_strategy == 'avoid-symmetric':
-                        del used_trajectories[
-                            used_trajectories.index(part.reversed)]
-                        used_trajectories.append(part.reversed)
 
-                    return paths.Sample(
-                        trajectory=part,
-                        ensemble=self
-                    )
+            for part in used_trajectories:
+                if part in used_and_possible:
+                    if self(part):
+                        # move the used one to the back of the list to
+                        # not reuse it directly
+                        del used_trajectories[used_trajectories.index(part)]
+                        used_trajectories.append(part)
+
+                        return paths.Sample(
+                            trajectory=part,
+                            ensemble=self
+                        )
+
+                if reuse_strategy.endswith('symmetric'):
+                    if part.reversed in used_and_possible:
+                        if self(part):
+                            # move the used one to the back of the list to
+                            # not reuse it directly
+                            del used_trajectories[used_trajectories.index(part)]
+                            used_trajectories.append(part)
+
+                            return paths.Sample(
+                                trajectory=part,
+                                ensemble=self
+                            )
 
         return None
 
