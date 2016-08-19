@@ -27,8 +27,23 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 
 
 # =============================================================================
-# Multi-State Transition Interface Sampling
+# Base dynamics engine class
 # =============================================================================
+
+class EngineError(Exception):
+    def __init__(self, message, last_trajectory):
+        # Call the base class constructor with the parameters it needs
+        super(EngineError, self).__init__(message)
+
+        # Now for your custom code...
+        self.last_trajectory = last_trajectory
+
+class EngineMaxLengthError(EngineError):
+    pass
+
+
+class EngineNaNError(EngineError):
+    pass
 
 
 class DynamicsEngine(StorableNamedObject):
@@ -525,9 +540,10 @@ class DynamicsEngine(StorableNamedObject):
                     on = self.on_max_length
 
                     if on == 'fail':
-                        final_error = RuntimeError(
+                        final_error = EngineMaxLengthError(
                             'Hit maximal length of %d frames.' %
-                            self.options['n_frames_max']
+                            self.options['n_frames_max'],
+                            trajectory
                         )
                         break
                     elif on == 'ignore':
@@ -541,27 +557,41 @@ class DynamicsEngine(StorableNamedObject):
                         attempt_max_length += 1
                         if attempt_max_length > self.retries_when_max_length:
                             if self.on_nan == 'fail':
-                                final_error = RuntimeError(
+                                final_error = EngineMaxLengthError(
                                     'Failed to generate trajectory without '
                                     'hitting max length after %d attempts' %
-                                    attempt_max_length)
+                                    attempt_max_length,
+                                    trajectory)
                                 break
 
             if has_nan:
-                attempt_nan += 1
-                if attempt_nan > self.retries_when_nan:
-                    if self.on_nan == 'fail':
-                        final_error = RuntimeError(
+                on = self.on_nan
+                if on == 'fail':
+                    final_error = EngineNaNError('`nan` in snapshot')
+                elif on == 'retry':
+                    attempt_nan += 1
+                    if attempt_nan > self.retries_when_nan:
+                        final_error = EngineNaNError(
                             'Failed to generate trajectory without `nan` '
-                            'after %d attempts' % attempt_nan)
+                            'after %d attempts' % attempt_error,
+                            trajectory)
+                elif on == 'ignore':
+                    pass
 
             if has_error:
-                attempt_error += 1
-                if attempt_error > self.retries_when_nan:
-                    if self.on_error == 'fail':
+                on = self.on_nan
+                if on == 'fail':
+                    final_error = errors[-1]
+                    del errors[-1]
+                elif on == 'retry':
+                    attempt_error += 1
+                    if attempt_error > self.retries_when_error:
                         final_error = RuntimeError(
-                            'Failed to generate trajectory without error '
-                            'after %d attempts' % attempt_error)
+                            'Failed to generate trajectory without `nan` '
+                            'after %d attempts' % attempt_error,
+                            trajectory)
+                elif on == 'ignore':
+                    pass
 
             elif stop:
                 valid = True

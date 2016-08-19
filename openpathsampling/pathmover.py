@@ -626,6 +626,16 @@ class InOut(frozenset):
         return ReplicaState(d.items())
 
 
+class SampleNaNError(Exception):
+    def __init__(self, message, trial_sample):
+        super(SampleNaNError, self).__init__(message)
+        self.trial_sample = trial_sample
+
+
+class MoveChangeNaNError(Exception):
+    pass
+
+
 class PathMover(TreeMixin, StorableNamedObject):
     """
     A PathMover is the description of a move in replica space.
@@ -1104,8 +1114,16 @@ class SampleMover(PathMover):
         # 2. pick samples from these ensembles
         samples = [self.select_sample(sample_set, ens) for ens in ensembles]
 
-        # 3. pass these samples to the generator
-        trials = self(*samples)
+        try:
+            # 3. pass these samples to the generator
+            trials = self(*samples)
+        except SampleNaNError as e:
+            return paths.RejectedSampleMoveChange(
+                samples=e.trial_sample,
+                mover=self,
+                details=paths.MoveDetails(
+                    error='NaN')
+            )
 
         # 4. accept/reject
         accepted, details = self._accept(trials)
@@ -1123,6 +1141,7 @@ class SampleMover(PathMover):
                 mover=self,
                 details=details
             )
+
 
     @abc.abstractmethod
     def __call__(self, *args):
@@ -1197,7 +1216,27 @@ class EngineMover(SampleMover):
 
         shooting_index = self.selector.pick(initial_trajectory)
 
-        trial_trajectory = self._run(initial_trajectory, shooting_index)
+        try:
+            trial_trajectory = self._run(initial_trajectory, shooting_index)
+        except paths.engines.EngineError as e:
+            trial_trajectory = e.last_trajectory
+
+            trial_details = paths.SampleDetails(
+                initial_trajectory=initial_trajectory,
+                shooting_snapshot=initial_trajectory[shooting_index],
+                error='NaN'
+            )
+
+            trial = paths.Sample(
+                replica=replica,
+                trajectory=trial_trajectory,
+                ensemble=self.target_ensemble,
+                parent=input_sample,
+                details=trial_details,
+                mover=self
+            )
+
+            raise SampleNaNError('Sample with NaN', trial)
 
         bias = self.selector.probability_ratio(
             initial_trajectory[shooting_index],
