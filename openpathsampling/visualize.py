@@ -5,8 +5,6 @@ import openpathsampling as paths
 import json
 from collections import namedtuple, OrderedDict, Counter
 
-import openpathsampling.pathmover as pm
-
 
 # TODO: Move TreeRenderer and Builder to a different file ???
 
