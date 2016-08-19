@@ -620,7 +620,10 @@ class SampleSet(StorableObject):
 
                         # another way would be to look for the smallest not
                         # taken id. This one is simpler
-                        replica_idx = max(0, max(self.replicas) + 1)
+                        if len(self.replicas) > 0:
+                            replica_idx = max(0, max(self.replicas) + 1)
+                        else:
+                            replica_idx = 0
 
                         sample.replica = replica_idx
 
