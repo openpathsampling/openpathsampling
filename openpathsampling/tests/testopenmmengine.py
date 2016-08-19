@@ -156,9 +156,9 @@ class testOpenMMEngine(object):
         self.engine.retries_when_max_length = 2
         _ = self.engine.generate(self.engine.current_snapshot, [true_func])
 
+    # OpenMM CPU will throw an error and not return a snapshot with nan
     @raises_with_message_like(RuntimeError,
-                              'Failed to generate trajectory without hitting '
-                              'max length')
+                              'Failed to generate trajectory without error ')
     def test_fail_nan(self):
         self.engine.on_max_length = 'retry'
         self.engine.options['n_max_length'] = 2
@@ -167,11 +167,3 @@ class testOpenMMEngine(object):
         # this is crude but does the trick
         snapshot.velocities[0] += 1000000. * u.nanometers / u.picoseconds
         _ = self.engine.generate(snapshot, [true_func])
-
-
-            # @raises_with_message_like(RuntimeError,
-    #                           "Failed to generate trajectory without error")
-    # def test_fail_length(self):
-    #     self.engine.on_nan = 'fail'
-    #     self.engine.options['n_max_length'] = 2
-    #     traj = self.engine.generate(self.engine.current_snapshot, [true_func])
