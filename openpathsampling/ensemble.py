@@ -830,7 +830,7 @@ class Ensemble(StorableNamedObject):
             engine,
             replica=0,
             unique='median',
-            level='native',
+            level='complex',
             attempts=2):
         """
         Generate a sample in the ensemble by extending parts of `trajectories`
