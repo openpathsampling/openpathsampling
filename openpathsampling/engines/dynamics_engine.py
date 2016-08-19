@@ -6,6 +6,7 @@ Created on 01.07.2014
 """
 
 import logging
+import sys
 
 import simtk.unit as u
 
@@ -13,8 +14,6 @@ from openpathsampling.netcdfplus import StorableNamedObject
 
 from snapshot import BaseSnapshot
 from trajectory import Trajectory
-
-import openpathsampling as paths
 
 from delayedinterrupt import DelayedInterrupt
 
@@ -35,6 +34,40 @@ __version__ = "$Id: NoName.py 1 2014-07-06 07:47:29Z jprinz $"
 class DynamicsEngine(StorableNamedObject):
     """
     Wraps simulation tool (parameters, storage, etc.)
+
+    Attributes
+    ----------
+    on_nan : str
+        set the behaviour of the engine when `NaN` is detected. Possible is
+        1.  `fail` will raise an exception
+        2.  `ignore` will completely ignore it and continue
+        3.  `retry` will rerun the trajectory (default)
+    retries_when_nan : int, default: 2
+        the number of retries (if chosen) before an exception is raised
+    on_error : str
+        set the behaviour of the engine when an exception happens. Possible is
+        1.  `fail` will raise an exception
+        2.  `ignore` will completely ignore it and continue
+        3.  `retry` will rerun the trajectory (default)
+    retries_when_error : int, default: 2
+        the number of retries (if chosen) before an exception is raised
+    on_max_length : str
+        set the behaviour if the trajectory length is n_frames_max. Possible is
+        1.  `fail` will raise an exception
+        2.  `ignore` will completely ignore the limit and continue
+        3.  `stop` will stop and return the max length trajectory (default)
+        4.  `retry` will rerun the trajectory
+    retries_when_max_length : int, default: 0
+        the number of retries (if chosen) before an exception is raised
+    on_retry : str or callable
+        the behaviour when a try is started. Since you have already generated
+        some trajectory you might not restart completely. Possibilities are
+        1.  `full` will restart completely and use the initial frames (default)
+        2.  `50%` will cut the existing in half but keeping at least the initial
+        3.  `remove_interval` will remove as many frames as the `interval`
+        4.  a callable will be used as a function to generate the new from the
+            old trajectories, e.g. `lambda t: t[:10]` would restart with the
+            first 10 frames
 
     Notes
     -----
@@ -58,7 +91,7 @@ class DynamicsEngine(StorableNamedObject):
 
     base_snapshot_type = BaseSnapshot
 
-    def __init__(self, options=None, descriptor=None, template=None):
+    def __init__(self, options=None, descriptor=None):
         """
         Create an empty DynamicsEngine object
 
@@ -79,7 +112,11 @@ class DynamicsEngine(StorableNamedObject):
 
         self.on_max_length = 'stop'
         self.on_nan = 'fail'
-        self.retries_when_nan = 5
+        self.retries_when_nan = 2
+        self.retries_when_error = 0
+        self.retries_when_max_length = 0
+        self.on_retry = 'full'
+        self.on_error = 'fail'
 
     @property
     def current_snapshot(self):
@@ -163,14 +200,16 @@ class DynamicsEngine(StorableNamedObject):
                                     '"')
 
                         elif type(my_options[variable]) is list:
-                            if type(my_options[variable][0]) is \
-                                    type(default_value[0]):
+                            if isinstance(
+                                    my_options[variable][0],
+                                    type(default_value[0])):
                                 okay_options[variable] = my_options[variable]
                             else:
                                 raise \
-                                    ValueError('List elements for option "' +
-                                    str(variable) + '" must be of type "' +
-                                    str(type(default_value[0])) + '"')
+                                    ValueError(
+                                        'List elements for option "' +
+                                        str(variable) + '" must be of type "' +
+                                        str(type(default_value[0])) + '"')
                         else:
                             okay_options[variable] = my_options[variable]
                     elif isinstance(my_options[variable], type(default_value)):
@@ -389,12 +428,32 @@ class DynamicsEngine(StorableNamedObject):
             initial = Trajectory([initial])
 
         valid = False
-        attempt = 0
+        attempt_nan = 0
+        attempt_error = 0
         trajectory = initial
 
-        while not valid:
-            attempt += 1
-            trajectory = initial
+        final_error = None
+        errors = []
+
+        while not valid and final_error is None:
+            if attempt_nan + attempt_error > 1:
+                # let's get a new initial trajectory the way the user wants to
+                if self.on_retry == 'full':
+                    trajectory = initial
+                elif self.on_retry == 'remove_interval':
+                    trajectory = \
+                        trajectory[:max(
+                            len(initial),
+                            len(trajectory) - intervals)]
+                elif self.on_retry == 'keep_half':
+                    trajectory = \
+                        trajectory[:min(
+                            int(len(trajectory) * 0.9),
+                            max(
+                                len(initial),
+                                len(trajectory) / 2))]
+                elif hasattr(self.on_retry, '__call__'):
+                    trajectory = self.on_retry(trajectory)
 
             if direction > 0:
                 self.current_snapshot = trajectory[-1]
@@ -412,8 +471,8 @@ class DynamicsEngine(StorableNamedObject):
                                         trusted=False)
 
             log_rate = 10
-
             has_nan = False
+            has_error = False
 
             while not stop:
                 if intervals > 0 and frame % intervals == 0:
@@ -443,15 +502,18 @@ class DynamicsEngine(StorableNamedObject):
                         elif direction < 0:
                             trajectory.prepend(snapshot.reversed)
 
-                except KeyboardInterrupt:
+                except KeyboardInterrupt as e:
                     # make sure we will report the last state for
-                    logger.info("Through frame: %d", frame)
-                    yield trajectory
-                    raise
+                    logger.info('Keyboard interrupt. Shutting down simulation')
+                    final_error = e
+                    break
+
                 except:
                     # any other error we start a retry
-                    has_nan = True
-                    break
+                    errors.append(sys.exc_info())
+                    if self.on_error != 'ignore':
+                        has_error = True
+                        break
 
                 # Check if we should stop. If not, continue simulation
                 stop = self.stop_conditions(trajectory=trajectory,
@@ -462,8 +524,7 @@ class DynamicsEngine(StorableNamedObject):
                     on = self.on_max_length
 
                     if on == 'fail':
-                        yield trajectory
-                        raise RuntimeError(
+                        final_error = RuntimeError(
                             'Hit maximal length of %d frames.' %
                             self.options['n_frames_max']
                         )
@@ -476,16 +537,35 @@ class DynamicsEngine(StorableNamedObject):
                         stop = True
 
             if has_nan:
-                if attempt > self.retries_when_nan:
+                attempt_nan += 1
+                if attempt_nan > self.retries_when_nan:
                     if self.on_nan == 'fail':
-                        yield trajectory
-                        raise RuntimeError(
-                            'Failed to generate trajectory without error or '
-                            '`nan` after %d attempts' % attempt)
+                        final_error = RuntimeError(
+                            'Failed to generate trajectory without `nan` '
+                            'after %d attempts' % attempt_nan)
+
+            if has_error:
+                attempt_error += 1
+                if attempt_error > self.retries_when_nan:
+                    if self.on_error == 'fail':
+                        final_error = RuntimeError(
+                            'Failed to generate trajectory without error '
+                            'after %d attempts' % attempt_error)
+
             elif stop:
                 valid = True
 
             self.stop(trajectory)
+
+        if errors:
+            logger.info('Errors occurred during generation ')
+            for e in errors:
+                logger.info(e)
+
+        if final_error:
+            yield trajectory
+            logger.info("Through frame: %d", len(trajectory))
+            raise final_error
 
         logger.info("Finished trajectory, length: %d", len(trajectory))
         yield trajectory
