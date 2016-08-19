@@ -287,19 +287,18 @@ class OpenMMEngine(DynamicsEngine):
         return self.n_steps_per_frame * self.simulation.integrator.getStepSize()
 
     def _build_current_snapshot(self):
-        try:
-            state = self.simulation.context.getState(getPositions=True,
-                                                     getVelocities=True)
+        # TODO: Add caching for this and mark if changed
 
-            snapshot = Snapshot.construct(
-                coordinates=state.getPositions(asNumpy=True),
-                box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
-                velocities=state.getVelocities(asNumpy=True),
-                engine=self
-            )
+        state = self.simulation.context.getState(getPositions=True,
+                                                 getVelocities=True,
+                                                 getEnergy=True)
 
-        except AttributeError as e:
-            raise ValueError('No attribute error: ' + str(e))
+        snapshot = Snapshot.construct(
+            coordinates=state.getPositions(asNumpy=True),
+            box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
+            velocities=state.getVelocities(asNumpy=True),
+            engine=self
+        )
 
         return snapshot
 

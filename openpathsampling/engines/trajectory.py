@@ -565,12 +565,11 @@ class Trajectory(list, StorableObject):
             return [[self.index(s) for s in subtrj]
                     for subtrj in subtrajectories]
 
-
     # ==========================================================================
     # UTILITY FUNCTIONS
     # ==========================================================================
 
-    def md(self, topology=None):
+    def to_mdtraj(self, topology=None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
 
@@ -588,7 +587,7 @@ class Trajectory(list, StorableObject):
         """
 
         if topology is None:
-            topology = self.topology.md
+            topology = self.topology.mdtraj
 
         output = self.xyz
 
