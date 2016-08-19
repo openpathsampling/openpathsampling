@@ -526,8 +526,13 @@ class DynamicsEngine(StorableNamedObject):
 
                 except:
                     # any other error we start a retry
-                    errors.append(sys.exc_info())
-                    if self.on_error != 'ignore':
+                    e = sys.exc_info()
+                    errors.append(e)
+                    if 'Particle coordinate is nan' in str(e):
+                        if self.on_nan != 'ignore':
+                            has_nan = True
+                            break
+                    elif self.on_error != 'ignore':
                         has_error = True
                         break
 
@@ -567,7 +572,8 @@ class DynamicsEngine(StorableNamedObject):
             if has_nan:
                 on = self.on_nan
                 if on == 'fail':
-                    final_error = EngineNaNError('`nan` in snapshot')
+                    final_error = EngineNaNError(
+                        '`nan` in snapshot', trajectory)
                 elif on == 'retry':
                     attempt_nan += 1
                     if attempt_nan > self.retries_when_nan:
@@ -581,7 +587,7 @@ class DynamicsEngine(StorableNamedObject):
             if has_error:
                 on = self.on_nan
                 if on == 'fail':
-                    final_error = errors[-1]
+                    final_error = errors[-1][1]
                     del errors[-1]
                 elif on == 'retry':
                     attempt_error += 1
@@ -603,7 +609,8 @@ class DynamicsEngine(StorableNamedObject):
             for no, e in enumerate(errors):
                 logger.info('[#%d] %s' % (no, repr(e[1])))
 
-        if final_error:
+        if final_error is not None:
+            print final_error
             yield trajectory
             logger.info("Through frame: %d", len(trajectory))
             raise final_error

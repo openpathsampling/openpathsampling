@@ -1142,7 +1142,6 @@ class SampleMover(PathMover):
                 details=details
             )
 
-
     @abc.abstractmethod
     def __call__(self, *args):
         """Generate trial samples directly
