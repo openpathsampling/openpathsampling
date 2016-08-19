@@ -54,7 +54,6 @@ class testOpenMMEngine(object):
         # Engine options
         options = {
             'n_steps_per_frame': 2,
-            'platform': 'CPU',
             'solute_indices': range(22),
             'n_frames_max': 5,
             'timestep': 2.0 * u.femtoseconds
@@ -67,6 +66,7 @@ class testOpenMMEngine(object):
             options=options
         )
 
+        self.engine.initialize('CPU')
         context = self.engine.simulation.context
         zero_array = np.zeros((template.topology.n_atoms, 3))
         context.setPositions(template.coordinates)
@@ -155,6 +155,19 @@ class testOpenMMEngine(object):
         self.engine.options['n_max_length'] = 2
         self.engine.retries_when_max_length = 2
         _ = self.engine.generate(self.engine.current_snapshot, [true_func])
+
+    @raises_with_message_like(RuntimeError,
+                              'Failed to generate trajectory without hitting '
+                              'max length')
+    def test_fail_nan(self):
+        self.engine.on_max_length = 'retry'
+        self.engine.options['n_max_length'] = 2
+        self.engine.retries_when_max_length = 2
+        snapshot = template.copy()
+        # this is crude but does the trick
+        snapshot.velocities[0] += 1000000. * u.nanometers / u.picoseconds
+        _ = self.engine.generate(snapshot, [true_func])
+
 
             # @raises_with_message_like(RuntimeError,
     #                           "Failed to generate trajectory without error")

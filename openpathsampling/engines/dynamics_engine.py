@@ -569,9 +569,9 @@ class DynamicsEngine(StorableNamedObject):
             self.stop(trajectory)
 
         if errors:
-            logger.info('Errors occurred during generation ')
-            for e in errors:
-                logger.info(e)
+            logger.info('Errors occurred during generation :')
+            for no, e in enumerate(errors):
+                logger.info('[#%d] %s' % (no, repr(e[1])))
 
         if final_error:
             yield trajectory
