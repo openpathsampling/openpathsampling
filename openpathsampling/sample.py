@@ -602,6 +602,14 @@ class SampleSet(StorableObject):
                                 level='minimal',
                                 **opts
                             )
+                    elif strategy == 'extend-native' and engine:
+                        if hasattr(ens, 'extend_sample_from_trajectories'):
+                            sample = ens.extend_sample_from_trajectories(
+                                trajectories=trajectories,
+                                engine=engine,
+                                level='native',
+                                **opts
+                            )
                     else:
                         sample = None
 
