@@ -193,7 +193,6 @@ class Ensemble(StorableNamedObject):
     __metaclass__ = abc.ABCMeta
 
     use_shortcircuit = True
-    replica_sign = +1
 
     def __init__(self):
         """
@@ -743,8 +742,7 @@ class Ensemble(StorableNamedObject):
             sample in this ensemble
         replica : int
             the replica id for the sample to be created
-        used_trajectories : (list of)
-        :class:`openpathsampling.trajectory.Trajectory`
+        used_trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             trajectories not taken into account in the first attempt
         reuse_strategy : str
             if `avoid` then in a second attempt the used trajectories are
@@ -789,8 +787,7 @@ class Ensemble(StorableNamedObject):
             sample in this ensemble
         replica : int
             the replica id for the sample to be created
-        used_trajectories : (list of)
-        :class:`openpathsampling.trajectory.Trajectory`
+        used_trajectories : (list of) :class:`openpathsampling.trajectory.Trajectory`
             trajectories not taken into account in the first attempt
         reuse_strategy : str
             if `avoid` then in a second attempt the used trajectories are
@@ -2571,7 +2568,6 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     # them being used in __init__ instead of the self-made ones
 
     _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
-    replica_sign = -1
 
     def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
         if n_l < 2:
@@ -2628,27 +2624,28 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         in_a = AllInXEnsemble(state_vol)
         out_a = AllOutXEnsemble(state_vol)
-        in_x = AllInXEnsemble(self.innermost_vol)
-        leave_x = PartOutXEnsemble(self.innermost_vol)
-        interstitial = out_a & in_x
-        segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
-                             for inner in self.innermost_vols]
 
-        self._segment_ensemble = join_ensembles(segment_ensembles)
+        # this code is for potential
 
-        start = [
-            SingleFrameEnsemble(in_a),
-            OptionalEnsemble(interstitial),
-        ]
+        # in_x = AllInXEnsemble(self.innermost_vol)
+        # leave_x = PartOutXEnsemble(self.innermost_vol)
+        # interstitial = out_a & in_x
+        # segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
+        #                      for inner in self.innermost_vols]
+
+        # start = [
+        #     SingleFrameEnsemble(in_a),
+        #     OptionalEnsemble(interstitial),
+        # ]
         # loop = [
         #     out_a & leave_x,
         #     in_x  # & hitA # redundant due to stop req for previous outA
         # ]
-        end = [
-            out_a & leave_x,
-            OptionalEnsemble(interstitial),
-            SingleFrameEnsemble(in_a)
-        ]
+        # end = [
+        #     out_a & leave_x,
+        #     OptionalEnsemble(interstitial),
+        #     SingleFrameEnsemble(in_a)
+        # ]
 
         # do not add higher orders, you would
         # for n_l in range(self.n_l - 2, 0, -1):
@@ -2656,15 +2653,14 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         #     sub_ensembles.append(
         #         SequentialEnsemble(start + loop * n_l + end))
 
-        sub_ensembles['complex'] = \
-            SequentialEnsemble(start + end)
+        sub_ensembles['complex'] = self._segment_ensemble
 
         # and the simplest possible just crossing from in_state to outside
         sub_ensembles['minimal'] = \
-            LengthEnsemble(2) & \
+            LengthEnsemble(2) &  \
             SequentialEnsemble([
-                SingleFrameEnsemble(AllInXEnsemble(state_vol)),
-                SingleFrameEnsemble(AllOutXEnsemble(state_vol))
+                SingleFrameEnsemble(in_a),
+                SingleFrameEnsemble(out_a)
             ])
 
         return sub_ensembles
@@ -2754,11 +2750,9 @@ class TISEnsemble(SequentialEnsemble):
 
     Attributes
     ----------
-    initial_states : `openpathsampling.volume.Volume` or
-    list of `openpathsampling.volume.Volume`
+    initial_states : `openpathsampling.volume.Volume` or list of `openpathsampling.volume.Volume`
         Volume(s) that only the first or last frame may be in
-    final_states : `openpathsampling.volume.Volume` or
-    list of `openpathsampling.volume.Volume`
+    final_states : `openpathsampling.volume.Volume` or list of `openpathsampling.volume.Volume`
         Volume(s) that only the last frame may be in
     interface : `openpathsampling.volume.Volume`
         Volume which the trajectory must exit to be accepted

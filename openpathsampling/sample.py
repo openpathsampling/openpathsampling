@@ -617,18 +617,13 @@ class SampleSet(StorableObject):
                     # make sure we chose a proper replica ID
                     if sample is not None:
                         found = True
-                        if ens.replica_sign > 0:
-                            if len(self) == 0:
-                                replica_idx = 0
-                            else:
-                                replica_idx = \
-                                    max(0, max(self.replicas) + 1)
+
+                        # another way would be to look for the smallest not
+                        # taken id. This one is simpler
+                        if len(self.replicas) > 0:
+                            replica_idx = max(0, max(self.replicas) + 1)
                         else:
-                            if len(self) == 0:
-                                replica_idx = -1
-                            else:
-                                replica_idx = \
-                                    min(min(self.replicas) - 1, - 1)
+                            replica_idx = 0
 
                         sample.replica = replica_idx
 
