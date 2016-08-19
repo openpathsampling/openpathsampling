@@ -830,7 +830,7 @@ class Ensemble(StorableNamedObject):
             engine,
             replica=0,
             unique='median',
-            level='complex',
+            level='native',
             attempts=2):
         """
         Generate a sample in the ensemble by extending parts of `trajectories`
@@ -864,10 +864,14 @@ class Ensemble(StorableNamedObject):
             If `first` the first found subtrajectory is selected. If
             `shortest` then from all subparts the shortest one is used.
         level : str
-            there are two levels you chose and not all are implemented for
-            an ensemble. Picking `complex` will use the largest (most complex)
+            there are three levels you chose and not all are implemented for
+            an ensemble. For all ensembles you can use `native` which will
+            simply try to extend the ensemble itself, the mose simple one, which
+            is always possible.
+            Picking `complex` will use the largest (most complex)
             sub-ensemble that makes sense. Like in the case of a Minus move
-            this is the segment ensemble. The other choice is `minimal` which
+            this is the segment ensemble.
+            The other choice is `minimal` which
             choses the minimal necessary subtrajectory extending makes sense
             from. For TIS or Minus Ensembles this will be crossing from the
             (initial) core to the outside. You should try `complex` first and
@@ -875,15 +879,19 @@ class Ensemble(StorableNamedObject):
         attempts : int
             the number of attemps on a trajectory to extend
         """
-        if not hasattr(self, 'extendable_sub_ensembles'):
-            return None
 
-        sub_ensembles = self.extendable_sub_ensembles
+        if level == 'native':
+            sub_ensemble = self
+        else:
+            if not hasattr(self, 'extendable_sub_ensembles'):
+                return None
 
-        if level not in sub_ensembles:
-            return None
+            sub_ensembles = self.extendable_sub_ensembles
 
-        sub_ensemble = sub_ensembles[level]
+            if level not in sub_ensembles:
+                return None
+
+            sub_ensemble = sub_ensembles[level]
 
         trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
 
@@ -904,17 +912,28 @@ class Ensemble(StorableNamedObject):
 
                     if self.strict_can_append(part):
                         # seems we could extend forward
-                        part = engine.extend_forward(
-                            part,
-                            self
-                        )
+
+                        part = part[:-1] + \
+                           engine.generate(
+                               part[-1],
+                               [paths.PrefixTrajectoryEnsemble(
+                                   self,
+                                   part
+                               ).strict_can_append],
+                               direction=+1
+                           )
 
                     if self.strict_can_prepend(part):
                         # and extend backward
-                        part = engine.extend_backward(
-                            part,
-                            self
-                        )
+
+                        part = engine.generate(
+                            part[0].reversed,
+                            [paths.SuffixTrajectoryEnsemble(
+                                self,
+                                part
+                            ).strict_can_prepend],
+                            direction=-1
+                        ).reversed + part[1:]
 
                     if self(part):  # make sure we found a sample
                         return paths.Sample(

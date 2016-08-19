@@ -629,5 +629,9 @@ class Trajectory(list, StorableObject):
                     obj.trajectory if isinstance(obj, paths.Sample) else obj
                     for obj in trajectories
                     ]
+        elif isinstance(trajectories, paths.BaseSnapshot):
+            return paths.Trajectory([trajectories])
+        elif isinstance(trajectories, paths.BaseSnapshot):
+            return paths.Trajectory([trajectories])
 
         return trajectories
