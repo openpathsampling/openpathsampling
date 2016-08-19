@@ -854,25 +854,43 @@ class EnsembleMixBuilder(Builder):
 
         for yp, ens1 in enumerate(self.ensembles):
             for ens_idx, ens2 in enumerate(self.ensembles):
-                txt = '+'
+                txt = ''
 
-                if mat[ens1][ens2]:
+                m = mat[ens1][ens2]
+                if 0 in m:
+                    txt += 'A'
+                if 1 in m:
+                    txt += 'O'
+                if -1 in m:
+                    txt += 'R'
+
+                if 1 in m:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp - 0.15,
+                            txt,
+                            css_class=['input']
+                        )
+                    )
+                if -1 in m:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp + 0.15,
+                            txt,
+                            css_class=['output']
+                        )
+                    )
+                if 0 in m:
                     group.add(
                         doc.connector(
                             ens_idx,
                             yp,
                             txt,
-                            css_class=['output']
+                            css_class=['unknown']
                         )
                     )
-                # else:
-                #     group.add(
-                #         doc.connector(
-                #             ens_idx,
-                #             yp,
-                #             css_class=['unknown']
-                #         )
-                #     )
 
         group.translate(50, 0)
 

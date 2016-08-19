@@ -481,13 +481,13 @@ class InOutSet(set):
         """
         res = {
             ens1: {
-                ens2: False
+                ens2: set()
                 for ens2 in ensembles
             } for ens1 in ensembles
         }
         for s in self:
             for (e1, e2, fix), v in s:
-                res[e1][e2] = True
+                res[e1][e2].add(fix)
 
         return res
 
