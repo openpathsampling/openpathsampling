@@ -604,6 +604,14 @@ class testDefaultScheme(object):
             strategies=['get']
         )
 
+        # for t1 in map(lambda x: init_cond[x].trajectory, ensembles):
+        #     for i, t2 in enumerate([traj1, traj2, traj3, traj1r, traj2r, traj3r]):
+        #         print i,
+        #         if t1 == t2:
+        #             print '=='
+        #         else:
+        #             print '!='
+
         assert_init_cond(
             init_cond, ensembles,
             [traj1, traj2, traj3] + [traj3] + [traj3r] * 3
