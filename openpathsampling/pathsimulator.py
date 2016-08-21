@@ -73,10 +73,6 @@ class PathSimulator(StorableNamedObject):
         self.sample_set = None
         self.output_stream = sys.stdout  # user can change to file handler
 
-    # TODO: Remove, is not used
-    def set_replicas(self, samples):
-        self.sample_set = paths.SampleSet(samples)
-
     def sync_storage(self):
         """
         Will sync all collective variables and the storage to disk
@@ -507,12 +503,15 @@ class PathSampling(PathSimulator):
         self.root_mover = move_scheme.move_decision_tree()
 #        self.move_scheme.name = "PathSamplingRoot"
 
-        samples = []
-        if sample_set is not None:
-            for sample in sample_set:
-                samples.append(sample.copy_reset())
+        # TODO: Check that this can really be removed
+        # samples = []
+        # if globalstate is not None:
+        #     for sample in globalstate:
+        #         samples.append(sample.copy_reset())
+        #
+        # self.globalstate = paths.SampleSet(samples)
 
-        self.sample_set = paths.SampleSet(samples)
+        self.sample_set = sample_set
         self.root = self.sample_set
 
         initialization_logging(init_log, self, 
@@ -543,6 +542,8 @@ class PathSampling(PathSimulator):
                 self.storage.save(self.move_scheme)
             self.save_initial()
 
+        initial_time = time.time()
+
         for nn in range(n_steps):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
@@ -554,9 +555,23 @@ class PathSampling(PathSimulator):
                     self.live_visualization.draw_ipynb(mcstep)
                     refresh=False
 
+                elapsed = time.time() - initial_time
+
+                if nn > 0:
+                    time_per_step = elapsed / nn
+                else:
+                    time_per_step = 1.0
+
                 paths.tools.refresh_output(
                     "Working on Monte Carlo cycle number " + str(self.step)
-                    + ".\n", 
+                    + "\n"
+                    + "Running for %d seconds - %5.2f steps per second\n" % (
+                        elapsed,
+                        1.0 / time_per_step
+                    )
+                    + "Expected time to finish: %d seconds\n" % (
+                        1.0 * (n_steps - nn) * time_per_step
+                    ),
                     refresh=refresh
                 )
 
@@ -577,7 +592,6 @@ class PathSampling(PathSimulator):
                 active=new_sampleset,
                 change=movepath
             )
-
 
             if self.storage is not None:
                 for cv in cvs:
@@ -601,6 +615,7 @@ class PathSampling(PathSimulator):
             "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
             refresh=False
         )
+
 
 class CommittorSimulation(PathSimulator):
     def __init__(self, storage, engine=None, states=None, randomizer=None,
