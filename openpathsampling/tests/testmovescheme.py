@@ -604,18 +604,22 @@ class testDefaultScheme(object):
             strategies=['get']
         )
 
-        # for t1 in map(lambda x: init_cond[x].trajectory, ensembles):
-        #     for i, t2 in enumerate([traj1, traj2, traj3, traj1r, traj2r, traj3r]):
-        #         print i,
-        #         if t1 == t2:
-        #             print '=='
-        #         else:
-        #             print '!='
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
 
-        assert_init_cond(
-            init_cond, ensembles,
-            [traj1, traj2, traj3] + [traj3] + [traj3r] * 3
-        )
+        for ensemble, traj in zip(ensembles[:3], [traj1, traj2, traj3]):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+        for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+
+        # because of the way the scheme ensembles are creating involving a
+        # set, the order in which the ensemble are created changes.
+        # in some cases traj3 is used and hence avoided in the outer
+        # in some cases traj3r, but both are fine.
+        try:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+        except AssertionError:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
 
         init_cond = scheme.initial_conditions_from_trajectories(
             trajectories=all_trajs,
