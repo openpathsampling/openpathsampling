@@ -604,10 +604,13 @@ class testDefaultScheme(object):
             strategies=['get']
         )
 
-        assert_init_cond(
-            init_cond, ensembles,
-            [traj1, traj2, traj3] + [traj3] + [traj3r] * 3
-        )
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+
+        for ensemble, traj in zip(ensembles[:3], [traj1, traj2, traj3]):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+        for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
+            assert_equal(init_cond[ensemble].trajectory, traj)
 
         init_cond = scheme.initial_conditions_from_trajectories(
             trajectories=all_trajs,
