@@ -612,6 +612,15 @@ class testDefaultScheme(object):
         for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
             assert_equal(init_cond[ensemble].trajectory, traj)
 
+        # because of the way the scheme ensembles are creating involving a
+        # set, the order in which the ensemble are created changes.
+        # in some cases traj3 is used and hence avoided in the outer
+        # in some cases traj3r, but both are fine.
+        try:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+        except AssertionError:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
+
         init_cond = scheme.initial_conditions_from_trajectories(
             trajectories=all_trajs,
             preconditions=['mirror', 'sort-shortest'],
