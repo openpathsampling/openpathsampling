@@ -2584,11 +2584,11 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         for vol in self.innermost_vols:
             self.innermost_vol = self.innermost_vol & vol
         self.greedy = greedy
-        in_a = AllInXEnsemble(state_vol)
-        out_a = AllOutXEnsemble(state_vol)
-        in_x = AllInXEnsemble(self.innermost_vol)
-        leave_x = PartOutXEnsemble(self.innermost_vol)
-        interstitial = out_a & in_x
+        in_A = AllInXEnsemble(state_vol)
+        out_A = AllOutXEnsemble(state_vol)
+        in_X = AllInXEnsemble(self.innermost_vol)
+        leave_X = PartOutXEnsemble(self.innermost_vol)
+        interstitial = out_A & in_X
         segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
                              for inner in self.innermost_vols]
 
@@ -2596,17 +2596,17 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         # interstitial = AllInXEnsemble(self.innermost_vol - state_vol)
         start = [
-            SingleFrameEnsemble(in_a),
+            SingleFrameEnsemble(in_A),
             OptionalEnsemble(interstitial),
         ]
         loop = [
-            out_a & leave_x,
-            in_x  # & hitA # redundant due to stop req for previous outA
+            out_A & leave_X,
+            in_X  # & hitA # redundant due to stop req for previous outA
         ]
         end = [
-            out_a & leave_x,
+            out_A & leave_X,
             OptionalEnsemble(interstitial),
-            SingleFrameEnsemble(in_a)
+            SingleFrameEnsemble(in_A)
         ]
         ensembles = start + loop * (n_l - 1) + end
 
@@ -2622,29 +2622,29 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
         sub_ensembles = {}
 
-        in_a = AllInXEnsemble(state_vol)
-        out_a = AllOutXEnsemble(state_vol)
+        in_A = AllInXEnsemble(state_vol)
+        out_A = AllOutXEnsemble(state_vol)
 
         # this code is for potential
 
-        # in_x = AllInXEnsemble(self.innermost_vol)
-        # leave_x = PartOutXEnsemble(self.innermost_vol)
-        # interstitial = out_a & in_x
+        # in_X = AllInXEnsemble(self.innermost_vol)
+        # leave_X = PartOutXEnsemble(self.innermost_vol)
+        # interstitial = out_A & in_X
         # segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
         #                      for inner in self.innermost_vols]
 
         # start = [
-        #     SingleFrameEnsemble(in_a),
+        #     SingleFrameEnsemble(in_A),
         #     OptionalEnsemble(interstitial),
         # ]
         # loop = [
-        #     out_a & leave_x,
-        #     in_x  # & hitA # redundant due to stop req for previous outA
+        #     out_A & leave_X,
+        #     in_X  # & hitA # redundant due to stop req for previous outA
         # ]
         # end = [
-        #     out_a & leave_x,
+        #     out_A & leave_X,
         #     OptionalEnsemble(interstitial),
-        #     SingleFrameEnsemble(in_a)
+        #     SingleFrameEnsemble(in_A)
         # ]
 
         # do not add higher orders, you would
@@ -2659,8 +2659,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         sub_ensembles['minimal'] = \
             LengthEnsemble(2) &  \
             SequentialEnsemble([
-                SingleFrameEnsemble(in_a),
-                SingleFrameEnsemble(out_a)
+                SingleFrameEnsemble(in_A),
+                SingleFrameEnsemble(out_A)
             ])
 
         return sub_ensembles
