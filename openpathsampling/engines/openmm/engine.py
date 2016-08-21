@@ -173,7 +173,7 @@ class OpenMMEngine(DynamicsEngine):
 
         if self._simulation is None:
             self._simulation = simtk.openmm.app.Simulation(
-                topology=self.topology.md.to_openmm(),
+                topology=self.topology.mdtraj.to_openmm(),
                 system=self.system,
                 integrator=self.integrator,
                 platform=simtk.openmm.Platform.getPlatformByName(self.platform)
@@ -200,25 +200,18 @@ class OpenMMEngine(DynamicsEngine):
         return self.n_steps_per_frame * self.simulation.integrator.getStepSize()
 
     def _build_current_snapshot(self):
-        try:
-            # TODO: Add caching for this and mark if changed
+        # TODO: Add caching for this and mark if changed
 
-            state = self.simulation.context.getState(getPositions=True,
-                                                     getVelocities=True,
-                                                     getEnergy=True)
+        state = self.simulation.context.getState(getPositions=True,
+                                                 getVelocities=True,
+                                                 getEnergy=True)
 
-            snapshot = Snapshot.construct(
-                coordinates=state.getPositions(asNumpy=True),
-                box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
-                velocities=state.getVelocities(asNumpy=True),
-                engine=self
-            )
-
-        except AttributeError as e:
-            raise ValueError('No attribute' + str(e))
-        except:
-            print "Unexpected error:", sys.exc_info()[0]
-            raise
+        snapshot = Snapshot.construct(
+            coordinates=state.getPositions(asNumpy=True),
+            box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
+            velocities=state.getVelocities(asNumpy=True),
+            engine=self
+        )
 
         return snapshot
 
