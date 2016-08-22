@@ -62,7 +62,7 @@ class testOpenMMEngine(object):
             template.topology,
             system,
             integrator,
-            options
+            options=options
         )
 
         context = self.engine.simulation.context
