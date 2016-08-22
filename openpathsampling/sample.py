@@ -554,7 +554,7 @@ class SampleSet(StorableObject):
                         strategy,
                         len(ensembles_to_fill),
                         found_samples_str
-                    ))
+                    ), print_anyway=False)
                 if type(ens_list) is not list:
                     ens_list = [ens_list]
 
@@ -670,7 +670,7 @@ class SampleSet(StorableObject):
         ) % (
             len(ensembles_to_fill),
             found_samples_str
-        ))
+        ), print_anyway=False)
 
         return self
 
