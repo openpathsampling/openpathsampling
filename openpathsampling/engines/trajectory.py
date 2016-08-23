@@ -8,7 +8,7 @@ import mdtraj as md
 import simtk.unit as u
 
 from openpathsampling.netcdfplus import StorableObject
-
+import openpathsampling as paths
 
 # ==============================================================================
 # TRAJECTORY
@@ -254,7 +254,12 @@ class Trajectory(list, StorableObject):
         return ret
 
     def __hash__(self):
-        return object.__hash__(self)
+        if len(self) == 0:
+            return hash(tuple())
+        else:
+            return hash(
+                (list.__getitem__(self, 0), len(self),
+                 list.__getitem__(self, -1)))
 
     def __getitem__(self, index):
         # Allow for numpy style selection using lists
@@ -560,12 +565,11 @@ class Trajectory(list, StorableObject):
             return [[self.index(s) for s in subtrj]
                     for subtrj in subtrajectories]
 
-
     # ==========================================================================
     # UTILITY FUNCTIONS
     # ==========================================================================
 
-    def md(self, topology=None):
+    def to_mdtraj(self, topology=None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
 
@@ -583,7 +587,7 @@ class Trajectory(list, StorableObject):
         """
 
         if topology is None:
-            topology = self.topology.md
+            topology = self.topology.mdtraj
 
         output = self.xyz
 
@@ -609,3 +613,24 @@ class Trajectory(list, StorableObject):
             topology = self[0].topology
 
         return topology
+
+    @staticmethod
+    def _to_list_of_trajectories(trajectories):
+        if isinstance(trajectories, Trajectory):
+            trajectories = [trajectories]
+        elif isinstance(trajectories, paths.Sample):
+            trajectories = [trajectories.trajectory]
+        elif isinstance(trajectories, paths.SampleSet):
+            trajectories = [s.trajectory for s in trajectories]
+        elif isinstance(trajectories, list):
+            if len(trajectories) > 0:
+                trajectories = [
+                    obj.trajectory if isinstance(obj, paths.Sample) else obj
+                    for obj in trajectories
+                    ]
+        elif isinstance(trajectories, paths.BaseSnapshot):
+            return paths.Trajectory([trajectories])
+        elif isinstance(trajectories, paths.BaseSnapshot):
+            return paths.Trajectory([trajectories])
+
+        return trajectories

@@ -79,7 +79,7 @@ def md(snapshot):
         output = np.zeros([1, n_atoms, 3], np.float32)
         output[0, :, :] = snapshot.coordinates
 
-        return mdtraj.Trajectory(output, snapshot.topology.md)
+        return mdtraj.Trajectory(output, snapshot.topology.mdtraj)
 
 
 @property

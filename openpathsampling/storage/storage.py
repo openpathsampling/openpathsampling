@@ -98,6 +98,7 @@ class Storage(NetCDFPlus):
         # objects with special storages
         self.create_store('trajectories', paths.storage.TrajectoryStore())
 
+        # topologies might be needed fot CVs so put them here
         self.create_store('topologies', NamedObjectStore(peng.Topology))
         self.create_store('cvs', paths.storage.CVStore())
 
