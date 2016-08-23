@@ -23,7 +23,7 @@ from test_helpers import (
 
 
 def setUp():
-    global topology, template, system, bad_template
+    global topology, template, system, nan_causing_template
     template = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
     topology = peng.to_openmm_topology(template)
 
@@ -45,14 +45,14 @@ def setUp():
     )
 
     # this is crude but does the trick
-    bad_template = template.copy()
+    nan_causing_template = template.copy()
     kinetics = template.kinetics.copy()
     # this is crude but does the trick
     kinetics.velocities = kinetics.velocities.copy()
     kinetics.velocities[0] = \
         (np.zeros(template.velocities.shape[1]) + 1000000.) * \
         u.nanometers / u.picoseconds
-    bad_template.kinetics = kinetics
+    nan_causing_template.kinetics = kinetics
 
 
 class testOpenMMEngine(object):
@@ -178,7 +178,7 @@ class testOpenMMEngine(object):
         self.engine.on_max_length = 'retry'
         self.engine.options['n_max_length'] = 2
         self.engine.options['retries_when_max_length'] = 2
-        _ = self.engine.generate(bad_template, [true_func])
+        _ = self.engine.generate(nan_causing_template, [true_func])
 
     def test_nan_rejected(self):
         stateA = paths.EmptyVolume()  # will run indefinitely
@@ -186,7 +186,7 @@ class testOpenMMEngine(object):
         tps = ef.A2BEnsemble(stateA, stateB)
         self.engine.n_frames_max = 10
 
-        init_traj = paths.Trajectory([bad_template] * 5)
+        init_traj = paths.Trajectory([nan_causing_template] * 5)
         init_samp = paths.SampleSet([paths.Sample(
             trajectory=init_traj,
             replica=0,
