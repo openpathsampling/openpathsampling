@@ -2307,7 +2307,7 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         self._test_everything(self.minus_nl3.strict_can_prepend,
                               non_default, False)
         
-    def test_populate_minus_ensemble_from_set(self):
+    def test_extend_sample_from_trajectories(self):
         # set up ensA and ensB
         ensA = paths.TISEnsemble(vol1, vol3, vol1, op)
         ensB = paths.TISEnsemble(vol1, vol3, vol2, op)
@@ -2325,8 +2325,8 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         predestined_snaps = [trajB[-1]]+ttraj['upper_out_in']
         predestined_traj = [s.xyz[0][0] for s in predestined_snaps]
         engine = CalvinistDynamics(predestined_traj)
-        sample = self.minus_nl2.populate_minus_ensemble_from_set(
-            samples=sset, minus_replica_id=-1, engine=engine
+        sample = self.minus_nl2.extend_sample_from_trajectories(
+            sset, replica=-1, engine=engine, level='complex'
         )
 
         assert_equal(sample.ensemble(sample.trajectory), True)
@@ -2341,8 +2341,8 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         predestined_snaps = [trajB[-1]]+ttraj['upper_in_out_in']
         predestined_traj = [s.xyz[0][0] for s in predestined_snaps]
         engine = CalvinistDynamics(predestined_traj)
-        sample = self.minus_nl2.populate_minus_ensemble_from_set(
-            samples=sset, minus_replica_id=-1, engine=engine
+        sample = self.minus_nl2.extend_sample_from_trajectories(
+            sset, replica=-1, engine=engine, level='complex'
         )
 
         assert_equal(sample.ensemble(sample.trajectory), True)

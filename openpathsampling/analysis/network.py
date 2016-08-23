@@ -1,5 +1,6 @@
 import logging
 import itertools
+import random
 
 import pandas as pd
 
@@ -61,7 +62,6 @@ class TransitionNetwork(StorableNamedObject):
             return self._sampling_transitions
         except AttributeError:
             return None
-
 
 
 class GeneralizedTPSNetwork(TransitionNetwork):
@@ -316,6 +316,26 @@ class TISNetwork(TransitionNetwork):
     @property
     def all_states(self):
         return list(set(self.initial_states + self.final_states))
+
+    def get_state(self, snapshot):
+        """
+        Find which core state a snapshot is in, if any
+
+        Parameters
+        ----------
+        snapshot : `openpathsampling.engines.BaseSnapshot`
+            the snapshot to be tested
+
+        Returns
+        -------
+        `openpathsampling.Volume`
+            the volume object defining the state
+        """
+        for state in self.all_states:
+            if state(snapshot):
+                return state
+
+        return None
 
 
 #def msouter_state_switching(mstis, steps):
