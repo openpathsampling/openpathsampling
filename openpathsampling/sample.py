@@ -271,22 +271,6 @@ class SampleSet(StorableObject):
             assert self.samples.count(samp) == 1, \
                     "More than one instance of %r!" % samp
 
-    def __add__(self, other):
-        """
-        Add the move path to the Sample and return the new sampleset
-        """
-        if isinstance(other, paths.MoveChange):
-            return self.apply_samples(other.results)
-        elif type(other) is list:
-            okay = True
-            for samp in other:
-                if not isinstance(samp, paths.Sample):
-                    okay = False
-
-            return self.apply_samples(other)
-        else:
-            raise ValueError('Only lists of Sample or MoveChanges allowed.')
-
     def append_as_new_replica(self, sample):
         """
         Adds the given sample to this SampleSet, with a new replica ID.
