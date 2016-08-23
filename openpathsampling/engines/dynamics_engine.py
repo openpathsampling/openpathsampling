@@ -70,7 +70,6 @@ class DynamicsEngine(StorableNamedObject):
     on_max_length : str
         set the behaviour if the trajectory length is n_frames_max. Possible is
         1.  `fail` will raise an exception
-        2.  `ignore` will completely ignore the limit and continue
         3.  `stop` will stop and return the max length trajectory (default)
         4.  `retry` will rerun the trajectory
     retries_when_max_length : int, default: 0
@@ -541,15 +540,10 @@ class DynamicsEngine(StorableNamedObject):
                 elif direction < 0:
                     trajectory.prepend(snapshot.reversed)
 
-                # Check if we should stop. If not, continue simulation
-                stop = self.stop_conditions(trajectory=trajectory,
-                                            continue_conditions=running)
-
-                print attempt_nan, attempt_error, len(trajectory), max_length
-
-                if len(trajectory) >= max_length:
+                if 0 < max_length < len(trajectory):
                     # hit the max length criterion
                     on = self.on_max_length
+                    del trajectory[-1]
 
                     if on == 'fail':
                         final_error = EngineMaxLengthError(
@@ -558,9 +552,6 @@ class DynamicsEngine(StorableNamedObject):
                             trajectory
                         )
                         break
-                    elif on == 'ignore':
-                        # keep on going
-                        pass
                     elif on == 'stop':
                         logger.info('Trajectory hit max length. Stopping.')
                         # fail gracefully
@@ -575,6 +566,10 @@ class DynamicsEngine(StorableNamedObject):
                                     attempt_max_length,
                                     trajectory)
                                 break
+
+                # Check if we should stop. If not, continue simulation
+                stop = self.stop_conditions(trajectory=trajectory,
+                                            continue_conditions=running)
 
             if has_nan:
                 on = self.on_nan
