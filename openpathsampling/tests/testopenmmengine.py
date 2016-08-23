@@ -69,9 +69,7 @@ class testOpenMMEngine(object):
         # Engine options
         options = {
             'n_steps_per_frame': 2,
-            'solute_indices': range(22),
-            'n_frames_max': 5,
-            'timestep': 2.0 * u.femtoseconds
+            'n_frames_max': 5
         }
 
         self.engine = peng.Engine(
