@@ -61,7 +61,8 @@ from analysis.trajectory_transition_analysis import (
 )
 
 from bias_function import (
-    BiasFunction, BiasLookupFunction, BiasEnsembleTable
+    BiasFunction, BiasLookupFunction, BiasEnsembleTable,
+    SRTISBiasFromNetwork
 )
 
 from collectivevariable import (
@@ -99,7 +100,8 @@ from movechange import (
     FilterSamplesMoveChange,
     PathSimulatorMoveChange, AcceptedSampleMoveChange,
     RejectedSampleMoveChange, SubMoveChange,
-    FilterByEnsembleMoveChange
+    FilterByEnsembleMoveChange, RejectedNaNSampleMoveChange,
+    RejectedMaxLengthSampleMoveChange
 )
 
 from pathmover import Details, MoveDetails, SampleDetails

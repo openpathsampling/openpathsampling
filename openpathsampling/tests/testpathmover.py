@@ -1117,6 +1117,10 @@ class testMinusMover(object):
         assert_subchanges_set_accepted(sub, [True, False, False])
 
     def test_extension_fails(self):
+
+        # we use `stop` and not `fail` for max length
+        self.dyn.options['on_max_length'] = 'stop'
+
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
         traj_bad_extension = make_1d_traj(innermost_bad_extension, [1.0]*5)
         samp_bad_extension = Sample(
@@ -1140,10 +1144,13 @@ class testMinusMover(object):
         assert_subchanges_set_accepted(sub, [True] * 2 + [False])
         # first two work and the extention fails
         # this only happens due to length
+
         assert_equal(
             len(sub[-1][0].trials[0].trajectory),
             len(traj_bad_extension)+self.dyn.n_frames_max-1
         )
+
+        self.dyn.options['on_max_length'] = 'fail'
 
 
 class testSingleReplicaMinusMover(object):
@@ -1277,6 +1284,9 @@ class testSingleReplicaMinusMover(object):
         assert_equal(sub_trials[0].ensemble, self.minus._segment_ensemble)
 
     def test_extension_fails(self):
+        # we use `stop` and not `fail` for max length
+        self.dyn.options['on_max_length'] = 'stop'
+
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
         traj_bad_extension = make_1d_traj(innermost_bad_extension, [1.0]*5)
         samp_bad_extension = Sample(
@@ -1305,6 +1315,9 @@ class testSingleReplicaMinusMover(object):
         )
 
 
+        self.dyn.options['on_max_length'] = 'fail'
+
+
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_pathmover(self):
@@ -1325,4 +1338,3 @@ class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_subtrajectoryselectmover(self):
         mover = paths.SubtrajectorySelectMover()
-
