@@ -687,8 +687,6 @@ class EngineMover(SampleMover):
             trial = self._build_sample(
                 input_sample, shooting_index, e.last_trajectory, 'max_length')
 
-            print len(e.last_trajectory)
-
             if EngineMover.reject_max_length:
                 raise SampleMaxLengthError('Sample with MaxLength', trial)
 

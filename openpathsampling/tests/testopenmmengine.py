@@ -218,8 +218,6 @@ class testOpenMMEngine(object):
         self.engine.options['n_frames_max'] = 10
         self.engine.on_max_length = 'fail'
 
-        print template.velocities
-
         init_traj = paths.Trajectory([template] * 5)
         init_samp = paths.SampleSet([paths.Sample(
             trajectory=init_traj,

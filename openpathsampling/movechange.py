@@ -369,18 +369,16 @@ class RejectedNaNSampleMoveChange(RejectedSampleMoveChange):
     """
     Represents an rejected SamplePMC because of occurance of NaN
 
-    This will return no samples also as its result, hence it is
-    rejected.
+    This will return no samples as its result, hence it is rejected.
     """
     pass
 
 
 class RejectedMaxLengthSampleMoveChange(RejectedSampleMoveChange):
     """
-    Represents an rejected SamplePMC because of occurance of NaN
+    Represents an rejected SamplePMC because of hitting the max length limit
 
-    This will return no samples also as its result, hence it is
-    rejected.
+    This will return no samples as its result, hence it is rejected.
     """
     pass
 

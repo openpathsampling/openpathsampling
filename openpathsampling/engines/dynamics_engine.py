@@ -500,23 +500,17 @@ class DynamicsEngine(StorableNamedObject):
                     logger.info("Through frame: %d", frame)
 
                 # Do integrator x steps
+
+                snapshot = None
+
                 try:
                     with DelayedInterrupt():
                         snapshot = self.generate_next_frame()
 
-                        if self.on_nan != 'ignore' and \
-                                not self.is_valid_snapshot(snapshot):
-                            has_nan = True
-                            break
-
-                        frame += 1
-
-                        # Store snapshot and add it to the trajectory.
-                        # Stores also final frame the last time
-                        if direction > 0:
-                            trajectory.append(snapshot)
-                        elif direction < 0:
-                            trajectory.prepend(snapshot.reversed)
+                        # if self.on_nan != 'ignore' and \
+                        #         not self.is_valid_snapshot(snapshot):
+                        has_nan = True
+                        break
 
                 except KeyboardInterrupt as e:
                     # make sure we will report the last state for
@@ -528,24 +522,36 @@ class DynamicsEngine(StorableNamedObject):
                     # any other error we start a retry
                     e = sys.exc_info()
                     errors.append(e)
-                    if 'Particle coordinate is nan' in str(e):
-                        if self.on_nan != 'ignore':
-                            has_nan = True
-                            break
-                    elif self.on_error != 'ignore':
+                    se = str(e).lower()
+                    if 'nan' in se and \
+                            ('particle' in se or 'coordinates' in se):
+                        # this cannot be ignored because we cannot continue!
+                        has_nan = True
+                        break
+                    elif True or self.on_error != 'ignore':
                         has_error = True
                         break
+
+                frame += 1
+
+                # Store snapshot and add it to the trajectory.
+                # Stores also final frame the last time
+                if direction > 0:
+                    trajectory.append(snapshot)
+                elif direction < 0:
+                    trajectory.prepend(snapshot.reversed)
 
                 # Check if we should stop. If not, continue simulation
                 stop = self.stop_conditions(trajectory=trajectory,
                                             continue_conditions=running)
+
+                print attempt_nan, attempt_error, len(trajectory), max_length
 
                 if len(trajectory) >= max_length:
                     # hit the max length criterion
                     on = self.on_max_length
 
                     if on == 'fail':
-                        print len(trajectory), max_length
                         final_error = EngineMaxLengthError(
                             'Hit maximal length of %d frames.' %
                             self.options['n_frames_max'],
@@ -582,8 +588,6 @@ class DynamicsEngine(StorableNamedObject):
                             'Failed to generate trajectory without `nan` '
                             'after %d attempts' % attempt_error,
                             trajectory)
-                elif on == 'ignore':
-                    pass
 
             if has_error:
                 on = self.on_nan
@@ -597,8 +601,6 @@ class DynamicsEngine(StorableNamedObject):
                             'Failed to generate trajectory without `nan` '
                             'after %d attempts' % attempt_error,
                             trajectory)
-                elif on == 'ignore':
-                    pass
 
             elif stop:
                 valid = True
@@ -611,7 +613,6 @@ class DynamicsEngine(StorableNamedObject):
                 logger.info('[#%d] %s' % (no, repr(e[1])))
 
         if final_error is not None:
-            print final_error
             yield trajectory
             logger.info("Through frame: %d", len(trajectory))
             raise final_error
