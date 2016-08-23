@@ -55,23 +55,21 @@ class DynamicsEngine(StorableNamedObject):
     ----------
     on_nan : str
         set the behaviour of the engine when `NaN` is detected. Possible is
-        1.  `fail` will raise an exception
-        2.  `ignore` will completely ignore it and continue
-        3.  `retry` will rerun the trajectory (default)
-    retries_when_nan : int, default: 2
-        the number of retries (if chosen) before an exception is raised
+        1.  `fail` will raise an exception `EngineNaNError`, user can catch it (like movers do) or let it fail
+        2.  `retry` will rerun the trajectory in engine.generate, that causes incorrect acceptance
     on_error : str
         set the behaviour of the engine when an exception happens. Possible is
-        1.  `fail` will raise an exception
-        2.  `ignore` will completely ignore it and continue
-        3.  `retry` will rerun the trajectory (default)
+        1.  `fail` will raise an exception `EngineError`, user can catch it or let it fail
+        2.  `retry` will rerun the trajectory in engine.generate, that causes incorrect acceptance
+    on_max_length : str
+        set the behaviour if the trajectory length is `n_frames_max`. If `n_frames_max == 0` this will be ignored and nothing happens. Possible is
+        1.  `fail` will raise an exception `EngineMaxLengthError`, user can catich it
+        2.  `stop` will stop and return the max length trajectory (default)
+        3.  `retry` will rerun the trajectory in engine.generate, that causes incorrect acceptance
+    retries_when_nan : int, default: 2
+        the number of retries (if chosen) before an exception is raised
     retries_when_error : int, default: 2
         the number of retries (if chosen) before an exception is raised
-    on_max_length : str
-        set the behaviour if the trajectory length is n_frames_max. Possible is
-        1.  `fail` will raise an exception
-        3.  `stop` will stop and return the max length trajectory (default)
-        4.  `retry` will rerun the trajectory
     retries_when_max_length : int, default: 0
         the number of retries (if chosen) before an exception is raised
     on_retry : str or callable
@@ -95,7 +93,6 @@ class DynamicsEngine(StorableNamedObject):
 
     _default_options = {
         'n_frames_max': None,
-        'timestep': None,
         'on_max_length': 'stop',
         'on_nan': 'fail',
         'retries_when_nan': 2,
