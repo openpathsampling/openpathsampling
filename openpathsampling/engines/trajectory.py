@@ -132,23 +132,6 @@ class Trajectory(list, StorableObject):
 
         return len(self)
 
-    @property
-    def n_frames(self):
-        """
-        Return the number of frames in the trajectory.
-
-        Returns
-        -------
-        length (int) - the number of frames in the trajectory
-
-        See also
-        --------
-        n_snapshots, len
-
-        """
-
-        return len(self)
-
     def __getattr__(self, item):
         """
         Fallback to access Snapshot properties
