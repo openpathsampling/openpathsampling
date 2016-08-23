@@ -365,6 +365,24 @@ class RejectedSampleMoveChange(SampleMoveChange):
         return []
 
 
+class RejectedNaNSampleMoveChange(RejectedSampleMoveChange):
+    """
+    Represents an rejected SamplePMC because of occurance of NaN
+
+    This will return no samples as its result, hence it is rejected.
+    """
+    pass
+
+
+class RejectedMaxLengthSampleMoveChange(RejectedSampleMoveChange):
+    """
+    Represents an rejected SamplePMC because of hitting the max length limit
+
+    This will return no samples as its result, hence it is rejected.
+    """
+    pass
+
+
 class SequentialMoveChange(MoveChange):
     """
     SequentialMoveChange has no own samples, only inferred Sampled from the

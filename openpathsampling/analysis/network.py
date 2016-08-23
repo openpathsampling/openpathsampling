@@ -365,7 +365,8 @@ class MSTISNetwork(TISNetwork):
             'from_state' : self.from_state,
             'states' : self.states,
             'special_ensembles' : self.special_ensembles,
-            'trans_info' : self.trans_info
+            'trans_info' : self.trans_info,
+            'ms_outer_objects': self.ms_outer_objects
         }
         return ret_dict
 
@@ -378,7 +379,8 @@ class MSTISNetwork(TISNetwork):
         network.special_ensembles = dct['special_ensembles']
         network.states = dct['states']
         network.__init__(
-            trans_info=dct['trans_info']
+            trans_info=dct['trans_info'],
+            ms_outers=dct['ms_outer_objects']
         )
         return network
 
@@ -661,7 +663,8 @@ class MISTISNetwork(TISNetwork):
             'transition_to_sampling' : self.transition_to_sampling,
             'input_transitions' : self.input_transitions,
             'trans_info' : self.trans_info,
-            'strict_sampling' : self.strict_sampling
+            'strict_sampling' : self.strict_sampling,
+            'ms_outer_objects' : self.ms_outer_objects
         }
         return ret_dict
 
@@ -673,7 +676,9 @@ class MISTISNetwork(TISNetwork):
         network.transition_to_sampling = dct['transition_to_sampling']
         network.input_transitions = dct['input_transitions']
         network.x_sampling_transitions = dct['x_sampling_transitions']
-        network.__init__(dct['trans_info'], dct['strict_sampling'])
+        network.__init__(trans_info=dct['trans_info'], 
+                         ms_outers=dct['ms_outer_objects'],
+                         strict_sampling=dct['strict_sampling'])
         return network
 
 

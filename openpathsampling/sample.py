@@ -415,7 +415,6 @@ class SampleSet(StorableObject):
                     list in the same order
 
             Default is `None` which means to do nothing.
-
         strategies : dict
             a dict that specifies the options used when ensemble functions
             are used to create a new sample.
