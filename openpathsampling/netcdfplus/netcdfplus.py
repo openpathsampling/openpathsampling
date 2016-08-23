@@ -636,60 +636,6 @@ class NetCDFPlus(netCDF4.Dataset):
 
         return None
 
-    def clone_store(self, store_to_copy, new_storage):
-        """
-        Clone a store from one storage to another. Mainly used as a helper
-        for the cloning of a store
-
-        Parameters
-        ----------
-        store_to_copy : [..]Store
-            the store to be copied
-        new_storage : Storage
-            the new Storage object
-
-        """
-        if type(store_to_copy) is str:
-            storage_name = store_to_copy
-        else:
-            storage_name = store_to_copy.prefix
-
-        copied_storages = 0
-
-        for variable in self.variables.keys():
-            if variable.startswith(storage_name + '_'):
-                copied_storages += 1
-                if variable not in new_storage.variables:
-                    # collective variables have additional variables
-                    # in the storage that need to be copied
-                    var = self.variables[variable]
-                    new_storage.createVariable(
-                        variable,
-                        str(var.dtype),
-                        var.dimensions,
-                        chunksizes=var.chunk
-                    )
-                    for attr in self.variables[variable].ncattrs():
-                        setattr(
-                            new_storage.variables[variable],
-                            attr,
-                            getattr(self.variables[variable], attr)
-                        )
-
-                    new_storage.variables[variable][:] = \
-                        self.variables[variable][:]
-                else:
-                    for idx in range(0, len(self.variables[variable])):
-                        new_storage.variables[variable][idx] = \
-                            self.variables[variable][idx]
-
-        if copied_storages == 0:
-            raise RuntimeWarning(
-                'Potential error in storage name. ' +
-                'No storage variables copied from ' +
-                storage_name
-            )
-
     def create_dimension(self, dim_name, size=None):
         """
         Initialize a new dimension in the storage.
