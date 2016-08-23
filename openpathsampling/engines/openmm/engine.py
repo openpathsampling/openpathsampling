@@ -25,6 +25,11 @@ class OpenMMEngine(DynamicsEngine):
         'energy': u.joule / u.mole
     }
 
+    _default_options = {
+        'n_steps_per_frame': 10,
+        'n_frames_max': 5000,
+    }
+
     base_snapshot_type = Snapshot
 
     def __init__(

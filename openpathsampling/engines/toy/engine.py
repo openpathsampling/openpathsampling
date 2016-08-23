@@ -17,15 +17,8 @@ class ToyEngine(DynamicsEngine):
 
     _default_options = {
         'integ': None,
-        'n_steps_per_frame': 10,
         'n_frames_max': 5000,
-        'on_max_length': 'stop',
-        'on_nan': 'fail',
-        'retries_when_nan': 2,
-        'retries_when_error': 0,
-        'retries_when_max_length': 0,
-        'on_retry': 'full',
-        'on_error': 'fail'
+        'n_steps_per_frame': 10
     }
 
     def __init__(self, options, topology):

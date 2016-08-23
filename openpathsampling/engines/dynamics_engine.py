@@ -95,13 +95,14 @@ class DynamicsEngine(StorableNamedObject):
 
     _default_options = {
         'n_frames_max': None,
-        'on_retry': 'full',
-        'on_error': 'fail',
-        'on_max_length': 'fail',
+        'timestep': None,
+        'on_max_length': 'stop',
         'on_nan': 'fail',
         'retries_when_nan': 2,
         'retries_when_error': 0,
-        'retries_when_max_length': 0
+        'retries_when_max_length': 0,
+        'on_retry': 'full',
+        'on_error': 'fail'
     }
 
     units = {
@@ -506,9 +507,9 @@ class DynamicsEngine(StorableNamedObject):
                         snapshot = self.generate_next_frame()
 
                         # if self.on_nan != 'ignore' and \
-                        #         not self.is_valid_snapshot(snapshot):
-                        has_nan = True
-                        break
+                        if not self.is_valid_snapshot(snapshot):
+                            has_nan = True
+                            break
 
                 except KeyboardInterrupt as e:
                     # make sure we will report the last state for
@@ -526,7 +527,7 @@ class DynamicsEngine(StorableNamedObject):
                         # this cannot be ignored because we cannot continue!
                         has_nan = True
                         break
-                    elif True or self.on_error != 'ignore':
+                    else:
                         has_error = True
                         break
 
