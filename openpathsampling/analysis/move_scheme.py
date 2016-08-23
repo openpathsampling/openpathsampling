@@ -800,10 +800,20 @@ class MoveScheme(StorableNamedObject):
         if self._mover_acceptance == { }:
             self.move_acceptance(steps)
 
+        no_move_keys = [k for k in self._mover_acceptance.keys()
+                        if k[0] is None]
+        n_in_scheme_no_move_trials = sum([self._mover_acceptance[k][1]
+                                          for k in no_move_keys
+                                          if k[1] != [None]])
         n_no_move_trials = sum([self._mover_acceptance[k][1]
                                 for k in self._mover_acceptance.keys()
                                 if k[0] is None])
         tot_trials = len(steps) - n_no_move_trials
+        if n_in_scheme_no_move_trials > 0:
+            output.write(
+                "Null moves for " + str(n_in_scheme_no_move_trials)
+                + " cycles. Excluding null moves:\n"
+            )
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
