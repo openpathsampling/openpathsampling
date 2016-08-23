@@ -203,6 +203,7 @@ class testToyEngine(object):
 
     def test_generate(self):
         self.sim.initialized = True
+        print self.sim.n_frames_max
         traj = self.sim.generate(self.sim.current_snapshot, [true_func])
         assert_equal(len(traj), self.sim.n_frames_max)
 

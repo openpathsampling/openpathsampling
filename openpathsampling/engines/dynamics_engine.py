@@ -567,8 +567,9 @@ class DynamicsEngine(StorableNamedObject):
                                     trajectory)
                                 break
 
-                # Check if we should stop. If not, continue simulation
-                stop = self.stop_conditions(trajectory=trajectory,
+                if stop is False:
+                    # Check if we should stop. If not, continue simulation
+                    stop = self.stop_conditions(trajectory=trajectory,
                                             continue_conditions=running)
 
             if has_nan:
@@ -584,7 +585,7 @@ class DynamicsEngine(StorableNamedObject):
                             'after %d attempts' % attempt_error,
                             trajectory)
 
-            if has_error:
+            elif has_error:
                 on = self.on_nan
                 if on == 'fail':
                     final_error = errors[-1][1]
