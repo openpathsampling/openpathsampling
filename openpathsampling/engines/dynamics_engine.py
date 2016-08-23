@@ -54,18 +54,28 @@ class DynamicsEngine(StorableNamedObject):
     Attributes
     ----------
     on_nan : str
-        set the behaviour of the engine when `NaN` is detected. Possible is
-        1.  `fail` will raise an exception `EngineNaNError`, user can catch it (like movers do) or let it fail
-        2.  `retry` will rerun the trajectory in engine.generate, that causes incorrect acceptance
+        set the behaviour of the engine when `NaN` is detected.
+        Possible is
+
+        1.  `fail` will raise an exception `EngineNaNError`
+        2.  `retry` will rerun the trajectory in engine.generate, these moves
+            do not satisfy detailed balance
     on_error : str
-        set the behaviour of the engine when an exception happens. Possible is
-        1.  `fail` will raise an exception `EngineError`, user can catch it or let it fail
-        2.  `retry` will rerun the trajectory in engine.generate, that causes incorrect acceptance
+        set the behaviour of the engine when an exception happens.
+        Possible is
+
+        1.  `fail` will raise an exception `EngineError`
+        2.  `retry` will rerun the trajectory in engine.generate, these moves
+            do not satisfy detailed balance
     on_max_length : str
-        set the behaviour if the trajectory length is `n_frames_max`. If `n_frames_max == 0` this will be ignored and nothing happens. Possible is
-        1.  `fail` will raise an exception `EngineMaxLengthError`, user can catich it
+        set the behaviour if the trajectory length is `n_frames_max`.
+        If `n_frames_max == 0` this will be ignored and nothing happens.
+        Possible is
+
+        1.  `fail` will raise an exception `EngineMaxLengthError`
         2.  `stop` will stop and return the max length trajectory (default)
-        3.  `retry` will rerun the trajectory in engine.generate, that causes incorrect acceptance
+        3.  `retry` will rerun the trajectory in engine.generate, these moves
+            do not satisfy detailed balance
     retries_when_nan : int, default: 2
         the number of retries (if chosen) before an exception is raised
     retries_when_error : int, default: 2
@@ -93,7 +103,7 @@ class DynamicsEngine(StorableNamedObject):
 
     _default_options = {
         'n_frames_max': None,
-        'on_max_length': 'stop',
+        'on_max_length': 'fail',
         'on_nan': 'fail',
         'retries_when_nan': 2,
         'retries_when_error': 0,

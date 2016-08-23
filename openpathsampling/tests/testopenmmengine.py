@@ -147,8 +147,13 @@ class testOpenMMEngine(object):
         assert_not_equal_array_array(old_vel, new_vel)
 
     def test_generate(self):
-        traj = self.engine.generate(self.engine.current_snapshot, [true_func])
-        assert_equal(len(traj), self.engine.n_frames_max)
+        try:
+            _ = self.engine.generate(self.engine.current_snapshot, [true_func])
+        except dyn.EngineMaxLengthError as e:
+            traj = e.last_trajectory
+            assert_equal(len(traj), self.engine.n_frames_max)
+        else:
+            raise RuntimeError('Did not have correct MaxLengthError')
 
     def test_snapshot_timestep(self):
         assert_equal(self.engine.snapshot_timestep, 4 * u.femtoseconds)

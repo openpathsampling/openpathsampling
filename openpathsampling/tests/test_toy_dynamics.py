@@ -203,9 +203,13 @@ class testToyEngine(object):
 
     def test_generate(self):
         self.sim.initialized = True
-        print self.sim.n_frames_max
-        traj = self.sim.generate(self.sim.current_snapshot, [true_func])
-        assert_equal(len(traj), self.sim.n_frames_max)
+        try:
+            traj = self.sim.generate(self.sim.current_snapshot, [true_func])
+        except paths.engines.EngineMaxLengthError as e:
+            traj = e.last_trajectory
+            assert_equal(len(traj), self.sim.n_frames_max)
+        else:
+            raise RuntimeError('Did not raise MaxLength Error')
 
     def test_generate_n_frames(self):
         n_frames = 3
