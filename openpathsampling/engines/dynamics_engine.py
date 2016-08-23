@@ -96,7 +96,14 @@ class DynamicsEngine(StorableNamedObject):
 
     _default_options = {
         'n_frames_max': None,
-        'timestep': None
+        'timestep': None,
+        'on_max_length':'stop',
+        'on_nan': 'fail',
+        'retries_when_nan': 2,
+        'retries_when_error': 0,
+        'retries_when_max_length': 0,
+        'on_retry': 'full',
+        'on_error': 'fail'
     }
 
     units = {
@@ -125,14 +132,6 @@ class DynamicsEngine(StorableNamedObject):
 
         self.descriptor = descriptor
         self._check_options(options)
-
-        self.on_max_length = 'stop'
-        self.on_nan = 'fail'
-        self.retries_when_nan = 2
-        self.retries_when_error = 0
-        self.retries_when_max_length = 0
-        self.on_retry = 'full'
-        self.on_error = 'fail'
 
     @property
     def current_snapshot(self):
