@@ -358,6 +358,19 @@ class MoveScheme(StorableNamedObject):
         strategies : dict
             a dict that specifies the options used when ensemble functions
             are used to create a new sample.
+        preconditions : list of str
+            a list of possible steps to modify the initial list of trajectories.
+            possible choices are
+
+                1.  `sort-shortest` - sorting by shortest first,
+                2.  `sort_median` - sorting by the middle one first and then in
+                    move away from the median length
+                3.  `sort-longest` - sorting by the longest first
+                4.  `reverse` - reverse the order and
+                5.  `mirror` which will add the reversed trajectories to the
+                    list in the same order
+
+            Default is `None` which means to do nothing.
         reuse_strategy : str
             if `avoid` then reusing the same same trajectory twice is avoided.
             `avoid-symmetric` will also remove reversed copies
@@ -383,8 +396,10 @@ class MoveScheme(StorableNamedObject):
         if sample_set is None:
             sample_set = paths.SampleSet([])
 
+        ensembles = self.list_initial_ensembles()
+
         return sample_set.generate_from_trajectories(
-            self.list_initial_ensembles(),
+            ensembles,
             trajectories,
             preconditions,
             strategies,
