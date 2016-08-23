@@ -192,8 +192,6 @@ class Ensemble(StorableNamedObject):
 
     __metaclass__ = abc.ABCMeta
 
-    use_shortcircuit = True
-
     def __init__(self):
         """
         A path volume defines a set of paths.
@@ -1086,12 +1084,6 @@ class Ensemble(StorableNamedObject):
         spl = ['  ' + p for p in spl]
         return '\n'.join(spl)
 
-    def _lencheck(self, trajectory):
-        if hasattr(self, 'frames'):
-            if type(self.frames) is int:
-                return trajectory.frames > self.frames and \
-                    trajectory.frames >= -self.frames
-
 
 class EmptyEnsemble(Ensemble):
     """
@@ -1264,105 +1256,54 @@ class EnsembleCombination(Ensemble):
             return self.fnc(a, b)
 
     def __call__(self, trajectory, trusted=None):
-        if Ensemble.use_shortcircuit:
-            return self._generalized_short_circuit(
-                combo=self.fnc,
-                f1=self.ensemble1,
-                f2=self.ensemble2,
-                trajectory=trajectory,
-                trusted=trusted,
-                fname="__call__"
-            )
-        else:
-            return self.fnc(
-                self.ensemble1(trajectory, trusted),
-                self.ensemble2(trajectory, trusted))
-
-    # NOTE: I'm pretty sure the following can be removed. It is incorrect
-    # (see path ensemble theory docs). The correct way to handle this is by
-    # having explicit complement (inverse) ensembles and only allowing 3
-    # operations -- complement (inverse), union (logical or), and intersection
-    # (logical and). ~DWHS
-
-    # Forward / Backward is tricky
-    # We can do the following. If a or b is true this means that the real
-    # result could be false or true, we just keep going but we should have
-    # stopped. If a or b is false this means for that ensemble continuing is
-    # not feasible and so false really means false. To check if a logical
-    # combination should be continued just try for all true values a
-    # potential false and check if we should continue.
-
-    def _continue_fnc(self, a, b):
-        fnc = self.fnc
-        res = fnc(a, b)
-        if a:
-            res |= fnc(False, b)
-        if b:
-            res |= fnc(a, False)
-        if a and b:
-            res |= fnc(False, False)
-
-        return res
+        return self._generalized_short_circuit(
+            combo=self.fnc,
+            f1=self.ensemble1,
+            f2=self.ensemble2,
+            trajectory=trajectory,
+            trusted=trusted,
+            fname="__call__"
+        )
 
     def can_append(self, trajectory, trusted=False):
-        if Ensemble.use_shortcircuit:
-            return self._generalized_short_circuit(
-                combo=self.fnc,
-                f1=self.ensemble1.can_append,
-                f2=self.ensemble2.can_append,
-                trajectory=trajectory,
-                trusted=trusted,
-                fname="can_append"
-            )
-        else:
-            return self.fnc(self.ensemble1.can_append(trajectory, trusted),
-                            self.ensemble2.can_append(trajectory, trusted))
+        return self._generalized_short_circuit(
+            combo=self.fnc,
+            f1=self.ensemble1.can_append,
+            f2=self.ensemble2.can_append,
+            trajectory=trajectory,
+            trusted=trusted,
+            fname="can_append"
+        )
 
     def can_prepend(self, trajectory, trusted=False):
-        if Ensemble.use_shortcircuit:
-            return self._generalized_short_circuit(
-                combo=self.fnc,
-                f1=self.ensemble1.can_prepend,
-                f2=self.ensemble2.can_prepend,
-                trajectory=trajectory,
-                trusted=trusted,
-                fname="can_prepend"
-            )
-        else:
-            return self.fnc(self.ensemble1.can_prepend(trajectory, trusted),
-                            self.ensemble2.can_prepend(trajectory, trusted))
+        return self._generalized_short_circuit(
+            combo=self.fnc,
+            f1=self.ensemble1.can_prepend,
+            f2=self.ensemble2.can_prepend,
+            trajectory=trajectory,
+            trusted=trusted,
+            fname="can_prepend"
+        )
 
     def strict_can_append(self, trajectory, trusted=False):
-        if Ensemble.use_shortcircuit:
-            return self._generalized_short_circuit(
-                combo=self.fnc,
-                f1=self.ensemble1.strict_can_append,
-                f2=self.ensemble2.strict_can_append,
-                trajectory=trajectory,
-                trusted=trusted,
-                fname="strict_can_append"
-            )
-        else:
-            return self.fnc(
-                self.ensemble1.strict_can_append(trajectory, trusted),
-                self.ensemble2.strict_can_append(trajectory, trusted)
-            )
+        return self._generalized_short_circuit(
+            combo=self.fnc,
+            f1=self.ensemble1.strict_can_append,
+            f2=self.ensemble2.strict_can_append,
+            trajectory=trajectory,
+            trusted=trusted,
+            fname="strict_can_append"
+        )
 
     def strict_can_prepend(self, trajectory, trusted=False):
-        if Ensemble.use_shortcircuit:
-            return self._generalized_short_circuit(
-                combo=self.fnc,
-                f1=self.ensemble1.strict_can_prepend,
-                f2=self.ensemble2.strict_can_prepend,
-                trajectory=trajectory,
-                trusted=trusted,
-                fname="strict_can_prepend"
-            )
-        else:
-            return self.fnc(
-                self.ensemble1.strict_can_prepend(trajectory, trusted),
-                self.ensemble2.strict_can_prepend(trajectory, trusted)
-            )
+        return self._generalized_short_circuit(
+            combo=self.fnc,
+            f1=self.ensemble1.strict_can_prepend,
+            f2=self.ensemble2.strict_can_prepend,
+            trajectory=trajectory,
+            trusted=trusted,
+            fname="strict_can_prepend"
+        )
 
     def __str__(self):
         # print self.sfnc, self.ensemble1, self.ensemble2,
@@ -1388,30 +1329,30 @@ class IntersectionEnsemble(EnsembleCombination):
                                                    str_fnc='{0}\nand\n{1}')
 
 
-class SymmetricDifferenceEnsemble(EnsembleCombination):
-    # TODO: this is not yet supported. Should be removed. ~DWHS
-    # should just be a shortcut for (ens1 | ens2) & ~(ens1 & ens2)
-    # should probably not even be a class. Just have `ensemble.__xor__`
-    # return (ens1 | ens2) & ~(ens1 & ens2)
-    def __init__(self, ensemble1, ensemble2):
-        super(SymmetricDifferenceEnsemble, self).__init__(
-            ensemble1,
-            ensemble2,
-            fnc=lambda a, b: a ^ b,
-            str_fnc='{0}\nxor\n{1}')
+# class SymmetricDifferenceEnsemble(EnsembleCombination):
+#     # TODO: this is not yet supported. Should be removed. ~DWHS
+#     # should just be a shortcut for (ens1 | ens2) & ~(ens1 & ens2)
+#     # should probably not even be a class. Just have `ensemble.__xor__`
+#     # return (ens1 | ens2) & ~(ens1 & ens2)
+#     def __init__(self, ensemble1, ensemble2):
+#         super(SymmetricDifferenceEnsemble, self).__init__(
+#             ensemble1,
+#             ensemble2,
+#             fnc=lambda a, b: a ^ b,
+#             str_fnc='{0}\nxor\n{1}')
 
 
-class RelativeComplementEnsemble(EnsembleCombination):
-    # TODO: this is not yet supported. Should be removed. ~DWHS
-    # should be a shortcut for ens1 & ~ens2
-    # should probably not even be a class. Just have `ensemble.__sub__`
-    # return ens1 & ~ens2
-    def __init__(self, ensemble1, ensemble2):
-        super(RelativeComplementEnsemble, self).__init__(
-            ensemble1,
-            ensemble2,
-            fnc=lambda a, b: a and not b,
-            str_fnc='{0}\nand not\n{1}')
+# class RelativeComplementEnsemble(EnsembleCombination):
+#     # TODO: this is not yet supported. Should be removed. ~DWHS
+#     # should be a shortcut for ens1 & ~ens2
+#     # should probably not even be a class. Just have `ensemble.__sub__`
+#     # return ens1 & ~ens2
+#     def __init__(self, ensemble1, ensemble2):
+#         super(RelativeComplementEnsemble, self).__init__(
+#             ensemble1,
+#             ensemble2,
+#             fnc=lambda a, b: a and not b,
+#             str_fnc='{0}\nand not\n{1}')
 
 
 class SequentialEnsemble(Ensemble):
