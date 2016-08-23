@@ -97,7 +97,7 @@ class DynamicsEngine(StorableNamedObject):
     _default_options = {
         'n_frames_max': None,
         'timestep': None,
-        'on_max_length':'stop',
+        'on_max_length': 'stop',
         'on_nan': 'fail',
         'retries_when_nan': 2,
         'retries_when_error': 0,
