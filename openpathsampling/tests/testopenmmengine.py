@@ -11,6 +11,10 @@ from simtk.openmm import app
 import openpathsampling.engines.openmm as peng
 import openpathsampling.engines as dyn
 
+import openpathsampling as paths
+
+from openpathsampling.ensemble import EnsembleFactory as ef
+
 from test_helpers import (
     true_func, data_filename,
     assert_equal_array_array,
@@ -168,3 +172,69 @@ class testOpenMMEngine(object):
         # this is crude but does the trick
         snapshot.velocities[0] += 1000000. * u.nanometers / u.picoseconds
         _ = self.engine.generate(snapshot, [true_func])
+
+    def test_nan_rejected(self):
+        stateA = paths.EmptyVolume()  # will run indefinitely
+        stateB = paths.EmptyVolume()
+        tps = ef.A2BEnsemble(stateA, stateB)
+        self.engine.n_frames_max = 10
+        snapshot = template.copy()
+        # this is crude but does the trick
+        snapshot.velocities[0] += 1000000. * u.nanometers / u.picoseconds
+        init_traj = paths.Trajectory([template] * 4 + [snapshot])
+        init_samp = paths.SampleSet([paths.Sample(
+            trajectory=init_traj,
+            replica=0,
+            ensemble=tps
+        )])
+
+        mover = paths.BackwardShootMover(
+            ensemble=tps,
+            selector=paths.UniformSelector(),
+            engine=self.engine
+        )
+        change = mover.move(init_samp)
+
+        assert (isinstance(change, paths.RejectedNaNSampleMoveChange))
+        assert_equal(change.samples[0].details.stopping_reason, 'nan')
+        # should return same length as initial since the next frame is nan
+        assert_equal(len(change.samples[0].trajectory), len(init_traj))
+
+        newsamp = init_samp + change
+        assert_equal(len(newsamp), 1)
+
+        # make sure there is no change!
+        assert_equal(init_samp[0].trajectory, init_traj)
+
+    def test_max_length_rejected(self):
+        stateA = paths.EmptyVolume()  # will run indefinitely
+        stateB = paths.EmptyVolume()
+        tps = ef.A2BEnsemble(stateA, stateB)
+        self.engine.options['n_frames_max'] = 7
+        self.engine.on_max_length = 'fail'
+        init_traj = paths.Trajectory([template] * 5)
+        init_samp = paths.SampleSet([paths.Sample(
+            trajectory=init_traj,
+            replica=0,
+            ensemble=tps
+        )])
+
+        mover = paths.BackwardShootMover(
+            ensemble=tps,
+            selector=paths.UniformSelector(),
+            engine=self.engine
+        )
+        change = mover.move(init_samp)
+
+        print change, type(change)
+
+        assert(isinstance(change, paths.RejectedMaxLengthSampleMoveChange))
+        assert_equal(change.samples[0].details.stopping_reason, 'max_length')
+        assert_equal(len(change.samples[0].trajectory), self.engine.n_frames_max)
+
+        newsamp = init_samp + change
+        assert_equal(len(newsamp), 1)
+
+        # make sure there is no change!
+        assert_equal(init_samp[0].trajectory, init_traj)
+

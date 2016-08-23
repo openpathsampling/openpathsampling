@@ -1325,4 +1325,3 @@ class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_subtrajectoryselectmover(self):
         mover = paths.SubtrajectorySelectMover()
-

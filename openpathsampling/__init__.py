@@ -99,7 +99,8 @@ from movechange import (
     FilterSamplesMoveChange,
     PathSimulatorMoveChange, AcceptedSampleMoveChange,
     RejectedSampleMoveChange, SubMoveChange,
-    FilterByEnsembleMoveChange
+    FilterByEnsembleMoveChange, RejectedNaNSampleMoveChange,
+    RejectedMaxLengthSampleMoveChange
 )
 
 from pathmover import Details, MoveDetails, SampleDetails

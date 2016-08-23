@@ -1,6 +1,7 @@
 import logging
 
 import simtk.openmm
+import simtk.openmm.app
 import simtk.unit as u
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor

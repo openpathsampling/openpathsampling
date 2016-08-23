@@ -38,6 +38,7 @@ class EngineError(Exception):
         # Now for your custom code...
         self.last_trajectory = last_trajectory
 
+
 class EngineMaxLengthError(EngineError):
     pass
 
@@ -545,6 +546,7 @@ class DynamicsEngine(StorableNamedObject):
                     on = self.on_max_length
 
                     if on == 'fail':
+                        print len(trajectory), max_length
                         final_error = EngineMaxLengthError(
                             'Hit maximal length of %d frames.' %
                             self.options['n_frames_max'],
@@ -592,7 +594,7 @@ class DynamicsEngine(StorableNamedObject):
                 elif on == 'retry':
                     attempt_error += 1
                     if attempt_error > self.retries_when_error:
-                        final_error = RuntimeError(
+                        final_error = EngineError(
                             'Failed to generate trajectory without `nan` '
                             'after %d attempts' % attempt_error,
                             trajectory)

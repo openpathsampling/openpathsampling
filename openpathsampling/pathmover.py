@@ -76,6 +76,12 @@ class SampleNaNError(Exception):
         self.trial_sample = trial_sample
 
 
+class SampleMaxLengthError(Exception):
+    def __init__(self, message, trial_sample):
+        super(SampleMaxLengthError, self).__init__(message)
+        self.trial_sample = trial_sample
+
+
 class MoveChangeNaNError(Exception):
     pass
 
@@ -559,14 +565,24 @@ class SampleMover(PathMover):
         samples = [self.select_sample(sample_set, ens) for ens in ensembles]
 
         try:
-            # 3. pass these samples to the generator
+            # 3. pass these samples to the generator which might throw
+            # engine specific exceptions if something goes wrong.
+            # Most common should be `EngineNaNError` if nan is detected and
+            # `EngineMaxLengthError`
             trials = self(*samples)
         except SampleNaNError as e:
-            return paths.RejectedSampleMoveChange(
+            return paths.RejectedNaNSampleMoveChange(
                 samples=e.trial_sample,
                 mover=self,
                 details=paths.MoveDetails(
-                    error='NaN')
+                    rejection_reason='nan')
+            )
+        except SampleMaxLengthError as e:
+            return paths.RejectedMaxLengthSampleMoveChange(
+                samples=e.trial_sample,
+                mover=self,
+                details=paths.MoveDetails(
+                    rejection_reason='max_length')
             )
 
         # 4. accept/reject
@@ -617,6 +633,7 @@ class EngineMover(SampleMover):
     """
 
     default_engine = None
+    reject_max_length = True
 
     # this will store the engine attribute for all subclasses as well
     _included_attr = ['_engine']
@@ -655,37 +672,52 @@ class EngineMover(SampleMover):
 
     def __call__(self, input_sample):
         initial_trajectory = input_sample.trajectory
-        replica = input_sample.replica
-
         shooting_index = self.selector.pick(initial_trajectory)
 
         try:
             trial_trajectory = self._run(initial_trajectory, shooting_index)
-        except paths.engines.EngineError as e:
-            trial_trajectory = e.last_trajectory
 
-            trial_details = paths.SampleDetails(
-                initial_trajectory=initial_trajectory,
-                shooting_snapshot=initial_trajectory[shooting_index],
-                error='NaN'
-            )
-
-            trial = paths.Sample(
-                replica=replica,
-                trajectory=trial_trajectory,
-                ensemble=self.target_ensemble,
-                parent=input_sample,
-                details=trial_details,
-                mover=self
-            )
+        except paths.engines.EngineNaNError as e:
+            trial = self._build_sample(
+                input_sample, shooting_index, e.last_trajectory, 'nan')
 
             raise SampleNaNError('Sample with NaN', trial)
 
-        bias = self.selector.probability_ratio(
-            initial_trajectory[shooting_index],
-            initial_trajectory,
-            trial_trajectory
-        )
+        except paths.engines.EngineMaxLengthError as e:
+            trial = self._build_sample(
+                input_sample, shooting_index, e.last_trajectory, 'max_length')
+
+            print len(e.last_trajectory)
+
+            if EngineMover.reject_max_length:
+                raise SampleMaxLengthError('Sample with MaxLength', trial)
+
+        else:
+            trial = self._build_sample(
+                input_sample, shooting_index, trial_trajectory)
+
+        trials = [trial]
+
+        return trials
+
+    def _build_sample(
+            self,
+            input_sample,
+            shooting_index,
+            trial_trajectory,
+            stopping_reason=None
+            ):
+
+        initial_trajectory = input_sample.trajectory
+
+        if stopping_reason is None:
+            bias = self.selector.probability_ratio(
+                initial_trajectory[shooting_index],
+                initial_trajectory,
+                trial_trajectory
+            )
+        else:
+            bias = 0.0
 
         # temporary test to make sure nothing went weird
         # old_bias = initial_point.sum_bias / trial_point.sum_bias
@@ -698,8 +730,11 @@ class EngineMover(SampleMover):
             shooting_snapshot=initial_trajectory[shooting_index]
         )
 
+        if stopping_reason is not None:
+            trial_details.stopping_reason = stopping_reason
+
         trial = paths.Sample(
-            replica=replica,
+            replica=input_sample.replica,
             trajectory=trial_trajectory,
             ensemble=self.target_ensemble,
             parent=input_sample,
@@ -708,9 +743,7 @@ class EngineMover(SampleMover):
             bias=bias
         )
 
-        trials = [trial]
-
-        return trials
+        return trial
 
     def _make_forward_trajectory(self, trajectory, shooting_index):
         initial_snapshot = trajectory[shooting_index]  # .copy()
