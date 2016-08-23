@@ -61,7 +61,8 @@ from analysis.trajectory_transition_analysis import (
 )
 
 from bias_function import (
-    BiasFunction, BiasLookupFunction, BiasEnsembleTable
+    BiasFunction, BiasLookupFunction, BiasEnsembleTable,
+    SRTISBiasFromNetwork
 )
 
 from collectivevariable import (

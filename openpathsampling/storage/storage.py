@@ -127,6 +127,8 @@ class Storage(NetCDFPlus):
                           NamedObjectStore(paths.MoveScheme))
         self.create_store('interfacesets',
                           NamedObjectStore(paths.InterfaceSet))
+        self.create_store('msouters',
+                          NamedObjectStore(paths.MSOuterTISInterface))
 
         # stores where nestable could make sense but is disabled
 
@@ -252,6 +254,8 @@ class Storage(NetCDFPlus):
             'movechanges': False,
             'transitions': True,
             'networks': True,
+            'interfacesets': True,
+            'msouters': True,
             'details': False,
             'steps': WeakLRUCache(1000),
             'topologies': True
@@ -283,6 +287,8 @@ class Storage(NetCDFPlus):
             'movechanges': False,
             'transitions': True,
             'networks': True,
+            'interfacesets': True,
+            'msouters': True,
             'details': False,
             'steps': WeakLRUCache(10),
             'topologies': True
@@ -314,6 +320,8 @@ class Storage(NetCDFPlus):
             'movechanges': WeakLRUCache(10),
             'transitions': WeakLRUCache(10),
             'networks': WeakLRUCache(10),
+            'interfacesets': WeakLRUCache(10),
+            'msouters': WeakLRUCache(10),
             'details': WeakLRUCache(10),
             'steps': WeakLRUCache(10),
             'topologies': WeakLRUCache(10)
@@ -346,6 +354,8 @@ class Storage(NetCDFPlus):
             'movechanges': WeakLRUCache(250000),
             'transitions': True,
             'networks': True,
+            'interfacesets': True,
+            'msouters': True,
             'details': False,
             'steps': WeakLRUCache(50000),
             'topologies': True
@@ -377,6 +387,8 @@ class Storage(NetCDFPlus):
             'movechanges': False,
             'transitions': False,
             'networks': False,
+            'interfacesets': False,
+            'msouters': False,
             'details': False,
             'steps': WeakLRUCache(10),
             'topologies': True
@@ -410,6 +422,8 @@ class Storage(NetCDFPlus):
             'movechanges': False,
             'transitions': False,
             'networks': False,
+            'interfacesets': False,
+            'msouters': False,
             'details': False,
             'steps': False,
             'topologies': False

@@ -465,10 +465,23 @@ class IdentityPathMover(PathMover):
     -----
     Since is does nothing it is considered rejected everytime!
     It can be used to test function of PathMover
+
+    Parameters
+    ----------
+    counts_as_trial : bool
+        Whether this mover should count as a trial or not. If `True`, the
+        `EmptyMoveChange` returned includes this mover, which means it gets
+        counted as a trial in analysis of acceptance. If `False` (default),
+        the mover for the returned move change is `None`, which does not get
+        counted as a trial.
     """
+    def __init__(self, counts_as_trial=False):
+        super(IdentityPathMover, self).__init__()
+        self.counts_as_trial=counts_as_trial
 
     def move(self, sample_set):
-        return paths.EmptyMoveChange()
+        mover = self if self.counts_as_trial else None
+        return paths.EmptyMoveChange(mover=mover)
 
 
 ###############################################################################

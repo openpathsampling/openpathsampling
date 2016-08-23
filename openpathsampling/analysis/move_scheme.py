@@ -679,11 +679,15 @@ class MoveScheme(StorableNamedObject):
             for m in delta:
                 acc = 1 if m.accepted else 0
                 key = (m.mover, str(delta.key(m)))
+                is_trial = 1
+                # if hasattr(key[0], 'counts_as_trial'):
+                    # is_trial = 1 if key[0].counts_as_trial else 0
+
                 try:
                     self._mover_acceptance[key][0] += acc
-                    self._mover_acceptance[key][1] += 1
+                    self._mover_acceptance[key][1] += is_trial
                 except KeyError:
-                    self._mover_acceptance[key] = [acc, 1]
+                    self._mover_acceptance[key] = [acc, is_trial]
 
     def move_summary(self, steps, movers=None, output=sys.stdout, depth=0):
         """
@@ -728,10 +732,20 @@ class MoveScheme(StorableNamedObject):
         if self._mover_acceptance == {}:
             self.move_acceptance(steps)
 
+        no_move_keys = [k for k in self._mover_acceptance.keys()
+                        if k[0] is None]
+        n_in_scheme_no_move_trials = sum([self._mover_acceptance[k][1]
+                                          for k in no_move_keys
+                                          if k[1] != [None]])
         n_no_move_trials = sum([self._mover_acceptance[k][1]
                                 for k in self._mover_acceptance.keys()
                                 if k[0] is None])
         tot_trials = len(steps) - n_no_move_trials
+        if n_in_scheme_no_move_trials > 0:
+            output.write(
+                "Null moves for " + str(n_in_scheme_no_move_trials)
+                + " cycles. Excluding null moves:\n"
+            )
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
@@ -742,9 +756,14 @@ class MoveScheme(StorableNamedObject):
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
             try:
+                # if null moves don't count
                 expected_frequency[groupname] = sum(
-                    [self.real_choice_probability[m] for m in group]
+                    [self.choice_probability[m] for m in group]
                 )
+                ## if null moves count
+                # expected_frequency[groupname] = sum(
+                    # [self.real_choice_probability[m] for m in group]
+                # )
             except KeyError:
                 expected_frequency[groupname] = float('nan')
 
