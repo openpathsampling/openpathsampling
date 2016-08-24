@@ -6,6 +6,8 @@ from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
 from openpathsampling.tools import refresh_output
 
+from collections import Counter
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,14 +121,15 @@ class SampleSet(StorableObject):
         self.append(value)
 
     def __eq__(self, other):
-        if len(self.samples) == len(other.samples):
-            for samp1 in self.samples:
-                if samp1 not in other.samples:
-                    return False
-
-            return True
-        else:
-            return False
+        return set(self.samples) == set(other.samples)
+        # if len(self.samples) == len(other.samples):
+        #     for samp1 in self.samples:
+        #         if samp1 not in other.samples:
+        #             return False
+        #
+        #     return True
+        # else:
+        #     return False
 
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)

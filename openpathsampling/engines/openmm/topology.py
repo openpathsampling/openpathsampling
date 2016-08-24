@@ -13,7 +13,6 @@ class MDTrajTopology(Topology):
 
     def to_dict(self):
         out = dict()
-        # used_elements = set()
 
         atom_data = []
         for atom in self.mdtraj.atoms:
