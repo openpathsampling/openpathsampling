@@ -2,6 +2,7 @@ import openpathsampling.pathmover_inout
 import svgwrite as svg
 from svgwrite.container import Group
 import openpathsampling as paths
+import os
 
 import json
 from collections import namedtuple, OrderedDict, Counter
@@ -17,13 +18,22 @@ class TreeRenderer(svg.Drawing):
     without distort the content. What we want is to move objects further
     apart of close while maintaining their size.
     """
-    def __init__(self, css_style=''):
+    def __init__(self, css_file=None):
         super(TreeRenderer, self).__init__()
         self.scale_x = 20.0
         self.scale_y = 20.0
 
+        if css_file is None:
+            css_file = 'vis'
+
+        css_file_name = os.path.join(
+            os.path.dirname(__file__), 'css', css_file + '.css')
+
+        with open(css_file_name) as content_file:
+            vis_css = content_file.read()
+
         # Add the CSS Stylesheet
-        self.css_style = css_style
+        self.css_style = css_file
         self.defs.add(self.style(
             self.css_style
         ))
@@ -462,7 +472,6 @@ class MoveTreeBuilder(Builder):
         self.ens_x = list()
         self.repl_x = list()
 
-        self.css_style = vis_css
         self.options.analysis['only_canonical'] = True
 
         self.doc = None
@@ -741,7 +750,6 @@ class EnsembleMixBuilder(Builder):
         self.ens_x = list()
         self.repl_x = list()
 
-        self.css_style = vis_css
         self.options.analysis['only_canonical'] = True
 
         self.doc = None
@@ -966,8 +974,6 @@ class PathTreeBuilder(Builder):
         super(PathTreeBuilder, self).__init__(['movers'])
         self.obj = list()
         self.doc = None
-
-        self.css_style = vis_css
 
         self.states = {}
         self.op = None
@@ -2802,168 +2808,3 @@ class EnsembleEvolution(SampleListGenerator):
 
     def update_tree_options(self, tree):
         tree.options.css['mark_transparent'] = 'rejected'
-
-
-# TODO: Move this to extra file and load using 'pkgutil' or so
-vis_css = r"""
-.opstree text, .movetree text {
-    alignment-baseline: central;
-    font-size: 10px;
-    text-anchor: middle;
-    font-family: Futura-CondensedMedium;
-    font-weight: lighter;
-    stroke: none !important;
-}
-.opstree .block text, .movetree .block text {
-    alignment-baseline: central;
-    font-size: 8px;
-    text-anchor: middle;
-    font-family: Futura-CondensedMedium;
-    font-weight: lighter;
-    stroke: none !important;
-}
-.opstree text.shadow {
-    stroke-width: 3;
-    stroke: white !important;
-}
-.opstree .left.label .shift text {
-    text-anchor: end;
-}
-.opstree .right.label .shift text {
-    text-anchor: start;
-}
-.opstree .block text, .movetree .block text {
-    fill: white !important;
-    stroke: none !important;
-}
-.opstree .block {
-    stroke: none !important;
-}
-.opstree g.block:hover rect {
-    opacity: 0.5;
-}
-.opstree .repex {
-    fill: blue;
-    stroke: blue;
-}
-.opstree .extend {
-    fill: blue;
-    stroke: blue;
-}
-.opstree .truncate {
-    fill: blue;
-    stroke: blue;
-}
-.opstree .new {
-    fill: black;
-    stroke: black;
-}
-.opstree .unknown {
-    fill: gray;
-    stroke: gray;
-}
-.opstree .hop {
-    fill: blue;
-    stroke: blue;
-}
-.opstree .correlation {
-    fill: black;
-    stroke: black;
-}
-.opstree .shooting.bw {
-    fill: green;
-    stroke: green;
-}
-.opstree .shooting.fw {
-    fill: red;
-    stroke: red;
-}
-.opstree .shooting.overlap {
-    fill: #666;
-    stroke: #666;
-}
-.opstree .reversal {
-    fill: gold;
-    stroke: gold;
-}
-.opstree .virtual {
-    opacity: 0.1;
-    fill:gray;
-    stroke: none;
-}
-.opstree line {
-    stroke-width: 2px;
-}
-.opstree .label {
-    fill: black !important;
-}
-.opstree .h-connector {
-    stroke-width: 0.1px;
-    stroke-dasharray: 3 3;
-}
-.opstree .rejected {
-    opacity: 0.25;
-}
-.opstree .level {
-    opacity: 0.25;
-}
-.opstree .orange {
-    fill: orange;
-}
-.tableline {
-    fill: gray;
-    opacity: 0.0;
-}
-.tableline:hover {
-    opacity: 0.2;
-}
-.opstree .left.label g.shift {
-    transform: translateX(-6px);
-}
-.opstree .right.label g.shift {
-    transform: translateX(+6px);
-}
-.opstree .infobox text {
-    text-anchor: start;
-}
-.opstree .shade {
-    stroke: none;
-}
-
-.movetree .label .shift {
-    transform: translateX(-18px);
-}
-
-.movetree .label text {
-    text-anchor: end;
-}
-.movetree .v-connector {
-    stroke: black;
-}
-.movetree .v-hook {
-    stroke: black;
-}
-.movetree .h-connector {
-    stroke: black;
-}
-.movetree .ensembles .head .shift {
-    transform: translateY(0px) rotate(270deg) ;
-}
-.movetree .ensembles .head text {
-    text-anchor: start;
-}
-.movetree .connector.input {
-    fill: green;
-}
-.movetree .connector.output {
-    fill: red;
-}
-.movetree .unknown {
-    fill: gray;
-}
-"""
-
-# css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
-#
-# with open(css_file, 'r') as content_file:
-#     vis_css = content_file.read()

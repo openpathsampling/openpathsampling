@@ -1,2 +1,4 @@
 graft openpathsampling
-recursive-include openpathsampling *.py
+graft openpathsampling/css
+recursive-include openpathsampling *.py *.css
+recursive-include openpathsampling/css *.css

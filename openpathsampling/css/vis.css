@@ -1,0 +1,155 @@
+.opstree text, .movetree text {
+    alignment-baseline: central;
+    font-size: 10px;
+    text-anchor: middle;
+    font-family: Futura-CondensedMedium;
+    font-weight: lighter;
+    stroke: none !important;
+}
+.opstree .block text, .movetree .block text {
+    alignment-baseline: central;
+    font-size: 8px;
+    text-anchor: middle;
+    font-family: Futura-CondensedMedium;
+    font-weight: lighter;
+    stroke: none !important;
+}
+.opstree text.shadow {
+    stroke-width: 3;
+    stroke: white !important;
+}
+.opstree .left.label .shift text {
+    text-anchor: end;
+}
+.opstree .right.label .shift text {
+    text-anchor: start;
+}
+.opstree .block text, .movetree .block text {
+    fill: white !important;
+    stroke: none !important;
+}
+.opstree .block {
+    stroke: none !important;
+}
+.opstree g.block:hover rect {
+    opacity: 0.5;
+}
+.opstree .repex {
+    fill: blue;
+    stroke: blue;
+}
+.opstree .extend {
+    fill: blue;
+    stroke: blue;
+}
+.opstree .truncate {
+    fill: blue;
+    stroke: blue;
+}
+.opstree .new {
+    fill: black;
+    stroke: black;
+}
+.opstree .unknown {
+    fill: gray;
+    stroke: gray;
+}
+.opstree .hop {
+    fill: blue;
+    stroke: blue;
+}
+.opstree .correlation {
+    fill: black;
+    stroke: black;
+}
+.opstree .shooting.bw {
+    fill: green;
+    stroke: green;
+}
+.opstree .shooting.fw {
+    fill: red;
+    stroke: red;
+}
+.opstree .shooting.overlap {
+    fill: #666;
+    stroke: #666;
+}
+.opstree .reversal {
+    fill: gold;
+    stroke: gold;
+}
+.opstree .virtual {
+    opacity: 0.1;
+    fill:gray;
+    stroke: none;
+}
+.opstree line {
+    stroke-width: 2px;
+}
+.opstree .label {
+    fill: black !important;
+}
+.opstree .h-connector {
+    stroke-width: 0.1px;
+    stroke-dasharray: 3 3;
+}
+.opstree .rejected {
+    opacity: 0.25;
+}
+.opstree .level {
+    opacity: 0.25;
+}
+.opstree .orange {
+    fill: orange;
+}
+.tableline {
+    fill: gray;
+    opacity: 0.0;
+}
+.tableline:hover {
+    opacity: 0.2;
+}
+.opstree .left.label g.shift {
+    transform: translateX(-6px);
+}
+.opstree .right.label g.shift {
+    transform: translateX(+6px);
+}
+.opstree .infobox text {
+    text-anchor: start;
+}
+.opstree .shade {
+    stroke: none;
+}
+
+.movetree .label .shift {
+    transform: translateX(-18px);
+}
+
+.movetree .label text {
+    text-anchor: end;
+}
+.movetree .v-connector {
+    stroke: black;
+}
+.movetree .v-hook {
+    stroke: black;
+}
+.movetree .h-connector {
+    stroke: black;
+}
+.movetree .ensembles .head .shift {
+    transform: translateY(0px) rotate(270deg) ;
+}
+.movetree .ensembles .head text {
+    text-anchor: start;
+}
+.movetree .connector.input {
+    fill: green;
+}
+.movetree .connector.output {
+    fill: red;
+}
+.movetree .unknown {
+    fill: gray;
+}

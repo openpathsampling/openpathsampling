@@ -188,7 +188,10 @@ Operating System :: MacOS
     'long_description': 'OpenPathSampling (http://github.com/choderalab/openpathsampling) is a \n'
                         'python library to do transition interface sampling.',
     'name': 'openpathsampling',
-    'package_data': [],
+    'include_package_data': True,
+    'package_data': {
+        'openpathsampling': ['css/*.css']
+    },
     'packages': [
         'openpathsampling',
         'openpathsampling.storage',
