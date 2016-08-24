@@ -227,20 +227,23 @@ class OpenMMEngine(DynamicsEngine):
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
-                    platform=simtk.openmm.Platform.getPlatformByName(platform)
+                    platform=simtk.openmm.Platform.getPlatformByName(platform),
+                    platformProperties=self.openmm_properties
                 )
             elif platform is None:
                 self._simulation = simtk.openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
-                    integrator=self.integrator
+                    integrator=self.integrator,
+                    platformProperties=self.openmm_properties
                 )
             else:
                 self._simulation = simtk.openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
-                    platform=platform
+                    platform=platform,
+                    platformProperties=self.openmm_properties
                 )
 
             logger.info(
