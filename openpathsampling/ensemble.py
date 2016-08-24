@@ -512,6 +512,9 @@ class Ensemble(StorableNamedObject):
         """
         length = len(trajectory)
 
+        logger.info('`iter_extendable_slices` is experimental. Use it on your '
+                    'own risk!')
+
         if max_length is None:
             max_length = length
 
