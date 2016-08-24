@@ -2137,7 +2137,8 @@ class SampleList(OrderedDict):
             the generated list of samples
 
         """
-        sl = SampleList(SampleList._get_samples_from_steps(steps, replica, accepted))
+        sl = SampleList(SampleList._get_samples_from_steps(
+            steps, replica, accepted))
         sl.steps = steps
         return sl
 
@@ -2166,8 +2167,9 @@ class SampleList(OrderedDict):
         """
         Remove all redundant samples and return a new object
 
-        Redundant samples are samples where the overlap with the previous sample is effectively
-        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+        Redundant samples are samples where the overlap with the previous
+        sample is effectively all samples. This depends on the analysis settings
+        like `time_symmetric` and `flip_time_direction`
 
         Returns
         -------
@@ -2176,9 +2178,9 @@ class SampleList(OrderedDict):
 
 
         """
-        l = SampleList(
-            [samp for samp, data in self.iteritems() if data['length_shared'] < data['length']]
-        )
+        l = SampleList([
+            samp for samp, data in self.iteritems()
+            if data['length_shared'] < data['length']])
         l.flip_time_direction = self.flip_time_direction
         l.time_symmetric = self.time_symmetric
         return l
@@ -2187,19 +2189,23 @@ class SampleList(OrderedDict):
         """
         Remove all redundant samples from the current object.
 
-        Redundant samples are samples where the overlap with the previous sample is effectively
-        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+        Redundant samples are samples where the overlap with the previous
+        sample is effectively all samples. This depends on the analysis
+        settings like `time_symmetric` and `flip_time_direction`
 
         """
-        l = [samp for samp, data in self.iteritems() if data['length_shared'] < data['length']]
+        l = [
+            samp for samp, data in self.iteritems()
+            if data['length_shared'] < data['length']]
         self.set_samples(l)
 
     def flatten_to_main(self):
         """
         Remove all redundant samples from the current object.
 
-        Redundant samples are samples where the overlap with the previous sample is effectively
-        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+        Redundant samples are samples where the overlap with the previous
+        sample is effectively all samples. This depends on the analysis settings
+        like `time_symmetric` and `flip_time_direction`
 
         """
         l = [samp for samp, data in self.iteritems() if data['level'] == 0]
