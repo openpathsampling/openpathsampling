@@ -114,7 +114,7 @@ class Trajectory(list, StorableObject):
 
         See also
         --------
-        n_frames, len
+        len
 
         """
 
