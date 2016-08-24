@@ -191,15 +191,18 @@ class SampleSet(StorableObject):
     def apply_samples(self, samples, copy=True):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
-        if type(samples) is Sample:
+        if isinstance(samples, Sample):
             samples = [samples]
+        elif isinstance(samples, paths.MoveChange):
+            samples = samples.results
         if copy==True:
             newset = SampleSet(self)
         else:
             newset = self
         for sample in samples:
             if type(sample) is not paths.Sample:
-                raise ValueError('No SAMPLE!')
+                raise ValueError(
+                    'No SAMPLE! Type `%s` found.' % sample.__class__.__name__)
             # TODO: should time be a property of Sample or SampleSet?
             newset[sample.replica] = sample
         return newset
