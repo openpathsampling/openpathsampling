@@ -439,6 +439,51 @@ class NetCDFPlus(netCDF4.Dataset):
         self.vars = dict()
         self.units = dict()
 
+    def add_class_json_store(self, name, cls):
+        """
+        Create a JSON store to hold objects of base class `cls`
+
+        Parameters
+        ----------
+        name : str
+            the name of the store to hold the objects
+        cls : :class:`StorableObject`
+            the base class of a storable objects
+
+        Returns
+        -------
+        :class:`ObjectStore`
+            the store used for the object, given. If the name is already
+
+        """
+        store = ObjectStore(cls)
+        self.add_store(name, store)
+
+        return store
+
+    def add_store(self, name, store):
+        """
+        Add a custom store to hold objects of base class `cls`
+
+        Parameters
+        ----------
+        name : str
+            the name of the store to hold the objects
+        store : :class:`ObjectStore`
+            the store to hold the objects
+
+        """
+        if name in self._stores:
+            raise RuntimeError('Name `%s` already taken.' % name)
+
+        # no store exists yet
+        self.create_store(
+            name,
+            store
+        )
+
+        self.finalize_stores()
+
     def create_store(self, name, store, register_attr=True):
         """
         Create a special variable type `obj.name` that can hold storable objects
