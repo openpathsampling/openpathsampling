@@ -18,9 +18,3 @@ class Topology(StorableNamedObject):
         super(Topology, self).__init__()
         self.n_atoms = n_atoms
         self.n_spatial = n_spatial
-
-    def subset(self, list_of_atoms):
-        return Topology(
-            n_atoms=len(list_of_atoms),
-            n_spatial=self.n_spatial
-        )
