@@ -486,6 +486,11 @@ class Ensemble(StorableNamedObject):
         cut at the end and for backward extendable ones you can cut at the
         beginning.
 
+
+        Notes
+        -----
+        This feature is not yet fully tested and should be used with care!
+
         Parameters
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
