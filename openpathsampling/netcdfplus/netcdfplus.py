@@ -6,11 +6,12 @@ import logging
 
 from dictify import StorableObjectJSON, UUIDObjectJSON
 from proxy import LoaderProxy
-from collections import OrderedDict
 
 from objects import NamedObjectStore, ObjectStore
 
 from collections import OrderedDict
+
+from base import StorableObject
 
 import numpy as np
 import netCDF4
@@ -32,6 +33,7 @@ class NetCDFPlus(netCDF4.Dataset):
     Extension of the python netCDF wrapper for easier storage of python objects
     """
     support_simtk_unit = True
+    auto_create_store = True
 
     @property
     def _netcdfplus_version_(self):
@@ -672,6 +674,13 @@ class NetCDFPlus(netCDF4.Dataset):
             store = self.find_store(obj)
             store_idx = self.stores.index[store]
             return store, store_idx, store.save(obj, idx)
+        elif self.auto_create_store and isinstance(obj, StorableObject):
+            if hasattr(obj.base_cls, '_json_store_name'):
+                store_name = getattr(obj.base_cls, '_json_store_name')
+                if store_name not in self._stores:
+                    store = self.add_class_json_store(store_name, obj.base_cls)
+                    store_idx = self.stores.index[store]
+                    return store, store_idx, store.save(obj, idx)
 
         # Could not save this object.
         raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
