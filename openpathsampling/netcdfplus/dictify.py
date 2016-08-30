@@ -475,21 +475,15 @@ class StorableObjectJSON(ObjectJSON):
     def simplify(self, obj, base_type=''):
         if obj is self.storage:
             return {'_storage': 'self'}
-        if obj.__class__.__module__ != '__builtin__':
-            if obj.__class__ in self.storage._obj_store:
-                store = self.storage._obj_store[obj.__class__]
-                if not store.nestable or obj.base_cls_name != base_type:
-                    # this also returns the base class name used for storage
-                    # store objects only if they are not creatable. If so they
-                    # will only be created in their top instance and we use
-                    # the simplify from the super class ObjectJSON
-                    idx = store.save(obj)
-                    if idx is None:
-                        raise RuntimeError(
-                            'cannot store idx None in store %s' % store)
-                    return {
-                        '_idx': idx,
-                        '_obj': store.prefix}
+
+        if isinstance(obj, StorableObject):
+            try:
+                store, store_idx, idx = self.storage.save(obj)
+                return {
+                    '_idx': idx,
+                    '_obj': store.prefix}
+            except RuntimeWarning:
+                pass
 
         return super(StorableObjectJSON, self).simplify(obj, base_type)
 
