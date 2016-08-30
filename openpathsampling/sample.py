@@ -121,15 +121,7 @@ class SampleSet(StorableObject):
         self.append(value)
 
     def __eq__(self, other):
-        return set(self.samples) == set(other.samples)
-        # if len(self.samples) == len(other.samples):
-        #     for samp1 in self.samples:
-        #         if samp1 not in other.samples:
-        #             return False
-        #
-        #     return True
-        # else:
-        #     return False
+        return Counter(self.samples) == Counter(other.samples)
 
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
