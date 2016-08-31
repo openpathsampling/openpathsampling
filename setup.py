@@ -116,7 +116,7 @@ def build_keyword_dictionary(prefs):
     for key in [
         'name', 'version', 'license', 'url', 'download_url', 'packages',
         'package_dir', 'platforms', 'description', 'requires',
-        'long_description'
+        'long_description', 'package_data', 'include_package_data'
     ]:
         if key in prefs:
             keywords[key] = prefs[key]
@@ -189,9 +189,6 @@ Operating System :: MacOS
                         'python library to do transition interface sampling.',
     'name': 'openpathsampling',
     'include_package_data': True,
-    'package_data': {
-        'openpathsampling': ['css/*.css']
-    },
     'packages': [
         'openpathsampling',
         'openpathsampling.storage',
@@ -224,7 +221,7 @@ Operating System :: MacOS
         'networkx',
         'matplotlib'],
     'url': 'http://www.openpathsampling.org',
-    'version': '0.9.0'}
+    'version': '0.9.1'}
 
 setup_keywords = build_keyword_dictionary(preferences)
 

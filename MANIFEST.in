@@ -1,4 +1,1 @@
-graft openpathsampling
-graft openpathsampling/css
-recursive-include openpathsampling *.py *.css
-recursive-include openpathsampling/css *.css
+# include visualization .css files
