@@ -127,7 +127,8 @@ class testExternalEngine(object):
         for testfile in glob.glob("test*out") + glob.glob("test*inp"):
             os.remove(testfile)
         ens10 = paths.LengthEnsemble(10)
-        init_traj = self.fast_engine.generate_forward(self.template, ens10)
+        init_traj = self.fast_engine.generate(self.template,
+                                              [ens10.can_append])
         assert_equal(ens10(init_traj), True)
         init_conds = paths.SampleSet([
             paths.Sample(replica=0, ensemble=ens10, trajectory=init_traj)
