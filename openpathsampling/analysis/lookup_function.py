@@ -27,7 +27,8 @@ class LookupFunction(object):
     def __init__(self, ordinate, abscissa):
         self.pairs = { }
         for (x,y) in zip(ordinate, abscissa):
-            self.pairs[x] = y
+            if not np.isnan(y):
+                self.pairs[x] = y
         self.sorted_ordinates = np.array(sorted(self.pairs.keys()))
         self._values = np.array([self.pairs[x] for x in self.sorted_ordinates])
 
@@ -35,8 +36,6 @@ class LookupFunction(object):
     def from_dict(cls, dct):
         x = dct.keys()
         y = dct.values()
-        print x
-        print y
         return cls(x, y)
 
     def keys(self):

@@ -389,10 +389,12 @@ class TISTransition(Transition):
                 self.histograms['max_lambda'].values(),
                 fcn="reverse_cumulative"
             ).sort_index(axis=1)
-            wham = WHAM()
-            wham.load_from_dataframe(df)
-            wham.clean_leading_ones()
-            tcp = wham.wham_bam_histogram()
+            # if lambdas not set, returns None and WHAM uses fallback
+            lambdas = self.interfaces.lambdas
+            wham = WHAM(interfaces=lambdas)
+            # wham.load_from_dataframe(df)
+            # wham.clean_leading_ones()
+            tcp = wham.wham_bam_histogram(df).to_dict()
         elif method == "mbar":
             pass
         else:
@@ -477,6 +479,7 @@ class TISTransition(Transition):
         logger.info("outer ensemble: " + outer_ensemble.name + " " 
                     + repr(outer_ensemble))
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
+        outer_lambda = self.interfaces.get_lambda(self.interfaces[-1])
         if outer_lambda is None:
             outer_lambda = guess_interface_lambda(outer_cross_prob)
             # lambda_bin = -1

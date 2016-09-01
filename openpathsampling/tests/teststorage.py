@@ -127,22 +127,16 @@ class testStorage(object):
             assert(len(storage_w.trajectories) == 2)
             assert(len(storage_w.stores['snapshot0']) == 10)
 
-            # this will store a new traj.reversed under IDX #2
-            storage_w.trajectories.save(traj.reversed)
-            assert(len(storage_w.snapshots) == 20)
-            assert(len(storage_w.trajectories) == 3)
-            assert(len(storage_w.stores['snapshot0']) == 20)
-
-            # this will store traj under pos IDX #3
+            # this will store traj under pos IDX #2
             storage_w.trajectories.save(traj)
             assert(len(storage_w.snapshots) == 20)
-            assert(len(storage_w.trajectories) == 4)
+            assert(len(storage_w.trajectories) == 3)
             assert(len(storage_w.stores['snapshot0']) == 20)
 
             # this will not store since traj is already stored
             storage_w.trajectories.save(traj)
             assert(len(storage_w.snapshots) == 20)
-            assert(len(storage_w.trajectories) == 4)
+            assert(len(storage_w.trajectories) == 3)
             assert(len(storage_w.stores['snapshot0']) == 20)
 
             # we saved in this order [0f, 8r, 6f, 7f, 9f, 5r, 4r, 3r, 2r, 1r ]
@@ -158,7 +152,7 @@ class testStorage(object):
                 storage_r.stores['snapshot0'].set_caching(False)
 
             # check if the loaded trajectory is reproduced
-            for s1, s2 in zip(traj, storage_r.trajectories[3]):
+            for s1, s2 in zip(traj, storage_r.trajectories[2]):
                 compare_snapshot(s1, s2, True)
 
             # this is the expected order in which it is saved
@@ -191,23 +185,66 @@ class testStorage(object):
             storage_r.close()
 
     def test_load_save(self):
-        store = Storage(filename=self.filename, mode='w', use_uuid=False)
-        assert(os.path.isfile(self.filename))
+        for use_uuid in [True, False]:
+            store = Storage(filename=self.filename, mode='w', use_uuid=use_uuid)
+            assert(os.path.isfile(self.filename))
 
-        store.save(self.template_snapshot)
-        store.close()
+            store.save(self.template_snapshot)
+            store.close()
 
-        store = Storage(filename=self.filename, mode='a')
-        loaded_template = store.snapshots[0]
-        loaded_r = store.snapshots[1]
+            store = Storage(filename=self.filename, mode='a')
+            loaded_template = store.snapshots[0]
+            loaded_r = store.snapshots[1]
 
-        compare_snapshot(loaded_template, self.template_snapshot, True)
-        compare_snapshot(
-            loaded_template.reversed,
-            self.template_snapshot.reversed, True)
-        compare_snapshot(loaded_r, self.template_snapshot.reversed)
+            compare_snapshot(loaded_template, self.template_snapshot, True)
+            compare_snapshot(
+                loaded_template.reversed,
+                self.template_snapshot.reversed, True)
+            compare_snapshot(loaded_r, self.template_snapshot.reversed)
 
-        store.close()
+            store.close()
+
+    def test_proxy(self):
+        for use_uuid in [True, False]:
+            store = Storage(filename=self.filename, mode='w', use_uuid=use_uuid)
+            assert(os.path.isfile(self.filename))
+
+            tm = self.template_snapshot
+
+            store.save(tm)
+
+            px = store.snapshots.proxy(0)
+
+            # make sure that the proxy and
+            assert(hash(px) == hash(tm))
+            assert(px == tm)
+
+            store.snapshots.cache.clear()
+            s0 = store.snapshots[0]
+
+            assert(hash(px) == hash(s0))
+            assert(px == s0)
+
+            compare_snapshot(px, tm)
+            compare_snapshot(s0, tm)
+
+            px = store.snapshots.proxy(0)
+
+            # make sure that after reloading it still works
+            assert(hash(px) == hash(tm))
+            assert(px == tm)
+
+            store.close()
+
+            store = Storage(filename=self.filename, mode='a')
+
+            s1 = store.snapshots[0]
+
+            store.close()
+
+            # when loading only for uuid based storages you get the same id
+            assert((hash(px) == hash(s1)) is use_uuid)
+            assert((px == s1) is use_uuid)
 
     def test_mention_only(self):
         storage_w = paths.Storage(self.filename, "w", use_uuid=True)

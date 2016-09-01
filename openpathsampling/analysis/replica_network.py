@@ -356,8 +356,18 @@ class ReplicaNetwork(object):
                     n_up[loc] += count
         self._flow_up = n_up
         self._flow_count = n_visit
-        return {e : float(n_up[e])/n_visit[e] if n_visit[e] > 0 else 0.0
-                for e in self.ensembles}
+        as_dict =  {e : float(n_up[e])/n_visit[e] if n_visit[e] > 0 else 0.0
+                    for e in self.ensembles}
+        return as_dict
+
+    def flow_pd(self, bottom, top, steps=None, force=False):
+        flow_dict = self.flow(bottom, top, steps, force)
+        inverted = {flow_dict[k]: k for k in flow_dict.keys()}
+        sorted_inverted = list(reversed(sorted(inverted.keys())))
+        re_keyed = {k: sorted_inverted[k] 
+                    for k in range(len(sorted_inverted))}
+        return pd.Series(re_keyed)
+
 
     def trips(self, bottom, top, steps=None, force=False):
         """
@@ -518,11 +528,13 @@ def trace_ensembles_for_replica(replica, steps):
     list
         list of ensembles
     """
-    trace = []
-    for step in steps:
-        sset = step.active
-        trace.append(sset[replica].ensemble)
-    return trace
+    # trace = []
+    # for step in steps:
+        # sset = step.active
+        # trace.append(sset[replica].ensemble)
+    # return trace
+    return [s.active[replica].ensemble for s in steps]
+
 
 def trace_replicas_for_ensemble(ensemble, steps):
     """

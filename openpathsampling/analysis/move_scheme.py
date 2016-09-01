@@ -1,63 +1,19 @@
 import openpathsampling as paths
 
 from move_strategy import levels as strategy_levels
-import move_strategy as strategies
-
+# import move_strategy as move_strategy
+import move_strategy
 from openpathsampling.netcdfplus import StorableNamedObject
 
 try:
     import pandas as pd
-    has_pandas=True
+    has_pandas = True
 except ImportError:
-    has_pandas=False
+    has_pandas = False
+    pd = None
 
 
 import sys
-
-def sample_from_trajectories(ensemble, trajectories, used_trajectories=None,
-                             avoid_reuse=True):
-    """
-    Generates a sample for the given ensemble and one of the trajectories.
-
-    Parameters
-    ----------
-    ensemble : :class:`.Ensemble`
-        the ensemble for the sample
-    trajectories : list of :class:`.Trajectory`
-        the trajectories to consider filling the sample with
-    used_trajectories : list of :class:`.Trajectory`
-        trajectories which are already in use
-    avoid_reuse : bool
-        if True (default), only use a trajectory in used_trajectories if
-        no other trajectory satisfies the ensemble. If False, use the first
-        trajectory in trajectories which satisfies the ensemble
-
-    Returns
-    -------
-    :class:`.Sample` or None :
-        the sample created, or None if no sample could be created
-    """
-    sample = None
-    selected = None
-    if used_trajectories is None:  # pragma: no cover
-        used_trajectories = []
-    possible = [traj for traj in trajectories if ensemble(traj)]
-    if avoid_reuse:
-        for traj in possible:
-            if traj not in used_trajectories:
-                selected = traj
-                break
-
-    if selected is None and len(possible) > 0:
-        # either not avoid_reuse or all possibilities already used
-        selected = possible[0]  # take the first one
-
-    if selected is not None:
-        sample = paths.Sample(replica=None,
-                              trajectory=selected,
-                              ensemble=ensemble)
-    return sample
-
 
 
 class MoveScheme(StorableNamedObject):
@@ -80,25 +36,26 @@ class MoveScheme(StorableNamedObject):
         self.strategies = {}
         self.balance_partners = {}
         self.choice_probability = {}
-        self._real_choice_probability = {} # used as override, e.g., in SRTIS
+        self._real_choice_probability = {}  # used as override, e.g., in SRTIS
         self.root_mover = None
 
-        self._mover_acceptance = {} # used in analysis
+        self._mover_acceptance = {}  # used in analysis
 
     def to_dict(self):
         ret_dict = {
-            'movers' : self.movers,
-            'network' : self.network,
-            'choice_probability' : self.choice_probability,
-            'real_choice_probability' : self.real_choice_probability,
-            'balance_partners' : self.balance_partners,
-            'root_mover' : self.root_mover,
+            'movers': self.movers,
+            'network': self.network,
+            'choice_probability': self.choice_probability,
+            'real_choice_probability': self.real_choice_probability,
+            'balance_partners': self.balance_partners,
+            'root_mover': self.root_mover,
         }
         return ret_dict
 
     @classmethod
     def from_dict(cls, dct):
         scheme = cls.__new__(cls)
+        # noinspection PyArgumentList
         scheme.__init__(dct['network'])
         scheme.movers = dct['movers']
         scheme.choice_probability = dct['choice_probability']
@@ -187,7 +144,7 @@ class MoveScheme(StorableNamedObject):
             Root mover of the move decision tree
         """
         if self.root_mover is None:
-            rebuild=True
+            rebuild = True
         if rebuild:
             self.choice_probability = {}
             self.build_move_decision_tree()
@@ -270,9 +227,10 @@ class MoveScheme(StorableNamedObject):
         """
         if root is None:
             if self.root_mover is None:
-                self.root = self.move_decision_tree()
+                self.root_mover = self.move_decision_tree()
+
             root = self.root_mover
-        movers = root.map_pre_order(lambda x : x)
+        movers = root.map_pre_order(lambda x: x)
         mover_ensemble_dict = {}
         for m in movers:
             input_sig = m.input_ensembles
@@ -354,7 +312,6 @@ class MoveScheme(StorableNamedObject):
                        "decision tree").format(fcn_name=fcn_name)
             raise RuntimeWarning(warnstr)
 
-
     def list_initial_ensembles(self, root=None):
         """
         Returns a list of initial ensembles for this move scheme.
@@ -379,10 +336,12 @@ class MoveScheme(StorableNamedObject):
                             if ens in used_ensembles]
         return output_ensembles
 
-
     def initial_conditions_from_trajectories(self, trajectories,
                                              sample_set=None,
-                                             avoid_reuse=True):
+                                             strategies=None,
+                                             preconditions=None,
+                                             reuse_strategy='avoid-symmetric',
+                                             engine=None):
         """
         Create a SampleSet with as many initial samples as possible.
 
@@ -396,11 +355,30 @@ class MoveScheme(StorableNamedObject):
         sample_set : :class:`.SampleSet`, optional
             if given, add samples to this sampleset. Default is None, which
             means that this will start a new sampleset.
-        avoid_reuse : bool
-            if True (default), use a trajectory that hasn't been used
-            already, if possible (otherwise use the first trajectory that
-            satisfies the ensemble). If False, always use the first
-            trajectory in trajectories that satisfies the ensemble
+        strategies : dict
+            a dict that specifies the options used when ensemble functions
+            are used to create a new sample.
+        preconditions : list of str
+            a list of possible steps to modify the initial list of trajectories.
+            possible choices are
+
+                1.  `sort-shortest` - sorting by shortest first,
+                2.  `sort_median` - sorting by the middle one first and then in
+                    move away from the median length
+                3.  `sort-longest` - sorting by the longest first
+                4.  `reverse` - reverse the order and
+                5.  `mirror` which will add the reversed trajectories to the
+                    list in the same order
+
+            Default is `None` which means to do nothing.
+        reuse_strategy : str
+            if `avoid` then reusing the same same trajectory twice is avoided.
+            `avoid-symmetric` will also remove reversed copies
+            if possible. `all` will not attempt to avoid already existing ones.
+            `once` will strictly not reuse a trajectory and `once-symmetric`
+            will also not use reversed copies.
+        engine : :class:`openpathsampling.engines.DyanmicsEngine`
+            the engine used for extending moves
 
         Returns
         -------
@@ -411,51 +389,23 @@ class MoveScheme(StorableNamedObject):
         See Also
         --------
         list_initial_ensembles
+        check_initial_conditions
+        assert_initial_conditions
         """
-        ensembles_to_fill = self.list_initial_ensembles()
+
         if sample_set is None:
             sample_set = paths.SampleSet([])
 
-        if isinstance(trajectories, paths.Trajectory):
-            trajectories = [trajectories]
+        ensembles = self.list_initial_ensembles()
 
-        used_trajectories = [s.trajectory for s in sample_set]
-
-        for ens_list in ensembles_to_fill:
-            if type(ens_list) is not list:
-                ens_list = [ens_list]
-            sample = None
-            for ens in ens_list:
-                if ens in sample_set.ensemble_list():
-                    break  # We've already got one. It's very nice
-                # fill only the first in ens_list that can be filled
-                # 1. try forward
-                possible = [traj for traj in trajectories if ens(traj)]
-                sample = sample_from_trajectories(
-                    ensemble=ens,
-                    trajectories=trajectories,
-                    used_trajectories=used_trajectories,
-                    avoid_reuse=avoid_reuse
-                )
-
-                # 2. try reversed
-                if sample is None:
-                    all_reversed = [traj.reversed for traj in trajectories]
-                    sample = sample_from_trajectories(
-                        ensemble=ens,
-                        trajectories=all_reversed,
-                        used_trajectories=used_trajectories,
-                        avoid_reuse=avoid_reuse
-                    )
-
-                # 3. hypothetically, try extending (future)
-
-            # now, if we've found a sample, add it
-            if sample is not None:
-                sample_set.append_as_new_replica(sample)
-                used_trajectories.append(sample.trajectory)
-
-        return sample_set
+        return sample_set.generate_from_trajectories(
+            ensembles,
+            trajectories,
+            preconditions,
+            strategies,
+            reuse_strategy,
+            engine
+        )
 
     def check_initial_conditions(self, sample_set):
         """
@@ -484,24 +434,8 @@ class MoveScheme(StorableNamedObject):
         assert_initial_conditions
         initial_conditions_report
         """
-        ensembles_to_fill = self.list_initial_ensembles()
-        samples = paths.SampleSet(sample_set)  # to make a copy
-        ensembles_filled = samples.ensemble_list()
-        missing = []
-        for ens_list in ensembles_to_fill:
-            if type(ens_list) is not list:
-                ens_list = [ens_list]
-            sample = None
-            for ens in ens_list:
-                if ens in samples.ensemble_list():
-                    sample = samples[ens]
-                    break
-            if sample is not None:
-                del samples[sample]
-            else:
-                missing.append(ens_list)
-        # missing, extra
-        return (missing, samples.ensemble_list())
+
+        return sample_set.check_ensembles(self.list_initial_ensembles())
 
     def assert_initial_conditions(self, sample_set, allow_extras=False):
         """
@@ -569,7 +503,7 @@ class MoveScheme(StorableNamedObject):
             for ens in extra:
                 msg += "*  " + ens.name + "\n"
         return msg
-    
+
     def build_balance_partners(self):
         """
         Create list of balance partners for all movers in groups.
@@ -590,7 +524,7 @@ class MoveScheme(StorableNamedObject):
                 partner_sig_set = (set(mover.output_ensembles), 
                                    set(mover.input_ensembles))
                 partners = [m for m in group 
-                            if m.ensemble_signature_set==partner_sig_set]
+                            if m.ensemble_signature_set == partner_sig_set]
                 self.balance_partners[mover] = partners
                 if len(partners) != 1:
                     warnstr = "Mover {0}: number of balance partners is {1}"
@@ -616,9 +550,9 @@ class MoveScheme(StorableNamedObject):
         """
         try:
             movers = self.movers[input_mover]
-        except TypeError: # unhashable type: 'list'
+        except TypeError:  # unhashable type: 'list'
             movers = input_mover
-        except KeyError: # input_mover not found
+        except KeyError:  # input_mover not found
             movers = [input_mover]
 
         # here we do a little type-checking
@@ -629,7 +563,7 @@ class MoveScheme(StorableNamedObject):
                 msg = ("Bad output from _select_movers: " + str(movers) 
                        + "; " + repr(m) + " is not a PathMover\n")
                 msg += ("Are you using a group name before building the "
-                        +"move decision tree?")
+                        + "move decision tree?")
                 raise TypeError(msg)
         return movers
 
@@ -657,7 +591,7 @@ class MoveScheme(StorableNamedObject):
         movers = self._select_movers(mover)
         total_probability = sum([self.real_choice_probability[m] 
                                  for m in movers])
-        return (n_attempts / total_probability)
+        return n_attempts / total_probability
 
     def n_trials_for_steps(self, mover, n_steps):
         """
@@ -684,8 +618,7 @@ class MoveScheme(StorableNamedObject):
         movers = self._select_movers(mover)
         total_probability = sum([self.real_choice_probability[m] 
                                  for m in movers])
-        return (total_probability * n_steps)
-
+        return total_probability * n_steps
 
     def sanity_check(self):
         # check that all sampling ensembles are used
@@ -717,15 +650,14 @@ class MoveScheme(StorableNamedObject):
         try:
             assert(len(all_movers) == len(all_unique_movers))
         except AssertionError as e:
-            failmsg = "At least one group-level mover duplicated in scheme {s}\n"
+            failmsg = "At least one group-level mover duplicated " \
+                      "in scheme {s}\n"
             e.args = [failmsg.format(s=self)]
             raise
 
         # note that the test for the same ens sig is part of the balance
         # calc
-        return True # if we get here, then we must have passed tests
-
-
+        return True  # if we get here, then we must have passed tests
 
     def _move_summary_line(self, move_name, n_accepted, n_trials,
                            n_total_trials, expected_frequency, indentation):
@@ -747,11 +679,15 @@ class MoveScheme(StorableNamedObject):
             for m in delta:
                 acc = 1 if m.accepted else 0
                 key = (m.mover, str(delta.key(m)))
+                is_trial = 1
+                # if hasattr(key[0], 'counts_as_trial'):
+                    # is_trial = 1 if key[0].counts_as_trial else 0
+
                 try:
                     self._mover_acceptance[key][0] += acc
-                    self._mover_acceptance[key][1] += 1
+                    self._mover_acceptance[key][1] += is_trial
                 except KeyError:
-                    self._mover_acceptance[key] = [acc, 1]
+                    self._mover_acceptance[key] = [acc, is_trial]
 
     def move_summary(self, steps, movers=None, output=sys.stdout, depth=0):
         """
@@ -776,8 +712,8 @@ class MoveScheme(StorableNamedObject):
             depth of submovers to show: if integer, shows that many
             submovers for each move; if None, shows all submovers
         """
-        my_movers = { }
-        expected_frequency = { }
+        my_movers = {}
+        expected_frequency = {}
         if movers is None:
             movers = self.movers.keys()
         if type(movers) is str:
@@ -789,17 +725,27 @@ class MoveScheme(StorableNamedObject):
                 my_movers[key] = [key]
 
 
-        stats = { } 
+        stats = {}
         for groupname in my_movers.keys():
             stats[groupname] = [0, 0]
 
-        if self._mover_acceptance == { }:
+        if self._mover_acceptance == {}:
             self.move_acceptance(steps)
 
+        no_move_keys = [k for k in self._mover_acceptance.keys()
+                        if k[0] is None]
+        n_in_scheme_no_move_trials = sum([self._mover_acceptance[k][1]
+                                          for k in no_move_keys
+                                          if k[1] != [None]])
         n_no_move_trials = sum([self._mover_acceptance[k][1]
                                 for k in self._mover_acceptance.keys()
                                 if k[0] is None])
         tot_trials = len(steps) - n_no_move_trials
+        if n_in_scheme_no_move_trials > 0:
+            output.write(
+                "Null moves for " + str(n_in_scheme_no_move_trials)
+                + " cycles. Excluding null moves:\n"
+            )
         for groupname in my_movers.keys():
             group = my_movers[groupname]
             for mover in group:
@@ -810,9 +756,14 @@ class MoveScheme(StorableNamedObject):
                     stats[groupname][0] += self._mover_acceptance[k][0]
                     stats[groupname][1] += self._mover_acceptance[k][1]
             try:
+                # if null moves don't count
                 expected_frequency[groupname] = sum(
-                    [self.real_choice_probability[m] for m in group]
+                    [self.choice_probability[m] for m in group]
                 )
+                ## if null moves count
+                # expected_frequency[groupname] = sum(
+                    # [self.real_choice_probability[m] for m in group]
+                # )
             except KeyError:
                 expected_frequency[groupname] = float('nan')
 
@@ -843,11 +794,11 @@ class DefaultScheme(MoveScheme):
     def __init__(self, network, engine=None):
         super(DefaultScheme, self).__init__(network)
         n_ensembles = len(network.sampling_ensembles)
-        self.append(strategies.NearestNeighborRepExStrategy())
-        self.append(strategies.OneWayShootingStrategy(engine=engine))
-        self.append(strategies.PathReversalStrategy())
-        self.append(strategies.MinusMoveStrategy(engine=engine))
-        global_strategy = strategies.OrganizeByMoveGroupStrategy()
+        self.append(move_strategy.NearestNeighborRepExStrategy())
+        self.append(move_strategy.OneWayShootingStrategy(engine=engine))
+        self.append(move_strategy.PathReversalStrategy())
+        self.append(move_strategy.MinusMoveStrategy(engine=engine))
+        global_strategy = move_strategy.OrganizeByMoveGroupStrategy()
         self.append(global_strategy)
 
         try:
@@ -858,27 +809,28 @@ class DefaultScheme(MoveScheme):
             pass
         else:
             for ms in msouters.keys():
-                self.append(strategies.OneWayShootingStrategy(
+                self.append(move_strategy.OneWayShootingStrategy(
                     ensembles=[ms],
                     group="ms_outer_shooting",
                     engine=engine
                 ))
-                self.append(strategies.PathReversalStrategy(
+                self.append(move_strategy.PathReversalStrategy(
                     ensembles=[ms],
                     replace=False
                 ))
                 ms_neighbors = [t.ensembles[-1] for t in msouters[ms]]
                 pairs = [[ms, neighb] for neighb in ms_neighbors]
-                self.append(strategies.SelectedPairsRepExStrategy(
+                self.append(move_strategy.SelectedPairsRepExStrategy(
                     ensembles=pairs
                 ))
+
 
 class LockedMoveScheme(MoveScheme):
     def __init__(self, root_mover, network=None, root_accepted=None):
         super(LockedMoveScheme, self).__init__(network)
         self.root_mover = root_mover
 
-    def append(self, strategies, levels=None):
+    def append(self, strategies, levels=None, force=False):
         raise TypeError("Locked schemes cannot append strategies")
 
     def build_move_decision_tree(self):
@@ -894,14 +846,14 @@ class LockedMoveScheme(MoveScheme):
     def to_dict(self):
         # things that we always have (from MoveScheme)
         ret_dict = {
-            'network' : self.network,
-            'balance_partners' : self.balance_partners,
-            'root_mover' : self.root_mover
-        }
+            'network': self.network,
+            'balance_partners': self.balance_partners,
+            'root_mover': self.root_mover,
+            'movers': self._movers,
+            'choice_probability': self._choice_probability,
+            'real_choice_probability': self._real_choice_probability}
+
         # things that LockedMoveScheme overrides
-        ret_dict['movers'] = self._movers
-        ret_dict['choice_probability'] = self._choice_probability
-        ret_dict['real_choice_probability'] = self._real_choice_probability
         return ret_dict
 
     @property
@@ -935,14 +887,14 @@ class SRTISScheme(DefaultScheme):
     """
     def __init__(self, network, bias=None, engine=None):
         super(SRTISScheme, self).__init__(network, engine)
-        sr_minus_strat = strategies.SingleReplicaMinusMoveStrategy(
+        sr_minus_strat = move_strategy.SingleReplicaMinusMoveStrategy(
             engine=engine
         )
-        sr_minus_strat.level = strategies.levels.SUPERGROUP # GROUP?
+        sr_minus_strat.level = move_strategy.levels.SUPERGROUP  # GROUP?
         # maybe this should be the default for that strategy anyway? using it
         # at mover-level seems less likely than group-level
-        self.append([strategies.PoorSingleReplicaStrategy(),
-                     strategies.EnsembleHopStrategy(bias=bias),
+        self.append([move_strategy.PoorSingleReplicaStrategy(),
+                     move_strategy.EnsembleHopStrategy(bias=bias),
                      sr_minus_strat])
 
 
@@ -954,8 +906,7 @@ class OneWayShootingMoveScheme(MoveScheme):
     """
     def __init__(self, network, selector=None, ensembles=None, engine=None):
         super(OneWayShootingMoveScheme, self).__init__(network)
-        self.append(strategies.OneWayShootingStrategy(selector=selector, 
-                                                      ensembles=ensembles,
-                                                      engine=engine))
-        self.append(strategies.OrganizeByMoveGroupStrategy())
-
+        self.append(move_strategy.OneWayShootingStrategy(selector=selector,
+                                                         ensembles=ensembles,
+                                                         engine=engine))
+        self.append(move_strategy.OrganizeByMoveGroupStrategy())
