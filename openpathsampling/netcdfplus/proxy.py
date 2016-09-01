@@ -6,6 +6,9 @@ import functools
 
 import weakref
 
+from base import StorableObject
+
+
 # =============================================================================
 # Loader Proxy
 # =============================================================================
@@ -36,20 +39,37 @@ class LoaderProxy(object):
         self._subject = weakref.ref(ref)
         return ref
 
+    @property
+    def reversed(self):
+        return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
+
+    @property
+    def _reversed(self):
+        return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
+
     def __eq__(self, other):
         if self is other:
             return True
-        elif type(other) is LoaderProxy:
-            if self._idx == other._idx and self._store is other._store:
-                return True
-        elif self.__subject__ is other:
-            return True
 
-        return False
+        if hasattr(other, '__uuid__'):
+            return self.__uuid__ == other.__uuid__
+
+        return NotImplemented
+
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __hash__(self):
+        return hash(self._idx)
 
     @property
     def __class__(self):
         return self._store.content_class
+
+    @property
+    def __uuid__(self):
+        return self._idx
 
     def __getattr__(self, item):
         return getattr(self.__subject__, item)
@@ -58,7 +78,17 @@ class LoaderProxy(object):
         """
         Call the loader and get the referenced object
         """
-        return self._store[self._idx]
+        try:
+            return self._store[self._idx]
+        except KeyError:
+            if type(self._idx) is int:
+                raise RuntimeWarning(
+                    'Index %s is not in store. This should never happen!' %
+                    self._idx)
+            else:
+                raise RuntimeWarning(
+                    'Object %s is not in store. Attach it using fallbacks.' %
+                    self._idx)
 
 
 class DelayedLoader(object):
@@ -70,10 +100,7 @@ class DelayedLoader(object):
     def __get__(self, instance, owner):
         if instance is not None:
             obj = instance._lazy[self]
-            if type(obj) is tuple:
-                (store, idx) = obj
-                return store[idx]
-            elif hasattr(obj, '_idx'):
+            if hasattr(obj, '_idx'):
                 return obj.__subject__
             else:
                 return obj
@@ -96,12 +123,13 @@ def lazy_loading_attributes(*attributes):
     """
     Set attributes in the decorated class to be handled as lazy loaded objects.
 
-    An attribute that is added here will be turned into a special descriptor that
-    will dynamically load an objects if it is represented internally as a LoaderProxy
-    object and will return the real object, not the proxy!
+    An attribute that is added here will be turned into a special descriptor
+    that will dynamically load an objects if it is represented internally as a
+    LoaderProxy object and will return the real object, not the proxy!
 
     The second thing you can do is that saving using the `.write()` command will
-    automatically remove the real object and turn the stored object into a proxy.
+    automatically remove the real object and turn the stored object into
+    a proxy
 
     Examples
     --------
@@ -114,11 +142,12 @@ def lazy_loading_attributes(*attributes):
 
     It will not return the proxy. This is completely hidden.
 
-    If you want to use the intelligent saving that will remove the reference to the
-    object you can do
+    If you want to use the intelligent saving that will remove the reference
+    to the object you can do
     >>> sample_store.write('parent', index, my_sample)
 
-    After this call the attribute `my_sample.parent` will be turned into a proxy.
+    After this call the attribute `my_sample.parent` will be turned into
+    a proxy
 
     """
     def _decorator(cls):

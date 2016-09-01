@@ -17,11 +17,49 @@ def pathlength(sample):
 def max_lambdas(sample, orderparameter):
     return max(orderparameter(sample.trajectory))
 
-def sampleset_sample_generator(storage):
-    for step in storage.steps:
+def sampleset_sample_generator(steps):
+    for step in steps:
         sset = step.active # take the sampleset after the move
         for sample in sset:
             yield sample
+
+def guess_interface_lambda(crossing_probability, direction=1):
+    """
+    Guesses the lambda for the interface based on the crossing probability.
+    The assumption is that the interface lambda value is the last value
+    where the (reverse) cumulative crossing probability is (nearly) 1.
+
+    Parameters
+    ----------
+    crossing_probability : Histogram
+        the max_lambda histogram
+    direction : int
+        if direction > 0, the order parameter is increasing, and the reverse
+        cumulative histogram is used for the crossing probability. If
+        direction < 0, the cumulative histogram is used for the crossing
+        probability.
+
+    Returns
+    -------
+    float
+        the value of lambda for the interface
+    """
+    lambda_bin = -1
+    if direction > 0:
+        cp_vals = crossing_probability.reverse_cumulative().values()
+        while (abs(cp_vals[lambda_bin+1] - 1.0) < 1e-10):
+            lambda_bin += 1
+        outer_lambda = crossing_probability.bins[lambda_bin]
+    elif direction < 0:
+        cp_vals = crossing_probability.cumulative().values()
+        while (abs(cp_vals[lambda_bin+1] - 1.0) > 1e-10):
+            lambda_bin += 1
+        outer_lambda = crossing_probability.bins[lambda_bin-1]
+    else:
+        raise RuntimeError("Bad direction in guess_interface_lambda: " +
+                           repr(direction))
+    return outer_lambda
+
 
 class Histogrammer(object):
     """
@@ -77,11 +115,7 @@ class TPSTransition(Transition):
         if name is not None:
             self.name = name
         if not hasattr(self, "ensembles"):
-            self.ensembles = [paths.SequentialEnsemble([
-                paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
-                paths.AllOutXEnsemble(stateA | stateB),
-                paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
-            ])]
+            self.ensembles = [self._tps_ensemble(stateA, stateB)]
 
     def to_dict(self):
         return {
@@ -97,16 +131,44 @@ class TPSTransition(Transition):
         mytrans.ensembles = dct['ensembles']
         return mytrans
 
-    def add_transition(self, stateA, stateB):
-        new_ens = paths.SequentialEnsemble([
+    def _tps_ensemble(self, stateA, stateB):
+        return paths.SequentialEnsemble([
             paths.AllInXEnsemble(stateA) & paths.LengthEnsemble(1),
             paths.AllOutXEnsemble(stateA | stateB),
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
+
+    def add_transition(self, stateA, stateB, **kwargs):
+        new_ens = self._tps_ensemble(stateA, stateB, **kwargs)
         try:
             self.ensembles[0] = self.ensembles[0] | new_ens
         except AttributeError:
             self.ensembles = [new_ens]
+
+
+class FixedLengthTPSTransition(TPSTransition):
+    """Transition using fixed length TPS ensembles"""
+    def __init__(self, stateA, stateB, length, name=None):
+        self.length = length
+        super(FixedLengthTPSTransition, self).__init__(stateA, stateB, name)
+
+    def to_dict(self):
+        dct = super(FixedLengthTPSTransition, self).to_dict()
+        dct['length'] = self.length
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        mytrans = super(FixedLengthTPSTransition, cls).from_dict(dct)
+        mytrans.length = dct['length']
+        return mytrans
+    
+    def _tps_ensemble(self, stateA, stateB):
+        return paths.SequentialEnsemble([
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(stateA),
+            paths.LengthEnsemble(self.length - 2), 
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(stateB)
+        ])
 
 
 class TISTransition(Transition):
@@ -216,7 +278,8 @@ class TISTransition(Transition):
             stateA, stateB, self.interfaces, orderparameter
         )
         for ensemble in self.ensembles:
-            ensemble.named("I'face "+str(self.ensembles.index(ensemble)))
+            ensemble.named(self.name + " " + 
+                           str(self.ensembles.index(ensemble)))
 
 
     # parameters for different types of output
@@ -269,14 +332,14 @@ class TISTransition(Transition):
                                                     + " " + ensemble.name)
 
 
-    def all_statistics(self, storage, weights=None, force=False):
+    def all_statistics(self, steps, weights=None, force=False):
         """
         Run all statistics for all ensembles.
         """
         # TODO: speed this up by just running over all samples once and
         # dealing them out to the appropriate histograms
         for ens in self.ensembles:
-            samples = sampleset_sample_generator(storage)
+            samples = sampleset_sample_generator(steps)
             self.ensemble_statistics(ens, samples, weights, force)
 
     def pathlength_histogram(self, ensemble):
@@ -297,12 +360,12 @@ class TISTransition(Transition):
         hist = self.histograms['crossing_probability'][ensemble]
         return hist.reverse_cumulative()
 
-    def total_crossing_probability(self, storage=None, method="wham", force=False):
+    def total_crossing_probability(self, steps=None, method="wham", force=False):
         """Return the total crossing probability using `method`
         
         Parameters
         ----------
-        storage : storage
+        steps : iterable of :class:`.MCStep`
             cycles to be analyzed
         method : "wham" (later: or "mbar" or "tram")
             approach to use to combine the histograms
@@ -318,18 +381,20 @@ class TISTransition(Transition):
                 except KeyError:
                     run_ensembles = True
             if run_ensembles or force:
-                if storage is None:
-                    raise RuntimeError("Unable to build histograms without storage source")
-                self.all_statistics(storage, force=True)
+                if steps is None:
+                    raise RuntimeError("Unable to build histograms without steps source")
+                self.all_statistics(steps, force=True)
                          
             df = histograms_to_pandas_dataframe(
                 self.histograms['max_lambda'].values(),
                 fcn="reverse_cumulative"
             ).sort_index(axis=1)
-            wham = WHAM()
-            wham.load_from_dataframe(df)
-            wham.clean_leading_ones()
-            tcp = wham.wham_bam_histogram()
+            # if lambdas not set, returns None and WHAM uses fallback
+            lambdas = self.interfaces.lambdas
+            wham = WHAM(interfaces=lambdas)
+            # wham.load_from_dataframe(df)
+            # wham.clean_leading_ones()
+            tcp = wham.wham_bam_histogram(df).to_dict()
         elif method == "mbar":
             pass
         else:
@@ -339,7 +404,7 @@ class TISTransition(Transition):
         self.tcp = LookupFunction(tcp.keys(), tcp.values())
         return self.tcp
 
-    def conditional_transition_probability(self, storage, ensemble, force=False):
+    def conditional_transition_probability(self, steps, ensemble, force=False):
         """
         This transition's conditional transition probability for a given
         ensemble.
@@ -350,19 +415,19 @@ class TISTransition(Transition):
 
         Parameters
         ----------
-        storage : storage
+        steps : iterable of :class:`.MCStep`
             cycles to analyze
         ensemble : Ensemble
             which ensemble to calculate the CTP for
         force : bool (False)
             if true, cached results are overwritten
         """
-        samples = sampleset_sample_generator(storage)
+        samples = sampleset_sample_generator(steps)
         n_acc = 0
         n_try = 0
         for samp in samples:
             if samp.ensemble is ensemble:
-                if self.stateB(samp.trajectory[-1]):
+                if self.stateB(samp.trajectory.get_as_proxy(-1)):
                     n_acc += 1
                 n_try += 1
         ctp = float(n_acc)/n_try
@@ -374,7 +439,7 @@ class TISTransition(Transition):
 
         return ctp
 
-    def rate(self, storage, flux=None, outer_ensemble=None,
+    def rate(self, steps, flux=None, outer_ensemble=None,
              outer_lambda=None, error=None, force=False):
         """Calculate the rate for this transition.
 
@@ -383,7 +448,7 @@ class TISTransition(Transition):
 
         Parameters
         ==========
-        storage : openpathsampling.storage.Storage
+        steps : iterable of :class:`.MCStep`
         flux : float
         outer_ensemble : openpathsampling.TISEnsemble
         error : list(3) or None
@@ -391,7 +456,7 @@ class TISTransition(Transition):
         logger.info("Rate for " + self.stateA.name + " -> " + self.stateB.name)
         # get the flux
         if flux is None: # TODO: find a way to raise error if bad flux
-            flux = self.minus_move_flux(storage)
+            flux = self.minus_move_flux(steps)
 
         if flux is not None:
             self._flux = flux
@@ -406,7 +471,7 @@ class TISTransition(Transition):
         if not force and hasattr(self, 'tcp'):
             tcp = self.tcp
         else:
-            tcp = self.total_crossing_probability(storage=storage, force=force)
+            tcp = self.total_crossing_probability(steps=steps, force=force)
 
         # get the conditional transition probability
         if outer_ensemble is None:
@@ -414,16 +479,18 @@ class TISTransition(Transition):
         logger.info("outer ensemble: " + outer_ensemble.name + " " 
                     + repr(outer_ensemble))
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
+        outer_lambda = self.interfaces.get_lambda(self.interfaces[-1])
         if outer_lambda is None:
-            lambda_bin = -1
-            outer_cp_vals = outer_cross_prob.reverse_cumulative().values()
-            # should be (almost) 1.0 for anything before correct lambda
-            while (abs(outer_cp_vals[lambda_bin+1] - 1.0) < 1e-7):
-                lambda_bin += 1
-            outer_lambda = outer_cross_prob.bins[lambda_bin]
+            outer_lambda = guess_interface_lambda(outer_cross_prob)
+            # lambda_bin = -1
+            # outer_cp_vals = outer_cross_prob.reverse_cumulative().values()
+            # # should be (almost) 1.0 for anything before correct lambda
+            # while (abs(outer_cp_vals[lambda_bin+1] - 1.0) < 1e-7):
+                # lambda_bin += 1
+            # outer_lambda = outer_cross_prob.bins[lambda_bin]
         logger.info("outer lambda: " + str(outer_lambda))
 
-        ctp = self.conditional_transition_probability(storage,
+        ctp = self.conditional_transition_probability(steps,
                                                       outer_ensemble,
                                                       force=force)
         outer_tcp = tcp(outer_lambda)
@@ -466,7 +533,7 @@ class TISTransition(Transition):
         return self.ensembles + [self.minus_ensemble]
 
 
-    def minus_move_flux(self, storage, force=False):
+    def minus_move_flux(self, steps, force=False):
         """
         Calculate the flux based on the minus ensemble trajectories.
         """
@@ -478,7 +545,7 @@ class TISTransition(Transition):
         # minus mover's signature. TODO: switch this back to being
         # mover-based when we move all analysis out of the network objects
         minus_steps = (
-            step for step in storage.steps
+            step for step in steps
             if (self.minus_ensemble in [s.ensemble for s in step.change.trials]
                 and step.change.accepted)
         )

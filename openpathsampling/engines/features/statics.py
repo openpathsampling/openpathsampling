@@ -1,22 +1,32 @@
 import numpy as np
 from shared import StaticContainerStore
 import mdtraj
+from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['statics']
 lazy = ['statics']
 
 storables = ['statics']
 
+dimensions = ['n_atoms', 'n_spatial']
+
 
 def netcdfplus_init(store):
-    store.storage.create_store('statics', StaticContainerStore())
+    static_store = StaticContainerStore()
+    static_store.set_caching(WeakLRUCache(10000))
+
+    name = store.prefix + 'statics'
+
+    static_store.set_dimension_prefix_store(store)
+
+    store.storage.create_store(name, static_store, False)
 
     store.create_variable(
         'statics',
-        'lazyobj.statics',
-        description="the snapshot index (0..n_configuration-1) of snapshot '{idx}'.",
-        chunksizes=(1,)
-    )
+        'lazyobj.' + name,
+        description="the snapshot index (0..n_configuration-1) of "
+                    "snapshot '{idx}'.",
+        chunksizes=(1,))
 
 
 @property
@@ -25,8 +35,8 @@ def coordinates(snapshot):
     Returns
     -------
     coordinates: numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
-        the atomic coordinates of the configuration. The coordinates are wrapped in a
-        simtk.unit.Unit.
+        the atomic coordinates of the configuration. The coordinates are
+        wrapped in a `simtk.unit.Unit`.
     """
 
     if snapshot.statics is not None:
@@ -69,7 +79,7 @@ def md(snapshot):
         output = np.zeros([1, n_atoms, 3], np.float32)
         output[0, :, :] = snapshot.coordinates
 
-        return mdtraj.Trajectory(output, snapshot.topology.md)
+        return mdtraj.Trajectory(output, snapshot.topology.mdtraj)
 
 
 @property

@@ -4,7 +4,10 @@ import logging
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
+from openpathsampling.tools import refresh_output
+
 logger = logging.getLogger(__name__)
+
 
 class SampleKeyError(Exception):
     def __init__(self, key, sample, sample_key):
@@ -14,9 +17,10 @@ class SampleKeyError(Exception):
         self.msg = (str(self.key) + " does not match " + str(self.sample_key)
                     + " from " + str(self.sample))
 
+
 @lazy_loading_attributes('movepath')
 class SampleSet(StorableObject):
-    '''
+    """
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
     dictionary of ensembles mapping to a list of samples, or as a dictionary
@@ -53,7 +57,7 @@ class SampleSet(StorableObject):
         values.
     replica_dict : dict
         A dictionary with replica IDs as keys and lists of Samples as values
-    '''
+    """
 
     def __init__(self, samples, movepath=None):
         super(SampleSet, self).__init__()
@@ -116,9 +120,8 @@ class SampleSet(StorableObject):
 
     def __eq__(self, other):
         if len(self.samples) == len(other.samples):
-            return True
-            for samp1, samp2 in zip(self.samples,other.samples):
-                if samp1 is not samp2:
+            for samp1 in self.samples:
+                if samp1 not in other.samples:
                     return False
 
             return True
@@ -270,9 +273,9 @@ class SampleSet(StorableObject):
 
     def __add__(self, other):
         """
-        Add the move path to the Sample and return the new sample set
+        Add the move path to the Sample and return the new sampleset
         """
-        if isinstance(other, paths.PathMoveChange):
+        if isinstance(other, paths.MoveChange):
             return self.apply_samples(other.results)
         elif type(other) is list:
             okay = True
@@ -282,7 +285,7 @@ class SampleSet(StorableObject):
 
             return self.apply_samples(other)
         else:
-            raise ValueError('Only lists of Sample or PathMoveChanges allowed.')
+            raise ValueError('Only lists of Sample or MoveChanges allowed.')
 
     def append_as_new_replica(self, sample):
         """
@@ -291,7 +294,10 @@ class SampleSet(StorableObject):
         The new replica ID is taken to be one greater than the highest
         previous replica ID.
         """
-        max_repID = max([s.replica for s in self.samples])
+        if len(self) == 0:
+            max_repID = -1
+        else:
+            max_repID = max([s.replica for s in self.samples])
         self.append(Sample(
             replica=max_repID + 1,
             trajectory=sample.trajectory,
@@ -323,7 +329,7 @@ class SampleSet(StorableObject):
         """Return SampleSet using `new_ensembles` as ensembles.
 
         This creates a SampleSet which replaces the ensembles in the old
-        sample set with equivalent ensembles from a given list. The string
+        sampleset with equivalent ensembles from a given list. The string
         description of the ensemble is used as a test.
 
         Note that this assumes that there are no one-to-many or many-to-one
@@ -373,52 +379,365 @@ class SampleSet(StorableObject):
                 ))
                 repid += 1
         return SampleSet(samples)
-        
 
+    def generate_from_trajectories(
+            self,
+            ensembles,
+            trajectories,
+            preconditions=None,
+            strategies=None,
+            reuse_strategy='avoid',
+            engine=None):
+        """
+        Create a SampleSet with as many initial samples as possible.
 
+        The goal of this is to give the initial SampleSet that would be
+        desired.
 
-    # @property
-    # def ensemble_dict(self):
-    #     if self._ensemble_dict is None:
-    #         self._ensemble_dict = self._get_ensemble_dict()
-    #
-    #     return self._ensemble_dict
-    #
-    # def _get_ensemble_dict(self):
-    #     """
-    #     Returns the dictionary of ensembles and their samples but not cached
-    #     :return:
-    #     """
-    #     ensembles = set([sample.ensemble for sample in self.samples])
-    #     print ensembles
-    #     return { sample.ensemble : [sample for sample in self.samples if sample.ensemble is ensemble] for ensemble in ensembles}
-    #
-    #
-    # @property
-    # def replica_dict(self):
-    #     if self._replica_dict is None:
-    #         self._replica_dict = self._get_replica_dict()
-    #
-    #     return self._replica_dict
-    #
-    # def _get_replica_dict(self):
-    #     """
-    #     Returns the dictionary of replica and their samples but not cached
-    #     :return:
-    #     """
-    #     replicas = set([sample.replica for sample in self.samples])
-    #     return { sample.replica : [sample for sample in self.samples if sample.replica is replica] for replica in replicas}
-    #
-    # def __plus__(self, other):
-    #     if other.predecessor is self:
-    #         newset = self.copy()
-    #         for sample in other._samples:
-    #             if sample not in self._samples:
-    #                 self._append(sample)
-    #
-    #         return newset
-    #     else:
-    #         raise ValueError('Incompatible MovePaths')
+        Parameters
+        ----------
+        trajectories : list of :class:`.Trajectory` or :class:`.Trajectory`
+            the input trajectories to use
+        ensembles : list of :class:`Ensemble` or list of :class:`Ensemble`
+            the list of ensembles to be generated. If an element is itself a
+            list then one sample for one of the ensembles in that list if
+            generated
+        preconditions : list of str
+            a list of possible steps to modify the initial list of trajectories.
+            possible choices are
+
+                1.  `sort-shortest` - sorting by shortest first,
+                2.  `sort_median` - sorting by the middle one first and then in
+                    move away from the median length
+                3.  `sort-longest` - sorting by the longest first
+                4.  `reverse` - reverse the order and
+                5.  `mirror` which will add the reversed trajectories to the
+                    list in the same order
+
+            Default is `None` which means to do nothing.
+        strategies : dict
+            a dict that specifies the options used when ensemble functions
+            are used to create a new sample.
+        reuse_strategy : str
+            if `avoid` then in a second attempt the used trajectories are
+            tried
+        engine : :class:`openpathsampling.engines.DyanmicsEngine`
+            the engine used for extending moves
+
+        Returns
+        -------
+        :class:`.SampleSet`
+            sampleset with samples for every initial ensemble for this
+            scheme that could be satisfied by the given trajectories
+
+        See Also
+        --------
+        list_initial_ensembles
+        """
+
+        implemented_strategies = [
+            'get',              # look for existing trajectories
+            'split',            # look for existing sub-trajectories
+            'extend-complex',   # try to extend long sub-trajectories
+            'extend-minimal'    # try to extend short sub-trajectories
+        ]
+
+        implemented_preconditions = [
+            'sort-shortest',
+            'sort-median',
+            'sort-longest',
+            'reverse',
+            'mirror'
+        ]
+
+        if preconditions is None:
+            preconditions = ['mirror']
+
+        # create a list of trajectories
+        trajectories = paths.Trajectory._to_list_of_trajectories(trajectories)
+
+        for pre in preconditions:
+            if pre not in implemented_preconditions:
+                raise RuntimeError(
+                    '%s is not a valid precondition strategy. Choose from %s.' %
+                    (pre, implemented_preconditions)
+                )
+
+            if pre == 'sort-shortest':
+                trajectories = sorted(trajectories, key=len)
+            elif pre == 'sort-longest':
+                trajectories = sorted(trajectories, key=len)
+            elif pre == 'sort-median':
+                sorted_trajectories = sorted(trajectories, key=len)
+                trajectories = list([p for p2 in zip(
+                    sorted_trajectories[len(sorted_trajectories) / 2:],
+                    reversed(sorted_trajectories[:len(sorted_trajectories) / 2])
+                ) for p in p2])
+
+                if len(sorted_trajectories) & 1:
+                    trajectories.append(sorted_trajectories[-1])
+            elif pre == 'reverse':
+                trajectories = list(reversed(trajectories))
+            elif pre == 'mirror':
+                trajectories = trajectories + \
+                    [traj.reversed for traj in trajectories]
+
+        # let's always try the short trajectories first
+        # print map(lambda x: hex(id(x)), trajectories)
+
+        # we will try forward/backward interleaved
+        used_trajectories = []
+
+        # if we start with an existing sample set look at what we got
+        # if we avoid we move the used ones to the back of the list
+        # if we remove we remove the used ones
+        for s in self:
+            traj = s.trajectory
+            if traj in trajectories:
+                used_trajectories.append(traj)
+
+        used_trajectories = sorted(used_trajectories, key=len)
+
+        # print map(lambda x: hex(id(x)), used_trajectories)
+
+        ensembles = [[x] if type(x) is not list else x for x in ensembles]
+
+        # 1. look in the existing sample_set
+        ensembles_to_fill, extra_ensembles = self.check_ensembles(ensembles)
+
+        # we reverse because we want to be able to remove elements
+        # from the list as we discover samples. This is easier to do
+        # when the list is traversed backwards since indices to not
+        # change, hence we reverse the list of ensemble and then traverse it
+        # in reversed order
+        ensembles_to_fill = \
+            list(reversed(ensembles_to_fill))
+
+        # 2. try strategies
+        if strategies is None:
+            # this is the default
+            strategies = [
+                'get',
+                'split'
+            ]
+
+        for idx, strategy in enumerate(strategies):
+            if type(strategy) is str:
+                strategies[idx] = (strategy, dict())
+
+            if strategies[idx][0] not in implemented_strategies:
+                raise RuntimeError(
+                    'Strategy `%s` is not known. Chose from %s.' % (
+                        strategies[idx][0],
+                        implemented_strategies
+                    )
+                )
+
+        found_samples_str = ''
+        for pos, ens_list in enumerate(ensembles):
+            found_samples_str += '.' if ens_list in ensembles_to_fill else '+'
+
+        for str_idx, (strategy, options) in enumerate(strategies):
+            for idx, ens_list in reversed(list(enumerate(ensembles_to_fill))):
+                pos = ensembles.index(ens_list)
+
+                found_samples_str = \
+                    found_samples_str[:pos] + \
+                    '?' + found_samples_str[pos + 1:]
+
+                refresh_output((
+                    '# trying strategy #%d `%s`: still missing %d samples\n'
+                    '%s\n'
+                ) % (
+                        str_idx + 1,
+                        strategy,
+                        len(ensembles_to_fill),
+                        found_samples_str
+                    ), ipynb_display_only=True, print_anyway=False)
+                if type(ens_list) is not list:
+                    ens_list = [ens_list]
+
+                found = False
+
+                for ens in ens_list:
+                    # create the list of options to be passed on
+                    opts = {key: value for key, value in options.items()
+                            if key not in ['exclude']}
+
+                    # exclude contains the Ensemble classes to be ignored
+                    if 'exclude' in options:
+                        if isinstance(ens, options['exclude']):
+                            continue
+
+                    # fill only the first in ens_list that can be filled
+
+                    if strategy == 'get':
+                        sample = ens.get_sample_from_trajectories(
+                            trajectories=trajectories,
+                            used_trajectories=used_trajectories,
+                            reuse_strategy=reuse_strategy,
+                            **opts
+                        )
+                    elif strategy == 'split':
+                        sample = ens.split_sample_from_trajectories(
+                            trajectories=trajectories,
+                            used_trajectories=used_trajectories,
+                            reuse_strategy=reuse_strategy,
+                            **opts
+                        )
+                    elif strategy == 'extend-complex' and engine:
+                        if hasattr(ens, 'extend_sample_from_trajectories'):
+                            sample = ens.extend_sample_from_trajectories(
+                                trajectories=trajectories,
+                                engine=engine,
+                                level='complex',
+                                **opts
+                            )
+                    elif strategy == 'extend-minimal' and engine:
+                        if hasattr(ens, 'extend_sample_from_trajectories'):
+                            sample = ens.extend_sample_from_trajectories(
+                                trajectories=trajectories,
+                                engine=engine,
+                                level='minimal',
+                                **opts
+                            )
+                    elif strategy == 'extend-native' and engine:
+                        if hasattr(ens, 'extend_sample_from_trajectories'):
+                            sample = ens.extend_sample_from_trajectories(
+                                trajectories=trajectories,
+                                engine=engine,
+                                level='native',
+                                **opts
+                            )
+                    else:
+                        sample = None
+
+                    # now, if we've found a sample, add it and
+                    # make sure we chose a proper replica ID
+                    if sample is not None:
+                        found = True
+
+                        # another way would be to look for the smallest not
+                        # taken id. This one is simpler
+                        if len(self.replicas) > 0:
+                            replica_idx = max(0, max(self.replicas) + 1)
+                        else:
+                            replica_idx = 0
+
+                        sample.replica = replica_idx
+
+                        logger.info((
+                            'generating - ensemble `%s` found sample '
+                            'replica %d, length %d\n')
+                            % (
+                                ens.name, sample.replica, len(sample)
+                            ))
+
+                        self.append(sample)
+                        if reuse_strategy != 'all':
+                            # we mark the trajectory and its reversed as used
+                            if sample.trajectory not in used_trajectories and (
+                                not reuse_strategy.endswith('symmetric') or
+                                sample.trajectory.reversed in used_trajectories
+                            ):
+                                used_trajectories.append(sample.trajectory)
+                            # if reuse_strategy.endswith('symmetric'):
+                            #     used_trajectories.append(
+                            #         sample.trajectory.reversed)
+
+                            # we want the list of used_trajectories to be
+                            # sorted. Short ones first. So if we have to chose
+                            # from the used_ones, use the shortest one
+                            # used_trajectories = sorted(
+                            #     used_trajectories, key=len)
+
+                        # found a sample in this category so remove it for
+                        # other tries
+                        del ensembles_to_fill[idx]
+
+                        # do not try other ensembles in this category
+                        break
+
+                found_samples_str = \
+                    found_samples_str[:pos] + \
+                    (str(str_idx + 1)[0] if found else '.') + \
+                    found_samples_str[pos + 1:]
+
+        refresh_output((
+            '# finished generating: still missing %d samples\n'
+            '%s\n'
+        ) % (
+            len(ensembles_to_fill),
+            found_samples_str
+        ), ipynb_display_only=True, print_anyway=False)
+
+        return self
+
+    def check_ensembles(self, ensembles):
+        """
+        Check for missing or extra ensembles in the sampleset
+
+        This is primary used programmatically as a reusable function for
+        several use cases where we need this information. See functions
+        under "see also" for examples of such cases.
+
+        Parameters
+        ----------
+        ensembles : list of :class:`Ensemble` or list of :class:`Ensemble`
+            the list of ensembles to be generated. If an element is itself a
+            list then one sample for one of the ensembles in that list if
+            generated
+
+        Returns
+        -------
+        missing : list of list of :class:`.Ensemble`
+            ensembles needed by the move scheme and missing in the sample
+            set, in the format used by `list_initial_ensembles`
+        extra : list of :class:`.Ensemble`
+            ensembles in the sampleset that are not used by the
+
+        See Also
+        --------
+        MoveScheme.list_initial_ensembles
+        MoveScheme.assert_initial_conditions
+        MoveScheme.initial_conditions_report
+        """
+        samples = paths.SampleSet(self)  # to make a copy
+        missing = []
+        for ens_list in ensembles:
+            if type(ens_list) is not list:
+                ens_list = [ens_list]
+            sample = None
+            for ens in ens_list:
+                if ens in samples.ensemble_list():
+                    sample = samples[ens]
+                    break
+            if sample is not None:
+                del samples[sample]
+            else:
+                missing.append(ens_list)
+
+        # missing, extra
+        return missing, samples.ensemble_list()
+
+    def copy_without_parents(self):
+        """
+        Return a copy of the sample set where all samples.parents are removed
+
+        Useful, if you are not interested in the heritage of the sample and
+        store a clean set of samples
+        """
+        return SampleSet(
+            [Sample(
+                replica=s.replica,
+                trajectory=s.trajectory,
+                ensemble=s.ensemble,
+                bias=s.bias,
+                details=s.details,
+                parent=None,
+                mover=s.mover
+            ) for s in self]
+        )
 
 
 @lazy_loading_attributes('parent', 'details', 'mover')
@@ -504,6 +823,12 @@ class Sample(StorableObject):
         else:
             return [] # empty iterator
 
+    def as_proxies(self):
+        if self.trajectory is not None:
+            return self.trajectory.as_proxies()
+        else:
+            return [] # empty iterator
+
     def __iter__(self):
         """
         Return an iterator over all snapshots in the samples trajectory
@@ -582,3 +907,11 @@ class Sample(StorableObject):
             return 0.0
 
         return self.bias
+
+    @property
+    def heritage(self):
+        samp = self
+        while samp.parent is not None:
+            # just one sample so use this
+            yield samp
+            samp = samp.parent

@@ -1,2 +1,7 @@
 # ignore _build/, which is where the generated docs go
 _build
+guides/absolute_beginners.rst
+guides/power_users.rst
+guides/user_levels.rst
+api
+netcdfplus/api

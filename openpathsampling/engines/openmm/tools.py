@@ -4,9 +4,71 @@ import simtk.unit as u
 
 from snapshot import Snapshot
 from topology import Topology, MDTrajTopology
-from openpathsampling.engines import Trajectory
+from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
 __author__ = 'Jan-Hendrik Prinz'
+
+
+class TopologyEngine(NoEngine):
+    _default_options = {}
+
+    def __init__(self, topology):
+
+        descriptor = SnapshotDescriptor.construct(
+            Snapshot,
+            {
+                'n_atoms': topology.n_atoms,
+                'n_spatial': topology.n_spatial
+            }
+        )
+
+        super(NoEngine, self).__init__(
+            descriptor=descriptor
+        )
+
+        self.topology = topology
+
+    def to_dict(self):
+        return {
+            'topology': self.topology,
+        }
+
+
+class FileEngine(TopologyEngine):
+
+    _default_options = {}
+
+    def __init__(self, topology, filename):
+        super(FileEngine, self).__init__(
+            topology=topology
+        )
+
+        self.filename = filename
+
+    def to_dict(self):
+        return {
+            'topology': self.topology,
+            'filename': self.filename
+        }
+
+
+class OpenMMToolsTestsystemEngine(TopologyEngine):
+
+    _default_options = {}
+
+    def __init__(self, topology, testsystem_name):
+
+        super(OpenMMToolsTestsystemEngine, self).__init__(
+            topology=topology
+        )
+
+        self.testsystem_name = testsystem_name
+
+    def to_dict(self):
+        return {
+            'topology': self.topology,
+            'testsystem_name': self.testsystem_name
+        }
 
 
 def snapshot_from_pdb(pdb_file, simple_topology=False):
@@ -17,10 +79,13 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
     ----------
     pdb_file : str
         The filename of the .pdb file to be used
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
 
     Returns
     -------
-    Snapshot
+    :class:`openpathsampling.engines.Snapshot`
         the constructed Snapshot
 
     """
@@ -36,10 +101,38 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
         coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
         box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
         velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
-        topology=topology
+        engine=FileEngine(topology, pdb_file)
     )
 
     return snapshot
+
+
+def topology_from_pdb(pdb_file, simple_topology=False):
+    """
+    Construct a Topology from the first frame in a pdb file without velocities
+
+    Parameters
+    ----------
+    pdb_file : str
+        The filename of the .pdb file to be used
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
+
+    Returns
+    -------
+    :class:`openpathsampling.engines.Snapshot`
+        the constructed Snapshot
+
+    """
+    pdb = md.load(pdb_file)
+
+    if simple_topology:
+        topology = Topology(*pdb.xyz[0].shape)
+    else:
+        topology = MDTrajTopology(pdb.topology)
+
+    return topology
 
 
 def snapshot_from_testsystem(testsystem, simple_topology=False):
@@ -48,32 +141,37 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
 
     Parameters
     ----------
-    omm_topology : openmm.Topology
+    testsystem : openmmtools.Topology
         The filename of the .pdb file to be used
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
 
     Returns
     -------
-    Snapshot
+    :class:`openpathsampling.engines.Snapshot`
         the constructed Snapshot
 
     """
 
-    velocities = u.Quantity(np.zeros(testsystem.positions.shape), u.nanometers / u.picoseconds)
+    velocities = u.Quantity(
+        np.zeros(testsystem.positions.shape), u.nanometers / u.picoseconds)
 
     if simple_topology:
         topology = Topology(*testsystem.positions.shape)
     else:
         topology = MDTrajTopology(md.Topology.from_openmm(testsystem.topology))
 
-    box_vectors = np.array([
-                    v / u.nanometers for v in
-                    testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
+    box_vectors = \
+        np.array([
+            v / u.nanometers for v in
+            testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
 
     snapshot = Snapshot.construct(
         coordinates=testsystem.positions,
         box_vectors=box_vectors,
         velocities=velocities,
-        topology=topology
+        engine=OpenMMToolsTestsystemEngine(topology, testsystem.name)
     )
 
     return snapshot
@@ -87,21 +185,27 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     ----------
     mdtrajectory : mdtraj.Trajectory
         Input mdtraj.Trajectory
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
 
     Returns
     -------
-    Trajectory
+    openpathsampling.engines.Trajectory
         the constructed Trajectory instance
     """
 
     trajectory = Trajectory()
     empty_kinetics = Snapshot.KineticContainer(
-        velocities=u.Quantity(np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
+        velocities=u.Quantity(
+            np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
     )
     if simple_topology:
         topology = Topology(*mdtrajectory.xyz[0].shape)
     else:
         topology = MDTrajTopology(mdtrajectory.topology)
+
+    engine = TopologyEngine(topology)
 
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
@@ -120,7 +224,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
         snap = Snapshot(
             statics=statics,
             kinetics=empty_kinetics,
-            topology=topology
+            engine=engine
         )
         trajectory.append(snap)
 
@@ -129,19 +233,21 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
 
 def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
     """
-    Return an empty snapshot from an openmm.Topology object using the specified units.
+    Return an empty snapshot from an openmm.Topology object
+
+    Velocities will be set to zero.
 
     Parameters
     ----------
     topology : openmm.Topology
         the topology representing the structure and number of atoms
-    units : dict of {str : simtk.unit.Unit }
-        representing a dict of string representing a dimension ('length', 'velocity', 'energy') pointing the
-        the simtk.unit.Unit to be used
+    simple_topology : bool
+        if `True` only a simple topology with n_atoms will be created.
+        This cannot be used with complex CVs but loads and stores very fast
 
     Returns
     -------
-    Snapshot
+    openpathsampling.engines.Snapshot
         the complete snapshot with zero coordinates and velocities
 
     """
@@ -155,8 +261,9 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
     snapshot = Snapshot.construct(
         coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
         box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
-        velocities=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
-        topology=topology
+        velocities=u.Quantity(
+            np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
+        engine=TopologyEngine(topology)
     )
 
     return snapshot
@@ -164,12 +271,13 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
 
 def to_openmm_topology(obj):
     """
-    Contruct an openmm.Topology file out of a Snapshot or Configuration object. This uses the
-    mdtraj.Topology in the Configuration as well as the box_vectors.
+    Contruct an openmm.Topology file out of a Snapshot or Configuration
+    object. This uses the mdtraj.Topology in the Configuration as well as
+    the box_vectors.
 
     Parameters
     ----------
-    obj : Snapshot or configuration
+    obj : openpathsampling.engines.BaseSnapshot or Configuration
         the object to be used in the topology construction
 
     Returns
@@ -178,11 +286,33 @@ def to_openmm_topology(obj):
         an object representing an openmm.Topology
     """
     if obj.topology is not None:
-        if hasattr(obj.topology, 'md'):
-            openmm_topology = obj.topology.md.to_openmm()
-            box_size_dimension = np.linalg.norm(obj.box_vectors.value_in_unit(u.nanometer), axis=1)
+        if hasattr(obj.topology, 'mdtraj'):
+            openmm_topology = obj.topology.mdtraj.to_openmm()
+            box_size_dimension = np.linalg.norm(
+                obj.box_vectors.value_in_unit(u.nanometer), axis=1)
             openmm_topology.setUnitCellDimensions(box_size_dimension)
 
             return openmm_topology
     else:
         return None
+
+
+def trajectory_to_mdtraj(trajectory, md_topology):
+    """
+    Construct a `mdtraj.Trajectory` object from an :obj:`Trajectory` object
+
+    Parameters
+    ----------
+    trajectory : :obj:`openpathsampling.engines.Trajectory`
+        Input Trajectory
+
+    Returns
+    -------
+    :obj:`mdtraj.Trajectory`
+        the constructed Trajectory instance
+    """
+
+    # TODO: Use units to make sure we did not rescale accidentally!
+    output = trajectory.xyz
+
+    return md.Trajectory(output, md_topology)

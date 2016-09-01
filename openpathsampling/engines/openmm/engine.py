@@ -1,19 +1,21 @@
 import logging
 
 import simtk.openmm
+import simtk.openmm.app
 import simtk.unit as u
-from simtk.openmm.app import Simulation
 
-from openpathsampling.engines import DynamicsEngine
+from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from snapshot import Snapshot
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
 
 class OpenMMEngine(DynamicsEngine):
-    """OpenMM dynamics engine based on using an 'simtk.openmm` system and integrator object.
+    """OpenMM dynamics engine based on 'simtk.openmm` system and integrator.
 
-    The engine will create a :class:`simtk.openmm.app.Simulation` instance and uses this to generate new frames.
+    The engine will create a :class:`simtk.openmm.app.Simulation` instance
+    and uses this to generate new frames.
 
     """
 
@@ -24,67 +26,78 @@ class OpenMMEngine(DynamicsEngine):
     }
 
     _default_options = {
-        'nsteps_per_frame': 10,
+        'n_steps_per_frame': 10,
         'n_frames_max': 5000,
-        'platform': 'fastest'
     }
 
     base_snapshot_type = Snapshot
 
-    #TODO: Planned to move topology to be part of engine and not snapshot
-    #TODO: Deal with cases where we load a GPU based engine, but the platform is not available
-    def __init__(self, template, system, integrator, options=None):
+    def __init__(
+            self,
+            topology,
+            system,
+            integrator,
+            openmm_properties=None,
+            options=None):
         """
         Parameters
         ----------
-        template : openpathsampling.Snapshot
-            a template snapshots which provides the topology object to be used to create the openmm engine
+        topology : openpathsampling.engines.openmm.MDTopology
+            a template snapshots which provides the topology object to be used
+            to create the openmm engine
         system : simtk.openmm.app.System
             the openmm system object
         integrator : simtk.openmm.Integrator
             the openmm integrator object
+        openmm_properties : dict
+            optional setting for creating the openmm simuation object. Typical
+            keys include GPU floating point precision
         options : dict
-            a dictionary that provides additional settings for the OPS engine. Allowed are
-                'n_steps_per_frame' : int, default: 10, the number of integration steps per returned snapshot
-                'n_frames_max' : int or None, default: 5000, the maximal number of frames allowed for a returned
-                trajectory object
-                `platform` : str, default: `fastest`, the openmm specification for the platform to be used, also 'fastest' is allowed
-                which will pick the currently fastest one available
+            a dictionary that provides additional settings for the OPS engine.
+            Allowed are
+
+                'n_steps_per_frame' : int, default: 10
+                    the number of integration steps per returned snapshot
+                'n_frames_max' : int or None, default: 5000,
+                    the maximal number of frames allowed for a returned
+                    trajectory object
+                `platform` : str, default: `fastest`,
+                    the openmm specification for the platform to be used,
+                    also 'fastest' is allowed   which will pick the currently
+                    fastest one available
 
         Notes
         -----
-        the `n_frames_max` does not limit Trajectory objects in length. It only limits the maximal lenght of returned
-        trajectory objects when this engine is used.
-        picking `fasted` as platform will not save `fastest` as the platform but rather replace the platform with the
-        currently fastest one (usually `OpenCL` or `CUDA` for GPU and `CPU` otherwise). If you load this engine it will
-        assume the same engine and not the currently fastest one, so you might have to create a replacement that uses
-        another engine.
+        the `n_frames_max` does not limit Trajectory objects in length. It only
+        limits the maximal length of returned trajectory objects when this
+        engine is used.
         """
 
         self.system = system
         self.integrator = integrator
+        self.topology = topology
+
+        dimensions = {
+            'n_atoms': topology.n_atoms,
+            'n_spatial': topology.n_spatial
+        }
+
+        descriptor = SnapshotDescriptor.construct(
+            Snapshot,
+            dimensions
+        )
 
         super(OpenMMEngine, self).__init__(
             options=options,
-            template=template
+            descriptor=descriptor
         )
 
-        if self.options['platform'] == 'fastest':
+        if openmm_properties is None:
+            openmm_properties = {}
 
-            speed = 0.0
-            platform = None
+        self.openmm_properties = openmm_properties
 
-            # determine the fastest platform
-            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms()):
-                pf = simtk.openmm.Platform.getPlatform(platform_idx)
-                if pf.getSpeed() > speed:
-                    speed = pf.getSpeed()
-                    platform = pf.getName()
-
-            if platform is not None:
-                self.options['platform'] = platform
-
-        # set no cached snapshot, means it will be constructed from the openmm context
+        # set no cached snapshot
         self._current_snapshot = None
         self._current_momentum = None
         self._current_configuration = None
@@ -92,14 +105,39 @@ class OpenMMEngine(DynamicsEngine):
 
         self._simulation = None
 
-    def from_new_options(self, integrator=None, options=None):
+    def from_new_options(
+            self,
+            integrator=None,
+            openmm_properties=None,
+            options=None):
         """
-        Create a new engine with the same system, but different options and/or integrator
+        Create a new engine from existing, but different optionsor integrator
+
+        Parameters
+        ----------
+        integrator : simtk.openmm.Integrator
+            the openmm integrator object
+        openmm_properties : dict
+            optional setting for creating the openmm simuation object. Typical
+            keys include GPU floating point precision
+        options : dict
+            a dictionary that provides additional settings for the OPS engine.
+            Allowed are
+
+                'n_steps_per_frame' : int, default: 10
+                    the number of integration steps per returned snapshot
+                'n_frames_max' : int or None, default: 5000,
+                    the maximal number of frames allowed for a returned
+                    trajectory object
+                `platforms` : list of str,
+                    the openmm specification for the platform to be used,
+                    also 'fastest' is allowed which will pick the currently
+                    fastest one available
 
         Notes
         -----
-        This can be used to quickly set up simulations at various temperatures or change the
-        step sizes, etc...
+        This can be used to quickly set up simulations at various temperatures
+        or change the step sizes.
 
         """
         if integrator is None:
@@ -111,16 +149,41 @@ class OpenMMEngine(DynamicsEngine):
         if options is not None:
             new_options.update(options)
 
-        new_engine = OpenMMEngine(self.template, self.system, integrator, new_options)
+        new_properties = False
+        if openmm_properties is None:
+            new_properties = True
+            openmm_properties = self.openmm_properties
 
-        if integrator is self.integrator and new_engine.options['platform'] == self.options['platform']:
-            # apparently we use a simulation object which is the same as the new one
-            # since we do not change the platform or change the integrator
-            # it means if it exists we copy the simulation object
+        new_engine = OpenMMEngine(
+            self.topology,
+            self.system,
+            integrator,
+            openmm_properties=openmm_properties,
+            options=new_options)
+
+        if self._simulation is not None and \
+                integrator is self.integrator and \
+                not new_properties:
+
+            # apparently we use a simulation object which is the same as the
+            # new one since we do not change the platform or
+            # change the integrator it means if it exists we copy the
+            # simulation object
 
             new_engine._simulation = self._simulation
 
         return new_engine
+
+    @property
+    def platform(self):
+        """
+        str : Return the name of the currently used platform
+
+        """
+        if self._simulation is not None:
+            return self._simulation.context.getPlatform().getName()
+        else:
+            return None
 
     @property
     def simulation(self):
@@ -129,58 +192,102 @@ class OpenMMEngine(DynamicsEngine):
 
         return self._simulation
 
-    def initialize(self):
+    def reset(self):
+        """
+        Remove the simulation object and allow recreation.
+
+        If you want to explicitely change the used platform, etc.
+
+        """
+
+        logger.info('Removed existing OpenMM engine.')
+        self._simulation = None
+
+    def initialize(self, platform=None):
         """
         Create the final OpenMMEngine
 
+        Parameters
+        ----------
+        platform : str or `simtk.openmm.Platform`
+            either a string with a name of the platform a platform object
+
         Notes
         -----
-        This step is OpenMM specific and will actually create the openmm.Simulation object used
-        to run the simulations. The object will be created automatically the first time the
-        engine is used. This way we will not create unnecessay Engines in memory during analysis.
+        This step is OpenMM specific and will actually create the openmm.
+        Simulation object used to run the simulations. The object will be
+        created automatically the first time the engine is used. This way we
+        will not create unnecessay Engines in memory during analysis.
 
         """
 
         if self._simulation is None:
-            self._simulation = simtk.openmm.app.Simulation(
-                topology=self.template.topology.md.to_openmm(),
-                system=self.system,
-                integrator=self.integrator,
-                platform=simtk.openmm.Platform.getPlatformByName(self.platform)
-            )
+            if type(platform) is str:
+                self._simulation = simtk.openmm.app.Simulation(
+                    topology=self.topology.mdtraj.to_openmm(),
+                    system=self.system,
+                    integrator=self.integrator,
+                    platform=simtk.openmm.Platform.getPlatformByName(platform),
+                    platformProperties=self.openmm_properties
+                )
+            elif platform is None:
+                self._simulation = simtk.openmm.app.Simulation(
+                    topology=self.topology.mdtraj.to_openmm(),
+                    system=self.system,
+                    integrator=self.integrator,
+                    platformProperties=self.openmm_properties
+                )
+            else:
+                self._simulation = simtk.openmm.app.Simulation(
+                    topology=self.topology.mdtraj.to_openmm(),
+                    system=self.system,
+                    integrator=self.integrator,
+                    platform=platform,
+                    platformProperties=self.openmm_properties
+                )
 
-    @property
-    def platform(self):
-        return self.options['platform']
+            logger.info(
+                'Initialized OpenMM engine using platform `%s`' %
+                self.platform)
+
+    @staticmethod
+    def available_platforms():
+        return [
+            simtk.openmm.Platform.getPlatform(platform_idx).getName()
+            for platform_idx in range(simtk.openmm.Platform.getNumPlatforms())
+        ]
 
     def to_dict(self):
         system_xml = simtk.openmm.XmlSerializer.serialize(self.system)
         integrator_xml = simtk.openmm.XmlSerializer.serialize(self.integrator)
 
         return {
-            'system_xml' : system_xml,
-            'integrator_xml' : integrator_xml,
-            'template' : self.template,
-            'options' : self.options
+            'system_xml': system_xml,
+            'integrator_xml': integrator_xml,
+            'topology': self.topology,
+            'options': self.options,
+            'properties': self.openmm_properties
         }
 
     @classmethod
     def from_dict(cls, dct):
         system_xml = dct['system_xml']
         integrator_xml = dct['integrator_xml']
-        template = dct['template']
+        topology = dct['topology']
         options = dct['options']
+        properties = dct['properties']
 
         return OpenMMEngine(
-            template=template,
+            topology=topology,
             system=simtk.openmm.XmlSerializer.deserialize(system_xml),
             integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
-            options=options
+            options=options,
+            openmm_properties=properties
         )
 
     @property
     def snapshot_timestep(self):
-        return self.nsteps_per_frame * self.options['timestep']
+        return self.n_steps_per_frame * self.simulation.integrator.getStepSize()
 
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
@@ -193,10 +300,20 @@ class OpenMMEngine(DynamicsEngine):
             coordinates=state.getPositions(asNumpy=True),
             box_vectors=state.getPeriodicBoxVectors(asNumpy=True),
             velocities=state.getVelocities(asNumpy=True),
-            topology=self.topology
+            engine=self
         )
 
         return snapshot
+
+    @staticmethod
+    def is_valid_snapshot(snapshot):
+        if np.isnan(np.min(snapshot.coordinates._value)):
+            return False
+
+        if np.isnan(np.min(snapshot.velocities._value)):
+            return False
+
+        return True
 
     @property
     def current_snapshot(self):
@@ -210,20 +327,31 @@ class OpenMMEngine(DynamicsEngine):
 
     @current_snapshot.setter
     def current_snapshot(self, snapshot):
-
         self.check_snapshot_type(snapshot)
 
         if snapshot is not self._current_snapshot:
-            if snapshot.coordinates is not None:
-                self.simulation.context.setPositions(snapshot.coordinates)
+            # if snapshot.coordinates is not None:
+            self.simulation.context.setPositions(snapshot.coordinates)
 
-            if snapshot.velocities is not None:
-                self.simulation.context.setVelocities(snapshot.velocities)
+            # if snapshot.box_vectors is not None:
+            self.simulation.context.setPeriodicBoxVectors(
+                snapshot.box_vectors[0],
+                snapshot.box_vectors[1],
+                snapshot.box_vectors[2]
+            )
+
+            # if snapshot.velocities is not None:
+            self.simulation.context.setVelocities(snapshot.velocities)
 
             # After the updates cache the new snapshot
             self._current_snapshot = snapshot
 
     def generate_next_frame(self):
-        self.simulation.step(self.nsteps_per_frame)
+        self.simulation.step(self.n_steps_per_frame)
         self._current_snapshot = None
         return self.current_snapshot
+
+    def minimize(self):
+        self.simulation.minimizeEnergy()
+        # make sure that we get the minimized structure on request
+        self._current_snapshot = None

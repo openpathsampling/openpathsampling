@@ -5,7 +5,7 @@ A Python toolkit to run PathSampling algorithms.
 
 Participate in the development process on GitHub_
 
-.. _GitHub: http://github.com/choderalab/openpathsampling
+.. _GitHub: http://github.com/openpathsampling/openpathsampling
 
 --------------------------------------------------------------------------------
 
@@ -20,7 +20,6 @@ Documentation
     guides/index
     whatsnew
     faq
-    Discussion Forums <http://discourse.openpathsampling.org>
 
 API Reference
 -------------
@@ -36,8 +35,8 @@ API Reference
     pathsimulator
     storage
     treemixin
-    trajectory
-    openmm
+    network
+    engines/openmm
 
 Developing
 ----------
@@ -63,4 +62,4 @@ README
 
 License
 -------
-OpenPathSampling is licensed under ???
+OpenPathSampling is licensed under the LGPL, v. 2.1 or later.

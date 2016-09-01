@@ -147,21 +147,21 @@ class testToyEngine(object):
             masses = sys_mass,
             pes = pes
         )
-        template = toy.Snapshot(
-            coordinates=init_pos.copy(),
-            velocities=init_pos.copy(),
-            topology=topology
-        )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
         sim = toy.Engine(options=options,
-                        template=template
+                        topology=topology
                        )
+        template = toy.Snapshot(
+            coordinates=init_pos.copy(),
+            velocities=init_pos.copy(),
+            engine=sim
+        )
 
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
-        sim.nsteps_per_frame = 10
+        sim.n_steps_per_frame = 10
         self.sim = sim
 
     def teardown(self):
@@ -169,9 +169,9 @@ class testToyEngine(object):
             os.remove('toy_tmp.nc')
 
     def test_sanity(self):
-        assert_items_equal(self.sim.mass, sys_mass)
+        assert_items_equal(self.sim._mass, sys_mass)
         assert_items_equal(self.sim._minv, [1.0/m_i for m_i in sys_mass])
-        assert_equal(self.sim.nsteps_per_frame, 10)
+        assert_equal(self.sim.n_steps_per_frame, 10)
 
     def test_snapshot_timestep(self):
         assert_equal(self.sim.snapshot_timestep, 0.02)
@@ -203,8 +203,13 @@ class testToyEngine(object):
 
     def test_generate(self):
         self.sim.initialized = True
-        traj = self.sim.generate(self.sim.current_snapshot, [true_func])
-        assert_equal(len(traj), self.sim.n_frames_max)
+        try:
+            traj = self.sim.generate(self.sim.current_snapshot, [true_func])
+        except paths.engines.EngineMaxLengthError as e:
+            traj = e.last_trajectory
+            assert_equal(len(traj), self.sim.n_frames_max)
+        else:
+            raise RuntimeError('Did not raise MaxLength Error')
 
     def test_generate_n_frames(self):
         n_frames = 3
@@ -244,22 +249,23 @@ class testLeapfrogVerletIntegrator(object):
             masses = sys_mass,
             pes = pes
         )
-        template = toy.Snapshot(
-            coordinates=init_pos.copy(),
-            velocities=init_pos.copy(),
-            topology=topology
-        )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
         sim = toy.Engine(options=options,
-                        template=template
+                        topology=topology
                        )
+
+        template = toy.Snapshot(
+            coordinates=init_pos.copy(),
+            velocities=init_pos.copy(),
+            engine=sim
+        )
 
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
 
-        sim.nsteps_per_frame = 10
+        sim.n_steps_per_frame = 10
         self.sim = sim
 
     def test_momentum_update(self):
@@ -297,22 +303,23 @@ class testLangevinBAOABIntegrator(object):
             masses = sys_mass,
             pes = pes
         )
-        template = toy.Snapshot(
-            coordinates=init_pos.copy(),
-            velocities=init_pos.copy(),
-            topology=topology
-        )
         options={
             'integ' : integ,
             'n_frames_max' : 5}
         sim = toy.Engine(options=options,
-                        template=template
+                        topology=topology
                        )
+
+        template = toy.Snapshot(
+            coordinates=init_pos.copy(),
+            velocities=init_pos.copy(),
+            engine=sim
+        )
 
         sim.positions = init_pos.copy()
         sim.velocities = init_vel.copy()
 
-        sim.nsteps_per_frame = 10
+        sim.n_steps_per_frame = 10
         self.sim = sim
 
     def test_OU_update(self):

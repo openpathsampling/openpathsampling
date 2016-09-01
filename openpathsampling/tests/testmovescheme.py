@@ -15,25 +15,31 @@ from openpathsampling.analysis.move_strategy import (
     OrganizeByMoveGroupStrategy, AllSetRepExStrategy
 )
 
+import openpathsampling.analysis.move_strategy as strategies
+
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testMoveScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
-        ])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
         self.scheme = MoveScheme(network)
 
     def test_append_individuals_default_levels(self):
@@ -191,11 +197,11 @@ class testMoveScheme(object):
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
 
-        self.scheme.append(all_repex)
+        self.scheme.append(all_repex, force=True)
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 6)
 
-        self.scheme.append(nn_repex)
+        self.scheme.append(nn_repex, force=True)
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
 
@@ -355,18 +361,24 @@ class testMoveScheme(object):
 
 class testDefaultScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
-        ])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        self.network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
+        self.no_ms_outer = paths.MSTISNetwork(
+            [(self.stateA, interfacesA), (self.stateB, interfacesB)]
+        )
     
     def test_default_scheme(self):
         scheme = DefaultScheme(self.network)
@@ -379,7 +391,6 @@ class testDefaultScheme(object):
             'Ms_outer_shootingChooser' : paths.OneWayShootingMover
         }
         names = chooser_type_dict.keys()
-
         assert_equal(len(root.movers), len(names))
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
@@ -410,6 +421,38 @@ class testDefaultScheme(object):
             for mover in root.movers[name_dict[choosername]].movers:
                 assert_equal(type(mover), chooser_type_dict[choosername])
 
+    def test_default_scheme_no_ms_outer(self):
+        scheme = DefaultScheme(self.no_ms_outer)
+        root = scheme.move_decision_tree()
+        chooser_type_dict = {
+            'ShootingChooser' : paths.OneWayShootingMover,
+            'PathreversalChooser' : paths.PathReversalMover,
+            'RepexChooser' : paths.ReplicaExchangeMover,
+            'MinusChooser' : paths.MinusMover
+        }
+        names = chooser_type_dict.keys()
+        assert_equal(len(root.movers), len(names))
+
+        name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
+        for name in names:
+            assert_in(name, name_dict.keys())
+
+        n_normal_repex = 4
+        n_msouter_repex = 0
+        n_repex = n_normal_repex + n_msouter_repex
+
+        assert_equal(
+            len(root.movers[name_dict['ShootingChooser']].movers), 6
+        )
+        assert_equal(
+            len(root.movers[name_dict['PathreversalChooser']].movers), 6
+        )
+        assert_equal(
+            len(root.movers[name_dict['RepexChooser']].movers), n_repex
+        )
+        assert_equal(
+            len(root.movers[name_dict['MinusChooser']].movers), 2
+        )
 
     def test_default_sanity(self):
         scheme = DefaultScheme(self.network)
@@ -437,7 +480,6 @@ class testDefaultScheme(object):
             for mover in group:
                 assert_equal(scheme.balance_partners[mover], [mover])
 
-
     def test_default_choice_probability(self):
         scheme = DefaultScheme(self.network)
         root = scheme.move_decision_tree()
@@ -464,21 +506,252 @@ class testDefaultScheme(object):
                 test_prob = scheme.choice_probability[mover]
                 assert_almost_equal(expected_prob, test_prob)
 
+    def test_initial_conditions_from_trajectory(self):
+        scheme = DefaultScheme(self.network)
+        # root = scheme.move_decision_tree()
+        assert_equal(len(scheme.list_initial_ensembles()), 9)
+        
+        traj1 = make_1d_traj([-0.6, -0.2, -0.6])
+        traj2 = make_1d_traj([-0.6, -0.2, -0.05, -0.4, -0.6])
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+
+        all_trajs = [traj1, traj2, traj3]
+
+        traj1r = traj1.reversed
+        traj2r = traj2.reversed
+        traj3r = traj3.reversed
+
+        def assert_init_cond(sample_set, ensembles, expected):
+            # helper to check the results. Expected is in the form
+            # of a list of resulting trajectories
+            # ens is the list of ensembles to be tested in order
+
+            sample_set.sanity_check()
+
+            assert_equal(len(sample_set), len(expected))
+
+            for ensemble, traj in zip(ensembles, expected):
+                # print ensemble.name, sample_set[ensemble].trajectory.xyz[:,0,0], traj.xyz[:, 0,0],
+                # print hex(id(traj)), hex(id(sample_set[ensemble].trajectory.xyz[:,0,0]))
+                assert_equal(sample_set[ensemble].trajectory, traj)
+
+        transAB = transBA = None
+        for trans in self.network.sampling_transitions:
+            if trans.stateA == self.stateA and trans.stateB == self.stateB:
+                transAB = trans
+            elif trans.stateA == self.stateB and trans.stateB == self.stateA:
+                transBA = trans
+            else:
+                raise RuntimeWarning("That's a weird transition!")
+
+        ms_outer_ens = self.network.special_ensembles['ms_outer'].keys()[0]
+
+        ensembles = transAB.ensembles + [ms_outer_ens] + transBA.ensembles
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=[],
+            reuse_strategy='all',
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj1, traj1, traj2, traj3]
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror'],
+            reuse_strategy='all',
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond, ensembles,
+            [traj1, traj1, traj2] + [traj3] + [traj3r] * 3
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror', 'sort-shortest'],
+            strategies=['get'],
+            reuse_strategy='all'
+        )
+        assert_init_cond(
+            init_cond, ensembles,
+            [traj1, traj1, traj3] + [traj3] + [traj3r] * 3
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=[],
+            reuse_strategy='avoid',
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj1, traj2, traj3, traj3]
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror'],
+            reuse_strategy='avoid',
+            strategies=['get']
+        )
+
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+
+        for ensemble, traj in zip(ensembles[:3], [traj1, traj2, traj3]):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+        for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+
+        # because of the way the scheme ensembles are creating involving a
+        # set, the order in which the ensemble are created changes.
+        # in some cases traj3 is used and hence avoided in the outer
+        # in some cases traj3r, but both are fine.
+        try:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+        except AssertionError:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror', 'sort-shortest'],
+            reuse_strategy='avoid',
+            strategies=['get']
+        )
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+
+        for ensemble, traj in zip(ensembles[:3], [traj1, traj1r, traj3]):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+        for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+
+        try:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+        except AssertionError:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
+
+        # this one avoids reversed copies
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj1],
+            preconditions=[],
+            strategies=['get']
+        )
+        assert_init_cond(
+            init_cond,
+            ensembles[:2],
+            [traj1, traj1]
+        )
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=traj2,
+            sample_set=init_cond,
+            preconditions=[],
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:3],
+            [traj1, traj1, traj2]
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj3],
+            preconditions=[],
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj3] * 4
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj3],
+            preconditions=['mirror'],
+            strategies=['get']
+        )
+        assert_init_cond(
+            init_cond,
+            ensembles,
+            [traj3] * 4 + [traj3r] * 3
+        )
+
+    def test_check_initial_conditions(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        # cheating a bit, since we know what this gives
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        assert_equal(len(init_cond), 7)
+        assert_equal(len(scheme.list_initial_ensembles()), 9)
+        (missing, extra) = scheme.check_initial_conditions(init_cond)
+        assert_equal(len(missing), 2)
+        assert_equal(len(extra), 0)
+        for ens in self.network.special_ensembles['minus'].keys():
+            assert_in([ens], missing)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        (missing, extra) = scheme.check_initial_conditions(init_cond)
+        assert_equal(len(missing), 2)
+        assert_equal(len(extra), 1)
+
+    @raises(AssertionError)
+    def test_assert_initial_conditions(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        scheme.assert_initial_conditions(init_cond)
+
+    def test_initial_conditions_report(self):
+        scheme = DefaultScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        init_cond.append_as_new_replica(
+            paths.Sample(trajectory=traj3,
+                         ensemble=paths.LengthEnsemble(4),
+                         replica=None)
+        )
+        expected = "Missing ensembles:\n"
+        expected += "*  [[MinusInterfaceEnsemble]]\n"*2
+        expected += "Extra ensembles:\n*  [LengthEnsemble]\n"
+        assert_equal(scheme.initial_conditions_report(init_cond), expected)
+
 
 class testLockedMoveScheme(object):
     def setup(self):
-        cvA = paths.CV_Function(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.CV_Function(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
-        interfacesA = vf.CVRangeVolumeSet(cvA, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        interfacesB = vf.CVRangeVolumeSet(cvB, float("-inf"), 
-                                          [-0.5, -0.3, -0.1, 0.0])
-        self.network = paths.MSTISNetwork([
-            (self.stateA, interfacesA, cvA),
-            (self.stateB, interfacesB, cvB)
-        ])
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        self.network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
         self.basic_scheme = DefaultScheme(self.network)
         self.root_mover = self.basic_scheme.move_decision_tree()
 
@@ -522,3 +795,52 @@ class testLockedMoveScheme(object):
         scheme = LockedMoveScheme(self.root_mover, self.network)
         scheme.movers = self.basic_scheme.movers
         vals = scheme.movers
+
+
+class testOneWayShootingMoveScheme(object):
+    def setup(self):
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+                                               [-0.5, -0.3, -0.1])
+        self.network = paths.MSTISNetwork(
+            [(self.stateA, interfacesA),
+             (self.stateB, interfacesB)],
+            ms_outers=paths.MSOuterTISInterface.from_lambdas(
+                {interfacesA: 0.0, interfacesB: 0.0}
+            )
+        )
+
+    def test_scheme(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        assert_equal(len(scheme.movers), 1)
+        assert_equal(len(root.movers), 1)
+
+    def test_sanity(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        scheme.sanity_check()
+
+    def test_unused_ensembles(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        root = scheme.move_decision_tree()
+        unused = scheme.find_unused_ensembles()
+        specials = self.network.special_ensembles
+        expected_unused = sum([specials[special_type].keys() 
+                               for special_type in specials], [])
+        assert_equal(set(expected_unused), set(unused))
+
+    def test_check_initial_conditions(self):
+        scheme = OneWayShootingMoveScheme(self.network)
+        traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
+        init_cond = scheme.initial_conditions_from_trajectories(traj3)
+        assert_equal(len(scheme.list_initial_ensembles()), 6)
+        assert_equal(len(init_cond), 6)
+        scheme.assert_initial_conditions(init_cond)
+        assert_equal(scheme.initial_conditions_report(init_cond),
+                     "No missing ensembles.\nNo extra ensembles.\n")

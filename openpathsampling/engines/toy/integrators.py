@@ -27,7 +27,7 @@ class LeapfrogVerletIntegrator(ToyIntegrator):
     def _position_update(self, sys, mydt):
         sys.positions += sys.velocities * mydt
 
-    def step(self, sys, nsteps):
+    def step(self, sys, n_steps):
         self._position_update(sys, 0.5*self.dt)
         self._momentum_update(sys, self.dt)
         self._position_update(sys, 0.5*self.dt)
@@ -35,16 +35,15 @@ class LeapfrogVerletIntegrator(ToyIntegrator):
 class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
     """ Langevin integrator for simple toy models
 
-    Implementation of the BAOAB integrator of Leimkuhler and Matthews. In
-    particular, see the appendix on p.54 of the reference below, which is
+    Implementation of the BAOAB integrator of Leimkuhler and Matthews [1]_.
+    In particular, see the appendix on p.54 of the reference below, which is
     where we take our notation from.
 
-    Reference
-    ---------
-    B. Leimkuhler and C. Matthews. "Rational Construction of Stochastic
-    Numerical Methods for Molecular Sampling." Appl. Math. Res. Express,
-    2013, 34-56 (2013). doi:10.1093/amrx/abs010
-
+    References
+    ----------
+    .. [1] B. Leimkuhler and C. Matthews. "Rational Construction of
+       Stochastic Numerical Methods for Molecular Sampling." Appl. Math.
+       Res. Express, 2013, 34-56 (2013). doi:10.1093/amrx/abs010
     """
 
     def __init__(self, dt, temperature, gamma):
@@ -79,7 +78,7 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
         sys.velocities = (self._c1 * sys.velocities +
                           self._c3 * np.sqrt(sys._minv) * R)
 
-    def step(self, sys, nsteps):
+    def step(self, sys, n_steps):
         self._momentum_update(sys, 0.5*self.dt)
         self._position_update(sys, 0.5*self.dt)
         self._OU_update(sys, self.dt)

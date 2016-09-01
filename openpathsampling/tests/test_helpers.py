@@ -21,15 +21,23 @@ from openpathsampling.engines import Topology
 
 from openpathsampling.engines import DynamicsEngine
 
-def make_1d_traj(coordinates, velocities=None, topology=None):
+def make_1d_traj(coordinates, velocities=None, engine=None):
     if velocities is None:
         velocities = [0.0]*len(coordinates)
+    if engine is None:
+        engine = toys.Engine(
+            {},
+            toys.Topology(
+                n_spatial=3,
+                masses=[1.0, 1.0, 1.0], pes=None
+            )
+        )
     traj = []
     for (pos, vel) in zip(coordinates, velocities):
         snap = toys.Snapshot(
             coordinates=np.array([[pos, 0, 0]]),
             velocities=np.array([[vel, 0, 0]]),
-            topology=topology
+            engine=engine
         )
         traj.append(snap)
     return paths.Trajectory(traj)
@@ -43,7 +51,7 @@ def items_equal(truth, beauty):
 
 def assert_items_almost_equal(truth, beauty, tol=10e-7):
     for (t,b) in zip(truth, beauty):
-        assert_equal( (t-b)<tol, True)
+        assert_equal( abs(t-b) - tol < 0.0, True)
 
 
 def assert_equal_array_array(truth, beauty):
@@ -69,20 +77,19 @@ class MoverWithSignature(paths.PathMover):
         self._in_ensembles = input_ensembles
         self._out_ensembles = output_ensembles
 
-    def move(self, globalstate):
+    def move(self, sample_set):
         # need to implement a fake move or this class will be considered abstract
         pass
 
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
-        template = toys.Snapshot(topology=topology)
+        engine = peng.tools.TopologyEngine(topology)
 
-        super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
-                                                template=template)
+        super(CalvinistDynamics, self).__init__(options={'n_frames_max': 12})
         self.predestination = make_1d_traj(coordinates=predestination,
                                            velocities=[1.0]*len(predestination),
-                                           topology=topology
+                                           engine=engine
                                           )
         self.frame_index = None
 
@@ -101,7 +108,7 @@ class CalvinistDynamics(DynamicsEngine):
                 frame_val = frame.coordinates[0][0]
                 snap_val = self._current_snap.coordinates[0][0]
                 # print "looking for " + str(snap_val) + " (" + str(frame_val) + ") " + str(snap_val==frame_val)
-                if frame_val == snap_val:
+                if abs(frame_val - snap_val) < 1e-7:
                     self.frame_index = self.predestination.index(frame)
                     break
 
@@ -114,6 +121,7 @@ class CalvinistDynamics(DynamicsEngine):
             self._current_snap = self.predestination[self.frame_index-1].reversed
             self.frame_index -= 1
 
+        # print self._current_snap.xyz[0][0]
         return self._current_snap
 
     def stop(self, trajectory):
@@ -200,6 +208,7 @@ def compare_snapshot(snapshot1, snapshot2, check_reversed=False):
         assert_close_unit(snapshot1.reversed.coordinates, snapshot1.coordinates, rtol=1e-7, atol=0)
         assert_close_unit(snapshot2.reversed.coordinates, snapshot2.coordinates, rtol=1e-7, atol=0)
 
+
 class RandomMDEngine(DynamicsEngine):
     _default_options = {}
 
@@ -207,11 +216,9 @@ class RandomMDEngine(DynamicsEngine):
         self.options = {
         }
 
-        super(RandomMDEngine, self).__init__(
-            options={},
-            template=template
-        )
+        super(RandomMDEngine, self).__init__()
 
+        self.template = template
         self.initialized = True
 
     def _build_current_snapshot(self):
@@ -229,7 +236,7 @@ class RandomMDEngine(DynamicsEngine):
         return peng.Snapshot.construct(coordinates = coordinates,
                         box_vectors = tmp.box_vectors,
                         velocities = velocities,
-                        topology = self.topology
+                        engine=self
                        )
 
     @property

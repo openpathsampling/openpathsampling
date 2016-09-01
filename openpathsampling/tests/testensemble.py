@@ -1,6 +1,9 @@
-from nose.tools import assert_equal, assert_not_equal, assert_items_equal, raises
+from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
+                        raises)
 from nose.plugins.skip import SkipTest
-from test_helpers import CallIdentity, prepend_exception_message, make_1d_traj, raises_with_message_like
+from test_helpers import (CallIdentity, prepend_exception_message,
+                          make_1d_traj, raises_with_message_like,
+                          CalvinistDynamics)
 
 import openpathsampling as paths
 import openpathsampling.engines.openmm as peng
@@ -10,6 +13,7 @@ import logging
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.DEBUG)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 logger = logging.getLogger('openpathsampling.tests.testensemble')
 
 import re
@@ -83,10 +87,10 @@ def setUp():
     global lower, upper, op, vol1, vol2, vol3, ttraj
     lower = 0.1
     upper = 0.5
-    op = paths.CV_Function("Id", lambda snap : snap.coordinates[0][0])
-    vol1 = paths.CVRangeVolume(op, lower, upper).named('stateA')
-    vol2 = paths.CVRangeVolume(op, -0.1, 0.7).named('interface0')
-    vol3 = paths.CVRangeVolume(op, 2.0, 2.5).named('stateB')
+    op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+    vol1 = paths.CVDefinedVolume(op, lower, upper).named('stateA')
+    vol2 = paths.CVDefinedVolume(op, -0.1, 0.7).named('interface0')
+    vol3 = paths.CVDefinedVolume(op, 2.0, 2.5).named('stateB')
     # we use the following codes to describe trajectories:
     # in : in the state
     # out : out of the state
@@ -200,6 +204,28 @@ class testPartOutXEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.leaveX, ttraj[test], res, failmsg)
 
+    def test_invert(self):
+        inverted = ~self.leaveX
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(inverted, ttraj[test], res, failmsg)
+
+    def test_can_append(self):
+        self._test_everything(self.leaveX.can_append, default=True)
+
+    def test_can_prepend(self):
+        self._test_everything(self.leaveX.can_prepend, default=True)
+
+    def test_strict_can_append(self):
+        self._test_everything(self.leaveX.strict_can_append, default=True)
+
+    def test_strict_can_prepend(self):
+        self._test_everything(self.leaveX.strict_can_prepend, default=True)
+
     def test_leaveX_0(self):
         """PartOutXEnsemble treatment of zero-length trajectory"""
         assert_equal(self.leaveX(paths.Trajectory([])), False)
@@ -224,6 +250,45 @@ class testAllInXEnsemble(EnsembleTest):
                 res = True
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.inX, ttraj[test], res, failmsg)
+
+    def test_can_append(self):
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX.can_append, ttraj[test], res, failmsg)
+
+    def test_can_prepend(self):
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX.can_prepend, ttraj[test], res,
+                              failmsg)
+
+    def test_strict_can_append(self):
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX.strict_can_append, ttraj[test], res,
+                              failmsg)
+
+    def test_strict_can_prepend(self):
+        for test in ttraj.keys():
+            if "out" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.inX.strict_can_prepend, ttraj[test], res,
+                              failmsg)
 
     def test_inX_0(self):
         """AllInXEnsemble treatment of zero-length trajectory"""
@@ -250,6 +315,44 @@ class testAllOutXEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.outX, ttraj[test], res, failmsg)
 
+    def test_can_append(self):
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX.can_append, ttraj[test], res, failmsg)
+
+    def test_can_prepend(self):
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX.can_prepend, ttraj[test], res, failmsg)
+
+    def test_strict_can_append(self):
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX.strict_can_append, ttraj[test], res,
+                              failmsg)
+
+    def test_strict_can_prepend(self):
+        for test in ttraj.keys():
+            if "in" in in_out_parser(test):
+                res = False
+            else:
+                res = True
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.outX.strict_can_prepend, ttraj[test],
+                              res, failmsg)
+
     def test_outX_0(self):
         """AllOutXEnsemble treatment of zero-length trajectory"""
         assert_equal(self.outX(paths.Trajectory([])), False)
@@ -274,6 +377,18 @@ class testPartInXEnsemble(EnsembleTest):
                 res = False
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.hitX, ttraj[test], res, failmsg)
+
+    def test_can_append(self):
+        self._test_everything(self.hitX.can_append, default=True)
+
+    def test_can_prepend(self):
+        self._test_everything(self.hitX.can_prepend, default=True)
+
+    def test_strict_can_append(self):
+        self._test_everything(self.hitX.strict_can_append, default=True)
+
+    def test_strict_can_prepend(self):
+        self._test_everything(self.hitX.strict_can_prepend, default=True)
 
     def test_hitX_0(self):
         """PartInXEnsemble treatment of zero-length trajectory"""
@@ -424,14 +539,6 @@ class testSequentialEnsemble(EnsembleTest):
                                     self.outX,
                                     self.inX & self.length1 ]
         )
-        self.minus = SequentialEnsemble([
-            self.inX & self.length1,
-            self.outX & self.leaveX0,
-            self.inX & self.length1,
-            self.inX0 | self.length0,
-            self.outX & self.leaveX0,
-            self.inX & self.length1
-        ])
         self.tis = SequentialEnsemble([
             self.inX & self.length1,
             self.outX & self.leaveX0,
@@ -486,8 +593,8 @@ class testSequentialEnsemble(EnsembleTest):
     def test_seqens_order_combo(self):
         # regression test for #229
         import numpy as np
-        op = paths.CV_Function(name="x", f=lambda snap : snap.xyz[0][0])
-        bigvol = paths.CVRangeVolume(collectivevariable=op,
+        op = paths.FunctionCV(name="x", f=lambda snap : snap.xyz[0][0])
+        bigvol = paths.CVDefinedVolume(collectivevariable=op,
                                     lambda_min=-100.0, lambda_max=100.0)
 
         traj = paths.Trajectory([
@@ -541,147 +648,248 @@ class testSequentialEnsemble(EnsembleTest):
             self._single_test(self.pseudo_tis.can_append, 
                                 ttraj[test], results[test], failmsg)
 
+    def test_strict_can_append_tis(self):
+        results = {
+            'upper_in_out' : True,
+            'lower_in_out' : True,
+            'upper_in_out_in' : False,
+            'lower_in_out_in' : False,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : False,
+            'lower_out_out_out' : False,
+            'upper_out_in' : False,
+            'lower_out_in' : False,
+            'upper_out' : False,
+            'lower_out' : False,
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False
+        }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.pseudo_tis.strict_can_append, 
+                                ttraj[test], results[test], failmsg)
+
     def test_can_append_pseudominus(self):
         """SequentialEnsemble as Pseudo-MinusEnsemble knows when it can append"""
-        results =   {   'upper_in_out' : True,
-                        'lower_in_out' : True,
-                        'upper_in_out_in' : True,
-                        'lower_in_out_in' : True,
-                        'upper_in' : True,
-                        'lower_in' : True,
-                        'upper_in_in_in' : True,
-                        'lower_in_in_in' : True,
-                        'upper_out_out_out' : True,
-                        'lower_out_out_out' : True,
-                        'upper_out_in' : True,
-                        'lower_out_in' : True,
-                        'upper_out' : True,
-                        'lower_out' : True,
-
-                        'upper_in_out_in_in' : True,
-                        'lower_in_out_in_in' : True,
-                        'upper_in_out_in_out_in' : False,
-                        'lower_in_out_in_out_in' : False,
-                        'upper_in_out_in_in_out' : True,
-                        'lower_in_out_in_in_out' : True,
-                        'upper_out_in_out' : True,
-                        'lower_out_in_out' : True,
-                        'upper_out_in_in_out' : True,
-                        'lower_out_in_in_out' : True,
-                        'upper_out_in_out_in': False,
-                        'lower_out_in_out_in': False,
-                        'upper_out_in_in_out_in' : False,
-                        'lower_out_in_in_out_in' : False,
-                        'upper_in_cross_in' : True,
-                        'lower_in_cross_in' : True,
-                        'upper_in_cross_in_cross' : True,
-                        'lower_in_cross_in_cross' : True,
-                        'upper_cross_in_cross_in' : False,
-                        'lower_cross_in_cross_in' : False,
-                        'upper_in_cross_in_cross_in' : False,
-                        'lower_in_cross_in_cross_in' : False
-                    }   
+        results = {
+            'upper_in_out' : True,
+            'lower_in_out' : True,
+            'upper_in_out_in' : True,
+            'lower_in_out_in' : True,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : True,
+            'lower_in_in_in' : True,
+            'upper_out_out_out' : True,
+            'lower_out_out_out' : True,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : True,
+            'lower_out' : True,
+            'upper_in_out_in_in' : True,
+            'lower_in_out_in_in' : True,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False,
+            'upper_in_out_in_in_out' : True,
+            'lower_in_out_in_in_out' : True,
+            'upper_out_in_out' : True,
+            'lower_out_in_out' : True,
+            'upper_out_in_in_out' : True,
+            'lower_out_in_in_out' : True,
+            'upper_out_in_out_in': False,
+            'lower_out_in_out_in': False,
+            'upper_out_in_in_out_in' : False,
+            'lower_out_in_in_out_in' : False,
+            'upper_in_cross_in' : True,
+            'lower_in_cross_in' : True,
+            'upper_in_cross_in_cross' : True,
+            'lower_in_cross_in_cross' : True,
+            'upper_cross_in_cross_in' : False,
+            'lower_cross_in_cross_in' : False,
+            'upper_in_cross_in_cross_in' : False,
+            'lower_in_cross_in_cross_in' : False
+        }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus.can_append, 
                                 ttraj[test], results[test], failmsg)
 
-    def test_can_append_minus(self):
-        results = {'upper_in_cross_in' : True,
-                   'lower_in_cross_in' : True,
-                   'upper_in_cross_in_cross' : True,
-                   'lower_in_cross_in_cross' : True,
-                   'upper_cross_in_cross_in' : False,
-                   'lower_cross_in_cross_in' : False,
-                   'upper_in_cross_in_cross_in' : False,
-                   'lower_in_cross_in_cross_in' : False
-                  }
+    def test_strict_can_append_pseudominus(self):
+        results = {
+            'upper_in_out' : True,
+            'lower_in_out' : True,
+            'upper_in_out_in' : True,
+            'lower_in_out_in' : True,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : False,
+            'lower_out_out_out' : False,
+            'upper_out_in' : False,
+            'lower_out_in' : False,
+            'upper_out' : False,
+            'lower_out' : False,
+            'upper_in_out_in_in' : True,
+            'lower_in_out_in_in' : True,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False,
+            'upper_in_out_in_in_out' : True,
+            'lower_in_out_in_in_out' : True,
+            'upper_out_in_out' : False,
+            'lower_out_in_out' : False,
+            'upper_out_in_in_out' : False,
+            'lower_out_in_in_out' : False,
+            'upper_out_in_out_in': False,
+            'lower_out_in_out_in': False,
+            'upper_out_in_in_out_in' : False,
+            'lower_out_in_in_out_in' : False,
+            'upper_in_cross_in' : True,
+            'lower_in_cross_in' : True,
+            'upper_in_cross_in_cross' : True,
+            'lower_in_cross_in_cross' : True,
+            'upper_cross_in_cross_in' : False,
+            'lower_cross_in_cross_in' : False,
+            'upper_in_cross_in_cross_in' : False,
+            'lower_in_cross_in_cross_in' : False
+        }   
         for test in results.keys():
-            logging.getLogger('openpathsampling.ensemble').debug(
-                "Testing " + str(test) + " (" + str(results[test]) + ")"
-            )
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus.can_append, 
-                                ttraj[test], results[test], failmsg)
-
-    def test_can_prepend_minus(self):
-        results = {'upper_in_cross_in' : True,
-                   'lower_in_cross_in' : True,
-                   'upper_in_cross_in_cross' : False,
-                   'lower_in_cross_in_cross' : False,
-                   'upper_cross_in_cross_in' : True,
-                   'lower_cross_in_cross_in' : True,
-                   'upper_in_cross_in_cross_in' : False,
-                   'lower_in_cross_in_cross_in' : False
-                  }
-        for test in results.keys():
-            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus.can_append, 
+            self._single_test(self.pseudo_minus.strict_can_append, 
                                 ttraj[test], results[test], failmsg)
 
     def test_can_prepend_pseudo_tis(self):
         """SequentialEnsemble as Pseudo-TISEnsemble knows when it can prepend"""
-        results =   {   'upper_in_out' : False,
-                        'lower_in_out' : False,
-                        'upper_in_out_in' : False,
-                        'lower_in_out_in' : False,
-                        'upper_in' : True,
-                        'lower_in' : True,
-                        'upper_in_in_in' : False,
-                        'lower_in_in_in' : False,
-                        'upper_out_out_out' : True,
-                        'lower_out_out_out' : True,
-                        'upper_out_in' : True,
-                        'lower_out_in' : True,
-                        'upper_out' : True,
-                        'lower_out' : True,
-                        'upper_in_out_in_in' : False,
-                        'lower_in_out_in_in' : False,
-                        'upper_in_out_in_out_in' : False,
-                        'lower_in_out_in_out_in' : False
-                    }   
+        results =   {
+            'upper_in_out' : False,
+            'lower_in_out' : False,
+            'upper_in_out_in' : False,
+            'lower_in_out_in' : False,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : True,
+            'lower_out_out_out' : True,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : True,
+            'lower_out' : True,
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False
+        }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_tis.can_prepend, 
                                 ttraj[test], results[test], failmsg)
 
+    def test_strict_can_prepend_pseudo_tis(self):
+        results =   {
+            'upper_in_out' : False,
+            'lower_in_out' : False,
+            'upper_in_out_in' : False,
+            'lower_in_out_in' : False,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : False,
+            'lower_out_out_out' : False,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : False,
+            'lower_out' : False,
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False
+        }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.pseudo_tis.strict_can_prepend, 
+                                ttraj[test], results[test], failmsg)
 
-    def test_can_prepend_minus(self):
-        """SequentialEnsemble as MinusEnsemble knows when it can prepend"""
-        results =   {   'upper_in_out' : True,
-                        'lower_in_out' : True,
-                        'upper_in_out_in' : True,
-                        'lower_in_out_in' : True,
-                        'upper_in' : True,
-                        'lower_in' : True,
-                        'upper_in_in_in' : True,
-                        'lower_in_in_in' : True,
-                        'upper_out_out_out' : True,
-                        'lower_out_out_out' : True,
-                        'upper_out_in' : True,
-                        'lower_out_in' : True,
-                        'upper_out' : True,
-                        'lower_out' : True,
+    def test_can_prepend_pseudo_minus(self):
+        results =   {
+            'upper_in_out' : True,
+            'lower_in_out' : True,
+            'upper_in_out_in' : True,
+            'lower_in_out_in' : True,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : True,
+            'lower_in_in_in' : True,
+            'upper_out_out_out' : True,
+            'lower_out_out_out' : True,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : True,
+            'lower_out' : True,
 
-                        'upper_in_out_in_in' : False,
-                        'lower_in_out_in_in' : False,
-                        'upper_in_out_in_out_in' : False,
-                        'lower_in_out_in_out_in' : False,
-                        'upper_in_out_in_in_out' : False,
-                        'lower_in_out_in_in_out' : False,
-                        'upper_out_in_out' : True,
-                        'lower_out_in_out' : True,
-                        'upper_out_in_in_out' : True,
-                        'lower_out_in_in_out' : True,
-                        'upper_out_in_out_in': True,
-                        'lower_out_in_out_in': True,
-                        'upper_out_in_in_out_in' : True,
-                        'lower_out_in_in_out_in' : True
-                    }   
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False,
+            'upper_in_out_in_in_out' : False,
+            'lower_in_out_in_in_out' : False,
+            'upper_out_in_out' : True,
+            'lower_out_in_out' : True,
+            'upper_out_in_in_out' : True,
+            'lower_out_in_in_out' : True,
+            'upper_out_in_out_in': True,
+            'lower_out_in_out_in': True,
+            'upper_out_in_in_out_in' : True,
+            'lower_out_in_in_out_in' : True
+        }   
         for test in results.keys():
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus.can_prepend, 
                                 ttraj[test], results[test], failmsg)
+
+    def test_strict_can_prepend_pseudo_minus(self):
+        results =   {
+            'upper_in_out' : False,
+            'lower_in_out' : False,
+            'upper_in_out_in' : True,
+            'lower_in_out_in' : True,
+            'upper_in' : True,
+            'lower_in' : True,
+            'upper_in_in_in' : False,
+            'lower_in_in_in' : False,
+            'upper_out_out_out' : False,
+            'lower_out_out_out' : False,
+            'upper_out_in' : True,
+            'lower_out_in' : True,
+            'upper_out' : False,
+            'lower_out' : False,
+
+            'upper_in_out_in_in' : False,
+            'lower_in_out_in_in' : False,
+            'upper_in_out_in_out_in' : False,
+            'lower_in_out_in_out_in' : False,
+            'upper_in_out_in_in_out' : False,
+            'lower_in_out_in_in_out' : False,
+            'upper_out_in_out' : False,
+            'lower_out_in_out' : False,
+            'upper_out_in_in_out' : False,
+            'lower_out_in_in_out' : False,
+            'upper_out_in_out_in': True,
+            'lower_out_in_out_in': True,
+            'upper_out_in_in_out_in' : True,
+            'lower_out_in_in_out_in' : True
+        }   
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(self.pseudo_minus.strict_can_prepend, 
+                                ttraj[test], results[test], failmsg)
+
 
     
     def test_sequential_transition_frames(self):
@@ -776,20 +984,6 @@ class testSequentialEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.tis, ttraj[test], results[test], failmsg)
     
-    def test_sequential_minus(self):
-        """SequentialEnsemble as MinusEnsemble identifies paths"""
-        results = {}
-        for test in ttraj.keys():
-            results[test] = False
-        results['upper_in_out_cross_out_in_out_in_out_cross_out_in'] = True
-        results['lower_in_out_cross_out_in_out_in_out_cross_out_in'] = True
-        results['upper_in_cross_in_cross_in'] = True
-        results['lower_in_cross_in_cross_in'] = True
-
-        for test in results.keys():
-            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
-            self._single_test(self.minus, ttraj[test], results[test], failmsg)
-
     def test_sequential_generate_first_tis(self):
         """SequentialEnsemble to generate the first TIS path"""
         ensemble = SequentialEnsemble([
@@ -858,6 +1052,233 @@ and
   len(x) = 1
 )
 ]""")
+
+
+class testSequentialEnsembleCombination(EnsembleTest):
+    # testing EnsembleCombinations of SequentialEnsembles -- this is mainly
+    # useful to making sure that the ensemble combination of strict_can_*
+    # works correctly, since this is where strict and normal have a
+    # distinction
+    def setUp(self):
+        self.ens1 = SequentialEnsemble([
+            AllInXEnsemble(vol1) & LengthEnsemble(1),
+            AllOutXEnsemble(vol1) & PartOutXEnsemble(vol2),
+            AllInXEnsemble(vol1) & LengthEnsemble(1)
+        ])
+        self.ens2 = SequentialEnsemble([
+            AllInXEnsemble(vol1) & LengthEnsemble(1),
+            LengthEnsemble(3),
+            AllInXEnsemble(vol1) & LengthEnsemble(1)
+        ])
+        self.combo_and = self.ens1 & self.ens2
+        self.combo_or = self.ens1 | self.ens2
+
+    def test_call(self):
+        ens1_passes = [
+            'in_cross_in',
+            'in_out_cross_in',
+            'in_out_cross_out_in'
+        ]
+        self._test_everything(self.ens1, ens1_passes, False)
+        ens2_passes = [
+            'in_out_cross_out_in',
+            'in_out_in_out_in',
+            'in_cross_in_cross_in'
+        ]
+        self._test_everything(self.ens2, ens2_passes, False)
+        
+        or_passes = list(set(ens1_passes + ens2_passes))
+        self._test_everything(self.combo_or, or_passes, False)
+
+        and_passes = list(set(ens1_passes) & set(ens2_passes))
+        self._test_everything(self.combo_and, and_passes, False)
+
+    def test_can_append(self):
+	ens1_true = [
+	    'hit',
+	    'in',
+	    'in_cross',
+	    'in_out',
+	    'in_out_cross',
+	    'in_out_out_out',
+	    'out',
+	    'out_cross',
+	    'out_out',
+	    'out_out_out'
+	]
+        self._test_everything(self.ens1.can_append, ens1_true, False)
+        ens2_true = [
+	    'hit',
+	    'in',
+	    'in_cross',
+	    'in_cross_in',
+	    'in_cross_in_cross',
+	    'in_hit_in',
+	    'in_hit_out',
+	    'in_in',
+	    'in_in_cross_in',
+	    'in_in_in',
+	    'in_in_in_out',
+	    'in_in_out',
+	    'in_in_out_in',
+	    'in_out',
+	    'in_out_cross',
+	    'in_out_in',
+	    'in_out_in_in',
+	    'in_out_in_out',
+	    'in_out_out_in',
+	    'in_out_out_out',
+	    'out',
+	    'out_cross',
+	    'out_hit_in',
+	    'out_hit_out',
+	    'out_in',
+	    'out_in_in',
+	    'out_in_out',
+	    'out_out',
+	    'out_out_in',
+	    'out_out_out'
+        ]
+        self._test_everything(self.ens2.can_append, ens2_true, False)
+        
+        or_true = list(set(ens1_true + ens2_true))
+        self._test_everything(self.combo_or.can_append, or_true, False)
+
+        and_true = list(set(ens1_true) & set(ens2_true))
+        self._test_everything(self.combo_and.can_append, and_true, False)
+
+    def test_can_prepend(self):
+        ens1_true = [
+	    'hit',
+	    'in',
+	    'out',
+	    'out_cross',
+	    'out_in',
+	    'out_out',
+	    'out_out_in',
+	    'out_out_out',
+	    'out_out_out_in'
+        ]
+        self._test_everything(self.ens1.can_prepend, ens1_true, False)
+	ens2_true = [
+            'cross_in_cross_in',
+            'hit',
+            'in',
+            'in_cross',
+            'in_cross_in',
+            'in_hit_in',
+            'in_hit_out',
+            'in_in',
+            'in_in_cross_in',
+            'in_in_in',
+            'in_in_out',
+            'in_in_out_in',
+            'in_out',
+            'in_out_cross',
+            'in_out_in',
+            'in_out_in_in',
+            'in_out_out_in',
+            'out',
+            'out_cross',
+            'out_hit_in',
+            'out_hit_out',
+            'out_in',
+            'out_in_cross_in',
+            'out_in_in',
+            'out_in_in_in',
+            'out_in_out',
+            'out_in_out_in',
+            'out_out',
+            'out_out_in',
+            'out_out_out',
+            'out_out_out_in'
+	]
+        self._test_everything(self.ens2.can_prepend, ens2_true, False)
+        
+        or_true = list(set(ens1_true + ens2_true))
+        self._test_everything(self.combo_or.can_prepend, or_true, False)
+
+        and_true = list(set(ens1_true) & set(ens2_true))
+        self._test_everything(self.combo_and.can_prepend, and_true, False)
+
+    def test_strict_can_append(self):
+	ens1_true = [
+	    'hit',
+	    'in',
+	    'in_cross',
+	    'in_out',
+	    'in_out_cross',
+	    'in_out_out_out',
+	]
+        self._test_everything(self.ens1.strict_can_append, ens1_true, False)
+        ens2_true = [
+	    'hit',
+	    'in',
+	    'in_cross',
+	    'in_cross_in',
+	    'in_cross_in_cross',
+	    'in_hit_in',
+	    'in_hit_out',
+	    'in_in',
+	    'in_in_cross_in',
+	    'in_in_in',
+	    'in_in_in_out',
+	    'in_in_out',
+	    'in_in_out_in',
+	    'in_out',
+	    'in_out_cross',
+	    'in_out_in',
+	    'in_out_in_in',
+	    'in_out_in_out',
+	    'in_out_out_in',
+	    'in_out_out_out',
+        ]
+        self._test_everything(self.ens2.strict_can_append, ens2_true, False)
+
+        or_true = list(set(ens1_true + ens2_true))
+        self._test_everything(self.combo_or.strict_can_append, or_true, False)
+
+        and_true = list(set(ens1_true) & set(ens2_true))
+        self._test_everything(self.combo_and.strict_can_append, and_true, False)
+
+    def test_strict_can_prepend(self):
+        ens1_true = [
+	    'hit',
+	    'in',
+	    'out_in',
+	    'out_out_in',
+	    'out_out_out_in'
+        ]
+        self._test_everything(self.ens1.strict_can_prepend, ens1_true, False)
+	ens2_true = [
+            'cross_in_cross_in',
+            'hit',
+            'in',
+            'in_cross_in',
+            'in_hit_in',
+            'in_in',
+            'in_in_cross_in',
+            'in_in_in',
+            'in_in_out_in',
+            'in_out_in',
+            'in_out_in_in',
+            'in_out_out_in',
+            'out_hit_in',
+            'out_in',
+            'out_in_cross_in',
+            'out_in_in',
+            'out_in_in_in',
+            'out_in_out_in',
+            'out_out_in',
+            'out_out_out_in'
+	]
+        self._test_everything(self.ens2.strict_can_prepend, ens2_true, False)
+
+        or_true = list(set(ens1_true + ens2_true))
+        self._test_everything(self.combo_or.strict_can_prepend, or_true, False)
+
+        and_true = list(set(ens1_true) & set(ens2_true))
+        self._test_everything(self.combo_and.strict_can_prepend, and_true, False)
 
 class testTISEnsemble(EnsembleTest):
     def setUp(self):
@@ -1004,8 +1425,6 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
         assert_equal(ens.can_append(traj[0:4]), True)
         assert_equal(ens.can_append(traj[0:5]), True)
         assert_equal(ens.can_append(traj[0:6]), True)
-        
-
 
     def test_sequential_caching_can_append(self):
         cache = self.pseudo_minus._cache_can_append
@@ -1222,7 +1641,7 @@ class testOptionalEnsemble(EnsembleTest):
         self.start_opt = SequentialEnsemble([
             OptionalEnsemble(AllOutXEnsemble(vol1)),
             AllInXEnsemble(vol1),
-            AllOutXEnsemble(vol1),
+            AllOutXEnsemble(vol1)
         ])
         self.end_opt = SequentialEnsemble([
             AllOutXEnsemble(vol1),
@@ -1232,7 +1651,7 @@ class testOptionalEnsemble(EnsembleTest):
         self.mid_opt = SequentialEnsemble([
             AllInXEnsemble(vol1),
             OptionalEnsemble(AllOutXEnsemble(vol1) & AllInXEnsemble(vol2)),
-            AllOutXEnsemble(vol2),
+            AllOutXEnsemble(vol2)
         ])
 
     def test_optional_start(self):
@@ -1264,7 +1683,22 @@ class testOptionalEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
-    def test_optional_start_can_preprend(self):
+    def test_optional_start_strict_can_append(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'in_out' : True,
+                        'out_in' : True,
+                        'out_out_in' : True,
+                        'in_out_in' : False,
+                        'out_in_out' : True
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt.strict_can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_start_can_prepend(self):
         bare_results = {'in' : True,
                         'out' : True,
                         'out_in_out' : True,
@@ -1278,6 +1712,24 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.start_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_start_strict_can_prepend(self):
+        bare_results = {'in' : False,
+                        'out' : True,
+                        'out_in_out' : True,
+                        'out_out_in_out' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in_out' : False,
+                        'out_in' : False,
+                        'out_in_out_in' : False,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.start_opt.strict_can_prepend
         for test in results.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
@@ -1311,7 +1763,23 @@ class testOptionalEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
-    def test_optional_middle_can_preprend(self):
+    def test_optional_middle_strict_can_append(self):
+        bare_results = {'in' : True,
+                        'out' : False,
+                        'in_out' : True,
+                        'out_in' : False,
+                        'in_cross' : True,
+                        'in_out_cross' : True,
+                        'out_cross' : False,
+                        'in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt.strict_can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_can_prepend(self):
         bare_results = {'in' : True,
                         'out' : True,
                         'in_out' : True,
@@ -1322,6 +1790,21 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.mid_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_strict_can_prepend(self):
+        bare_results = {'in' : False,
+                        'out' : False,
+                        'in_out' : False,
+                        'out_in' : False,
+                        'in_cross' : True,
+                        'out_cross' : True,
+                        'in_cross_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.mid_opt.strict_can_prepend
         for test in results.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
@@ -1355,6 +1838,22 @@ class testOptionalEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
+    def test_optional_end_strict_can_append(self):
+        bare_results = {'in' : False,
+                        'out' : True,
+                        'out_in' : True,
+                        'in_out' : False,
+                        'out_in_out' : True,
+                        'in_out_in' : False,
+                        'out_in_out_in' : False,
+                        'in_in_out' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.end_opt.strict_can_append
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
     def test_optional_middle_can_prepend(self):
         bare_results = {'in' : True,
                         'out' : True,
@@ -1367,6 +1866,22 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.end_opt.can_prepend
+        for test in results.keys():
+            failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
+            self._single_test(fcn, ttraj[test], results[test], failmsg)
+
+    def test_optional_middle_strict_can_prepend(self):
+        bare_results = {'in' : True,
+                        'out' : True,
+                        'out_in' : True,
+                        'in_out' : True,
+                        'out_in_out' : True,
+                        'in_out_in_out' : False,
+                        'in_out_in' : False,
+                        'out_in_out_in' : False
+                       }
+        results = results_upper_lower(bare_results)
+        fcn = self.end_opt.strict_can_prepend
         for test in results.keys():
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
@@ -1388,6 +1903,7 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
             traj[0:2]
         )
         assert_equal(ens.can_append(traj[0:3]), False)
+        assert_equal(ens.strict_can_append(traj[0:3]), False)
         assert_equal(ens(traj[0:3]), False)
 
     def test_good_start_traj(self):
@@ -1397,8 +1913,26 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
             traj[0:2]
         )
         assert_equal(ens.can_append(traj[2:3]), True)
+        assert_equal(ens.strict_can_append(traj[2:3]), True)
         assert_equal(ens(traj[2:3]), True)
 
+    @raises(RuntimeError)
+    def test_can_prepend(self):
+        traj = ttraj['upper_in_in_in']
+        ens = PrefixTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[0:2]
+        )
+        ens.can_prepend(traj[2:3])
+
+    @raises(RuntimeError)
+    def test_strict_can_prepend(self):
+        traj = ttraj['upper_in_in_in']
+        ens = PrefixTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[0:2]
+        )
+        ens.strict_can_prepend(traj[2:3])
 
     def test_caching_in_fwdapp_seq(self):
         inX = AllInXEnsemble(vol1)
@@ -1429,10 +1963,11 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
         assert_equal(ens._cached_trajectory, traj[0:6])
         assert_equal(ens._cache_can_append.trusted, True)
 
+
 class testSuffixTrajectoryEnsemble(EnsembleTest):
     def setUp(self):
-        xval = paths.CV_Function("x", lambda s : s.xyz[0][0])
-        vol = paths.CVRangeVolume(xval, 0.1, 0.5)
+        xval = paths.FunctionCV("x", lambda s : s.xyz[0][0])
+        vol = paths.CVDefinedVolume(xval, 0.1, 0.5)
         self.inX = AllInXEnsemble(vol)
         self.outX = AllOutXEnsemble(vol)
 
@@ -1443,6 +1978,7 @@ class testSuffixTrajectoryEnsemble(EnsembleTest):
             traj[-2:]
         )
         assert_equal(ens.can_prepend(traj[-3:2]), False)
+        assert_equal(ens.strict_can_prepend(traj[-3:2]), False)
         assert_equal(ens(traj[-3:2]), False)
 
     def test_good_end_traj(self):
@@ -1452,9 +1988,29 @@ class testSuffixTrajectoryEnsemble(EnsembleTest):
             traj[-2:]
         )
         assert_equal(ens.can_prepend(traj[-3:-2]), True)
+        assert_equal(ens.strict_can_prepend(traj[-3:-2]), True)
         assert_equal(ens(traj[-3:-2]), True)
         assert_equal(ens.can_prepend(traj[-4:-2]), False)
+        assert_equal(ens.strict_can_prepend(traj[-4:-2]), False)
         assert_equal(ens(traj[-4:-2]), False)
+
+    @raises(RuntimeError)
+    def test_can_append(self):
+        traj = ttraj['upper_out_in_in_in']
+        ens = SuffixTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[-2:]
+        )
+        ens.can_append(traj)
+
+    @raises(RuntimeError)
+    def test_strict_can_append(self):
+        traj = ttraj['upper_out_in_in_in']
+        ens = SuffixTrajectoryEnsemble(
+            SequentialEnsemble([self.inX]),
+            traj[-2:]
+        )
+        ens.strict_can_append(traj)
 
     def test_caching_in_bkwdprep_seq(self):
         length1 = LengthEnsemble(1)
@@ -1548,6 +2104,28 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl2.can_append, non_default, True)
 
+    def test_minus_nl2_strict_can_append(self):
+        non_default = [
+            'in',
+            'hit',
+            'in_out',
+            'in_out_in',
+            'in_out_out_out',
+            'in_out_out_in',
+            'in_out_in_out',
+            'in_out_in_in',
+            'in_out_out_in_out',
+            'in_out_in_in_out',
+            'in_cross',
+            'in_cross_in',
+            'in_out_cross',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_cross_in_cross',
+        ]
+        self._test_everything(self.minus_nl2.strict_can_append, non_default, 
+                              False)
+
     def test_minus_nl2_can_prepend(self):
         non_default = [
             'in_cross_in_cross',
@@ -1568,6 +2146,32 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl2.can_prepend, non_default, True)
 
+    def test_minus_nl2_strict_can_prepend(self):
+        non_default = [
+            'in',
+            'hit',
+            'out_in',
+            'cross_in',
+            'in_cross_in',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_out_in',
+            'out_out_in',
+            'out_out_out_in',
+            'in_in_cross_in',
+            'out_in_cross_in',
+            'out_in_out_out_in',
+            'in_in_out_in',
+            'in_out_out_in',
+            'out_in_out_in',
+            'out_in_in_out_in',
+            'out_out_in_out_in',
+            'cross_in_cross_in',
+            'out_hit_in_out_in'
+        ]
+        self._test_everything(self.minus_nl2.strict_can_prepend,
+                              non_default, False)
+
     def test_minus_interstitial_nl2_ensemble(self):
         non_default = [
             'in_cross_in_cross_in',
@@ -1586,6 +2190,22 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         self._test_everything(self.minus_interstitial_nl2.can_append,
                               non_default, True)
 
+    def test_minus_interstitial_nl2_strict_can_append(self):
+        non_default = [
+            'in',
+            'hit',
+            'in_out',
+            'in_out_out_out',
+            'in_cross',
+            'in_cross_in',
+            'in_out_cross',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_cross_in_cross',
+        ]
+        self._test_everything(self.minus_interstitial_nl2.strict_can_append,
+                              non_default, False)
+
     def test_minus_interstitial_nl2_can_prepend(self):
         non_default = [
             'in_cross_in_cross_in',
@@ -1594,6 +2214,24 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_interstitial_nl2.can_prepend,
                               non_default, True)
+
+    def test_minus_interstitial_nl2_strict_can_prepend(self):
+        non_default = [
+            'in',
+            'hit',
+            'out_in',
+            'cross_in',
+            'in_cross_in',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'out_out_in',
+            'out_out_out_in',
+            'in_in_cross_in',
+            'out_in_cross_in',
+            'cross_in_cross_in',
+        ]
+        self._test_everything(self.minus_interstitial_nl2.strict_can_prepend,
+                              non_default, False)
 
     def test_minus_nl3_ensemble(self):
         non_default = [
@@ -1608,12 +2246,113 @@ class testMinusInterfaceEnsemble(EnsembleTest):
         ]
         self._test_everything(self.minus_nl3.can_append, non_default, True)
 
+    def test_minus_nl3_strict_can_append(self):
+        non_default = [
+            'in',
+            'hit',
+            'in_out',
+            'in_out_in',
+            'in_out_out_out',
+            'in_out_out_in',
+            'in_out_in_out',
+            'in_out_in_in',
+            'in_out_out_in_out',
+            'in_out_in_in_out',
+            'in_cross',
+            'in_cross_in',
+            'in_out_cross',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_cross_in_cross',
+            'in_cross_in_cross_in',
+            'in_out_in_in_out_in',
+            'in_out_in_out_in'
+        ]
+        self._test_everything(self.minus_nl3.strict_can_append, non_default,
+                              False)
+
     def test_minus_nl3_can_prepend(self):
         non_default = [
             'in_out_cross_out_in_out_in_out_cross_out_in',
             'out_in_in_in_out_in_out_in_in_in_out'
         ]
         self._test_everything(self.minus_nl3.can_prepend, non_default, True)
+
+    def test_minus_nl3_strict_can_prepend(self):
+        non_default = [
+            'in',
+            'hit',
+            'out_in',
+            'cross_in',
+            'in_cross_in',
+            'in_out_cross_in',
+            'in_out_cross_out_in',
+            'in_out_in',
+            'out_out_in',
+            'out_out_out_in',
+            'in_in_cross_in',
+            'out_in_cross_in',
+            'out_in_out_out_in',
+            'in_in_out_in',
+            'in_out_out_in',
+            'out_in_out_in',
+            'out_in_in_out_in',
+            'out_out_in_out_in',
+            'cross_in_cross_in',
+            'out_hit_in_out_in',
+            'in_cross_in_cross_in',
+            'in_out_in_in_out_in',
+            'in_out_in_out_in'
+        ]
+        self._test_everything(self.minus_nl3.strict_can_prepend,
+                              non_default, False)
+        
+    def test_extend_sample_from_trajectories(self):
+        # set up ensA and ensB
+        ensA = paths.TISEnsemble(vol1, vol3, vol1, op)
+        ensB = paths.TISEnsemble(vol1, vol3, vol2, op)
+        # set up trajA and trajB
+        trajA = make_1d_traj([0.25, 1.0, 1.5, 2.1])
+        trajB = ttraj['upper_in_cross_in']
+
+        sset = paths.SampleSet([
+            paths.Sample(replica=0, ensemble=ensA, trajectory=trajA),
+            paths.Sample(replica=1, ensemble=ensB, trajectory=trajB)
+        ])
+        sset.sanity_check()
+
+        # test with first trajectory
+        predestined_snaps = [trajB[-1]]+ttraj['upper_out_in']
+        predestined_traj = [s.xyz[0][0] for s in predestined_snaps]
+        engine = CalvinistDynamics(predestined_traj)
+        sample = self.minus_nl2.extend_sample_from_trajectories(
+            sset, replica=-1, engine=engine, level='complex'
+        )
+
+        assert_equal(sample.ensemble(sample.trajectory), True)
+        assert_equal(sample.ensemble, self.minus_nl2)
+        assert_equal(sample.replica, -1)
+        assert_equal(len(sample.trajectory), 5)
+        expected = trajB + ttraj['upper_out_in']
+        for (t, b) in zip(sample.trajectory, expected):
+            assert_equal(t.xyz[0][0], b.xyz[0][0])
+
+        # test with a different trajectory
+        predestined_snaps = [trajB[-1]]+ttraj['upper_in_out_in']
+        predestined_traj = [s.xyz[0][0] for s in predestined_snaps]
+        engine = CalvinistDynamics(predestined_traj)
+        sample = self.minus_nl2.extend_sample_from_trajectories(
+            sset, replica=-1, engine=engine, level='complex'
+        )
+
+        assert_equal(sample.ensemble(sample.trajectory), True)
+        assert_equal(sample.ensemble, self.minus_nl2)
+        assert_equal(sample.replica, -1)
+        assert_equal(len(sample.trajectory), 6)
+        expected = trajB + ttraj['upper_in_out_in']
+        for (t, b) in zip(sample.trajectory, expected):
+            assert_equal(t.xyz[0][0], b.xyz[0][0])
+
 
 # TODO: this whole class should become a single test in SeqEns
 class testSingleEnsembleSequentialEnsemble(EnsembleTest):
@@ -1731,6 +2470,258 @@ class testEnsembleSplit(EnsembleTest):
 
         sub_traj = ensembleAXA.find_last_subtrajectory(traj3)
         assert(traj3.subtrajectory_indices(sub_traj) == [2,3,4])
+
+class testVolumeCombinations(EnsembleTest):
+    def setup(self):
+        self.outA = paths.AllOutXEnsemble(vol1)
+        self.outB = paths.AllOutXEnsemble(~vol2)
+        self.outA.special_debug = True
+        self.outB.special_debug = True
+        self.partinA = paths.PartInXEnsemble(vol1)
+        self.partinB = paths.PartInXEnsemble(~vol2)
+        self.outA_or_outB = self.outA | self.outB
+        self.outA_and_outB = self.outA & self.outB
+        self.partinA_or_partinB = self.partinA | self.partinB
+        self.partinA_and_partinB = self.partinA & self.partinB
+        extras = build_trajdict(['babbc', 'ca', 'bcbba', 'abbc', 'cbba',
+                                 'abbcb', 'cbbab'], lower, upper)
+        for test in extras.keys():
+            extras[test] = make_1d_traj(coordinates=extras[test],
+                                       velocities=[1.0]*len(extras[test]))
+        self.local_ttraj = dict(ttraj)
+        self.local_ttraj.update(extras)
+
+    def _test_trusted(self, trajectory, function, results,
+                      cache_results=None, direction=+1, start_traj_len=1):
+        # Tests `trajectory` frame by frame in a forward direction for the
+        # `function`, expecting `results`. Additionally, can take the 
+
+        if cache_results is None:
+            cache_results = {}
+
+        # clear the caches before starting
+        for cache in cache_results.keys():
+            cache.__init__(direction=cache.direction)
+
+        for i in range(len(trajectory)-start_traj_len):
+            if direction > 0:
+                start = 0
+                end = start + (i+start_traj_len)
+            elif direction < 0:
+                end = len(trajectory)
+                start = end - (i+start_traj_len)
+            # test untrusted
+            assert_equal(function(trajectory[start:end]), results[i])
+            # test trusted
+            trusted_val = function(trajectory[start:end], trusted=True)
+            # print i, "["+str(start)+":"+str(end)+"]", trusted_val, results[i]
+            assert_equal(trusted_val, results[i])
+            for cache in cache_results.keys():
+                # TODO: this is currently very specific to the caches used
+                # by volumes ensembles. That should be generalized by
+                # allowing several different tags within contents.
+                # cache_results could {cache : {'content_key' : [values]}}
+                if cache_results[cache][i] is not None:
+                    #print "cache", cache_results.keys().index(cache),
+                    try:
+                        contents = cache.contents['previous']
+                    except KeyError:
+                        contents = None
+                    #print contents, cache_results[cache][i]
+
+                    assert_equal(cache.contents['previous'],
+                                 cache_results[cache][i])
+
+    def test_call_outA_or_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_or_outB, 
+            results=[True, True, True, True, False], 
+            cache_results={
+                self.outA._cache_call : [True, False, False, False, False],
+                self.outB._cache_call : [None, True, True, True, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_or_outB,
+            results=[True, True, True, True, False],
+            cache_results={
+                self.outA._cache_call : [True, True, True, True, False],
+                self.outB._cache_call : [None, None, None, None, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_cross'],
+            function=self.outA_or_outB,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_call : [False, False],
+                self.outB._cache_call : [True, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_in'],
+            function=self.outA_or_outB,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_call : [True, False],
+                self.outB._cache_call : [None, False]
+            }
+        )
+
+    def test_call_outA_and_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_and_outB,
+            results=[True, False, False, False, False],
+            cache_results={
+                # cache for A gets checked first: value of cache for B
+                # doesn't matter once cache for A is False (short-circuit)
+                self.outA._cache_call : [True, False, False, False, False],
+                self.outB._cache_call : [True, None, None, None, None]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_and_outB,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_call : [True, True, True, True, False],
+                self.outB._cache_call : [True, False, False, False, None]
+            }
+        )
+
+    def test_can_append_outA_or_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_or_outB.can_append, 
+            results=[True, True, True, True, False], 
+            cache_results={
+                self.outA._cache_can_append : [True, False, False, False, False],
+                self.outB._cache_can_append : [None, True, True, True, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, True, True, True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, True, False],
+                self.outB._cache_can_append : [None, None, None, None, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_cross'],
+            function=self.outA_or_outB.can_append,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_can_append : [False, False],
+                self.outB._cache_can_append : [True, False]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, False],
+                self.outB._cache_can_append : [None, False]
+            }
+        )
+
+    def test_call_start_from_later_frame(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_or_outB.can_append,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, False],
+                self.outB._cache_can_append : [None, None, None, False]
+            },
+            start_traj_len=2
+        )
+
+    def test_can_append_outA_and_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
+            function=self.outA_and_outB.can_append,
+            results=[True, False, False, False, False],
+            cache_results={
+                # cache for A gets checked first: value of cache for B
+                # doesn't matter once cache for A is False (short-circuit)
+                self.outA._cache_can_append : [True, False, False, False, False],
+                self.outB._cache_can_append : [True, None, None, None, None]
+            }
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_out_cross_out_out_in'],
+            function=self.outA_and_outB.can_append,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_append : [True, True, True, True, False],
+                self.outB._cache_can_append : [True, False, False, False, None]
+            }
+        )
+
+    def test_can_prepend_outA_or_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, True, False],
+                self.outB._cache_can_prepend : [None, None, None, False]
+            },
+            direction=-1
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_out_out_in'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [False, False, False, False],
+                self.outB._cache_can_prepend : [True, True, True, False]
+            },
+            direction=-1
+        )
+
+    def test_can_prepend_start_from_later_frame(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross'],
+            function=self.outA_or_outB.can_prepend,
+            results=[True, True, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, False],
+                self.outB._cache_can_prepend : [None, None, False]
+            },
+            direction=-1,
+            start_traj_len=2
+        )
+
+
+    def test_can_prepend_outA_and_outB(self):
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_in_out_out_cross_out'],
+            function=self.outA_and_outB.can_prepend,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, True, True, True, False],
+                self.outB._cache_can_prepend : [True, False, False, False, False]
+            },
+            direction=-1
+        )
+        self._test_trusted(
+            trajectory=self.local_ttraj['upper_cross_out_out_in_out'],
+            function=self.outA_and_outB.can_prepend,
+            results=[True, False, False, False, False],
+            cache_results={
+                self.outA._cache_can_prepend : [True, False, False, False, False],
+                self.outB._cache_can_prepend : [True, None, None, None, None]
+            },
+            direction=-1
+        )
+
 
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
