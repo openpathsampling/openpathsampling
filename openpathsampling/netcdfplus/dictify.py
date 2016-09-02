@@ -17,6 +17,8 @@ from base import StorableObject
 
 from openpathsampling.tools import word_wrap
 
+from cache import WeakValueCache
+
 __author__ = 'Jan-Hendrik Prinz'
 
 
@@ -105,7 +107,7 @@ class ObjectJSON(object):
                 return {
                     '_numpy': self.simplify(obj.shape),
                     '_dtype': str(obj.dtype),
-                    '_data': base64.b64encode(obj)
+                    '_data': base64.b64encode(obj.copy(order='C'))
                 }
             elif hasattr(obj, 'to_dict'):
                 # the object knows how to dismantle itself into a json string
@@ -545,3 +547,67 @@ class UUIDObjectJSON(ObjectJSON):
                 return result
 
         return super(UUIDObjectJSON, self).build(obj)
+
+
+class CachedUUIDObjectJSON(ObjectJSON):
+    def __init__(self, unit_system=None):
+        super(CachedUUIDObjectJSON, self).__init__(unit_system)
+        self.excluded_keys = ['json']
+        self.uuid_cache = WeakValueCache()
+
+    def simplify(self, obj, base_type=''):
+        if obj.__class__.__module__ != '__builtin__':
+            if hasattr(obj, 'to_dict'):
+                # the object knows how to dismantle itself into a json string
+                if obj.__uuid__ not in self.uuid_cache:
+                    self.uuid_cache[obj.__uuid__] = obj
+
+                    return {
+                        '_cls': obj.__class__.__name__,
+                        '_uuid': str(obj.__uuid__),
+                        '_dict': self.simplify(obj.to_dict(), base_type)}
+                else:
+                    return {
+                        '_uuid': str(obj.__uuid__)}
+
+        return super(CachedUUIDObjectJSON, self).simplify(obj, base_type)
+
+    def build(self, obj):
+        if type(obj) is dict:
+            if '_uuid' in obj:
+                uuid = UUID(obj['_uuid'])
+                if '_cls' in obj and '_dict' in obj:
+                    if obj['_cls'] not in self.class_list:
+                        self.update_class_list()
+                        if obj['_cls'] not in self.class_list:
+                            raise ValueError((
+                                                 'Cannot create obj of class `%s`.\n' +
+                                                 'Class is not registered as creatable! '
+                                                 'You might have to define\n' +
+                                                 'the class locally and call '
+                                                 '`update_storable_classes()` on your storage.') %
+                                             obj['_cls'])
+
+                    attributes = self.build(obj['_dict'])
+
+                    obj = self.class_list[obj['_cls']].from_dict(attributes)
+                    obj.__uuid__ = self.class_list[obj['_cls']].from_dict(attributes)
+                    self.uuid_cache[uuid] = obj
+                else:
+                    return self.uuid_cache.get(uuid)
+
+        return super(CachedUUIDObjectJSON, self).build(obj)
+
+    def to_json(self, obj, base_type=''):
+        # we need to clear the cache, since we have no idea, what the other end
+        # still knows. We can only cache stuff we are sending this time
+        self.uuid_cache.clear()
+        simplified = self.simplify(obj, base_type)
+        return json.dumps(simplified)
+
+    def from_json(self, json_string):
+        # here we keep the cache. It could happen that an object is sended in
+        # full, but we still have it and so we do not have to rebuild it which
+        # saves some time
+        simplified = yaml.load(json_string)
+        return self.build(simplified)

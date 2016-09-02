@@ -629,6 +629,56 @@ def attach_features(features, use_lazy_reversed=False):
             code.format("    self.{0} = {0}",          'variables', [], ['lazy', 'numpy'])
             code.format("    np.copyto(self.{0}, {0})",   'variables', ['numpy'], ['lazy'])
 
+        # compile the function for .to_dict()
+
+        # def to_dict(self):
+
+        with context.Function('to_dict') as code:
+            code += [
+                "def to_dict(self):",
+            ]
+            code += [
+                "    return {",
+            ]
+            if has_lazy:
+                code.format("       '{0}': self._lazy[cls.{0}],",        'lazy', [], ['numpy', 'exclude_copy'])
+
+            code.format("        '{0}': self.{0},",          'variables', [], ['lazy'])
+
+            code += [
+                "    }"
+            ]
+
+        # compile the function for .to_dict()
+
+        # def from_dict(self):
+
+        # with context.Function('from_dict') as code:
+        #     code += [
+        #         "def __init__(self%s):" % signature,
+        #     ]
+        #
+        #     code.add_uuid('self')
+        #
+        #     # dict for lazy attributes using DelayedLoader descriptor
+        #     if has_lazy:
+        #         code += [
+        #             "    self._lazy = {",
+        #         ]
+        #         code.format("       cls.{0} : {0},", 'lazy')
+        #         code += [
+        #             "    }"
+        #         ]
+        #
+        #     # set _reversed
+        #     code += [
+        #         "    self._reversed = None"
+        #     ]
+        #
+        #     # set non-lazy attributes
+        #     code.format("    self.{0} = {0}", 'variables', [], ['lazy'])
+
+
         # register (new) __features__ with the class as a namedtuple
         cls.__features__ = FeatureTuple(**__features__)
 
