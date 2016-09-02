@@ -1,6 +1,8 @@
 import math
 import pandas as pd
+import numpy as np
 from openpathsampling.engines.external_engine import ExternalEngine
+from openpathsampling.engines.toy import ToySnapshot
 import openpathsampling as paths
 
 # inspired by a question Gerhard Hummer asked at a Lorentz Center / ECAM
@@ -9,7 +11,7 @@ import openpathsampling as paths
 class CVFileEngine(ExternalEngine):
 
     _default_options = {
-        'engine_command': "a.out",
+        'path_to_engine': "a.out",
         'cv_names': []
     }
     def __init__(self, options=None):
@@ -41,14 +43,26 @@ class CVFileEngine(ExternalEngine):
             spatial_i = i % n_spatial
             self.cv[name] = paths.FunctionCV(name, lambda s: s.xyz[i])
 
+        self.velocities = np.zeros((n_atoms, n_spatial))  # HACK
+
     def trajectory_from_file(self, filename):
-        pass
+        df = pd.read_table(filename, delim_whitespace=True)
+        snaplist = [ToySnapshot(coordinates=df.iloc[i].values,
+                                velocities=self.velocities)
+                    for i in df.index]
+        return paths.Trajectory(snaplist)
 
     def read_frame_from_file(self, filename, frame_num):
-        pass
+        # not the most efficient, but a quick hack
+        df = pd.read_table(filename, delim_whitespace=True)
+        return ToySnapshot(coordinates=df.iloc[df.index[frame_num]],
+                           velocities=self.velocities)
 
     def write_frame_to_file(self, filename, snapshot, mode="a"):
-        pass
+        flattened = sum(snapshot.coordinates.to_list(), [])
+        df = pd.DataFrame(data=flattened)
+        df.to_csv(filename, sep=" ", header=False, index=False, mode=mode)
 
     def engine_command(self):
-        pass
+        return (self.path_to_engine + " " + str(self.input_file) + " > " +
+                self.output_file)
