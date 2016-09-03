@@ -12,10 +12,21 @@ class CVFileEngine(ExternalEngine):
 
     _default_options = {
         'path_to_engine': "a.out",
-        'cv_names': []
+        'cv_names': ['x'],
+        'n_frames_max' : 10000,
+        'name_prefix' : "test",
+        'default_sleep_ms' : 100,
+        'auto_optimize_sleep' : True,
+        'engine_sleep' : 100,
+        'engine_directory' : "",
+        'n_spatial' : 1,
+        'n_atoms' : 1
     }
     def __init__(self, options=None):
+
         # FUTURE: add `format` (csv, ssv, etc)
+        if options is None:
+            options = {}
         try:
             n_atoms = options['n_atoms']
         except KeyError:
@@ -30,31 +41,37 @@ class CVFileEngine(ExternalEngine):
             if len(cv_names) == 0:
                 n_spatial = 1
             else:
-                n_spatial = math.ceil(float(len(cv_names)) / n_atoms)
+                n_spatial = int(math.ceil(float(len(cv_names)) / n_atoms))
 
-        template = np.array([[0.0]*len(cv_name_list)])
-        if options is None:
-            options = {}
-        super(CVFileEngine, self).__init__(options=options, template)
-        self.cv = {}
-        for i in range(len(cv_names)):
-            name = cv_names[i]
-            atom_i = i / n_atoms
-            spatial_i = i % n_spatial
-            self.cv[name] = paths.FunctionCV(name, lambda s: s.xyz[i])
+        options['n_atoms'] = n_atoms
+        options['n_spatial'] = n_spatial
 
-        self.velocities = np.zeros((n_atoms, n_spatial))  # HACK
+        template = np.array([[0.0]*len(cv_names)])
+        super(CVFileEngine, self).__init__(options=options,
+                                           template=template)
+
+        cvs = [paths.FunctionCV(self.cv_names[i],
+                                lambda s: s.xyz.flatten()[i])
+               for i in range(len(self.cv_names))]
+        self.cv = {cv.name: cv for cv in cvs}
+
+        self.shape = (n_atoms, n_spatial)
+        self.velocities = np.zeros(self.shape)  # HACK
 
     def trajectory_from_file(self, filename):
-        df = pd.read_table(filename, delim_whitespace=True)
-        snaplist = [ToySnapshot(coordinates=df.iloc[i].values,
-                                velocities=self.velocities)
-                    for i in df.index]
+        df = pd.read_table(filename, delim_whitespace=True, header=None)
+        snaplist = [
+            ToySnapshot(
+                coordinates=df.iloc[i].values.reshape(self.shape),
+                velocities=self.velocities
+            )
+            for i in df.index
+        ]
         return paths.Trajectory(snaplist)
 
     def read_frame_from_file(self, filename, frame_num):
         # not the most efficient, but a quick hack
-        df = pd.read_table(filename, delim_whitespace=True)
+        df = pd.read_table(filename, delim_whitespace=True, header=None)
         return ToySnapshot(coordinates=df.iloc[df.index[frame_num]],
                            velocities=self.velocities)
 
