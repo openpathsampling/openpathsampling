@@ -33,33 +33,6 @@ class Storage(NetCDFPlus):
 
     USE_FEATURE_SNAPSHOTS = True
 
-    @property
-    def template(self):
-        """
-        Return the template snapshot from the storage
-
-        Returns
-        -------
-        openpathsampling.engines.BaseSnapshot
-            the initial snapshot
-        """
-        if self._template is None:
-            self._template = self.tag['template']
-
-        return self._template
-
-    @property
-    def n_atoms(self):
-        return self.topology.n_atoms
-
-    @property
-    def n_spatial(self):
-        return self.topology.n_spatial
-
-    @property
-    def topology(self):
-        return self.template.topology
-
     def __init__(
             self,
             filename,

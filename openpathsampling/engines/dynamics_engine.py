@@ -545,7 +545,7 @@ class DynamicsEngine(StorableNamedObject):
                 if direction > 0:
                     trajectory.append(snapshot)
                 elif direction < 0:
-                    trajectory.prepend(snapshot.reversed)
+                    trajectory.insert(0, snapshot.reversed)
 
                 if 0 < max_length < len(trajectory):
                     # hit the max length criterion
