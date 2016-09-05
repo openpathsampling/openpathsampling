@@ -398,8 +398,8 @@ def attach_features(features, use_lazy_reversed=False):
                 code += [
                     "    this._lazy = {",
                 ]
-                code.format("       cls.{0} : self._lazy['{0}'],",        'lazy', [], ['numpy', 'exclude_copy'])
-                code.format("       cls.{0} : self._lazy['{0}'].copy(),", 'lazy', ['numpy'], ['exclude_copy'])
+                code.format("       '{0}' : self._lazy['{0}'],",        'lazy', [], ['numpy', 'exclude_copy'])
+                code.format("       '{0}' : self._lazy['{0}'].copy(),", 'lazy', ['numpy'], ['exclude_copy'])
                 code += [
                     "    }"
                 ]
@@ -485,14 +485,7 @@ def attach_features(features, use_lazy_reversed=False):
                 code += [
                     "    this._lazy = {",
                 ]
-                code.format("       cls.{0} : self._lazy['{0}'],", 'lazy')
-
-                # This should not be necessary since we do not flip lazy loading OPS objects
-
-                # code.format("       cls.{0} : self._lazy[cls.{0}],", 'reversal', ['lazy'])
-                # code.format("       cls.{0} : - self._lazy[cls.{0}],", 'minus', ['lazy'])
-                # code.format("       cls.{0} : not self._lazy[cls.{0}],", 'flip', ['lazy'])
-
+                code.format("       '{0}' : self._lazy['{0}'],", 'lazy')
                 code += [
                     "    }"
                 ]
