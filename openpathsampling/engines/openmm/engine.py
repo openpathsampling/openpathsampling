@@ -271,8 +271,8 @@ class OpenMMEngine(DynamicsEngine):
 
     @classmethod
     def from_dict(cls, dct):
-        system_xml = dct['system_xml']
-        integrator_xml = dct['integrator_xml']
+        system_xml = str(dct['system_xml'])
+        integrator_xml = str(dct['integrator_xml'])
         topology = dct['topology']
         options = dct['options']
         properties = dct['properties']

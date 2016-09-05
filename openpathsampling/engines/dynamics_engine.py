@@ -237,6 +237,9 @@ class DynamicsEngine(StorableNamedObject):
                         okay_options[variable] = my_options[variable]
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
+                    elif type(default_value) is str and \
+                            type(my_options[variable]) is unicode:
+                        okay_options[variable] = my_options[variable]
                     else:
                         raise ValueError(
                             'Type of option "' + str(variable) + '" (' +
@@ -271,22 +274,25 @@ class DynamicsEngine(StorableNamedObject):
             # raise AttributeError("Something went wrong with " + str(item))
 
         # see, if the attribute is actually a dimension
-        if self.descriptor is not None:
-            if item in self.descriptor.dimensions:
-                return self.descriptor.dimensions[item]
+        if hasattr(self, 'descriptor'):
+            if self.descriptor is not None:
+                if item in self.descriptor.dimensions:
+                    return self.descriptor.dimensions[item]
 
-        # fallback is to look for an option and return it's value
-        try:
-            return self.options[item]
-        except KeyError:
-            # convert KeyError to AttributeError
-            default_msg = "'{0}' has no attribute '{1}'"
-            raise AttributeError(
-                (default_msg + ", nor does its options dictionary").format(
-                    self.__class__.__name__,
-                    item
+            # fallback is to look for an option and return it's value
+            try:
+                return self.options[item]
+            except KeyError:
+                # convert KeyError to AttributeError
+                default_msg = "'{0}' has no attribute '{1}'"
+                raise AttributeError(
+                    (default_msg + ", nor does its options dictionary").format(
+                        self.__class__.__name__,
+                        item
+                    )
                 )
-            )
+        else:
+            raise AttributeError(item)
 
     @property
     def dimensions(self):

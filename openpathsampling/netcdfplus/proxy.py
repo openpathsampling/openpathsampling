@@ -91,15 +91,31 @@ class LoaderProxy(object):
                     self._idx)
 
 
+_delayed_loader_instances = {}
+
+
+def get_delayed_loader(name):
+    # if name not in _delayed_loader_instances:
+    #     _delayed_loader_instances[name] =  DelayedLoader()
+    #
+    # return _delayed_loader_instances[name]
+
+    return DelayedLoader(name)
+
+
 class DelayedLoader(object):
     """
     Descriptor class to handle proxy objects in attributes
 
     If a proxy is stored in an attribute then the full object will be returned
     """
+
+    def __init__(self, name):
+        self.name = name
+
     def __get__(self, instance, owner):
         if instance is not None:
-            obj = instance._lazy[self]
+            obj = instance._lazy[self.name]
             if hasattr(obj, '_idx'):
                 return obj.__subject__
             else:
@@ -108,15 +124,7 @@ class DelayedLoader(object):
             return self
 
     def __set__(self, instance, value):
-
-        # print instance.__class__.__name__
-        # print instance.__dict__.keys()
-        # print instance.__class__.__dict__.keys()
-        # print instance.__class__.__features__
-
-        # print hasattr(instance, '_lazy')
-
-        instance._lazy[self] = value
+        instance._lazy[self.name] = value
 
 
 def lazy_loading_attributes(*attributes):
@@ -152,7 +160,7 @@ def lazy_loading_attributes(*attributes):
     """
     def _decorator(cls):
         for attr in attributes:
-            setattr(cls, attr, DelayedLoader())
+            setattr(cls, attr, get_delayed_loader(attr))
 
         _super_init = cls.__init__
 

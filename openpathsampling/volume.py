@@ -251,12 +251,12 @@ class CVDefinedVolume(Volume):
         try:
             self.lambda_min = lambda_min.__float__()
         except AttributeError:
-            self.lambda_min = float(lambda_min)
+            self.lambda_min = float(str(lambda_min))
 
         try:
             self.lambda_max = lambda_max.__float__()
         except AttributeError:
-            self.lambda_max = float(lambda_max)
+            self.lambda_max = float(str(lambda_max))
 
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.

@@ -1,7 +1,7 @@
 import logging
 import weakref
 
-import yaml
+import ujson
 from uuid import UUID
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
@@ -945,7 +945,7 @@ class ObjectStore(StorableNamedObject):
         """
 
         if idx not in self.cache:
-            simplified = yaml.load(json)
+            simplified = ujson.loads(json)
             obj = self.simplifier.build(simplified)
 
             self._get_id(idx, obj)

@@ -1,4 +1,4 @@
-from openpathsampling.netcdfplus import DelayedLoader
+from openpathsampling.netcdfplus import get_delayed_loader
 from numpydoctools import NumpyDocTools
 import openpathsampling as paths
 
@@ -255,7 +255,7 @@ def attach_features(features, use_lazy_reversed=False):
             feat_no += 1
 
         if use_lazy_reversed:
-            cls._reversed = DelayedLoader()
+            cls._reversed = get_delayed_loader('_reversed')
 
         origin = dict()
         copy_fncs = list()
@@ -347,7 +347,10 @@ def attach_features(features, use_lazy_reversed=False):
 
         # add descriptors that can handle lazy loaded objects
         for attr in __features__['lazy']:
-            setattr(cls, attr, DelayedLoader())
+            dl = get_delayed_loader(attr)
+            logger.info('Register `%s` in cls `%s` [%s]' % (
+                attr, cls.__name__, hex(id(dl))))
+            setattr(cls, attr, dl)
 
         # update the docstring to be a union of docstrings from the class
         # and the features
@@ -395,8 +398,8 @@ def attach_features(features, use_lazy_reversed=False):
                 code += [
                     "    this._lazy = {",
                 ]
-                code.format("       cls.{0} : self._lazy[cls.{0}],",        'lazy', [], ['numpy', 'exclude_copy'])
-                code.format("       cls.{0} : self._lazy[cls.{0}].copy(),", 'lazy', ['numpy'], ['exclude_copy'])
+                code.format("       cls.{0} : self._lazy['{0}'],",        'lazy', [], ['numpy', 'exclude_copy'])
+                code.format("       cls.{0} : self._lazy['{0}'].copy(),", 'lazy', ['numpy'], ['exclude_copy'])
                 code += [
                     "    }"
                 ]
@@ -441,8 +444,8 @@ def attach_features(features, use_lazy_reversed=False):
                 code += [
                     "    target._lazy = {",
                 ]
-                code.format("       cls.{0} : self._lazy[cls.{0}],",        'lazy', [], ['numpy', 'exclude_copy'])
-                code.format("       cls.{0} : self._lazy[cls.{0}].copy(),", 'lazy', ['numpy'], ['exclude_copy'])
+                code.format("       cls.{0} : self._lazy['{0}'],",        'lazy', [], ['numpy', 'exclude_copy'])
+                code.format("       cls.{0} : self._lazy['{0}'].copy(),", 'lazy', ['numpy'], ['exclude_copy'])
                 code += [
                     "    }"
                 ]
@@ -482,7 +485,7 @@ def attach_features(features, use_lazy_reversed=False):
                 code += [
                     "    this._lazy = {",
                 ]
-                code.format("       cls.{0} : self._lazy[cls.{0}],", 'lazy')
+                code.format("       cls.{0} : self._lazy['{0}'],", 'lazy')
 
                 # This should not be necessary since we do not flip lazy loading OPS objects
 
@@ -561,15 +564,20 @@ def attach_features(features, use_lazy_reversed=False):
 
             code.add_uuid('self')
 
+            code += [
+                "    assert(cls is self.__class__)",
+            ]
+
             # dict for lazy attributes using DelayedLoader descriptor
             if has_lazy:
                 code += [
                     "    self._lazy = {",
                 ]
-                code.format("       cls.{0} : {0},", 'lazy')
+                code.format("       '{0}' : {0},", 'lazy')
                 code += [
                     "    }"
                 ]
+                # code.format("    self.{0} = {0}", 'lazy')
 
             # set _reversed
             code += [
@@ -616,8 +624,8 @@ def attach_features(features, use_lazy_reversed=False):
                 code += [
                     "    self._lazy = {",
                 ]
-                code.format("       cls.{0} : {0},",        'lazy', [], ['numpy'])
-                code.format("       cls.{0} : {0}.copy(),", 'lazy', ['numpy'], [])
+                code.format("       '{0}' : {0},",        'lazy', [], ['numpy'])
+                code.format("       '{0}' : {0}.copy(),", 'lazy', ['numpy'], [])
                 code += [
                     "    }"
                 ]
@@ -640,44 +648,25 @@ def attach_features(features, use_lazy_reversed=False):
             code += [
                 "    return {",
             ]
-            if has_lazy:
-                code.format("       '{0}': self._lazy[cls.{0}],",        'lazy', [], ['numpy', 'exclude_copy'])
-
-            code.format("        '{0}': self.{0},",          'variables', [], ['lazy'])
-
+            code.format("        '{0}': self.{0},",          'variables', [], [])
             code += [
                 "    }"
             ]
 
-        # compile the function for .to_dict()
+        # compile the function for .from_dict()
 
         # def from_dict(self):
 
-        # with context.Function('from_dict') as code:
-        #     code += [
-        #         "def __init__(self%s):" % signature,
-        #     ]
-        #
-        #     code.add_uuid('self')
-        #
-        #     # dict for lazy attributes using DelayedLoader descriptor
-        #     if has_lazy:
-        #         code += [
-        #             "    self._lazy = {",
-        #         ]
-        #         code.format("       cls.{0} : {0},", 'lazy')
-        #         code += [
-        #             "    }"
-        #         ]
-        #
-        #     # set _reversed
-        #     code += [
-        #         "    self._reversed = None"
-        #     ]
-        #
-        #     # set non-lazy attributes
-        #     code.format("    self.{0} = {0}", 'variables', [], ['lazy'])
-
+        with context.Function('from_dict') as code:
+            code += [
+                "@classmethod",
+                "def from_dict(cls, dct):",
+                "    return cls(",
+            ]
+            code.format("        {0}=dct['{0}'],",          'variables', [], [])
+            code += [
+                "    )"
+            ]
 
         # register (new) __features__ with the class as a namedtuple
         cls.__features__ = FeatureTuple(**__features__)
