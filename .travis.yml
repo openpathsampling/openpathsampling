@@ -18,6 +18,7 @@ script:
   - echo travis_fold:end:conda.build.package
 
   # Run tests in _test environment
+  - conda info --envs
   - source activate _t_env
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
