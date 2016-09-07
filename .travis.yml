@@ -18,8 +18,10 @@ script:
   - echo travis_fold:end:conda.build.package
 
   # Run tests in _test environment
+  - conda create --name test
   - conda info --envs
-  - source activate _t_env
+  - source activate test
+  - conda install --use-local openpathsampling-dev
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
