@@ -645,5 +645,6 @@ class CachedUUIDObjectJSON(ObjectJSON):
         # here we keep the cache. It could happen that an object is sended in
         # full, but we still have it and so we do not have to rebuild it which
         # saves some time
+        # self.uuid_cache.clear()
         simplified = ujson.loads(json_string)
         return self.build(simplified)

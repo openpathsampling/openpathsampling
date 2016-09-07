@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def _snapshot_function_overridden(cls, method):
     """
-    check if in a snapshot class a method was overridden by the user in any (super-)class
+    check if in a method was overridden by the user in any (super-)class
 
     Used to prevent the decorator from overriding user set functions
 
@@ -31,7 +31,7 @@ def _snapshot_function_overridden(cls, method):
 
     if hasattr(paths.BaseSnapshot, method):
         fnc = getattr(cls, method)
-        # if the method is present in BaseSnapshot it does not count as overridden
+        # if method is present in BaseSnapshot it does not count as overridden
         return not (fnc.im_func is getattr(paths.BaseSnapshot, method).im_func)
     elif method in cls.__dict__:
         return True
@@ -52,11 +52,14 @@ def _register_function(cls, name, code, __features__):
         exec cc in locals()
 
         if name not in cls.__dict__:
-            if hasattr(cls, '__features__') and cls.__features__.debug[name] is None:
+            if hasattr(cls, '__features__') and \
+                    cls.__features__.debug[name] is None:
                 raise RuntimeWarning((
-                    'Subclassing snapshots with overridden function "%s" is only possible if this '
-                    'function is overridden again, otherwise some features might not be copied. '
-                    'The general practise of overriding is not recommended.') % name)
+                    'Subclassing snapshots with overridden function "%s" is '
+                    'only possible if this function is overridden again, '
+                    'otherwise some features might not be copied. '
+                    'The general practise of overriding is not '
+                    'recommended.') % name)
 
             setattr(cls, name, locals()[name])
 
@@ -64,15 +67,16 @@ def _register_function(cls, name, code, __features__):
 
         else:
             logger.debug(
-                'Function "%s" for class "%s" exists and will not be overridden' %
+                'Function "%s" for class "%s" exists and is not overridden' %
                 (name, cls.__name__)
             )
 
             __features__['debug'][name] = None
 
     except RuntimeError as e:
-        logger.warn(
-            'Problems compiling function "%s" for class "%s". Implementation will not be available!' %
+        logger.warn((
+            'Problems compiling function "%s" for class "%s". '
+            'Implementation will not be available!') %
             (name, cls.__name__)
         )
         pass
@@ -125,6 +129,7 @@ class CodeFunction(list):
                 "    {0}.__uuid__ = {0}.get_uuid()".format(name)
             ]
 
+
 class CodeContext(object):
     def __init__(self, cls, __features__, use_uuid=True):
         self.cls = cls
@@ -137,8 +142,8 @@ class CodeContext(object):
 
 FeatureTuple = namedtuple(
         'FeatureTuple', 'classes variables properties functions required lazy ' +
-                        'numpy reversal minus flip exclude_copy imports debug storables ' +
-                        'dimensions'
+                        'numpy reversal minus flip exclude_copy imports '
+                        'debug storables dimensions'
     )
 
 

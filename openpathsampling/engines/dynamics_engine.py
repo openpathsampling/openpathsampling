@@ -10,7 +10,7 @@ import sys
 
 import simtk.unit as u
 
-from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
 from snapshot import BaseSnapshot
 from trajectory import Trajectory
@@ -462,6 +462,8 @@ class DynamicsEngine(StorableNamedObject):
 
         final_error = None
         errors = []
+
+        # logger.info('USING SYSTEM INSTANCE `%s`' % StorableObject.INSTANCE_UUID)
 
         while not valid and final_error is None:
             if attempt_nan + attempt_error > 1:
