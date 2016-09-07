@@ -18,7 +18,7 @@ script:
   - echo travis_fold:end:conda.build.package
 
   # Run tests in _test environment
-  - conda create --name test --use-local openpathsampling-dev
+  - conda create --yes --name test --use-local openpathsampling-dev
   - conda info --envs
   - source activate test
   # - conda install --use-local openpathsampling-dev
