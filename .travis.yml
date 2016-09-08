@@ -21,7 +21,7 @@ script:
   - conda create --yes --name test --use-local openpathsampling-dev
   - conda info --envs
   - source activate test
-  - conda install jupyter
+  - conda install --yes jupyter
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
