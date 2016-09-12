@@ -109,7 +109,11 @@ class RandomVelocities(SnapshotModifier):
         new_snap = snapshot.copy()
 
         vel_subset = self.extract_subset(new_snap.velocities)
-        masses = self.extract_subset(snapshot.topology.masses)
+
+        # raises AttributeError if snapshot doesn't support masses feature
+        all_masses = snapshot.masses
+
+        masses = self.extract_subset(all_masses)
         n_spatial = len(vel_subset[0])
         n_atoms = len(vel_subset)
         for atom_i in range(n_atoms):
