@@ -1,10 +1,12 @@
+import simtk.unit as u
+
 @property
-def masses(snapshot):
+def masses_per_mole(snapshot):
     """
     Returns
     -------
-    masses : list of length n_atoms
-        atomic masses (with simtk.unit attached)
+    masses_per_mole : list of simtk.unit.Quantity with length n_atoms
+        atomic masses (with simtk.unit attached) in units of mass/mole
     """
     try:
         simulation = snapshot.engine.simulation
@@ -13,12 +15,23 @@ def masses(snapshot):
         # probably)
         ops_topology = snapshot.topology
         topology = ops_topology.mdtraj.to_openmm()
-        masses = [a.element.mass for a in topology.atoms()]
-        return masses
+        masses_per_mole = [a.element.mass for a in topology.atoms()]
     else:
         # standard case from simulation
         system = simulation.context.getSystem()
         n_particles = system.getNumParticles()
-        masses = [system.getParticleMass(i)
+        masses_per_mole = [system.getParticleMass(i)
                   for i in range(system.getNumParticles())]
-        return masses
+    return masses_per_mole
+
+@property
+def masses(snapshot):
+    """
+    Returns
+    -------
+    masses : list of simtk.unit.Quantity with length n_atoms
+        atomic masses (with simtk.unit attached) in units of mass
+    """
+    masses_per_mole = snapshot.masses_per_mole
+    masses = [m / u.AVOGADRO_CONSTANT_NA for m in masses_per_mole]
+    return masses

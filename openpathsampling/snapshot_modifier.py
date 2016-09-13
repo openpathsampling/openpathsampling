@@ -98,15 +98,17 @@ class RandomVelocities(SnapshotModifier):
     Parameters
     ----------
     beta : float
-        Inverse temperature in units of inverse velocity squared [also known
-        as 1.0/(k_B * T)].
+        inverse temperature (in units of kB) for the distribution; 
     """
-    def __init__(self, subset_mask=None, beta=None):
+    def __init__(self, beta, subset_mask=None):
         super(RandomVelocities, self).__init__(subset_mask)
         self.beta = beta
 
     def __call__(self, snapshot):
         new_snap = snapshot.copy()
+        # TODO: this needs to happen in such a way that the kinetics
+        # container is a different object in OpenMM snapshots -- but without
+        # breaking toy snapshots
 
         vel_subset = self.extract_subset(new_snap.velocities)
 
@@ -121,3 +123,4 @@ class RandomVelocities(SnapshotModifier):
             vel_subset[atom_i] = sigma * np.random.normal(size=n_spatial)
         self.apply_to_subset(new_snap.velocities, vel_subset)
         return new_snap
+
