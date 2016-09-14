@@ -48,6 +48,10 @@ def velocities(self):
 
 @velocities.setter
 def velocities(self, value):
-    kc = KineticContainer(velocities=value)
+    if value is not None:
+        kc = KineticContainer(velocities=value)
+    else:
+        kc = None
+
     self.is_reversed = False
     self.kinetics = kc
