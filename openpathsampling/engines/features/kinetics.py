@@ -1,4 +1,4 @@
-from shared import KineticContainerStore
+from shared import KineticContainerStore, KineticContainer
 from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['kinetics', 'is_reversed']
@@ -44,3 +44,10 @@ def velocities(self):
             return self.kinetics.velocities
 
     return None
+
+
+@velocities.setter
+def velocities(self, value):
+    kc = KineticContainer(velocities=value)
+    self.is_reversed = False
+    self.kinetics = kc
