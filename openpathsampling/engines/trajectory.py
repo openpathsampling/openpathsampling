@@ -99,18 +99,6 @@ class Trajectory(list, StorableObject):
 
         return Trajectory([snap for snap in reversed(self)])
 
-    def prepend(self, snapshot):
-        """
-        Prepend a snapshot
-
-        Just convenience method to replace insert(0, snapshot)
-        """
-        self.insert(0, snapshot)
-        # And a generation of scientist-programmers who grew up learning
-        # "OPS trajectories are just Python lists" scream in pain when they
-        # find this after googling "python list.prepend not working".
-        # (Blame JHP. This was his doing.) ;)
-
     @property
     def n_snapshots(self):
         """
@@ -126,24 +114,7 @@ class Trajectory(list, StorableObject):
 
         See also
         --------
-        n_frames, len
-
-        """
-
-        return len(self)
-
-    @property
-    def n_frames(self):
-        """
-        Return the number of frames in the trajectory.
-
-        Returns
-        -------
-        length (int) - the number of frames in the trajectory
-
-        See also
-        --------
-        n_snapshots, len
+        len
 
         """
 
@@ -211,36 +182,6 @@ class Trajectory(list, StorableObject):
 
         else:
             return []
-
-    @property
-    def n_spatial(self):
-        if self.topology is None:
-            n_spatial = self[0].coordinates.shape[1]
-        else:
-            n_spatial = self.topology.n_spatial
-
-        return n_spatial
-
-    @property
-    def n_atoms(self):
-        """
-        Return the number of atoms in the trajectory in the current view. 
-        
-        Returns
-        -------        
-        n_atoms : int
-            number of atoms
-
-        Notes
-        -----        
-        If a trajectory has been subsetted then this returns only the number
-        of the view otherwise if equals the number of atoms in the snapshots
-        stored
-        
-        """
-
-        n_atoms = self[0].xyz.shape[0]
-        return n_atoms
 
     # ==========================================================================
     # LIST INHERITANCE FUNCTIONS

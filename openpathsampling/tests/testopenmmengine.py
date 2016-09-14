@@ -208,7 +208,7 @@ class testOpenMMEngine(object):
         # since we shoot, we start with a shorter trajectory
         assert(len(change.samples[0].trajectory) < len(init_traj))
 
-        newsamp = init_samp + change
+        newsamp = init_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
 
         # make sure there is no change!
@@ -240,7 +240,7 @@ class testOpenMMEngine(object):
         assert_equal(
             len(change.samples[0].trajectory), self.engine.n_frames_max)
 
-        newsamp = init_samp + change
+        newsamp = init_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
 
         # make sure there is no change!
