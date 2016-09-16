@@ -20,6 +20,7 @@ Documentation
     guides/index
     whatsnew
     faq
+    developers/index
 
 API Reference
 -------------
