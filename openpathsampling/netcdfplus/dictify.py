@@ -638,13 +638,11 @@ class CachedUUIDObjectJSON(ObjectJSON):
         # we need to clear the cache, since we have no idea, what the other end
         # still knows. We can only cache stuff we are sending this time
         self.uuid_cache.clear()
-        simplified = self.simplify(obj, base_type)
-        return ujson.dumps(simplified)
+        return super(CachedUUIDObjectJSON, self).to_json(obj, base_type)
 
-    def from_json(self, json_string):
-        # here we keep the cache. It could happen that an object is sended in
-        # full, but we still have it and so we do not have to rebuild it which
-        # saves some time
-        # self.uuid_cache.clear()
-        simplified = ujson.loads(json_string)
-        return self.build(simplified)
+    # def from_json(self, json_string):
+    #     # here we keep the cache. It could happen that an object is sended in
+    #     # full, but we still have it and so we do not have to rebuild it which
+    #     # saves some time
+    #     simplified = ujson.loads(json_string)
+    #     return self.build(simplified)

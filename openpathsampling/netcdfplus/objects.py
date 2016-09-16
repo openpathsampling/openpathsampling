@@ -1,7 +1,4 @@
 import logging
-import weakref
-
-import ujson
 from uuid import UUID
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
@@ -945,8 +942,7 @@ class ObjectStore(StorableNamedObject):
         """
 
         if idx not in self.cache:
-            simplified = ujson.loads(json)
-            obj = self.simplifier.build(simplified)
+            obj = self.simplifier.from_json(json)
 
             self._get_id(idx, obj)
 
