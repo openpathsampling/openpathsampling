@@ -1,16 +1,16 @@
-import logging
 from uuid import UUID
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from proxy import LoaderProxy
 from base import StorableNamedObject, StorableObject
 
+from weakref import WeakKeyDictionary, WeakValueDictionary
 from collections import OrderedDict
+
+import logging
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
-
-from weakref import WeakKeyDictionary, WeakValueDictionary
 
 
 class UUIDDict(OrderedDict):
