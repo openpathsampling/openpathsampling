@@ -18,7 +18,10 @@ script:
   - echo travis_fold:end:conda.build.package
 
   # Run tests in _test environment
-  - source activate _t_env
+  - conda create --yes --name test --use-local openpathsampling-dev
+  - conda info --envs
+  - source activate test
+  - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma ipynbtest
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh

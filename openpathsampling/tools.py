@@ -2,31 +2,37 @@ import sys
 
 __author__ = 'Jan-Hendrik Prinz'
 
-import IPython.display
-import IPython.terminal.interactiveshell
-import ipykernel.zmqshell
 
+try:
+    import IPython
+    import IPython.display
 
-def in_ipynb():
-    try:
-        ipython = get_ipython()
+    def in_ipynb():
+        try:
+            ipython = get_ipython()
 
-        if isinstance(ipython, IPython.terminal.interactiveshell.TerminalInteractiveShell):
-            # we are running inside an IPYTHON console
+            import IPython.terminal.interactiveshell
+            import ipykernel.zmqshell
+
+            if isinstance(ipython, IPython.terminal.interactiveshell.TerminalInteractiveShell):
+                # we are running inside an IPYTHON console
+                return False
+            elif isinstance(ipython, ipykernel.zmqshell.ZMQInteractiveShell):
+                # we run in an IPYTHON notebook
+                return True
+            else:
+                return False
+        except NameError:
+            # No IPYTHON
             return False
-        elif isinstance(ipython, ipykernel.zmqshell.ZMQInteractiveShell):
-            # we run in an IPYTHON notebook
-            return True
-        else:
+        except:
+            # No idea, but we should not fail because of that
             return False
-    except NameError:
-        # No IPYTHON
-        return False
-    except:
-        # No idea, but we should not fail because of that
-        return False
 
-is_ipynb = in_ipynb()
+    is_ipynb = in_ipynb()
+
+except ImportError:
+    is_ipynb = False
 
 
 def refresh_output(output_str, print_anyway=True, refresh=True,
