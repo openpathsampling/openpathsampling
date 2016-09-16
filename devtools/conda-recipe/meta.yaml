@@ -29,6 +29,7 @@ requirements:
     - svgwrite
     - networkx
     - matplotlib
+    - ujson
 
 test:
   requires:

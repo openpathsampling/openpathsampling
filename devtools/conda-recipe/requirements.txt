@@ -10,3 +10,4 @@ mdtraj
 svgwrite
 networkx
 matplotlib
+ujson
