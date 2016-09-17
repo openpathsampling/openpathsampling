@@ -9,4 +9,5 @@ pyyaml
 mdtraj
 svgwrite
 networkx
+pyqt=4
 matplotlib
