@@ -32,10 +32,6 @@ requirements:
     - matplotlib
 
 test:
-  requires:
-    - msmbuilder
-    - pyemma
-
   imports:
     - openpathsampling
 
