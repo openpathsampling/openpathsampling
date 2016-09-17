@@ -35,7 +35,7 @@ test:
   requires:
     - nose
     - nose-timer
-    - python-coveralls
+    - python-coveralls  # [not win]
     - msmbuilder
     - pyemma
     - ipynbtest
