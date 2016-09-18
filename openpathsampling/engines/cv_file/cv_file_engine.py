@@ -5,7 +5,7 @@ from openpathsampling.engines.external_engine import ExternalEngine
 from openpathsampling.engines.toy import ToySnapshot
 import openpathsampling as paths
 
-# inspired by a question Gerhard Hummer asked at a Lorentz Center / ECAM
+# inspired by a question Gerhard Hummer asked at a Lorentz Center / E-CAM
 # state of the art meeting.
 
 class CVFileEngine(ExternalEngine):
@@ -50,8 +50,10 @@ class CVFileEngine(ExternalEngine):
         super(CVFileEngine, self).__init__(options=options,
                                            template=template)
 
+        # explanation for the strange i=i is because lambdas are annoying
+        # when defined in loops: http://stackoverflow.com/questions/938429
         cvs = [paths.FunctionCV(self.cv_names[i],
-                                lambda s: s.xyz.flatten()[i])
+                                lambda s, i=i: s.xyz.flatten()[i])
                for i in range(len(self.cv_names))]
         self.cv = {cv.name: cv for cv in cvs}
 
