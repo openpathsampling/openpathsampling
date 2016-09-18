@@ -306,23 +306,23 @@ class DynamicsEngine(StorableNamedObject):
         default_options.update(self._default_options)
         return default_options
 
-    def strip_units(self, item):
-        """Remove units and set in the standard unit set for this engine.
+    # def strip_units(self, item):
+        # """Remove units and set in the standard unit set for this engine.
 
-        Each engine needs to know how to do its own unit system. The default
-        assumes there is no unit system.
+        # Each engine needs to know how to do its own unit system. The default
+        # assumes there is no unit system.
 
-        Parameters
-        ----------
-        item : object with units
-            the input with units
+        # Parameters
+        # ----------
+        # item : object with units
+            # the input with units
 
-        Returns
-        -------
-        float or iterable
-            the result without units, in the engine's specific unit system
-        """
-        return item
+        # Returns
+        # -------
+        # float or iterable
+            # the result without units, in the engine's specific unit system
+        # """
+        # return item
 
     def start(self, snapshot=None):
         if snapshot is not None:
