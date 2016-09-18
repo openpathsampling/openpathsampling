@@ -33,14 +33,6 @@ requirements:
     - ujson
 
 test:
-  requires:
-    - nose
-    - nose-timer
-    - python-coveralls
-    - msmbuilder
-    - pyemma
-    - ipynbtest
-
   imports:
     - openpathsampling
 
