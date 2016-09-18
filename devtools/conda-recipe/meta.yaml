@@ -30,6 +30,7 @@ requirements:
     - networkx
     - pyqt 4*
     - matplotlib
+    - ujson
 
 test:
   requires:
