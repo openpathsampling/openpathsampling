@@ -945,8 +945,7 @@ class ObjectStore(StorableNamedObject):
         """
 
         if idx not in self.cache:
-            simplified = yaml.load(json)
-            obj = self.simplifier.build(simplified)
+            obj = self.simplifier.from_json(json)
 
             self._get_id(idx, obj)
 

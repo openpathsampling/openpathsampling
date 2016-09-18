@@ -3,7 +3,7 @@ import svgwrite as svg
 from svgwrite.container import Group
 import openpathsampling as paths
 
-import json
+import ujson
 from collections import namedtuple, OrderedDict, Counter
 
 
@@ -94,7 +94,7 @@ class TreeRenderer(svg.Drawing):
             adds = {}
 
         if data is not None:
-            group.set_desc(desc=json.dumps(data))
+            group.set_desc(desc=ujson.dumps(data))
 
         group.add(self.rect(
             insert=self.xy(x - 0.5 + padding, y - 0.3),
