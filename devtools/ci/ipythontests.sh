@@ -22,6 +22,7 @@ date
 # skip toy_mistis_2_flux: not needed
 ipynbtest.py "toy_mistis_3_analysis.ipynb" || testfail=1
 date
+cd ../ipython
 ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
 date
 #ipynbtest.py "alanine.ipynb" || testfail=1
