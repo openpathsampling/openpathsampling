@@ -18,7 +18,7 @@ then run replica exchange multiple state transition interface sampling.
     steps and store the results. 
 
 - [`AD_mstis_3_restart.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_mstis/AD_mstis_3_restart.ipynb)
-    [Part 3] (Optional) This open the current production file and will run
+    [Part 3; Optional] This open the current production file and will run
     and append more steps.
 
 - [`AD_mstis_4_analysis.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_mstis/AD_mstis_4_analysis.ipynb)

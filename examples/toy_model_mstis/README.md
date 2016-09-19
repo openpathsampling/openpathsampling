@@ -4,7 +4,7 @@ This example illustrates the use of OpenPathSampling for Multiple State
 Transition Interface Sampling in a 2D toy potential with 3 states and using
 a simple Langevin integrator.
 
-- [`toy_mstis_1_bootstrap.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/toy_model_mstis/toy_mstis_1_bootstrap.ipynb)
+- [`toy_mstis_1_setup.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/toy_model_mstis/toy_mstis_1_setup.ipynb)
     [Part 1] Setup the system and create initial pathways to be used in
     later parts. Contains an example on how to use bootstrapping.
 - [`toy_mstis_2_run.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/toy_model_mstis/.ipynb)
