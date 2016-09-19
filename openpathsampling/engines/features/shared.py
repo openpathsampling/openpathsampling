@@ -43,23 +43,19 @@ class StaticContainer(StorableObject):
         self.coordinates = copy.deepcopy(coordinates)
         self.box_vectors = copy.deepcopy(box_vectors)
 
-        if self.coordinates is not None:
-            # Check for nans in coordinates, and raise an exception if
-            # something is wrong.
-            if type(self.coordinates) is u.Quantity:
-                coords = self.coordinates._value
-            else:
-                coords = self.coordinates
-
-            if np.any(np.isnan(coords)):
-                try:
-                    import pandas as pd
-                except ImportError:
-                    df=""
-                else:
-                    df=str(pd.Dataframe(coords)) + "\n"
-                raise ValueError(df + "Some coordinates became 'nan'; " +
-                                 "simulation is unstable or buggy.")
+        # if self.coordinates is not None:
+        #     # Check for nans in coordinates, and raise an exception if
+        #     # something is wrong.
+        #     if type(self.coordinates) is u.Quantity:
+        #         coords = self.coordinates._value
+        #     else:
+        #         coords = self.coordinates
+        #
+        #     if np.any(np.isnan(coords)):
+        #         bad_atoms = [i for i in range(len(coords))
+        #                      if np.any(np.isnan(coords[i]))]
+        #         raise ValueError("Coordinates went 'nan' for atoms: " +
+        #                          str(bad_atoms))
 
         return
 

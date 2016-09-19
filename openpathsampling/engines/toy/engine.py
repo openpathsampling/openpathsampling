@@ -15,7 +15,7 @@ class ToyEngine(DynamicsEngine):
 
     base_snapshot_type = Snapshot
 
-    default_options = {
+    _default_options = {
         'integ': None,
         'n_frames_max': 5000,
         'n_steps_per_frame': 10

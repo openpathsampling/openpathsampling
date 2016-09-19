@@ -7,23 +7,15 @@ from openpathsampling.engines import Topology
 
 
 class MDTrajTopology(Topology):
-    def __init__(self, mdtraj_topology, subsets=None):
+    def __init__(self, mdtraj_topology):
         super(MDTrajTopology, self).__init__(int(mdtraj_topology.n_atoms), 3)
-        self.md = mdtraj_topology
-        if subsets is None:
-            self.subsets = {}
-        else:
-            self.subsets = subsets
-
-    def subset(self, list_of_atoms):
-        return MDTrajTopology(self.md.subset(list_of_atoms), self.subsets)
+        self.mdtraj = mdtraj_topology
 
     def to_dict(self):
         out = dict()
-        # used_elements = set()
 
         atom_data = []
-        for atom in self.md.atoms:
+        for atom in self.mdtraj.atoms:
             if atom.element is None:
                 element_symbol = ""
             else:
@@ -36,59 +28,39 @@ class MDTrajTopology(Topology):
 
         out['atom_columns'] = ["serial", "name", "element", "resSeq", "resName", "chainID"]
         out['atoms'] = atom_data
-        out['bonds'] = [(a.index, b.index) for (a, b) in self.md.bonds]
+        out['bonds'] = [(a.index, b.index) for (a, b) in self.mdtraj.bonds]
 
-        return {'md': out, 'subsets': self.subsets}
+        return {'mdtraj': out}
 
     @classmethod
     def from_dict(cls, dct):
         # TODO: fix this in a better way. Works for now with mdtraj 1.3.x and 1.4.x
-        top_dict = dct['md']
-        # elements = top_dict['elements']
-
-        # for key, el in elements.iteritems():
-        #     try:
-        #         md.element.Element(
-        #                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])
-        #                  )
-        #         simtk.openmm.app.Element(
-        #                     number=int(el[0]), name=el[1], symbol=el[2], mass=float(el[3])*units.amu
-        #                  )
-        #     except(AssertionError):
-        #         pass
+        top_dict = dct['mdtraj']
 
         atoms = pd.DataFrame(top_dict['atoms'], columns=top_dict['atom_columns'])
         bonds = np.array(top_dict['bonds'])
 
         md_topology = md.Topology.from_dataframe(atoms, bonds)
 
-        return cls(md_topology, dct['subsets'])
+        return cls(md_topology)
 
 
 class OpenMMSystemTopology(Topology):
     """A Topology that is based on an openmm.system object
 
     """
-    def __init__(self, openmm_system, subsets=None):
+    def __init__(self, openmm_system):
         super(OpenMMSystemTopology, self).__init__(
             n_atoms=int(self.system.getNumParticles())
         )
         self.system = openmm_system
-        if subsets is None:
-            self.subsets = {}
-        else:
-            self.subsets = subsets
-
-    def subset(self, list_of_atoms):
-        return self
 
     def to_dict(self):
         system_xml = XmlSerializer.serialize(self.system)
-        return {'system_xml' : system_xml, 'subsets' : self.subsets}
+        return {'system_xml' : system_xml}
 
     @classmethod
     def from_dict(cls, dct):
         system_xml = dct['system_xml']
-        subsets = dct['subsets']
 
-        return cls(XmlSerializer.deserialize(system_xml), subsets)
+        return cls(XmlSerializer.deserialize(system_xml))

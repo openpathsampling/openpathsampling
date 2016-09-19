@@ -27,6 +27,7 @@ class MDSnapshot(BaseSnapshot):
 #         features.velocities,
 #         features.coordinates,
 #         features.box_vectors,
+#         features.masses,
 #         features.engine
 #     ],
 #     description="A fast MDSnapshot",
@@ -37,6 +38,7 @@ class MDSnapshot(BaseSnapshot):
 @features.base.attach_features([
     features.statics,
     features.kinetics,
+    features.masses,
     features.engine
 ])
 class Snapshot(BaseSnapshot):

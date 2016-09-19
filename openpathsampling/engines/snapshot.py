@@ -107,6 +107,17 @@ class BaseSnapshot(StorableObject):
         BaseSnapshot.__init__(this, topology=self.topology)
         return this
 
+    def copy_with_replacement(self, **kwargs):
+        cp = self.copy()  # this will copy all, but it is simple
+        for key, value in kwargs.iteritems():
+            if hasattr(cp, key):
+                setattr(cp, key, value)
+            else:
+                raise TypeError("copy_with_replacement() got an "
+                                "unexpected keyword argument '%s'" % key)
+
+        return cp
+
     def create_reversed(self):
         this = self.copy()
         this._reversed = self
