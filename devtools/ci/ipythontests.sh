@@ -23,6 +23,7 @@ date
 ipynbtest.py "toy_mistis_3_analysis.ipynb" || testfail=1
 date
 cd ../ipython
+cp ../toy_model_mstis/mstis.nc ./
 ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
 date
 #ipynbtest.py "alanine.ipynb" || testfail=1
