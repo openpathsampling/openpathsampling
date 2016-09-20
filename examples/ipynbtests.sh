@@ -23,7 +23,7 @@ date
 # TODO: curl down toy_mistis_v1.nc
 ipynbtest.py "toy_mistis_3_analysis.ipynb" || testfail=1
 date
-cd ../ipython
+cd ../tests/
 cp ../toy_model_mstis/mstis.nc ./
 ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
 date
@@ -35,6 +35,8 @@ ipynbtest.py --strict "test_cv.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_pyemma.ipynb" || testfail=1
 date
+cd ../misc/
+cp ../toy_model_mstis/mstis.nc ./
 ipynbtest.py "tutorial_storage.ipynb" || testfail=1
 
 cd ../..
