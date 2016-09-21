@@ -22,14 +22,16 @@ class testOpenMMSnapshot(object):
             integrator=omt.integrators.VVVRIntegrator()
         )
         self.n_atoms = self.engine.topology.n_atoms
+        self.engine.current_snapshot = self.template
 
     def test_masses_from_file(self):
         masses = self.template.masses
         assert_equal(len(masses), self.n_atoms)
 
     def test_masses_from_simulation(self):
-        self.engine.generate(self.template,
-                             [paths.LengthEnsemble(2).can_append])
         sim_snap = self.engine.current_snapshot
         masses = sim_snap.masses
         assert_equal(len(masses), self.n_atoms)
+
+    def test_n_degrees_of_freedom(self):
+        assert_equal(self.engine.current_snapshot.n_degrees_of_freedom, 51)
