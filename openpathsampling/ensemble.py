@@ -834,6 +834,7 @@ class Ensemble(StorableNamedObject):
             replica=0,
             unique='median',
             level='complex',
+            on_error='retry',
             attempts=2):
         """
         Generate a sample in the ensemble by extending parts of `trajectories`
@@ -879,6 +880,13 @@ class Ensemble(StorableNamedObject):
             from. For TIS or Minus Ensembles this will be crossing from the
             (initial) core to the outside. You should try `complex` first and
             then `minimal`. `complex` should be much faster.
+        on_error : str
+            if `retry` (default) then any error will trigger a retry and
+            eventually no sample will be retured. `fail` will raise the
+            exception. Typical things to happen are `MaxLengthError` or
+            `NaNError`, but also initialisation error can happen. `fail` should
+            only be used for debugging purposes since you will not get a
+            preliminary sampleset as a result but an exception.
         attempts : int
             the number of attemps on a trajectory to extend
         """
@@ -912,38 +920,46 @@ class Ensemble(StorableNamedObject):
                             attempt + 1,
                             len(part)
                         ))
+                    try:
+                        if self.strict_can_append(part):
+                            # seems we could extend forward
 
-                    if self.strict_can_append(part):
-                        # seems we could extend forward
+                            part = part[:-1] + \
+                               engine.generate(
+                                   part[-1],
+                                   [paths.PrefixTrajectoryEnsemble(
+                                       self,
+                                       part
+                                   ).strict_can_append],
+                                   direction=+1
+                               )
 
-                        part = part[:-1] + \
-                           engine.generate(
-                               part[-1],
-                               [paths.PrefixTrajectoryEnsemble(
-                                   self,
-                                   part
-                               ).strict_can_append],
-                               direction=+1
-                           )
+                        if self.strict_can_prepend(part):
+                            # and extend backward
 
-                    if self.strict_can_prepend(part):
-                        # and extend backward
+                            part = engine.generate(
+                                part[0].reversed,
+                                [paths.SuffixTrajectoryEnsemble(
+                                    self,
+                                    part
+                                ).strict_can_prepend],
+                                direction=-1
+                            ).reversed + part[1:]
 
-                        part = engine.generate(
-                            part[0].reversed,
-                            [paths.SuffixTrajectoryEnsemble(
-                                self,
-                                part
-                            ).strict_can_prepend],
-                            direction=-1
-                        ).reversed + part[1:]
-
-                    if self(part):  # make sure we found a sample
-                        return paths.Sample(
-                            trajectory=part,
-                            ensemble=self,
-                            replica=replica
-                        )
+                        if self(part):  # make sure we found a sample
+                            return paths.Sample(
+                                trajectory=part,
+                                ensemble=self,
+                                replica=replica
+                            )
+                    except paths.engines.EngineError as e:
+                        if on_error == 'fail':
+                            raise
+                        elif on_error == 'retry':
+                            pass
+                        else:
+                            # This should not happen!
+                            pass
 
         return None
 
