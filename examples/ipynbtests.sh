@@ -2,8 +2,8 @@
 # Run ipython notebook tests
 
 testfail=0
-curl -OL https://www.dropbox.com/s/1x4ny0c93gvu54n/toy_mstis_1k_OPS1.nc
-curl -OL https://www.dropbox.com/s/qaeczkugwxkrdfy/toy_mistis_1k_OPS1.nc
+curl -OL http://www.dropbox.com/s/1x4ny0c93gvu54n/toy_mstis_1k_OPS1.nc
+curl -OL http://www.dropbox.com/s/qaeczkugwxkrdfy/toy_mistis_1k_OPS1.nc
 #python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
 cd toy_model_mstis/
 date
