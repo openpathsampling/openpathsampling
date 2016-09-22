@@ -1,29 +1,60 @@
-# -----------------------------------------------------------------------------
-# Alanine Multistate
-# -----------------------------------------------------------------------------
+# coding: utf-8
 
+
+# =============================================================================
+# ALANINE MULTISTATE
+# =============================================================================
+print """ALANINE MULTISTATE"""
+
+# Example Simulation
+
+
+# -----------------------------------------------------------------------------
+# Import and general setup
+# -----------------------------------------------------------------------------
+print """Import and general setup"""
+
+# standard packages
 import mdtraj as md
 
+# OpenMM
 from simtk.openmm import app
 import simtk.openmm as mm
 import simtk.unit as unit
 
+# OpenPathSampling
 import openpathsampling as paths
 import openmmtools as omt
 
+# the openpathsampling OpenMM engine
 import openpathsampling.engines.openmm as eng
 
-import openpathsampling.analysis.move_strategy as strat
+
+project_path = "/cbio/jclab/home/prinzj/projects/ops/AD_mstis/"
+pdb_file_path = project_path + "data/Alanine_solvated.pdb"
+
+platform = 'CUDA'
+
+if platform == 'OpenCL':
+    openmm_properties = {'OpenCLPrecision': 'mixed'}
+elif platform == 'CUDA':
+    openmm_properties = {'CUDAPrecision': 'mixed'}
+elif platform == 'CPU':
+    openmm_properties = {}
+else:
+    openmm_properties = {}
 
 # -----------------------------------------------------------------------------
 # Set simulation options and create a simulator object
 # -----------------------------------------------------------------------------
-
-user_path = "/cbio/jclab/home/prinzj/"
-pdb_file_path = user_path + "projects/ops/AD_mstis/data/Alanine_solvated.pdb"
+print """Set simulation options and create a simulator object"""
 
 template = eng.snapshot_from_pdb(pdb_file_path)
+
+print """## 1. the force field"""
 forcefield = app.ForceField('amber96.xml', 'tip3p.xml')
+
+print """## 2. the system object"""
 pdb = app.PDBFile(pdb_file_path)
 
 system = forcefield.createSystem(
@@ -35,18 +66,23 @@ system = forcefield.createSystem(
     ewaldErrorTolerance=0.0005
 )
 
+print """## 3. the integrator"""
 integrator = omt.integrators.VVVRIntegrator(
     temperature=300 * unit.kelvin,  # temperature
     timestep=2.0 * unit.femtoseconds  # integration step size
 )
 integrator.setConstraintTolerance(0.00001)
 
+print """## 4. the platform"""
+
+print """## 5. OpenMM properties"""
 openmm_properties = {'OpenCLPrecision': 'mixed'}
+
+print """## 6. OPS options"""
 engine_options = {
     'n_frames_max': 5000,
     'nsteps_per_frame': 10
 }
-
 engine = eng.Engine(
     template.topology,
     system,
@@ -54,7 +90,6 @@ engine = eng.Engine(
     openmm_properties=openmm_properties,
     options=engine_options
 )
-
 engine.name = 'default'
 integrator_high = mm.LangevinIntegrator(
     1000 * unit.kelvin,  # temperature
@@ -77,27 +112,30 @@ engine_high.initialize()
 # -----------------------------------------------------------------------------
 # Equilibrate
 # -----------------------------------------------------------------------------
+print """Equilibrate"""
 
-engine_high.current_snapshot = template
-engine_high.minimize()
-initial_snapshot_high = engine_high.current_snapshot
+# engine_high.current_snapshot = template
+# engine_high.minimize()
+# initial_snapshot_high = engine_high.current_snapshot
+
 
 # -----------------------------------------------------------------------------
 # Create the storage
 # -----------------------------------------------------------------------------
+print """Create the storage"""
 
 storage = paths.Storage("ala_mstis_bootstrap.nc", 'w')
-storage.save(engine)
-storage.save(engine_high)
+storage.save(engine);
+storage.save(engine_high);
 storage.tag['template'] = template
 
 # -----------------------------------------------------------------------------
 # State Definitions
 # -----------------------------------------------------------------------------
+print """State Definitions"""
 
 states = ['A', 'B', 'C', 'D', 'E', 'F']
 # states = ['A', 'B', 'C', 'D']
-
 state_centers = {
     'A': [-150, 150],
     'B': [-70, 135],
@@ -121,6 +159,7 @@ storage.tag['interface_levels'] = interface_levels
 # -----------------------------------------------------------------------------
 # Order Parameters
 # -----------------------------------------------------------------------------
+print """Order Parameters"""
 
 psi_atoms = [6, 8, 14, 16]
 psi = paths.MDTrajFunctionCV(
@@ -138,7 +177,7 @@ phi = paths.MDTrajFunctionCV(
     indices=[phi_atoms]
 ).with_diskcache()
 
-storage.save([psi, phi])
+storage.save([psi, phi]);
 
 
 def circle_degree(snapshot, center, phi, psi):
@@ -165,6 +204,7 @@ for state in state_centers:
 # -----------------------------------------------------------------------------
 # Volumes
 # -----------------------------------------------------------------------------
+print """Volumes"""
 
 interface_sets = {}
 for state, levels in interface_levels.iteritems():
@@ -174,6 +214,11 @@ vol_state = {}
 for state, levels in interface_levels.iteritems():
     vol_state[state] = interface_sets[state][0]
     vol_state[state].name = state
+
+# -----------------------------------------------------------------------------
+# Set up the MSTIS network
+# -----------------------------------------------------------------------------
+print """Set up the MSTIS network"""
 
 ms_outers = paths.MSOuterTISInterface.from_lambdas(
     {ifaces: max(ifaces.lambdas) + 5
@@ -190,21 +235,20 @@ storage.tag['network'] = mstis
 # -----------------------------------------------------------------------------
 # Set up the `MoveScheme`
 # -----------------------------------------------------------------------------
+print """Set up the `MoveScheme`"""
 
 scheme = paths.DefaultScheme(mstis)
 
 # -----------------------------------------------------------------------------
 # Initial trajectories
 # -----------------------------------------------------------------------------
+print """Initial trajectories"""
 
 hit_all_states_emsemble = paths.join_ensembles(
     [paths.AllOutXEnsemble(vol_state[state]) for state in states])
 # initial_trajectories = engine_high.generate(template, [hit_all_states])
-
 trajectory = paths.Trajectory([template])
-
 # generate the iterator starting with the current (old) trajectory
-
 it = engine_high.iter_generate(
     trajectory,
     [hit_all_states_emsemble],
@@ -231,13 +275,13 @@ for traj in it:
 # -----------------------------------------------------------------------------
 # Find initial samples
 # -----------------------------------------------------------------------------
+print """Find initial samples"""
 
 total_sample_set = scheme.initial_conditions_from_trajectories(
     trajectory,
     strategies=[
         # 1. split and pick shortest and exclude for MinusInterfaceEnsembles
-        ('split',
-         {'unique': 'shortest', 'exclude': paths.MinusInterfaceEnsemble}),
+        ('split', {'unique': 'shortest', 'exclude': paths.MinusInterfaceEnsemble}),
         # 2. split and pick median length
         ('split', {'unique': 'median'}),
         # 3. extend-complex (implemented for minus with segments A-X-A)
@@ -245,9 +289,7 @@ total_sample_set = scheme.initial_conditions_from_trajectories(
         # 4. extend-minimal (implemented for minus and tis with crossings A-X)
         'extend-minimal'],
     engine=engine)
-
 print scheme.initial_conditions_report(total_sample_set)
-
 # loop until we are done
 while scheme.check_initial_conditions(total_sample_set)[0]:
     total_sample_set = scheme.initial_conditions_from_trajectories(
@@ -258,12 +300,12 @@ while scheme.check_initial_conditions(total_sample_set)[0]:
             'extend-minimal'],
         engine=engine)
 
-# -----------------------------------------------------------------------------
 # Equilibration
-# -----------------------------------------------------------------------------
 equil_scheme = paths.MoveScheme(mstis)
 
 # tell the scheme to actually use OneWayShooting and nothing else
+import openpathsampling.analysis.move_strategy as strat
+
 equil_scheme.append([
     strat.OneWayShootingStrategy(engine=engine),
     strat.OrganizeByMoveGroupStrategy()
@@ -294,15 +336,11 @@ for eng, counts in engine_list.items():
     print eng.name, counts
 
 storage.tag['sampleset'] = equilibrated_sset.copy_without_parents()
-equilibrated_sset.sanity_check()
 
+equilibrated_sset.sanity_check()
 print 'snapshots:', len(storage.snapshots)
 print 'trajectories:', len(storage.trajectories)
 print 'samples:', len(storage.samples)
 print 'filesize:', storage.file_size_str
 
-# -----------------------------------------------------------------------------
-# Finish up
-# -----------------------------------------------------------------------------
-
-storage.close()
+# storage.close()
