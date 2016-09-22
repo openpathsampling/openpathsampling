@@ -40,7 +40,8 @@ cp ../toy_model_mstis/mstis.nc ./
 ipynbtest.py "tutorial_storage.ipynb" || testfail=1
 
 cd ..
-rm toy_mstis_20k_OPS1.nc
+rm toy_mstis_1k_OPS1.nc
+rm toy_mistis_1k_OPS1.nc
 if [ $testfail -eq 1 ]
 then
     exit 1
