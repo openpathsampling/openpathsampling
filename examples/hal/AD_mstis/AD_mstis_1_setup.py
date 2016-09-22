@@ -35,15 +35,6 @@ pdb_file_path = project_path + "data/Alanine_solvated.pdb"
 
 platform = 'CUDA'
 
-if platform == 'OpenCL':
-    openmm_properties = {'OpenCLPrecision': 'mixed'}
-elif platform == 'CUDA':
-    openmm_properties = {'CUDAPrecision': 'mixed'}
-elif platform == 'CPU':
-    openmm_properties = {}
-else:
-    openmm_properties = {}
-
 # -----------------------------------------------------------------------------
 # Set simulation options and create a simulator object
 # -----------------------------------------------------------------------------
@@ -76,7 +67,15 @@ integrator.setConstraintTolerance(0.00001)
 print """## 4. the platform"""
 
 print """## 5. OpenMM properties"""
-openmm_properties = {'OpenCLPrecision': 'mixed'}
+
+if platform == 'OpenCL':
+    openmm_properties = {'OpenCLPrecision': 'mixed'}
+elif platform == 'CUDA':
+    openmm_properties = {'CUDAPrecision': 'mixed'}
+elif platform == 'CPU':
+    openmm_properties = {}
+else:
+    openmm_properties = {}
 
 print """## 6. OPS options"""
 engine_options = {
@@ -125,8 +124,8 @@ print """Equilibrate"""
 print """Create the storage"""
 
 storage = paths.Storage("ala_mstis_bootstrap.nc", 'w')
-storage.save(engine);
-storage.save(engine_high);
+storage.save(engine)
+storage.save(engine_high)
 storage.tag['template'] = template
 
 # -----------------------------------------------------------------------------
@@ -177,7 +176,7 @@ phi = paths.MDTrajFunctionCV(
     indices=[phi_atoms]
 ).with_diskcache()
 
-storage.save([psi, phi]);
+storage.save([psi, phi])
 
 
 def circle_degree(snapshot, center, phi, psi):
