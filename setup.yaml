@@ -79,6 +79,7 @@ requires:
   - svgwrite
   - networkx
   - matplotlib
+  - ujson
 
 license: LGPL 2.1 or later
 license_file: LICENSE
