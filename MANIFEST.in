@@ -1,1 +1,3 @@
 # include visualization .css files
+graft openpathsampling
+include openpathsampling/css/*.css
