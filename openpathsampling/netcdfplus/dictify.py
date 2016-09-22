@@ -1,12 +1,13 @@
 import base64
-import json
 import importlib
 
 import numpy as np
 from simtk import unit as units
-import yaml
+import math
 import abc
 from uuid import UUID
+
+import ujson
 
 import marshal
 import types
@@ -16,6 +17,8 @@ import __builtin__
 from base import StorableObject
 
 from openpathsampling.tools import word_wrap
+
+from cache import WeakValueCache
 
 __author__ = 'Jan-Hendrik Prinz'
 
@@ -78,12 +81,21 @@ class ObjectJSON(object):
                 raise RuntimeError((
                     'The module reference "%s" you want to store is '
                     'not allowed!') % obj.__name__)
+
         elif type(obj) is type or type(obj) is abc.ABCMeta:
             # store a storable number type
             if obj in self.type_classes:
                 return {'_type': obj.__name__}
             else:
                 return None
+
+        elif type(obj) is float and math.isinf(obj):
+            return {
+                '_float': str(obj)}
+
+        elif type(obj) is int and math.isinf(obj):
+            return {
+                '_integer': str(obj)}
 
         elif obj.__class__.__module__ != '__builtin__':
             if obj.__class__ is units.Quantity:
@@ -105,13 +117,22 @@ class ObjectJSON(object):
                 return {
                     '_numpy': self.simplify(obj.shape),
                     '_dtype': str(obj.dtype),
-                    '_data': base64.b64encode(obj)
+                    '_data': base64.b64encode(obj.copy(order='C'))
                 }
             elif hasattr(obj, 'to_dict'):
                 # the object knows how to dismantle itself into a json string
+                if hasattr(obj, '__uuid__'):
+                    return {
+                        '_cls': obj.__class__.__name__,
+                        '_obj_uuid': str(obj.__uuid__),
+                        '_dict': self.simplify(obj.to_dict(), base_type)}
+                else:
+                    return {
+                        '_cls': obj.__class__.__name__,
+                        '_dict': self.simplify(obj.to_dict(), base_type)}
+            elif type(obj) is UUID:
                 return {
-                    '_cls': obj.__class__.__name__,
-                    '_dict': self.simplify(obj.to_dict(), base_type)}
+                    '_uuid': str(obj)}
             else:
                 return None
         elif type(obj) is list:
@@ -176,6 +197,15 @@ class ObjectJSON(object):
                         self.build(obj['_numpy'])
                 )
 
+            elif '_float' in obj:
+                return float(str(obj['_float']))
+
+            elif '_integer' in obj:
+                return float(str(obj['_integer']))
+
+            elif '_uuid' in obj:
+                return UUID(obj['_uuid'])
+
             elif '_cls' in obj and '_dict' in obj:
                 if obj['_cls'] not in self.class_list:
                     self.update_class_list()
@@ -224,6 +254,9 @@ class ObjectJSON(object):
 
         elif type(obj) is list:
             return [self.build(o) for o in obj]
+
+        elif type(obj) is unicode:
+            return str(obj)
 
         else:
             return obj
@@ -428,7 +461,7 @@ class ObjectJSON(object):
 
     def to_json(self, obj, base_type=''):
         simplified = self.simplify(obj, base_type)
-        return json.dumps(simplified)
+        return ujson.dumps(simplified)
 
     def to_json_object(self, obj):
         if hasattr(obj, 'base_cls') \
@@ -437,7 +470,7 @@ class ObjectJSON(object):
         else:
             simplified = self.simplify(obj)
         try:
-            json_str = json.dumps(simplified)
+            json_str = ujson.dumps(simplified)
         except TypeError as e:
             err = (
                 'Cannot convert object of type `%s` to json. '
@@ -455,7 +488,7 @@ class ObjectJSON(object):
         return json_str
 
     def from_json(self, json_string):
-        simplified = yaml.load(json_string)
+        simplified = ujson.loads(json_string)
         return self.build(simplified)
 
     def unit_to_json(self, unit):
@@ -475,13 +508,28 @@ class StorableObjectJSON(ObjectJSON):
     def simplify(self, obj, base_type=''):
         if obj is self.storage:
             return {'_storage': 'self'}
+        if obj.__class__.__module__ != '__builtin__':
+            if obj.__class__ in self.storage._obj_store:
+                store = self.storage._obj_store[obj.__class__]
+                if not store.nestable or obj.base_cls_name != base_type:
+                    # this also returns the base class name used for storage
+                    # store objects only if they are not creatable. If so they
+                    # will only be created in their top instance and we use
+                    # the simplify from the super class ObjectJSON
+                    idx = store.save(obj)
+                    if idx is None:
+                        raise RuntimeError(
+                            'cannot store idx None in store %s' % store)
+                    return {
+                        '_idx': idx,
+                        '_store': store.prefix}
 
         if isinstance(obj, StorableObject):
             try:
                 store, store_idx, idx = self.storage.save(obj)
                 return {
                     '_idx': idx,
-                    '_obj': store.prefix}
+                    '_store': store.prefix}
             except RuntimeWarning:
                 pass
 
@@ -493,8 +541,8 @@ class StorableObjectJSON(ObjectJSON):
                 if obj['_storage'] == 'self':
                     return self.storage
 
-            if '_idx' in obj and '_obj' in obj:
-                store = self.storage._stores[obj['_obj']]
+            if '_idx' in obj and '_store' in obj:
+                store = self.storage._stores[obj['_store']]
                 result = store.load(obj['_idx'])
 
                 return result
@@ -521,8 +569,8 @@ class UUIDObjectJSON(ObjectJSON):
                     # use the simplify from the super class ObjectJSON
                     store.save(obj)
                     return {
-                        '_uuid': str(obj.__uuid__),
-                        '_obj': store.prefix}
+                        '_obj_uuid': str(obj.__uuid__),
+                        '_store': store.prefix}
 
         return super(UUIDObjectJSON, self).simplify(obj, base_type)
 
@@ -532,10 +580,78 @@ class UUIDObjectJSON(ObjectJSON):
                 if obj['_storage'] == 'self':
                     return self.storage
 
-            if '_uuid' in obj:
-                store = self.storage._stores[obj['_obj']]
-                result = store.load(UUID(obj['_uuid']))
+            if '_obj_uuid' in obj and '_store' in obj:
+                store = self.storage._stores[obj['_store']]
+                result = store.load(UUID(obj['_obj_uuid']))
 
                 return result
 
         return super(UUIDObjectJSON, self).build(obj)
+
+
+class CachedUUIDObjectJSON(ObjectJSON):
+    def __init__(self, unit_system=None):
+        super(CachedUUIDObjectJSON, self).__init__(unit_system)
+        self.excluded_keys = ['json']
+        self.uuid_cache = WeakValueCache()
+
+    def simplify(self, obj, base_type=''):
+        if obj.__class__.__module__ != '__builtin__':
+            if hasattr(obj, 'to_dict') and hasattr(obj, '__uuid__'):
+                # the object knows how to dismantle itself into a json string
+                if obj.__uuid__ not in self.uuid_cache:
+                    self.uuid_cache[obj.__uuid__] = obj
+
+                    return {
+                        '_cls': obj.__class__.__name__,
+                        '_obj_uuid': str(obj.__uuid__),
+                        '_dict': self.simplify(obj.to_dict(), base_type)}
+                else:
+                    return {
+                        '_obj_uuid': str(obj.__uuid__)}
+
+        return super(CachedUUIDObjectJSON, self).simplify(obj, base_type)
+
+    def build(self, jsn):
+        if type(jsn) is dict:
+            if '_obj_uuid' in jsn:
+                uuid = UUID(jsn['_obj_uuid'])
+                if uuid in self.uuid_cache:
+                    return self.uuid_cache[uuid]
+                elif '_cls' in jsn and '_dict' in jsn:
+                    if jsn['_cls'] not in self.class_list:
+                        self.update_class_list()
+                        if jsn['_cls'] not in self.class_list:
+                            raise ValueError((
+                                 'Cannot create jsn of class `%s`.\n' +
+                                 'Class is not registered as creatable! '
+                                 'You might have to define\n' +
+                                 'the class locally and call '
+                                 '`update_storable_classes()` on your storage.') %
+                             jsn['_cls'])
+
+                    attributes = self.build(jsn['_dict'])
+
+                    obj = self.class_list[jsn['_cls']].from_dict(attributes)
+                    obj.__uuid__ = uuid
+                    self.uuid_cache[uuid] = obj
+                    return obj
+                else:
+                    # this should not happen!
+                    raise ('What happend here. JSN `%s`' % jsn)
+                    pass
+
+        return super(CachedUUIDObjectJSON, self).build(jsn)
+
+    def to_json(self, obj, base_type=''):
+        # we need to clear the cache, since we have no idea, what the other end
+        # still knows. We can only cache stuff we are sending this time
+        self.uuid_cache.clear()
+        return super(CachedUUIDObjectJSON, self).to_json(obj, base_type)
+
+    # def from_json(self, json_string):
+    #     # here we keep the cache. It could happen that an object is sended in
+    #     # full, but we still have it and so we do not have to rebuild it which
+    #     # saves some time
+    #     simplified = ujson.loads(json_string)
+    #     return self.build(simplified)
