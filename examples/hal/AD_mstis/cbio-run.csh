@@ -40,5 +40,6 @@
 cd $PBS_O_WORKDIR
 
 # Launch my program.
-./python /cbio/jclab/home/prinzj/projects/ops/AD_mstis/AD_mstis_1_setup.py
+pwd
+python /cbio/jclab/home/prinzj/projects/ops/AD_mstis/AD_mstis_1_setup.py
 cp *.nc /cbio/jclab/home/prinzj/projects/ops/AD_mstis/
