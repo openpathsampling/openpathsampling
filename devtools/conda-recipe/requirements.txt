@@ -12,3 +12,4 @@ networkx
 matplotlib
 ujson
 pyqt=4
+sip=4.18
