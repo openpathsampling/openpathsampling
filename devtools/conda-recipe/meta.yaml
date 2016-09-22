@@ -29,7 +29,6 @@ requirements:
     - svgwrite
     - networkx
     - pyqt 4*
-    - sip 4.18*
     - matplotlib
     - ujson
 
