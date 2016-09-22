@@ -12,4 +12,4 @@ networkx
 matplotlib
 ujson
 pyqt=4
-qt=4.4
+qt=4.5
