@@ -3,6 +3,13 @@ import simtk.unit as u
 
 @property
 def n_degrees_of_freedom(snapshot):
+    """
+    Returns
+    -------
+    n_degrees_of_freedom: int
+        number of degrees of freedom in this system (after accounting for
+        constraints)
+    """
     # dof calculation taken from OpenMM's StateDataReporter
     n_spatial = 3  # can we get this programmatically?
     system = snapshot.engine.simulation.system
@@ -19,6 +26,12 @@ def n_degrees_of_freedom(snapshot):
 
 @property
 def instantaneous_temperature(snapshot):
+    """
+    Returns
+    -------
+    instantaneous_temperature : simtk.unit.Quantity (temperature)
+        instantaneous temperature from the kinetic energy of this snapshot
+    """
     # TODO: this can be generalized as a feature that works with any
     # snapshot that has features for KE (in units of kB) and n_dofs
     state = snapshot.engine.simulation.context.getState(getEnergy=True)
