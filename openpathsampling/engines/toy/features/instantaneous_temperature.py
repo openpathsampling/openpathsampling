@@ -12,7 +12,7 @@ def instantaneous_temperature(snapshot):
     double_ke = sum([masses[i] * velocities[i].dot(velocities[i])
                      for i in range(len(masses))])
 
-    dofs = snaphost.n_degrees_of_freedom
+    dofs = snapshot.n_degrees_of_freedom
 
     temperature = double_ke / dofs
     return temperature

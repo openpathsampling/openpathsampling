@@ -4,3 +4,5 @@ from openpathsampling.engines.features import (
     velocities,
     engine
 )
+
+import instantaneous_temperature
