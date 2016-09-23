@@ -1,3 +1,12 @@
+# OUTDATED!!!
+
+Please note, this directory is in the process of being restructured into
+several subdirectories, which we hope will make it easier to find the
+documents you're looking for. The documentation below this paragraph is
+for the old "all-in-one" directory. Most things have moved into their own
+directories; please look at the subdirectories of `examples/` to learn more
+about OPS.
+
 ## Python Notebook Examples
 This folder contains some example python notebooks to learn and understand
 the ways OpenPathSampling works.
