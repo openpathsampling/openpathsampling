@@ -26,15 +26,15 @@ ipynbtest.py "toy_mistis_3_analysis.ipynb" || testfail=1
 date
 cd ../tests/
 cp ../toy_model_mstis/mstis.nc ./
-ipynbtest.py --strict --show-diff "test_openmm_integration.ipynb" || testfail=1
+ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
 date
-ipynbtest.py --strict --show-diff "test_snapshot.ipynb" || testfail=1
+ipynbtest.py --strict "test_snapshot.ipynb" || testfail=1
 date
-ipynbtest.py --strict --show-diff "test_netcdfplus.ipynb" || testfail=1
+ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
 date
-ipynbtest.py --strict --show-diff "test_cv.ipynb" || testfail=1
+ipynbtest.py --strict "test_cv.ipynb" || testfail=1
 date
-ipynbtest.py --strict --show-diff "test_pyemma.ipynb" || testfail=1
+ipynbtest.py --strict "test_pyemma.ipynb" || testfail=1
 date
 cd ../misc/
 cp ../toy_model_mstis/mstis.nc ./
