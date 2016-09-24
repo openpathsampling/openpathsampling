@@ -627,10 +627,18 @@ class testDefaultScheme(object):
             reuse_strategy='avoid',
             strategies=['get']
         )
-        assert_init_cond(
-            init_cond, ensembles,
-            [traj1, traj1r, traj3] + [traj3] + [traj3r] * 3
-        )
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+
+        for ensemble, traj in zip(ensembles[:3], [traj1, traj1r, traj3]):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+        for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+
+        try:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+        except AssertionError:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
 
         # this one avoids reversed copies
         init_cond = scheme.initial_conditions_from_trajectories(

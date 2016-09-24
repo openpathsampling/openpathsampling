@@ -62,7 +62,8 @@ from analysis.trajectory_transition_analysis import (
 )
 
 from bias_function import (
-    BiasFunction, BiasLookupFunction, BiasEnsembleTable
+    BiasFunction, BiasLookupFunction, BiasEnsembleTable,
+    SRTISBiasFromNetwork
 )
 
 from collectivevariable import (
@@ -79,7 +80,6 @@ from ensemble import (
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
-    SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
     OptionalEnsemble, join_ensembles
 )
@@ -100,7 +100,8 @@ from movechange import (
     FilterSamplesMoveChange,
     PathSimulatorMoveChange, AcceptedSampleMoveChange,
     RejectedSampleMoveChange, SubMoveChange,
-    FilterByEnsembleMoveChange
+    FilterByEnsembleMoveChange, RejectedNaNSampleMoveChange,
+    RejectedMaxLengthSampleMoveChange
 )
 
 from pathmover import Details, MoveDetails, SampleDetails
@@ -157,5 +158,3 @@ def git_HEAD():  # pragma: no cover
     git_dir = os.path.dirname(os.path.realpath(__file__))
     return check_output(["git", "-C", git_dir, "rev-parse", "HEAD"])[:-1]
     # chops the newline at the end
-
-

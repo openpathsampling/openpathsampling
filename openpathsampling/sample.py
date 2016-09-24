@@ -6,6 +6,8 @@ from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 
 from openpathsampling.tools import refresh_output
 
+from collections import Counter
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,14 +121,7 @@ class SampleSet(StorableObject):
         self.append(value)
 
     def __eq__(self, other):
-        if len(self.samples) == len(other.samples):
-            for samp1 in self.samples:
-                if samp1 not in other.samples:
-                    return False
-
-            return True
-        else:
-            return False
+        return Counter(self.samples) == Counter(other.samples)
 
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
@@ -191,15 +186,18 @@ class SampleSet(StorableObject):
     def apply_samples(self, samples, copy=True):
         '''Updates the SampleSet based on a list of samples, by setting them
         by replica in the order given in the argument list.'''
-        if type(samples) is Sample:
+        if isinstance(samples, Sample):
             samples = [samples]
+        elif isinstance(samples, paths.MoveChange):
+            samples = samples.results
         if copy==True:
             newset = SampleSet(self)
         else:
             newset = self
         for sample in samples:
             if type(sample) is not paths.Sample:
-                raise ValueError('No SAMPLE!')
+                raise ValueError(
+                    'No SAMPLE! Type `%s` found.' % sample.__class__.__name__)
             # TODO: should time be a property of Sample or SampleSet?
             newset[sample.replica] = sample
         return newset
@@ -270,22 +268,6 @@ class SampleSet(StorableObject):
         for samp in self.samples:
             assert self.samples.count(samp) == 1, \
                     "More than one instance of %r!" % samp
-
-    def __add__(self, other):
-        """
-        Add the move path to the Sample and return the new sampleset
-        """
-        if isinstance(other, paths.MoveChange):
-            return self.apply_samples(other.results)
-        elif type(other) is list:
-            okay = True
-            for samp in other:
-                if not isinstance(samp, paths.Sample):
-                    okay = False
-
-            return self.apply_samples(other)
-        else:
-            raise ValueError('Only lists of Sample or MoveChanges allowed.')
 
     def append_as_new_replica(self, sample):
         """
@@ -415,7 +397,6 @@ class SampleSet(StorableObject):
                     list in the same order
 
             Default is `None` which means to do nothing.
-
         strategies : dict
             a dict that specifies the options used when ensemble functions
             are used to create a new sample.
@@ -787,12 +768,9 @@ class Sample(StorableObject):
         self.details = details
         self.mover = mover
 
-    def __call__(self):
-        return self.trajectory
-
-    #=============================================================================================
+    # ==========================================================================
     # LIST INHERITANCE FUNCTIONS
-    #=============================================================================================
+    # ==========================================================================
 
     def __len__(self):
         return len(self.trajectory)

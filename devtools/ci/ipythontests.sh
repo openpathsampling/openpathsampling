@@ -1,24 +1,29 @@
 #!/bin/sh
 # Run ipython notebook tests
 
-cd examples/ipython
+cd examples/
 testfail=0
 #python ipynbtest.py "sliced_sequential_ensembles.ipynb" || testfail=1
+cd toy_model_mstis/
 date
-ipynbtest.py "mstis_bootstrap.ipynb" || testfail=1
+ipynbtest.py "toy_mstis_1_setup.ipynb" || testfail=1
 date
-ipynbtest.py "mstis.ipynb" || testfail=1
+ipynbtest.py "toy_mstis_2_run.ipynb" || testfail=1
 date
-ipynbtest.py "mstis_analysis.ipynb" || testfail=1
+ipynbtest.py "toy_mstis_3_analysis.ipynb" || testfail=1
 date
 #ipynbtest.py "srtis.ipynb" || testfail=1
 #date
-ipynbtest.py "repex_networks.ipynb" || testfail=1
+ipynbtest.py "toy_mstis_4_repex_analysis.ipynb" || testfail=1
+cd ../toy_model_mistis/
 date
-ipynbtest.py "mistis_setup.ipynb" || testfail=1
+ipynbtest.py "toy_mistis_1_setup_run.ipynb" || testfail=1
 date
-ipynbtest.py "mistis_analysis.ipynb" || testfail=1
+# skip toy_mistis_2_flux: not needed
+ipynbtest.py "toy_mistis_3_analysis.ipynb" || testfail=1
 date
+cd ../ipython
+cp ../toy_model_mstis/mstis.nc ./
 ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
 date
 #ipynbtest.py "alanine.ipynb" || testfail=1

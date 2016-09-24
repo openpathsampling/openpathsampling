@@ -33,33 +33,6 @@ class Storage(NetCDFPlus):
 
     USE_FEATURE_SNAPSHOTS = True
 
-    @property
-    def template(self):
-        """
-        Return the template snapshot from the storage
-
-        Returns
-        -------
-        openpathsampling.engines.BaseSnapshot
-            the initial snapshot
-        """
-        if self._template is None:
-            self._template = self.tag['template']
-
-        return self._template
-
-    @property
-    def n_atoms(self):
-        return self.topology.n_atoms
-
-    @property
-    def n_spatial(self):
-        return self.topology.n_spatial
-
-    @property
-    def topology(self):
-        return self.template.topology
-
     def __init__(
             self,
             filename,
@@ -127,6 +100,8 @@ class Storage(NetCDFPlus):
                           NamedObjectStore(paths.MoveScheme))
         self.create_store('interfacesets',
                           NamedObjectStore(paths.InterfaceSet))
+        self.create_store('msouters',
+                          NamedObjectStore(paths.MSOuterTISInterface))
 
         # stores where nestable could make sense but is disabled
 
@@ -252,6 +227,8 @@ class Storage(NetCDFPlus):
             'movechanges': False,
             'transitions': True,
             'networks': True,
+            'interfacesets': True,
+            'msouters': True,
             'details': False,
             'steps': WeakLRUCache(1000),
             'topologies': True
@@ -283,6 +260,8 @@ class Storage(NetCDFPlus):
             'movechanges': False,
             'transitions': True,
             'networks': True,
+            'interfacesets': True,
+            'msouters': True,
             'details': False,
             'steps': WeakLRUCache(10),
             'topologies': True
@@ -314,6 +293,8 @@ class Storage(NetCDFPlus):
             'movechanges': WeakLRUCache(10),
             'transitions': WeakLRUCache(10),
             'networks': WeakLRUCache(10),
+            'interfacesets': WeakLRUCache(10),
+            'msouters': WeakLRUCache(10),
             'details': WeakLRUCache(10),
             'steps': WeakLRUCache(10),
             'topologies': WeakLRUCache(10)
@@ -346,6 +327,8 @@ class Storage(NetCDFPlus):
             'movechanges': WeakLRUCache(250000),
             'transitions': True,
             'networks': True,
+            'interfacesets': True,
+            'msouters': True,
             'details': False,
             'steps': WeakLRUCache(50000),
             'topologies': True
@@ -377,6 +360,8 @@ class Storage(NetCDFPlus):
             'movechanges': False,
             'transitions': False,
             'networks': False,
+            'interfacesets': False,
+            'msouters': False,
             'details': False,
             'steps': WeakLRUCache(10),
             'topologies': True
@@ -410,6 +395,8 @@ class Storage(NetCDFPlus):
             'movechanges': False,
             'transitions': False,
             'networks': False,
+            'interfacesets': False,
+            'msouters': False,
             'details': False,
             'steps': False,
             'topologies': False

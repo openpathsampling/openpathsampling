@@ -166,7 +166,7 @@ class testForwardShootMover(testShootingMover):
         )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
-        newsamp = self.init_samp + change
+        newsamp = self.init_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
         assert_equal(change.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
@@ -179,7 +179,7 @@ class testForwardShootMover(testShootingMover):
             engine=self.toy_engine
         )
         change = mover.move(self.toy_samp)
-        newsamp = self.toy_samp + change
+        newsamp = self.toy_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
         assert_equal(change.accepted, True)
         newsamp.sanity_check()
@@ -207,7 +207,7 @@ class testBackwardShootMover(testShootingMover):
         )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
-        newsamp = self.init_samp + change
+        newsamp = self.init_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
         assert_equal(len(self.init_samp[0].trajectory), 8)
         assert_not_equal(newsamp[0].trajectory[0],
@@ -226,7 +226,7 @@ class testBackwardShootMover(testShootingMover):
             engine=self.toy_engine
         )
         change = mover.move(self.toy_samp)
-        newsamp = self.toy_samp + change
+        newsamp = self.toy_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
         assert_equal(change.accepted, True)
         newsamp.sanity_check()
@@ -646,7 +646,7 @@ class testSequentialMover(object):
         assert_equal(len(samples), 3)
         for subchange in change:
             assert_equal(subchange.accepted, True)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
@@ -660,7 +660,7 @@ class testSequentialMover(object):
         assert_equal(change[0].accepted, False)
         assert_equal(change[1].accepted, True)
         assert_equal(change[2].accepted, True)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_last_rejected(self):
@@ -675,7 +675,7 @@ class testSequentialMover(object):
         assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
         assert_equal(change[2].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_restricted_by_replica(self):
@@ -694,7 +694,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         for subchange in change:
             assert_equal(subchange.accepted, True)
         assert_equal(len(change.trials,),3)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
@@ -708,7 +708,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         allsamp = change.trials
         assert_equal(len(allsamp), 1)
         assert_equal(change[0].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_last_rejected(self):
@@ -725,7 +725,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
         assert_equal(change[2].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_restricted_by_replica(self):
@@ -743,7 +743,7 @@ class testConditionalSequentialMover(testSequentialMover):
         assert_equal(len(samples), 3)
         for ch in change:
             assert_equal(change.accepted, True)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
@@ -756,7 +756,7 @@ class testConditionalSequentialMover(testSequentialMover):
         allsamp = change.trials
         assert_equal(len(allsamp), 1)
         assert_equal(change[0].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_last_rejected(self):
@@ -775,7 +775,7 @@ class testConditionalSequentialMover(testSequentialMover):
         assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
         assert_equal(change[2].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_restricted_by_replica(self):
@@ -1117,6 +1117,10 @@ class testMinusMover(object):
         assert_subchanges_set_accepted(sub, [True, False, False])
 
     def test_extension_fails(self):
+
+        # we use `stop` and not `fail` for max length
+        self.dyn.options['on_max_length'] = 'stop'
+
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
         traj_bad_extension = make_1d_traj(innermost_bad_extension, [1.0]*5)
         samp_bad_extension = Sample(
@@ -1140,10 +1144,13 @@ class testMinusMover(object):
         assert_subchanges_set_accepted(sub, [True] * 2 + [False])
         # first two work and the extention fails
         # this only happens due to length
+
         assert_equal(
             len(sub[-1][0].trials[0].trajectory),
             len(traj_bad_extension)+self.dyn.n_frames_max-1
         )
+
+        self.dyn.options['on_max_length'] = 'fail'
 
 
 class testSingleReplicaMinusMover(object):
@@ -1277,6 +1284,9 @@ class testSingleReplicaMinusMover(object):
         assert_equal(sub_trials[0].ensemble, self.minus._segment_ensemble)
 
     def test_extension_fails(self):
+        # we use `stop` and not `fail` for max length
+        self.dyn.options['on_max_length'] = 'stop'
+
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
         traj_bad_extension = make_1d_traj(innermost_bad_extension, [1.0]*5)
         samp_bad_extension = Sample(
@@ -1305,6 +1315,9 @@ class testSingleReplicaMinusMover(object):
         )
 
 
+        self.dyn.options['on_max_length'] = 'fail'
+
+
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_pathmover(self):
@@ -1325,4 +1338,3 @@ class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_subtrajectoryselectmover(self):
         mover = paths.SubtrajectorySelectMover()
-
