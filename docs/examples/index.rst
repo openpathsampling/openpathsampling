@@ -1,3 +1,5 @@
+.. _examples:
+
 Examples
 ========
 
@@ -16,8 +18,8 @@ examples and the notebooks are available in the top level
 
    $ jupyter notebook
 
-.. warning:: The pre-filled out notebooks are *far* less fun than running them
-             yourself!
+.. note:: The pre-filled out notebooks are *far* less fun than running them
+          yourself!
 
 .. toctree::
    :maxdepth: 3
