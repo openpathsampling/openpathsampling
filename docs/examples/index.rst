@@ -1,5 +1,5 @@
-OpenPathSampling Examples
-=========================
+Examples
+========
 
 This page provides a series of examples, tutorials and recipes to help you
 get started with ``openpathsampling``.
@@ -14,7 +14,7 @@ examples and the notebooks are available in the top level
 
 .. code:: bash
 
-   $ ipython notebook
+   $ jupyter notebook
 
 .. warning:: The pre-filled out notebooks are *far* less fun than running them
              yourself!

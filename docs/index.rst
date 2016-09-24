@@ -1,16 +1,32 @@
 OpenPathSampling
 ================
 
-A Python toolkit to run PathSampling algorithms.
+A Python library to facilitate path sampling algorithms.
 
-Participate in the development process on GitHub_
+OpenPathSampling (OPS) currently supports many variants of transition path
+sampling (TPS) and transition interface sampling (TIS), as well as other
+useful calculations for rare events, such as committor analysis and flux
+calculations.
+
+OPS is independent of the underlying molecular dynamics engine, and
+currently has support for OpenMM, as well as an internal engine suitable for
+2D toy models.
+
+To learn more about what OPS can do, look at out examples_. If you want to
+jump right in, take a look at how easy it is to install_!
+
+.. _examples: examples/index.html
+.. _install: getting_started.html
+
+OPS is an open-source project, distributed under the LGPL. Join us in
+the development process on GitHub_.
 
 .. _GitHub: http://github.com/openpathsampling/openpathsampling
 
 --------------------------------------------------------------------------------
 
-Documentation
--------------
+For Users
+---------
 
 .. toctree::
     :maxdepth: 2
@@ -22,41 +38,15 @@ Documentation
     faq
     developers/index
 
-API Reference
--------------
+
+For Developers
+--------------
 
 .. toctree::
-    :maxdepth: 1
-
-    collectivevariable
-    volume
-    ensemble
-    shooting
-    pathmover
-    pathsimulator
-    storage
-    treemixin
-    network
-    engines/openmm
-
-Developing
-----------
-
-.. toctree::
-    :maxdepth: 1
-
-    netcdfplus/index
-    engines/index
-
-    api
-
-README
-------
-
-.. toctree::
-    :maxdepth: 1
-
-    readme
+    :maxdepth: 2
+    
+    developers/index
+    api_sections
 
 --------------------------------------------------------------------------------
 
