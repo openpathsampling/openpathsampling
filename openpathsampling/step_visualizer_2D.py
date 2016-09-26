@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 import openpathsampling as paths
 
-class LiveVisualization(object):
+class StepVisualizer2D(object):
     def __init__(self, network, cv_x, cv_y, xlim, ylim, output_directory=None):
         self.network = network
         self.cv_x = cv_x
