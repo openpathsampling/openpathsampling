@@ -2092,6 +2092,57 @@ class OneWayExtendMover(RandomChoiceMover):
         return mover
 
 
+class ForwardFirstTwoWayShootingMover(EngineMover):
+    def __init__(self, ensemble, selector, engine=None):
+        super(ForwardFirstTwoWayShootingMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=ensemble,
+            selector=selector,
+            engine=engine
+        )
+
+    # required for concrete class; not really used
+    @property
+    def direction(self):
+        return 'bidrectional'
+
+    def _run(self, trajectory, shooting_index):
+        """
+        Takes initial trajectory and shooting point, return trial trajectory.
+        """
+        shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(
+            fnum=shooting_index,
+            maxt=len(trajectory) - 1,
+            sh_dir="Forward-first"
+        ))
+
+        fwd_snapshot = trajectory[shooting_index]
+        fwd_trajectory = self.engine.generate(
+            fwd_snapshot, [self.target_ensemble.can_append]
+        )
+
+        fwd_snapshot = trajectory[shooting_index]
+        fwd_trajectory = self.engine.generate(
+            fwd_snapshot, [self.target_ensemble.can_append]
+        )
+        # make the forward trajectory
+
+        # make the backward trajectory
+
+
+class BackwardFirstTwoWayShootingMover(PathMover):
+    def __init__(self, ensemble, selector, engine=None):
+        pass
+
+
+class TwoWayShootingMover(RandomChoiceMover):
+    _is_canonical = True
+
+    def __init__(self, ensemble, selector, engine=None):
+        pass
+
+
 class MinusMover(SubPathMover):
     """
     Instance of a MinusMover.
