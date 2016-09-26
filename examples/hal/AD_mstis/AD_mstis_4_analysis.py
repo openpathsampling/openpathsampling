@@ -1,12 +1,14 @@
-# coding: utf-8# Analyzing the MSTIS simulation
-
-
-
-
-
+# coding: utf-8
 import matplotlib.pyplot as plt
 import openpathsampling as paths
 import numpy as np
+
+
+# =============================================================================
+# ANALYZING THE MSTIS SIMULATION
+# =============================================================================
+print """ANALYZING THE MSTIS SIMULATION"""
+
 storage = paths.AnalysisStorage("ala_mstis_production.nc")
 print "PathMovers:", len(storage.pathmovers)
 print "Engines:", len(storage.engines)
@@ -16,25 +18,20 @@ print "SampleSets:", len(storage.samplesets)
 print "Snapshots:", len(storage.snapshots)
 print "Trajectories:", len(storage.trajectories)
 print "Networks:", len(storage.networks)
+
 mstis = storage.networks[0]
-for cv in storage.cvs:
-    print cv.name, cv._store_dict
-## Reaction rates
 
-
-
-
-
+# Reaction rates
 mstis.hist_args['max_lambda'] = { 'bin_width' : 2, 'bin_range' : (0.0, 90) }
 mstis.hist_args['pathlength'] = { 'bin_width' : 5, 'bin_range' : (0, 100) }
-mstis.rate_matrix(storage.steps, force=True)
 
+print 'THE RATE MATRIX'
+print mstis.rate_matrix(storage.steps, force=True)
 
-
-
-
-
-### Total crossing probability
+# -----------------------------------------------------------------------------
+# Total crossing probability
+# -----------------------------------------------------------------------------
+print """Total crossing probability"""
 
 stateA = storage.volumes["A0"]
 stateB = storage.volumes["B0"]
@@ -53,9 +50,12 @@ plt.plot(tcp_AC.x, tcp_AC) # same as tcp_AB in MSTIS
 plt.plot(tcp_AB.x, np.log(tcp_AB))
 plt.plot(tcp_CA.x, np.log(tcp_CA))
 plt.plot(tcp_BC.x, np.log(tcp_BC))
-### Flux
 
 
+# -----------------------------------------------------------------------------
+# Flux
+# -----------------------------------------------------------------------------
+print """Flux"""
 
 import pandas as pd
 flux_matrix = pd.DataFrame(columns=mstis.states, index=mstis.states)
@@ -64,7 +64,12 @@ for state_pair in mstis.transitions:
     flux_matrix.set_value(state_pair[0], state_pair[1], transition._flux)
 
 flux_matrix
-### Conditional transition probability
+
+
+# -----------------------------------------------------------------------------
+# Conditional transition probability
+# -----------------------------------------------------------------------------
+print """Conditional transition probability"""
 
 outer_ctp_matrix = pd.DataFrame(columns=mstis.states, index=mstis.states)
 for state_pair in mstis.transitions:
@@ -85,14 +90,17 @@ for state_pair in mstis.transitions:
     
     
 ctp_by_interface
-## Path ensemble properties
 
+# Path ensemble properties
 hists_A = mstis.transitions[(stateA, stateB)].histograms
 hists_B = mstis.transitions[(stateB, stateC)].histograms
 hists_C = mstis.transitions[(stateC, stateB)].histograms
-### Interface crossing probabilities
 
 
+# -----------------------------------------------------------------------------
+# Interface crossing probabilities
+# -----------------------------------------------------------------------------
+print """Interface crossing probabilities"""
 
 for hist in [hists_A, hists_B, hists_C]:
     for ens in hist['max_lambda']:
@@ -107,7 +115,12 @@ for hist in [hists_A, hists_B, hists_C]:
     for ens in hist['max_lambda']:
         reverse_cumulative = hist['max_lambda'][ens].reverse_cumulative()
         plt.plot(reverse_cumulative.x, np.log(reverse_cumulative))
-### Path length histograms
+
+
+# -----------------------------------------------------------------------------
+# Path length histograms
+# -----------------------------------------------------------------------------
+print """Path length histograms"""
 
 for hist in [hists_A, hists_B, hists_C]:
     for ens in hist['pathlength']:
@@ -116,14 +129,15 @@ for hist in [hists_A, hists_B, hists_C]:
 for ens in hists_A['pathlength']:
     normalized = hists_A['pathlength'][ens].normalized()
     plt.plot(normalized.x, normalized)
-## Sampling properties
+
+# Sampling properties
 
 
 
-
-
-
-### Move scheme analysis
+# -----------------------------------------------------------------------------
+# Move scheme analysis
+# -----------------------------------------------------------------------------
+print """Move scheme analysis"""
 
 scheme = storage.schemes[0]
 scheme.move_summary(storage.steps)
@@ -131,29 +145,29 @@ scheme.move_summary(storage.steps, 'shooting')
 scheme.move_summary(storage.steps, 'minus')
 scheme.move_summary(storage.steps, 'repex')
 scheme.move_summary(storage.steps, 'pathreversal')
-### Replica exchange sampling
 
 
+# -----------------------------------------------------------------------------
+# Replica exchange sampling
+# -----------------------------------------------------------------------------
+print """Replica exchange sampling"""
 
 repx_net = paths.ReplicaNetwork(scheme, storage.steps)
-#### Replica exchange mixing matrix
 
+print """# Replica exchange mixing matrix"""
 repx_net.mixing_matrix()
-#### Replica exchange graph
 
-
-
-
-
+print """# Replica exchange graph"""
 repxG = paths.ReplicaNetworkGraph(repx_net)
 repxG.draw('spring')
-#### Replica exchange flow
+
+print """# Replica exchange flow"""
 
 
-
-
-
-### Replica move history tree
+# -----------------------------------------------------------------------------
+# Replica move history tree
+# -----------------------------------------------------------------------------
+print """Replica move history tree"""
 
 import openpathsampling.visualize as vis
 reload(vis)
@@ -168,8 +182,13 @@ SVG(tree.svg())
 decorrelated = tree.generator.decorrelated
 print "We have " + str(len(decorrelated)) + " decorrelated trajectories."
 
-### Visualizing trajectories
 
-## Histogramming data (TODO)
 
+# -----------------------------------------------------------------------------
+# Visualizing trajectories
+# -----------------------------------------------------------------------------
+print """Visualizing trajectories"""
+
+
+# Histogramming data (TODO)
 
