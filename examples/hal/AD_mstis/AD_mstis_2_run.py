@@ -40,7 +40,7 @@ mstis_calc = paths.PathSampling(
 )
 
 mstis_calc.save_frequency = 50
-mstis_calc.run(50000)
+mstis_calc.run(10000)
 print len(storage.steps)
 
 storage.close()

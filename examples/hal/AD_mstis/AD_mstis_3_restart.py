@@ -20,4 +20,3 @@ mstis_calc.run(10000)
 print 'Final filesize', storage.file_size_str
 
 storage.close()
-
