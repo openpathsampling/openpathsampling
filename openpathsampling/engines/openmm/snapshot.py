@@ -37,6 +37,8 @@ class MDSnapshot(BaseSnapshot):
 @features.base.attach_features([
     features.statics,
     features.kinetics,
+    features.masses,
+    features.instantaneous_temperature,
     features.engine
 ])
 class Snapshot(BaseSnapshot):

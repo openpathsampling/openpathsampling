@@ -1,4 +1,5 @@
 import logging
+import copy
 
 import simtk.openmm
 import simtk.openmm.app
@@ -227,20 +228,23 @@ class OpenMMEngine(DynamicsEngine):
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
-                    platform=simtk.openmm.Platform.getPlatformByName(platform)
+                    platform=simtk.openmm.Platform.getPlatformByName(platform),
+                    platformProperties=self.openmm_properties
                 )
             elif platform is None:
                 self._simulation = simtk.openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
-                    integrator=self.integrator
+                    integrator=self.integrator,
+                    platformProperties=self.openmm_properties
                 )
             else:
                 self._simulation = simtk.openmm.app.Simulation(
                     topology=self.topology.mdtraj.to_openmm(),
                     system=self.system,
                     integrator=self.integrator,
-                    platform=platform
+                    platform=platform,
+                    platformProperties=self.openmm_properties
                 )
 
             logger.info(
@@ -285,6 +289,35 @@ class OpenMMEngine(DynamicsEngine):
     @property
     def snapshot_timestep(self):
         return self.n_steps_per_frame * self.simulation.integrator.getStepSize()
+
+    # def strip_units(self, item):
+        # """Remove units and report in the md_unit_system
+
+        # Parameters
+        # ----------
+        # item : simtk.unit.Quantity or iterable of simtk.unit.Quantity
+            # the input with units
+
+        # Returns
+        # -------
+        # float or iterable
+            # resulting value in the simtk.units.md_unit_system, but without
+            # units attached
+        # """
+        # try:
+            # # ideally, this works -- other choices are much slower
+            # return item.value_in_unit_system(u.md_unit_system)
+        # except AttributeError:
+            # # if this fails, then we don't know what `item` was: not
+            # # quantity, not iterable
+            # iterator_length = len(item)
+
+            # # we copy the item so that we ensure we get the same type
+            # new_item = copy.copy(item)
+            # for i in range(iterator_length):
+                # new_item[i] = item[i].value_in_unit_system(u.md_unit_system)
+            # return item
+
 
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
@@ -341,7 +374,11 @@ class OpenMMEngine(DynamicsEngine):
             self.simulation.context.setVelocities(snapshot.velocities)
 
             # After the updates cache the new snapshot
-            self._current_snapshot = snapshot
+            if snapshot.engine is self:
+                # no need for copy if this snap is from this engine
+                self._current_snapshot = snapshot
+            else:
+                self._current_snapshot = self._build_current_snapshot()
 
     def generate_next_frame(self):
         self.simulation.step(self.n_steps_per_frame)

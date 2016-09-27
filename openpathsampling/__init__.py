@@ -79,7 +79,6 @@ from ensemble import (
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
-    SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
     OptionalEnsemble, join_ensembles
 )
@@ -90,7 +89,7 @@ from high_level.interface_set import (
 
 from high_level.ms_outer_interface import MSOuterTISInterface
 
-from live_visualization import LiveVisualization
+from step_visualizer_2D import StepVisualizer2D
 
 from movechange import (
     EmptyMoveChange, ConditionalSequentialMoveChange,
@@ -154,5 +153,3 @@ def git_HEAD():  # pragma: no cover
     git_dir = os.path.dirname(os.path.realpath(__file__))
     return check_output(["git", "-C", git_dir, "rev-parse", "HEAD"])[:-1]
     # chops the newline at the end
-
-
