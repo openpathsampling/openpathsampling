@@ -89,7 +89,7 @@ class SetNN(NN):
                 return SetNN(
                     self.length_set &
                     set(range(
-                        *other.length_slice.indices(max(self.length_set)))))
+                        *other.length_slice.indices(max(self.length_set) + 1))))
         elif isinstance(other, SetNN):
             return SetNN(
                 self.length_set & other.length_set
