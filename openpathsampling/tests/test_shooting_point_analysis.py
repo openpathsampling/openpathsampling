@@ -7,6 +7,7 @@ from test_helpers import make_1d_traj, data_filename
 import openpathsampling as paths
 import openpathsampling.engines as peng
 import numpy as np
+import os
 
 from openpathsampling.analysis.shooting_point_analysis import *
 
@@ -14,6 +15,11 @@ import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.engines').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.sample').setLevel(logging.CRITICAL)
+
 
 class testTransformedDict(object):
     def setup(self):
@@ -129,6 +135,7 @@ class testShootingPointAnalysis(object):
             randomizer=randomizer,
             initial_snapshots=[self.snap0, self.snap1]
         )
+        self.simulation.output_stream = open(os.devnull, 'w')
         self.simulation.run(20)
         # set up the analysis object
         self.analyzer = ShootingPointAnalysis(self.storage.steps,
@@ -182,23 +189,25 @@ class testShootingPointAnalysis(object):
             assert_true(np.isnan(hist[index]))
         for index in [0, 2]:
             assert_true(hist[index] > 0)
-        assert_equal(bins, input_bins)
+        assert_array_almost_equal(bins, input_bins)
 
     def test_committor_histogram_2d(self):
         rehash = lambda snap : (snap.xyz[0][0], 2 * snap.xyz[0][0])
         input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
-        hist, bins = self.analyzer.committor_histogram(rehash, self.left,
-                                                       input_bins)
+        hist, b_x, b_y = self.analyzer.committor_histogram(rehash, self.left,
+                                                           input_bins)
         assert_equal(hist.shape, (5,5))
         for i in range(5):
             for j in range(5):
                 if (i,j) in [(0, 0), (1, 2)]:
+                    pass
                     assert_true(hist[(i,j)] > 0)
                 else:
                     assert_true(np.isnan(hist[(i,j)]))
 
         # this may change later to bins[0]==bins[1]==input_bins
-        assert_equal(bins, input_bins) 
+        assert_array_almost_equal(input_bins, b_x)
+        assert_array_almost_equal(input_bins, b_y)
 
     def test_to_pandas(self):
         df1 = self.analyzer.to_pandas()

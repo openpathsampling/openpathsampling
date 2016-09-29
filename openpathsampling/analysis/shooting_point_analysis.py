@@ -234,17 +234,23 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
             (state_hist, b) = np.histogram(count_state.keys(),
                                            weights=count_state.values(),
                                            bins=bins)
+            b_list = [b]
         elif ndim == 2:
-            (all_hist, b) = np.histogram2d(x=[k[0] for k in count_all],
-                                           y=[k[1] for k in count_all],
-                                           weights=count_all.values(),
-                                           bins=bins)
-            (state_hist, b) = np.histogram2d(x=[k[0] for k in count_state],
-                                             y=[k[1] for k in count_state],
-                                             weights=count_state.values(),
-                                             bins=bins)
+            (all_hist, b_x, b_y) = np.histogram2d(
+                x=[k[0] for k in count_all],
+                y=[k[1] for k in count_all],
+                weights=count_all.values(),
+                bins=bins
+            )
+            (state_hist, b_x, b_y) = np.histogram2d(
+                x=[k[0] for k in count_state],
+                y=[k[1] for k in count_state],
+                weights=count_state.values(),
+                bins=bins
+            )
+            b_list = [b_x, b_y]
         state_frac = np.true_divide(state_hist, all_hist)
-        return state_frac, b
+        return tuple([state_frac] + b_list)
 
     def to_pandas(self, label_function=None):
         """

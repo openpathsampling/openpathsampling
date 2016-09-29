@@ -677,7 +677,8 @@ class CommittorSimulation(PathSimulator):
                     "Working on snapshot %d / %d; shot %d / %d" % (
                         snap_num+1, len(self.initial_snapshots),
                         step+1, n_per_snapshot
-                    )
+                    ),
+                    output_stream=self.output_stream,
                 )
 
                 if as_chain:
