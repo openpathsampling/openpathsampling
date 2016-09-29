@@ -80,16 +80,17 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
 
     Parameters
     ----------
-    steps : iterable of :class:`.MCStep`
-        input MC steps to analysis
+    steps : iterable of :class:`.MCStep` or None
+        input MC steps to analysis, if None, analysis not automatically
+        performed
     states : list of :class:`.Volume`
         volumes to consider as states for the analysis. For pandas output,
         these volumes must be named.
     """
-    def __init__(self, steps, states, auto_analyze=True):
+    def __init__(self, steps, states):
         super(ShootingPointAnalysis, self).__init__()
         self.states = states
-        if auto_analyze:
+        if steps is not None:
             self.analyze(steps)
 
     def analyze(self, steps):
