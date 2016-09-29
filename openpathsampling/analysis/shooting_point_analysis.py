@@ -86,37 +86,58 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         volumes to consider as states for the analysis. For pandas output,
         these volumes must be named.
     """
-    def __init__(self, steps, states):
+    def __init__(self, steps, states, auto_analyze=True):
         super(ShootingPointAnalysis, self).__init__()
-        for step in steps:
-            try:
-                # TODO: this should in step.change.canonical.details
-                details = step.change.canonical.trials[0].details
-                shooting_snap = details.shooting_snapshot
-            except AttributeError:
-                # wrong kind of move (no shooting_snapshot)
-                pass
-            except IndexError:
-                # very wrong kind of move (no trials!)
-                pass
-            else:
-                # easy to change how we define the key
-                key = shooting_snap
-                trial_traj = step.change.canonical.trials[0].trajectory
-                init_traj = details.initial_trajectory
-                test_points = [s for s in [trial_traj[0], trial_traj[-1]]
-                               if s not in [init_traj[0], init_traj[-1]]]
+        self.states = states
+        if auto_analyze:
+            self.analyze(steps)
 
-                total = collections.Counter(
-                    {state: sum([int(state(pt)) for pt in test_points])
-                                for state in states}
-                )
-                total_count = sum(total.values())
-                assert total_count == 1 or total_count == 2
-                try:
-                    self[key] += total
-                except KeyError:
-                    self[key] = total
+    def analyze(self, steps):
+        for step in steps:
+            total = self.analyze_single_step(step)
+
+    def analyze_single_step(self, step):
+        key = self.step_key(step)
+        if key is not None:
+            details = step.change.canonical.trials[0].details
+            trial_traj = step.change.canonical.trials[0].trajectory
+            init_traj = details.initial_trajectory
+            test_points = [s for s in [trial_traj[0], trial_traj[-1]]
+                           if s not in [init_traj[0], init_traj[-1]]]
+
+            total = collections.Counter(
+                {state: sum([int(state(pt)) for pt in test_points])
+                            for state in self.states}
+            )
+            total_count = sum(total.values())
+            assert total_count == 1 or total_count == 2
+            try:
+                self[key] += total
+            except KeyError:
+                self[key] = total
+        else:
+            total = {}
+
+        return [s for s in total.keys() if total[s] == 1]
+
+    @staticmethod
+    def step_key(step):
+        key = None
+        try:
+            # TODO: this should in step.change.canonical.details
+            details = step.change.canonical.trials[0].details
+            shooting_snap = details.shooting_snapshot
+        except AttributeError:
+            # wrong kind of move (no shooting_snapshot)
+            pass
+        except IndexError:
+            # very wrong kind of move (no trials!)
+            pass
+        else:
+            # easy to change how we define the key
+            key = shooting_snap
+        return key
+
 
     def committor(self, state, label_function=None):
         """Calculate the (point-by-point) committor.
@@ -220,3 +241,11 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
             df.index = [label_function(self.hash_representatives[k])
                         for k in self.store]
         return df
+
+def one_way_shooting_final_state(step, states):
+    details = step.co
+
+    states_at_t0 = sum([s(partial_trajectory[0]) for s in states])
+    states_at_tf = sum([s(partial_trajectory[-1]) for s in states])
+    if states_at_t0 + states_at_tf != 1:
+        raise RuntimeError("Can't identify unique final state .....")
