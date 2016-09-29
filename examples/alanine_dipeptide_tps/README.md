@@ -22,17 +22,17 @@ These are related to, but not an exact reproduction of, the work done in
   (Fixed-length track) Extending the transition trajectory to satsify the
   fixed-length path ensemble.
 
-- [`AD_tps_2a_run.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_tps/AD_tps_2a_run.ipynb)
+- [`AD_tps_2a_run_flex.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_tps/AD_tps_2a_run_flex.ipynb)
   (Flexible-length track) Running flexible-length TPS (production run).
 
-- [`AD_tps_2b_run.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_tps/AD_tps_2b_run.ipynb)
+- [`AD_tps_2b_run_fixed.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_tps/AD_tps_2b_run_fixed.ipynb)
   (Fixed-length track) Running fixed-length TPS (production run).
 
-- [`AD_tps_3a_analysis.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_tps/AD_tps_3a_analysis.ipynb)
+- [`AD_tps_3a_analyis_flex.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_tps/AD_tps_3a_analyis_flex.ipynb)
   (Flexible-length track) Analyzing the results of the flexible-length TPS
   run.
 
-- [`AD_tps_3b_analysis.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_tps/AD_tps_3b_analysis.ipynb)
+- [`AD_tps_3b_analyis_fixed.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_tps/AD_tps_3b_analyis_fixed.ipynb)
   (Flexible-length track) Analyzing the results of the flexible-length TPS
   run. Very similar to `3a`.
 
