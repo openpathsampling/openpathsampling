@@ -139,6 +139,29 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
             key = shooting_snap
         return key
 
+    @classmethod
+    def from_individual_runs(cls, run_results, states=None):
+        """Build shooting point analysis from pairs of shooting point to
+        final state.
+
+        Parameters
+        ----------
+        run_results : list of 2-tuples (:class:`.Snapshot`, :class:`.Volume`)
+            the first element in each pair is the shooting point, the second
+            is the final volume
+        """
+        if states is None:
+            states = set(s[1] for s in run_results)
+        analyzer = ShootingPointAnalysis(None, states)
+        for step in run_results:
+            key = step[0]
+            total = collections.Counter({step[1] : 1})
+            try:
+                analyzer[key] += total
+            except KeyError:
+                analyzer[key] = total
+
+        return analyzer
 
     def committor(self, state, label_function=None):
         """Calculate the (point-by-point) committor.
@@ -242,11 +265,3 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
             df.index = [label_function(self.hash_representatives[k])
                         for k in self.store]
         return df
-
-def one_way_shooting_final_state(step, states):
-    details = step.co
-
-    states_at_t0 = sum([s(partial_trajectory[0]) for s in states])
-    states_at_tf = sum([s(partial_trajectory[-1]) for s in states])
-    if states_at_t0 + states_at_tf != 1:
-        raise RuntimeError("Can't identify unique final state .....")

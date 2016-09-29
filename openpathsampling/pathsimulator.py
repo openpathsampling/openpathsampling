@@ -700,6 +700,8 @@ class CommittorSimulation(PathSimulator):
                     if self.step % self.save_frequency == 0:
                         self.sync_storage()
 
+                self.step += 1
+
 class DirectSimulation(PathSimulator):
     """
     Direct simulation to calculate rates and fluxes.
