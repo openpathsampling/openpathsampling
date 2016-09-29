@@ -30,8 +30,8 @@ import openmmtools as omt
 import openpathsampling.engines.openmm as eng
 
 
-# project_path = "/cbio/jclab/home/prinzj/projects/ops/AD_mstis/"
-project_path = "/Users/jan-hendrikprinz/Studium/git/openpathsampling/examples/"
+project_path = "/cbio/jclab/home/prinzj/projects/ops/AD_mstis/"
+# project_path = "/Users/jan-hendrikprinz/Studium/git/openpathsampling/examples/"
 pdb_file_path = project_path + "data/Alanine_solvated.pdb"
 
 platform = 'OpenCL'
