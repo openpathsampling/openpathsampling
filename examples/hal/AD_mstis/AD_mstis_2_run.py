@@ -31,6 +31,7 @@ sset.sanity_check()
 # Running RETIS
 
 storage = paths.storage.Storage("ala_mstis_production.nc", "w")
+storage.save(old_store.snapshots[0])
 
 scheme = paths.DefaultScheme(mstis, engine)
 mstis_calc = paths.PathSampling(

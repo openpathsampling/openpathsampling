@@ -134,8 +134,8 @@ storage.tag['template'] = template
 # -----------------------------------------------------------------------------
 print """State Definitions"""
 
-states = ['A', 'B', 'C', 'D', 'E', 'F']
-# states = ['A', 'B', 'C', 'D']
+# states = ['A', 'B', 'C', 'D', 'E', 'F']
+states = ['A', 'B', 'C', 'D']
 state_centers = {
     'A': [-150, 150],
     'B': [-70, 135],
