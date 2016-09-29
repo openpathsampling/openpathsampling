@@ -41,7 +41,7 @@ def refresh_output(output_str, print_anyway=True, refresh=True,
         output_stream = sys.stdout
 
     if is_ipynb or not ipynb_display_only or print_anyway:
-        if refresh:
+        if is_ipynb and refresh:
             IPython.display.clear_output(wait=True)
 
         output_stream.write(output_str)

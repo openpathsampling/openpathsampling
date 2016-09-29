@@ -34,7 +34,7 @@ import openpathsampling.engines.openmm as eng
 project_path = "/Users/jan-hendrikprinz/Studium/git/openpathsampling/examples/"
 pdb_file_path = project_path + "data/Alanine_solvated.pdb"
 
-platform = 'CUDA'
+platform = 'OpenCL'
 
 # -----------------------------------------------------------------------------
 # Set simulation options and create a simulator object
