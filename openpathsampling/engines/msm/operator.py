@@ -74,14 +74,16 @@ class State(O):
     of steps
     """
 
-    def __init__(self, block, length, inverted=False):
-        self.block = block
+    def __init__(self, length, ins, outs, inverted=False):
+        self.block_ins = ins
+        self.block_outs = outs
         self.length = length
         self.inverted = inverted
 
     def __str__(self):
-        return 'S[%s,%s,%s]' % (
-            str(self.block),
+        return 'S[%s,%s,%s,%s]' % (
+            str(self.block_ins),
+            str(self.block_outs),
             str(self.length),
             str(self.inverted)
         )
@@ -99,15 +101,20 @@ class State(O):
 
         """
         if isinstance(other, State):
-            if self.block == other.block:
-                if not self.length & other.length:
-                    return State(self.block, self.length | other.length)
+            # if self.block == other.block:
+            #     if not self.length & other.length:
+            #         return State(self.block, self.length | other.length)
+            #
+            # if self.length == other.length:
+            #     if not self.block & other.block:
+            #         return State(self.block | other.block, self.length)
+            #
 
-            if self.length == other.length:
-                if not self.block & other.block:
-                    return State(self.block | other.block, self.length)
+            ls = self.length & - other.length
+            lo = other.length & - self.length
+            lb = self.length & other.length
 
-            return Union([
+            return State([
                 self,
                 other,
                 State(
