@@ -30,7 +30,8 @@ import openmmtools as omt
 import openpathsampling.engines.openmm as eng
 
 
-project_path = "/cbio/jclab/home/prinzj/projects/ops/AD_mstis/"
+# project_path = "/cbio/jclab/home/prinzj/projects/ops/AD_mstis/"
+project_path = "/Users/jan-hendrikprinz/Studium/git/openpathsampling/examples/"
 pdb_file_path = project_path + "data/Alanine_solvated.pdb"
 
 platform = 'CUDA'
@@ -298,6 +299,12 @@ while scheme.check_initial_conditions(total_sample_set)[0]:
             'extend-complex',
             'extend-minimal'],
         engine=engine)
+
+# -----------------------------------------------------------------------------
+# Equilibration
+# -----------------------------------------------------------------------------
+print """Equilibration"""
+
 
 # Equilibration
 equil_scheme = paths.MoveScheme(mstis)
