@@ -81,8 +81,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
     Parameters
     ----------
     steps : iterable of :class:`.MCStep` or None
-        input MC steps to analysis, if None, analysis not automatically
-        performed
+        input MC steps to analyze; if None, no analysis performed
     states : list of :class:`.Volume`
         volumes to consider as states for the analysis. For pandas output,
         these volumes must be named.
@@ -94,10 +93,32 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
             self.analyze(steps)
 
     def analyze(self, steps):
+        """Analyze a list of steps, adding to internal results.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep` or None
+            MC steps to analyze
+        """
         for step in steps:
             total = self.analyze_single_step(step)
 
     def analyze_single_step(self, step):
+        """
+        Analyzes final states from a path sampling step. Adds to internal
+        results.
+
+        Parameters
+        ----------
+        step : :class:`.MCStep`
+            the step to analyze and add to this analysis
+
+        Returns
+        -------
+        list of :class:`.Volume`
+            the states which are identified as new final states from this
+            move
+        """
         key = self.step_key(step)
         if key is not None:
             details = step.change.canonical.trials[0].details
@@ -120,10 +141,24 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         else:
             total = {}
 
-        return [s for s in total.keys() if total[s] == 1]
+        return [s for s in total.keys() if total[s] > 0]
 
     @staticmethod
     def step_key(step):
+        """
+        Returns the key we use for hashing (the shooting snapshot).
+
+        Parameters
+        ----------
+        step : :class:`.MCStep`
+            the step to extract a shooting point from
+
+        Returns
+        -------
+        :class:`.Snapshot` or None
+            the shooting snapshot, or None if this step is not a shooting
+            move.
+        """
         key = None
         try:
             # TODO: this should in step.change.canonical.details
@@ -220,8 +255,9 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         Returns
         -------
         tuple :
-            (hist, bins) like numpy.histogram, where hist is the histogram
-            count and bins is the bins output from numpy.histogram 
+            hist, bins like numpy.histogram, where hist is the histogram
+            count and bins is the bins output from numpy.histogram. 2-tuple
+            in the case of 1D histogram, 3-tuple in the case of 2D histogram
         """
         rehashed = self.rehash(new_hash)
         r_store = rehashed.store

@@ -617,6 +617,25 @@ class PathSampling(PathSimulator):
 
 
 class CommittorSimulation(PathSimulator):
+    """Committor simulations. What state do you hit from a given snapshot?
+
+    Parameters
+    ----------
+    storage : :class:`.Storage`
+        the file to store simulations in
+    engine : :class:`.DynamicsEngine`
+        the dynamics engine to use to run the simulation
+    states : list of :class:`.Volume`
+        the volumes representing the stable states
+    randomizer : :class:`.SnapshotModifier`
+        the method used to modify the input snapshot before each shot
+    initial_snapshots : list of :class:`.Snapshot`
+        initial snapshots to use
+    direction : int or None
+        if direction > 1, only forward shooting is used, if direction < 1,
+        only backward, and if direction is None, mix of forward and
+        backward. Useful if using no modification on the randomizer.
+    """
     def __init__(self, storage, engine=None, states=None, randomizer=None,
                  initial_snapshots=None, direction=None):
         super(CommittorSimulation, self).__init__(storage)
@@ -667,6 +686,19 @@ class CommittorSimulation(PathSimulator):
             self.mover = self.backward_mover
 
     def run(self, n_per_snapshot, as_chain=False):
+        """Run the simulation.
+
+        Parameters
+        ----------
+        n_per_snapshot : int
+            number of shots per snapshot
+        as_chain : bool
+            if as_chain is False (default), then the input to the modifier
+            is always the original snapshot. If as_chain is True, then the
+            input to the modifier is the previous (modified) snapshot.
+            Useful for modifications that can't cover the whole range from a
+            given snapshot.
+        """
         self.step = 0
         snap_num = 0
         for snapshot in self.initial_snapshots:
