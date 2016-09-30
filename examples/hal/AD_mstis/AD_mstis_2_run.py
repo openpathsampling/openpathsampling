@@ -1,6 +1,8 @@
 # coding: utf-8
 import openpathsampling as paths
 
+import config as cf
+
 
 # =============================================================================
 # RUN FROM BOOTSTRAP PATHS
@@ -12,7 +14,7 @@ print """RUN FROM BOOTSTRAP PATHS"""
 # -----------------------------------------------------------------------------
 print """Loading things from storage"""
 
-old_store = paths.AnalysisStorage("ala_mstis_bootstrap.nc")
+old_store = paths.AnalysisStorage(cf.storage_setup)
 print "PathMovers:", len(old_store.pathmovers)
 print "Engines:", len(old_store.engines)
 print "Samples:", len(old_store.samples)
@@ -28,8 +30,15 @@ mstis = old_store.networks[0]
 sset = old_store.tag['sampleset']
 sset.sanity_check()
 
-# Running RETIS
+# initialize engine
+# if we do not select a platform the fastest possible will be chosen
+# but we explicitely request to run on CPU
+platform = cf.platform
+engine.initialize(platform)
 
+print 'Engine uses platform `%s`' % engine.platform
+
+# Running RETIS
 storage = paths.storage.Storage("ala_mstis_production.nc", "w")
 storage.save(old_store.snapshots[0])
 
@@ -42,7 +51,10 @@ mstis_calc = paths.PathSampling(
 
 mstis_calc.save_frequency = 50
 mstis_calc.run(10000)
-print len(storage.steps)
+print 'steps:', len(storage.steps)
+print 'snapshots:', len(storage.snapshots)
+print 'trajectories:', len(storage.trajectories)
+print 'samples:', len(storage.samples)
+print 'filesize:', storage.file_size_str
 
 storage.close()
-

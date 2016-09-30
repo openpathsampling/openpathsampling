@@ -4,6 +4,9 @@
 # walltime : maximum wall clock time (hh:mm:ss)
 #PBS -l walltime=24:00:00
 #
+# memory : the amount of available memory
+#PBS -l mem=4G
+#
 # join stdout and stderr
 #PBS -j oe
 #
@@ -21,7 +24,7 @@
 #PBS -V
 #
 # job name (default = name of script file)
-#PBS -N myjob
+#PBS -N AD_mstis_1_setup
 #
 # mail settings (one or more characters)
 # email is sent to local user, unless another email address is specified with PBS -M option

@@ -29,25 +29,21 @@ import openmmtools as omt
 # the openpathsampling OpenMM engine
 import openpathsampling.engines.openmm as eng
 
-
-project_path = "/cbio/jclab/home/prinzj/projects/ops/AD_mstis/"
-# project_path = "/Users/jan-hendrikprinz/Studium/git/openpathsampling/examples/"
-pdb_file_path = project_path + "data/Alanine_solvated.pdb"
-
-platform = 'OpenCL'
+# file paths
+import config as cf
 
 # -----------------------------------------------------------------------------
 # Set simulation options and create a simulator object
 # -----------------------------------------------------------------------------
 print """Set simulation options and create a simulator object"""
 
-template = eng.snapshot_from_pdb(pdb_file_path)
+template = eng.snapshot_from_pdb(cf.pdb_file)
 
 print """## 1. the force field"""
 forcefield = app.ForceField('amber96.xml', 'tip3p.xml')
 
 print """## 2. the system object"""
-pdb = app.PDBFile(pdb_file_path)
+pdb = app.PDBFile(cf.pdb_file)
 
 system = forcefield.createSystem(
     pdb.topology,
@@ -68,6 +64,8 @@ integrator.setConstraintTolerance(0.00001)
 print """## 4. the platform"""
 
 print """## 5. OpenMM properties"""
+
+platform = cf.platform
 
 if platform == 'OpenCL':
     openmm_properties = {'OpenCLPrecision': 'mixed'}
@@ -98,7 +96,7 @@ integrator_high = mm.LangevinIntegrator(
 )
 integrator.setConstraintTolerance(0.00001)
 engine_high_options = {
-    'n_frames_max': 10000,
+    'n_frames_max': 2000,
     'nsteps_per_frame': 20
 }
 engine_high = engine.from_new_options(
@@ -124,7 +122,7 @@ print """Equilibrate"""
 # -----------------------------------------------------------------------------
 print """Create the storage"""
 
-storage = paths.Storage("ala_mstis_bootstrap.nc", 'w')
+storage = paths.Storage(cf.storage_setup, 'w')
 storage.save(engine)
 storage.save(engine_high)
 storage.tag['template'] = template
@@ -134,8 +132,8 @@ storage.tag['template'] = template
 # -----------------------------------------------------------------------------
 print """State Definitions"""
 
-# states = ['A', 'B', 'C', 'D', 'E', 'F']
-states = ['A', 'B', 'C', 'D']
+states = ['A', 'B', 'C', 'D', 'E', 'F']
+# states = ['A', 'B', 'C', 'D']
 state_centers = {
     'A': [-150, 150],
     'B': [-70, 135],
@@ -321,6 +319,9 @@ equilibration = paths.PathSampling(
     sample_set=total_sample_set,
     move_scheme=equil_scheme,
 )
+
+storage.sync()
+
 equilibration.run(250)
 equilibrated_sset = equilibration.sample_set
 engine_list = {}
@@ -349,4 +350,6 @@ print 'trajectories:', len(storage.trajectories)
 print 'samples:', len(storage.samples)
 print 'filesize:', storage.file_size_str
 
-# storage.close()
+storage.sync()
+
+storage.close()
