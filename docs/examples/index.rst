@@ -10,16 +10,17 @@ Each subsection is a notebook.  To open these notebooks in a "live" IPython
 session and execute the documentation interactively, you need to download
 the repository and start the IPython notebook.
 
-If you installed `openpathsampling` from source, you will need to navigate
-to :code:`path-to-openpathsampling/examples`. The notebook files for these
-examples and the notebooks are available in the top level
+If you installed `openpathsampling` from source, you can find these in the
+``examples`` directory within the root ``openpathsampling`` directory. You
+cn also find them in our `GitHub repository
+<https://github.com/openpathsampling/openpathsampling/tree/master/examples>`_.
 
 .. code:: bash
 
    $ jupyter notebook
 
-.. note:: The pre-filled out notebooks are *far* less fun than running them
-          yourself!
+.. note:: It's a *lot* more fun to run these examples live than to just read
+          them here!
 
 Introductory Examples
 ---------------------
