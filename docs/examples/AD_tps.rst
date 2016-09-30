@@ -1,3 +1,5 @@
+.. _AD-tps:
+
 Flexible Length TPS on Alanine Dipeptide
 ========================================
 

@@ -56,7 +56,7 @@ The advanced examples demonstrate some of the more specialized uses of OPS.
 .. toctree::
     :maxdepth: 1
 
-    AD_advanced_analysis
+    AD_tps_advanced_analysis
     DNA_flux_example
     custom_movescheme
 

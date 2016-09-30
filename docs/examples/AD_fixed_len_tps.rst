@@ -1,3 +1,5 @@
+.. _AD-fixed-tps:
+
 Fixed Length TPS on Alanine Dipeptide
 =====================================
 
