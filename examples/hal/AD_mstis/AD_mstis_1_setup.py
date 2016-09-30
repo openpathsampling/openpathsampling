@@ -32,6 +32,8 @@ import openpathsampling.engines.openmm as eng
 # file paths
 import config as cf
 
+from openpathsampling.tools import refresh_output
+
 # -----------------------------------------------------------------------------
 # Set simulation options and create a simulator object
 # -----------------------------------------------------------------------------
@@ -89,23 +91,26 @@ engine = eng.Engine(
     options=engine_options
 )
 engine.name = 'default'
-integrator_high = mm.LangevinIntegrator(
-    1000 * unit.kelvin,  # temperature
-    1.0 / unit.picoseconds,  # friction coefficient
-    1.0 * unit.femtoseconds  # integration step size
+
+integrator_high = omt.integrators.VVVRIntegrator(
+    temperature=1000 * unit.kelvin,  # temperature
+    timestep=1.0 * unit.femtoseconds  # integration step size
 )
-integrator.setConstraintTolerance(0.00001)
+integrator_high.setConstraintTolerance(0.00001)
+
 engine_high_options = {
     'n_frames_max': 2000,
-    'nsteps_per_frame': 20
+    'nsteps_per_frame': 20  # twice as many steps with half stepsize
 }
 engine_high = engine.from_new_options(
     integrator=integrator_high,
     options=engine_high_options)
 engine_high.name = 'high'
-paths.EngineMover.engine = engine
-engine.initialize()
-engine_high.initialize()
+
+paths.EngineMover.engine = engine_high
+engine_high.initialize(platform)
+
+print 'High-Engine uses platform `%s`' % engine_high.platform
 
 # -----------------------------------------------------------------------------
 # Equilibrate
@@ -115,7 +120,6 @@ print """Equilibrate"""
 # engine_high.current_snapshot = template
 # engine_high.minimize()
 # initial_snapshot_high = engine_high.current_snapshot
-
 
 # -----------------------------------------------------------------------------
 # Create the storage
@@ -132,8 +136,8 @@ storage.tag['template'] = template
 # -----------------------------------------------------------------------------
 print """State Definitions"""
 
-states = ['A', 'B', 'C', 'D', 'E', 'F']
-# states = ['A', 'B', 'C', 'D']
+# states = ['A', 'B', 'C', 'D', 'E', 'F']
+states = ['A', 'B', 'C', 'D']
 state_centers = {
     'A': [-150, 150],
     'B': [-70, 135],
@@ -260,11 +264,11 @@ for traj in it:
         if paths.PartInXEnsemble(vol_state[state])(traj))
 
     # output status report
-    s = 'Ran %6d steps [%s]. Found states [%s]' % (
+    s = 'Ran %6d steps [%s]. Found states [%s]\n' % (
         len(traj) - 1,
-        (len(traj) - 1) * engine.snapshot_timestep,
+        (len(traj) - 1) * engine_high.snapshot_timestep,
         found_states)
-    print s
+    refresh_output(s)
 
     # remember the last output for later. Python 2 will leak `traj` into
     # local, but Python 3 does not and we want to be compatible
@@ -286,7 +290,7 @@ total_sample_set = scheme.initial_conditions_from_trajectories(
         'extend-complex',
         # 4. extend-minimal (implemented for minus and tis with crossings A-X)
         'extend-minimal'],
-    engine=engine)
+    engine=engine_high)
 print scheme.initial_conditions_report(total_sample_set)
 # loop until we are done
 while scheme.check_initial_conditions(total_sample_set)[0]:
@@ -296,13 +300,22 @@ while scheme.check_initial_conditions(total_sample_set)[0]:
         strategies=[
             'extend-complex',
             'extend-minimal'],
-        engine=engine)
+        engine=engine_high)
 
 # -----------------------------------------------------------------------------
 # Equilibration
 # -----------------------------------------------------------------------------
 print """Equilibration"""
 
+del engine_high.simulation.context
+
+engine.initialize(cf.platform)
+
+refresh_output('Low-Engine uses platform `%s`' % engine.platform, refresh=False)
+
+print
+print
+print
 
 # Equilibration
 equil_scheme = paths.MoveScheme(mstis)

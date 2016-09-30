@@ -31,7 +31,7 @@ engine.initialize(platform)
 print 'Engine uses platform `%s`' % engine.platform
 
 # Running RETIS
-storage = paths.storage.Storage("ala_mstis_production.nc", "w")
+storage = paths.storage.Storage(cf.storage_production, "w")
 storage.save(old_store.snapshots[0])
 
 scheme = paths.DefaultScheme(mstis, engine)
@@ -41,8 +41,9 @@ mstis_calc = paths.PathSampling(
     move_scheme=scheme
 )
 
-mstis_calc.save_frequency = 50
+mstis_calc.save_frequency = 5
 mstis_calc.run(10000)
+
 print 'steps:', len(storage.steps)
 print 'snapshots:', len(storage.snapshots)
 print 'trajectories:', len(storage.trajectories)
