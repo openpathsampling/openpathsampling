@@ -8,6 +8,10 @@ import openpathsampling as paths
 import openpathsampling.engines as peng
 import numpy as np
 
+import openmmtools as omt
+import simtk.unit as u
+import openpathsampling.engines.openmm as omm_engine
+
 from openpathsampling.snapshot_modifier import *
 
 import logging
@@ -170,3 +174,17 @@ class testRandomizeVelocities(object):
                                   self.snap_2x3D.velocities[1])
         for val in new_2x3D.velocities[0]:
             assert_not_equal(val, 0.0)
+
+    def test_with_openmm_snapshot(self):
+        test_system = omt.testsystems.AlanineDipeptideVacuum()
+        template = omm_engine.snapshot_from_testsystem(test_system)
+        engine = omm_engine.Engine(
+            topology=template.topology,
+            system=test_system.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        beta = 1.0 / (300.0 * u.kelvin * u.BOLTZMANN_CONSTANT_kB)
+        randomizer = RandomVelocities(beta=beta)
+        new_snap = randomizer(template)
+        engine.generate(new_snap, [lambda x, foo: len(x) <= 4])
+

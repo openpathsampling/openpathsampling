@@ -28,18 +28,12 @@ requirements:
     - mdtraj
     - svgwrite
     - networkx
+    - pyqt 4.11.4 py27_3
     - matplotlib
+    - ujson
     - psutil
 
 test:
-  requires:
-    - nose
-    - nose-timer
-    - python-coveralls
-    - msmbuilder
-    - pyemma
-    - ipynbtest
-
   imports:
     - openpathsampling
 

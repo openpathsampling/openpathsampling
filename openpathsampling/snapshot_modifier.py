@@ -1,5 +1,6 @@
 import random
 import logging
+import copy
 import abc
 
 import numpy as np
@@ -94,26 +95,40 @@ class NoModification(SnapshotModifier):
 
 class RandomVelocities(SnapshotModifier):
     """Randomize velocities according to the Boltzmann distribution.
+
+    Note
+    ----
+    This modifier will only work with snapshots that have the `velocities`
+    feature and the `masses` feature. Furthermore, the units have to be such
+    that the input `beta` and the features `masses` and `velocities` are all
+    in the same unit system. In particular, `1.0 / beta * masses` must be in
+    units of `velocity**2`.
     
     Parameters
     ----------
     beta : float
-        Inverse temperature in units of inverse velocity squared [also known
-        as 1.0/(k_B * T)].
+        inverse temperature (in units of kB) for the distribution; 
     """
-    def __init__(self, subset_mask=None, beta=None):
+    def __init__(self, beta, subset_mask=None):
         super(RandomVelocities, self).__init__(subset_mask)
         self.beta = beta
 
     def __call__(self, snapshot):
-        new_snap = snapshot.copy()
+        # raises AttributeError is snapshot doesn't support velocities
+        velocities = copy.copy(snapshot.velocities)  # copy.copy for units
+        vel_subset = self.extract_subset(velocities)
 
-        vel_subset = self.extract_subset(new_snap.velocities)
-        masses = self.extract_subset(snapshot.topology.masses)
+        # raises AttributeError if snapshot doesn't support masses feature
+        all_masses = snapshot.masses
+        masses = self.extract_subset(all_masses)
+
         n_spatial = len(vel_subset[0])
         n_atoms = len(vel_subset)
         for atom_i in range(n_atoms):
             sigma = np.sqrt(1.0 / (self.beta * masses[atom_i]))
             vel_subset[atom_i] = sigma * np.random.normal(size=n_spatial)
-        self.apply_to_subset(new_snap.velocities, vel_subset)
+
+        self.apply_to_subset(velocities, vel_subset)
+        new_snap = snapshot.copy_with_replacement(velocities=velocities)
         return new_snap
+

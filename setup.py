@@ -219,7 +219,8 @@ Operating System :: MacOS
         'mdtraj',
         'svgwrite',
         'networkx',
-        'matplotlib'],
+        'matplotlib',
+        'ujson'],
     'url': 'http://www.openpathsampling.org',
     'version': '0.9.0'}
 

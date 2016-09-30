@@ -10,3 +10,5 @@ mdtraj
 svgwrite
 networkx
 matplotlib
+ujson
+pyqt=4

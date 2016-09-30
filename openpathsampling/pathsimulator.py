@@ -515,8 +515,8 @@ class PathSampling(PathSimulator):
 
         initialization_logging(init_log, self, 
                                ['move_scheme', 'sample_set'])
-        self.live_visualization = None
-        self.visualize_frequency = 1
+        self.live_visualizer = None
+        self.status_update_frequency = 1
         self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run_until(self, n_steps):
@@ -547,11 +547,11 @@ class PathSampling(PathSimulator):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
             refresh=True
-            if self.step % self.visualize_frequency == 0:
+            if self.step % self.status_update_frequency == 0:
                 # do we visualize this step?
-                if self.live_visualization is not None and mcstep is not None:
+                if self.live_visualizer is not None and mcstep is not None:
                     # do we visualize at all?
-                    self.live_visualization.draw_ipynb(mcstep)
+                    self.live_visualizer.draw_ipynb(mcstep)
                     refresh=False
 
                 elapsed = time.time() - initial_time
@@ -608,8 +608,8 @@ class PathSampling(PathSimulator):
 
         self.sync_storage()
 
-        if self.live_visualization is not None and mcstep is not None:
-            self.live_visualization.draw_ipynb(mcstep)
+        if self.live_visualizer is not None and mcstep is not None:
+            self.live_visualizer.draw_ipynb(mcstep)
         paths.tools.refresh_output(
             "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
             refresh=False

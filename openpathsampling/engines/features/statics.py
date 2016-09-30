@@ -1,5 +1,5 @@
 import numpy as np
-from shared import StaticContainerStore
+from shared import StaticContainerStore, StaticContainer
 import mdtraj
 from openpathsampling.netcdfplus import WeakLRUCache
 
@@ -45,6 +45,16 @@ def coordinates(snapshot):
     return None
 
 
+@coordinates.setter
+def coordinates(self, value):
+    if value is not None:
+        sc = StaticContainer(coordinates=value, box_vectors=self.box_vectors)
+    else:
+        sc = None
+
+    self.statics = sc
+
+
 @property
 def box_vectors(snapshot):
     """
@@ -58,6 +68,16 @@ def box_vectors(snapshot):
         return snapshot.statics.box_vectors
 
     return None
+
+
+@box_vectors.setter
+def box_vectors(self, value):
+    if value is not None:
+        sc = StaticContainer(box_vectors=value, coordinates=self.coordinates)
+    else:
+        sc = None
+
+    self.statics = sc
 
 
 @property
