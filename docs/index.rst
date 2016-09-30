@@ -33,6 +33,7 @@ For Users
     install
     examples/index
     guides/index
+    topics/index
     whatsnew
     faq
 

@@ -6,18 +6,14 @@ Examples
 This page provides a series of examples, tutorials and recipes to help you
 get started with ``openpathsampling``.
 
-Each subsection is a notebook.  To open these notebooks in a "live" IPython
-session and execute the documentation interactively, you need to download
-the repository and start the IPython notebook.
+Each subsection of the pages linked below is a notebook.  To open these
+notebooks in a "live" session and execute the documentation interactively,
+open them using ``jupyter notebook NOTEBOOK_NAME.ipynb``. 
 
 If you installed `openpathsampling` from source, you can find these in the
 ``examples`` directory within the root ``openpathsampling`` directory. You
 cn also find them in our `GitHub repository
 <https://github.com/openpathsampling/openpathsampling/tree/master/examples>`_.
-
-.. code:: bash
-
-   $ jupyter notebook
 
 .. note:: It's a *lot* more fun to run these examples live than to just read
           them here!
@@ -79,6 +75,18 @@ you might find interesting.
     splitting_files
     customizing_visualization
     storage
+
+Miscellaneous Examples
+----------------------
+
+.. toctree::
+    :hidden:
+
+    miscellaneous/index
+
+The examples above provide most of the tools that you might need. However,
+to document various other tricks and workflows, we have a page of
+:ref:`miscellaneous examples <misc-examples>`.
 
 -----
 
