@@ -111,6 +111,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
                             for state in self.states}
             )
             total_count = sum(total.values())
+            # TODO: clarify assertion (at least one endpoint in state)
             assert total_count == 1 or total_count == 2
             try:
                 self[key] += total
