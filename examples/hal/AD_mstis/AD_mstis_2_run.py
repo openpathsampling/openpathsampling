@@ -15,14 +15,6 @@ print """RUN FROM BOOTSTRAP PATHS"""
 print """Loading things from storage"""
 
 old_store = paths.AnalysisStorage(cf.storage_setup)
-print "PathMovers:", len(old_store.pathmovers)
-print "Engines:", len(old_store.engines)
-print "Samples:", len(old_store.samples)
-print "Trajectories:", len(old_store.trajectories)
-print "Ensembles:", len(old_store.ensembles)
-print "SampleSets:", len(old_store.samplesets)
-print "Snapshots:", len(old_store.snapshots)
-print "Networks:", len(old_store.networks)
 
 # template = old_store.snapshots[0]
 engine = old_store.engines['default']
@@ -32,7 +24,7 @@ sset.sanity_check()
 
 # initialize engine
 # if we do not select a platform the fastest possible will be chosen
-# but we explicitely request to run on CPU
+# but we explicitly request to use the one in the config file
 platform = cf.platform
 engine.initialize(platform)
 
