@@ -407,7 +407,8 @@ class MoveScheme(StorableNamedObject):
             reuse_strategy,
             engine
         )
-        refresh_output(self.initial_conditions_report(sample_set))
+        refresh_output(self.initial_conditions_report(sample_set),
+                       ipynb_display_only=True, print_anyway=False)
         return sample_set
 
 

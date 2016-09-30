@@ -571,7 +571,8 @@ class PathSampling(PathSimulator):
                     + "Expected time to finish: %d seconds\n" % (
                         1.0 * (n_steps - nn) * time_per_step
                     ),
-                    refresh=refresh
+                    refresh=refresh,
+                    output_stream=self.output_stream
                 )
 
             time_start = time.time() 
@@ -612,7 +613,8 @@ class PathSampling(PathSimulator):
             self.live_visualizer.draw_ipynb(mcstep)
         paths.tools.refresh_output(
             "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
-            refresh=False
+            refresh=False,
+            output_stream=self.output_stream
         )
 
 

@@ -154,6 +154,31 @@ class testShootingPointAnalysis(object):
         assert_true(0 < self.analyzer[self.snap1][self.left] < 20)
         assert_true(0 < self.analyzer[self.snap1][self.right] < 20)
 
+    def test_non_shooting_steps(self):
+        network = paths.TPSNetwork(self.left, self.right)
+        init_traj = make_1d_traj([-1.1, 0.0, 1.1])
+        ensemble = network.all_ensembles[0]
+        mover = paths.PathReversalMover(ensemble)
+        scheme = paths.LockedMoveScheme(mover, network)
+        init_conds=scheme.initial_conditions_from_trajectories([init_traj])
+        assert_equal(len(init_conds), 1)
+        self.storage.close()
+        self.storage = paths.Storage(self.filename, "w")
+        assert_equal(init_conds[ensemble].trajectory, init_traj)
+        sim = paths.PathSampling(storage=self.storage,
+                                 move_scheme=scheme,
+                                 sample_set=init_conds)
+        sim.output_stream = open(os.devnull, "w")
+        sim.run(1)
+        step0 = self.storage.steps[0]
+        step1 = self.storage.steps[1]
+
+        assert_equal(self.analyzer.step_key(step0), None)
+        assert_equal(self.analyzer.step_key(step1), None)
+
+        assert_equal(self.analyzer.analyze_single_step(step0), [])
+        assert_equal(self.analyzer.analyze_single_step(step1), [])
+
     def test_committor(self):
         committor_A = self.analyzer.committor(self.left)
         committor_B = self.analyzer.committor(self.right)
@@ -208,6 +233,14 @@ class testShootingPointAnalysis(object):
         # this may change later to bins[0]==bins[1]==input_bins
         assert_array_almost_equal(input_bins, b_x)
         assert_array_almost_equal(input_bins, b_y)
+
+    @raises(RuntimeError)
+    def test_committor_histogram_3d(self):
+        # only 1D and 2D are supported
+        rehash = lambda snap : (snap.xyz[0][0], 2 * snap.xyz[0][0], 0.0)
+        input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
+        hist, b_x, b_y = self.analyzer.committor_histogram(rehash, self.left,
+                                                           input_bins)
 
     def test_to_pandas(self):
         df1 = self.analyzer.to_pandas()
