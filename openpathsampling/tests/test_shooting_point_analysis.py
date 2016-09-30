@@ -154,6 +154,21 @@ class testShootingPointAnalysis(object):
         assert_true(0 < self.analyzer[self.snap1][self.left] < 20)
         assert_true(0 < self.analyzer[self.snap1][self.right] < 20)
 
+    def test_from_individual_runs(self):
+        runs = [(self.snap0, self.left),
+                (self.snap0, self.left),
+                (self.snap0, self.left),
+                (self.snap0, self.right),
+                (self.snap1, self.left),
+                (self.snap1, self.right),
+                (self.snap1, self.left),
+                (self.snap1, self.right)]
+        analyzer = ShootingPointAnalysis.from_individual_runs(runs)
+        assert_equal(analyzer[self.snap0][self.left], 3)
+        assert_equal(analyzer[self.snap0][self.right], 1)
+        assert_equal(analyzer[self.snap1][self.left], 2)
+        assert_equal(analyzer[self.snap1][self.right], 2)
+
     def test_non_shooting_steps(self):
         network = paths.TPSNetwork(self.left, self.right)
         init_traj = make_1d_traj([-1.1, 0.0, 1.1])
