@@ -1,3 +1,5 @@
+.. _toy-mstis:
+
 Multiple State TIS on a Toy Model
 ==================================
 
