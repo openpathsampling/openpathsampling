@@ -71,10 +71,11 @@ you might find interesting.
 .. toctree::
     :maxdepth: 1
 
+    storage
     restarting
     splitting_files
     customizing_visualization
-    storage
+    move_schemes_strategies
 
 Miscellaneous Examples
 ----------------------
