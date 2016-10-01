@@ -1,3 +1,5 @@
+.. _AD-mstis:
+
 Multiple state TIS on Alanine Dipeptide
 =======================================
 
