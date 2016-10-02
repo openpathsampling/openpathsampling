@@ -1,4 +1,4 @@
-.. _storage_need_to_know:
+.. _dev-storage:
 
 Storage
 =======

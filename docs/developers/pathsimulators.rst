@@ -1,4 +1,4 @@
-.. _pathsimulators:
+.. _dev-pathsimulators:
 
 Path Simulators
 ===============

@@ -1,4 +1,4 @@
-.. _collective_variables:
+.. _dev-collective-variables:
 
 Collective Variables
 ====================
