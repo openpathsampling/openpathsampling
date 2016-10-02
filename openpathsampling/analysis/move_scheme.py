@@ -1,4 +1,5 @@
 import openpathsampling as paths
+from openpathsampling.tools import refresh_output
 
 from move_strategy import levels as strategy_levels
 # import move_strategy as move_strategy
@@ -398,7 +399,7 @@ class MoveScheme(StorableNamedObject):
 
         ensembles = self.list_initial_ensembles()
 
-        return sample_set.generate_from_trajectories(
+        sample_set = sample_set.generate_from_trajectories(
             ensembles,
             trajectories,
             preconditions,
@@ -406,6 +407,10 @@ class MoveScheme(StorableNamedObject):
             reuse_strategy,
             engine
         )
+        refresh_output(self.initial_conditions_report(sample_set))
+        return sample_set
+
+
 
     def check_initial_conditions(self, sample_set):
         """
@@ -736,7 +741,7 @@ class MoveScheme(StorableNamedObject):
                         if k[0] is None]
         n_in_scheme_no_move_trials = sum([self._mover_acceptance[k][1]
                                           for k in no_move_keys
-                                          if k[1] != [None]])
+                                          if k[1] != '[None]'])
         n_no_move_trials = sum([self._mover_acceptance[k][1]
                                 for k in self._mover_acceptance.keys()
                                 if k[0] is None])
