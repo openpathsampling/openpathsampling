@@ -27,10 +27,10 @@ The sections linked below give details about extending various parts of OPS.
 .. toctree::
     :maxdepth: 2
 
-    storage_need_to_know
     pathsimulators
     engines
-    collective_variables
-    networks
     pathmovers_and_movestrategies
+    networks
+    collective_variables
+    storage_need_to_know
     
