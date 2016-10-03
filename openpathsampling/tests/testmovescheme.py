@@ -15,7 +15,7 @@ from openpathsampling.high_level.move_strategy import (
     OrganizeByMoveGroupStrategy, AllSetRepExStrategy
 )
 
-import openpathsampling.analysis.move_strategy as strategies
+import openpathsampling.high_level.move_strategy as strategies
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)

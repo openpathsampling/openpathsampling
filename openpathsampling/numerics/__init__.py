@@ -2,6 +2,7 @@ from histogram import (
     Histogram, SparseHistogram, HistogramPlotter2D,
     histograms_to_pandas_dataframe
 )
+from wham import WHAM
 from lookup_function import (LookupFunction, LookupFunctionGroup,
                              VoxelLookupFunction)
 
