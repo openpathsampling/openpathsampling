@@ -39,7 +39,7 @@ from analysis.tis_analysis import (
     TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
 )
 
-from analysis.network import (
+from high_level.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
     FixedLengthTPSNetwork
 )
