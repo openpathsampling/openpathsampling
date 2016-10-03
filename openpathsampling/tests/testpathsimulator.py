@@ -190,6 +190,7 @@ class testCommittorSimulation(object):
                                               states=[self.left, self.right],
                                               randomizer=randomizer,
                                               initial_snapshots=self.snap0)
+        self.simulation.output_stream = open(os.devnull, 'w')
 
     def teardown(self):
         if os.path.isfile(self.filename):

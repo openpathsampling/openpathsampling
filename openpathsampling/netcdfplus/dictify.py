@@ -31,6 +31,9 @@ class ObjectJSON(object):
 
     allow_marshal = True
 
+    # switch to `true`, if you want more protection
+    prevent_unsafe_modules = False
+
     allowed_storable_atomic_types = [
         int, float, bool, long, str,
         np.float32, np.float64,
@@ -359,7 +362,7 @@ class ObjectJSON(object):
                 if module not in ObjectJSON.safe_modules
             ]
 
-            if len(unsafe_modules) > 0:
+            if ObjectJSON.prevent_unsafe_modules and len(unsafe_modules) > 0:
                 if len(err) > 0:
                     err += '\n\n'
 
@@ -367,7 +370,7 @@ class ObjectJSON(object):
                        ' modules to be installed: ' + str(unsafe_modules) + \
                        ' which are not marked as safe! '
                 err += 'You can change the list of safe modules using '
-                err += '\n\n        FunctionCV._safe_modules.extend(['
+                err += '\n\n        ObjectJSON.safe_modules.extend(['
                 err += '\n' + ',\n'.join(
                        map(lambda x: ' ' * 12 + x, unsafe_modules)
                 )

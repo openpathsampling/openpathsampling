@@ -223,7 +223,7 @@ Operating System :: MacOS
         'matplotlib',
         'ujson'],
     'url': 'http://www.openpathsampling.org',
-    'version': '0.9.0'}
+    'version': '0.9.1'}
 
 setup_keywords = build_keyword_dictionary(preferences)
 
