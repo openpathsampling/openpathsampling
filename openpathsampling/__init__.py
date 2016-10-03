@@ -89,7 +89,7 @@ from high_level.interface_set import (
 
 from high_level.ms_outer_interface import MSOuterTISInterface
 
-from live_visualization import LiveVisualization
+from step_visualizer_2D import StepVisualizer2D
 
 from movechange import (
     EmptyMoveChange, ConditionalSequentialMoveChange,

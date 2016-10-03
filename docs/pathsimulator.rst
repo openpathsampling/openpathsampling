@@ -2,21 +2,22 @@
 
 .. currentmodule:: openpathsampling.pathsimulator
 
-PathSimulator Functions
+PathSimulator API
 =======================
 
-basic pathsimulators
---------------------
+Abstract Base Class
+-------------------
 .. autosummary::
     :toctree: api/generated/
 
     PathSimulator
-    PathSampling
 
-special pathsimulators
-----------------------
+Specific PathSimulators
+-----------------------
 .. autosummary::
     :toctree: api/generated/
 
-    Bootstrapping
+    PathSampling
     FullBootstrapping
+    CommittorSimulation
+    DirectSimulation
