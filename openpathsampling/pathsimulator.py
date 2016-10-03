@@ -55,6 +55,23 @@ class MCStep(StorableObject):
 
 
 class PathSimulator(StorableNamedObject):
+    """Abstract class for the "main" function of a simulation.
+
+    Parameters
+    ----------
+    storage : :class:`.Storage`
+        Storage file for results
+
+    Attributes
+    ----------
+    save_frequency : int
+        Results should be sync'd (saved to disk) after every
+        ``save_frequency`` steps. Note: subclasses must directly implement
+        this, the attribute is just a placeholder.
+    output_stream : file
+        Subclasses should write output to this, allowing a standard way to
+        redirect any output.
+    """
     __metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
