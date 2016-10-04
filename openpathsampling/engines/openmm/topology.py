@@ -35,18 +35,19 @@ class MDTrajTopology(Topology):
 
     @classmethod
     def from_dict(cls, dct):
-        if 'mdtraj' in dct:
-            # old versions 0.9.0 and below
-            top_dict = dct['mdtraj']
+        top_dict = dct['mdtraj']
 
-            atoms = pd.DataFrame(top_dict['atoms'], columns=top_dict['atom_columns'])
-            bonds = np.array(top_dict['bonds'])
+        atoms = pd.DataFrame(top_dict['atoms'], columns=top_dict['atom_columns'])
+        bonds = np.array(top_dict['bonds'])
 
-            try:
-                md_topology = md.Topology.from_dataframe(atoms, bonds)
-                return cls(md_topology)
-            except StandardError:
-                # we try a fix and add multiples of 10000 to the resSeq
+        try:
+            md_topology = md.Topology.from_dataframe(atoms, bonds)
+            return cls(md_topology)
+        except StandardError:
+            # we try a fix and add multiples of 10000 to the resSeq
+
+            for ci in np.unique(atoms['chainID']):
+                chain_atoms = atoms[atoms['chainID'] == ci]
 
                 old_chain_id = 0
                 old_residue_id = 0
@@ -69,8 +70,9 @@ class MDTrajTopology(Topology):
                     old_chain_id = chain_id
                     old_residue_id = res_id
 
-                md_topology = md.Topology.from_dataframe(atoms, bonds)
-                return cls(md_topology)
+            md_topology = md.Topology.from_dataframe(atoms, bonds)
+
+            return cls(md_topology)
 
 
 class OpenMMSystemTopology(Topology):
