@@ -8,8 +8,8 @@ from test_helpers import (
 )
 
 import openpathsampling as paths
-from openpathsampling.analysis.move_scheme import MoveScheme, DefaultScheme
-from openpathsampling.analysis.move_strategy import *
+from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
+from openpathsampling.high_level.move_strategy import *
 from openpathsampling import VolumeFactory as vf
 
 import collections
