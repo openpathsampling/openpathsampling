@@ -21,12 +21,13 @@ class MDTrajTopology(Topology):
             else:
                 element_symbol = atom.element.symbol
 
-            atom_data.append((atom.serial, atom.name, element_symbol,
-                         int(atom.residue.resSeq), atom.residue.name,
-                         atom.residue.chain.index))
-            # used_elements.add(atom.element)
+            atom_data.append((
+                atom.serial, atom.name, element_symbol,
+                int(atom.residue.resSeq), atom.residue.name,
+                atom.residue.chain.index))
 
-        out['atom_columns'] = ["serial", "name", "element", "resSeq", "resName", "chainID"]
+        out['atom_columns'] = ["serial", "name", "element", "resSeq",
+                               "resName", "chainID", "segmentID"]
         out['atoms'] = atom_data
         out['bonds'] = [(a.index, b.index) for (a, b) in self.mdtraj.bonds]
 
@@ -34,19 +35,50 @@ class MDTrajTopology(Topology):
 
     @classmethod
     def from_dict(cls, dct):
-        # TODO: fix this in a better way. Works for now with mdtraj 1.3.x and 1.4.x
-        top_dict = dct['mdtraj']
+        if 'mdtraj' in dct:
+            # old versions 0.9.0 and below
+            top_dict = dct['mdtraj']
 
-        atoms = pd.DataFrame(top_dict['atoms'], columns=top_dict['atom_columns'])
-        bonds = np.array(top_dict['bonds'])
+            atoms = pd.DataFrame(top_dict['atoms'], columns=top_dict['atom_columns'])
+            bonds = np.array(top_dict['bonds'])
 
-        md_topology = md.Topology.from_dataframe(atoms, bonds)
+            try:
+                md_topology = md.Topology.from_dataframe(atoms, bonds)
+                return cls(md_topology)
+            except StandardError:
+                # we try a fix and add multiples of 10000 to the resSeq
 
-        return cls(md_topology)
+                old_chain_id = 0
+                old_residue_id = 0
+                multiplier = 0
+                for row, res_id, chain_id in zip(
+                        range(len(atoms)),
+                        atoms['resSeq'],
+                        atoms['chainID']):
+
+                    if chain_id > old_chain_id:
+                        multiplier = 0
+                        old_residue_id = 0
+
+                    if res_id < old_residue_id:
+                        multiplier += 1
+
+                    if multiplier > 0:
+                        atoms.loc[row, 'resSeq'] += multiplier * 10000
+
+                    old_chain_id = chain_id
+                    old_residue_id = res_id
+
+                md_topology = md.Topology.from_dataframe(atoms, bonds)
+                return cls(md_topology)
 
 
 class OpenMMSystemTopology(Topology):
     """A Topology that is based on an openmm.system object
+
+    This uses the XmlSerializer class from OpenMM itself to transform the
+    system object into an XML string which is then stored in the JSON.
+    This is rather inefficient but works very stable.
 
     """
     def __init__(self, openmm_system):
@@ -57,7 +89,7 @@ class OpenMMSystemTopology(Topology):
 
     def to_dict(self):
         system_xml = XmlSerializer.serialize(self.system)
-        return {'system_xml' : system_xml}
+        return {'system_xml': system_xml}
 
     @classmethod
     def from_dict(cls, dct):
