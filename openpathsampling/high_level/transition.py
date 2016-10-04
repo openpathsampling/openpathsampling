@@ -147,12 +147,12 @@ class TISTransition(Transition):
         # build ensembles if we don't already have them
         self.orderparameter = orderparameter
         if not hasattr(self, "ensembles"):
-            self.build_ensembles(self.stateA, self.stateB, 
+            self.build_ensembles(self.stateA, self.stateB,
                                  self.interfaces, self.orderparameter)
 
         self.default_orderparameter = self.orderparameter
 
-        self.total_crossing_probability_method="wham" 
+        self.total_crossing_probability_method = "wham" 
         self.histograms = {}
         # caches for the results of our calculation
         self._flux = None
@@ -173,7 +173,7 @@ class TISTransition(Transition):
         }
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
-            state_vol=stateA, 
+            state_vol=stateA,
             innermost_vols=interfaces[0]
         )
 
@@ -202,7 +202,7 @@ class TISTransition(Transition):
 
     def __str__(self):
         mystr = str(self.__class__.__name__) + ": " + str(self.name) + "\n"
-        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name) 
+        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name)
                   + " or " + str(self.stateB.name) + "\n")
         for iface in self.interfaces:
             mystr += "Interface: " + str(iface.name) + "\n"
@@ -214,7 +214,7 @@ class TISTransition(Transition):
             stateA, stateB, self.interfaces, orderparameter
         )
         for ensemble in self.ensembles:
-            ensemble.named(self.name + " " + 
+            ensemble.named(self.name + " " +
                            str(self.ensembles.index(ensemble)))
 
 
@@ -288,7 +288,7 @@ class TISTransition(Transition):
         hist = self.histograms['pathlength'][ensemble]
         return hist.normalized()
 
-    def crossing_probability(self, ensemble, nblocks=1):
+    def crossing_probability(self, ensemble, n_blocks=1):
         """
         Return the crossing probability for the given ensemble.
         """
@@ -298,7 +298,7 @@ class TISTransition(Transition):
 
     def total_crossing_probability(self, steps=None, method="wham", force=False):
         """Return the total crossing probability using `method`
-        
+
         Parameters
         ----------
         steps : iterable of :class:`.MCStep`
@@ -320,7 +320,7 @@ class TISTransition(Transition):
                 if steps is None:
                     raise RuntimeError("Unable to build histograms without steps source")
                 self.all_statistics(steps, force=True)
-                         
+
             df = histograms_to_pandas_dataframe(
                 self.histograms['max_lambda'].values(),
                 fcn="reverse_cumulative"
@@ -334,8 +334,8 @@ class TISTransition(Transition):
         elif method == "mbar":
             pass
         else:
-            raise ValueError("Only supported methods are 'wham' and 'mbar'. " + \
-                             "Whereas 'mbar' is not yet implemented!")
+            raise ValueError("Only supported methods are 'wham' and 'mbar'.  "
+                             + "Whereas 'mbar' is not yet implemented!")
 
         self.tcp = LookupFunction(tcp.keys(), tcp.values())
         return self.tcp
@@ -367,7 +367,8 @@ class TISTransition(Transition):
                     n_acc += 1
                 n_try += 1
         ctp = float(n_acc)/n_try
-        logger.info("CTP: " + str(n_acc) + "/" + str(n_try) + "=" + str(ctp) + "\n")
+        logger.info("CTP: " + str(n_acc) + "/" + str(n_try) + "=" + str(ctp)
+                    + "\n")
         try:
             self.ctp[ensemble] = ctp
         except AttributeError:
@@ -399,7 +400,9 @@ class TISTransition(Transition):
 
 
         if self._flux is None:
-            raise ValueError("No flux available to TISTransition. Cannot calculate rate")
+            raise ValueError(
+                "No flux available to TISTransition. Cannot calculate rate"
+            )
         
         flux = self._flux
 
@@ -412,7 +415,7 @@ class TISTransition(Transition):
         # get the conditional transition probability
         if outer_ensemble is None:
             outer_ensemble = self.ensembles[-1]
-        logger.info("outer ensemble: " + outer_ensemble.name + " " 
+        logger.info("outer ensemble: " + outer_ensemble.name + " "
                     + repr(outer_ensemble))
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
         outer_lambda = self.interfaces.get_lambda(self.interfaces[-1])
@@ -476,7 +479,7 @@ class TISTransition(Transition):
         if not force and self._flux != None:
             return self._flux
 
-        self.minus_count_sides = { "in" : [], "out" : [] }
+        self.minus_count_sides = {"in": [], "out": []}
         # NOTE: this assumes that minus mover is the only thing with the
         # minus mover's signature. TODO: switch this back to being
         # mover-based when we move all analysis out of the network objects

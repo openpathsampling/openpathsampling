@@ -1,14 +1,5 @@
 import logging
 
-import numpy as np
-
-import openpathsampling as paths
-from openpathsampling.numerics import (
-    Histogram, histograms_to_pandas_dataframe, LookupFunction
-)
-from openpathsampling.numerics import WHAM
-from openpathsampling.netcdfplus import StorableNamedObject
-
 logger = logging.getLogger(__name__)
 
 def pathlength(sample):
@@ -47,12 +38,12 @@ def guess_interface_lambda(crossing_probability, direction=1):
     lambda_bin = -1
     if direction > 0:
         cp_vals = crossing_probability.reverse_cumulative().values()
-        while (abs(cp_vals[lambda_bin+1] - 1.0) < 1e-10):
+        while abs(cp_vals[lambda_bin+1] - 1.0) < 1e-10:
             lambda_bin += 1
         outer_lambda = crossing_probability.bins[lambda_bin]
     elif direction < 0:
         cp_vals = crossing_probability.cumulative().values()
-        while (abs(cp_vals[lambda_bin+1] - 1.0) > 1e-10):
+        while abs(cp_vals[lambda_bin+1] - 1.0) > 1e-10:
             lambda_bin += 1
         outer_lambda = crossing_probability.bins[lambda_bin-1]
     else:
@@ -67,7 +58,7 @@ def minus_sides_summary(trajectory, minus_ensemble):
     minus_state = minus_ensemble.state_vol
     minus_innermost = minus_ensemble.innermost_vol
     minus_interstitial = minus_innermost & ~minus_state
-    vol_dict = { 
+    vol_dict = {
         "A" : minus_state,
         "X" : ~minus_innermost,
         "I" : minus_interstitial
@@ -75,7 +66,7 @@ def minus_sides_summary(trajectory, minus_ensemble):
     summary = trajectory.summarize_by_volumes(vol_dict)
     # this is a per-trajectory loop
     count_sides = {"in" : [], "out" : []}
-    side=None
+    side = None
     local_count = 0
     # strip off the beginning and ending in A
     for (label, count) in summary[1:-1]:
@@ -91,4 +82,3 @@ def minus_sides_summary(trajectory, minus_ensemble):
             local_count = 0
         local_count += count
     return count_sides
-
