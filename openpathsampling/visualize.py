@@ -27,7 +27,7 @@ class TreeRenderer(svg.Drawing):
             css_file = 'vis'
 
         css_file_name = os.path.join(
-            os.path.dirname(__file__), 'css', css_file + '.css')
+            os.path.dirname(__file__), 'resources', css_file + '.css')
 
         with open(css_file_name) as content_file:
             vis_css = content_file.read()
