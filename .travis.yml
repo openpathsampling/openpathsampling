@@ -18,10 +18,10 @@ script:
   - echo travis_fold:end:conda.build.package
 
   # Run tests in _test environment
-  # - conda create --yes --name test --use-local openpathsampling-dev
-  # - conda info --envs
-  # - source activate test
-  # - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma ipynbtest
+  - conda create --yes --name test --use-local openpathsampling-dev
+  - conda info --envs
+  - source activate test
+  - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma ipynbtest
   # - source devtools/ci/git_hash.sh
   # - source devtools/ci/nosetests.sh
   # - source devtools/ci/ipythontests.sh
@@ -41,7 +41,7 @@ env:
 # - python=3.5  CONDA_PY=35  CONDA_NPY=110
 
   global:
-  - secure: "Ou9KukGxCOdNWvEpr+9YrWTlB0xezu1mNV1gXtFjJ0RDIvzPRGUkpU7AUAdKwn6fUcbzq5E1y6rU9aG/QQe9YZkRHhPo585ZzieTNa0UxsyINk7XuwxL7MpRZijHCHFBvRVNrXkIh3CtmXvZS2ksAa8+FuYiO/lBbOMZ0nNAJac="
+#  - secure: "Ou9KukGxCOdNWvEpr+9YrWTlB0xezu1mNV1gXtFjJ0RDIvzPRGUkpU7AUAdKwn6fUcbzq5E1y6rU9aG/QQe9YZkRHhPo585ZzieTNa0UxsyINk7XuwxL7MpRZijHCHFBvRVNrXkIh3CtmXvZS2ksAa8+FuYiO/lBbOMZ0nNAJac="
   - secure: "NJvoSrLNd2ZR3HluJjEqI36gD5lsucwIvgnYjNmM4cwnnA77aLV9FRYTwlLRZn3XY9FL8KOzL5l0amNzMD7sQrf7bWwWv7iCUBddH549q9RSgiuOugtodYJ6VaXi76hk1rOgcJpDoCj9wTCIlMtWibPUzr1QHmdihfdM2iA2kkE="
   - secure: "l9NJkZDD0ALhkErUvhRrreLsrcWErd+CXpWv8dxHGtkjemNx6CwVtyL+a30jz/QwMANSZbKll/cPK5yJQvuwDaWxja6UPLLKVNGtma+CmwKcIC/wwTwbMoxcS62fyLJ3kS0qR8oCQz2nCPKiYyRGADtPLWVMZckY1SJfNYcKuCM="
 
