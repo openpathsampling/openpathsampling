@@ -4,7 +4,7 @@ import numpy as np
 
 import openpathsampling as paths
 from openpathsampling.numerics import (
-    Histogram, histograms_to_pandas_dataframe, LookupFunction
+    Histogram, histograms_to_pandas_dataframe, LookupFunction, Histogrammer
 )
 from openpathsampling.numerics import WHAM
 from openpathsampling.netcdfplus import StorableNamedObject
@@ -15,25 +15,6 @@ from openpathsampling.analysis.tools import (
     pathlength, max_lambdas, guess_interface_lambda, minus_sides_summary,
     sampleset_sample_generator
 )
-
-class Histogrammer(object):
-    """
-    Basically a dictionary to track what each histogram should be making.
-    """
-    def __init__(self, f, f_args=None, hist_args=None):
-        self.f = f
-        self.f_args = f_args
-        self._hist_args = hist_args
-        self.empty_hist = Histogram(**self._hist_args)
-
-    @property
-    def hist_args(self):
-        return self._hist_args
-
-    @hist_args.setter
-    def hist_args(self, val):
-        self._hist_args = val
-        self.empty_hist = Histogram(**self._hist_args)
 
 class Transition(StorableNamedObject):
     """
