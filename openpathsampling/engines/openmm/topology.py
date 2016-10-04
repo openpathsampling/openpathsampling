@@ -24,7 +24,7 @@ class MDTrajTopology(Topology):
             atom_data.append((
                 atom.serial, atom.name, element_symbol,
                 int(atom.residue.resSeq), atom.residue.name,
-                atom.residue.chain.index))
+                atom.residue.chain.index, atom.segment_id))
 
         out['atom_columns'] = ["serial", "name", "element", "resSeq",
                                "resName", "chainID", "segmentID"]
@@ -48,29 +48,37 @@ class MDTrajTopology(Topology):
 
             for ci in np.unique(atoms['chainID']):
                 chain_atoms = atoms[atoms['chainID'] == ci]
+                indices = chain_atoms.index.tolist()
 
-                old_chain_id = 0
                 old_residue_id = 0
                 multiplier = 0
-                for row, res_id, chain_id in zip(
-                        range(len(atoms)),
-                        atoms['resSeq'],
-                        atoms['chainID']):
-
-                    if chain_id > old_chain_id:
-                        multiplier = 0
-                        old_residue_id = 0
-
+                places = []
+                for row, res_id in zip(indices, list(chain_atoms['resSeq'])):
                     if res_id < old_residue_id:
+                        if multiplier > 0:
+                            atoms.loc[places, 'resSeq'] += 10000 * multiplier
+
+                        places = []
                         multiplier += 1
 
                     if multiplier > 0:
-                        atoms.loc[row, 'resSeq'] += multiplier * 10000
+                        places.append(row)
 
-                    old_chain_id = chain_id
                     old_residue_id = res_id
 
+                if multiplier > 0:
+                    atoms.loc[places, 'resSeq'] += 10000 * multiplier
+
+
+            # this function is really slow! Reads ~ 1000 atoms per second
             md_topology = md.Topology.from_dataframe(atoms, bonds)
+
+            # that we have successfully created the topology using from_df
+            # we remove the wrong multipliers
+            # this is weird, but reproduces the current behaviour
+
+            for atom in md_topology.atoms:
+                atom.residue.resSeq %= 10000
 
             return cls(md_topology)
 
