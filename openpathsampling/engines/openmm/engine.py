@@ -374,7 +374,11 @@ class OpenMMEngine(DynamicsEngine):
             self.simulation.context.setVelocities(snapshot.velocities)
 
             # After the updates cache the new snapshot
-            self._current_snapshot = snapshot
+            if snapshot.engine is self:
+                # no need for copy if this snap is from this engine
+                self._current_snapshot = snapshot
+            else:
+                self._current_snapshot = self._build_current_snapshot()
 
     def generate_next_frame(self):
         self.simulation.step(self.n_steps_per_frame)

@@ -30,15 +30,16 @@ except ImportError:  # pragma: no cover
     isrelease = str(ops_setup.preferences['released'])
         
         
-from analysis.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme, OneWayShootingMoveScheme
+from high_level.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
+    OneWayShootingMoveScheme
 )
 
-from analysis.tis_analysis import (
+from high_level.transition import (
     TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
 )
 
-from analysis.network import (
+from high_level.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
     FixedLengthTPSNetwork
 )
@@ -89,7 +90,7 @@ from high_level.interface_set import (
 
 from high_level.ms_outer_interface import MSOuterTISInterface
 
-from live_visualization import LiveVisualization
+from step_visualizer_2D import StepVisualizer2D
 
 from movechange import (
     EmptyMoveChange, ConditionalSequentialMoveChange,
@@ -141,6 +142,10 @@ from volume import (
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )
+
+from high_level import move_strategy as strategies
+
+import openpathsampling.numerics as numerics
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
 import openpathsampling.engines.openmm as openmm

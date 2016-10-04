@@ -18,11 +18,16 @@ then run replica exchange multiple state transition interface sampling.
     steps and store the results. 
 
 - [`AD_mstis_3_restart.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_mstis/AD_mstis_3_restart.ipynb)
-    [Part 3] (Optional) This open the current production file and will run
+    [Part 3; Optional] This open the current production file and will run
     and append more steps.
 
 - [`AD_mstis_4_analysis.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_mstis/AD_mstis_4_analysis.ipynb)
     [Part 4] Analysis of the results in the production file. Almost entirely a copy of the analysis of the toy MSTIS analysis notebook.
      
+Other files:
+
+- [`alatools.py`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/alanine_dipeptide_mstis/alatools.py)
+    Miscellaneous tools to define CVs and make plots for the MSTIS alanine
+    dipeptide example.
 
 

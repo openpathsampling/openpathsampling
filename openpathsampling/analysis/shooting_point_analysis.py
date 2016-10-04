@@ -80,43 +80,124 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
 
     Parameters
     ----------
-    steps : iterable of :class:`.MCStep`
-        input MC steps to analysis
+    steps : iterable of :class:`.MCStep` or None
+        input MC steps to analyze; if None, no analysis performed
     states : list of :class:`.Volume`
         volumes to consider as states for the analysis. For pandas output,
         these volumes must be named.
     """
     def __init__(self, steps, states):
         super(ShootingPointAnalysis, self).__init__()
-        for step in steps:
-            try:
-                # TODO: this should in step.change.canonical.details
-                details = step.change.canonical.trials[0].details
-                shooting_snap = details.shooting_snapshot
-            except AttributeError:
-                # wrong kind of move (no shooting_snapshot)
-                pass
-            except IndexError:
-                # very wrong kind of move (no trials!)
-                pass
-            else:
-                # easy to change how we define the key
-                key = shooting_snap
-                trial_traj = step.change.canonical.trials[0].trajectory
-                init_traj = details.initial_trajectory
-                test_points = [s for s in [trial_traj[0], trial_traj[-1]]
-                               if s not in [init_traj[0], init_traj[-1]]]
+        self.states = states
+        if steps is not None:
+            self.analyze(steps)
 
-                total = collections.Counter(
-                    {state: sum([int(state(pt)) for pt in test_points])
-                                for state in states}
-                )
-                total_count = sum(total.values())
-                assert total_count == 1 or total_count == 2
-                try:
-                    self[key] += total
-                except KeyError:
-                    self[key] = total
+    def analyze(self, steps):
+        """Analyze a list of steps, adding to internal results.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep` or None
+            MC steps to analyze
+        """
+        for step in steps:
+            total = self.analyze_single_step(step)
+
+    def analyze_single_step(self, step):
+        """
+        Analyzes final states from a path sampling step. Adds to internal
+        results.
+
+        Parameters
+        ----------
+        step : :class:`.MCStep`
+            the step to analyze and add to this analysis
+
+        Returns
+        -------
+        list of :class:`.Volume`
+            the states which are identified as new final states from this
+            move
+        """
+        key = self.step_key(step)
+        if key is not None:
+            details = step.change.canonical.trials[0].details
+            trial_traj = step.change.canonical.trials[0].trajectory
+            init_traj = details.initial_trajectory
+            test_points = [s for s in [trial_traj[0], trial_traj[-1]]
+                           if s not in [init_traj[0], init_traj[-1]]]
+
+            total = collections.Counter(
+                {state: sum([int(state(pt)) for pt in test_points])
+                            for state in self.states}
+            )
+            total_count = sum(total.values())
+            # TODO: clarify assertion (at least one endpoint in state)
+            assert total_count == 1 or total_count == 2
+            try:
+                self[key] += total
+            except KeyError:
+                self[key] = total
+        else:
+            total = {}
+
+        return [s for s in total.keys() if total[s] > 0]
+
+    @staticmethod
+    def step_key(step):
+        """
+        Returns the key we use for hashing (the shooting snapshot).
+
+        Parameters
+        ----------
+        step : :class:`.MCStep`
+            the step to extract a shooting point from
+
+        Returns
+        -------
+        :class:`.Snapshot` or None
+            the shooting snapshot, or None if this step is not a shooting
+            move.
+        """
+        key = None
+        try:
+            # TODO: this should in step.change.canonical.details
+            details = step.change.canonical.trials[0].details
+            shooting_snap = details.shooting_snapshot
+        except AttributeError:
+            # wrong kind of move (no shooting_snapshot)
+            pass
+        except IndexError:
+            # very wrong kind of move (no trials!)
+            pass
+        else:
+            # easy to change how we define the key
+            key = shooting_snap
+        return key
+
+    @classmethod
+    def from_individual_runs(cls, run_results, states=None):
+        """Build shooting point analysis from pairs of shooting point to
+        final state.
+
+        Parameters
+        ----------
+        run_results : list of 2-tuples (:class:`.Snapshot`, :class:`.Volume`)
+            the first element in each pair is the shooting point, the second
+            is the final volume
+        """
+        if states is None:
+            states = set(s[1] for s in run_results)
+        analyzer = ShootingPointAnalysis(None, states)
+        for step in run_results:
+            key = step[0]
+            total = collections.Counter({step[1] : 1})
+            try:
+                analyzer[key] += total
+            except KeyError:
+                analyzer[key] = total
+
+        return analyzer
 
     def committor(self, state, label_function=None):
         """Calculate the (point-by-point) committor.
@@ -159,7 +240,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
                                + "(key: {1})".format(ndim, key))
         return ndim
 
-    def committor_histogram(self, new_hash, state, bins):
+    def committor_histogram(self, new_hash, state, bins=10):
         """Calculate the histogrammed version of the committor.
 
         Parameters
@@ -174,8 +255,9 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         Returns
         -------
         tuple :
-            (hist, bins) like numpy.histogram, where hist is the histogram
-            count and bins is the bins output from numpy.histogram 
+            hist, bins like numpy.histogram, where hist is the histogram
+            count and bins is the bins output from numpy.histogram. 2-tuple
+            in the case of 1D histogram, 3-tuple in the case of 2D histogram
         """
         rehashed = self.rehash(new_hash)
         r_store = rehashed.store
@@ -183,23 +265,29 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         count_state = {k : r_store[k][state] for k in r_store}
         ndim = self._get_key_dim(r_store.keys()[0])
         if ndim == 1:
-            all_hist = np.histogram(count_all.keys(),
-                                    weights=count_all.values(), 
-                                    bins=bins)[0]
-            state_hist = np.histogram(count_state.keys(),
-                                      weights=count_state.values(),
-                                      bins=bins)[0]
+            (all_hist, b) = np.histogram(count_all.keys(),
+                                         weights=count_all.values(), 
+                                         bins=bins)
+            (state_hist, b) = np.histogram(count_state.keys(),
+                                           weights=count_state.values(),
+                                           bins=bins)
+            b_list = [b]
         elif ndim == 2:
-            all_hist = np.histogram2d(x=[k[0] for k in count_all],
-                                      y=[k[1] for k in count_all],
-                                      weights=count_all.values(),
-                                      bins=bins)[0]
-            state_hist = np.histogram2d(x=[k[0] for k in count_state],
-                                        y=[k[1] for k in count_state],
-                                        weights=count_state.values(),
-                                        bins=bins)[0]
+            (all_hist, b_x, b_y) = np.histogram2d(
+                x=[k[0] for k in count_all],
+                y=[k[1] for k in count_all],
+                weights=count_all.values(),
+                bins=bins
+            )
+            (state_hist, b_x, b_y) = np.histogram2d(
+                x=[k[0] for k in count_state],
+                y=[k[1] for k in count_state],
+                weights=count_state.values(),
+                bins=bins
+            )
+            b_list = [b_x, b_y]
         state_frac = np.true_divide(state_hist, all_hist)
-        return state_frac, bins
+        return tuple([state_frac] + b_list)
 
     def to_pandas(self, label_function=None):
         """

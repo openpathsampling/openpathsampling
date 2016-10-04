@@ -1,5 +1,5 @@
 name: openpathsampling
-version: 0.9.0
+version: 0.9.1
 
 authors:
   - David W.H. Swenson
@@ -49,6 +49,7 @@ packages:
   - openpathsampling.tests
   - openpathsampling.analysis
   - openpathsampling.high_level
+  - openpathsampling.numerics
   - openpathsampling.netcdfplus
   - openpathsampling.engines
   - openpathsampling.engines.features

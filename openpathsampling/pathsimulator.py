@@ -55,6 +55,23 @@ class MCStep(StorableObject):
 
 
 class PathSimulator(StorableNamedObject):
+    """Abstract class for the "main" function of a simulation.
+
+    Parameters
+    ----------
+    storage : :class:`.Storage`
+        Storage file for results
+
+    Attributes
+    ----------
+    save_frequency : int
+        Results should be sync'd (saved to disk) after every
+        ``save_frequency`` steps. Note: subclasses must directly implement
+        this, the attribute is just a placeholder.
+    output_stream : file
+        Subclasses should write output to this, allowing a standard way to
+        redirect any output.
+    """
     __metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
@@ -515,8 +532,8 @@ class PathSampling(PathSimulator):
 
         initialization_logging(init_log, self, 
                                ['move_scheme', 'sample_set'])
-        self.live_visualization = None
-        self.visualize_frequency = 1
+        self.live_visualizer = None
+        self.status_update_frequency = 1
         self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
     def run_until(self, n_steps):
@@ -547,11 +564,11 @@ class PathSampling(PathSimulator):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
             refresh=True
-            if self.step % self.visualize_frequency == 0:
+            if self.step % self.status_update_frequency == 0:
                 # do we visualize this step?
-                if self.live_visualization is not None and mcstep is not None:
+                if self.live_visualizer is not None and mcstep is not None:
                     # do we visualize at all?
-                    self.live_visualization.draw_ipynb(mcstep)
+                    self.live_visualizer.draw_ipynb(mcstep)
                     refresh=False
 
                 elapsed = time.time() - initial_time
@@ -571,7 +588,8 @@ class PathSampling(PathSimulator):
                     + "Expected time to finish: %d seconds\n" % (
                         1.0 * (n_steps - nn) * time_per_step
                     ),
-                    refresh=refresh
+                    refresh=refresh,
+                    output_stream=self.output_stream
                 )
 
             time_start = time.time() 
@@ -608,15 +626,35 @@ class PathSampling(PathSimulator):
 
         self.sync_storage()
 
-        if self.live_visualization is not None and mcstep is not None:
-            self.live_visualization.draw_ipynb(mcstep)
+        if self.live_visualizer is not None and mcstep is not None:
+            self.live_visualizer.draw_ipynb(mcstep)
         paths.tools.refresh_output(
             "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
-            refresh=False
+            refresh=False,
+            output_stream=self.output_stream
         )
 
 
 class CommittorSimulation(PathSimulator):
+    """Committor simulations. What state do you hit from a given snapshot?
+
+    Parameters
+    ----------
+    storage : :class:`.Storage`
+        the file to store simulations in
+    engine : :class:`.DynamicsEngine`
+        the dynamics engine to use to run the simulation
+    states : list of :class:`.Volume`
+        the volumes representing the stable states
+    randomizer : :class:`.SnapshotModifier`
+        the method used to modify the input snapshot before each shot
+    initial_snapshots : list of :class:`.Snapshot`
+        initial snapshots to use
+    direction : int or None
+        if direction > 1, only forward shooting is used, if direction < 1,
+        only backward, and if direction is None, mix of forward and
+        backward. Useful if using no modification on the randomizer.
+    """
     def __init__(self, storage, engine=None, states=None, randomizer=None,
                  initial_snapshots=None, direction=None):
         super(CommittorSimulation, self).__init__(storage)
@@ -667,11 +705,33 @@ class CommittorSimulation(PathSimulator):
             self.mover = self.backward_mover
 
     def run(self, n_per_snapshot, as_chain=False):
+        """Run the simulation.
+
+        Parameters
+        ----------
+        n_per_snapshot : int
+            number of shots per snapshot
+        as_chain : bool
+            if as_chain is False (default), then the input to the modifier
+            is always the original snapshot. If as_chain is True, then the
+            input to the modifier is the previous (modified) snapshot.
+            Useful for modifications that can't cover the whole range from a
+            given snapshot.
+        """
         self.step = 0
+        snap_num = 0
         for snapshot in self.initial_snapshots:
             start_snap = snapshot
             # do what we need to get the snapshot set up
             for step in range(n_per_snapshot):
+                paths.tools.refresh_output(
+                    "Working on snapshot %d / %d; shot %d / %d" % (
+                        snap_num+1, len(self.initial_snapshots),
+                        step+1, n_per_snapshot
+                    ),
+                    output_stream=self.output_stream,
+                )
+
                 if as_chain:
                     start_snap = self.randomizer(start_snap)
                 else:
@@ -699,6 +759,9 @@ class CommittorSimulation(PathSimulator):
                     self.storage.steps.save(mcstep)
                     if self.step % self.save_frequency == 0:
                         self.sync_storage()
+
+                self.step += 1
+            snap_num += 1
 
 class DirectSimulation(PathSimulator):
     """

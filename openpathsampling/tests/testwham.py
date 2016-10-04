@@ -50,7 +50,7 @@ class testWHAM(object):
         self.cleaned = pd.DataFrame(data=self.expected_cleaned,
                                     index=self.index,
                                     columns=self.columns)
-        self.wham = paths.analysis.WHAM(cutoff=0.1)
+        self.wham = paths.numerics.WHAM(cutoff=0.1)
 
 
     def test_prep_reverse_cumulative(self):
@@ -59,7 +59,7 @@ class testWHAM(object):
                                    self.expected_cleaned)
 
     def test_prep_reverse_cumulative_with_interfaces(self):
-        wham = paths.analysis.WHAM(cutoff=0.1, interfaces=[0.0, 0.2, 0.3])
+        wham = paths.numerics.WHAM(cutoff=0.1, interfaces=[0.0, 0.2, 0.3])
         cleaned = wham.prep_reverse_cumulative(self.input_df)
         np.testing.assert_allclose(cleaned.as_matrix(),
                                    np.array([[2.0, 0.0, 0.0],
