@@ -35,7 +35,7 @@ from high_level.move_scheme import (
     OneWayShootingMoveScheme
 )
 
-from analysis.tis_analysis import (
+from high_level.transition import (
     TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
 )
 
