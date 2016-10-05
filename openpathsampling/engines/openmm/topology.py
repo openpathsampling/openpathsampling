@@ -37,7 +37,8 @@ class MDTrajTopology(Topology):
     def from_dict(cls, dct):
         top_dict = dct['mdtraj']
 
-        atoms = pd.DataFrame(top_dict['atoms'], columns=top_dict['atom_columns'])
+        atoms = pd.DataFrame(
+            top_dict['atoms'], columns=top_dict['atom_columns'])
         bonds = np.array(top_dict['bonds'])
 
         try:
@@ -68,7 +69,6 @@ class MDTrajTopology(Topology):
 
                 if multiplier > 0:
                     atoms.loc[places, 'resSeq'] += 10000 * multiplier
-
 
             # this function is really slow! Reads ~ 1000 atoms per second
             md_topology = md.Topology.from_dataframe(atoms, bonds)
