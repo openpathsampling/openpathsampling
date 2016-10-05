@@ -63,6 +63,8 @@ integrator_low.setConstraintTolerance(0.00001)
 
 print """## 4. the platform"""
 
+print eng.Engine.available_platforms()
+
 print """## 5. OpenMM properties"""
 
 platform = cf.platform
@@ -79,7 +81,7 @@ else:
 print """## 6. OPS options"""
 engine_low_options = {
     'n_frames_max': 5000,
-    'nsteps_per_frame': 10
+    'n_steps_per_frame': 10
 }
 engine_low = eng.Engine(
     template.topology,
@@ -92,20 +94,19 @@ engine_low.name = 'default'
 
 integrator_high = omt.integrators.VVVRIntegrator(
     temperature=1000 * unit.kelvin,  # temperature
-    timestep=1.0 * unit.femtoseconds  # integration step size
+    timestep=2.0 * unit.femtoseconds  # integration step size
 )
 integrator_high.setConstraintTolerance(0.00001)
 
 engine_high_options = {
     'n_frames_max': 2000,
-    'nsteps_per_frame': 20  # twice as many steps with half stepsize
+    'n_steps_per_frame': 10  # twice as many steps with half stepsize
 }
 engine_high = engine_low.from_new_options(
     integrator=integrator_high,
     options=engine_high_options)
 engine_high.name = 'high'
 
-paths.EngineMover.engine = engine_high
 engine_high.initialize(platform)
 
 print 'High-Engine uses'
@@ -137,8 +138,8 @@ storage.tag['template'] = template
 # -----------------------------------------------------------------------------
 print """State Definitions"""
 
-# states = ['A', 'B', 'C', 'D', 'E', 'F']
-states = ['A', 'B', 'C', 'D']
+states = ['A', 'B', 'C', 'D', 'E', 'F']
+# states = ['A', 'B', 'C', 'D']
 state_centers = {
     'A': [-150, 150],
     'B': [-70, 135],
@@ -264,11 +265,17 @@ for traj in it:
         state for state in states
         if paths.PartInXEnsemble(vol_state[state])(traj))
 
+    visited_states = ','.join(
+        state for state in states
+        if paths.PartInXEnsemble(vol_state[state])(traj[-100:]))
+
     # output status report
-    s = 'Ran %6d steps [%s]. Found states [%s]\n' % (
+    s = 'Ran %6d steps [%s]. Found states [%s] / visited [%s]\n' % (
         len(traj) - 1,
         (len(traj) - 1) * engine_high.snapshot_timestep,
-        found_states)
+        found_states,
+        visited_states)
+
     refresh_output(s)
 
     # remember the last output for later. Python 2 will leak `traj` into
@@ -308,7 +315,6 @@ while scheme.check_initial_conditions(total_sample_set)[0]:
 print """Equilibration"""
 
 engine_high.unload_context()
-
 engine_low.initialize(cf.platform)
 
 refresh_output('Low-Engine uses', refresh=False)
@@ -317,19 +323,10 @@ print 'temperature `%6.2f K' % (
     float(engine_low.integrator.getGlobalVariableByName('kT')) / 0.0083144621)
 
 print
-print
-print
 
 # Equilibration
-equil_scheme = paths.MoveScheme(mstis)
+equil_scheme = paths.OneWayShootingMoveScheme(mstis, engine=engine_low)
 
-# tell the scheme to actually use OneWayShooting and nothing else
-import openpathsampling.analysis.move_strategy as strat
-
-equil_scheme.append([
-    strat.OneWayShootingStrategy(engine=engine_low),
-    strat.OrganizeByMoveGroupStrategy()
-])
 equilibration = paths.PathSampling(
     storage=None,
     sample_set=total_sample_set,

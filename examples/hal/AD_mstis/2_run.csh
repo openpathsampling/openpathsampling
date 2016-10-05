@@ -1,5 +1,5 @@
 #!/bin/tcsh
-#  Batch script for single thread CPU job.
+#  Batch script for single thread GPU job.
 #
 # walltime : maximum wall clock time (hh:mm:ss)
 #PBS -l walltime=24:00:00
@@ -18,7 +18,9 @@
 #
 # nodes: number of nodes
 #   ppn: number of processes per node
-#PBS -l nodes=1:ppn=1
+#  gpus: number of gpus per node
+#  GPUs are in 'exclusive' mode by default, but 'shared' keyword sets them to shared mode.
+#PBS -l nodes=1:ppn=1:gpus=1:shared
 #
 # export all my environment variables to the job
 #PBS -V
