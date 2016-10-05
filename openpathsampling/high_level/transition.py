@@ -2,83 +2,19 @@ import logging
 
 import numpy as np
 
-from histogram import Histogram, histograms_to_pandas_dataframe
-from wham import WHAM
-from lookup_function import LookupFunction
 import openpathsampling as paths
+from openpathsampling.numerics import (
+    Histogram, histograms_to_pandas_dataframe, LookupFunction, Histogrammer
+)
+from openpathsampling.numerics import WHAM
 from openpathsampling.netcdfplus import StorableNamedObject
 
 logger = logging.getLogger(__name__)
 
-
-def pathlength(sample):
-    return len(sample.trajectory)
-
-def max_lambdas(sample, orderparameter):
-    return max(orderparameter(sample.trajectory))
-
-def sampleset_sample_generator(steps):
-    for step in steps:
-        sset = step.active # take the sampleset after the move
-        for sample in sset:
-            yield sample
-
-def guess_interface_lambda(crossing_probability, direction=1):
-    """
-    Guesses the lambda for the interface based on the crossing probability.
-    The assumption is that the interface lambda value is the last value
-    where the (reverse) cumulative crossing probability is (nearly) 1.
-
-    Parameters
-    ----------
-    crossing_probability : Histogram
-        the max_lambda histogram
-    direction : int
-        if direction > 0, the order parameter is increasing, and the reverse
-        cumulative histogram is used for the crossing probability. If
-        direction < 0, the cumulative histogram is used for the crossing
-        probability.
-
-    Returns
-    -------
-    float
-        the value of lambda for the interface
-    """
-    lambda_bin = -1
-    if direction > 0:
-        cp_vals = crossing_probability.reverse_cumulative().values()
-        while (abs(cp_vals[lambda_bin+1] - 1.0) < 1e-10):
-            lambda_bin += 1
-        outer_lambda = crossing_probability.bins[lambda_bin]
-    elif direction < 0:
-        cp_vals = crossing_probability.cumulative().values()
-        while (abs(cp_vals[lambda_bin+1] - 1.0) > 1e-10):
-            lambda_bin += 1
-        outer_lambda = crossing_probability.bins[lambda_bin-1]
-    else:
-        raise RuntimeError("Bad direction in guess_interface_lambda: " +
-                           repr(direction))
-    return outer_lambda
-
-
-class Histogrammer(object):
-    """
-    Basically a dictionary to track what each histogram should be making.
-    """
-    def __init__(self, f, f_args=None, hist_args=None):
-        self.f = f
-        self.f_args = f_args
-        self._hist_args = hist_args
-        self.empty_hist = Histogram(**self._hist_args)
-
-    @property
-    def hist_args(self):
-        return self._hist_args
-
-    @hist_args.setter
-    def hist_args(self, val):
-        self._hist_args = val
-        self.empty_hist = Histogram(**self._hist_args)
+from openpathsampling.analysis.tools import (
+    pathlength, max_lambdas, guess_interface_lambda, minus_sides_summary,
+    sampleset_sample_generator
+)
 
 class Transition(StorableNamedObject):
     """
@@ -211,12 +147,12 @@ class TISTransition(Transition):
         # build ensembles if we don't already have them
         self.orderparameter = orderparameter
         if not hasattr(self, "ensembles"):
-            self.build_ensembles(self.stateA, self.stateB, 
+            self.build_ensembles(self.stateA, self.stateB,
                                  self.interfaces, self.orderparameter)
 
         self.default_orderparameter = self.orderparameter
 
-        self.total_crossing_probability_method="wham" 
+        self.total_crossing_probability_method = "wham" 
         self.histograms = {}
         # caches for the results of our calculation
         self._flux = None
@@ -237,7 +173,7 @@ class TISTransition(Transition):
         }
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
-            state_vol=stateA, 
+            state_vol=stateA,
             innermost_vols=interfaces[0]
         )
 
@@ -266,7 +202,7 @@ class TISTransition(Transition):
 
     def __str__(self):
         mystr = str(self.__class__.__name__) + ": " + str(self.name) + "\n"
-        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name) 
+        mystr += (str(self.stateA.name) + " -> " + str(self.stateA.name)
                   + " or " + str(self.stateB.name) + "\n")
         for iface in self.interfaces:
             mystr += "Interface: " + str(iface.name) + "\n"
@@ -278,7 +214,7 @@ class TISTransition(Transition):
             stateA, stateB, self.interfaces, orderparameter
         )
         for ensemble in self.ensembles:
-            ensemble.named(self.name + " " + 
+            ensemble.named(self.name + " " +
                            str(self.ensembles.index(ensemble)))
 
 
@@ -352,7 +288,7 @@ class TISTransition(Transition):
         hist = self.histograms['pathlength'][ensemble]
         return hist.normalized()
 
-    def crossing_probability(self, ensemble, nblocks=1):
+    def crossing_probability(self, ensemble, n_blocks=1):
         """
         Return the crossing probability for the given ensemble.
         """
@@ -362,7 +298,7 @@ class TISTransition(Transition):
 
     def total_crossing_probability(self, steps=None, method="wham", force=False):
         """Return the total crossing probability using `method`
-        
+
         Parameters
         ----------
         steps : iterable of :class:`.MCStep`
@@ -384,7 +320,7 @@ class TISTransition(Transition):
                 if steps is None:
                     raise RuntimeError("Unable to build histograms without steps source")
                 self.all_statistics(steps, force=True)
-                         
+
             df = histograms_to_pandas_dataframe(
                 self.histograms['max_lambda'].values(),
                 fcn="reverse_cumulative"
@@ -398,8 +334,8 @@ class TISTransition(Transition):
         elif method == "mbar":
             pass
         else:
-            raise ValueError("Only supported methods are 'wham' and 'mbar'. " + \
-                             "Whereas 'mbar' is not yet implemented!")
+            raise ValueError("Only supported methods are 'wham' and 'mbar'.  "
+                             + "Whereas 'mbar' is not yet implemented!")
 
         self.tcp = LookupFunction(tcp.keys(), tcp.values())
         return self.tcp
@@ -431,7 +367,8 @@ class TISTransition(Transition):
                     n_acc += 1
                 n_try += 1
         ctp = float(n_acc)/n_try
-        logger.info("CTP: " + str(n_acc) + "/" + str(n_try) + "=" + str(ctp) + "\n")
+        logger.info("CTP: " + str(n_acc) + "/" + str(n_try) + "=" + str(ctp)
+                    + "\n")
         try:
             self.ctp[ensemble] = ctp
         except AttributeError:
@@ -463,7 +400,9 @@ class TISTransition(Transition):
 
 
         if self._flux is None:
-            raise ValueError("No flux available to TISTransition. Cannot calculate rate")
+            raise ValueError(
+                "No flux available to TISTransition. Cannot calculate rate"
+            )
         
         flux = self._flux
 
@@ -476,7 +415,7 @@ class TISTransition(Transition):
         # get the conditional transition probability
         if outer_ensemble is None:
             outer_ensemble = self.ensembles[-1]
-        logger.info("outer ensemble: " + outer_ensemble.name + " " 
+        logger.info("outer ensemble: " + outer_ensemble.name + " "
                     + repr(outer_ensemble))
         outer_cross_prob = self.histograms['max_lambda'][outer_ensemble]
         outer_lambda = self.interfaces.get_lambda(self.interfaces[-1])
@@ -540,7 +479,7 @@ class TISTransition(Transition):
         if not force and self._flux != None:
             return self._flux
 
-        self.minus_count_sides = { "in" : [], "out" : [] }
+        self.minus_count_sides = {"in": [], "out": []}
         # NOTE: this assumes that minus mover is the only thing with the
         # minus mover's signature. TODO: switch this back to being
         # mover-based when we move all analysis out of the network objects
@@ -583,36 +522,3 @@ class TISTransition(Transition):
         flux = 1.0 / (t_in_avg + t_out_avg) / engine_dt
         self._flux = flux
         return self._flux
-
-
-
-def minus_sides_summary(trajectory, minus_ensemble):
-    # note: while this could be refactored so vol_dict is external, I don't
-    # think this hurts speed very much, and it it really useful for testing
-    minus_state = minus_ensemble.state_vol
-    minus_innermost = minus_ensemble.innermost_vol
-    minus_interstitial = minus_innermost & ~minus_state
-    vol_dict = { 
-        "A" : minus_state,
-        "X" : ~minus_innermost,
-        "I" : minus_interstitial
-    }
-    summary = trajectory.summarize_by_volumes(vol_dict)
-    # this is a per-trajectory loop
-    count_sides = {"in" : [], "out" : []}
-    side=None
-    local_count = 0
-    # strip off the beginning and ending in A
-    for (label, count) in summary[1:-1]:
-        if label == "X" and side != "out":
-            if side == "in":
-                count_sides["in"].append(local_count)
-            side = "out"
-            local_count = 0
-        elif label == "A" and side != "in":
-            if side == "out":
-                count_sides["out"].append(local_count)
-            side = "in"
-            local_count = 0
-        local_count += count
-    return count_sides

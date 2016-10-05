@@ -202,7 +202,8 @@ Operating System :: MacOS
         'openpathsampling.engines.openmm',
         'openpathsampling.engines.openmm.features',
         'openpathsampling.engines.toy',
-        'openpathsampling.engines.toy.features'],
+        'openpathsampling.engines.toy.features',
+        'openpathsampling.numerics'],
     'platforms': ['Linux', 'Mac OS X', 'Windows'],
     'released': False,
     'requires': [
@@ -222,7 +223,7 @@ Operating System :: MacOS
         'matplotlib',
         'ujson'],
     'url': 'http://www.openpathsampling.org',
-    'version': '0.9.0'}
+    'version': '0.9.1'}
 
 setup_keywords = build_keyword_dictionary(preferences)
 
