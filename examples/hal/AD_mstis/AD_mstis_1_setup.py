@@ -1,5 +1,23 @@
 # coding: utf-8
 
+# standard packages
+import mdtraj as md
+
+# OpenMM
+from simtk.openmm import app
+import simtk.unit as unit
+
+# OpenPathSampling
+import openpathsampling as paths
+import openmmtools as omt
+
+# the openpathsampling OpenMM engine
+import openpathsampling.engines.openmm as eng
+
+# file paths
+import config as cf
+
+from openpathsampling.tools import refresh_output
 
 # =============================================================================
 # ALANINE MULTISTATE
@@ -14,25 +32,6 @@ print """ALANINE MULTISTATE"""
 # -----------------------------------------------------------------------------
 print """Import and general setup"""
 
-# standard packages
-import mdtraj as md
-
-# OpenMM
-from simtk.openmm import app
-import simtk.openmm as mm
-import simtk.unit as unit
-
-# OpenPathSampling
-import openpathsampling as paths
-import openmmtools as omt
-
-# the openpathsampling OpenMM engine
-import openpathsampling.engines.openmm as eng
-
-# file paths
-import config as cf
-
-from openpathsampling.tools import refresh_output
 
 # -----------------------------------------------------------------------------
 # Set simulation options and create a simulator object
@@ -52,16 +51,15 @@ system = forcefield.createSystem(
     nonbondedMethod=app.PME,
     nonbondedCutoff=1.0 * unit.nanometers,
     constraints=app.HBonds,
-    rigidWater=True,
     ewaldErrorTolerance=0.0005
 )
 
 print """## 3. the integrator"""
-integrator = omt.integrators.VVVRIntegrator(
+integrator_low = omt.integrators.VVVRIntegrator(
     temperature=300 * unit.kelvin,  # temperature
     timestep=2.0 * unit.femtoseconds  # integration step size
 )
-integrator.setConstraintTolerance(0.00001)
+integrator_low.setConstraintTolerance(0.00001)
 
 print """## 4. the platform"""
 
@@ -79,18 +77,18 @@ else:
     openmm_properties = {}
 
 print """## 6. OPS options"""
-engine_options = {
+engine_low_options = {
     'n_frames_max': 5000,
     'nsteps_per_frame': 10
 }
-engine = eng.Engine(
+engine_low = eng.Engine(
     template.topology,
     system,
-    integrator,
+    integrator_low,
     openmm_properties=openmm_properties,
-    options=engine_options
+    options=engine_low_options
 )
-engine.name = 'default'
+engine_low.name = 'default'
 
 integrator_high = omt.integrators.VVVRIntegrator(
     temperature=1000 * unit.kelvin,  # temperature
@@ -102,7 +100,7 @@ engine_high_options = {
     'n_frames_max': 2000,
     'nsteps_per_frame': 20  # twice as many steps with half stepsize
 }
-engine_high = engine.from_new_options(
+engine_high = engine_low.from_new_options(
     integrator=integrator_high,
     options=engine_high_options)
 engine_high.name = 'high'
@@ -110,7 +108,10 @@ engine_high.name = 'high'
 paths.EngineMover.engine = engine_high
 engine_high.initialize(platform)
 
-print 'High-Engine uses platform `%s`' % engine_high.platform
+print 'High-Engine uses'
+print 'platform `%s`' % engine_high.platform
+print 'temperature `%6.2f K' % \
+      engine_high.integrator.getGlobalVariableByName('kT') / 0.0083144621
 
 # -----------------------------------------------------------------------------
 # Equilibrate
@@ -127,7 +128,7 @@ print """Equilibrate"""
 print """Create the storage"""
 
 storage = paths.Storage(cf.storage_setup, 'w')
-storage.save(engine)
+storage.save(engine_low)
 storage.save(engine_high)
 storage.tag['template'] = template
 
@@ -283,15 +284,14 @@ total_sample_set = scheme.initial_conditions_from_trajectories(
     trajectory,
     strategies=[
         # 1. split and pick shortest and exclude for MinusInterfaceEnsembles
-        ('split', {'unique': 'shortest', 'exclude': paths.MinusInterfaceEnsemble}),
-        # 2. split and pick median length
-        ('split', {'unique': 'median'}),
-        # 3. extend-complex (implemented for minus with segments A-X-A)
+        'split',
+        # 2. extend-complex (implemented for minus with segments A-X-A)
         'extend-complex',
-        # 4. extend-minimal (implemented for minus and tis with crossings A-X)
+        # 3. extend-minimal (implemented for minus and tis with crossings A-X)
         'extend-minimal'],
     engine=engine_high)
 print scheme.initial_conditions_report(total_sample_set)
+
 # loop until we are done
 while scheme.check_initial_conditions(total_sample_set)[0]:
     total_sample_set = scheme.initial_conditions_from_trajectories(
@@ -307,11 +307,14 @@ while scheme.check_initial_conditions(total_sample_set)[0]:
 # -----------------------------------------------------------------------------
 print """Equilibration"""
 
-del engine_high.simulation.context
+engine_high.unload_context()
 
-engine.initialize(cf.platform)
+engine_low.initialize(cf.platform)
 
-refresh_output('Low-Engine uses platform `%s`' % engine.platform, refresh=False)
+refresh_output('Low-Engine uses', refresh=False)
+print 'platform `%s`' % engine_low.platform
+print 'temperature `%6.2f K' % \
+      engine_low.integrator.getGlobalVariableByName('kT') / 0.0083144621
 
 print
 print
@@ -324,7 +327,7 @@ equil_scheme = paths.MoveScheme(mstis)
 import openpathsampling.analysis.move_strategy as strat
 
 equil_scheme.append([
-    strat.OneWayShootingStrategy(engine=engine),
+    strat.OneWayShootingStrategy(engine=engine_low),
     strat.OrganizeByMoveGroupStrategy()
 ])
 equilibration = paths.PathSampling(

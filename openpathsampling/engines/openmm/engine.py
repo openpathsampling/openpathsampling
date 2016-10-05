@@ -214,6 +214,7 @@ class OpenMMEngine(DynamicsEngine):
         """
         if self._simulation is not None:
             del self._simulation.context
+            self._simulation = None
 
     def initialize(self, platform=None):
         """
