@@ -74,7 +74,8 @@ class CVFileEngine(ExternalEngine):
     def read_frame_from_file(self, filename, frame_num):
         # not the most efficient, but a quick hack
         df = pd.read_table(filename, delim_whitespace=True, header=None)
-        return ToySnapshot(coordinates=df.iloc[df.index[frame_num]],
+        coords = df.iloc[df.index[frame_num]].values.reshape(self.shape)
+        return ToySnapshot(coordinates=coords,
                            velocities=self.velocities)
 
     def write_frame_to_file(self, filename, snapshot, mode="a"):
@@ -83,5 +84,6 @@ class CVFileEngine(ExternalEngine):
         df.to_csv(filename, sep=" ", header=False, index=False, mode=mode)
 
     def engine_command(self):
+        # TODO: self.input_file doesn't exist
         return (self.path_to_engine + " " + str(self.input_file) + " > " +
                 self.output_file)
