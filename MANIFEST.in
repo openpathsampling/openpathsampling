@@ -1,2 +1,3 @@
+# include visualization .css files
 graft openpathsampling
-recursive-include openpathsampling *.py
+include openpathsampling/resources/*.css
