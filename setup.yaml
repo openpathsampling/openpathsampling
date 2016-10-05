@@ -38,7 +38,9 @@ classifiers: |
 download_url: http://github.com/openpathsampling/openpathsampling
 url: http://www.openpathsampling.org
 
-package_data: []
+package_data:
+  openpathsampling:
+    - openpathsampling/css/*.css
 
 packages:
   - openpathsampling
@@ -47,6 +49,7 @@ packages:
   - openpathsampling.tests
   - openpathsampling.analysis
   - openpathsampling.high_level
+  - openpathsampling.numerics
   - openpathsampling.netcdfplus
   - openpathsampling.engines
   - openpathsampling.engines.features

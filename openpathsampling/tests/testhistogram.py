@@ -11,7 +11,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 import collections
 
-from openpathsampling.analysis import (Histogram, SparseHistogram,
+from openpathsampling.numerics import (Histogram, SparseHistogram,
                                        HistogramPlotter2D)
 
 class MockAxes(object):
