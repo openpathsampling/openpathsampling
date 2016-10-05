@@ -11,7 +11,7 @@ from test_helpers import (
 import openpathsampling as paths
 
 import openpathsampling.engines.toy as peng
-from openpathsampling.analysis.network import *
+from openpathsampling.high_level.network import *
 from openpathsampling import VolumeFactory as vf
 
 import logging
