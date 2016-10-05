@@ -110,8 +110,8 @@ engine_high.initialize(platform)
 
 print 'High-Engine uses'
 print 'platform `%s`' % engine_high.platform
-print 'temperature `%6.2f K' % \
-      engine_high.integrator.getGlobalVariableByName('kT') / 0.0083144621
+print 'temperature `%6.2f K' % (
+      engine_high.integrator.getGlobalVariableByName('kT') / 0.0083144621)
 
 # -----------------------------------------------------------------------------
 # Equilibrate
@@ -313,8 +313,8 @@ engine_low.initialize(cf.platform)
 
 refresh_output('Low-Engine uses', refresh=False)
 print 'platform `%s`' % engine_low.platform
-print 'temperature `%6.2f K' % \
-      engine_low.integrator.getGlobalVariableByName('kT') / 0.0083144621
+print 'temperature `%6.2f K' % (
+      engine_low.integrator.getGlobalVariableByName('kT') / 0.0083144621)
 
 print
 print
