@@ -5,6 +5,9 @@ from simtk.openmm import XmlSerializer
 
 from openpathsampling.engines import Topology
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class MDTrajTopology(Topology):
     def __init__(self, mdtraj_topology):
@@ -46,6 +49,9 @@ class MDTrajTopology(Topology):
             return cls(md_topology)
         except StandardError:
             # we try a fix and add multiples of 10000 to the resSeq
+
+            logger.info('Normal reconstruction of topology failed. '
+                        'Trying a fix to the 10k residue ID problem.')
 
             for ci in np.unique(atoms['chainID']):
                 chain_atoms = atoms[atoms['chainID'] == ci]
