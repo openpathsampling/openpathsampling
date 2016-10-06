@@ -6,7 +6,7 @@ from test_helpers import (
 
 
 import openpathsampling as paths
-from openpathsampling.analysis.tis_analysis import *
+from openpathsampling.high_level.transition import *
 
 import logging
 logging.getLogger('opentis.analysis.tis_analysis').setLevel(logging.DEBUG)
