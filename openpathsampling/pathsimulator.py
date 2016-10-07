@@ -117,9 +117,8 @@ class PathSimulator(StorableNamedObject):
         mcstep = MCStep(
             simulation=self,
             mccycle=self.step,
-            previous=None,
             active=self.sample_set,
-            change=paths.EmptyMoveChange()
+            change=paths.AcceptedSampleMoveChange(self.sample_set.samples)
         )
 
         if self.storage is not None:
@@ -496,6 +495,7 @@ class PathSampling(PathSimulator):
     """
 
     calc_name = "PathSampling"
+
     def __init__(
             self,
             storage,
@@ -507,8 +507,6 @@ class PathSampling(PathSimulator):
         ----------
         storage : openpathsampling.storage.Storage
             the storage where all results should be stored in
-        engine : openpathsampling.DynamicsEngine
-            the engine to be used with shooting moves
         move_scheme : openpathsampling.MoveScheme
             the move scheme used for the pathsampling cycle
         sample_set : openpathsampling.SampleSet
