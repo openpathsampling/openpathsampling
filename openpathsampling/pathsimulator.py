@@ -545,15 +545,16 @@ class PathSampling(PathSimulator):
             )
 
             self._current_step = mcstep
-            self.save_current_step()
 
         else:
             self.sample_set = sample_set
-
-        if self.storage is not None:
-            self.storage.save(self)
+            self._current_step = None
 
         self.root = self.sample_set
+
+        if self.storage is not None:
+            self.save_current_step()
+            self.storage.save(self)
 
     def to_dict(self):
         return {
