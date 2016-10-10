@@ -532,7 +532,9 @@ class Trajectory(list, StorableObject):
 
         output = self.xyz
 
-        return md.Trajectory(output, topology)
+        traj = md.Trajectory(output, topology)
+        traj.unitcell_vectors = self.box_vectors
+        return traj
 
     @property
     def topology(self):
