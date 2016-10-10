@@ -149,10 +149,14 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         ret_dict = {
             'transitions' : self.transitions,
             'x_sampling_transitions' : self._sampling_transitions,
-            'initial_states': self.initial_states,
-            'final_states': self.final_states,
             'special_ensembles': self.special_ensembles
         }
+        try:
+            ret_dict['initial_states'] = self.initial_states
+            ret_dict['final_states'] = self.final_states
+        except AttributeError:  # pragma: no cover
+            # DEPRECATED: remove for 2.0
+            pass  # backward compatibility
         return ret_dict
 
     @property
