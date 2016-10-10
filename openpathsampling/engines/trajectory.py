@@ -527,6 +527,7 @@ class Trajectory(list, StorableObject):
             the trajectory
         """
 
+
         if topology is None:
             topology = self.topology.mdtraj
 

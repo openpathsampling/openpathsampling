@@ -312,7 +312,11 @@ def trajectory_to_mdtraj(trajectory, md_topology):
         the constructed Trajectory instance
     """
 
-    # TODO: Use units to make sure we did not rescale accidentally!
-    output = trajectory.xyz
-
-    return md.Trajectory(output, md_topology)
+    # TODO: The following would work if we remove trajectory.to_mdtraj()
+    # For now, let's keep all the code in one place, and better for
+    # engines.openmm.tools to require engines.trajectory than vice versa
+    # output = trajectory.xyz
+    # traj = md.Trajectory(output, md_topology)
+    # traj.unitcell_vectors = trajectory.box_vectors
+    return trajectory.to_mdtraj()
+                         
