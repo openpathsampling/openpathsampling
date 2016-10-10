@@ -25,22 +25,26 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 class testMDTrajSupport(object):
     def setUp(self):
         self.md_trajectory = md.load(data_filename("ala_small_traj.pdb"))
+        self.ops_trajectory = trajectory_from_mdtraj(self.md_trajectory)
+        self.md_topology = self.ops_trajectory.topology.mdtraj
 
     def test_trajectory_mdtraj_round_trip(self):
         # first test that the ops trajectory works
-        ops_trajectory = trajectory_from_mdtraj(self.md_trajectory)
-        nptest.assert_allclose(ops_trajectory.xyz, self.md_trajectory.xyz)
-        nptest.assert_allclose(ops_trajectory.box_vectors,
+        nptest.assert_allclose(self.ops_trajectory.xyz,
+                               self.md_trajectory.xyz)
+        nptest.assert_allclose(self.ops_trajectory.box_vectors,
                                self.md_trajectory.unitcell_vectors)
     
         # switch back to mdtraj
-        md_trajectory_2 = trajectory_to_mdtraj(ops_trajectory,
-                                               ops_trajectory.topology.mdtraj)
+        md_trajectory_2 = trajectory_to_mdtraj(self.ops_trajectory,
+                                               self.md_topology)
         nptest.assert_allclose(self.md_trajectory.xyz, md_trajectory_2.xyz)
         nptest.assert_allclose(self.md_trajectory.unitcell_vectors,
                                md_trajectory_2.unitcell_vectors)
-        
 
-
-
+    def test_trajectory_to_mdtraj_other_input(self):
+        snap = self.ops_trajectory[0]
+        md1 = trajectory_to_mdtraj(snap)
+        md2 = trajectory_to_mdtraj([snap])
+        assert_equal(md1, md2)
 
