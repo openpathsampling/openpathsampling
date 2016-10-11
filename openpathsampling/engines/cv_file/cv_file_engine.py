@@ -79,11 +79,9 @@ class CVFileEngine(ExternalEngine):
                            velocities=self.velocities)
 
     def write_frame_to_file(self, filename, snapshot, mode="a"):
-        flattened = sum(snapshot.coordinates.to_list(), [])
-        df = pd.DataFrame(data=flattened)
+        flattened = sum(snapshot.coordinates.tolist(), [])
+        df = pd.DataFrame(data=[flattened])
         df.to_csv(filename, sep=" ", header=False, index=False, mode=mode)
 
-    def engine_command(self):
-        # TODO: self.input_file doesn't exist
-        return (self.path_to_engine + " " + str(self.input_file) + " > " +
-                self.output_file)
+    # NOTE: Uses default engine command. Subclass if you actually want to
+    # use it as a proper engine.

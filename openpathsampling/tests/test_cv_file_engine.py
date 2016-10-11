@@ -7,6 +7,7 @@ from test_helpers import data_filename, assert_items_almost_equal
 
 import openpathsampling as paths
 import openpathsampling.engines.cv_file as cv_engine
+import openpathsampling.engines.toy as toys
 import os
 import numpy as np
 
@@ -47,8 +48,15 @@ class testCVFileEngine(object):
                      True)
 
     def test_write_frame_to_file(self):
-        raise SkipTest
-
-    def test_engine_command(self):
-        raise SkipTest
-
+        coords = [6.0, 8.0, 9.0]
+        snap = toys.Snapshot(coordinates=np.array([coords]),
+                             velocities=np.array([[0.0, 0.0, 0.0]]))
+        self.engine.write_frame_to_file(data_filename("frame.out"), snap,
+                                        mode="w")
+        f = open(data_filename("frame.out"))
+        lines = [l for l in f]
+        assert_equal(len(lines), 1)
+        splitted = map(float, lines[0].split())
+        assert_items_almost_equal(splitted, coords)
+        if os.path.isfile(data_filename("frame.out")):
+            os.remove(data_filename("frame.out"))
