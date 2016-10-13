@@ -213,9 +213,10 @@ class TreeRenderer(svg.Drawing):
 
         css_class += ['v-region']
 
-        padding = self.horizontal_gap
+        # padding = self.horizontal_gap
         width = 0.2
         gap = 0.0
+        radius = 0.07
 
         group = Group(
             class_=self.css_class(css_class)
@@ -229,7 +230,7 @@ class TreeRenderer(svg.Drawing):
         if extend_top:
             group.add(self.circle(
                 center=self.xy(x, y - 0.5 + gap),
-                r=self.w(padding)
+                r=self.w(radius)
             ))
             group.add(self.line(
                 start=self.xy(x - 1.0 * width, y - 0.5 + gap),
@@ -239,7 +240,7 @@ class TreeRenderer(svg.Drawing):
         if extend_bottom:
             group.add(self.circle(
                 center=(self.xy(x, y + (w - 1.0) + 0.5 - gap)),
-                r=self.w(padding)
+                r=self.w(radius)
             ))
             group.add(self.line(
                 start=self.xy(x - 1.0 * width, y + w - 1.0 + 0.5 - gap),
@@ -1073,7 +1074,6 @@ class PathTreeBuilder(Builder):
             view_options.update(view_options_upd)
 
             if view_options['hide']:
-                print 'HIDe'
                 pos_y -= 1
                 draw_pos_y[num] = None
                 continue
@@ -1697,7 +1697,7 @@ class PathTreeBuilder(Builder):
 
         return out
 
-    def _create_naming_function(self, fnc):
+    def _create_naming_fnc(self, fnc):
         opts = self.options
         return fnc or opts.format['default_label'] or (lambda obj: '')
 
