@@ -389,3 +389,27 @@ class OpenMMEngine(DynamicsEngine):
         self.simulation.minimizeEnergy()
         # make sure that we get the minimized structure on request
         self._current_snapshot = None
+
+    def apply_constraints(self, snapshot=None):
+        """Apply position and velocity constraints to a given snapshot.
+
+        If no snapshot given, applies constraints to the current_snapshot.
+
+        Parameters
+        ----------
+        snapshot : :class:`.Snapshot`
+            the snapshot to apply this engine's constraints to
+
+        Returns
+        -------
+        :class:`.Snapshot`
+            the snapshot after the constraints have been applied
+        """
+        old_snap = snapshot
+        if snapshot is not None:
+            old_snap = self.current_snapshot
+        self.simulation.context.applyConstraints()
+        self.simulation.context.applyVelocityConstraints()
+        result_snap = self.current_snapshot
+        self.current_snapshot = old_snap
+        return result_snap
