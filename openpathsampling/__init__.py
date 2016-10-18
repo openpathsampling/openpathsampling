@@ -158,3 +158,8 @@ def git_HEAD():  # pragma: no cover
     git_dir = os.path.dirname(os.path.realpath(__file__))
     return check_output(["git", "-C", git_dir, "rev-parse", "HEAD"])[:-1]
     # chops the newline at the end
+
+
+import os.path
+
+resources_directory = os.path.join(os.path.dirname(__file__), 'resources')

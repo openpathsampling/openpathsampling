@@ -105,7 +105,7 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         except TypeError:
             final_states = [final_states]
 
-        self.special_ensembles = {None : {}}
+        self.special_ensembles = {None: {}}
 
         self.initial_states = initial_states
         self.final_states = final_states
@@ -149,7 +149,14 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         ret_dict = {
             'transitions' : self.transitions,
             'x_sampling_transitions' : self._sampling_transitions,
+            'special_ensembles': self.special_ensembles
         }
+        try:
+            ret_dict['initial_states'] = self.initial_states
+            ret_dict['final_states'] = self.final_states
+        except AttributeError:  # pragma: no cover
+            # DEPRECATED: remove for 2.0
+            pass  # backward compatibility
         return ret_dict
 
     @property
@@ -163,6 +170,18 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         super(GeneralizedTPSNetwork, network).__init__()
         network._sampling_transitions = dct['x_sampling_transitions']
         network.transitions = dct['transitions']
+        try:
+            network.initial_states = dct['initial_states']
+            network.final_states = dct['final_states']
+        except KeyError:  # pragma: no cover
+            # DEPRECATED: remove for 2.0
+            pass  # backward compatibility
+        try:
+            network.special_ensembles = dct['special_ensembles']
+        except KeyError:  # pragma: no cover
+            # DEPRECATED: remove for 2.0
+            network.special_ensembles = {None: {}}
+            # default behavior for backward compatibility
         return network
 
     @classmethod

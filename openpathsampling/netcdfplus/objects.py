@@ -442,7 +442,11 @@ class ObjectStore(StorableNamedObject):
         Enable numpy style selection of object in the store
         """
         try:
-            if type(item) is int or type(item) is str or type(item) is UUID:
+            if type(item) is int:
+                if item < 0:
+                    item += len(self)
+                return self.load(item)
+            elif type(item) is str or type(item) is UUID:
                 return self.load(item)
             elif type(item) is slice:
                 return [self.load(idx)
