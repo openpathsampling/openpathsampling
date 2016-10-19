@@ -521,6 +521,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         for storage in self._stores.values():
             storage.restore()
+            storage._created = True
 
     def list_stores(self):
         """
