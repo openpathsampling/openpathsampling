@@ -290,6 +290,10 @@ class OpenMMEngine(DynamicsEngine):
         options = dct['options']
         properties = dct['properties']
 
+        # we need to have str as keys
+        properties = {str(key): str(value)
+                      for key, value in properties.iteritems()}
+
         return OpenMMEngine(
             topology=topology,
             system=simtk.openmm.XmlSerializer.deserialize(system_xml),
