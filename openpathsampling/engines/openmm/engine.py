@@ -204,6 +204,18 @@ class OpenMMEngine(DynamicsEngine):
         logger.info('Removed existing OpenMM engine.')
         self._simulation = None
 
+    def unload_context(self):
+        """
+        Unload the OpenMM context
+
+        Certain platforms can only exist once, e.g. CUDA. To use multiple
+        engines you need to manually initialize and unload contexts.
+
+        """
+        if self._simulation is not None:
+            del self._simulation.context
+            self._simulation = None
+
     def initialize(self, platform=None):
         """
         Create the final OpenMMEngine
@@ -277,6 +289,10 @@ class OpenMMEngine(DynamicsEngine):
         topology = dct['topology']
         options = dct['options']
         properties = dct['properties']
+
+        # we need to have str as keys
+        properties = {str(key): str(value)
+                      for key, value in properties.iteritems()}
 
         return OpenMMEngine(
             topology=topology,

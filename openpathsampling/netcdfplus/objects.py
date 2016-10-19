@@ -283,11 +283,11 @@ class ObjectStore(StorableNamedObject):
 
     def __repr__(self):
         if self.content_class is not None:
-            return "store.%s[%s]" % (
-                self.prefix, self.content_class.__name__)
+            return "store.%s[%s] %d objects" % (
+                self.prefix, self.content_class.__name__, len(self))
         else:
-            return "store.%s[%s]" % (
-                self.prefix, 'None/ANY')
+            return "store.%s[%s] %d objects" % (
+                self.prefix, 'None/ANY', len(self))
 
     @property
     def simplifier(self):
