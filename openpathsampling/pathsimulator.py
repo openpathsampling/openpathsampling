@@ -234,11 +234,11 @@ class Bootstrapping(PathSimulator):
                                ['movers', 'ensembles'])
         init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
-        self._bootstrapmove = BootstrapPromotionMove(bias=None,
-                                               shooters=self.movers,
-                                               ensembles=self.ensembles
-                                              )
-
+        self._bootstrapmove = BootstrapPromotionMove(
+            bias=None,
+            shooters=self.movers,
+            ensembles=self.ensembles
+        )
 
     def run(self, n_steps):
         bootstrapmove = self._bootstrapmove
@@ -521,13 +521,17 @@ class PathSampling(PathSimulator):
         """
         super(PathSampling, self).__init__(storage)
         self.move_scheme = move_scheme
-        self.root_mover = move_scheme.move_decision_tree()
+        if move_scheme is not None:
+            self.root_mover = move_scheme.move_decision_tree()
+            self._mover = paths.PathSimulatorMover(self.root_mover, self)
+        else:
+            self.root_mover = None
+            self._mover = None
 
         initialization_logging(init_log, self,
                                ['move_scheme', 'sample_set'])
         self.live_visualizer = None
         self.status_update_frequency = 1
-        self._mover = paths.PathSimulatorMover(self.root_mover, self)
 
         if initialize:
             samples = []
@@ -554,7 +558,6 @@ class PathSampling(PathSimulator):
 
         if self.storage is not None:
             self.save_current_step()
-            self.storage.save(self)
 
     def to_dict(self):
         return {
@@ -565,17 +568,16 @@ class PathSampling(PathSimulator):
 
     @classmethod
     def from_dict(cls, dct):
-        obj = cls.__new__(cls)
+
+        # create empty object
+        obj = cls(None)
+
+        # and correct the content
         obj.move_scheme = dct['move_scheme']
         obj.root = dct['root']
         obj.root_mover = dct['root_mover']
 
-        obj.live_visualizer = None
-        obj.status_update_frequency = 1
         obj._mover = paths.PathSimulatorMover(obj.root_mover, obj)
-
-        obj._current_step = None
-        obj.storage = None
 
         return obj
 
@@ -612,19 +614,11 @@ class PathSampling(PathSimulator):
             the new simulator object
         """
         obj = cls(
-            None,
+            storage,
             step.simulation.move_scheme,
-            initialize
+            step.sample_set,
+            initialize=initialize
         )
-
-        if not initialize:
-            obj.sample_set = step.sample_set
-            obj._current_step.active = obj.sample_set
-
-        obj.storage = storage
-
-        storage.save(obj)
-        obj.save_current_step()
 
         return obj
 
