@@ -390,7 +390,8 @@ class OpenMMEngine(DynamicsEngine):
         # make sure that we get the minimized structure on request
         self._current_snapshot = None
 
-    def apply_constraints(self, snapshot=None):
+    def apply_constraints(self, snapshot=None, position_tol=None,
+                          velocity_tol=1e-5):
         """Apply position and velocity constraints to a given snapshot.
 
         If no snapshot given, applies constraints to the current_snapshot.
@@ -399,17 +400,32 @@ class OpenMMEngine(DynamicsEngine):
         ----------
         snapshot : :class:`.Snapshot`
             the snapshot to apply this engine's constraints to
+        position_tol : float or None
+            tolerance for position constraints; `None` takes the value from
+            the integrator
+        velocity_tol : float
+            tolerance for velocity constraints; default is 1e-5
 
         Returns
         -------
         :class:`.Snapshot`
             the snapshot after the constraints have been applied
         """
-        old_snap = snapshot
-        if snapshot is not None:
+        context = self.simulation.context
+        if self._current_snapshot is not None:
             old_snap = self.current_snapshot
-        self.simulation.context.applyConstraints()
-        self.simulation.context.applyVelocityConstraints()
+        else:
+            old_snap = None
+
+        if snapshot is not None:
+            self.current_snapshot = snapshot
+
+        if position_tol is None:
+            position_tol = context.getIntegrator().getConstraintTolerance()
+        # default 1e-5 for velocity_tol comes from OpenMM's setVelToTemp
+        context.applyConstraints(position_tol)  
+        context.applyVelocityConstraints(velocity_tol)
         result_snap = self.current_snapshot
-        self.current_snapshot = old_snap
+        if old_snap is not None:
+            self.current_snapshot = old_snap
         return result_snap

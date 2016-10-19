@@ -184,7 +184,7 @@ class testRandomizeVelocities(object):
             integrator=omt.integrators.VVVRIntegrator()
         )
         beta = 1.0 / (300.0 * u.kelvin * u.BOLTZMANN_CONSTANT_kB)
-        randomizer = RandomVelocities(beta=beta)
+        randomizer = RandomVelocities(beta=beta, engine=engine)
         new_snap = randomizer(template)
         engine.generate(new_snap, [lambda x, foo: len(x) <= 4])
 
