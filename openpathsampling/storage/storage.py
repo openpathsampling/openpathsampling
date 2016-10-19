@@ -92,7 +92,7 @@ class Storage(NetCDFPlus):
                           NamedObjectStore(paths.ShootingPointSelector))
         self.create_store('engines', NamedObjectStore(peng.DynamicsEngine))
         self.create_store('pathsimulators',
-                          NamedObjectStore(paths.PathSimulator))
+                          paths.storage.PathSimulatorStore())
         self.create_store('transitions', NamedObjectStore(paths.Transition))
         self.create_store('networks',
                           NamedObjectStore(paths.TransitionNetwork))
