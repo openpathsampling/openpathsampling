@@ -130,5 +130,15 @@ class RandomVelocities(SnapshotModifier):
 
         self.apply_to_subset(velocities, vel_subset)
         new_snap = snapshot.copy_with_replacement(velocities=velocities)
+
+        # applying constraints, if they exist
+        engine = new_snap.engine
+        try:
+            apply_constraints = engine.apply_constraints
+        except AttributeError:
+            pass  # fine if there isn't one
+        else:
+            new_snap = apply_constraints(new_snap)
+
         return new_snap
 
