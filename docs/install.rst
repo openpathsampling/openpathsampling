@@ -31,6 +31,7 @@ following commands ::
 
 Install from Source
 ===================
+
 Clone the source code repository from github::
 
   $ git clone git://github.com/openpathsampling/openpathsampling.git

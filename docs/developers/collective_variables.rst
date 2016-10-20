@@ -16,6 +16,12 @@ The first examples
 Wrapping a function in a CV
 ---------------------------
 
+Under most circumstances, you don't need to subclass
+:class:`.CollectiveVariable`. Instead, you should wrap the function you
+would like to use in an OPS :class:`.CollectiveVariable`.
+
+To do this, you create an instance of :class:`.FunctionCV`. 
+
 
 Creating a wrapper class for a library
 --------------------------------------

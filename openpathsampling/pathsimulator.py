@@ -651,7 +651,7 @@ class CommittorSimulation(PathSimulator):
     initial_snapshots : list of :class:`.Snapshot`
         initial snapshots to use
     direction : int or None
-        if direction > 1, only forward shooting is used, if direction < 1,
+        if direction > 0, only forward shooting is used, if direction < 0,
         only backward, and if direction is None, mix of forward and
         backward. Useful if using no modification on the randomizer.
     """
