@@ -437,6 +437,9 @@ class ObjectStore(StorableNamedObject):
 
         return LoaderProxy(self, idx)
 
+    def __contains__(self, item):
+        return item in self.index
+
     def __getitem__(self, item):
         """
         Enable numpy style selection of object in the store
@@ -868,18 +871,24 @@ class ObjectStore(StorableNamedObject):
 
             # numbers other than -1 are reserved for other things
 
+        elif self.fallback_store is not None and self.storage.exclude_from_fallback:
+            if obj in self.fallback_store:
+                return self.reference(obj)
+        elif self.storage.fallback is not None and self.storage.exclude_from_fallback:
+            if obj in self.storage.fallback:
+                return self.reference(obj)
+
         if isinstance(obj, LoaderProxy):
             if obj._store is self:
                 # is a proxy of a saved object so do nothing
                 return obj._idx
+            elif self.storage.exclude_proxy_from_other:
+                # it is stored but not in this store and not in the fallback
+                # so we try storing the full snapshot which might be still
+                # in cache or memory if that is not the case it will be loaded
+                # and stored again.
+                return obj._idx
             else:
-                # it is stored but not in this store so we try storing the
-                # full snapshot which might be still in cache or memory
-                # if that is not the case it will be stored again. This can
-                # happen when you load from one store save to another. And load
-                # again after some time while the cache has been changed and try
-                # to save again the loaded object. We will not explicitly store
-                # a table that matches objects between different storages.
                 return self.save(obj.__subject__)
 
         if not isinstance(obj, self.content_class):
