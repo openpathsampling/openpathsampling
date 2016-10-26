@@ -871,16 +871,11 @@ class ObjectStore(StorableNamedObject):
 
             # numbers other than -1 are reserved for other things
 
-        elif self.fallback_store is not None and self.storage.exclude_from_fallback:
-            if obj in self.fallback_store:
-                return self.reference(obj)
-        elif self.storage.fallback is not None and self.storage.exclude_from_fallback:
-            if obj in self.storage.fallback:
-                return self.reference(obj)
-
         if isinstance(obj, LoaderProxy):
             if obj._store is self:
                 # is a proxy of a saved object so do nothing
+                return obj._idx
+            elif self.storage.exclude_from_fallback and obj._store is self.storage.fallback:
                 return obj._idx
             elif self.storage.exclude_proxy_from_other:
                 # it is stored but not in this store and not in the fallback
@@ -890,6 +885,13 @@ class ObjectStore(StorableNamedObject):
                 return obj._idx
             else:
                 return self.save(obj.__subject__)
+
+        if self.fallback_store is not None and self.storage.exclude_from_fallback:
+            if obj in self.fallback_store:
+                return self.reference(obj)
+        elif self.storage.fallback is not None and self.storage.exclude_from_fallback:
+            if obj in self.storage.fallback:
+                return self.reference(obj)
 
         if not isinstance(obj, self.content_class):
             raise ValueError((
