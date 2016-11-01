@@ -2640,8 +2640,8 @@ class SampleList(OrderedDict):
         decorrelated = [self[0]]
 
         for s in self:
-            # check if we are on the main path of evolution and not something that is rejected
-            # at some point
+            # check if we are on the main path of evolution and not
+            # something that is rejected at some point
             if self[s]['level'] == 0:
                 if not s.trajectory.is_correlated(prev, self.time_symmetric):
                     decorrelated.append(s)
