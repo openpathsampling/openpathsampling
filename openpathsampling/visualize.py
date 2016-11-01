@@ -18,14 +18,14 @@ class TreeRenderer(svg.Drawing):
     without distort the content. What we want is to move objects further
     apart of close while maintaining their size.
     """
-    def __init__(self, css_file=None):
+    def __init__(self):
         super(TreeRenderer, self).__init__()
+
         self.scale_x = 20.0
         self.scale_y = 20.0
+        self.horizontal_gap = 0.05
 
-        if css_file is None:
-            css_file = 'vis'
-
+    def add_css_file(self, css_file='vis'):
         css_file_name = os.path.join(
             paths.resources_directory, css_file + '.css')
 
@@ -33,11 +33,14 @@ class TreeRenderer(svg.Drawing):
             vis_css = content_file.read()
 
         # Add the CSS Stylesheet
-        self.css_style = vis_css
         self.defs.add(self.style(
-            self.css_style
+            vis_css
         ))
-        self.horizontal_gap = 0.05
+
+    def add_css(self, css_style):
+        self.defs.add(self.style(
+            css_style
+        ))
 
     @staticmethod
     def css_class(css_class):
@@ -419,7 +422,7 @@ class Builder(object):
     """
     Abstract class of building SVG representations
     """
-    def __init__(self, additional_option_categories=None):
+    def __init__(self, additional_option_categories=None, base_css_style='vis'):
         options = ['analysis', 'css', 'ui', 'format']
         if additional_option_categories is not None:
             options += additional_option_categories
@@ -430,12 +433,18 @@ class Builder(object):
         )
 
         self.options = option_tuple_class(**{opt: {} for opt in options})
+        self.base_css_style = base_css_style
+        self.add_css = ''
 
     def svg(self):
-        return self.render().tostring()
+        tree = self.render()
+        tree.add_css_file(self.base_css_style)
+        if self.add_css:
+            tree.add_css(self.add_css)
+        return tree.tostring()
 
     def html(self):
-        return self.render().tostring()
+        return self.svg()
 
     def render(self):
         """
@@ -2152,10 +2161,9 @@ class SampleList(OrderedDict):
             #     samples.append(samp)
             #
             # return list(reversed(samples))
-            samp = steps[0].active[replica]
-            samples = [samp]
+            samples = []
             for step in steps:
-                if replica in step.active:
+                if step.active and replica in step.active:
                     next_sample = step.active[replica]
                     if intermediates:
                         # add the intermediate samples to completely trace
@@ -2681,7 +2689,7 @@ class SampleListGenerator(SampleList):
 
     def __init__(self):
         super(SampleListGenerator, self).__init__([])
-        self.steps = None
+        self._steps = None
 
     def _update_sample(self):
         pass
@@ -2769,14 +2777,15 @@ class ReplicaEvolution(SampleListGenerator):
         self._update_sample()
 
     def _update_sample(self):
-        self.set_samples(SampleList._get_samples_from_steps(
-            self.steps,
-            self._replica,
-            self._accepted,
-            self._intermediates
-        ))
+        if self.steps:
+            self.set_samples(SampleList._get_samples_from_steps(
+                self.steps,
+                self._replica,
+                self._accepted,
+                self._intermediates
+            ))
 
-        self.analyze()
+            self.analyze()
 
     def update_tree_options(self, tree):
         tree.options.css['mark_transparent'] = 'rejected'
