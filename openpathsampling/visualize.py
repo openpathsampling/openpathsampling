@@ -2143,7 +2143,7 @@ class SampleList(OrderedDict):
         return sl
 
     @staticmethod
-    def _get_samples_from_steps(steps, replica, accepted):
+    def _get_samples_from_steps(steps, replica, accepted, intermediates=True):
         if accepted:
             # samp = steps[-1].active[replica]
             # samples = [samp]
@@ -2156,7 +2156,20 @@ class SampleList(OrderedDict):
             samples = [samp]
             for step in steps:
                 if replica in step.active:
-                    samples.append(step.active[replica])
+                    next_sample = step.active[replica]
+                    if intermediates:
+                        # add the intermediate samples to completely trace
+                        # where we came from and allow only samples that
+                        # happened in this step
+                        samp = next_sample.parent
+                        add_samples = []
+                        while samp is not None and steps.get_step(samp) == step and samp is not samples[-1]:
+                            add_samples.append(samp)
+                            samp = samp.parent
+
+                        samples.extend(list(reversed(add_samples)))
+
+                    samples.append(next_sample)
 
             return samples
         else:
@@ -2649,19 +2662,26 @@ class SampleListGenerator(SampleList):
     will mimick a list of Samples generated from steps to your liking
     """
 
+    class UpdateSampleProperty(object):
+        def __init__(self, var):
+            if var[0] != '_':
+                var = '_' + var
+
+            self.var = var
+
+        def __get__(self, instance, owner):
+            return getattr(instance, self.var)
+
+        def __set__(self, instance, value):
+            setattr(instance, self.var, value)
+            if hasattr(instance, '_update_sample'):
+                instance._update_sample()
+
+    steps = UpdateSampleProperty('steps')
+
     def __init__(self):
         super(SampleListGenerator, self).__init__([])
         self.steps = None
-
-    @property
-    def steps(self):
-        return self._steps
-
-    @steps.setter
-    def steps(self, steps):
-        self._steps = steps
-        if steps is not None:
-            self._update_sample()
 
     def _update_sample(self):
         pass
@@ -2736,37 +2756,27 @@ class ReplicaEvolution(SampleListGenerator):
     will mimick a list of Samples generated from steps to your liking
     """
 
-    def __init__(self, replica, accepted=True):
+    replica = SampleListGenerator.UpdateSampleProperty('replica')
+    accepted = SampleListGenerator.UpdateSampleProperty('accepted')
+    intermediates = SampleListGenerator.UpdateSampleProperty('intermediates')
+
+    def __init__(self, replica, accepted=True, intermediates=True):
         super(ReplicaEvolution, self).__init__()
         self._replica = replica
         self._accepted = accepted
+        self._intermediates = intermediates
+
+        self._update_sample()
 
     def _update_sample(self):
         self.set_samples(SampleList._get_samples_from_steps(
             self.steps,
             self._replica,
-            self._accepted
+            self._accepted,
+            self._intermediates
         ))
 
         self.analyze()
-
-    @property
-    def replica(self):
-        return self._replica
-
-    @replica.setter
-    def replica(self, value):
-        self._replica = value
-        self._update_sample()
-
-    @property
-    def accepted(self):
-        return self._accepted
-
-    @accepted.setter
-    def accepted(self, value):
-        self._accepted = value
-        self._update_sample()
 
     def update_tree_options(self, tree):
         tree.options.css['mark_transparent'] = 'rejected'
@@ -2777,14 +2787,7 @@ class SampleAncestors(SampleListGenerator):
         super(SampleAncestors, self).__init__()
         self._sample = sample
 
-    @property
-    def sample(self):
-        return self._sample
-
-    @sample.setter
-    def sample(self, value):
-        self._sample = value
-        self._update_sample()
+    sample = SampleListGenerator.UpdateSampleProperty('sample')
 
     def _update_sample(self):
 
@@ -2809,6 +2812,9 @@ class EnsembleEvolution(SampleListGenerator):
     will mimick a list of Samples generated from steps to your liking
     """
 
+    ensemble = SampleListGenerator.UpdateSampleProperty('ensemble')
+    accepted = SampleListGenerator.UpdateSampleProperty('accepted')
+
     def __init__(self, ensemble, accepted=True):
         super(EnsembleEvolution, self).__init__()
         self._ensemble = ensemble
@@ -2819,24 +2825,6 @@ class EnsembleEvolution(SampleListGenerator):
             step.active[self.ensemble] for step in self.steps
             if not self.accepted or step.change.accepted
         ])
-
-    @property
-    def ensemble(self):
-        return self._ensemble
-
-    @ensemble.setter
-    def ensemble(self, value):
-        self._ensemble = value
-        self._update_sample()
-
-    @property
-    def accepted(self):
-        return self._accepted
-
-    @accepted.setter
-    def accepted(self, value):
-        self._accepted = value
-        self._update_sample()
 
     def update_tree_options(self, tree):
         tree.options.css['mark_transparent'] = 'rejected'
