@@ -10,6 +10,7 @@ from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
 logger = logging.getLogger(__name__)
 
+
 class SnapshotModifier(StorableNamedObject):
     """Abstract class for snapshot modification.
 
@@ -37,6 +38,7 @@ class SnapshotModifier(StorableNamedObject):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, subset_mask=None):
+        super(SnapshotModifier, self).__init__()
         self.subset_mask = subset_mask
 
     def extract_subset(self, full_array):
