@@ -423,6 +423,9 @@ class Builder(object):
     """
     Abstract class of building SVG representations
     """
+
+    unique_id = 0
+
     def __init__(self, additional_option_categories=None, base_css_style='vis'):
         options = ['analysis', 'css', 'ui', 'format']
         if additional_option_categories is not None:
@@ -435,14 +438,31 @@ class Builder(object):
 
         self.options = option_tuple_class(**{opt: {} for opt in options})
         self.base_css_style = base_css_style
-        self.add_css = ''
+        self._add_css = []
+
+    def add_css(self, css):
+        self._add_css.append(css)
+
+    def reset_css(self):
+        self._add_css = []
 
     def svg(self):
-        tree = self.render()
-        tree.add_css_file(self.base_css_style)
+        svg = self.render()
+        self._finalize_svg(svg)
+
+        return svg.tostring()
+
+    def _finalize_svg(self, svg):
+        # add a unique ID
+        unique_id = 'pathtree-' + str(Builder.unique_id)
+        Builder.unique_id += 1
+        svg['id'] = unique_id
+
+        # add CSS
+        svg.add_css_file(self.base_css_style)
         if self.add_css:
-            tree.add_css(self.add_css)
-        return tree.tostring()
+            for css in self._add_css:
+                svg.add_css(css.replace('#self', '#' + unique_id))
 
     def html(self):
         return self.svg()
@@ -947,9 +967,9 @@ def _create_simple_legend(title, fnc, width=1):
     def _legend_fnc(self):
         doc = self.doc
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-' + title)
         part.add(
-            doc.label(0, 0, title)
+            doc.label(0, 0, title, css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -1254,7 +1274,7 @@ class PathTreeBuilder(Builder):
 
     def part_hovering_blocks(self, left, width):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='hovering-blocks')
 
         # +--------------------------------------------------------------------
         # +  HOVERING TABLE LINE PLOT
@@ -1275,7 +1295,7 @@ class PathTreeBuilder(Builder):
 
     def part_trajectory_label(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='trajectory-label')
 
         trj_format = self._create_naming_fnc(
             self.options.format['trajectory_label'])
@@ -1310,7 +1330,7 @@ class PathTreeBuilder(Builder):
 
     def part_shooting_hooks(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='shooting-hooks')
 
         draw_pos_y = {}
         matrix = self.generator.matrix
@@ -1365,7 +1385,7 @@ class PathTreeBuilder(Builder):
 
     def part_snapshot_blocks(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='snapshot-blocks')
 
         matrix = self.generator.matrix
 
@@ -1539,7 +1559,7 @@ class PathTreeBuilder(Builder):
 
     def part_info_box(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='info-box')
 
         group.add(
             doc.label(0, -1, 'Information', css_class=['infobox'])
@@ -1581,9 +1601,9 @@ class PathTreeBuilder(Builder):
         smp_format = self._create_naming_fnc(
             self.options.format['sample_label'])
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-sample')
         part.add(
-            doc.label(0, 0, 'smp')
+            doc.label(0, 0, 'smp', css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -1599,9 +1619,9 @@ class PathTreeBuilder(Builder):
         doc = self.doc
         time_symmetric = self.generator.time_symmetric
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-correlation')
         part.add(
-            doc.label(0, 0, 'cor')
+            doc.label(0, 0, 'cor', css_class=['head'])
         )
 
         old_tc = 1
@@ -1641,9 +1661,9 @@ class PathTreeBuilder(Builder):
     def part_legend_step(self):
         doc = self.doc
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-step')
         part.add(
-            doc.label(0, 0, 'step')
+            doc.label(0, 0, 'step', css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -1667,9 +1687,9 @@ class PathTreeBuilder(Builder):
     def part_legend_active(self):
         doc = self.doc
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-active')
         part.add(
-            doc.label(0, 0, 'active')
+            doc.label(0, 0, 'active', css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
