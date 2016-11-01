@@ -527,12 +527,15 @@ class Trajectory(list, StorableObject):
             the trajectory
         """
 
+
         if topology is None:
             topology = self.topology.mdtraj
 
         output = self.xyz
 
-        return md.Trajectory(output, topology)
+        traj = md.Trajectory(output, topology)
+        traj.unitcell_vectors = self.box_vectors
+        return traj
 
     @property
     def topology(self):
