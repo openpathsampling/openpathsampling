@@ -18,6 +18,7 @@ import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class MockMoveStrategy(MoveStrategy):
     def make_movers(self, scheme):
