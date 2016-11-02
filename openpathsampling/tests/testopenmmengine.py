@@ -21,6 +21,11 @@ from test_helpers import (
     assert_not_equal_array_array,
     raises_with_message_like)
 
+import logging
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 def setUp():
     global topology, template, system, nan_causing_template
