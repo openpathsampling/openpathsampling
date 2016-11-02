@@ -110,16 +110,15 @@ class PathSimulator(StorableNamedObject):
         """
         pass
 
-    def save_initial(self):
+    def save_initial_step(self):
         """
         Save the initial state as an MCStep to the storage
         """
         mcstep = MCStep(
             simulation=self,
             mccycle=self.step,
-            previous=None,
             active=self.sample_set,
-            change=paths.EmptyMoveChange()
+            change=paths.AcceptedSampleMoveChange(self.sample_set.samples)
         )
 
         if self.storage is not None:
@@ -235,11 +234,11 @@ class Bootstrapping(PathSimulator):
                                ['movers', 'ensembles'])
         init_log.info("Parameter: %s : %s", 'trajectory', str(trajectory))
 
-        self._bootstrapmove = BootstrapPromotionMove(bias=None,
-                                               shooters=self.movers,
-                                               ensembles=self.ensembles
-                                              )
-
+        self._bootstrapmove = BootstrapPromotionMove(
+            bias=None,
+            shooters=self.movers,
+            ensembles=self.ensembles
+        )
 
     def run(self, n_steps):
         bootstrapmove = self._bootstrapmove
@@ -254,7 +253,7 @@ class Bootstrapping(PathSimulator):
         ens_num = len(self.sample_set)-1
 
         if self.step == 0:
-            self.save_initial()
+            self.save_initial_step()
 
         failsteps = 0
         # if we fail n_steps times in a row, kill the job
@@ -430,6 +429,7 @@ class FullBootstrapping(PathSimulator):
             build_attempts=20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
+        subtraj=None
         while not has_AA_path:
             self.engine.current_snapshot = self.snapshot.copy()
             self.engine.snapshot = self.snapshot.copy()
@@ -446,13 +446,14 @@ class FullBootstrapping(PathSimulator):
                 # if we have a short enough path go ahead
                 subtraj = subtrajs[0]
                 # check that this is A->A as well
-                has_AA_path = self.state(subtraj[-1]) and self.state(subtraj[0])
+                has_AA_path = self.state(subtraj[-1]) \
+                    and self.state(subtraj[0])
 
             build_attempts -= 1
             if build_attempts == 0:
-                raise RuntimeError('Too many attempts. Try another initial snapshot instead.')
+                raise RuntimeError(
+                    'Too many attempts. Try another initial snapshot instead.')
 
-            
         self.output_stream.write("Sampling " + str(self.n_ensembles) +
                                  " ensembles.\n")
         bootstrap = paths.Bootstrapping(
@@ -479,7 +480,7 @@ class FullBootstrapping(PathSimulator):
                        + " round of " + str(n_steps_per_round) + " steps.")
                 if self.error_max_rounds:
                     raise RuntimeError(msg)
-                else: # pragma: no cover
+                else:  # pragma: no cover
                     logger.warning(msg)
                     break
             n_filled = len(bootstrap.sample_set)
@@ -496,80 +497,199 @@ class PathSampling(PathSimulator):
     """
 
     calc_name = "PathSampling"
+
     def __init__(
             self,
             storage,
             move_scheme=None,
-            sample_set=None
+            sample_set=None,
+            initialize=True
     ):
         """
         Parameters
         ----------
-        storage : openpathsampling.storage.Storage
+        storage : :class:`openpathsampling.storage.Storage`
             the storage where all results should be stored in
-        engine : openpathsampling.DynamicsEngine
-            the engine to be used with shooting moves
-        move_scheme : openpathsampling.MoveScheme
+        move_scheme : :class:`openpathsampling.MoveScheme`
             the move scheme used for the pathsampling cycle
-        sample_set : openpathsampling.SampleSet
+        sample_set : :class:`openpathsampling.SampleSet`
             the initial SampleSet for the Simulator
+        initialize : bool
+            if `False` the new PathSimulator will continue at the step and
+            not create a new SampleSet object to cut the connection to previous
+            steps
         """
         super(PathSampling, self).__init__(storage)
         self.move_scheme = move_scheme
-        self.root_mover = move_scheme.move_decision_tree()
-#        self.move_scheme.name = "PathSamplingRoot"
+        if move_scheme is not None:
+            self.root_mover = move_scheme.move_decision_tree()
+            self._mover = paths.PathSimulatorMover(self.root_mover, self)
+        else:
+            self.root_mover = None
+            self._mover = None
 
-        # TODO: Check that this can really be removed
-        # samples = []
-        # if globalstate is not None:
-        #     for sample in globalstate:
-        #         samples.append(sample.copy_reset())
-        #
-        # self.globalstate = paths.SampleSet(samples)
-
-        self.sample_set = sample_set
-        self.root = self.sample_set
-
-        initialization_logging(init_log, self, 
+        initialization_logging(init_log, self,
                                ['move_scheme', 'sample_set'])
         self.live_visualizer = None
         self.status_update_frequency = 1
-        self._mover = paths.PathSimulatorMover(self.root_mover, self)
+
+        if initialize:
+            samples = []
+            if sample_set is not None:
+                for sample in sample_set:
+                    samples.append(sample.copy_reset())
+
+            self.sample_set = paths.SampleSet(samples)
+
+            mcstep = MCStep(
+                simulation=self,
+                mccycle=self.step,
+                active=self.sample_set,
+                change=paths.AcceptedSampleMoveChange(self.sample_set.samples)
+            )
+
+            self._current_step = mcstep
+
+        else:
+            self.sample_set = sample_set
+            self._current_step = None
+
+        self.root = self.sample_set
+
+        if self.storage is not None:
+            self.save_current_step()
+
+    def to_dict(self):
+        return {
+            'root': self.root,
+            'move_scheme': self.move_scheme,
+            'root_mover': self.root_mover,
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+
+        # create empty object
+        obj = cls(None)
+
+        # and correct the content
+        obj.move_scheme = dct['move_scheme']
+        obj.root = dct['root']
+        obj.root_mover = dct['root_mover']
+
+        obj._mover = paths.PathSimulatorMover(obj.root_mover, obj)
+
+        return obj
+
+    @property
+    def current_step(self):
+        return self._current_step
+
+    def save_current_step(self):
+        """
+        Save the current step to the storage
+
+        """
+        if self.storage is not None and self._current_step is not None:
+            self.storage.steps.save(self._current_step)
+
+    @classmethod
+    def from_step(cls, storage, step, initialize=True):
+        """
+
+        Parameters
+        ----------
+        storage : :class:`openpathsampling.storage.Storage`
+            the storage to be used to hold the simulation results
+        step : :class:`openpathsampling.MCStep`
+            the step used to fill the initial parameters
+        initialize : bool
+            if `False` the new PathSimulator will continue at the given step and
+            not create a new SampleSet object to cut the connection to previous
+            steps.
+
+        Returns
+        -------
+        :class:`openpathsampling.PathSampling`
+            the new simulator object
+        """
+        obj = cls(
+            storage,
+            step.simulation.move_scheme,
+            step.sample_set,
+            initialize=initialize
+        )
+
+        return obj
+
+    def restart_at_step(self, step, storage=None):
+        """
+        Continue with a loaded pathsampling at a given step
+
+        Notes
+        -----
+        You can only continue from a step that is compatible in the sense
+        that it was previously generated from the pathsampling instance.
+
+        If you want to switch the move scheme you need to create a new
+        pathsampling instance. You can do so with the constructor or using
+        the classmethod `from_step` which simplifies the setup process
+
+        Parameters
+        ----------
+        step : :class:`MCStep`
+            the step to be continued from. You are always free to chose any step
+            which can be used to fork a simulation but for analysis you may
+            only use one path of steps.
+        storage : :class:`Storage`
+            If given this will change the storage used to store the generated
+            steps
+
+        """
+        if step.simulation is not self:
+            raise RuntimeWarning(
+                'Trying to continue from other step. Please use the '
+                '`.from_step` method to create a new PathSampling object '
+                'instead.')
+
+        if storage is not None:
+            self.storage = storage
+
+        self.step = step.mccycle
+        self.sample_set = step.active
+        self.root = step.simulation.root
+
+        self._current_step = step
 
     def run_until(self, n_steps):
-        if self.storage is not None:
-            if len(self.storage.steps) > 0:
-                self.step = len(self.storage.steps)
+        # if self.storage is not None:
+        #     if len(self.storage.steps) > 0:
+        #         self.step = len(self.storage.steps)
         n_steps_to_run = n_steps - self.step
         self.run(n_steps_to_run)
 
     def run(self, n_steps):
         mcstep = None
 
-        cvs = list()
-        n_samples = 0
+        # cvs = list()
+        # n_samples = 0
 
-        if self.storage is not None:
-            n_samples = len(self.storage.snapshots)
-            cvs = list(self.storage.cvs)
-
-        if self.step == 0:
-            if self.storage is not None:
-                self.storage.save(self.move_scheme)
-            self.save_initial()
+        # if self.storage is not None:
+        #     n_samples = len(self.storage.snapshots)
+        #     cvs = list(self.storage.cvs)
 
         initial_time = time.time()
 
         for nn in range(n_steps):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
-            refresh=True
+            refresh = True
             if self.step % self.status_update_frequency == 0:
                 # do we visualize this step?
                 if self.live_visualizer is not None and mcstep is not None:
                     # do we visualize at all?
                     self.live_visualizer.draw_ipynb(mcstep)
-                    refresh=False
+                    refresh = False
 
                 elapsed = time.time() - initial_time
 
@@ -610,13 +730,17 @@ class PathSampling(PathSimulator):
                 change=movepath
             )
 
-            if self.storage is not None:
-                for cv in cvs:
-                    n_len = len(self.storage.snapshots)
-                    cv(self.storage.snapshots[n_samples:n_len])
-                    n_samples = n_len
+            self._current_step = mcstep
+            self.save_current_step()
 
-                self.storage.steps.save(mcstep)
+            # if self.storage is not None:
+            #     # I think this is done automatically when saving snapshots
+            #     # for cv in cvs:
+            #     #     n_len = len(self.storage.snapshots)
+            #     #     cv(self.storage.snapshots[n_samples:n_len])
+            #     #     n_samples = n_len
+            #
+            #     self.storage.steps.save(mcstep)
 
             if self.step % self.save_frequency == 0:
                 self.sample_set.sanity_check()
@@ -749,7 +873,7 @@ class CommittorSimulation(PathSimulator):
 
                 mcstep = MCStep(
                     simulation=self,
-                    mccycle = self.step,
+                    mccycle=self.step,
                     previous=sample_set,
                     active=new_sample_set,
                     change=new_pmc
@@ -762,6 +886,7 @@ class CommittorSimulation(PathSimulator):
 
                 self.step += 1
             snap_num += 1
+
 
 class DirectSimulation(PathSimulator):
     """
@@ -819,16 +944,16 @@ class DirectSimulation(PathSimulator):
 
     def run(self, n_steps):
         most_recent_state = None
-        last_interface_exit = {p : -1 for p in self.flux_pairs}
-        last_state_visit = {s : -1 for s in self.states}
-        was_in_interface = {p : None for p in self.flux_pairs}
+        last_interface_exit = {p: -1 for p in self.flux_pairs}
+        last_state_visit = {s: -1 for s in self.states}
+        was_in_interface = {p: None for p in self.flux_pairs}
         local_traj = paths.Trajectory([self.initial_snapshot])
         self.engine.current_snapshot = self.initial_snapshot
         for step in range(n_steps):
             frame = self.engine.generate_next_frame()
 
             # update the most recent state if we're in a state
-            state = None # no state at all
+            state = None  # no state at all
             for s in self.states:
                 if s(frame):
                     state = s
