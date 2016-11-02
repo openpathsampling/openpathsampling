@@ -297,7 +297,7 @@ def to_openmm_topology(obj):
         return None
 
 
-def trajectory_to_mdtraj(trajectory, md_topology):
+def trajectory_to_mdtraj(trajectory, md_topology=None):
     """
     Construct a `mdtraj.Trajectory` object from an :obj:`Trajectory` object
 
@@ -311,8 +311,19 @@ def trajectory_to_mdtraj(trajectory, md_topology):
     :obj:`mdtraj.Trajectory`
         the constructed Trajectory instance
     """
+    if not hasattr(trajectory, 'to_mdtraj'):
+        try:
+            _ = len(trajectory)
+        except TypeError:
+            trajectory = Trajectory([trajectory])
+        else:
+            trajectory = Trajectory(trajectory)
 
-    # TODO: Use units to make sure we did not rescale accidentally!
-    output = trajectory.xyz
-
-    return md.Trajectory(output, md_topology)
+    # TODO: The following would work if we remove trajectory.to_mdtraj()
+    # For now, let's keep all the code in one place, and better for
+    # engines.openmm.tools to require engines.trajectory than vice versa
+    # output = trajectory.xyz
+    # traj = md.Trajectory(output, md_topology)
+    # traj.unitcell_vectors = trajectory.box_vectors
+    return trajectory.to_mdtraj(md_topology)
+                         

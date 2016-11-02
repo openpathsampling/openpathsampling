@@ -21,12 +21,26 @@ if it isn't interoperable enough to go into the main repository.
 
 .. rubric:: Coding Style
 
-Our coding style is mostly `PEP8`_ (with some allowances for things like
-capitalization in variable names, when scientific custom prefers capitals),
-and docstrings formatted according to the `numpydoc`_ standard.
+Our coding style is mostly `PEP8`_, with allowances for better readability
+and matching standard scientific naming conventions (e.g., capitalization of
+variable nams). Docstrings are formatted according to the `numpydoc`_
+standard.
 
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/
 .. _numpydoc: https://github.com/numpy/numpy/blob/master/doc/HOWTO_DOCUMENT.rst.txt
+
+.. rubric:: Tests and Examples
+
+Additions to OPS should include thorough unit tests. We use `nose`_ to run
+our tests. Unit tests are located in the ``openpathsampling/tests/``
+directory. Examples and integration tests should be written as Jupyter
+notebooks and placed in the ``examples/`` directory.  Pull requests to the
+OPS GitHub repository will automatically run all unit tests with each push.
+We also run a subset of the integration tests on each push, using
+`ipynbtest`_.
+
+.. _nose: http://nose.readthedocs.io/
+.. _ipynbtest: https://github.com/jhprinz/ipynb-test
 
 -----
 

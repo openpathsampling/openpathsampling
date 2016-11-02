@@ -6,3 +6,4 @@ from snapshot import (
     SnapshotWrapperStore, SnapshotValueStore, BaseSnapshotStore,
     FeatureSnapshotStore)
 from trajectory import TrajectoryStore
+from pathsimulator import PathSimulatorStore
