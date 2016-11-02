@@ -111,6 +111,10 @@ class RandomVelocities(SnapshotModifier):
     engine : :class:`.DynamicsEngine` or None
         engine to be used for constraints; if None, use the snapshot's
         engine
+    subset_mask : list of int or None
+        the subset to use (default None, meaning no subset). The values
+        select along the first axis of the input array. For example, in a
+        typical shape=(n_atoms, 3) array, this will pick the atoms.
     """
     def __init__(self, beta, engine=None, subset_mask=None):
         super(RandomVelocities, self).__init__(subset_mask)
