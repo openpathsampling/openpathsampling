@@ -213,9 +213,10 @@ class TreeRenderer(svg.Drawing):
 
         css_class += ['v-region']
 
-        padding = self.horizontal_gap
+        # padding = self.horizontal_gap
         width = 0.2
         gap = 0.0
+        radius = 0.07
 
         group = Group(
             class_=self.css_class(css_class)
@@ -229,7 +230,7 @@ class TreeRenderer(svg.Drawing):
         if extend_top:
             group.add(self.circle(
                 center=self.xy(x, y - 0.5 + gap),
-                r=self.w(padding)
+                r=self.w(radius)
             ))
             group.add(self.line(
                 start=self.xy(x - 1.0 * width, y - 0.5 + gap),
@@ -239,7 +240,7 @@ class TreeRenderer(svg.Drawing):
         if extend_bottom:
             group.add(self.circle(
                 center=(self.xy(x, y + (w - 1.0) + 0.5 - gap)),
-                r=self.w(padding)
+                r=self.w(radius)
             ))
             group.add(self.line(
                 start=self.xy(x - 1.0 * width, y + w - 1.0 + 0.5 - gap),
@@ -933,7 +934,7 @@ class EnsembleMixBuilder(Builder):
         return doc
 
 
-def _create_simple_legend(title, fnc):
+def _create_simple_legend(title, fnc, width=1):
     def _legend_fnc(self):
         doc = self.doc
 
@@ -949,7 +950,7 @@ def _create_simple_legend(title, fnc):
                     fnc(sample)))
             )
 
-        return part
+        return part, width
     return _legend_fnc
 
 
@@ -1095,6 +1096,24 @@ class PathTreeBuilder(Builder):
                 if step is not None:
                     step_accepted = step.change.accepted
 
+                    if not step_accepted:
+                        # in the case of the initial step we still use an
+                        # EmptyMove although technically an EmptyMove is
+                        # rejected we use it as rejected or better this did
+                        # not even have an acceptance
+                        # step so we treat is as accepted for visual purposes
+
+                        active_steps = self.generator.get_active_steps(sample)
+
+                        # so if this sample is in the active samplesets
+                        # somewhere it must have been accepted in the past.
+                        # So if it has not been accepted in steps we know, we
+                        # still assume that the first mention of this sample
+                        # is like an accepting treat the step as accepted
+
+                        if active_steps is not None:
+                            step_accepted = True
+
                 change = self.generator.get_change(sample)
                 if change is not None:
                     move_accepted = change.accepted
@@ -1169,17 +1188,19 @@ class PathTreeBuilder(Builder):
 
         # add all the legend parts
 
-        for num, part in enumerate(legend_parts):
-            part.translate(- doc.scale_x * num)
+        pos_shift = 0
+
+        for part, width in legend_parts:
+            part.translate(- doc.scale_x * pos_shift)
             legend_group.add(part)
 
-        legend_columns = len(legend_parts)
+            pos_shift += width
 
         # +--------------------------------------------------------------------
         # +  BUILD FINAL IMAGE
         # +--------------------------------------------------------------------
 
-        left_x = (-0.5 - legend_columns) * doc.scale_x
+        left_x = (-0.5 - pos_shift) * doc.scale_x
         width = 64 + tree_scale * (max_x - min_x + 2) - left_x
         height = doc.scale_y * (max_y + 3.0)
         top_y = -1.5 * doc.scale_y
@@ -1563,7 +1584,7 @@ class PathTreeBuilder(Builder):
                     smp_format(sample)))
             )
 
-        return part
+        return part, 1
 
     def part_legend_correlation(self):
         doc = self.doc
@@ -1606,7 +1627,7 @@ class PathTreeBuilder(Builder):
                 extend_bottom=False,
                 css_class=['correlation']))
 
-        return part
+        return part, 1
 
     def part_legend_step(self):
         doc = self.doc
@@ -1632,7 +1653,49 @@ class PathTreeBuilder(Builder):
                 doc.label(0, 1 + pos_y, txt)
             )
 
-        return part
+        return part, 1
+
+    def part_legend_active(self):
+        doc = self.doc
+
+        part = doc.g(class_='legend')
+        part.add(
+            doc.label(0, 0, 'active')
+        )
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            sample = data['sample']
+            if isinstance(self.generator, SampleListGenerator):
+                mccycles = self.generator.get_active_mccycles(sample)
+                if mccycles is None:
+                    txt = '*'
+                else:
+                    txt = self._set_of_int_to_str(mccycles)
+            else:
+                txt = '?'
+
+            part.add(
+                doc.label(0, 1 + pos_y, txt)
+            )
+
+        return part, 2
+
+    @staticmethod
+    def _set_of_int_to_str(ints):
+        sorted_ints = sorted(ints) + [-1]
+        first = None
+        last = None
+        out = ''
+        for ii in sorted_ints:
+            if first is None:
+                first = ii
+            elif ii != last + 1:
+                out += '%d-%d' % (first, last)
+                first = ii
+
+            last = ii
+
+        return out
 
     def _create_naming_fnc(self, fnc):
         opts = self.options
@@ -2563,12 +2626,28 @@ class StepList(list):
 
     def _create_step_sample_list(self):
         # TODO: This will someday be replaced by a `sample.step` property
-        self._sample_step_list = dict()
+        self._sample_created_step_list = dict()
+        self._sample_active_step_list = dict()
+        self._sample_active_step_list_mccycle = dict()
         self._sample_change_list = dict()
         for step in self:
+            # TODO: This is a fix for the use of EmptyMoveChange for
+            # the initial step. We should use a special step that introduces
+            # the initial samples to the mccycle instead.
+            for s in step.active.samples:
+                if s not in self._sample_active_step_list:
+                    self._sample_active_step_list[s] = [step]
+                    self._sample_active_step_list_mccycle[s] = [step.mccycle]
+                else:
+                    self._sample_active_step_list[s].append(step)
+                    self._sample_active_step_list_mccycle[s].append(step.mccycle)
+
+                if s not in self._sample_created_step_list:
+                    self._sample_created_step_list[s] = step
+
             for ch in step.change:
                 for s in ch.samples:
-                    self._sample_step_list[s] = step
+                    self._sample_created_step_list[s] = step
                     self._sample_change_list[s] = ch
 
     def get_step(self, sample):
@@ -2591,7 +2670,57 @@ class StepList(list):
         one move and thus during one step
         """
 
-        return self._sample_step_list.get(sample)
+        return self._sample_created_step_list.get(sample)
+
+    def get_active_steps(self, sample):
+        """
+        Return the steps in which a sample was in the active sampleset
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the appearing `MCStep` from
+
+        Returns
+        -------
+        list of :obj:`MCStep`
+            the steps in which the sample was in the active sampleset
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely
+        generated in one move and thus during one step. This will list all
+        steps here the sample is in the _final_ active sampleset. This is
+        usually a range of steps from where is was first generated to the
+        step before it is replaced.
+        """
+
+        return self._sample_active_step_list.get(sample)
+
+    def get_active_mccycles(self, sample):
+        """
+        Return the mccycles in which a sample was in the active sampleset
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the mccycles where it was in an active sampleset
+
+        Returns
+        -------
+        list of int
+            the mccycles in which the sample was in the active sampleset
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely
+        generated in one move and thus during one step. This will list all
+        steps here the sample is in the _final_ active sampleset. This is
+        usually a range of steps from where is was first generated to the
+        step before it is replaced.
+        """
+
+        return self._sample_active_step_list_mccycle.get(sample)
 
     def get_mccycle(self, sample):
         """
@@ -2609,7 +2738,7 @@ class StepList(list):
 
         """
 
-        return self._sample_step_list.get(sample).mccycle
+        return self._sample_created_step_list.get(sample).mccycle
 
     def get_change(self, sample):
         """
@@ -2631,7 +2760,7 @@ class StepList(list):
 
     @property
     def samples(self):
-        return self._sample_step_list.keys()
+        return self._sample_created_step_list.keys()
 
 
 class SampleListGenerator(SampleList):
@@ -2661,6 +2790,8 @@ class SampleListGenerator(SampleList):
 
     def update_tree_options(self, tree):
         pass
+
+    # Delegate functions to access methods in self.steps
 
     def get_mccycle(self, sample):
         """
@@ -2720,6 +2851,56 @@ class SampleListGenerator(SampleList):
 
         return self.steps.get_change(sample)
 
+    def get_active_steps(self, sample):
+        """
+        Return the steps in which a sample was in the active sampleset
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the appearing `MCStep` from
+
+        Returns
+        -------
+        list of :obj:`MCStep`
+            the steps in which the sample was in the active sampleset
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely
+        generated in one move and thus during one step. This will list all
+        steps here the sample is in the _final_ active sampleset. This is
+        usually a range of steps from where is was first generated to the
+        step before it is replaced.
+        """
+
+        return self.steps.get_active_steps(sample)
+
+    def get_active_mccycles(self, sample):
+        """
+        Return the mccycles in which a sample was in the active sampleset
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the mccycles where it was in an active sampleset
+
+        Returns
+        -------
+        list of int
+            the mccycles in which the sample was in the active sampleset
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely
+        generated in one move and thus during one step. This will list all
+        steps here the sample is in the _final_ active sampleset. This is
+        usually a range of steps from where is was first generated to the
+        step before it is replaced.
+        """
+
+        return self.steps.get_active_mccycles(sample)
+
 
 class ReplicaEvolution(SampleListGenerator):
     """
@@ -2735,11 +2916,16 @@ class ReplicaEvolution(SampleListGenerator):
         self._accepted = accepted
 
     def _update_sample(self):
-        self.set_samples(SampleList._get_samples_from_steps(
+        samples = SampleList._get_samples_from_steps(
             self.steps,
             self._replica,
             self._accepted
-        ))
+        )
+
+        # we truncate
+
+
+        self.set_samples(samples)
 
         self.analyze()
 
