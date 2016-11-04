@@ -282,12 +282,13 @@ class ObjectStore(StorableNamedObject):
         return repr(self)
 
     def __repr__(self):
-        if self.content_class is not None:
-            return "store.%s[%s]" % (
-                self.prefix, self.content_class.__name__)
-        else:
-            return "store.%s[%s]" % (
-                self.prefix, 'None/ANY')
+        return 'store.%s[%s] : %s' % (
+            self.prefix,
+            self.content_class.__name__ if self.content_class is not None else
+            'None/ANY',
+            str(len(self)) + ' object(s)' if self._created else
+            '(not created)'
+        )
 
     @property
     def simplifier(self):
@@ -442,7 +443,11 @@ class ObjectStore(StorableNamedObject):
         Enable numpy style selection of object in the store
         """
         try:
-            if type(item) is int or type(item) is str or type(item) is UUID:
+            if type(item) is int:
+                if item < 0:
+                    item += len(self)
+                return self.load(item)
+            elif type(item) is str or type(item) is UUID:
                 return self.load(item)
             elif type(item) is slice:
                 return [self.load(idx)

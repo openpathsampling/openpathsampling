@@ -184,6 +184,13 @@ class ObjectJSON(object):
             oo = obj
             return oo
 
+    @staticmethod
+    def _unicode2str(s):
+        if type(s) is unicode:
+            return str(s)
+        else:
+            return s
+
     def build(self, obj):
         if type(obj) is dict:
             if '_units' in obj and '_value' in obj:
@@ -234,7 +241,7 @@ class ObjectJSON(object):
 
             elif '_dict' in obj:
                 return {
-                    self.build(key): self.build(o)
+                    self._unicode2str(self.build(key)): self.build(o)
                     for key, o in self.build(obj['_dict'])
                 }
 
@@ -251,7 +258,7 @@ class ObjectJSON(object):
 
             else:
                 return {
-                    key: self.build(o)
+                    self._unicode2str(key): self.build(o)
                     for key, o in obj.iteritems()
                 }
 

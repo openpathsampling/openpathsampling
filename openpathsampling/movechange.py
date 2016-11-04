@@ -297,7 +297,6 @@ class EmptyMoveChange(MoveChange):
         return []
 
 
-
 class SampleMoveChange(MoveChange):
     """
     A MoveChange representing the application of samples.
@@ -357,12 +356,6 @@ class RejectedSampleMoveChange(SampleMoveChange):
     This will return no samples also as its result, hence it is
     rejected.
     """
-
-    def _get_trials(self):
-        return self.samples
-
-    def _get_results(self):
-        return []
 
 
 class RejectedNaNSampleMoveChange(RejectedSampleMoveChange):
