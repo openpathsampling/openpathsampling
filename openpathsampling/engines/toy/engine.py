@@ -6,10 +6,26 @@ from snapshot import ToySnapshot as Snapshot
 
 class ToyEngine(DynamicsEngine):
     """
-    The trick is that we have various "simulation" classes (either
-    generated directly as here, or subclassed for more complication
-    simulation objects as in OpenMM), but they all quack the same when it
-    comes to things the DynamicsEngine calls on them for
+    Engine for toy models. Mostly used for 2D examples.
+
+    Parameters
+    ----------
+    options : dict
+        A dictionary providing additional settings. Keys can be
+
+            'integ' : :class:`.ToyIntegrator`
+                the integrator for this engine
+            'n_frames_max' : int
+                the maximum number of frames allowed for a returned
+                trajectory, default is 5000
+            'n_steps_per_frame' : int
+                number of integration steps per returned snapshot, default
+                is 10.
+
+    topology : :class:`.ToyTopology`
+        object which includes masses, potential energy surface, and the
+        dimensions n_atoms and n_spatial; plays a role similar to a topology
+        in molecular mechanics
 
     """
 
