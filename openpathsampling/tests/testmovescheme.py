@@ -730,7 +730,8 @@ class testDefaultScheme(object):
                          replica=None)
         )
         expected = "Missing ensembles:\n"
-        expected += "*  [[MinusInterfaceEnsemble]]\n"*2
+        expected += "*  [Out A minus]\n"
+        expected += "*  [Out B minus]\n"
         expected += "Extra ensembles:\n*  [LengthEnsemble]\n"
         assert_equal(scheme.initial_conditions_report(init_cond), expected)
 
