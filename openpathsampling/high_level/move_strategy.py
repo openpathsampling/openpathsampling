@@ -278,7 +278,7 @@ class ShootingMoveStrategy(MoveStrategy):
             # covers cases 1 and 3 above
             init_ensembles = self.get_ensembles(scheme, self.ensembles)
         else:
-            # covers case 3 above
+            # covers case 2 above
             sigs = [m.ensemble_signature for m in movers]
             sig_ensembles = self.signatures_to_init_ensembles(sigs)
             init_ensembles = self.get_ensembles(scheme, sig_ensembles)
