@@ -10,9 +10,15 @@ class ToyIntegrator(StorableNamedObject):
         super(StorableNamedObject, self).__init__()
 
 class LeapfrogVerletIntegrator(ToyIntegrator):
-    """Leapfrog Integrator. Not for actual use; but the momentum and
-    position update functions are used in other integrators, so we inherit
-    from this.
+    """Leapfrog Verlet integrator
+
+    Not for actual use, but the momentum and position update functions are
+    used in other integrators, so we inherit from this.
+
+    Parameters
+    ----------
+    dt : float
+        time step
     """
     
     dd = None
@@ -27,17 +33,44 @@ class LeapfrogVerletIntegrator(ToyIntegrator):
     def _position_update(self, sys, mydt):
         sys.positions += sys.velocities * mydt
 
-    def step(self, sys, n_steps):
+    def step(self, sys):
+        """
+        Take an MD step. Update in-place.
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+        """
         self._position_update(sys, 0.5*self.dt)
         self._momentum_update(sys, self.dt)
         self._position_update(sys, 0.5*self.dt)
 
 class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
-    """ Langevin integrator for simple toy models
+    """Langevin integrator for simple toy models
 
     Implementation of the BAOAB integrator of Leimkuhler and Matthews [1]_.
-    In particular, see the appendix on p.54 of the reference below, which is
+    In particular, see the appendix on p.54 of that reference, which is
     where we take our notation from.
+
+    Parameters
+    ----------
+    dt : float
+        time step
+    temperature : float
+    gamma : float
+        friction constant for the Langevin equation
+
+    Attributes
+    ----------
+    beta : float
+        inverse temperature
+    c1 : float
+        c1 parameter from Leimkuhler and Matthews
+    c2 : float
+        c2 parameter from Leimkuhler and Matthews
+    c3 : float
+        c3 parameter from Leimkuhler and Matthews
 
     References
     ----------
@@ -78,7 +111,15 @@ class LangevinBAOABIntegrator(LeapfrogVerletIntegrator):
         sys.velocities = (self._c1 * sys.velocities +
                           self._c3 * np.sqrt(sys._minv) * R)
 
-    def step(self, sys, n_steps):
+    def step(self, sys):
+        """
+        Take an MD step. Update in-place.
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+        """
         self._momentum_update(sys, 0.5*self.dt)
         self._position_update(sys, 0.5*self.dt)
         self._OU_update(sys, self.dt)

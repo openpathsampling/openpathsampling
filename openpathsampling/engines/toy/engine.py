@@ -5,8 +5,7 @@ from snapshot import ToySnapshot as Snapshot
 
 
 class ToyEngine(DynamicsEngine):
-    """
-    Engine for toy models. Mostly used for 2D examples.
+    """Engine for toy models. Mostly used for 2D examples.
 
     Parameters
     ----------
@@ -27,6 +26,16 @@ class ToyEngine(DynamicsEngine):
         dimensions n_atoms and n_spatial; plays a role similar to a topology
         in molecular mechanics
 
+    Attributes
+    ----------
+    pes : :class:`.PES`
+        potential energy surface
+    mass : array-like
+        mass of each atom
+    snapshot_timestep : float
+        time step between reported snapshots
+    current_snapshot : :class:`.Snapshot`
+        the current state of the system, as a snapshot
     """
 
     base_snapshot_type = Snapshot
@@ -121,5 +130,6 @@ class ToyEngine(DynamicsEngine):
         self.velocities = vels[0]
 
     def generate_next_frame(self):
-        self.integ.step(self, self.n_steps_per_frame)
+        for i in range(self.n_steps_per_frame):
+            self.integ.step(sys=self)
         return self.current_snapshot
