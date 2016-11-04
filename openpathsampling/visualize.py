@@ -495,13 +495,17 @@ class MoveTreeBuilder(Builder):
             self.initial = initial
 
     @staticmethod
-    def from_scheme(scheme):
+    def from_scheme(scheme, hidden_ensembles=True):
         """
-        Initaliza a new `MoveTreeBuilder` from the date in a `MoveScheme`
+        Initalize a new `MoveTreeBuilder` from the data in a `MoveScheme`
 
         Parameters
         ----------
         scheme : :obj:`openpathsampling.MoveScheme`
+            use the root mover of this scheme as the basis for visualization
+        hidden_ensembles : bool
+            whether to show the scheme's hidden ensembles as well (default
+            True)
 
         Returns
         -------
@@ -516,11 +520,14 @@ class MoveTreeBuilder(Builder):
             # error on the thing you return below ~~~DWHS
             input_ensembles = scheme.input_ensembles
 
-        hidden = list(scheme.find_hidden_ensembles())
         # using network.all_ensembles forces a correct ordering
+        ensembles = scheme.network.all_ensembles
+        if hidden_ensembles:
+            ensembles += list(scheme.find_hidden_ensembles())
+        
         return MoveTreeBuilder(
             pathmover=scheme.root_mover,
-            ensembles=scheme.network.all_ensembles + hidden,
+            ensembles=ensembles,
             initial=input_ensembles
         )
 

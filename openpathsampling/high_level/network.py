@@ -747,6 +747,7 @@ class MISTISNetwork(TISNetwork):
                 stateA=stateA,
                 stateB=final_state,
                 interfaces=transition.interfaces,
+                name=stateA.name + "->" + stateB.name,
                 orderparameter=transition.orderparameter
             )
 
