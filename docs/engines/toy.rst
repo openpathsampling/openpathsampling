@@ -11,8 +11,9 @@ Main functions
 .. autosummary::
    :toctree: ../api/generated/
 
-   Snapshot
    ToySnapshot
+   Snapshot
+   ToyEngine
    Engine
    Topology
 
