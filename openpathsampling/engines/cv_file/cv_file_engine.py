@@ -28,20 +28,23 @@ class CVFileEngine(ExternalEngine):
         if options is None:
             options = {}
         try:
-            n_atoms = options['n_atoms']
-        except KeyError:
-            n_atoms = 1
-        try:
             cv_names = options['cv_names']
         except KeyError:
             cv_names = self._default_options['cv_names']
         try:
+            n_atoms = options['n_atoms']
+        except KeyError:
+            if 'n_spatial' not in options.keys():
+                n_atoms = 1
+        try:
             n_spatial = options['n_spatial']
         except KeyError:
-            if len(cv_names) == 0:
-                n_spatial = 1
-            else:
-                n_spatial = int(math.ceil(float(len(cv_names)) / n_atoms))
+            # if len(cv_names) is 0, you'll crash before this
+            # (options doesn't like empty lists)
+            n_spatial = int(math.ceil(float(len(cv_names)) / n_atoms))
+        else:
+            if 'n_atoms' not in options.keys():
+                n_atoms = int(math.ceil(float(len(cv_names)) / n_spatial))
 
         options['n_atoms'] = n_atoms
         options['n_spatial'] = n_spatial

@@ -28,7 +28,22 @@ class testCVFileEngine(object):
         pass
 
     def test_initialization_as_spatial(self):
-        raise SkipTest
+        engine = cv_engine.Engine(
+            options={
+                'cv_names': ['alpha', 'beta', 'gamma'],
+                'n_spatial': 1
+            }
+        )
+        assert_equal(engine.n_atoms, 3)
+        assert_equal(engine.n_spatial, 1)
+
+    def test_initialization_no_options(self):
+        engine = cv_engine.Engine()
+        assert_equal(engine.n_atoms, 1)
+        assert_equal(engine.n_spatial, 1)
+        assert_equal(len(engine.cv), 1)
+        assert_equal(engine.cv.keys(), ["x"])
+        assert_equal(engine.cv['x'].name, "x")
 
     def test_trajectory_from_file(self):
         trajectory = self.engine.trajectory_from_file(self.filename)
