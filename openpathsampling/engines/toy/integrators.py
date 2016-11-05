@@ -6,6 +6,9 @@ from openpathsampling.netcdfplus import StorableNamedObject
 
 
 class ToyIntegrator(StorableNamedObject):
+    """
+    Abstract base class for toy engine integrators.
+    """
     def __init__(self):
         super(StorableNamedObject, self).__init__()
 
