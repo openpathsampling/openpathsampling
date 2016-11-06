@@ -18,14 +18,14 @@ class TreeRenderer(svg.Drawing):
     without distort the content. What we want is to move objects further
     apart of close while maintaining their size.
     """
-    def __init__(self, css_file=None):
+    def __init__(self):
         super(TreeRenderer, self).__init__()
+
         self.scale_x = 20.0
         self.scale_y = 20.0
+        self.horizontal_gap = 0.05
 
-        if css_file is None:
-            css_file = 'vis'
-
+    def add_css_file(self, css_file='vis'):
         css_file_name = os.path.join(
             paths.resources_directory, css_file + '.css')
 
@@ -33,11 +33,14 @@ class TreeRenderer(svg.Drawing):
             vis_css = content_file.read()
 
         # Add the CSS Stylesheet
-        self.css_style = vis_css
         self.defs.add(self.style(
-            self.css_style
+            vis_css
         ))
-        self.horizontal_gap = 0.05
+
+    def add_css(self, css_style):
+        self.defs.add(self.style(
+            css_style
+        ))
 
     @staticmethod
     def css_class(css_class):
@@ -420,7 +423,10 @@ class Builder(object):
     """
     Abstract class of building SVG representations
     """
-    def __init__(self, additional_option_categories=None):
+
+    unique_id = 0
+
+    def __init__(self, additional_option_categories=None, base_css_style='vis'):
         options = ['analysis', 'css', 'ui', 'format']
         if additional_option_categories is not None:
             options += additional_option_categories
@@ -431,12 +437,35 @@ class Builder(object):
         )
 
         self.options = option_tuple_class(**{opt: {} for opt in options})
+        self.base_css_style = base_css_style
+        self._add_css = []
+
+    def add_css(self, css):
+        self._add_css.append(css)
+
+    def reset_css(self):
+        self._add_css = []
 
     def svg(self):
-        return self.render().tostring()
+        svg = self.render()
+        self._finalize_svg(svg)
+
+        return svg.tostring()
+
+    def _finalize_svg(self, svg):
+        # add a unique ID
+        unique_id = 'pathtree-' + str(Builder.unique_id)
+        Builder.unique_id += 1
+        svg['id'] = unique_id
+
+        # add CSS
+        svg.add_css_file(self.base_css_style)
+        if self.add_css:
+            for css in self._add_css:
+                svg.add_css(css.replace('#self', '#' + unique_id))
 
     def html(self):
-        return self.render().tostring()
+        return self.svg()
 
     def render(self):
         """
@@ -938,9 +967,9 @@ def _create_simple_legend(title, fnc, width=1):
     def _legend_fnc(self):
         doc = self.doc
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-' + title)
         part.add(
-            doc.label(0, 0, title)
+            doc.label(0, 0, title, css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -1245,7 +1274,7 @@ class PathTreeBuilder(Builder):
 
     def part_hovering_blocks(self, left, width):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='hovering-blocks')
 
         # +--------------------------------------------------------------------
         # +  HOVERING TABLE LINE PLOT
@@ -1266,7 +1295,7 @@ class PathTreeBuilder(Builder):
 
     def part_trajectory_label(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='trajectory-label')
 
         trj_format = self._create_naming_fnc(
             self.options.format['trajectory_label'])
@@ -1301,7 +1330,7 @@ class PathTreeBuilder(Builder):
 
     def part_shooting_hooks(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='shooting-hooks')
 
         draw_pos_y = {}
         matrix = self.generator.matrix
@@ -1356,7 +1385,7 @@ class PathTreeBuilder(Builder):
 
     def part_snapshot_blocks(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='snapshot-blocks')
 
         matrix = self.generator.matrix
 
@@ -1530,7 +1559,7 @@ class PathTreeBuilder(Builder):
 
     def part_info_box(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='info-box')
 
         group.add(
             doc.label(0, -1, 'Information', css_class=['infobox'])
@@ -1572,9 +1601,9 @@ class PathTreeBuilder(Builder):
         smp_format = self._create_naming_fnc(
             self.options.format['sample_label'])
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-sample')
         part.add(
-            doc.label(0, 0, 'smp')
+            doc.label(0, 0, 'smp', css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -1590,9 +1619,9 @@ class PathTreeBuilder(Builder):
         doc = self.doc
         time_symmetric = self.generator.time_symmetric
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-correlation')
         part.add(
-            doc.label(0, 0, 'cor')
+            doc.label(0, 0, 'cor', css_class=['head'])
         )
 
         old_tc = 1
@@ -1632,9 +1661,9 @@ class PathTreeBuilder(Builder):
     def part_legend_step(self):
         doc = self.doc
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-step')
         part.add(
-            doc.label(0, 0, 'step')
+            doc.label(0, 0, 'step', css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -1658,9 +1687,9 @@ class PathTreeBuilder(Builder):
     def part_legend_active(self):
         doc = self.doc
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-active')
         part.add(
-            doc.label(0, 0, 'active')
+            doc.label(0, 0, 'active', css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -2206,15 +2235,34 @@ class SampleList(OrderedDict):
         return sl
 
     @staticmethod
-    def _get_samples_from_steps(steps, replica, accepted):
+    def _get_samples_from_steps(steps, replica, accepted, intermediates=True):
         if accepted:
-            samp = steps[-1].active[replica]
-            samples = [samp]
-            while samp.parent is not None:
-                samp = samp.parent
-                samples.append(samp)
+            # samp = steps[-1].active[replica]
+            # samples = [samp]
+            # while samp.parent is not None:
+            #     samp = samp.parent
+            #     samples.append(samp)
+            #
+            # return list(reversed(samples))
+            samples = []
+            for step in steps:
+                if step.active and replica in step.active:
+                    next_sample = step.active[replica]
+                    if intermediates:
+                        # add the intermediate samples to completely trace
+                        # where we came from and allow only samples that
+                        # happened in this step
+                        samp = next_sample.parent
+                        add_samples = []
+                        while samp is not None and steps.get_step(samp) == step and samp is not samples[-1]:
+                            add_samples.append(samp)
+                            samp = samp.parent
 
-            return list(reversed(samples))
+                        samples.extend(list(reversed(add_samples)))
+
+                    samples.append(next_sample)
+
+            return samples
         else:
             samp = steps[0].active[replica]
             samples = [samp]
@@ -2592,8 +2640,8 @@ class SampleList(OrderedDict):
         decorrelated = [self[0]]
 
         for s in self:
-            # check if we are on the main path of evolution and not something that is rejected
-            # at some point
+            # check if we are on the main path of evolution and not
+            # something that is rejected at some point
             if self[s]['level'] == 0:
                 if not s.trajectory.is_correlated(prev, self.time_symmetric):
                     decorrelated.append(s)
@@ -2771,19 +2819,26 @@ class SampleListGenerator(SampleList):
     will mimick a list of Samples generated from steps to your liking
     """
 
+    class UpdateSampleProperty(object):
+        def __init__(self, var):
+            if var[0] != '_':
+                var = '_' + var
+
+            self.var = var
+
+        def __get__(self, instance, owner):
+            return getattr(instance, self.var)
+
+        def __set__(self, instance, value):
+            setattr(instance, self.var, value)
+            if hasattr(instance, '_update_sample'):
+                instance._update_sample()
+
+    steps = UpdateSampleProperty('steps')
+
     def __init__(self):
         super(SampleListGenerator, self).__init__([])
-        self.steps = None
-
-    @property
-    def steps(self):
-        return self._steps
-
-    @steps.setter
-    def steps(self, steps):
-        self._steps = steps
-        if steps is not None:
-            self._update_sample()
+        self._steps = None
 
     def _update_sample(self):
         pass
@@ -2910,42 +2965,28 @@ class ReplicaEvolution(SampleListGenerator):
     will mimick a list of Samples generated from steps to your liking
     """
 
-    def __init__(self, replica, accepted=True):
+    replica = SampleListGenerator.UpdateSampleProperty('replica')
+    accepted = SampleListGenerator.UpdateSampleProperty('accepted')
+    intermediates = SampleListGenerator.UpdateSampleProperty('intermediates')
+
+    def __init__(self, replica, accepted=True, intermediates=True):
         super(ReplicaEvolution, self).__init__()
         self._replica = replica
         self._accepted = accepted
+        self._intermediates = intermediates
+
+        self._update_sample()
 
     def _update_sample(self):
-        samples = SampleList._get_samples_from_steps(
-            self.steps,
-            self._replica,
-            self._accepted
-        )
+        if self.steps:
+            self.set_samples(SampleList._get_samples_from_steps(
+                self.steps,
+                self._replica,
+                self._accepted,
+                self._intermediates
+            ))
 
-        # we truncate
-
-
-        self.set_samples(samples)
-
-        self.analyze()
-
-    @property
-    def replica(self):
-        return self._replica
-
-    @replica.setter
-    def replica(self, value):
-        self._replica = value
-        self._update_sample()
-
-    @property
-    def accepted(self):
-        return self._accepted
-
-    @accepted.setter
-    def accepted(self, value):
-        self._accepted = value
-        self._update_sample()
+            self.analyze()
 
     def update_tree_options(self, tree):
         tree.options.css['mark_transparent'] = 'rejected'
@@ -2956,14 +2997,7 @@ class SampleAncestors(SampleListGenerator):
         super(SampleAncestors, self).__init__()
         self._sample = sample
 
-    @property
-    def sample(self):
-        return self._sample
-
-    @sample.setter
-    def sample(self, value):
-        self._sample = value
-        self._update_sample()
+    sample = SampleListGenerator.UpdateSampleProperty('sample')
 
     def _update_sample(self):
 
@@ -2988,6 +3022,9 @@ class EnsembleEvolution(SampleListGenerator):
     will mimick a list of Samples generated from steps to your liking
     """
 
+    ensemble = SampleListGenerator.UpdateSampleProperty('ensemble')
+    accepted = SampleListGenerator.UpdateSampleProperty('accepted')
+
     def __init__(self, ensemble, accepted=True):
         super(EnsembleEvolution, self).__init__()
         self._ensemble = ensemble
@@ -2998,24 +3035,6 @@ class EnsembleEvolution(SampleListGenerator):
             step.active[self.ensemble] for step in self.steps
             if not self.accepted or step.change.accepted
         ])
-
-    @property
-    def ensemble(self):
-        return self._ensemble
-
-    @ensemble.setter
-    def ensemble(self, value):
-        self._ensemble = value
-        self._update_sample()
-
-    @property
-    def accepted(self):
-        return self._accepted
-
-    @accepted.setter
-    def accepted(self, value):
-        self._accepted = value
-        self._update_sample()
 
     def update_tree_options(self, tree):
         tree.options.css['mark_transparent'] = 'rejected'

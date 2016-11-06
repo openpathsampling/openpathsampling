@@ -283,7 +283,8 @@ class testLeapfrogVerletIntegrator(object):
     def test_step(self):
         # no assertions since the tests of position/momentum updates should
         # handle that... this is just to make sure we run
-        self.sim.integ.step(self.sim, 2)
+        self.sim.integ.step(self.sim)
+        self.sim.integ.step(self.sim)
 
 
 
