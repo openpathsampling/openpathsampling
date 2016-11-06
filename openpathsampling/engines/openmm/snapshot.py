@@ -16,7 +16,7 @@ import features
 ])
 class MDSnapshot(BaseSnapshot):
     """
-    A fast MDSnapshot
+    A fast MD snapshot, which does not proxy the coordinates/velocities.
     """
 
 # The following code does the same as above
@@ -43,7 +43,7 @@ class MDSnapshot(BaseSnapshot):
 ])
 class Snapshot(BaseSnapshot):
     """
-    The standard MDSnapshot supporting coordinate, velocities and box_vectors
+    The standard snapshot for MD, based on statics and kinetics proxies.
     """
 
     StaticContainer = features.StaticContainer

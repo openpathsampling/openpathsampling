@@ -142,7 +142,15 @@ class SampleSet(StorableObject):
         return len(self.samples)
 
     def __contains__(self, item):
-        return item in self.samples
+        # check for Sample, replica (int) and Ensemble, too
+        if item in self.samples:
+            return True
+        elif item in self.ensemble_dict:
+            return True
+        elif item in self.replica_dict:
+            return True
+        else:
+            return False
 
     def all_from_ensemble(self, ensemble):
         try:

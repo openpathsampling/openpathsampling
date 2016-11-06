@@ -24,6 +24,7 @@ requirements:
     - netcdf4
     - openmm
     - openmmtools
+    - jupyter
     - pyyaml
     - mdtraj
     - svgwrite
