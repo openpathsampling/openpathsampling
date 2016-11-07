@@ -15,14 +15,14 @@ class LammpsEngine(DynamicsEngine):
     within this framework
     """
 
-    units = {
-        'length': u.dimensionless,
-        'velocity': u.dimensionless,
-        'energy': u.dimensionless
-    }
+    # units = {
+    #     'length': u.dimensionless,
+    #     'velocity': u.dimensionless,
+    #     'energy': u.dimensionless
+    # }
 
     _default_options = {
-        'nsteps_per_frame': 10,
+        'n_steps_per_frame': 10,
         'n_frames_max': 5000
     }
 
@@ -30,24 +30,35 @@ class LammpsEngine(DynamicsEngine):
 
         self.inputs = inputs
 
+        # Create new lammps instance
         self._lmp = lammps()
 
+        # Execute the give script
         commands = inputs.splitlines()
 
         for command in commands:
             self._lmp.command(command)
 
-        self.command('compute thermo_ke all ke')
+        # self.command('compute thermo_ke all ke')
         self.command('run 1')
 
         if template is None:
             template = self._get_snapshot(True)
 
-        descriptor =
+        dimensions = {
+            'n_atoms': template.coordinates.shape[0],
+            'n_spatial': template.coordinates.shape[1]
+        }
+
+        descriptor = paths.engines.SnapshotDescriptor.construct(
+            Snapshot,
+            dimensions
+        )
 
         super(LammpsEngine, self).__init__(
             options=options,
-            template=template
+            descriptor=descriptor
+
         )
 
         # set no cached snapshot, means it will be constructed
@@ -68,15 +79,14 @@ class LammpsEngine(DynamicsEngine):
         Create the final OpenMMEngine
 
         """
-
         self.initialized = True
 
     def _get_snapshot(self, topology=None):
         lmp = self._lmp
         x = lmp.gather_atoms("x", 1, 3)
         v = lmp.gather_atoms("v", 1, 3)
-        pe = lmp.extract_compute('thermo_pe', 0, 0)
-        ke = lmp.extract_compute('thermo_ke', 0, 0)
+        # pe = lmp.extract_compute('thermo_pe', 0, 0)
+        # ke = lmp.extract_compute('thermo_ke', 0, 0)
         xlo = lmp.extract_global("boxxlo", 1)
         xhi = lmp.extract_global("boxxhi", 1)
         ylo = lmp.extract_global("boxylo", 1)
@@ -89,15 +99,15 @@ class LammpsEngine(DynamicsEngine):
         bv = np.array(
             [[xhi - xlo, 0.0, 0.0], [xy, yhi - ylo, 0.0], [xz, yz, zhi - zlo]])
         n_atoms = lmp.get_natoms()
-        n_spatial = len(x) / n_atoms
+        # n_spatial = len(x) / n_atoms
 
         snapshot = Snapshot.construct(
             engine=self,
             coordinates=np.ctypeslib.array(x).reshape(
-                (n_atoms, -1)),
-            box_vectors=bv,
+                (n_atoms, -1)) * u.nanometers,
+            box_vectors=bv * u.nanometers,
             velocities=np.ctypeslib.array(v).reshape(
-                (n_atoms, -1))
+                (n_atoms, -1)) * u.nanometers / u.picoseconds
         )
 
         return snapshot
@@ -137,7 +147,7 @@ class LammpsEngine(DynamicsEngine):
 
     @property
     def snapshot_timestep(self):
-        return self.nsteps_per_frame * self.options['timestep']
+        return self.n_steps_per_frame * self.options['timestep']
 
     def _build_current_snapshot(self):
         return self._get_snapshot()
@@ -171,7 +181,7 @@ class LammpsEngine(DynamicsEngine):
         self._lmp.command('run ' + str(steps))
 
     def generate_next_frame(self):
-        self.run(self.nsteps_per_frame)
+        self.run(self.n_steps_per_frame)
         self._current_snapshot = None
         return self.current_snapshot
 

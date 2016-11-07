@@ -9,4 +9,4 @@ from openpathsampling.engines.openmm.tools import (
 
 import features
 
-from openpathsampling.engines.openmm.snapshot import Snapshot, MDSnapshot
+from snapshot import Snapshot, MDSnapshot
