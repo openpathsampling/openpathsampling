@@ -9,6 +9,7 @@ OpenPathSampling API
     ensemble
     shooting
     pathmover
+    movestrategy
     pathsimulator
     storage
     treemixin

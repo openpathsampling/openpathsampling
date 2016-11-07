@@ -10,6 +10,7 @@ from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
 logger = logging.getLogger(__name__)
 
+
 class SnapshotModifier(StorableNamedObject):
     """Abstract class for snapshot modification.
 
@@ -37,6 +38,7 @@ class SnapshotModifier(StorableNamedObject):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, subset_mask=None):
+        super(SnapshotModifier, self).__init__()
         self.subset_mask = subset_mask
 
     def extract_subset(self, full_array):
@@ -107,11 +109,19 @@ class RandomVelocities(SnapshotModifier):
     Parameters
     ----------
     beta : float
-        inverse temperature (in units of kB) for the distribution; 
+        inverse temperature (in units of kB) for the distribution
+    engine : :class:`.DynamicsEngine` or None
+        engine to be used for constraints; if None, use the snapshot's
+        engine
+    subset_mask : list of int or None
+        the subset to use (default None, meaning no subset). The values
+        select along the first axis of the input array. For example, in a
+        typical shape=(n_atoms, 3) array, this will pick the atoms.
     """
-    def __init__(self, beta, subset_mask=None):
+    def __init__(self, beta, engine=None, subset_mask=None):
         super(RandomVelocities, self).__init__(subset_mask)
         self.beta = beta
+        self.engine = engine 
 
     def __call__(self, snapshot):
         # raises AttributeError is snapshot doesn't support velocities
@@ -130,5 +140,19 @@ class RandomVelocities(SnapshotModifier):
 
         self.apply_to_subset(velocities, vel_subset)
         new_snap = snapshot.copy_with_replacement(velocities=velocities)
+
+        # applying constraints, if they exist
+        if self.engine is None:
+            engine = new_snap.engine
+        else:
+            engine = self.engine
+
+        try:
+            apply_constraints = engine.apply_constraints
+        except AttributeError:
+            pass  # fine if there isn't one
+        else:
+            new_snap = apply_constraints(new_snap)
+
         return new_snap
 
