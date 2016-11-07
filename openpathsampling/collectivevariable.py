@@ -1,6 +1,6 @@
 import chaindict as cd
 from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, \
-    ObjectJSON, create_to_dict
+    ObjectJSON, create_to_dict, ObjectStore
 
 import openpathsampling.engines as peng
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
@@ -64,13 +64,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         # default settings if we should create a disk cache
         self.diskcache_enabled = False
         self.diskcache_template = None
-        if self.cv_time_reversible:
-            self.diskcache_allow_incomplete = False
-            self.diskcache_chunksize = 100
-        else:
-            self.diskcache_allow_incomplete = True
-            self.diskcache_chunksize = 1
+        self.diskcache_allow_incomplete = not self.cv_time_reversible
 
+        self.diskcache_chunksize = ObjectStore.default_store_chunk_size
         self._single_dict = cd.ExpandSingle()
         self._cache_dict = cd.ReversibleCacheChainDict(
             WeakKeyCache(),

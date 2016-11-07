@@ -85,5 +85,5 @@ class TrajectoryStore(ObjectStore):
             description="trajectory[trajectory][frame] is the snapshot index "
                         "(0..nspanshots-1) of frame 'frame' of trajectory "
                         "'trajectory'.",
-            chunksizes=(10240,)
+            chunksizes=(65536,)
         )

@@ -1020,7 +1020,7 @@ class NamedObjectStore(ObjectStore):
         self.create_variable(
             "name", 'str',
             description='The name of the object',
-            chunksizes=tuple([10240])
+            chunksizes=tuple([65536])
         )
 
     def add_single_to_cache(self, idx, json):

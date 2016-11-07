@@ -374,7 +374,7 @@ class LRUChunkLoadingCache(Cache):
 
     """
 
-    def __init__(self, chunksize=100, max_chunks=100, variable=None):
+    def __init__(self, chunksize=250, max_chunks=1000, variable=None):
         super(LRUChunkLoadingCache, self).__init__()
         self.max_chunks = max_chunks
         self.chunksize = chunksize

@@ -47,11 +47,11 @@ class MoveChangeStore(ObjectStore):
 
         self.create_variable('subchanges', 'obj.movechanges',
                              dimensions='...',
-                             chunksizes=(10240,))
+                             chunksizes=(65536,))
 
         self.create_variable('samples', 'obj.samples',
                              dimensions='...',
-                             chunksizes=(10240,))
+                             chunksizes=(65536,))
 
     def cache_all(self):
         """Load all samples as fast as possible into the cache
