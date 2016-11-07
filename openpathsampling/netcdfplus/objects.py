@@ -6,11 +6,10 @@ from proxy import LoaderProxy
 from base import StorableNamedObject, StorableObject
 
 from collections import OrderedDict
+from weakref import WeakKeyDictionary, WeakValueDictionary
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
-
-from weakref import WeakKeyDictionary, WeakValueDictionary
 
 
 class UUIDDict(OrderedDict):

@@ -628,8 +628,8 @@ class CachedUUIDObjectJSON(ObjectJSON):
                                  'Class is not registered as creatable! '
                                  'You might have to define\n' +
                                  'the class locally and call '
-                                 '`update_storable_classes()` on your storage.') %
-                             jsn['_cls'])
+                                 '`update_storable_classes()` on your storage.'
+                            ) % jsn['_cls'])
 
                     attributes = self.build(jsn['_dict'])
 

@@ -6,7 +6,6 @@ import logging
 
 from dictify import StorableObjectJSON, UUIDObjectJSON
 from proxy import LoaderProxy
-from collections import OrderedDict
 
 from objects import NamedObjectStore, ObjectStore
 
