@@ -116,7 +116,7 @@ def build_keyword_dictionary(prefs):
     for key in [
         'name', 'version', 'license', 'url', 'download_url', 'packages',
         'package_dir', 'platforms', 'description', 'requires',
-        'long_description'
+        'long_description', 'package_data', 'include_package_data'
     ]:
         if key in prefs:
             keywords[key] = prefs[key]
@@ -188,7 +188,7 @@ Operating System :: MacOS
     'long_description': 'OpenPathSampling (http://github.com/choderalab/openpathsampling) is a \n'
                         'python library to do transition interface sampling.',
     'name': 'openpathsampling',
-    'package_data': [],
+    'include_package_data': True,
     'packages': [
         'openpathsampling',
         'openpathsampling.storage',
@@ -202,7 +202,8 @@ Operating System :: MacOS
         'openpathsampling.engines.openmm',
         'openpathsampling.engines.openmm.features',
         'openpathsampling.engines.toy',
-        'openpathsampling.engines.toy.features'],
+        'openpathsampling.engines.toy.features',
+        'openpathsampling.numerics'],
     'platforms': ['Linux', 'Mac OS X', 'Windows'],
     'released': False,
     'requires': [
@@ -210,6 +211,7 @@ Operating System :: MacOS
         'numpy',
         'scipy',
         'pandas',
+        'jupyter',
         'netcdf4',
         'openmm',
         'openmmtools',
@@ -222,7 +224,7 @@ Operating System :: MacOS
         'matplotlib',
         'ujson'],
     'url': 'http://www.openpathsampling.org',
-    'version': '0.9.0'}
+    'version': '0.9.1'}
 
 setup_keywords = build_keyword_dictionary(preferences)
 

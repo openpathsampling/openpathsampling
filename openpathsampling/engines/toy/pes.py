@@ -7,6 +7,8 @@ from openpathsampling.netcdfplus import StorableObject
 # string completely and can thus be stored automatically
 
 class PES(StorableObject):
+    """Abstract base class for toy potential energy surfaces.
+    """
     # For now, we only support additive combinations; maybe someday that can
     # include multiplication, too
 
@@ -20,11 +22,33 @@ class PES(StorableObject):
         return PES_Sub(self, other)
 
     def kinetic_energy(self, sys):
+        """Default kinetic energy implementation.
+        
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+        """
         v = sys.velocities
         m = sys.mass
         return 0.5*np.dot(m, np.multiply(v,v))
 
 class PES_Combination(PES):
+    """Mathematical combination of two potential energy surfaces.
+
+    Abstract base class.
+
+    Parameters
+    ----------
+    pes1 : :class:`.PES`
+        first potential energy surface of the combination
+    pes2 : :class:`.PES`
+        second potential energy surface of the combination
+    fcn : function of two variables
+        function to combine the PES energies
+    dfdx_fcn : function of two variables
+        function to combine the PES (first) derivatives
+    """
     def __init__(self, pes1, pes2, fcn, dfdx_fcn):
         super(PES_Combination, self).__init__()
         self.pes1 = pes1
@@ -33,12 +57,45 @@ class PES_Combination(PES):
         self._dfdx_fcn = dfdx_fcn
 
     def V(self, sys):
+        """Potential energy
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        float
+            the potential energy
+        """
         return self._fcn(self.pes1.V(sys), self.pes2.V(sys))
 
     def dVdx(self, sys):
+        """Derivative of potential energy (-force)
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        np.array
+            the derivatives of the potential at this point
+        """
         return self._dfdx_fcn(self.pes1.dVdx(sys), self.pes2.dVdx(sys))
 
 class PES_Sub(PES_Combination):
+    """Difference of two potential energy surfaces; pes1 - pes2
+
+    Parameters
+    ----------
+    pes1 : :class:`.PES`
+        first potential energy surface of the combination
+    pes2 : :class:`.PES`
+        second potential energy surface of the combination
+    """
     def __init__(self, pes1, pes2):
         super(PES_Sub, self).__init__(
             pes1,
@@ -48,6 +105,15 @@ class PES_Sub(PES_Combination):
             )
 
 class PES_Add(PES_Combination):
+    """Sum of two potential energy surfaces; pes1 + pes 2
+
+    Parameters
+    ----------
+    pes1 : :class:`.PES`
+        first potential energy surface of the combination
+    pes2 : :class:`.PES`
+        second potential energy surface of the combination
+    """
     def __init__(self, pes1, pes2):
         super(PES_Add, self).__init__(
             pes1,
@@ -57,6 +123,16 @@ class PES_Add(PES_Combination):
         )
 
 class HarmonicOscillator(PES):
+    """Simple harmonic oscillator. Independent in each degree of freedom.
+    
+    V(x) = \sum_i A_i * mass_i * omega_i**2 * (x_i - x0_i)**2
+
+    Parameters
+    ----------
+    A : list of float
+    omega : list of float
+    x0 : list of float
+    """
     def __init__(self, A, omega, x0):
         super(HarmonicOscillator, self).__init__()
         self.A = np.array(A)
@@ -64,18 +140,51 @@ class HarmonicOscillator(PES):
         self.x0 = np.array(x0)
 
     def V(self, sys):
+        """Potential energy
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        float
+            the potential energy
+        """
         dx = sys.positions - self.x0
         k = self.omega*self.omega*sys.mass
         return 0.5*np.dot(self.A * k, dx * dx)
 
     def dVdx(self, sys):
+        """Derivative of potential energy (-force)
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        np.array
+            the derivatives of the potential at this point
+        """
         dx = sys.positions - self.x0
         k = self.omega*self.omega*sys.mass
         return self.A*k*dx
 
 class Gaussian(PES):
-    ''' Returns the Gaussian given by A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)
-    '''
+    """Gaussian given by A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)
+
+    Parameters
+    ----------
+    A : float
+        amplitude of the Gaussian
+    alpha : list of float
+        Gaussian width parameter
+    x0 : list of float
+        center of the Gaussian
+    """
     def __init__(self, A, alpha, x0):
         super(Gaussian, self).__init__()
         self.A = A
@@ -84,10 +193,34 @@ class Gaussian(PES):
         self._local_dVdx = np.zeros(self.x0.size)
 
     def V(self, sys):
+        """Potential energy
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        float
+            the potential energy
+        """
         dx = sys.positions - self.x0
         return self.A*np.exp(-np.dot(self.alpha, np.multiply(dx, dx)))
 
     def dVdx(self, sys):
+        """Derivative of potential energy (-force)
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        np.array
+            the derivatives of the potential at this point
+        """
         dx = sys.positions - self.x0
         exp_part = self.A*np.exp(-np.dot(self.alpha, np.multiply(dx, dx)))
         for i in range(len(dx)):
@@ -95,6 +228,17 @@ class Gaussian(PES):
         return self._local_dVdx
 
 class OuterWalls(PES):
+    """Creates an x**6 barrier around the system.
+
+    V(x) = \sum_i sigma_i * (x_i - x0_i)**6
+
+    Parameters
+    ----------
+    sigma : list of float
+        linear scaling of the potential wall
+    x0 : list of float
+        center of the potential
+    """
     def __init__(self, sigma, x0):
         super(OuterWalls, self).__init__()
         self.sigma = np.array(sigma)
@@ -102,6 +246,18 @@ class OuterWalls(PES):
         self._local_dVdx = np.zeros(self.x0.size)
 
     def V(self, sys):
+        """Potential energy
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        float
+            the potential energy
+        """
         dx = sys.positions - self.x0
         myV = 0.0
         for i in range(len(dx)):
@@ -109,12 +265,33 @@ class OuterWalls(PES):
         return myV
 
     def dVdx(self, sys):
+        """Derivative of potential energy (-force)
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        np.array
+            the derivatives of the potential at this point
+        """
         dx = sys.positions - self.x0
         for i in range(len(dx)):
             self._local_dVdx[i] = 6.0*self.sigma[i]*dx[i]**5
         return self._local_dVdx
 
 class LinearSlope(PES):
+    """Linear potential energy surface.  V(x) = \sum_i m_i * x_i + c
+
+    Parameters
+    ----------
+    m : list of float
+        slope
+    c : float
+        energy offset
+    """
     def __init__(self, m, c):
         super(LinearSlope, self).__init__()
         self.m = m
@@ -123,8 +300,32 @@ class LinearSlope(PES):
         self.dim = len(self.m)
 
     def V(self, sys):
+        """Potential energy
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        float
+            the potential energy
+        """
         return np.dot(self.m, sys.positions) + self.c
 
     def dVdx(self, sys):
+        """Derivative of potential energy (-force)
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        np.array
+            the derivatives of the potential at this point
+        """
         # this is independent of the position
         return self._local_dVdx
