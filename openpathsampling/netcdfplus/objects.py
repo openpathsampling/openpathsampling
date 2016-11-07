@@ -439,7 +439,16 @@ class ObjectStore(StorableNamedObject):
         return LoaderProxy(self, idx)
 
     def __contains__(self, item):
-        return item in self.index
+        if item in self.index:
+            return True
+
+        if self.fallback_store is not None and item in self.fallback_store:
+            return True
+
+        if self.storage.fallback is not None and item in self.storage.fallback:
+            return True
+
+        return False
 
     def __getitem__(self, item):
         """
