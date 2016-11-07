@@ -13,6 +13,8 @@ from collections import OrderedDict
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+from weakref import WeakKeyDictionary, WeakValueDictionary
+
 
 class UUIDDict(OrderedDict):
     def __init__(self):
@@ -41,6 +43,35 @@ class UUIDDict(OrderedDict):
 
     def get(self, item, default=None):
         return OrderedDict.get(self, self.id(item), default)
+
+
+class UUIDDictWeak(WeakKeyDictionary):
+    def __init__(self):
+        WeakKeyDictionary.__init__(self)
+
+    @staticmethod
+    def id(obj):
+        if type(obj) is str:
+            return UUID(obj)
+        elif type(obj) is UUID:
+            return obj
+        else:
+            return obj.__uuid__
+
+    def __getitem__(self, item):
+        return WeakKeyDictionary.__getitem__(self, self.id(item))
+
+    def __setitem__(self, key, value, **kwargs):
+        WeakKeyDictionary.__setitem__(self, self.id(key), value)
+
+    def __delitem__(self, key, **kwargs):
+        WeakKeyDictionary.__delitem__(self, self.id(key))
+
+    def __contains__(self, item):
+        return WeakKeyDictionary.__contains__(self, self.id(item))
+
+    def get(self, item, default=None):
+        return WeakKeyDictionary.get(self, self.id(item), default)
 
 
 class ObjectStore(StorableNamedObject):
@@ -156,6 +187,8 @@ class ObjectStore(StorableNamedObject):
 
         self.index = None
 
+        self.proxy_index = WeakValueDictionary()
+
         if json in [True, False, 'json', 'jsonobj']:
             self.json = json
         else:
@@ -212,7 +245,7 @@ class ObjectStore(StorableNamedObject):
         return UUIDDict()
 
     def create_int_index(self):
-        return weakref.WeakKeyDictionary()
+        return UUIDDictWeak()
 
     @property
     def reference_by_uuid(self):
@@ -249,12 +282,13 @@ class ObjectStore(StorableNamedObject):
         return repr(self)
 
     def __repr__(self):
-        if self.content_class is not None:
-            return "store.%s[%s]" % (
-                self.prefix, self.content_class.__name__)
-        else:
-            return "store.%s[%s]" % (
-                self.prefix, 'None/ANY')
+        return 'store.%s[%s] : %s' % (
+            self.prefix,
+            self.content_class.__name__ if self.content_class is not None else
+            'None/ANY',
+            str(len(self)) + ' object(s)' if self._created else
+            '(not created)'
+        )
 
     @property
     def simplifier(self):
@@ -381,11 +415,25 @@ class ObjectStore(StorableNamedObject):
                 idx = item.__uuid__
         else:
             if tt is int:
-                idx = item
+                if item in self.cache:
+                    idx = self.cache[item].__uuid__
+                    self.proxy_index[item] = idx
+                elif item in self.proxy_index:
+                    idx = self.proxy_index[item]
+                    self.index[idx] = item
+                else:
+                    # apparently we want a proxy for a non-existing object
+                    # so we create a new UUID and tell the storage
+                    # that we associate the UUID with that index
+                    idx = StorableObject.get_uuid()
+                    self.index[idx] = item
+                    self.proxy_index[item] = idx
             else:
-                idx = self.index.get(item)
-
-                if idx is None:
+                # idx = self.index.get(item)
+                idx = item.__uuid__
+                if item in self.index:
+                    self.proxy_index[self.index[item]] = idx
+                else:
                     return item
 
         return LoaderProxy(self, idx)
@@ -395,7 +443,11 @@ class ObjectStore(StorableNamedObject):
         Enable numpy style selection of object in the store
         """
         try:
-            if type(item) is int or type(item) is str or type(item) is UUID:
+            if type(item) is int:
+                if item < 0:
+                    item += len(self)
+                return self.load(item)
+            elif type(item) is str or type(item) is UUID:
                 return self.load(item)
             elif type(item) is slice:
                 return [self.load(idx)
@@ -683,7 +735,6 @@ class ObjectStore(StorableNamedObject):
         """
 
         if type(idx) is UUID:
-            # we want to load by uuid and it was not in cache.
             if idx in self.index:
                 n_idx = int(self.index[idx])
             else:
@@ -899,8 +950,7 @@ class ObjectStore(StorableNamedObject):
         """
 
         if idx not in self.cache:
-            simplified = yaml.load(json)
-            obj = self.simplifier.build(simplified)
+            obj = self.simplifier.from_json(json)
 
             self._get_id(idx, obj)
 
@@ -935,6 +985,10 @@ class ObjectStore(StorableNamedObject):
     def _get_id(self, idx, obj):
         if self.reference_by_uuid:
             obj.__uuid__ = self.vars['uuid'][idx]
+        else:
+            # check if there exists already a proxy with that idx
+            if idx in self.proxy_index:
+                obj.__uuid__ = self.proxy_index[idx]
 
 
 class NamedObjectStore(ObjectStore):

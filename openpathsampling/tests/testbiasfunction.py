@@ -22,8 +22,8 @@ class testBiasEnsembleTable(object):
     def setup(self):
         # create the network
         xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(xval, -1.0, -0.5).named("A")
-        self.stateB = paths.CVRangeVolume(xval, 0.5, float("inf")).named("B")
+        self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
+        self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
         ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0), 
                                            [-0.5, -0.4, -0.3, -0.2])
         self.network = paths.MISTISNetwork([
@@ -143,7 +143,7 @@ class testBiasEnsembleTable(object):
         ifacesB = paths.VolumeInterfaceSet(xval2, float("-inf"),
                                            [0.0, 0.1, 0.2])
         xval3 = paths.FunctionCV(name="xC", f=lambda s : s.xyz[0][0]-2.0)
-        stateC = paths.CVRangeVolume(self.xval, -3.0, 2.0)
+        stateC = paths.CVDefinedVolume(self.xval, -3.0, 2.0)
         ifacesC = paths.VolumeInterfaceSet(xval3, -1.0, [0.0, 0.1, 0.2, 0.3])
         network = paths.MISTISNetwork(
             [(self.stateA, ifacesA, self.stateB),
@@ -226,3 +226,127 @@ class testBiasEnsembleTable(object):
         # just to make sure no errors raise when there are NaNs in table
         bias_ABC = bias_A + bias_B + bias_C
 
+class testSRTISBiasFromNetwork(object):
+    def setup(self):
+        xval = paths.CoordinateFunctionCV(name="xA",
+                                          f=lambda s : s.xyz[0][0])
+        self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
+        self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
+        self.ifacesA = paths.VolumeInterfaceSet(xval, -1.0, 
+                                                [-0.5, -0.4, -0.3, -0.2])
+        self.ifacesB = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3, 0.2],
+                                                1.0)
+        self.tcp_A = paths.numerics.LookupFunction(
+            ordinate=[-0.5, -0.4, -0.3, -0.2, -0.1],
+            abscissa=[1.0, 0.5, 0.25, 0.125, 0.0625]
+        )
+        self.tcp_B = paths.numerics.LookupFunction(
+            ordinate=[0.5, 0.4, 0.3, 0.2, 0.1],
+            abscissa=[1.0, 0.2, 0.04, 0.008, 0.0016]
+        )
+
+
+    def test_bias_from_network(self):
+        # force the TCP in
+        network = paths.MISTISNetwork([
+            (self.stateA, self.ifacesA, self.stateB)
+        ])
+        network.sampling_transitions[0].tcp = self.tcp_A
+        bias = paths.SRTISBiasFromNetwork(network)
+        transition = network.transitions.values()[0]  # only one
+
+        # check reciprocal of symmetric partners
+        for i in range(4):
+            for j in range(i, 4):
+                assert_equal(bias.dataframe.loc[i, j],
+                             1.0 / bias.dataframe.loc[j, i])
+
+        for i in range(len(transition.ensembles) - 1):
+            ens_to = transition.ensembles[i]
+            ens_from = transition.ensembles[i + 1]
+            assert_equal(bias.bias_value(ens_from, ens_to), 0.5)
+
+        for i in range(len(transition.ensembles) - 2):
+            ens_to = transition.ensembles[i]
+            ens_from = transition.ensembles[i + 2]
+            assert_equal(bias.bias_value(ens_from, ens_to), 0.25)
+
+    @raises(RuntimeError)
+    def test_fail_without_tcp(self):
+        network = paths.MISTISNetwork([
+            (self.stateA, self.ifacesA, self.stateB)
+        ])
+        bias = paths.SRTISBiasFromNetwork(network)
+
+    @raises(RuntimeError)
+    def test_fail_without_lambdas(self):
+        fake_ifaceA = paths.InterfaceSet(cv=self.ifacesA.cv,
+                                         volumes=self.ifacesA.volumes,
+                                         direction=self.ifacesA.direction)
+        network = paths.MISTISNetwork([
+            (self.stateA, fake_ifaceA, self.stateB)
+        ])
+        network.sampling_transitions[0].tcp = self.tcp_A
+        bias = paths.SRTISBiasFromNetwork(network)
+
+    def test_bias_from_ms_network(self):
+        ms_outer = paths.MSOuterTISInterface.from_lambdas(
+            {self.ifacesA : -0.1, self.ifacesB : 0.1}
+        )
+        network = paths.MISTISNetwork(
+            [(self.stateA, self.ifacesA, self.stateB),
+             (self.stateB, self.ifacesB, self.stateA)],
+            ms_outers=[ms_outer]
+        )
+        transition_AB = None
+        transition_BA = None
+        for t in network.sampling_transitions:
+            if t.stateA == self.stateA:
+                t.tcp = self.tcp_A
+                transition_AB = t
+            elif t.stateA == self.stateB:
+                t.tcp = self.tcp_B
+                transition_BA = t
+            else:
+                print [t.stateA, t.stateB]
+                print [self.stateA, self.stateB]
+                raise RuntimeError("Weird states in test transition")
+
+        bias = paths.SRTISBiasFromNetwork(network)
+
+        n_ensembles = len(bias.dataframe.index)
+        for i in range(n_ensembles):
+            for j in range(i, n_ensembles):
+                if not np.isnan(bias.dataframe.loc[i, j]):
+                    np.testing.assert_almost_equal(
+                        bias.dataframe.loc[i, j],
+                        1.0 / bias.dataframe.loc[j, i]
+                    )
+
+        for i in range(len(transition_AB.ensembles) - 1):
+            ens_to = transition_AB.ensembles[i]
+            ens_from = transition_AB.ensembles[i + 1]
+            assert_almost_equal(bias.bias_value(ens_from, ens_to), 0.5)
+
+        for i in range(len(transition_BA.ensembles) - 1):
+            ens_to = transition_BA.ensembles[i]
+            ens_from = transition_BA.ensembles[i + 1]
+            assert_almost_equal(bias.bias_value(ens_from, ens_to), 0.2)
+
+        for ensA in transition_AB.ensembles:
+            for ensB in transition_BA.ensembles:
+                assert_equal(np.isnan(bias.bias_value(ensA, ensB)), True)
+                assert_equal(np.isnan(bias.bias_value(ensB, ensA)), True)
+
+        assert_almost_equal(bias.bias_value(transition_BA.ensembles[-1],
+                                            network.ms_outers[0]),
+                            5.0 / 2)
+        assert_almost_equal(bias.bias_value(transition_AB.ensembles[-1],
+                                            network.ms_outers[0]),
+                            2.0 / 2)
+
+
+
+
+
+        raise SkipTest

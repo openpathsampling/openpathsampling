@@ -1,11 +1,11 @@
+import openpathsampling.pathmover_inout
 import svgwrite as svg
 from svgwrite.container import Group
 import openpathsampling as paths
+import os
 
-import json
+import ujson
 from collections import namedtuple, OrderedDict, Counter
-
-import openpathsampling.pathmover as pm
 
 
 # TODO: Move TreeRenderer and Builder to a different file ???
@@ -18,17 +18,29 @@ class TreeRenderer(svg.Drawing):
     without distort the content. What we want is to move objects further
     apart of close while maintaining their size.
     """
-    def __init__(self, css_style=''):
+    def __init__(self):
         super(TreeRenderer, self).__init__()
+
         self.scale_x = 20.0
         self.scale_y = 20.0
+        self.horizontal_gap = 0.05
+
+    def add_css_file(self, css_file='vis'):
+        css_file_name = os.path.join(
+            paths.resources_directory, css_file + '.css')
+
+        with open(css_file_name) as content_file:
+            vis_css = content_file.read()
 
         # Add the CSS Stylesheet
-        self.css_style = css_style
         self.defs.add(self.style(
-            self.css_style
+            vis_css
         ))
-        self.horizontal_gap = 0.05
+
+    def add_css(self, css_style):
+        self.defs.add(self.style(
+            css_style
+        ))
 
     @staticmethod
     def css_class(css_class):
@@ -71,7 +83,8 @@ class TreeRenderer(svg.Drawing):
 
         css_class += ['connector']
 
-        return self.block(x, y, text, False, False, False, False, css_class=css_class)
+        return self.block(
+            x, y, text, False, False, css_class=css_class)
 
     def block(self, x, y, text="",
               extend_right=True, extend_left=True,
@@ -95,7 +108,7 @@ class TreeRenderer(svg.Drawing):
             adds = {}
 
         if data is not None:
-            group.set_desc(desc=json.dumps(data))
+            group.set_desc(desc=ujson.dumps(data))
 
         group.add(self.rect(
             insert=self.xy(x - 0.5 + padding, y - 0.3),
@@ -132,8 +145,9 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def horizontal_region(self, x, y, w=1.0, text="",
-                          extend_right=False, extend_left=False, css_class=None):
+    def horizontal_region(
+            self, x, y, w=1.0, text="",
+            extend_right=False, extend_left=False, css_class=None):
 
         if css_class is None:
             css_class = list()
@@ -194,15 +208,18 @@ class TreeRenderer(svg.Drawing):
 
         return group
 
-    def vertical_region(self, x, y, w=1.0, text="", extend_top=True, extend_bottom=True, css_class=None):
+    def vertical_region(
+            self, x, y, w=1.0, text="",
+            extend_top=True, extend_bottom=True, css_class=None):
         if css_class is None:
             css_class = list()
 
         css_class += ['v-region']
 
-        padding = self.horizontal_gap
+        # padding = self.horizontal_gap
         width = 0.2
         gap = 0.0
+        radius = 0.07
 
         group = Group(
             class_=self.css_class(css_class)
@@ -216,7 +233,7 @@ class TreeRenderer(svg.Drawing):
         if extend_top:
             group.add(self.circle(
                 center=self.xy(x, y - 0.5 + gap),
-                r=self.w(padding)
+                r=self.w(radius)
             ))
             group.add(self.line(
                 start=self.xy(x - 1.0 * width, y - 0.5 + gap),
@@ -226,7 +243,7 @@ class TreeRenderer(svg.Drawing):
         if extend_bottom:
             group.add(self.circle(
                 center=(self.xy(x, y + (w - 1.0) + 0.5 - gap)),
-                r=self.w(padding)
+                r=self.w(radius)
             ))
             group.add(self.line(
                 start=self.xy(x - 1.0 * width, y + w - 1.0 + 0.5 - gap),
@@ -320,7 +337,7 @@ class TreeRenderer(svg.Drawing):
         return self.line(
             class_=self.css_class(css_class),
             start=self.xy(x1 + 0.5 + padding, y),
-            end=self.xy(x2 - 0.5, y)
+            end=self.xy(x2 - 0.5 - 2 * padding, y)
         )
 
     def label(self, x, y, text, css_class=None):
@@ -388,8 +405,10 @@ class TreeRenderer(svg.Drawing):
 
     def to_html(self):
         svg_source = self.to_svg()
-        html = '<!DOCTYPE html><html style="margin:0px; padding:0px; width:100%;">' + \
-               svg_source + '<body style="margin:0px; padding:0px;"></body></html>'
+        html = '<!DOCTYPE html>' \
+               '<html style="margin:0px; padding:0px; width:100%;">' + \
+               svg_source + \
+               '<body style="margin:0px; padding:0px;"></body></html>'
 
         return html
 
@@ -404,7 +423,10 @@ class Builder(object):
     """
     Abstract class of building SVG representations
     """
-    def __init__(self, additional_option_categories=None):
+
+    unique_id = 0
+
+    def __init__(self, additional_option_categories=None, base_css_style='vis'):
         options = ['analysis', 'css', 'ui', 'format']
         if additional_option_categories is not None:
             options += additional_option_categories
@@ -415,12 +437,35 @@ class Builder(object):
         )
 
         self.options = option_tuple_class(**{opt: {} for opt in options})
+        self.base_css_style = base_css_style
+        self._add_css = []
+
+    def add_css(self, css):
+        self._add_css.append(css)
+
+    def reset_css(self):
+        self._add_css = []
 
     def svg(self):
-        return self.render().tostring()
+        svg = self.render()
+        self._finalize_svg(svg)
+
+        return svg.tostring()
+
+    def _finalize_svg(self, svg):
+        # add a unique ID
+        unique_id = 'pathtree-' + str(Builder.unique_id)
+        Builder.unique_id += 1
+        svg['id'] = unique_id
+
+        # add CSS
+        svg.add_css_file(self.base_css_style)
+        if self.add_css:
+            for css in self._add_css:
+                svg.add_css(css.replace('#self', '#' + unique_id))
 
     def html(self):
-        return self.render().tostring()
+        return self.svg()
 
     def render(self):
         """
@@ -438,10 +483,12 @@ class MoveTreeBuilder(Builder):
     """
     Builder Class for creating MoveTree Visualisations
 
-    You need to specify a :obj:`openpathsampling.PathMover` and a list of ensembles. Then it will
-    display all possible steps in the pathmover and its relation to the given list of ensembles.
+    You need to specify a :obj:`openpathsampling.PathMover` and a list of
+    ensembles. Then it will display all possible steps in the pathmover and its
+    relation to the given list of ensembles.
 
-    This is useful to get an idea which parts of the ensemble affect which part of ensembles
+    This is useful to get an idea which parts of the ensemble affect which
+    part of ensembles
     """
     def __init__(self, pathmover=None, ensembles=None, initial=None):
         super(MoveTreeBuilder, self).__init__()
@@ -463,7 +510,6 @@ class MoveTreeBuilder(Builder):
         self.ens_x = list()
         self.repl_x = list()
 
-        self.css_style = vis_css
         self.options.analysis['only_canonical'] = True
 
         self.doc = None
@@ -495,11 +541,15 @@ class MoveTreeBuilder(Builder):
             input_ensembles = scheme.list_initial_ensembles()
         except AttributeError:
             # inp is a path mover
+            # ??? this is nonsense in from_scheme, isn't it? you would get
+            # error on the thing you return below ~~~DWHS
             input_ensembles = scheme.input_ensembles
 
+        hidden = list(scheme.find_hidden_ensembles())
+        # using network.all_ensembles forces a correct ordering
         return MoveTreeBuilder(
             pathmover=scheme.root_mover,
-            ensembles=list(scheme.find_used_ensembles()) + list(scheme.find_hidden_ensembles()),
+            ensembles=scheme.network.all_ensembles + hidden,
             initial=input_ensembles
         )
 
@@ -514,7 +564,7 @@ class MoveTreeBuilder(Builder):
         return l
 
     def render(self):
-        doc = TreeRenderer(self.css_style)
+        doc = TreeRenderer()
         self.doc = doc
 
         level_y = dict()
@@ -529,7 +579,8 @@ class MoveTreeBuilder(Builder):
         )
 
         tree = path.depth_pre_order(
-            lambda this: this, only_canonical=self.options.analysis['only_canonical'])
+            lambda this: this,
+            only_canonical=self.options.analysis['only_canonical'])
         total = len(tree)
 
         for yp, (level, sub_mp) in enumerate(tree):
@@ -538,7 +589,7 @@ class MoveTreeBuilder(Builder):
             sub_type = sub_mp.__class__
             sub_name = sub_type.__name__[:-5]
 
-            if sub_type is paths.SamplePathMoveChange:
+            if sub_type is paths.SampleMoveChange:
                 group.add(
                     doc.block(level, yp))
 
@@ -598,7 +649,8 @@ class MoveTreeBuilder(Builder):
         for ens_idx, ens in enumerate(self.ensembles):
             txt = chr(ens_idx + 65)
 
-            label = ens.name if hasattr(ens, 'name') else ens.__class__.__name__[:-8]
+            label = ens.name if hasattr(ens, 'name') else \
+                ens.__class__.__name__[:-8]
 
             group.add(
                 doc.label(
@@ -619,15 +671,19 @@ class MoveTreeBuilder(Builder):
 
         max_level = 0
 
-        initial_rs = paths.pathmover.ReplicaStateSet.from_ensembles(self.initial)
+        rset = openpathsampling.pathmover_inout.ReplicaStateSet
+
+        initial_rs = rset.from_ensembles(self.initial)
         subs = MoveTreeBuilder._get_sub_used(self.pathmover, initial_rs, 0)
 
         # this checks if the mover can actually be run without problems
-        # assert(Counter(dict(initial_rs)) >= self.pathmover.in_out_matrix.minimal)
+        # assert(
+        #     Counter(dict(initial_rs)) >= self.pathmover.in_out_matrix.minimal)
 
         for yp, (level, sub_mp) in enumerate(
                 path.depth_pre_order(
-                    lambda this: this, only_canonical=self.options.analysis['only_canonical'])):
+                    lambda this: this,
+                    only_canonical=self.options.analysis['only_canonical'])):
             sub = subs[yp]
 
             if level > max_level:
@@ -707,13 +763,213 @@ class MoveTreeBuilder(Builder):
         return doc
 
 
-def _create_simple_legend(title, fnc):
+class EnsembleMixBuilder(Builder):
+    """
+    Builder Class for creating MoveTree Visualisations
+
+    You need to specify a :obj:`openpathsampling.PathMover` and a list of
+    ensembles. Then it will display all possible steps in the pathmover and its
+    relation to the given list of ensembles.
+
+    This is useful to get an idea which parts of the ensemble affect which part
+    of ensembles
+    """
+
+    def __init__(self, pathmover=None, ensembles=None, initial=None):
+        super(EnsembleMixBuilder, self).__init__()
+
+        self.p_x = dict()
+        self.p_y = dict()
+        self.obj = list()
+
+        self.ensembles = []
+        self.pathmover = None
+        self.initial = None
+
+        self.traj_ens_x = dict()
+        self.traj_ens_y = dict()
+
+        self.traj_repl_x = dict()
+        self.traj_repl_y = dict()
+
+        self.ens_x = list()
+        self.repl_x = list()
+
+        self.options.analysis['only_canonical'] = True
+
+        self.doc = None
+
+        if pathmover is not None:
+            self.pathmover = pathmover
+
+        if ensembles is not None:
+            self.ensembles = ensembles
+
+        if initial is not None:
+            self.initial = initial
+
+    @staticmethod
+    def from_scheme(scheme):
+        """
+        Initaliza a new `MoveTreeBuilder` from the date in a `MoveScheme`
+
+        Parameters
+        ----------
+        scheme : :obj:`openpathsampling.MoveScheme`
+
+        Returns
+        -------
+        :obj:`MoveTreeBuilder`
+        """
+        try:
+            # inp is a move scheme
+            input_ensembles = scheme.list_initial_ensembles()
+        except AttributeError:
+            # inp is a path mover
+            # ??? this is nonsense in from_scheme, isn't it? you would get
+            # error on the thing you return below ~~~DWHS
+            input_ensembles = scheme.input_ensembles
+        # using network.all_ensembles forces a correct ordering
+        return EnsembleMixBuilder(
+            pathmover=scheme.root_mover,
+            ensembles=scheme.network.all_ensembles,
+            initial=input_ensembles
+        )
+
+    @staticmethod
+    def _get_sub_used(mover, replica_states, level):
+        l = [(mover, level, replica_states)]
+        subs = mover.sub_replica_state(replica_states)
+        map(
+            lambda x, y, z: l.extend(MoveTreeBuilder._get_sub_used(x, y, z)),
+            mover.submovers, subs, [1 + level] * len(mover.submovers)
+        )
+        return l
+
+    def render(self):
+        doc = TreeRenderer()
+        self.doc = doc
+
+        self.ens_x = [None] * len(self.ensembles)
+        self.repl_x = [None] * len(self.ensembles)
+
+        path = self.pathmover
+        total = len(self.ensembles)
+
+        mat = path.in_out.mixing_matrix(self.ensembles)
+
+        group = doc.g(
+            class_='ensembles'
+        )
+
+        for yp, ens1 in enumerate(self.ensembles):
+            txt = chr(yp + 65)
+
+            label = ens1.name if hasattr(ens1, 'name') else \
+                ens1.__class__.__name__[:-8]
+
+            group.add(
+                doc.label(
+                    -1,
+                    yp,
+                    label
+                )
+            )
+
+            group.add(
+                doc.label(
+                    yp,
+                    -1,
+                    '[' + txt + '] ' + label,
+                    css_class=['head']
+                )
+            )
+            group.add(
+                doc.vertical_hook(
+                    yp,
+                    -1,
+                    yp,
+                    total
+                )
+            )
+            group.add(
+                doc.horizontal_connector(
+                    -1.35,
+                    total + 0.35,
+                    yp
+                )
+            )
+
+        for yp, ens1 in enumerate(self.ensembles):
+            for ens_idx, ens2 in enumerate(self.ensembles):
+                txt = ''
+
+                m = mat[ens1][ens2]
+                if 0 in m:
+                    txt += 'A'
+                if 1 in m:
+                    txt += 'O'
+                if -1 in m:
+                    txt += 'R'
+
+                if 1 in m:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp - 0.15,
+                            txt,
+                            css_class=['input']
+                        )
+                    )
+                if -1 in m:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp + 0.15,
+                            txt,
+                            css_class=['output']
+                        )
+                    )
+                if 0 in m:
+                    group.add(
+                        doc.connector(
+                            ens_idx,
+                            yp,
+                            txt,
+                            css_class=['unknown']
+                        )
+                    )
+
+        group.translate(50, 0)
+
+        doc.add(group)
+
+        doc['class'] = 'movetree'
+
+        left_x = - 120
+        top_y = - 120
+        width = len(self.ensembles) * doc.scale_x - left_x + 50
+        height = (total + 1) * doc.scale_y - top_y
+
+        # adjust view box to fit full image
+        doc['viewBox'] = '%.2f %.2f %.2f %.2f' % (
+            left_x,
+            top_y,
+            width,
+            height
+        )
+        doc['width'] = width
+
+        return doc
+
+
+def _create_simple_legend(title, fnc, width=1):
     def _legend_fnc(self):
         doc = self.doc
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-' + title)
         part.add(
-            doc.label(0, 0, title)
+            doc.label(0, 0, title, css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -723,7 +979,7 @@ def _create_simple_legend(title, fnc):
                     fnc(sample)))
             )
 
-        return part
+        return part, width
     return _legend_fnc
 
 
@@ -731,16 +987,17 @@ class PathTreeBuilder(Builder):
     """
     Builder class to visualize the time evolution of a list of samples
 
-    This will basically create path trees as known from TIS and adding some useful
-    features.
+    This will basically create path trees as known from TIS and adding some
+    useful features.
 
-    The basic way to use it is to create a list of samples that should be visualized first.
-    Then create the `PathTreeBuilder` and
+    The basic way to use it is to create a list of samples that should be
+    visualized first. Then create the `PathTreeBuilder` and
     >>> tree = PathTreeBuilder.from_()
     >>> tree.samples = my_samplelist
     >>> SVG(tree.svg())
 
-    There are a lot of options. For a full list see the tutorial on pathree visualization.
+    There are a lot of options. For a full list see the tutorial on pathree
+    visualization.
 
     Attributes
     ----------
@@ -758,8 +1015,6 @@ class PathTreeBuilder(Builder):
         super(PathTreeBuilder, self).__init__(['movers'])
         self.obj = list()
         self.doc = None
-
-        self.css_style = vis_css
 
         self.states = {}
         self.op = None
@@ -790,7 +1045,7 @@ class PathTreeBuilder(Builder):
         # make sure we are up-to-date
         self.generator.analyze()
 
-        doc = TreeRenderer(self.css_style)
+        doc = TreeRenderer()
         self.doc = doc
 
         opts = self.options
@@ -806,7 +1061,7 @@ class PathTreeBuilder(Builder):
 
         matrix = self.generator.matrix
 
-        # Loops over samples the first time to determine all necessary information
+        # Loops over samples first time to determine all necessary information
 
         pos_y = -1
         draw_pos_y = {}
@@ -856,7 +1111,8 @@ class PathTreeBuilder(Builder):
 
             if time_direction == -1:
                 bw_css_class, fw_css_class = fw_css_class, bw_css_class
-                label_position = 'left' if view_options['label_position'] == 'right' else 'right'
+                label_position = 'left' if \
+                    view_options['label_position'] == 'right' else 'right'
 
             css_class = [] + view_options['css_class']
 
@@ -864,10 +1120,28 @@ class PathTreeBuilder(Builder):
             move_accepted = True
 
             if isinstance(self.generator, SampleListGenerator):
-                # we have steps available to use these to figure out, if a step was rejected
+                # we have steps available to figure out, if a step was rejected
                 step = self.generator.get_step(sample)
                 if step is not None:
                     step_accepted = step.change.accepted
+
+                    if not step_accepted:
+                        # in the case of the initial step we still use an
+                        # EmptyMove although technically an EmptyMove is
+                        # rejected we use it as rejected or better this did
+                        # not even have an acceptance
+                        # step so we treat is as accepted for visual purposes
+
+                        active_steps = self.generator.get_active_steps(sample)
+
+                        # so if this sample is in the active samplesets
+                        # somewhere it must have been accepted in the past.
+                        # So if it has not been accepted in steps we know, we
+                        # still assume that the first mention of this sample
+                        # is like an accepting treat the step as accepted
+
+                        if active_steps is not None:
+                            step_accepted = True
 
                 change = self.generator.get_change(sample)
                 if change is not None:
@@ -943,18 +1217,19 @@ class PathTreeBuilder(Builder):
 
         # add all the legend parts
 
-        for num, part in enumerate(legend_parts):
-            part.translate(- doc.scale_x * num)
+        pos_shift = 0
+
+        for part, width in legend_parts:
+            part.translate(- doc.scale_x * pos_shift)
             legend_group.add(part)
 
-        legend_columns = len(legend_parts)
-
+            pos_shift += width
 
         # +--------------------------------------------------------------------
         # +  BUILD FINAL IMAGE
         # +--------------------------------------------------------------------
 
-        left_x = (-0.5 - legend_columns) * doc.scale_x
+        left_x = (-0.5 - pos_shift) * doc.scale_x
         width = 64 + tree_scale * (max_x - min_x + 2) - left_x
         height = doc.scale_y * (max_y + 3.0)
         top_y = -1.5 * doc.scale_y
@@ -999,7 +1274,7 @@ class PathTreeBuilder(Builder):
 
     def part_hovering_blocks(self, left, width):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='hovering-blocks')
 
         # +--------------------------------------------------------------------
         # +  HOVERING TABLE LINE PLOT
@@ -1020,9 +1295,10 @@ class PathTreeBuilder(Builder):
 
     def part_trajectory_label(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='trajectory-label')
 
-        trj_format = self._create_naming_function(self.options.format['trajectory_label'])
+        trj_format = self._create_naming_fnc(
+            self.options.format['trajectory_label'])
 
         for pos_y, data in enumerate(self._plot_sample_list):
             sample = data['sample']
@@ -1035,11 +1311,14 @@ class PathTreeBuilder(Builder):
             label_position = data['label_position']
             css_class = data['css_class']
 
-            traj_str = str(trj_format(sample.trajectory)) + view_options['suffix'].upper()
+            traj_str = \
+                str(trj_format(sample.trajectory)) + \
+                view_options['suffix'].upper()
 
             if label_position == 'left':
                 group.add(
-                    doc.label(shift, pos_y, traj_str, css_class=css_class + ['left'])
+                    doc.label(shift, pos_y, traj_str,
+                              css_class=css_class + ['left'])
                 )
             elif label_position == 'right':
                 group.add(
@@ -1051,7 +1330,7 @@ class PathTreeBuilder(Builder):
 
     def part_shooting_hooks(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='shooting-hooks')
 
         draw_pos_y = {}
         matrix = self.generator.matrix
@@ -1106,7 +1385,7 @@ class PathTreeBuilder(Builder):
 
     def part_snapshot_blocks(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='snapshot-blocks')
 
         matrix = self.generator.matrix
 
@@ -1114,9 +1393,9 @@ class PathTreeBuilder(Builder):
 
         opts = self.options
 
-        trj_format = self._create_naming_function(opts.format['trajectory_label'])
-        smp_format = self._create_naming_function(opts.format['sample_label'])
-        snp_format = self._create_naming_function(opts.format['snapshot_label'])
+        trj_format = self._create_naming_fnc(opts.format['trajectory_label'])
+        smp_format = self._create_naming_fnc(opts.format['sample_label'])
+        snp_format = self._create_naming_fnc(opts.format['snapshot_label'])
 
         vis_blocks = {}
 
@@ -1183,7 +1462,7 @@ class PathTreeBuilder(Builder):
                     parts.append('reversed')
                 else:
                     if length_bw == 0 and length_fw == 0:
-                        # all snaps are repeated so potentially treat differently
+                        # if all are new use a special vis
                         parts.append('full')
                     else:
                         parts.append('overlap')
@@ -1199,8 +1478,9 @@ class PathTreeBuilder(Builder):
                 if vis_type == 'line':
                     label = view_options['label'] or view_options['name']
                     group.add(
-                        doc.horizontal_region(shift + region[0], pos_y, region[1] - region[0],
-                                              label, css_class=css_class + add_css_class)
+                        doc.horizontal_region(
+                            shift + region[0], pos_y, region[1] - region[0],
+                            label, css_class=css_class + add_css_class)
                     )
                 elif vis_type == 'block':
                     group.add(
@@ -1240,7 +1520,8 @@ class PathTreeBuilder(Builder):
                                 extend_right=pos < length - 1,
                                 css_class=css_class + add_css_class,
                                 data=data,
-                                color=self.coloring(snapshot) if self.coloring else None
+                                color=self.coloring(snapshot)
+                                if self.coloring else None
                             ))
                 else:
                     hidden = True
@@ -1264,7 +1545,8 @@ class PathTreeBuilder(Builder):
                         else:
                             if left is not None:
                                 group.add(
-                                    doc.shade(left, pos_y, xp - left, color=color)
+                                    doc.shade(
+                                        left, pos_y, xp - left, color=color)
                                 )
                                 left = None
 
@@ -1277,7 +1559,7 @@ class PathTreeBuilder(Builder):
 
     def part_info_box(self):
         doc = self.doc
-        group = doc.g()
+        group = doc.g(class_='info-box')
 
         group.add(
             doc.label(0, -1, 'Information', css_class=['infobox'])
@@ -1306,18 +1588,22 @@ class PathTreeBuilder(Builder):
 
         return group
 
-    part_legend_ensemble = _create_simple_legend('ens', lambda sample: sample.ensemble.name)
-    part_legend_replica = _create_simple_legend('repl', lambda sample: sample.replica)
-    part_legend_bias = _create_simple_legend('bias', lambda sample: sample.bias)
+    part_legend_ensemble = _create_simple_legend(
+        'ens', lambda sample: sample.ensemble.name)
+    part_legend_replica = _create_simple_legend(
+        'repl', lambda sample: sample.replica)
+    part_legend_bias = _create_simple_legend(
+        'bias', lambda sample: sample.bias)
 
     def part_legend_sample(self):
 
         doc = self.doc
-        smp_format = self._create_naming_function(self.options.format['sample_label'])
+        smp_format = self._create_naming_fnc(
+            self.options.format['sample_label'])
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-sample')
         part.add(
-            doc.label(0, 0, 'smp')
+            doc.label(0, 0, 'smp', css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -1327,15 +1613,15 @@ class PathTreeBuilder(Builder):
                     smp_format(sample)))
             )
 
-        return part
+        return part, 1
 
     def part_legend_correlation(self):
         doc = self.doc
         time_symmetric = self.generator.time_symmetric
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-correlation')
         part.add(
-            doc.label(0, 0, 'cor')
+            doc.label(0, 0, 'cor', css_class=['head'])
         )
 
         old_tc = 1
@@ -1370,14 +1656,14 @@ class PathTreeBuilder(Builder):
                 extend_bottom=False,
                 css_class=['correlation']))
 
-        return part
+        return part, 1
 
     def part_legend_step(self):
         doc = self.doc
 
-        part = doc.g(class_='legend')
+        part = doc.g(class_='legend-step')
         part.add(
-            doc.label(0, 0, 'step')
+            doc.label(0, 0, 'step', css_class=['head'])
         )
 
         for pos_y, data in enumerate(self._plot_sample_list):
@@ -1385,7 +1671,7 @@ class PathTreeBuilder(Builder):
             if isinstance(self.generator, SampleListGenerator):
                 step = self.generator.get_step(sample)
                 if step is None:
-                    # apparently this sample was not generate by any step we know
+                    # apparently this sample was not generate by any known step
                     txt = '*'
                 else:
                     txt = str(step.mccycle)
@@ -1396,9 +1682,51 @@ class PathTreeBuilder(Builder):
                 doc.label(0, 1 + pos_y, txt)
             )
 
-        return part
+        return part, 1
 
-    def _create_naming_function(self, fnc):
+    def part_legend_active(self):
+        doc = self.doc
+
+        part = doc.g(class_='legend-active')
+        part.add(
+            doc.label(0, 0, 'active', css_class=['head'])
+        )
+
+        for pos_y, data in enumerate(self._plot_sample_list):
+            sample = data['sample']
+            if isinstance(self.generator, SampleListGenerator):
+                mccycles = self.generator.get_active_mccycles(sample)
+                if mccycles is None:
+                    txt = '*'
+                else:
+                    txt = self._set_of_int_to_str(mccycles)
+            else:
+                txt = '?'
+
+            part.add(
+                doc.label(0, 1 + pos_y, txt)
+            )
+
+        return part, 2
+
+    @staticmethod
+    def _set_of_int_to_str(ints):
+        sorted_ints = sorted(ints) + [-1]
+        first = None
+        last = None
+        out = ''
+        for ii in sorted_ints:
+            if first is None:
+                first = ii
+            elif ii != last + 1:
+                out += '%d-%d' % (first, last)
+                first = ii
+
+            last = ii
+
+        return out
+
+    def _create_naming_fnc(self, fnc):
         opts = self.options
         return fnc or opts.format['default_label'] or (lambda obj: '')
 
@@ -1447,13 +1775,13 @@ class PathTreeBuilder(Builder):
             'BackwardExtendMover': {
                 'name': 'Extend',
                 'suffix': 'b',
-                'overlap': 'line',  # this will repeat the part where the extension is started
+                'overlap': 'line',
                 'css_class': ['extend']
             },
             'ForwardExtendMover': {
                 'name': 'Extend',
                 'suffix': 'f',
-                'overlap': 'line',  # this will repeat the part where the extension is started
+                'overlap': 'line',
                 'label_position': 'right',
                 'css_class': ['extend']
             },
@@ -1661,7 +1989,8 @@ class SnapshotMatrix(object):
             if new_y_pos is None or new_y_pos > pos:
                 return pos
 
-            if new_y_pos not in x or not self._snapshot_is(snapshot, x[new_y_pos]):
+            if new_y_pos not in x or \
+                    not self._snapshot_is(snapshot, x[new_y_pos]):
                 return pos
 
             pos = new_y_pos
@@ -1687,72 +2016,66 @@ class SnapshotMatrix(object):
         return new_y_pos
 
 
-class SampleSelector(object):
-    """
-    A Function that can construct a series of samples within the scope of a list of MC steps
-
-    If you want to plot a list of samples and study their evolution you usually do that within
-    the context of MC steps they were generated in. You do not have to because you can generate
-    samples without a step, but that is rather the exception. Therefore you construct the
-    PathTreeBuilder with a list of steps as basis.
-
-    To select the way in which you want to pick a list of samples from the ones appearing in
-    these steps you use a SampleSelector, like `ReplicaEvolution(replica_id, accepted)`,
-    `SampleAncestors(child_sample)`, `EnsembleEvolution(ensemble, accepted)`
-    """
-
-
 class SampleList(OrderedDict):
     """
     A timely ordered series of `Sample` objects.
 
-    This is effectively a list object enhanced with a few additional functions that
-    simplify analysis. Although this can hold an arbitrary list of samples it is meant
-    to represent a time evolution of samples and thus samples that have a causal relation.
+    This is effectively a list object enhanced with a few additional functions
+    that simplify analysis. Although this can hold an arbitrary list of samples
+    it is meant to represent a time evolution of samples and thus samples that
+    have a causal relation.
 
-    Examples would be the history of samples that lead to a specific samples (heritage)
-    or the history of samples in a specific ensemble or of a given replica.
+    Examples would be the history of samples that lead to a specific samples
+    (heritage) or the history of samples in a specific ensemble or of a given
+    replica.
 
-    It provides some useful filters that make sense for samples. And you can add a list of
-    steps as context, where the samples where generated in. I analyzing the evolution of a
-    path you do not need the context. It is mostly for error checking and inspecting moves,
-    while analyzing in the step context allow you to analyze decorrelation of paths.
+    It provides some useful filters that make sense for samples. And you can
+    add a list of steps as context, where the samples where generated in.
+    In analyzing the evolution of a path you do not need the context. It is
+    mostly for error checking and inspecting moves, while analyzing in the
+    step context allow you to analyze decorrelation of paths.
 
     Attributes
     ----------
     time_symmetric : bool, default: `True`
-        if `True` a snapshots and its reversed counterpart will be treated alike.
+        if `True` a snapshots and its reversed counterpart will be treated
+        alike.
     flip_time_direction : bool, default: `False`
-        if `True` the sample list detects if a reversal happens between to successive
-        samples and will reverse the time direction to counter the flip. This results in
-        a much clearer picture and shows the redundancy of snapshots when reversing
-        trajectories. Use with care it will distort the sense of time from left to right
-        in the generated picture
+        if `True` the sample list detects if a reversal happens between to
+        successive samples and will reverse the time direction to counter
+        the flip. This results in a much clearer picture and shows the
+        redundancy of snapshots when reversing trajectories. Use with care it
+        will distort the sense of time from left to right in the generated
+        picture
     trace_missing : bool, default: `False`
-        if `True` this will mean that alignment between trajectories will be traced using
-        the `.parent` property even if a sample is not contained in the sample list itself.
-        Imagine you are looking only at the evolution of a particular replica after a
-        complete MC step. These steps might involve several shooting moves that will
-        completely deorrelate between a sample and its listed predecessor. Usually the closest
-        parent is used as a reference and overlapping parts will be aligned. If the closest
-        parent does not have overlap (because of being completely decorrelated) we cannot simply
-        align. In that case you might create a new hidden samplelist tracing the parents to
-        the closest parent to determine the relative shift. This is done, if `trace_missing` is
-        `True`. If `False` two such samples will be treated as unrelated and the new is placed at
+        if `True` this will mean that alignment between trajectories will be
+        traced using the `.parent` property even if a sample is not contained
+        in the sample list itself. Imagine you are looking only at the evolution
+        of a particular replica after a complete MC step. These steps might
+        involve several shooting moves that will completely deorrelate between
+        a sample and its listed predecessor. Usually the closest parent is used
+        as a reference and overlapping parts will be aligned. If the closest
+        parent does not have overlap (because of being completely decorrelated)
+        we cannot simply align. In that case you might create a new hidden
+        samplelist tracing the parents to the closest parent to determine the
+        relative shift. This is done, if `trace_missing` is `True`. If `False`
+        two such samples will be treated as unrelated and the new is placed at
         position zero as is the very first sample in the list.
 
         Notes
         -----
-        This is a special `OrderedDict` of the form `{ samp1: information, samp2: information }`.
-        So, if you get by integer you will get the sample at the position, while getting a
-        sample directly will act as a regular dict. So this will actually work and return the
-        information of the third sample in the list.
+        This is a special `OrderedDict` of the form
+        `{ samp1: information, samp2: information }`. So, if you get by integer
+        you will get the sample at the position, while getting a sample
+        directly will act as a regular dict. So this will actually work
+        and return the information of the third sample in the list.
 
         >>> sl = SampleList()
         >>> print sl[sl[3]]
 
-        It seemed to make sense to provide a possibility to access a specific index in an
-        OrderedDict, which is not possible in the base implementation.
+        It seemed to make sense to provide a possibility to access a specific
+        index in an OrderedDict, which is not possible in the base
+        implementation.
 
     """
 
@@ -1794,11 +2117,12 @@ class SampleList(OrderedDict):
         Parameters
         ----------
         filter_func : callable
-            a function that is called on all sample, data pairs. If `True` is returned the
-            sample is kept, otherwise the sample will be removed from the list. The function
-            can be called with either `filter_func(sample, data_dict)` or `filter_func(sample),
-            depending on how many parameters the function accepts. data dict is the information
-            contained in `sample_list[sample]`
+            a function that is called on all sample, data pairs. If `True` is
+            returned the sample is kept, otherwise the sample will be removed
+            from the list. The function can be called with either
+            `filter_func(sample, data_dict)` or `filter_func(sample),
+            depending on how many parameters the function accepts. data dict
+            is the information contained in `sample_list[sample]`
 
         """
         try:
@@ -1814,9 +2138,9 @@ class SampleList(OrderedDict):
     @property
     def steps(self):
         """
-        list of `openpathsampling.MCStep` : The list of steps giving the context for the samples.
-            Currently samples do no contain information about the context / step they were
-            generated in.
+        list of `openpathsampling.MCStep` : The list of steps giving the context
+            for the samples. Currently samples do no contain information about
+            the context / step they were generated in.
 
         """
         return self._steps
@@ -1828,7 +2152,7 @@ class SampleList(OrderedDict):
     @staticmethod
     def filter_redundant_moves(samp, data):
         """
-        A filter letting only samples pass that are not identical to the previous one
+        A filter samples that are not identical to the previous one
         """
         return not data['length'] == data['length_shared']
 
@@ -1836,7 +2160,8 @@ class SampleList(OrderedDict):
     def matrix(self):
         """
         :obj:`SnapshotMatrix`
-            a generated sparse matrix of snapshots. Mostly used for plotting purposes
+            a generated sparse matrix of snapshots. Mostly used for plotting
+            purposes
         """
         return self._matrix
 
@@ -1846,8 +2171,8 @@ class SampleList(OrderedDict):
         Parameters
         ----------
         samples : list of :obj:`openpathsampling.Sample`
-            the list of samples to be inspected. This will trigger reevaluation of the
-            current list of samples
+            the list of samples to be inspected. This will trigger reevaluation
+            of the current list of samples
 
         """
         self.clear()
@@ -1864,8 +2189,8 @@ class SampleList(OrderedDict):
         Parameters
         ----------
         sample : :obj:`openpathsampling.Sample`
-            the sample from which the ancestory are traced. It will follow the `.parent`
-            property until no parent is found
+            the sample from which the ancestory are traced. It will follow the
+            `.parent` property until no parent is found
 
         Returns
         -------
@@ -1904,20 +2229,40 @@ class SampleList(OrderedDict):
             the generated list of samples
 
         """
-        sl = SampleList(SampleList._get_samples_from_steps(steps, replica, accepted))
+        sl = SampleList(SampleList._get_samples_from_steps(
+            steps, replica, accepted))
         sl.steps = steps
         return sl
 
     @staticmethod
-    def _get_samples_from_steps(steps, replica, accepted):
+    def _get_samples_from_steps(steps, replica, accepted, intermediates=True):
         if accepted:
-            samp = steps[-1].active[replica]
-            samples = [samp]
-            while samp.parent is not None:
-                samp = samp.parent
-                samples.append(samp)
+            # samp = steps[-1].active[replica]
+            # samples = [samp]
+            # while samp.parent is not None:
+            #     samp = samp.parent
+            #     samples.append(samp)
+            #
+            # return list(reversed(samples))
+            samples = []
+            for step in steps:
+                if step.active and replica in step.active:
+                    next_sample = step.active[replica]
+                    if intermediates:
+                        # add the intermediate samples to completely trace
+                        # where we came from and allow only samples that
+                        # happened in this step
+                        samp = next_sample.parent
+                        add_samples = []
+                        while samp is not None and steps.get_step(samp) == step and samp is not samples[-1]:
+                            add_samples.append(samp)
+                            samp = samp.parent
 
-            return list(reversed(samples))
+                        samples.extend(list(reversed(add_samples)))
+
+                    samples.append(next_sample)
+
+            return samples
         else:
             samp = steps[0].active[replica]
             samples = [samp]
@@ -1933,8 +2278,9 @@ class SampleList(OrderedDict):
         """
         Remove all redundant samples and return a new object
 
-        Redundant samples are samples where the overlap with the previous sample is effectively
-        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+        Redundant samples are samples where the overlap with the previous
+        sample is effectively all samples. This depends on the analysis settings
+        like `time_symmetric` and `flip_time_direction`
 
         Returns
         -------
@@ -1943,9 +2289,9 @@ class SampleList(OrderedDict):
 
 
         """
-        l = SampleList(
-            [samp for samp, data in self.iteritems() if data['length_shared'] < data['length']]
-        )
+        l = SampleList([
+            samp for samp, data in self.iteritems()
+            if data['length_shared'] < data['length']])
         l.flip_time_direction = self.flip_time_direction
         l.time_symmetric = self.time_symmetric
         return l
@@ -1954,19 +2300,23 @@ class SampleList(OrderedDict):
         """
         Remove all redundant samples from the current object.
 
-        Redundant samples are samples where the overlap with the previous sample is effectively
-        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+        Redundant samples are samples where the overlap with the previous
+        sample is effectively all samples. This depends on the analysis
+        settings like `time_symmetric` and `flip_time_direction`
 
         """
-        l = [samp for samp, data in self.iteritems() if data['length_shared'] < data['length']]
+        l = [
+            samp for samp, data in self.iteritems()
+            if data['length_shared'] < data['length']]
         self.set_samples(l)
 
     def flatten_to_main(self):
         """
         Remove all redundant samples from the current object.
 
-        Redundant samples are samples where the overlap with the previous sample is effectively
-        all samples. This depends on the analysis settings like `time_symmetric` and `flip_time_direction`
+        Redundant samples are samples where the overlap with the previous
+        sample is effectively all samples. This depends on the analysis settings
+        like `time_symmetric` and `flip_time_direction`
 
         """
         l = [samp for samp, data in self.iteritems() if data['level'] == 0]
@@ -2290,8 +2640,8 @@ class SampleList(OrderedDict):
         decorrelated = [self[0]]
 
         for s in self:
-            # check if we are on the main path of evolution and not something that is rejected
-            # at some point
+            # check if we are on the main path of evolution and not
+            # something that is rejected at some point
             if self[s]['level'] == 0:
                 if not s.trajectory.is_correlated(prev, self.time_symmetric):
                     decorrelated.append(s)
@@ -2324,12 +2674,28 @@ class StepList(list):
 
     def _create_step_sample_list(self):
         # TODO: This will someday be replaced by a `sample.step` property
-        self._sample_step_list = dict()
+        self._sample_created_step_list = dict()
+        self._sample_active_step_list = dict()
+        self._sample_active_step_list_mccycle = dict()
         self._sample_change_list = dict()
         for step in self:
+            # TODO: This is a fix for the use of EmptyMoveChange for
+            # the initial step. We should use a special step that introduces
+            # the initial samples to the mccycle instead.
+            for s in step.active.samples:
+                if s not in self._sample_active_step_list:
+                    self._sample_active_step_list[s] = [step]
+                    self._sample_active_step_list_mccycle[s] = [step.mccycle]
+                else:
+                    self._sample_active_step_list[s].append(step)
+                    self._sample_active_step_list_mccycle[s].append(step.mccycle)
+
+                if s not in self._sample_created_step_list:
+                    self._sample_created_step_list[s] = step
+
             for ch in step.change:
                 for s in ch.samples:
-                    self._sample_step_list[s] = step
+                    self._sample_created_step_list[s] = step
                     self._sample_change_list[s] = ch
 
     def get_step(self, sample):
@@ -2352,7 +2718,57 @@ class StepList(list):
         one move and thus during one step
         """
 
-        return self._sample_step_list.get(sample)
+        return self._sample_created_step_list.get(sample)
+
+    def get_active_steps(self, sample):
+        """
+        Return the steps in which a sample was in the active sampleset
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the appearing `MCStep` from
+
+        Returns
+        -------
+        list of :obj:`MCStep`
+            the steps in which the sample was in the active sampleset
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely
+        generated in one move and thus during one step. This will list all
+        steps here the sample is in the _final_ active sampleset. This is
+        usually a range of steps from where is was first generated to the
+        step before it is replaced.
+        """
+
+        return self._sample_active_step_list.get(sample)
+
+    def get_active_mccycles(self, sample):
+        """
+        Return the mccycles in which a sample was in the active sampleset
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the mccycles where it was in an active sampleset
+
+        Returns
+        -------
+        list of int
+            the mccycles in which the sample was in the active sampleset
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely
+        generated in one move and thus during one step. This will list all
+        steps here the sample is in the _final_ active sampleset. This is
+        usually a range of steps from where is was first generated to the
+        step before it is replaced.
+        """
+
+        return self._sample_active_step_list_mccycle.get(sample)
 
     def get_mccycle(self, sample):
         """
@@ -2370,7 +2786,7 @@ class StepList(list):
 
         """
 
-        return self._sample_step_list.get(sample).mccycle
+        return self._sample_created_step_list.get(sample).mccycle
 
     def get_change(self, sample):
         """
@@ -2383,7 +2799,7 @@ class StepList(list):
 
         Returns
         -------
-        :obj:`PathMoveChange`
+        :obj:`MoveChange`
             the move change in which the sample was generated
 
         """
@@ -2392,7 +2808,7 @@ class StepList(list):
 
     @property
     def samples(self):
-        return self._sample_step_list.keys()
+        return self._sample_created_step_list.keys()
 
 
 class SampleListGenerator(SampleList):
@@ -2403,25 +2819,34 @@ class SampleListGenerator(SampleList):
     will mimick a list of Samples generated from steps to your liking
     """
 
+    class UpdateSampleProperty(object):
+        def __init__(self, var):
+            if var[0] != '_':
+                var = '_' + var
+
+            self.var = var
+
+        def __get__(self, instance, owner):
+            return getattr(instance, self.var)
+
+        def __set__(self, instance, value):
+            setattr(instance, self.var, value)
+            if hasattr(instance, '_update_sample'):
+                instance._update_sample()
+
+    steps = UpdateSampleProperty('steps')
+
     def __init__(self):
         super(SampleListGenerator, self).__init__([])
-        self.steps = None
-
-    @property
-    def steps(self):
-        return self._steps
-
-    @steps.setter
-    def steps(self, steps):
-        self._steps = steps
-        if steps is not None:
-            self._update_sample()
+        self._steps = None
 
     def _update_sample(self):
         pass
 
     def update_tree_options(self, tree):
         pass
+
+    # Delegate functions to access methods in self.steps
 
     def get_mccycle(self, sample):
         """
@@ -2474,12 +2899,62 @@ class SampleListGenerator(SampleList):
 
         Returns
         -------
-        :obj:`PathMoveChange`
+        :obj:`MoveChange`
             the move change in which the sample was generated
 
         """
 
         return self.steps.get_change(sample)
+
+    def get_active_steps(self, sample):
+        """
+        Return the steps in which a sample was in the active sampleset
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the appearing `MCStep` from
+
+        Returns
+        -------
+        list of :obj:`MCStep`
+            the steps in which the sample was in the active sampleset
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely
+        generated in one move and thus during one step. This will list all
+        steps here the sample is in the _final_ active sampleset. This is
+        usually a range of steps from where is was first generated to the
+        step before it is replaced.
+        """
+
+        return self.steps.get_active_steps(sample)
+
+    def get_active_mccycles(self, sample):
+        """
+        Return the mccycles in which a sample was in the active sampleset
+
+        Parameters
+        ----------
+        sample : :obj:`Sample`
+            the sample to find the mccycles where it was in an active sampleset
+
+        Returns
+        -------
+        list of int
+            the mccycles in which the sample was in the active sampleset
+
+        Notes
+        -----
+        A sample can appear in other moves as well, but it is uniquely
+        generated in one move and thus during one step. This will list all
+        steps here the sample is in the _final_ active sampleset. This is
+        usually a range of steps from where is was first generated to the
+        step before it is replaced.
+        """
+
+        return self.steps.get_active_mccycles(sample)
 
 
 class ReplicaEvolution(SampleListGenerator):
@@ -2490,37 +2965,28 @@ class ReplicaEvolution(SampleListGenerator):
     will mimick a list of Samples generated from steps to your liking
     """
 
-    def __init__(self, replica, accepted=True):
+    replica = SampleListGenerator.UpdateSampleProperty('replica')
+    accepted = SampleListGenerator.UpdateSampleProperty('accepted')
+    intermediates = SampleListGenerator.UpdateSampleProperty('intermediates')
+
+    def __init__(self, replica, accepted=True, intermediates=True):
         super(ReplicaEvolution, self).__init__()
         self._replica = replica
         self._accepted = accepted
+        self._intermediates = intermediates
+
+        self._update_sample()
 
     def _update_sample(self):
-        self.set_samples(SampleList._get_samples_from_steps(
-            self.steps,
-            self._replica,
-            self._accepted
-        ))
+        if self.steps:
+            self.set_samples(SampleList._get_samples_from_steps(
+                self.steps,
+                self._replica,
+                self._accepted,
+                self._intermediates
+            ))
 
-        self.analyze()
-
-    @property
-    def replica(self):
-        return self._replica
-
-    @replica.setter
-    def replica(self, value):
-        self._replica = value
-        self._update_sample()
-
-    @property
-    def accepted(self):
-        return self._accepted
-
-    @accepted.setter
-    def accepted(self, value):
-        self._accepted = value
-        self._update_sample()
+            self.analyze()
 
     def update_tree_options(self, tree):
         tree.options.css['mark_transparent'] = 'rejected'
@@ -2531,14 +2997,7 @@ class SampleAncestors(SampleListGenerator):
         super(SampleAncestors, self).__init__()
         self._sample = sample
 
-    @property
-    def sample(self):
-        return self._sample
-
-    @sample.setter
-    def sample(self, value):
-        self._sample = value
-        self._update_sample()
+    sample = SampleListGenerator.UpdateSampleProperty('sample')
 
     def _update_sample(self):
 
@@ -2563,6 +3022,9 @@ class EnsembleEvolution(SampleListGenerator):
     will mimick a list of Samples generated from steps to your liking
     """
 
+    ensemble = SampleListGenerator.UpdateSampleProperty('ensemble')
+    accepted = SampleListGenerator.UpdateSampleProperty('accepted')
+
     def __init__(self, ensemble, accepted=True):
         super(EnsembleEvolution, self).__init__()
         self._ensemble = ensemble
@@ -2574,185 +3036,5 @@ class EnsembleEvolution(SampleListGenerator):
             if not self.accepted or step.change.accepted
         ])
 
-    @property
-    def ensemble(self):
-        return self._ensemble
-
-    @ensemble.setter
-    def ensemble(self, value):
-        self._ensemble = value
-        self._update_sample()
-
-    @property
-    def accepted(self):
-        return self._accepted
-
-    @accepted.setter
-    def accepted(self, value):
-        self._accepted = value
-        self._update_sample()
-
     def update_tree_options(self, tree):
         tree.options.css['mark_transparent'] = 'rejected'
-
-
-# TODO: Move this to extra file and load using 'pkgutil' or so
-vis_css = r"""
-.opstree text, .movetree text {
-    alignment-baseline: central;
-    font-size: 10px;
-    text-anchor: middle;
-    font-family: Futura-CondensedMedium;
-    font-weight: lighter;
-    stroke: none !important;
-}
-.opstree .block text, .movetree .block text {
-    alignment-baseline: central;
-    font-size: 8px;
-    text-anchor: middle;
-    font-family: Futura-CondensedMedium;
-    font-weight: lighter;
-    stroke: none !important;
-}
-.opstree text.shadow {
-    stroke-width: 3;
-    stroke: white !important;
-}
-.opstree .left.label .shift text {
-    text-anchor: end;
-}
-.opstree .right.label .shift text {
-    text-anchor: start;
-}
-.opstree .block text, .movetree .block text {
-    fill: white !important;
-    stroke: none !important;
-}
-.opstree .block {
-    stroke: none !important;
-}
-.opstree g.block:hover rect {
-    opacity: 0.5;
-}
-.opstree .repex {
-    fill: blue;
-    stroke: blue;
-}
-.opstree .extend {
-    fill: blue;
-    stroke: blue;
-}
-.opstree .truncate {
-    fill: blue;
-    stroke: blue;
-}
-.opstree .new {
-    fill: black;
-    stroke: black;
-}
-.opstree .unknown {
-    fill: gray;
-    stroke: gray;
-}
-.opstree .hop {
-    fill: blue;
-    stroke: blue;
-}
-.opstree .correlation {
-    fill: black;
-    stroke: black;
-}
-.opstree .shooting.bw {
-    fill: green;
-    stroke: green;
-}
-.opstree .shooting.fw {
-    fill: red;
-    stroke: red;
-}
-.opstree .shooting.overlap {
-    fill: #666;
-    stroke: #666;
-}
-.opstree .reversal {
-    fill: gold;
-    stroke: gold;
-}
-.opstree .virtual {
-    opacity: 0.1;
-    fill:gray;
-    stroke: none;
-}
-.opstree line {
-    stroke-width: 2px;
-}
-.opstree .label {
-    fill: black !important;
-}
-.opstree .h-connector {
-    stroke-width: 0.1px;
-    stroke-dasharray: 3 3;
-}
-.opstree .rejected {
-    opacity: 0.25;
-}
-.opstree .level {
-    opacity: 0.25;
-}
-.opstree .orange {
-    fill: orange;
-}
-.tableline {
-    fill: gray;
-    opacity: 0.0;
-}
-.tableline:hover {
-    opacity: 0.2;
-}
-.opstree .left.label g.shift {
-    transform: translateX(-6px);
-}
-.opstree .right.label g.shift {
-    transform: translateX(+6px);
-}
-.opstree .infobox text {
-    text-anchor: start;
-}
-.opstree .shade {
-    stroke: none;
-}
-
-.movetree .label .shift {
-    transform: translateX(-18px);
-}
-
-.movetree .label text {
-    text-anchor: end;
-}
-.movetree .v-connector {
-    stroke: black;
-}
-.movetree .v-hook {
-    stroke: black;
-}
-.movetree .ensembles .head .shift {
-    transform: translateY(0px) rotate(270deg) ;
-}
-.movetree .ensembles .head text {
-    text-anchor: start;
-}
-.movetree .connector.input {
-    fill: green;
-}
-.movetree .connector.output {
-    fill: red;
-}
-.movetree .unknown {
-    fill: gray;
-}
-"""
-
-# css_file = os.path.join(os.path.dirname(__file__), 'vis.css')
-#
-# with open(css_file, 'r') as content_file:
-#     vis_css = content_file.read()

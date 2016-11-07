@@ -14,7 +14,7 @@ from openpathsampling.pathmover import *
 from openpathsampling.pathmover import IdentityPathMover
 from openpathsampling.sample import Sample, SampleSet
 from openpathsampling.shooting import UniformSelector
-from openpathsampling.volume import CVRangeVolume
+from openpathsampling.volume import CVDefinedVolume
 import openpathsampling.engines.toy as toys
 from test_helpers import CallIdentity, raises_with_message_like
 from test_helpers import (assert_equal_array_array, items_equal,
@@ -118,8 +118,8 @@ class testShootingMover(object):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
                                       -0.1, 0.2, 0.4, 0.6, 0.8])
         op = FunctionCV("myid", f=lambda snap : snap.coordinates[0][0])
-        self.stateA = CVRangeVolume(op, -100, 0.0)
-        self.stateB = CVRangeVolume(op, 0.65, 100)
+        self.stateA = CVDefinedVolume(op, -100, 0.0)
+        self.stateB = CVDefinedVolume(op, 0.65, 100)
         self.tps = ef.A2BEnsemble(self.stateA, self.stateB)
         init_traj = make_1d_traj(
             coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
@@ -166,7 +166,7 @@ class testForwardShootMover(testShootingMover):
         )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
-        newsamp = self.init_samp + change
+        newsamp = self.init_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
         assert_equal(change.accepted, True)
         assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
@@ -179,7 +179,7 @@ class testForwardShootMover(testShootingMover):
             engine=self.toy_engine
         )
         change = mover.move(self.toy_samp)
-        newsamp = self.toy_samp + change
+        newsamp = self.toy_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
         assert_equal(change.accepted, True)
         newsamp.sanity_check()
@@ -207,7 +207,7 @@ class testBackwardShootMover(testShootingMover):
         )
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
-        newsamp = self.init_samp + change
+        newsamp = self.init_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
         assert_equal(len(self.init_samp[0].trajectory), 8)
         assert_not_equal(newsamp[0].trajectory[0],
@@ -226,7 +226,7 @@ class testBackwardShootMover(testShootingMover):
             engine=self.toy_engine
         )
         change = mover.move(self.toy_samp)
-        newsamp = self.toy_samp + change
+        newsamp = self.toy_samp.apply_samples(change)
         assert_equal(len(newsamp), 1)
         assert_equal(change.accepted, True)
         newsamp.sanity_check()
@@ -263,9 +263,9 @@ class testPathReversalMover(object):
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
-        volA = CVRangeVolume(op, -100, 0.0)
-        volB = CVRangeVolume(op, 1.0, 100)
-        volX = CVRangeVolume(op, -100, 0.25)
+        volA = CVDefinedVolume(op, -100, 0.0)
+        volB = CVDefinedVolume(op, 1.0, 100)
+        volX = CVDefinedVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
         self.move = PathReversalMover(ensemble=self.tis)
         self.op = op
@@ -331,10 +331,10 @@ class testReplicaExchangeMover(object):
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
-        state1 = CVRangeVolume(op, -100, 0.0)
-        state2 = CVRangeVolume(op, 1, 100)
-        volA = CVRangeVolume(op, -100, 0.25)
-        volB = CVRangeVolume(op, -100, 0.50)
+        state1 = CVDefinedVolume(op, -100, 0.0)
+        state2 = CVDefinedVolume(op, 1, 100)
+        volA = CVDefinedVolume(op, -100, 0.25)
+        volB = CVDefinedVolume(op, -100, 0.50)
         self.tisA = paths.TISEnsemble(state1, state2, volA)
         self.tisB = paths.TISEnsemble(state1, state2, volB)
         self.traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
@@ -410,9 +410,9 @@ class testRandomChoiceMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
-        volA = CVRangeVolume(op, -100, 0.0)
-        volB = CVRangeVolume(op, 1.0, 100)
-        volX = CVRangeVolume(op, -100, 0.25)
+        volA = CVDefinedVolume(op, -100, 0.0)
+        volB = CVDefinedVolume(op, 1.0, 100)
+        volX = CVDefinedVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
         self.tps = ef.A2BEnsemble(volA, volB)
         self.len3 = LengthEnsemble(3)
@@ -474,10 +474,10 @@ class testRandomAllowedChoiceMover(object):
         # SampleMover.engine = self.dyn
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
-        stateA = CVRangeVolume(op, -100, 0.0)
-        stateB = CVRangeVolume(op, 0.65, 100)
-        volX = CVRangeVolume(op, -100, 0.25)
-        volY = CVRangeVolume(op, -100, 0.40)
+        stateA = CVDefinedVolume(op, -100, 0.0)
+        stateB = CVDefinedVolume(op, 0.65, 100)
+        volX = CVDefinedVolume(op, -100, 0.25)
+        volY = CVDefinedVolume(op, -100, 0.40)
         self.ens1 = paths.TISEnsemble(stateA, stateB, volX, op)
         self.ens2 = paths.TISEnsemble(stateA, stateB, volY, op)
         init_traj1 = make_1d_traj(
@@ -503,16 +503,16 @@ class testRandomAllowedChoiceMover(object):
         self.mover = RandomAllowedChoiceMover([self.shooter, self.pathrev])
 
     def test_move_single_replica(self):
-        sampleset = SampleSet([self.samp1])
-        change = self.mover.move(sampleset)
+        sample_set = SampleSet([self.samp1])
+        change = self.mover.move(sample_set)
         subchange = change.subchange
         assert_equal(subchange.mover, self.pathrev)
         assert_equal(subchange.accepted, True)
         assert_equal(change.accepted, True)
         assert_equal(len(subchange.samples), 1)
 
-        sampleset = SampleSet([self.samp2])
-        change = self.mover.move(sampleset)
+        sample_set = SampleSet([self.samp2])
+        change = self.mover.move(sample_set)
         subchange = change.subchange
         assert_equal(subchange.mover, self.shooter)
         assert_equal(subchange.accepted, True)
@@ -520,10 +520,10 @@ class testRandomAllowedChoiceMover(object):
 
 
     def test_move_multiple_replicas(self):
-        sampleset = SampleSet([self.samp1, self.samp2])
+        sample_set = SampleSet([self.samp1, self.samp2])
         count = {}
         for i in range(100):
-            change = self.mover.move(sampleset)
+            change = self.mover.move(sample_set)
             subchange = change.subchange
             assert_equal(change.accepted, True)
             assert_equal(subchange.accepted, True)
@@ -543,14 +543,14 @@ class testRandomAllowedChoiceMover(object):
 
 
     def test_move_multiple_replicas_weighted_ensembles(self):
-        sampleset = SampleSet([self.samp1, self.samp2])
+        sample_set = SampleSet([self.samp1, self.samp2])
         ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
         # weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
         weighted_mover = RandomAllowedChoiceMover([self.pathrev,
                                                    self.shooter], [1.0, 2.0])
         count = {}
         for i in range(100):
-            change = weighted_mover.move(sampleset)
+            change = weighted_mover.move(sample_set)
             subchange = change.subchange
             assert_equal(change.accepted, True)
             assert_equal(subchange.accepted, True)
@@ -578,9 +578,9 @@ class testSequentialMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
-        volA = CVRangeVolume(op, -100, 0.0)
-        volB = CVRangeVolume(op, 1.0, 100)
-        volX = CVRangeVolume(op, -100, 0.25)
+        volA = CVDefinedVolume(op, -100, 0.0)
+        volB = CVDefinedVolume(op, 1.0, 100)
+        volX = CVDefinedVolume(op, -100, 0.25)
         tis = paths.TISEnsemble(volA, volB, volX)
         tps = ef.A2BEnsemble(volA, volB)
         len3 = LengthEnsemble(3)
@@ -646,7 +646,7 @@ class testSequentialMover(object):
         assert_equal(len(samples), 3)
         for subchange in change:
             assert_equal(subchange.accepted, True)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
@@ -660,7 +660,7 @@ class testSequentialMover(object):
         assert_equal(change[0].accepted, False)
         assert_equal(change[1].accepted, True)
         assert_equal(change[2].accepted, True)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_last_rejected(self):
@@ -675,7 +675,7 @@ class testSequentialMover(object):
         assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
         assert_equal(change[2].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_restricted_by_replica(self):
@@ -694,7 +694,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         for subchange in change:
             assert_equal(subchange.accepted, True)
         assert_equal(len(change.trials,),3)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
@@ -708,7 +708,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         allsamp = change.trials
         assert_equal(len(allsamp), 1)
         assert_equal(change[0].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_last_rejected(self):
@@ -725,7 +725,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
         assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
         assert_equal(change[2].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_restricted_by_replica(self):
@@ -743,7 +743,7 @@ class testConditionalSequentialMover(testSequentialMover):
         assert_equal(len(samples), 3)
         for ch in change:
             assert_equal(change.accepted, True)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.tps)
 
     def test_first_rejected(self):
@@ -756,7 +756,7 @@ class testConditionalSequentialMover(testSequentialMover):
         allsamp = change.trials
         assert_equal(len(allsamp), 1)
         assert_equal(change[0].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_last_rejected(self):
@@ -775,7 +775,7 @@ class testConditionalSequentialMover(testSequentialMover):
         assert_equal(change[0].accepted, True)
         assert_equal(change[1].accepted, True)
         assert_equal(change[2].accepted, False)
-        gs = gs + change
+        gs = gs.apply_samples(change)
         assert_equal(gs[0].ensemble, self.len3)
 
     def test_restricted_by_replica(self):
@@ -788,7 +788,7 @@ class SubtrajectorySelectTester(object):
 
     def setup(self):
         op = CallIdentity()
-        vol = paths.CVRangeVolume(op, -0.5, 0.5)
+        vol = paths.CVDefinedVolume(op, -0.5, 0.5)
         inX = paths.AllInXEnsemble(vol)
         outX = paths.AllOutXEnsemble(vol)
         self.ensemble = paths.SequentialEnsemble([
@@ -896,9 +896,9 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 #     def setup(self):
 #         traj = Trajectory([-0.5, 0.7, 1.1])
 #         op = CallIdentity()
-#         volA = CVRangeVolume(op, -100, 0.0)
-#         volB = CVRangeVolume(op, 1.0, 100)
-#         volX = CVRangeVolume(op, -100, 0.25)
+#         volA = CVDefinedVolume(op, -100, 0.0)
+#         volB = CVDefinedVolume(op, 1.0, 100)
+#         volX = CVDefinedVolume(op, -100, 0.25)
 #         self.tis = paths.TISEnsemble(volA, volB, volX)
 #         self.len3 = LengthEnsemble(3)
 #         self.len2 = LengthEnsemble(2)
@@ -931,9 +931,9 @@ class testMinusMover(object):
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
-        volA = CVRangeVolume(op, -100, 0.0)
-        volB = CVRangeVolume(op, 1.0, 100)
-        volX = CVRangeVolume(op, -100, 0.25)
+        volA = CVDefinedVolume(op, -100, 0.0)
+        volB = CVDefinedVolume(op, 1.0, 100)
+        volX = CVDefinedVolume(op, -100, 0.25)
         self.dyn = CalvinistDynamics([
             # successful move: (backward extension then forward)
             -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,
@@ -1117,6 +1117,10 @@ class testMinusMover(object):
         assert_subchanges_set_accepted(sub, [True, False, False])
 
     def test_extension_fails(self):
+
+        # we use `stop` and not `fail` for max length
+        self.dyn.options['on_max_length'] = 'stop'
+
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
         traj_bad_extension = make_1d_traj(innermost_bad_extension, [1.0]*5)
         samp_bad_extension = Sample(
@@ -1140,10 +1144,13 @@ class testMinusMover(object):
         assert_subchanges_set_accepted(sub, [True] * 2 + [False])
         # first two work and the extention fails
         # this only happens due to length
+
         assert_equal(
             len(sub[-1][0].trials[0].trajectory),
             len(traj_bad_extension)+self.dyn.n_frames_max-1
         )
+
+        self.dyn.options['on_max_length'] = 'fail'
 
 
 class testSingleReplicaMinusMover(object):
@@ -1151,9 +1158,9 @@ class testSingleReplicaMinusMover(object):
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
 
-        volA = CVRangeVolume(op, -100, 0.0)
-        volB = CVRangeVolume(op, 1.0, 100)
-        volX = CVRangeVolume(op, -100, 0.25)
+        volA = CVDefinedVolume(op, -100, 0.0)
+        volB = CVDefinedVolume(op, 1.0, 100)
+        volX = CVDefinedVolume(op, -100, 0.25)
         self.dyn = CalvinistDynamics([
             # successful move: (backward extension then forward)
             -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,
@@ -1277,6 +1284,9 @@ class testSingleReplicaMinusMover(object):
         assert_equal(sub_trials[0].ensemble, self.minus._segment_ensemble)
 
     def test_extension_fails(self):
+        # we use `stop` and not `fail` for max length
+        self.dyn.options['on_max_length'] = 'stop'
+
         innermost_bad_extension = [-0.25, 0.1, 0.5, 0.1, -0.25]
         traj_bad_extension = make_1d_traj(innermost_bad_extension, [1.0]*5)
         samp_bad_extension = Sample(
@@ -1305,6 +1315,9 @@ class testSingleReplicaMinusMover(object):
         )
 
 
+        self.dyn.options['on_max_length'] = 'fail'
+
+
 class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_pathmover(self):
@@ -1325,4 +1338,3 @@ class testAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_subtrajectoryselectmover(self):
         mover = paths.SubtrajectorySelectMover()
-

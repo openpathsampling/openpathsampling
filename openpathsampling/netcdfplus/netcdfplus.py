@@ -6,6 +6,7 @@ import logging
 
 from dictify import StorableObjectJSON, UUIDObjectJSON
 from proxy import LoaderProxy
+from collections import OrderedDict
 
 from objects import NamedObjectStore, ObjectStore
 
@@ -117,54 +118,6 @@ class NetCDFPlus(netCDF4.Dataset):
 
         def __len__(self):
             return len(self.variable)
-
-    class KeyDelegate(object):
-        """
-        Value delegate for objects that implement __getitem__ and __setitem__
-
-        It will basically just wrap keys for objects that are used in a dict
-        like structure with getter and setter function to allow easier
-        conversion
-
-        delegate[x] is equivalent to delegate[x.idx(store)]
-
-        Attributes
-        ----------
-        variable : dict-like
-            the dict to be wrapped
-        store : openpathsampling.netcdfplus.ObjectStore
-            a reference to an object store used
-
-        """
-
-        def __init__(self, variable, store):
-            self.variable = variable
-            self.store = store
-
-        def __setitem__(self, key, value):
-            if hasattr(key, '__iter__'):
-                idxs = [item if type(item) is int else self.store.index[item]
-                        for item in key]
-                sorted_idxs = list(set(idxs))
-                sorted_values = [value[idxs.index(val)] for val in sorted_idxs]
-                self.variable[sorted_idxs] = sorted_values
-
-            else:
-                self.variable[
-                    key if type(key) is int else self.store.index[key]
-                ] = value
-
-        def __getitem__(self, key):
-            if hasattr(key, '__iter__'):
-                idxs = [item if type(item) is int else self.store.index[item]
-                        for item in key]
-                sorted_idxs = sorted(list(set(idxs)))
-
-                sorted_values = self.variable[sorted_idxs]
-                return [sorted_values[sorted_idxs.index(idx)] for idx in idxs]
-            else:
-                return self.variable[
-                    key if type(key) is int else self.store.index[key]]
 
     @property
     def objects(self):
@@ -568,6 +521,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         for storage in self._stores.values():
             storage.restore()
+            storage._created = True
 
     def list_stores(self):
         """
@@ -682,60 +636,6 @@ class NetCDFPlus(netCDF4.Dataset):
                 return store.variables['json'][store.idx(obj)]
 
         return None
-
-    def clone_store(self, store_to_copy, new_storage):
-        """
-        Clone a store from one storage to another. Mainly used as a helper
-        for the cloning of a store
-
-        Parameters
-        ----------
-        store_to_copy : [..]Store
-            the store to be copied
-        new_storage : Storage
-            the new Storage object
-
-        """
-        if type(store_to_copy) is str:
-            storage_name = store_to_copy
-        else:
-            storage_name = store_to_copy.prefix
-
-        copied_storages = 0
-
-        for variable in self.variables.keys():
-            if variable.startswith(storage_name + '_'):
-                copied_storages += 1
-                if variable not in new_storage.variables:
-                    # collective variables have additional variables
-                    # in the storage that need to be copied
-                    var = self.variables[variable]
-                    new_storage.createVariable(
-                        variable,
-                        str(var.dtype),
-                        var.dimensions,
-                        chunksizes=var.chunk
-                    )
-                    for attr in self.variables[variable].ncattrs():
-                        setattr(
-                            new_storage.variables[variable],
-                            attr,
-                            getattr(self.variables[variable], attr)
-                        )
-
-                    new_storage.variables[variable][:] = \
-                        self.variables[variable][:]
-                else:
-                    for idx in range(0, len(self.variables[variable])):
-                        new_storage.variables[variable][idx] = \
-                            self.variables[variable][idx]
-
-        if copied_storages == 0:
-            raise RuntimeWarning(
-                'Potential error in storage name. ' +
-                'No storage variables copied from ' +
-                storage_name
-            )
 
     def create_dimension(self, dim_name, size=None):
         """

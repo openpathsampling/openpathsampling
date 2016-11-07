@@ -9,14 +9,26 @@ from simtk import unit as u
 from simtk.openmm import app
 
 import openpathsampling.engines.openmm as peng
+import openpathsampling.engines as dyn
 
-from test_helpers import (true_func, data_filename,
-                          assert_equal_array_array,
-                          assert_not_equal_array_array)
+import openpathsampling as paths
 
+from openpathsampling.ensemble import EnsembleFactory as ef
+
+from test_helpers import (
+    true_func, data_filename,
+    assert_equal_array_array,
+    assert_not_equal_array_array,
+    raises_with_message_like)
+
+import logging
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 def setUp():
-    global topology, template, system
+    global topology, template, system, nan_causing_template
     template = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
     topology = peng.to_openmm_topology(template)
 
@@ -37,6 +49,16 @@ def setUp():
         ewaldErrorTolerance=0.0005
     )
 
+    # this is crude but does the trick
+    nan_causing_template = template.copy()
+    kinetics = template.kinetics.copy()
+    # this is crude but does the trick
+    kinetics.velocities = kinetics.velocities.copy()
+    kinetics.velocities[0] = \
+        (np.zeros(template.velocities.shape[1]) + 1000000.) * \
+        u.nanometers / u.picoseconds
+    nan_causing_template.kinetics = kinetics
+
 
 class testOpenMMEngine(object):
     def setUp(self):
@@ -52,19 +74,17 @@ class testOpenMMEngine(object):
         # Engine options
         options = {
             'n_steps_per_frame': 2,
-            'platform': 'CPU',
-            'solute_indices': range(22),
-            'n_frames_max': 5,
-            'timestep': 2.0 * u.femtoseconds
+            'n_frames_max': 5
         }
 
         self.engine = peng.Engine(
             template.topology,
             system,
             integrator,
-            options
+            options=options
         )
 
+        self.engine.initialize('CPU')
         context = self.engine.simulation.context
         zero_array = np.zeros((template.topology.n_atoms, 3))
         context.setPositions(template.coordinates)
@@ -74,7 +94,10 @@ class testOpenMMEngine(object):
         pass
 
     def test_sanity(self):
-        pass
+        assert_equal(self.engine.n_steps_per_frame, 2)
+        assert_equal(self.engine.n_frames_max, 5)
+        # TODO: add more sanity checkes
+        pass  # not quite a SkipTest, but a reminder to add more
 
     def test_snapshot_get(self):
         snap = self.engine.current_snapshot
@@ -132,8 +155,101 @@ class testOpenMMEngine(object):
         assert_not_equal_array_array(old_vel, new_vel)
 
     def test_generate(self):
-        traj = self.engine.generate(self.engine.current_snapshot, [true_func])
-        assert_equal(len(traj), self.engine.n_frames_max)
+        try:
+            _ = self.engine.generate(self.engine.current_snapshot, [true_func])
+        except dyn.EngineMaxLengthError as e:
+            traj = e.last_trajectory
+            assert_equal(len(traj), self.engine.n_frames_max)
+        else:
+            raise RuntimeError('Did not have correct MaxLengthError')
 
     def test_snapshot_timestep(self):
         assert_equal(self.engine.snapshot_timestep, 4 * u.femtoseconds)
+
+    @raises_with_message_like(paths.engines.EngineMaxLengthError,
+                              "Hit maximal length")
+    def test_fail_length(self):
+        self.engine.options['on_max_length'] = 'fail'
+        self.engine.options['n_max_length'] = 2
+        _ = self.engine.generate(self.engine.current_snapshot, [true_func])
+
+    @raises_with_message_like(paths.engines.EngineMaxLengthError,
+                              'Failed to generate trajectory without hitting '
+                              'max length')
+    def test_retry_length(self):
+        self.engine.on_max_length = 'retry'
+        self.engine.options['n_max_length'] = 2
+        self.engine.options['retries_when_max_length'] = 2
+        _ = self.engine.generate(self.engine.current_snapshot, [true_func])
+
+    # OpenMM CPU will throw an error and not return a snapshot with nan
+    @raises_with_message_like(dyn.EngineNaNError,
+                              '`nan` in snapshot')
+    def test_fail_nan(self):
+        self.engine.on_max_length = 'retry'
+        self.engine.options['n_max_length'] = 2
+        self.engine.options['retries_when_max_length'] = 2
+        _ = self.engine.generate(nan_causing_template, [true_func])
+
+    def test_nan_rejected(self):
+        stateA = paths.EmptyVolume()  # will run indefinitely
+        stateB = paths.EmptyVolume()
+        tps = ef.A2BEnsemble(stateA, stateB)
+        self.engine.n_frames_max = 10
+
+        init_traj = paths.Trajectory([nan_causing_template] * 5)
+        init_samp = paths.SampleSet([paths.Sample(
+            trajectory=init_traj,
+            replica=0,
+            ensemble=tps
+        )])
+
+        mover = paths.BackwardShootMover(
+            ensemble=tps,
+            selector=paths.UniformSelector(),
+            engine=self.engine
+        )
+        change = mover.move(init_samp)
+
+        assert (isinstance(change, paths.RejectedNaNSampleMoveChange))
+        assert_equal(change.samples[0].details.stopping_reason, 'nan')
+        # since we shoot, we start with a shorter trajectory
+        assert(len(change.samples[0].trajectory) < len(init_traj))
+
+        newsamp = init_samp.apply_samples(change)
+        assert_equal(len(newsamp), 1)
+
+        # make sure there is no change!
+        assert_equal(init_samp[0].trajectory, init_traj)
+
+    def test_max_length_rejected(self):
+        stateA = paths.EmptyVolume()  # will run indefinitely
+        stateB = paths.EmptyVolume()
+        tps = ef.A2BEnsemble(stateA, stateB)
+        self.engine.options['n_frames_max'] = 10
+        self.engine.on_max_length = 'fail'
+
+        init_traj = paths.Trajectory([template] * 5)
+        init_samp = paths.SampleSet([paths.Sample(
+            trajectory=init_traj,
+            replica=0,
+            ensemble=tps
+        )])
+
+        mover = paths.BackwardShootMover(
+            ensemble=tps,
+            selector=paths.UniformSelector(),
+            engine=self.engine
+        )
+        change = mover.move(init_samp)
+
+        assert(isinstance(change, paths.RejectedMaxLengthSampleMoveChange))
+        assert_equal(change.samples[0].details.stopping_reason, 'max_length')
+        assert_equal(
+            len(change.samples[0].trajectory), self.engine.n_frames_max)
+
+        newsamp = init_samp.apply_samples(change)
+        assert_equal(len(newsamp), 1)
+
+        # make sure there is no change!
+        assert_equal(init_samp[0].trajectory, init_traj)

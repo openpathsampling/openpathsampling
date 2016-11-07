@@ -7,19 +7,19 @@ import pandas as pd
 
 class BiasFunction(StorableNamedObject):
     """Generic bias functions. Everything inherits from here. Abstract."""
-    def probability_old_to_new(self, sampleset, change):
+    def probability_old_to_new(self, sample_set, change):
         raise NotImplementedError
 
-    def probability_new_to_old(self, sampleset, change):
+    def probability_new_to_old(self, sample_set, change):
         raise NotImplementedError
 
-    def get_new_old(self, sampleset, change):
+    def get_new_old(self, sample_set, change):
         """Associates changed and original samples.
 
         Returns tuple (replica, new_sample, old_sample)
         """
         # TODO: this should move to sample.py (or pmc.py?) as a free function
-        return [(s.replica, s, sampleset[s.replica]) for s in change.samples]
+        return [(s.replica, s, sample_set[s.replica]) for s in change.samples]
 
 
 class BiasLookupFunction(BiasFunction):
@@ -32,14 +32,37 @@ class BiasLookupFunction(BiasFunction):
 
 
 class BiasEnsembleTable(BiasFunction):
+    """Bias based on the ensemble; set from a table.
+
+    The rows indicate the "from" ensemble; the columns indicate the "to"
+    ensemble. The entries are the probability of accepting the move (if
+    greater than 1, take 100% probability).
+
+    Note
+    ----
+    We use the `ensembles_to_ids` dictionary to isolate the ensembles from
+    the dataframe indices, because as of Pandas 0.18, callables (like
+    ensembles) don't behave well as index/columns for dataframes.
+
+    Parameters
+    ----------
+    dataframe : pandas.DataFrame
+        dataframe with integers for index, columns
+    ensembles_to_ids : dict, keys :class:`.Ensemble`, values int
+        mapping of ensemble to the specific volume
+    """
     # TODO: bias seems kind of fixed to Metropolis acceptance criterion --
     # is that okay elsewhere?
     def __init__(self, dataframe, ensembles_to_ids):
         super(BiasEnsembleTable, self).__init__() 
         self.dataframe = dataframe
         self.ensembles_to_ids = ensembles_to_ids
-        self.ids_to_ensembles = {self.ensembles_to_ids[e] : e
-                                 for e in self.ensembles_to_ids}
+        self._ids_to_ensembles = {self.ensembles_to_ids[e] : e
+                                  for e in self.ensembles_to_ids}
+
+    @property
+    def ids_to_ensembles(self):
+        return self._ids_to_ensembles
 
     def __add__(self, other):
         # the following craziness is to get the ensembles listed in the
@@ -119,6 +142,10 @@ class BiasEnsembleTable(BiasFunction):
                         msg += str(self.dataframe) + "\n"
                         msg += str(other.dataframe) + "\n"
                         msg += ens_from.name + "=>" + ens_to.name
+                        msg += ("  (" + str(self_from_id) + "," 
+                                + str(self_to_id) + ")  (" 
+                                + str(other_from_id) + "," 
+                                + str(other_to_id) + ")")
                         raise ValueError(msg)
                 value = self_value if self_value is not None else other_value
                 if value is not None:
@@ -132,6 +159,21 @@ class BiasEnsembleTable(BiasFunction):
 
     @classmethod
     def ratios_from_dictionary(cls, ratio_dictionary):
+        """Create bias from dictionary of 1D values as ratios.
+
+        The bias for entry (from, to) is given by v_from / v_to, where
+        v_from = ratio_dictionary[from] and v_to = ratio_dictionary[to].
+
+        Parameters
+        ----------
+        ratio_dictionary : dict; keys :class:`.Ensemble`, values float
+            input data for each ensemble
+
+        Returns
+        -------
+        :class:`.BiasEnsembleTable`
+            bias table
+        """
         ensembles_to_ids = {e : ratio_dictionary.keys().index(e) 
                             for e in ratio_dictionary.keys()}
         id_based_df = pd.DataFrame(index=ensembles_to_ids.values(),
@@ -147,12 +189,30 @@ class BiasEnsembleTable(BiasFunction):
 
 
     def bias_value(self, from_ensemble, to_ensemble):
+        """Value of the bias from from_ensemble to to_ensemble.
+
+        Parameters
+        ----------
+        from_ensemble : :class:`.Ensemble`
+            ensemble to move from
+        to_ensemble : :class:`.Ensemble`
+            ensemble to move to
+
+        Returns
+        -------
+        float
+            value of the bias
+        """
         from_id = self.ensembles_to_ids[from_ensemble]
         to_id = self.ensembles_to_ids[to_ensemble]
         return self.dataframe.loc[from_id, to_id]
 
     @property
     def df(self):
+        """Pretty-print version of internal dataframe.
+
+        Uses the names of the ensembles for printing.
+        """
         ids_to_ensembles = {self.ensembles_to_ids[e] : e
                             for e in self.ensembles_to_ids}
         df = self.dataframe.copy()
@@ -165,8 +225,8 @@ class BiasEnsembleTable(BiasFunction):
         # recognized as a float, but apparently it does
         return float(min(1.0, self.bias_value(from_ensemble, to_ensemble)))
 
-    def probability_old_to_new(self, sampleset, change):
-        new_old = self.get_new_old(sampleset, change)
+    def probability_old_to_new(self, sample_set, change):
+        new_old = self.get_new_old(sample_set, change)
         prob = 1.0
         for diff in new_old:
             new = diff[1]
@@ -174,8 +234,8 @@ class BiasEnsembleTable(BiasFunction):
             prob *= self.bias_value(old.ensemble, new.ensemble)
         return min(1.0, prob)
 
-    def probability_new_to_old(self, sampleset, change):
-        new_old = self.get_new_old(sampleset, change)
+    def probability_new_to_old(self, sample_set, change):
+        new_old = self.get_new_old(sample_set, change)
         prob = 1.0
         for diff in new_old:
             new = diff[1]
@@ -183,4 +243,70 @@ class BiasEnsembleTable(BiasFunction):
             prob *= self.bias_value(new.ensemble, old.ensemble)
         return min(1.0, prob)
 
+
+def SRTISBiasFromNetwork(network, steps=None):
+    """Create an SRTIS fixed bias from an analyzed network.
+
+    If the network has not been analyzed and `steps` is given, it will
+    calculate the rates first, and then provide the bias.
+
+    Parameters
+    ----------
+    network : :class:`.TISTransitionNetwork`
+        analyzed network to use to obtain a guess of the SRTIS bias
+    steps : list of :class:`.MCStep`
+        if the network has not been analyzed, use these steps to analyze it
+
+    Returns
+    -------
+    BiasEnsembleTable
+        fixed bias for SRTIS
+    """
+    if steps is not None:
+        network.rate_matrix(steps)
+
+    has_tcp = [hasattr(t, 'tcp') for t in network.sampling_transitions]
+    if sum(has_tcp) != len(network.sampling_transitions):
+        raise RuntimeError(
+            "Transition are missing total crossing probability. "
+            + "Analyze the network first!")
+
+    try:
+        ms_outer_ensembles = network.special_ensembles['ms_outer'].keys()
+    except KeyError:
+        ms_outer_ensembles= []
+    bias = BiasEnsembleTable(pd.DataFrame(), {})
+    for trans in network.sampling_transitions:
+        ensembles = trans.ensembles + ms_outer_ensembles
+        if network.ms_outer_objects is not None:
+            outer_lambdas = [outer.lambda_for_interface_set(trans.interfaces)
+                             for outer in network.ms_outer_objects
+                             if trans.interfaces in outer.interface_sets]
+        else:
+            outer_lambdas = []
+        try:
+            lambdas = trans.interfaces.lambdas + outer_lambdas
+        except TypeError:
+            # when trans.interfaces.lambdas is None (not a list)
+            raise RuntimeError(
+                "Can't create SRTIS bias: interface boundaries unknown")
+
+        bias += BiasEnsembleTable.ratios_from_dictionary(
+            {ens: trans.tcp(lambda_ens)
+             for (ens, lambda_ens) in zip(ensembles, lambdas)}
+        )
+
+    # now the MS-outers need to be adjusted based on the number of
+    # interface sets they connect
+    for outer in ms_outer_ensembles:
+        outer_id = bias.ensembles_to_ids[outer]
+        outer_count = len(network.special_ensembles['ms_outer'][outer])
+        for col in bias.dataframe.columns:
+            val_from_outer = bias.dataframe.loc[outer_id, col]
+            bias.dataframe.set_value(index=outer_id, col=col,
+                                     value=val_from_outer * outer_count)
+            val_to_outer = bias.dataframe.loc[col, outer_id]
+            bias.dataframe.set_value(index=col, col=outer_id,
+                                     value=val_to_outer / outer_count)
+    return bias
 

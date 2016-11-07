@@ -282,27 +282,6 @@ class ExpandSingle(ChainDict):
         self._post[key] = value
 
 
-class Transform(ChainDict):
-    """
-    Applies a transformation to the input keys
-    """
-    def __init__(self, transform):
-        """
-        transform : function
-            the function to be applied to all input keys on the underlying dicts
-        """
-        super(Transform, self).__init__()
-        self.transform = transform
-
-    def __getitem__(self, item):
-        return self._post[self.transform(item)]
-
-    __call__ = __getitem__
-
-    def __setitem__(self, key, value):
-        self._post[self.transform(key)] = value
-
-
 class Function(ChainDict):
     """
     Uses a regular function to evaluate given keys.

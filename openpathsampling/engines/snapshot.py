@@ -36,16 +36,19 @@ class BaseSnapshot(StorableObject):
         self.topology = topology
 
     def __eq__(self, other):
-        if isinstance(other, self.__class__):
-            return self is other
+        if self is other:
+            return True
+
+        if isinstance(other, BaseSnapshot):
+            return self.__uuid__ == other.__uuid__
 
         return NotImplemented
 
     def __ne__(self, other):
-        if isinstance(other, self.__class__):
-            return self is not other
+        return not self == other
 
-        return NotImplemented
+    def __hash__(self):
+        return hash(self.__uuid__)
 
     @property
     def reversed(self):
@@ -103,6 +106,17 @@ class BaseSnapshot(StorableObject):
         this = self.__class__.__new__(self.__class__)
         BaseSnapshot.__init__(this, topology=self.topology)
         return this
+
+    def copy_with_replacement(self, **kwargs):
+        cp = self.copy()  # this will copy all, but it is simple
+        for key, value in kwargs.iteritems():
+            if hasattr(cp, key):
+                setattr(cp, key, value)
+            else:
+                raise TypeError("copy_with_replacement() got an "
+                                "unexpected keyword argument '%s'" % key)
+
+        return cp
 
     def create_reversed(self):
         this = self.copy()

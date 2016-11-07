@@ -8,8 +8,8 @@ from test_helpers import (
 )
 
 import openpathsampling as paths
-from openpathsampling.analysis.move_scheme import MoveScheme, DefaultScheme
-from openpathsampling.analysis.move_strategy import *
+from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
+from openpathsampling.high_level.move_strategy import *
 from openpathsampling import VolumeFactory as vf
 
 import collections
@@ -46,8 +46,8 @@ class MoveStrategyTestSetup(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 

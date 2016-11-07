@@ -1,6 +1,6 @@
 package:
   name: openpathsampling-dev
-  version: "0.9.0"
+  version: "0.9.1"
 
 source:
 #  git_url: ../../.git
@@ -24,21 +24,16 @@ requirements:
     - netcdf4
     - openmm
     - openmmtools
+    - jupyter
     - pyyaml
     - mdtraj
     - svgwrite
     - networkx
+    - pyqt 4.11.4 py27_3
     - matplotlib
+    - ujson
 
 test:
-  requires:
-    - nose
-    - nose-timer
-    - python-coveralls
-    - msmbuilder
-    - pyemma
-    - ipynbtest
-
   imports:
     - openpathsampling
 

@@ -254,7 +254,7 @@ class GenericVolumeInterfaceSet(InterfaceSet):
 
 
 class VolumeInterfaceSet(GenericVolumeInterfaceSet):
-    """InterfaceSet based on CVRangeVolume.
+    """InterfaceSet based on CVDefinedVolume.
 
     Parameters
     ----------
@@ -268,7 +268,7 @@ class VolumeInterfaceSet(GenericVolumeInterfaceSet):
         output volumes will be intersected (`&`) with this.
     """
     def __init__(self, cv, minvals, maxvals, intersect_with=None):
-        volume_func = lambda minv, maxv: paths.CVRangeVolume(cv, minv, maxv)
+        volume_func = lambda minv, maxv: paths.CVDefinedVolume(cv, minv, maxv)
         super(VolumeInterfaceSet, self).__init__(cv, minvals, maxvals,
                                                  intersect_with,
                                                  volume_func)
@@ -277,7 +277,7 @@ class VolumeInterfaceSet(GenericVolumeInterfaceSet):
     def from_dict(dct):
         interface_set = VolumeInterfaceSet.__new__(VolumeInterfaceSet)
         interface_set._load_from_dict(dct)
-        volume_func = lambda minv, maxv: paths.CVRangeVolume(
+        volume_func = lambda minv, maxv: paths.CVDefinedVolume(
             interface_set.cv, minv, maxv
         )
         super(InterfaceSet, interface_set).__init__()
@@ -286,7 +286,7 @@ class VolumeInterfaceSet(GenericVolumeInterfaceSet):
 
 
 class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
-    """InterfaceSet based on CVRangeVolumePeriodic.
+    """InterfaceSet based on PeriodicCVDefinedVolume.
 
     Parameters
     ----------
@@ -305,7 +305,7 @@ class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
     """
     def __init__(self, cv, minvals, maxvals, period_min=None,
                  period_max=None, intersect_with=None):
-        volume_func = lambda minv, maxv: paths.CVRangeVolumePeriodic(
+        volume_func = lambda minv, maxv: paths.PeriodicCVDefinedVolume(
             cv, minv, maxv, period_min, period_max
         )
         self.period_min = period_min
@@ -329,7 +329,7 @@ class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
         interface_set._load_from_dict(dct)
         interface_set.period_min = dct['period_min']
         interface_set.period_max = dct['period_max']
-        volume_func = lambda minv, maxv: paths.CVRangeVolumePeriodic(
+        volume_func = lambda minv, maxv: paths.PeriodicCVDefinedVolume(
             interface_set.cv, minv, maxv, self.period_min, self.period_max
         )
         super(InterfaceSet, interface_set).__init__()

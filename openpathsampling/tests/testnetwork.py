@@ -11,7 +11,7 @@ from test_helpers import (
 import openpathsampling as paths
 
 import openpathsampling.engines.toy as peng
-from openpathsampling.analysis.network import *
+from openpathsampling.high_level.network import *
 from openpathsampling import VolumeFactory as vf
 
 import logging
@@ -25,9 +25,9 @@ class testMultipleStateTIS(object):
     # generic class to set up states and ifaces
     def setup(self):
         xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
-        self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
+        self.stateA = paths.CVDefinedVolume(xval, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(xval, -0.1, 0.1)
+        self.stateC = paths.CVDefinedVolume(xval, 0.5, float("inf"))
 
         ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
                                            [-0.5, -0.4, -0.3])
@@ -95,7 +95,7 @@ class testMSTISNetwork(testMultipleStateTIS):
         ifacesC = self.ifacesC[:-1]
 
         ms_outer_info = [
-            (iface, paths.CVRangeVolume(self.xval, minv, maxv))
+            (iface, paths.CVDefinedVolume(self.xval, minv, maxv))
             for (iface, minv, maxv) in [(ifacesA, float("-inf"), -0.3),
                                         (ifacesB, -0.2, 0.2),
                                         (ifacesC, 0.5, float("inf"))]
@@ -321,9 +321,9 @@ class testTPSNetwork(object):
     def setup(self):
         from test_helpers import CallIdentity
         xval = paths.FunctionCV("xval", lambda snap: snap.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(xval, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(xval, -0.1, 0.1)
-        self.stateC = paths.CVRangeVolume(xval, 0.5, float("inf"))
+        self.stateA = paths.CVDefinedVolume(xval, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(xval, -0.1, 0.1)
+        self.stateC = paths.CVDefinedVolume(xval, 0.5, float("inf"))
         self.states = [self.stateA, self.stateB, self.stateC]
         self.traj = {}
         self.traj['AA'] = make_1d_traj([-0.51, -0.49, -0.49, -0.52])

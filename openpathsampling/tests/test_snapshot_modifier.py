@@ -8,6 +8,10 @@ import openpathsampling as paths
 import openpathsampling.engines as peng
 import numpy as np
 
+import openmmtools as omt
+import simtk.unit as u
+import openpathsampling.engines.openmm as omm_engine
+
 from openpathsampling.snapshot_modifier import *
 
 import logging
@@ -170,3 +174,50 @@ class testRandomizeVelocities(object):
                                   self.snap_2x3D.velocities[1])
         for val in new_2x3D.velocities[0]:
             assert_not_equal(val, 0.0)
+
+    def test_with_openmm_snapshot(self):
+        # note: this is only a smoke test; correctness depends on OpenMM's
+        # tests of its constraint approaches.
+        test_system = omt.testsystems.AlanineDipeptideVacuum()
+        template = omm_engine.snapshot_from_testsystem(test_system)
+        engine = omm_engine.Engine(
+            topology=template.topology,
+            system=test_system.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        beta = 1.0 / (300.0 * u.kelvin * u.BOLTZMANN_CONSTANT_kB)
+        
+        # when the engine doesn't have an existing snapshot
+        randomizer = RandomVelocities(beta=beta, engine=engine)
+        new_snap = randomizer(template)
+        # coordinates stayed the same
+        assert_array_almost_equal(template.coordinates,
+                                  new_snap.coordinates)
+        # velocities changed
+        assert_equal(np.isclose(template.velocities,
+                                new_snap.velocities).all(),
+                     False)
+        engine.generate(new_snap, [lambda x, foo: len(x) <= 4])
+
+        # when the engine does have an existing snapshot
+        zeros = np.zeros((engine.n_atoms, engine.n_spatial))
+        zero_snap = paths.engines.openmm.Snapshot.construct(
+            coordinates=zeros * u.nanometer,
+            velocities=zeros * u.nanometer / u.picosecond,
+            box_vectors=template.box_vectors,
+            engine=engine
+        )
+        engine.current_snapshot = zero_snap
+        randomizer = RandomVelocities(beta=beta, engine=engine)
+        new_snap = randomizer(template)
+        # coordinates stayed the same
+        assert_array_almost_equal(template.coordinates,
+                                  new_snap.coordinates)
+        # velocities changed
+        assert_equal(np.isclose(template.velocities,
+                                new_snap.velocities).all(),
+                     False)
+        # internal snapshot unchanged
+        assert_equal(engine.current_snapshot, zero_snap)
+        engine.generate(new_snap, [lambda x, foo: len(x) <= 4])
+

@@ -2,6 +2,7 @@ python
 numpy
 scipy
 pandas
+jupyter
 netcdf4
 openmm
 openmmtools
@@ -10,3 +11,5 @@ mdtraj
 svgwrite
 networkx
 matplotlib
+ujson
+pyqt=4

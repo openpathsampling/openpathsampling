@@ -8,12 +8,14 @@ import copy
 
 import openpathsampling as paths
 from openpathsampling import VolumeFactory as vf
-from openpathsampling.analysis.move_scheme import *
-from openpathsampling.analysis.move_strategy import (
+from openpathsampling.high_level.move_scheme import *
+from openpathsampling.high_level.move_strategy import (
     levels,
     MoveStrategy, OneWayShootingStrategy, NearestNeighborRepExStrategy,
     OrganizeByMoveGroupStrategy, AllSetRepExStrategy
 )
+
+import openpathsampling.high_level.move_strategy as strategies
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -25,8 +27,8 @@ class testMoveScheme(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
@@ -361,8 +363,8 @@ class testDefaultScheme(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
@@ -452,7 +454,6 @@ class testDefaultScheme(object):
             len(root.movers[name_dict['MinusChooser']].movers), 2
         )
 
-
     def test_default_sanity(self):
         scheme = DefaultScheme(self.network)
         root = scheme.move_decision_tree()
@@ -478,7 +479,6 @@ class testDefaultScheme(object):
         for group in scheme.movers.values():
             for mover in group:
                 assert_equal(scheme.balance_partners[mover], [mover])
-
 
     def test_default_choice_probability(self):
         scheme = DefaultScheme(self.network)
@@ -517,6 +517,24 @@ class testDefaultScheme(object):
 
         all_trajs = [traj1, traj2, traj3]
 
+        traj1r = traj1.reversed
+        traj2r = traj2.reversed
+        traj3r = traj3.reversed
+
+        def assert_init_cond(sample_set, ensembles, expected):
+            # helper to check the results. Expected is in the form
+            # of a list of resulting trajectories
+            # ens is the list of ensembles to be tested in order
+
+            sample_set.sanity_check()
+
+            assert_equal(len(sample_set), len(expected))
+
+            for ensemble, traj in zip(ensembles, expected):
+                # print ensemble.name, sample_set[ensemble].trajectory.xyz[:,0,0], traj.xyz[:, 0,0],
+                # print hex(id(traj)), hex(id(sample_set[ensemble].trajectory.xyz[:,0,0]))
+                assert_equal(sample_set[ensemble].trajectory, traj)
+
         transAB = transBA = None
         for trans in self.network.sampling_transitions:
             if trans.stateA == self.stateA and trans.stateB == self.stateB:
@@ -525,53 +543,149 @@ class testDefaultScheme(object):
                 transBA = trans
             else:
                 raise RuntimeWarning("That's a weird transition!")
+
         ms_outer_ens = self.network.special_ensembles['ms_outer'].keys()[0]
 
-        init_cond_1 = scheme.initial_conditions_from_trajectories(
-            trajectories=all_trajs, avoid_reuse=False
+        ensembles = transAB.ensembles + [ms_outer_ens] + transBA.ensembles
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=[],
+            reuse_strategy='all',
+            strategies=['get']
         )
-        init_cond_1.sanity_check()
-        assert_equal(len(init_cond_1), 7)
-        assert_equal(init_cond_1[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(init_cond_1[transAB.ensembles[1]].trajectory, traj1)
-        assert_equal(init_cond_1[transAB.ensembles[2]].trajectory, traj2)
-        for ens in transBA.ensembles:
-            assert_equal(init_cond_1[ens].trajectory, traj3.reversed)
-        assert_equal(init_cond_1[ms_outer_ens].trajectory, traj3)
 
-        init_cond_2 = scheme.initial_conditions_from_trajectories(
-            trajectories=all_trajs, avoid_reuse=True
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj1, traj1, traj2, traj3]
         )
-        init_cond_2.sanity_check()
-        assert_equal(len(init_cond_2), 7)
-        assert_equal(init_cond_2[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(init_cond_2[transAB.ensembles[1]].trajectory, traj2)
-        assert_equal(init_cond_2[transAB.ensembles[2]].trajectory, traj3)
-        for ens in transBA.ensembles:
-            assert_equal(init_cond_2[ens].trajectory, traj3.reversed)
-        assert_equal(init_cond_2[ms_outer_ens].trajectory, traj3)
 
-        init_cond_3 = scheme.initial_conditions_from_trajectories([traj1])
-        init_cond_3.sanity_check()
-        assert_equal(len(init_cond_3), 2)
-        assert_equal(init_cond_3[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(init_cond_3[transAB.ensembles[1]].trajectory, traj1)
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror'],
+            reuse_strategy='all',
+            strategies=['get']
+        )
 
-        init_cond_4 = scheme.initial_conditions_from_trajectories([traj2],
-                                                                  init_cond_3)
-        init_cond_4.sanity_check()
-        assert_equal(len(init_cond_4), 3)
-        assert_equal(init_cond_4[transAB.ensembles[0]].trajectory, traj1)
-        assert_equal(init_cond_4[transAB.ensembles[1]].trajectory, traj1)
-        assert_equal(init_cond_4[transAB.ensembles[2]].trajectory, traj2)
+        assert_init_cond(
+            init_cond, ensembles,
+            [traj1, traj1, traj2] + [traj3] + [traj3r] * 3
+        )
 
-        init_cond_5 = scheme.initial_conditions_from_trajectories(traj3)
-        init_cond_5.sanity_check()
-        assert_equal(len(init_cond_5), 7)
-        for ens in transAB.ensembles:
-            assert_equal(init_cond_5[ens].trajectory, traj3)
-        for ens in transBA.ensembles:
-            assert_equal(init_cond_5[ens].trajectory, traj3.reversed)
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror', 'sort-shortest'],
+            strategies=['get'],
+            reuse_strategy='all'
+        )
+        assert_init_cond(
+            init_cond, ensembles,
+            [traj1, traj1, traj3] + [traj3] + [traj3r] * 3
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=[],
+            reuse_strategy='avoid',
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj1, traj2, traj3, traj3]
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror'],
+            reuse_strategy='avoid',
+            strategies=['get']
+        )
+
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+
+        for ensemble, traj in zip(ensembles[:3], [traj1, traj2, traj3]):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+        for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+
+        # because of the way the scheme ensembles are creating involving a
+        # set, the order in which the ensemble are created changes.
+        # in some cases traj3 is used and hence avoided in the outer
+        # in some cases traj3r, but both are fine.
+        try:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+        except AssertionError:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=all_trajs,
+            preconditions=['mirror', 'sort-shortest'],
+            reuse_strategy='avoid',
+            strategies=['get']
+        )
+        init_cond.sanity_check()
+        assert_equal(len(init_cond), 7)
+
+        for ensemble, traj in zip(ensembles[:3], [traj1, traj1r, traj3]):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+        for ensemble, traj in zip(ensembles[4:], [traj3r] * 3):
+            assert_equal(init_cond[ensemble].trajectory, traj)
+
+        try:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3)
+        except AssertionError:
+            assert_equal(init_cond[ensembles[3]].trajectory, traj3r)
+
+        # this one avoids reversed copies
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj1],
+            preconditions=[],
+            strategies=['get']
+        )
+        assert_init_cond(
+            init_cond,
+            ensembles[:2],
+            [traj1, traj1]
+        )
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=traj2,
+            sample_set=init_cond,
+            preconditions=[],
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:3],
+            [traj1, traj1, traj2]
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj3],
+            preconditions=[],
+            strategies=['get']
+        )
+
+        assert_init_cond(
+            init_cond,
+            ensembles[:4],
+            [traj3] * 4
+        )
+
+        init_cond = scheme.initial_conditions_from_trajectories(
+            trajectories=[traj3],
+            preconditions=['mirror'],
+            strategies=['get']
+        )
+        assert_init_cond(
+            init_cond,
+            ensembles,
+            [traj3] * 4 + [traj3r] * 3
+        )
 
     def test_check_initial_conditions(self):
         scheme = DefaultScheme(self.network)
@@ -625,8 +739,8 @@ class testLockedMoveScheme(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
@@ -687,8 +801,8 @@ class testOneWayShootingMoveScheme(object):
     def setup(self):
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(cvA, float("-inf"), -0.5)
-        self.stateB = paths.CVRangeVolume(cvB, float("-inf"), -0.5)
+        self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
                                                [-0.5, -0.3, -0.1])
         interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 

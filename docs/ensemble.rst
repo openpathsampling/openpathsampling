@@ -2,8 +2,8 @@
 
 .. currentmodule:: openpathsampling.ensemble
 
-Ensemble Functions
-==================
+Ensembles API
+=============
 
 The concept of the path ensemble, the (appropriately weighted) set of
 trajectories satisfying particular conditions, is at the heart of path
@@ -53,12 +53,9 @@ Set-based Ensemble combinations
 .. autosummary::
    :toctree: api/generated/
 
+   EnsembleCombination
    IntersectionEnsemble
    UnionEnsemble
-   SymmetricDifferenceEnsemble
-   RelativeComplementEnsemble
-   EnsembleCombination
-   NegatedEnsemble
 
 
 Length specific Ensembles

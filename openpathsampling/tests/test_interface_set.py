@@ -113,7 +113,7 @@ class testVolumeInterfaceSet(object):
 
     def test_new_interface(self):
         new_iface = self.increasing_set.new_interface(0.25)
-        expected = paths.CVRangeVolume(self.cv, float("-inf"), 0.25)
+        expected = paths.CVDefinedVolume(self.cv, float("-inf"), 0.25)
         assert_equal(expected, new_iface)
 
     @raises(TypeError)
@@ -162,7 +162,7 @@ class testPeriodicVolumeInterfaceSet(object):
 
     def test_new_interface(self):
         new_iface = self.increasing_set.new_interface(-140)
-        expected = paths.CVRangeVolumePeriodic(self.cv, 0.0, -140, -180, 180)
+        expected = paths.PeriodicCVDefinedVolume(self.cv, 0.0, -140, -180, 180)
         assert_equal(new_iface, expected)
     
     def test_storage(self):

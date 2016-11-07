@@ -27,9 +27,9 @@ class testFullBootstrapping(object):
     def setup(self):
         self.cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
         cv_neg = paths.FunctionCV("Neg", lambda snap: -snap.xyz[0][0])
-        self.stateA = paths.CVRangeVolume(self.cv, -1.0, 0.0)
-        self.stateB = paths.CVRangeVolume(self.cv, 1.0, 2.0)
-        self.stateC = paths.CVRangeVolume(self.cv, 3.0, 4.0)
+        self.stateA = paths.CVDefinedVolume(self.cv, -1.0, 0.0)
+        self.stateB = paths.CVDefinedVolume(self.cv, 1.0, 2.0)
+        self.stateC = paths.CVDefinedVolume(self.cv, 3.0, 4.0)
         interfacesAB = paths.VolumeInterfaceSet(
             self.cv, -1.0, [0.0, 0.2, 0.4]
         )
@@ -111,7 +111,7 @@ class testFullBootstrapping(object):
             transition=self.tisAB,
             snapshot=self.snapA,
             engine=engine,
-            extra_interfaces=[paths.CVRangeVolume(self.cv, -1.0, 0.6)]
+            extra_interfaces=[paths.CVDefinedVolume(self.cv, -1.0, 0.6)]
         )
         bootstrap.output_stream = open(os.devnull, "w")
         gs = bootstrap.run()
@@ -172,8 +172,8 @@ class testCommittorSimulation(object):
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
         cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
-        self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
-        self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
+        self.left = paths.CVDefinedVolume(cv, float("-inf"), -1.0)
+        self.right = paths.CVDefinedVolume(cv, 1.0, float("inf"))
         self.state_labels = {"Left" : self.left,
                              "Right" : self.right,
                              "None" : ~(self.left | self.right)}
@@ -190,6 +190,7 @@ class testCommittorSimulation(object):
                                               states=[self.left, self.right],
                                               randomizer=randomizer,
                                               initial_snapshots=self.snap0)
+        self.simulation.output_stream = open(os.devnull, 'w')
 
     def teardown(self):
         if os.path.isfile(self.filename):
@@ -345,10 +346,10 @@ class testDirectSimulation(object):
                                    engine=self.engine)
         cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.cv = cv
-        self.center = paths.CVRangeVolume(cv, -0.2, 0.2)
-        self.interface = paths.CVRangeVolume(cv, -0.3, 0.3)
-        self.outside = paths.CVRangeVolume(cv, 0.6, 0.9)
-        self.extra = paths.CVRangeVolume(cv, -1.5, -0.9)
+        self.center = paths.CVDefinedVolume(cv, -0.2, 0.2)
+        self.interface = paths.CVDefinedVolume(cv, -0.3, 0.3)
+        self.outside = paths.CVDefinedVolume(cv, 0.6, 0.9)
+        self.extra = paths.CVDefinedVolume(cv, -1.5, -0.9)
         self.flux_pairs = [(self.center, self.interface)]
         self.sim = DirectSimulation(storage=None,
                                     engine=self.engine,
@@ -403,8 +404,8 @@ class testDirectSimulation(object):
                                         test_matrix[i][j])
 
     def test_fluxes(self):
-        left_interface = paths.CVRangeVolume(self.cv, -0.3, float("inf"))
-        right_interface = paths.CVRangeVolume(self.cv, float("-inf"), 0.3)
+        left_interface = paths.CVDefinedVolume(self.cv, -0.3, float("inf"))
+        right_interface = paths.CVDefinedVolume(self.cv, float("-inf"), 0.3)
         sim = DirectSimulation(storage=None,
                                engine=self.engine,
                                states=[self.center, self.outside],
@@ -438,10 +439,10 @@ class testDirectSimulation(object):
         cv1 = self.cv
         cv2 = paths.FunctionCV("abs_sin",
                                lambda snap : np.abs(np.sin(snap.xyz[0][0])))
-        state = paths.CVRangeVolume(cv1, -np.pi/8.0, np.pi/8.0)
-        other_state = paths.CVRangeVolume(cv1, -5.0/8.0*np.pi, -3.0/8.0*np.pi)
-        alpha = paths.CVRangeVolume(cv1, float("-inf"), 3.0/8.0*np.pi)
-        beta = paths.CVRangeVolume(cv2, float("-inf"), np.sqrt(2)/2.0)
+        state = paths.CVDefinedVolume(cv1, -np.pi/8.0, np.pi/8.0)
+        other_state = paths.CVDefinedVolume(cv1, -5.0/8.0*np.pi, -3.0/8.0*np.pi)
+        alpha = paths.CVDefinedVolume(cv1, float("-inf"), 3.0/8.0*np.pi)
+        beta = paths.CVDefinedVolume(cv2, float("-inf"), np.sqrt(2)/2.0)
         # approx     alpha: x < 1.17   beta: abs(sin(x)) < 0.70
         S = 0              # cv1 =  0.00; cv2 = 0.00
         I = np.pi/5.0      # cv1 =  0.63; cv2 = 0.59

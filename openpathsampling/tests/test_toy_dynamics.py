@@ -203,11 +203,15 @@ class testToyEngine(object):
 
     def test_generate(self):
         self.sim.initialized = True
-        traj = self.sim.generate(self.sim.current_snapshot, [true_func])
-        assert_equal(len(traj), self.sim.n_frames_max)
+        try:
+            traj = self.sim.generate(self.sim.current_snapshot, [true_func])
+        except paths.engines.EngineMaxLengthError as e:
+            traj = e.last_trajectory
+            assert_equal(len(traj), self.sim.n_frames_max)
+        else:
+            raise RuntimeError('Did not raise MaxLength Error')
 
     def test_generate_n_frames(self):
-        n_frames = 3
         self.sim.initialized = True
         ens = paths.LengthEnsemble(4) # first snap plus n_frames
         orig = self.sim.current_snapshot.copy()
@@ -224,13 +228,11 @@ class testToyEngine(object):
             assert_items_equal(s1.coordinates[0], s2.coordinates[0])
             assert_items_equal(s1.velocities[0], s2.velocities[0])
 
-
     def test_start_with_snapshot(self):
         snap = toy.Snapshot(coordinates=np.array([1,2]),
                         velocities=np.array([3,4]))
         self.sim.start(snapshot=snap)
         self.sim.stop([snap])
-
 
 
 # === TESTS FOR TOY INTEGRATORS ===========================================
@@ -281,7 +283,8 @@ class testLeapfrogVerletIntegrator(object):
     def test_step(self):
         # no assertions since the tests of position/momentum updates should
         # handle that... this is just to make sure we run
-        self.sim.integ.step(self.sim, 2)
+        self.sim.integ.step(self.sim)
+        self.sim.integ.step(self.sim)
 
 
 

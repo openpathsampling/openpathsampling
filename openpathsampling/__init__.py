@@ -30,15 +30,16 @@ except ImportError:  # pragma: no cover
     isrelease = str(ops_setup.preferences['released'])
         
         
-from analysis.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme, OneWayShootingMoveScheme
+from high_level.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
+    OneWayShootingMoveScheme
 )
 
-from analysis.tis_analysis import (
+from high_level.transition import (
     TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
 )
 
-from analysis.network import (
+from high_level.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
     FixedLengthTPSNetwork
 )
@@ -55,13 +56,14 @@ from analysis.shooting_point_analysis import (
     ShootingPointAnalysis, SnapshotByCoordinateDict
 )
 
-from analysis.single_trajectory_analysis import (
-    SingleTrajectoryAnalysis,
+from analysis.trajectory_transition_analysis import (
+    TrajectoryTransitionAnalysis,
     TrajectorySegmentContainer
 )
 
 from bias_function import (
-    BiasFunction, BiasLookupFunction, BiasEnsembleTable
+    BiasFunction, BiasLookupFunction, BiasEnsembleTable,
+    SRTISBiasFromNetwork
 )
 
 from collectivevariable import (
@@ -78,7 +80,6 @@ from ensemble import (
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
     ReversedTrajectoryEnsemble, SequentialEnsemble, VolumeEnsemble,
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
-    SymmetricDifferenceEnsemble, RelativeComplementEnsemble,
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
     OptionalEnsemble, join_ensembles
 )
@@ -89,17 +90,18 @@ from high_level.interface_set import (
 
 from high_level.ms_outer_interface import MSOuterTISInterface
 
-from live_visualization import LiveVisualization
+from step_visualizer_2D import StepVisualizer2D
 
-from pathmovechange import (
-    EmptyPathMoveChange, ConditionalSequentialPathMoveChange,
-    PathMoveChange, PartialAcceptanceSequentialPathMoveChange,
-    RandomChoicePathMoveChange, SamplePathMoveChange,
-    SequentialPathMoveChange, KeepLastSamplePathMoveChange,
-    FilterSamplesPathMoveChange,
-    PathSimulatorPathMoveChange, AcceptedSamplePathMoveChange,
-    RejectedSamplePathMoveChange, SubPathMoveChange,
-    FilterByEnsemblePathMoveChange
+from movechange import (
+    EmptyMoveChange, ConditionalSequentialMoveChange,
+    MoveChange, PartialAcceptanceSequentialMoveChange,
+    RandomChoiceMoveChange, SampleMoveChange,
+    SequentialMoveChange, KeepLastSampleMoveChange,
+    FilterSamplesMoveChange,
+    PathSimulatorMoveChange, AcceptedSampleMoveChange,
+    RejectedSampleMoveChange, SubMoveChange,
+    FilterByEnsembleMoveChange, RejectedNaNSampleMoveChange,
+    RejectedMaxLengthSampleMoveChange
 )
 
 from pathmover import Details, MoveDetails, SampleDetails
@@ -136,10 +138,14 @@ from storage.storage import Storage, AnalysisStorage
 
 from volume import (
     Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
-    EmptyVolume, FullVolume, CVRangeVolume, CVRangeVolumePeriodic,
+    EmptyVolume, FullVolume, CVDefinedVolume, PeriodicCVDefinedVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )
+
+from high_level import move_strategy as strategies
+
+import openpathsampling.numerics as numerics
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
 import openpathsampling.engines.openmm as openmm
@@ -154,3 +160,6 @@ def git_HEAD():  # pragma: no cover
     # chops the newline at the end
 
 
+import os.path
+
+resources_directory = os.path.join(os.path.dirname(__file__), 'resources')

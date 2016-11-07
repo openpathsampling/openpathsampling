@@ -18,7 +18,7 @@ the same order parameter) or at the ensemble level (e.g., for
 `LengthEnsemble`s).
 
 All of these functions return results which can then be translated into a
-volume according to the rules of the CVRangeVolume._lrange_to_Volume
+volume according to the rules of the CVDefinedVolume._lrange_to_Volume
 function:
 
           Return Value  | Volume generated
@@ -26,9 +26,9 @@ function:
                      1  | `self` for volume A
                     -1  | `FullVolume`
                   None  | `EmptyVolume`
- list with one 2-tuple  | `CVRangeVolume` with range given by 2-tuple
+ list with one 2-tuple  | `CVDefinedVolume` with range given by 2-tuple
 list with two 2-tuples  | `VolumeCombination` of or'd together 
-                        | `CVRangeVolume`s with ranges given by the 2-tuples
+                        | `CVDefinedVolume`s with ranges given by the 2-tuples
 ------------------------+--------------------------------------------------
 
 

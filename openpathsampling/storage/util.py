@@ -43,8 +43,8 @@ def split_md_storage(filename):
     for storage_name in [
         'steps', 'pathmovers', 'topologies', 'networks', 'details',
         'shootingpointselectors', 'engines', 'volumes', 'samples',
-        'samplesets', 'ensembles', 'transitions', 'pathmovechanges',
-        'pathsimulators', 'cvs'
+        'samplesets', 'ensembles', 'transitions', 'movechanges',
+        'pathsimulators', 'cvs', 'interfacesets', 'msouters'
     ]:
         map(
             getattr(st_main, storage_name).save,
@@ -83,8 +83,8 @@ def join_md_storage(filename_main, filename_data=None):
         'steps',
         'pathmovers', 'topologies', 'networks', 'details', 'trajectories',
         'shootingpointselectors', 'engines', 'volumes',
-        'samplesets', 'ensembles', 'transitions', 'pathmovechanges',
-        'samples', 'pathsimulators', 'cvs'
+        'samplesets', 'ensembles', 'transitions', 'movechanges',
+        'samples', 'pathsimulators', 'cvs', 'interfacesets', 'msouters'
     ]:
         map(
             getattr(st_to, storage_name).save,

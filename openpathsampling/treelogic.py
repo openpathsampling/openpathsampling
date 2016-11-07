@@ -54,8 +54,8 @@ class TreeMixin(object):
 
         Returns
         -------
-        PathMoveChange
-            the n-th subchange if this PathMoveChange uses underlying changes
+        MoveChange
+            the n-th subchange if this MoveChange uses underlying changes
         """
         if type(item) is int:
             return self._subnodes[item]
@@ -97,7 +97,7 @@ class TreeMixin(object):
         Returns
         -------
         int
-            the number of (Sub)PathMoveChanges in this PathMoveChange
+            the number of (Sub)MoveChanges in this MoveChange
 
         """
         if self._len is None:

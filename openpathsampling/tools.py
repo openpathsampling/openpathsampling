@@ -3,20 +3,49 @@ import sys
 __author__ = 'Jan-Hendrik Prinz'
 
 
+try:
+    import IPython
+    import IPython.display
+
+    def in_ipynb():
+        try:
+            ipython = get_ipython()
+
+            import IPython.terminal.interactiveshell
+            import ipykernel.zmqshell
+
+            if isinstance(ipython, IPython.terminal.interactiveshell.TerminalInteractiveShell):
+                # we are running inside an IPYTHON console
+                return False
+            elif isinstance(ipython, ipykernel.zmqshell.ZMQInteractiveShell):
+                # we run in an IPYTHON notebook
+                return True
+            else:
+                return False
+        except NameError:
+            # No IPYTHON
+            return False
+        except:
+            # No idea, but we should not fail because of that
+            return False
+
+    is_ipynb = in_ipynb()
+
+except ImportError:
+    is_ipynb = False
+
+
 def refresh_output(output_str, print_anyway=True, refresh=True,
-                   output_stream=None):
+                   output_stream=None, ipynb_display_only=False):
     if output_stream is None:
         output_stream = sys.stdout
-    try:
-        import IPython.display
-    except ImportError:
-        if print_anyway:
-            output_stream.write(output_str)
-    else:
+
+    if is_ipynb or not ipynb_display_only or print_anyway:
         if refresh:
             IPython.display.clear_output(wait=True)
+
         output_stream.write(output_str)
-    sys.stdout.flush()
+        sys.stdout.flush()
 
 
 # a little code snippet to wrap strings around for nicer output

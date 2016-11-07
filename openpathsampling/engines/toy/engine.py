@@ -5,17 +5,42 @@ from snapshot import ToySnapshot as Snapshot
 
 
 class ToyEngine(DynamicsEngine):
-    """
-    The trick is that we have various "simulation" classes (either
-    generated directly as here, or subclassed for more complication
-    simulation objects as in OpenMM), but they all quack the same when it
-    comes to things the DynamicsEngine calls on them for
+    """Engine for toy models. Mostly used for 2D examples.
 
+    Parameters
+    ----------
+    options : dict
+        A dictionary providing additional settings. Keys can be
+
+            'integ' : :class:`.ToyIntegrator`
+                the integrator for this engine
+            'n_frames_max' : int
+                the maximum number of frames allowed for a returned
+                trajectory, default is 5000
+            'n_steps_per_frame' : int
+                number of integration steps per returned snapshot, default
+                is 10.
+
+    topology : :class:`.ToyTopology`
+        object which includes masses, potential energy surface, and the
+        dimensions n_atoms and n_spatial; plays a role similar to a topology
+        in molecular mechanics
+
+    Attributes
+    ----------
+    pes : :class:`.PES`
+        potential energy surface
+    mass : array-like
+        mass of each atom
+    snapshot_timestep : float
+        time step between reported snapshots
+    current_snapshot : :class:`.Snapshot`
+        the current state of the system, as a snapshot
     """
 
     base_snapshot_type = Snapshot
 
-    default_options = {
+    _default_options = {
         'integ': None,
         'n_frames_max': 5000,
         'n_steps_per_frame': 10
@@ -105,5 +130,6 @@ class ToyEngine(DynamicsEngine):
         self.velocities = vels[0]
 
     def generate_next_frame(self):
-        self.integ.step(self, self.n_steps_per_frame)
+        for i in range(self.n_steps_per_frame):
+            self.integ.step(sys=self)
         return self.current_snapshot

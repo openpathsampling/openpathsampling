@@ -8,7 +8,7 @@ import mdtraj as md
 import simtk.unit as u
 
 from openpathsampling.netcdfplus import StorableObject
-
+import openpathsampling as paths
 
 # ==============================================================================
 # TRAJECTORY
@@ -99,18 +99,6 @@ class Trajectory(list, StorableObject):
 
         return Trajectory([snap for snap in reversed(self)])
 
-    def prepend(self, snapshot):
-        """
-        Prepend a snapshot
-
-        Just convenience method to replace insert(0, snapshot)
-        """
-        self.insert(0, snapshot)
-        # And a generation of scientist-programmers who grew up learning
-        # "OPS trajectories are just Python lists" scream in pain when they
-        # find this after googling "python list.prepend not working".
-        # (Blame JHP. This was his doing.) ;)
-
     @property
     def n_snapshots(self):
         """
@@ -126,24 +114,7 @@ class Trajectory(list, StorableObject):
 
         See also
         --------
-        n_frames, len
-
-        """
-
-        return len(self)
-
-    @property
-    def n_frames(self):
-        """
-        Return the number of frames in the trajectory.
-
-        Returns
-        -------
-        length (int) - the number of frames in the trajectory
-
-        See also
-        --------
-        n_snapshots, len
+        len
 
         """
 
@@ -212,36 +183,6 @@ class Trajectory(list, StorableObject):
         else:
             return []
 
-    @property
-    def n_spatial(self):
-        if self.topology is None:
-            n_spatial = self[0].coordinates.shape[1]
-        else:
-            n_spatial = self.topology.n_spatial
-
-        return n_spatial
-
-    @property
-    def n_atoms(self):
-        """
-        Return the number of atoms in the trajectory in the current view. 
-        
-        Returns
-        -------        
-        n_atoms : int
-            number of atoms
-
-        Notes
-        -----        
-        If a trajectory has been subsetted then this returns only the number
-        of the view otherwise if equals the number of atoms in the snapshots
-        stored
-        
-        """
-
-        n_atoms = self[0].xyz.shape[0]
-        return n_atoms
-
     # ==========================================================================
     # LIST INHERITANCE FUNCTIONS
     # ==========================================================================
@@ -254,7 +195,12 @@ class Trajectory(list, StorableObject):
         return ret
 
     def __hash__(self):
-        return object.__hash__(self)
+        if len(self) == 0:
+            return hash(tuple())
+        else:
+            return hash(
+                (list.__getitem__(self, 0), len(self),
+                 list.__getitem__(self, -1)))
 
     def __getitem__(self, index):
         # Allow for numpy style selection using lists
@@ -560,12 +506,11 @@ class Trajectory(list, StorableObject):
             return [[self.index(s) for s in subtrj]
                     for subtrj in subtrajectories]
 
-
     # ==========================================================================
     # UTILITY FUNCTIONS
     # ==========================================================================
 
-    def md(self, topology=None):
+    def to_mdtraj(self, topology=None):
         """
         Construct a mdtraj.Trajectory object from the Trajectory itself
 
@@ -582,12 +527,15 @@ class Trajectory(list, StorableObject):
             the trajectory
         """
 
+
         if topology is None:
-            topology = self.topology.md
+            topology = self.topology.mdtraj
 
         output = self.xyz
 
-        return md.Trajectory(output, topology)
+        traj = md.Trajectory(output, topology)
+        traj.unitcell_vectors = self.box_vectors
+        return traj
 
     @property
     def topology(self):
@@ -609,3 +557,24 @@ class Trajectory(list, StorableObject):
             topology = self[0].topology
 
         return topology
+
+    @staticmethod
+    def _to_list_of_trajectories(trajectories):
+        if isinstance(trajectories, Trajectory):
+            trajectories = [trajectories]
+        elif isinstance(trajectories, paths.Sample):
+            trajectories = [trajectories.trajectory]
+        elif isinstance(trajectories, paths.SampleSet):
+            trajectories = [s.trajectory for s in trajectories]
+        elif isinstance(trajectories, list):
+            if len(trajectories) > 0:
+                trajectories = [
+                    obj.trajectory if isinstance(obj, paths.Sample) else obj
+                    for obj in trajectories
+                    ]
+        elif isinstance(trajectories, paths.BaseSnapshot):
+            return paths.Trajectory([trajectories])
+        elif isinstance(trajectories, paths.BaseSnapshot):
+            return paths.Trajectory([trajectories])
+
+        return trajectories

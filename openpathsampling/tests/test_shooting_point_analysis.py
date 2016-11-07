@@ -7,6 +7,7 @@ from test_helpers import make_1d_traj, data_filename
 import openpathsampling as paths
 import openpathsampling.engines as peng
 import numpy as np
+import os
 
 from openpathsampling.analysis.shooting_point_analysis import *
 
@@ -14,6 +15,11 @@ import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.engines').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.sample').setLevel(logging.CRITICAL)
+
 
 class testTransformedDict(object):
     def setup(self):
@@ -114,8 +120,8 @@ class testShootingPointAnalysis(object):
         }
         self.engine = toys.Engine(options=options, topology=topology)
         cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
-        self.left = paths.CVRangeVolume(cv, float("-inf"), -1.0)
-        self.right = paths.CVRangeVolume(cv, 1.0, float("inf"))
+        self.left = paths.CVDefinedVolume(cv, float("-inf"), -1.0)
+        self.right = paths.CVDefinedVolume(cv, 1.0, float("inf"))
 
         randomizer = paths.NoModification()
         self.filename = data_filename("shooting_analysis.nc")
@@ -129,6 +135,7 @@ class testShootingPointAnalysis(object):
             randomizer=randomizer,
             initial_snapshots=[self.snap0, self.snap1]
         )
+        self.simulation.output_stream = open(os.devnull, 'w')
         self.simulation.run(20)
         # set up the analysis object
         self.analyzer = ShootingPointAnalysis(self.storage.steps,
@@ -146,6 +153,46 @@ class testShootingPointAnalysis(object):
         assert_true(0 < self.analyzer[self.snap0][self.right] < 20)
         assert_true(0 < self.analyzer[self.snap1][self.left] < 20)
         assert_true(0 < self.analyzer[self.snap1][self.right] < 20)
+
+    def test_from_individual_runs(self):
+        runs = [(self.snap0, self.left),
+                (self.snap0, self.left),
+                (self.snap0, self.left),
+                (self.snap0, self.right),
+                (self.snap1, self.left),
+                (self.snap1, self.right),
+                (self.snap1, self.left),
+                (self.snap1, self.right)]
+        analyzer = ShootingPointAnalysis.from_individual_runs(runs)
+        assert_equal(analyzer[self.snap0][self.left], 3)
+        assert_equal(analyzer[self.snap0][self.right], 1)
+        assert_equal(analyzer[self.snap1][self.left], 2)
+        assert_equal(analyzer[self.snap1][self.right], 2)
+
+    def test_non_shooting_steps(self):
+        network = paths.TPSNetwork(self.left, self.right)
+        init_traj = make_1d_traj([-1.1, 0.0, 1.1])
+        ensemble = network.all_ensembles[0]
+        mover = paths.PathReversalMover(ensemble)
+        scheme = paths.LockedMoveScheme(mover, network)
+        init_conds=scheme.initial_conditions_from_trajectories([init_traj])
+        assert_equal(len(init_conds), 1)
+        self.storage.close()
+        self.storage = paths.Storage(self.filename, "w")
+        assert_equal(init_conds[ensemble].trajectory, init_traj)
+        sim = paths.PathSampling(storage=self.storage,
+                                 move_scheme=scheme,
+                                 sample_set=init_conds)
+        sim.output_stream = open(os.devnull, "w")
+        sim.run(1)
+        step0 = self.storage.steps[0]
+        step1 = self.storage.steps[1]
+
+        assert_equal(self.analyzer.step_key(step0), None)
+        assert_equal(self.analyzer.step_key(step1), None)
+
+        assert_equal(self.analyzer.analyze_single_step(step0), [])
+        assert_equal(self.analyzer.analyze_single_step(step1), [])
 
     def test_committor(self):
         committor_A = self.analyzer.committor(self.left)
@@ -182,23 +229,33 @@ class testShootingPointAnalysis(object):
             assert_true(np.isnan(hist[index]))
         for index in [0, 2]:
             assert_true(hist[index] > 0)
-        assert_equal(bins, input_bins)
+        assert_array_almost_equal(bins, input_bins)
 
     def test_committor_histogram_2d(self):
         rehash = lambda snap : (snap.xyz[0][0], 2 * snap.xyz[0][0])
         input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
-        hist, bins = self.analyzer.committor_histogram(rehash, self.left,
-                                                       input_bins)
+        hist, b_x, b_y = self.analyzer.committor_histogram(rehash, self.left,
+                                                           input_bins)
         assert_equal(hist.shape, (5,5))
         for i in range(5):
             for j in range(5):
                 if (i,j) in [(0, 0), (1, 2)]:
+                    pass
                     assert_true(hist[(i,j)] > 0)
                 else:
                     assert_true(np.isnan(hist[(i,j)]))
 
         # this may change later to bins[0]==bins[1]==input_bins
-        assert_equal(bins, input_bins) 
+        assert_array_almost_equal(input_bins, b_x)
+        assert_array_almost_equal(input_bins, b_y)
+
+    @raises(RuntimeError)
+    def test_committor_histogram_3d(self):
+        # only 1D and 2D are supported
+        rehash = lambda snap : (snap.xyz[0][0], 2 * snap.xyz[0][0], 0.0)
+        input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
+        hist, b_x, b_y = self.analyzer.committor_histogram(rehash, self.left,
+                                                           input_bins)
 
     def test_to_pandas(self):
         df1 = self.analyzer.to_pandas()

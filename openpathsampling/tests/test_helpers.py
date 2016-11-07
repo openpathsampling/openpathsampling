@@ -77,7 +77,7 @@ class MoverWithSignature(paths.PathMover):
         self._in_ensembles = input_ensembles
         self._out_ensembles = output_ensembles
 
-    def move(self, globalstate):
+    def move(self, sample_set):
         # need to implement a fake move or this class will be considered abstract
         pass
 
@@ -85,10 +85,8 @@ class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
         topology = Topology(n_atoms=1, n_spatial=1)
         engine = peng.tools.TopologyEngine(topology)
-        template = toys.Snapshot(engine=engine)
 
-        super(CalvinistDynamics, self).__init__(options={'n_frames_max' : 12},
-                                                template=template)
+        super(CalvinistDynamics, self).__init__(options={'n_frames_max': 12})
         self.predestination = make_1d_traj(coordinates=predestination,
                                            velocities=[1.0]*len(predestination),
                                            engine=engine

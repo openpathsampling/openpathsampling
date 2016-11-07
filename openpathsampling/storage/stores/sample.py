@@ -53,7 +53,7 @@ class SampleSetStore(VariableStore):
 
     def initialize(self):
         """
-        Initialize the associated storage to allow for sampleset storage
+        Initialize the associated storage to allow for sample_set storage
 
         """
         super(SampleSetStore, self).initialize()
@@ -62,10 +62,10 @@ class SampleSetStore(VariableStore):
             'samples',
             'obj.samples',
             dimensions='...',
-            description="sampleset[sampleset][frame] is the sample index "
-                        "(0..nspanshots-1) of frame 'frame' of sampleset "
-                        "'sampleset'.",
+            description="sample_set[sample_set][frame] is the sample index "
+                        "(0..nspanshots-1) of frame 'frame' of sample_set "
+                        "'sample_set'.",
             chunksizes=(1024,)
         )
 
-        self.create_variable('movepath', 'lazyobj.pathmovechanges')
+        self.create_variable('movepath', 'lazyobj.movechanges')
