@@ -64,6 +64,116 @@ class NetCDFPlus(netCDF4.Dataset):
         'uuid': str
     }
 
+    class ValueDelegateS(object):
+        """
+        Value delegate for objects that implement __getitem__ and __setitem__
+
+        It will basically just wrap values that are used in a dict like
+        structure with getter and setter function to allow easier conversion
+
+        delegate[x] is equivalent to delegate.getter(delegate.variable[x])
+
+        Attributes
+        ----------
+        variable : dict-like
+            the dict to be wrapped
+        getter : function
+            the function applied to results from running the __getitem__
+            on the variable
+        setter : function
+            the function applied to the value to be stored using __setitem__
+            on the variable
+        store : openpathsampling.netcdfplus.ObjectStore
+            a reference to an object store used for convenience in some cases
+
+        """
+
+        def __init__(self, variable, getter=None, setter=None, store=None):
+            self.variable = variable
+            self.store = store
+
+            if setter is None:
+                setter = lambda v: v
+            self.setter = setter
+
+            if getter is None:
+                getter = lambda v: v
+            self.getter = getter
+
+        def __setitem__(self, key, value):
+            self.variable[key] = self.setter(value)
+
+        def __getitem__(self, key):
+            return self.getter(self.variable[key])
+
+        def __getattr__(self, item):
+            return getattr(self.variable, item)
+
+        def __str__(self):
+            return str(self.variable)
+
+        def __repr__(self):
+            return repr(self.variable)
+
+        def __len__(self):
+            return len(self.variable)
+
+
+    class ValueDelegateG(object):
+        """
+        Value delegate for objects that implement __getitem__ and __setitem__
+
+        It will basically just wrap values that are used in a dict like
+        structure with getter and setter function to allow easier conversion
+
+        delegate[x] is equivalent to delegate.getter(delegate.variable[x])
+
+        Attributes
+        ----------
+        variable : dict-like
+            the dict to be wrapped
+        getter : function
+            the function applied to results from running the __getitem__
+            on the variable
+        setter : function
+            the function applied to the value to be stored using __setitem__
+            on the variable
+        store : openpathsampling.netcdfplus.ObjectStore
+            a reference to an object store used for convenience in some cases
+
+        """
+
+        def __init__(self, variable, getter=None, setter=None, store=None):
+            self.variable = variable
+            self.store = store
+
+            if setter is None:
+                setter = lambda v: v
+            self.setter = setter
+
+            if getter is None:
+                getter = lambda v: v
+            self.getter = getter
+
+        def __setitem__(self, key, value):
+            self.variable[key] = self.setter(value)
+
+        def __getitem__(self, key):
+            return self.getter(self.variable[key])
+
+        def __getattr__(self, item):
+            return getattr(self.variable, item)
+
+        def __str__(self):
+            return str(self.variable)
+
+        def __repr__(self):
+            return repr(self.variable)
+
+        def __len__(self):
+            return len(self.variable)
+
+
     class ValueDelegate(object):
         """
         Value delegate for objects that implement __getitem__ and __setitem__
@@ -117,6 +227,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         def __len__(self):
             return len(self.variable)
+
 
     @property
     def objects(self):
@@ -1004,8 +1115,19 @@ class NetCDFPlus(netCDF4.Dataset):
                     else:
                         getter = _get2(lambda v: v)
 
-            self.vars[var_name] = \
-                NetCDFPlus.ValueDelegate(var, getter, setter, store)
+            delegate = NetCDFPlus.ValueDelegate(var, getter, setter, store)
+
+            # this is a trick to speed up the s/getter. If we do not need
+            # to _cast_ because of python objects of units we can copy
+            # the s/getter of the original var which is still bound to the
+            # right object
+            if getter is None:
+                delegate.__getitem__ = var.__getitem__
+
+            if setter is None:
+                delegate.__setitem__ = var.__setitem__
+
+            self.vars[var_name] = delegate
 
         else:
             raise ValueError("Variable '%s' is already taken!" % var_name)

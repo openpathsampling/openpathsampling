@@ -7,6 +7,8 @@ from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, \
     LRUChunkLoadingCache
 import openpathsampling.engines as peng
 
+from openpathsampling.netcdfplus import with_timing_logging
+
 import logging
 from uuid import UUID
 
@@ -572,6 +574,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         self.load_indices()
 
+    @with_timing_logging
     def load_indices(self):
         if self.reference_by_uuid:
             for idx, uuid in enumerate(self.vars['uuid'][:]):
