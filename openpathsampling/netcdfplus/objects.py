@@ -1,7 +1,4 @@
 import logging
-import weakref
-
-import yaml
 from uuid import UUID
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
@@ -101,6 +98,8 @@ class ObjectStore(StorableNamedObject):
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
         'index', 'length', 'uuid'
     ]
+
+    default_store_chunk_size = 250
 
     class DictDelegator(object):
         def __init__(self, store, dct):
@@ -578,7 +577,7 @@ class ObjectStore(StorableNamedObject):
                 "json",
                 jsontype,
                 description='A json serialized version of the object',
-                chunksizes=tuple([10240])
+                chunksizes=tuple([65536])
             )
 
         if self.storage.reference_by_uuid:
@@ -586,7 +585,7 @@ class ObjectStore(StorableNamedObject):
             self.create_variable(
                 "uuid", 'uuid',
                 description='The uuid of the object',
-                chunksizes=tuple([10240])
+                chunksizes=tuple([65536])
             )
 
         self._created = True
@@ -657,14 +656,16 @@ class ObjectStore(StorableNamedObject):
         else:
             dimensions = tuple([self.prefix] + list(dimensions))
 
+        store_chunk_size = ObjectStore.default_store_chunk_size
+
         if chunksizes is None and len(dimensions) == 1:
-            chunksizes = (1, )
+            chunksizes = (store_chunk_size, )
         elif chunksizes is not None and dimensions[-1] == '...' \
                 and len(dimensions) == len(chunksizes) + 2:
-            chunksizes = tuple([1] + list(chunksizes))
+            chunksizes = tuple([store_chunk_size] + list(chunksizes))
         elif chunksizes is not None and dimensions[-1] != '...' \
                 and len(dimensions) == len(chunksizes) + 1:
-            chunksizes = tuple([1] + list(chunksizes))
+            chunksizes = tuple([store_chunk_size] + list(chunksizes))
 
         if self.dimension_prefix:
             dimensions = tuple(
