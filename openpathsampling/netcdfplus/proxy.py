@@ -158,7 +158,7 @@ def lazy_loading_attributes(*attributes):
 
         @functools.wraps(cls.__init__)
         def _init(self, *args, **kwargs):
-            self._lazy = dict()
+            self._lazy = {}
             _super_init(self, *args, **kwargs)
 
         cls.__init__ = _init

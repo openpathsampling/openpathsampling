@@ -6,8 +6,8 @@ class SampleStore(VariableStore):
     def __init__(self):
         super(SampleStore, self).__init__(
             Sample,
-            ['trajectory', 'ensemble', 'replica', 'parent',
-             'details', 'bias', 'mover']
+            ['replica', 'trajectory', 'ensemble', 'bias',
+             'details', 'parent', 'mover']
         )
 
     def by_ensemble(self, ensemble):

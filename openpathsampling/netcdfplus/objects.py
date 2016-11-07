@@ -1481,10 +1481,12 @@ class VariableStore(ObjectStore):
         if not part:
             return
 
+        var_names = self.content_class.args()[1:]
+
         if not self._cached_all:
             data = zip(*[
-                self.storage.variables[self.prefix + '_' + var][part]
-                for var in self.var_names
+                self.vars[var][part]
+                for var in var_names
             ])
 
             [self.add_to_cache(idx, v) for idx, v in zip(part, data)]
@@ -1492,6 +1494,46 @@ class VariableStore(ObjectStore):
             self._cached_all = True
 
     def add_to_cache(self, idx, data):
+        if idx not in self.cache:
+            # attr = {var: self.vars[var].getter(data[nn])
+            #         for nn, var in enumerate(self.var_names)}
+            obj = self.content_class(*data)
+            self._get_id(idx, obj)
+
+            self.index[obj] = idx
+            self.cache[idx] = obj
+
+
+    def cache_all2(self, part=None):
+        """Load all samples as fast as possible into the cache
+
+        Parameters
+        ----------
+        part : list of int or `None`
+            If `None` (default) all samples will be loaded. Otherwise the
+            list of indices in `part` will be loaded into the cache
+
+        """
+        if part is None:
+            part = range(len(self))
+        else:
+            part = sorted(list(set(list(part))))
+
+        if not part:
+            return
+
+        if not self._cached_all:
+            data = zip(*[
+                self.storage.variables[self.prefix + '_' + var][part]
+                for var in self.var_names
+                ])
+
+            [self.add_to_cache2(idx, v) for idx, v in zip(part, data)]
+
+            self._cached_all = True
+
+
+    def add_to_cache2(self, idx, data):
         if idx not in self.cache:
             attr = {var: self.vars[var].getter(data[nn])
                     for nn, var in enumerate(self.var_names)}

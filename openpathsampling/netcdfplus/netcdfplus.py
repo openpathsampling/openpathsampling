@@ -64,116 +64,6 @@ class NetCDFPlus(netCDF4.Dataset):
         'uuid': str
     }
 
-    class ValueDelegateS(object):
-        """
-        Value delegate for objects that implement __getitem__ and __setitem__
-
-        It will basically just wrap values that are used in a dict like
-        structure with getter and setter function to allow easier conversion
-
-        delegate[x] is equivalent to delegate.getter(delegate.variable[x])
-
-        Attributes
-        ----------
-        variable : dict-like
-            the dict to be wrapped
-        getter : function
-            the function applied to results from running the __getitem__
-            on the variable
-        setter : function
-            the function applied to the value to be stored using __setitem__
-            on the variable
-        store : openpathsampling.netcdfplus.ObjectStore
-            a reference to an object store used for convenience in some cases
-
-        """
-
-        def __init__(self, variable, getter=None, setter=None, store=None):
-            self.variable = variable
-            self.store = store
-
-            if setter is None:
-                setter = lambda v: v
-            self.setter = setter
-
-            if getter is None:
-                getter = lambda v: v
-            self.getter = getter
-
-        def __setitem__(self, key, value):
-            self.variable[key] = self.setter(value)
-
-        def __getitem__(self, key):
-            return self.getter(self.variable[key])
-
-        def __getattr__(self, item):
-            return getattr(self.variable, item)
-
-        def __str__(self):
-            return str(self.variable)
-
-        def __repr__(self):
-            return repr(self.variable)
-
-        def __len__(self):
-            return len(self.variable)
-
-
-    class ValueDelegateG(object):
-        """
-        Value delegate for objects that implement __getitem__ and __setitem__
-
-        It will basically just wrap values that are used in a dict like
-        structure with getter and setter function to allow easier conversion
-
-        delegate[x] is equivalent to delegate.getter(delegate.variable[x])
-
-        Attributes
-        ----------
-        variable : dict-like
-            the dict to be wrapped
-        getter : function
-            the function applied to results from running the __getitem__
-            on the variable
-        setter : function
-            the function applied to the value to be stored using __setitem__
-            on the variable
-        store : openpathsampling.netcdfplus.ObjectStore
-            a reference to an object store used for convenience in some cases
-
-        """
-
-        def __init__(self, variable, getter=None, setter=None, store=None):
-            self.variable = variable
-            self.store = store
-
-            if setter is None:
-                setter = lambda v: v
-            self.setter = setter
-
-            if getter is None:
-                getter = lambda v: v
-            self.getter = getter
-
-        def __setitem__(self, key, value):
-            self.variable[key] = self.setter(value)
-
-        def __getitem__(self, key):
-            return self.getter(self.variable[key])
-
-        def __getattr__(self, item):
-            return getattr(self.variable, item)
-
-        def __str__(self):
-            return str(self.variable)
-
-        def __repr__(self):
-            return repr(self.variable)
-
-        def __len__(self):
-            return len(self.variable)
-
-
     class ValueDelegate(object):
         """
         Value delegate for objects that implement __getitem__ and __setitem__
@@ -203,12 +93,16 @@ class NetCDFPlus(netCDF4.Dataset):
             self.store = store
 
             if setter is None:
+                # None should not be used
                 setter = lambda v: v
-            self.setter = setter
+                self.__setitem__ = variable.__setitem__
 
             if getter is None:
                 getter = lambda v: v
+                self.__getitem__ = variable.__getitem__
+
             self.getter = getter
+            self.setter = setter
 
         def __setitem__(self, key, value):
             self.variable[key] = self.setter(value)
@@ -890,6 +784,8 @@ class NetCDFPlus(netCDF4.Dataset):
                 v.base_cls is not base_type if hasattr(v, 'base_cls') else \
                 hasattr(v, '__iter__')
 
+            get_numpy_iterable = lambda v: isinstance(v, np.ndarray)
+
             set_is_iterable = lambda v: \
                 v.base_cls is not base_type if hasattr(v, 'base_cls') else \
                 hasattr(v, '__iter__')
@@ -941,8 +837,8 @@ class NetCDFPlus(netCDF4.Dataset):
             else:
                 getter = lambda v: [
                     None if w[0] == '-' else store.load(UUID(w))
-                    for w in to_uuid_chunks(v)
-                ] if get_is_iterable(v) else \
+                    for w in v
+                ] if get_numpy_iterable(v) else \
                     None if v[0] == '-' else store.load(UUID(v))
 
                 setter = lambda v: \
@@ -984,7 +880,7 @@ class NetCDFPlus(netCDF4.Dataset):
             else:
                 getter = lambda v: [
                     None if w[0] == '-' else LoaderProxy(store, UUID(w))
-                    for w in to_uuid_chunks(v)
+                    for w in v
                 ] if get_is_iterable(v) else \
                     None if v[0] == '-' else LoaderProxy(store, UUID(v))
                 setter = lambda v: \
@@ -1061,22 +957,30 @@ class NetCDFPlus(netCDF4.Dataset):
 
                 if hasattr(var, 'var_vlen'):
                     if var.var_type.startswith('obj.'):
-                        getter = lambda v: [
-                            None if w[0] == '-' else store.load(UUID(w))
-                            for w in to_uuid_chunks(v)
+                        getter = lambda v: [[
+                            None if u[0] == '-' else store.load(UUID(u))
+                            for u in to_uuid_chunks(w)
+                            ] for w in v
+                        ] if isinstance(v, np.ndarray) else [
+                            None if u[0] == '-' else store.load(UUID(u))
+                            for u in to_uuid_chunks(v)
                         ]
                     elif var.var_type.startswith('lazyobj.'):
-                        getter = lambda v: [
-                            None if w[0] == '-' else LoaderProxy(store, UUID(w))
-                            for w in to_uuid_chunks(v)
+                        getter = lambda v: [[
+                            None if u[0] == '-' else LoaderProxy(store, UUID(u))
+                            for u in to_uuid_chunks(w)
+                            ] for w in v
+                        ] if isinstance(v, np.ndarray) else [
+                            None if u[0] == '-' else LoaderProxy(store, UUID(u))
+                            for u in to_uuid_chunks(v)
                         ]
-                else:
-                    if var.var_type.startswith('obj.'):
-                        getter = lambda v: \
-                            None if v[0] == '-' else store.load(UUID(v))
-                    elif var.var_type.startswith('lazyobj.'):
-                        getter = lambda v: None if v[0] == '-' \
-                            else LoaderProxy(store, UUID(v))
+                # else:
+                #     if var.var_type.startswith('obj.'):
+                #         getter = lambda v: \
+                #             None if v[0] == '-' else store.load(UUID(v))
+                #     elif var.var_type.startswith('lazyobj.'):
+                #         getter = lambda v: None if v[0] == '-' \
+                #             else LoaderProxy(store, UUID(v))
 
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
@@ -1121,11 +1025,6 @@ class NetCDFPlus(netCDF4.Dataset):
             # to _cast_ because of python objects of units we can copy
             # the s/getter of the original var which is still bound to the
             # right object
-            if getter is None:
-                delegate.__getitem__ = var.__getitem__
-
-            if setter is None:
-                delegate.__setitem__ = var.__setitem__
 
             self.vars[var_name] = delegate
 

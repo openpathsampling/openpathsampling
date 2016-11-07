@@ -3,6 +3,7 @@ import logging
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
+from openpathsampling.netcdfplus import DelayedLoader
 
 from openpathsampling.tools import refresh_output
 
@@ -20,7 +21,7 @@ class SampleKeyError(Exception):
                     + " from " + str(self.sample))
 
 
-@lazy_loading_attributes('movepath')
+# @lazy_loading_attributes('movepath')
 class SampleSet(StorableObject):
     """
     SampleSet is essentially a list of samples, with a few conveniences.  It
@@ -61,14 +62,19 @@ class SampleSet(StorableObject):
         A dictionary with replica IDs as keys and lists of Samples as values
     """
 
+    movepath = DelayedLoader()
+
     def __init__(self, samples, movepath=None):
         super(SampleSet, self).__init__()
+
+        self._lazy = {}
 
         self.samples = []
         self.ensemble_dict = {}
         self.replica_dict = {}
         self.extend(samples)
         self.movepath = movepath
+
 
     @property
     def ensembles(self):
@@ -730,7 +736,7 @@ class SampleSet(StorableObject):
         )
 
 
-@lazy_loading_attributes('parent', 'details', 'mover')
+# @lazy_loading_attributes('parent', 'details', 'mover')
 class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
@@ -757,6 +763,10 @@ class Sample(StorableObject):
         the Monte Carlo step number associated with this Sample
     """
 
+    parent = DelayedLoader()
+    details = DelayedLoader()
+    mover = DelayedLoader()
+
     def __init__(self,
                  replica=None,
                  trajectory=None,
@@ -768,6 +778,9 @@ class Sample(StorableObject):
                  ):
 
         super(Sample, self).__init__()
+
+        self._lazy = {}
+
         self.bias = bias
         self.replica = replica
         self.ensemble = ensemble
