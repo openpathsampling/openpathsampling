@@ -13,7 +13,6 @@ class TrajectoryStore(ObjectStore):
         self.vars['snapshots'][idx] = trajectory
         store = self.storage.snapshots
 
-
         for frame, snapshot in enumerate(trajectory.iter_proxies()):
             if type(snapshot) is not LoaderProxy:
                 loader = store.proxy(snapshot)
@@ -33,7 +32,7 @@ class TrajectoryStore(ObjectStore):
         snap_store = self.storage.snapshots
         current_mention = snap_store.only_mention
         snap_store.only_mention = True
-        ref = self.save(trajectory)
+        self.save(trajectory)
         snap_store.only_mention = current_mention
 
     def _load(self, idx):
