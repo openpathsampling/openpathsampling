@@ -1436,6 +1436,15 @@ class VariableStore(ObjectStore):
             json=False
         )
 
+        # TODO: determine var_names automatically from content_class
+        # problem is that some decorators, e.g. using delayed loader
+        # hide the actual __init__ signature and so we cannot determine
+        # what variables to store. Could be 2.0
+
+        if not issubclass(content_class, StorableObject):
+            raise ValueError(('Content_class %s must be subclassed from '
+                             'StorableObject') % content_class.__name__)
+
         self.var_names = var_names
         self._cached_all = False
 
@@ -1450,8 +1459,9 @@ class VariableStore(ObjectStore):
             self.write(var, idx, obj)
 
     def _load(self, idx):
-        attr = {var: self.vars[var][idx] for var in self.var_names}
-        return self.content_class(**attr)
+        # attr = {var: self.vars[var][idx] for var in self.var_names}
+        args = [ self.vars[var][idx] for var in self.var_names]
+        return self.content_class(*args)
 
     def initialize(self):
         super(VariableStore, self).initialize()
