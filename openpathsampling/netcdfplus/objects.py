@@ -1473,14 +1473,22 @@ class VariableStore(ObjectStore):
             list of indices in `part` will be loaded into the cache
 
         """
+        max_length = self.cache.size[0]
+        max_length = len(self) if max_length < 0 else max_length
+
         if part is None:
-            part = range(len(self))
+            length = min(len(self), max_length)
+            part = range(length)
         else:
-            part = sorted(list(set(list(part))))
+            part = sorted(list(set(part())))
+            length = min(len(part), max_length)
+            part = part[:length]
 
         if not part:
             return
 
+        # just in case we saved the var_names in another order and so we are
+        # backwards compatible
         var_names = self.content_class.args()[1:]
 
         if not self._cached_all:
