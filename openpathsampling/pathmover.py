@@ -544,8 +544,8 @@ class SampleMover(PathMover):
             accepted = False
 
         details = paths.MoveDetails(
-            total_acceptance=probability,
-            random_value=rand
+            metropolis_acceptance=probability,
+            metropolis_random=rand
         )
 
         logger.info("Trial was " + ("accepted" if accepted else "rejected"))
