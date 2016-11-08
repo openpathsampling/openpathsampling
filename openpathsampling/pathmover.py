@@ -2321,15 +2321,6 @@ class Details(StorableObject):
 class MoveDetails(Details):
     """Details of the move as applied to a given replica
 
-    Attributes
-    ----------
-    inputs : list of Trajectory
-        the Samples which were used as inputs to the move
-    trials : list of Trajectory
-        the trial trajectories
-    results : list of Trajectory
-        the results
-
     Specific move types may have add several other attributes for each
     MoveDetails object. For example, shooting moves will also include
     information about the shooting point selection, etc.
@@ -2338,34 +2329,15 @@ class MoveDetails(Details):
     rejection_reason : String
         explanation of reasons the path was rejected
 
-    RENAME: inputs=>initial
-            accepted=>trial_in_ensemble (probably only in shooting)
-
-    TODO:
-    Currently trial/accepted are in terms of Trajectory objects. I
-    think it makes more sense for them to be Samples.
-    I kept trial, accepted as a trajectory and only changed inputs
-    to a list of samples. Since trial, accepted are move related
-    to the shooting and not necessarily dependent on a replica or
-    initial ensemble.
     """
 
     def __init__(self, **kwargs):
-        self.inputs = None
-        self.trials = None
-        self.results = None
         super(MoveDetails, self).__init__(**kwargs)
 
 
 class SampleDetails(Details):
     """Details of a sample
-
-    Attributes
-    ----------
-    selection_probability : float
-        the chance that a sample will be accepted due to asymmetrical proposal
     """
 
     def __init__(self, **kwargs):
-        self.selection_probability = 1.0
         super(SampleDetails, self).__init__(**kwargs)
