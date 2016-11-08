@@ -38,12 +38,12 @@ class MoveChange(TreeMixin, StorableObject):
         self._accepted = None
         self.mover = mover
         if subchanges is None:
-            self.subchanges = list()
+            self.subchanges = []
         else:
             self.subchanges = subchanges
 
         if samples is None:
-            self.samples = list()
+            self.samples = []
         else:
             self.samples = samples
         self.details = details
