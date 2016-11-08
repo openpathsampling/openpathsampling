@@ -79,12 +79,20 @@ class MoveChangeStore(ObjectStore):
             subchanges_idxss = self.variables['subchanges'][:]
             mover_idxs = self.variables['mover'][:]
             details_idxs = self.variables['details'][:]
+            try:
+                input_samples_vars = self.variables['input_samples']
+            except KeyError:
+                # BACKWARD COMPATIBILITY: REMOVE IN 2.0
+                input_samples_idxss = [[] for _ in samples_idxss]
+            else:
+                input_samples_idxss = input_samples_vars[:]
 
             [self._add_empty_to_cache(*v) for v in zip(
                 poss,
                 uuids,
                 cls_names,
                 samples_idxss,
+                input_samples_idxss,
                 mover_idxs,
                 details_idxs)]
 
@@ -95,11 +103,12 @@ class MoveChangeStore(ObjectStore):
             self._cached_all = True
 
     def _add_empty_to_cache(self, pos, uuid, cls_name, samples_idxs,
-                            mover_idx, details_idx):
+                            input_samples_idxs, mover_idx, details_idx):
 
         if pos not in self.cache:
             obj = self._load_partial_samples(cls_name, samples_idxs,
-                                             mover_idx, details_idx)
+                                             input_samples_idxs, mover_idx,
+                                             details_idx)
 
             if self.reference_by_uuid:
                 obj.__uuid__ = uuid
@@ -120,7 +129,7 @@ class MoveChangeStore(ObjectStore):
         return obj
 
     def _load_partial_samples(self, cls_name, samples_idxs,
-                              mover_idx, details_idx):
+                              input_samples_idxs, mover_idx, details_idx):
         cls = self.class_list[cls_name]
         obj = cls.__new__(cls)
         if self.reference_by_uuid:
@@ -138,12 +147,18 @@ class MoveChangeStore(ObjectStore):
         if len(samples_idxs) > 0:
             if self.reference_by_uuid:
                 samples_idxs = self.storage.to_uuid_chunks(samples_idxs)
+                input_samples_idxs = \
+                    self.storage.to_uuid_chunks(input_samples_idxs)
                 obj.samples = \
                     [self.storage.samples[UUID(idx)] for idx in samples_idxs]
+                obj.input_samples = [self.storage.samples[UUID(idx)]
+                                     for idx in input_samples_idxs]
                 obj.details = self.storage.details.proxy(str(details_idx))
             else:
                 obj.samples = \
                     [self.storage.samples[int(idx)] for idx in samples_idxs]
+                obj.input_samples = [self.storage.samples[int(idx)]
+                                     for idx in input_samples_idxs]
                 obj.details = self.storage.details.proxy(int(details_idx))
 
         return obj
