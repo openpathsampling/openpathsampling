@@ -304,7 +304,7 @@ class SampleMoveChange(MoveChange):
     This is the most common MoveChange and all other moves use this
     as leaves and on the lowest level consist only of `SampleMoveChange`
     """
-    def __init__(self, samples, mover=None, details=None):
+    def __init__(self, samples, mover=None, details=None, input_samples=None):
         """
         Parameters
         ----------
@@ -327,6 +327,7 @@ class SampleMoveChange(MoveChange):
             samples = [samples]
 
         self.samples = samples
+        self.input_samples = input_samples
 
     def _get_results(self):
         return []

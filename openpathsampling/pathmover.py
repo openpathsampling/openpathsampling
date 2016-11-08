@@ -587,13 +587,15 @@ class SampleMover(PathMover):
             return paths.RejectedNaNSampleMoveChange(
                 samples=e.trial_sample,
                 mover=self,
+                input_samples=samples,
                 details=paths.MoveDetails(
-                    rejection_reason='nan')
+                    rejection_reason='nan'),
             )
         except SampleMaxLengthError as e:
             return paths.RejectedMaxLengthSampleMoveChange(
                 samples=e.trial_sample,
                 mover=self,
+                input_samples=samples,
                 details=paths.MoveDetails(
                     rejection_reason='max_length')
             )
@@ -606,12 +608,14 @@ class SampleMover(PathMover):
             return paths.AcceptedSampleMoveChange(
                 samples=trials,
                 mover=self,
+                input_samples=samples,
                 details=details
             )
         else:
             return paths.RejectedSampleMoveChange(
                 samples=trials,
                 mover=self,
+                input_samples=samples,
                 details=details
             )
 
