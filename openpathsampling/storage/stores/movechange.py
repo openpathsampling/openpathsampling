@@ -62,7 +62,6 @@ class MoveChangeStore(ObjectStore):
                              dimensions='...',
                              chunksizes=(10240,))
 
-
     def cache_all(self):
         """Load all samples as fast as possible into the cache
 
