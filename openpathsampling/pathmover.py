@@ -959,7 +959,6 @@ class ReplicaExchangeMover(SampleMover):
             trajectory=trajectory1,
             ensemble=ensemble2,
             parent=sample1,
-            details=SampleDetails(),
             mover=self
         )
         trial2 = paths.Sample(
@@ -967,7 +966,6 @@ class ReplicaExchangeMover(SampleMover):
             trajectory=trajectory2,
             ensemble=ensemble1,
             parent=sample2,
-            details=SampleDetails(),
             mover=self
         )
 
@@ -1898,6 +1896,7 @@ class ReplicaIDChangeMover(PathMover):
         return paths.AcceptedSampleMoveChange(
             samples=[new_sample],
             mover=self,
+            input_samples=samples,
             details=details
         )
 

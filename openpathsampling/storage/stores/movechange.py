@@ -19,6 +19,7 @@ class MoveChangeStore(ObjectStore):
 
     def _save(self, movechange, idx):
         self.vars['samples'][idx] = movechange.samples
+        self.vars['input_samples'][idx] = movechange.input_samples
         self.vars['subchanges'][idx] = movechange.subchanges
         self.write('details', idx, movechange)
         self.vars['mover'][idx] = movechange.mover
@@ -34,6 +35,10 @@ class MoveChangeStore(ObjectStore):
         obj.samples = self.vars['samples'][idx]
         obj.subchanges = self.vars['subchanges'][idx]
         obj.details = self.vars['details'][idx]
+        try:
+            obj.input_samples = self.vars['input_samples'][idx]
+        except KeyError:  # BACKWARDS COMPATIBILITY; REMOVE IN 2.0
+            obj.input_samples = None
 
         return obj
 
@@ -52,6 +57,11 @@ class MoveChangeStore(ObjectStore):
         self.create_variable('samples', 'obj.samples',
                              dimensions='...',
                              chunksizes=(10240,))
+
+        self.create_variable('input_samples', 'obj.samples',
+                             dimensions='...',
+                             chunksizes=(10240,))
+
 
     def cache_all(self):
         """Load all samples as fast as possible into the cache
