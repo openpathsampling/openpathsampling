@@ -31,7 +31,8 @@ class MoveChange(TreeMixin, StorableObject):
 
     details = DelayedLoader()
 
-    def __init__(self, subchanges=None, samples=None, mover=None, details=None):
+    def __init__(self, subchanges=None, samples=None, mover=None,
+                 details=None, input_samples=None):
         StorableObject.__init__(self)
 
         self._lazy = {}
@@ -43,14 +44,20 @@ class MoveChange(TreeMixin, StorableObject):
         self._accepted = None
         self.mover = mover
         if subchanges is None:
-            self.subchanges = list()
+            self.subchanges = []
         else:
             self.subchanges = subchanges
 
         if samples is None:
-            self.samples = list()
+            self.samples = []
         else:
             self.samples = samples
+
+        if input_samples is None:
+            self.input_samples = list()
+        else:
+            self.input_samples = input_samples
+
         self.details = details
 
     def __getattr__(self, item):
@@ -309,7 +316,7 @@ class SampleMoveChange(MoveChange):
     This is the most common MoveChange and all other moves use this
     as leaves and on the lowest level consist only of `SampleMoveChange`
     """
-    def __init__(self, samples, mover=None, details=None):
+    def __init__(self, samples, mover=None, details=None, input_samples=None):
         """
         Parameters
         ----------
@@ -326,7 +333,11 @@ class SampleMoveChange(MoveChange):
         mover
         details
         """
-        super(SampleMoveChange, self).__init__(mover=mover, details=details)
+        super(SampleMoveChange, self).__init__(
+            mover=mover,
+            details=details,
+            input_samples=input_samples
+        )
 
         if samples.__class__ is paths.Sample:
             samples = [samples]
