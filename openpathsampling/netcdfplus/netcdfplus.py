@@ -633,6 +633,18 @@ class NetCDFPlus(netCDF4.Dataset):
             return store.idx(obj)
 
     def repr_json(self, obj):
+        """
+        Return the JSON representation in the storage if available
+
+        Parameters
+        ----------
+        obj : :class:`openpathsampling.netcdfplus.StorableObject`
+
+        Returns
+        -------
+        str
+            the JSON string (usually in unicode) from the storage
+        """
         if hasattr(obj, 'base_cls'):
             store = self._objects[obj.base_cls]
 

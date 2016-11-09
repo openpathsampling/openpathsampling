@@ -20,13 +20,15 @@ class TrajectoryStore(ObjectStore):
 
     def mention(self, trajectory):
         """
-        Save a trajectory without
+        Save a trajectory and store its snapshots only shallow
+
+        This will mention the ids of all snapshots in the file but not save
+        the content of all the snapshots. This way you can store CV values
+        if you want
+
         Parameters
         ----------
-        trajectory
-
-        Returns
-        -------
+        trajectory : :class:`openpathsampling.Trajectory`
 
         """
         snap_store = self.storage.snapshots
