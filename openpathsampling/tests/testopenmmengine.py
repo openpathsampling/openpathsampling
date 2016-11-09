@@ -212,7 +212,8 @@ class testOpenMMEngine(object):
         change = mover.move(init_samp)
 
         assert (isinstance(change, paths.RejectedNaNSampleMoveChange))
-        assert_equal(change.samples[0].details.stopping_reason, 'nan')
+        print change.details.rejection_reason
+        assert_equal(change.details.rejection_reason, 'nan')
         # since we shoot, we start with a shorter trajectory
         assert(len(change.samples[0].trajectory) < len(init_traj))
 
@@ -244,7 +245,7 @@ class testOpenMMEngine(object):
         change = mover.move(init_samp)
 
         assert(isinstance(change, paths.RejectedMaxLengthSampleMoveChange))
-        assert_equal(change.samples[0].details.stopping_reason, 'max_length')
+        assert_equal(change.details.rejection_reason, 'max_length')
         assert_equal(
             len(change.samples[0].trajectory), self.engine.n_frames_max)
 
