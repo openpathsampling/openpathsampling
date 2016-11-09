@@ -2492,7 +2492,7 @@ class SampleList(OrderedDict):
                         trajectory=traj,
                         ensemble=sample.ensemble,
                         bias=sample.bias,
-                        details=sample.details,
+                        # details=sample.details,
                         parent=sample.parent,
                         mover=sample.mover
                     )

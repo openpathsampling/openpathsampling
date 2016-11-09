@@ -764,7 +764,7 @@ class EngineMover(SampleMover):
             replica=input_sample.replica,
             trajectory=trial_trajectory,
             ensemble=self.target_ensemble,
-            # parent=input_sample,
+            parent=input_sample,
             mover=self,
             bias=bias
         )
@@ -969,14 +969,14 @@ class ReplicaExchangeMover(SampleMover):
             replica=replica1,
             trajectory=trajectory1,
             ensemble=ensemble2,
-            # parent=sample1,
+            parent=sample1,
             mover=self
         )
         trial2 = paths.Sample(
             replica=replica2,
             trajectory=trajectory2,
             ensemble=ensemble1,
-            # parent=sample2,
+            parent=sample2,
             mover=self
         )
 
@@ -1136,7 +1136,7 @@ class SubtrajectorySelectMover(SampleMover):
                 replica=replica,
                 trajectory=subtraj,
                 ensemble=self.sub_ensemble,
-                # parent=trial,
+                parent=trial,
                 mover=self,
                 bias=bias
             )
@@ -1231,7 +1231,7 @@ class PathReversalMover(SampleMover):
             trajectory=reversed_trajectory,
             ensemble=ensemble,
             mover=self,
-            # parent=trial,
+            parent=trial,
             bias=bias
         )
 
@@ -1858,7 +1858,7 @@ class ConditionalSequentialMover(SequentialMover):
 #             replica=rep_to,
 #             ensemble=rep_sample.ensemble,
 #             trajectory=rep_sample.trajectory,
-#             # parent=rep_sample,
+#             parent=rep_sample,
 #             mover=self
 #         )
 #

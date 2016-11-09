@@ -121,7 +121,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         """
         key = self.step_key(step)
         if key is not None:
-            details = step.change.canonical.trials[0].details
+            details = step.change.canonical.details
             trial_traj = step.change.canonical.trials[0].trajectory
             init_traj = details.initial_trajectory
             test_points = [s for s in [trial_traj[0], trial_traj[-1]]
@@ -161,8 +161,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         """
         key = None
         try:
-            # TODO: this should in step.change.canonical.details
-            details = step.change.canonical.trials[0].details
+            details = step.change.canonical.details
             shooting_snap = details.shooting_snapshot
         except AttributeError:
             # wrong kind of move (no shooting_snapshot)
