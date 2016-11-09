@@ -212,7 +212,6 @@ class testOpenMMEngine(object):
         change = mover.move(init_samp)
 
         assert (isinstance(change, paths.RejectedNaNSampleMoveChange))
-        print change.details.rejection_reason
         assert_equal(change.details.rejection_reason, 'nan')
         # since we shoot, we start with a shorter trajectory
         assert(len(change.samples[0].trajectory) < len(init_traj))
