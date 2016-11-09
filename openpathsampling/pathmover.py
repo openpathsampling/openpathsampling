@@ -1080,7 +1080,7 @@ class SubtrajectorySelectMover(SampleMover):
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
 
-    Parameters
+    Attributes
     ----------
     ensemble : openpathsampling.Ensemble
         the set of allows samples to chose from
@@ -1156,6 +1156,18 @@ class RandomSubtrajectorySelectMover(SubtrajectorySelectMover):
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
 
+    Attributes
+    ----------
+    ensemble : openpathsampling.Ensemble
+        the set of allows samples to chose from
+    sub_ensemble : openpathsampling.Ensemble
+        the subensemble to be searched for
+    n_l : int or None
+        the number of subtrajectories that need to be found. If
+        `None` every number of subtrajectories > 0 is okay.
+        Otherwise the move is only accepted if exactly n_l subtrajectories
+        are found.
+
     """
 
     def _choose(self, trajectory_list):
@@ -1168,6 +1180,19 @@ class FirstSubtrajectorySelectMover(SubtrajectorySelectMover):
 
     If there are no subtrajectories which satisfy the ensemble, this returns
     the zero-length trajectory.
+
+    Attributes
+    ----------
+    ensemble : openpathsampling.Ensemble
+        the set of allows samples to chose from
+    sub_ensemble : openpathsampling.Ensemble
+        the subensemble to be searched for
+    n_l : int or None
+        the number of subtrajectories that need to be found. If
+        `None` every number of subtrajectories > 0 is okay.
+        Otherwise the move is only accepted if exactly n_l subtrajectories
+        are found.
+
     """
 
     def _choose(self, trajectory_list):
@@ -1180,6 +1205,19 @@ class FinalSubtrajectorySelectMover(SubtrajectorySelectMover):
 
     If there are no subtrajectories which satisfy the ensemble, this returns
     the zero-length trajectory.
+
+    Attributes
+    ----------
+    ensemble : openpathsampling.Ensemble
+        the set of allows samples to chose from
+    sub_ensemble : openpathsampling.Ensemble
+        the subensemble to be searched for
+    n_l : int or None
+        the number of subtrajectories that need to be found. If
+        `None` every number of subtrajectories > 0 is okay.
+        Otherwise the move is only accepted if exactly n_l subtrajectories
+        are found.
+
     """
 
     def _choose(self, trajectory_list):
@@ -1502,6 +1540,12 @@ class RandomAllowedChoiceMover(RandomChoiceMover):
     from sub movers that actually can succeed because they have samples in all
     required input_ensembles
 
+    Attributes
+    ----------
+    movers : list of PathMover
+        the PathMovers to choose from
+    weights : list of floats
+        the relative weight of each PathMover (does not need to be normalized)
     """
 
     def _selector(self, sample_set):
@@ -1532,6 +1576,13 @@ class FirstAllowedMover(SelectionMover):
     A mover can only safely be run, if all inputs can be satisfied.
     This will pick the first mover from the list where all ensembles
     from input_ensembles are found.
+
+    Attributes
+    ----------
+    movers : list of PathMover
+        the PathMovers to choose from
+    weights : list of floats
+        the relative weight of each PathMover (does not need to be normalized)
 
     """
 
@@ -1564,6 +1615,13 @@ class LastAllowedMover(SelectionMover):
     A mover can only safely be run, if all inputs can be satisfied.
     This will pick the last mover from the list where all ensembles
     from input_ensembles are found.
+
+    Attributes
+    ----------
+    movers : list of PathMover
+        the PathMovers to choose from
+    weights : list of floats
+        the relative weight of each PathMover (does not need to be normalized)
 
     """
 
