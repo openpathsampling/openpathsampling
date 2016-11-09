@@ -761,7 +761,7 @@ class Sample(StorableObject):
                  trajectory=None,
                  ensemble=None,
                  bias=1.0,
-                 # details=None,
+                 details=None,
                  parent=None,
                  mover=None
                  ):
