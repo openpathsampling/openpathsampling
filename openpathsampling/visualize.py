@@ -2237,13 +2237,6 @@ class SampleList(OrderedDict):
     @staticmethod
     def _get_samples_from_steps(steps, replica, accepted, intermediates=True):
         if accepted:
-            # samp = steps[-1].active[replica]
-            # samples = [samp]
-            # while samp.parent is not None:
-            #     samp = samp.parent
-            #     samples.append(samp)
-            #
-            # return list(reversed(samples))
             samples = []
             for step in steps:
                 if step.active and replica in step.active:
