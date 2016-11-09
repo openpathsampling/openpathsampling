@@ -26,7 +26,7 @@ ipynbtest.py "toy_mistis_3_analysis.ipynb" || testfail=1
 date
 cd ../tests/
 cp ../toy_model_mstis/mstis.nc ./
-ipynbtest.py --strict "test_openmm_integration.ipynb" || testfail=1
+ipynbtest.py --strict --show-diff "test_openmm_integration.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_snapshot.ipynb" || testfail=1
 date
