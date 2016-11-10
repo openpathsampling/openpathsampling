@@ -285,7 +285,9 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
                 bins=bins
             )
             b_list = [b_x, b_y]
-        state_frac = np.true_divide(state_hist, all_hist)
+        # if all_hist is 0, state_hist is NaN: ignore warning, return NaN
+        with np.errstate(divide='ignore', invalid='ignore'):
+            state_frac = np.true_divide(state_hist, all_hist)
         return tuple([state_frac] + b_list)
 
     def to_pandas(self, label_function=None):
