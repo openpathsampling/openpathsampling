@@ -87,7 +87,7 @@ class SampleSet(StorableObject):
             return (self[element] for element in key)
         elif type(key) is slice:
             rep_idxs = filter(
-                lambda x :
+                lambda x:
                     (key.start is None or x >= key.start) and
                     (key.stop is None or x < key.stop),
                 sorted(self.replica_dict.keys())
@@ -142,7 +142,15 @@ class SampleSet(StorableObject):
         return len(self.samples)
 
     def __contains__(self, item):
-        return item in self.samples
+        # check for Sample, replica (int) and Ensemble, too
+        if item in self.samples:
+            return True
+        elif item in self.ensemble_dict:
+            return True
+        elif item in self.replica_dict:
+            return True
+        else:
+            return False
 
     def all_from_ensemble(self, ensemble):
         try:
@@ -184,13 +192,14 @@ class SampleSet(StorableObject):
             self.append(samples)
 
     def apply_samples(self, samples, copy=True):
-        '''Updates the SampleSet based on a list of samples, by setting them
-        by replica in the order given in the argument list.'''
+        """Update by setting samples by replica in the order given
+
+        """
         if isinstance(samples, Sample):
             samples = [samples]
         elif isinstance(samples, paths.MoveChange):
             samples = samples.results
-        if copy==True:
+        if copy:
             newset = SampleSet(self)
         else:
             newset = self
@@ -203,25 +212,25 @@ class SampleSet(StorableObject):
         return newset
 
     def replica_list(self):
-        '''Returns the list of replicas IDs in this SampleSet'''
+        """Returns the list of replicas IDs in this SampleSet
+
+        """
         return self.replica_dict.keys()
 
     def ensemble_list(self):
-        '''Returns the list of ensembles in this SampleSet'''
+        """Returns the list of ensembles in this SampleSet
+
+        """
         return self.ensemble_dict.keys()
 
     def sanity_check(self):
-        '''Checks that the sample trajectories satisfy their ensembles
-        '''
+        """Checks that the sample trajectories satisfy their ensembles
+
+        """
         logger.info("Starting sanity check")
         for sample in self:
-            # TODO: Replace by using .valid which means that it is in the ensemble
-            # and does the same testing but with caching so the .valid might
-            # fail in case of some bad hacks. Since we check anyway, let's just
-
-            #assert(sample.valid)
-            logger.info("Checking sanity of "+repr(sample.ensemble)+
-                        " with "+str(sample.trajectory))
+            logger.info("Checking sanity of " + repr(sample.ensemble) +
+                        " with " + str(sample.trajectory))
             try:
                 assert(sample.ensemble(sample.trajectory))
             except AssertionError as e:
@@ -232,15 +241,15 @@ class SampleSet(StorableObject):
                 else:
                     arg0 = failmsg + e.args[0]
                     e.args = tuple([arg0] + list(e.args[1:]))
-                raise # reraises last exception
+                raise  # re-raise last exception
 
     def consistency_check(self):
-        '''Check that all internal dictionaries are consistent
+        """Check that all internal dictionaries are consistent
 
         This is mainly a sanity check for use in testing, but might be
         good to run (rarely) in the code until we're sure the tests cover
         all use cases.
-        '''
+        """
 
         # check that we have the same number of samples in everything
         nsamps_ens = 0
@@ -250,18 +259,19 @@ class SampleSet(StorableObject):
         for rep in self.replica_dict.keys():
             nsamps_rep += len(self.replica_dict[rep])
         nsamps = len(self.samples)
-        assert nsamps==nsamps_ens, \
-                "nsamps != nsamps_ens : %d != %d" % (nsamps, nsamps_ens)
-        assert nsamps==nsamps_rep, \
-                "nsamps != nsamps_rep : %d != %d" % (nsamps, nsamps_rep)
+        assert nsamps == nsamps_ens, \
+            "nsamps != nsamps_ens : %d != %d" % (nsamps, nsamps_ens)
+        assert nsamps == nsamps_rep, \
+            "nsamps != nsamps_rep : %d != %d" % (nsamps, nsamps_rep)
 
         # if we have the same number of samples, then we check that each
         # sample in samples is in each of the dictionaries
         for samp in self.samples:
             assert samp in self.ensemble_dict[samp.ensemble], \
-                    "Sample not in ensemble_dict! %r %r" % (samp, self.ensemble_dict)
+                "Sample not in ensemble_dict! %r %r" % (
+                    samp, self.ensemble_dict)
             assert samp in self.replica_dict[samp.replica], \
-                    "Sample not in replica_dict! %r %r" % (samp, self.replica_dict)
+                "Sample not in replica_dict! %r %r" % (samp, self.replica_dict)
 
         # finally, check to be sure that thre are no duplicates in
         # self.samples; this completes the consistency check
@@ -277,15 +287,15 @@ class SampleSet(StorableObject):
         previous replica ID.
         """
         if len(self) == 0:
-            max_repID = -1
+            max_replica = -1
         else:
-            max_repID = max([s.replica for s in self.samples])
+            max_replica = max([s.replica for s in self.samples])
         self.append(Sample(
-            replica=max_repID + 1,
+            replica=max_replica + 1,
             trajectory=sample.trajectory,
             ensemble=sample.ensemble,
             bias=sample.bias,
-            details=sample.details,
+            # details=sample.details,
             parent=sample.parent,
             mover=sample.mover
         ))
@@ -301,8 +311,8 @@ class SampleSet(StorableObject):
         return SampleSet([
             Sample.initial_sample(
                 replica=ensembles.index(e),
-                trajectory=paths.Trajectory(trajectory.as_proxies()), # copy
-                ensemble = e)
+                trajectory=paths.Trajectory(trajectory.as_proxies()),  # copy
+                ensemble=e)
             for e in ensembles
         ])
 
@@ -342,7 +352,7 @@ class SampleSet(StorableObject):
     @staticmethod
     def relabel_replicas_per_ensemble(ssets):
         """
-        Return a SampleSet with one trajectory ID per ensemble in the given ssets.
+        Return a SampleSet with one trajectory ID per ensemble in `ssets`
 
         This is used if you create several sample sets (e.g., from
         bootstrapping different transitions) which have the same trajectory
@@ -553,6 +563,8 @@ class SampleSet(StorableObject):
 
                     # fill only the first in ens_list that can be filled
 
+                    sample = None
+
                     if strategy == 'get':
                         sample = ens.get_sample_from_trajectories(
                             trajectories=trajectories,
@@ -591,8 +603,6 @@ class SampleSet(StorableObject):
                                 level='native',
                                 **opts
                             )
-                    else:
-                        sample = None
 
                     # now, if we've found a sample, add it and
                     # make sure we chose a proper replica ID
@@ -715,14 +725,14 @@ class SampleSet(StorableObject):
                 trajectory=s.trajectory,
                 ensemble=s.ensemble,
                 bias=s.bias,
-                details=s.details,
-                parent=None,
+                # details=s.details,
                 mover=s.mover
             ) for s in self]
         )
 
 
-@lazy_loading_attributes('parent', 'details', 'mover')
+# @lazy_loading_attributes('parent', 'details', 'mover')
+@lazy_loading_attributes('parent', 'mover')
 class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
@@ -738,15 +748,12 @@ class Sample(StorableObject):
     Attributes
     ----------
     replica : int
-        The replica ID to which this Sample applies. The replica ID can also be negative.
+        The replica ID to which this Sample applies. The replica ID can also
+        be negative.
     trajectory : openpathsampling.Trajectory
         The trajectory (path) for this sample
     ensemble : openpathsampling.Ensemble
         The Ensemble this sample is drawn from
-    details : openpathsampling.MoveDetails
-        Object 
-    step : int
-        the Monte Carlo step number associated with this Sample
     """
 
     def __init__(self,
@@ -765,8 +772,10 @@ class Sample(StorableObject):
         self.ensemble = ensemble
         self.trajectory = trajectory
         self.parent = parent
-        self.details = details
+        # self.details = details
         self.mover = mover
+
+        self._valid = None
 
     # ==========================================================================
     # LIST INHERITANCE FUNCTIONS
@@ -800,13 +809,13 @@ class Sample(StorableObject):
         if self.trajectory is not None:
             return reversed(self.trajectory)
         else:
-            return [] # empty iterator
+            return []  # empty iterator
 
     def as_proxies(self):
         if self.trajectory is not None:
             return self.trajectory.as_proxies()
         else:
-            return [] # empty iterator
+            return []  # empty iterator
 
     def __iter__(self):
         """
@@ -821,12 +830,14 @@ class Sample(StorableObject):
         if self.trajectory is not None:
             return iter(self.trajectory)
         else:
-            return [] # empty iterator
+            return []  # empty iterator
 
     def __str__(self):
-        mystr  = "Replica: "+str(self.replica)+"\n"
-        mystr += "Trajectory: "+str(self.trajectory)+"\n"
-        mystr += "Ensemble: "+repr(self.ensemble)+"\n"
+        # mystr  = "Replica: "+str(self.replica)+"\n"
+        # mystr += "Trajectory: "+str(self.trajectory)+"\n"
+        # mystr += "Ensemble: "+repr(self.ensemble)+"\n"
+        mystr = 'Sample(RepID: %d, Ens: %s, %d steps)' % (
+            self.replica, repr(self.ensemble), len(self.trajectory))
         return mystr
 
     @property
@@ -854,9 +865,9 @@ class Sample(StorableObject):
         return '<Sample @ ' + str(hex(id(self))) + '>'
 
     def copy_reset(self):
-        '''
+        """
         Copy of Sample with initialization move details.
-        '''
+        """
         result = Sample(
             replica=self.replica,
             trajectory=self.trajectory,
@@ -878,7 +889,6 @@ class Sample(StorableObject):
             ensemble=ensemble
         )
         return result
-
 
     @property
     def acceptance(self):

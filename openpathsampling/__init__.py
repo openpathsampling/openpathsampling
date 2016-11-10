@@ -111,7 +111,7 @@ from pathmover import (
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
     BackwardExtendMover, ForwardExtendMover, MinusMover,
     SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
-    ReplicaExchangeMover, EnsembleHopMover, ReplicaIDChangeMover,
+    ReplicaExchangeMover, EnsembleHopMover,
     SequentialMover, ConditionalMover,
     PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
     SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
