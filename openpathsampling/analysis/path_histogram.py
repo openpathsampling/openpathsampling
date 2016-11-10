@@ -1,5 +1,5 @@
 import openpathsampling as paths
-from openpathsampling.analysis import SparseHistogram
+from openpathsampling.numerics import SparseHistogram
 
 from collections import Counter
 import numpy as np

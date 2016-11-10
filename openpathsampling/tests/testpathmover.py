@@ -4,7 +4,8 @@
 
 from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_true)
+                        raises, assert_true, assert_in, assert_not_in)
+from numpy.testing import assert_allclose
 
 from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
@@ -257,6 +258,79 @@ class testOneWayShootingMover(testShootingMover):
         moverclasses = [m.__class__ for m in mover.movers]
         assert_equal(ForwardShootMover in moverclasses, True)
         assert_equal(BackwardShootMover in moverclasses, True)
+
+class testForwardFirstTwoWayShootingMover(testShootingMover):
+    _MoverType = ForwardFirstTwoWayShootingMover
+    # this allows us to run the exact same tests for backward-first
+    def test_run(self):
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=paths.NoModification(),
+            engine=self.dyn
+        )
+        traj, details = mover._run(self.init_samp[0].trajectory, 4)
+        assert_allclose(traj.xyz[:,0,0], [-0.1, 0.2, 0.4, 0.6, 0.8])
+        assert_equal(details.keys(), ['modified_shooting_snapshot'])
+        assert_equal(details['modified_shooting_snapshot'], traj[2])
+        assert_not_in(details['modified_shooting_snapshot'],
+                      self.init_samp[0].trajectory)
+
+        traj, details = mover._run(self.init_samp[0].trajectory, 3)
+        assert_allclose(traj.xyz[:,0,0], [-0.1, 0.1, 0.3, 0.5, 0.7])
+        assert_equal(details.keys(), ['modified_shooting_snapshot'])
+        assert_equal(details['modified_shooting_snapshot'], traj[2])
+        assert_not_in(details['modified_shooting_snapshot'],
+                      self.init_samp[0].trajectory)
+
+    def test_run_toy(self):
+        # mostly smoke test for toy engine integration
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=paths.NoModification(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.toy_samp)
+        assert_in(change.details.modified_shooting_snapshot,
+                  change.trials[0].trajectory)
+        assert_in(change.details.shooting_snapshot,
+                  change.initial_trajectory)
+
+
+class testBackwardFirstTwoWayShootingMover(testForwardFirstTwoWayShootingMover):
+    _MoverType = BackwardFirstTwoWayShootingMover
+    # runs the same tests as ForwardFirst
+
+
+class testTwoWayShootingMover(testShootingMover):
+    def test_properties(self):
+        selector = UniformSelector()
+        modifier = paths.NoModification()
+        mover = TwoWayShootingMover(
+            ensemble=self.tps,
+            selector=selector,
+            modifier=modifier,
+            engine=self.dyn
+        )
+        assert_equal(mover.ensemble, self.tps)
+        assert_equal(mover.selector, selector)
+        assert_equal(mover.modifier, modifier)
+
+    def test_to_dict_from_dict(self):
+        mover = TwoWayShootingMover(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=paths.NoModification(),
+            engine=self.dyn
+        )
+        dct = mover.to_dict()
+        new_mover = mover.from_dict(dct)
+        assert_equal(mover.movers, new_mover.movers)
+        assert_equal(mover.ensemble, new_mover.ensemble)
+        assert_equal(mover.selector, new_mover.selector)
+        assert_equal(mover.modifier, new_mover.modifier)
+
 
 class testPathReversalMover(object):
     def setup(self):

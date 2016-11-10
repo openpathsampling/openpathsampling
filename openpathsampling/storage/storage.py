@@ -92,7 +92,7 @@ class Storage(NetCDFPlus):
                           NamedObjectStore(paths.ShootingPointSelector))
         self.create_store('engines', NamedObjectStore(peng.DynamicsEngine))
         self.create_store('pathsimulators',
-                          NamedObjectStore(paths.PathSimulator))
+                          paths.storage.PathSimulatorStore())
         self.create_store('transitions', NamedObjectStore(paths.Transition))
         self.create_store('networks',
                           NamedObjectStore(paths.TransitionNetwork))
@@ -159,7 +159,8 @@ class Storage(NetCDFPlus):
             'production': self.production_cache_sizes,
             'off': self.no_cache_sizes,
             'lowmemory': self.lowmemory_cache_sizes,
-            'memtest': self.memtest_cache_sizes
+            'memtest': self.memtest_cache_sizes,
+            'unlimited': self.unlimited_cache_sizes()
         }
 
         if mode in available_cache_sizes:
@@ -228,6 +229,7 @@ class Storage(NetCDFPlus):
             'transitions': True,
             'networks': True,
             'interfacesets': True,
+            'schemes': True,
             'msouters': True,
             'details': False,
             'steps': WeakLRUCache(1000),
@@ -261,6 +263,7 @@ class Storage(NetCDFPlus):
             'transitions': True,
             'networks': True,
             'interfacesets': True,
+            'schemes': True,
             'msouters': True,
             'details': False,
             'steps': WeakLRUCache(10),
@@ -294,6 +297,7 @@ class Storage(NetCDFPlus):
             'transitions': WeakLRUCache(10),
             'networks': WeakLRUCache(10),
             'interfacesets': WeakLRUCache(10),
+            'schemes': WeakLRUCache(10),
             'msouters': WeakLRUCache(10),
             'details': WeakLRUCache(10),
             'steps': WeakLRUCache(10),
@@ -328,8 +332,9 @@ class Storage(NetCDFPlus):
             'transitions': True,
             'networks': True,
             'interfacesets': True,
+            'schemes': True,
             'msouters': True,
-            'details': False,
+            'details': WeakLRUCache(50000),
             'steps': WeakLRUCache(50000),
             'topologies': True
         }
@@ -361,6 +366,7 @@ class Storage(NetCDFPlus):
             'transitions': False,
             'networks': False,
             'interfacesets': False,
+            'schemes': True,
             'msouters': False,
             'details': False,
             'steps': WeakLRUCache(10),
@@ -396,10 +402,45 @@ class Storage(NetCDFPlus):
             'transitions': False,
             'networks': False,
             'interfacesets': False,
+            'schemes': False,
             'msouters': False,
             'details': False,
             'steps': False,
             'topologies': False
+        }
+
+    @staticmethod
+    def unlimited_cache_sizes():
+        """
+        Set cache sizes to no caching at all.
+
+        Notes
+        -----
+        This is VERY SLOW and only used for debugging.
+        """
+        return {
+            'trajectories': True,
+            'snapshots': True,
+            'statics': True,
+            'kinetics': True,
+            'samples': True,
+            'samplesets': True,
+            'cvs': True,
+            'pathmovers': True,
+            'shootingpointselectors': True,
+            'engines': True,
+            'pathsimulators': True,
+            'volumes': True,
+            'ensembles': True,
+            'movechanges': True,
+            'transitions': True,
+            'networks': True,
+            'interfacesets': True,
+            'schemes': True,
+            'msouters': True,
+            'details': True,
+            'steps': True,
+            'topologies': True
         }
 
 
@@ -409,7 +450,7 @@ class AnalysisStorage(Storage):
 
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename, caching_mode='analysis'):
         """
         Open a storage in read-only and do caching useful for analysis.
 
@@ -417,6 +458,12 @@ class AnalysisStorage(Storage):
         ----------
         filename : str
             The filename of the storage to be opened
+        caching_mode : str
+            The caching mode to be used. Default is `analysis` which will
+            cache lots of usually relevant object. If you have a decent
+            size system and lots of memory you might want to try `unlimited`
+            which will not load all objects but keep every object you load.
+            This is fastest but might crash for large storages.
 
         """
         super(AnalysisStorage, self).__init__(
@@ -424,7 +471,7 @@ class AnalysisStorage(Storage):
             mode='r'
         )
 
-        self.set_caching_mode('analysis')
+        self.set_caching_mode(caching_mode)
 
         # Let's go caching
         AnalysisStorage.cache_for_analysis(self)

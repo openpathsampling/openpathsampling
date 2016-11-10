@@ -204,6 +204,18 @@ class OpenMMEngine(DynamicsEngine):
         logger.info('Removed existing OpenMM engine.')
         self._simulation = None
 
+    def unload_context(self):
+        """
+        Unload the OpenMM context
+
+        Certain platforms can only exist once, e.g. CUDA. To use multiple
+        engines you need to manually initialize and unload contexts.
+
+        """
+        if self._simulation is not None:
+            del self._simulation.context
+            self._simulation = None
+
     def initialize(self, platform=None):
         """
         Create the final OpenMMEngine
@@ -277,6 +289,10 @@ class OpenMMEngine(DynamicsEngine):
         topology = dct['topology']
         options = dct['options']
         properties = dct['properties']
+
+        # we need to have str as keys
+        properties = {str(key): str(value)
+                      for key, value in properties.iteritems()}
 
         return OpenMMEngine(
             topology=topology,
@@ -389,3 +405,43 @@ class OpenMMEngine(DynamicsEngine):
         self.simulation.minimizeEnergy()
         # make sure that we get the minimized structure on request
         self._current_snapshot = None
+
+    def apply_constraints(self, snapshot=None, position_tol=None,
+                          velocity_tol=1e-5):
+        """Apply position and velocity constraints to a given snapshot.
+
+        If no snapshot given, applies constraints to the current_snapshot.
+
+        Parameters
+        ----------
+        snapshot : :class:`.Snapshot`
+            the snapshot to apply this engine's constraints to
+        position_tol : float or None
+            tolerance for position constraints; `None` takes the value from
+            the integrator
+        velocity_tol : float
+            tolerance for velocity constraints; default is 1e-5
+
+        Returns
+        -------
+        :class:`.Snapshot`
+            the snapshot after the constraints have been applied
+        """
+        context = self.simulation.context
+        if self._current_snapshot is not None:
+            old_snap = self.current_snapshot
+        else:
+            old_snap = None
+
+        if snapshot is not None:
+            self.current_snapshot = snapshot
+
+        if position_tol is None:
+            position_tol = context.getIntegrator().getConstraintTolerance()
+        # default 1e-5 for velocity_tol comes from OpenMM's setVelToTemp
+        context.applyConstraints(position_tol)  
+        context.applyVelocityConstraints(velocity_tol)
+        result_snap = self.current_snapshot
+        if old_snap is not None:
+            self.current_snapshot = old_snap
+        return result_snap

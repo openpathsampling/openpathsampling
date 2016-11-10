@@ -8,8 +8,8 @@ from test_helpers import (
 )
 
 import openpathsampling as paths
-from openpathsampling.analysis.move_scheme import MoveScheme, DefaultScheme
-from openpathsampling.analysis.move_strategy import *
+from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
+from openpathsampling.high_level.move_strategy import *
 from openpathsampling import VolumeFactory as vf
 
 import collections
@@ -119,6 +119,29 @@ class testOneWayShootingStrategy(MoveStrategyTestSetup):
         for mover in movers:
             assert_equal(type(mover), paths.OneWayShootingMover)
             assert_equal(type(mover.selector), paths.UniformSelector)
+
+class testTwoWayShootingStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = TwoWayShootingStrategy(modifier=paths.NoModification())
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 6)
+        for mover in movers:
+            assert_equal(type(mover), paths.TwoWayShootingMover)
+            assert_equal(type(mover.selector), paths.UniformSelector)
+            assert_equal(type(mover.modifier), paths.NoModification)
+
+    def test_composition_with_default_scheme(self):
+        strategy = TwoWayShootingStrategy(modifier=paths.NoModification())
+        scheme = DefaultScheme(self.network, engine=None)
+        scheme.append(strategy)
+        scheme.build_move_decision_tree()
+        assert_equal(len(scheme.movers['shooting']), 6)
+        for mover in scheme.movers['shooting']:
+            assert_equal(type(mover), paths.TwoWayShootingMover)
+            assert_equal(type(mover.selector), paths.UniformSelector)
+            assert_equal(type(mover.modifier), paths.NoModification)
+
 
 class testNearestNeighborRepExStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):

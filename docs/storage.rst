@@ -29,7 +29,6 @@ stores
     SampleStore
     MoveChangeStore
     MCStepStore
-    ObjectDictStore
     SampleStore
     SampleSetStore
     TrajectoryStore
