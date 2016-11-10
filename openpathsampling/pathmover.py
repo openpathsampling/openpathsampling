@@ -2245,9 +2245,48 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         return trial_trajectory, details
 
 
-class BackwardFirstTwoWayShootingMover(PathMover):
-    def __init__(self, ensemble, selector, engine=None):
-        pass
+class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
+    def _run(self, trajectory, shooting_index):
+        """
+        The actual shooting process (after shooting point is chosen).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            input trajectory
+        shooting_index : int
+            index of the shooting point within `trajectory`
+
+        Returns
+        -------
+        trial_trajectory : :class:`.Trajectory`
+            the resulting trial trajectory
+        details : dict
+            details dictionary (includes modified shooting point)
+        """
+        shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(
+            fnum=shooting_index,
+            maxt=len(trajectory) - 1,
+            sh_dir="Backward-first"
+        ))
+
+        original = trajectory[shooting_index]
+        modified = self.modifier(original)
+
+        bkwd_partial = self._make_backward_trajectory(trajectory, modified,
+                                                      shooting_index)
+        # TODO: come up with a test that shows why you need mid_traj here;
+        # should be a SeqEns with OptionalEnsembles. Exact example is hard!
+        mid_traj = bkwd_partial.reversed + trajectory[shooting_index + 1:]
+        fwd_partial = self._make_forward_trajectory(mid_traj, modified,
+                                                    shooting_index)
+
+        # join the two
+        trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
+
+        details = {'modified_shooting_snapshot': modified}
+        return trial_trajectory, details
 
 
 class TwoWayShootingMover(RandomChoiceMover):

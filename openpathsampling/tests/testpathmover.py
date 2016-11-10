@@ -298,6 +298,10 @@ class testForwardFirstTwoWayShootingMover(testShootingMover):
                   change.initial_trajectory)
 
 
+class testBackwardFirstTwoWayShootingMover(testForwardFirstTwoWayShootingMover):
+    _MoverType = BackwardFirstTwoWayShootingMover
+    # runs the same tests as ForwardFirst
+
 class testPathReversalMover(object):
     def setup(self):
         op = FunctionCV("myid", f=lambda snap :
