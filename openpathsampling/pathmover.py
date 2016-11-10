@@ -586,7 +586,6 @@ class SampleMover(PathMover):
             # Most common should be `EngineNaNError` if nan is detected and
             # `EngineMaxLengthError`
             trials, call_details = self(*samples)
-            print self, trials, call_details
 
         except SampleNaNError as e:
             return paths.RejectedNaNSampleMoveChange(
