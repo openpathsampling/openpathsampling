@@ -224,6 +224,35 @@ class OneWayShootingStrategy(MoveStrategy):
                                                             self.engine)
         return shooters
 
+
+class TwoWayShootingStrategy(MoveStrategy):
+    _level = levels.MOVER
+    def __init__(self, modifier, selector=None, ensembles=None, engine=None,
+                 group="shooting", replace=True):
+        super(TwoWayShootingStrategy, self).__init__(
+            ensembles=ensembles, group=group, replace=replace
+        )
+        self.modifier = modifier
+        if selector is None:
+            selector = paths.UniformSelector()
+        self.selector = selector
+        self.engine = engine
+
+    def make_movers(self, scheme):
+        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        shooters = [
+            paths.TwoWayShootingMover(
+                ensemble=ens,
+                selector=self.selector,
+                modifier=self.modifier,
+                engine=self.engine
+            ).named("TwoWayShooting " + ens.name)
+            for ens in ensembles
+        ]
+        return shooters
+
+
 class NearestNeighborRepExStrategy(MoveStrategy):
     """
     Make the NN replica exchange scheme among ordered ensembles.

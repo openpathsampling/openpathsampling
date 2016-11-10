@@ -2160,7 +2160,6 @@ class OneWayExtendMover(RandomChoiceMover):
         return mover
 
 
-
 class AbstractTwoWayShootingMover(EngineMover):
     def __init__(self, ensemble, selector, modifier, engine=None):
         super(AbstractTwoWayShootingMover, self).__init__(
@@ -2173,7 +2172,7 @@ class AbstractTwoWayShootingMover(EngineMover):
 
     # required for concrete class; not really used
     @property
-    def direction(self):
+    def direction(self):  # pragma: no cover
         return 'bidrectional'
 
     def _make_forward_trajectory(self, trajectory, initial_snapshot,
