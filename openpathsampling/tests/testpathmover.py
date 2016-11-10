@@ -260,8 +260,10 @@ class testOneWayShootingMover(testShootingMover):
         assert_equal(BackwardShootMover in moverclasses, True)
 
 class testForwardFirstTwoWayShootingMover(testShootingMover):
+    _MoverType = ForwardFirstTwoWayShootingMover
+    # this allows us to run the exact same tests for backward-first
     def test_run(self):
-        mover = ForwardFirstTwoWayShootingMover(
+        mover = self._MoverType(
             ensemble=self.tps,
             selector=UniformSelector(),
             modifier=paths.NoModification(),
@@ -280,6 +282,20 @@ class testForwardFirstTwoWayShootingMover(testShootingMover):
         assert_equal(details['modified_shooting_snapshot'], traj[2])
         assert_not_in(details['modified_shooting_snapshot'],
                       self.init_samp[0].trajectory)
+
+    def test_run_toy(self):
+        # mostly smoke test for toy engine integration
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=paths.NoModification(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.toy_samp)
+        assert_in(change.details.modified_shooting_snapshot,
+                  change.trials[0].trajectory)
+        assert_in(change.details.shooting_snapshot,
+                  change.initial_trajectory)
 
 
 class testPathReversalMover(object):

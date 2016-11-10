@@ -747,7 +747,7 @@ class EngineMover(SampleMover):
                 input_sample, shooting_index, trial_trajectory)
 
         trials = [trial]
-        # TODO: update details here to include run_details
+        details.update(run_details)
 
         return trials, details
 
@@ -2232,8 +2232,11 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
 
         fwd_partial = self._make_forward_trajectory(trajectory, modified,
                                                     shooting_index)
-        bkwd_partial = self._make_backward_trajectory(trajectory, modified,
-                                                     shooting_index)
+        # TODO: come up with a test that shows why you need mid_traj here;
+        # should be a SeqEns with OptionalEnsembles. Exact example is hard!
+        mid_traj = trajectory[0:shooting_index] + fwd_partial
+        bkwd_partial = self._make_backward_trajectory(mid_traj, modified,
+                                                      shooting_index)
 
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
