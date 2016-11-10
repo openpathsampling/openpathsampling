@@ -71,15 +71,17 @@ def make_list_of_pairs(l):
 
 
 class SampleNaNError(Exception):
-    def __init__(self, message, trial_sample):
+    def __init__(self, message, trial_sample, details):
         super(SampleNaNError, self).__init__(message)
         self.trial_sample = trial_sample
+        self.details = details
 
 
 class SampleMaxLengthError(Exception):
-    def __init__(self, message, trial_sample):
+    def __init__(self, message, trial_sample, details):
         super(SampleMaxLengthError, self).__init__(message)
         self.trial_sample = trial_sample
+        self.details = details
 
 
 class MoveChangeNaNError(Exception):
@@ -518,6 +520,7 @@ class SampleMover(PathMover):
 
         shoot_str = "MC in {cls} using samples {trials}"
         logger.info(shoot_str.format(cls=cls.__name__, trials=trials))
+
         trial_dict = dict()
         for trial in trials:
             trial_dict[trial.ensemble] = trial
@@ -543,10 +546,10 @@ class SampleMover(PathMover):
             # rejected
             accepted = False
 
-        details = paths.MoveDetails(
-            metropolis_acceptance=probability,
-            metropolis_random=rand
-        )
+        details = {
+            'metropolis_acceptance': probability,
+            'metropolis_random': rand
+        }
 
         logger.info("Trial was " + ("accepted" if accepted else "rejected"))
 
@@ -582,7 +585,8 @@ class SampleMover(PathMover):
             # engine specific exceptions if something goes wrong.
             # Most common should be `EngineNaNError` if nan is detected and
             # `EngineMaxLengthError`
-            trials = self(*samples)
+            trials, call_details = self(*samples)
+
         except SampleNaNError as e:
             return paths.RejectedNaNSampleMoveChange(
                 samples=e.trial_sample,
@@ -601,7 +605,14 @@ class SampleMover(PathMover):
             )
 
         # 4. accept/reject
-        accepted, details = self._accept(trials)
+        accepted, acceptance_details = self._accept(trials)
+
+        # update details
+        kwargs = {}
+        kwargs.update(call_details)
+        kwargs.update(acceptance_details)
+
+        details = MoveDetails(**kwargs)
 
         # 5. and return a PMC
         if accepted:
@@ -647,6 +658,28 @@ class SampleMover(PathMover):
 
 class EngineMover(SampleMover):
     """Baseclass for Movers that use an engine
+
+    Notes
+    -----
+
+    A few comments for developers working with subclasses of
+    ``EngineMover``: This class is intended to do most of the grunt work for
+    a wide range of possible engine-based needs. Remember that your
+    ``selector`` can select first or final points, e.g., to extend a move.
+    In order to help you find your way through the ``EngineMover`` code,
+    here is an overview of what various private methods do:
+
+    * ``__call__``: Creates the trial. Two steps: (1) make the trajectory;
+      (2) assemble a sample to return
+    * ``_build_sample``: assembles the final sample
+    * ``_make_forward_trajectory``/``_make_backward_trajectory``: creates
+      the actual trajectory, using :class:`.PrefixTrajectoryEnsemble` or
+      :class:`.SuffixTrajectoryEnsemble` to ensure reasonable behavior (see
+      below for further discussion)
+    * ``._run``: this is what is called by ``__call__``, and it in turn
+      calls the functions to make the trajectories (depending on the nature
+      of the mover). Frequently, this is the only thing to override (two-way
+      shooting, shifting).
     """
 
     default_engine = None
@@ -692,28 +725,30 @@ class EngineMover(SampleMover):
         shooting_index = self.selector.pick(initial_trajectory)
 
         try:
-            trial_trajectory = self._run(initial_trajectory, shooting_index)
+            trial_trajectory, run_details = self._run(initial_trajectory,
+                                                      shooting_index)
 
         except paths.engines.EngineNaNError as e:
-            trial = self._build_sample(
+            trial, details = self._build_sample(
                 input_sample, shooting_index, e.last_trajectory, 'nan')
 
-            raise SampleNaNError('Sample with NaN', trial)
+            raise SampleNaNError('Sample with NaN', trial, details)
 
         except paths.engines.EngineMaxLengthError as e:
-            trial = self._build_sample(
+            trial, details = self._build_sample(
                 input_sample, shooting_index, e.last_trajectory, 'max_length')
 
             if EngineMover.reject_max_length:
-                raise SampleMaxLengthError('Sample with MaxLength', trial)
+                raise SampleMaxLengthError('Sample with MaxLength', trial, details)
 
         else:
-            trial = self._build_sample(
+            trial, details = self._build_sample(
                 input_sample, shooting_index, trial_trajectory)
 
         trials = [trial]
+        details.update(run_details)
 
-        return trials
+        return trials, details
 
     def _build_sample(
             self,
@@ -740,25 +775,24 @@ class EngineMover(SampleMover):
         # assert(initial_trajectory[shooting_index] in trial_trajectory)
 
         # we need to save the initial
-        trial_details = paths.SampleDetails(
-            initial_trajectory=initial_trajectory,
-            shooting_snapshot=initial_trajectory[shooting_index]
-        )
+        trial_details = {
+            'initial_trajectory': initial_trajectory,
+            'shooting_snapshot': initial_trajectory[shooting_index]
+        }
 
         if stopping_reason is not None:
-            trial_details.stopping_reason = stopping_reason
+            trial_details['stopping_reason'] = stopping_reason
 
         trial = paths.Sample(
             replica=input_sample.replica,
             trajectory=trial_trajectory,
             ensemble=self.target_ensemble,
             parent=input_sample,
-            details=trial_details,
             mover=self,
             bias=bias
         )
 
-        return trial
+        return trial, trial_details
 
     def _make_forward_trajectory(self, trajectory, shooting_index):
         initial_snapshot = trajectory[shooting_index]  # .copy()
@@ -811,7 +845,7 @@ class EngineMover(SampleMover):
         else:
             raise RuntimeError("Unknown direction: " + str(self.direction))
 
-        return trial_trajectory
+        return trial_trajectory, {}
 
 
 class ForwardShootMover(EngineMover):
@@ -969,7 +1003,7 @@ class ReplicaExchangeMover(SampleMover):
             mover=self
         )
 
-        return [trial1, trial2]
+        return [trial1, trial2], {}
 
 
 class StateSwapMover(SampleMover):
@@ -1045,7 +1079,6 @@ class StateSwapMover(SampleMover):
             trajectory=trajectory1,
             ensemble=ensemble2,
             parent=sample1,
-            details=SampleDetails(),
             mover=self
         )
         trial2 = paths.Sample(
@@ -1053,11 +1086,10 @@ class StateSwapMover(SampleMover):
             trajectory=trajectory2,
             ensemble=ensemble1,
             parent=sample2,
-            details=SampleDetails(),
             mover=self
         )
 
-        return [trial1, trial2]
+        return [trial1, trial2], {}
 
 
 ###############################################################################
@@ -1071,7 +1103,7 @@ class SubtrajectorySelectMover(SampleMover):
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
 
-    Parameters
+    Attributes
     ----------
     ensemble : openpathsampling.Ensemble
         the set of allows samples to chose from
@@ -1105,7 +1137,7 @@ class SubtrajectorySelectMover(SampleMover):
 
     @abc.abstractmethod
     def _choose(self, trajectory_list):
-        pass
+        return [], {}
 
     def __call__(self, trial):
         initial_trajectory = trial.trajectory
@@ -1119,7 +1151,7 @@ class SubtrajectorySelectMover(SampleMover):
 
         if (self.n_l is None and len(subtrajs) > 0) or \
                 (self.n_l is not None and len(subtrajs) == self.n_l):
-            subtraj = self._choose(subtrajs)
+            subtraj, selection_details = self._choose(subtrajs)
 
             bias = 1.0
 
@@ -1135,8 +1167,9 @@ class SubtrajectorySelectMover(SampleMover):
             trials = [trial]
         else:
             trials = []
+            selection_details = {}
 
-        return trials
+        return trials, selection_details
 
 
 class RandomSubtrajectorySelectMover(SubtrajectorySelectMover):
@@ -1146,21 +1179,22 @@ class RandomSubtrajectorySelectMover(SubtrajectorySelectMover):
     If there are no subtrajectories which satisfy the subensemble, this
     returns the zero-length trajectory.
 
-    Parameters
+    Attributes
     ----------
     ensemble : openpathsampling.Ensemble
         the set of allows samples to chose from
-    subensemble : openpathsampling.Ensemble
+    sub_ensemble : openpathsampling.Ensemble
         the subensemble to be searched for
     n_l : int or None
         the number of subtrajectories that need to be found. If
         `None` every number of subtrajectories > 0 is okay.
         Otherwise the move is only accepted if exactly n_l subtrajectories
         are found.
+
     """
 
     def _choose(self, trajectory_list):
-        return random.choice(trajectory_list)
+        return random.choice(trajectory_list), {}
 
 
 class FirstSubtrajectorySelectMover(SubtrajectorySelectMover):
@@ -1169,10 +1203,23 @@ class FirstSubtrajectorySelectMover(SubtrajectorySelectMover):
 
     If there are no subtrajectories which satisfy the ensemble, this returns
     the zero-length trajectory.
+
+    Attributes
+    ----------
+    ensemble : openpathsampling.Ensemble
+        the set of allows samples to chose from
+    sub_ensemble : openpathsampling.Ensemble
+        the subensemble to be searched for
+    n_l : int or None
+        the number of subtrajectories that need to be found. If
+        `None` every number of subtrajectories > 0 is okay.
+        Otherwise the move is only accepted if exactly n_l subtrajectories
+        are found.
+
     """
 
     def _choose(self, trajectory_list):
-        return trajectory_list[0]
+        return trajectory_list[0], {}
 
 
 class FinalSubtrajectorySelectMover(SubtrajectorySelectMover):
@@ -1181,10 +1228,23 @@ class FinalSubtrajectorySelectMover(SubtrajectorySelectMover):
 
     If there are no subtrajectories which satisfy the ensemble, this returns
     the zero-length trajectory.
+
+    Attributes
+    ----------
+    ensemble : openpathsampling.Ensemble
+        the set of allows samples to chose from
+    sub_ensemble : openpathsampling.Ensemble
+        the subensemble to be searched for
+    n_l : int or None
+        the number of subtrajectories that need to be found. If
+        `None` every number of subtrajectories > 0 is okay.
+        Otherwise the move is only accepted if exactly n_l subtrajectories
+        are found.
+
     """
 
     def _choose(self, trajectory_list):
-        return trajectory_list[-1]
+        return trajectory_list[-1], {}
 
 
 ###############################################################################
@@ -1236,7 +1296,7 @@ class PathReversalMover(SampleMover):
             bias=bias
         )
 
-        return [trial]
+        return [trial], {}
 
 
 class EnsembleHopMover(SampleMover):
@@ -1326,7 +1386,6 @@ class EnsembleHopMover(SampleMover):
         logger.info("Hop starts from legal ensemble: "+str(ens_from(trajectory)))
         logger.info("Hop ends in legal ensemble: "+str(ens_to(trajectory)))
 
-        sample_details = SampleDetails()
 
         # TODO: remove this and generalize!!!
         if type(self.bias) is float:
@@ -1342,24 +1401,23 @@ class EnsembleHopMover(SampleMover):
         else:
             bias = 1.0
             logger.info("Using default bias: self.bias == " + str(self.bias))
-                    
 
         trial = paths.Sample(
             replica=replica,
             trajectory=trajectory,
             ensemble=ens_to,
-            details=sample_details,
             mover=self,
             parent=rep_sample,
             bias=bias
         )
 
-        details = MoveDetails()
-        setattr(details, 'initial_ensemble', ens_from)
-        setattr(details, 'trial_ensemble', ens_to)
-        setattr(details, 'bias', bias)
+        details = {
+            'initial_ensemble': ens_from,
+            'trial_ensemble': ens_to,
+            'bias': bias
+        }
 
-        return [trial]
+        return [trial], details
 
 
 # ****************************************************************************
@@ -1446,12 +1504,14 @@ class SelectionMover(PathMover):
 
         mover = self.movers[idx]
 
-        details = MoveDetails()
-        details.inputs = []
-        details.choice = idx
-        details.chosen_mover = mover
-        details.probability = weights[idx] / sum(weights)
-        details.weights = weights
+        kwargs = {
+            'choice': idx,
+            'chosen_mover': mover,
+            'probability': weights[idx] / sum(weights),
+            'weights': weights
+        }
+
+        details = MoveDetails(**kwargs)
 
         path = paths.RandomChoiceMoveChange(
             mover.move(sample_set),
@@ -1544,6 +1604,9 @@ class FirstAllowedMover(SelectionMover):
     ----------
     movers : list of PathMover
         the PathMovers to choose from
+    weights : list of floats
+        the relative weight of each PathMover (does not need to be normalized)
+
     """
 
     def _selector(self, sample_set):
@@ -1580,6 +1643,9 @@ class LastAllowedMover(SelectionMover):
     ----------
     movers : list of PathMover
         the PathMovers to choose from
+    weights : list of floats
+        the relative weight of each PathMover (does not need to be normalized)
+
     """
 
     def _selector(self, sample_set):
@@ -1845,60 +1911,60 @@ class ConditionalSequentialMover(SequentialMover):
             movechanges, mover=self)
 
 
-class ReplicaIDChangeMover(PathMover):
-    """
-    Changes the replica ID for a path.
-    """
-
-    def __init__(self, replica_pair):
-        super(ReplicaIDChangeMover, self).__init__()
-        self.replica_pair = replica_pair
-        initialization_logging(logger=init_log, obj=self,
-                               entries=['replica_pairs'])
-
-    def move(self, sample_set):
-        rep_from = self.replica_pair[0]
-        rep_to = self.replica_pair[1]
-        rep_sample = self.select_sample(sample_set,
-                                        replicas=rep_from)
-
-        logger.info(
-            "Creating new sample from replica ID " + str(rep_from) +
-            " and putting it in replica ID " + str(rep_to))
-
-        # note: currently this clones into a new replica ID. We might later
-        # want to kill the old replica ID (and possibly rename this mover).
-
-        new_sample = paths.Sample(
-            replica=rep_to,
-            ensemble=rep_sample.ensemble,
-            trajectory=rep_sample.trajectory,
-            parent=rep_sample,
-            mover=self
-        )
-
-        # Can be used to remove the old sample. Not used yet!
-        # kill_sample = paths.Sample(
-        #     replica=rep_from,
-        #     trajectory=None,
-        #     ensemble=rep_sample.ensemble,
-        #     parent=None,
-        #     mover=self
-        # )
-
-        details = MoveDetails()
-        details.inputs = [rep_sample]
-        details.trials = [rep_sample]
-        details.mover = self
-        setattr(details, 'rep_from', rep_from)
-        setattr(details, 'rep_to', rep_to)
-
-        return paths.AcceptedSampleMoveChange(
-            samples=[new_sample],
-            mover=self,
-            input_samples=samples,
-            details=details
-        )
+# class ReplicaIDChangeMover(PathMover):
+#     """
+#     Changes the replica ID for a path.
+#     """
+#
+#     def __init__(self, replica_pair):
+#         super(ReplicaIDChangeMover, self).__init__()
+#         self.replica_pair = replica_pair
+#         initialization_logging(logger=init_log, obj=self,
+#                                entries=['replica_pairs'])
+#
+#     def move(self, sample_set):
+#         rep_from = self.replica_pair[0]
+#         rep_to = self.replica_pair[1]
+#         rep_sample = self.select_sample(sample_set,
+#                                         replicas=rep_from)
+#
+#         logger.info(
+#             "Creating new sample from replica ID " + str(rep_from) +
+#             " and putting it in replica ID " + str(rep_to))
+#
+#         # note: currently this clones into a new replica ID. We might later
+#         # want to kill the old replica ID (and possibly rename this mover).
+#
+#         new_sample = paths.Sample(
+#             replica=rep_to,
+#             ensemble=rep_sample.ensemble,
+#             trajectory=rep_sample.trajectory,
+#             parent=rep_sample,
+#             mover=self
+#         )
+#
+#         # Can be used to remove the old sample. Not used yet!
+#         # kill_sample = paths.Sample(
+#         #     replica=rep_from,
+#         #     trajectory=None,
+#         #     ensemble=rep_sample.ensemble,
+#         #     parent=None,
+#         #     mover=self
+#         # )
+#
+#         kwargs = {
+#             'rep_from': rep_from,
+#             'rep_to': rep_to
+#         }
+#
+#         details = MoveDetails(**kwargs)
+#
+#         return paths.AcceptedSampleMoveChange(
+#             samples=[new_sample],
+#             mover=self,
+#             input_samples=[rep_sample],
+#             details=details
+#         )
 
 
 class SubPathMover(PathMover):
@@ -1911,8 +1977,6 @@ class SubPathMover(PathMover):
         ----------
         mover : :class:`openpathsampling.PathMover`
             the submover to be delegated to
-        ensembles : nested list of :class:`openpathsampling.Ensemble` or None
-            the ensemble specification
         """
         super(SubPathMover, self).__init__()
         self.mover = mover
@@ -2095,6 +2159,172 @@ class OneWayExtendMover(RandomChoiceMover):
         return mover
 
 
+class AbstractTwoWayShootingMover(EngineMover):
+    def __init__(self, ensemble, selector, modifier, engine=None):
+        super(AbstractTwoWayShootingMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=ensemble,
+            selector=selector,
+            engine=engine
+        )
+        self.modifier = modifier
+
+    # required for concrete class; not really used
+    @property
+    def direction(self):  # pragma: no cover
+        return 'bidrectional'
+
+    def _make_forward_trajectory(self, trajectory, initial_snapshot,
+                                 shooting_index):
+        fwd_ens = paths.PrefixTrajectoryEnsemble(
+            self.target_ensemble,
+            trajectory[0:shooting_index]
+        )
+        fwd_partial = self.engine.generate(initial_snapshot,
+                                           running=[fwd_ens.can_append])
+        return fwd_partial
+
+    def _make_backward_trajectory(self, trajectory, initial_snapshot,
+                                  shooting_index):
+        # run backward
+        bkwd_ens = paths.SuffixTrajectoryEnsemble(
+            self.target_ensemble,
+            trajectory[shooting_index + 1:]
+        )
+        bkwd_partial = self.engine.generate(initial_snapshot.reversed,
+                                            running=[bkwd_ens.can_prepend])
+        return bkwd_partial
+
+    def _run(self, trajectory, shooting_index):
+        # to override the default implementation in EngineMover
+        raise NotImplementedError
+
+class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
+    def _run(self, trajectory, shooting_index):
+        """
+        The actual shooting process (after shooting point is chosen).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            input trajectory
+        shooting_index : int
+            index of the shooting point within `trajectory`
+
+        Returns
+        -------
+        trial_trajectory : :class:`.Trajectory`
+            the resulting trial trajectory
+        details : dict
+            details dictionary (includes modified shooting point)
+        """
+        shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(
+            fnum=shooting_index,
+            maxt=len(trajectory) - 1,
+            sh_dir="Forward-first"
+        ))
+
+        original = trajectory[shooting_index]
+        modified = self.modifier(original)
+
+        fwd_partial = self._make_forward_trajectory(trajectory, modified,
+                                                    shooting_index)
+        # TODO: come up with a test that shows why you need mid_traj here;
+        # should be a SeqEns with OptionalEnsembles. Exact example is hard!
+        mid_traj = trajectory[0:shooting_index] + fwd_partial
+        bkwd_partial = self._make_backward_trajectory(mid_traj, modified,
+                                                      shooting_index)
+
+        # join the two
+        trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
+
+        details = {'modified_shooting_snapshot': modified}
+        return trial_trajectory, details
+
+
+class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
+    def _run(self, trajectory, shooting_index):
+        """
+        The actual shooting process (after shooting point is chosen).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            input trajectory
+        shooting_index : int
+            index of the shooting point within `trajectory`
+
+        Returns
+        -------
+        trial_trajectory : :class:`.Trajectory`
+            the resulting trial trajectory
+        details : dict
+            details dictionary (includes modified shooting point)
+        """
+        shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(
+            fnum=shooting_index,
+            maxt=len(trajectory) - 1,
+            sh_dir="Backward-first"
+        ))
+
+        original = trajectory[shooting_index]
+        modified = self.modifier(original)
+
+        bkwd_partial = self._make_backward_trajectory(trajectory, modified,
+                                                      shooting_index)
+        # TODO: come up with a test that shows why you need mid_traj here;
+        # should be a SeqEns with OptionalEnsembles. Exact example is hard!
+        mid_traj = bkwd_partial.reversed + trajectory[shooting_index + 1:]
+        fwd_partial = self._make_forward_trajectory(mid_traj, modified,
+                                                    shooting_index)
+
+        # join the two
+        trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
+
+        details = {'modified_shooting_snapshot': modified}
+        return trial_trajectory, details
+
+
+class TwoWayShootingMover(RandomChoiceMover):
+    def __init__(self, ensemble, selector, modifier, engine=None):
+        movers = [
+            ForwardFirstTwoWayShootingMover(
+                ensemble=ensemble,
+                selector=selector,
+                modifier=modifier,
+                engine=engine
+            ),
+            BackwardFirstTwoWayShootingMover(
+                ensemble=ensemble,
+                selector=selector,
+                modifier=modifier,
+                engine=engine
+            )
+        ]
+        super(TwoWayShootingMover, self).__init__(movers=movers)
+
+    @classmethod
+    def from_dict(cls, dct):
+        # see also OneWayShootingMover for this
+        mover = cls.__new__(cls)
+        super(cls, mover).__init__(movers=dct['movers'])
+        return mover
+
+    @property
+    def ensemble(self):
+        return self.movers[0].ensemble
+
+    @property
+    def selector(self):
+        return self.movers[0].selector
+
+    @property
+    def modifier(self):
+        return self.movers[0].modifier
+
+
 class MinusMover(SubPathMover):
     """
     Instance of a MinusMover.
@@ -2187,7 +2417,8 @@ class SingleReplicaMinusMover(MinusMover):
         except TypeError:
             innermost_ensembles = [innermost_ensembles]
 
-        if bias is None: bias = "" # TODO temp for storage until real bias
+        if bias is None:
+            bias = ""  # TODO temp for storage until real bias
         self.bias = bias
         self.minus_ensemble = minus_ensemble
         self.innermost_ensembles = innermost_ensembles
@@ -2338,8 +2569,12 @@ class MoveDetails(Details):
         super(MoveDetails, self).__init__(**kwargs)
 
 
+# leave this for potential backwards compatibility
 class SampleDetails(Details):
     """Details of a sample
+
+    .. note:: Deprecated in OpenPathSampling 0.9.3
+          `SampleDetails` will be removed in OPS 2.0.0
     """
 
     def __init__(self, **kwargs):
