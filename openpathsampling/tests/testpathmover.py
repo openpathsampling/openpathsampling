@@ -4,7 +4,8 @@
 
 from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_true)
+                        raises, assert_true, assert_in, assert_not_in)
+from numpy.testing import assert_allclose
 
 from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
@@ -257,6 +258,29 @@ class testOneWayShootingMover(testShootingMover):
         moverclasses = [m.__class__ for m in mover.movers]
         assert_equal(ForwardShootMover in moverclasses, True)
         assert_equal(BackwardShootMover in moverclasses, True)
+
+class testForwardFirstTwoWayShootingMover(testShootingMover):
+    def test_run(self):
+        mover = ForwardFirstTwoWayShootingMover(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=paths.NoModification(),
+            engine=self.dyn
+        )
+        traj, details = mover._run(self.init_samp[0].trajectory, 4)
+        assert_allclose(traj.xyz[:,0,0], [-0.1, 0.2, 0.4, 0.6, 0.8])
+        assert_equal(details.keys(), ['modified_shooting_snapshot'])
+        assert_equal(details['modified_shooting_snapshot'], traj[2])
+        assert_not_in(details['modified_shooting_snapshot'],
+                      self.init_samp[0].trajectory)
+
+        traj, details = mover._run(self.init_samp[0].trajectory, 3)
+        assert_allclose(traj.xyz[:,0,0], [-0.1, 0.1, 0.3, 0.5, 0.7])
+        assert_equal(details.keys(), ['modified_shooting_snapshot'])
+        assert_equal(details['modified_shooting_snapshot'], traj[2])
+        assert_not_in(details['modified_shooting_snapshot'],
+                      self.init_samp[0].trajectory)
+
 
 class testPathReversalMover(object):
     def setup(self):

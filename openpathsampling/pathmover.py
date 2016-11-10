@@ -2163,7 +2163,7 @@ class OneWayExtendMover(RandomChoiceMover):
 
 class AbstractTwoWayShootingMover(EngineMover):
     def __init__(self, ensemble, selector, modifier, engine=None):
-        super(ForwardFirstTwoWayShootingMover, self).__init__(
+        super(AbstractTwoWayShootingMover, self).__init__(
             ensemble=ensemble,
             target_ensemble=ensemble,
             selector=selector,
@@ -2176,7 +2176,8 @@ class AbstractTwoWayShootingMover(EngineMover):
     def direction(self):
         return 'bidrectional'
 
-    def _make_forward_trajectory(self, trajectory, initial_snapshot):
+    def _make_forward_trajectory(self, trajectory, initial_snapshot,
+                                 shooting_index):
         fwd_ens = paths.PrefixTrajectoryEnsemble(
             self.target_ensemble,
             trajectory[0:shooting_index]
@@ -2185,14 +2186,15 @@ class AbstractTwoWayShootingMover(EngineMover):
                                            running=[fwd_ens.can_append])
         return fwd_partial
 
-    def _make_backward_trajectory(self, trajectory, initial_snapshot):
+    def _make_backward_trajectory(self, trajectory, initial_snapshot,
+                                  shooting_index):
         # run backward
         bkwd_ens = paths.SuffixTrajectoryEnsemble(
             self.target_ensemble,
             trajectory[shooting_index + 1:]
         )
         bkwd_partial = self.engine.generate(initial_snapshot.reversed,
-                                            running=[bkwd_ens.can_append])
+                                            running=[bkwd_ens.can_prepend])
         return bkwd_partial
 
     def _run(self, trajectory, shooting_index):
@@ -2202,7 +2204,21 @@ class AbstractTwoWayShootingMover(EngineMover):
 class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
     def _run(self, trajectory, shooting_index):
         """
-        Takes initial trajectory and shooting point, return trial trajectory.
+        The actual shooting process (after shooting point is chosen).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            input trajectory
+        shooting_index : int
+            index of the shooting point within `trajectory`
+
+        Returns
+        -------
+        trial_trajectory : :class:`.Trajectory`
+            the resulting trial trajectory
+        details : dict
+            details dictionary (includes modified shooting point)
         """
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
@@ -2214,8 +2230,10 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         original = trajectory[shooting_index]
         modified = self.modifier(original)
 
-        fwd_partial = self._make_forward_trajectory(trajectory, modified)
-        bkwd_partial = self._make_backward_trajectory(trajectory, modified)
+        fwd_partial = self._make_forward_trajectory(trajectory, modified,
+                                                    shooting_index)
+        bkwd_partial = self._make_backward_trajectory(trajectory, modified,
+                                                     shooting_index)
 
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
