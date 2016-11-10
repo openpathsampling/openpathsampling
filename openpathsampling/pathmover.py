@@ -586,7 +586,6 @@ class SampleMover(PathMover):
             # Most common should be `EngineNaNError` if nan is detected and
             # `EngineMaxLengthError`
             trials, call_details = self(*samples)
-            print self, trials, call_details
 
         except SampleNaNError as e:
             return paths.RejectedNaNSampleMoveChange(
@@ -659,6 +658,28 @@ class SampleMover(PathMover):
 
 class EngineMover(SampleMover):
     """Baseclass for Movers that use an engine
+
+    Notes
+    -----
+
+    A few comments for developers working with subclasses of
+    ``EngineMover``: This class is intended to do most of the grunt work for
+    a wide range of possible engine-based needs. Remember that your
+    ``selector`` can select first or final points, e.g., to extend a move.
+    In order to help you find your way through the ``EngineMover`` code,
+    here is an overview of what various private methods do:
+
+    * ``__call__``: Creates the trial. Two steps: (1) make the trajectory;
+      (2) assemble a sample to return
+    * ``_build_sample``: assembles the final sample
+    * ``_make_forward_trajectory``/``_make_backward_trajectory``: creates
+      the actual trajectory, using :class:`.PrefixTrajectoryEnsemble` or
+      :class:`.SuffixTrajectoryEnsemble` to ensure reasonable behavior (see
+      below for further discussion)
+    * ``._run``: this is what is called by ``__call__``, and it in turn
+      calls the functions to make the trajectories (depending on the nature
+      of the mover). Frequently, this is the only thing to override (two-way
+      shooting, shifting).
     """
 
     default_engine = None
@@ -704,7 +725,8 @@ class EngineMover(SampleMover):
         shooting_index = self.selector.pick(initial_trajectory)
 
         try:
-            trial_trajectory = self._run(initial_trajectory, shooting_index)
+            trial_trajectory, run_details = self._run(initial_trajectory,
+                                                      shooting_index)
 
         except paths.engines.EngineNaNError as e:
             trial, details = self._build_sample(
@@ -724,6 +746,7 @@ class EngineMover(SampleMover):
                 input_sample, shooting_index, trial_trajectory)
 
         trials = [trial]
+        details.update(run_details)
 
         return trials, details
 
@@ -822,7 +845,7 @@ class EngineMover(SampleMover):
         else:
             raise RuntimeError("Unknown direction: " + str(self.direction))
 
-        return trial_trajectory
+        return trial_trajectory, {}
 
 
 class ForwardShootMover(EngineMover):
@@ -2134,6 +2157,172 @@ class OneWayExtendMover(RandomChoiceMover):
         )
 
         return mover
+
+
+class AbstractTwoWayShootingMover(EngineMover):
+    def __init__(self, ensemble, selector, modifier, engine=None):
+        super(AbstractTwoWayShootingMover, self).__init__(
+            ensemble=ensemble,
+            target_ensemble=ensemble,
+            selector=selector,
+            engine=engine
+        )
+        self.modifier = modifier
+
+    # required for concrete class; not really used
+    @property
+    def direction(self):  # pragma: no cover
+        return 'bidrectional'
+
+    def _make_forward_trajectory(self, trajectory, initial_snapshot,
+                                 shooting_index):
+        fwd_ens = paths.PrefixTrajectoryEnsemble(
+            self.target_ensemble,
+            trajectory[0:shooting_index]
+        )
+        fwd_partial = self.engine.generate(initial_snapshot,
+                                           running=[fwd_ens.can_append])
+        return fwd_partial
+
+    def _make_backward_trajectory(self, trajectory, initial_snapshot,
+                                  shooting_index):
+        # run backward
+        bkwd_ens = paths.SuffixTrajectoryEnsemble(
+            self.target_ensemble,
+            trajectory[shooting_index + 1:]
+        )
+        bkwd_partial = self.engine.generate(initial_snapshot.reversed,
+                                            running=[bkwd_ens.can_prepend])
+        return bkwd_partial
+
+    def _run(self, trajectory, shooting_index):
+        # to override the default implementation in EngineMover
+        raise NotImplementedError
+
+class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
+    def _run(self, trajectory, shooting_index):
+        """
+        The actual shooting process (after shooting point is chosen).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            input trajectory
+        shooting_index : int
+            index of the shooting point within `trajectory`
+
+        Returns
+        -------
+        trial_trajectory : :class:`.Trajectory`
+            the resulting trial trajectory
+        details : dict
+            details dictionary (includes modified shooting point)
+        """
+        shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(
+            fnum=shooting_index,
+            maxt=len(trajectory) - 1,
+            sh_dir="Forward-first"
+        ))
+
+        original = trajectory[shooting_index]
+        modified = self.modifier(original)
+
+        fwd_partial = self._make_forward_trajectory(trajectory, modified,
+                                                    shooting_index)
+        # TODO: come up with a test that shows why you need mid_traj here;
+        # should be a SeqEns with OptionalEnsembles. Exact example is hard!
+        mid_traj = trajectory[0:shooting_index] + fwd_partial
+        bkwd_partial = self._make_backward_trajectory(mid_traj, modified,
+                                                      shooting_index)
+
+        # join the two
+        trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
+
+        details = {'modified_shooting_snapshot': modified}
+        return trial_trajectory, details
+
+
+class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
+    def _run(self, trajectory, shooting_index):
+        """
+        The actual shooting process (after shooting point is chosen).
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            input trajectory
+        shooting_index : int
+            index of the shooting point within `trajectory`
+
+        Returns
+        -------
+        trial_trajectory : :class:`.Trajectory`
+            the resulting trial trajectory
+        details : dict
+            details dictionary (includes modified shooting point)
+        """
+        shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
+        logger.info(shoot_str.format(
+            fnum=shooting_index,
+            maxt=len(trajectory) - 1,
+            sh_dir="Backward-first"
+        ))
+
+        original = trajectory[shooting_index]
+        modified = self.modifier(original)
+
+        bkwd_partial = self._make_backward_trajectory(trajectory, modified,
+                                                      shooting_index)
+        # TODO: come up with a test that shows why you need mid_traj here;
+        # should be a SeqEns with OptionalEnsembles. Exact example is hard!
+        mid_traj = bkwd_partial.reversed + trajectory[shooting_index + 1:]
+        fwd_partial = self._make_forward_trajectory(mid_traj, modified,
+                                                    shooting_index)
+
+        # join the two
+        trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
+
+        details = {'modified_shooting_snapshot': modified}
+        return trial_trajectory, details
+
+
+class TwoWayShootingMover(RandomChoiceMover):
+    def __init__(self, ensemble, selector, modifier, engine=None):
+        movers = [
+            ForwardFirstTwoWayShootingMover(
+                ensemble=ensemble,
+                selector=selector,
+                modifier=modifier,
+                engine=engine
+            ),
+            BackwardFirstTwoWayShootingMover(
+                ensemble=ensemble,
+                selector=selector,
+                modifier=modifier,
+                engine=engine
+            )
+        ]
+        super(TwoWayShootingMover, self).__init__(movers=movers)
+
+    @classmethod
+    def from_dict(cls, dct):
+        # see also OneWayShootingMover for this
+        mover = cls.__new__(cls)
+        super(cls, mover).__init__(movers=dct['movers'])
+        return mover
+
+    @property
+    def ensemble(self):
+        return self.movers[0].ensemble
+
+    @property
+    def selector(self):
+        return self.movers[0].selector
+
+    @property
+    def modifier(self):
+        return self.movers[0].modifier
 
 
 class MinusMover(SubPathMover):
