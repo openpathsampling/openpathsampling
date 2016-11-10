@@ -736,7 +736,7 @@ class SampleSet(StorableObject):
         )
 
 
-# @lazy_loading_attributes('parent', 'details', 'mover')
+# @lazy_loading_attributes('parent', 'mover')
 class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
