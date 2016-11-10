@@ -302,6 +302,39 @@ class testBackwardFirstTwoWayShootingMover(testForwardFirstTwoWayShootingMover):
     _MoverType = BackwardFirstTwoWayShootingMover
     # runs the same tests as ForwardFirst
 
+
+class testTwoWayShootingMover(testShootingMover):
+    def test_properties(self):
+        selector = UniformSelector()
+        modifier = paths.NoModification()
+        mover = TwoWayShootingMover(
+            ensemble=self.tps,
+            selector=selector,
+            modifier=modifier,
+            engine=self.dyn
+        )
+        assert_equal(mover.ensemble, self.tps)
+        assert_equal(mover.selector, selector)
+        assert_equal(mover.modifier, modifier)
+
+    def test_to_dict_from_dict(self):
+        mover = TwoWayShootingMover(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=paths.NoModification(),
+            engine=self.dyn
+        )
+        dct = mover.to_dict()
+        new_mover = mover.from_dict(dct)
+        assert_equal(mover.movers, new_mover.movers)
+        assert_equal(mover.ensemble, new_mover.ensemble)
+        assert_equal(mover.selector, new_mover.selector)
+        assert_equal(mover.modifier, new_mover.modifier)
+
+
+
+
+
 class testPathReversalMover(object):
     def setup(self):
         op = FunctionCV("myid", f=lambda snap :

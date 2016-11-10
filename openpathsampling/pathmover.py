@@ -2290,10 +2290,41 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
 
 
 class TwoWayShootingMover(RandomChoiceMover):
-    _is_canonical = True
+    def __init__(self, ensemble, selector, modifier, engine=None):
+        movers = [
+            ForwardFirstTwoWayShootingMover(
+                ensemble=ensemble,
+                selector=selector,
+                modifier=modifier,
+                engine=engine
+            ),
+            BackwardFirstTwoWayShootingMover(
+                ensemble=ensemble,
+                selector=selector,
+                modifier=modifier,
+                engine=engine
+            )
+        ]
+        super(TwoWayShootingMover, self).__init__(movers=movers)
 
-    def __init__(self, ensemble, selector, engine=None):
-        pass
+    @classmethod
+    def from_dict(cls, dct):
+        # see also OneWayShootingMover for this
+        mover = cls.__new__(cls)
+        super(cls, mover).__init__(movers=dct['movers'])
+        return mover
+
+    @property
+    def ensemble(self):
+        return self.movers[0].ensemble
+
+    @property
+    def selector(self):
+        return self.movers[0].selector
+
+    @property
+    def modifier(self):
+        return self.movers[0].modifier
 
 
 class MinusMover(SubPathMover):
