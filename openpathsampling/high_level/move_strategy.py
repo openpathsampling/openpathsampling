@@ -226,6 +226,26 @@ class OneWayShootingStrategy(MoveStrategy):
 
 
 class TwoWayShootingStrategy(MoveStrategy):
+    """Strategy to make a group of 2-way shooting movers.
+
+    Parameters
+    ----------
+    modifier : :class:`.SnapshotModifier`
+        how to modify the shooting point
+    selector : :class:`.ShootingPointSelector`
+        how to select the shooting point; None (default) gives uniform
+        selection
+    ensembles : list of :class:`.Ensemble`
+        ensembles to include; see :class:`.MoveStrategy` documentation for
+        details
+    engine : :class:`.DynamicsEngine`
+        the dynamics engine to use
+    group : string
+        the name of the mover group, default is "shooting"
+    replace : bool
+        whether to replace existing movers, default True. See
+        :class:`.MoveStrategy` documentation for details.
+    """
     _level = levels.MOVER
     def __init__(self, modifier, selector=None, ensembles=None, engine=None,
                  group="shooting", replace=True):

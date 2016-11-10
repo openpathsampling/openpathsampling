@@ -119,7 +119,9 @@ from pathmover import (
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
     LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover,
-    IdentityPathMover, RandomAllowedChoiceMover
+    IdentityPathMover, RandomAllowedChoiceMover,
+    TwoWayShootingMover, ForwardFirstTwoWayShootingMover,
+    BackwardFirstTwoWayShootingMover
 )
 
 from pathsimulator import (

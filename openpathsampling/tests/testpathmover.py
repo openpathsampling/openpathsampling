@@ -332,9 +332,6 @@ class testTwoWayShootingMover(testShootingMover):
         assert_equal(mover.modifier, new_mover.modifier)
 
 
-
-
-
 class testPathReversalMover(object):
     def setup(self):
         op = FunctionCV("myid", f=lambda snap :
