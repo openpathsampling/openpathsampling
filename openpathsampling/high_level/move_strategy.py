@@ -201,17 +201,10 @@ class MoveStrategy(StorableNamedObject):
         """
         raise NotImplementedError #TODO: use JHP's ABCError when 302 is merged
 
-class ShootingMoveStrategy(MoveStrategy):
-    _level = levels.MOVER
-    def __init__(self, selector, modifier, ensembles, engine, group,
-                 replace):
-        super(ShootingMoveStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
-        )
-        self.selector = selector
-        self.modifier = modifier
-        self.engine = engine
 
+class SingleEnsembleMoveStrategy(MoveStrategy):
+    """Abstract class for movers with one (and same) input/output ensemble.
+    """
     @staticmethod
     def signatures_to_init_ensembles(signatures):
         """
@@ -286,7 +279,7 @@ class ShootingMoveStrategy(MoveStrategy):
         return init_ensembles
 
 
-class OneWayShootingStrategy(ShootingMoveStrategy):
+class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
     """
     Strategy for OneWayShooting. Allows choice of shooting point selector.
     """
@@ -294,7 +287,6 @@ class OneWayShootingStrategy(ShootingMoveStrategy):
     def __init__(self, selector=None, ensembles=None, engine=None,
                  group="shooting", replace=True):
         super(OneWayShootingStrategy, self).__init__(
-            selector=selector, modifier=None, engine=engine,
             ensembles=ensembles, group=group, replace=replace,
         )
         if selector is None:
@@ -310,6 +302,7 @@ class OneWayShootingStrategy(ShootingMoveStrategy):
                                                             ensembles,
                                                             self.engine)
         return shooters
+
 
 class NearestNeighborRepExStrategy(MoveStrategy):
     """
