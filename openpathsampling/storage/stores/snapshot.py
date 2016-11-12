@@ -390,10 +390,11 @@ class SnapshotWrapperStore(ObjectStore):
             the loaded object
         """
 
-        if type(idx) is UUID:
+        if type(idx) is long:
             # we want to load by uuid and it was not in cache.
+            print 'long', idx
             if idx in self.index:
-                n_idx = int(self.index[idx])
+                n_idx = self.index[idx]
             else:
                 if self.fallback_store is not None:
                     return self.fallback_store.load(idx)
@@ -410,6 +411,8 @@ class SnapshotWrapperStore(ObjectStore):
             )
         else:
             n_idx = int(idx)
+
+        print n_idx
 
         if n_idx < 0:
             return None
@@ -454,7 +457,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         if obj is not None:
             self._get_id(n_idx, obj)
-            self.index[obj] = n_idx
+            # self.index[obj.__uuid__] = n_idx
             self.cache[n_idx] = obj
 
             logger.debug(
@@ -601,7 +604,7 @@ class SnapshotWrapperStore(ObjectStore):
         n_idx = None
 
         if obj.__uuid__ in self.index:
-            n_idx = self.index[obj]
+            n_idx = self.index[obj.__uuid__]
 
         if n_idx is not None:
             # snapshot is mentioned
@@ -616,7 +619,7 @@ class SnapshotWrapperStore(ObjectStore):
 
                 # only mention but not really store snapshots
                 self.vars['store'][n_idx / 2] = -1
-                self.index[obj] = n_idx
+                self.index[obj.__uuid__] = n_idx
                 self._auto_complete_single_snapshot(obj, n_idx)
                 self._set_id(n_idx, obj)
 
@@ -649,7 +652,7 @@ class SnapshotWrapperStore(ObjectStore):
         try:
             store, store_idx = self.type_list[obj.engine.descriptor]
             self.vars['store'][n_idx / 2] = store_idx
-            self.index[obj] = n_idx
+            self.index[obj.__uuid__] = n_idx
             store[n_idx] = obj
             return store
 
@@ -662,7 +665,7 @@ class SnapshotWrapperStore(ObjectStore):
                 # we just create space for it
                 store, store_idx = self.add_type(obj.engine.descriptor)
                 self.vars['store'][n_idx / 2] = store_idx
-                self.index[obj] = n_idx
+                self.index[obj.__uuid__] = n_idx
                 store[n_idx] = obj
                 return store
 
@@ -839,7 +842,7 @@ class SnapshotWrapperStore(ObjectStore):
         n_idx = None
 
         if obj.__uuid__ in self.index:
-            n_idx = self.index[obj]
+            n_idx = self.index[obj.__uuid__]
 
         if n_idx is None:
             # if the obj is not know, add it to the file and index, but
@@ -898,7 +901,7 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             chunksizes = tuple(params['dimensions'])
 
-        cv_idx = self.storage.cvs.index[cv]
+        cv_idx = self.storage.cvs.index[cv.__uuid__]
         store = SnapshotValueStore(
             time_reversible=time_reversible,
             allow_incomplete=allow_incomplete,
@@ -1018,10 +1021,10 @@ class SnapshotWrapperStore(ObjectStore):
             stored yet
         """
         try:
-            return self.index[obj]
+            return self.index[obj.__uuid__]
         except KeyError:
             try:
-                return self.index[obj._reversed] ^ 1
+                return self.index[obj._reversed.__uuid__] ^ 1
             except KeyError:
                 raise KeyError(obj)
 
@@ -1039,7 +1042,7 @@ class SnapshotWrapperStore(ObjectStore):
         """
         Enable numpy style selection of object in the store
         """
-        if type(item) is int or type(item) is str or type(item) is UUID:
+        if type(item) is int or type(item) is str or type(item) is long:
             return self.load(item)
         elif type(item) is slice:
             return [self.load(idx)

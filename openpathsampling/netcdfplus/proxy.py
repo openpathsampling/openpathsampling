@@ -151,7 +151,6 @@ def lazy_loading_attributes(*attributes):
 
         _super_init = cls.__init__
 
-
         code =  'def _init(self, %s):'
 
         source_code = '\n'.join(code)
