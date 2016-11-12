@@ -1063,8 +1063,7 @@ class SnapshotWrapperStore(ObjectStore):
                 obj._reversed.__uuid__ = uuid
 
             uuid = StorableObject.ruuid(uuid)
-
-        obj.__uuid__ = uuid
+            obj.__uuid__ = uuid
 
     def _set_id(self, idx, obj):
         if self.reference_by_uuid:

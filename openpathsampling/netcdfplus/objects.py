@@ -19,8 +19,10 @@ class UUIDDict(OrderedDict):
     @staticmethod
     def id(obj):
         if type(obj) is str:
-            return UUID(obj)
+            return int(UUID(obj))
         elif type(obj) is UUID:
+            return int(obj)
+        elif type(obj) is long:
             return obj
         else:
             return obj.__uuid__
@@ -39,6 +41,40 @@ class UUIDDict(OrderedDict):
 
     def get(self, item, default=None):
         return OrderedDict.get(self, self.id(item), default)
+
+
+class HashedUUIDList(dict):
+    def __init__(self):
+        dict.__init__(self)
+        self._list = []
+
+    def append(self, key):
+        dict.__setitem__(self, key, len(self))
+        self._list.append(key)
+
+    def extend(self, t):
+        l = len(self)
+        # t = filter(t, lambda x : x not in self)
+        map(dict.__setitem__, t, range(l, l + len(t)))
+        self._list.extend(t)
+
+    def __setitem__(self, key, value):
+        dict.__setitem__(self, value, key)
+        self._list[key] = value
+
+    def __getitem__(self, key):
+        return self._list[key]
+
+    def index(self, key):
+        return dict.__getitem__(self, key)
+
+    def mark(self, key):
+        if key not in self:
+            dict.__setitem__(self, key, -2)
+
+    def unmark(self, key):
+        if key in self:
+            dict.__delitem__(key)
 
 
 class UUIDDictWeak(WeakKeyDictionary):
@@ -240,7 +276,7 @@ class ObjectStore(StorableNamedObject):
             self.index = self.create_int_index()
 
     def create_uuid_index(self):
-        return UUIDDict()
+        return HashedUUIDList()
 
     def create_int_index(self):
         return UUIDDictWeak()
@@ -254,9 +290,11 @@ class ObjectStore(StorableNamedObject):
             self.load_indices()
 
     def load_indices(self):
-        uuids = self.vars['uuid'][:]
-        for idx, uuid in enumerate(uuids):
-            self.index[uuid] = idx
+        # uuids = self.vars['uuid'][:]
+        # for idx, uuid in enumerate(uuids):
+        #     self.index[uuid] = idx
+        self.index.clear()
+        self.index.extend(self.vars['uuid'][:])
 
     @property
     def storage(self):
@@ -363,6 +401,9 @@ class ObjectStore(StorableNamedObject):
             number of stored objects
 
         """
+        # if self.reference_by_uuid:
+        #     return len(self.index)
+
         return len(self.storage.dimensions[self.prefix])
 
     def write(self, variable, idx, obj, attribute=None):
@@ -403,12 +444,12 @@ class ObjectStore(StorableNamedObject):
         if self.reference_by_uuid:
             if tt is int:
                 idx = self.vars['uuid'][item]
-            elif tt is UUID:
+            elif tt is long:
                 idx = item
             elif tt in [str, unicode]:
                 if item[0] == '-':
                     return None
-                idx = UUID(item)
+                idx = int(UUID(item))
             else:
                 idx = item.__uuid__
         else:
@@ -734,9 +775,9 @@ class ObjectStore(StorableNamedObject):
             the loaded object
         """
 
-        if type(idx) is UUID:
+        if type(idx) is long:
             if idx in self.index:
-                n_idx = int(self.index[idx])
+                n_idx = self.index[idx]
             else:
                 if self.fallback_store is not None:
                     return self.fallback_store.load(idx)
@@ -793,7 +834,9 @@ class ObjectStore(StorableNamedObject):
             self._get_id(n_idx, obj)
 
             # update cache there might have been a change due to naming
-            self.index[obj] = n_idx
+            if not self.reference_by_uuid:
+                self.index[obj] = n_idx
+    
             self.cache[n_idx] = obj
 
             logger.debug(
@@ -825,9 +868,8 @@ class ObjectStore(StorableNamedObject):
             the object to be fake stored
 
         """
-
-        if obj not in self.index:
-            self.index[obj] = -2
+        if self.reference_by_uuid:
+            self.index.mark(obj.__uuid__)
 
     def forget(self, obj):
         """
@@ -842,9 +884,8 @@ class ObjectStore(StorableNamedObject):
 
         """
 
-        if obj in self.index:
-            if self.index[obj] == -2:
-                del self.index[obj]
+        if self.reference_by_uuid:
+            self.index.unmark(obj.__uuid__)
 
     def save(self, obj, idx=None):
         """
@@ -862,12 +903,20 @@ class ObjectStore(StorableNamedObject):
 
         """
 
-        if obj in self.index:
-            # has been saved so quit and do nothing
-            if not self.index[obj] == -1:
-                return self.reference(obj)
+        if self.reference_by_uuid:
+            if obj.__uuid__ in self.index:
+                # has been saved so quit and do nothing
+                if not self.index[obj] == -1:
+                    return self.reference(obj)
 
-            # numbers other than -1 are reserved for other things
+                # numbers other than -1 are reserved for other things
+        else:
+            if obj.__uuid__ in self.index:
+                # has been saved so quit and do nothing
+                if not self.index[obj] == -1:
+                    return self.reference(obj)
+
+                    # numbers other than -1 are reserved for other things
 
         if isinstance(obj, LoaderProxy):
             if obj._store is self:
