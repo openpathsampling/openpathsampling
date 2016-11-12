@@ -38,7 +38,6 @@ class Storage(NetCDFPlus):
             filename,
             mode=None,
             template=None,
-            use_uuid=True,
             fallback=None):
         """
         Create a netCDF+ storage for OPS Objects
@@ -59,7 +58,6 @@ class Storage(NetCDFPlus):
         super(Storage, self).__init__(
             filename,
             mode,
-            use_uuid=use_uuid,
             fallback=fallback)
 
     def _create_storages(self):

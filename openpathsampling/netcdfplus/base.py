@@ -22,23 +22,24 @@ class StorableObject(object):
 
     INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
     CREATION_COUNT = 0L
+    ACTIVE_LONG = int(uuid.UUID(
+            fields=tuple(
+                INSTANCE_UUID +
+                [CREATION_COUNT]
+            )
+        ))
 
     @staticmethod
     def get_uuid():
-        StorableObject.CREATION_COUNT += 2
-        return uuid.UUID(
-            fields=tuple(
-                StorableObject.INSTANCE_UUID +
-                [StorableObject.CREATION_COUNT]
-            )
-        )
+        StorableObject.ACTIVE_LONG += 2
+        return StorableObject.ACTIVE_LONG
 
     def reverse_uuid(self):
-        return StorableObject.ruuid(self.__uuid__)
+        return self.__uuid__ ^ 1
 
     @staticmethod
     def ruuid(uid):
-        return uuid.UUID(int=int(uid) ^ 1)
+        return uid ^ 1
 
     def __init__(self):
         self.__uuid__ = StorableObject.get_uuid()
@@ -140,25 +141,25 @@ class StorableObject(object):
         """
         return self.__class__.__name__
 
-    def save(self, store):
-        """
-        Save the object in the given store (or storage)
-
-        Parameters
-        ----------
-        store : :class:`openpathsampling.netcdfplus.ObjectStore` or \
-        :class:`openpathsampling.netcdfplus.netcdfplus.NetCDFPlus`
-            the store or storage to be saved in. if a storage is given then
-            the default store for the given object base type is determined and
-            the appropriate store is used.
-
-        Returns
-        -------
-        int or None
-            the integer index used to save the object or `None` if the object
-            has already been saved.
-        """
-        store.save(self)
+    # def save(self, store):
+    #     """
+    #     Save the object in the given store (or storage)
+    #
+    #     Parameters
+    #     ----------
+    #     store : :class:`openpathsampling.netcdfplus.ObjectStore` or \
+    #     :class:`openpathsampling.netcdfplus.netcdfplus.NetCDFPlus`
+    #         the store or storage to be saved in. if a storage is given then
+    #         the default store for the given object base type is determined and
+    #         the appropriate store is used.
+    #
+    #     Returns
+    #     -------
+    #     int or None
+    #         the integer index used to save the object or `None` if the object
+    #         has already been saved.
+    #     """
+    #     store.save(self)
 
     @classmethod
     def base(cls):
