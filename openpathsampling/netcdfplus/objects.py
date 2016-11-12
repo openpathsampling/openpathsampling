@@ -55,7 +55,7 @@ class HashedList(dict):
     def extend(self, t):
         l = len(self)
         # t = filter(t, lambda x : x not in self)
-        map(dict.__setitem__, t, range(l, l + len(t)))
+        map(lambda x, y: dict.__setitem__(self, x, y), t, range(l, l + len(t)))
         self._list.extend(t)
 
     def __setitem__(self, key, value):
@@ -1156,7 +1156,7 @@ class NamedObjectStore(ObjectStore):
             else:
                 raise ValueError('str "' + idx + '" not found in storage')
 
-        elif type(idx) is UUID:
+        elif type(idx) is long:
             pass
 
         elif type(idx) is not int:
@@ -1323,6 +1323,8 @@ class UniqueNamedObjectStore(NamedObjectStore):
         fixed = obj._name_fixed
         err = list()
 
+        print idx
+
         if is_str:
             if fixed:
                 if name != idx:
@@ -1382,7 +1384,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
         else:
             if fixed:
                 # no new name, but fixed. Check if already stored.
-                if obj in self.index:
+                if obj.__uuid__ in self.index:
                     return self.reference(obj)
 
                 # if not stored yet check if we could
@@ -1406,6 +1408,9 @@ class UniqueNamedObjectStore(NamedObjectStore):
                     )
 
         if len(err) > 0:
+            print self.index
+            print obj.__uuid__
+
             raise RuntimeWarning('/n'.join(err))
 
         # no errors, reserve the name for nested saving and actually call save

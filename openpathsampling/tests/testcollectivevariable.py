@@ -99,8 +99,7 @@ class test_FunctionCV(object):
 
         # test all combinations of (1) with and without UUIDs,
         # (2) using partial yes, no all of these must work
-        for use_uuid, allow_incomplete in [(True, True), (False, True),
-                                        (True, False), (False, False)]:
+        for allow_incomplete in (False, True):
 
             # print '=========================================================='
             # print 'UUID', use_uuid, 'PARTIAL', allow_incomplete
@@ -113,7 +112,7 @@ class test_FunctionCV(object):
             traj = paths.Trajectory(list(self.traj_simple))
             template = traj[0]
 
-            storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
+            storage_w = paths.Storage(fname, "w")
             storage_w.snapshots.save(template)
 
             cv1 = paths.CoordinateFunctionCV(
@@ -204,7 +203,7 @@ class test_FunctionCV(object):
         # print
         # print
 
-        for use_uuid in [True, False]:
+        for use_uuid in [True]:
 
             # print '=========================================================='
             # print 'UUID', use_uuid
@@ -217,7 +216,7 @@ class test_FunctionCV(object):
             traj = paths.Trajectory(list(self.traj_simple))
             template = traj[0]
 
-            storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
+            storage_w = paths.Storage(fname, "w")
             storage_w.snapshots.save(template)
 
             cv1 = paths.CoordinateFunctionCV(
@@ -249,12 +248,8 @@ class test_FunctionCV(object):
             for idx, value in zip(
                     store.variables['index'][:],
                     store.vars['value']):
-                if use_uuid:
-                    snap = storage_w.snapshots[
-                        storage_w.snapshots.vars['uuid'][idx]]
-                else:
-                    # * 2 because we use a symmetric cv
-                    snap = storage_w.snapshots[int(idx) * 2]
+                snap = storage_w.snapshots[
+                    storage_w.snapshots.vars['uuid'][idx]]
 
                 assert_close_unit(cv1(snap), value)
 
@@ -274,7 +269,7 @@ class test_FunctionCV(object):
         # print
         # print
 
-        for use_uuid in [True, False]:
+        for use_uuid in [True]:
 
             # print '=========================================================='
             # print 'UUID', use_uuid
@@ -287,7 +282,7 @@ class test_FunctionCV(object):
             traj = paths.Trajectory(list(self.traj_simple))
             template = traj[0]
 
-            storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
+            storage_w = paths.Storage(fname, "w")
             storage_w.snapshots.save(template)
 
             cv1 = paths.CoordinateFunctionCV(
@@ -337,13 +332,8 @@ class test_FunctionCV(object):
             for idx, value in zip(
                     store.variables['index'][:],
                     store.vars['value']):
-                if use_uuid:
-
-                    snap = storage_w.snapshots[
-                        storage_w.snapshots.vars['uuid'][idx]]
-                else:
-                    # * 2 because we use a symmetric cv
-                    snap = storage_w.snapshots[int(idx) * 2]
+                snap = storage_w.snapshots[
+                    storage_w.snapshots.vars['uuid'][idx]]
 
                 assert_close_unit(cv1(snap), value)
 

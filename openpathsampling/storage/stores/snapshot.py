@@ -600,7 +600,7 @@ class SnapshotWrapperStore(ObjectStore):
     def save(self, obj, idx=None):
         n_idx = None
 
-        if obj in self.index:
+        if obj.__uuid__ in self.index:
             n_idx = self.index[obj]
 
         if n_idx is not None:
@@ -838,7 +838,7 @@ class SnapshotWrapperStore(ObjectStore):
     def get_uuid_index(self, obj):
         n_idx = None
 
-        if obj in self.index:
+        if obj.__uuid__ in self.index:
             n_idx = self.index[obj]
 
         if n_idx is None:
@@ -847,7 +847,7 @@ class SnapshotWrapperStore(ObjectStore):
             # this can later be done using .save(obj)
             n_idx = self.free()
             self.variables['store'][n_idx / 2] = -1
-            self.index[obj] = n_idx
+            self.index[obj.__uuid__] = n_idx
             self._set_id(n_idx, obj)
 
     @staticmethod

@@ -822,16 +822,16 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif var_type.startswith('obj.'):
             getter = lambda v: [
-                None if w[0] == '-' else store.load(UUID(w))
+                None if w[0] == '-' else store.load(int(UUID(w)))
                 for w in v
             ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else store.load(UUID(v))
+                None if v[0] == '-' else store.load(int(UUID(v)))
 
             setter = lambda v: \
-                ''.join(['-' * 36 if w is None else str(store.save(w))
+                ''.join(['-' * 36 if w is None else str(UUID(int=store.save(w)))
                          for w in list.__iter__(v)]) \
                 if set_is_iterable(v) else \
-                '-' * 36 if v is None else str(store.save(v))
+                '-' * 36 if v is None else str(UUID(int=store.save(v)))
 
         elif var_type == 'obj':
             # arbitrary object
@@ -853,27 +853,27 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif var_type.startswith('lazyobj.'):
             getter = lambda v: [
-                None if w[0] == '-' else LoaderProxy(store, UUID(w))
+                None if w[0] == '-' else LoaderProxy(store, int(UUID(w)))
                 for w in v
             ] if get_is_iterable(v) else \
-                None if v[0] == '-' else LoaderProxy(store, UUID(v))
+                None if v[0] == '-' else LoaderProxy(store, int(UUID(v)))
             setter = lambda v: \
                 ''.join([
-                    '-' * 36 if w is None else str(store.save(w))
+                    '-' * 36 if w is None else str(UUID(int=store.save(w)))
                     for w in list.__iter__(v)
                 ]) if set_is_iterable(v) else \
-                '-' * 36 if v is None else str(store.save(v))
+                '-' * 36 if v is None else str(UUID(int=store.save(v)))
 
         elif var_type == 'uuid':
             getter = lambda v: \
-                [None if w[0] == '-' else UUID(w) for w in v] \
-                if type(v) is not unicode else None if v[0] == '-' else UUID(v)
+                [None if w[0] == '-' else int(UUID(w)) for w in v] \
+                if type(v) is not unicode else None if v[0] == '-' else int(UUID(v))
             setter = lambda v: \
                 ''.join([
-                    '-' * 36 if w is None else str(w)
+                    '-' * 36 if w is None else str(UUID(int=w))
                     for w in list.__iter__(v)
                 ]) if hasattr(v, '__iter__') else \
-                '-' * 36 if v is None else str(v)
+                '-' * 36 if v is None else str(UUID(int=v))
 
         elif var_type == 'lazyobj':
             # arbitrary object
@@ -931,20 +931,20 @@ class NetCDFPlus(netCDF4.Dataset):
             if hasattr(var, 'var_vlen'):
                 if var.var_type.startswith('obj.'):
                     getter = lambda v: [[
-                        None if u[0] == '-' else store.load(UUID(u))
+                        None if u[0] == '-' else store.load(int(UUID(u)))
                         for u in to_uuid_chunks(w)
                         ] for w in v
                     ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else store.load(UUID(u))
+                        None if u[0] == '-' else store.load(int(UUID(u)))
                         for u in to_uuid_chunks(v)
                     ]
                 elif var.var_type.startswith('lazyobj.'):
                     getter = lambda v: [[
-                        None if u[0] == '-' else LoaderProxy(store, UUID(u))
+                        None if u[0] == '-' else LoaderProxy(store, int(UUID(u)))
                         for u in to_uuid_chunks(w)
                         ] for w in v
                     ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else LoaderProxy(store, UUID(u))
+                        None if u[0] == '-' else LoaderProxy(store, int(UUID(u)))
                         for u in to_uuid_chunks(v)
                     ]
 
