@@ -304,7 +304,7 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
         return shooters
 
 
-class TwoWayShootingStrategy(MoveStrategy):
+class TwoWayShootingStrategy(SingleEnsembleMoveStrategy):
     """Strategy to make a group of 2-way shooting movers.
 
     Parameters
@@ -338,7 +338,8 @@ class TwoWayShootingStrategy(MoveStrategy):
         self.engine = engine
 
     def make_movers(self, scheme):
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        # ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        ensemble_list = self.get_init_ensembles(scheme)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         shooters = [
             paths.TwoWayShootingMover(
