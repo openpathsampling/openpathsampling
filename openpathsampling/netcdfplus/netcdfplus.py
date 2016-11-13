@@ -1095,6 +1095,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
             chunksizes = tuple(chunksizes)
 
+        print var_name, var_type, dimensions, chunksizes, variable_length
+
         if variable_length:
             vlen_t = ncfile.createVLType(nc_type, var_name + '_vlen')
             ncvar = ncfile.createVariable(

@@ -134,7 +134,7 @@ class ObjectStore(StorableNamedObject):
         'index', 'length', 'uuid'
     ]
 
-    default_store_chunk_size = 250
+    default_store_chunk_size = 256
 
     class DictDelegator(object):
         def __init__(self, store, dct):
@@ -398,20 +398,15 @@ class ObjectStore(StorableNamedObject):
         var = self.vars[variable]
         val = getattr(obj, attribute)
 
-        print idx, obj, var.var_type
-
         var[int(idx)] = val
 
         if var.var_type.startswith('lazy'):
             proxy = var.store.proxy(val)
-            print proxy, variable, val
             if isinstance(obj, LoaderProxy):
                 # for a loader proxy apply it to the real object
                 setattr(obj.__subject__, attribute, proxy)
             else:
                 setattr(obj, attribute, proxy)
-
-            print obj.__dict__
 
     def proxy(self, item):
         """
@@ -1328,8 +1323,6 @@ class UniqueNamedObjectStore(NamedObjectStore):
         fixed = obj._name_fixed
         err = list()
 
-        print idx
-
         if is_str:
             if fixed:
                 if name != idx:
@@ -1413,9 +1406,6 @@ class UniqueNamedObjectStore(NamedObjectStore):
                     )
 
         if len(err) > 0:
-            print self.index
-            print obj.__uuid__
-
             raise RuntimeWarning('/n'.join(err))
 
         # no errors, reserve the name for nested saving and actually call save

@@ -392,7 +392,6 @@ class SnapshotWrapperStore(ObjectStore):
 
         if type(idx) is long:
             # we want to load by uuid and it was not in cache.
-            print 'long', idx
             if idx in self.index:
                 n_idx = self.index[idx]
             else:
@@ -411,8 +410,6 @@ class SnapshotWrapperStore(ObjectStore):
             )
         else:
             n_idx = int(idx)
-
-        print n_idx
 
         if n_idx < 0:
             return None
@@ -943,6 +940,8 @@ class SnapshotWrapperStore(ObjectStore):
                 shape = tuple(['snapshots'])
                 chunksizes = tuple([chunksize])
 
+            print chunksize, chunksizes, shape
+
             # create the variable
             store.storage.create_variable(
                 store_name + '_value',
@@ -1058,7 +1057,7 @@ class SnapshotValueStore(ObjectStore):
             self,
             time_reversible=True,
             allow_incomplete=False,
-            chunksize=250
+            chunksize=256
     ):
         super(SnapshotValueStore, self).__init__(None)
         self.snapshot_index = None
