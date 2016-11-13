@@ -560,6 +560,7 @@ class UUIDObjectJSON(ObjectJSON):
     def simplify(self, obj, base_type=''):
         if obj is self.storage:
             return {'_storage': 'self'}
+
         if obj.__class__.__module__ != '__builtin__':
             if obj.__class__ in self.storage._obj_store:
                 store = self.storage._obj_store[obj.__class__]
@@ -570,8 +571,11 @@ class UUIDObjectJSON(ObjectJSON):
                     # use the simplify from the super class ObjectJSON
                     store.save(obj)
                     return {
-                        '_obj_uuid': str(UUID(int=obj.__uuid__)),
+                        '_hex_uuid': hex(obj.__uuid__),
                         '_store': store.prefix}
+                    # return {
+                    #     '_obj_uuid': str(UUID(int=obj.__uuid__)),
+                    #     '_store': store.prefix}
 
         return super(UUIDObjectJSON, self).simplify(obj, base_type)
 
@@ -584,6 +588,12 @@ class UUIDObjectJSON(ObjectJSON):
             if '_obj_uuid' in obj and '_store' in obj:
                 store = self.storage._stores[obj['_store']]
                 result = store.load(int(UUID(obj['_obj_uuid'])))
+
+                return result
+
+            if '_hex_uuid' in obj and '_store' in obj:
+                store = self.storage._stores[obj['_store']]
+                result = store.load(long(obj['_hex_uuid'], 16))
 
                 return result
 
