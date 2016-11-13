@@ -99,11 +99,11 @@ class test_FunctionCV(object):
 
         # test all combinations of (1) with and without UUIDs,
         # (2) using partial yes, no all of these must work
-        for allow_incomplete in (False, True):
+        for allow_incomplete in (True, False):
 
-            # print '=========================================================='
-            # print 'UUID', use_uuid, 'PARTIAL', allow_incomplete
-            # print '=========================================================='
+            print '=========================================================='
+            print 'PARTIAL', allow_incomplete
+            print '=========================================================='
 
             fname = data_filename("cv_storage_test.nc")
             if os.path.isfile(fname):
@@ -148,10 +148,11 @@ class test_FunctionCV(object):
             assert (cv_cache.allow_incomplete == allow_incomplete)
 
             for idx, snap in enumerate(storage_r.trajectories[1]):
-                # if hasattr(snap, '_idx'):
-                #     print 'IDX', snap._idx
+                print idx, snap
+                if hasattr(snap, '_idx'):
+                    print 'Proxy IDX', snap._idx
 
-                # print 'ITEMS', storage_r.snapshots.index.items()
+                print 'ITEMS', storage_r.snapshots.index.items()
                 # print snap, type(snap), snap.__dict__
 
                 # print snap.__uuid__

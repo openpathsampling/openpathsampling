@@ -163,7 +163,7 @@ class BaseSnapshotStore(IndexedObjectStore):
             return idx
 
         # n_idx = self.free() / 2
-        n_idx = len(self.index) / 2
+        n_idx = len(self.index)
 
         # mark as saved so circular dependencies will not cause infinite loops
         self.index.append(pos)
@@ -939,8 +939,6 @@ class SnapshotWrapperStore(ObjectStore):
             else:
                 shape = tuple(['snapshots'])
                 chunksizes = tuple([chunksize])
-
-            print chunksize, chunksizes, shape
 
             # create the variable
             store.storage.create_variable(
