@@ -728,6 +728,8 @@ class NetCDFPlus(netCDF4.Dataset):
         types = NetCDFPlus._type_conversion.keys()
         types += ['obj.' + x for x in self.objects.keys()]
         types += ['lazyobj.' + x for x in self.objects.keys()]
+        types += ['uuid.' + x for x in self.objects.keys()]
+        types += ['lazyuuid.' + x for x in self.objects.keys()]
         return sorted(types)
 
     def var_type_to_nc_type(self, var_type):
@@ -743,7 +745,9 @@ class NetCDFPlus(netCDF4.Dataset):
         object
             A object of netcdf compatible varible types
         """
-        if var_type.startswith('obj.') or var_type.startswith('lazyobj.'):
+        if 'obj.' in var_type:
+            nc_type = str
+        elif 'uuid.' in var_type:
             nc_type = str
         else:
             nc_type = NetCDFPlus._type_conversion[var_type]
@@ -773,8 +777,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         to_uuid_chunks = lambda x: [x[i:i + 36] for i in range(0, len(x), 36)]
 
-        if var_type.startswith('obj.') or var_type.startswith('lazyobj.') \
-                or var_type.startswith('uuid.') or var_type.startswith('lazyuuid.'):
+        if 'obj.' in var_type or 'uuid.' in var_type:
             store_name = str(var_type.split('.')[1])
             store = self._stores[store_name]
 

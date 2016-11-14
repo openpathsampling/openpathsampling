@@ -453,7 +453,6 @@ class LRUChunkLoadingCache(Cache):
 
                 if right > left:
                     chunk.extend(self.variable[left:right])
-                    print chunk
 
     def _update_chunk_order(self, chunk_idx):
         if chunk_idx != self._firstchunk:
