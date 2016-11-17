@@ -282,6 +282,20 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
 class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
     """
     Strategy for OneWayShooting. Allows choice of shooting point selector.
+
+    Parameters
+    ----------
+    selector : :class:`.ShootingPointSelector`
+        method used to select shooting point
+    ensembles : list of :class:`.Ensemble`
+        ensembles for which this strategy applies; None gives default
+        behavior
+    engine : :class:`.DynamicsEngine`
+        engine for the dynamics
+    group : str
+        mover group name, default "shooting"
+    replace : bool
+        whether to replace existing movers in the group; default True
     """
     _level = levels.MOVER
     def __init__(self, selector=None, ensembles=None, engine=None,
@@ -396,8 +410,20 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
 
 class SelectedPairsRepExStrategy(MoveStrategy):
     """
-    Take a specific pair of ensembles and add a replica exchange swap for
-    that pair.
+    Add replica exchange swap for specific pairs of ensembles.
+
+    Note that unlike many signature-level strategies, this defaults to
+    `replace=False`, under the assumption that you're probably using it to
+    add extra replica exchanges.
+
+    Parameters
+    ----------
+    ensembles : list of pairs of ensembles, or list of two ensembles
+        ensemble pairs for replica exchange
+    group : str
+        name of the group, default 'repex'
+    replace : bool
+        whether to replica existing signature, default False
     """
     _level = levels.SIGNATURE
 
