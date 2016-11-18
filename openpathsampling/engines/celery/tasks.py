@@ -5,7 +5,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-app = Celery('tasks', backend='redis://localhost:6379/0', broker='amqp://')
+app = Celery('tasks', backend='redis://localhost:6379/0', broker='redis://localhost:6379/0')
 app.config_from_object('celeryconfig')
 
 
@@ -15,7 +15,7 @@ def _redo_uuid(**kwargs):
     import openpathsampling.netcdfplus as npl
     # logger.info('OLD UUID `%s`' % npl.StorableObject.INSTANCE_UUID)
     npl.StorableObject.initialize_uuid()
-    logger.info('NEW UUID `%s`' % npl.StorableObject.INSTANCE_UUID)
+    logger.info('NEW UUID `%s`' % npl.StorableObject.get_instance_uuid())
 
 # need to use registered instance for sender argument.
 worker_process_init.connect(_redo_uuid)
@@ -26,7 +26,7 @@ def add(x, y):
     return x + y
 
 
-@app.task
+@app.task(name='openpathsampling.engine.celery.tasks.generate')
 def generate(engine, template, ensemble):
     engine.initialize('CPU')
     traj = engine.generate(template, ensemble.can_append)
