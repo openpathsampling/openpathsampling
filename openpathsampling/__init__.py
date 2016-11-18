@@ -30,15 +30,16 @@ except ImportError:  # pragma: no cover
     isrelease = str(ops_setup.preferences['released'])
         
         
-from analysis.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme, OneWayShootingMoveScheme
+from high_level.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
+    OneWayShootingMoveScheme
 )
 
-from analysis.tis_analysis import (
+from high_level.transition import (
     TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
 )
 
-from analysis.network import (
+from high_level.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
     FixedLengthTPSNetwork
 )
@@ -110,7 +111,7 @@ from pathmover import (
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
     BackwardExtendMover, ForwardExtendMover, MinusMover,
     SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
-    ReplicaExchangeMover, EnsembleHopMover, ReplicaIDChangeMover,
+    ReplicaExchangeMover, EnsembleHopMover,
     SequentialMover, ConditionalMover,
     PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
     SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
@@ -118,7 +119,9 @@ from pathmover import (
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
     LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover,
-    IdentityPathMover, RandomAllowedChoiceMover
+    IdentityPathMover, RandomAllowedChoiceMover,
+    TwoWayShootingMover, ForwardFirstTwoWayShootingMover,
+    BackwardFirstTwoWayShootingMover
 )
 
 from pathsimulator import (
@@ -142,6 +145,10 @@ from volume import (
     RelativeComplementVolume, join_volumes
 )
 
+from high_level import move_strategy as strategies
+
+import openpathsampling.numerics as numerics
+
 from openpathsampling.engines import Trajectory, BaseSnapshot
 import openpathsampling.engines.openmm as openmm
 import openpathsampling.engines.toy as toy
@@ -153,3 +160,8 @@ def git_HEAD():  # pragma: no cover
     git_dir = os.path.dirname(os.path.realpath(__file__))
     return check_output(["git", "-C", git_dir, "rev-parse", "HEAD"])[:-1]
     # chops the newline at the end
+
+
+import os.path
+
+resources_directory = os.path.join(os.path.dirname(__file__), 'resources')

@@ -33,9 +33,16 @@ class StorableObject(object):
             )
         )
 
-    @classmethod
-    def initialize_uuid(cls):
-        cls.INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
+    @staticmethod
+    def get_instance_uuid():
+        return uuid.UUID(
+            fields=tuple(
+                StorableObject.INSTANCE_UUID +
+                [StorableObject.CREATION_COUNT]))
+
+    @staticmethod
+    def initialize_uuid():
+        StorableObject.INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
 
     def reverse_uuid(self):
         return StorableObject.ruuid(self.__uuid__)

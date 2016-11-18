@@ -21,6 +21,11 @@ from test_helpers import (
     assert_not_equal_array_array,
     raises_with_message_like)
 
+import logging
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 def setUp():
     global topology, template, system, nan_causing_template
@@ -89,7 +94,10 @@ class testOpenMMEngine(object):
         pass
 
     def test_sanity(self):
-        pass
+        assert_equal(self.engine.n_steps_per_frame, 2)
+        assert_equal(self.engine.n_frames_max, 5)
+        # TODO: add more sanity checkes
+        pass  # not quite a SkipTest, but a reminder to add more
 
     def test_snapshot_get(self):
         snap = self.engine.current_snapshot
@@ -204,7 +212,7 @@ class testOpenMMEngine(object):
         change = mover.move(init_samp)
 
         assert (isinstance(change, paths.RejectedNaNSampleMoveChange))
-        assert_equal(change.samples[0].details.stopping_reason, 'nan')
+        assert_equal(change.details.rejection_reason, 'nan')
         # since we shoot, we start with a shorter trajectory
         assert(len(change.samples[0].trajectory) < len(init_traj))
 
@@ -236,7 +244,7 @@ class testOpenMMEngine(object):
         change = mover.move(init_samp)
 
         assert(isinstance(change, paths.RejectedMaxLengthSampleMoveChange))
-        assert_equal(change.samples[0].details.stopping_reason, 'max_length')
+        assert_equal(change.details.rejection_reason, 'max_length')
         assert_equal(
             len(change.samples[0].trajectory), self.engine.n_frames_max)
 
