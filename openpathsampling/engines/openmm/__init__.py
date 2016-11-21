@@ -12,3 +12,4 @@ import features
 
 from snapshot import Snapshot, MDSnapshot
 from openpathsampling.engines import NoEngine, SnapshotDescriptor
+from quick import create_simple_openmm_from_pdb
