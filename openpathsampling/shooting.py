@@ -122,10 +122,6 @@ class UniformSelector(ShootingPointSelector):
         self.pad_end = pad_end
 
     def f(self, frame, trajectory=None):
-        '''
-        Careful, this only returns a correct value for allowed frames since
-        this function does not know about the position in the trajectory
-        '''
         return 1.0
 
     def sum_bias(self, trajectory):

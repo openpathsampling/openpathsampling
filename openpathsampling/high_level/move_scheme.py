@@ -92,10 +92,14 @@ class MoveScheme(StorableNamedObject):
         """
         # first we clean up the input: strategies is a list of MoveStrategy;
         # levels is a list of integers
-        if self.root_mover is not None and force is not True:
-            raise RuntimeError("Can't add strategies after the move " +
-                               "decision tree has been built. " +
-                               "Override with `force=True`.")
+        if self.root_mover is not None:
+            if force:
+                self.root_mover = None
+            else:
+                raise RuntimeError("Can't add strategies after the move " +
+                                   "decision tree has been built. " +
+                                   "Override with `force=True`.")
+
         try:
             strategies = list(strategies)
         except TypeError:
