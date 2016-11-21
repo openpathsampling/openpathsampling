@@ -1,7 +1,4 @@
 import logging
-import weakref
-
-import yaml
 from uuid import UUID
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
@@ -9,11 +6,10 @@ from proxy import LoaderProxy
 from base import StorableNamedObject, StorableObject
 
 from collections import OrderedDict
+from weakref import WeakKeyDictionary, WeakValueDictionary
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
-
-from weakref import WeakKeyDictionary, WeakValueDictionary
 
 
 class UUIDDict(OrderedDict):
@@ -23,8 +19,10 @@ class UUIDDict(OrderedDict):
     @staticmethod
     def id(obj):
         if type(obj) is str:
-            return UUID(obj)
+            return int(UUID(obj))
         elif type(obj) is UUID:
+            return int(obj)
+        elif type(obj) is long:
             return obj
         else:
             return obj.__uuid__
@@ -43,6 +41,40 @@ class UUIDDict(OrderedDict):
 
     def get(self, item, default=None):
         return OrderedDict.get(self, self.id(item), default)
+
+
+class HashedList(dict):
+    def __init__(self):
+        dict.__init__(self)
+        self._list = []
+
+    def append(self, key):
+        dict.__setitem__(self, key, len(self))
+        self._list.append(key)
+
+    def extend(self, t):
+        l = len(self)
+        # t = filter(t, lambda x : x not in self)
+        map(lambda x, y: dict.__setitem__(self, x, y), t, range(l, l + len(t)))
+        self._list.extend(t)
+
+    def __setitem__(self, key, value):
+        dict.__setitem__(self, key, value)
+        self._list[value] = key
+
+    def __getitem__(self, key):
+        return dict.__getitem__(self, key)
+
+    def index(self, key):
+        return self._list[key]
+
+    def mark(self, key):
+        if key not in self:
+            dict.__setitem__(self, key, -2)
+
+    def unmark(self, key):
+        if key in self:
+            dict.__delitem__(key)
 
 
 class UUIDDictWeak(WeakKeyDictionary):
@@ -101,6 +133,8 @@ class ObjectStore(StorableNamedObject):
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
         'index', 'length', 'uuid'
     ]
+
+    default_store_chunk_size = 256
 
     class DictDelegator(object):
         def __init__(self, store, dct):
@@ -236,29 +270,20 @@ class ObjectStore(StorableNamedObject):
         self.units = self.prefix_delegate(self.storage.units)
         self.vars = self.prefix_delegate(self.storage.vars)
 
-        if self.reference_by_uuid:
-            self.index = self.create_uuid_index()
-        else:
-            self.index = self.create_int_index()
+        self.index = self.create_uuid_index()
 
     def create_uuid_index(self):
-        return UUIDDict()
-
-    def create_int_index(self):
-        return UUIDDictWeak()
-
-    @property
-    def reference_by_uuid(self):
-        return self.storage.reference_by_uuid
+        return HashedList()
 
     def restore(self):
-        if self.reference_by_uuid:
-            self.load_indices()
+        self.load_indices()
 
     def load_indices(self):
-        uuids = self.vars['uuid'][:]
-        for idx, uuid in enumerate(uuids):
-            self.index[uuid] = idx
+        # uuids = self.vars['uuid'][:]
+        # for idx, uuid in enumerate(uuids):
+        #     self.index[uuid] = idx
+        self.index.clear()
+        self.index.extend(self.vars['uuid'][:])
 
     @property
     def storage(self):
@@ -347,13 +372,9 @@ class ObjectStore(StorableNamedObject):
         """
         Add iteration over all elements in the storage
         """
-        if self.reference_by_uuid:
-            # we want to iterator in the order object were saved!
-            for uuid in self.index:
-                yield self.load(uuid)
-        else:
-            for idx in range(len(self)):
-                yield self.load(idx)
+        # we want to iterator in the order object were saved!
+        for uuid in self.index:
+            yield self.load(uuid)
 
     def __len__(self):
         """
@@ -365,6 +386,9 @@ class ObjectStore(StorableNamedObject):
             number of stored objects
 
         """
+        # if self.reference_by_uuid:
+        #     return len(self.index)
+
         return len(self.storage.dimensions[self.prefix])
 
     def write(self, variable, idx, obj, attribute=None):
@@ -402,39 +426,16 @@ class ObjectStore(StorableNamedObject):
             return None
 
         tt = type(item)
-        if self.reference_by_uuid:
-            if tt is int:
-                idx = self.vars['uuid'][item]
-            elif tt is UUID:
-                idx = item
-            elif tt in [str, unicode]:
-                if item[0] == '-':
-                    return None
-                idx = UUID(item)
-            else:
-                idx = item.__uuid__
+        if tt is int:
+            idx = self.vars['uuid'][item]
+        elif tt is long:
+            idx = item
+        elif tt in [str, unicode]:
+            if item[0] == '-':
+                return None
+            idx = int(UUID(item))
         else:
-            if tt is int:
-                if item in self.cache:
-                    idx = self.cache[item].__uuid__
-                    self.proxy_index[item] = idx
-                elif item in self.proxy_index:
-                    idx = self.proxy_index[item]
-                    self.index[idx] = item
-                else:
-                    # apparently we want a proxy for a non-existing object
-                    # so we create a new UUID and tell the storage
-                    # that we associate the UUID with that index
-                    idx = StorableObject.get_uuid()
-                    self.index[idx] = item
-                    self.proxy_index[item] = idx
-            else:
-                # idx = self.index.get(item)
-                idx = item.__uuid__
-                if item in self.index:
-                    self.proxy_index[self.index[item]] = idx
-                else:
-                    return item
+            idx = item.__uuid__
 
         return LoaderProxy(self, idx)
 
@@ -447,7 +448,7 @@ class ObjectStore(StorableNamedObject):
                 if item < 0:
                     item += len(self)
                 return self.load(item)
-            elif type(item) is str or type(item) is UUID:
+            elif type(item) is str or type(item) is long:
                 return self.load(item)
             elif type(item) is slice:
                 return [self.load(idx)
@@ -578,16 +579,15 @@ class ObjectStore(StorableNamedObject):
                 "json",
                 jsontype,
                 description='A json serialized version of the object',
-                chunksizes=tuple([10240])
+                chunksizes=tuple([65536])
             )
 
-        if self.storage.reference_by_uuid:
-            # TODO: Change to 16byte string
-            self.create_variable(
-                "uuid", 'uuid',
-                description='The uuid of the object',
-                chunksizes=tuple([10240])
-            )
+        # TODO: Change to 16byte string
+        self.create_variable(
+            "uuid", 'uuid',
+            description='The uuid of the object',
+            chunksizes=tuple([65536])
+        )
 
         self._created = True
 
@@ -657,14 +657,16 @@ class ObjectStore(StorableNamedObject):
         else:
             dimensions = tuple([self.prefix] + list(dimensions))
 
+        store_chunk_size = ObjectStore.default_store_chunk_size
+
         if chunksizes is None and len(dimensions) == 1:
-            chunksizes = (1, )
+            chunksizes = (store_chunk_size, )
         elif chunksizes is not None and dimensions[-1] == '...' \
                 and len(dimensions) == len(chunksizes) + 2:
-            chunksizes = tuple([1] + list(chunksizes))
+            chunksizes = tuple([store_chunk_size] + list(chunksizes))
         elif chunksizes is not None and dimensions[-1] != '...' \
                 and len(dimensions) == len(chunksizes) + 1:
-            chunksizes = tuple([1] + list(chunksizes))
+            chunksizes = tuple([store_chunk_size] + list(chunksizes))
 
         if self.dimension_prefix:
             dimensions = tuple(
@@ -734,9 +736,9 @@ class ObjectStore(StorableNamedObject):
             the loaded object
         """
 
-        if type(idx) is UUID:
+        if type(idx) is long:
             if idx in self.index:
-                n_idx = int(self.index[idx])
+                n_idx = self.index[idx]
             else:
                 if self.fallback_store is not None:
                     return self.fallback_store.load(idx)
@@ -793,7 +795,6 @@ class ObjectStore(StorableNamedObject):
             self._get_id(n_idx, obj)
 
             # update cache there might have been a change due to naming
-            self.index[obj] = n_idx
             self.cache[n_idx] = obj
 
             logger.debug(
@@ -807,10 +808,7 @@ class ObjectStore(StorableNamedObject):
         return obj
 
     def reference(self, obj):
-        if self.reference_by_uuid:
-            return obj.__uuid__
-        else:
-            return self.index.get(obj)
+        return obj.__uuid__
 
     def remember(self, obj):
         """
@@ -825,9 +823,7 @@ class ObjectStore(StorableNamedObject):
             the object to be fake stored
 
         """
-
-        if obj not in self.index:
-            self.index[obj] = -2
+        self.index.mark(obj.__uuid__)
 
     def forget(self, obj):
         """
@@ -842,9 +838,7 @@ class ObjectStore(StorableNamedObject):
 
         """
 
-        if obj in self.index:
-            if self.index[obj] == -2:
-                del self.index[obj]
+        self.index.unmark(obj.__uuid__)
 
     def save(self, obj, idx=None):
         """
@@ -861,10 +855,11 @@ class ObjectStore(StorableNamedObject):
             previously stored one.
 
         """
+        uuid = obj.__uuid__
 
-        if obj in self.index:
+        if uuid in self.index:
             # has been saved so quit and do nothing
-            if not self.index[obj] == -1:
+            if not self.index[uuid] == -1:
                 return self.reference(obj)
 
             # numbers other than -1 are reserved for other things
@@ -872,7 +867,7 @@ class ObjectStore(StorableNamedObject):
         if isinstance(obj, LoaderProxy):
             if obj._store is self:
                 # is a proxy of a saved object so do nothing
-                return obj._idx
+                return uuid
             else:
                 # it is stored but not in this store so we try storing the
                 # full snapshot which might be still in cache or memory
@@ -890,13 +885,14 @@ class ObjectStore(StorableNamedObject):
                 % (self.content_class, obj.__class__.__name__)
             )
 
-        n_idx = self.free()
+        # n_idx = self.free()
+        n_idx = len(self.index)
 
         # mark as saved so circular dependencies will not cause infinite loops
-        self.index[obj] = n_idx
+        self.index.append(uuid)
 
         # make sure in nested saving that an IDX is not used twice!
-        self.reserve_idx(n_idx)
+        # self.reserve_idx(n_idx)
 
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
 
@@ -904,16 +900,16 @@ class ObjectStore(StorableNamedObject):
             self._save(obj, n_idx)
 
             # store the name in the cache
-            if hasattr(self, 'cache'):
-                self.cache[n_idx] = obj
+            # if hasattr(self, 'cache'):
+            self.cache[n_idx] = obj
 
         except:
             # in case we did not succeed remove the mark as being saved
-            del self.index[obj]
-            self.release_idx(n_idx)
+            del self.index[uuid]
+            # self.release_idx(n_idx)
             raise
 
-        self.release_idx(n_idx)
+        # self.release_idx(n_idx)
         self._set_id(n_idx, obj)
 
         return self.reference(obj)
@@ -955,7 +951,7 @@ class ObjectStore(StorableNamedObject):
             self._get_id(idx, obj)
 
             self.cache[idx] = obj
-            self.index[obj] = idx
+            self.index[obj.__uuid__] = idx
 
             return obj
 
@@ -979,16 +975,10 @@ class ObjectStore(StorableNamedObject):
         return self.load(uuid)
 
     def _set_id(self, idx, obj):
-        if self.reference_by_uuid:
-            self.vars['uuid'][idx] = obj.__uuid__
+        self.vars['uuid'][idx] = obj.__uuid__
 
     def _get_id(self, idx, obj):
-        if self.reference_by_uuid:
-            obj.__uuid__ = self.vars['uuid'][idx]
-        else:
-            # check if there exists already a proxy with that idx
-            if idx in self.proxy_index:
-                obj.__uuid__ = self.proxy_index[idx]
+        obj.__uuid__ = self.vars['uuid'][idx]
 
 
 class NamedObjectStore(ObjectStore):
@@ -1020,7 +1010,7 @@ class NamedObjectStore(ObjectStore):
         self.create_variable(
             "name", 'str',
             description='The name of the object',
-            chunksizes=tuple([10240])
+            chunksizes=tuple([65536])
         )
 
     def add_single_to_cache(self, idx, json):
@@ -1166,7 +1156,7 @@ class NamedObjectStore(ObjectStore):
             else:
                 raise ValueError('str "' + idx + '" not found in storage')
 
-        elif type(idx) is UUID:
+        elif type(idx) is long:
             pass
 
         elif type(idx) is not int:
@@ -1179,7 +1169,7 @@ class NamedObjectStore(ObjectStore):
         obj = super(NamedObjectStore, self).load(n_idx)
 
         if obj is not None:
-            n_idx = self.index[obj]
+            n_idx = self.index[obj.__uuid__]
             setattr(obj, '_name',
                     self.storage.variables[self.prefix + '_name'][n_idx])
             # make sure that you cannot change the name of loaded objects
@@ -1241,7 +1231,7 @@ class NamedObjectStore(ObjectStore):
             obj._name = obj_name
             raise
 
-        n_idx = self.index[obj]
+        n_idx = self.index[obj.__uuid__]
         self.storage.variables[self.prefix + '_name'][n_idx] = name
         self._update_name_in_cache(name, n_idx)
 
@@ -1392,7 +1382,7 @@ class UniqueNamedObjectStore(NamedObjectStore):
         else:
             if fixed:
                 # no new name, but fixed. Check if already stored.
-                if obj in self.index:
+                if obj.__uuid__ in self.index:
                     return self.reference(obj)
 
                 # if not stored yet check if we could
@@ -1436,6 +1426,15 @@ class VariableStore(ObjectStore):
             json=False
         )
 
+        # TODO: determine var_names automatically from content_class
+        # problem is that some decorators, e.g. using delayed loader
+        # hide the actual __init__ signature and so we cannot determine
+        # what variables to store. Could be 2.0
+
+        if not issubclass(content_class, StorableObject):
+            raise ValueError(('Content_class %s must be subclassed from '
+                             'StorableObject') % content_class.__name__)
+
         self.var_names = var_names
         self._cached_all = False
 
@@ -1450,8 +1449,9 @@ class VariableStore(ObjectStore):
             self.write(var, idx, obj)
 
     def _load(self, idx):
-        attr = {var: self.vars[var][idx] for var in self.var_names}
-        return self.content_class(**attr)
+        # attr = {var: self.vars[var][idx] for var in self.var_names}
+        args = [ self.vars[var][idx] for var in self.var_names]
+        return self.content_class(*args)
 
     def initialize(self):
         super(VariableStore, self).initialize()
@@ -1473,18 +1473,28 @@ class VariableStore(ObjectStore):
             list of indices in `part` will be loaded into the cache
 
         """
+        max_length = self.cache.size[0]
+        max_length = len(self) if max_length < 0 else max_length
+
         if part is None:
-            part = range(len(self))
+            length = min(len(self), max_length)
+            part = range(length)
         else:
-            part = sorted(list(set(list(part))))
+            part = sorted(list(set(part())))
+            length = min(len(part), max_length)
+            part = part[:length]
 
         if not part:
             return
 
+        # just in case we saved the var_names in another order and so we are
+        # backwards compatible
+        var_names = self.content_class.args()[1:]
+
         if not self._cached_all:
             data = zip(*[
-                self.storage.variables[self.prefix + '_' + var][part]
-                for var in self.var_names
+                self.vars[var][part]
+                for var in var_names
             ])
 
             [self.add_to_cache(idx, v) for idx, v in zip(part, data)]
@@ -1493,12 +1503,12 @@ class VariableStore(ObjectStore):
 
     def add_to_cache(self, idx, data):
         if idx not in self.cache:
-            attr = {var: self.vars[var].getter(data[nn])
-                    for nn, var in enumerate(self.var_names)}
-            obj = self.content_class(**attr)
+            # attr = {var: self.vars[var].getter(data[nn])
+            #         for nn, var in enumerate(self.var_names)}
+            obj = self.content_class(*data)
             self._get_id(idx, obj)
 
-            self.index[obj] = idx
+            self.index[obj.__uuid__] = idx
             self.cache[idx] = obj
 
 
@@ -1738,12 +1748,8 @@ class IndexedObjectStore(ObjectStore):
 
         return obj
 
-    @property
-    def reference_by_uuid(self):
-        return False
-
-    def create_int_index(self):
-        return dict()
+    # def create_uuid_index(self):
+    #     return dict()
 
     def save(self, obj, idx=None):
         """
@@ -1765,13 +1771,14 @@ class IndexedObjectStore(ObjectStore):
             # has been saved so quit and do nothing
             return idx
 
-        n_idx = self.free()
+        # n_idx = self.free()
+        n_idx = len(self.index)
 
         # mark as saved so circular dependencies will not cause infinite loops
-        self.index[idx] = n_idx
+        self.index.append(idx)
 
         # make sure in nested saving that an IDX is not used twice!
-        self.reserve_idx(n_idx)
+        # self.reserve_idx(n_idx)
 
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
 
@@ -1780,24 +1787,24 @@ class IndexedObjectStore(ObjectStore):
             self.vars['index'][n_idx] = idx
 
             # store the name in the cache
-            if hasattr(self, 'cache'):
-                self.cache[n_idx] = obj
+            # if hasattr(self, 'cache'):
+            self.cache[n_idx] = obj
 
         except:
             logger.debug('Problem saving %d !' % n_idx)
             # in case we did not succeed remove the mark as being saved
             del self.index[idx]
-            self.release_idx(n_idx)
+            # self.release_idx(n_idx)
             raise
 
-        self.release_idx(n_idx)
+        # self.release_idx(n_idx)
         self._set_id(n_idx, obj)
 
         return idx
 
     def restore(self):
-        for pos, idx in enumerate(self.vars['index'][:]):
-            self.index[idx] = pos
+        self.index.clear()
+        self.index.extend(self.vars['index'][:])
 
     def initialize(self):
         super(IndexedObjectStore, self).initialize()

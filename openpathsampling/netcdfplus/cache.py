@@ -374,7 +374,7 @@ class LRUChunkLoadingCache(Cache):
 
     """
 
-    def __init__(self, chunksize=100, max_chunks=100, variable=None):
+    def __init__(self, chunksize=256, max_chunks=1000, variable=None):
         super(LRUChunkLoadingCache, self).__init__()
         self.max_chunks = max_chunks
         self.chunksize = chunksize
@@ -453,7 +453,6 @@ class LRUChunkLoadingCache(Cache):
 
                 if right > left:
                     chunk.extend(self.variable[left:right])
-                    print chunk
 
     def _update_chunk_order(self, chunk_idx):
         if chunk_idx != self._firstchunk:

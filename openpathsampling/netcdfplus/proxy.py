@@ -3,7 +3,6 @@
 @author: JH Prinz
 """
 import functools
-
 import weakref
 
 from base import StorableObject
@@ -56,7 +55,6 @@ class LoaderProxy(object):
 
         return NotImplemented
 
-
     def __ne__(self, other):
         return not self == other
 
@@ -108,14 +106,6 @@ class DelayedLoader(object):
             return self
 
     def __set__(self, instance, value):
-
-        # print instance.__class__.__name__
-        # print instance.__dict__.keys()
-        # print instance.__class__.__dict__.keys()
-        # print instance.__class__.__features__
-
-        # print hasattr(instance, '_lazy')
-
         instance._lazy[self] = value
 
 
@@ -130,6 +120,11 @@ def lazy_loading_attributes(*attributes):
     The second thing you can do is that saving using the `.write()` command will
     automatically remove the real object and turn the stored object into
     a proxy
+
+    Notes
+    -----
+    This decorator will obfuscate the __init__ signature in Python 2.
+    This is fixed in Python 3.4+
 
     Examples
     --------
@@ -156,9 +151,16 @@ def lazy_loading_attributes(*attributes):
 
         _super_init = cls.__init__
 
+        code =  'def _init(self, %s):'
+
+        source_code = '\n'.join(code)
+        cc = compile(source_code, '<string>', 'exec')
+        exec cc in locals()
+
+
         @functools.wraps(cls.__init__)
         def _init(self, *args, **kwargs):
-            self._lazy = dict()
+            self._lazy = {}
             _super_init(self, *args, **kwargs)
 
         cls.__init__ = _init

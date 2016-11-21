@@ -7,6 +7,8 @@ from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, \
     LRUChunkLoadingCache
 import openpathsampling.engines as peng
 
+from openpathsampling.netcdfplus import with_timing_logging
+
 import logging
 from uuid import UUID
 
@@ -160,13 +162,14 @@ class BaseSnapshotStore(IndexedObjectStore):
             # has been saved so quit and do nothing
             return idx
 
-        n_idx = self.free() / 2
+        # n_idx = self.free() / 2
+        n_idx = len(self.index)
 
         # mark as saved so circular dependencies will not cause infinite loops
-        self.index[pos] = n_idx
+        self.index.append(pos)
 
         # make sure in nested saving that an IDX is not used twice!
-        self.reserve_idx(n_idx)
+        # self.reserve_idx(n_idx)
 
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
 
@@ -175,17 +178,17 @@ class BaseSnapshotStore(IndexedObjectStore):
             self.vars['index'][n_idx] = pos
 
             # store the name in the cache
-            if hasattr(self, 'cache'):
-                self.cache[n_idx] = obj
+            # if hasattr(self, 'cache'):
+            self.cache[n_idx] = obj
 
         except:
             logger.debug('Problem saving %d !' % n_idx)
             # in case we did not succeed remove the mark as being saved
             del self.index[pos]
-            self.release_idx(n_idx)
+            # self.release_idx(n_idx)
             raise
 
-        self.release_idx(n_idx)
+        # self.release_idx(n_idx)
         self._set_id(n_idx, obj)
 
         return idx
@@ -219,13 +222,7 @@ class BaseSnapshotStore(IndexedObjectStore):
         pass
 
     def _get_id(self, idx, obj):
-        if self.reference_by_uuid:
-            uuid = self.vars['uuid'][int(idx / 2)]
-        else:
-            if idx in self.proxy_index:
-                uuid = self.proxy_index[int(idx / 2)]
-            else:
-                return
+        uuid = self.vars['uuid'][int(idx / 2)]
 
         if idx & 1:
             uuid = StorableObject.ruuid(uuid)
@@ -233,13 +230,10 @@ class BaseSnapshotStore(IndexedObjectStore):
         obj.__uuid__ = uuid
 
     def _set_id(self, idx, obj):
-        if self.reference_by_uuid:
-            self.vars['uuid'][int(idx / 2)] = obj.__uuid__
+        self.vars['uuid'][int(idx / 2)] = obj.__uuid__
 
     def load_indices(self):
-        if self.reference_by_uuid:
-            for pos, idx in enumerate(self.vars['index'][:]):
-                self.index[idx] = pos
+        self.index.extend(self.vars['index'])
 
     def all(self):
         return peng.Trajectory(map(self.proxy, range(len(self))))
@@ -396,10 +390,10 @@ class SnapshotWrapperStore(ObjectStore):
             the loaded object
         """
 
-        if type(idx) is UUID:
+        if type(idx) is long:
             # we want to load by uuid and it was not in cache.
             if idx in self.index:
-                n_idx = int(self.index[idx])
+                n_idx = self.index[idx]
             else:
                 if self.fallback_store is not None:
                     return self.fallback_store.load(idx)
@@ -460,7 +454,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         if obj is not None:
             self._get_id(n_idx, obj)
-            self.index[obj] = n_idx
+            # self.index[obj.__uuid__] = n_idx
             self.cache[n_idx] = obj
 
             logger.debug(
@@ -557,25 +551,21 @@ class SnapshotWrapperStore(ObjectStore):
             self.type_list[store.descriptor] = (store, idx)
             self.store_snapshot_list.append(store)
 
-        if self.reference_by_uuid:
-            self.storage.cvs.load_indices()
+        self.storage.cvs.load_indices()
 
         for idx, store in enumerate(self.storage.vars['cvcache']):
             cv_st_idx = int(store.name[2:])
 
-            if self.reference_by_uuid:
-                cv = self.storage.cvs[self.storage.cvs.vars['uuid'][cv_st_idx]]
-            else:
-                cv = self.storage.cvs[cv_st_idx]
-
+            cv = self.storage.cvs[self.storage.cvs.vars['uuid'][cv_st_idx]]
             self.cv_list[cv] = (store, idx)
 
         self.load_indices()
 
+    @with_timing_logging
     def load_indices(self):
-        if self.reference_by_uuid:
-            for idx, uuid in enumerate(self.vars['uuid'][:]):
-                self.index[uuid] = idx * 2
+        # TODO: Update with ReversedHashedList
+        for idx, uuid in enumerate(self.vars['uuid'][:]):
+            self.index[uuid] = idx * 2
 
     def get_cv_cache(self, idx):
         store_name = SnapshotWrapperStore._get_cv_name(idx)
@@ -610,35 +600,15 @@ class SnapshotWrapperStore(ObjectStore):
     def save(self, obj, idx=None):
         n_idx = None
 
-        if self.reference_by_uuid:
-            if obj in self.index:
-                n_idx = self.index[obj]
-        else:
-            if hasattr(obj, '_idx'):
-                if obj._store is self:
-                    # is a proxy of a saved object so do nothing
-                    return obj._idx
-                else:
-                    return self.save(obj.__subject__)
-
-            if obj in self.index:
-                n_idx = self.index[obj]
-
-            elif obj._reversed is not None:
-                # if the object has no reversed present, the reversed does not
-                # exist yet and hence it cannot be in the index, so no checking
-                if obj._reversed in self.index:
-                    n_idx = self.index[obj._reversed] ^ 1
+        if obj.__uuid__ in self.index:
+            n_idx = self.index[obj.__uuid__]
 
         if n_idx is not None:
             # snapshot is mentioned
             store_idx = int(self.variables['store'][n_idx / 2])
             if not store_idx == -1:
                 # and stored
-                if self.reference_by_uuid:
-                    return self.reference(obj)
-                else:
-                    return n_idx
+                return self.reference(obj)
 
         if self.only_mention:
             if n_idx is None:
@@ -646,14 +616,11 @@ class SnapshotWrapperStore(ObjectStore):
 
                 # only mention but not really store snapshots
                 self.vars['store'][n_idx / 2] = -1
-                self.index[obj] = n_idx
+                self.index[obj.__uuid__] = n_idx
                 self._auto_complete_single_snapshot(obj, n_idx)
                 self._set_id(n_idx, obj)
 
-            if self.reference_by_uuid:
-                return self.reference(obj)
-            else:
-                return n_idx
+            return self.reference(obj)
 
         if not isinstance(obj, self.content_class):
             raise ValueError(
@@ -676,16 +643,13 @@ class SnapshotWrapperStore(ObjectStore):
 
         self.cache[n_idx] = obj
 
-        if self.reference_by_uuid:
-            return self.reference(obj)
-        else:
-            return n_idx
+        return self.reference(obj)
 
     def _save(self, obj, n_idx):
         try:
             store, store_idx = self.type_list[obj.engine.descriptor]
             self.vars['store'][n_idx / 2] = store_idx
-            self.index[obj] = n_idx
+            self.index[obj.__uuid__] = n_idx
             store[n_idx] = obj
             return store
 
@@ -698,7 +662,7 @@ class SnapshotWrapperStore(ObjectStore):
                 # we just create space for it
                 store, store_idx = self.add_type(obj.engine.descriptor)
                 self.vars['store'][n_idx / 2] = store_idx
-                self.index[obj] = n_idx
+                self.index[obj.__uuid__] = n_idx
                 store[n_idx] = obj
                 return store
 
@@ -762,10 +726,7 @@ class SnapshotWrapperStore(ObjectStore):
             # TODO: Make better looping over this to not have
             # to load all the indices at once
             # can be problematic for 10M+ stored snapshots
-            if self.reference_by_uuid:
-                indices = self.vars['uuid'][:]
-            else:
-                indices = range(0, len(self), 2)
+            indices = self.vars['uuid'][:]
 
             for pos, idx in enumerate(indices):
                 if not cv_store.time_reversible:
@@ -877,21 +838,8 @@ class SnapshotWrapperStore(ObjectStore):
     def get_uuid_index(self, obj):
         n_idx = None
 
-        if self.reference_by_uuid:
-            if obj in self.index:
-                n_idx = self.index[obj]
-        else:
-            if hasattr(obj, '_idx'):
-                if obj._store is self:
-                    # is a proxy of a saved object so do nothing
-                    return obj._idx
-
-            if obj in self.index:
-                n_idx = self.index[obj]
-
-            elif obj._reversed is not None:
-                if obj._reversed in self.index:
-                    n_idx = self.index[obj._reversed] ^ 1
+        if obj.__uuid__ in self.index:
+            n_idx = self.index[obj.__uuid__]
 
         if n_idx is None:
             # if the obj is not know, add it to the file and index, but
@@ -899,7 +847,7 @@ class SnapshotWrapperStore(ObjectStore):
             # this can later be done using .save(obj)
             n_idx = self.free()
             self.variables['store'][n_idx / 2] = -1
-            self.index[obj] = n_idx
+            self.index[obj.__uuid__] = n_idx
             self._set_id(n_idx, obj)
 
     @staticmethod
@@ -939,7 +887,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         if not allow_incomplete:
             # in complete mode we force chunk size one to match it to snapshots
-            chunksize = 1
+            chunksize = self.default_store_chunk_size
 
         # determine value type and shape
         params = NetCDFPlus.get_value_parameters(cv(template))
@@ -950,7 +898,7 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             chunksizes = tuple(params['dimensions'])
 
-        cv_idx = self.storage.cvs.index[cv]
+        cv_idx = self.storage.cvs.index[cv.__uuid__]
         store = SnapshotValueStore(
             time_reversible=time_reversible,
             allow_incomplete=allow_incomplete,
@@ -984,7 +932,7 @@ class SnapshotWrapperStore(ObjectStore):
             store.create_variable('index', 'index')
 
         else:
-            chunksize = 1
+            chunksize = self.default_store_chunk_size
             if shape is not None:
                 shape = tuple(['snapshots'] + list(shape))
                 chunksizes = tuple([chunksize] + list(chunksizes))
@@ -1012,10 +960,7 @@ class SnapshotWrapperStore(ObjectStore):
         # use the cache and function of the CV to fill the store when it is made
         if not allow_incomplete:
 
-            if self.reference_by_uuid:
-                indices = self.vars['uuid'][:]
-            else:
-                indices = range(0, len(self), 2)
+            indices = self.vars['uuid'][:]
 
             for pos, idx in enumerate(indices):
 
@@ -1040,19 +985,10 @@ class SnapshotWrapperStore(ObjectStore):
         return UUIDReversalDict()
 
     def _get_id(self, idx, obj):
-        if self.reference_by_uuid:
-            uuid = self.vars['uuid'][int(idx / 2)]
+        uuid = self.vars['uuid'][int(idx / 2)]
 
-            if idx & 1:
-                uuid = StorableObject.ruuid(uuid)
-
-        else:
-            if idx in self.proxy_index:
-                uuid = self.proxy_index[idx]
-            elif idx ^ 1 in self.proxy_index:
-                uuid = StorableObject.ruuid(self.proxy_index[idx ^ 1])
-            else:
-                return
+        if idx & 1:
+            uuid = StorableObject.ruuid(uuid)
 
         obj.__uuid__ = uuid
         if idx & 1:
@@ -1060,12 +996,10 @@ class SnapshotWrapperStore(ObjectStore):
                 obj._reversed.__uuid__ = uuid
 
             uuid = StorableObject.ruuid(uuid)
-
-        obj.__uuid__ = uuid
+            obj.__uuid__ = uuid
 
     def _set_id(self, idx, obj):
-        if self.reference_by_uuid:
-            self.vars['uuid'][idx / 2] = obj.__uuid__
+        self.vars['uuid'][idx / 2] = obj.__uuid__
 
     def idx(self, obj):
         """
@@ -1084,10 +1018,10 @@ class SnapshotWrapperStore(ObjectStore):
             stored yet
         """
         try:
-            return self.index[obj]
+            return self.index[obj.__uuid__]
         except KeyError:
             try:
-                return self.index[obj._reversed] ^ 1
+                return self.index[obj._reversed.__uuid__] ^ 1
             except KeyError:
                 raise KeyError(obj)
 
@@ -1096,40 +1030,16 @@ class SnapshotWrapperStore(ObjectStore):
             store.fill_cache()
 
     def pos(self, obj):
-        if hasattr(obj, '_idx'):
-            if self.reference_by_uuid:
-                pos = self.index.get(obj)
-            else:
-                if obj._store is self:
-                    pos = obj._idx
-                else:
-                    return None
-        else:
-            pos = self.index.get(obj)
-
-            if pos is None and not self.reference_by_uuid:
-                if obj._reversed:
-                    pos = self.index.get(obj._reversed)
-                    if pos is None:
-                        return None
-
-                    pos ^= 1
-                else:
-                    return None
-
-        return pos
+        return self.index.get(obj.__uuid__)
 
     def all(self):
-        if self.reference_by_uuid:
-            return peng.Trajectory(map(self.proxy, self.vars['uuid'][:]))
-        else:
-            return peng.Trajectory(map(self.proxy, range(len(self))))
+        return peng.Trajectory(map(self.proxy, self.vars['uuid'][:]))
 
     def __getitem__(self, item):
         """
         Enable numpy style selection of object in the store
         """
-        if type(item) is int or type(item) is str or type(item) is UUID:
+        if type(item) is int or type(item) is str or type(item) is long:
             return self.load(item)
         elif type(item) is slice:
             return [self.load(idx)
@@ -1145,7 +1055,7 @@ class SnapshotValueStore(ObjectStore):
             self,
             time_reversible=True,
             allow_incomplete=False,
-            chunksize=100
+            chunksize=256
     ):
         super(SnapshotValueStore, self).__init__(None)
         self.snapshot_index = None
@@ -1170,9 +1080,6 @@ class SnapshotValueStore(ObjectStore):
     def create_uuid_index(self):
         return dict()
 
-    def create_int_index(self):
-        return dict()
-
     def register(self, storage, prefix):
         super(SnapshotValueStore, self).register(storage, prefix)
         self.snapshot_pos = self.storage.snapshots.pos
@@ -1188,18 +1095,7 @@ class SnapshotValueStore(ObjectStore):
         pos = self.snapshot_pos(idx)
 
         if pos is None:
-            if self.reference_by_uuid:
-                return None
-            else:
-                if idx._reversed:
-                    pos = self.snapshot_pos(idx._reversed)
-
-                    if pos is None:
-                        return None
-
-                    pos ^= 1
-                else:
-                    return None
+            return None
 
         if self.time_reversible:
             pos /= 2

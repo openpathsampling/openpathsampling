@@ -6,8 +6,8 @@ class SampleStore(VariableStore):
     def __init__(self):
         super(SampleStore, self).__init__(
             Sample,
-            ['trajectory', 'ensemble', 'replica', 'parent',
-             'bias', 'mover']
+            ['replica', 'trajectory', 'ensemble', 'bias',
+             'parent', 'mover']
         )
 
     def by_ensemble(self, ensemble):
@@ -65,7 +65,7 @@ class SampleSetStore(VariableStore):
             description="sample_set[sample_set][frame] is the sample index "
                         "(0..nspanshots-1) of frame 'frame' of sample_set "
                         "'sample_set'.",
-            chunksizes=(1024,)
+            chunksizes=(65536,)
         )
 
         self.create_variable('movepath', 'lazyobj.movechanges')
