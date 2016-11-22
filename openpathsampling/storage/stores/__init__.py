@@ -4,6 +4,6 @@ from movechange import MoveChangeStore
 from sample import SampleSetStore, SampleStore
 from snapshot import (
     SnapshotWrapperStore, SnapshotValueStore, BaseSnapshotStore,
-    FeatureSnapshotStore)
+    FeatureSnapshotStore, ReversalHashedList)
 from trajectory import TrajectoryStore
 from pathsimulator import PathSimulatorStore

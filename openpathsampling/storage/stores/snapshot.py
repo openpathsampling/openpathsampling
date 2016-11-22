@@ -36,7 +36,7 @@ class ReversalHashedList(dict):
         self._list = []
 
     def append(self, key):
-        dict.__setitem__(self, key, len(self))
+        dict.__setitem__(self, key & ~1, len(self._list) * 2 ^ (key & 1))
         self._list.append(key)
 
     def extend(self, t):
@@ -51,12 +51,12 @@ class ReversalHashedList(dict):
 
     def __setitem__(self, key, value):
         # we will always store the ones with even keys
-        dict.__setitem__(self, key & ~ 1, value ^ (key & 1))
+        dict.__setitem__(self, key & ~1, value ^ (key & 1))
         # we will always store the ones with even value
         self._list[value / 2] = key ^ (value & 1)
 
     def get(self, key, d=None):
-        uu = dict.__getitem__(self, key & ~1)
+        uu = dict.get(self, key & ~1, d)
         if uu is not None:
             return uu ^ (key & 1)
         else:
@@ -656,10 +656,7 @@ class SnapshotWrapperStore(ObjectStore):
         return ref
 
     def save(self, obj, idx=None):
-        n_idx = None
-
-        if obj.__uuid__ in self.index:
-            n_idx = self.index[obj.__uuid__]
+        n_idx = self.index.get(obj.__uuid__)
 
         if n_idx is not None:
             # snapshot is mentioned
