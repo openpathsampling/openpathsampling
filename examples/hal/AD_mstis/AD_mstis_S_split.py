@@ -18,7 +18,7 @@ def strip_snapshots(input_storage, output_storage=None):
 
     print """1. Cache for reading"""
 
-    storage = paths.AnalysisStorage(input_storage)
+    storage = paths.Storage(input_storage)
 
     parts = base_filename.split('.')
     parts[-2] += '_strip'
