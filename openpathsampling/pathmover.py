@@ -602,7 +602,7 @@ class SampleMover(PathMover):
                 samples=e.trial_sample,
                 mover=self,
                 input_samples=samples,
-                details=paths.MoveDetails(details)
+                details=paths.Details(**details)
             )
 
         # 4. accept/reject
