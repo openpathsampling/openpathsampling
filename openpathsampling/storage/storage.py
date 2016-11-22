@@ -527,3 +527,5 @@ class AnalysisStorage(Storage):
                     (self.context, self.store.name, len(self.store), dtime))
             else:
                 logger.info('%s in %d ms' % (self.context, dtime))
+
+class CLIStorage(Storage):
