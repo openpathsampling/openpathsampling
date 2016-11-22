@@ -596,12 +596,13 @@ class SampleMover(PathMover):
                     rejection_reason='nan'),
             )
         except SampleMaxLengthError as e:
+            details = e.details
+            e.details.update({'rejection_reason': 'max_length'})
             return paths.RejectedMaxLengthSampleMoveChange(
                 samples=e.trial_sample,
                 mover=self,
                 input_samples=samples,
-                details=paths.MoveDetails(
-                    rejection_reason='max_length')
+                details=paths.MoveDetails(details)
             )
 
         # 4. accept/reject
