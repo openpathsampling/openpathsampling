@@ -179,3 +179,20 @@ class FirstFrameSelector(ShootingPointSelector):
         # must be matched by a first-frame selector somewhere
         return 1.0
 
+class NullShootingSelector(ShootingPointSelector):
+    """
+    If your engine mover doesn't actually use a shooting point selector
+    (even though it is required input), you should use the
+    NullShootingSelector.
+    """
+    def f(self, frame, trajectory):
+        return 1.0
+
+    def pick(self, trajectory):
+        return None
+
+    def probability(self, snapshot, trajectory):
+        return 1.0
+
+    def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
+        return 1.0
