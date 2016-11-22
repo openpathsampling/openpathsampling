@@ -56,7 +56,11 @@ class ReversalHashedList(dict):
         self._list[value / 2] = key ^ (value & 1)
 
     def get(self, key, d=None):
-        return dict.get(self, key & ~1, d) ^ (key & 1)
+        uu = dict.__getitem__(self, key & ~1)
+        if uu is not None:
+            return uu ^ (key & 1)
+        else:
+            return d
 
     def __getitem__(self, key):
         return dict.__getitem__(self, key & ~1) ^ (key & 1)

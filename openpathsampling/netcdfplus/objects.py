@@ -1511,9 +1511,6 @@ class VariableStore(ObjectStore):
         # backwards compatible
         # var_names = self.content_class.args()[1:]
 
-        print self.var_names
-        print self.content_class.args()[1:]
-
         if not self._cached_all:
             data = zip(*[
                 self.vars[var][part]
