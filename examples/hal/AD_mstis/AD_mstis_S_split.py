@@ -18,7 +18,7 @@ def strip_snapshots(input_storage, output_storage=None):
 
     print """1. Cache for reading"""
 
-    storage = paths.Storage(input_storage)
+    storage = paths.AnalysisStorage(input_storage)
 
     parts = base_filename.split('.')
     parts[-2] += '_strip'
@@ -39,7 +39,7 @@ def strip_snapshots(input_storage, output_storage=None):
     # st_traj.snapshots.save(storage.snapshots[0])
 
     # cache proxies for all snapshots
-    q = storage.snapshots.all()
+    q = storage.snapshots.all().as_proxies()
 
     cvs = storage.cvs
 
@@ -54,6 +54,11 @@ def strip_snapshots(input_storage, output_storage=None):
     print """3. Copy CVs"""
     for cv in tqdm(cvs):
         st_strip.cvs.save(cv)
+
+    # copy all trajectories with shallow copies of snapshots
+    print """4. Copy snapshots w/o snapshots"""
+    for snap in tqdm(q):
+        st_strip.snapshots.mention(snap)
 
     # copy all trajectories with shallow copies of snapshots
     print """4. Copy trajectories w/o snapshots"""

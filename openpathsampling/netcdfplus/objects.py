@@ -62,8 +62,8 @@ class HashedList(dict):
         dict.__setitem__(self, key, value)
         self._list[value] = key
 
-    def __getitem__(self, key):
-        return dict.__getitem__(self, key)
+    # def __getitem__(self, key):
+    #     return dict.__getitem__(self, key)
 
     def index(self, key):
         return self._list[key]
@@ -978,7 +978,7 @@ class ObjectStore(StorableNamedObject):
         self.vars['uuid'][idx] = obj.__uuid__
 
     def _get_id(self, idx, obj):
-        obj.__uuid__ = self.vars['uuid'][idx]
+        obj.__uuid__ = self.index.index(idx)
 
 
 class NamedObjectStore(ObjectStore):
@@ -1444,6 +1444,26 @@ class VariableStore(ObjectStore):
             'var_names': self.var_names
         }
 
+    @classmethod
+    def from_dict(cls, dct):
+        # update potential changes in var_names ordering
+        old_var_names = dct['var_names']
+        new_var_names = dct['content_class'].args()[1:]
+
+        var_names = [name for name in new_var_names if name in old_var_names]
+
+        if len(var_names) < len(old_var_names):
+            logger.info(
+                ('Potential conflict when loading from Variable Store '
+                 'Stored variables %s do not equal representation in '
+                 'object [%s] : %s'
+                 ) % (old_var_names, dct['content_class'], new_var_names))
+
+        return VariableStore(
+            content_class=dct['content_class'],
+            var_names=var_names
+        )
+
     def _save(self, obj, idx):
         for var in self.var_names:
             self.write(var, idx, obj)
@@ -1489,12 +1509,15 @@ class VariableStore(ObjectStore):
 
         # just in case we saved the var_names in another order and so we are
         # backwards compatible
-        var_names = self.content_class.args()[1:]
+        # var_names = self.content_class.args()[1:]
+
+        print self.var_names
+        print self.content_class.args()[1:]
 
         if not self._cached_all:
             data = zip(*[
                 self.vars[var][part]
-                for var in var_names
+                for var in self.var_names
             ])
 
             [self.add_to_cache(idx, v) for idx, v in zip(part, data)]

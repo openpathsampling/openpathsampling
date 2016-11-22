@@ -10,7 +10,7 @@ class TrajectoryStore(ObjectStore):
         return {}
 
     def _save(self, trajectory, idx):
-        self.vars['snapshots'][idx] = trajectory
+        self.vars['snapshots'][idx] = trajectory.as_proxies()
         store = self.storage.snapshots
 
         for frame, snapshot in enumerate(trajectory.iter_proxies()):

@@ -107,15 +107,15 @@ class MoveChangeStore(ObjectStore):
                                              details_idx)
 
             obj.__uuid__ = uuid
-            self._get_id(pos, obj)
-            self.index[obj] = pos
+            # self._get_id(pos, obj)
+            self.index[uuid] = pos
             self.cache[pos] = obj
 
     def _load_partial_subchanges(self, obj, subchanges_idxs):
         if len(subchanges_idxs) > 0:
             subchanges_idxs = self.storage.to_uuid_chunks(subchanges_idxs)
             obj.subchanges = \
-                [self.load(UUID(idx)) for idx in subchanges_idxs]
+                [self.load(int(UUID(idx))) for idx in subchanges_idxs]
 
         return obj
 
@@ -129,18 +129,18 @@ class MoveChangeStore(ObjectStore):
         else:
             MoveChange.__init__(
                 obj,
-                mover=self.storage.pathmovers[UUID(mover_idx)])
+                mover=self.storage.pathmovers[int(UUID(mover_idx))])
 
         if len(samples_idxs) > 0:
             samples_idxs = self.storage.to_uuid_chunks(samples_idxs)
             input_samples_idxs = \
                 self.storage.to_uuid_chunks(input_samples_idxs)
             obj.samples = \
-                [self.storage.samples[UUID(idx)] for idx in samples_idxs]
+                [self.storage.samples[int(UUID(idx))] for idx in samples_idxs]
 
         if len(input_samples_idxs) > 0:
             obj.input_samples = [
-                self.storage.samples[UUID(idx)]
+                self.storage.samples[int(UUID(idx))]
                 for idx in input_samples_idxs]
 
         obj.details = self.storage.details.proxy(str(details_idx))

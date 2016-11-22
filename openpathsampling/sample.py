@@ -769,9 +769,9 @@ class Sample(StorableObject):
                  trajectory=None,
                  ensemble=None,
                  bias=1.0,
-                 details=None,
                  parent=None,
-                 mover=None
+                 mover=None,
+                 details=None
                  ):
 
         super(Sample, self).__init__()
