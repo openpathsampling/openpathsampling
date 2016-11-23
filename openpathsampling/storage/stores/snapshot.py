@@ -1082,7 +1082,7 @@ class SnapshotValueStore(ObjectStore):
 
     def register(self, storage, prefix):
         super(SnapshotValueStore, self).register(storage, prefix)
-        self.snapshot_pos = self.storage.snapshots.pos
+        self.snapshot_pos = self.storage.stores['snapshots'].pos
 
     def __len__(self):
         return len(self.variables['value'])
