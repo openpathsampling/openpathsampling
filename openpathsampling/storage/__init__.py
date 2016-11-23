@@ -2,8 +2,8 @@ from distributed import DistributedUUIDStorage, TrajectoryStorage
 
 from stores import (
     MCStepStore, MoveChangeStore, SampleSetStore,
-    SampleStore, BaseSnapshotStore, FeatureSnapshotStore, SnapshotValueStore, TrajectoryStore, CVStore, PathSimulatorStore)
-from openpathsampling.storage.stores.wrapper import SnapshotWrapperStore
+    SampleStore, TrajectoryStore, CVStore, PathSimulatorStore,
+    SnapshotWrapperStore)
 
 from storage import Storage, AnalysisStorage
 
