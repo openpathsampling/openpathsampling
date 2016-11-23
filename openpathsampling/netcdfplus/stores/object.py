@@ -44,6 +44,10 @@ class HashedList(dict):
         if key in self:
             dict.__delitem__(self, key)
 
+    @property
+    def list(self):
+        return self._list
+
 
 class ObjectStore(StorableNamedObject):
     """
@@ -312,7 +316,7 @@ class ObjectStore(StorableNamedObject):
         Add iteration over all elements in the storage
         """
         # we want to iterator in the order object were saved!
-        for uuid in self.index:
+        for uuid in self.index.list:
             yield self.load(uuid)
 
     def __len__(self):
