@@ -305,7 +305,7 @@ class ObjectStore(StorableNamedObject):
             The integer index of the given object or `None` if it is not
             stored yet
         """
-        return self.index[obj]
+        return self.index[obj.__uuid__]
 
     def __iter__(self):
         """
