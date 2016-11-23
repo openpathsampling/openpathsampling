@@ -1,15 +1,14 @@
 import abc
-
-from openpathsampling.netcdfplus import StorableObject, LoaderProxy
-from openpathsampling.netcdfplus.objects import IndexedObjectStore
-from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, \
-    LRUChunkLoadingCache
-import openpathsampling.engines as peng
-
-from openpathsampling.netcdfplus import with_timing_logging
-
 import logging
 from uuid import UUID
+
+import openpathsampling.engines as peng
+from openpathsampling.netcdfplus import LoaderProxy
+from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, \
+    LRUChunkLoadingCache
+
+from openpathsampling.netcdfplus import with_timing_logging
+from openpathsampling.netcdfplus import IndexedObjectStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
