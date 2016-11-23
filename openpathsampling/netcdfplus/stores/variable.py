@@ -39,7 +39,7 @@ class VariableStore(ObjectStore):
 
     def _load(self, idx):
         # attr = {var: self.vars[var][idx] for var in self.var_names}
-        args = [ self.vars[var][idx] for var in self.var_names]
+        args = [self.vars[var][idx] for var in self.var_names]
         return self.content_class(*args)
 
     def initialize(self):

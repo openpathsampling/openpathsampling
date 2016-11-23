@@ -3,7 +3,8 @@ from uuid import UUID
 from weakref import WeakValueDictionary
 
 from openpathsampling.netcdfplus.base import StorableNamedObject, StorableObject
-from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, WeakLRUCache
+from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, \
+    WeakLRUCache
 from openpathsampling.netcdfplus.proxy import LoaderProxy
 
 logger = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 class HashedList(dict):
     def __init__(self):
+        super(HashedList, self).__init__()
         dict.__init__(self)
         self._list = []
 
@@ -21,7 +23,6 @@ class HashedList(dict):
 
     def extend(self, t):
         l = len(self)
-        # t = filter(t, lambda x : x not in self)
         map(lambda x, y: dict.__setitem__(self, x, y), t, range(l, l + len(t)))
         self._list.extend(t)
 
@@ -41,7 +42,7 @@ class HashedList(dict):
 
     def unmark(self, key):
         if key in self:
-            dict.__delitem__(key)
+            dict.__delitem__(self, key)
 
 
 class ObjectStore(StorableNamedObject):
@@ -745,7 +746,8 @@ class ObjectStore(StorableNamedObject):
 
         return obj
 
-    def reference(self, obj):
+    @staticmethod
+    def reference(obj):
         return obj.__uuid__
 
     def remember(self, obj):
