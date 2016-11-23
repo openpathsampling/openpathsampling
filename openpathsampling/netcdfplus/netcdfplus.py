@@ -2,21 +2,17 @@
 author
 """
 
-import logging
-
-from dictify import StorableObjectJSON, UUIDObjectJSON
-from proxy import LoaderProxy
-
-from objects import NamedObjectStore, ObjectStore
-
-from collections import OrderedDict
-
-import numpy as np
-import netCDF4
-import os.path
 import abc
-
+import logging
+import os.path
+from collections import OrderedDict
 from uuid import UUID
+
+import netCDF4
+import numpy as np
+from dictify import UUIDObjectJSON
+from stores import NamedObjectStore, ObjectStore
+from proxy import LoaderProxy
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')

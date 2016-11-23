@@ -2,8 +2,8 @@ from distributed import DistributedUUIDStorage, TrajectoryStorage
 
 from stores import (
     MCStepStore, MoveChangeStore, SampleSetStore,
-    SampleStore, BaseSnapshotStore, FeatureSnapshotStore, SnapshotWrapperStore,
-    SnapshotValueStore, TrajectoryStore, CVStore, PathSimulatorStore)
+    SampleStore, TrajectoryStore, CVStore, PathSimulatorStore,
+    SnapshotWrapperStore)
 
 from storage import Storage, AnalysisStorage
 
