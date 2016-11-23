@@ -273,18 +273,18 @@ class BaseSnapshotStore(IndexedObjectStore):
     def _set(self, idx, snapshot):
         pass
 
-    def _get_id(self, idx, obj):
-        print idx, obj
-        print 1/0
-        uuid = self.vars['uuid'][int(idx / 2)]
-
-        if idx & 1:
-            uuid = StorableObject.ruuid(uuid)
-
-        obj.__uuid__ = uuid
-
-    def _set_id(self, idx, obj):
-        self.vars['uuid'][int(idx / 2)] = obj.__uuid__
+    # def _get_id(self, idx, obj):
+    #     print idx, obj
+    #     print 1/0
+    #     uuid = self.vars['uuid'][int(idx / 2)]
+    #
+    #     if idx & 1:
+    #         uuid = StorableObject.ruuid(uuid)
+    #
+    #     obj.__uuid__ = uuid
+    #
+    # def _set_id(self, idx, obj):
+    #     self.vars['uuid'][int(idx / 2)] = obj.__uuid__
 
     def load_indices(self):
         self.index.extend(self.vars['index'])
@@ -620,9 +620,6 @@ class SnapshotWrapperStore(ObjectStore):
 
     @with_timing_logging
     def load_indices(self):
-        # TODO: Update with ReversedHashedList
-        # for idx, uuid in enumerate(self.vars['uuid'][:]):
-        #     self.index[uuid] = idx * 2
         self.index.extend(self.vars['uuid'][:])
 
     def get_cv_cache(self, idx):
@@ -1040,18 +1037,9 @@ class SnapshotWrapperStore(ObjectStore):
         return ReversalHashedList()
 
     def _get_id(self, idx, obj):
-        uuid = self.index.index(int(idx / 2))
-
-        if idx & 1:
-            uuid = StorableObject.ruuid(uuid)
-
-        obj.__uuid__ = uuid
-        if idx & 1:
-            if obj._reversed:
-                obj._reversed.__uuid__ = uuid
-
-            uuid = StorableObject.ruuid(uuid)
-            obj.__uuid__ = uuid
+        obj.__uuid__ = self.index.index(int(idx))
+        if obj._reversed:
+            obj._reversed.__uuid__ = StorableObject.ruuid(uuid)
 
     def _set_id(self, idx, obj):
         self.vars['uuid'][idx / 2] = obj.__uuid__
