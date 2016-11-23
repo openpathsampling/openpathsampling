@@ -80,6 +80,9 @@ class VariableStore(ObjectStore):
         # backwards compatible
         var_names = self.content_class.args()[1:]
 
+        # Backwards compatibility
+        var_names = [name for name in var_names if name in self.var_names]
+
         if not self._cached_all:
             data = zip(*[
                 self.vars[var][part]
@@ -97,5 +100,5 @@ class VariableStore(ObjectStore):
             obj = self.content_class(*data)
             self._get_id(idx, obj)
 
-            self.index[obj.__uuid__] = idx
+            # self.index[obj.__uuid__] = idx
             self.cache[idx] = obj
