@@ -107,8 +107,6 @@ class MoveChangeStore(ObjectStore):
                                              details_idx)
 
             obj.__uuid__ = uuid
-            # self._get_id(pos, obj)
-            self.index[uuid] = pos
             self.cache[pos] = obj
 
     def _load_partial_subchanges(self, obj, subchanges_idxs):
