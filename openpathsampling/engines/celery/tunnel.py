@@ -168,9 +168,12 @@ def parse_options():
 def main():
     options, server, remote = parse_options()
 
+    server = ('localhost', 6371)
+    remote = ('localhost', 7777)
+
     password = None
-    if options.readpass:
-        password = getpass.getpass('Enter SSH password: ')
+    # if options.readpass:
+    #     password = getpass.getpass('Enter SSH password: ')
 
     client = paramiko.SSHClient()
     client.load_system_host_keys()
