@@ -201,9 +201,101 @@ class MoveStrategy(StorableNamedObject):
         """
         raise NotImplementedError #TODO: use JHP's ABCError when 302 is merged
 
-class OneWayShootingStrategy(MoveStrategy):
+
+class SingleEnsembleMoveStrategy(MoveStrategy):
+    """Abstract class for movers with one (and same) input/output ensemble.
+    """
+    @staticmethod
+    def signatures_to_init_ensembles(signatures):
+        """
+        Convert signatures into initialization ensembles.
+
+        Note
+        ----
+            Subclasses may need to override this. The default behavior works
+            for movers where the input and output have only one ensemble,
+            and that ensemble is the same for both.
+
+        Parameters
+        ----------
+        signatures : list of 2-tuple of tuple of :class:`.Ensemble`
+            the move signatures from a path mover
+
+        Returns
+        -------
+        list of :class:`.Ensemble`
+            the ensembles to be used for initialization
+        """
+        init_ensembles = [s[0] for s in signatures]
+        for e in init_ensembles: assert(len(e) == 1)  # sanity check
+        return init_ensembles
+
+    def get_init_ensembles(self, scheme):
+        """
+        Procedure for selecting the initialization ensembles.
+
+        If this strategy has a specific set of ensembles, then those
+        ensembles are used (after wrapping into list-of-list form).
+        If the strategy does not have movers, but `self.from_group` already
+        exists in the scheme, then we use the movers from the scheme to
+        identify the signatures, and therefore the ensembles.
+        If neither the strategy nor the scheme provide a list of ensembles,
+        we use the default of all ensembles (initially grouped by
+        transitions). If self.replace_signatures has been set to True, then
+        we ignore the 
+
+        Parameters
+        ----------
+        scheme : :class:`.MoveScheme`
+            the move scheme this strategy will be applied to
+
+        Returns
+        -------
+        list of list of :class:`.Ensemble`
+            the ensembles to be used to initialize the movers
+        """
+        # if self.ensembles is not None, use those
+        # elif scheme.movers[from_group], extract from that
+        # elif self.ensembles in None, use all the ensembles (as now)
+        try:
+            movers = scheme.movers[self.from_group]
+        except KeyError:
+            movers = []
+
+        # these are the conditions 
+        conditions = (self.ensembles is not None
+                      or len(movers) == 0
+                      or self.replace_signatures or self.replace_movers)
+
+        if conditions:
+            # covers cases 1 and 3 above
+            init_ensembles = self.get_ensembles(scheme, self.ensembles)
+        else:
+            # covers case 2 above
+            sigs = [m.ensemble_signature for m in movers]
+            sig_ensembles = self.signatures_to_init_ensembles(sigs)
+            init_ensembles = self.get_ensembles(scheme, sig_ensembles)
+
+        return init_ensembles
+
+
+class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
     """
     Strategy for OneWayShooting. Allows choice of shooting point selector.
+
+    Parameters
+    ----------
+    selector : :class:`.ShootingPointSelector`
+        method used to select shooting point
+    ensembles : list of :class:`.Ensemble`
+        ensembles for which this strategy applies; None gives default
+        behavior
+    engine : :class:`.DynamicsEngine`
+        engine for the dynamics
+    group : str
+        mover group name, default "shooting"
+    replace : bool
+        whether to replace existing movers in the group; default True
     """
     _level = levels.MOVER
     def __init__(self, selector=None, ensembles=None, engine=None,
@@ -217,7 +309,8 @@ class OneWayShootingStrategy(MoveStrategy):
         self.engine = engine
 
     def make_movers(self, scheme):
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        #ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        ensemble_list = self.get_init_ensembles(scheme)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector,
                                                             ensembles,
@@ -225,7 +318,7 @@ class OneWayShootingStrategy(MoveStrategy):
         return shooters
 
 
-class TwoWayShootingStrategy(MoveStrategy):
+class TwoWayShootingStrategy(SingleEnsembleMoveStrategy):
     """Strategy to make a group of 2-way shooting movers.
 
     Parameters
@@ -259,7 +352,8 @@ class TwoWayShootingStrategy(MoveStrategy):
         self.engine = engine
 
     def make_movers(self, scheme):
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        # ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        ensemble_list = self.get_init_ensembles(scheme)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
         shooters = [
             paths.TwoWayShootingMover(
@@ -287,10 +381,9 @@ class NearestNeighborRepExStrategy(MoveStrategy):
         ensemble_list = self.get_ensembles(scheme, self.ensembles)
         movers = []
         for ens in ensemble_list:
-            movers.extend(
-                [paths.ReplicaExchangeMover(ensemble1=ens[i], ensemble2=ens[i+1])
-                 for i in range(len(ens)-1)]
-            )
+            movers.extend([paths.ReplicaExchangeMover(ensemble1=ens[i],
+                                                      ensemble2=ens[i+1])
+                           for i in range(len(ens)-1)])
         return movers
 
 class NthNearestNeighborRepExStrategy(MoveStrategy):
@@ -310,19 +403,33 @@ class AllSetRepExStrategy(NearestNeighborRepExStrategy):
         movers = []
         for ens in ensemble_list:
             pairs = list(itertools.combinations(ens, 2))
-            movers.extend([paths.ReplicaExchangeMover(ensemble1= pair[0], ensemble2=pair[1])
+            movers.extend([paths.ReplicaExchangeMover(ensemble1=pair[0],
+                                                      ensemble2=pair[1])
                            for pair in pairs])
         return movers
 
 class SelectedPairsRepExStrategy(MoveStrategy):
     """
-    Take a specific pair of ensembles and add a replica exchange swap for
-    that pair.
+    Add replica exchange swap for specific pairs of ensembles.
+
+    Note that unlike many signature-level strategies, this defaults to
+    `replace=False`, under the assumption that you're probably using it to
+    add extra replica exchanges.
+
+    Parameters
+    ----------
+    ensembles : list of pairs of ensembles, or list of two ensembles
+        ensemble pairs for replica exchange
+    group : str
+        name of the group, default 'repex'
+    replace : bool
+        whether to replica existing signature, default False
     """
     _level = levels.SIGNATURE
 
     def initialization_error(self):
-        raise RuntimeError("SelectedPairsRepExStrategy must be initialized with ensemble pairs.")
+        raise RuntimeError("SelectedPairsRepExStrategy must be "
+                           + "initialized with ensemble pairs.")
 
     def __init__(self, ensembles=None, group="repex", replace=False):
         # check that we have a list of pairs
@@ -345,7 +452,8 @@ class SelectedPairsRepExStrategy(MoveStrategy):
         ensemble_list = self.get_ensembles(scheme, self.ensembles)
         movers = []
         for pair in ensemble_list:
-            movers.append(paths.ReplicaExchangeMover(ensemble1=pair[0], ensemble2=pair[1]))
+            movers.append(paths.ReplicaExchangeMover(ensemble1=pair[0],
+                                                     ensemble2=pair[1]))
         return movers
 
 
@@ -379,7 +487,7 @@ class ReplicaExchangeStrategy(MoveStrategy):
             # We use the fact that Python uses short-circuit logic to throw
             # the exception if the test fails, and the assertion acts as a
             # backup. This is faster than a try: except: version.  see
-            # http://stackoverflow.com/questions/1569049/making-pythons-assert-throw-an-exception-that-i-choose/1569618#1569618
+            # http://stackoverflow.com/questions/1569049/#1569618
             assert(len(sig[0])==len(sig[1]) or sig_error(sig))
             n_ens = len(sig[0])
             if n_ens == 2: # replica exchange
