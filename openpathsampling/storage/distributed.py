@@ -1,4 +1,5 @@
 import openpathsampling as paths
+import openpathsampling.storage.stores.wrapper
 from openpathsampling.netcdfplus import NamedObjectStore, ImmutableDictStore
 import openpathsampling.engines as peng
 
@@ -19,7 +20,7 @@ class TrajectoryStorage(Storage):
         # objects with special storages
 
         self.create_store('trajectories', paths.storage.TrajectoryStore())
-        self.create_store('snapshots', paths.storage.SnapshotWrapperStore())
+        self.create_store('snapshots', openpathsampling.storage.stores.wrapper.SnapshotWrapperStore())
 
         # normal objects
 
