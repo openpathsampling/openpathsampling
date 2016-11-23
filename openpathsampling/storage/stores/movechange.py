@@ -127,20 +127,26 @@ class MoveChangeStore(ObjectStore):
         else:
             MoveChange.__init__(
                 obj,
-                mover=self.storage.pathmovers[int(UUID(mover_idx))])
+                mover=self.storage.pathmovers.load(int(UUID(mover_idx))))
 
         if len(samples_idxs) > 0:
             samples_idxs = self.storage.to_uuid_chunks(samples_idxs)
-            input_samples_idxs = \
-                self.storage.to_uuid_chunks(input_samples_idxs)
-            obj.samples = \
-                [self.storage.samples[int(UUID(idx))] for idx in samples_idxs]
+            obj.samples = [
+                self.storage.samples.load(int(UUID(idx)))
+                for idx in samples_idxs]
+        else:
+            obj.samples = []
 
         if len(input_samples_idxs) > 0:
+            input_samples_idxs = \
+                self.storage.to_uuid_chunks(input_samples_idxs)
             obj.input_samples = [
-                self.storage.samples[int(UUID(idx))]
+                self.storage.samples.load(int(UUID(idx)))
                 for idx in input_samples_idxs]
+        else:
+            obj.input_samples = []
 
-        obj.details = self.storage.details.proxy(str(details_idx))
+        if details_idx[0] != '-':
+            obj.details = self.storage.details.proxy(int(UUID(details_idx)))
 
         return obj
