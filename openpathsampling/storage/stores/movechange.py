@@ -108,14 +108,13 @@ class MoveChangeStore(ObjectStore):
 
             obj.__uuid__ = uuid
             self._get_id(pos, obj)
-            self.index[obj] = pos
             self.cache[pos] = obj
 
     def _load_partial_subchanges(self, obj, subchanges_idxs):
         if len(subchanges_idxs) > 0:
             subchanges_idxs = self.storage.to_uuid_chunks(subchanges_idxs)
             obj.subchanges = \
-                [self.load(UUID(idx)) for idx in subchanges_idxs]
+                [self.load(int(UUID(idx))) for idx in subchanges_idxs]
 
         return obj
 
