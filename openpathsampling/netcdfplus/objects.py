@@ -5,42 +5,10 @@ from cache import MaxCache, Cache, NoCache, WeakLRUCache
 from proxy import LoaderProxy
 from base import StorableNamedObject, StorableObject
 
-from collections import OrderedDict
-from weakref import WeakKeyDictionary, WeakValueDictionary
+from weakref import WeakValueDictionary
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
-
-
-class UUIDDict(OrderedDict):
-    def __init__(self):
-        OrderedDict.__init__(self)
-
-    @staticmethod
-    def id(obj):
-        if type(obj) is str:
-            return int(UUID(obj))
-        elif type(obj) is UUID:
-            return int(obj)
-        elif type(obj) is long:
-            return obj
-        else:
-            return obj.__uuid__
-
-    def __getitem__(self, item):
-        return OrderedDict.__getitem__(self, self.id(item))
-
-    def __setitem__(self, key, value, **kwargs):
-        OrderedDict.__setitem__(self, self.id(key), value)
-
-    def __delitem__(self, key, **kwargs):
-        OrderedDict.__delitem__(self, self.id(key))
-
-    def __contains__(self, item):
-        return OrderedDict.__contains__(self, self.id(item))
-
-    def get(self, item, default=None):
-        return OrderedDict.get(self, self.id(item), default)
 
 
 class HashedList(dict):
@@ -75,35 +43,6 @@ class HashedList(dict):
     def unmark(self, key):
         if key in self:
             dict.__delitem__(key)
-
-
-class UUIDDictWeak(WeakKeyDictionary):
-    def __init__(self):
-        WeakKeyDictionary.__init__(self)
-
-    @staticmethod
-    def id(obj):
-        if type(obj) is str:
-            return UUID(obj)
-        elif type(obj) is UUID:
-            return obj
-        else:
-            return obj.__uuid__
-
-    def __getitem__(self, item):
-        return WeakKeyDictionary.__getitem__(self, self.id(item))
-
-    def __setitem__(self, key, value, **kwargs):
-        WeakKeyDictionary.__setitem__(self, self.id(key), value)
-
-    def __delitem__(self, key, **kwargs):
-        WeakKeyDictionary.__delitem__(self, self.id(key))
-
-    def __contains__(self, item):
-        return WeakKeyDictionary.__contains__(self, self.id(item))
-
-    def get(self, item, default=None):
-        return WeakKeyDictionary.get(self, self.id(item), default)
 
 
 class ObjectStore(StorableNamedObject):
