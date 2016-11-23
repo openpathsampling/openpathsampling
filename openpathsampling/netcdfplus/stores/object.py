@@ -918,4 +918,4 @@ class ObjectStore(StorableNamedObject):
         self.vars['uuid'][idx] = obj.__uuid__
 
     def _get_id(self, idx, obj):
-        obj.__uuid__ = self.vars['uuid'][idx]
+        obj.__uuid__ = self.index.index(int(idx))
