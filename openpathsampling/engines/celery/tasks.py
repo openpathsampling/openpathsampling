@@ -60,14 +60,12 @@ def _open_tunnel(**kwargs):
 
 def _close_tunnel(**kwargs):
     logger.info('Shutting down tunnel')
-    print 'HELLO'
     tunnel_server.stop()
     logger.info('Tunnel removed')
-    print 'REMOVED'
 
 
 celeryd_init.connect(_open_tunnel)
-# worker_shutdown.connect(_close_tunnel)
+worker_shutdown.connect(_close_tunnel)
 
 
 @app.task(name='openpathsampling.engine.celery.tasks.generate')
