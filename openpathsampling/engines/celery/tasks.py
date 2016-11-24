@@ -5,7 +5,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-app = Celery('tasks', backend='redis://localhost:6379/0', broker='redis://localhost:6379/0')
+app = Celery('tasks', backend='redis://localhost:7777/0', broker='redis://localhost:7777/0')
+# app = Celery('tasks', backend='redis://localhost:6379/0', broker='redis://localhost:6379/0')
 app.config_from_object('celeryconfig')
 
 
