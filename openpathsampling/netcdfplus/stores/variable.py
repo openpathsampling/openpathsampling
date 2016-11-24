@@ -24,7 +24,23 @@ class VariableStore(ObjectStore):
             raise ValueError(('Content_class %s must be subclassed from '
                              'StorableObject') % content_class.__name__)
 
-        self.var_names = var_names
+        var_names_class = self.content_class.args()[1:]
+
+        # backwards compatibility. Reorder the stored var_names to comply
+        # with the signature. Optional variables need to be at the end!!
+        var_names_new = []
+        for name in var_names_class:
+            if name in var_names:
+                var_names_new.append(name)
+            else:
+                break
+
+        logger.info(
+            'Creates VariableStore with variables %s and instatiated with %s' %
+            (str(var_names_new), str(var_names))
+        )
+
+        self.var_names = var_names_new
         self._cached_all = False
 
     def to_dict(self):
@@ -38,9 +54,9 @@ class VariableStore(ObjectStore):
             self.write(var, idx, obj)
 
     def _load(self, idx):
-        # attr = {var: self.vars[var][idx] for var in self.var_names}
-        args = [self.vars[var][idx] for var in self.var_names]
-        return self.content_class(*args)
+        kwargs = {var: self.vars[var][idx] for var in self.var_names}
+        # args = [self.vars[var][idx] for var in self.var_names]
+        return self.content_class(**kwargs)
 
     def initialize(self):
         super(VariableStore, self).initialize()
@@ -78,15 +94,11 @@ class VariableStore(ObjectStore):
 
         # just in case we saved the var_names in another order and so we are
         # backwards compatible
-        var_names = self.content_class.args()[1:]
-
-        # Backwards compatibility
-        var_names = [name for name in var_names if name in self.var_names]
 
         if not self._cached_all:
             data = zip(*[
                 self.vars[var][part]
-                for var in var_names
+                for var in self.var_names
             ])
 
             [self.add_to_cache(idx, v) for idx, v in zip(part, data)]

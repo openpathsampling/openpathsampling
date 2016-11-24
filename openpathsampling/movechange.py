@@ -54,7 +54,7 @@ class MoveChange(TreeMixin, StorableObject):
             self.samples = samples
 
         if input_samples is None:
-            self.input_samples = list()
+            self.input_samples = []
         else:
             self.input_samples = input_samples
 
