@@ -96,7 +96,7 @@ def forward_tunnel(local_port, remote_host, remote_port, transport):
         chain_port = remote_port
         ssh_transport = transport
 
-    ForwardServer(('', local_port), SubHander).serve_forever()
+    ForwardServer(('', local_port), SubHander)
 
 
 def verbose(s):
@@ -107,37 +107,43 @@ def verbose(s):
 def main():
     # options, server, remote = parse_options()
 
-    server = ('shark.imp.fu-berlin.de', 22)
-    remote = ('localhost', 6379)
+    db_server = 'shark.imp.fu-berlin.de'
+    redis_db_port = 6379
 
-    port = 7777
+    redis_server = (db_server, 22)
+    node_remote = ('localhost', redis_db_port)
 
-    user = 'jprinz'
-    keyfile = None
-    look_for_keys = None
+    node_port = 6379  # can be any port. Needs to be the same as in redis worker
 
-    password = '********'
-    # if options.readpass:
-    #     password = getpass.getpass('Enter SSH password: ')
+    redis_server_user = 'jprinz'
+    keyfile = '/Users/jan-hendrikprinz/.ssh/known_hosts'
+    look_for_keys = True
+
+    password = None
 
     client = paramiko.SSHClient()
     client.load_system_host_keys()
     client.set_missing_host_key_policy(paramiko.WarningPolicy())
 
-    verbose('Connecting to ssh host %s:%d ...' % (server[0], server[1]))
+    verbose('Connecting to ssh host %s:%d ...' % (redis_server[0], redis_server[1]))
     try:
-        client.connect(server[0], server[1], username=user,
-                       key_filename=keyfile,
-                       look_for_keys=look_for_keys, password=password)
+        client.connect(
+            redis_server[0], redis_server[1],
+            username=redis_server_user,
+            key_filename=keyfile,
+            look_for_keys=look_for_keys,
+            password=password)
+
     except Exception as e:
-        print('*** Failed to connect to %s:%d: %r' % (server[0], server[1], e))
+        print('*** Failed to connect to %s:%d: %r' % (redis_server[0], redis_server[1], e))
         sys.exit(1)
 
     verbose('Now forwarding port %d to %s:%d ...' % (
-    port, remote[0], remote[1]))
+    node_port, 'localhost', node_remote[1]))
 
     try:
-        forward_tunnel(port, remote[0], remote[1],
+        forward_tunnel(
+            node_port, node_remote[0], node_remote[1],
                        client.get_transport())
     except KeyboardInterrupt:
         print('C-c: Port forwarding stopped.')

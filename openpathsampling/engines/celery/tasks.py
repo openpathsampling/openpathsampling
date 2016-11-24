@@ -1,13 +1,39 @@
 from celery import Celery
-from celery.signals import worker_process_init
+from celery.signals import worker_process_init, celeryd_init
 import logging
+
+from sshtunnel import SSHTunnelForwarder
+
+from celery.signals import worker_init, worker_shutdown
 
 logger = logging.getLogger(__name__)
 
+db_server = 'shark.imp.fu-berlin.de'
+redis_db_port = 6379
 
-app = Celery('tasks', backend='redis://localhost:7777/0', broker='redis://localhost:7777/0')
-# app = Celery('tasks', backend='redis://localhost:6379/0', broker='redis://localhost:6379/0')
+redis_server = (db_server, 22)
+node_remote = ('localhost', redis_db_port)
+
+node_port = 6383  # can be any port. Needs to be the same as in redis worker
+
+redis_server_user = 'jprinz'
+keyfile = '/Users/jan-hendrikprinz/.ssh/known_hosts'
+
+ssh_password = open('pw').read()
+
+server_str = 'redis://localhost:%d/0' % node_port
+
+app = Celery('tasks', backend=server_str, broker=server_str)
 app.config_from_object('celeryconfig')
+
+tunnel_server = SSHTunnelForwarder(
+    db_server,
+    # ssh_host_key=known_hosts_line,
+    ssh_username=redis_server_user,
+    ssh_password=ssh_password,
+    local_bind_address=('127.0.0.1', node_port),
+    remote_bind_address=('127.0.0.1', redis_db_port)
+)
 
 
 # This will force each child process to have a seperate INSTANCE_UUID
@@ -24,6 +50,24 @@ def _redo_uuid(**kwargs):
 
 # need to use registered instance for sender argument.
 worker_process_init.connect(_redo_uuid)
+
+
+def _open_tunnel(**kwargs):
+    logger.info('RUNNING TUNNEL')
+    tunnel_server.start()
+    logger.info('tunnel established at port %s' % str(tunnel_server.local_bind_address))
+
+
+def _close_tunnel(**kwargs):
+    logger.info('Shutting down tunnel')
+    print 'HELLO'
+    tunnel_server.stop()
+    logger.info('Tunnel removed')
+    print 'REMOVED'
+
+
+celeryd_init.connect(_open_tunnel)
+# worker_shutdown.connect(_close_tunnel)
 
 
 @app.task(name='openpathsampling.engine.celery.tasks.generate')
