@@ -20,6 +20,7 @@ pdb_file = join(resource_path, 'AD_initial_frame.pdb')
 
 storage_setup = join(data_path, 'ala_mstis_setup.nc')
 storage_production = join(data_path, 'ala_mstis_production.nc')
+storage_resetup = join(data_path, 'ala_mstis_setup2.nc')
 
 # platform
 
