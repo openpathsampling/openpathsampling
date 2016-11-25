@@ -2,17 +2,18 @@ from os.path import join
 
 # file paths
 
-project_path = join(
-    '/Users', 'jan-hendrikprinz', 'Studium', 'git',
-    'openpathsampling', 'examples', 'resources'
-)
-
 # project_path = join(
-#     '/cbio', 'jclab', 'home', 'prinzj', 'projects', 'ops', 'AD_mstis/')
+#     '/Users', 'jan-hendrikprinz', 'Studium', 'git',
+#     'openpathsampling', 'examples', 'resources'
+# )
+#
+# resource_path = project_path
 
-# resource_path = join(project_path, 'data/')
+project_path = join(
+    '/cbio', 'jclab', 'home', 'prinzj', 'projects', 'ops', 'AD_mstis/')
 
-resource_path = project_path
+resource_path = join(project_path, 'data/')
+
 
 data_path = project_path
 

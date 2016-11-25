@@ -37,8 +37,7 @@ engine_high.initialize(platform)
 print 'Engine uses platform `%s`' % engine_high.platform
 
 # Running RETIS
-storage = paths.storage.Storage(cf.storage_production, "w")
-storage.save(template)
+
 
 # -----------------------------------------------------------------------------
 # Create the storage
@@ -46,6 +45,7 @@ storage.save(template)
 print """Create the storage"""
 
 storage = paths.Storage(cf.storage_resetup, 'w')
+storage.save(template)
 storage.save(engine_low)
 storage.save(engine_high)
 
