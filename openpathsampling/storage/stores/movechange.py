@@ -138,8 +138,8 @@ class MoveChangeStore(ObjectStore):
             input_samples_idxs = \
                 self.storage.to_uuid_chunks(input_samples_idxs)
             obj.input_samples = [
-                self.storage.samples.load(int(UUID(idx)))
-                for idx in input_samples_idxs]
+                self.storage.samples.load(int(UUID(idx))) if idx[0] != '-' else
+                None for idx in input_samples_idxs]
         else:
             obj.input_samples = []
 
