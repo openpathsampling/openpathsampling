@@ -68,6 +68,7 @@ class ObjectStore(StorableNamedObject):
         :obj:`openpathsampling.netcdfplus.base.StorableObject` or subclassed.
 
     """
+    _restore_non_initial_attr = False
 
     allowed_types = [
         'int', 'float', 'long', 'str', 'bool',

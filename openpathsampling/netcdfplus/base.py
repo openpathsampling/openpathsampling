@@ -311,31 +311,32 @@ class StorableObject(object):
         if dct is None:
             dct = {}
 
-        if hasattr(cls, 'args'):
-            args = cls.args()
-            init_dct = {key: dct[key] for key in dct if key in args}
-            non_init_dct = {key: dct[key] for key in dct if key not in args}
-        else:
-            args = {}
-            init_dct = dct
-            non_init_dct = {}
-
         try:
-            obj = cls(**init_dct)
 
-            if cls._restore_non_initial_attr:
-                if len(non_init_dct) > 0:
-                    for key, value in non_init_dct.iteritems():
-                        setattr(obj, key, value)
+            if hasattr(cls, 'args'):
+                args = cls.args()
+                init_dct = {key: dct[key] for key in dct if key in args}
+
+                obj = cls(**init_dct)
+
+                if cls._restore_non_initial_attr:
+                    non_init_dct = {key: dct[key] for key in dct if key not in args}
+
+                    if len(non_init_dct) > 0:
+                        for key, value in non_init_dct.iteritems():
+                            setattr(obj, key, value)
+
             else:
-                if cls._restore_name:
-                    if 'name' in dct:
-                        obj.name = dct['name']
+                obj = cls(**dct)
+
+            # if cls._restore_name:
+            #     if 'name' in dct:
+            #         obj.name = dct['name']
 
             return obj
 
         except TypeError as e:
-            if init_dct and args:
+            if hasattr(cls, 'args'):
                 err = (
                     'Could not reconstruct the object of class `%s`. '
                     '\nStored parameters: %s \n'

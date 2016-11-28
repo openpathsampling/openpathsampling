@@ -32,7 +32,8 @@ class SnapshotValueStore(ObjectStore):
     def to_dict(self):
         return {
             'time_reversible': self.time_reversible,
-            'allow_incomplete': self.allow_incomplete
+            'allow_incomplete': self.allow_incomplete,
+            'chunksize': self.chunksize
         }
 
     def create_uuid_index(self):
