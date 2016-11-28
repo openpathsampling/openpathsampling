@@ -91,6 +91,8 @@ class ObjectStore(StorableNamedObject):
 
     """
 
+    _restore_non_initial_attr = False
+
     allowed_types = [
         'int', 'float', 'long', 'str', 'bool',
         'numpy.float32', 'numpy.float64',
