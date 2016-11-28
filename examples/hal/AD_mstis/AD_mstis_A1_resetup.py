@@ -55,7 +55,8 @@ storage.save(engine_high)
 print """Copy tags"""
 
 for key, value in old_store.tag.iteritems():
-    storage.tag[key] = value
+    if key != 'sampleset':
+        storage.tag[key] = value
 
 # -----------------------------------------------------------------------------
 # Set up the `MoveScheme`

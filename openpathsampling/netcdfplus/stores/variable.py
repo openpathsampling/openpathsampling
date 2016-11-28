@@ -35,6 +35,8 @@ class VariableStore(ObjectStore):
             else:
                 break
 
+        print var_names_class
+
         logger.info(
             'Creates VariableStore with variables %s and instatiated with %s' %
             (str(var_names_new), str(var_names))
