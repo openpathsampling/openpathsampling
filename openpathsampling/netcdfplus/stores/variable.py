@@ -35,8 +35,6 @@ class VariableStore(ObjectStore):
             else:
                 break
 
-        print var_names_class
-
         logger.info(
             'Creates VariableStore with variables %s and instatiated with %s' %
             (str(var_names_new), str(var_names))
@@ -56,9 +54,9 @@ class VariableStore(ObjectStore):
             self.write(var, idx, obj)
 
     def _load(self, idx):
-        kwargs = {var: self.vars[var][idx] for var in self.var_names}
-        # args = [self.vars[var][idx] for var in self.var_names]
-        return self.content_class(**kwargs)
+        # kwargs = {var: self.vars[var][idx] for var in self.var_names}
+        args = [self.vars[var][idx] for var in self.var_names]
+        return self.content_class(*args)
 
     def initialize(self):
         super(VariableStore, self).initialize()
