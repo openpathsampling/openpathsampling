@@ -15,8 +15,14 @@ those points within the TPS ensemble, e.g., for the transition state
 ensemble, then you should select your points differently (by looping over
 ``storage.steps`` and taking the ``active`` sample set).
 
-The second notebook runs the committor simulation, and the third notebook
-analyzes it.
+The second notebook runs the committor simulation. The third notebook
+prepares the analysis data in a way that was needed for this particular
+project, where each "shot" of the committor was treated as a separate
+"experiment." While this approach is not normally needed, if you already
+have data that can easily be put into this format, the fourth notebook shows
+how it can be used to construct a :class:`.ShootingPointAnalysis` object.
+That notebook also proceeds to demonstrate the kinds of analysis that object
+can perform.
 
 -----
 
@@ -31,5 +37,10 @@ analyzes it.
 -----
 
 .. notebook:: examples/misc/alanine_dipeptide_committor/3_committor_analysis.ipynb
+   :skip_exceptions:
+
+-----
+
+.. notebook:: examples/misc/alanine_dipeptide_committor/4_analysis_help.ipynb
    :skip_exceptions:
 

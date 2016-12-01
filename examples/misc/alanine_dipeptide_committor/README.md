@@ -18,4 +18,12 @@ trajectories in the `active` sample set.
 * [`2_committor_simulation.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/misc/alanine_dipeptide_committor/2_committor_simulation.ipynb):
   Run the committor for the selected snapshots.
 * [`3_committor_analysis.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/misc/alanine_dipeptide_committor/3_committor_analysis.ipynb):
-  Analyze the results of the committor simulation.
+  Convert the simulation data to a simplified form which can be used for
+  several different kinds of analysis. Note that this is a bit of a
+  peculiarity of the specific project from which this example comes.
+  Normally you would directly study the `ShootingPointAnalysis` object, as
+  is done in the next notebook.
+* [`4_analysis_help.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/misc/alanine_dipeptide_committor/4_analysis_help.ipynb)
+  Analyze the final results. This shows how to build a
+  `ShootingPointAnalysis` object from the previous output (which isn't
+  noramlly needed) and then how to analyze that object.
