@@ -326,4 +326,6 @@ def trajectory_to_mdtraj(trajectory, md_topology=None):
     # traj = md.Trajectory(output, md_topology)
     # traj.unitcell_vectors = trajectory.box_vectors
     return trajectory.to_mdtraj(md_topology)
-                         
+
+def ops_load_trajectory(filename, **kwargs):
+    return trajectory_from_mdtraj(md.load(filename, **kwargs))
