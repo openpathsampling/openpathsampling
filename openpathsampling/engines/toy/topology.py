@@ -4,10 +4,16 @@ from snapshot import ToySnapshot
 
 class ToyTopology(Topology):
     """
-    Attributes
+    Parameters
     ----------
+    n_spatial : int
+        the number of spatial degrees of freedom
     masses : numpy.ndarray (n_atoms, dtype=float)
         The masses associated with each atom
+    pes : :class:`.PES`
+        potential energy surface for this system
+    n_atoms : int
+        number of atoms (default is 1)
     """
 
     def __init__(self, n_spatial, masses, pes, n_atoms=1):
