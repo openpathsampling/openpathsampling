@@ -1,6 +1,6 @@
 package:
   name: openpathsampling-dev
-  version: "0.9.1"
+  version: "0.9.2"
 
 source:
 #  git_url: ../../.git
@@ -24,6 +24,7 @@ requirements:
     - netcdf4
     - openmm
     - openmmtools
+    - jupyter
     - pyyaml
     - mdtraj
     - svgwrite

@@ -285,8 +285,7 @@ class testCommittorSimulation(object):
         snap1_coords = snap1.coordinates.tolist()
         count = {self.snap0: 0, snap1: 0}
         for step in self.storage.steps:
-            # TODO: this should in step.change.canonical.details
-            shooting_snap = step.change.trials[0].details.shooting_snapshot
+            shooting_snap = step.change.canonical.details.shooting_snapshot
             if shooting_snap.coordinates.tolist() == snap0_coords:
                 mysnap = self.snap0
             elif shooting_snap.coordinates.tolist() == snap1_coords:
