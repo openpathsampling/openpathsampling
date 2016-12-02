@@ -588,20 +588,20 @@ class SampleMover(PathMover):
             trials, call_details = self(*samples)
 
         except SampleNaNError as e:
+            e.details.update({'rejection_reason': 'nan'})
             return paths.RejectedNaNSampleMoveChange(
                 samples=e.trial_sample,
                 mover=self,
                 input_samples=samples,
-                details=paths.MoveDetails(
-                    rejection_reason='nan'),
+                details=paths.MoveDetails(**e.details)
             )
         except SampleMaxLengthError as e:
+            e.details.update({'rejection_reason': 'max_length'})
             return paths.RejectedMaxLengthSampleMoveChange(
                 samples=e.trial_sample,
                 mover=self,
                 input_samples=samples,
-                details=paths.MoveDetails(
-                    rejection_reason='max_length')
+                details=paths.Details(**e.details)
             )
 
         # 4. accept/reject
