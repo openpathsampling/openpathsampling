@@ -23,7 +23,7 @@ from openpathsampling.engines import DynamicsEngine
 
 def make_1d_traj(coordinates, velocities=None, engine=None):
     if velocities is None:
-        velocities = [0.0]*len(coordinates)
+        velocities = [1.0]*len(coordinates)
     if engine is None:
         engine = toys.Engine(
             {},

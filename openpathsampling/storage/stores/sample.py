@@ -7,7 +7,7 @@ class SampleStore(VariableStore):
         super(SampleStore, self).__init__(
             Sample,
             ['trajectory', 'ensemble', 'replica', 'parent',
-             'details', 'bias', 'mover']
+             'bias', 'mover']
         )
 
     def by_ensemble(self, ensemble):
@@ -22,7 +22,7 @@ class SampleStore(VariableStore):
         self.create_variable('ensemble', 'obj.ensembles')
         self.create_variable('replica', 'int')
         self.create_variable('parent', 'lazyobj.samples')
-        self.create_variable('details', 'lazyobj.details')
+        # self.create_variable('details', 'lazyobj.details')
         self.create_variable('bias', 'float')
         self.create_variable('mover', 'obj.pathmovers')
 
