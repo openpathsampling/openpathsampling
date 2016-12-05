@@ -156,3 +156,44 @@ class RandomVelocities(SnapshotModifier):
 
         return new_snap
 
+class GaussianDeltaP(SnapshotModifier):
+    """
+    Snapshot modifier which changes momentum direction with constant energy.
+    """
+    def __init__(self, subset_mask=None, delta_P=None):
+        pass
+
+    def _verify_snapshot(self, snapshot):
+        try:
+            box_vectors = snapshot.box_vectors
+        except AttributeError:
+            box_vectors = None
+        
+        try:
+            n_dofs = snapshot.n_degrees_of_freedom
+        except AttributeError:
+            raise RuntimeError("Snapshot missing n_degrees_of_freedom. "
+                               + "Can't use this snapshot modifier.")
+
+        # all engines should have n_spatial and n_atoms
+        n_spatial = snapshot.engine.n_spatial
+        n_atoms = snapshot.engine.n_atoms
+
+        remove_angular = 0 if box_vectors is None else 1
+        remove_linear = 0 if n_atoms == 1 else 1
+        n_motion_removers = n_spatial * (remove_linear + remove_angular)
+
+        n_dofs_required = n_spatial * n_atoms - n_motion_removers
+        
+        if n_dofs < n_dofs_required:
+            raise RuntimeError("Snapshot has " + str(n_dofs)
+                               + " degrees of freedom. "
+                               + "Are there constrints?")
+
+
+    def __call__(self, snapshot):
+        velocities = copy.copy(snapshot.velocities)
+        vel_subset = self.extract_subset(velocities)
+        masses = self.extract_subset(snapshot.masses)
+
+        pass
