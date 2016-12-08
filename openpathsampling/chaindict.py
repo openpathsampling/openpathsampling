@@ -449,3 +449,20 @@ class StoredDict(ChainDict):
 
     def cache_all(self):
         pass
+
+
+class MultiStoredDict(Wrap):
+    """
+    ChainDict that has a store attached and returns existing store values
+    """
+    def __init__(self, stores):
+        """
+        Parameters
+        ----------
+        value_store : storage.Variable
+            the store that references the store variable to store the values
+            by index
+        """
+        super(MultiStoredDict, self).__init__()
+        self.stores = stores
+

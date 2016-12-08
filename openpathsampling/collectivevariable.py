@@ -74,6 +74,7 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         )
         self._store_dict = None
         self._eval_dict = None
+        self.stores = []
 
         super(CollectiveVariable, self).__init__(
             post=self._single_dict > self._cache_dict)
@@ -111,15 +112,54 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             the store / variable that holds the output values / objects
 
         """
-        self._store_dict = cd.StoredDict(value_store)
-        # hook_store = self._single_dict
-        hook_store = self._cache_dict
-        self._store_dict._post = hook_store._post
-        hook_store._post = self._store_dict
+        if value_store not in self.stores:
+            self.stores = [value_store] + self.stores
+            self._update_store_dict()
+        elif self.stores is not value_store:
+            self.stores = [value_store] + \
+                          [s for s in self.stores if s is not value_store]
+
+            self._update_store_dict()
+
+    def _update_store_dict(self):
+        cv_stores = map(cd.StoredDict, self.stores)
+
+        last_cv = self._eval_dict
+        for s in reversed(cv_stores):
+            s._post = last_cv
+            last_cv = s
+
+        self._store_dict = cv_stores[0]
+        self._cache_dict._post = cv_stores[0]
+
+    def add_cache_from_storage(self, storage):
+        """
+        Attach store variables to the collective variables.
+
+        If used the collective variable will automatically sync values with
+        the store and load from it if necessary. If the CV is created with
+        `diskcache_enabled = True`. This will be done during CV creation.
+
+        Parameters
+        ----------
+        storage : :class:`openpathsampling.storage.Storage`
+            the storage
+
+        """
+
+        idx = storage.cvs.index[self.__uuid__]
+        if idx is not None:
+            value_store = storage.snapshots.get_cv_cache(idx)
+
+            if value_store not in self.stores:
+                self.stores.append(value_store)
+                self._update_store_dict()
+        else:
+            raise ValueError('The given storage does not contain this CV.')
 
     # This is important since we subclass from list and lists are not hashable
     # but CVs should be
-    __hash__ = object.__hash__
+    __hash__ = StorableNamedObject.__hash__
 
     def sync(self):
         """
