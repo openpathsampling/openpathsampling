@@ -6,6 +6,9 @@ aspects of OpenPathSampling.
 * [`committors.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/misc/committors.ipynb)
   How to use OPS for committor analysis, and to analyze the shooting points
   from a path sampling simulation.
+* [`alanine_dipeptide_committor`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/misc/alanine_dipeptide_committor/)
+  A sequence of several files to perform a committor simulation and analyze
+  it for a real system.
 * [`custom_strategy_repex_shoot_repex.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/misc/custom_strategy_repex_shoot_repex.ipynb)
   How to make a custom move strategy and custom mover, and then compare
   measures of replica travel between two different move schemes.
