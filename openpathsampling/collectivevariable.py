@@ -112,6 +112,9 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             the store / variable that holds the output values / objects
 
         """
+        if value_store is None:
+            return
+
         if value_store not in self.stores:
             self.stores = [value_store] + self.stores
             self._update_store_dict()
@@ -129,8 +132,13 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             s._post = last_cv
             last_cv = s
 
-        self._store_dict = cv_stores[0]
-        self._cache_dict._post = cv_stores[0]
+        if len(self.stores) > 0:
+
+            self._store_dict = cv_stores[0]
+        else:
+            self._store_dict = None
+
+        self._cache_dict._post = last_cv
 
     def add_cache_from_storage(self, storage):
         """
@@ -150,6 +158,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         idx = storage.cvs.index[self.__uuid__]
         if idx is not None:
             value_store = storage.snapshots.get_cv_cache(idx)
+            if value_store is None:
+                return
 
             if value_store not in self.stores:
                 self.stores.append(value_store)

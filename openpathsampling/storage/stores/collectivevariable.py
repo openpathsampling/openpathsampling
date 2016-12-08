@@ -162,6 +162,8 @@ class CVStore(UniqueNamedObjectStore):
             the CV from which you want the cache to be filled
 
         """
-        store = self.storage.snapshots.cv_list.get(cv)
-        if store is not None:
-            store.fill_cache()
+        pass
+        # store = self.storage.snapshots.cv_list.get(cv)
+
+        # if store is not None:
+        #     store[0].fill_cache()

@@ -44,6 +44,10 @@ class HashedList(dict):
         if key in self:
             dict.__delitem__(self, key)
 
+    def clear(self):
+        dict.clear(self)
+        self._list = []
+
     @property
     def list(self):
         return self._list
