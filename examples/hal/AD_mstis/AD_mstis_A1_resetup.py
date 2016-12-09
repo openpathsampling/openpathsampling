@@ -63,7 +63,7 @@ for key, value in old_store.tag.iteritems():
 # -----------------------------------------------------------------------------
 print """Set up the `MoveScheme`"""
 
-scheme = paths.DefaultScheme(mstis)
+scheme = old_store.schemes[0]
 
 # -----------------------------------------------------------------------------
 # Initial trajectories
