@@ -9,12 +9,13 @@ from openpathsampling.numerics import (
 from openpathsampling.numerics import WHAM
 from openpathsampling.netcdfplus import StorableNamedObject
 
-logger = logging.getLogger(__name__)
-
 from openpathsampling.analysis.tools import (
     pathlength, max_lambdas, guess_interface_lambda, minus_sides_summary,
     sampleset_sample_generator
 )
+
+logger = logging.getLogger(__name__)
+
 
 class Transition(StorableNamedObject):
     """
@@ -41,6 +42,7 @@ class Transition(StorableNamedObject):
             stateA=dct['stateA'],
             stateB=dct['stateB']
         )
+
 
 class TPSTransition(Transition):
     """
@@ -74,6 +76,7 @@ class TPSTransition(Transition):
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
 
+    # TODO: Can this kwargs be removed? It is not used
     def add_transition(self, stateA, stateB, **kwargs):
         new_ens = self._tps_ensemble(stateA, stateB, **kwargs)
         try:
@@ -331,10 +334,10 @@ class TISTransition(Transition):
             # wham.load_from_dataframe(df)
             # wham.clean_leading_ones()
             tcp = wham.wham_bam_histogram(df).to_dict()
-        elif method == "mbar":
-            pass
+        # elif method == "mbar":
+        #     pass
         else:
-            raise ValueError("Only supported methods are 'wham' and 'mbar'.  "
+            raise ValueError("Only supported methods are 'wham'.  "
                              + "Whereas 'mbar' is not yet implemented!")
 
         self.tcp = LookupFunction(tcp.keys(), tcp.values())
@@ -398,7 +401,6 @@ class TISTransition(Transition):
         if flux is not None:
             self._flux = flux
 
-
         if self._flux is None:
             raise ValueError(
                 "No flux available to TISTransition. Cannot calculate rate"
@@ -440,7 +442,6 @@ class TISTransition(Transition):
         logger.info("flux * outer_tcp * ctp = " + str(flux) + " * " +
                     str(outer_tcp) + " * " + str(ctp))
         return self._rate
-
 
     def to_dict(self):
         ret_dict = {
@@ -512,12 +513,14 @@ class TISTransition(Transition):
 
         t_in_avg = np.array(self.minus_count_sides['in']).mean()
         t_out_avg = np.array(self.minus_count_sides['out']).mean()
-        # if len(minus_movers_used) != 1:
-        #     # TODO: someday, this may not need to be forbidden, although I
-        #     # don't think it will be useful. For now, this is important for
-        #     # testing. Minimum, important that all have the same timestep
-        #     raise RuntimeError(str(len(minus_movers_used)) +
-        #                        " minus movers for the same ensemble?")
+
+        # print len(set(minus_movers_used))
+        if len(set(minus_movers_used)) != 1:
+            # TODO: someday, this may not need to be forbidden, although I
+            # don't think it will be useful. For now, this is important for
+            # testing. Minimum, important that all have the same timestep
+            raise RuntimeError(str(len(minus_movers_used)) +
+                               " minus movers for the same ensemble?")
 
         engine_dt = minus_movers_used.keys()[0].engine.snapshot_timestep
         flux = 1.0 / (t_in_avg + t_out_avg) / engine_dt

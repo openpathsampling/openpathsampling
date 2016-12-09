@@ -185,13 +185,11 @@ storage.save([psi, phi])
 
 
 def circle_degree(snapshot, center, phi, psi):
-    import math
-    degrees = 180 / 3.14159
-    psi_deg = psi(snapshot) * degrees
-    phi_deg = phi(snapshot) * degrees
-    return math.sqrt(
-        min(phi_deg - center[0], 360 - phi_deg + center[0]) ** 2 +
-        min(psi_deg - center[1], 360 - psi_deg + center[1]) ** 2)
+    import numpy
+    p = numpy.array([psi(snapshot), phi(snapshot)]) / numpy.pi * 180.0
+    delta = numpy.abs(center - p)
+    delta = numpy.where(delta > 180.0, delta - 360.0, delta)
+    return numpy.hypot(delta[0], delta[1])
 
 
 cv_state = dict()
