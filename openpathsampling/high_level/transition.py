@@ -515,12 +515,12 @@ class TISTransition(Transition):
         t_out_avg = np.array(self.minus_count_sides['out']).mean()
 
         # print len(set(minus_movers_used))
-        if len(set(minus_movers_used)) != 1:
-            # TODO: someday, this may not need to be forbidden, although I
-            # don't think it will be useful. For now, this is important for
-            # testing. Minimum, important that all have the same timestep
-            raise RuntimeError(str(len(minus_movers_used)) +
-                               " minus movers for the same ensemble?")
+        # if len(set(minus_movers_used)) != 1:
+        #     # TODO: someday, this may not need to be forbidden, although I
+        #     # don't think it will be useful. For now, this is important for
+        #     # testing. Minimum, important that all have the same timestep
+        #     raise RuntimeError(str(len(minus_movers_used)) +
+        #                        " minus movers for the same ensemble?")
 
         engine_dt = minus_movers_used.keys()[0].engine.snapshot_timestep
         flux = 1.0 / (t_in_avg + t_out_avg) / engine_dt

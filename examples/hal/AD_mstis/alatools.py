@@ -5,6 +5,43 @@ import numpy as np
 
 import math
 
+
+def storage_status(storages):
+    if len(storages) == 0:
+        return
+
+    print '                    STORE    %s  |  #shared' % (
+        ' / '.join(map(lambda x: '     #%1d ( cache )' % x,
+                       range(1, len(storages) + 1)))
+    )
+    print '-' * (38 + 20 * len(storages))
+
+    for ty in storages[0].objects:
+        shared = None
+        s = []
+        for st in storages:
+            store = st.objects[ty]
+
+            if shared is None:
+                shared = set(store.index)
+            else:
+                shared &= set(store.index)
+
+            l = len(store)
+            c = store.cache.count[0]
+            s.append('%7d (%7s)' % (
+                l,
+                ((str(c * 100 / l) + '%' if c > 0 else '')
+                 if c < l else '#######') if l > 0 else '',
+            ))
+
+        print '%25s    %s  |  %7d' % (
+            ty,
+            ' / '.join(s),
+            len(shared)
+        )
+
+
 class CVSphere(paths.Volume):
     """
     Defines a sphere in multi-CV space with center and distance
