@@ -72,7 +72,7 @@ platform = cf.platform
 if platform == 'OpenCL':
     openmm_properties = {'OpenCLPrecision': 'mixed'}
 elif platform == 'CUDA':
-    openmm_properties = {'CUDAPrecision': 'mixed'}
+    openmm_properties = {'CudaPrecision': 'mixed'}
 elif platform == 'CPU':
     openmm_properties = {}
 else:
