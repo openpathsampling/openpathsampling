@@ -248,7 +248,8 @@ class testGeneralizedDirectionModifier(object):
         )
 
         # create the OpenMM versions
-        self.openmm_modifier = GeneralizedDirectionModifier(1.0)
+        u_vel = u.nanometer / u.picosecond
+        self.openmm_modifier = GeneralizedDirectionModifier(1.2 * u_vel)
         ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
         self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
         self.openmm_engine = omm_engine.Engine(
@@ -305,7 +306,22 @@ class testGeneralizedDirectionModifier(object):
         self.openmm_modifier._verify_snapshot(ad_explicit_snap)
 
     def test_dv_widths_toy(self):
-        pass
+        selected = np.array([1.0, 2.0])
+        n_atoms = len(self.toy_snapshot.coordinates)
+        assert_array_almost_equal(self.toy_modifier._dv_widths(n_atoms, 2),
+                                  selected)
+        assert_array_almost_equal(
+            self.toy_modifier_long_dv._dv_widths(n_atoms, 2),
+            selected
+        )
+        assert_array_almost_equal(
+            self.toy_modifier_all._dv_widths(n_atoms, n_atoms),
+            np.array([1.5]*3)
+        )
 
     def test_dv_widths_openmm(self):
-        pass
+        n_atoms = len(self.openmm_snap.coordinates)
+        results = self.openmm_modifier._dv_widths(n_atoms, n_atoms)
+        expected = np.array([1.2] * n_atoms) * u.nanometer / u.picosecond
+        for truth, beauty in zip(expected, results):
+            assert_almost_equal(truth, beauty)

@@ -214,7 +214,6 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         # assert len(dv_widths) == n_subset_atoms
         return dv_widths
 
-
     def __call__(self, snapshot):
         self._verify_snapshot(snapshot)
         velocities = copy.copy(snapshot.velocities)
@@ -234,7 +233,6 @@ class GeneralizedDirectionModifier(SnapshotModifier):
             rescale_factor = initial_sum_sq_vel / final_sum_sq_vel
             vel_subset[atom_i] *= rescale_factor
 
-
         self.apply_to_subset(velocities, vel_subset)
         new_snap = snapshot.copy_with_replacement(velocities=velocities)
 
@@ -242,7 +240,10 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         return new_snap
 
 class VelocityDirectionModifier(GeneralizedDirectionModifier):
-    pass
+    def _select_atoms_to_modify(self, n_subset_atoms):
+        pass
 
 class SingleAtomVelocityDirectionModifier(GeneralizedDirectionModifier):
-    pass
+    def _select_atoms_to_modify(self, n_subset_atoms):
+        pass
+
