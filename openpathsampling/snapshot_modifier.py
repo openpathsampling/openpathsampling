@@ -77,7 +77,7 @@ class SnapshotModifier(StorableNamedObject):
         -------
         full_array : list-like
             modified version of the input array, where the elements
-            specified by self.subset_mask have been replaced    
+            specified by self.subset_mask have been replaced
         """
         subset_mask = self.subset_mask
         if self.subset_mask is None:
@@ -87,7 +87,7 @@ class SnapshotModifier(StorableNamedObject):
         return full_array
 
     @abc.abstractmethod
-    def __call__(self, snapshot): 
+    def __call__(self, snapshot):
         raise NotImplementedError
 
 class NoModification(SnapshotModifier):
@@ -105,7 +105,7 @@ class RandomVelocities(SnapshotModifier):
     that the input `beta` and the features `masses` and `velocities` are all
     in the same unit system. In particular, `1.0 / beta * masses` must be in
     units of `velocity**2`.
-    
+
     Parameters
     ----------
     beta : float
@@ -121,7 +121,7 @@ class RandomVelocities(SnapshotModifier):
     def __init__(self, beta, engine=None, subset_mask=None):
         super(RandomVelocities, self).__init__(subset_mask)
         self.beta = beta
-        self.engine = engine 
+        self.engine = engine
 
     def __call__(self, snapshot):
         # raises AttributeError is snapshot doesn't support velocities
@@ -175,7 +175,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
             box_vectors = snapshot.box_vectors
         except AttributeError:
             box_vectors = None
-        
+
         try:
             n_dofs = snapshot.n_degrees_of_freedom
         except AttributeError:
@@ -191,10 +191,11 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         n_motion_removers = n_spatial * (remove_linear + remove_angular)
 
         n_dofs_required = n_spatial * n_atoms - n_motion_removers
-        
+
         if n_dofs < n_dofs_required:
             raise RuntimeError("Snapshot has " + str(n_dofs)
-                               + " degrees of freedom. "
+                               + " degrees of freedom, not " 
+                               + str(n_dofs_required) + ". "
                                + "Are there constraints? Constraints can't"
                                + " be used with this modifier.")
 

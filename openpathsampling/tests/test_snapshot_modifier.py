@@ -23,11 +23,11 @@ class testNoModification(object):
     def setup(self):
         self.modifier = NoModification()
         self.snapshot_1D = peng.toy.Snapshot(
-            coordinates=np.array([0.0, 1.0, 2.0, 3.0]), 
+            coordinates=np.array([0.0, 1.0, 2.0, 3.0]),
             velocities=np.array([0.5, 1.5, 2.5, 3.5])
         )
         self.snapshot_3D = peng.openmm.MDSnapshot(
-            coordinates=np.array([[0.0, 0.1, 0.2], 
+            coordinates=np.array([[0.0, 0.1, 0.2],
                                   [1.0, 1.1, 1.2],
                                   [2.0, 2.1, 2.2],
                                   [3.0, 3.1, 3.2]]),
@@ -63,17 +63,17 @@ class testNoModification(object):
                                   np.array([0.0, 1.0, 2.0, 3.0]))
 
         copy_3Dx = self.snapshot_3D.coordinates.copy()
-        new_3Dx = mod.apply_to_subset(copy_3Dx, 
-                                      np.array([[-1.0, -1.1, -1.2], 
+        new_3Dx = mod.apply_to_subset(copy_3Dx,
+                                      np.array([[-1.0, -1.1, -1.2],
                                                 [-2.0, -2.1, -2.2]]))
-        assert_array_almost_equal(new_3Dx, np.array([[0.0, 0.1, 0.2], 
+        assert_array_almost_equal(new_3Dx, np.array([[0.0, 0.1, 0.2],
                                                      [-1.0, -1.1, -1.2],
                                                      [-2.0, -2.1, -2.2],
                                                      [3.0, 3.1, 3.2]]))
         # and check that memory points to the right things; orig unchanged
         assert_true(copy_3Dx is new_3Dx)
         assert_array_almost_equal(self.snapshot_3D.coordinates,
-                                  np.array([[0.0, 0.1, 0.2], 
+                                  np.array([[0.0, 0.1, 0.2],
                                             [1.0, 1.1, 1.2],
                                             [2.0, 2.1, 2.2],
                                             [3.0, 3.1, 3.2]]))
@@ -170,7 +170,7 @@ class testRandomizeVelocities(object):
         assert_true(new_2x3D.coordinates is not self.snap_2x3D.coordinates)
         assert_true(new_2x3D.velocities is not self.snap_2x3D.velocities)
         # show that the unchanged atom is, in fact, unchanged
-        assert_array_almost_equal(new_2x3D.velocities[1], 
+        assert_array_almost_equal(new_2x3D.velocities[1],
                                   self.snap_2x3D.velocities[1])
         for val in new_2x3D.velocities[0]:
             assert_not_equal(val, 0.0)
@@ -186,7 +186,7 @@ class testRandomizeVelocities(object):
             integrator=omt.integrators.VVVRIntegrator()
         )
         beta = 1.0 / (300.0 * u.kelvin * u.BOLTZMANN_CONSTANT_kB)
-        
+
         # when the engine doesn't have an existing snapshot
         randomizer = RandomVelocities(beta=beta, engine=engine)
         new_snap = randomizer(template)
@@ -248,7 +248,17 @@ class testGeneralizedDirectionModifier(object):
         )
 
         # create the OpenMM versions
-        #
+        self.openmm_modifier = GeneralizedDirectionModifier(1.0)
+        ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+        self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
+        self.openmm_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        self.openmm_snap = self.test_snap.copy_with_replacement(
+            engine=self.openmm_engine
+        )
         pass
 
     def test_verify_snapshot_toy(self):
@@ -256,18 +266,43 @@ class testGeneralizedDirectionModifier(object):
         self.toy_modifier_all._verify_snapshot(self.toy_snapshot)
         self.toy_modifier_long_dv._verify_snapshot(self.toy_snapshot)
 
-
     def test_verify_snapshot_openmm(self):
-        pass
+        self.openmm_modifier._verify_snapshot(self.openmm_snap)
 
+    @raises(RuntimeError)
     def test_verify_snapshot_no_dofs(self):
-        pass
+        assert_true(isinstance(self.test_snap.engine,
+                               omm_engine.tools.OpenMMToolsTestsystemEngine))
+        self.openmm_modifier._verify_snapshot(self.test_snap)
 
+    @raises(RuntimeError)
     def test_verify_snapshot_constraints(self):
-        pass
+        ad_vacuum_constr = omt.testsystems.AlanineDipeptideVacuum()
+        constrained_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum_constr.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        constr_snap = self.test_snap.copy_with_replacement(
+            engine=constrained_engine
+        )
+        self.openmm_modifier._verify_snapshot(constr_snap)
 
     def test_verify_snapshot_box_vectors(self):
-        pass
+        ad_explicit = omt.testsystems.AlanineDipeptideExplicit(
+            constraints=None,
+            rigid_water=False
+        )
+        ad_explicit_tmpl = omm_engine.snapshot_from_testsystem(ad_explicit)
+        explicit_engine= omm_engine.Engine(
+            topology=ad_explicit_tmpl.topology,
+            system=ad_explicit.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        ad_explicit_snap = ad_explicit_tmpl.copy_with_replacement(
+            engine=explicit_engine
+        )
+        self.openmm_modifier._verify_snapshot(ad_explicit_snap)
 
     def test_dv_widths_toy(self):
         pass
