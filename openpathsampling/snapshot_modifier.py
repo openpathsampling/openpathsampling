@@ -241,9 +241,9 @@ class GeneralizedDirectionModifier(SnapshotModifier):
 
 class VelocityDirectionModifier(GeneralizedDirectionModifier):
     def _select_atoms_to_modify(self, n_subset_atoms):
-        pass
+        return range(n_subset_atoms)
 
 class SingleAtomVelocityDirectionModifier(GeneralizedDirectionModifier):
     def _select_atoms_to_modify(self, n_subset_atoms):
-        pass
+        return np.random.choice(range(n_subset_atoms))
 

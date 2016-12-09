@@ -325,3 +325,24 @@ class testGeneralizedDirectionModifier(object):
         expected = np.array([1.2] * n_atoms) * u.nanometer / u.picosecond
         for truth, beauty in zip(expected, results):
             assert_almost_equal(truth, beauty)
+
+
+class testVelocityDirectionModifier(object):
+    def setup(self):
+        pass
+
+    def test_select_atoms_to_modify(self):
+        pass
+
+    def test_call(self):
+        pass
+
+class testSingleAtomVelocityDirectionModifier(object):
+    def setup(self):
+        pass
+
+    def test_select_atoms_to_modify(self):
+        pass
+
+    def test_call(self):
+        pass
