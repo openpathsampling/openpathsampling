@@ -160,11 +160,17 @@ class GeneralizedDirectionModifier(SnapshotModifier):
     """
     Snapshot modifier which changes momentum direction with constant energy.
     """
-    def __init__(self, subset_mask=None, delta_v=None):
+    def __init__(self, delta_v, subset_mask=None):
         super(GeneralizedDirectionModifier, self).__init__(subset_mask)
         self.delta_v = delta_v
 
     def _verify_snapshot(self, snapshot):
+        """
+        Verifies that a snapshot has the right number of degrees of freedom.
+
+        The approach implemented in this will not satisfy detailed balance
+        if there are constraints on the atoms that are changing.
+        """
         try:
             box_vectors = snapshot.box_vectors
         except AttributeError:
@@ -189,7 +195,8 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         if n_dofs < n_dofs_required:
             raise RuntimeError("Snapshot has " + str(n_dofs)
                                + " degrees of freedom. "
-                               + "Are there constraints?")
+                               + "Are there constraints? Constraints can't"
+                               + " be used with this modifier.")
 
     def _select_atoms_to_modify(self, n_subset_atoms):
         raise NotImplementedError
@@ -208,6 +215,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
 
 
     def __call__(self, snapshot):
+        self._verify_snapshot(snapshot)
         velocities = copy.copy(snapshot.velocities)
         vel_subset = self.extract_subset(velocities)
         masses = self.extract_subset(snapshot.masses)
@@ -221,6 +229,10 @@ class GeneralizedDirectionModifier(SnapshotModifier):
             randoms = np.random.normal(size=len(vel_subset[atom_i]))
             delta_v = dv_widths[atom_i] * randoms
             vel_subset[atom_i] += delta_v
+            final_sum_sq_vel = sum([v**2 for v in vel_subset[atom_i]])
+            rescale_factor = initial_sum_sq_vel / final_sum_sq_vel
+            vel_subset[atom_i] *= rescale_factor
+
 
         self.apply_to_subset(velocities, vel_subset)
         new_snap = snapshot.copy_with_replacement(velocities=velocities)

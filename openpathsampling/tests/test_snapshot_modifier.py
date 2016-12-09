@@ -223,16 +223,50 @@ class testRandomizeVelocities(object):
 
 class testGeneralizedDirectionModifier(object):
     def setup(self):
-        toy_modifier = GeneralizedDirectionModifier(
-            subset_mask=[1, 2],
-            delta_v = [1.0, 2.0]
+        import openpathsampling.engines.toy as toys
+        # applies one delta_v to all atoms
+        self.toy_modifier_all = GeneralizedDirectionModifier(1.5)
+        # defines delta_v per atom, including those not in the mask
+        self.toy_modifier_long_dv = GeneralizedDirectionModifier(
+            delta_v=[0.5, 1.0, 2.0],
+            subset_mask=[1, 2]
         )
+        # defines delta_v per atom in the subset mask
+        self.toy_modifier = GeneralizedDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2]
+        )
+        self.toy_engine = toys.Engine(
+            topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
+                                   masses=[1.0, 1.5, 4.0]),
+            options={}
+        )
+        self.toy_snapshot = toys.Snapshot(
+            coordinates=np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]),
+            velocities=np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]),
+            engine=self.toy_engine
+        )
+
+        # create the OpenMM versions
+        #
         pass
 
     def test_verify_snapshot_toy(self):
-        pass
+        self.toy_modifier._verify_snapshot(self.toy_snapshot)
+        self.toy_modifier_all._verify_snapshot(self.toy_snapshot)
+        self.toy_modifier_long_dv._verify_snapshot(self.toy_snapshot)
+
 
     def test_verify_snapshot_openmm(self):
+        pass
+
+    def test_verify_snapshot_no_dofs(self):
+        pass
+
+    def test_verify_snapshot_constraints(self):
+        pass
+
+    def test_verify_snapshot_box_vectors(self):
         pass
 
     def test_dv_widths_toy(self):
