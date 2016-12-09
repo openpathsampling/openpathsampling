@@ -156,12 +156,13 @@ class RandomVelocities(SnapshotModifier):
 
         return new_snap
 
-class GaussianDeltaP(SnapshotModifier):
+class GeneralizedDirectionModifier(SnapshotModifier):
     """
     Snapshot modifier which changes momentum direction with constant energy.
     """
-    def __init__(self, subset_mask=None, delta_P=None):
-        pass
+    def __init__(self, subset_mask=None, delta_v=None):
+        super(GeneralizedDirectionModifier, self).__init__(subset_mask)
+        self.delta_v = delta_v
 
     def _verify_snapshot(self, snapshot):
         try:
@@ -188,7 +189,22 @@ class GaussianDeltaP(SnapshotModifier):
         if n_dofs < n_dofs_required:
             raise RuntimeError("Snapshot has " + str(n_dofs)
                                + " degrees of freedom. "
-                               + "Are there constrints?")
+                               + "Are there constraints?")
+
+    def _select_atoms_to_modify(self, n_subset_atoms):
+        raise NotImplementedError
+
+    def _dv_widths(self, n_atoms, n_subset_atoms):
+        try:
+            dv_widths = list(self.delta_v)
+        except TypeError:
+            dv_widths = [self.delta_v] * n_subset_atoms
+
+        if len(dv_widths) == n_atoms:
+            dv_widths = self.extract_subset(dv_widths)
+
+        # assert len(dv_widths) == n_subset_atoms
+        return dv_widths
 
 
     def __call__(self, snapshot):
@@ -196,4 +212,24 @@ class GaussianDeltaP(SnapshotModifier):
         vel_subset = self.extract_subset(velocities)
         masses = self.extract_subset(snapshot.masses)
 
-        pass
+        atoms_to_change = self._select_atoms_to_modify(len(vel_subset))
+        dv_widths = self._dv_widths(n_atoms=len(velocities),
+                                    n_subset_atoms=len(vel_subset))
+
+        for atom_i in atoms_to_change:
+            initial_sum_sq_vel = sum([v**2 for v in vel_subset[atom_i]])
+            randoms = np.random.normal(size=len(vel_subset[atom_i]))
+            delta_v = dv_widths[atom_i] * randoms
+            vel_subset[atom_i] += delta_v
+
+        self.apply_to_subset(velocities, vel_subset)
+        new_snap = snapshot.copy_with_replacement(velocities=velocities)
+
+        # NOTE: no constraint correction here! constraints are not allowed!
+        return new_snap
+
+class VelocityDirectionModifier(GeneralizedDirectionModifier):
+    pass
+
+class SingleAtomVelocityDirectionModifier(GeneralizedDirectionModifier):
+    pass

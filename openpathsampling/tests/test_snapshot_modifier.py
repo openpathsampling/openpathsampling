@@ -221,3 +221,22 @@ class testRandomizeVelocities(object):
         assert_equal(engine.current_snapshot, zero_snap)
         engine.generate(new_snap, [lambda x, foo: len(x) <= 4])
 
+class testGeneralizedDirectionModifier(object):
+    def setup(self):
+        toy_modifier = GeneralizedDirectionModifier(
+            subset_mask=[1, 2],
+            delta_v = [1.0, 2.0]
+        )
+        pass
+
+    def test_verify_snapshot_toy(self):
+        pass
+
+    def test_verify_snapshot_openmm(self):
+        pass
+
+    def test_dv_widths_toy(self):
+        pass
+
+    def test_dv_widths_openmm(self):
+        pass
