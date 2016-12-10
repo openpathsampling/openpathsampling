@@ -249,5 +249,5 @@ class VelocityDirectionModifier(GeneralizedDirectionModifier):
 
 class SingleAtomVelocityDirectionModifier(GeneralizedDirectionModifier):
     def _select_atoms_to_modify(self, n_subset_atoms):
-        return np.random.choice(range(n_subset_atoms))
+        return [np.random.choice(range(n_subset_atoms))]
 

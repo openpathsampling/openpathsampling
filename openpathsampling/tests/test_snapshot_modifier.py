@@ -400,10 +400,74 @@ class testVelocityDirectionModifier(object):
 
 class testSingleAtomVelocityDirectionModifier(object):
     def setup(self):
-        pass
+        import openpathsampling.engines.toy as toys
+        self.toy_modifier = SingleAtomVelocityDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2]
+        )
+        self.toy_engine = toys.Engine(
+            topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
+                                   masses=[1.0, 1.5, 4.0]),
+            options={}
+        )
+        self.toy_snapshot = toys.Snapshot(
+            coordinates=np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]),
+            velocities=np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]),
+            engine=self.toy_engine
+        )
+
+        u_vel = u.nanometer / u.picosecond
+        self.openmm_modifier = SingleAtomVelocityDirectionModifier(1.2*u_vel)
+        ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+        self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
+        self.openmm_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        
+        self.openmm_snap = self.test_snap.copy_with_replacement(
+            engine=self.openmm_engine,
+            velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
+        )
 
     def test_select_atoms_to_modify(self):
-        raise SkipTest
+        selected = self.toy_modifier._select_atoms_to_modify(2)
+        assert_equal(len(selected), 1)
+        selected = [self.toy_modifier._select_atoms_to_modify(2)[0]
+                    for i in range(20)]
+        count = Counter(selected)
+        assert_equal(set([0, 1]), set(count.keys()))
+        assert_true(count[0] > 0)
+        assert_true(count[1] > 0)
 
     def test_call(self):
-        raise SkipTest
+        new_toy_snap = self.toy_modifier(self.toy_snapshot)
+        assert_array_almost_equal(new_toy_snap.coordinates,
+                                  self.toy_snapshot.coordinates)
+        new_vel = new_toy_snap.velocities
+        old_vel = self.toy_snapshot.velocities
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        assert_equal(Counter(same_vel), Counter({True: 2, False: 1}))
+        for new_v, old_v in zip(new_vel, old_vel):
+            assert_almost_equal(sum([v**2 for v in new_v]),
+                                sum([v**2 for v in old_v]))
+
+        new_omm_snap = self.openmm_modifier(self.openmm_snap)
+        n_atoms = len(self.openmm_snap.coordinates)
+        assert_array_almost_equal(new_omm_snap.coordinates,
+                                  self.openmm_snap.coordinates)
+        new_vel = new_omm_snap.velocities
+        old_vel = self.openmm_snap.velocities
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        assert_equal(Counter(same_vel), Counter({True: n_atoms-1, False: 1}))
+        u_vel_sq = (u.nanometers / u.picoseconds)**2
+        for new_v, old_v in zip(new_vel, old_vel):
+            assert_almost_equal(
+                sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
+                sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
+            )
