@@ -224,13 +224,17 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         dv_widths = self._dv_widths(n_atoms=len(velocities),
                                     n_subset_atoms=len(vel_subset))
 
+        # zero_with_units is a hack for using units (or not) in `sum`
+        zero_with_units = (vel_subset[0][0] - vel_subset[0][0])**2
         for atom_i in atoms_to_change:
-            initial_sum_sq_vel = sum([v**2 for v in vel_subset[atom_i]])
+            initial_sum_sq_vel = sum([v**2 for v in vel_subset[atom_i]],
+                                     zero_with_units)
             randoms = np.random.normal(size=len(vel_subset[atom_i]))
             delta_v = dv_widths[atom_i] * randoms
             vel_subset[atom_i] += delta_v
-            final_sum_sq_vel = sum([v**2 for v in vel_subset[atom_i]])
-            rescale_factor = initial_sum_sq_vel / final_sum_sq_vel
+            final_sum_sq_vel = sum([v**2 for v in vel_subset[atom_i]],
+                                   zero_with_units)
+            rescale_factor = np.sqrt(initial_sum_sq_vel / final_sum_sq_vel)
             vel_subset[atom_i] *= rescale_factor
 
         self.apply_to_subset(velocities, vel_subset)

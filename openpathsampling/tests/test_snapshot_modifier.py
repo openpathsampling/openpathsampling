@@ -14,6 +14,8 @@ import openpathsampling.engines.openmm as omm_engine
 
 from openpathsampling.snapshot_modifier import *
 
+from collections import Counter
+
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
@@ -260,7 +262,6 @@ class testGeneralizedDirectionModifier(object):
         self.openmm_snap = self.test_snap.copy_with_replacement(
             engine=self.openmm_engine
         )
-        pass
 
     def test_verify_snapshot_toy(self):
         self.toy_modifier._verify_snapshot(self.toy_snapshot)
@@ -329,20 +330,80 @@ class testGeneralizedDirectionModifier(object):
 
 class testVelocityDirectionModifier(object):
     def setup(self):
-        pass
+        import openpathsampling.engines.toy as toys
+        self.toy_modifier = VelocityDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2]
+        )
+        self.toy_engine = toys.Engine(
+            topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
+                                   masses=[1.0, 1.5, 4.0]),
+            options={}
+        )
+        self.toy_snapshot = toys.Snapshot(
+            coordinates=np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]),
+            velocities=np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]),
+            engine=self.toy_engine
+        )
+
+        u_vel = u.nanometer / u.picosecond
+        self.openmm_modifier = VelocityDirectionModifier(1.2 * u_vel)
+        ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+        self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
+        self.openmm_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        
+        self.openmm_snap = self.test_snap.copy_with_replacement(
+            engine=self.openmm_engine,
+            velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
+        )
 
     def test_select_atoms_to_modify(self):
-        pass
+        assert_equal(self.toy_modifier._select_atoms_to_modify(2), [0, 1])
+        n_atoms = len(self.openmm_snap.coordinates)
+        assert_equal(self.openmm_modifier._select_atoms_to_modify(n_atoms),
+                     range(n_atoms))
 
     def test_call(self):
-        pass
+        new_toy_snap = self.toy_modifier(self.toy_snapshot)
+        assert_array_almost_equal(new_toy_snap.coordinates,
+                                  self.toy_snapshot.coordinates)
+        new_vel = new_toy_snap.velocities
+        old_vel = self.toy_snapshot.velocities
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        assert_equal(Counter(same_vel), Counter({True: 1, False: 2}))
+        for new_v, old_v in zip(new_vel, old_vel):
+            assert_almost_equal(sum([v**2 for v in new_v]),
+                                sum([v**2 for v in old_v]))
+
+        new_omm_snap = self.openmm_modifier(self.openmm_snap)
+        n_atoms = len(self.openmm_snap.coordinates)
+        assert_array_almost_equal(new_omm_snap.coordinates,
+                                  self.openmm_snap.coordinates)
+        new_vel = new_omm_snap.velocities
+        old_vel = self.openmm_snap.velocities
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        assert_equal(Counter(same_vel), Counter({False: n_atoms}))
+        u_vel_sq = (u.nanometers / u.picoseconds)**2
+        for new_v, old_v in zip(new_vel, old_vel):
+            assert_almost_equal(
+                sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
+                sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
+            )
 
 class testSingleAtomVelocityDirectionModifier(object):
     def setup(self):
         pass
 
     def test_select_atoms_to_modify(self):
-        pass
+        raise SkipTest
 
     def test_call(self):
-        pass
+        raise SkipTest
