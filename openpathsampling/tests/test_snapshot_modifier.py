@@ -328,6 +328,24 @@ class testGeneralizedDirectionModifier(object):
             assert_almost_equal(truth, beauty)
 
 
+    def test_rescale_linear_momenta_constant_energy_toy(self):
+        velocities = np.array([[1.5, -1.0], [-1.0, 2.0], [0.25, -1.0]])
+        masses = np.array([1.0, 1.5, 4.0])
+        new_vel = self.toy_modifier.rescale_linear_momenta_constant_energy(
+            velocities=velocities,
+            masses=masses
+        )
+        #expected = np.array([[7.0/6.0, 1.0/3.0],
+                             #[-11.0/9.0, 22.0/9.0],
+                             #[1.0/6.0, 5.0/6.0]])
+        assert_array_almost_equal(new_vel, expected)
+
+        raise SkipTest
+
+    def test_rescale_linear_momenta_constant_energy_openmm(self):
+        raise SkipTest
+
+
 class testVelocityDirectionModifier(object):
     def setup(self):
         import openpathsampling.engines.toy as toys
@@ -401,6 +419,9 @@ class testVelocityDirectionModifier(object):
                 sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
                 sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
             )
+
+    def test_call_with_linear_momentum_fix(self):
+        raise SkipTest
 
 class testSingleAtomVelocityDirectionModifier(object):
     def setup(self):

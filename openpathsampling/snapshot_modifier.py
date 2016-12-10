@@ -243,7 +243,8 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         # assert len(dv_widths) == n_subset_atoms
         return dv_widths
 
-    def rescale_linear_momenta_constant_energy(self, velocities, masses):
+    @staticmethod
+    def rescale_linear_momenta_constant_energy(velocities, masses):
         # TODO: initially, maybe see if there's an internal motion remover
         # to do most of this? and get KE from a snapshot feature?
         n_atoms = len(masses)
