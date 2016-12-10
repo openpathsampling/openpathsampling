@@ -169,7 +169,13 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         Verifies that a snapshot has the right number of degrees of freedom.
 
         The approach implemented in this will not satisfy detailed balance
-        if there are constraints on the atoms that are changing.
+        if there are constraints on the atoms that are changing. This is a
+        way of checking for that.
+
+        Parameters
+        ----------
+        snapshot : :class:`.Snapshot`
+            input snapshot to check for validity
         """
         try:
             box_vectors = snapshot.box_vectors
@@ -186,13 +192,23 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         n_spatial = snapshot.engine.n_spatial
         n_atoms = snapshot.engine.n_atoms
 
-        remove_angular = 0 if box_vectors is None else 1
-        remove_linear = 0 if n_atoms == 1 else 1
+        # NOTE: none of our engines currently explicitly remove angular
+        # (but isn't angular momentum impossible in periodic condensed
+        # phase)
+        remove_angular = 0  # if box_vectors is None else 1
+        remove_linear = 1 if n_atoms != 1 else 0
+        if remove_linear:
+            try:
+                ignore = snapshot.engine.ignore_linear_momentum
+            except AttributeError:
+                ignore = False
+            remove_linear = 0 if ignore else remove_linear
+
         n_motion_removers = n_spatial * (remove_linear + remove_angular)
 
         n_dofs_required = n_spatial * n_atoms - n_motion_removers
 
-        if n_dofs < n_dofs_required:
+        if n_dofs != n_dofs_required:
             raise RuntimeError("Snapshot has " + str(n_dofs)
                                + " degrees of freedom, not " 
                                + str(n_dofs_required) + ". "
