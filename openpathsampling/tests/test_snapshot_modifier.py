@@ -333,7 +333,8 @@ class testVelocityDirectionModifier(object):
         import openpathsampling.engines.toy as toys
         self.toy_modifier = VelocityDirectionModifier(
             delta_v=[1.0, 2.0],
-            subset_mask=[1, 2]
+            subset_mask=[1, 2],
+            rescale_linear_momenta=False
         )
         self.toy_engine = toys.Engine(
             topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
@@ -347,7 +348,10 @@ class testVelocityDirectionModifier(object):
         )
 
         u_vel = u.nanometer / u.picosecond
-        self.openmm_modifier = VelocityDirectionModifier(1.2 * u_vel)
+        self.openmm_modifier = VelocityDirectionModifier(
+            delta_v=1.2*u_vel,
+            rescale_linear_momenta=False
+        )
         ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
         self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
         self.openmm_engine = omm_engine.Engine(
@@ -403,7 +407,8 @@ class testSingleAtomVelocityDirectionModifier(object):
         import openpathsampling.engines.toy as toys
         self.toy_modifier = SingleAtomVelocityDirectionModifier(
             delta_v=[1.0, 2.0],
-            subset_mask=[1, 2]
+            subset_mask=[1, 2],
+            rescale_linear_momenta=False
         )
         self.toy_engine = toys.Engine(
             topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
@@ -417,7 +422,10 @@ class testSingleAtomVelocityDirectionModifier(object):
         )
 
         u_vel = u.nanometer / u.picosecond
-        self.openmm_modifier = SingleAtomVelocityDirectionModifier(1.2*u_vel)
+        self.openmm_modifier = SingleAtomVelocityDirectionModifier(
+            delta_v=1.2*u_vel,
+            rescale_linear_momenta=False
+        )
         ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
         self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
         self.openmm_engine = omm_engine.Engine(

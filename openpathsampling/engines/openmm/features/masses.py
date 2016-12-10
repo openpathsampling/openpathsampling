@@ -1,4 +1,5 @@
 import simtk.unit as u
+import numpy as np
 
 @property
 def masses_per_mole(snapshot):
@@ -22,6 +23,11 @@ def masses_per_mole(snapshot):
         n_particles = system.getNumParticles()
         masses_per_mole = [system.getParticleMass(i)
                   for i in range(system.getNumParticles())]
+    masses_per_mole = u.Quantity(
+        value=np.array([m.value_in_unit(u.dalton) 
+                        for m in masses_per_mole]),
+        unit=u.dalton
+    )
     return masses_per_mole
 
 @property
@@ -33,5 +39,6 @@ def masses(snapshot):
         atomic masses (with simtk.unit attached) in units of mass
     """
     masses_per_mole = snapshot.masses_per_mole
-    masses = [m / u.AVOGADRO_CONSTANT_NA for m in masses_per_mole]
+    masses = masses_per_mole / u.AVOGADRO_CONSTANT_NA
+    # [m / u.AVOGADRO_CONSTANT_NA for m in masses_per_mole]
     return masses

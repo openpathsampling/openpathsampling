@@ -135,7 +135,11 @@ class RandomVelocities(SnapshotModifier):
         n_spatial = len(vel_subset[0])
         n_atoms = len(vel_subset)
         for atom_i in range(n_atoms):
-            sigma = np.sqrt(1.0 / (self.beta * masses[atom_i]))
+            radicand = 1.0 / (self.beta * masses[atom_i])
+            try:  # preference that masses is quantity or np.array
+                sigma = radicand.sqrt()
+            except AttributeError:  # if masses regular list
+                sigma = np.sqrt(radicand)
             vel_subset[atom_i] = sigma * np.random.normal(size=n_spatial)
 
         self.apply_to_subset(velocities, vel_subset)
@@ -158,11 +162,20 @@ class RandomVelocities(SnapshotModifier):
 
 class GeneralizedDirectionModifier(SnapshotModifier):
     """
-    Snapshot modifier which changes momentum direction with constant energy.
+    Snapshot modifier which changes velocity direction with constant energy.
+
+    Abstract class with core implementation. The implementation here
+    requires takes `delta_v` to be the standard deviation of a Gaussian
+    distribution of velocity displacements. The velocities are modified
+    according to that displacement, then renormalized so that each atom
+    still has the same total momentum as before (although the direction can
+    be changed).
     """
-    def __init__(self, delta_v, subset_mask=None):
+    def __init__(self, delta_v, subset_mask=None,
+                 rescale_linear_momenta=True):
         super(GeneralizedDirectionModifier, self).__init__(subset_mask)
         self.delta_v = delta_v
+        self.rescale_linear_momenta = rescale_linear_momenta
 
     def _verify_snapshot(self, snapshot):
         """
@@ -230,11 +243,38 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         # assert len(dv_widths) == n_subset_atoms
         return dv_widths
 
+    def rescale_linear_momenta_constant_energy(self, velocities, masses):
+        # TODO: initially, maybe see if there's an internal motion remover
+        # to do most of this? and get KE from a snapshot feature?
+        n_atoms = len(masses)
+        inv_masses = 1.0 / masses
+        momenta = velocities * masses[:, np.newaxis] 
+        total_momenta = sum(momenta, 0*momenta[0])
+        remove_momenta = total_momenta / n_atoms
+        remove_velocities = inv_masses[:, np.newaxis] * remove_momenta
+
+        # can't just use the dot product because of simtk.units
+        ke_per_dof = momenta * velocities
+        zero_energy = 0 *ke_per_dof[0][0]
+        old_ke = sum(sum(ke_per_dof, zero_energy), zero_energy)
+
+        velocities -= remove_velocities
+
+        new_momenta = velocities * masses[:, np.newaxis]
+        # again, this is just a dot product, and simtk.units are annoying
+        ke_per_dof = momenta * velocities
+        zero_energy = 0 *ke_per_dof[0][0]
+        new_ke = sum(sum(ke_per_dof, zero_energy), zero_energy)
+
+        rescale_factor = np.sqrt(old_ke / new_ke)
+        velocities *= rescale_factor
+
+        return velocities
+
     def __call__(self, snapshot):
-        self._verify_snapshot(snapshot)
+        remove_linear = self._verify_snapshot(snapshot)
         velocities = copy.copy(snapshot.velocities)
         vel_subset = self.extract_subset(velocities)
-        masses = self.extract_subset(snapshot.masses)
 
         atoms_to_change = self._select_atoms_to_modify(len(vel_subset))
         dv_widths = self._dv_widths(n_atoms=len(velocities),
@@ -254,6 +294,13 @@ class GeneralizedDirectionModifier(SnapshotModifier):
             vel_subset[atom_i] *= rescale_factor
 
         self.apply_to_subset(velocities, vel_subset)
+
+        if self.rescale_linear_momenta:
+            velocities = self.rescale_linear_momenta_constant_energy(
+                velocities=velocities,
+                masses=snapshot.masses
+            )
+
         new_snap = snapshot.copy_with_replacement(velocities=velocities)
 
         # NOTE: no constraint correction here! constraints are not allowed!
