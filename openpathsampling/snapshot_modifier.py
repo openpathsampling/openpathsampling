@@ -21,7 +21,7 @@ class SnapshotModifier(StorableNamedObject):
     Attributes
     ----------
     subset_mask : list of int or None
-        the subset to use (default None, meaning no subset). The values
+        the subset to use (default None, meaning use all). The values
         select along the first axis of the input array. For example, in a
         typical shape=(n_atoms, 3) array, this will pick the atoms.
 
@@ -114,7 +114,7 @@ class RandomVelocities(SnapshotModifier):
         engine to be used for constraints; if None, use the snapshot's
         engine
     subset_mask : list of int or None
-        the subset to use (default None, meaning no subset). The values
+        the subset to use (default None, meaning use all). The values
         select along the first axis of the input array. For example, in a
         typical shape=(n_atoms, 3) array, this will pick the atoms.
     """
@@ -170,6 +170,27 @@ class GeneralizedDirectionModifier(SnapshotModifier):
     according to that displacement, then renormalized so that each atom
     still has the same total momentum as before (although the direction can
     be changed).
+
+    Parameters
+    ----------
+    delta_v : float or array-like of float
+        velocity change parameter, as the width of a Gaussian from which
+        each degree of freedom's velocity change is chosen. Can be a list
+        with length ``n_atoms`` (mapping to each atom); length equal to the
+        subset mask (mapping to each element of the subset mask); or a float
+        (mapping the same value to all atoms).
+    subset_mask : list of int or None
+        the subset to use (default None, meaning use all). The values
+        select along the first axis of the input array. For example, in a
+        typical shape=(n_atoms, 3) array, this will pick the atoms.
+    rescale_linear_momenta : bool
+        whether the total linear momentum should be removed from the system,
+        default is True
+
+    See Also
+    --------
+    VelocityDirectionModifier
+    SingleAtomVelocityDirectionModifier
     """
     def __init__(self, delta_v, subset_mask=None,
                  rescale_linear_momenta=True):
@@ -232,6 +253,22 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         raise NotImplementedError
 
     def _dv_widths(self, n_atoms, n_subset_atoms):
+        """
+        Generate the list of velocity delta widths.
+
+        Parameters
+        ----------
+        n_atoms : int
+            number of total atoms
+        n_subset_atoms : int
+            number of atoms in the subset to be (possibly) changed
+
+        Returns
+        -------
+        list, length n_subset_atoms
+            list of velocity deltas associated with each atom from the
+            subset
+        """
         try:
             dv_widths = list(self.delta_v)
         except TypeError:
@@ -280,6 +317,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
 
         velocities -= remove_velocities
 
+        # from here, we're doing the KE rescaling
         # can't just use the dot product because of simtk.units
         new_momenta = velocities * masses[:, np.newaxis]
         new_dof_ke = new_momenta * velocities
@@ -292,7 +330,24 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         return velocities
 
     def __call__(self, snapshot):
-        remove_linear = self._verify_snapshot(snapshot)
+        """
+        Primary call function to be used by subclasses.
+
+        Uses the :method:`._select_atoms_to_modify` method to determine
+        exactly which atoms from the subset should be modified. This method
+        must be written in subclasses.
+
+        Parameters
+        ----------
+        snapshot : :class:`.Snapshot`
+            initial snapshot
+
+        Returns
+        -------
+        :class:`.Snapshot`
+            modified snapshot
+        """
+        self._verify_snapshot(snapshot)
         velocities = copy.copy(snapshot.velocities)
         vel_subset = self.extract_subset(velocities)
 
@@ -316,9 +371,14 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         self.apply_to_subset(velocities, vel_subset)
 
         if self.rescale_linear_momenta:
+            momenta = velocities * snapshot.masses[:, np.newaxis]
+            dof_double_KE = momenta * velocities
+            zero_energy = 0 * new_dof_ke[0][0]
+            double_KE = sum(sum(new_dof_ke, zero_energy), zero_energy)
             velocities = self.rescale_linear_momenta_constant_energy(
                 velocities=velocities,
-                masses=snapshot.masses
+                masses=snapshot.masses,
+                double_KE=double_KE
             )
 
         new_snap = snapshot.copy_with_replacement(velocities=velocities)
@@ -327,10 +387,63 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         return new_snap
 
 class VelocityDirectionModifier(GeneralizedDirectionModifier):
+    """
+    Randomly change all the velocities (in the subset masked, at least)
+    according to the given delta_v.
+
+    Parameters
+    ----------
+    delta_v : float or array-like of float
+        velocity change parameter, as the width of a Gaussian from which
+        each degree of freedom's velocity change is chosen. Can be a list
+        with length ``n_atoms`` (mapping to each atom); length equal to the
+        subset mask (mapping to each element of the subset mask); or a float
+        (mapping the same value to all atoms).
+    subset_mask : list of int or None
+        the subset to use (default None, meaning use all). The values
+        select along the first axis of the input array. For example, in a
+        typical shape=(n_atoms, 3) array, this will pick the atoms.
+    rescale_linear_momenta : bool
+        whether the total linear momentum should be removed from the system,
+        default is True
+
+    See Also
+    --------
+    GeneralizedDirectionModifier
+    SingleAtomVelocityDirectionModifier
+    """
     def _select_atoms_to_modify(self, n_subset_atoms):
         return range(n_subset_atoms)
 
 class SingleAtomVelocityDirectionModifier(GeneralizedDirectionModifier):
+    """
+    Change a single atom according to the ``delta_v``.
+
+    Note that even though this only uses the ``delta_v`` to change one atom,
+    the velocities of other atoms will also be changed in order to preserve
+    the initial kinetic energy and possibly also to remove linear momenta.
+
+    Parameters
+    ----------
+    delta_v : float or array-like of float
+        velocity change parameter, as the width of a Gaussian from which
+        each degree of freedom's velocity change is chosen. Can be a list
+        with length ``n_atoms`` (mapping to each atom); length equal to the
+        subset mask (mapping to each element of the subset mask); or a float
+        (mapping the same value to all atoms).
+    subset_mask : list of int or None
+        the subset to use (default None, meaning use all). The values
+        select along the first axis of the input array. For example, in a
+        typical shape=(n_atoms, 3) array, this will pick the atoms.
+    rescale_linear_momenta : bool
+        whether the total linear momentum should be removed from the system,
+        default is True
+
+    See Also
+    --------
+    GeneralizedDirectionModifier
+    VelocityDirectionModifier
+    """
     def _select_atoms_to_modify(self, n_subset_atoms):
         return [np.random.choice(range(n_subset_atoms))]
 
