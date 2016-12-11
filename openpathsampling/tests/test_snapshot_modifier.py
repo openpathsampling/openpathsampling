@@ -327,11 +327,17 @@ class testGeneralizedDirectionModifier(object):
         for truth, beauty in zip(expected, results):
             assert_almost_equal(truth, beauty)
 
-
     def test_rescale_linear_momenta_constant_energy_toy(self):
         velocities = np.array([[1.5, -1.0], [-1.0, 2.0], [0.25, -1.0]])
         masses = np.array([1.0, 1.5, 4.0])
-        new_vel = self.toy_modifier.rescale_linear_momenta_constant_energy(
+        new_vel = self.toy_modifier._remove_linear_momentum(
+            velocities=velocities,
+            masses=masses
+        )
+        new_momenta = new_vel * masses[:, np.newaxis]
+        total_momenta = sum(new_momenta)
+        assert_array_almost_equal(total_momenta, np.array([0.0]*2))
+        new_vel = self.toy_modifier._rescale_kinetic_energy(
             velocities=velocities,
             masses=masses,
             double_KE=20.0
@@ -343,7 +349,7 @@ class testGeneralizedDirectionModifier(object):
         assert_array_almost_equal(total_momenta, np.array([0.0]*2))
         assert_almost_equal(new_ke, 20.0)
 
-    def test_rescale_linear_momenta_constant_energy_openmm(self):
+    def test_remove_momentum_rescale_energy_openmm(self):
         # don't actually need to do everything with OpenMM, but do need to
         # add units
         u_vel = u.nanometer / u.picosecond
@@ -353,7 +359,16 @@ class testGeneralizedDirectionModifier(object):
         velocities = \
                 np.array([[1.5, -1.0], [-1.0, 2.0], [0.25, -1.0]]) * u_vel
         masses = np.array([1.0, 1.5, 4.0]) * u_mass
-        new_vel = self.toy_modifier.rescale_linear_momenta_constant_energy(
+        new_vel = self.openmm_modifier._remove_linear_momentum(
+            velocities=velocities,
+            masses=masses
+        )
+        new_momenta = new_vel * masses[:, np.newaxis]
+        total_momenta = sum(new_momenta, new_momenta[0])
+        assert_array_almost_equal(total_momenta,
+                                  np.array([0.0]*2) * u_vel * u_mass)
+
+        new_vel = self.openmm_modifier._rescale_kinetic_energy(
             velocities=velocities,
             masses=masses,
             double_KE=20.0 * u_energy
@@ -365,7 +380,8 @@ class testGeneralizedDirectionModifier(object):
         # tests require that the linear momentum be 0, and KE be correct
         assert_array_almost_equal(total_momenta,
                                   np.array([0.0]*2) * u_vel * u_mass)
-        assert_almost_equal(new_ke, 20.0 * u_energy)
+        assert_equal(new_ke.unit, (20.0 * u_energy).unit)
+        assert_almost_equal(new_ke._value, (20.0 * u_energy)._value)
 
 
 class testVelocityDirectionModifier(object):
@@ -374,11 +390,11 @@ class testVelocityDirectionModifier(object):
         self.toy_modifier = VelocityDirectionModifier(
             delta_v=[1.0, 2.0],
             subset_mask=[1, 2],
-            rescale_linear_momenta=False
+            remove_linear_momentum=False
         )
         self.toy_engine = toys.Engine(
             topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
-                                   masses=[1.0, 1.5, 4.0]),
+                                   masses=np.array([1.0, 1.5, 4.0])),
             options={}
         )
         self.toy_snapshot = toys.Snapshot(
@@ -390,7 +406,7 @@ class testVelocityDirectionModifier(object):
         u_vel = u.nanometer / u.picosecond
         self.openmm_modifier = VelocityDirectionModifier(
             delta_v=1.2*u_vel,
-            rescale_linear_momenta=False
+            remove_linear_momentum=False
         )
         ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
         self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
@@ -451,11 +467,11 @@ class testSingleAtomVelocityDirectionModifier(object):
         self.toy_modifier = SingleAtomVelocityDirectionModifier(
             delta_v=[1.0, 2.0],
             subset_mask=[1, 2],
-            rescale_linear_momenta=False
+            remove_linear_momentum=False
         )
         self.toy_engine = toys.Engine(
             topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
-                                   masses=[1.0, 1.5, 4.0]),
+                                   masses=np.array([1.0, 1.5, 4.0])),
             options={}
         )
         self.toy_snapshot = toys.Snapshot(
@@ -467,7 +483,7 @@ class testSingleAtomVelocityDirectionModifier(object):
         u_vel = u.nanometer / u.picosecond
         self.openmm_modifier = SingleAtomVelocityDirectionModifier(
             delta_v=1.2*u_vel,
-            rescale_linear_momenta=False
+            remove_linear_momentum=False
         )
         ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
         self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)

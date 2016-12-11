@@ -183,7 +183,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         the subset to use (default None, meaning use all). The values
         select along the first axis of the input array. For example, in a
         typical shape=(n_atoms, 3) array, this will pick the atoms.
-    rescale_linear_momenta : bool
+    remove_linear_momentum : bool
         whether the total linear momentum should be removed from the system,
         default is True
 
@@ -193,10 +193,10 @@ class GeneralizedDirectionModifier(SnapshotModifier):
     SingleAtomVelocityDirectionModifier
     """
     def __init__(self, delta_v, subset_mask=None,
-                 rescale_linear_momenta=True):
+                 remove_linear_momentum=True):
         super(GeneralizedDirectionModifier, self).__init__(subset_mask)
         self.delta_v = delta_v
-        self.rescale_linear_momenta = rescale_linear_momenta
+        self.remove_linear_momentum = remove_linear_momentum
 
     def _verify_snapshot(self, snapshot):
         """
@@ -281,14 +281,38 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         return dv_widths
 
     @staticmethod
-    def rescale_linear_momenta_constant_energy(velocities, masses, double_KE):
+    def _remove_linear_momentum(velocities, masses):
         """
-        Remove COM motion while keeping constant energy.
+        Remove COM motion.
 
-        This is pretty standard in shooting moves: you have modified the
-        snapshot, but changed the kinetic energy and added linear momentum
-        drift. So you need to remove that linear momentum, and rescale the
-        kinetic energy to match the desired kinetic energy.
+        Parameters
+        ----------
+        velocities : array-like, shape (n_atoms, n_spatial)
+            input velocities (after snapshot change)
+        masses : array-like, shape (n_atoms,)
+            masses of each atom
+
+        Returns
+        -------
+        array-like
+            velocities adjusted to have 0 linear momentum
+        """
+        # TODO: initially, maybe see if there's an internal motion remover
+        # to do most of this? and get KE from a snapshot feature?
+        n_atoms = len(masses)
+        inv_masses = 1.0 / masses
+        momenta = velocities * masses[:, np.newaxis] 
+        total_momenta = sum(momenta, 0*momenta[0])
+        remove_momenta = total_momenta / n_atoms
+        remove_velocities = inv_masses[:, np.newaxis] * remove_momenta
+
+        velocities -= remove_velocities
+        return velocities
+
+    @staticmethod
+    def _rescale_kinetic_energy(velocities, masses, double_KE):
+        """
+        Rescale KE to desired value.
 
         Parameters
         ----------
@@ -303,26 +327,14 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         Returns
         -------
         array-like
-            velocities adjusted to have 0 linear momenta and the desired
-            kinetic energy
+            velocities adjusted to have the desired kinetic energy
         """
-        # TODO: initially, maybe see if there's an internal motion remover
-        # to do most of this? and get KE from a snapshot feature?
-        n_atoms = len(masses)
-        inv_masses = 1.0 / masses
-        momenta = velocities * masses[:, np.newaxis] 
-        total_momenta = sum(momenta, 0*momenta[0])
-        remove_momenta = total_momenta / n_atoms
-        remove_velocities = inv_masses[:, np.newaxis] * remove_momenta
-
-        velocities -= remove_velocities
-
         # from here, we're doing the KE rescaling
         # can't just use the dot product because of simtk.units
-        new_momenta = velocities * masses[:, np.newaxis]
-        new_dof_ke = new_momenta * velocities
-        zero_energy = 0 * new_dof_ke[0][0]
-        new_ke = sum(sum(new_dof_ke, zero_energy), zero_energy)
+        momenta = velocities * masses[:, np.newaxis]
+        dof_ke = momenta * velocities
+        zero_energy = 0 * dof_ke[0][0]
+        new_ke = sum(sum(dof_ke, zero_energy), zero_energy)
 
         rescale_factor = np.sqrt(double_KE / new_ke)
         velocities *= rescale_factor
@@ -370,16 +382,17 @@ class GeneralizedDirectionModifier(SnapshotModifier):
 
         self.apply_to_subset(velocities, vel_subset)
 
-        if self.rescale_linear_momenta:
-            momenta = velocities * snapshot.masses[:, np.newaxis]
-            dof_double_KE = momenta * velocities
-            zero_energy = 0 * new_dof_ke[0][0]
-            double_KE = sum(sum(new_dof_ke, zero_energy), zero_energy)
-            velocities = self.rescale_linear_momenta_constant_energy(
-                velocities=velocities,
-                masses=snapshot.masses,
-                double_KE=double_KE
-            )
+        # calculate the total KE so we can preserve it
+        masses = snapshot.masses
+        momenta = velocities * masses[:, np.newaxis]
+        dof_double_KE = momenta * velocities
+        zero_energy = 0 * dof_double_KE[0][0]
+        double_KE = sum(sum(dof_double_KE, zero_energy), zero_energy)
+
+        if self.remove_linear_momentum:
+            velocities = self._remove_linear_momentum(velocities, masses)
+
+        self._rescale_kinetic_energy(velocities, masses, double_KE)
 
         new_snap = snapshot.copy_with_replacement(velocities=velocities)
 
