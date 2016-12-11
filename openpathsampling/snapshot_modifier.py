@@ -244,7 +244,31 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         return dv_widths
 
     @staticmethod
-    def rescale_linear_momenta_constant_energy(velocities, masses):
+    def rescale_linear_momenta_constant_energy(velocities, masses, double_KE):
+        """
+        Remove COM motion while keeping constant energy.
+
+        This is pretty standard in shooting moves: you have modified the
+        snapshot, but changed the kinetic energy and added linear momentum
+        drift. So you need to remove that linear momentum, and rescale the
+        kinetic energy to match the desired kinetic energy.
+
+        Parameters
+        ----------
+        velocities : array-like, shape (n_atoms, n_spatial)
+            input velocities (after snapshot change)
+        masses : array-like, shape (n_atoms,)
+            masses of each atom
+        double_KE : float or unitted Quantity
+            the desired kinetic energy multiplied by 2.0 (because to avoid
+            needing to multiple by 1/2 internally)
+
+        Returns
+        -------
+        array-like
+            velocities adjusted to have 0 linear momenta and the desired
+            kinetic energy
+        """
         # TODO: initially, maybe see if there's an internal motion remover
         # to do most of this? and get KE from a snapshot feature?
         n_atoms = len(masses)
@@ -254,20 +278,15 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         remove_momenta = total_momenta / n_atoms
         remove_velocities = inv_masses[:, np.newaxis] * remove_momenta
 
-        # can't just use the dot product because of simtk.units
-        ke_per_dof = momenta * velocities
-        zero_energy = 0 *ke_per_dof[0][0]
-        old_ke = sum(sum(ke_per_dof, zero_energy), zero_energy)
-
         velocities -= remove_velocities
 
+        # can't just use the dot product because of simtk.units
         new_momenta = velocities * masses[:, np.newaxis]
-        # again, this is just a dot product, and simtk.units are annoying
-        ke_per_dof = momenta * velocities
-        zero_energy = 0 *ke_per_dof[0][0]
-        new_ke = sum(sum(ke_per_dof, zero_energy), zero_energy)
+        new_dof_ke = new_momenta * velocities
+        zero_energy = 0 * new_dof_ke[0][0]
+        new_ke = sum(sum(new_dof_ke, zero_energy), zero_energy)
 
-        rescale_factor = np.sqrt(old_ke / new_ke)
+        rescale_factor = np.sqrt(double_KE / new_ke)
         velocities *= rescale_factor
 
         return velocities

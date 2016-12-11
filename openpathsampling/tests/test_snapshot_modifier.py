@@ -333,17 +333,39 @@ class testGeneralizedDirectionModifier(object):
         masses = np.array([1.0, 1.5, 4.0])
         new_vel = self.toy_modifier.rescale_linear_momenta_constant_energy(
             velocities=velocities,
-            masses=masses
+            masses=masses,
+            double_KE=20.0
         )
-        #expected = np.array([[7.0/6.0, 1.0/3.0],
-                             #[-11.0/9.0, 22.0/9.0],
-                             #[1.0/6.0, 5.0/6.0]])
-        assert_array_almost_equal(new_vel, expected)
-
-        raise SkipTest
+        new_momenta = new_vel * masses[:, np.newaxis]
+        total_momenta = sum(new_momenta)
+        new_ke = sum(sum(new_momenta * new_vel))
+        # tests require that the linear momentum be 0, and KE be correct
+        assert_array_almost_equal(total_momenta, np.array([0.0]*2))
+        assert_almost_equal(new_ke, 20.0)
 
     def test_rescale_linear_momenta_constant_energy_openmm(self):
-        raise SkipTest
+        # don't actually need to do everything with OpenMM, but do need to
+        # add units
+        u_vel = u.nanometer / u.picosecond
+        u_mass = u.dalton / u.AVOGADRO_CONSTANT_NA
+        u_energy = u.kilojoule_per_mole / u.AVOGADRO_CONSTANT_NA
+
+        velocities = \
+                np.array([[1.5, -1.0], [-1.0, 2.0], [0.25, -1.0]]) * u_vel
+        masses = np.array([1.0, 1.5, 4.0]) * u_mass
+        new_vel = self.toy_modifier.rescale_linear_momenta_constant_energy(
+            velocities=velocities,
+            masses=masses,
+            double_KE=20.0 * u_energy
+        )
+        new_momenta = new_vel * masses[:, np.newaxis]
+        total_momenta = sum(new_momenta, new_momenta[0])
+        zero_energy = 0.0 * u_energy
+        new_ke = sum(sum(new_momenta * new_vel, zero_energy), zero_energy)
+        # tests require that the linear momentum be 0, and KE be correct
+        assert_array_almost_equal(total_momenta,
+                                  np.array([0.0]*2) * u_vel * u_mass)
+        assert_almost_equal(new_ke, 20.0 * u_energy)
 
 
 class testVelocityDirectionModifier(object):
