@@ -459,7 +459,32 @@ class testVelocityDirectionModifier(object):
             )
 
     def test_call_with_linear_momentum_fix(self):
-        raise SkipTest
+        toy_modifier = VelocityDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2],
+            remove_linear_momentum=True
+        )
+        new_toy_snap = toy_modifier(self.toy_snapshot)
+        velocities = new_toy_snap.velocities
+        momenta = velocities * new_toy_snap.masses[:, np.newaxis]
+        assert_array_almost_equal(sum(momenta), np.array([0.0]*2))
+        double_ke = sum(sum(momenta * velocities))
+        assert_almost_equal(double_ke, 86.0)
+
+        u_vel = u.nanometer / u.picosecond
+        u_mass = u.dalton / u.AVOGADRO_CONSTANT_NA
+
+        openmm_modifier = VelocityDirectionModifier(
+            delta_v=1.2*u_vel,
+            remove_linear_momentum=False
+        )
+        new_openmm_snap = openmm_modifier(self.openmm_snap)
+        velocities = new_openmm_snap.velocities
+        momenta = velocities * new_openmm_snap.masses[:, np.newaxis]
+        zero_momentum = 0 * u_vel * u_mass
+        total_momenta = sum(momenta, zero_momentum)
+        assert_array_almost_equal(total_momenta,
+                                  np.array([0.0]*3) * u_vel * u_mass)
 
 class testSingleAtomVelocityDirectionModifier(object):
     def setup(self):
@@ -538,3 +563,31 @@ class testSingleAtomVelocityDirectionModifier(object):
                 sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
                 sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
             )
+
+    def test_call_with_linear_momentum_fix(self):
+        toy_modifier = SingleAtomVelocityDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2],
+            remove_linear_momentum=True
+        )
+        new_toy_snap = toy_modifier(self.toy_snapshot)
+        velocities = new_toy_snap.velocities
+        momenta = velocities * new_toy_snap.masses[:, np.newaxis]
+        assert_array_almost_equal(sum(momenta), np.array([0.0]*2))
+        double_ke = sum(sum(momenta * velocities))
+        assert_almost_equal(double_ke, 86.0)
+
+        u_vel = u.nanometer / u.picosecond
+        u_mass = u.dalton / u.AVOGADRO_CONSTANT_NA
+
+        openmm_modifier = SingleAtomVelocityDirectionModifier(
+            delta_v=1.2*u_vel,
+            remove_linear_momentum=False
+        )
+        new_openmm_snap = openmm_modifier(self.openmm_snap)
+        velocities = new_openmm_snap.velocities
+        momenta = velocities * new_openmm_snap.masses[:, np.newaxis]
+        zero_momentum = 0 * u_vel * u_mass
+        total_momenta = sum(momenta, zero_momentum)
+        assert_array_almost_equal(total_momenta,
+                                  np.array([0.0]*3) * u_vel * u_mass)
