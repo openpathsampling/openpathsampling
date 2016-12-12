@@ -14,6 +14,8 @@ import openpathsampling.engines.openmm as omm_engine
 
 from openpathsampling.snapshot_modifier import *
 
+from collections import Counter
+
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
@@ -23,11 +25,11 @@ class testNoModification(object):
     def setup(self):
         self.modifier = NoModification()
         self.snapshot_1D = peng.toy.Snapshot(
-            coordinates=np.array([0.0, 1.0, 2.0, 3.0]), 
+            coordinates=np.array([0.0, 1.0, 2.0, 3.0]),
             velocities=np.array([0.5, 1.5, 2.5, 3.5])
         )
         self.snapshot_3D = peng.openmm.MDSnapshot(
-            coordinates=np.array([[0.0, 0.1, 0.2], 
+            coordinates=np.array([[0.0, 0.1, 0.2],
                                   [1.0, 1.1, 1.2],
                                   [2.0, 2.1, 2.2],
                                   [3.0, 3.1, 3.2]]),
@@ -63,17 +65,17 @@ class testNoModification(object):
                                   np.array([0.0, 1.0, 2.0, 3.0]))
 
         copy_3Dx = self.snapshot_3D.coordinates.copy()
-        new_3Dx = mod.apply_to_subset(copy_3Dx, 
-                                      np.array([[-1.0, -1.1, -1.2], 
+        new_3Dx = mod.apply_to_subset(copy_3Dx,
+                                      np.array([[-1.0, -1.1, -1.2],
                                                 [-2.0, -2.1, -2.2]]))
-        assert_array_almost_equal(new_3Dx, np.array([[0.0, 0.1, 0.2], 
+        assert_array_almost_equal(new_3Dx, np.array([[0.0, 0.1, 0.2],
                                                      [-1.0, -1.1, -1.2],
                                                      [-2.0, -2.1, -2.2],
                                                      [3.0, 3.1, 3.2]]))
         # and check that memory points to the right things; orig unchanged
         assert_true(copy_3Dx is new_3Dx)
         assert_array_almost_equal(self.snapshot_3D.coordinates,
-                                  np.array([[0.0, 0.1, 0.2], 
+                                  np.array([[0.0, 0.1, 0.2],
                                             [1.0, 1.1, 1.2],
                                             [2.0, 2.1, 2.2],
                                             [3.0, 3.1, 3.2]]))
@@ -170,7 +172,7 @@ class testRandomizeVelocities(object):
         assert_true(new_2x3D.coordinates is not self.snap_2x3D.coordinates)
         assert_true(new_2x3D.velocities is not self.snap_2x3D.velocities)
         # show that the unchanged atom is, in fact, unchanged
-        assert_array_almost_equal(new_2x3D.velocities[1], 
+        assert_array_almost_equal(new_2x3D.velocities[1],
                                   self.snap_2x3D.velocities[1])
         for val in new_2x3D.velocities[0]:
             assert_not_equal(val, 0.0)
@@ -186,7 +188,7 @@ class testRandomizeVelocities(object):
             integrator=omt.integrators.VVVRIntegrator()
         )
         beta = 1.0 / (300.0 * u.kelvin * u.BOLTZMANN_CONSTANT_kB)
-        
+
         # when the engine doesn't have an existing snapshot
         randomizer = RandomVelocities(beta=beta, engine=engine)
         new_snap = randomizer(template)
@@ -221,3 +223,371 @@ class testRandomizeVelocities(object):
         assert_equal(engine.current_snapshot, zero_snap)
         engine.generate(new_snap, [lambda x, foo: len(x) <= 4])
 
+class testGeneralizedDirectionModifier(object):
+    def setup(self):
+        import openpathsampling.engines.toy as toys
+        # applies one delta_v to all atoms
+        self.toy_modifier_all = GeneralizedDirectionModifier(1.5)
+        # defines delta_v per atom, including those not in the mask
+        self.toy_modifier_long_dv = GeneralizedDirectionModifier(
+            delta_v=[0.5, 1.0, 2.0],
+            subset_mask=[1, 2]
+        )
+        # defines delta_v per atom in the subset mask
+        self.toy_modifier = GeneralizedDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2]
+        )
+        self.toy_engine = toys.Engine(
+            topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
+                                   masses=[1.0, 1.5, 4.0]),
+            options={}
+        )
+        self.toy_snapshot = toys.Snapshot(
+            coordinates=np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]),
+            velocities=np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]),
+            engine=self.toy_engine
+        )
+
+        # create the OpenMM versions
+        u_vel = u.nanometer / u.picosecond
+        self.openmm_modifier = GeneralizedDirectionModifier(1.2 * u_vel)
+        ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+        self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
+        self.openmm_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        self.openmm_snap = self.test_snap.copy_with_replacement(
+            engine=self.openmm_engine
+        )
+
+    def test_verify_snapshot_toy(self):
+        self.toy_modifier._verify_snapshot(self.toy_snapshot)
+        self.toy_modifier_all._verify_snapshot(self.toy_snapshot)
+        self.toy_modifier_long_dv._verify_snapshot(self.toy_snapshot)
+
+    def test_verify_snapshot_openmm(self):
+        self.openmm_modifier._verify_snapshot(self.openmm_snap)
+
+    @raises(RuntimeError)
+    def test_verify_snapshot_no_dofs(self):
+        assert_true(isinstance(self.test_snap.engine,
+                               omm_engine.tools.OpenMMToolsTestsystemEngine))
+        self.openmm_modifier._verify_snapshot(self.test_snap)
+
+    @raises(RuntimeError)
+    def test_verify_snapshot_constraints(self):
+        ad_vacuum_constr = omt.testsystems.AlanineDipeptideVacuum()
+        constrained_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum_constr.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        constr_snap = self.test_snap.copy_with_replacement(
+            engine=constrained_engine
+        )
+        self.openmm_modifier._verify_snapshot(constr_snap)
+
+    def test_verify_snapshot_box_vectors(self):
+        ad_explicit = omt.testsystems.AlanineDipeptideExplicit(
+            constraints=None,
+            rigid_water=False
+        )
+        ad_explicit_tmpl = omm_engine.snapshot_from_testsystem(ad_explicit)
+        explicit_engine= omm_engine.Engine(
+            topology=ad_explicit_tmpl.topology,
+            system=ad_explicit.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        ad_explicit_snap = ad_explicit_tmpl.copy_with_replacement(
+            engine=explicit_engine
+        )
+        self.openmm_modifier._verify_snapshot(ad_explicit_snap)
+
+    def test_dv_widths_toy(self):
+        selected = np.array([1.0, 2.0])
+        n_atoms = len(self.toy_snapshot.coordinates)
+        assert_array_almost_equal(self.toy_modifier._dv_widths(n_atoms, 2),
+                                  selected)
+        assert_array_almost_equal(
+            self.toy_modifier_long_dv._dv_widths(n_atoms, 2),
+            selected
+        )
+        assert_array_almost_equal(
+            self.toy_modifier_all._dv_widths(n_atoms, n_atoms),
+            np.array([1.5]*3)
+        )
+
+    def test_dv_widths_openmm(self):
+        n_atoms = len(self.openmm_snap.coordinates)
+        results = self.openmm_modifier._dv_widths(n_atoms, n_atoms)
+        expected = np.array([1.2] * n_atoms) * u.nanometer / u.picosecond
+        for truth, beauty in zip(expected, results):
+            assert_almost_equal(truth, beauty)
+
+    def test_rescale_linear_momenta_constant_energy_toy(self):
+        velocities = np.array([[1.5, -1.0], [-1.0, 2.0], [0.25, -1.0]])
+        masses = np.array([1.0, 1.5, 4.0])
+        new_vel = self.toy_modifier._remove_linear_momentum(
+            velocities=velocities,
+            masses=masses
+        )
+        new_momenta = new_vel * masses[:, np.newaxis]
+        total_momenta = sum(new_momenta)
+        assert_array_almost_equal(total_momenta, np.array([0.0]*2))
+        new_vel = self.toy_modifier._rescale_kinetic_energy(
+            velocities=velocities,
+            masses=masses,
+            double_KE=20.0
+        )
+        new_momenta = new_vel * masses[:, np.newaxis]
+        total_momenta = sum(new_momenta)
+        new_ke = sum(sum(new_momenta * new_vel))
+        # tests require that the linear momentum be 0, and KE be correct
+        assert_array_almost_equal(total_momenta, np.array([0.0]*2))
+        assert_almost_equal(new_ke, 20.0)
+
+    def test_remove_momentum_rescale_energy_openmm(self):
+        # don't actually need to do everything with OpenMM, but do need to
+        # add units
+        u_vel = u.nanometer / u.picosecond
+        u_mass = u.dalton / u.AVOGADRO_CONSTANT_NA
+        u_energy = u.kilojoule_per_mole / u.AVOGADRO_CONSTANT_NA
+
+        velocities = \
+                np.array([[1.5, -1.0], [-1.0, 2.0], [0.25, -1.0]]) * u_vel
+        masses = np.array([1.0, 1.5, 4.0]) * u_mass
+        new_vel = self.openmm_modifier._remove_linear_momentum(
+            velocities=velocities,
+            masses=masses
+        )
+        new_momenta = new_vel * masses[:, np.newaxis]
+        total_momenta = sum(new_momenta, new_momenta[0])
+        assert_array_almost_equal(total_momenta,
+                                  np.array([0.0]*2) * u_vel * u_mass)
+
+        new_vel = self.openmm_modifier._rescale_kinetic_energy(
+            velocities=velocities,
+            masses=masses,
+            double_KE=20.0 * u_energy
+        )
+        new_momenta = new_vel * masses[:, np.newaxis]
+        total_momenta = sum(new_momenta, new_momenta[0])
+        zero_energy = 0.0 * u_energy
+        new_ke = sum(sum(new_momenta * new_vel, zero_energy), zero_energy)
+        # tests require that the linear momentum be 0, and KE be correct
+        assert_array_almost_equal(total_momenta,
+                                  np.array([0.0]*2) * u_vel * u_mass)
+        assert_equal(new_ke.unit, (20.0 * u_energy).unit)
+        assert_almost_equal(new_ke._value, (20.0 * u_energy)._value)
+
+
+class testVelocityDirectionModifier(object):
+    def setup(self):
+        import openpathsampling.engines.toy as toys
+        self.toy_modifier = VelocityDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2],
+            remove_linear_momentum=False
+        )
+        self.toy_engine = toys.Engine(
+            topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
+                                   masses=np.array([1.0, 1.5, 4.0])),
+            options={}
+        )
+        self.toy_snapshot = toys.Snapshot(
+            coordinates=np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]),
+            velocities=np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]),
+            engine=self.toy_engine
+        )
+
+        u_vel = u.nanometer / u.picosecond
+        self.openmm_modifier = VelocityDirectionModifier(
+            delta_v=1.2*u_vel,
+            remove_linear_momentum=False
+        )
+        ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+        self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
+        self.openmm_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        
+        self.openmm_snap = self.test_snap.copy_with_replacement(
+            engine=self.openmm_engine,
+            velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
+        )
+
+    def test_select_atoms_to_modify(self):
+        assert_equal(self.toy_modifier._select_atoms_to_modify(2), [0, 1])
+        n_atoms = len(self.openmm_snap.coordinates)
+        assert_equal(self.openmm_modifier._select_atoms_to_modify(n_atoms),
+                     range(n_atoms))
+
+    def test_call(self):
+        new_toy_snap = self.toy_modifier(self.toy_snapshot)
+        assert_array_almost_equal(new_toy_snap.coordinates,
+                                  self.toy_snapshot.coordinates)
+        new_vel = new_toy_snap.velocities
+        old_vel = self.toy_snapshot.velocities
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        assert_equal(Counter(same_vel), Counter({True: 1, False: 2}))
+        for new_v, old_v in zip(new_vel, old_vel):
+            assert_almost_equal(sum([v**2 for v in new_v]),
+                                sum([v**2 for v in old_v]))
+
+        new_omm_snap = self.openmm_modifier(self.openmm_snap)
+        n_atoms = len(self.openmm_snap.coordinates)
+        assert_array_almost_equal(new_omm_snap.coordinates,
+                                  self.openmm_snap.coordinates)
+        new_vel = new_omm_snap.velocities
+        old_vel = self.openmm_snap.velocities
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        assert_equal(Counter(same_vel), Counter({False: n_atoms}))
+        u_vel_sq = (u.nanometers / u.picoseconds)**2
+        for new_v, old_v in zip(new_vel, old_vel):
+            assert_almost_equal(
+                sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
+                sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
+            )
+
+    def test_call_with_linear_momentum_fix(self):
+        toy_modifier = VelocityDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2],
+            remove_linear_momentum=True
+        )
+        new_toy_snap = toy_modifier(self.toy_snapshot)
+        velocities = new_toy_snap.velocities
+        momenta = velocities * new_toy_snap.masses[:, np.newaxis]
+        assert_array_almost_equal(sum(momenta), np.array([0.0]*2))
+        double_ke = sum(sum(momenta * velocities))
+        assert_almost_equal(double_ke, 86.0)
+
+        u_vel = u.nanometer / u.picosecond
+        u_mass = u.dalton / u.AVOGADRO_CONSTANT_NA
+
+        openmm_modifier = VelocityDirectionModifier(
+            delta_v=1.2*u_vel,
+            remove_linear_momentum=False
+        )
+        new_openmm_snap = openmm_modifier(self.openmm_snap)
+        velocities = new_openmm_snap.velocities
+        momenta = velocities * new_openmm_snap.masses[:, np.newaxis]
+        zero_momentum = 0 * u_vel * u_mass
+        total_momenta = sum(momenta, zero_momentum)
+        assert_array_almost_equal(total_momenta,
+                                  np.array([0.0]*3) * u_vel * u_mass)
+
+class testSingleAtomVelocityDirectionModifier(object):
+    def setup(self):
+        import openpathsampling.engines.toy as toys
+        self.toy_modifier = SingleAtomVelocityDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2],
+            remove_linear_momentum=False
+        )
+        self.toy_engine = toys.Engine(
+            topology=toys.Topology(n_spatial=2, n_atoms=3, pes=None,
+                                   masses=np.array([1.0, 1.5, 4.0])),
+            options={}
+        )
+        self.toy_snapshot = toys.Snapshot(
+            coordinates=np.array([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]]),
+            velocities=np.array([[1.0, 1.0], [2.0, 2.0], [3.0, 3.0]]),
+            engine=self.toy_engine
+        )
+
+        u_vel = u.nanometer / u.picosecond
+        self.openmm_modifier = SingleAtomVelocityDirectionModifier(
+            delta_v=1.2*u_vel,
+            remove_linear_momentum=False
+        )
+        ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+        self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
+        self.openmm_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        
+        self.openmm_snap = self.test_snap.copy_with_replacement(
+            engine=self.openmm_engine,
+            velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
+        )
+
+    def test_select_atoms_to_modify(self):
+        selected = self.toy_modifier._select_atoms_to_modify(2)
+        assert_equal(len(selected), 1)
+        selected = [self.toy_modifier._select_atoms_to_modify(2)[0]
+                    for i in range(20)]
+        count = Counter(selected)
+        assert_equal(set([0, 1]), set(count.keys()))
+        assert_true(count[0] > 0)
+        assert_true(count[1] > 0)
+
+    def test_call(self):
+        new_toy_snap = self.toy_modifier(self.toy_snapshot)
+        assert_array_almost_equal(new_toy_snap.coordinates,
+                                  self.toy_snapshot.coordinates)
+        new_vel = new_toy_snap.velocities
+        old_vel = self.toy_snapshot.velocities
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        assert_equal(Counter(same_vel), Counter({True: 2, False: 1}))
+        for new_v, old_v in zip(new_vel, old_vel):
+            assert_almost_equal(sum([v**2 for v in new_v]),
+                                sum([v**2 for v in old_v]))
+
+        new_omm_snap = self.openmm_modifier(self.openmm_snap)
+        n_atoms = len(self.openmm_snap.coordinates)
+        assert_array_almost_equal(new_omm_snap.coordinates,
+                                  self.openmm_snap.coordinates)
+        new_vel = new_omm_snap.velocities
+        old_vel = self.openmm_snap.velocities
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                    for i in range(len(new_vel))]
+        assert_equal(Counter(same_vel), Counter({True: n_atoms-1, False: 1}))
+        u_vel_sq = (u.nanometers / u.picoseconds)**2
+        for new_v, old_v in zip(new_vel, old_vel):
+            assert_almost_equal(
+                sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
+                sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
+            )
+
+    def test_call_with_linear_momentum_fix(self):
+        toy_modifier = SingleAtomVelocityDirectionModifier(
+            delta_v=[1.0, 2.0],
+            subset_mask=[1, 2],
+            remove_linear_momentum=True
+        )
+        new_toy_snap = toy_modifier(self.toy_snapshot)
+        velocities = new_toy_snap.velocities
+        momenta = velocities * new_toy_snap.masses[:, np.newaxis]
+        assert_array_almost_equal(sum(momenta), np.array([0.0]*2))
+        double_ke = sum(sum(momenta * velocities))
+        assert_almost_equal(double_ke, 86.0)
+
+        u_vel = u.nanometer / u.picosecond
+        u_mass = u.dalton / u.AVOGADRO_CONSTANT_NA
+
+        openmm_modifier = SingleAtomVelocityDirectionModifier(
+            delta_v=1.2*u_vel,
+            remove_linear_momentum=False
+        )
+        new_openmm_snap = openmm_modifier(self.openmm_snap)
+        velocities = new_openmm_snap.velocities
+        momenta = velocities * new_openmm_snap.masses[:, np.newaxis]
+        zero_momentum = 0 * u_vel * u_mass
+        total_momenta = sum(momenta, zero_momentum)
+        assert_array_almost_equal(total_momenta,
+                                  np.array([0.0]*3) * u_vel * u_mass)

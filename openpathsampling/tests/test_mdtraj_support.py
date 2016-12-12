@@ -11,7 +11,7 @@ import openpathsampling as paths
 import mdtraj as md
 
 from openpathsampling.engines.openmm.tools import (
-    trajectory_from_mdtraj, trajectory_to_mdtraj
+    trajectory_from_mdtraj, trajectory_to_mdtraj, ops_load_trajectory
 )
 
 logging.getLogger('opentis.trajectory').setLevel(logging.DEBUG)
@@ -48,3 +48,8 @@ class testMDTrajSupport(object):
         md2 = trajectory_to_mdtraj([snap])
         assert_equal(md1, md2)
 
+    def test_ops_load_trajectory_pdb(self):
+        pdb_file = data_filename("ala_small_traj.pdb")
+        ops_trajectory = ops_load_trajectory(pdb_file)
+        # TODO: we should add tests to make sure this also works correctly
+        # with other file formats (e.g., gromacs, where `top` kw is req'd)

@@ -588,20 +588,20 @@ class SampleMover(PathMover):
             trials, call_details = self(*samples)
 
         except SampleNaNError as e:
+            e.details.update({'rejection_reason': 'nan'})
             return paths.RejectedNaNSampleMoveChange(
                 samples=e.trial_sample,
                 mover=self,
                 input_samples=samples,
-                details=paths.MoveDetails(
-                    rejection_reason='nan'),
+                details=paths.MoveDetails(**e.details)
             )
         except SampleMaxLengthError as e:
+            e.details.update({'rejection_reason': 'max_length'})
             return paths.RejectedMaxLengthSampleMoveChange(
                 samples=e.trial_sample,
                 mover=self,
                 input_samples=samples,
-                details=paths.MoveDetails(
-                    rejection_reason='max_length')
+                details=paths.Details(**e.details)
             )
 
         # 4. accept/reject
@@ -2543,11 +2543,19 @@ class Details(StorableObject):
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
 
+    _print_repr_types = [paths.Ensemble]
+    _print_nothing_keys = ["__uuid__"]
+
     def __str__(self):
         # primarily for debugging/interactive use
         mystr = ""
         for key in self.__dict__.keys():
-            if not isinstance(self.__dict__[key], paths.Ensemble):
+            obj = self.__dict__[key]
+            if key in self._print_nothing_keys:
+                pass  # do nothing!
+            elif any([isinstance(obj, tt) for tt in self._print_repr_types]):
+                mystr += str(key) + " = " + repr(obj) + '\n'
+            else:
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 

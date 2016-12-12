@@ -747,6 +747,7 @@ class MISTISNetwork(TISNetwork):
                 stateA=stateA,
                 stateB=final_state,
                 interfaces=transition.interfaces,
+                name=stateA.name + "->" + stateB.name,
                 orderparameter=transition.orderparameter
             )
 
@@ -773,7 +774,7 @@ class MISTISNetwork(TISNetwork):
             minus = paths.MinusInterfaceEnsemble(
                 state_vol=initial,
                 innermost_vols=innermosts
-            )
+            ).named(t.stateA.name + " MIS minus")
             try:
                 self.special_ensembles['minus'][minus] = trans_from_initial
             except KeyError:
