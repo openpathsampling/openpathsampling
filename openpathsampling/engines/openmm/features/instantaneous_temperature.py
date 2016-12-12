@@ -34,6 +34,8 @@ def instantaneous_temperature(snapshot):
     """
     # TODO: this can be generalized as a feature that works with any
     # snapshot that has features for KE (in units of kB) and n_dofs
+    old_snap = snapshot.engine.current_snapshot
+    snapshot.engine.current_snapshot = snapshot
     state = snapshot.engine.simulation.context.getState(getEnergy=True)
     # divide by Avogadro b/c OpenMM reports energy/mole
     ke_in_energy = state.getKineticEnergy() / u.AVOGADRO_CONSTANT_NA
@@ -42,5 +44,6 @@ def instantaneous_temperature(snapshot):
     dofs = snapshot.n_degrees_of_freedom
 
     temperature = 2 * ke_per_kB / dofs
+    snapshot.engine.current_snapshot = old_snap
     return temperature
 
