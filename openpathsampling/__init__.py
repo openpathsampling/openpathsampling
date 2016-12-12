@@ -111,7 +111,7 @@ from pathmover import (
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
     BackwardExtendMover, ForwardExtendMover, MinusMover,
     SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
-    ReplicaExchangeMover, EnsembleHopMover, ReplicaIDChangeMover,
+    ReplicaExchangeMover, EnsembleHopMover,
     SequentialMover, ConditionalMover,
     PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
     SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
@@ -119,7 +119,9 @@ from pathmover import (
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
     LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover,
-    IdentityPathMover, RandomAllowedChoiceMover
+    IdentityPathMover, RandomAllowedChoiceMover,
+    TwoWayShootingMover, ForwardFirstTwoWayShootingMover,
+    BackwardFirstTwoWayShootingMover
 )
 
 from pathsimulator import (
@@ -132,7 +134,10 @@ from sample import Sample, SampleSet
 from shooting import ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
 
-from snapshot_modifier import NoModification, RandomVelocities
+from snapshot_modifier import (
+    NoModification, RandomVelocities, VelocityDirectionModifier,
+    SingleAtomVelocityDirectionModifier
+)
 
 from storage.storage import Storage, AnalysisStorage
 
