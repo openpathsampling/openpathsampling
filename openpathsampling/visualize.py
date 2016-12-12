@@ -511,6 +511,7 @@ class MoveTreeBuilder(Builder):
         self.repl_x = list()
 
         self.options.analysis['only_canonical'] = True
+        self.options.analysis['label_with'] = "name"  # or "class"
 
         self.doc = None
 
@@ -524,13 +525,17 @@ class MoveTreeBuilder(Builder):
             self.initial = initial
 
     @staticmethod
-    def from_scheme(scheme):
+    def from_scheme(scheme, hidden_ensembles=True):
         """
-        Initaliza a new `MoveTreeBuilder` from the date in a `MoveScheme`
+        Initalize a new `MoveTreeBuilder` from the data in a `MoveScheme`
 
         Parameters
         ----------
         scheme : :obj:`openpathsampling.MoveScheme`
+            use the root mover of this scheme as the basis for visualization
+        hidden_ensembles : bool
+            whether to show the scheme's hidden ensembles as well (default
+            True)
 
         Returns
         -------
@@ -545,11 +550,14 @@ class MoveTreeBuilder(Builder):
             # error on the thing you return below ~~~DWHS
             input_ensembles = scheme.input_ensembles
 
-        hidden = list(scheme.find_hidden_ensembles())
         # using network.all_ensembles forces a correct ordering
+        ensembles = scheme.network.all_ensembles
+        if hidden_ensembles:
+            ensembles += list(scheme.find_hidden_ensembles())
+        
         return MoveTreeBuilder(
             pathmover=scheme.root_mover,
-            ensembles=scheme.network.all_ensembles + hidden,
+            ensembles=ensembles,
             initial=input_ensembles
         )
 
@@ -587,7 +595,17 @@ class MoveTreeBuilder(Builder):
             x_pos = - level
 
             sub_type = sub_mp.__class__
-            sub_name = sub_type.__name__[:-5]
+            if self.options.analysis['label_with'] == "name":
+                try:
+                    sub_name = sub_mp.name
+                except AttributeError:
+                    sub_name = sub_type.__name__[:-5]
+            elif self.options.analysis['label_with'] == "class":
+                sub_name = sub_type.__name__[:-5]
+            else:  # pragma: no cover (should never occur)
+                raise ValueError("Bad option for 'label_with': " 
+                                 + str(self.options.analysis['label_width']))
+
 
             if sub_type is paths.SampleMoveChange:
                 group.add(
@@ -746,7 +764,7 @@ class MoveTreeBuilder(Builder):
 
         doc['class'] = 'movetree'
 
-        left_x = -max_level * doc.scale_x - 120
+        left_x = -max_level * doc.scale_x - 130
         top_y = - 120
         width = len(self.ensembles) * doc.scale_x - left_x + 50
         height = (total + 1) * doc.scale_y - top_y

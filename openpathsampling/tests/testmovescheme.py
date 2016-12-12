@@ -1,6 +1,6 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, assert_in, raises, assert_is,
-                        assert_is_not)
+                        assert_is_not, assert_true)
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
@@ -729,10 +729,17 @@ class testDefaultScheme(object):
                          ensemble=paths.LengthEnsemble(4),
                          replica=None)
         )
-        expected = "Missing ensembles:\n"
-        expected += "*  [[MinusInterfaceEnsemble]]\n"*2
-        expected += "Extra ensembles:\n*  [LengthEnsemble]\n"
-        assert_equal(scheme.initial_conditions_report(init_cond), expected)
+        start = "Missing ensembles:\n"
+        missing_A = "*  [Out A minus]\n"
+        missing_B = "*  [Out B minus]\n"
+        finish = "Extra ensembles:\n*  [LengthEnsemble]\n"
+        expected_AB = start + missing_A + missing_B + finish
+        expected_BA = start + missing_B + missing_A + finish
+        result = scheme.initial_conditions_report(init_cond)
+        try:
+            assert_equal(result, expected_AB)
+        except AssertionError:
+            assert_equal(result, expected_BA)
 
 
 class testLockedMoveScheme(object):
