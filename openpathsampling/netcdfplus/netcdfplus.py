@@ -182,6 +182,14 @@ class NetCDFPlus(netCDF4.Dataset):
             the mode of file creation, one of 'w' (write), 'a' (append) or
             'r' (read-only) None, which will append any existing files
             (equal to append), is the default.
+        use_uuid : bool
+            if `True` the store will use UUIDs to identify all objects.
+            This is slower but allows arbitrary splitting and merging of objects
+        fallback : :class:`openpathsampling.Storage`
+            the _fallback_ storage to be loaded from if an object is not present
+            in this storage. By default you will not try to resave objects
+            that could be found in the fallback. Note that the fall back does
+            only work if `use_uuid` is enabled
 
         Notes
         -----
@@ -222,6 +230,12 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.filename = filename
         self.fallback = fallback
+
+        # this can be set to false to re-store objects present in the fallback
+        self.exclude_from_fallback = True
+
+        # this can be set to false to re-store proxies from other stores
+        self.exclude_proxy_from_other = False
 
         # call netCDF4-python to create or open .nc file
         super(NetCDFPlus, self).__init__(filename, mode)
@@ -578,6 +592,23 @@ class NetCDFPlus(netCDF4.Dataset):
         # Could not save this object.
         raise RuntimeWarning("Objects of type '%s' cannot be stored!" %
                              obj.__class__.__name__)
+
+    def __contains__(self, item):
+        if type(item) is list:
+            # a list of objects will be stored one by one
+            return [part in self for part in item]
+
+        elif type(item) is tuple:
+            # a tuple will store all parts
+            return tuple([part in self for part in item])
+
+        elif item.__class__ in self._obj_store:
+            # to store we just check if the base_class is present in the
+            # storages also we assume that if a class has no base_cls
+            store = self.find_store(item)
+            return item in store
+
+        return False
 
     def load(self, uuid):
         """
