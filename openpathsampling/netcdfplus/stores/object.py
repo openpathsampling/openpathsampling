@@ -334,9 +334,6 @@ class ObjectStore(StorableNamedObject):
             number of stored objects
 
         """
-        # if self.reference_by_uuid:
-        #     return len(self.index)
-
         return len(self.storage.dimensions[self.prefix])
 
     def write(self, variable, idx, obj, attribute=None):
@@ -386,6 +383,18 @@ class ObjectStore(StorableNamedObject):
             idx = item.__uuid__
 
         return LoaderProxy(self, idx)
+
+    def __contains__(self, item):
+        if item.__uuid__ in self.index:
+            return True
+
+        if self.fallback_store is not None and item in self.fallback_store:
+            return True
+
+        if self.storage.fallback is not None and item in self.storage.fallback:
+            return True
+
+        return False
 
     def __getitem__(self, item):
         """
@@ -826,6 +835,14 @@ class ObjectStore(StorableNamedObject):
                 # to save again the loaded object. We will not explicitly store
                 # a table that matches objects between different storages.
                 return self.save(obj.__subject__)
+
+        if self.fallback_store is not None and self.storage.exclude_from_fallback:
+            if obj in self.fallback_store:
+                return self.reference(obj)
+
+        elif self.storage.fallback is not None and self.storage.exclude_from_fallback:
+            if obj in self.storage.fallback:
+                return self.reference(obj)
 
         if not isinstance(obj, self.content_class):
             raise ValueError((
