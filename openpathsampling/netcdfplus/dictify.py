@@ -661,7 +661,7 @@ class CachedUUIDObjectJSON(ObjectJSON):
         return super(CachedUUIDObjectJSON, self).to_json(obj, base_type)
 
     # def from_json(self, json_string):
-    #     # here we keep the cache. It could happen that an object is sended in
+    #     # here we keep the cache. It could happen that an object is sent in
     #     # full, but we still have it and so we do not have to rebuild it which
     #     # saves some time
     #     simplified = ujson.loads(json_string)

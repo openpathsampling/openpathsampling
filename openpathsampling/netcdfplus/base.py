@@ -114,7 +114,7 @@ class StorableObject(object):
 
         Parameters
         ----------
-        store : :class:`openpathsampling.netcdfplus.objects.ObjectStore`
+        store : :class:`openpathsampling.netcdfplus.ObjectStore`
             the store in which to ask for the index
 
         Returns
@@ -314,49 +314,43 @@ class StorableObject(object):
         if dct is None:
             dct = {}
 
-        try:
-
-            if hasattr(cls, 'args'):
-                args = cls.args()
-                init_dct = {key: dct[key] for key in dct if key in args}
-
+        if hasattr(cls, 'args'):
+            args = cls.args()
+            init_dct = {key: dct[key] for key in dct if key in args}
+            try:
                 obj = cls(**init_dct)
 
                 if cls._restore_non_initial_attr:
-                    non_init_dct = {key: dct[key] for key in dct if key not in args}
+                    non_init_dct = {
+                        key: dct[key] for key in dct if key not in args}
 
                     if len(non_init_dct) > 0:
                         for key, value in non_init_dct.iteritems():
                             setattr(obj, key, value)
 
-            else:
-                obj = cls(**dct)
+                return obj
 
-            # if cls._restore_name:
-            #     if 'name' in dct:
-            #         obj.name = dct['name']
+            except TypeError as e:
+                if hasattr(cls, 'args'):
+                    err = (
+                        'Could not reconstruct the object of class `%s`. '
+                        '\nStored parameters: %s \n'
+                        '\nCall parameters: %s \n'
+                        '\nSignature parameters: %s \n'
+                        '\nActual message: %s'
+                    ) % (
+                        cls.__name__,
+                        str(dct),
+                        str(init_dct),
+                        str(cls.args),
+                        str(e)
+                    )
+                    raise TypeError(err)
+                else:
+                    raise
 
-            return obj
-
-        except TypeError as e:
-            if hasattr(cls, 'args'):
-                err = (
-                    'Could not reconstruct the object of class `%s`. '
-                    '\nStored parameters: %s \n'
-                    '\nCall parameters: %s \n'
-                    '\nSignature parameters: %s \n'
-                    '\nActual message: %s'
-
-                ) % (
-                    cls.__name__,
-                    str(dct),
-                    str(init_dct),
-                    str(args),
-                    str(e)
-                )
-            else:
-                err = e
-            raise TypeError(err)
+        else:
+            return cls(**dct)
 
 
 class StorableNamedObject(StorableObject):
