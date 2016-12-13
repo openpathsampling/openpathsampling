@@ -83,7 +83,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         self.diskcache_enabled = True
         return self
 
-    def with_diskcache(self, template=None, chunksize=None, allow_incomplete=None):
+    def with_diskcache(
+            self, template=None, chunksize=None, allow_incomplete=None):
         self.diskcache_enabled = True
         if template:
             self.diskcache_template = template
@@ -636,7 +637,8 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
 
     This is identical to FunctionCV except that the function is called with
     an mdraj.Trajetory object instead of the
-    :class:`openpathsampling.Trajectory` one using `f(traj.to_mdtraj(), \**kwargs)`
+    :class:`openpathsampling.Trajectory` one using
+    `f(traj.to_mdtraj(), **kwargs)`
 
     Examples
     --------
@@ -783,7 +785,7 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
     def _eval(self, items):
         trajectory = peng.Trajectory(items)
 
-        # create an MDtraj trajectory out of it
+        # create an mdtraj trajectory out of it
         ptraj = trajectory_to_mdtraj(trajectory, self.topology.mdtraj)
 
         # run the featurizer
