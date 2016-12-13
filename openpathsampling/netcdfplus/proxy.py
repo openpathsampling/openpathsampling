@@ -77,8 +77,9 @@ class LoaderProxy(object):
         Call the loader and get the referenced object
         """
         try:
+            # print 'load', self.__class__.__name__, self._idx
             return self._store[self._idx]
-        except KeyError:
+        except KeyError as e:
             if type(self._idx) is int:
                 raise RuntimeWarning(
                     'Index %s is not in store. This should never happen!' %

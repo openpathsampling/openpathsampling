@@ -741,9 +741,9 @@ class SnapshotWrapperStore(ObjectStore):
             except KeyError:
                 raise KeyError(obj)
 
-    def cache_all_cvs(self):
-        for store, idx in self.cv_list.values():
-            store.fill_cache()
+    # def cache_all_cvs(self):
+    #     for store, idx in self.cv_list.values():
+    #         store.fill_cache()
 
     def pos(self, obj):
         return self.index.get(obj.__uuid__)

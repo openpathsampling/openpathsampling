@@ -186,6 +186,9 @@ class StorableObject(object):
 
         return cls._base
 
+    def __hash__(self):
+        return hash(self.__uuid__)
+
     @property
     def base_cls_name(self):
         """
