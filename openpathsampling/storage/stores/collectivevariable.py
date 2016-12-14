@@ -150,4 +150,10 @@ class CVStore(UniqueNamedObjectStore):
         Fill the caches of all CVs
 
         """
-        pass
+
+        # load all CVs regularly
+        for cv in self:
+            # And cache the feature stores
+            store, idx = self.storage.snapshots.cv_list.get(cv)
+            if store is not None:
+                store.fill_cache()
