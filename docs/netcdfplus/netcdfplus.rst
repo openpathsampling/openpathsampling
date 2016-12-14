@@ -1,6 +1,6 @@
 .. _netcdfplus:
 
-.. currentmodule:: openpathsampling.netcdfplus.netcdfplus
+.. currentmodule:: openpathsampling.netcdfplus
 
 netCDFplus Base Class
 =====================

@@ -186,7 +186,7 @@ storage.save([psi, phi])
 
 def circle_degree(snapshot, center, phi_cv, psi_cv):
     import numpy
-    p = numpy.array([psi_cv(snapshot), phi_cv(snapshot)]) / numpy.pi * 180.0
+    p = numpy.array([phi_cv(snapshot), psi_cv(snapshot)]) / numpy.pi * 180.0
     delta = numpy.abs(center - p)
     delta = numpy.where(delta > 180.0, delta - 360.0, delta)
     return numpy.hypot(delta[0], delta[1])
