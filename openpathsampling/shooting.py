@@ -32,7 +32,11 @@ class ShootingPointSelector(StorableNamedObject):
         return 1.0
 
     def probability(self, snapshot, trajectory):
-        return self.f(snapshot, trajectory) / self.sum_bias(trajectory)
+        sum_bias = self.sum_bias(trajectory)
+        if sum_bias > 0.0:
+            return self.f(snapshot, trajectory) / sum_bias
+        else:
+            return 0.0
 
     def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
         p_old = self.probability(snapshot, old_trajectory)
