@@ -636,7 +636,7 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
     """Make `CollectiveVariable` from `f` that takes mdtraj.trajectory as input.
 
     This is identical to FunctionCV except that the function is called with
-    an mdraj.Trajetory object instead of the
+    an :class:`mdtraj.Trajectory` object instead of the
     :class:`openpathsampling.Trajectory` one using
     `f(traj.to_mdtraj(), **kwargs)`
 

@@ -700,7 +700,7 @@ class MoveScheme(StorableNamedObject):
                     self._mover_acceptance[key] = [acc, is_trial]
 
     def move_summary(
-            self, steps, movers=None, output=sys.stdout, depth=0, scheme_copies=None):
+            self, steps, movers=None, output=sys.stdout, depth=0):
         """
         Provides a summary of the movers in `steps`.
 
@@ -722,10 +722,6 @@ class MoveScheme(StorableNamedObject):
         depth : integer or None
             depth of submovers to show: if integer, shows that many
             submovers for each move; if None, shows all submovers
-        scheme_copies : lits of :class:`MoveScheme`
-            list any movescheme here that is considered the same as the object
-            itself. This is useful if you ran the same network twice but
-            created several MoveSchemes to run on multiple instances
         """
         my_movers = {}
         expected_frequency = {}
@@ -739,11 +735,11 @@ class MoveScheme(StorableNamedObject):
             except KeyError:
                 my_movers[key] = [key]
 
-        if scheme_copies is not None:
-            for sc in scheme_copies:
-                movers = sc.movers.keys()
-                for key in movers:
-                    my_movers[key].extend(self.movers[key])
+        # if scheme_copies is not None:
+        #     for sc in scheme_copies:
+        #         movers = sc.movers.keys()
+        #         for key in movers:
+        #             my_movers[key].extend(self.movers[key])
 
         stats = {}
         for groupname in my_movers.keys():

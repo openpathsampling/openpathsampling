@@ -36,6 +36,7 @@ except ImportError:
 
 last_output = None
 
+
 def refresh_output(output_str, print_anyway=True, refresh=True,
                    output_stream=None, ipynb_display_only=False):
 
@@ -63,7 +64,7 @@ def refresh_output(output_str, print_anyway=True, refresh=True,
         last_output = None
 
     output_stream.write(output_str)
-    sys.stdout.flush()
+    output_stream.flush()
 
 
 # a little code snippet to wrap strings around for nicer output
