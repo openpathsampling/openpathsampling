@@ -760,7 +760,9 @@ class EngineMover(SampleMover):
 
         initial_trajectory = input_sample.trajectory
 
-        if stopping_reason is None:
+        trial_in_ensemble = input_sample.ensemble(trial_trajectory)
+
+        if stopping_reason is None and trial_in_ensemble: 
             bias = self.selector.probability_ratio(
                 initial_trajectory[shooting_index],
                 initial_trajectory,
