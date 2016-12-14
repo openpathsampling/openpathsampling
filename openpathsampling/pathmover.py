@@ -551,7 +551,13 @@ class SampleMover(PathMover):
             'metropolis_random': rand
         }
 
-        logger.info("Trial was " + ("accepted" if accepted else "rejected"))
+        if accepted:
+            result_str = "accepted"
+        else:
+            result_str = ("rejected. Acceptance probabilty "
+                          + str(probability))
+
+        logger.info("Trial was " + result_str)
 
         return accepted, details
 
@@ -760,9 +766,7 @@ class EngineMover(SampleMover):
 
         initial_trajectory = input_sample.trajectory
 
-        trial_in_ensemble = input_sample.ensemble(trial_trajectory)
-
-        if stopping_reason is None and trial_in_ensemble: 
+        if stopping_reason is None:
             bias = self.selector.probability_ratio(
                 initial_trajectory[shooting_index],
                 initial_trajectory,
