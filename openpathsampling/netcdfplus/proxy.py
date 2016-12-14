@@ -152,12 +152,11 @@ def lazy_loading_attributes(*attributes):
 
         _super_init = cls.__init__
 
-        code =  'def _init(self, %s):'
+        code = 'def _init(self, %s):'
 
         source_code = '\n'.join(code)
         cc = compile(source_code, '<string>', 'exec')
         exec cc in locals()
-
 
         @functools.wraps(cls.__init__)
         def _init(self, *args, **kwargs):

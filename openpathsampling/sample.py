@@ -761,7 +761,6 @@ class Sample(StorableObject):
     """
 
     parent = DelayedLoader()
-    # details = DelayedLoader()
     mover = DelayedLoader()
 
     def __init__(self,
@@ -770,8 +769,7 @@ class Sample(StorableObject):
                  ensemble=None,
                  bias=1.0,
                  parent=None,
-                 mover=None,
-                 details=None
+                 mover=None
                  ):
 
         super(Sample, self).__init__()

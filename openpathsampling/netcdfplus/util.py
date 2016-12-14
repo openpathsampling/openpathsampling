@@ -1,10 +1,6 @@
-__author__ = 'jan-hendrikprinz'
-
 from time import time as tt
-
 import logging
 
-# logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 enable_timing = True

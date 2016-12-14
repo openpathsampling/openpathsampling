@@ -21,6 +21,7 @@ class HashedList(dict):
         dict.__setitem__(self, key, len(self))
         self._list.append(key)
 
+    # noinspection PyCallByClass
     def extend(self, t):
         l = len(self)
         map(lambda x, y: dict.__setitem__(self, x, y), t, range(l, l + len(t)))
@@ -227,9 +228,6 @@ class ObjectStore(StorableNamedObject):
         self.load_indices()
 
     def load_indices(self):
-        # uuids = self.vars['uuid'][:]
-        # for idx, uuid in enumerate(uuids):
-        #     self.index[uuid] = idx
         self.index.clear()
         self.index.extend(self.vars['uuid'][:])
 
@@ -321,7 +319,7 @@ class ObjectStore(StorableNamedObject):
         Add iteration over all elements in the storage
         """
         # we want to iterator in the order object were saved!
-        for uuid in self.index.list:
+        for uuid in self.index._list:
             yield self.load(uuid)
 
     def __len__(self):
@@ -334,9 +332,6 @@ class ObjectStore(StorableNamedObject):
             number of stored objects
 
         """
-        # if self.reference_by_uuid:
-        #     return len(self.index)
-
         return len(self.storage.dimensions[self.prefix])
 
     def write(self, variable, idx, obj, attribute=None):
@@ -386,6 +381,18 @@ class ObjectStore(StorableNamedObject):
             idx = item.__uuid__
 
         return LoaderProxy(self, idx)
+
+    def __contains__(self, item):
+        if item.__uuid__ in self.index:
+            return True
+
+        if self.fallback_store is not None and item in self.fallback_store:
+            return True
+
+        if self.storage.fallback is not None and item in self.storage.fallback:
+            return True
+
+        return False
 
     def __getitem__(self, item):
         """
@@ -539,17 +546,19 @@ class ObjectStore(StorableNamedObject):
 
         self._created = True
 
-    # ==============================================================================
+    # ==========================================================================
     # INITIALISATION UTILITY FUNCTIONS
-    # ==============================================================================
+    # ==========================================================================
 
     def create_variable(
             self,
-            name,
+            var_name,
             var_type,
             dimensions=None,
             chunksizes=None,
-            **kwargs
+            description=None,
+            simtk_unit=None,
+            maskable=False
     ):
         """
         Create a new variable in the netCDF storage. This is just a helper
@@ -557,36 +566,41 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ==========
-        name : str
-            The name of the variable to be created
+        var_name : str
+            The var_name of the variable to be created
         var_type : str
-            The string representing the type of the data stored in the variable.
-            Allowed are strings of native python types in which case the
-            variables will be treated as python or a string of the form
-            'numpy.type' which will refer to the numpy data types. Numpy is
-            preferred since the api to netCDF uses numpy and thus it is faster.
-            Possible input strings are `int`, `float`, `long`, `str`,
-            `numpy.float32`, `numpy.float64`, `numpy.int8`, `numpy.int16`,
-            `numpy.int32`, `numpy.int64`
+            The string representing the type of the data stored in the
+            variable.  Allowed are strings of native python types in which
+            case the variables will be treated as python or a string of the
+            form 'numpy.type' which will refer to the numpy data types.
+            Numpy is preferred sinec the api to netCDF uses numpy and thus
+            it is faster. Possible input strings are
+            `int`, `float`, `long`, `str`, `numpy.float32`, `numpy.float64`,
+            `numpy.int8`, `numpy.int16`, `numpy.int32`, `numpy.int64`, `json`,
+            `obj.<store>`, `lazyobj.<store>`
         dimensions : str or tuple of str
             A tuple representing the dimensions used for the netcdf variable.
             If not specified then the default dimension of the storage is used.
-        simtk_units : str
-            A string representing the units used if the var_type is `float`
-            the units is set to `none`
+            If the last dimension is `'...'` then it is assumed that the
+            objects are of variable length. In netCDF this is usually
+            referred to as a VLType.  We will treat is just as another
+            dimension, but it can only be the last dimension.
         description : str
             A string describing the variable in a readable form.
-        variable_length : bool
-            If true the variable is treated as a variable length (list) of the
-            given type. A built-in example for this type is a string which is
-            a variable length of char. This make using all the mixed
-            stuff superfluous
-        chunksizes : tuple of int or int
+        chunksizes : tuple of int
             A tuple of ints per number of dimensions. This specifies in what
             block sizes a variable is stored. Usually for object related stuff
             we want to store everything of one object at once so this is often
-            (1, ..., ...). A single int is interpreted as a tuple with one
-            entry.
+            (1, ..., ...)
+        simtk_unit : str
+            A string representing the units used for this variable. Can be
+            used with all var_types although it makes sense only for numeric
+            ones.
+        maskable : bool, default: False
+            If set to `True` the values in this variable can only partially
+            exist and if they have not yet been written they are filled with
+            a fill_value which is treated as a non-set variable. The created
+            variable will interpret this values as `None` when returned
         """
 
         # add the main dimension to the var_type
@@ -633,11 +647,13 @@ class ObjectStore(StorableNamedObject):
             )
 
         self.storage.create_variable(
-            self.prefix + '_' + name,
+            self.prefix + '_' + var_name,
             var_type=var_type,
             dimensions=dimensions,
             chunksizes=chunksizes,
-            **kwargs
+            description=description,
+            simtk_unit=simtk_unit,
+            maskable=maskable
         )
 
     @property
@@ -826,6 +842,16 @@ class ObjectStore(StorableNamedObject):
                 # to save again the loaded object. We will not explicitly store
                 # a table that matches objects between different storages.
                 return self.save(obj.__subject__)
+
+        if self.fallback_store is not None and \
+                self.storage.exclude_from_fallback:
+            if obj in self.fallback_store:
+                return self.reference(obj)
+
+        elif self.storage.fallback is not None and \
+                self.storage.exclude_from_fallback:
+            if obj in self.storage.fallback:
+                return self.reference(obj)
 
         if not isinstance(obj, self.content_class):
             raise ValueError((
