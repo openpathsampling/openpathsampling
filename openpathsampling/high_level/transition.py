@@ -337,8 +337,8 @@ class TISTransition(Transition):
         # elif method == "mbar":
         #     pass
         else:
-            raise ValueError("Only supported methods are 'wham'.  "
-                             + "Whereas 'mbar' is not yet implemented!")
+            raise ValueError("Only supported method is 'wham'.  "
+                             + "'mbar' is not yet implemented!")
 
         self.tcp = LookupFunction(tcp.keys(), tcp.values())
         return self.tcp
