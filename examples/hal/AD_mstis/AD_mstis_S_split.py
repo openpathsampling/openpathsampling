@@ -15,7 +15,6 @@ def strip_snapshots(input_storage, output_storage=None):
     base_filename = os.path.basename(input_storage)
     path_to_file = os.path.dirname(os.path.realpath(input_storage))
 
-
     print """1. Cache for reading"""
 
     storage = paths.Storage(input_storage)
@@ -28,15 +27,12 @@ def strip_snapshots(input_storage, output_storage=None):
     else:
         strip_filename = output_storage
 
-    # st_traj = paths.Storage('mstis_traj.nc', 'w')
-    # st_data = paths.Storage('mstis_data.nc', 'w')
     st_strip = paths.Storage(os.path.join(path_to_file, strip_filename), 'w')
-
-    st_strip.fallback = storage
 
     # save single snappshot
     st_strip.snapshots.save(storage.snapshots[0])
-    # st_traj.snapshots.save(storage.snapshots[0])
+
+    # st_strip.fallback = storage
 
     # cache proxies for all snapshots
     q = storage.snapshots.all().as_proxies()
@@ -65,10 +61,6 @@ def strip_snapshots(input_storage, output_storage=None):
     for traj in tqdm(storage.trajectories):
         st_strip.trajectories.mention(traj)
 
-    # _ = map(st_strip.trajectories.mention, storage.trajectories)
-
-    # _ = map(st_traj.trajectories.save, storage.trajectories)
-
     # save all the steps / all we want for analysis
     print """5. Copy steps"""
     for step in tqdm(storage.steps):
@@ -77,14 +69,12 @@ def strip_snapshots(input_storage, output_storage=None):
     # Some output
     print 'Original file:', storage.file_size_str
     print 'Stripped file:', st_strip.file_size_str
-    # print 'Traj file:', st_traj.file_size_str
     print 'So we saved about %2.0f %%' % (
         (1.0 - st_strip.file_size / float(storage.file_size)) * 100.0)
 
     print """6. Closing"""
 
     st_strip.close()
-    # st_traj.close()
     storage.close()
 
     print """7. Done"""
