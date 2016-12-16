@@ -46,6 +46,8 @@ cd $PBS_O_WORKDIR
 
 # Launch my program.
 pwd
-python /cbio/jclab/home/prinzj/projects/ops/AD_mstis/AD_mstis_1_setup.py
+setenv OPS_PROJECT_NUMBER 1
+python /cbio/jclab/home/prinzj/projects/ops/AD_mstis/AD_mstis_A1_resetup.py
+setenv OPS_PROJECT_NUMBER 2
 python /cbio/jclab/home/prinzj/projects/ops/AD_mstis/AD_mstis_2_run.py
 python /cbio/jclab/home/prinzj/projects/ops/AD_mstis/AD_mstis_5_split.py

@@ -5,17 +5,17 @@ import re
 
 # file paths
 
-project_path = join(
-    '/Users', 'jan-hendrikprinz', 'Studium', 'git',
-    'openpathsampling', 'examples', 'hal', 'AD_mstis'
-)
-
-resource_path = project_path
-
 # project_path = join(
-#     '/cbio', 'jclab', 'home', 'prinzj', 'projects', 'ops', 'AD_mstis/')
+#     '/Users', 'jan-hendrikprinz', 'Studium', 'git',
+#     'openpathsampling', 'examples', 'hal', 'AD_mstis'
+# )
 #
-# resource_path = join(project_path, 'data/')
+# resource_path = project_path
+
+project_path = join(
+    '/cbio', 'jclab', 'home', 'prinzj', 'projects', 'ops', 'AD_mstis/')
+
+resource_path = join(project_path, 'data/')
 data_path = project_path
 
 # project setting
@@ -36,13 +36,12 @@ for f in project_files:
     except:
         pass
 
-number = os.getenv('OPS_PROJECT_NUMBER', number)
+number = int(os.getenv('OPS_PROJECT_NUMBER', number))
 
 base_storage_fnc = lambda x: 'ala_mstis[%d]' % x
 base_storage_name = base_storage_fnc(number)
 
-bfn = lambda n, part: join(data_path, '%s[%d]_%s.nc' % (base_name, n, part))
-
+bfn = lambda no, part: join(data_path, '%s[%d]_%s.nc' % (base_name, no, part))
 
 pdb_file = join(resource_path, 'AD_initial_frame.pdb')
 
