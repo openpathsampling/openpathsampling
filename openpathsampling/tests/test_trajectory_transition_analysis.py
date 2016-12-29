@@ -40,7 +40,7 @@ class testTrajectorySegmentContainer(object):
     @raises(TypeError)
     def test_segments_setitem_fails(self):
         self.container[0] = self.trajectory
-    
+
     def test_segments(self):
         assert_equal(self.container[0], self.trajectory[0:2])
         assert_equal(self.container[1], self.trajectory[6:8])
@@ -84,7 +84,7 @@ class testTrajectorySegmentContainer(object):
         container_B += self.container
         assert_equal(len(container_B), 5)
         assert_equal(container_B_id, id(container_B))
-        
+
 
 class testTrajectoryTransitionAnalysis(object):
     def setup(self):
@@ -98,8 +98,9 @@ class testTrajectoryTransitionAnalysis(object):
 
         self.stateX = ~vol1 & ~vol3
 
-        transition = paths.TPSTransition(self.stateA, self.stateB)
-        self.analyzer = paths.TrajectoryTransitionAnalysis(transition, dt=0.1)
+        self.transition = paths.TPSTransition(self.stateA, self.stateB)
+        self.analyzer = paths.TrajectoryTransitionAnalysis(self.transition,
+                                                           dt=0.1)
         self.traj_str = "aaaxaxxbxaxababaxbbbbbxxxxxxa"
         # frame numbers "0    5    0    5    0    5  8"
         self.trajectory = self._make_traj(self.traj_str)
@@ -153,11 +154,11 @@ class testTrajectoryTransitionAnalysis(object):
 
     def test_analyze_flux(self):
         # A: [{out: 1, in: 1}
-        # B: insufficient 
+        # B: insufficient
         # NOTE: we may want a separate trajectory for this
         flux_core_test_str = "axaxaaaxxaxbxaaxxabaa"
         # frame numbers       0    5    0    5    0
-        # in (I) or out (O):   OIOIIIOOI   IIOO 
+        # in (I) or out (O):   OIOIIIOOI   IIOO
         core_traj = self._make_traj(flux_core_test_str)
         flux_segs_A = self.analyzer.analyze_flux(core_traj, self.stateA)
         # flux_segs_A = self.analyzer.flux_segments[self.stateA]
@@ -176,19 +177,41 @@ class testTrajectoryTransitionAnalysis(object):
     def test_analyze_flux_with_interface(self):
         flux_iface_traj_str = "aixixaiaxiixiaxaixbxbixiaaixiai"
         # frame numbers        0    5    0    5    0    5    0
-        # in (I) or out (O)      OOOIIIOOOOOIOII       IIIOO 
+        # in (I) or out (O)      OOOIIIOOOOOIOII       IIIOO
         assert_equal(len(flux_iface_traj_str), 31) # check I counted correctly
         flux_traj = self._make_traj(flux_iface_traj_str)
         self.analyzer.reset_analysis()
         flux_segs_A = self.analyzer.analyze_flux(flux_traj, self.stateA,
                                                  self.interfaceA0)
         # flux_segs_A = self.analyzer.flux_segments[self.stateA]
-        assert_equal(flux_segs_A['in'][:], 
+        assert_equal(flux_segs_A['in'][:],
                      [flux_traj[5:8], flux_traj[13:14], flux_traj[15:17],
                       flux_traj[24:27]])
-        assert_equal(flux_segs_A['out'][:], 
+        assert_equal(flux_segs_A['out'][:],
                      [flux_traj[2:5], flux_traj[8:13], flux_traj[14:15],
                       flux_traj[27:29]])
+
+    def test_flux(self):
+        flux_iface_traj_str = "aixixaiaxiixiaxaixbxbixiaaixiai"
+        flux_traj = self._make_traj(flux_iface_traj_str)
+        self.analyzer.reset_analysis()
+        self.analyzer.dt = 1.0
+        flux = self.analyzer.flux(trajectories=[flux_traj],
+                                  state=self.stateA,
+                                  interface=self.interfaceA0)
+        average_out = (3.0 + 5.0 + 1.0 + 2.0) / 4.0
+        average_in = (3.0 + 1.0 + 2.0 + 3.0) / 4.0
+        assert_almost_equal(flux, 1.0 / (average_out + average_in))
+        self.analyzer.dt = None
+
+    @raises(RuntimeError)
+    def test_flux_no_dt(self):
+        analyzer = paths.TrajectoryTransitionAnalysis(self.transition)
+        flux_iface_traj_str = "aixixaiaxiixiaxaixbxbixiaaixiai"
+        flux_traj = self._make_traj(flux_iface_traj_str)
+        flux = analyzer.flux(trajectories=[flux_traj],
+                             state=self.stateA,
+                             interface=self.interfaceA0)
 
     def test_analyze(self):
         # only test that it runs -- correctness testing in the others
@@ -202,9 +225,9 @@ class testTrajectoryTransitionAnalysis(object):
 
         self.analyzer.reset_analysis()
         self.analyzer.analyze([self.trajectory])
-        assert_equal(cont_frames[self.stateA].tolist(), 
+        assert_equal(cont_frames[self.stateA].tolist(),
                      self.analyzer.continuous_frames[self.stateA].tolist())
-        assert_equal(life_frames[self.stateA].tolist(), 
+        assert_equal(life_frames[self.stateA].tolist(),
                      self.analyzer.lifetime_frames[self.stateA].tolist())
         A2B = (self.stateA, self.stateB)
         assert_equal(trans_frames[A2B].tolist(),
