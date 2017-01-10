@@ -22,23 +22,24 @@ class StorableObject(object):
 
     INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
     CREATION_COUNT = 0L
+    ACTIVE_LONG = int(uuid.UUID(
+            fields=tuple(
+                INSTANCE_UUID +
+                [CREATION_COUNT]
+            )
+        ))
 
     @staticmethod
     def get_uuid():
-        StorableObject.CREATION_COUNT += 2
-        return uuid.UUID(
-            fields=tuple(
-                StorableObject.INSTANCE_UUID +
-                [StorableObject.CREATION_COUNT]
-            )
-        )
+        StorableObject.ACTIVE_LONG += 2
+        return StorableObject.ACTIVE_LONG
 
     def reverse_uuid(self):
-        return StorableObject.ruuid(self.__uuid__)
+        return self.__uuid__ ^ 1
 
     @staticmethod
     def ruuid(uid):
-        return uuid.UUID(int=int(uid) ^ 1)
+        return uid ^ 1
 
     def __init__(self):
         self.__uuid__ = StorableObject.get_uuid()
@@ -113,7 +114,7 @@ class StorableObject(object):
 
         Parameters
         ----------
-        store : :class:`openpathsampling.netcdfplus.objects.ObjectStore`
+        store : :class:`openpathsampling.netcdfplus.ObjectStore`
             the store in which to ask for the index
 
         Returns
@@ -140,25 +141,25 @@ class StorableObject(object):
         """
         return self.__class__.__name__
 
-    def save(self, store):
-        """
-        Save the object in the given store (or storage)
-
-        Parameters
-        ----------
-        store : :class:`openpathsampling.netcdfplus.ObjectStore` or \
-        :class:`openpathsampling.netcdfplus.netcdfplus.NetCDFPlus`
-            the store or storage to be saved in. if a storage is given then
-            the default store for the given object base type is determined and
-            the appropriate store is used.
-
-        Returns
-        -------
-        int or None
-            the integer index used to save the object or `None` if the object
-            has already been saved.
-        """
-        store.save(self)
+    # def save(self, store):
+    #     """
+    #     Save the object in the given store (or storage)
+    #
+    #     Parameters
+    #     ----------
+    #     store : :class:`openpathsampling.netcdfplus.ObjectStore` or \
+    #     :class:`openpathsampling.netcdfplus.netcdfplus.NetCDFPlus`
+    #         the store or storage to be saved in. if a storage is given then
+    #         the default store for the given object base type is determined and
+    #         the appropriate store is used.
+    #
+    #     Returns
+    #     -------
+    #     int or None
+    #         the integer index used to save the object or `None` if the object
+    #         has already been saved.
+    #     """
+    #     store.save(self)
 
     @classmethod
     def base(cls):
@@ -184,6 +185,9 @@ class StorableObject(object):
                         cls._base = cls
 
         return cls._base
+
+    def __hash__(self):
+        return hash(self.__uuid__)
 
     @property
     def base_cls_name(self):
@@ -313,45 +317,40 @@ class StorableObject(object):
         if hasattr(cls, 'args'):
             args = cls.args()
             init_dct = {key: dct[key] for key in dct if key in args}
-            non_init_dct = {key: dct[key] for key in dct if key not in args}
+            try:
+                obj = cls(**init_dct)
+
+                if cls._restore_non_initial_attr:
+                    non_init_dct = {
+                        key: dct[key] for key in dct if key not in args}
+
+                    if len(non_init_dct) > 0:
+                        for key, value in non_init_dct.iteritems():
+                            setattr(obj, key, value)
+
+                return obj
+
+            except TypeError as e:
+                if hasattr(cls, 'args'):
+                    err = (
+                        'Could not reconstruct the object of class `%s`. '
+                        '\nStored parameters: %s \n'
+                        '\nCall parameters: %s \n'
+                        '\nSignature parameters: %s \n'
+                        '\nActual message: %s'
+                    ) % (
+                        cls.__name__,
+                        str(dct),
+                        str(init_dct),
+                        str(cls.args),
+                        str(e)
+                    )
+                    raise TypeError(err)
+                else:
+                    raise
+
         else:
-            args = {}
-            init_dct = dct
-            non_init_dct = {}
-
-        try:
-            obj = cls(**init_dct)
-
-            if cls._restore_non_initial_attr:
-                if len(non_init_dct) > 0:
-                    for key, value in non_init_dct.iteritems():
-                        setattr(obj, key, value)
-            else:
-                if cls._restore_name:
-                    if 'name' in dct:
-                        obj.name = dct['name']
-
-            return obj
-
-        except TypeError as e:
-            if init_dct and args:
-                err = (
-                    'Could not reconstruct the object of class `%s`. '
-                    '\nStored parameters: %s \n'
-                    '\nCall parameters: %s \n'
-                    '\nSignature parameters: %s \n'
-                    '\nActual message: %s'
-
-                ) % (
-                    cls.__name__,
-                    str(dct),
-                    str(init_dct),
-                    str(args),
-                    str(e)
-                )
-            else:
-                err = e
-            raise TypeError(err)
+            return cls(**dct)
 
 
 class StorableNamedObject(StorableObject):

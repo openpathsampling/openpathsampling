@@ -321,18 +321,19 @@ class PeriodicVolumeInterfaceSet(GenericVolumeInterfaceSet):
         dct['period_max'] = self.period_max
         return dct
 
-    @staticmethod
-    def from_dict(dct):
-        interface_set = PeriodicVolumeInterfaceSet.__new__(
-            PeriodicVolumeInterfaceSet
-        )
+    @classmethod
+    def from_dict(cls, dct):
+        interface_set = cls.__new__(cls)
+
         interface_set._load_from_dict(dct)
         interface_set.period_min = dct['period_min']
         interface_set.period_max = dct['period_max']
         volume_func = lambda minv, maxv: paths.PeriodicCVDefinedVolume(
-            interface_set.cv, minv, maxv, self.period_min, self.period_max
+            interface_set.cv,
+            minv, maxv,
+            interface_set.period_min,
+            interface_set.period_max
         )
         super(InterfaceSet, interface_set).__init__()
         interface_set._set_volume_func(volume_func)
         return interface_set
-

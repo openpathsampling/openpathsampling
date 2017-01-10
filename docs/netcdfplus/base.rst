@@ -1,6 +1,6 @@
 .. _base:
 
-.. currentmodule:: openpathsampling.netcdfplus.base
+.. currentmodule:: openpathsampling.netcdfplus
 
 Base Functions
 ==============

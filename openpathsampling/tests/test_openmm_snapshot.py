@@ -1,6 +1,6 @@
 import openpathsampling.engines.openmm as omm_engine
 import openpathsampling as paths
-from nose.tools import assert_equal, assert_almost_equal
+from nose.tools import assert_equal, assert_almost_equal, assert_not_equal
 from test_helpers import data_filename, assert_close_unit
 
 import openmmtools as omt
@@ -55,3 +55,10 @@ class testOpenMMSnapshot(object):
         n_dofs = 51.0  # see test above
         assert_close_unit(test_snap.instantaneous_temperature,
                           expected_ke / u.BOLTZMANN_CONSTANT_kB / n_dofs)
+
+    def test_instantaneous_temperature_changes(self):
+        trajectory = self.engine.generate(self.template,
+                                          [lambda t, foo: len(t) < 4])
+        temp_1 = trajectory[1].instantaneous_temperature
+        temp_2 = trajectory[2].instantaneous_temperature
+        assert_not_equal(temp_1, temp_2)

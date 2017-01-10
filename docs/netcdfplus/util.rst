@@ -1,6 +1,6 @@
 .. _util:
 
-.. currentmodule:: openpathsampling.netcdfplus.util
+.. currentmodule:: openpathsampling.netcdfplus
 
 Utility Functions
 =================

@@ -1,5 +1,4 @@
 import openpathsampling as paths
-import numpy as np
 import pandas as pd
 import scipy.sparse
 from scipy.sparse.csgraph import reverse_cuthill_mckee
@@ -334,8 +333,8 @@ class ReplicaNetwork(object):
             if True, recalculate cached values
 
 
-        Reference
-        ---------
+        References
+        ----------
             Katzgraber, Trebst, Huse, and Troyer. J. Stat. Mech. 2006,
             P03018 (2006). doi:10.1088/1742-5468/2006/03/P03018
         """
@@ -445,8 +444,6 @@ class ReplicaNetworkGraph(object):
     ----------
     repx_network : paths.ReplicaNetwork
         replica exchange network object
-    storage : paths.Storage
-        file for data
     """
     def __init__(self, repx_network):
         (n_try, n_acc) = repx_network.analyze_exchanges()
@@ -558,6 +555,7 @@ def trace_replicas_for_ensemble(ensemble, steps):
         trace.append(sset[ensemble].replica)
     return trace
 
+
 def condense_repeats(ll):
     """
     Count the number of consecutive repeats in a list.
@@ -570,6 +568,7 @@ def condense_repeats(ll):
         a list
 
     Returns
+    -------
     list of tuples
         list of 2-tuples in the format (element, repeats) where element is
         the element from the list, and repeats is the number of consecutive

@@ -1,6 +1,6 @@
 .. _dictify:
 
-.. currentmodule:: openpathsampling.netcdfplus.dictify
+.. currentmodule:: openpathsampling.netcdfplus
 
 JSON Serialization Functions
 ============================

@@ -71,6 +71,10 @@ class PathSimulator(StorableNamedObject):
     output_stream : file
         Subclasses should write output to this, allowing a standard way to
         redirect any output.
+    allow_refresh : bool
+        Whether to allow the output to refresh an ipynb cell; default True.
+        This is likely to be overridden when a pathsimulator is wrapped in
+        another simulation.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -89,6 +93,7 @@ class PathSimulator(StorableNamedObject):
         )
         self.sample_set = None
         self.output_stream = sys.stdout  # user can change to file handler
+        self.allow_refresh =  True
 
     def sync_storage(self):
         """
@@ -269,7 +274,8 @@ class Bootstrapping(PathSimulator):
                 ("Working on Bootstrapping cycle step %d" +
                 " in ensemble %d/%d .\n") %
                 ( self.step, ens_num + 1, len(self.ensembles) ),
-                output_stream=self.output_stream
+                output_stream=self.output_stream,
+                refresh=self.allow_refresh
             )
 
             movepath = bootstrapmove.move(self.sample_set)
@@ -329,7 +335,8 @@ class Bootstrapping(PathSimulator):
             ("DONE! Completed Bootstrapping cycle step %d" +
             " in ensemble %d/%d.\n") %
             ( self.step, ens_num + 1, len(self.ensembles) ),
-            output_stream=self.output_stream
+            output_stream=self.output_stream,
+            refresh=self.allow_refresh
         )
 
 
@@ -684,7 +691,7 @@ class PathSampling(PathSimulator):
         for nn in range(n_steps):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
-            refresh = True
+            refresh = self.allow_refresh
             if self.step % self.status_update_frequency == 0:
                 # do we visualize this step?
                 if self.live_visualizer is not None and mcstep is not None:
@@ -855,6 +862,7 @@ class CommittorSimulation(PathSimulator):
                         step+1, n_per_snapshot
                     ),
                     output_stream=self.output_stream,
+                    refresh=self.allow_refresh
                 )
 
                 if as_chain:

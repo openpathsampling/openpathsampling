@@ -1,6 +1,6 @@
 .. _objects:
 
-.. currentmodule:: openpathsampling.netcdfplus.objects
+.. currentmodule:: openpathsampling.netcdfplus
 
 Store Functions
 ===============

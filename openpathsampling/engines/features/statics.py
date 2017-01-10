@@ -25,8 +25,7 @@ def netcdfplus_init(store):
         'statics',
         'lazyobj.' + name,
         description="the snapshot index (0..n_configuration-1) of "
-                    "snapshot '{idx}'.",
-        chunksizes=(1,))
+                    "snapshot '{idx}'.")
 
 
 @property
