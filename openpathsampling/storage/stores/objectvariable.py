@@ -2,15 +2,14 @@ from openpathsampling.netcdfplus import UniqueNamedObjectStore
 from openpathsampling import CollectiveVariable
 
 
-class CVStore(UniqueNamedObjectStore):
+class AttributeStore(UniqueNamedObjectStore):
     """
     ObjectStore to store a dict with StorableObject : value
     """
-    def __init__(self, obj_store=None):
+    def __init__(self):
         super(CVStore, self).__init__(
             CollectiveVariable
         )
-        self.obj_store = obj_store
 
     def _save(self, cv, idx):
         self.vars['json'][idx] = cv
@@ -21,7 +20,7 @@ class CVStore(UniqueNamedObjectStore):
     def _load(self, idx):
         op = self.vars['json'][idx]
 
-        cache_store = self.object_store.get_cv_cache(idx)
+        cache_store = self.storage.snapshots.get_cv_cache(idx)
 
         if cache_store is not None:
             op.set_cache_store(cache_store)
@@ -30,13 +29,6 @@ class CVStore(UniqueNamedObjectStore):
             op.allow_incomplete = cache_store.allow_incomplete
 
         return op
-
-    @property
-    def object_store(self):
-        if self.obj_store is not None:
-            return self.obj_store
-        else:
-            return self.storage.snapshots
 
     def sync(self, cv):
         """
@@ -51,10 +43,10 @@ class CVStore(UniqueNamedObjectStore):
             all collective variables are synced
 
         """
-        self.object_store.sync_cv(cv)
+        self.storage.snapshots.sync_cv(cv)
 
     def complete(self, cv):
-        self.object_store.complete_cv(cv)
+        self.storage.snapshots.complete_cv(cv)
 
     def sync_all(self):
         map(self.sync, self)
@@ -89,15 +81,15 @@ class CVStore(UniqueNamedObjectStore):
         if template is None:
             if cv.diskcache_template is not None:
                 template = cv.diskcache_template
-            elif len(self.object_store) > 0:
-                template = self.object_store[0]
+            elif len(self.storage.snapshots) > 0:
+                template = self.storage.snapshots[0]
 
             else:
                 raise RuntimeError(
                     'Need either at least one stored snapshot or a '
                     'template snapshot to determine type and shape of the CV.')
 
-        self.object_store.add_cv(
+        self.storage.snapshots.add_cv(
             cv,
             template,
             allow_incomplete=allow_incomplete,
@@ -118,7 +110,7 @@ class CVStore(UniqueNamedObjectStore):
         :class:`openpathsampling.netcdfplus.ObjectStore` or `netcdf4.Variable`
 
         """
-        return self.object_store.cv_list[cv][0]
+        return self.storage.snapshots.cv_list[cv][0]
 
     def has_cache(self, cv):
         """
@@ -134,7 +126,7 @@ class CVStore(UniqueNamedObjectStore):
         bool
             `True` if the CV has a diskstore attached
         """
-        return cv in self.object_store.cv_list
+        return cv in self.storage.snapshots.cv_list
 
     def set_cache_store(self, cv):
         """
@@ -162,6 +154,6 @@ class CVStore(UniqueNamedObjectStore):
         # load all CVs regularly
         for cv in self:
             # And cache the feature stores
-            store = self.object_store.cv_list.get(cv)
+            store = self.storage.snapshots.cv_list.get(cv)
             if store is not None:
                 store[0].fill_cache()
