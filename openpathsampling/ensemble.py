@@ -426,6 +426,10 @@ class Ensemble(StorableNamedObject):
                         pad = min(overlap + 1, end - start - 2)
                         start = end - pad
                     else:
+                        # TODO: for some ensembles, there are better ways to
+                        # change start. For frame-by-frame ensembles
+                        # (AllInX, AllOutX) we know that we can completely
+                        # stop for all subtrajectories.
                         start += 1
                     end = start + min_length
 
