@@ -236,13 +236,18 @@ class SnapshotWrapperStore(ObjectStore):
         self.create_variable('store', 'index')
 
         self.storage.create_dimension('snapshottype')
-        self.storage.create_dimension('cvcache')
 
         self.storage.create_variable(
             'snapshottype',
             'obj.stores',
             'snapshottype')
-        self.storage.create_variable('cvcache', 'obj.stores', 'cvcache')
+
+    def free(self):
+        idx = len(self)
+        while idx in self._free:
+            idx += 2
+
+        return idx
 
     def add_type(self, descriptor):
         if isinstance(descriptor, peng.BaseSnapshot):
@@ -291,17 +296,11 @@ class SnapshotWrapperStore(ObjectStore):
         return description
 
     def restore(self):
+        super(SnapshotWrapperStore, self).restore()
+
         for idx, store in enumerate(self.storage.vars['snapshottype']):
             self.type_list[store.descriptor] = (store, idx)
             self.store_snapshot_list.append(store)
-
-        self.storage.cvs.load_indices()
-
-        for idx, store in enumerate(self.storage.vars['cvcache']):
-            cv_st_idx = int(store.name[2:])
-
-            cv = self.storage.cvs[self.storage.cvs.vars['uuid'][cv_st_idx]]
-            self.cv_list[cv] = (store, idx)
 
         self.load_indices()
 
@@ -566,28 +565,6 @@ class SnapshotWrapperStore(ObjectStore):
                     cv_store.vars['index'][n_idx] = pos
                     cv_store.index[pos] = n_idx
                     cv_store.cache[n_idx] = value
-
-    def free(self):
-        idx = len(self)
-        while idx in self._free:
-            idx += 2
-
-        return idx
-
-    # def get_uuid_index(self, obj):
-    #     n_idx = None
-    #
-    #     if obj.__uuid__ in self.index:
-    #         n_idx = self.index[obj.__uuid__]
-    #
-    #     if n_idx is None:
-    #         # if the obj is not know, add it to the file and index, but
-    #         # store only a reference and not the full object
-    #         # this can later be done using .save(obj)
-    #         n_idx = self.free()
-    #         self.variables['store'][n_idx // 2] = -1
-    #         self.index[obj.__uuid__] = n_idx
-    #         self._set_id(n_idx, obj)
 
     @staticmethod
     def _get_cv_name(cv_idx):

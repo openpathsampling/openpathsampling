@@ -74,9 +74,10 @@ class Storage(NetCDFPlus):
 
         # topologies might be needed fot CVs so put them here
         self.create_store('topologies', NamedObjectStore(peng.Topology))
-        self.create_store('cvs', paths.storage.CVStore())
 
-        self.create_store('snapshots', SnapshotWrapperStore())
+        snapshotstore = SnapshotWrapperStore()
+        self.create_store('snapshots', snapshotstore)
+        self.create_store('cvs', paths.storage.CVStore(snapshotstore))
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())

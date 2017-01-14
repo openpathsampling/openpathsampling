@@ -105,7 +105,7 @@ class ObjectStore(StorableNamedObject):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True, nestable=False):
+    def __init__(self, content_class, json=True, nestable=False, allow_cvs=False):
         """
 
         Parameters
@@ -166,6 +166,10 @@ class ObjectStore(StorableNamedObject):
         self._cached_all = False
         self.nestable = nestable
         self._created = False
+        self.allow_cvs = allow_cvs
+
+        if allow_cvs:
+            self.cv_list = {}
 
         # This will not be stored since its information is contained in the
         # dimension names
@@ -233,6 +237,17 @@ class ObjectStore(StorableNamedObject):
 
     def restore(self):
         self.load_indices()
+
+        if self.allow_cvs:
+            self.storage.cvs.load_indices()
+
+            for idx, store in enumerate(self.storage.vars['cvcache']):
+                cv_st_idx = int(store.name[2:])
+
+                cv = self.storage.cvs[self.storage.cvs.vars['uuid'][cv_st_idx]]
+
+                if self.content_class:
+                    self.cv_list[cv] = (store, idx)
 
     def load_indices(self):
         self.index.clear()
@@ -556,6 +571,12 @@ class ObjectStore(StorableNamedObject):
         )
 
         self._created = True
+        self.initialize_ov()
+
+    def initialize_ov(self):
+        self.storage.create_dimension('cvcache')
+        self.storage.create_variable('cvcache', 'obj.stores', 'cvcache')
+
 
     # ==========================================================================
     # INITIALISATION UTILITY FUNCTIONS

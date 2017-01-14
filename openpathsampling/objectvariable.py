@@ -3,14 +3,13 @@ from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, \
     ObjectJSON, create_to_dict, ObjectStore
 
 import openpathsampling.engines as peng
-from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 
 
 # ==============================================================================
 #  CLASS CollectiveVariable
 # ==============================================================================
 
-class TrajectoryVariable(cd.Wrap, StorableNamedObject):
+class ObjectVariable(cd.Wrap, StorableNamedObject):
     """
     Wrapper for a function that acts on snapshots or iterables of snapshots
 
@@ -67,7 +66,7 @@ class TrajectoryVariable(cd.Wrap, StorableNamedObject):
         self._eval_dict = None
         self.stores = []
 
-        super(CollectiveVariable, self).__init__(
+        super(ObjectVariable, self).__init__(
             post=self._single_dict > self._cache_dict)
 
     def enable_diskcache(self):
@@ -199,7 +198,7 @@ class TrajectoryVariable(cd.Wrap, StorableNamedObject):
     to_dict = create_to_dict(['name'])
 
 
-class CallableCV(CollectiveVariable):
+class CallableOV(ObjectVariable):
     """Turn any callable object into a storable `CollectiveVariable`.
 
     Attributes
@@ -288,7 +287,7 @@ class CallableCV(CollectiveVariable):
         which are now `numpy`, `math`, `msmbuilder`, `pandas` and `mdtraj`
         """
 
-        super(CallableCV, self).__init__(
+        super(CallableOV, self).__init__(
             name
         )
         self.cv_requires_lists = cv_requires_lists
@@ -316,7 +315,7 @@ class CallableCV(CollectiveVariable):
         self._post = post
 
     def to_dict(self):
-        dct = super(CallableCV, self).to_dict()
+        dct = super(CallableOV, self).to_dict()
         callable_argument = self.__class__.args()[2]
         dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
@@ -360,7 +359,7 @@ class CallableCV(CollectiveVariable):
         return items
 
 
-class FunctionCV(CallableCV):
+class FunctionCV(CallableOV):
     """Turn any function into a `CollectiveVariable`.
 
     Attributes
@@ -394,7 +393,7 @@ class FunctionCV(CallableCV):
 
         See also
         --------
-        `openpathsampling.CallableCV`
+        `openpathsampling.CallableOV`
 
         """
 
@@ -416,7 +415,7 @@ class FunctionCV(CallableCV):
         return self.cv_callable(items, **self.kwargs)
 
 
-class GeneratorCV(CallableCV):
+class GeneratorCV(CallableOV):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
