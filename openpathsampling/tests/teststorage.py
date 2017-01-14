@@ -70,7 +70,8 @@ class testStorage(object):
         store.close()
 
         store = Storage(filename=self.filename, mode='a')
-        loaded_topology = store.template.topology        # check if poth topologies have the same JSON string
+        loaded_topology = store.template.topology
+        # check if path topologies have the same JSON string
         # this also tests the simplifier for topologies
 
         assert_equal(

@@ -371,7 +371,7 @@ def attach_features(features, use_lazy_reversed=False):
 
         # set new docstring. This is only possible since our class is created
         # using a Metaclass for abstract classes `abc`. Normal classes cannot
-        # have thier docstring changed.
+        # have their docstring changed.
         cls.__doc__ = parser.get_docstring()
 
         context = CodeContext(cls, __features__, USE_UUID)
