@@ -278,7 +278,7 @@ class SampleSet(StorableObject):
             assert samp in self.replica_dict[samp.replica], \
                 "Sample not in replica_dict! %r %r" % (samp, self.replica_dict)
 
-        # finally, check to be sure that thre are no duplicates in
+        # finally, check to be sure that there are no duplicates in
         # self.samples; this completes the consistency check
         for samp in self.samples:
             assert self.samples.count(samp) == 1, \

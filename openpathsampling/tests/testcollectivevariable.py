@@ -84,7 +84,7 @@ class test_FunctionCV(object):
             topology=self.topology,
             pair_indices=atom_pairs)
 
-        # little trick. We just predent the atom_pairs_op is a function we want
+        # little trick. We just pretend the atom_pairs_op is a function we want
         # to use it cannot be stored though, but for from_template it is enough
 
         params = NetCDFPlus.get_value_parameters(

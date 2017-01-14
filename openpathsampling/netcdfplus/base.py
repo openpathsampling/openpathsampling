@@ -141,26 +141,6 @@ class StorableObject(object):
         """
         return self.__class__.__name__
 
-    # def save(self, store):
-    #     """
-    #     Save the object in the given store (or storage)
-    #
-    #     Parameters
-    #     ----------
-    #     store : :class:`openpathsampling.netcdfplus.ObjectStore` or \
-    #     :class:`openpathsampling.netcdfplus.netcdfplus.NetCDFPlus`
-    #         the store or storage to be saved in. if a storage is given then
-    #         the default store for the given object base type is determined and
-    #         the appropriate store is used.
-    #
-    #     Returns
-    #     -------
-    #     int or None
-    #         the integer index used to save the object or `None` if the object
-    #         has already been saved.
-    #     """
-    #     store.save(self)
-
     @classmethod
     def base(cls):
         """
