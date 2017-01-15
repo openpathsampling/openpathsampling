@@ -1,12 +1,12 @@
-import openpathsampling.chaindict as cd
+import chaindict as cd
 from base import StorableNamedObject, create_to_dict
-from dictify import ObjectJSON
 from cache import WeakKeyCache
+from dictify import ObjectJSON
 from stores.object import ObjectStore
 
 
 # ==============================================================================
-#  CLASS CollectiveVariable
+#  CLASS Attribute
 # ==============================================================================
 
 class Attribute(cd.Wrap, StorableNamedObject):
@@ -58,7 +58,6 @@ class Attribute(cd.Wrap, StorableNamedObject):
         self.diskcache_template = None
         self.diskcache_allow_incomplete = False
 
-        # todo: remove ObjectStore
         self.diskcache_chunksize = ObjectStore.default_store_chunk_size
         self._single_dict = cd.ExpandSingle()
         self._cache_dict = cd.CacheChainDict(

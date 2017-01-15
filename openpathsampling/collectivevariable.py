@@ -1,16 +1,15 @@
-import chaindict as cd
-from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, \
-    ObjectJSON, create_to_dict, ObjectStore
-
 import openpathsampling.engines as peng
+import openpathsampling.netcdfplus.chaindict as cd
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
+from openpathsampling.netcdfplus import WeakKeyCache, \
+    ObjectJSON, create_to_dict, ObjectStore, Attribute
 
 
 # ==============================================================================
 #  CLASS CollectiveVariable
 # ==============================================================================
 
-class CollectiveVariable(cd.Wrap, StorableNamedObject):
+class CollectiveVariable(Attribute):
     """
     Wrapper for a function that acts on snapshots or iterables of snapshots
 
@@ -30,10 +29,6 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
     name
     cv_time_reversible
 
-    _single_dict : :class:`openpathsampling.chaindict.ChainDict`
-        The ChainDict that takes care of using only a single element instead of
-        an iterable. In the case of a single object. It will be wrapped in a
-        list and later only the single element will be returned
     _cache_dict : :class:`openpathsampling.chaindict.ChainDict`
         The ChainDict that will cache calculated values for fast access
 
@@ -52,158 +47,18 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
             name,
             cv_time_reversible=False
     ):
-        if (type(name) is not str and type(name) is not unicode) or len(
-                name) == 0:
-            raise ValueError('name must be a non-empty string')
+        super(CollectiveVariable, self).__init__(name, peng.BaseSnapshot)
 
-        StorableNamedObject.__init__(self)
-
-        self.name = name
         self.cv_time_reversible = cv_time_reversible
-
-        # default settings if we should create a disk cache
-        self.diskcache_enabled = False
-        self.diskcache_template = None
         self.diskcache_allow_incomplete = not self.cv_time_reversible
 
         self.diskcache_chunksize = ObjectStore.default_store_chunk_size
-        self._single_dict = cd.ExpandSingle()
         self._cache_dict = cd.ReversibleCacheChainDict(
             WeakKeyCache(),
             reversible=cv_time_reversible
         )
-        self._store_dict = None
-        self._eval_dict = None
-        self.stores = []
 
-        super(CollectiveVariable, self).__init__(
-            post=self._single_dict > self._cache_dict)
-
-    def enable_diskcache(self):
-        self.diskcache_enabled = True
-        return self
-
-    def with_diskcache(
-            self, template=None, chunksize=None, allow_incomplete=None):
-        self.diskcache_enabled = True
-        if template:
-            self.diskcache_template = template
-        if allow_incomplete:
-            self.diskcache_allow_incomplete = allow_incomplete
-        if chunksize:
-            self.diskcache_chunksize = chunksize
-
-        return self
-    
-    def disable_diskcache(self):
-        self.diskcache_enabled = False
-        return self
-
-    def set_cache_store(self, value_store):
-        """
-        Attach store variables to the collective variables.
-
-        If used the collective variable will automatically sync values with
-        the store and load from it if necessary. If the CV is created with
-        `diskcache_enabled = True`. This will be done during CV creation.
-
-        Parameters
-        ----------
-        value_store : :class:`openpathsampling.netcdfplus.ObjectStore`
-            the store / variable that holds the output values / objects
-
-        """
-        if value_store is None:
-            return
-
-        if value_store not in self.stores:
-            self.stores = [value_store] + self.stores
-            self._update_store_dict()
-        elif self.stores is not value_store:
-            self.stores = [value_store] + \
-                          [s for s in self.stores if s is not value_store]
-
-            self._update_store_dict()
-
-    def _update_store_dict(self):
-        cv_stores = map(cd.StoredDict, self.stores)
-
-        last_cv = self._eval_dict
-        for s in reversed(cv_stores):
-            s._post = last_cv
-            last_cv = s
-
-        if len(self.stores) > 0:
-
-            self._store_dict = cv_stores[0]
-        else:
-            self._store_dict = None
-
-        self._cache_dict._post = last_cv
-
-    def add_cache_from_storage(self, storage):
-        """
-        Attach store variables to the collective variables.
-
-        If used the collective variable will automatically sync values with
-        the store and load from it if necessary. If the CV is created with
-        `diskcache_enabled = True`. This will be done during CV creation.
-
-        Parameters
-        ----------
-        storage : :class:`openpathsampling.storage.Storage`
-            the storage
-
-        """
-
-        idx = storage.cvs.index[self.__uuid__]
-        if idx is not None:
-            value_store = storage.snapshots.get_cv_cache(idx)
-            if value_store is None:
-                return
-
-            if value_store not in self.stores:
-                self.stores.append(value_store)
-                self._update_store_dict()
-        else:
-            raise ValueError('The given storage does not contain this CV.')
-
-    # This is important since we subclass from list and lists are not hashable
-    # but CVs should be
-    __hash__ = StorableNamedObject.__hash__
-
-    def sync(self):
-        """
-        Sync this CV with the attached storages
-
-        """
-        if self._store_dict:
-            self._store_dict.sync()
-
-    def cache_all(self):
-        """
-        Sync this CV with attached storages
-
-        """
-        if self._store_dict:
-            self._store_dict.cache_all()
-
-    def __eq__(self, other):
-        """Override the default Equals behavior"""
-        if isinstance(other, self.__class__):
-            if self.name != other.name:
-                    return False
-
-            return True
-
-        return NotImplemented
-
-    def __ne__(self, other):
-        """Define a non-equality test"""
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
-
-        return NotImplemented
+        self._post = self._single_dict > self._cache_dict
 
     to_dict = create_to_dict(['name', 'cv_time_reversible'])
 

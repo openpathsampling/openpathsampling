@@ -1,10 +1,10 @@
-from openpathsampling.netcdfplus import UniqueNamedObjectStore
-from openpathsampling.netcdfplus import Attribute
+from named import UniqueNamedObjectStore
+from openpathsampling.netcdfplus.attribute import Attribute
 
 
 class AttributeStore(UniqueNamedObjectStore):
     """
-    ObjectStore to store a dict with StorableObject : value
+    ObjectStore to store additional attributes to an existing store
     """
     def __init__(self, obj_store=None):
         super(AttributeStore, self).__init__(
@@ -52,6 +52,12 @@ class AttributeStore(UniqueNamedObjectStore):
 
         """
         self.object_store.sync_cv(cv)
+
+    def initialize(self):
+        super(AttributeStore, self).initialize()
+
+        # self.storage.create_dimension('attributecache')
+        self.create_variable('cache', 'obj.stores')
 
     def complete(self, cv):
         self.object_store.complete_cv(cv)

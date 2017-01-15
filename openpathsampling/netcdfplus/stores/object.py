@@ -3,11 +3,8 @@ from uuid import UUID
 from weakref import WeakValueDictionary
 
 from openpathsampling.netcdfplus.base import StorableNamedObject, StorableObject
-from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, \
-    WeakLRUCache
+from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, WeakLRUCache
 from openpathsampling.netcdfplus.proxy import LoaderProxy
-from openpathsampling.netcdfplus.netcdfplus import NetCDFPlus
-from openpathsampling.netcdfplus.stores import ValueStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -100,7 +97,7 @@ class ObjectStore(StorableNamedObject):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True, nestable=False, allow_attributes=False):
+    def __init__(self, content_class, json=True, nestable=False):
         """
 
         Parameters
@@ -161,10 +158,8 @@ class ObjectStore(StorableNamedObject):
         self._cached_all = False
         self.nestable = nestable
         self._created = False
-        self.allow_attributes = allow_attributes
 
-        if allow_attributes:
-            self.attribute_list = {}
+        self.attribute_list = {}
 
         # This will not be stored since its information is contained in the
         # dimension names
@@ -232,17 +227,15 @@ class ObjectStore(StorableNamedObject):
 
     def restore(self):
         self.load_indices()
+        # self.storage.attributes.load_indices()
 
-        if self.allow_attributes:
-            self.storage.attributes.load_indices()
+        for idx, store in enumerate(self.storage.vars['attributecache']):
+            attribute_st_idx = int(store.name[2:])
 
-            for idx, store in enumerate(self.storage.vars['attributecache']):
-                attribute_st_idx = int(store.name[2:])
+            attribute = self.storage.attributes[self.storage.attributes.vars['uuid'][attribute_st_idx]]
 
-                attribute = self.storage.attributes[self.storage.attributes.vars['uuid'][attribute_st_idx]]
-
-                if self.content_class:
-                    self.attribute_list[attribute] = (store, idx)
+            if self.content_class is attribute.key_class:
+                self.attribute_list[attribute] = (store, idx)
 
     def load_indices(self):
         self.index.clear()
@@ -562,11 +555,6 @@ class ObjectStore(StorableNamedObject):
         )
 
         self._created = True
-        self.initialize_ov()
-
-    def initialize_ov(self):
-        self.storage.create_dimension('attributecache')
-        self.storage.create_variable('attributecache', 'obj.stores', 'attributecache')
 
 
     # ==========================================================================
@@ -1094,11 +1082,12 @@ class ObjectStore(StorableNamedObject):
     def _get_attribute_name(attribute_idx):
         return 'attribute' + str(attribute_idx)
 
-    def add_attribute(self, attribute, template, allow_incomplete=None, chunksize=None):
+    def add_attribute(self, store, attribute, template, allow_incomplete=None, chunksize=None):
         """
 
         Parameters
         ----------
+        store : :obj:`openpathsampling.netcdfplus.ValueStore`
         attribute : :obj:`openpathsampling.CollectiveVariable`
         template : :obj:`openpathsampling.engines.BaseSnapshot`
         chunksize : int
@@ -1124,7 +1113,7 @@ class ObjectStore(StorableNamedObject):
             chunksize = self.default_store_chunk_size
 
         # determine value type and shape
-        params = NetCDFPlus.get_value_parameters(attribute(template))
+        params = self.storage.get_value_parameters(attribute(template))
         shape = params['dimensions']
 
         if shape is None:
@@ -1132,15 +1121,17 @@ class ObjectStore(StorableNamedObject):
         else:
             chunksizes = tuple(params['dimensions'])
 
-        attribute_idx = self.storage.attributes.index[attribute.__uuid__]
-        store = ValueStore(
+        # attribute_idx = self.storage.attributes.index[attribute.__uuid__]
+        value_store = store(
             attribute.content_class,
             allow_incomplete=allow_incomplete,
             chunksize=chunksize
         )
 
-        store_name = self.__class__._get_attribute_name(attribute_idx)
-        self.storage.create_store(store_name, store, False)
+        # store_name = self.__class__._get_attribute_name(attribute_idx)
+        store_name = self.name + '_' + attribute.name
+
+        self.storage.create_store(store_name, value_store, False)
 
         if store.allow_incomplete:
             # we are not using the .initialize function here since we
@@ -1155,7 +1146,7 @@ class ObjectStore(StorableNamedObject):
                 chunksizes = tuple([chunksize])
 
             # create the variable
-            store.create_variable(
+            value_store.create_variable(
                 'value',
                 var_type=params['var_type'],
                 dimensions=shape,
@@ -1163,7 +1154,7 @@ class ObjectStore(StorableNamedObject):
                 simtk_unit=params['simtk_unit'],
             )
 
-            store.create_variable('index', 'index')
+            value_store.create_variable('index', 'index')
 
         else:
             chunksize = self.default_store_chunk_size
@@ -1175,7 +1166,7 @@ class ObjectStore(StorableNamedObject):
                 chunksizes = tuple([chunksize])
 
             # create the variable
-            store.storage.create_variable(
+            value_store.storage.create_variable(
                 store_name + '_value',
                 var_type=params['var_type'],
                 dimensions=shape,
@@ -1183,13 +1174,14 @@ class ObjectStore(StorableNamedObject):
                 simtk_unit=params['simtk_unit'],
             )
 
-        setattr(store, 'value', self.storage.vars[store_name + '_value'])
+        # setattr(value_store, 'value', self.storage.vars[store_name + '_value'])
 
         store.initialize()
 
-        store_idx = int(len(self.storage.dimensions['attributecache']))
-        self.attribute_list[attribute] = (store, store_idx)
-        self.storage.vars['attributecache'][store_idx] = store
+        # the value
+        # store_idx = int(len(self.storage.attributes))
+        self.attribute_list[attribute] = store
+        # self.storage.vars['attributecache'][store_idx] = store
 
         # use the cache and function of the CV to fill the store when it is made
         if not allow_incomplete:
@@ -1212,8 +1204,8 @@ class ObjectStore(StorableNamedObject):
                 value = attribute(proxy)
 
                 if value is not None:
-                    store.vars['value'][pos] = value
-                    store.cache[pos] = value
+                    value_store.vars['value'][pos] = value
+                    value_store.cache[pos] = value
 
-        attribute.set_cache_store(store)
-        return store, store_idx
+        attribute.set_cache_store(value_store)
+        return value_store
