@@ -304,6 +304,7 @@ class SnapshotWrapperStore(ObjectStore):
 
     @with_timing_logging
     def load_indices(self):
+        self.index.clear()
         self.index.extend(self.vars['uuid'][:])
 
     def get_cv_cache(self, idx):

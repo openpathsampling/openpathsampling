@@ -5,4 +5,5 @@ class CVStore(AttributeStore):
     """
     ObjectStore to store a dict with StorableObject : value
     """
-    pass
+    def __init__(self):
+        super(CVStore, self).__init__()
