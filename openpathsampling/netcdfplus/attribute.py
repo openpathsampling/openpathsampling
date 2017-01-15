@@ -1,15 +1,15 @@
-import chaindict as cd
-from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, \
-    ObjectJSON, create_to_dict, ObjectStore
-
-import openpathsampling.engines as peng
+import openpathsampling.chaindict as cd
+from base import StorableNamedObject, create_to_dict
+from dictify import ObjectJSON
+from cache import WeakKeyCache
+from stores.object import ObjectStore
 
 
 # ==============================================================================
 #  CLASS CollectiveVariable
 # ==============================================================================
 
-class ObjectVariable(cd.Wrap, StorableNamedObject):
+class Attribute(cd.Wrap, StorableNamedObject):
     """
     Wrapper for a function that acts on snapshots or iterables of snapshots
 
@@ -42,7 +42,8 @@ class ObjectVariable(cd.Wrap, StorableNamedObject):
 
     def __init__(
             self,
-            name
+            name,
+            key_class
     ):
         if (type(name) is not str and type(name) is not unicode) or len(
                 name) == 0:
@@ -57,6 +58,7 @@ class ObjectVariable(cd.Wrap, StorableNamedObject):
         self.diskcache_template = None
         self.diskcache_allow_incomplete = False
 
+        # todo: remove ObjectStore
         self.diskcache_chunksize = ObjectStore.default_store_chunk_size
         self._single_dict = cd.ExpandSingle()
         self._cache_dict = cd.CacheChainDict(
@@ -66,7 +68,9 @@ class ObjectVariable(cd.Wrap, StorableNamedObject):
         self._eval_dict = None
         self.stores = []
 
-        super(ObjectVariable, self).__init__(
+        self.key_class = key_class
+
+        super(Attribute, self).__init__(
             post=self._single_dict > self._cache_dict)
 
     def enable_diskcache(self):
@@ -195,10 +199,10 @@ class ObjectVariable(cd.Wrap, StorableNamedObject):
 
         return NotImplemented
 
-    to_dict = create_to_dict(['name'])
+    to_dict = create_to_dict(['name', 'key_class'])
 
 
-class CallableOV(ObjectVariable):
+class CallableOV(Attribute):
     """Turn any callable object into a storable `CollectiveVariable`.
 
     Attributes
@@ -211,6 +215,7 @@ class CallableOV(ObjectVariable):
     def __init__(
             self,
             name,
+            key_class,
             cv_callable,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
@@ -221,6 +226,7 @@ class CallableOV(ObjectVariable):
         Parameters
         ----------
         name
+        key_class
         cv_callable : callable (function or class with __call__)
             The callable to be used
         cv_requires_lists : If `True` the internal function  always a list of
@@ -288,7 +294,8 @@ class CallableOV(ObjectVariable):
         """
 
         super(CallableOV, self).__init__(
-            name
+            name,
+            key_class
         )
         self.cv_requires_lists = cv_requires_lists
         self.cv_wrap_numpy_array = cv_wrap_numpy_array
@@ -316,7 +323,7 @@ class CallableOV(ObjectVariable):
 
     def to_dict(self):
         dct = super(CallableOV, self).to_dict()
-        callable_argument = self.__class__.args()[2]
+        callable_argument = self.__class__.args()[3]
         dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
         dct['cv_wrap_numpy_array'] = self.cv_wrap_numpy_array
@@ -370,6 +377,7 @@ class FunctionCV(CallableOV):
     def __init__(
             self,
             name,
+            key_class,
             f,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
@@ -399,6 +407,7 @@ class FunctionCV(CallableOV):
 
         super(FunctionCV, self).__init__(
             name,
+            key_class,
             cv_callable=f,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
@@ -425,6 +434,7 @@ class GeneratorCV(CallableOV):
     def __init__(
             self,
             name,
+            key_class,
             generator,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
@@ -435,6 +445,7 @@ class GeneratorCV(CallableOV):
         Parameters
         ----------
         name
+        key_class
         generator : callable class
             a class where instances have a `__call__` attribute
         cv_requires_lists
@@ -454,6 +465,7 @@ class GeneratorCV(CallableOV):
 
         super(GeneratorCV, self).__init__(
             name,
+            key_class,
             cv_callable=generator,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
@@ -473,5 +485,4 @@ class GeneratorCV(CallableOV):
         return self.cv_callable
 
     def _eval(self, items):
-        trajectory = peng.Trajectory(items)
-        return [self._instance(snap) for snap in trajectory]
+        return [self._instance(item) for item in items]

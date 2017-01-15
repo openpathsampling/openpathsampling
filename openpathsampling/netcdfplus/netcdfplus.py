@@ -11,7 +11,7 @@ from uuid import UUID
 import netCDF4
 import numpy as np
 from dictify import UUIDObjectJSON
-from stores import NamedObjectStore, ObjectStore
+from stores import NamedObjectStore, ObjectStore, AttributeStore
 from proxy import LoaderProxy
 
 logger = logging.getLogger(__name__)
@@ -168,6 +168,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         This will usually only be called in subclassed storages.
         """
+        # todo: add CVStore, rename to attribute
         pass
 
     def __init__(self, filename, mode=None, fallback=None):
@@ -262,6 +263,8 @@ class NetCDFPlus(netCDF4.Dataset):
             self.stores.initialize()
             self.stores.set_caching(True)
             self.update_delegates()
+
+            self.create_store('attributes', AttributeStore())
 
             # now create all storages in subclasses
             self._create_storages()
@@ -882,7 +885,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
             setter = lambda v: ''.join(
                 ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
-                     for w in list.__iter__(v)]) \
+                    for w in list.__iter__(v)]) \
                 if set_is_iterable(v) else \
                 '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
 

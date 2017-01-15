@@ -9,6 +9,9 @@ from stores import IndexedObjectStore
 from stores import VariableStore
 from stores import DictStore, ImmutableDictStore
 from stores import NamedObjectStore, UniqueNamedObjectStore
+from stores import ValueStore
+from stores import AttributeStore
 
 from proxy import DelayedLoader, lazy_loading_attributes, LoaderProxy
 from util import with_timing_logging
+from attribute import Attribute
