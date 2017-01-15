@@ -302,8 +302,6 @@ class SnapshotWrapperStore(ObjectStore):
             self.type_list[store.descriptor] = (store, idx)
             self.store_snapshot_list.append(store)
 
-        self.load_indices()
-
     @with_timing_logging
     def load_indices(self):
         self.index.extend(self.vars['uuid'][:])

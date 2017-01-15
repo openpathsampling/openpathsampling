@@ -10,9 +10,9 @@ from uuid import UUID
 
 import netCDF4
 import numpy as np
-from .dictify import UUIDObjectJSON
-from .stores import NamedObjectStore, ObjectStore
-from .proxy import LoaderProxy
+from dictify import UUIDObjectJSON
+from stores import NamedObjectStore, ObjectStore, AttributeStore
+from proxy import LoaderProxy
 
 import sys
 if sys.version_info > (3, ):
@@ -174,6 +174,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         This will usually only be called in subclassed storages.
         """
+        # todo: add CVStore, rename to attribute
         pass
 
     def __init__(self, filename, mode=None, fallback=None):
@@ -268,6 +269,8 @@ class NetCDFPlus(netCDF4.Dataset):
             self.stores.initialize()
             self.stores.set_caching(True)
             self.update_delegates()
+
+            self.create_store('attributes', AttributeStore())
 
             # now create all storages in subclasses
             self._create_storages()

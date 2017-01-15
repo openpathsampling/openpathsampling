@@ -6,6 +6,8 @@ from openpathsampling.netcdfplus.base import StorableNamedObject, StorableObject
 from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, \
     WeakLRUCache
 from openpathsampling.netcdfplus.proxy import LoaderProxy
+from openpathsampling.netcdfplus.netcdfplus import NetCDFPlus
+from openpathsampling.netcdfplus.stores import ValueStore
 
 import sys
 if sys.version_info > (3, ):
@@ -105,7 +107,7 @@ class ObjectStore(StorableNamedObject):
 
     default_cache = 10000
 
-    def __init__(self, content_class, json=True, nestable=False, allow_cvs=False):
+    def __init__(self, content_class, json=True, nestable=False, allow_attributes=False):
         """
 
         Parameters
@@ -166,10 +168,10 @@ class ObjectStore(StorableNamedObject):
         self._cached_all = False
         self.nestable = nestable
         self._created = False
-        self.allow_cvs = allow_cvs
+        self.allow_attributes = allow_attributes
 
-        if allow_cvs:
-            self.cv_list = {}
+        if allow_attributes:
+            self.attribute_list = {}
 
         # This will not be stored since its information is contained in the
         # dimension names
@@ -238,16 +240,16 @@ class ObjectStore(StorableNamedObject):
     def restore(self):
         self.load_indices()
 
-        if self.allow_cvs:
-            self.storage.cvs.load_indices()
+        if self.allow_attributes:
+            self.storage.attributes.load_indices()
 
-            for idx, store in enumerate(self.storage.vars['cvcache']):
-                cv_st_idx = int(store.name[2:])
+            for idx, store in enumerate(self.storage.vars['attributecache']):
+                attribute_st_idx = int(store.name[2:])
 
-                cv = self.storage.cvs[self.storage.cvs.vars['uuid'][cv_st_idx]]
+                attribute = self.storage.attributes[self.storage.attributes.vars['uuid'][attribute_st_idx]]
 
                 if self.content_class:
-                    self.cv_list[cv] = (store, idx)
+                    self.attribute_list[attribute] = (store, idx)
 
     def load_indices(self):
         self.index.clear()
@@ -574,8 +576,8 @@ class ObjectStore(StorableNamedObject):
         self.initialize_ov()
 
     def initialize_ov(self):
-        self.storage.create_dimension('cvcache')
-        self.storage.create_variable('cvcache', 'obj.stores', 'cvcache')
+        self.storage.create_dimension('attributecache')
+        self.storage.create_variable('attributecache', 'obj.stores', 'attributecache')
 
 
     # ==========================================================================
@@ -990,3 +992,243 @@ class ObjectStore(StorableNamedObject):
 
     def _get_id(self, idx, obj):
         obj.__uuid__ = self.index.index(int(idx))
+
+    # CV SUPPORT
+
+    def _auto_complete(self, obj, pos):
+        for attribute, (attribute_store, attribute_idx) in self.attribute_list.items():
+            if not attribute_store.allow_incomplete:
+                # value = attribute._cache_dict._get(obj)
+                # if value is None:
+                #     # not in cache so compute it if possible
+                #     if attribute._eval_dict:
+                #         value = attribute._eval_dict([obj])[0]
+
+                value = attribute(obj)
+
+                if value is not None:
+                    if attribute_store.allow_incomplete:
+                        attribute_store[obj] = value
+                    else:
+                        n_idx = pos
+                        attribute_store.vars['value'][n_idx] = value
+                        attribute_store.cache[n_idx] = value
+
+    def complete_attribute(self, attribute):
+        """
+        Compute all missing values of a CV and store them
+
+
+        Parameters
+        ----------
+        attribute : :obj:`openpathsampling.CollectiveVariable`
+
+
+        """
+        if attribute not in self.attribute_list:
+            return
+
+        attribute_store = self.attribute_list[attribute][0]
+
+        if attribute_store.allow_incomplete:
+            # for complete this does not make sense
+
+            # TODO: Make better looping over this to not have
+            # to load all the indices at once
+            # can be problematic for 10M+ stored snapshots
+            indices = self.vars['uuid'][:]
+
+            for pos, idx in enumerate(indices):
+                proxy = None
+
+                if pos not in attribute_store.index:
+                    # this value is not stored to go ahead
+
+                    proxy = self.storage.snapshots[idx]
+                    #
+                    # # get from cache first, this is fastest
+                    # value = attribute._cache_dict._get(proxy)
+                    #
+                    # if value is None:
+                    #     # not in cache so compute it if possible
+                    #     if attribute._eval_dict:
+                    #         value = attribute._eval_dict([proxy])[0]
+                    #     else:
+                    #         value = None
+
+                    value = attribute(proxy)
+
+                    if value is not None:
+                        n_idx = attribute_store.free()
+
+                        attribute_store.vars['value'][n_idx] = value
+                        attribute_store.vars['index'][n_idx] = pos
+                        attribute_store.index[pos] = n_idx
+                        attribute_store.cache[n_idx] = value
+
+    def sync_attribute(self, attribute):
+        """
+        Store all cached values of a CV in the diskcache
+
+        Parameters
+        ----------
+        attribute : :obj:`openpathsampling.CollectiveVariable`
+
+
+        """
+
+        if attribute not in self.attribute_list:
+            return
+
+        attribute_store = self.attribute_list[attribute][0]
+
+        # for complete this does not make sense
+        if attribute_store.allow_incomplete:
+
+            # loop all objects in the fast CV cache
+            for obj, value in attribute._cache_dict.cache.iteritems():
+                if value is not None:
+                    pos = self.pos(obj)
+
+                    # if the snapshot is not saved, nothing we can do
+                    if pos is None:
+                        continue
+
+                    if pos in attribute_store.index:
+                        # this value is stored so skip it
+                        continue
+
+                    n_idx = attribute_store.free()
+
+                    attribute_store.vars['value'][n_idx] = value
+                    attribute_store.vars['index'][n_idx] = pos
+                    attribute_store.index[pos] = n_idx
+                    attribute_store.cache[n_idx] = value
+
+    @staticmethod
+    def _get_attribute_name(attribute_idx):
+        return 'attribute' + str(attribute_idx)
+
+    def add_attribute(self, attribute, template, allow_incomplete=None, chunksize=None):
+        """
+
+        Parameters
+        ----------
+        attribute : :obj:`openpathsampling.CollectiveVariable`
+        template : :obj:`openpathsampling.engines.BaseSnapshot`
+        chunksize : int
+        allow_incomplete : bool
+
+        Returns
+        -------
+        :obj:`openpathsampling.netcdfplus.ObjectStore`
+        int
+        """
+        if attribute in self.attribute_list:
+            return self.attribute_list[attribute]
+
+        if allow_incomplete is None:
+            allow_incomplete = attribute.diskcache_allow_incomplete
+        if chunksize is None:
+            chunksize = attribute.diskcache_chunksize
+        if template is None:
+            template = attribute.diskcache_template
+
+        if not allow_incomplete:
+            # in complete mode we force chunk size one to match it to snapshots
+            chunksize = self.default_store_chunk_size
+
+        # determine value type and shape
+        params = NetCDFPlus.get_value_parameters(attribute(template))
+        shape = params['dimensions']
+
+        if shape is None:
+            chunksizes = None
+        else:
+            chunksizes = tuple(params['dimensions'])
+
+        attribute_idx = self.storage.attributes.index[attribute.__uuid__]
+        store = ValueStore(
+            attribute.content_class,
+            allow_incomplete=allow_incomplete,
+            chunksize=chunksize
+        )
+
+        store_name = self.__class__._get_attribute_name(attribute_idx)
+        self.storage.create_store(store_name, store, False)
+
+        if store.allow_incomplete:
+            # we are not using the .initialize function here since we
+            # only have one variable and only here know its shape
+            self.storage.create_dimension(store.prefix, 0)
+
+            if shape is not None:
+                shape = tuple(list(shape))
+                chunksizes = tuple([chunksize] + list(chunksizes))
+            else:
+                shape = tuple()
+                chunksizes = tuple([chunksize])
+
+            # create the variable
+            store.create_variable(
+                'value',
+                var_type=params['var_type'],
+                dimensions=shape,
+                chunksizes=chunksizes,
+                simtk_unit=params['simtk_unit'],
+            )
+
+            store.create_variable('index', 'index')
+
+        else:
+            chunksize = self.default_store_chunk_size
+            if shape is not None:
+                shape = tuple(['snapshots'] + list(shape))
+                chunksizes = tuple([chunksize] + list(chunksizes))
+            else:
+                shape = tuple(['snapshots'])
+                chunksizes = tuple([chunksize])
+
+            # create the variable
+            store.storage.create_variable(
+                store_name + '_value',
+                var_type=params['var_type'],
+                dimensions=shape,
+                chunksizes=chunksizes,
+                simtk_unit=params['simtk_unit'],
+            )
+
+        setattr(store, 'value', self.storage.vars[store_name + '_value'])
+
+        store.initialize()
+
+        store_idx = int(len(self.storage.dimensions['attributecache']))
+        self.attribute_list[attribute] = (store, store_idx)
+        self.storage.vars['attributecache'][store_idx] = store
+
+        # use the cache and function of the CV to fill the store when it is made
+        if not allow_incomplete:
+
+            indices = self.vars['uuid'][:]
+
+            for pos, idx in enumerate(indices):
+
+                proxy = LoaderProxy(self.storage.snapshots, idx)
+
+                # value = attribute._cache_dict._get(proxy)
+                #
+                # if value is None:
+                #     # not in cache so compute it if possible
+                #     if attribute._eval_dict:
+                #         value = attribute._eval_dict([proxy])[0]
+                #     else:
+                #         value = None
+
+                value = attribute(proxy)
+
+                if value is not None:
+                    store.vars['value'][pos] = value
+                    store.cache[pos] = value
+
+        attribute.set_cache_store(store)
+        return store, store_idx
