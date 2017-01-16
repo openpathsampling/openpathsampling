@@ -93,12 +93,16 @@ class NetCDFPlus(netCDF4.Dataset):
             self.store = store
 
             if setter is None:
+                # None should not be used
                 setter = lambda v: v
-            self.setter = setter
+                self.__setitem__ = variable.__setitem__
 
             if getter is None:
                 getter = lambda v: v
+                self.__getitem__ = variable.__getitem__
+
             self.getter = getter
+            self.setter = setter
 
         def __setitem__(self, key, value):
             self.variable[key] = self.setter(value)
@@ -117,6 +121,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         def __len__(self):
             return len(self.variable)
+
 
     @property
     def objects(self):
@@ -659,6 +664,18 @@ class NetCDFPlus(netCDF4.Dataset):
             return store.idx(obj)
 
     def repr_json(self, obj):
+        """
+        Return the JSON representation in the storage if available
+
+        Parameters
+        ----------
+        obj : :class:`openpathsampling.netcdfplus.StorableObject`
+
+        Returns
+        -------
+        str
+            the JSON string (usually in unicode) from the storage
+        """
         if hasattr(obj, 'base_cls'):
             store = self._objects[obj.base_cls]
 
@@ -810,6 +827,8 @@ class NetCDFPlus(netCDF4.Dataset):
                 v.base_cls is not base_type if hasattr(v, 'base_cls') else \
                 hasattr(v, '__iter__')
 
+            get_numpy_iterable = lambda v: isinstance(v, np.ndarray)
+
             set_is_iterable = lambda v: \
                 v.base_cls is not base_type if hasattr(v, 'base_cls') else \
                 hasattr(v, '__iter__')
@@ -861,8 +880,8 @@ class NetCDFPlus(netCDF4.Dataset):
             else:
                 getter = lambda v: [
                     None if w[0] == '-' else store.load(UUID(w))
-                    for w in to_uuid_chunks(v)
-                ] if get_is_iterable(v) else \
+                    for w in v
+                ] if get_numpy_iterable(v) else \
                     None if v[0] == '-' else store.load(UUID(v))
 
                 setter = lambda v: \
@@ -904,7 +923,7 @@ class NetCDFPlus(netCDF4.Dataset):
             else:
                 getter = lambda v: [
                     None if w[0] == '-' else LoaderProxy(store, UUID(w))
-                    for w in to_uuid_chunks(v)
+                    for w in v
                 ] if get_is_iterable(v) else \
                     None if v[0] == '-' else LoaderProxy(store, UUID(v))
                 setter = lambda v: \
@@ -981,22 +1000,30 @@ class NetCDFPlus(netCDF4.Dataset):
 
                 if hasattr(var, 'var_vlen'):
                     if var.var_type.startswith('obj.'):
-                        getter = lambda v: [
-                            None if w[0] == '-' else store.load(UUID(w))
-                            for w in to_uuid_chunks(v)
+                        getter = lambda v: [[
+                            None if u[0] == '-' else store.load(UUID(u))
+                            for u in to_uuid_chunks(w)
+                            ] for w in v
+                        ] if isinstance(v, np.ndarray) else [
+                            None if u[0] == '-' else store.load(UUID(u))
+                            for u in to_uuid_chunks(v)
                         ]
                     elif var.var_type.startswith('lazyobj.'):
-                        getter = lambda v: [
-                            None if w[0] == '-' else LoaderProxy(store, UUID(w))
-                            for w in to_uuid_chunks(v)
+                        getter = lambda v: [[
+                            None if u[0] == '-' else LoaderProxy(store, UUID(u))
+                            for u in to_uuid_chunks(w)
+                            ] for w in v
+                        ] if isinstance(v, np.ndarray) else [
+                            None if u[0] == '-' else LoaderProxy(store, UUID(u))
+                            for u in to_uuid_chunks(v)
                         ]
-                else:
-                    if var.var_type.startswith('obj.'):
-                        getter = lambda v: \
-                            None if v[0] == '-' else store.load(UUID(v))
-                    elif var.var_type.startswith('lazyobj.'):
-                        getter = lambda v: None if v[0] == '-' \
-                            else LoaderProxy(store, UUID(v))
+                # else:
+                #     if var.var_type.startswith('obj.'):
+                #         getter = lambda v: \
+                #             None if v[0] == '-' else store.load(UUID(v))
+                #     elif var.var_type.startswith('lazyobj.'):
+                #         getter = lambda v: None if v[0] == '-' \
+                #             else LoaderProxy(store, UUID(v))
 
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
@@ -1035,8 +1062,14 @@ class NetCDFPlus(netCDF4.Dataset):
                     else:
                         getter = _get2(lambda v: v)
 
-            self.vars[var_name] = \
-                NetCDFPlus.ValueDelegate(var, getter, setter, store)
+            delegate = NetCDFPlus.ValueDelegate(var, getter, setter, store)
+
+            # this is a trick to speed up the s/getter. If we do not need
+            # to _cast_ because of python objects of units we can copy
+            # the s/getter of the original var which is still bound to the
+            # right object
+
+            self.vars[var_name] = delegate
 
         else:
             raise ValueError("Variable '%s' is already taken!" % var_name)

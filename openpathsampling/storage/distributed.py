@@ -19,8 +19,6 @@ class TrajectoryStorage(Storage):
         # objects with special storages
 
         self.create_store('trajectories', paths.storage.TrajectoryStore())
-        self.create_store('snapshots', paths.storage.FeatureSnapshotStore(self._template.__class__))
-
         self.create_store('snapshots', paths.storage.SnapshotWrapperStore())
 
         # normal objects
@@ -44,7 +42,7 @@ class DistributedUUIDStorage(object):
 
     class MultiDelegate(object):
         """
-        A delegate that will alter the ``iter()`` behaviour of the underlying store
+        A delegate that will alter the ``iter()`` behaviour of the store
 
         Attributes
         ----------
@@ -78,16 +76,13 @@ class DistributedUUIDStorage(object):
             print idx
             return self[idx]
 
-    def __init__(self, storages = None):
+    def __init__(self, storages=None):
         """
         Parameters
         ----------
 
-        storage : :class:`openpathsampling.storage.Storage`
-            The storage the view is watching
-        step_range : iterable
-            An iterable object that species the step indices to be iterated over
-            when using the view
+        storages : list of :class:`openpathsampling.storage.Storage`
+            The storages to be used
 
         """
         self.storages = []
@@ -114,14 +109,6 @@ class DistributedUUIDStorage(object):
 
         if not hasattr(storage, 'use_uuid'):
             raise RuntimeError('The storage to be added does not use UUIDs!')
-
-        # if self.snapshots.snapshot_class is not storage.snapshots.snapshot_class or \
-        #         self.snapshots.snapshot_dimensions != storage.snapshots.snapshot_dimensions:
-        #     if storage.template.__uuid__ != self.template.__uuid__:
-        #         raise RuntimeWarning(
-        #             'The storage to be added uses a different template snapshot! It is NOT '
-        #             'recommended to join these storages'
-        #         )
 
         for store in storage.stores:
             name = store.name

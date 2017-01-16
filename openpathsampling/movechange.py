@@ -4,12 +4,13 @@ import logging
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
+from openpathsampling.netcdfplus import DelayedLoader
 from treelogic import TreeMixin
 
 logger = logging.getLogger(__name__)
 
 
-@lazy_loading_attributes('details')
+# @lazy_loading_attributes('details')
 class MoveChange(TreeMixin, StorableObject):
     '''
     A class that described the concrete realization of a PathMove.
@@ -28,9 +29,13 @@ class MoveChange(TreeMixin, StorableObject):
         E.g. for a RandomChoiceMover which Mover was selected.
     '''
 
+    details = DelayedLoader()
+
     def __init__(self, subchanges=None, samples=None, mover=None,
                  details=None, input_samples=None):
         StorableObject.__init__(self)
+
+        self._lazy = {}
 
         self._len = None
         self._collapsed = None

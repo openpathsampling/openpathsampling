@@ -1,7 +1,4 @@
 import logging
-import weakref
-
-import yaml
 from uuid import UUID
 
 from cache import MaxCache, Cache, NoCache, WeakLRUCache
@@ -9,11 +6,10 @@ from proxy import LoaderProxy
 from base import StorableNamedObject, StorableObject
 
 from collections import OrderedDict
+from weakref import WeakKeyDictionary, WeakValueDictionary
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
-
-from weakref import WeakKeyDictionary, WeakValueDictionary
 
 
 class UUIDDict(OrderedDict):
@@ -101,6 +97,8 @@ class ObjectStore(StorableNamedObject):
         'numpy.uint8', 'numpy.uinf16', 'numpy.uint32', 'numpy.uint64',
         'index', 'length', 'uuid'
     ]
+
+    default_store_chunk_size = 250
 
     class DictDelegator(object):
         def __init__(self, store, dct):
@@ -590,7 +588,7 @@ class ObjectStore(StorableNamedObject):
                 "json",
                 jsontype,
                 description='A json serialized version of the object',
-                chunksizes=tuple([10240])
+                chunksizes=tuple([65536])
             )
 
         if self.storage.reference_by_uuid:
@@ -598,7 +596,7 @@ class ObjectStore(StorableNamedObject):
             self.create_variable(
                 "uuid", 'uuid',
                 description='The uuid of the object',
-                chunksizes=tuple([10240])
+                chunksizes=tuple([65536])
             )
 
         self._created = True
@@ -669,14 +667,16 @@ class ObjectStore(StorableNamedObject):
         else:
             dimensions = tuple([self.prefix] + list(dimensions))
 
+        store_chunk_size = ObjectStore.default_store_chunk_size
+
         if chunksizes is None and len(dimensions) == 1:
-            chunksizes = (1, )
+            chunksizes = (store_chunk_size, )
         elif chunksizes is not None and dimensions[-1] == '...' \
                 and len(dimensions) == len(chunksizes) + 2:
-            chunksizes = tuple([1] + list(chunksizes))
+            chunksizes = tuple([store_chunk_size] + list(chunksizes))
         elif chunksizes is not None and dimensions[-1] != '...' \
                 and len(dimensions) == len(chunksizes) + 1:
-            chunksizes = tuple([1] + list(chunksizes))
+            chunksizes = tuple([store_chunk_size] + list(chunksizes))
 
         if self.dimension_prefix:
             dimensions = tuple(
@@ -1040,7 +1040,7 @@ class NamedObjectStore(ObjectStore):
         self.create_variable(
             "name", 'str',
             description='The name of the object',
-            chunksizes=tuple([10240])
+            chunksizes=tuple([65536])
         )
 
     def add_single_to_cache(self, idx, json):
@@ -1456,6 +1456,15 @@ class VariableStore(ObjectStore):
             json=False
         )
 
+        # TODO: determine var_names automatically from content_class
+        # problem is that some decorators, e.g. using delayed loader
+        # hide the actual __init__ signature and so we cannot determine
+        # what variables to store. Could be 2.0
+
+        if not issubclass(content_class, StorableObject):
+            raise ValueError(('Content_class %s must be subclassed from '
+                             'StorableObject') % content_class.__name__)
+
         self.var_names = var_names
         self._cached_all = False
 
@@ -1470,8 +1479,9 @@ class VariableStore(ObjectStore):
             self.write(var, idx, obj)
 
     def _load(self, idx):
-        attr = {var: self.vars[var][idx] for var in self.var_names}
-        return self.content_class(**attr)
+        # attr = {var: self.vars[var][idx] for var in self.var_names}
+        args = [ self.vars[var][idx] for var in self.var_names]
+        return self.content_class(*args)
 
     def initialize(self):
         super(VariableStore, self).initialize()
@@ -1493,18 +1503,28 @@ class VariableStore(ObjectStore):
             list of indices in `part` will be loaded into the cache
 
         """
+        max_length = self.cache.size[0]
+        max_length = len(self) if max_length < 0 else max_length
+
         if part is None:
-            part = range(len(self))
+            length = min(len(self), max_length)
+            part = range(length)
         else:
-            part = sorted(list(set(list(part))))
+            part = sorted(list(set(part())))
+            length = min(len(part), max_length)
+            part = part[:length]
 
         if not part:
             return
 
+        # just in case we saved the var_names in another order and so we are
+        # backwards compatible
+        var_names = self.content_class.args()[1:]
+
         if not self._cached_all:
             data = zip(*[
-                self.storage.variables[self.prefix + '_' + var][part]
-                for var in self.var_names
+                self.vars[var][part]
+                for var in var_names
             ])
 
             [self.add_to_cache(idx, v) for idx, v in zip(part, data)]
@@ -1513,9 +1533,9 @@ class VariableStore(ObjectStore):
 
     def add_to_cache(self, idx, data):
         if idx not in self.cache:
-            attr = {var: self.vars[var].getter(data[nn])
-                    for nn, var in enumerate(self.var_names)}
-            obj = self.content_class(**attr)
+            # attr = {var: self.vars[var].getter(data[nn])
+            #         for nn, var in enumerate(self.var_names)}
+            obj = self.content_class(*data)
             self._get_id(idx, obj)
 
             self.index[obj] = idx

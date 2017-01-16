@@ -7,6 +7,8 @@ from openpathsampling.netcdfplus import NetCDFPlus, ObjectStore, \
     LRUChunkLoadingCache
 import openpathsampling.engines as peng
 
+from openpathsampling.netcdfplus import with_timing_logging
+
 import logging
 from uuid import UUID
 
@@ -572,6 +574,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         self.load_indices()
 
+    @with_timing_logging
     def load_indices(self):
         if self.reference_by_uuid:
             for idx, uuid in enumerate(self.vars['uuid'][:]):
@@ -939,7 +942,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         if not allow_incomplete:
             # in complete mode we force chunk size one to match it to snapshots
-            chunksize = 1
+            chunksize = self.default_store_chunk_size
 
         # determine value type and shape
         params = NetCDFPlus.get_value_parameters(cv(template))
@@ -984,7 +987,7 @@ class SnapshotWrapperStore(ObjectStore):
             store.create_variable('index', 'index')
 
         else:
-            chunksize = 1
+            chunksize = self.default_store_chunk_size
             if shape is not None:
                 shape = tuple(['snapshots'] + list(shape))
                 chunksizes = tuple([chunksize] + list(chunksizes))
@@ -1145,7 +1148,7 @@ class SnapshotValueStore(ObjectStore):
             self,
             time_reversible=True,
             allow_incomplete=False,
-            chunksize=100
+            chunksize=250
     ):
         super(SnapshotValueStore, self).__init__(None)
         self.snapshot_index = None

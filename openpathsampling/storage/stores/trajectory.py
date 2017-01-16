@@ -13,7 +13,6 @@ class TrajectoryStore(ObjectStore):
         self.vars['snapshots'][idx] = trajectory
         store = self.storage.snapshots
 
-
         for frame, snapshot in enumerate(trajectory.iter_proxies()):
             if type(snapshot) is not LoaderProxy:
                 loader = store.proxy(snapshot)
@@ -21,19 +20,21 @@ class TrajectoryStore(ObjectStore):
 
     def mention(self, trajectory):
         """
-        Save a trajectory without
+        Save a trajectory and store its snapshots only shallow
+
+        This will mention the ids of all snapshots in the file but not save
+        the content of all the snapshots. This way you can store CV values
+        if you want
+
         Parameters
         ----------
-        trajectory
-
-        Returns
-        -------
+        trajectory : :class:`openpathsampling.Trajectory`
 
         """
         snap_store = self.storage.snapshots
         current_mention = snap_store.only_mention
         snap_store.only_mention = True
-        ref = self.save(trajectory)
+        self.save(trajectory)
         snap_store.only_mention = current_mention
 
     def _load(self, idx):
@@ -86,5 +87,5 @@ class TrajectoryStore(ObjectStore):
             description="trajectory[trajectory][frame] is the snapshot index "
                         "(0..nspanshots-1) of frame 'frame' of trajectory "
                         "'trajectory'.",
-            chunksizes=(10240,)
+            chunksizes=(65536,)
         )
