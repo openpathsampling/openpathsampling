@@ -1216,7 +1216,7 @@ class testMinusMover(object):
         assert_equal(len(change.trials), 2)
 
         assert_subchanges_set_accepted(sub, [True] * 2 + [False])
-        # first two work and the extention fails
+        # first two work and the extension fails
         # this only happens due to length
 
         assert_equal(
@@ -1381,7 +1381,7 @@ class testSingleReplicaMinusMover(object):
         assert_equal(len(change.trials), 0) # no trials survive filtering
         assert_subchanges_set_accepted(sub, [True, False])
 
-        # first two work and the extention fails
+        # first two work and the extension fails
         # this only happens due to length
         assert_equal(
             len(sub[-1].trials[0].trajectory),
