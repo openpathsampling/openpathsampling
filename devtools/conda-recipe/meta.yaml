@@ -18,7 +18,7 @@ requirements:
 
   run:
     - python
-    - numpy 1.10
+    - numpy 1.10.*
     - scipy
     - pandas
     - netcdf4
