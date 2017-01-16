@@ -41,7 +41,7 @@ def strip_snapshots(input_storage, output_storage=None):
 
     # make sure all values for CVs are precomputed
     print """2. Precompute CVs"""
-    for cv in tqdm(cvs):
+    for cv in tqdm([cv for cv in cvs if cv.diskcache_enabled]):
         _ = cv(q)
 
     # this will also switch the storage cache to the new file
