@@ -18,7 +18,7 @@ requirements:
 
   run:
     - python
-    - numpy
+    - numpy 1.10
     - scipy
     - pandas
     - netcdf4
@@ -29,7 +29,7 @@ requirements:
     - mdtraj
     - svgwrite
     - networkx
-    - pyqt 4.11.4 py27_3
+    - pyqt
     - matplotlib
     - ujson
 

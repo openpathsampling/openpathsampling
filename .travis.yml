@@ -27,7 +27,7 @@ script:
   - source devtools/ci/ipythontests.sh
 
   # Upload new docs
-  - bash devtools/ci/after_sucess.sh
+  - bash -x devtools/ci/after_sucess.sh
 
 addons:
   apt:

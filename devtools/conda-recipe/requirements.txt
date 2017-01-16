@@ -1,5 +1,5 @@
 python
-numpy
+numpy=1.10
 scipy
 pandas
 jupyter
@@ -12,4 +12,4 @@ svgwrite
 networkx
 matplotlib
 ujson
-pyqt=4
+pyqt
