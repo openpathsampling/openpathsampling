@@ -426,6 +426,10 @@ class Ensemble(StorableNamedObject):
                         pad = min(overlap + 1, end - start - 2)
                         start = end - pad
                     else:
+                        # TODO: for some ensembles, there are better ways to
+                        # change start. For frame-by-frame ensembles
+                        # (AllInX, AllOutX) we know that we can completely
+                        # stop for all subtrajectories.
                         start += 1
                     end = start + min_length
 
@@ -1625,7 +1629,7 @@ class SequentialEnsemble(Ensemble):
         # 1. subtraj_final - subtraj_first > 0: Do we obtain a subtrajectory?
         # 2. subtraj_final == traj_final: Have we assigned all the frames?
         # 3. ens_num == final_ens: are we looking at the last ensemble
-        # Vaious combinations of these result in three possible outcomes:
+        # Various combinations of these result in three possible outcomes:
         # (a) return True (we can append)
         # (b) return False (we can't append)
         # (c) loop around to text another subtrajectory (we can't tell)

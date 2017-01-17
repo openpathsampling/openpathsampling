@@ -9,4 +9,4 @@ def netcdfplus_init(store):
         'box_vectors', 'numpy.float32',
         dimensions=('n_spatial', 'n_spatial'),
         description="box_vectors for the current simulation box",
-        chunksizes=(1, 'n_spatial', 'n_spatial'))
+        chunksizes=('n_spatial', 'n_spatial'))

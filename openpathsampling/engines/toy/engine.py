@@ -39,6 +39,7 @@ class ToyEngine(DynamicsEngine):
     """
 
     base_snapshot_type = Snapshot
+    ignore_linear_momentum = True
 
     _default_options = {
         'integ': None,
