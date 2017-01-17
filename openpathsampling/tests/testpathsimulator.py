@@ -2,7 +2,7 @@ from test_helpers import (raises_with_message_like, data_filename,
                           CalvinistDynamics, make_1d_traj)
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal, assert_true)
-from nose.plugins.skip import SkipTest
+# from nose.plugins.skip import SkipTest
 
 from openpathsampling.pathsimulator import *
 import openpathsampling as paths
@@ -297,7 +297,6 @@ class testCommittorSimulation(object):
         assert_equal(count, {self.snap0: 10, snap1: 10})
 
     def test_randomized_committor(self):
-        raise SkipTest
         # this shows that we get both states even with forward-only
         # shooting, if the randomizer gives the negative velocities
         randomizer = paths.RandomVelocities(beta=1.0)

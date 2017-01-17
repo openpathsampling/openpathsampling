@@ -699,7 +699,8 @@ class MoveScheme(StorableNamedObject):
                 except KeyError:
                     self._mover_acceptance[key] = [acc, is_trial]
 
-    def move_summary(self, steps, movers=None, output=sys.stdout, depth=0):
+    def move_summary(
+            self, steps, movers=None, output=sys.stdout, depth=0):
         """
         Provides a summary of the movers in `steps`.
 
@@ -734,6 +735,11 @@ class MoveScheme(StorableNamedObject):
             except KeyError:
                 my_movers[key] = [key]
 
+        # if scheme_copies is not None:
+        #     for sc in scheme_copies:
+        #         movers = sc.movers.keys()
+        #         for key in movers:
+        #             my_movers[key].extend(self.movers[key])
 
         stats = {}
         for groupname in my_movers.keys():

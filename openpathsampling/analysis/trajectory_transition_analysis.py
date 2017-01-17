@@ -64,7 +64,7 @@ class TrajectorySegmentContainer(object):
         raise TypeError("TrajectorySegmentContainer is immutable")
 
     # intentionally do not support __mul__ & related
-    
+
 
 class TrajectoryTransitionAnalysis(object):
     """Analyze a trajectory or set of trajectories for transition properties.
@@ -107,11 +107,11 @@ class TrajectoryTransitionAnalysis(object):
         stateB = self.stateB
         dt = self.dt
         self.continuous_segments = {
-            stateA: TrajectorySegmentContainer(segments=[], dt=dt), 
+            stateA: TrajectorySegmentContainer(segments=[], dt=dt),
             stateB: TrajectorySegmentContainer(segments=[], dt=dt)
         }
         self.lifetime_segments = {
-            stateA: TrajectorySegmentContainer(segments=[], dt=dt), 
+            stateA: TrajectorySegmentContainer(segments=[], dt=dt),
             stateB: TrajectorySegmentContainer(segments=[], dt=dt)
         }
         self.transition_segments = {
@@ -119,9 +119,9 @@ class TrajectoryTransitionAnalysis(object):
             (stateB, stateA): TrajectorySegmentContainer(segments=[], dt=dt)
         }
         self.flux_segments = {
-            stateA: {'in': TrajectorySegmentContainer(segments=[], dt=dt), 
+            stateA: {'in': TrajectorySegmentContainer(segments=[], dt=dt),
                      'out': TrajectorySegmentContainer(segments=[], dt=dt)},
-            stateB: {'in': TrajectorySegmentContainer(segments=[], dt=dt), 
+            stateB: {'in': TrajectorySegmentContainer(segments=[], dt=dt),
                      'out': TrajectorySegmentContainer(segments=[], dt=dt)}
         }
 
@@ -129,7 +129,7 @@ class TrajectoryTransitionAnalysis(object):
     def continuous_frames(self):
         return {k: self.continuous_segments[k].n_frames
                 for k in self.continuous_segments.keys()}
-    
+
     @property
     def continuous_times(self):
         return {k: self.continuous_segments[k].times
@@ -137,9 +137,9 @@ class TrajectoryTransitionAnalysis(object):
 
     @property
     def lifetime_frames(self):
-        return {k: self.lifetime_segments[k].n_frames 
+        return {k: self.lifetime_segments[k].n_frames
                 for k in self.lifetime_segments.keys()}
-                             
+
     @property
     def lifetimes(self):
         return {k: self.lifetime_segments[k].times
@@ -169,7 +169,7 @@ class TrajectoryTransitionAnalysis(object):
         ensemble = paths.AllInXEnsemble(state)
         segments = ensemble.split(trajectory, overlap=0)
         return TrajectorySegmentContainer(segments, self.dt)
-    
+
     @staticmethod
     def get_lifetime_segments(trajectory, from_vol, to_vol, forbidden=None,
                               padding=[0, -1]):
@@ -285,12 +285,12 @@ class TrajectoryTransitionAnalysis(object):
         segments = [seg[1:-1] for seg in transition_ensemble.split(trajectory)]
         return TrajectorySegmentContainer(segments, self.dt)
 
-    def analyze_flux(self, trajectory, state, interface=None):
+    def analyze_flux(self, trajectories, state, interface=None):
         """Analysis to obtain flux segments for given state.
 
         Parameters
         ----------
-        trajectory : :class:`.Trajectory`
+        trajectories : :class:`.Trajectory` or list of :class:`.Trajectory`
             trajectory to analyze
         state : :class:`.Volume`
             state volume to characterize. Must be one of the states in the
@@ -298,7 +298,7 @@ class TrajectoryTransitionAnalysis(object):
         interface : :class:`.Volume` or None
             interface to calculate the flux through. If `None`, same as
             `state`
-        
+
         Returns
         -------
         dict
@@ -307,9 +307,24 @@ class TrajectoryTransitionAnalysis(object):
             the interface. The reciprocal of the sum of the mean of these
             two is the flux through the interface.
         """
-        other = list(set([self.stateA, self.stateB]) - set([state]))[0]
         if interface is None:
             interface = state
+        if isinstance(trajectories, paths.Trajectory):
+            trajectories = [trajectories]
+
+        all_flux_dicts = [
+            self._analyze_flux_single_traj(traj, state, interface)
+            for traj in trajectories
+        ]
+
+        empty = TrajectorySegmentContainer([], dt=self.dt)
+        total_in = sum([flux['in'] for flux in all_flux_dicts], empty)
+        total_out = sum([flux['out'] for flux in all_flux_dicts], empty)
+        return {'in': total_in, 'out': total_out}
+
+
+    def _analyze_flux_single_traj(self, trajectory, state, interface):
+        other = list(set([self.stateA, self.stateB]) - set([state]))[0]
         out_segments = self.get_lifetime_segments(
             trajectory=trajectory,
             from_vol=~interface,
@@ -328,6 +343,16 @@ class TrajectoryTransitionAnalysis(object):
         in_container = TrajectorySegmentContainer(in_segments, self.dt)
         return {'in': in_container, 'out': out_container}
 
+    def flux(self, trajectories, state, interface=None):
+        if self.dt is None:
+            raise RuntimeError("Can't calculate the flux without `dt`")
+
+        flux_dict = self.analyze_flux(trajectories, state, interface)
+        in_segs = flux_dict['in']
+        out_segs = flux_dict['out']
+        flux = 1.0 / (np.mean(in_segs.times) + np.mean(out_segs.times))
+        return flux
+
     def analyze(self, trajectories):
         """Full analysis of a trajectory or trajectories.
 
@@ -338,7 +363,7 @@ class TrajectoryTransitionAnalysis(object):
         # TODO: I hate using isinstance, but I don't see another way
         if isinstance(trajectories, paths.Trajectory):
             trajectories = [trajectories]
-        
+
         # shortcuts for readability
         c_segs = self.continuous_segments
         l_segs = self.lifetime_segments
@@ -357,8 +382,8 @@ class TrajectoryTransitionAnalysis(object):
             t_duration_BA = self.analyze_transition_duration(traj,
                                                              self.stateB,
                                                              self.stateA)
-            t_segs[(self.stateB, self.stateA)] += t_duration_AB
-            t_segs[(self.stateA, self.stateB)] += t_duration_BA
+            t_segs[(self.stateA, self.stateB)] += t_duration_AB
+            t_segs[(self.stateB, self.stateA)] += t_duration_BA
         # return self so we can init and analyze in one line
         return self
 
