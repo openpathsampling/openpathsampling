@@ -1,6 +1,8 @@
 import openpathsampling as paths
 
-class ChannelAnalysis(paths.StorableNamedObject):
+from openpathsampling.netcdfplus import StorableNamedObject
+
+class ChannelAnalysis(StorableNamedObject):
     """Analyze path sampling simulation for multiple channels.
 
     User defines several channels (e.g., mechanisms) as :class:`.Ensemble`
@@ -31,9 +33,23 @@ class ChannelAnalysis(paths.StorableNamedObject):
     # later where step_num could be something else
     @staticmethod
     def _step_num(step):
+        """Return ordinal number for the given input object.
+
+        Abstracted so that other things might replace it.
+
+        Parameters
+        ----------
+        step : :class:`.MCStep`
+            the step
+
+        Returns
+        -------
+        int :
+            MC cycle number
+        """
         return step.mccycle
 
-    def _analyze(steps):
+    def _analyze(self, steps):
         """Primary analysis routine.
 
         Parameters
@@ -47,23 +63,31 @@ class ChannelAnalysis(paths.StorableNamedObject):
         prev_result = None
         last_start = {c: None for c in self.channels}
         for step in steps:
-            traj = step.active[replica].trajectory
+            step_num = self._step_num(step)
+            traj = step.active[self.replica].trajectory
             # re-use previous if the trajectory hasn't changed
             if traj is prev_traj:
                 result = prev_result
             else:
                 result = {c: len(self.channels[c].split(traj)) > 0
                           for c in self.channels}
+                if prev_result is None:
+                    prev_result = result
                 changed = [c for c in result if result[c] != prev_result[c]]
                 for c in changed:
                     if result[c] is True:
                         # switched from False to True: entered this label
-                        last_start[c] = self._step_num(step)
+                        last_start[c] = step_num
                     else:
                         # switched from True to False: exited this label
-                        finish = self._step_num(step)
+                        finish = step_num
                         self._results[c] += (last_start[c], finish)
                         last_start[c] = None
+        # finish off any extras
+        for c in self._results:
+            if last_start[c] is not None and len(self._results[c]) > 0:
+                if self._results[c][-1][1] != step_num:
+                    self._results[c] += (last_start[c], step_num)
 
     @property
     def treat_multiples(self):
