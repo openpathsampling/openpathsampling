@@ -60,19 +60,22 @@ class ChannelAnalysis(StorableNamedObject):
         # for now, this assumes only one ensemble per channel
         # (would like that to change in the future)
         prev_traj = None
-        prev_result = None
         last_start = {c: None for c in self.channels}
         for step in steps:
             step_num = self._step_num(step)
             traj = step.active[self.replica].trajectory
+            if prev_traj is None:
+                prev_result = {c: len(self.channels[c].split(traj)) > 0
+                               for c in self.channels}
+                for c in last_start:
+                    if prev_result[c] is True:
+                        last_start[c] = step_num
             # re-use previous if the trajectory hasn't changed
             if traj is prev_traj:
                 result = prev_result
             else:
                 result = {c: len(self.channels[c].split(traj)) > 0
                           for c in self.channels}
-                if prev_result is None:
-                    prev_result = result
                 changed = [c for c in result if result[c] != prev_result[c]]
                 for c in changed:
                     if result[c] is True:
@@ -81,13 +84,17 @@ class ChannelAnalysis(StorableNamedObject):
                     else:
                         # switched from True to False: exited this label
                         finish = step_num
-                        self._results[c] += (last_start[c], finish)
+                        self._results[c] += [(last_start[c], finish)]
                         last_start[c] = None
+            prev_traj = traj
         # finish off any extras
         for c in self._results:
-            if last_start[c] is not None and len(self._results[c]) > 0:
-                if self._results[c][-1][1] != step_num:
-                    self._results[c] += (last_start[c], step_num)
+            if last_start[c] is not None:
+                if len(self._results[c]) > 0:
+                    if self._results[c][-1][1] != step_num:
+                        self._results[c] += [(last_start[c], step_num)]
+                else:
+                    self._results[c] += [(last_start[c], step_num)]
 
     @property
     def treat_multiples(self):
