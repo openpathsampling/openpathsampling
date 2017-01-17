@@ -150,18 +150,10 @@ class CVStore(UniqueNamedObjectStore):
         Fill the caches of all CVs
 
         """
-        map(self.fill_cache, self)
 
-    def fill_cache(self, cv):
-        """
-        Fill the cache of a specific CV
-
-        Parameters
-        ----------
-        cv : :obj:`openpathsampling.CollectiveVariable`
-            the CV from which you want the cache to be filled
-
-        """
-        store = self.storage.snapshots.cv_list.get(cv)
-        if store is not None:
-            store.fill_cache()
+        # load all CVs regularly
+        for cv in self:
+            # And cache the feature stores
+            store = self.storage.snapshots.cv_list.get(cv)
+            if store is not None:
+                store[0].fill_cache()

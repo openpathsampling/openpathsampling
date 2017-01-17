@@ -551,7 +551,13 @@ class SampleMover(PathMover):
             'metropolis_random': rand
         }
 
-        logger.info("Trial was " + ("accepted" if accepted else "rejected"))
+        if accepted:
+            result_str = "accepted"
+        else:
+            result_str = ("rejected. Acceptance probabilty "
+                          + str(probability))
+
+        logger.info("Trial was " + result_str)
 
         return accepted, details
 
@@ -2543,11 +2549,19 @@ class Details(StorableObject):
         for key, value in kwargs.iteritems():
             setattr(self, key, value)
 
+    _print_repr_types = [paths.Ensemble]
+    _print_nothing_keys = ["__uuid__"]
+
     def __str__(self):
         # primarily for debugging/interactive use
         mystr = ""
         for key in self.__dict__.keys():
-            if not isinstance(self.__dict__[key], paths.Ensemble):
+            obj = self.__dict__[key]
+            if key in self._print_nothing_keys:
+                pass  # do nothing!
+            elif any([isinstance(obj, tt) for tt in self._print_repr_types]):
+                mystr += str(key) + " = " + repr(obj) + '\n'
+            else:
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
 

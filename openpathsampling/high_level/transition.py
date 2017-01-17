@@ -9,12 +9,13 @@ from openpathsampling.numerics import (
 from openpathsampling.numerics import WHAM
 from openpathsampling.netcdfplus import StorableNamedObject
 
-logger = logging.getLogger(__name__)
-
 from openpathsampling.analysis.tools import (
     pathlength, max_lambdas, guess_interface_lambda, minus_sides_summary,
     sampleset_sample_generator
 )
+
+logger = logging.getLogger(__name__)
+
 
 class Transition(StorableNamedObject):
     """
@@ -41,6 +42,7 @@ class Transition(StorableNamedObject):
             stateA=dct['stateA'],
             stateB=dct['stateB']
         )
+
 
 class TPSTransition(Transition):
     """
@@ -74,8 +76,8 @@ class TPSTransition(Transition):
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
 
-    def add_transition(self, stateA, stateB, **kwargs):
-        new_ens = self._tps_ensemble(stateA, stateB, **kwargs)
+    def add_transition(self, stateA, stateB):
+        new_ens = self._tps_ensemble(stateA, stateB)
         try:
             self.ensembles[0] = self.ensembles[0] | new_ens
         except AttributeError:
@@ -331,11 +333,11 @@ class TISTransition(Transition):
             # wham.load_from_dataframe(df)
             # wham.clean_leading_ones()
             tcp = wham.wham_bam_histogram(df).to_dict()
-        elif method == "mbar":
-            pass
+        # elif method == "mbar":
+        #     pass
         else:
-            raise ValueError("Only supported methods are 'wham' and 'mbar'.  "
-                             + "Whereas 'mbar' is not yet implemented!")
+            raise ValueError("Only supported method is 'wham'.  "
+                             + "'mbar' is not yet implemented!")
 
         self.tcp = LookupFunction(tcp.keys(), tcp.values())
         return self.tcp
@@ -398,7 +400,6 @@ class TISTransition(Transition):
         if flux is not None:
             self._flux = flux
 
-
         if self._flux is None:
             raise ValueError(
                 "No flux available to TISTransition. Cannot calculate rate"
@@ -441,7 +442,6 @@ class TISTransition(Transition):
                     str(outer_tcp) + " * " + str(ctp))
         return self._rate
 
-
     def to_dict(self):
         ret_dict = {
             'stateA' : self.stateA,
@@ -471,7 +471,6 @@ class TISTransition(Transition):
     def all_ensembles(self):
         return self.ensembles + [self.minus_ensemble]
 
-
     def minus_move_flux(self, steps, force=False):
         """
         Calculate the flux based on the minus ensemble trajectories.
@@ -486,7 +485,7 @@ class TISTransition(Transition):
         minus_steps = (
             step for step in steps
             if (self.minus_ensemble in [s.ensemble for s in step.change.trials]
-                and step.change.accepted)
+                and step.change.accepted and step.change.mover is not None)
         )
         #for move in minus_moves:
             #minus_samp = [s for s in move.results
@@ -509,13 +508,16 @@ class TISTransition(Transition):
             if len(self.minus_count_sides[key]) == 0:
                 logger.warn("No instances of "+str(key)+" for minus move.")
 
+        # print minus_movers_used
+
         t_in_avg = np.array(self.minus_count_sides['in']).mean()
         t_out_avg = np.array(self.minus_count_sides['out']).mean()
-        if len(minus_movers_used) != 1:
+
+        if len(set(minus_movers_used)) != 1:
             # TODO: someday, this may not need to be forbidden, although I
             # don't think it will be useful. For now, this is important for
             # testing. Minimum, important that all have the same timestep
-            raise RuntimeError(str(len(minus_movers_used)) + 
+            raise RuntimeError(str(len(minus_movers_used)) +
                                " minus movers for the same ensemble?")
 
         engine_dt = minus_movers_used.keys()[0].engine.snapshot_timestep

@@ -10,6 +10,9 @@ import time
 import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, \
     ImmutableDictStore, NamedObjectStore
+
+from stores import SnapshotWrapperStore
+
 import openpathsampling.engines as peng
 
 logger = logging.getLogger(__name__)
@@ -38,7 +41,6 @@ class Storage(NetCDFPlus):
             filename,
             mode=None,
             template=None,
-            use_uuid=True,
             fallback=None):
         """
         Create a netCDF+ storage for OPS Objects
@@ -59,7 +61,6 @@ class Storage(NetCDFPlus):
         super(Storage, self).__init__(
             filename,
             mode,
-            use_uuid=use_uuid,
             fallback=fallback)
 
     def _create_storages(self):
@@ -75,7 +76,7 @@ class Storage(NetCDFPlus):
         self.create_store('topologies', NamedObjectStore(peng.Topology))
         self.create_store('cvs', paths.storage.CVStore())
 
-        self.create_store('snapshots', paths.storage.SnapshotWrapperStore())
+        self.create_store('snapshots', SnapshotWrapperStore())
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())

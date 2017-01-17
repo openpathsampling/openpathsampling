@@ -19,4 +19,4 @@ def netcdfplus_init(store):
         dimensions=('n_atoms', 'n_spatial'),
         description="the velocity of atom 'atom' in dimension " +
                     "'coordinate' of momentum 'momentum'.",
-        chunksizes=(1, 'n_atoms', 'n_spatial'))
+        chunksizes=('n_atoms', 'n_spatial'))

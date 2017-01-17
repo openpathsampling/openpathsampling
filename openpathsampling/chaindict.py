@@ -449,3 +449,4 @@ class StoredDict(ChainDict):
 
     def cache_all(self):
         pass
+
