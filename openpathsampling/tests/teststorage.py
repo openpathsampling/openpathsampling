@@ -70,7 +70,8 @@ class testStorage(object):
         store.close()
 
         store = Storage(filename=self.filename, mode='a')
-        loaded_topology = store.template.topology        # check if poth topologies have the same JSON string
+        loaded_topology = store.template.topology
+        # check if path topologies have the same JSON string
         # this also tests the simplifier for topologies
 
         assert_equal(
@@ -88,13 +89,12 @@ class testStorage(object):
         traj = paths.Trajectory(list(self.traj))
         template = traj[0]
 
-        for use_uuid, use_cache in [
-                (True, True), (False, True), (True, False), (False, False)]:
+        for use_cache in (False, True):
             # print '=========================================================='
             # print 'UUID', use_uuid, 'CACHE', use_cache
             # print '=========================================================='
 
-            storage_w = paths.Storage(fname, "w", use_uuid=use_uuid)
+            storage_w = paths.Storage(fname, "w")
             storage_w.snapshots.save(template)
 
             # let's mess up the order in which we save and include
@@ -185,8 +185,8 @@ class testStorage(object):
             storage_r.close()
 
     def test_load_save(self):
-        for use_uuid in [True, False]:
-            store = Storage(filename=self.filename, mode='w', use_uuid=use_uuid)
+        for use_uuid in [True]:
+            store = Storage(filename=self.filename, mode='w')
             assert(os.path.isfile(self.filename))
 
             store.save(self.template_snapshot)
@@ -205,8 +205,8 @@ class testStorage(object):
             store.close()
 
     def test_proxy(self):
-        for use_uuid in [True, False]:
-            store = Storage(filename=self.filename, mode='w', use_uuid=use_uuid)
+        for use_uuid in [True]:
+            store = Storage(filename=self.filename, mode='w')
             assert(os.path.isfile(self.filename))
 
             tm = self.template_snapshot
@@ -247,7 +247,7 @@ class testStorage(object):
             assert((px == s1) is use_uuid)
 
     def test_mention_only(self):
-        storage_w = paths.Storage(self.filename, "w", use_uuid=True)
+        storage_w = paths.Storage(self.filename, "w")
 
         template = self.template_snapshot
 
@@ -323,7 +323,7 @@ class testStorage(object):
         store.close()
 
     def test_load_save_toy(self):
-        store = Storage(filename=self.filename, mode='w', use_uuid=False)
+        store = Storage(filename=self.filename, mode='w')
         assert(os.path.isfile(self.filename))
 
         store.save(self.toy_template)
@@ -344,7 +344,7 @@ class testStorage(object):
 
     def test_reverse_bug(self):
         store = Storage(filename=self.filename,
-                        mode='w', use_uuid=False)
+                        mode='w')
         assert(os.path.isfile(self.filename))
 
         store.snapshots.save(self.template_snapshot)

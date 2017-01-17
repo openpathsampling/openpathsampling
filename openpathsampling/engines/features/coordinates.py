@@ -17,7 +17,7 @@ def netcdfplus_init(store):
         dimensions=('n_atoms', 'n_spatial'),
         description="coordinate of atom '{ix[1]}' in dimension " +
                    "'{ix[2]}' of configuration '{ix[0]}'.",
-        chunksizes=(1, 'n_atoms', 'n_spatial'))
+        chunksizes=('n_atoms', 'n_spatial'))
 
 
 @property

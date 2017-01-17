@@ -86,7 +86,6 @@ class StaticContainer(StorableObject):
             the reduced deep copy
         """
 
-        # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
         return StaticContainer(coordinates=self.coordinates,
                                box_vectors=self.box_vectors
                                )
@@ -161,13 +160,13 @@ class StaticContainerStore(ObjectStore):
             dimensions=('n_atoms', 'n_spatial'),
             description="coordinate of atom '{ix[1]}' in dimension " +
                         "'{ix[2]}' of configuration '{ix[0]}'.",
-            chunksizes=(1, 'n_atoms', 'n_spatial'),
+            chunksizes=('n_atoms', 'n_spatial'),
             simtk_unit=u.nanometers)
 
         self.create_variable(
             'box_vectors', 'numpy.float32',
             dimensions=('n_spatial', 'n_spatial'),
-            chunksizes=(1, 'n_spatial', 'n_spatial'),
+            chunksizes=('n_spatial', 'n_spatial'),
             simtk_unit=u.nanometers)
 
 
@@ -304,5 +303,5 @@ class KineticContainerStore(ObjectStore):
             dimensions=('n_atoms', 'n_spatial'),
             description="the velocity of atom 'atom' in dimension " +
                         "'coordinate' of momentum 'momentum'.",
-            chunksizes=(1, 'n_atoms', 'n_spatial'),
+            chunksizes=('n_atoms', 'n_spatial'),
             simtk_unit=u.nanometers / u.picoseconds)

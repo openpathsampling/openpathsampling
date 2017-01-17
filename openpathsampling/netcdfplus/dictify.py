@@ -127,7 +127,7 @@ class ObjectJSON(object):
                 if hasattr(obj, '__uuid__'):
                     return {
                         '_cls': obj.__class__.__name__,
-                        '_obj_uuid': str(obj.__uuid__),
+                        '_obj_uuid': str(UUID(int=obj.__uuid__)),
                         '_dict': self.simplify(obj.to_dict(), base_type)}
                 else:
                     return {
@@ -135,7 +135,7 @@ class ObjectJSON(object):
                         '_dict': self.simplify(obj.to_dict(), base_type)}
             elif type(obj) is UUID:
                 return {
-                    '_uuid': str(obj)}
+                    '_uuid': str(UUID(int=obj))}
             else:
                 return None
         elif type(obj) is list:
@@ -214,7 +214,7 @@ class ObjectJSON(object):
                 return float(str(obj['_integer']))
 
             elif '_uuid' in obj:
-                return UUID(obj['_uuid'])
+                return int(UUID(obj['_uuid']))
 
             elif '_cls' in obj and '_dict' in obj:
                 if obj['_cls'] not in self.class_list:
@@ -560,6 +560,7 @@ class UUIDObjectJSON(ObjectJSON):
     def simplify(self, obj, base_type=''):
         if obj is self.storage:
             return {'_storage': 'self'}
+
         if obj.__class__.__module__ != '__builtin__':
             if obj.__class__ in self.storage._obj_store:
                 store = self.storage._obj_store[obj.__class__]
@@ -570,8 +571,11 @@ class UUIDObjectJSON(ObjectJSON):
                     # use the simplify from the super class ObjectJSON
                     store.save(obj)
                     return {
-                        '_obj_uuid': str(obj.__uuid__),
+                        '_hex_uuid': hex(obj.__uuid__),
                         '_store': store.prefix}
+                    # return {
+                    #     '_obj_uuid': str(UUID(int=obj.__uuid__)),
+                    #     '_store': store.prefix}
 
         return super(UUIDObjectJSON, self).simplify(obj, base_type)
 
@@ -583,7 +587,13 @@ class UUIDObjectJSON(ObjectJSON):
 
             if '_obj_uuid' in obj and '_store' in obj:
                 store = self.storage._stores[obj['_store']]
-                result = store.load(UUID(obj['_obj_uuid']))
+                result = store.load(int(UUID(obj['_obj_uuid'])))
+
+                return result
+
+            if '_hex_uuid' in obj and '_store' in obj:
+                store = self.storage._stores[obj['_store']]
+                result = store.load(long(obj['_hex_uuid'], 16))
 
                 return result
 
@@ -605,11 +615,11 @@ class CachedUUIDObjectJSON(ObjectJSON):
 
                     return {
                         '_cls': obj.__class__.__name__,
-                        '_obj_uuid': str(obj.__uuid__),
+                        '_obj_uuid': str(UUID(int=obj.__uuid__)),
                         '_dict': self.simplify(obj.to_dict(), base_type)}
                 else:
                     return {
-                        '_obj_uuid': str(obj.__uuid__)}
+                        '_obj_uuid': str(UUID(int=obj.__uuid__))}
 
         return super(CachedUUIDObjectJSON, self).simplify(obj, base_type)
 
@@ -628,8 +638,8 @@ class CachedUUIDObjectJSON(ObjectJSON):
                                  'Class is not registered as creatable! '
                                  'You might have to define\n' +
                                  'the class locally and call '
-                                 '`update_storable_classes()` on your storage.') %
-                             jsn['_cls'])
+                                 '`update_storable_classes()` on your storage.'
+                            ) % jsn['_cls'])
 
                     attributes = self.build(jsn['_dict'])
 
@@ -651,7 +661,7 @@ class CachedUUIDObjectJSON(ObjectJSON):
         return super(CachedUUIDObjectJSON, self).to_json(obj, base_type)
 
     # def from_json(self, json_string):
-    #     # here we keep the cache. It could happen that an object is sended in
+    #     # here we keep the cache. It could happen that an object is sent in
     #     # full, but we still have it and so we do not have to rebuild it which
     #     # saves some time
     #     simplified = ujson.loads(json_string)

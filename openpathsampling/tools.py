@@ -34,18 +34,37 @@ try:
 except ImportError:
     is_ipynb = False
 
+last_output = None
+
 
 def refresh_output(output_str, print_anyway=True, refresh=True,
                    output_stream=None, ipynb_display_only=False):
+
+    global last_output
+
     if output_stream is None:
         output_stream = sys.stdout
 
-    if is_ipynb or not ipynb_display_only or print_anyway:
-        if refresh:
-            IPython.display.clear_output(wait=True)
+    if not output_str:
+        return
 
-        output_stream.write(output_str)
-        sys.stdout.flush()
+    if refresh:
+        if is_ipynb:
+            IPython.display.clear_output(wait=True)
+        elif output_stream is sys.stdout:
+            if last_output is not None:
+                lines = len(last_output.split('\n'))
+                CURSOR_UP_ONE = '\x1b[1A'
+                ERASE_LINE = '\x1b[2K'
+
+                output_stream.write((CURSOR_UP_ONE + ERASE_LINE) * (lines - 1))
+
+            last_output = output_str
+    else:
+        last_output = None
+
+    output_stream.write(output_str)
+    output_stream.flush()
 
 
 # a little code snippet to wrap strings around for nicer output

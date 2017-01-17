@@ -96,7 +96,7 @@ class testOpenMMEngine(object):
     def test_sanity(self):
         assert_equal(self.engine.n_steps_per_frame, 2)
         assert_equal(self.engine.n_frames_max, 5)
-        # TODO: add more sanity checkes
+        # TODO: add more sanity checks
         pass  # not quite a SkipTest, but a reminder to add more
 
     def test_snapshot_get(self):

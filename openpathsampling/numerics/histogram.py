@@ -459,7 +459,7 @@ def write_histograms(fname, hists):
     """
     pass
 
-# TODO: might as well add a main fucntion to this; read data / weight from
+# TODO: might as well add a main function to this; read data / weight from
 # stdin and output an appropriate histogram depending on some options. Then
 # it is both a useful script and a library class!
 
