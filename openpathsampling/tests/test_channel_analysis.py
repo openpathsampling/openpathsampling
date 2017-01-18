@@ -32,6 +32,8 @@ class testChannelAnalysis(object):
         self.decr_1 = self._make_active([0.0, -0.5, -1.1])
         self.both_1 = self._make_active([0.0, 0.5, -0.5, 1.1])
         self.both_2 = self._make_active([0.0, -0.4, 0.4, -1.1])
+        self.none_1 = self._make_active([0.0, 1.1])
+        self.nont_2 = self._make_active([0.0, -1.1])
 
         self.channels = {
             'incr': increasing,
@@ -52,7 +54,8 @@ class testChannelAnalysis(object):
             paths.MCStep(mccycle=1, active=self.decr_1)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results, {'incr': [(0,1)], 'decr': [(1,2)]})
+        assert_equal(results._results,
+                     {'incr': [(0,1)], 'decr': [(1,2)], None: []})
 
     def test_analyze_incr_incr(self):
         steps = [
@@ -60,7 +63,8 @@ class testChannelAnalysis(object):
             paths.MCStep(mccycle=1, active=self.incr_2)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results, {'incr': [(0,2)], 'decr': []})
+        assert_equal(results._results,
+                     {'incr': [(0,2)], 'decr': [], None: []})
 
     def test_analyze_incr_both_decr(self):
         steps = [
@@ -70,16 +74,45 @@ class testChannelAnalysis(object):
             paths.MCStep(mccycle=3, active=self.decr_1)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results, {'incr': [(0,3)], 'decr': [(1,4)]})
+        assert_equal(results._results,
+                     {'incr': [(0,3)], 'decr': [(1,4)], None: []})
 
     def test_analyze_incr_both_incr(self):
-        raise SkipTest
+        steps = [
+            paths.MCStep(mccycle=0, active=self.incr_1),
+            paths.MCStep(mccycle=1, active=self.both_1),
+            paths.MCStep(mccycle=2, active=self.incr_2)
+        ]
+        results = paths.ChannelAnalysis(steps, self.channels)
+        assert_equal(results._results,
+                     {'incr': [(0,3)], 'decr': [(1,2)], None: []})
 
     def test_analyze_incr_same_decr(self):
-        raise SkipTest
+        steps = [
+            paths.MCStep(mccycle=0, active=self.incr_1),
+            paths.MCStep(mccycle=1, active=self.incr_1),
+            paths.MCStep(mccycle=2, active=self.incr_2)
+        ]
+        results = paths.ChannelAnalysis(steps, self.channels)
+        assert_equal(results._results,
+                     {'incr': [(0,3)], 'decr': [], None: []})
 
     def test_analyze_incr_none_incr(self):
-        raise SkipTest
+        steps = [
+            paths.MCStep(mccycle=0, active=self.incr_1),
+            paths.MCStep(mccycle=1, active=self.none_1),
+            paths.MCStep(mccycle=2, active=self.incr_2)
+        ]
+        results = paths.ChannelAnalysis(steps, self.channels)
+        assert_equal(results._results,
+                     {'incr': [(0,1), (2,3)], 'decr': [], None: [(1,2)]})
 
     def test_analyze_incr_none_decr(self):
-        raise SkipTest
+        steps = [
+            paths.MCStep(mccycle=0, active=self.incr_1),
+            paths.MCStep(mccycle=1, active=self.none_1),
+            paths.MCStep(mccycle=2, active=self.decr_1)
+        ]
+        results = paths.ChannelAnalysis(steps, self.channels)
+        assert_equal(results._results,
+                     {'incr': [(0,1)], 'decr': [(2,3)], None: [(1,2)]})

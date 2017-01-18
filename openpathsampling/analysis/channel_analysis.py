@@ -26,7 +26,7 @@ class ChannelAnalysis(StorableNamedObject):
         self.replica = replica
 
         self.treat_multiples = 'unique'
-        self._results = {c: [] for c in self.channels}
+        self._results = {c: [] for c in self.channels.keys() + [None]}
         self._analyze(steps)
 
     # separate this because I think much of the code might be generalized
@@ -60,13 +60,14 @@ class ChannelAnalysis(StorableNamedObject):
         # for now, this assumes only one ensemble per channel
         # (would like that to change in the future)
         prev_traj = None
-        last_start = {c: None for c in self.channels}
+        last_start = {c: None for c in self._results}
         for step in steps:
             step_num = self._step_num(step)
             traj = step.active[self.replica].trajectory
             if prev_traj is None:
                 prev_result = {c: len(self.channels[c].split(traj)) > 0
                                for c in self.channels}
+                prev_result[None] = not any(prev_result.values())
                 for c in last_start:
                     if prev_result[c] is True:
                         last_start[c] = step_num
@@ -76,6 +77,7 @@ class ChannelAnalysis(StorableNamedObject):
             else:
                 result = {c: len(self.channels[c].split(traj)) > 0
                           for c in self.channels}
+                result[None] = not any(result.values())
                 changed = [c for c in result if result[c] != prev_result[c]]
                 for c in changed:
                     if result[c] is True:
@@ -93,6 +95,7 @@ class ChannelAnalysis(StorableNamedObject):
         for c in self._results:
             if last_start[c] is not None:
                 if len(self._results[c]) > 0:
+                    # don't do double it if it's already there
                     if self._results[c][-1][1] != step_num:
                         self._results[c] += [(last_start[c], next_step)]
                 else:
