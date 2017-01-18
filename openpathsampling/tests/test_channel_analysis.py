@@ -52,22 +52,34 @@ class testChannelAnalysis(object):
             paths.MCStep(mccycle=1, active=self.decr_1)
         ]
         results = paths.ChannelAnalysis(steps, self.channels)
-        assert_equal(results._results, {'incr': [(0,1)], 'decr': [(1,1)]})
+        assert_equal(results._results, {'incr': [(0,1)], 'decr': [(1,2)]})
 
     def test_analyze_incr_incr(self):
-        pass
+        steps = [
+            paths.MCStep(mccycle=0, active=self.incr_1),
+            paths.MCStep(mccycle=1, active=self.incr_2)
+        ]
+        results = paths.ChannelAnalysis(steps, self.channels)
+        assert_equal(results._results, {'incr': [(0,2)], 'decr': []})
 
     def test_analyze_incr_both_decr(self):
-        pass
+        steps = [
+            paths.MCStep(mccycle=0, active=self.incr_1),
+            paths.MCStep(mccycle=1, active=self.both_1),
+            paths.MCStep(mccycle=2, active=self.both_2),
+            paths.MCStep(mccycle=3, active=self.decr_1)
+        ]
+        results = paths.ChannelAnalysis(steps, self.channels)
+        assert_equal(results._results, {'incr': [(0,3)], 'decr': [(1,4)]})
 
     def test_analyze_incr_both_incr(self):
-        pass
+        raise SkipTest
 
     def test_analyze_incr_same_decr(self):
-        pass
+        raise SkipTest
 
     def test_analyze_incr_none_incr(self):
-        pass
+        raise SkipTest
 
     def test_analyze_incr_none_decr(self):
-        pass
+        raise SkipTest

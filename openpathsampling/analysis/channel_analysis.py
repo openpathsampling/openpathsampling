@@ -87,14 +87,16 @@ class ChannelAnalysis(StorableNamedObject):
                         self._results[c] += [(last_start[c], finish)]
                         last_start[c] = None
             prev_traj = traj
+            prev_result = result
         # finish off any extras
+        next_step = step_num + 1 # again, this can be changed
         for c in self._results:
             if last_start[c] is not None:
                 if len(self._results[c]) > 0:
                     if self._results[c][-1][1] != step_num:
-                        self._results[c] += [(last_start[c], step_num)]
+                        self._results[c] += [(last_start[c], next_step)]
                 else:
-                    self._results[c] += [(last_start[c], step_num)]
+                    self._results[c] += [(last_start[c], next_step)]
 
     @property
     def treat_multiples(self):
