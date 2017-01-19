@@ -41,13 +41,13 @@ class testChannelAnalysis(object):
         }
 
         # used in simplest tests of relabeling
-        self.toy_results =  {'a': [(0, 5), (8, 10)], 
+        self.toy_results =  {'a': [(0, 5), (8, 10)],
                              'b': [(3, 9)],
                              'c': [(7, 9)]}
         self.set_a = frozenset(['a'])
         self.set_b = frozenset(['b'])
         self.set_c = frozenset(['c'])
-        self.toy_expanded_results = [(0, 5, self.set_a), (3, 9, self.set_b), 
+        self.toy_expanded_results = [(0, 5, self.set_a), (3, 9, self.set_b),
                                      (7, 9, self.set_c), (8, 10, self.set_a)]
 
     def _make_active(self, seq):
@@ -149,8 +149,8 @@ class testChannelAnalysis(object):
         relabeled = paths.ChannelAnalysis._labels_by_step_multiple(
             self.toy_expanded_results
         )
-        assert_equal(relabeled, 
-                     [(0, 3, self.set_a), 
+        assert_equal(relabeled,
+                     [(0, 3, self.set_a),
                       (3, 5, self.set_a | self.set_b),
                       (5, 7, self.set_b),
                       (7, 8, self.set_b | self.set_c),

@@ -180,17 +180,9 @@ class ChannelAnalysis(StorableNamedObject):
                 relabeled += [(prev_step_num, step_num,
                                frozenset(active_channels))]
 
-            try:
-                start_channel = start_events[step_num]
-            except KeyError:
-                start_channel = set([])
-            try:
-                finish_channel = finish_events[step_num]
-            except KeyError:
-                finish_channel = set([])
-
-            active_channels -= finish_channel
-            active_channels |= start_channel
+            # defaultdict gives empty if doesn't exist
+            active_channels -= finish_events[step_num]
+            active_channels |= start_events[step_num]
 
             prev_step_num = step_num
 
