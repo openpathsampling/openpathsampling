@@ -1,6 +1,9 @@
 import openpathsampling as paths
 
+import collections
+
 from openpathsampling.netcdfplus import StorableNamedObject
+
 
 class ChannelAnalysis(StorableNamedObject):
     """Analyze path sampling simulation for multiple channels.
@@ -122,7 +125,7 @@ class ChannelAnalysis(StorableNamedObject):
 
     @staticmethod
     def _expand_results(results):
-        expanded = [(domain[0], domain[1], set([channel]))
+        expanded = [(domain[0], domain[1], frozenset([channel]))
                     for channel in results for domain in results[channel]]
         return sorted(expanded, key=lambda tup: tup[0])
 
@@ -157,8 +160,41 @@ class ChannelAnalysis(StorableNamedObject):
         return relabeled
 
     @staticmethod
-    def _label_by_step_multiple(results):
-        pass
+    def _labels_by_step_multiple(expanded_results):
+        relabeled = []
+        # start events are times when a channel is added to the active
+        # finish events are when channel is removed from the active
+        # both are dicts of time to a set of channels
+        start_events = collections.defaultdict(set)
+        finish_events = collections.defaultdict(set)
+        for event in expanded_results:
+            start_events[event[0]] |= set(event[2])
+            finish_events[event[1]] |= set(event[2])
+
+        all_event_steps = set(start_events.keys()) | set(finish_events.keys())
+        active_channels = set([])
+        prev_step_num = None
+        # note to self: this is some elegant freaking code
+        for step_num in sorted(list(all_event_steps)):
+            if prev_step_num is not None:
+                relabeled += [(prev_step_num, step_num,
+                               frozenset(active_channels))]
+
+            try:
+                start_channel = start_events[step_num]
+            except KeyError:
+                start_channel = set([])
+            try:
+                finish_channel = finish_events[step_num]
+            except KeyError:
+                finish_channel = set([])
+
+            active_channels -= finish_channel
+            active_channels |= start_channel
+
+            prev_step_num = step_num
+
+        return relabeled
 
     def labels_by_step(self):
         expanded_results = self._expand_results(self._results)

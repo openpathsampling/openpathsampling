@@ -44,9 +44,9 @@ class testChannelAnalysis(object):
         self.toy_results =  {'a': [(0, 5), (8, 10)], 
                              'b': [(3, 9)],
                              'c': [(7, 9)]}
-        self.set_a = set(['a'])
-        self.set_b = set(['b'])
-        self.set_c = set(['c'])
+        self.set_a = frozenset(['a'])
+        self.set_b = frozenset(['b'])
+        self.set_c = frozenset(['c'])
         self.toy_expanded_results = [(0, 5, self.set_a), (3, 9, self.set_b), 
                                      (7, 9, self.set_c), (8, 10, self.set_a)]
 
@@ -146,4 +146,13 @@ class testChannelAnalysis(object):
                                  (9, 10, self.set_a)])
 
     def test_labels_by_step_multiple(self):
-        raise SkipTest
+        relabeled = paths.ChannelAnalysis._labels_by_step_multiple(
+            self.toy_expanded_results
+        )
+        assert_equal(relabeled, 
+                     [(0, 3, self.set_a), 
+                      (3, 5, self.set_a | self.set_b),
+                      (5, 7, self.set_b),
+                      (7, 8, self.set_b | self.set_c),
+                      (8, 9, self.set_b | self.set_c | self.set_a),
+                      (9, 10, self.set_a)])
