@@ -44,8 +44,11 @@ class testChannelAnalysis(object):
         self.toy_results =  {'a': [(0, 5), (8, 10)], 
                              'b': [(3, 9)],
                              'c': [(7, 9)]}
-        self.toy_expanded_results = [(0, 5, 'a'), (3, 9, 'b'), 
-                                     (7, 9, 'c'), (8, 10, 'a')]
+        self.set_a = set(['a'])
+        self.set_b = set(['b'])
+        self.set_c = set(['c'])
+        self.toy_expanded_results = [(0, 5, self.set_a), (3, 9, self.set_b), 
+                                     (7, 9, self.set_c), (8, 10, self.set_a)]
 
     def _make_active(self, seq):
         traj = make_1d_traj(seq)
@@ -132,11 +135,15 @@ class testChannelAnalysis(object):
         relabeled = paths.ChannelAnalysis._labels_by_step_newest(
             self.toy_expanded_results
         )
-        assert_equal(relabeled,
-                     [(0, 3, 'a'), (3, 7, 'b'), (7, 8, 'c'), (8, 10, 'a')])
+        assert_equal(relabeled, [(0, 3, self.set_a), (3, 7, self.set_b),
+                                 (7, 8, self.set_c), (8, 10, self.set_a)])
 
     def test_labels_by_step_oldest(self):
-        raise SkipTest
+        relabeled = paths.ChannelAnalysis._labels_by_step_oldest(
+            self.toy_expanded_results
+        )
+        assert_equal(relabeled, [(0, 5, self.set_a), (5, 9, self.set_b),
+                                 (9, 10, self.set_a)])
 
     def test_labels_by_step_multiple(self):
         raise SkipTest

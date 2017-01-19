@@ -122,7 +122,7 @@ class ChannelAnalysis(StorableNamedObject):
 
     @staticmethod
     def _expand_results(results):
-        expanded = [(domain[0], domain[1], channel)
+        expanded = [(domain[0], domain[1], set([channel]))
                     for channel in results for domain in results[channel]]
         return sorted(expanded, key=lambda tup: tup[0])
 
@@ -137,16 +137,38 @@ class ChannelAnalysis(StorableNamedObject):
         return relabeled
 
     @staticmethod
-    def _labels_by_step_oldest(results):
-        pass
+    def _labels_by_step_oldest(expanded_results):
+        relabeled = []
+        previous = expanded_results[0]
+        for current in expanded_results[1:]:
+            if current[1] > previous[1]:
+                # ends after last one ended
+                # if this isn't true, this one gets skipped
+                # if it is true, then previous is used
+                relabeled += [previous]
+                # save the new starting point
+                previous = (previous[1], current[1], current[2])
+            else:
+                pass # for testing
+        if relabeled[-1] != previous:
+            relabeled += [previous]
+        else:
+            pass # for testing
+        return relabeled
 
     @staticmethod
     def _label_by_step_multiple(results):
         pass
 
-
     def labels_by_step(self):
-        pass
+        expanded_results = self._expand_results(self._results)
+        method = {
+            'all': lambda x: x,
+            'newest': self._labels_by_step_newest,
+            'oldest': self._labels_by_step_oldest,
+            'multiple': self._labels_by_step_multiple
+        }[self.treat_multiples]
+        return method(expanded_results)
 
     @property
     def switching_matrix(self):
