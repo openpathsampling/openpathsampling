@@ -33,12 +33,19 @@ class testChannelAnalysis(object):
         self.both_1 = self._make_active([0.0, 0.5, -0.5, 1.1])
         self.both_2 = self._make_active([0.0, -0.4, 0.4, -1.1])
         self.none_1 = self._make_active([0.0, 1.1])
-        self.nont_2 = self._make_active([0.0, -1.1])
+        self.none_2 = self._make_active([0.0, -1.1])
 
         self.channels = {
             'incr': increasing,
             'decr': decreasing
         }
+
+        # used in simplest tests of relabeling
+        self.toy_results =  {'a': [(0, 5), (8, 10)], 
+                             'b': [(3, 9)],
+                             'c': [(7, 9)]}
+        self.toy_expanded_results = [(0, 5, 'a'), (3, 9, 'b'), 
+                                     (7, 9, 'c'), (8, 10, 'a')]
 
     def _make_active(self, seq):
         traj = make_1d_traj(seq)
@@ -116,3 +123,20 @@ class testChannelAnalysis(object):
         results = paths.ChannelAnalysis(steps, self.channels)
         assert_equal(results._results,
                      {'incr': [(0,1)], 'decr': [(2,3)], None: [(1,2)]})
+
+    def test_expand_results(self):
+        expanded = paths.ChannelAnalysis._expand_results(self.toy_results)
+        assert_equal(expanded, self.toy_expanded_results)
+
+    def test_labels_by_step_newest(self):
+        relabeled = paths.ChannelAnalysis._labels_by_step_newest(
+            self.toy_expanded_results
+        )
+        assert_equal(relabeled,
+                     [(0, 3, 'a'), (3, 7, 'b'), (7, 8, 'c'), (8, 10, 'a')])
+
+    def test_labels_by_step_oldest(self):
+        raise SkipTest
+
+    def test_labels_by_step_multiple(self):
+        raise SkipTest

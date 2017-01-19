@@ -20,12 +20,13 @@ class ChannelAnalysis(StorableNamedObject):
         replica ID to analyze from the steps, default is 0.
     """
     def __init__(self, steps, channels, replica=0):
+        super(ChannelAnalysis, self).__init__()
         self.channels = channels
         if steps is None:
             steps = []
         self.replica = replica
 
-        self.treat_multiples = 'unique'
+        self._treat_multiples = 'all'
         self._results = {c: [] for c in self.channels.keys() + [None]}
         self._analyze(steps)
 
@@ -51,6 +52,10 @@ class ChannelAnalysis(StorableNamedObject):
 
     def _analyze(self, steps):
         """Primary analysis routine.
+
+        Converts the input steps to an internal ._results dictionary of
+        channel name to list of (start, end) tuples for when that channel is
+        occupied.
 
         Parameters
         ----------
@@ -98,6 +103,8 @@ class ChannelAnalysis(StorableNamedObject):
                     # don't do double it if it's already there
                     if self._results[c][-1][1] != step_num:
                         self._results[c] += [(last_start[c], next_step)]
+                    # note: is the else: of the above even possible?
+                    # namely, do we need the if statement? should test that
                 else:
                     self._results[c] += [(last_start[c], next_step)]
 
@@ -107,7 +114,39 @@ class ChannelAnalysis(StorableNamedObject):
 
     @treat_multiples.setter
     def treat_multiples(self, value):
+        value = value.lower()
+        if value not in ['all', 'newest', 'oldest', 'multiple']:
+            raise ValueError("Invalid value for treat_multiples: " +
+                             str(value))
         self._treat_multiples = value
+
+    @staticmethod
+    def _expand_results(results):
+        expanded = [(domain[0], domain[1], channel)
+                    for channel in results for domain in results[channel]]
+        return sorted(expanded, key=lambda tup: tup[0])
+
+    @staticmethod
+    def _labels_by_step_newest(expanded_results):
+        relabeled = []
+        previous = expanded_results[0]
+        for current in expanded_results[1:]:
+            relabeled += [(previous[0], current[0], previous[2])]
+            previous = current
+        relabeled += [expanded_results[-1]]
+        return relabeled
+
+    @staticmethod
+    def _labels_by_step_oldest(results):
+        pass
+
+    @staticmethod
+    def _label_by_step_multiple(results):
+        pass
+
+
+    def labels_by_step(self):
+        pass
 
     @property
     def switching_matrix(self):
