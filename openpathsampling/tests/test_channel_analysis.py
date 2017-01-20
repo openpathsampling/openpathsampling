@@ -200,10 +200,10 @@ class testChannelAnalysis(object):
 
     def test_switching(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.toy_results
         #nan = float('nan')
         nan = 0  # self transitions are 0
 
-        analysis._results = self.toy_results
 
         analysis.treat_multiples = 'newest'
         df = analysis.switching_matrix
@@ -225,4 +225,51 @@ class testChannelAnalysis(object):
                              [1, 0, 0, 0, nan]])
         assert_array_almost_equal(df.as_matrix(), expected)
 
+        # TODO: define switching when using 'all'
 
+    def test_residence_times(self):
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.toy_results
+
+        analysis.treat_multiples = 'newest'
+        residence_times = analysis.residence_times
+        assert_equal(residence_times, {'a': [3, 2], 'b': [4], 'c': [1]})
+
+        analysis.treat_multiples = 'oldest'
+        residence_times = analysis.residence_times
+        assert_equal(residence_times, {'a': [5, 1], 'b': [4]})
+
+        analysis.treat_multiples = 'all'
+        residence_times = analysis.residence_times
+        assert_equal(residence_times, {'a': [5, 2], 'b': [6], 'c': [2]})
+
+        analysis.treat_multiples = 'multiple'
+        residence_times = analysis.residence_times
+        assert_equal(residence_times, {'a': [3, 1], 'b': [2], 'a,b': [2],
+                                       'b,c': [1], 'a,b,c': [1]})
+
+    def test_total_time(self):
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.toy_results
+
+        analysis.treat_multiples = 'newest'
+        total_time = analysis.total_time
+        assert_equal(total_time, {'a': 5, 'b': 4, 'c': 1})
+
+        analysis.treat_multiples = 'oldest'
+        total_time = analysis.total_time
+        assert_equal(total_time, {'a': 6, 'b': 4})
+        assert_equal(total_time['c'], 0)
+
+        analysis.treat_multiples = 'all'
+        total_time = analysis.total_time
+        assert_equal(total_time, {'a': 7, 'b': 6, 'c': 2})
+
+        analysis.treat_multiples = 'multiple'
+        total_time = analysis.total_time
+        assert_equal(total_time, {'a': 4, 'b': 2, 'a,b': 2, 'b,c': 1,
+                                  'a,b,c': 1})
+
+
+    def test_status(self):
+        raise SkipTest

@@ -230,11 +230,21 @@ class ChannelAnalysis(StorableNamedObject):
 
     @property
     def residence_times(self):
-        pass
+        labeled_results = self.labels_by_step()
+        durations = [(self.label_to_string(step[2]), step[1] - step[0])
+                     for step in labeled_results]
+        results = collections.defaultdict(list)
+        for dur in durations:
+            results[dur[0]] += [dur[1]]
+        return results
 
     @property
     def total_time(self):
-        pass
+        residences = self.residence_times
+        results = collections.defaultdict(int)
+        for channel in residences:
+            results[channel] = sum(residences[channel])
+        return results
 
     def status(self, step_number):
         """Which channels were active at a given step number"""
