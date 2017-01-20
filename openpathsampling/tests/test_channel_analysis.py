@@ -180,6 +180,24 @@ class testChannelAnalysis(object):
         assert_equal(obj.treat_multiples, 'all')
         obj.treat_multiples = 'bad_string'
 
+    def test_labels_as_sets_sort_function(self):
+        sort_key = paths.ChannelAnalysis._labels_as_sets_sort_function
+
+        inp_list = [self.set_b, self.set_c, self.set_a]
+        sorted_set_list = sorted(inp_list, key=sort_key)
+        sorted_labels = [paths.ChannelAnalysis.label_to_string(e)
+                         for e in sorted_set_list]
+        assert_equal(sorted_labels, ['a', 'b', 'c'])
+
+        inp_list = [self.set_a, self.set_a | self.set_b, self.set_b,
+                    self.set_c | self.set_b,
+                    self.set_a | self.set_b | self.set_c]
+        sorted_set_list = sorted(inp_list, key=sort_key)
+        sorted_labels = [paths.ChannelAnalysis.label_to_string(e)
+                         for e in sorted_set_list]
+        assert_equal(sorted_labels, ['a', 'b', 'a,b', 'b,c', 'a,b,c'])
+
+
     def test_switching(self):
         raise SkipTest
 

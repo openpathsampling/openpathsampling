@@ -1,6 +1,5 @@
-import openpathsampling as paths
-
 import collections
+import pandas as pd
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
@@ -199,11 +198,24 @@ class ChannelAnalysis(StorableNamedObject):
         }[self.treat_multiples]
         return method(expanded_results)
 
+    @staticmethod
+    def _labels_as_sets_sort_function(label):
+        ll = sorted(list(label))
+        return [len(ll)] + ll
+
+    @staticmethod
+    def label_to_string(label):
+        return ",".join(sorted(list(label)))
+
     @property
     def switching_matrix(self):
         labeled_results = self.labels_by_step()
-        for i in range(len(labeled_results) - 1):
-            pass
+        sorted_set_labels = sorted([ll[2] for ll in labeled_results],
+                                   key=self._labels_as_sets_sort_function)
+        sorted_labels = [self.label_to_string(e) for e in sorted_set_labels]
+        switches = [(labeled_results[i], labeled_results[i+1])
+                    for i in range(len(labeled_results)-1)]
+        switch_count = collections.Counter(switches)
 
     @property
     def residence_times(self):
