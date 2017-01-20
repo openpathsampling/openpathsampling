@@ -1,6 +1,7 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal)
 from nose.plugins.skip import SkipTest
+from numpy.testing import assert_array_almost_equal
 from test_helpers import make_1d_traj
 
 import openpathsampling as paths
@@ -197,7 +198,31 @@ class testChannelAnalysis(object):
                          for e in sorted_set_list]
         assert_equal(sorted_labels, ['a', 'b', 'a,b', 'b,c', 'a,b,c'])
 
-
     def test_switching(self):
-        raise SkipTest
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        #nan = float('nan')
+        nan = 0  # self transitions are 0
+
+        analysis._results = self.toy_results
+
+        analysis.treat_multiples = 'newest'
+        df = analysis.switching_matrix
+        expected = np.array([[nan, 1, 0], [0, nan, 1], [1, 0, nan]])
+        assert_array_almost_equal(df.as_matrix(), expected)
+
+        analysis.treat_multiples = 'oldest'
+        df = analysis.switching_matrix
+        expected = np.array([[nan, 1], [1, nan]]) # no column for c!
+        assert_array_almost_equal(df.as_matrix(), expected)
+
+        analysis.treat_multiples = 'multiple'
+        df = analysis.switching_matrix
+        # 'a', 'b', 'a,b', 'b,c', 'a,b,c'
+        expected = np.array([[nan, 0, 1, 0, 0],
+                             [0, nan, 0, 1, 0],
+                             [0, 1, nan, 0, 0],
+                             [0, 0, 0, nan, 1],
+                             [1, 0, 0, 0, nan]])
+        assert_array_almost_equal(df.as_matrix(), expected)
+
 
