@@ -189,14 +189,16 @@ class ChannelAnalysis(StorableNamedObject):
 
         return relabeled
 
-    def labels_by_step(self):
+    def labels_by_step(self, treat_multiples=None):
+        if treat_multiples is None:
+            treat_multiples = self.treat_multiples
         expanded_results = self._expand_results(self._results)
         method = {
             'all': lambda x: x,
             'newest': self._labels_by_step_newest,
             'oldest': self._labels_by_step_oldest,
             'multiple': self._labels_by_step_multiple
-        }[self.treat_multiples]
+        }[treat_multiples]
         return method(expanded_results)
 
     @staticmethod
@@ -248,4 +250,12 @@ class ChannelAnalysis(StorableNamedObject):
 
     def status(self, step_number):
         """Which channels were active at a given step number"""
-        pass
+        treat_multiples = self.treat_multiples
+        if self.treat_multiples == 'all':
+            treat_multiples = 'multiple'
+        labeled_results = self.labels_by_step(treat_multiples)
+        for step in labeled_results:
+            if step[0] <= step_number < step[1]:
+                return self.label_to_string(step[2])
+        raise RuntimeError("Step " + str(step_number) + " outside of range."
+                           + " Max step: " + str(labeled_results[-1][1]))

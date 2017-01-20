@@ -272,4 +272,29 @@ class testChannelAnalysis(object):
 
 
     def test_status(self):
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.toy_results
+
+        analysis.treat_multiples = 'newest'
+        assert_equal(analysis.status(4), 'b')
+        assert_equal(analysis.status(8), 'a')
+
+        analysis.treat_multiples = 'oldest'
+        assert_equal(analysis.status(4), 'a')
+        assert_equal(analysis.status(8), 'b')
+
+        analysis.treat_multiples = 'multiple'
+        assert_equal(analysis.status(4), 'a,b')
+        assert_equal(analysis.status(8), 'a,b,c')
+
+        analysis.treat_multiples = 'all'
+        assert_equal(analysis.status(4), 'a,b')
+        assert_equal(analysis.status(8), 'a,b,c')
+
+    @raises(RuntimeError)
+    def test_bad_status_number(self):
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.toy_results
+
+        analysis.status(10)
         raise SkipTest
