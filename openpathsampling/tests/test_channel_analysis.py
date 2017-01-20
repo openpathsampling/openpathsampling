@@ -156,3 +156,30 @@ class testChannelAnalysis(object):
                       (7, 8, self.set_b | self.set_c),
                       (8, 9, self.set_b | self.set_c | self.set_a),
                       (9, 10, self.set_a)])
+
+    def test_empty(self):
+        obj = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        empty_results = {c: [] for c in self.channels.keys() + [None]}
+        assert_equal(obj._results, empty_results)
+
+    def test_treat_multiples(self):
+        obj = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        assert_equal(obj.treat_multiples, 'all')
+        obj.treat_multiples = 'oldest'
+        assert_equal(obj.treat_multiples, 'oldest')
+        obj.treat_multiples = 'newest'
+        assert_equal(obj.treat_multiples, 'newest')
+        obj.treat_multiples = 'multiple'
+        assert_equal(obj.treat_multiples, 'multiple')
+        obj.treat_multiples = 'all'
+        assert_equal(obj.treat_multiples, 'all')
+
+    @raises(ValueError)
+    def test_bad_treat_multiples(self):
+        obj = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        assert_equal(obj.treat_multiples, 'all')
+        obj.treat_multiples = 'bad_string'
+
+    def test_switching(self):
+        raise SkipTest
+

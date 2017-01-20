@@ -31,7 +31,8 @@ class ChannelAnalysis(StorableNamedObject):
 
         self._treat_multiples = 'all'
         self._results = {c: [] for c in self.channels.keys() + [None]}
-        self._analyze(steps)
+        if len(steps) > 0:
+            self._analyze(steps)
 
     # separate this because I think much of the code might be generalized
     # later where step_num could be something else
@@ -200,7 +201,9 @@ class ChannelAnalysis(StorableNamedObject):
 
     @property
     def switching_matrix(self):
-        pass
+        labeled_results = self.labels_by_step()
+        for i in range(len(labeled_results) - 1):
+            pass
 
     @property
     def residence_times(self):
