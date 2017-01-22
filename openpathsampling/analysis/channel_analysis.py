@@ -125,12 +125,44 @@ class ChannelAnalysis(StorableNamedObject):
 
     @staticmethod
     def _expand_results(results):
+        """
+        Takes ._results dict and makes it into chronological list of events
+
+        Note
+        ----
+            The output of this is in terms of "channel events." It doesn't
+            do anything to ensure that only one channel is defined at a
+            given time --- so subsequent events can include overlapping
+            times. Other functions relabel by time.
+
+        See also
+        --------
+            _labels_by_step_newest
+            _labels_by_step_oldest
+            _labels_by_step_multiple
+
+        Parameters
+        ----------
+        results : dict of {str: [(int, int), ...]}
+            the results dictionary. The keys are the channel names, and the
+            values are a list of tuples representing the start and finish
+            step numbers for the range of steps while in this channel
+
+        Returns
+        -------
+        list of 3-tuples (int, int, frozenset)
+            the "events": each event is the tuple of start step, finish
+            step, and channel name (as a frozenset containing one string),
+            sorted according to the start step.
+        """
         expanded = [(domain[0], domain[1], frozenset([channel]))
                     for channel in results for domain in results[channel]]
         return sorted(expanded, key=lambda tup: tup[0])
 
     @staticmethod
     def _labels_by_step_newest(expanded_results):
+        """
+        """
         relabeled = []
         previous = expanded_results[0]
         for current in expanded_results[1:]:
@@ -203,11 +235,43 @@ class ChannelAnalysis(StorableNamedObject):
 
     @staticmethod
     def _labels_as_sets_sort_function(label):
+        """Sort function for labels.
+
+        The input labels are frozensets of lists of strings. The sort order
+        is first by number of items in the list, and then by the list items.
+        A list of None will be sorted into the first place.
+
+        Parameters
+        ----------
+        label: frozenset of list of (string or None)
+            input label
+
+        Returns
+        -------
+        list:
+            first element is the length of the input set, followed by
+            the input as a sorted list
+        """
         ll = sorted(list(label))
         return [len(ll)] + ll
 
     @staticmethod
     def label_to_string(label):
+        """Convert set of string/None to comma-separated string.
+
+        For example, frozenset(['c', 'a']) becomes 'a,c' (no space).
+
+        Parameters
+        ----------
+        label: frozenset of list of (string or None)
+            input label
+
+        Returns
+        -------
+        string:
+            the string for this label
+        """
+        # separated for reusability
         return ",".join(sorted([str(l) for l in list(label)]))
 
     @property
@@ -249,7 +313,22 @@ class ChannelAnalysis(StorableNamedObject):
         return results
 
     def status(self, step_number):
-        """Which channels were active at a given step number"""
+        """Reports which channel(s) are associated with a given step number.
+
+        Note
+        ----
+            Results will depend on the value of ``treat_multiples``.
+
+        Parameters
+        ----------
+        step_number : int
+            the step number of interest
+
+        Returns
+        -------
+        string :
+            the string label for the channel(s)
+        """
         treat_multiples = self.treat_multiples
         if self.treat_multiples == 'all':
             treat_multiples = 'multiple'
