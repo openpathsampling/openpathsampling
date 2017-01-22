@@ -42,9 +42,12 @@ class testChannelAnalysis(object):
         }
 
         # used in simplest tests of relabeling
-        self.toy_results =  {'a': [(0, 5), (8, 10)],
-                             'b': [(3, 9)],
-                             'c': [(7, 9)]}
+        self.toy_results = {'a': [(0, 5), (8, 10)],
+                            'b': [(3, 9)],
+                            'c': [(7, 9)]}
+        self.results_with_none = {'a': [(0, 2), (6, 9)],
+                                  'b': [(5, 7), (9, 10)],
+                                  None: [(2, 5)]}
         self.set_a = frozenset(['a'])
         self.set_b = frozenset(['b'])
         self.set_c = frozenset(['c'])
@@ -198,6 +201,14 @@ class testChannelAnalysis(object):
                          for e in sorted_set_list]
         assert_equal(sorted_labels, ['a', 'b', 'a,b', 'b,c', 'a,b,c'])
 
+    def test_labels_sort_function_with_none(self):
+        sort_key = paths.ChannelAnalysis._labels_as_sets_sort_function
+        inp_list = [self.set_b, self.set_a, set([None])]
+        sorted_set_list = sorted(inp_list, key=sort_key)
+        sorted_labels = [paths.ChannelAnalysis.label_to_string(e)
+                         for e in sorted_set_list]
+        assert_equal(sorted_labels, ['None', 'a', 'b'])
+
     def test_switching(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
         analysis._results = self.toy_results
@@ -227,6 +238,20 @@ class testChannelAnalysis(object):
 
         # TODO: define switching when using 'all'
 
+    def test_switching_with_none(self):
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.results_with_none
+        nan = 0  # self transitions are 0
+
+        analysis.treat_multiples = 'newest'
+        df = analysis.switching_matrix
+
+        # None, a, b
+        expected = np.array([[nan, 0, 1],
+                             [1, nan, 1],
+                             [0, 1, nan]])
+        assert_array_almost_equal(df.as_matrix(), expected)
+
     def test_residence_times(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
         analysis._results = self.toy_results
@@ -247,6 +272,14 @@ class testChannelAnalysis(object):
         residence_times = analysis.residence_times
         assert_equal(residence_times, {'a': [3, 1], 'b': [2], 'a,b': [2],
                                        'b,c': [1], 'a,b,c': [1]})
+
+    def test_residence_times_with_none(self):
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.results_with_none
+
+        residence_times = analysis.residence_times
+        assert_equal(residence_times,
+                     {'a': [2, 3], 'b': [2, 1], 'None': [3]})
 
     def test_total_time(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
@@ -270,6 +303,13 @@ class testChannelAnalysis(object):
         assert_equal(total_time, {'a': 4, 'b': 2, 'a,b': 2, 'b,c': 1,
                                   'a,b,c': 1})
 
+    def test_total_time_with_none(self):
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.results_with_none
+
+        total_time = analysis.total_time
+        assert_equal(total_time, {'a': 5, 'b': 3, 'None': 3})
+
 
     def test_status(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
@@ -290,6 +330,11 @@ class testChannelAnalysis(object):
         analysis.treat_multiples = 'all'
         assert_equal(analysis.status(4), 'a,b')
         assert_equal(analysis.status(8), 'a,b,c')
+
+    def test_status_with_none(self):
+        analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analysis._results = self.results_with_none
+        assert_equal(analysis.status(4), 'None')
 
     @raises(RuntimeError)
     def test_bad_status_number(self):

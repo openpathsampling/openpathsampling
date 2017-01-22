@@ -208,7 +208,7 @@ class ChannelAnalysis(StorableNamedObject):
 
     @staticmethod
     def label_to_string(label):
-        return ",".join(sorted(list(label)))
+        return ",".join(sorted([str(l) for l in list(label)]))
 
     @property
     def switching_matrix(self):
