@@ -150,7 +150,7 @@ class ChannelAnalysis(StorableNamedObject):
 
         Returns
         -------
-        list of 3-tuples (int, int, frozenset)
+        list of 3-tuples (int, int, frozenset) :
             the "events": each event is the tuple of start step, finish
             step, and channel name (as a frozenset containing one string),
             sorted according to the start step.
@@ -162,6 +162,25 @@ class ChannelAnalysis(StorableNamedObject):
     @staticmethod
     def _labels_by_step_newest(expanded_results):
         """
+        Makes one channel per step, based on most recent channel entered.
+
+        See also
+        --------
+            _expand_results
+            _labels_by_step_oldest
+            _labels_by_step_multiple
+            labels_by_step
+
+        Parameters
+        ----------
+        expanded_results : list of 3-tuples (int, int, frozenset)
+            input events; the output of _expand_results (see details there)
+
+        Returns
+        -------
+        list of 3-tuples (int, int, frozenset)
+            events with ranges such that there is only one channel at any
+            given step number, and that channel is the most recent entered
         """
         relabeled = []
         previous = expanded_results[0]
@@ -173,6 +192,27 @@ class ChannelAnalysis(StorableNamedObject):
 
     @staticmethod
     def _labels_by_step_oldest(expanded_results):
+        """
+        Makes one channel per step, based on least recent channel entered.
+
+        See also
+        --------
+            _expand_results
+            _labels_by_step_newest
+            _labels_by_step_multiple
+            labels_by_step
+
+        Parameters
+        ----------
+        expanded_results : list of 3-tuples (int, int, frozenset)
+            input events; the output of _expand_results (see details there)
+
+        Returns
+        -------
+        list of 3-tuples (int, int, frozenset) : 
+            events with ranges such that there is only one channel at any
+            given step number, and that channel is the least recent entered
+        """
         relabeled = []
         previous = expanded_results[0]
         for current in expanded_results[1:]:
@@ -194,6 +234,26 @@ class ChannelAnalysis(StorableNamedObject):
 
     @staticmethod
     def _labels_by_step_multiple(expanded_results):
+        """Makes one channel label per step, combining all active channels.
+
+        See also
+        --------
+            _expand_results
+            _labels_by_step_newest
+            _labels_by_step_oldest
+            labels_by_step
+
+        Parameters
+        ----------
+        expanded_results : list of 3-tuples (int, int, frozenset)
+            input events; the output of _expand_results (see details there)
+
+        Returns
+        -------
+        list of 3-tuples (int, int, frozenset) : 
+            events such that there is only one event at any given step
+            number, with the channel label as the set of all active channels
+        """
         relabeled = []
         # start events are times when a channel is added to the active
         # finish events are when channel is removed from the active
@@ -222,6 +282,33 @@ class ChannelAnalysis(StorableNamedObject):
         return relabeled
 
     def labels_by_step(self, treat_multiples=None):
+        """
+        Prepare internally stored results for primary analysis routines.
+
+        Note
+        ----
+            The results of this depend on the value of ``treat_multiples``.
+            In fact, this method is just a switch for the specific
+            ``treat_multiples`` values.
+
+        See also
+        --------
+            _labels_by_step_newest
+            _labels_by_step_oldest
+            _labels_by_step_multiple
+
+        Parameters
+        ----------
+            treat_multiples : 'all', 'newest', 'oldest',  'multiple', or None
+                method to prepare output; see documentation on
+                ``treat_multiples`` for details. Default is `None`, which
+                uses the value in ``self.treat_multiples``.
+
+        Returns
+        -------
+        list of 3-tuples (int, int, frozenset) :
+            events such that there is only one event at any give step
+        """
         if treat_multiples is None:
             treat_multiples = self.treat_multiples
         expanded_results = self._expand_results(self._results)
