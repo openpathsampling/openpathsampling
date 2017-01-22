@@ -52,8 +52,16 @@ class testChannelAnalysis(object):
         self.set_b = frozenset(['b'])
         self.set_c = frozenset(['c'])
         self.toy_expanded_results = [(0, 5, self.set_a), (3, 9, self.set_b),
-                                     (7, 9, self.set_c), (8, 10, self.set_a)]
-
+                                     (7, 9, self.set_c), (8, 10, self.set_a)] 
+        self.expanded_results_simultaneous_ending = [
+            (0, 5, self.set_a), (3, 9, self.set_b), (7, 10, self.set_c),
+            (8, 10, self.set_a)
+        ]
+        self.expanded_oldest_skips_internal = [
+            (0, 5, self.set_a), (3, 9, self.set_b), (7, 8, self.set_c),
+            (8, 10, self.set_a), (10, 11, self.set_b)
+        ]
+    
     def _make_active(self, seq):
         traj = make_1d_traj(seq)
         sample = paths.Sample(replica=0,
@@ -136,23 +144,36 @@ class testChannelAnalysis(object):
         assert_equal(expanded, self.toy_expanded_results)
 
     def test_labels_by_step_newest(self):
-        relabeled = paths.ChannelAnalysis._labels_by_step_newest(
-            self.toy_expanded_results
-        )
+        test_set = self.toy_expanded_results
+        relabeled = paths.ChannelAnalysis._labels_by_step_newest(test_set)
+        assert_equal(relabeled, [(0, 3, self.set_a), (3, 7, self.set_b),
+                                 (7, 8, self.set_c), (8, 10, self.set_a)])
+
+        test_set = self.expanded_results_simultaneous_ending
+        relabeled = paths.ChannelAnalysis._labels_by_step_newest(test_set)
         assert_equal(relabeled, [(0, 3, self.set_a), (3, 7, self.set_b),
                                  (7, 8, self.set_c), (8, 10, self.set_a)])
 
     def test_labels_by_step_oldest(self):
-        relabeled = paths.ChannelAnalysis._labels_by_step_oldest(
-            self.toy_expanded_results
-        )
+        test_set = self.toy_expanded_results
+        relabeled = paths.ChannelAnalysis._labels_by_step_oldest(test_set)
         assert_equal(relabeled, [(0, 5, self.set_a), (5, 9, self.set_b),
                                  (9, 10, self.set_a)])
 
+        test_set = self.expanded_results_simultaneous_ending
+        relabeled = paths.ChannelAnalysis._labels_by_step_oldest(test_set)
+        assert_equal(relabeled, [(0, 5, self.set_a), (5, 9, self.set_b),
+                                 (9, 10, self.set_c)])
+
+        test_set = self.expanded_oldest_skips_internal
+        relabeled = paths.ChannelAnalysis._labels_by_step_oldest(test_set)
+        assert_equal(relabeled, [(0, 5, self.set_a), (5, 9, self.set_b),
+                                 (9, 10, self.set_a), (10, 11, self.set_b)])
+
+
     def test_labels_by_step_multiple(self):
-        relabeled = paths.ChannelAnalysis._labels_by_step_multiple(
-            self.toy_expanded_results
-        )
+        test_set = self.toy_expanded_results
+        relabeled = paths.ChannelAnalysis._labels_by_step_multiple(test_set)
         assert_equal(relabeled,
                      [(0, 3, self.set_a),
                       (3, 5, self.set_a | self.set_b),

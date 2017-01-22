@@ -4,7 +4,6 @@ import numpy as np
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
-
 class ChannelAnalysis(StorableNamedObject):
     """Analyze path sampling simulation for multiple channels.
 
@@ -152,8 +151,9 @@ class ChannelAnalysis(StorableNamedObject):
                 relabeled += [previous]
                 # save the new starting point
                 previous = (previous[1], current[1], current[2])
-            else:
-                pass # for testing
+            # NOTE: Tests include a case for the implicit "else" here, but
+            # for some reason an empty `else: pass` doesn't show up as
+            # covering the `pass` line; so removed them
         if relabeled[-1] != previous:
             relabeled += [previous]
         else:
