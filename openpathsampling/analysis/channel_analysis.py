@@ -20,6 +20,13 @@ class ChannelAnalysis(StorableNamedObject):
         channels of interest
     replica: int
         replica ID to analyze from the steps, default is 0.
+
+    Attributes
+    ----------
+    treat_multiples
+    switching_matrix
+    residence_times
+    total_time
     """
     def __init__(self, steps, channels, replica=0):
         super(ChannelAnalysis, self).__init__()
@@ -113,6 +120,18 @@ class ChannelAnalysis(StorableNamedObject):
 
     @property
     def treat_multiples(self):
+        """
+        string :
+            method for handling paths that match multiple channels. Allowed
+            values are
+            * 'newest': use the most recent channel entered
+            * 'oldest': use the least recent channel entered
+            * 'multiple': treat multiple channels as a new type of channel,
+               e.g., 'a' and 'b' because 'a,b'
+            * 'all': treat each channel individually, despite overlaps. For
+              switching, this is the same as ???. For status, this is the
+              same as 'multiple'
+        """
         return self._treat_multiples
 
     @treat_multiples.setter
@@ -363,6 +382,11 @@ class ChannelAnalysis(StorableNamedObject):
 
     @property
     def switching_matrix(self):
+        """
+        pandas.DataFrame :
+            number of switches from one channel to another. Depends on
+            ``treat_multiples``, see details there.
+        """
         labeled_results = self.labels_by_step()
         labels_in_order = [ll[2] for ll in labeled_results]
         labels_set = set(labels_in_order)
@@ -383,6 +407,12 @@ class ChannelAnalysis(StorableNamedObject):
 
     @property
     def residence_times(self):
+        """
+        dict {string: list of int} :
+            number of steps spent in each channel for each "stay" in that
+            channel; allows calculations of distribution properties. Depends
+            on ``treat_multiples``, see details there.
+        """
         labeled_results = self.labels_by_step()
         durations = [(self.label_to_string(step[2]), step[1] - step[0])
                      for step in labeled_results]
@@ -393,6 +423,11 @@ class ChannelAnalysis(StorableNamedObject):
 
     @property
     def total_time(self):
+        """
+        dict {string: int} :
+            total number of steps spent in each channel for each "stay" in
+            that channel. Depends on ``treat_multiples``, see details there.
+        """
         residences = self.residence_times
         results = collections.defaultdict(int)
         for channel in residences:
@@ -404,7 +439,8 @@ class ChannelAnalysis(StorableNamedObject):
 
         Note
         ----
-            Results will depend on the value of ``treat_multiples``.
+            Results will depend on the value of ``treat_multiples``. See
+            details in the documentation for that.
 
         Parameters
         ----------
