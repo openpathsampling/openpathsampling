@@ -363,4 +363,3 @@ class testChannelAnalysis(object):
         analysis._results = self.toy_results
 
         analysis.status(10)
-        raise SkipTest
