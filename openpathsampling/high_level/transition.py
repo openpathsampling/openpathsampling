@@ -76,9 +76,8 @@ class TPSTransition(Transition):
             paths.AllInXEnsemble(stateB) & paths.LengthEnsemble(1)
         ])
 
-    # TODO: Can this kwargs be removed? It is not used
-    def add_transition(self, stateA, stateB, **kwargs):
-        new_ens = self._tps_ensemble(stateA, stateB, **kwargs)
+    def add_transition(self, stateA, stateB):
+        new_ens = self._tps_ensemble(stateA, stateB)
         try:
             self.ensembles[0] = self.ensembles[0] | new_ens
         except AttributeError:
