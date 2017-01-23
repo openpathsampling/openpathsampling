@@ -51,7 +51,7 @@ def refresh_output(output_str, print_anyway=True, refresh=True,
     if refresh:
         if is_ipynb:
             IPython.display.clear_output(wait=True)
-        else:
+        elif output_stream is sys.stdout:
             if last_output is not None:
                 lines = len(last_output.split('\n'))
                 CURSOR_UP_ONE = '\x1b[1A'
