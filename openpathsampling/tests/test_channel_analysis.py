@@ -2,11 +2,12 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
-from test_helpers import make_1d_traj
+from test_helpers import make_1d_traj, data_filename
 
 import openpathsampling as paths
 import numpy as np
 import random
+import os
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -52,7 +53,7 @@ class testChannelAnalysis(object):
         self.set_b = frozenset(['b'])
         self.set_c = frozenset(['c'])
         self.toy_expanded_results = [(0, 5, self.set_a), (3, 9, self.set_b),
-                                     (7, 9, self.set_c), (8, 10, self.set_a)] 
+                                     (7, 9, self.set_c), (8, 10, self.set_a)]
         self.expanded_results_simultaneous_ending = [
             (0, 5, self.set_a), (3, 9, self.set_b), (7, 10, self.set_c),
             (8, 10, self.set_a)
@@ -61,7 +62,7 @@ class testChannelAnalysis(object):
             (0, 5, self.set_a), (3, 9, self.set_b), (7, 8, self.set_c),
             (8, 10, self.set_a), (10, 11, self.set_b)
         ]
-    
+
     def _make_active(self, seq):
         traj = make_1d_traj(seq)
         sample = paths.Sample(replica=0,
@@ -69,6 +70,22 @@ class testChannelAnalysis(object):
                               ensemble=self.ensemble)
         sample_set = paths.SampleSet(sample)
         return sample_set
+
+    def test_storage(self):
+        analyzer = paths.ChannelAnalysis(steps=None, channels=self.channels)
+        analyzer._results = self.toy_results
+        analyzer.treat_multiples = 'newest'
+        storage = paths.Storage(data_filename('test.nc'), 'w')
+        storage.tag['analyzer'] = analyzer
+        storage.sync()
+        storage.close()
+
+        new_store = paths.Storage(data_filename('test.nc'), 'r')
+        reloaded = storage.tag['analyzer']
+        assert_equal(reloaded._results, self.toy_results)
+
+        if os.path.isfile(data_filename('test.nc')):
+            os.remove(data_filename('test.nc'))
 
     def test_analyze_incr_decr(self):
         steps = [

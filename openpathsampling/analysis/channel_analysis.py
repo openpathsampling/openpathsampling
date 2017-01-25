@@ -40,6 +40,23 @@ class ChannelAnalysis(StorableNamedObject):
         if len(steps) > 0:
             self._analyze(steps)
 
+    def to_dict(self):
+        return {
+            'results': self._results,
+            'treat_multiples': self._treat_multiples,
+            'channels': self.channels,
+            'replica': self.replica
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = cls(steps=None,
+                  channels=dct['channels'],
+                  replica=dct['replica'])
+        obj._results = dct['results']
+        obj._treat_multiples = dct['treat_multiples']
+        return obj
+
     # separate this because I think much of the code might be generalized
     # later where step_num could be something else
     @staticmethod
@@ -228,7 +245,7 @@ class ChannelAnalysis(StorableNamedObject):
 
         Returns
         -------
-        list of 3-tuples (int, int, frozenset) : 
+        list of 3-tuples (int, int, frozenset) :
             events with ranges such that there is only one channel at any
             given step number, and that channel is the least recent entered
         """
@@ -269,7 +286,7 @@ class ChannelAnalysis(StorableNamedObject):
 
         Returns
         -------
-        list of 3-tuples (int, int, frozenset) : 
+        list of 3-tuples (int, int, frozenset) :
             events such that there is only one event at any given step
             number, with the channel label as the set of all active channels
         """
