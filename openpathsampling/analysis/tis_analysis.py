@@ -3,6 +3,11 @@ import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 
 def steps_to_weighted_trajectories(steps, ensembles):
+    """Bare function to convert to teh weighted trajs dictionary.
+
+    This prepares data for the faster analysis format. This preparation only
+    need to be done once, and it will cover a lot of the analysis cases.
+    """
     results = {e: collections.Counter() for e in ensembles}
 
     my_steps = steps
@@ -20,6 +25,8 @@ def steps_to_weighted_trajectories(steps, ensembles):
     return results
 
 class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
+    """Abstract class for getting statistics for MC steps sampling multiple
+    ensembles."""
     def calculate(self, steps, ensembles):
         weighted_trajs = steps_to_weighted_trajectories(steps, ensembles)
         return self.from_weighted_trajectories(weighted_trajs)
@@ -27,11 +34,15 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
     def from_weighted_trajectories(self, input_dict):
         raise NotImplementedError
 
+######## CALCULATING THE FLUX
+
 #class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
     #def from_weighted_trajectories(self, input_dict):
         #pass
 
 class DictFlux(MultiEnsembleSamplingAnalyzer):
+    """Pre-calculated flux, provided as a dict.
+    """
     def __init__(self, flux_dict):
         super(DictFlux, self).__init__()
         self.flux_dict = flux_dict
@@ -42,7 +53,13 @@ class DictFlux(MultiEnsembleSamplingAnalyzer):
     def from_weighted_trajectories(self, input_dict):
         return self.flux_dict
 
+########## GENERAL HISTOGRAMMING
+
 class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
+    """
+    Generic code to calculate the properly weighted histograms of trajectory
+    properties per ensemble.
+    """
     def __init__(self, ensembles, f, hist_parameters):
         self.ensembles = ensembles
         self.f = f
@@ -58,23 +75,8 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
             self.hists[ens].histogram(data, weights)
         return self.hists
 
-class FullHistogramMaxLambas(EnsembleHistogrammer):
-    def __init__(self, transition, hist_parameters, max_lambda_func=None):
-        if max_lambda_func is None:
-            max_lambda_func = lambda t: max(transition.interfaces.cv(t))
-            #max_lambda_func = transition.interfaces.max_cv  # TODO traj-cv
-        super(FullHistogramTCP, self).__init__(
-            ensembles=transition.ensembles,
-            f=max_lambda_func,
-            hist_parameters=hist_parameters
-        )
-
-
-#class PerEnsembleMaxLambdas(EnsembleHistogrammer):
-    #def __init__(self, transition):
-        #interfaces_lambdas = transition.interfaces.lambdas
-
 class PathLengthHistogrammer(EnsembleHistogrammer):
+    """Histogramming path length distribution"""
     def __init__(self, ensembles, hist_parameters=None):
         if hist_parameters is None:
             pass  # set defaults
@@ -84,21 +86,64 @@ class PathLengthHistogrammer(EnsembleHistogrammer):
             hist_parameters=hist_parameters
         )
 
-class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
-    def __init__(self, ensembles, states):
-        pass
+###############HISTOGRAMMING MAX LAMBDA
+
+class FullHistogramMaxLambdas(EnsembleHistogrammer):
+    """Histogramming the full max-lambda function (one way of getting TCP)
+    """
+    def __init__(self, transition, hist_parameters, max_lambda_func=None):
+        if max_lambda_func is None:
+            max_lambda_func = lambda t: max(transition.interfaces.cv(t))
+            #max_lambda_func = transition.interfaces.max_cv  # TODO traj-cv
+        super(FullHistogramTCP, self).__init__(
+            ensembles=transition.ensembles,
+            f=max_lambda_func,
+            hist_parameters=hist_parameters
+        )
+        self._tcp = None
+
+#class PerEnsembleMaxLambdas(EnsembleHistogrammer):
+    #def __init__(self, transition):
+        #interfaces_lambdas = transition.interfaces.lambdas
+
+class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
+    def __init__(self, max_lambda_calc, combiner=None):
+        self.max_lambda_calc = max_lambda_calc
+        if combiner is None:
+            combiner = paths.numerics.WHAM()
+        self.combiner = combiner
 
     def from_weighted_trajectories(self, input_dict):
-        pass
+        hists = self.max_lambda_calc.from_weighted_trajectories(input_dict)
+
+    
+
+############### ASSEMBLING THE TOTAL CROSSING PROBABILITY
+
+
+class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
+    def __init__(self, ensembles, states):
+        self.states = states
+        self.ensembles = ensembles
+
+    def from_weighted_trajectories(self, input_dict):
+        ctp = {}
+        for ens in self.ensembles:
+            acc = collecton.Counter()
+            n_try = len(input_dict[ens])
+            final_frames = [traj.get_as_proxy(1) for
+                            traj in input_dict[ens].keys()]
+            weights = input_dict[ens].values()
+            for (f, w) in zip(final_frames, weights):
+                acc += collection.Counter({s: w for s in states if s(f)})
+
+            ctp[ens] = {s : float(acc[s]) / n_try}
+            # TODO: add logging to report here
+        return ctp
 
 
 class TISResults(StorableNamedObject):
     pass
-
-
-class TISTransitionAnalysis(StorableNamedObject):
-    def __init__(self, transition):
-        pass
 
 
 class TISAnalysis(StorableNamedObject):
