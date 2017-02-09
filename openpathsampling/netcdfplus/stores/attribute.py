@@ -21,7 +21,10 @@ class AttributeStore(UniqueNamedObjectStore):
 
     def _load(self, idx):
         cv = self.vars['json'][idx]
-        cache_store = self.vars['cache']
+        cache_store = None
+
+        if 'cache' in self.vars:
+            cache_store = self.vars['cache']
 
         if cache_store is not None:
             cv.set_cache_store(cache_store)
@@ -33,10 +36,6 @@ class AttributeStore(UniqueNamedObjectStore):
 
     def key_store(self, cv):
         return self.storage._objects[cv.key_class]
-        # if self.value_store is not None:
-        #     return self.value_store
-        # else:
-        #     return self.storage.snapshots
 
     def sync(self, cv):
         """
@@ -51,13 +50,10 @@ class AttributeStore(UniqueNamedObjectStore):
             all collective variables are synced
 
         """
-        # key_store = self.storage._objects[cv.key_class]
         self.key_store(cv).sync_attribute(cv)
 
     def initialize(self):
         super(AttributeStore, self).initialize()
-
-        # self.storage.create_dimension('attributecache')
         self.create_variable('cache', 'obj.stores')
 
     def complete(self, cv):
