@@ -21,6 +21,7 @@ class AttributeStore(UniqueNamedObjectStore):
     def _load(self, idx):
         op = self.vars['json'][idx]
 
+        # todo: get attached store from attributes.cache or
         cache_store = self.object_store.get_cv_cache(idx)
 
         if cache_store is not None:
