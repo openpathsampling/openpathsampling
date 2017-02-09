@@ -3,7 +3,8 @@ import logging
 from weakref import WeakValueDictionary
 
 from openpathsampling.netcdfplus.base import StorableNamedObject, StorableObject
-from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, WeakLRUCache
+from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, \
+    WeakLRUCache
 from openpathsampling.netcdfplus.proxy import LoaderProxy
 
 import sys
@@ -98,6 +99,9 @@ class ObjectStore(StorableNamedObject):
 
         def __getitem__(self, item):
             return self.dct[self.prefix + item]
+
+        def __contains__(self, item):
+            return (self.prefix + item) in self.dct
 
     def prefix_delegate(self, dct):
         return ObjectStore.DictDelegator(self, dct)
@@ -570,7 +574,6 @@ class ObjectStore(StorableNamedObject):
 
         self._created = True
 
-
     # ==========================================================================
     # INITIALISATION UTILITY FUNCTIONS
     # ==========================================================================
@@ -809,7 +812,7 @@ class ObjectStore(StorableNamedObject):
         Tell a store that an obj should be assumed as stored
 
         This is useful, if you do not want to store an object in a specific
-        store. Especially to make sure snapshots are not stored multiple times
+        store. Especially to make sure attributes are not stored multiple times
 
         Parameters
         ----------
@@ -864,7 +867,7 @@ class ObjectStore(StorableNamedObject):
                 return uuid
             else:
                 # it is stored but not in this store so we try storing the
-                # full snapshot which might be still in cache or memory
+                # full attribute which might be still in cache or memory
                 # if that is not the case it will be stored again. This can
                 # happen when you load from one store save to another. And load
                 # again after some time while the cache has been changed and try
@@ -902,15 +905,12 @@ class ObjectStore(StorableNamedObject):
 
         try:
             self._save(obj, n_idx)
-
-            # store the name in the cache
-            # if hasattr(self, 'cache'):
+            self._auto_complete(obj, n_idx)
             self.cache[n_idx] = obj
 
         except:
             # in case we did not succeed remove the mark as being saved
             del self.index[uuid]
-            # self.release_idx(n_idx)
             raise
 
         # self.release_idx(n_idx)
@@ -1012,7 +1012,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        attribute : :obj:`openpathsampling.CollectiveVariable`
+        attribute : :obj:`openpathsampling.netcdfplus.Attribute`
 
 
         """
@@ -1020,23 +1020,22 @@ class ObjectStore(StorableNamedObject):
             return
 
         attribute_store = self.attribute_list[attribute]
+        key_store = self.storage.attributes.key_store(attribute)
 
         if attribute_store.allow_incomplete:
             # for complete this does not make sense
 
             # TODO: Make better looping over this to not have
             # to load all the indices at once
-            # can be problematic for 10M+ stored snapshots
+            # can be problematic for 10M+ stored attributes
             indices = self.vars['uuid'][:]
 
             for pos, idx in enumerate(indices):
-                proxy = None
-
                 if pos not in attribute_store.index:
                     # this value is not stored to go ahead
 
-                    proxy = self.storage.snapshots[idx]
-                    #
+                    proxy = LoaderProxy(key_store, idx)
+
                     # # get from cache first, this is fastest
                     # value = attribute._cache_dict._get(proxy)
                     #
@@ -1081,7 +1080,7 @@ class ObjectStore(StorableNamedObject):
                 if value is not None:
                     pos = self.pos(obj)
 
-                    # if the snapshot is not saved, nothing we can do
+                    # if the attribute is not saved, nothing we can do
                     if pos is None:
                         continue
 
@@ -1103,14 +1102,16 @@ class ObjectStore(StorableNamedObject):
     def pos(self, obj):
         return self.index.get(obj.__uuid__)
 
-    def add_attribute(self, store_cls, attribute, template, allow_incomplete=None, chunksize=None):
+    def add_attribute(
+            self, store_cls, attribute, template,
+            allow_incomplete=None, chunksize=None):
         """
 
         Parameters
         ----------
         store_cls : :obj:`openpathsampling.netcdfplus.ValueStore`
         attribute : :obj:`openpathsampling.CollectiveVariable`
-        template : :obj:`openpathsampling.engines.BaseSnapshot`
+        template : :obj:`openpathsampling.engines.Baseattribute`
         chunksize : int
         allow_incomplete : bool
 
@@ -1122,6 +1123,8 @@ class ObjectStore(StorableNamedObject):
         if attribute in self.attribute_list:
             return self.attribute_list[attribute]
 
+        key_store = self.storage.attributes.key_store(attribute)
+
         if allow_incomplete is None:
             allow_incomplete = attribute.diskcache_allow_incomplete
         if chunksize is None:
@@ -1130,7 +1133,7 @@ class ObjectStore(StorableNamedObject):
             template = attribute.diskcache_template
 
         if not allow_incomplete:
-            # in complete mode we force chunk size one to match it to snapshots
+            # in complete mode we force chunk size one to match it to attributes
             chunksize = self.default_store_chunk_size
 
         # determine value type and shape
@@ -1180,10 +1183,10 @@ class ObjectStore(StorableNamedObject):
         else:
             chunksize = self.default_store_chunk_size
             if shape is not None:
-                shape = tuple(['snapshots'] + list(shape))
+                shape = tuple([self.name] + list(shape))
                 chunksizes = tuple([chunksize] + list(chunksizes))
             else:
-                shape = tuple(['snapshots'])
+                shape = tuple([self.name])
                 chunksizes = tuple([chunksize])
 
             # create the variable
@@ -1206,7 +1209,6 @@ class ObjectStore(StorableNamedObject):
         if not allow_incomplete:
 
             indices = self.vars['uuid'][:]
-            key_store = self.storage.attributes.key_store(attribute)
 
             for pos, idx in enumerate(indices):
 
@@ -1229,4 +1231,3 @@ class ObjectStore(StorableNamedObject):
 
         attribute.set_cache_store(value_store)
         return value_store
-
