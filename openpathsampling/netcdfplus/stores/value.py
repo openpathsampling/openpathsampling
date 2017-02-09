@@ -25,6 +25,7 @@ class ValueStore(ObjectStore):
 
     def to_dict(self):
         return {
+            'key_class': self.key_class,
             'allow_incomplete': self.allow_incomplete,
             'chunksize': self.chunksize
         }
