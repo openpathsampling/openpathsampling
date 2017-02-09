@@ -170,4 +170,4 @@ class AttributeStore(UniqueNamedObjectStore):
             # And cache the feature stores
             store = self.key_store(cv).attribute_list.get(cv)
             if store is not None:
-                store[0].fill_cache()
+                store.fill_cache()
