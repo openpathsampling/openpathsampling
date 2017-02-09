@@ -258,9 +258,9 @@ class ExpandSingle(ChainDict):
     def __getitem__(self, items):
         if isinstance(items, self.key_class):
             return self._post[[items]][0]
-        elif type(items) is LoaderProxy:
-            return self._post[[items]][0]
-        elif hasattr(items, '__iter__'):
+        # elif type(items) is LoaderProxy:
+        #     return self._post[[items]][0]
+        elif hasattr(items.__class__, '__iter__'):
             try:
                 _ = len(items)
             except AttributeError:

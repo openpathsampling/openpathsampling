@@ -1,5 +1,6 @@
 from named import UniqueNamedObjectStore
 from openpathsampling.netcdfplus.attribute import Attribute
+from openpathsampling.netcdfplus.stores.value import ValueStore
 
 
 class AttributeStore(UniqueNamedObjectStore):
@@ -19,25 +20,23 @@ class AttributeStore(UniqueNamedObjectStore):
             self.add_diskcache(cv)
 
     def _load(self, idx):
-        op = self.vars['json'][idx]
-
-        # todo: get attached store from attributes.cache or
-        cache_store = self.object_store.get_cv_cache(idx)
+        cv = self.vars['json'][idx]
+        cache_store = self.vars['cache']
 
         if cache_store is not None:
-            op.set_cache_store(cache_store)
-            op.diskcache_enabled = True
-            op.diskcache_chunksize = cache_store.chunksize
-            op.allow_incomplete = cache_store.allow_incomplete
+            cv.set_cache_store(cache_store)
+            cv.diskcache_enabled = True
+            cv.diskcache_chunksize = cache_store.chunksize
+            cv.allow_incomplete = cache_store.allow_incomplete
 
-        return op
+        return cv
 
-    @property
-    def object_store(self):
-        if self.value_store is not None:
-            return self.value_store
-        else:
-            return self.storage.snapshots
+    def key_store(self, cv):
+        return self.storage._objects[cv.key_class]
+        # if self.value_store is not None:
+        #     return self.value_store
+        # else:
+        #     return self.storage.snapshots
 
     def sync(self, cv):
         """
@@ -52,7 +51,8 @@ class AttributeStore(UniqueNamedObjectStore):
             all collective variables are synced
 
         """
-        self.object_store.sync_cv(cv)
+        # key_store = self.storage._objects[cv.key_class]
+        self.key_store(cv).sync_attribute(cv)
 
     def initialize(self):
         super(AttributeStore, self).initialize()
@@ -61,7 +61,7 @@ class AttributeStore(UniqueNamedObjectStore):
         self.create_variable('cache', 'obj.stores')
 
     def complete(self, cv):
-        self.object_store.complete_cv(cv)
+        self.key_store(cv).complete_attribute(cv)
 
     def sync_all(self):
         map(self.sync, self)
@@ -96,15 +96,16 @@ class AttributeStore(UniqueNamedObjectStore):
         if template is None:
             if cv.diskcache_template is not None:
                 template = cv.diskcache_template
-            elif len(self.object_store) > 0:
-                template = self.object_store[0]
+            elif len(self.key_store(cv)) > 0:
+                template = self.key_store(cv)[0]
 
             else:
                 raise RuntimeError(
                     'Need either at least one stored snapshot or a '
                     'template snapshot to determine type and shape of the CV.')
 
-        self.object_store.add_cv(
+        self.key_store(cv).add_attribute(
+            ValueStore,
             cv,
             template,
             allow_incomplete=allow_incomplete,
@@ -125,7 +126,7 @@ class AttributeStore(UniqueNamedObjectStore):
         :class:`openpathsampling.netcdfplus.ObjectStore` or `netcdf4.Variable`
 
         """
-        return self.object_store.cv_list[cv][0]
+        return self.key_store(cv).attribute_list[cv]
 
     def has_cache(self, cv):
         """
@@ -141,7 +142,7 @@ class AttributeStore(UniqueNamedObjectStore):
         bool
             `True` if the CV has a diskstore attached
         """
-        return cv in self.object_store.cv_list
+        return cv in self.key_store(cv).attribute_list
 
     def set_cache_store(self, cv):
         """
@@ -169,6 +170,6 @@ class AttributeStore(UniqueNamedObjectStore):
         # load all CVs regularly
         for cv in self:
             # And cache the feature stores
-            store = self.object_store.cv_list.get(cv)
+            store = self.key_store(cv).attribute_list.get(cv)
             if store is not None:
                 store[0].fill_cache()

@@ -34,7 +34,7 @@ class ValueStore(ObjectStore):
 
     def register(self, storage, prefix):
         super(ValueStore, self).register(storage, prefix)
-        self.object_pos = self.storage.stores['snapshots'].pos
+        self.object_pos = self.storage._objects[self.key_class].pos
 
     def __len__(self):
         return len(self.variables['value'])

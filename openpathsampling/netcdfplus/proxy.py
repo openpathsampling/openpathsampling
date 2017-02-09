@@ -62,6 +62,9 @@ class LoaderProxy(object):
     def __hash__(self):
         return hash(self._idx)
 
+    def __len__(self):
+        return len(self.__subject__)
+
     @property
     def __class__(self):
         return self._store.content_class

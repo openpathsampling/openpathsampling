@@ -238,14 +238,13 @@ class ObjectStore(StorableNamedObject):
         # self.storage.attributes.load_indices()
 
         # only if we have a new style file
-        if 'attributecache' in self.storage.vars:
-            for idx, store in enumerate(self.storage.attributes.vars['cache']):
-                attribute_st_idx = int(store.name[2:])
-
-                attribute = self.storage.attributes[self.storage.attributes.vars['uuid'][attribute_st_idx]]
-
+        if hasattr(self.storage, 'attributes'):
+            for attribute, store in zip(
+                    self.storage.attributes,
+                    self.storage.attributes.vars['cache']
+            ):
                 if self.content_class is attribute.key_class:
-                    self.attribute_list[attribute] = (store, idx)
+                    self.attribute_list[attribute] = store
                     self.cv[attribute.name] = attribute
 
     def load_indices(self):
@@ -988,7 +987,7 @@ class ObjectStore(StorableNamedObject):
     # CV SUPPORT
 
     def _auto_complete(self, obj, pos):
-        for attribute, (attribute_store, attribute_idx) in self.attribute_list.items():
+        for attribute, attribute_store in self.attribute_list.items():
             if not attribute_store.allow_incomplete:
                 # value = attribute._cache_dict._get(obj)
                 # if value is None:
@@ -1020,7 +1019,7 @@ class ObjectStore(StorableNamedObject):
         if attribute not in self.attribute_list:
             return
 
-        attribute_store = self.attribute_list[attribute][0]
+        attribute_store = self.attribute_list[attribute]
 
         if attribute_store.allow_incomplete:
             # for complete this does not make sense
@@ -1072,7 +1071,7 @@ class ObjectStore(StorableNamedObject):
         if attribute not in self.attribute_list:
             return
 
-        attribute_store = self.attribute_list[attribute][0]
+        attribute_store = self.attribute_list[attribute]
 
         # for complete this does not make sense
         if attribute_store.allow_incomplete:
@@ -1101,12 +1100,15 @@ class ObjectStore(StorableNamedObject):
     def _get_attribute_name(attribute_idx):
         return 'attribute' + str(attribute_idx)
 
-    def add_attribute(self, store, attribute, template, allow_incomplete=None, chunksize=None):
+    def pos(self, obj):
+        return self.index.get(obj.__uuid__)
+
+    def add_attribute(self, store_cls, attribute, template, allow_incomplete=None, chunksize=None):
         """
 
         Parameters
         ----------
-        store : :obj:`openpathsampling.netcdfplus.ValueStore`
+        store_cls : :obj:`openpathsampling.netcdfplus.ValueStore`
         attribute : :obj:`openpathsampling.CollectiveVariable`
         template : :obj:`openpathsampling.engines.BaseSnapshot`
         chunksize : int
@@ -1141,8 +1143,8 @@ class ObjectStore(StorableNamedObject):
             chunksizes = tuple(params['dimensions'])
 
         # attribute_idx = self.storage.attributes.index[attribute.__uuid__]
-        value_store = store(
-            attribute.content_class,
+        value_store = store_cls(
+            attribute.key_class,
             allow_incomplete=allow_incomplete,
             chunksize=chunksize
         )
@@ -1152,10 +1154,10 @@ class ObjectStore(StorableNamedObject):
 
         self.storage.create_store(store_name, value_store, False)
 
-        if store.allow_incomplete:
+        if value_store.allow_incomplete:
             # we are not using the .initialize function here since we
             # only have one variable and only here know its shape
-            self.storage.create_dimension(store.prefix, 0)
+            self.storage.create_dimension(value_store.prefix, 0)
 
             if shape is not None:
                 shape = tuple(list(shape))
@@ -1193,23 +1195,22 @@ class ObjectStore(StorableNamedObject):
                 simtk_unit=params['simtk_unit'],
             )
 
-        # setattr(value_store, 'value', self.storage.vars[store_name + '_value'])
-
-        store.initialize()
+        value_store.initialize()
 
         # the value
-        # store_idx = int(len(self.storage.attributes))
-        self.attribute_list[attribute] = store
-        # self.storage.vars['attributecache'][store_idx] = store
+        self.attribute_list[attribute] = value_store
+        attribute_idx = self.storage.attributes.index[attribute.__uuid__]
+        self.storage.attributes.vars['cache'][attribute_idx] = value_store
 
         # use the cache and function of the CV to fill the store when it is made
         if not allow_incomplete:
 
             indices = self.vars['uuid'][:]
+            key_store = self.storage.attributes.key_store(attribute)
 
             for pos, idx in enumerate(indices):
 
-                proxy = LoaderProxy(self.storage.snapshots, idx)
+                proxy = LoaderProxy(key_store, idx)
 
                 # value = attribute._cache_dict._get(proxy)
                 #
@@ -1228,3 +1229,4 @@ class ObjectStore(StorableNamedObject):
 
         attribute.set_cache_store(value_store)
         return value_store
+
