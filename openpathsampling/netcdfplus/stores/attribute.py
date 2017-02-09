@@ -24,7 +24,7 @@ class AttributeStore(UniqueNamedObjectStore):
         cache_store = None
 
         if 'cache' in self.vars:
-            cache_store = self.vars['cache']
+            cache_store = self.vars['cache'][idx]
 
         if cache_store is not None:
             cv.set_cache_store(cache_store)

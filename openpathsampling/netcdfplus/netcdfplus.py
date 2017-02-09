@@ -463,7 +463,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if register_attr:
             if hasattr(self, name):
-                raise ValueError('Attribute name %s is already in use!' % name)
+                print name, 'in use'
+                # raise ValueError('Attribute name %s is already in use!' % name)
 
             setattr(self, store.prefix, store)
 

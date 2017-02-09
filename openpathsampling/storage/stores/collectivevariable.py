@@ -1,4 +1,5 @@
 from openpathsampling.netcdfplus import AttributeStore
+import openpathsampling as paths
 
 
 class CVStore(AttributeStore):
@@ -7,6 +8,7 @@ class CVStore(AttributeStore):
     """
     def __init__(self):
         super(CVStore, self).__init__()
+        self.content_class = paths.BaseSnapshot
 
     def _load(self, idx):
 
@@ -15,12 +17,12 @@ class CVStore(AttributeStore):
 
         cache_store = None
 
-        if 'cache' in self.vars:
-            cache_store = self.vars['cache']
-        else:
-            sn = self.storage.snapshots._get_cv_name(idx)
-            if sn in self.storage.stores.name_idx:
-                cache_store = self.storage.stores[sn]
+        sn = self.storage.snapshots._get_cv_name(idx)
+        if sn in self.storage.stores.name_idx:
+            cache_store = self.storage.stores[sn]
+
+        elif 'cache' in self.vars:
+            cache_store = self.vars['cache'][idx]
 
         if cache_store is not None:
             cv.set_cache_store(cache_store)
