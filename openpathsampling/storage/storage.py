@@ -79,14 +79,14 @@ class Storage(NetCDFPlus):
         self.create_store('snapshots', snapshotstore)
         # self.create_store('attributes', AttributeStore())
 
-        self.create_store('cvs', paths.storage.CVStore())
+        # self.create_store('cvs', paths.storage.CVStore())
+
+        self.cvs = self.attributes
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
-        self.create_store(
-            'movechanges',
-            paths.storage.MoveChangeStore()
-        )
+        self.create_store('movechanges',
+                          paths.storage.MoveChangeStore())
         self.create_store('steps', paths.storage.MCStepStore())
 
         # normal objects
@@ -134,6 +134,18 @@ class Storage(NetCDFPlus):
 
     def _restore(self):
         self.set_caching_mode()
+
+        if hasattr(self, 'cvs'):
+            logger.info('Opening an old version that handles CVs differently. '
+                        'You cannot extend this file, only savely read it.')
+
+            if self.mode != 'r':
+                logger.info('Cannot open in append mode. Closing')
+                self.close()
+                raise RuntimeWarning('Closing. Cannot append incompatible '
+                                     'file. You can still open readable.')
+        else:
+            self.cvs = self.attributes
 
     def sync_all(self):
         """
@@ -493,9 +505,9 @@ class AnalysisStorage(Storage):
         """
 
         with AnalysisStorage.CacheTimer('Cached all CVs'):
-            for cv, (cv_store, cv_store_idx) in \
-                    storage.snapshots.attribute_list.items():
-                cv_store.cache.load_max()
+            for cv, cv_store in storage.snapshots.attribute_list.items():
+                if cv_store:
+                    cv_store.cache.load_max()
 
         stores_to_cache = ['cvs',
                            'samples',

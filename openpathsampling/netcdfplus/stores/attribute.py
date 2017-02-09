@@ -18,6 +18,8 @@ class AttributeStore(UniqueNamedObjectStore):
 
         if cv.diskcache_enabled:
             self.add_diskcache(cv)
+        else:
+            self.vars['cache'][idx] = None
 
     def _load(self, idx):
         cv = self.vars['json'][idx]

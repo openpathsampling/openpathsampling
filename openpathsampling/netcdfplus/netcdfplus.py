@@ -199,6 +199,8 @@ class NetCDFPlus(netCDF4.Dataset):
         if mode is None:
             mode = 'a'
 
+        self.mode = mode
+
         exists = os.path.isfile(filename)
         if exists and mode == 'a':
             logger.info(
@@ -279,6 +281,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
             logger.info("Finished setting up netCDF file")
 
+            self.sync()
+
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
 
@@ -327,8 +331,6 @@ class NetCDFPlus(netCDF4.Dataset):
             # call the subclass specific restore in case there is more stuff
             # to prepare
             self._restore()
-
-        self.sync()
 
     def _create_simplifier(self):
         self.simplifier = UUIDObjectJSON(self)
@@ -463,8 +465,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if register_attr:
             if hasattr(self, name):
-                print name, 'in use'
-                # raise ValueError('Attribute name %s is already in use!' % name)
+                raise ValueError('Attribute name %s is already in use!' % name)
 
             setattr(self, store.prefix, store)
 
