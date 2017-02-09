@@ -160,6 +160,7 @@ class ObjectStore(StorableNamedObject):
         self._created = False
 
         self.attribute_list = {}
+        self.cv = {}
 
         # This will not be stored since its information is contained in the
         # dimension names
@@ -229,13 +230,16 @@ class ObjectStore(StorableNamedObject):
         self.load_indices()
         # self.storage.attributes.load_indices()
 
-        for idx, store in enumerate(self.storage.vars['attributecache']):
-            attribute_st_idx = int(store.name[2:])
+        # only if we have a new style file
+        if 'attributecache' in self.storage.vars:
+            for idx, store in enumerate(self.storage.attributes.vars['cache']):
+                attribute_st_idx = int(store.name[2:])
 
-            attribute = self.storage.attributes[self.storage.attributes.vars['uuid'][attribute_st_idx]]
+                attribute = self.storage.attributes[self.storage.attributes.vars['uuid'][attribute_st_idx]]
 
-            if self.content_class is attribute.key_class:
-                self.attribute_list[attribute] = (store, idx)
+                if self.content_class is attribute.key_class:
+                    self.attribute_list[attribute] = (store, idx)
+                    self.cv[attribute.name] = attribute
 
     def load_indices(self):
         self.index.clear()

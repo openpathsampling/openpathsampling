@@ -52,6 +52,7 @@ class Attribute(cd.Wrap, StorableNamedObject):
         StorableNamedObject.__init__(self)
 
         self.name = name
+        self.key_class = key_class
 
         # default settings if we should create a disk cache
         self.diskcache_enabled = False
@@ -59,7 +60,7 @@ class Attribute(cd.Wrap, StorableNamedObject):
         self.diskcache_allow_incomplete = False
 
         self.diskcache_chunksize = ObjectStore.default_store_chunk_size
-        self._single_dict = cd.ExpandSingle()
+        self._single_dict = cd.ExpandSingle(self.key_class)
         self._cache_dict = cd.CacheChainDict(
             WeakKeyCache()
         )
@@ -67,7 +68,6 @@ class Attribute(cd.Wrap, StorableNamedObject):
         self._eval_dict = None
         self.stores = []
 
-        self.key_class = key_class
 
         super(Attribute, self).__init__(
             post=self._single_dict > self._cache_dict)

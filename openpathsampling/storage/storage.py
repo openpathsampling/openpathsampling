@@ -9,7 +9,7 @@ import time
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, \
-    ImmutableDictStore, NamedObjectStore
+    ImmutableDictStore, NamedObjectStore, AttributeStore
 
 from stores import SnapshotWrapperStore
 
@@ -77,7 +77,9 @@ class Storage(NetCDFPlus):
 
         snapshotstore = SnapshotWrapperStore()
         self.create_store('snapshots', snapshotstore)
-        self.create_store('cvs', paths.storage.CVStore(snapshotstore))
+        # self.create_store('attributes', AttributeStore())
+
+        self.create_store('cvs', paths.storage.CVStore())
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
