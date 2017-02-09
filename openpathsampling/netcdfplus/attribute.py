@@ -68,7 +68,6 @@ class Attribute(cd.Wrap, StorableNamedObject):
         self._eval_dict = None
         self.stores = []
 
-
         super(Attribute, self).__init__(
             post=self._single_dict > self._cache_dict)
 
@@ -134,32 +133,32 @@ class Attribute(cd.Wrap, StorableNamedObject):
 
         self._cache_dict._post = last_cv
 
-    def add_cache_from_storage(self, storage):
-        """
-        Attach store variables to the collective variables.
-
-        If used the collective variable will automatically sync values with
-        the store and load from it if necessary. If the CV is created with
-        `diskcache_enabled = True`. This will be done during CV creation.
-
-        Parameters
-        ----------
-        storage : :class:`openpathsampling.storage.Storage`
-            the storage
-
-        """
-
-        idx = storage.cvs.index[self.__uuid__]
-        if idx is not None:
-            value_store = storage.snapshots.get_cv_cache(idx)
-            if value_store is None:
-                return
-
-            if value_store not in self.stores:
-                self.stores.append(value_store)
-                self._update_store_dict()
-        else:
-            raise ValueError('The given storage does not contain this CV.')
+    # def add_cache_from_storage(self, storage):
+    #     """
+    #     Attach store variables to the collective variables.
+    #
+    #     If used the collective variable will automatically sync values with
+    #     the store and load from it if necessary. If the CV is created with
+    #     `diskcache_enabled = True`. This will be done during CV creation.
+    #
+    #     Parameters
+    #     ----------
+    #     storage : :class:`openpathsampling.storage.Storage`
+    #         the storage
+    #
+    #     """
+    #
+    #     idx = storage.cvs.index[self.__uuid__]
+    #     if idx is not None:
+    #         value_store = storage.snapshots.get_cv_cache(idx)
+    #         if value_store is None:
+    #             return
+    #
+    #         if value_store not in self.stores:
+    #             self.stores.append(value_store)
+    #             self._update_store_dict()
+    #     else:
+    #         raise ValueError('The given storage does not contain this CV.')
 
     # This is important since we subclass from list and lists are not hashable
     # but CVs should be
@@ -201,7 +200,7 @@ class Attribute(cd.Wrap, StorableNamedObject):
     to_dict = create_to_dict(['name', 'key_class'])
 
 
-class CallableOV(Attribute):
+class CallableAttribute(Attribute):
     """Turn any callable object into a storable `CollectiveVariable`.
 
     Attributes
@@ -292,7 +291,7 @@ class CallableOV(Attribute):
         which are now `numpy`, `math`, `msmbuilder`, `pandas` and `mdtraj`
         """
 
-        super(CallableOV, self).__init__(
+        super(CallableAttribute, self).__init__(
             name,
             key_class
         )
@@ -321,7 +320,7 @@ class CallableOV(Attribute):
         self._post = post
 
     def to_dict(self):
-        dct = super(CallableOV, self).to_dict()
+        dct = super(CallableAttribute, self).to_dict()
         callable_argument = self.__class__.args()[3]
         dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
@@ -365,7 +364,7 @@ class CallableOV(Attribute):
         return items
 
 
-class FunctionCV(CallableOV):
+class FunctionAttribute(CallableAttribute):
     """Turn any function into a `CollectiveVariable`.
 
     Attributes
@@ -400,11 +399,11 @@ class FunctionCV(CallableOV):
 
         See also
         --------
-        `openpathsampling.CallableOV`
+        `openpathsampling.CallableAttribute`
 
         """
 
-        super(FunctionCV, self).__init__(
+        super(FunctionAttribute, self).__init__(
             name,
             key_class,
             cv_callable=f,
@@ -423,7 +422,7 @@ class FunctionCV(CallableOV):
         return self.cv_callable(items, **self.kwargs)
 
 
-class GeneratorCV(CallableOV):
+class GeneratorAttribute(CallableAttribute):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
@@ -462,7 +461,7 @@ class GeneratorCV(CallableOV):
         from external packages can be used.
         """
 
-        super(GeneratorCV, self).__init__(
+        super(GeneratorAttribute, self).__init__(
             name,
             key_class,
             cv_callable=generator,

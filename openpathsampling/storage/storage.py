@@ -494,7 +494,7 @@ class AnalysisStorage(Storage):
 
         with AnalysisStorage.CacheTimer('Cached all CVs'):
             for cv, (cv_store, cv_store_idx) in \
-                    storage.snapshots.cv_list.items():
+                    storage.snapshots.attribute_list.items():
                 cv_store.cache.load_max()
 
         stores_to_cache = ['cvs',
