@@ -27,8 +27,8 @@ class TransitionNetwork(StorableNamedObject):
     """
     def __init__(self):
         super(TransitionNetwork, self).__init__()
-        self.transitions = {}
-        self.special_ensembles = {}
+        #self.transitions = {}
+        #self.special_ensembles = {}
 
     @property
     def sampling_ensembles(self):
