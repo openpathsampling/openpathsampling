@@ -25,6 +25,7 @@ class Transition(StorableNamedObject):
         super(Transition, self).__init__()
         self.stateA = stateA
         self.stateB = stateB
+        self.ensembles = []
 
     @property
     def all_ensembles(self):
@@ -100,11 +101,11 @@ class FixedLengthTPSTransition(TPSTransition):
         mytrans = super(FixedLengthTPSTransition, cls).from_dict(dct)
         mytrans.length = dct['length']
         return mytrans
-    
+
     def _tps_ensemble(self, stateA, stateB):
         return paths.SequentialEnsemble([
             paths.LengthEnsemble(1) & paths.AllInXEnsemble(stateA),
-            paths.LengthEnsemble(self.length - 2), 
+            paths.LengthEnsemble(self.length - 2),
             paths.LengthEnsemble(1) & paths.AllInXEnsemble(stateB)
         ])
 
@@ -132,7 +133,7 @@ class TISTransition(Transition):
         name for the transition
 
     """
-    
+
     def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
         super(TISTransition, self).__init__(stateA, stateB)
 
@@ -154,7 +155,7 @@ class TISTransition(Transition):
 
         self.default_orderparameter = self.orderparameter
 
-        self.total_crossing_probability_method = "wham" 
+        self.total_crossing_probability_method = "wham"
         self.histograms = {}
         # caches for the results of our calculation
         self._flux = None
@@ -404,7 +405,7 @@ class TISTransition(Transition):
             raise ValueError(
                 "No flux available to TISTransition. Cannot calculate rate"
             )
-        
+
         flux = self._flux
 
         # get the total crossing probability
