@@ -6,8 +6,6 @@ import pandas as pd
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
-import openpathsampling.volume
-import openpathsampling.ensemble
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +27,8 @@ class TransitionNetwork(StorableNamedObject):
     """
     def __init__(self):
         super(TransitionNetwork, self).__init__()
+        self.transitions = {}
+        self.special_ensembles = {}
 
     @property
     def sampling_ensembles(self):
@@ -119,7 +119,7 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         else:
             all_final = paths.join_volumes(final_states)
             all_final.name = "|".join([v.name for v in final_states])
-        
+
         self._sampling_transitions = []
         for my_initial in initial_states:
             my_final_states = [final for final in final_states
@@ -132,7 +132,7 @@ class GeneralizedTPSNetwork(TransitionNetwork):
                     self.TransitionType(my_initial, my_final, **kwargs)
                 ]
             elif len(self._sampling_transitions) == 1:
-                self._sampling_transitions[0].add_transition(my_initial, 
+                self._sampling_transitions[0].add_transition(my_initial,
                                                              my_final)
             else:
                 raise RuntimeError("More than one sampling transition for TPS?")
@@ -200,9 +200,10 @@ class GeneralizedTPSNetwork(TransitionNetwork):
             else:
                 raise RuntimeError("More than one sampling transition for TPS?")
 
-            transitions[(initial, final)] = cls.TransitionType(initial, final,
+            transitions[(initial, final)] = cls.TransitionType(initial,
+                                                               final,
                                                                **kwargs)
-        
+
         dict_result = {
             'x_sampling_transitions' : sampling,
             'transitions' : transitions
@@ -380,7 +381,7 @@ class MSTISNetwork(TISNetwork):
     analysis transitions are obtained using `.transition[(stateA, stateB)]`.
     """
     def to_dict(self):
-        ret_dict = { 
+        ret_dict = {
             'from_state' : self.from_state,
             'states' : self.states,
             'special_ensembles' : self.special_ensembles,
@@ -460,7 +461,7 @@ class MSTISNetwork(TISNetwork):
                 trans.ensembles = fromA.ensembles
                 for i in range(len(trans.ensembles)):
                     trans.ensembles[i].named(trans.name + "[" + str(i) + "]")
-                                             
+
                 trans.minus_ensemble = fromA.minus_ensemble
                 self.transitions[(stateA, stateB)] = trans
 
@@ -504,7 +505,7 @@ class MSTISNetwork(TISNetwork):
             union_others.named("all states except " + str(state.name))
 
             this_trans = paths.TISTransition(
-                stateA=state, 
+                stateA=state,
                 stateB=union_others,
                 interfaces=ifaces,
                 name="Out " + state.name,
@@ -555,7 +556,7 @@ class MSTISNetwork(TISNetwork):
                 trans_hist = transition.ensemble_histogram_info[histname]
                 if trans_hist.hist_args == {}:
                     trans_hist.hist_args = self.hist_args[histname]
-        
+
             transition.total_crossing_probability(steps=steps,
                                                   force=force)
             transition.minus_move_flux(steps=steps, force=force)
@@ -568,7 +569,7 @@ class MSTISNetwork(TISNetwork):
         for trans in self.transitions.values():
             rate = trans.rate(steps)
             self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
-            #print trans.stateA.name, trans.stateB.name, 
+            #print trans.stateA.name, trans.stateB.name,
             #print rate
 
         return self._rate_matrix
@@ -581,7 +582,7 @@ class MISTISNetwork(TISNetwork):
     Multiple interface set TIS network.
 
     Input is given as a list of 4-tuples. Each 4-tuple represents a
-    transition, and is in the order: 
+    transition, and is in the order:
         (initial_state, interfaces, order_parameter, final_states)
     This will create the `input_transitions` objects.
 
@@ -658,7 +659,7 @@ class MISTISNetwork(TISNetwork):
                         self.add_ms_outer_interface(ms_outer, all_transitions)
                     else:
                         relevant = ms_outer.relevant_transitions(all_transitions)
-                        allowed = set(sum([[t.stateA, t.stateB] 
+                        allowed = set(sum([[t.stateA, t.stateB]
                                            for t in relevant], []))
                         forbidden = set(list_all_states) - allowed
                         self.add_ms_outer_interface(ms_outer,
@@ -695,7 +696,7 @@ class MISTISNetwork(TISNetwork):
         network.transition_to_sampling = dct['transition_to_sampling']
         network.input_transitions = dct['input_transitions']
         network.x_sampling_transitions = dct['x_sampling_transitions']
-        network.__init__(trans_info=dct['trans_info'], 
+        network.__init__(trans_info=dct['trans_info'],
                          ms_outers=dct['ms_outer_objects'],
                          strict_sampling=dct['strict_sampling'])
         return network
@@ -707,7 +708,7 @@ class MISTISNetwork(TISNetwork):
         for initial in self.initial_states:
             for t1 in [t for t in transitions if t.stateA==initial]:
                 t_reverse = [
-                    t for t in transitions 
+                    t for t in transitions
                     if t.stateA == t1.stateB and t.stateB == t1.stateA
                 ]
                 if len(t_reverse) == 1:
@@ -722,7 +723,7 @@ class MISTISNetwork(TISNetwork):
         self.transition_pairs = transition_pair_set_dict.values()
 
         if len(self.transition_pairs) > 0:
-            all_in_pairs = reduce(list.__add__, map(lambda x: list(x), 
+            all_in_pairs = reduce(list.__add__, map(lambda x: list(x),
                                                     self.transition_pairs))
         else:
             all_in_pairs = []
@@ -751,7 +752,7 @@ class MISTISNetwork(TISNetwork):
                 orderparameter=transition.orderparameter
             )
 
-            new_ensembles = [e & ensemble_to_intersect 
+            new_ensembles = [e & ensemble_to_intersect
                              for e in sample_trans.ensembles]
             if self.strict_sampling:
                 for (old, new) in zip(new_ensembles, sample_trans.ensembles):
