@@ -2792,12 +2792,16 @@ class TISEnsemble(SequentialEnsemble):
         self.orderparameter = orderparameter
         # TODO: add max_orderparameter as a traj CV
         self.lambda_i = lambda_i
+        self._initial_volumes = volumes_a
+        self._final_volumes = volumes_b
 
     def __call__(self, trajectory, trusted=None, candidate=False):
         if candidate:
-            # we assume that initial and final frames are in appropriate
-            # states, and no other frames are in a state
-            return max(self.orderparameter(trajectory)) >= self.lambda_i
+            # as a candidate trajectory, we assume that only the first and
+            # final frames can be in a state
+            return (self._initial_volumes(trajectory[0])
+                    & self._final_volumes(trajectory[-1])
+                    & max(self.orderparameter(trajectory)) >= self.lambda_i)
         else:
             return super(TISEnsemble, self).__call__(trajectory, trusted)
 
