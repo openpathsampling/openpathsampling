@@ -25,7 +25,9 @@ class Transition(StorableNamedObject):
         super(Transition, self).__init__()
         self.stateA = stateA
         self.stateB = stateB
-        self.ensembles = []
+        # whoops: can't be set here, but must be set in subclass
+        # TODO: make that work in a more sensible way
+        #self.ensembles = []
 
     @property
     def all_ensembles(self):
