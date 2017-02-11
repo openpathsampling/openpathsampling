@@ -121,6 +121,7 @@ class Storage(NetCDFPlus):
         # Set global attributes.
         setattr(self, 'title', 'OpenPathSampling Storage')
 
+        # backwards compatibility
         self.cvs = self.attributes
 
         self.set_caching_mode()
