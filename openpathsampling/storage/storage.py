@@ -77,10 +77,6 @@ class Storage(NetCDFPlus):
 
         snapshotstore = SnapshotWrapperStore()
         self.create_store('snapshots', snapshotstore)
-        # self.create_store('attributes', AttributeStore())
-
-        # self.create_store('cvs', paths.storage.CVStore())
-
         self.cvs = self.attributes
 
         self.create_store('samples', paths.storage.SampleStore())
@@ -127,10 +123,6 @@ class Storage(NetCDFPlus):
         setattr(self, 'title', 'OpenPathSampling Storage')
 
         self.set_caching_mode()
-
-        # since we want to store stuff we need to finalize stores that have not
-        # been initialized yet
-        self.finalize_stores()
 
     def _restore(self):
         self.set_caching_mode()
@@ -228,6 +220,7 @@ class Storage(NetCDFPlus):
         """
 
         return {
+            'attributes': True,
             'trajectories': WeakLRUCache(10000),
             'snapshots': WeakLRUCache(10000),
             'statics': WeakLRUCache(10000),
@@ -262,6 +255,7 @@ class Storage(NetCDFPlus):
         """
 
         return {
+            'attributes': True,
             'trajectories': WeakLRUCache(1000),
             'snapshots': WeakLRUCache(1000),
             'statics': WeakLRUCache(10),
@@ -296,6 +290,7 @@ class Storage(NetCDFPlus):
 
         """
         return {
+            'attributes': WeakLRUCache(10),
             'trajectories': WeakLRUCache(10),
             'snapshots': WeakLRUCache(10),
             'statics': WeakLRUCache(10),
@@ -331,6 +326,7 @@ class Storage(NetCDFPlus):
 
         """
         return {
+            'attributes': True,
             'trajectories': WeakLRUCache(500000),
             'snapshots': WeakLRUCache(100000),
             'statics': WeakLRUCache(10000),
@@ -365,6 +361,7 @@ class Storage(NetCDFPlus):
 
         """
         return {
+            'attributes': True,
             'trajectories': WeakLRUCache(1000),
             'snapshots': WeakLRUCache(10000),
             'statics': WeakLRUCache(1000),
@@ -401,6 +398,7 @@ class Storage(NetCDFPlus):
         This is VERY SLOW and only used for debugging.
         """
         return {
+            'attributes': False,
             'trajectories': False,
             'snapshots': False,
             'statics': False,
@@ -523,8 +521,6 @@ class AnalysisStorage(Storage):
             store = getattr(storage, store_name)
             with AnalysisStorage.CacheTimer('Cache all objects', store):
                 store.cache_all()
-
-#        storage.trajectories.cache_all()
 
     class CacheTimer(object):
         def __init__(self, context, store=None):

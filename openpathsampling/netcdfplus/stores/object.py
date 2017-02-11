@@ -232,7 +232,6 @@ class ObjectStore(StorableNamedObject):
 
     def restore(self):
         self.load_indices()
-        # self.storage.attributes.load_indices()
 
         # only if we have a new style file
         if hasattr(self.storage, 'attributes'):
@@ -443,17 +442,13 @@ class ObjectStore(StorableNamedObject):
         return obj
 
     def clear_cache(self):
-        """Clear the cache and force reloading
-
-        """
+        """Clear the cache and force reloading"""
 
         self.cache.clear()
         self._cached_all = False
 
     def cache_all(self):
-        """Load all samples as fast as possible into the cache
-
-        """
+        """Load all samples as fast as possible into the cache"""
         if not self._cached_all:
             idxs = range(len(self))
             jsons = self.variables['json'][:]
@@ -1137,7 +1132,6 @@ class ObjectStore(StorableNamedObject):
             chunksize=chunksize
         )
 
-        # store_name = self.__class__._get_attribute_name(attribute_idx)
         store_name = self.name + '_' + attribute.name
 
         self.storage.create_store(store_name, value_store, False)

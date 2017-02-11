@@ -37,6 +37,19 @@ class AttributeStore(UniqueNamedObjectStore):
         return cv
 
     def key_store(self, cv):
+        """
+        Return the store that saves the key objects
+
+        Parameters
+        ----------
+        cv : `Attribute`
+
+        Returns
+        -------
+        `ObjectStore`
+            the store the contains the key objects
+
+        """
         return self.storage._objects[cv.key_class]
 
     def sync(self, cv):
@@ -59,12 +72,28 @@ class AttributeStore(UniqueNamedObjectStore):
         self.create_variable('cache', 'obj.stores')
 
     def complete(self, cv):
+        """
+        Call the related complete function to precompute values for all objects
+
+        Parameters
+        ----------
+        cv : `Attribute`
+
+        """
         self.key_store(cv).complete_attribute(cv)
 
     def sync_all(self):
+        """
+        Sync all attribute caches to disk
+
+        """
         map(self.sync, self)
 
     def complete_all(self):
+        """
+        Complete all attributes
+
+        """
         map(self.complete, self)
 
     def add_diskcache(

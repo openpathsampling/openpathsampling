@@ -21,9 +21,9 @@ class ReversalHashedList(dict):
         dict.__setitem__(self, key & ~1, len(self._list) * 2 ^ (key & 1))
         self._list.append(key)
 
+    # noinspection PyCallByClass
     def extend(self, t):
         l = len(self._list)
-        # t = filter(t, lambda x : x not in self)
         map(lambda x, y: dict.__setitem__(self, x & ~1, y * 2 ^ (x & 1)), t,
             range(l, l + len(t)))
         self._list.extend(t)
@@ -552,7 +552,10 @@ class SnapshotWrapperStore(ObjectStore):
     def _get_cv_name(cv_idx):
         return 'cv' + str(cv_idx)
 
-    def add_attribute(self, store_cls, attribute, template, allow_incomplete=None, chunksize=None):
+    def add_attribute(
+            self, store_cls, attribute, template,
+            allow_incomplete=None, chunksize=None):
+
         self.add_cv(attribute, template, allow_incomplete, chunksize)
 
     def add_cv(self, cv, template, allow_incomplete=None, chunksize=None):
