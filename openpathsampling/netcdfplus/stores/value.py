@@ -8,6 +8,15 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 
 class ValueStore(ObjectStore):
+    """
+    Store that stores a value by integer index
+
+    Usually used to save additional attributes for objects
+
+    See Also
+    --------
+    `Attribute`, `AttributeStore`
+    """
     def __init__(
             self,
             key_class,

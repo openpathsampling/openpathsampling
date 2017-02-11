@@ -11,7 +11,7 @@ from stores.object import ObjectStore
 
 class Attribute(cd.Wrap, StorableNamedObject):
     """
-    Wrapper for a function that acts on snapshots or iterables of snapshots
+    Wrapper for a function that acts on objects or iterables of objects
 
     Parameters
     ----------
@@ -133,33 +133,6 @@ class Attribute(cd.Wrap, StorableNamedObject):
 
         self._cache_dict._post = last_cv
 
-    # def add_cache_from_storage(self, storage):
-    #     """
-    #     Attach store variables to the collective variables.
-    #
-    #     If used the collective variable will automatically sync values with
-    #     the store and load from it if necessary. If the CV is created with
-    #     `diskcache_enabled = True`. This will be done during CV creation.
-    #
-    #     Parameters
-    #     ----------
-    #     storage : :class:`openpathsampling.storage.Storage`
-    #         the storage
-    #
-    #     """
-    #
-    #     idx = storage.cvs.index[self.__uuid__]
-    #     if idx is not None:
-    #         value_store = storage.snapshots.get_cv_cache(idx)
-    #         if value_store is None:
-    #             return
-    #
-    #         if value_store not in self.stores:
-    #             self.stores.append(value_store)
-    #             self._update_store_dict()
-    #     else:
-    #         raise ValueError('The given storage does not contain this CV.')
-
     # This is important since we subclass from list and lists are not hashable
     # but CVs should be
     __hash__ = StorableNamedObject.__hash__
@@ -229,9 +202,9 @@ class CallableAttribute(Attribute):
             The callable to be used
         cv_requires_lists : If `True` the internal function  always a list of
             elements instead of single values. It also means that if you call
-            the CV with a list of snapshots a list of snapshot objects will be
-            passed. If `False` a list of Snapshots like a trajectory will
-            be passed snapshot by snapshot.
+            the CV with a list of objects a list of object objects will be
+            passed. If `False` a list of objects like a trajectory will
+            be passed object by object.
         cv_wrap_numpy_array : bool, default: False
             if `True` the returned array will be wrapped with a
             `numpy.array()` which will convert a list of numpy arrays into a
@@ -251,9 +224,9 @@ class CallableAttribute(Attribute):
         This function is abstract and need _eval to be implemented to work.
         Problem is that there are two types of callable functions:
         1. direct functions: these can be called and give the wanted value
-           `c(snapshot, \**kwargs)` would be the typical call
+           `c(object, \**kwargs)` would be the typical call
         2. a generating function: a function the creates the callable object
-           `c(**kwargs)(snapshot)` is the typical call. This is usually used
+           `c(**kwargs)(object)` is the typical call. This is usually used
            for classes. Create the instance and then use it.
 
         This function is very powerful, but need some explanation if you want
@@ -280,10 +253,10 @@ class CallableAttribute(Attribute):
            arguments to the function and added as kwargs to the FunctionCV
 
         >>> import openpathsampling.engines as peng
-        >>> def func(snapshot, indices):
+        >>> def func(object, indices):
         >>>     import mdtraj as md
         >>>     return md.compute_dihedrals(
-        >>>         peng.Trajectory([snapshot]).to_mdtraj(), indices=indices)
+        >>>         peng.Trajectory([object]).to_mdtraj(), indices=indices)
 
         >>> cv = FunctionCV('my_cv', func, indices=[[4, 6, 8, 10]])
 
@@ -394,7 +367,7 @@ class FunctionAttribute(CallableAttribute):
         kwargs
             a dictionary of named arguments which should be given to
             `cv_callable` (for example, the atoms which define a specific
-            distance/angle). Finally `cv_callable(snapshots, **kwargs)` is
+            distance/angle). Finally `cv_callable(objects, **kwargs)` is
             called
 
         See also
@@ -425,7 +398,7 @@ class FunctionAttribute(CallableAttribute):
 class GeneratorAttribute(CallableAttribute):
     """Turn a callable class or function generating a callable object into a CV
 
-    The class instance will be called with snapshots. The instance itself
+    The class instance will be called with objects. The instance itself
     will be created using the given \**kwargs.
     """
 
@@ -453,7 +426,7 @@ class GeneratorAttribute(CallableAttribute):
             additional arguments which should be given to `c` (for example, the
             atoms which define a specific distance/angle). Finally an instance
             `instance = cls(\**kwargs)` is create when the CV is created and
-            using the CV will call `instance(snapshots)`
+            using the CV will call `instance(objects)`
 
         Notes
         -----
