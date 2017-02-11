@@ -233,16 +233,6 @@ class ObjectStore(StorableNamedObject):
     def restore(self):
         self.load_indices()
 
-        # only if we have a new style file
-        if hasattr(self.storage, 'attributes'):
-            for attribute, store in zip(
-                    self.storage.attributes,
-                    self.storage.attributes.vars['cache']
-            ):
-                if self.content_class is attribute.key_class:
-                    self.attribute_list[attribute] = store
-                    self.cv[attribute.name] = attribute
-
     def load_indices(self):
         self.index.clear()
         self.index.extend(self.vars['uuid'][:])

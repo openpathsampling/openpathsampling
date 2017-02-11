@@ -77,7 +77,6 @@ class Storage(NetCDFPlus):
 
         snapshotstore = SnapshotWrapperStore()
         self.create_store('snapshots', snapshotstore)
-        self.cvs = self.attributes
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
@@ -121,6 +120,8 @@ class Storage(NetCDFPlus):
     def _initialize(self):
         # Set global attributes.
         setattr(self, 'title', 'OpenPathSampling Storage')
+
+        self.cvs = self.attributes
 
         self.set_caching_mode()
 

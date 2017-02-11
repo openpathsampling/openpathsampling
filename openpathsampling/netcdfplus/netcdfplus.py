@@ -266,10 +266,10 @@ class NetCDFPlus(netCDF4.Dataset):
             self.stores.set_caching(True)
             self.update_delegates()
 
-            self.create_store('attributes', AttributeStore())
-
             # now create all storages in subclasses
             self._create_storages()
+
+            self.create_store('attributes', AttributeStore())
 
             # call the subclass specific initialization
             self._initialize()
@@ -328,9 +328,19 @@ class NetCDFPlus(netCDF4.Dataset):
             self.update_delegates()
             self._restore_storages()
 
+            # only if we have a new style file
+            if hasattr(self, 'attributes'):
+                for attribute, store in zip(
+                        self.attributes,
+                        self.attributes.vars['cache']
+                ):
+                    key_store = self.attributes.key_store(attribute)
+                    key_store.attribute_list[attribute] = store
+
             # call the subclass specific restore in case there is more stuff
             # to prepare
             self._restore()
+
 
     def _create_simplifier(self):
         self.simplifier = UUIDObjectJSON(self)
