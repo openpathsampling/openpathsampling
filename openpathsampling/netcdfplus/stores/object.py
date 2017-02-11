@@ -892,20 +892,14 @@ class ObjectStore(StorableNamedObject):
         """
         Enable saving using __setitem__
 
-        This only supports writing `store[...] = value`. Not sure if this is
-        ever used.
-
         """
-        if key is Ellipsis:
-            key = None
-
         self.save(value, key)
 
-    def load_single(self, idx):
-        return self._load(idx)
-
-    def load_range(self, start, end):
-        return map(self._load, range(start, end))
+    # def load_single(self, idx):
+    #     return self._load(idx)
+    #
+    # def load_range(self, start, end):
+    #     return map(self._load, range(start, end))
 
     def add_single_to_cache(self, idx, json):
         """
@@ -929,24 +923,24 @@ class ObjectStore(StorableNamedObject):
 
             return obj
 
-    def uuid(self, uuid):
-        """
-        Return last object with a given uuid
-
-        Parameters
-        ----------
-        uuid : str
-            the uuid to be searched for
-
-        Returns
-        -------
-        :py:class:`openpathsampling.netcdfplus.base.StorableObject`
-            the last object with a given uuid. This is to mimic an immutable
-            object. Once you (re-)save with the same uuid you replace the old
-            one and hence you leed to load the last stored one.
-
-        """
-        return self.load(uuid)
+    # def uuid(self, uuid):
+    #     """
+    #     Return last object with a given uuid
+    #
+    #     Parameters
+    #     ----------
+    #     uuid : str
+    #         the uuid to be searched for
+    #
+    #     Returns
+    #     -------
+    #     :py:class:`openpathsampling.netcdfplus.base.StorableObject`
+    #         the last object with a given uuid. This is to mimic an immutable
+    #         object. Once you (re-)save with the same uuid you replace the old
+    #         one and hence you leed to load the last stored one.
+    #
+    #     """
+    #     return self.load(uuid)
 
     def _set_id(self, idx, obj):
         self.vars['uuid'][idx] = obj.__uuid__
