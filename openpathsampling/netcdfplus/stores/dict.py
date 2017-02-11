@@ -133,7 +133,7 @@ class DictStore(NamedObjectStore):
 
         n_idx = int(self.free())
         # make sure in nested saving that an IDX is not used twice!
-        self.reserve_idx(n_idx)
+        # self.reserve_idx(n_idx)
 
         logger.debug(
             'Saving `%s` with name `%s` @ IDX #%d' %

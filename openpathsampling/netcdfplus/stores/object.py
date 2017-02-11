@@ -490,33 +490,33 @@ class ObjectStore(StorableNamedObject):
         # start at first free position in the storage
         idx = len(self)
 
-        # and skip also reserved potential stored ones
-        while idx in self._free:
-            idx += 1
+        # # and skip also reserved potential stored ones
+        # while idx in self._free:
+        #     idx += 1
 
         return idx
 
-    def reserve_idx(self, idx):
-        """
-        Locks an idx as used
-
-        Parameters
-        ----------
-        idx : int
-            the integer index to be reserved
-        """
-        self._free.add(idx)
-
-    def release_idx(self, idx):
-        """
-        Releases a lock on an idx
-
-        Parameters
-        ----------
-        idx : int
-            the integer index to be released
-        """
-        self._free.discard(idx)
+    # def reserve_idx(self, idx):
+    #     """
+    #     Locks an idx as used
+    #
+    #     Parameters
+    #     ----------
+    #     idx : int
+    #         the integer index to be reserved
+    #     """
+    #     self._free.add(idx)
+    #
+    # def release_idx(self, idx):
+    #     """
+    #     Releases a lock on an idx
+    #
+    #     Parameters
+    #     ----------
+    #     idx : int
+    #         the integer index to be released
+    #     """
+    #     self._free.discard(idx)
 
     def initialize(self):
         """
