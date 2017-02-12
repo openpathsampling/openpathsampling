@@ -301,20 +301,6 @@ class SnapshotWrapperStore(ObjectStore):
             self.type_list[store.descriptor] = (store, idx)
             self.store_snapshot_list.append(store)
 
-    @with_timing_logging
-    def load_indices(self):
-        self.index.clear()
-        self.index.extend(self.vars['uuid'][:])
-
-    # def get_cv_cache(self, idx):
-    #     store_name = SnapshotWrapperStore._get_cv_name(idx)
-    #
-    #     if store_name in self.storage.stores.name_idx:
-    #         store = self.storage.stores[store_name]
-    #         return store
-    #     else:
-    #         return None
-
     def mention(self, snapshot):
         """
         Save a shallow copy
@@ -574,6 +560,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         self.add_cv(attribute, template, allow_incomplete, chunksize)
 
+    # todo: this can be reduced to almost the function in super
     def add_cv(self, cv, template, allow_incomplete=None, chunksize=None):
         """
 
