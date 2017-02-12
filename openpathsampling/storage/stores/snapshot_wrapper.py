@@ -2,7 +2,7 @@ import logging
 from uuid import UUID
 
 import openpathsampling.engines as peng
-from openpathsampling.netcdfplus import ObjectStore, with_timing_logging, \
+from openpathsampling.netcdfplus import ObjectStore, \
     NetCDFPlus, LoaderProxy
 
 from .snapshot_feature import FeatureSnapshotStore
