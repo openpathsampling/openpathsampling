@@ -752,7 +752,11 @@ class SnapshotWrapperStore(ObjectStore):
         """
         Enable numpy style selection of object in the store
         """
-        if type(item) is int or type(item) is str or type(item) is long:
+        if type(item) is int:
+            if item < 0:
+                item += len(self)
+            return self.load(item)
+        elif type(item) is str or type(item) is long:
             return self.load(item)
         elif type(item) is slice:
             return [self.load(idx)
