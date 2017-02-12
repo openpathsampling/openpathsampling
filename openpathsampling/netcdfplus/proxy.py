@@ -55,6 +55,12 @@ class LoaderProxy(object):
 
         return NotImplemented
 
+    def __getitem__(self, item):
+        return self.__subject__[item]
+
+    def __iter__(self):
+        return iter(self.__subject__)
+
     def __ne__(self, other):
         return not self == other
 

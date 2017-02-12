@@ -724,21 +724,21 @@ class SnapshotWrapperStore(ObjectStore):
     def all(self):
         return peng.Trajectory(map(self.proxy, self.vars['uuid'][:]))
 
-    # todo: this will not catch a non found item as the super function does!
-    def __getitem__(self, item):
-        """
-        Enable numpy style selection of object in the store
-        """
-        if type(item) is int:
-            if item < 0:
-                item += len(self)
-            return self.load(item)
-        elif type(item) is str or type(item) is long:
-            return self.load(item)
-        elif type(item) is slice:
-            return [self.load(idx)
-                    for idx in range(*item.indices(len(self)))]
-        elif type(item) is list:
-            return [self.load(idx) for idx in item]
-        elif item is Ellipsis:
-            return iter(self)
+    # # todo: this will not catch a non found item as the super function does!
+    # def __getitem__(self, item):
+    #     """
+    #     Enable numpy style selection of object in the store
+    #     """
+    #     if type(item) is int:
+    #         if item < 0:
+    #             item += len(self)
+    #         return self.load(item)
+    #     elif type(item) is str or type(item) is long:
+    #         return self.load(item)
+    #     elif type(item) is slice:
+    #         return [self.load(idx)
+    #                 for idx in range(*item.indices(len(self)))]
+    #     elif type(item) is list:
+    #         return [self.load(idx) for idx in item]
+    #     elif item is Ellipsis:
+    #         return iter(self)
