@@ -4,13 +4,13 @@ Created on 03.09.2014
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 """
 
+import abc
 import logging
 import itertools
 
 from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
-import abc
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -20,6 +20,18 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 
 def join_ensembles(ensemble_list):
+    """Join several ensembles using a set theory union.
+
+    Parameters
+    ----------
+    ensemble_list : list of :class:`.Ensemble`
+        list of ensembles to join
+
+    Returns
+    -------
+    :class:`.Ensemble`
+        union of all given ensembles
+    """
     ensemble = None
     for ens in ensemble_list:
         if ensemble is None:
@@ -258,7 +270,7 @@ class Ensemble(StorableNamedObject):
         if it is appended by a frame. To check, it assumes that the
         trajectory to length L-1 is okay. This is mainly for interactive
         usage, when a trajectory is generated.
-        
+
         Parameters
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
@@ -266,7 +278,7 @@ class Ensemble(StorableNamedObject):
         trusted : bool
             If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
-        
+
         Returns
         -------
         bool
@@ -282,7 +294,7 @@ class Ensemble(StorableNamedObject):
         if it is prepended by a frame. To check, it assumes that the
         trajectory from index 1 is okay. This is mainly for interactive
         usage, when a trajectory is generated using a backward move.
-        
+
         Parameters
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
@@ -290,7 +302,7 @@ class Ensemble(StorableNamedObject):
         trusted : bool
             If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
-        
+
         Returns
         -------
         bool
@@ -998,12 +1010,12 @@ class Ensemble(StorableNamedObject):
                     ('splitting - found %d slices of lengths '
                      '[%d, ..., %d, ..., %d] '
                      'ordered by `%s`\n') % (
-                        len(parts),
-                        min(lens),
-                        sorted(lens)[len(parts) / 2],
-                        max(lens),
-                        unique
-                    ))
+                         len(parts),
+                         min(lens),
+                         sorted(lens)[len(parts) / 2],
+                         max(lens),
+                         unique
+                     ))
         except TypeError:
             pass
 
@@ -1077,7 +1089,7 @@ class Ensemble(StorableNamedObject):
             # elif type(other) is EmptyEnsemble:
             # return self
             # elif type(other) is FullEnsemble:
-            # return NegatedEnsemble(self)        
+            # return NegatedEnsemble(self)
             # else:
             # return SymmetricDifferenceEnsemble(self, other)
 
@@ -1538,7 +1550,7 @@ class SequentialEnsemble(Ensemble):
         logger.debug("Looking for transitions in trajectory " + str(trajectory))
         transitions = self.transition_frames(trajectory, trusted)
         logger.debug("Found transitions: " + str(transitions))
-        # if we don't have the right number of transitions, or if the last 
+        # if we don't have the right number of transitions, or if the last
         # print transitions
         if len(transitions) != len(self.ensembles):
             # print "Returns false b/c not enough ensembles"
@@ -1591,7 +1603,7 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ((ens.can_append(subtraj, trusted=True) or
                 ens(subtraj, trusted=True)
-                ) and subtraj_final < traj_final):
+               ) and subtraj_final < traj_final):
             subtraj_final += 1
             # TODO: replace with append; probably faster
             subtraj = traj[slice(subtraj_first, subtraj_final + 1)]
@@ -1615,7 +1627,7 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ((ens.can_prepend(subtraj, trusted=True) or
                 ens.check_reverse(subtraj, trusted=True)
-                ) and subtraj_first >= traj_first):
+               ) and subtraj_first >= traj_first):
             subtraj_first -= 1
             subtraj = traj[slice(subtraj_first, subtraj_final)]
             logger.debug(" Traj slice " + str(subtraj_first + 1) + " " +
@@ -1816,9 +1828,10 @@ class SequentialEnsemble(Ensemble):
                 self.update_cache(cache, ens_num, first_ens, subtraj_final)
                 self.assign_frames(cache, None)
             else:
-                logger.debug("len(traj)=" + str(len(trajectory)) +
-                             "cache_from=" + str(
-                    cache.contents['subtraj_from']))
+                logger.debug(
+                    "len(traj)=" + str(len(trajectory))
+                    + "cache_from=" + str(cache.contents['subtraj_from'])
+                )
                 subtraj_from = cache.contents['subtraj_from']
                 if subtraj_from is None:
                     subtraj_from = 0
@@ -1827,10 +1840,11 @@ class SequentialEnsemble(Ensemble):
                 ens_final = cache.contents['ens_from']
 
         # logging startup
-        logger.debug("Beginning can_prepend with ens_num:" + str(ens_num) +
-                     "  ens_final:" + str(ens_final) + "  subtraj_final " +
-                     str(subtraj_final) + "; strict=" + str(strict)
-                     )
+        logger.debug(
+            "Beginning can_prepend with ens_num:" + str(ens_num)
+            + "  ens_final:" + str(ens_final) + "  subtraj_final "
+            + str(subtraj_final) + "; strict=" + str(strict)
+        )
         if cache.trusted:
             logger.debug("Cache contents: " + str(cache.contents))
             logger.debug("cache.prev_start_frame: " +
@@ -1980,7 +1994,6 @@ class LengthEnsemble(Ensemble):
 
         super(LengthEnsemble, self).__init__()
         self.length = length
-        pass
 
     def __call__(self, trajectory, trusted=None):
         length = len(trajectory)
