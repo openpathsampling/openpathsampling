@@ -2796,13 +2796,16 @@ class TISEnsemble(SequentialEnsemble):
         self._final_volumes = volumes_b
 
     def __call__(self, trajectory, trusted=None, candidate=False):
-        if candidate:
+        use_candidate = (candidate and self.lambda_i is not None
+                         and self.orderparameter is not None)
+        if use_candidate:
             # as a candidate trajectory, we assume that only the first and
             # final frames can be in a state
             return (self._initial_volumes(trajectory[0])
                     & self._final_volumes(trajectory[-1])
                     & max(self.orderparameter(trajectory)) >= self.lambda_i)
         else:
+            # it still works fine if we use the slower algorithm
             return super(TISEnsemble, self).__call__(trajectory, trusted)
 
     def trajectory_summary(self, trajectory):
