@@ -844,6 +844,8 @@ class ShootFromSnapshotsSimulation(PathSimulator):
     @classmethod
     def from_dict(cls, dct):
         obj = cls.__new__(cls)
+        # user must manually set a storage!
+        super(ShootFromSnapshotsSimulation, obj).__init__(storage=None)
         obj.engine = dct['engine']
         obj.initial_snapshots = dct['initial_snapshots']
         obj.randomizer = dct['randomizer']
@@ -982,6 +984,7 @@ class CommittorSimulation(ShootFromSnapshotsSimulation):
         obj = super(CommittorSimulation, cls).from_dict(dct)
         obj.states = dct['states']
         obj.direction = dct['direction']
+        return obj
 
 
 class DirectSimulation(PathSimulator):

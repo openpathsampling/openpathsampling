@@ -202,6 +202,18 @@ class testCommittorSimulation(object):
         assert_equal(len(sim.initial_snapshots), 1)
         assert_true(isinstance(sim.mover, paths.RandomChoiceMover))
 
+    def test_storage(self):
+        self.storage.tag['simulation'] = self.simulation
+        self.storage.close()
+        read_store = paths.Storage(self.filename, 'r')
+        sim = read_store.tag['simulation']
+        new_filename = data_filename("test2.nc")
+        sim.storage = paths.Storage(new_filename, 'w')
+        sim.output_stream = open(os.devnull, 'w')
+        sim.run(n_per_snapshot=2)
+        if os.path.isfile(new_filename):
+            os.remove(new_filename)
+
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=20)
         assert_equal(len(self.simulation.storage.steps), 20)
@@ -237,6 +249,7 @@ class testCommittorSimulation(object):
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=self.snap0,
                                   direction=1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=10)
         assert_equal(len(sim.storage.steps), 10)
         for step in self.simulation.storage.steps:
@@ -257,6 +270,7 @@ class testCommittorSimulation(object):
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=self.snap0,
                                   direction=-1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=10)
         assert_equal(len(sim.storage.steps), 10)
         for step in self.simulation.storage.steps:
@@ -279,6 +293,7 @@ class testCommittorSimulation(object):
                                   states=[self.left, self.right],
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=[self.snap0, snap1])
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(10)
         assert_equal(len(self.storage.steps), 20)
         snap0_coords = self.snap0.coordinates.tolist()
@@ -306,6 +321,7 @@ class testCommittorSimulation(object):
                                   randomizer=randomizer,
                                   initial_snapshots=self.snap0,
                                   direction=1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(50)
         assert_equal(len(sim.storage.steps), 50)
         counts = {'None-Right' : 0,
