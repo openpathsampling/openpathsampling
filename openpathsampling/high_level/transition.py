@@ -261,10 +261,10 @@ class TISTransition(Transition):
         prev_result = {h: None for h in run_it}
         for sample in in_ens_samples:
             for hist in run_it:
-                hist_info = self.ensemble_histogram_info[hist]
                 if sample is prev_sample[hist]:
                     hist_data_sample = prev_result[hist]
                 else:
+                    hist_info = self.ensemble_histogram_info[hist]
                     hist_data_sample = hist_info.f(sample,
                                                    **hist_info.f_args)
                 prev_result[hist] = hist_data_sample
