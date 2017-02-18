@@ -2792,8 +2792,8 @@ class TISEnsemble(SequentialEnsemble):
         self.orderparameter = orderparameter
         # TODO: add max_orderparameter as a traj CV
         self.lambda_i = lambda_i
-        self._initial_volumes = volumes_a
-        self._final_volumes = volumes_b
+        self._initial_volumes = volume_a
+        self._final_volumes = volume_b | volume_a
 
     def __call__(self, trajectory, trusted=None, candidate=False):
         use_candidate = (candidate and self.lambda_i is not None
@@ -2801,9 +2801,17 @@ class TISEnsemble(SequentialEnsemble):
         if use_candidate:
             # as a candidate trajectory, we assume that only the first and
             # final frames can be in a state
-            return (self._initial_volumes(trajectory[0])
-                    & self._final_volumes(trajectory[-1])
-                    & max(self.orderparameter(trajectory)) >= self.lambda_i)
+            #logger.debug("initial: " +
+                         #str(self._initial_volumes(trajectory[0])))
+            #logger.debug("final: " +
+                         #str(self._final_volumes(trajectory[0])))
+            #logger.debug("max: " +
+                         #str(max(self.orderparameter(trajectory))))
+            return (
+                self._initial_volumes(trajectory[0])
+                & self._final_volumes(trajectory[-1])
+                & (max(self.orderparameter(trajectory)) > self.lambda_i)
+            )
         else:
             # it still works fine if we use the slower algorithm
             return super(TISEnsemble, self).__call__(trajectory, trusted)
