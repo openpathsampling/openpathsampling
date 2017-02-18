@@ -154,6 +154,74 @@ class testFullBootstrapping(object):
         bootstrap.output_stream = open(os.devnull, "w")
         gs = bootstrap.run(max_ensemble_rounds=1)
 
+
+class testShootFromSnapshotsSimulation(object):
+    # note that most of ShootFromSnapshotSimulation is tested in the tests
+    # for CommittorSimulation. This is just an additional test to show that
+    # using different ensembles from the ones used for the committor will
+    # also work.
+    def setup(self):
+        # As a test system, let's use 1D motion on a flat potential. If the
+        # velocity is positive, you right the state on the right. If it is
+        # negative, you hit the state on the left.
+        pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
+        topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        integrator = toys.LeapfrogVerletIntegrator(0.1)
+        options = {
+            'integ': integrator,
+            'n_frames_max': 100000,
+            'n_steps_per_frame': 5
+        }
+        self.engine = toys.Engine(options=options, topology=topology)
+        self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
+                                   velocities=np.array([[1.0]]),
+                                   engine=self.engine)
+        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        starting_volume = paths.CVDefinedVolume(cv, -0.01, 0.01)
+        forward_ensemble = paths.LengthEnsemble(5)
+        backward_ensemble = paths.LengthEnsemble(3)
+        randomizer = paths.NoModification()
+
+        self.filename = data_filename("shoot_from_snaps.nc")
+        self.storage = paths.Storage(self.filename, 'w')
+        self.simulation = ShootFromSnapshotsSimulation(
+            storage=self.storage,
+            engine=self.engine,
+            starting_volume=starting_volume,
+            forward_ensemble=forward_ensemble,
+            backward_ensemble=backward_ensemble,
+            randomizer=randomizer,
+            initial_snapshots=self.snap0
+        )
+        self.simulation.output_stream = open(os.devnull, "w")
+
+    def teardown(self):
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
+        paths.EngineMover.default_engine = None
+
+    def test_run_arbitrary_ensemble(self):
+        # integration test of the whole thing, including storage
+        self.simulation.run(10)
+        self.storage.close()
+        analysis = paths.Storage(self.filename, 'r')
+        sim = analysis.pathsimulators[0]
+        assert_equal(len(analysis.steps), 10)
+        length_to_submover = {5: [], 3: []}
+        for step in analysis.steps:
+            step.active.sanity_check()
+            assert_equal(len(step.active), 1)
+            active_sample = step.active[0]
+            change = step.change
+            assert_equal(change.mover, sim.mover)
+            # KeyError here indicates problem with lengths generated
+            length_to_submover[len(active_sample)] += change.subchange.mover
+
+        for k in length_to_submover:
+            # allow 0 or 1  because maybe we made no trials with submover
+            assert_true(len(set(length_to_submover[k])) <= 1)
+
+
 class testCommittorSimulation(object):
     def setup(self):
         # As a test system, let's use 1D motion on a flat potential. If the
@@ -181,7 +249,7 @@ class testCommittorSimulation(object):
         randomizer = paths.NoModification()
 
         self.filename = data_filename("committor_test.nc")
-        self.storage = paths.Storage(self.filename, 
+        self.storage = paths.Storage(self.filename,
                                      mode="w")
         self.storage.save(self.snap0)
 
