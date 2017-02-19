@@ -95,10 +95,10 @@ class NamedObjectStore(ObjectStore):
             jsons = self.variables['json'][:]
             names = self.variables['name'][:]
 
-            map(self.add_single_to_cache_named, zip(
+            map(self.add_single_to_cache_named,
                 idxs,
                 names,
-                jsons))
+                jsons)
 
             # [self.add_single_to_cache(i, n, j) for i, n, j in zip(
             #     idxs,
@@ -173,28 +173,6 @@ class NamedObjectStore(ObjectStore):
     def find_all(self, name):
         if len(self._name_idx[name]) > 0:
             return self[sorted(list(self._name_idx[name]))]
-
-    def add_single_to_cache(self, idx, json):
-        """
-        Add a single object to cache by json
-
-        Parameters
-        ----------
-        idx : int
-            the index where the object was stored
-        json : str
-            json string the represents a serialized version of the stored object
-        """
-
-        if idx not in self.cache:
-            obj = self.simplifier.from_json(json)
-
-            self._get_id(idx, obj)
-
-            self.cache[idx] = obj
-            self.index[obj.__uuid__] = idx
-
-            return obj
 
     # ==========================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
