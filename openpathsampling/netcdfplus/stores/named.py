@@ -40,26 +40,6 @@ class NamedObjectStore(ObjectStore):
             chunksizes=tuple([65536])
         )
 
-    def add_single_to_cache(self, idx, json):
-        """
-        Add a single object to cache by json
-
-        Parameters
-        ----------
-        idx : int
-            the index where the object was stored
-        json : str
-            json string the represents a serialized version of the stored object
-        """
-
-        if idx not in self.cache:
-            obj = super(NamedObjectStore, self).add_single_to_cache(idx, json)
-
-            name = self.storage.variables[self.prefix + '_name'][idx]
-            setattr(obj, '_name', name)
-            if name != '':
-                self._update_name_in_cache(obj._name, idx)
-
     @property
     def name_idx(self):
         """
@@ -74,10 +54,14 @@ class NamedObjectStore(ObjectStore):
         """
 
         # if not done already cache names once
-        if not self._names_loaded:
-            self.update_name_cache()
+        # if not self._names_loaded:
+        #     self.update_name_cache()
 
         return self._name_idx
+
+    def load_indices(self):
+        super(NamedObjectStore, self).load_indices()
+        self.update_name_cache()
 
     def update_name_cache(self):
         """
@@ -95,12 +79,59 @@ class NamedObjectStore(ObjectStore):
     def _update_name_in_cache(self, name, idx):
         # make sure to cast unicode to str
         name = str(name)
-        if name != '':
+        if name:
             if name not in self._name_idx:
                 self._name_idx[name] = {idx}
             else:
                 if idx not in self._name_idx[name]:
                     self._name_idx[name].add(idx)
+
+    def cache_all(self):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if not self._cached_all:
+            idxs = range(len(self))
+            jsons = self.variables['json'][:]
+            names = self.variables['name'][:]
+
+            map(self.add_single_to_cache_named, zip(
+                idxs,
+                names,
+                jsons))
+
+            # [self.add_single_to_cache(i, n, j) for i, n, j in zip(
+            #     idxs,
+            #     names,
+            #     jsons)]
+
+            self._cached_all = True
+
+    def add_single_to_cache_named(self, idx, name, json):
+        """
+        Add a single object to cache by json
+
+        Parameters
+        ----------
+        idx : int
+            the index where the object was stored
+        name : str
+            the name of the object if it exists
+        json : str
+            json string the represents a serialized version of the stored object
+        """
+
+        if idx not in self.cache:
+            obj = self.simplifier.from_json(json)
+
+            self._get_id(idx, obj)
+
+            self.cache[idx] = obj
+            self.index[obj.__uuid__] = idx
+
+            setattr(obj, '_name', name)
+
+            return obj
 
     def find(self, name):
         """
@@ -137,11 +168,33 @@ class NamedObjectStore(ObjectStore):
             can be empty [] if no objects with that name exist
 
         """
-        return sorted(list(self.name_idx[name]))
+        return sorted(list(self._name_idx[name]))
 
     def find_all(self, name):
-        if len(self.name_idx[name]) > 0:
-            return self[sorted(list(self.name_idx[name]))]
+        if len(self._name_idx[name]) > 0:
+            return self[sorted(list(self._name_idx[name]))]
+
+    def add_single_to_cache(self, idx, json):
+        """
+        Add a single object to cache by json
+
+        Parameters
+        ----------
+        idx : int
+            the index where the object was stored
+        json : str
+            json string the represents a serialized version of the stored object
+        """
+
+        if idx not in self.cache:
+            obj = self.simplifier.from_json(json)
+
+            self._get_id(idx, obj)
+
+            self.cache[idx] = obj
+            self.index[obj.__uuid__] = idx
+
+            return obj
 
     # ==========================================================================
     # LOAD/SAVE DECORATORS FOR CACHE HANDLING
@@ -168,42 +221,106 @@ class NamedObjectStore(ObjectStore):
         if type(idx) is int and idx < 0:
             return None
 
-        n_idx = idx
-
         if type(idx) is str:
             # we want to load by name and it was not in cache.
             if idx in self.name_idx:
                 if len(self.name_idx[idx]) > 1:
-                    logger.debug((
-                        'Found name "%s" multiple (%d) times in storage! '
-                        'Loading last!') % (
-                        idx, len(self.cache[idx])))
+                    if self._log_debug:
+                        logger.debug((
+                            'Found name "%s" multiple (%d) times in storage! '
+                            'Loading last!') % (
+                            idx, len(self.cache[idx])))
 
                 n_idx = sorted(list(self.name_idx[idx]))[-1]
             else:
                 raise ValueError('str "' + idx + '" not found in storage')
 
+        # --- start super of ObjectStore ---
+
         elif type(idx) is long:
-            pass
+            if idx in self.index:
+                n_idx = self.index[idx]
+            else:
+                if self.fallback_store is not None:
+                    return self.fallback_store.load(idx)
+                elif self.storage.fallback is not None:
+                    return self.storage.fallback.stores[self.name].load(idx)
+                else:
+                    raise ValueError(
+                        'str %s not found in storage or fallback' % idx)
 
         elif type(idx) is not int:
             raise ValueError((
-                'indices of type "%s" are not allowed in named '
-                'storage (only str and int)') %
-                type(idx).__name__
-            )
+                 'indices of type "%s" are not allowed in named storage '
+                 '(only str and int)') % type(idx).__name__
+                             )
+        else:
+            n_idx = int(idx)
 
-        obj = super(NamedObjectStore, self).load(n_idx)
+        if n_idx < 0:
+            return None
+
+        # if it is in the cache, return it
+        try:
+            obj = self.cache[n_idx]
+            if self._log_debug:
+                logger.debug(
+                    'Found IDX #' + str(idx) + ' in cache. Not loading!')
+            return obj
+
+        except KeyError:
+            pass
+
+        if self._log_debug:
+            logger.debug(
+                'Calling load object of type `%s` @ IDX #%d' %
+                (self.content_class.__name__, n_idx))
+
+        if n_idx >= len(self):
+            logger.warning(
+                'Trying to load from IDX #%d > number of object %d' %
+                (n_idx, len(self)))
+            return None
+        elif n_idx < 0:
+            logger.warning((
+                               'Trying to load negative IDX #%d < 0. '
+                               'This should never happen!!!') % n_idx)
+            raise RuntimeError(
+                'Loading of negative int should result in no object. '
+                'This should never happen!')
+        else:
+            obj = self._load(n_idx)
+
+        if self._log_debug:
+            logger.debug(
+                'Calling load object of type %s and IDX # %d ... DONE' %
+                (self.content_class.__name__, n_idx))
 
         if obj is not None:
-            n_idx = self.index[obj.__uuid__]
+            self._get_id(n_idx, obj)
+
             setattr(obj, '_name',
                     self.storage.variables[self.prefix + '_name'][n_idx])
             # make sure that you cannot change the name of loaded objects
             obj.fix_name()
 
             # finally store the name of a named object in cache
-            self._update_name_in_cache(obj._name, n_idx)
+            # self._update_name_in_cache(obj._name, n_idx)
+
+            # update cache there might have been a change due to naming
+            self.cache[n_idx] = obj
+
+            if self._log_debug:
+                logger.debug(
+                    'Try loading UUID object of type %s and IDX # %d ... DONE' %
+                    (self.content_class.__name__, n_idx))
+
+        if self._log_debug:
+            logger.debug(
+                'Finished load object of type %s and IDX # %d ... DONE' %
+                (self.content_class.__name__, n_idx))
+
+        # --- end ---
 
         return obj
 
