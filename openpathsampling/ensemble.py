@@ -209,6 +209,7 @@ class Ensemble(StorableNamedObject):
         A path volume defines a set of paths.
         """
         super(Ensemble, self).__init__()
+        self._saved_str = None  # cached first time it is requested
 
     def __eq__(self, other):
         if self is other:
@@ -1059,6 +1060,11 @@ class Ensemble(StorableNamedObject):
         return None
 
     def __str__(self):
+        if self._saved_str is None:
+            self._saved_str = self._str()
+        return self._saved_str
+
+    def _str(self):
         """
         Returns a complete mathematical expression that defines the current
         ensemble in a readable form.
@@ -1157,7 +1163,7 @@ class EmptyEnsemble(Ensemble):
     def __or__(self, other):
         return other
 
-    def __str__(self):
+    def _str(self):
         return 'empty'
 
 
@@ -1203,7 +1209,7 @@ class FullEnsemble(Ensemble):
     def __or__(self, other):
         return self
 
-    def __str__(self):
+    def _str(self):
         return 'all'
 
 
@@ -1228,7 +1234,7 @@ class NegatedEnsemble(Ensemble):
         # We cannot guess the result here so keep on running forever
         return True
 
-    def __str__(self):
+    def _str(self):
         return 'not ' + str(self.ensemble)
 
 
@@ -1345,7 +1351,7 @@ class EnsembleCombination(Ensemble):
             fname="strict_can_prepend"
         )
 
-    def __str__(self):
+    def _str(self):
         # print self.sfnc, self.ensemble1, self.ensemble2,
         # print self.sfnc.format(
         #     '(' + str(self.ensemble1) + ')',
@@ -1969,7 +1975,7 @@ class SequentialEnsemble(Ensemble):
     def strict_can_prepend(self, trajectory, trusted=False):
         return self._generic_can_prepend(trajectory, trusted, strict=True)
 
-    def __str__(self):
+    def _str(self):
         head = "[\n"
         tail = "\n]"
         sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
@@ -2017,7 +2023,7 @@ class LengthEnsemble(Ensemble):
     def can_prepend(self, trajectory, trusted=False):
         return self.can_append(trajectory)
 
-    def __str__(self):
+    def _str(self):
         if type(self.length) is int:
             return 'len(x) = {0}'.format(self.length)
         else:
@@ -2168,7 +2174,7 @@ class AllInXEnsemble(VolumeEnsemble):
     def __invert__(self):
         return PartOutXEnsemble(self.volume, self.trusted)
 
-    def __str__(self):
+    def _str(self):
         return 'x[t] in {0} for all t'.format(self._volume)
 
 
@@ -2181,7 +2187,7 @@ class AllOutXEnsemble(AllInXEnsemble):
     def _volume(self):
         return ~self.volume
 
-    def __str__(self):
+    def _str(self):
         return 'x[t] in {0} for all t'.format(self._volume)
 
     def __invert__(self):
@@ -2193,7 +2199,7 @@ class PartInXEnsemble(VolumeEnsemble):
     Ensemble of trajectory with at least one frame in the volume
     """
 
-    def __str__(self):
+    def _str(self):
         return 'exists t such that x[t] in {0}'.format(self._volume)
 
     def __call__(self, trajectory, trusted=None):
@@ -2219,7 +2225,7 @@ class PartOutXEnsemble(PartInXEnsemble):
     Ensemble of trajectories with at least one frame outside the volume
     """
 
-    def __str__(self):
+    def _str(self):
         return 'exists t such that x[t] in {0}'.format(self._volume)
 
     @property
@@ -2247,7 +2253,7 @@ class ExitsXEnsemble(VolumeEnsemble):
         # changing the defaults for frames and trusted; prevent single frame
         super(ExitsXEnsemble, self).__init__(volume, trusted)
 
-    def __str__(self):
+    def _str(self):
         domain = 'exists x[t], x[t+1] '
         result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
             self._volume)
@@ -2270,7 +2276,7 @@ class EntersXEnsemble(ExitsXEnsemble):
     frames of the trajectory crossing from outside to inside the given volume.
     """
 
-    def __str__(self):
+    def _str(self):
         domain = 'exists x[t], x[t+1] '
         result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
             self._volume)
@@ -2351,14 +2357,14 @@ class SlicedTrajectoryEnsemble(WrappedEnsemble):
     def _alter(self, trajectory):
         return trajectory[self.region]
 
-    def __str__(self):
+    def _str(self):
         # TODO: someday may add different string support for slices with
         # only one frame
         start = "" if self.region.start is None else str(self.region.start)
         stop = "" if self.region.stop is None else str(self.region.stop)
         step = "" if self.region.step is None else " every " + str(
             self.region.step)
-        return ("(" + self.ensemble.__str__() +
+        return ("(" + str(self.ensemble) +
                 " in {" + start + ":" + stop + "}" + step + ")")
 
 
@@ -2471,8 +2477,8 @@ class AppendedNameEnsemble(WrappedEnsemble):
         self.label = label
         super(AppendedNameEnsemble, self).__init__(ensemble)
 
-    def __str__(self):
-        return self.ensemble.__str__() + " " + self.label
+    def _str(self):
+        return str(self.ensemble) + " " + self.label
 
 
 class OptionalEnsemble(WrappedEnsemble):
@@ -2484,8 +2490,8 @@ class OptionalEnsemble(WrappedEnsemble):
         super(OptionalEnsemble, self).__init__(ensemble)
         self._new_ensemble = LengthEnsemble(0) | self.ensemble
 
-    def __str__(self):
-        return "{" + self.ensemble.__str__() + "} (OPTIONAL)"
+    def _str(self):
+        return "{" + str(self.ensemble) + "} (OPTIONAL)"
 
 
 class SingleFrameEnsemble(WrappedEnsemble):
@@ -2513,8 +2519,8 @@ class SingleFrameEnsemble(WrappedEnsemble):
         super(SingleFrameEnsemble, self).__init__(ensemble)
         self._new_ensemble = LengthEnsemble(1) & self.ensemble
 
-    def __str__(self):
-        return "{" + self.ensemble.__str__() + "} (SINGLE FRAME)"
+    def _str(self):
+        return "{" + str(self.ensemble) + "} (SINGLE FRAME)"
 
 
 class MinusInterfaceEnsemble(SequentialEnsemble):
