@@ -3,7 +3,7 @@ import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 
 def steps_to_weighted_trajectories(steps, ensembles):
-    """Bare function to convert to teh weighted trajs dictionary.
+    """Bare function to convert to the weighted trajs dictionary.
 
     This prepares data for the faster analysis format. This preparation only
     need to be done once, and it will cover a lot of the analysis cases.
@@ -86,7 +86,7 @@ class PathLengthHistogrammer(EnsembleHistogrammer):
             hist_parameters=hist_parameters
         )
 
-###############HISTOGRAMMING MAX LAMBDA
+############### HISTOGRAMMING MAX LAMBDA
 
 class FullHistogramMaxLambdas(EnsembleHistogrammer):
     """Histogramming the full max-lambda function (one way of getting TCP)
@@ -116,7 +116,7 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
     def from_weighted_trajectories(self, input_dict):
         hists = self.max_lambda_calc.from_weighted_trajectories(input_dict)
 
-    
+
 
 ############### ASSEMBLING THE TOTAL CROSSING PROBABILITY
 
@@ -142,18 +142,16 @@ class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
         return ctp
 
 
-class TISResults(StorableNamedObject):
-    pass
-
-
 class TISAnalysis(StorableNamedObject):
     """
     Generic class for TIS analysis. One of these for each network.
     """
     def __init__(self, network, steps=None, flux=None, tcp=None, ctp=None):
+        # NOTE: each of flux, ctp, tcp refer to the methods used; in
+        # principle, these should have the option of being provided as a
+        # single example (to be applied to all) or as a dict showing which
+        # to apply to which analysis transition
         self.network = network
-        if steps is not None:
-            pass  # do *all* the analysis!
 
         # set default analysis behaviors
         if flux is None:
@@ -164,10 +162,17 @@ class TISAnalysis(StorableNamedObject):
                         for transition in self.network.sampling_transitions}
         if ctp is None:
             outermost_ensembles = [t.ensembles[-1]
-                                   for t in self.sampling_transitions]
+                                   for t in self.network.sampling_transitions]
             self.ctp = ConditionalTransitionProbability(outermost_ensembles)
 
         self.transitions = network.transitions
+
+        if steps is not None:
+            self.weighted_trajs = steps_to_weighted_trajectories(
+                steps,
+                network.sampling_ensembles
+            )
+            pass  # do *all* the analysis!
 
     def rate_matrix(self, steps=None):
         pass
