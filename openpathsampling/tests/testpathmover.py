@@ -340,7 +340,8 @@ class testPathReversalMover(object):
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
-        self.tis = paths.TISEnsemble(volA, volB, volX)
+        self.tis = paths.TISEnsemble(volA, volB, volX, orderparameter=op,
+                                     lambda_i=0.25)
         self.move = PathReversalMover(ensemble=self.tis)
         self.op = op
 

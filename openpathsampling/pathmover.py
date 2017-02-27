@@ -132,6 +132,7 @@ class PathMover(TreeMixin, StorableNamedObject):
         self._out_ensembles = None
         self._len = None
         self._inout = None
+        self._trust_candidate = False
 
     #        initialization_logging(logger=init_log, obj=self,
     #                               entries=['ensembles'])
@@ -494,8 +495,7 @@ class SampleMover(PathMover):
     def __init__(self):
         super(SampleMover, self).__init__()
 
-    @classmethod
-    def metropolis(cls, trials):
+    def metropolis(self, trials):
         """Implements the Metropolis acceptance for a list of trial samples
 
         The Metropolis uses the .bias for each sample and checks of samples
@@ -519,7 +519,8 @@ class SampleMover(PathMover):
         """
 
         shoot_str = "MC in {cls} using samples {trials}"
-        logger.info(shoot_str.format(cls=cls.__name__, trials=trials))
+        logger.info(shoot_str.format(cls=self.__class__.__name__,
+                                     trials=trials))
 
         trial_dict = dict()
         for trial in trials:
@@ -531,7 +532,7 @@ class SampleMover(PathMover):
         # TODO: This isn't right. `bias` should be associated with the
         # change; not with each individual sample. ~~~DWHS
         for ens, sample in trial_dict.iteritems():
-            valid = ens(sample.trajectory)
+            valid = ens(sample.trajectory, candidate=self._trust_candidate)
             if not valid:
                 # one sample not valid reject
                 accepted = False
@@ -1267,6 +1268,7 @@ class PathReversalMover(SampleMover):
         """
         super(PathReversalMover, self).__init__()
         self.ensemble = ensemble
+        self._trust_candidate = True
 
     def _called_ensembles(self):
         return [self.ensemble]
@@ -1288,7 +1290,8 @@ class PathReversalMover(SampleMover):
 
         reversed_trajectory = trajectory.reversed
 
-        valid = ensemble(reversed_trajectory)
+        valid = ensemble(reversed_trajectory,
+                         candidate=self._trust_candidate)
         logger.info("PathReversal move accepted: " + str(valid))
 
         bias = 1.0
