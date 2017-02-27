@@ -956,6 +956,7 @@ class ReplicaExchangeMover(SampleMover):
         self.bias = bias
         self.ensemble1 = ensemble1
         self.ensemble2 = ensemble2
+        self._trust_candidate = True
 
         initialization_logging(logger=init_log, obj=self,
                                entries=['bias', 'ensemble1', 'ensemble2'])
@@ -986,11 +987,11 @@ class ReplicaExchangeMover(SampleMover):
         replica1 = sample1.replica
         replica2 = sample2.replica
 
-        from1to2 = ensemble2(trajectory1)
+        from1to2 = ensemble2(trajectory1, candidate=self._trust_candidate)
         logger.debug("trajectory " + repr(trajectory1) +
                      " into ensemble " + repr(ensemble2) +
                      " : " + str(from1to2))
-        from2to1 = ensemble1(trajectory2)
+        from2to1 = ensemble1(trajectory2, candidate=self._trust_candidate)
         logger.debug("trajectory " + repr(trajectory2) +
                      " into ensemble " + repr(ensemble1) +
                      " : " + str(from2to1))
