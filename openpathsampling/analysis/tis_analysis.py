@@ -90,17 +90,20 @@ class PathLengthHistogrammer(EnsembleHistogrammer):
 
 class FullHistogramMaxLambdas(EnsembleHistogrammer):
     """Histogramming the full max-lambda function (one way of getting TCP)
+
+    One of these per transition.
     """
     def __init__(self, transition, hist_parameters, max_lambda_func=None):
         if max_lambda_func is None:
             max_lambda_func = lambda t: max(transition.interfaces.cv(t))
             #max_lambda_func = transition.interfaces.max_cv  # TODO traj-cv
-        super(FullHistogramTCP, self).__init__(
+        self.lambdas = {e: l for (e, l) in zip(transition.ensembles,
+                                               transition.lambdas)}
+        super(FullHistogramMaxLambdas, self).__init__(
             ensembles=transition.ensembles,
             f=max_lambda_func,
             hist_parameters=hist_parameters
         )
-        self._tcp = None
 
 #class PerEnsembleMaxLambdas(EnsembleHistogrammer):
     #def __init__(self, transition):
@@ -110,15 +113,21 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
     def __init__(self, max_lambda_calc, combiner=None):
         self.max_lambda_calc = max_lambda_calc
         if combiner is None:
-            combiner = paths.numerics.WHAM()
+            lambdas = self.max_lambda_calc.transition.interfaces.lambdas
+            combiner = paths.numerics.WHAM(interfaces=lambdas)
         self.combiner = combiner
 
     def from_weighted_trajectories(self, input_dict):
         hists = self.max_lambda_calc.from_weighted_trajectories(input_dict)
-
-
-
-############### ASSEMBLING THE TOTAL CROSSING PROBABILITY
+        tcp_results = {}
+        for trans in hists:
+            df = paths.numerics.histograms_to_pandas_dataframe(
+                hists.values(),
+                fcn="reverse_cumulative"
+            ).sort_index(axis=1)
+            tcp = wham.wham_bam_histogram(df).to_dict()
+            tcp_results[trans] = LookupFunction(tcp.keys(), tcp.values())
+        return tcp_results
 
 
 class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
@@ -167,6 +176,7 @@ class TISAnalysis(StorableNamedObject):
 
         self.transitions = network.transitions
 
+        self.weighted_trajs = None  # default if there are no steps
         if steps is not None:
             self.weighted_trajs = steps_to_weighted_trajectories(
                 steps,
@@ -190,11 +200,16 @@ class TISAnalysis(StorableNamedObject):
         pass
 
     def calc_total_crossing_probability(self, weighted_trajs):
-        tcps = []
-        for trans in self.network.sampling_transitions:
-            tcp = self.tcp[trans].from_weighted_trajectories(weighted_trajs)
-            tcps.append(tcp)
+        sampling_tcps = {
+            trans: self.tcp[traj].from_weighted_trajectories(weighted_trajs)
+            for trans in self.network.sampling_transitions
+        }
 
+        for sampling_trans in sampling_tcps:
+            pass
+
+        # map the TCP from the sampling transitions to the analysis
+        # transitions
         pass
 
     def calc_conditional_transition_probability(self, weighted_trajs):
