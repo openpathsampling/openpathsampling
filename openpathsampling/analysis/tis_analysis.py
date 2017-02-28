@@ -106,6 +106,7 @@ class FullHistogramMaxLambdas(EnsembleHistogrammer):
         )
 
 #class PerEnsembleMaxLambdas(EnsembleHistogrammer):
+    # TODO: this just maps the count to the ensemble, not the full histogram
     #def __init__(self, transition):
         #interfaces_lambdas = transition.interfaces.lambdas
 
@@ -119,6 +120,9 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
 
     def from_weighted_trajectories(self, input_dict):
         hists = self.max_lambda_calc.from_weighted_trajectories(input_dict)
+        return self.from_ensemble_histograms(hists)
+
+    def from_ensemble_histograms(self, hists)
         tcp_results = {}
         for trans in hists:
             df = paths.numerics.histograms_to_pandas_dataframe(
@@ -150,6 +154,21 @@ class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
             # TODO: add logging to report here
         return ctp
 
+class TransitionDictResults(StorableNamedObject):
+    # allows you to use analysis transition, 2-tuple of states, or sampling
+    # transition as the key to retrieve the stored results
+    def __init__(self, results_dict, network):
+        self.results_dict = results_dict
+        self.network = network
+
+    def __getattr__(self, key):
+        if key in self.network.sampling_transitions:
+            key = self.network.sampling_to_analysis(key)
+        try:
+            result = self.results_dict[key]
+        except KeyError:
+            result = self.results_dict[self.network.transitions[key]]
+        return result
 
 class TISAnalysis(StorableNamedObject):
     """
@@ -194,6 +213,14 @@ class TISAnalysis(StorableNamedObject):
         pass
 
     def flux(self, from_state, through_interface=None):
+        pass
+
+    @property
+    def conditional_transition_probability(self):
+        pass
+
+    @property
+    def total_crossing_probability(self):
         pass
 
     def calc_flux(self, weighted_trajs):
