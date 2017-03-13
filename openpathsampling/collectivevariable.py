@@ -2,7 +2,7 @@ import openpathsampling.engines as peng
 import openpathsampling.netcdfplus.chaindict as cd
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 from openpathsampling.netcdfplus import WeakKeyCache, \
-    ObjectJSON, create_to_dict, ObjectStore, Attribute
+    ObjectJSON, create_to_dict, ObjectStore, PseudoAttribute
 
 import sys
 if sys.version_info > (3, ):
@@ -14,7 +14,7 @@ else:
 #  CLASS CollectiveVariable
 # ==============================================================================
 
-class CollectiveVariable(Attribute):
+class CollectiveVariable(PseudoAttribute):
     """
     Wrapper for a function that acts on snapshots or iterables of snapshots
 

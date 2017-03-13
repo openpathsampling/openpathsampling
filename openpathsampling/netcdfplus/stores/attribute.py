@@ -1,15 +1,15 @@
 from named import UniqueNamedObjectStore
-from openpathsampling.netcdfplus.attribute import Attribute
+from openpathsampling.netcdfplus.attribute import PseudoAttribute
 from openpathsampling.netcdfplus.stores.value import ValueStore
 
 
-class AttributeStore(UniqueNamedObjectStore):
+class PseudoAttributeStore(UniqueNamedObjectStore):
     """
     ObjectStore to store additional attributes to an existing store
     """
     def __init__(self, obj_store=None):
-        super(AttributeStore, self).__init__(
-            Attribute
+        super(PseudoAttributeStore, self).__init__(
+            PseudoAttribute
         )
         self.value_store = obj_store
 
@@ -42,7 +42,7 @@ class AttributeStore(UniqueNamedObjectStore):
 
         Parameters
         ----------
-        cv : `Attribute`
+        cv : `PseudoAttribute`
 
         Returns
         -------
@@ -60,7 +60,7 @@ class AttributeStore(UniqueNamedObjectStore):
 
         Parameters
         ----------
-        cv : :class:`openpathsampling.netcdf.Attribute` or `None`
+        cv : :class:`openpathsampling.netcdf.PseudoAttribute` or `None`
             the objectdict to store. if `None` is given (default) then
             all collective variables are synced
 
@@ -68,7 +68,7 @@ class AttributeStore(UniqueNamedObjectStore):
         self.key_store(cv).sync_attribute(cv)
 
     def initialize(self):
-        super(AttributeStore, self).initialize()
+        super(PseudoAttributeStore, self).initialize()
         self.create_variable('cache', 'obj.stores')
 
     def complete(self, cv):
@@ -77,7 +77,7 @@ class AttributeStore(UniqueNamedObjectStore):
 
         Parameters
         ----------
-        cv : `Attribute`
+        cv : `PseudoAttribute`
 
         """
         self.key_store(cv).complete_attribute(cv)
@@ -107,7 +107,7 @@ class AttributeStore(UniqueNamedObjectStore):
 
         Parameters
         ----------
-        cv : :class:`openpathsampling.netcdf.Attribute`
+        cv : :class:`openpathsampling.netcdf.PseudoAttribute`
             the objectdict you request the attached variable store
         template : :obj:`openpathsampling.engines.BaseSnapshot`
             an optional snapshot to be used to compute a test value of the CV.
@@ -145,7 +145,7 @@ class AttributeStore(UniqueNamedObjectStore):
 
         Parameters
         ----------
-        cv : :class:`openpathsampling.netcdf.Attribute`
+        cv : :class:`openpathsampling.netcdf.PseudoAttribute`
             the objectdict you request the attached variable store
 
         Returns
@@ -161,7 +161,7 @@ class AttributeStore(UniqueNamedObjectStore):
 
         Parameters
         ----------
-        cv : :obj:`openpathsampling.netcdf.Attribute`
+        cv : :obj:`openpathsampling.netcdf.PseudoAttribute`
             the CV you want to check
 
         Returns
@@ -177,7 +177,7 @@ class AttributeStore(UniqueNamedObjectStore):
 
         Parameters
         ----------
-        cv : :obj:`openpathsampling.netcdf.Attribute`
+        cv : :obj:`openpathsampling.netcdf.PseudoAttribute`
             the CV you want to set this store as its cache
         """
         if self.has_cache(cv):

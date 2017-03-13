@@ -6,14 +6,14 @@ from test_helpers import data_filename, assert_close_unit
 
 import mdtraj as md
 import openpathsampling.engines.openmm as peng
-from openpathsampling.netcdfplus import FunctionAttribute
+from openpathsampling.netcdfplus import FunctionPseudoAttribute
 
 import openpathsampling as paths
 from openpathsampling.tests.test_helpers import make_1d_traj
 import os
 
 
-class test_FunctionAttribute(object):
+class test_FunctionPseudoAttribute(object):
     def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
@@ -32,7 +32,7 @@ class test_FunctionAttribute(object):
 
     def test_pickle_external_attr(self):
         template = make_1d_traj([0.0])[0]
-        attr = FunctionAttribute("x", paths.Trajectory, lambda x: x)
+        attr = FunctionPseudoAttribute("x", paths.Trajectory, lambda x: x)
         storage = paths.Storage("myfile.nc", "w", template)
         storage.save(attr)
         storage.close()
@@ -43,6 +43,8 @@ class test_FunctionAttribute(object):
         # test all combinations of (1) with and without UUIDs,
         # (2) using partial yes, no all of these must work
         for allow_incomplete in (True, False):
+
+            print 'ALLOW INCOMPLETE', allow_incomplete
 
             fname = data_filename("attr_storage_test.nc")
             if os.path.isfile(fname):
@@ -56,7 +58,7 @@ class test_FunctionAttribute(object):
             storage_w.trajectories.save(traj)
 
             # compute distance in x[0]
-            attr1 = FunctionAttribute(
+            attr1 = FunctionPseudoAttribute(
                 'f1',
                 paths.Trajectory,
                 lambda x: x[0].coordinates[0] - x[-1].coordinates[0]
@@ -114,7 +116,7 @@ class test_FunctionAttribute(object):
         storage_w.trajectories.save(traj)
 
         # compute distance in x[0]
-        attr1 = FunctionAttribute(
+        attr1 = FunctionPseudoAttribute(
             'f1',
             paths.Trajectory,
             lambda x: x[0].coordinates[0] - x[-1].coordinates[0]
@@ -161,7 +163,7 @@ class test_FunctionAttribute(object):
         storage_w.trajectories.save(traj)
 
         # compute distance in x[0]
-        attr1 = FunctionAttribute(
+        attr1 = FunctionPseudoAttribute(
             'f1',
             paths.Trajectory,
             lambda x: x[0].coordinates[0] - x[-1].coordinates[0]

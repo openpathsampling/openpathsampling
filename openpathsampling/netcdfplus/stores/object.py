@@ -991,7 +991,7 @@ class ObjectStore(StorableNamedObject):
 
         Parameters
         ----------
-        attribute : :obj:`openpathsampling.netcdfplus.Attribute`
+        attribute : :obj:`openpathsampling.netcdfplus.PseudoAttribute`
 
 
         """
@@ -1108,12 +1108,14 @@ class ObjectStore(StorableNamedObject):
             allow_incomplete = attribute.diskcache_allow_incomplete
         if chunksize is None:
             chunksize = attribute.diskcache_chunksize
+
         if template is None:
             template = attribute.diskcache_template
 
         if not allow_incomplete:
             # in complete mode we force chunk size one to match it to attributes
-            chunksize = self.default_store_chunk_size
+            # chunksize = self.default_store_chunk_size
+            chunksize = self.variables['uuid'].chunking()[0]
 
         # determine value type and shape
         params = self.storage.get_value_parameters(attribute(template))
@@ -1159,7 +1161,13 @@ class ObjectStore(StorableNamedObject):
             value_store.create_variable('index', 'index')
 
         else:
-            chunksize = self.default_store_chunk_size
+            # todo: seems to be a bug in NetCDF4. Need to set chunksize to 1
+            # see Issue https://github.com/Unidata/netcdf4-python/issues/566
+            # I assume this will still work as expected.
+
+            # chunksize = self.default_store_chunk_size
+            # chunksize = self.variables['uuid'].chunking()[0]
+            chunksize = 1
             if shape is not None:
                 shape = tuple([self.name] + list(shape))
                 chunksizes = tuple([chunksize] + list(chunksizes))

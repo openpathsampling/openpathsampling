@@ -15,7 +15,7 @@ class ValueStore(ObjectStore):
 
     See Also
     --------
-    `Attribute`, `AttributeStore`
+    `PseudoAttribute`, `PseudoAttributeStore`
     """
     def __init__(
             self,

@@ -11,7 +11,7 @@ from uuid import UUID
 import netCDF4
 import numpy as np
 from dictify import UUIDObjectJSON
-from stores import NamedObjectStore, ObjectStore, AttributeStore
+from stores import NamedObjectStore, ObjectStore, PseudoAttributeStore
 from proxy import LoaderProxy
 
 import sys
@@ -275,7 +275,7 @@ class NetCDFPlus(netCDF4.Dataset):
             # now create all storages in subclasses
             self._create_storages()
 
-            self.create_store('attributes', AttributeStore())
+            self.create_store('attributes', PseudoAttributeStore())
 
             # call the subclass specific initialization
             self._initialize()
@@ -482,7 +482,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if register_attr:
             if hasattr(self, name):
-                raise ValueError('Attribute name %s is already in use!' % name)
+                raise ValueError('Store name %s is already in use!' % name)
 
             setattr(self, store.prefix, store)
 
@@ -1171,6 +1171,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
             setattr(ncvar, 'var_vlen', 'True')
         else:
+            print 'New variable', var_name, nc_type, dimensions, chunksizes
             ncvar = ncfile.createVariable(
                 var_name, nc_type, dimensions, chunksizes=chunksizes,
             )
