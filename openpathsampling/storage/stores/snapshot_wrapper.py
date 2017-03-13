@@ -657,6 +657,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         else:
             chunksize = self.default_store_chunk_size
+            chunksize = 1
             if shape is not None:
                 shape = tuple(['snapshots'] + list(shape))
                 chunksizes = tuple([chunksize] + list(chunksizes))
