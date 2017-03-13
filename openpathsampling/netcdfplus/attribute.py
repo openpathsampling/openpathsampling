@@ -6,10 +6,10 @@ from stores.object import ObjectStore
 
 
 # ==============================================================================
-#  CLASS Attribute
+#  CLASS PseudoAttribute
 # ==============================================================================
 
-class Attribute(cd.Wrap, StorableNamedObject):
+class PseudoAttribute(cd.Wrap, StorableNamedObject):
     """
     Wrapper for a function that acts on objects or iterables of objects
 
@@ -68,7 +68,7 @@ class Attribute(cd.Wrap, StorableNamedObject):
         self._eval_dict = None
         self.stores = []
 
-        super(Attribute, self).__init__(
+        super(PseudoAttribute, self).__init__(
             post=self._single_dict > self._cache_dict)
 
     def enable_diskcache(self):
@@ -173,7 +173,7 @@ class Attribute(cd.Wrap, StorableNamedObject):
     to_dict = create_to_dict(['name', 'key_class'])
 
 
-class CallableAttribute(Attribute):
+class CallablePseudoAttribute(PseudoAttribute):
     """Turn any callable object into a storable `CollectiveVariable`.
 
     Attributes
@@ -264,7 +264,7 @@ class CallableAttribute(Attribute):
         which are now `numpy`, `math`, `msmbuilder`, `pandas` and `mdtraj`
         """
 
-        super(CallableAttribute, self).__init__(
+        super(CallablePseudoAttribute, self).__init__(
             name,
             key_class
         )
@@ -293,7 +293,7 @@ class CallableAttribute(Attribute):
         self._post = post
 
     def to_dict(self):
-        dct = super(CallableAttribute, self).to_dict()
+        dct = super(CallablePseudoAttribute, self).to_dict()
         callable_argument = self.__class__.args()[3]
         dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
@@ -337,7 +337,7 @@ class CallableAttribute(Attribute):
         return items
 
 
-class FunctionAttribute(CallableAttribute):
+class FunctionPseudoAttribute(CallablePseudoAttribute):
     """Turn any function into a `CollectiveVariable`.
 
     Attributes
@@ -372,11 +372,11 @@ class FunctionAttribute(CallableAttribute):
 
         See also
         --------
-        `openpathsampling.CallableAttribute`
+        `openpathsampling.CallablePseudoAttribute`
 
         """
 
-        super(FunctionAttribute, self).__init__(
+        super(FunctionPseudoAttribute, self).__init__(
             name,
             key_class,
             cv_callable=f,
@@ -395,7 +395,7 @@ class FunctionAttribute(CallableAttribute):
         return self.cv_callable(items, **self.kwargs)
 
 
-class GeneratorAttribute(CallableAttribute):
+class GeneratorPseudoAttribute(CallablePseudoAttribute):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with objects. The instance itself
@@ -434,7 +434,7 @@ class GeneratorAttribute(CallableAttribute):
         from external packages can be used.
         """
 
-        super(GeneratorAttribute, self).__init__(
+        super(GeneratorPseudoAttribute, self).__init__(
             name,
             key_class,
             cv_callable=generator,

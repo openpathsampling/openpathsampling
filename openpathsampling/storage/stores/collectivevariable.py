@@ -1,8 +1,8 @@
-from openpathsampling.netcdfplus import AttributeStore
+from openpathsampling.netcdfplus import PseudoAttributeStore
 import openpathsampling as paths
 
 
-class CVStore(AttributeStore):
+class CVStore(PseudoAttributeStore):
     """
     ObjectStore to store a dict with StorableObject : value
     """

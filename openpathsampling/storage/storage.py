@@ -9,7 +9,7 @@ import time
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, \
-    ImmutableDictStore, NamedObjectStore, AttributeStore
+    ImmutableDictStore, NamedObjectStore, PseudoAttributeStore
 
 from stores import SnapshotWrapperStore
 
