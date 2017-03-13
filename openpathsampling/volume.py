@@ -368,7 +368,7 @@ class CVDefinedVolume(Volume):
     def __call__(self, snapshot):
         l = self.collectivevariable(snapshot).__float__()
 
-        # we explicitely test for infinity to allow the user to
+        # we explicitly test for infinity to allow the user to
         # define `lambda_min/max='inf'` also when using units
         # a simtk unit cannot be compared to a python infinite float
         if self.lambda_min != float('-inf') and self.lambda_min > l:

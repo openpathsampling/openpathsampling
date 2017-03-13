@@ -166,7 +166,7 @@ class BootstrapPromotionMove(SubPathMover):
         # Bootstrapping sets numeric replica IDs. If the user wants it done
         # differently, the user can change it.
         self._ensemble_dict = {ens : rep for rep, ens in enumerate(ensembles) }
-        
+
         # Create all possible hoppers so we do not have to recreate these
         # every time which will result in more efficient storage
         mover = paths.LastAllowedMover([
@@ -188,7 +188,7 @@ class BootstrapPromotionMove(SubPathMover):
 
 class Bootstrapping(PathSimulator):
     """Creates a SampleSet with one sample per ensemble.
-    
+
     The ensembles for the Bootstrapping pathsimulator must be one ensemble
     set, in increasing order. Replicas are named numerically.
     """
@@ -950,6 +950,15 @@ class DirectSimulation(PathSimulator):
         self.transition_count = []
         self.flux_events = {pair: [] for pair in self.flux_pairs}
 
+    @property
+    def results(self):
+        return {'transition_count': self.transition_count,
+                'flux_events': self.flux_events}
+
+    def load_results(self, results):
+        self.transition_count = results['transition_count']
+        self.flux_events = results['flux_events']
+
     def run(self, n_steps):
         most_recent_state = None
         last_interface_exit = {p: -1 for p in self.flux_pairs}
@@ -965,12 +974,12 @@ class DirectSimulation(PathSimulator):
             for s in self.states:
                 if s(frame):
                     state = s
-            if state: 
+            if state:
                 last_state_visit[state] = step
                 if state is not most_recent_state:
                     # we've made a transition: on the first entrance into
                     # this state, we reset the last_interface_exit
-                    state_flux_pairs = [p for p in self.flux_pairs 
+                    state_flux_pairs = [p for p in self.flux_pairs
                                         if p[0] == state]
                     for p in state_flux_pairs:
                         last_interface_exit[p] = -1
@@ -1020,7 +1029,7 @@ class DirectSimulation(PathSimulator):
     @property
     def rate_matrix(self):
         transitions = self.transitions
-        rates = {t : 1.0 / np.array(transitions[t]).mean() 
+        rates = {t : 1.0 / np.array(transitions[t]).mean()
                  for t in transitions}
         rate_matrix = pd.DataFrame(columns=self.states,
                                    index=self.states)

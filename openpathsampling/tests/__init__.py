@@ -15,13 +15,6 @@ def setup_package():
 
     snapshot = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
 
-    # print snapshot.__dict__
-    # print snapshot.engine.__dict__
-
-    # once we have a template configuration (coordinates to not really matter)
-    # we can create a storage. We might move this logic out of the dynamics engine
-    # and keep sotrage and engine generation completely separate!
-
     storage = Storage(
         filename=data_filename("ala_small_traj.nc"),
         template=snapshot,

@@ -28,8 +28,8 @@ except ImportError:  # pragma: no cover
     if not ops_setup.preferences['released']:
         version.full_version += ".dev-" + version.git_version[:7]
     isrelease = str(ops_setup.preferences['released'])
-        
-        
+
+
 from high_level.move_scheme import (
     MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
     OneWayShootingMoveScheme
@@ -60,6 +60,8 @@ from analysis.trajectory_transition_analysis import (
     TrajectoryTransitionAnalysis,
     TrajectorySegmentContainer
 )
+
+from analysis.channel_analysis import ChannelAnalysis
 
 from bias_function import (
     BiasFunction, BiasLookupFunction, BiasEnsembleTable,

@@ -86,7 +86,6 @@ class StaticContainer(StorableObject):
             the reduced deep copy
         """
 
-        # TODO: Keep old potential_energy? Is not correct but might be useful. Boxvectors are fine!
         return StaticContainer(coordinates=self.coordinates,
                                box_vectors=self.box_vectors
                                )

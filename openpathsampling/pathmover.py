@@ -91,7 +91,7 @@ class MoveChangeNaNError(Exception):
 class PathMover(TreeMixin, StorableNamedObject):
     """
     A PathMover is the description of a move in replica space.
-    
+
     Notes
     -----
     A pathmover takes a SampleSet() and returns MoveChange() that is
@@ -109,7 +109,7 @@ class PathMover(TreeMixin, StorableNamedObject):
 
     Note, that a SampleSet is an unordered list (or a set). Hence the ordering
     in the example is arbitrary.
-    
+
     Potential future change: `engine` is not needed for all PathMovers
     (replica exchange, ensemble hopping, path reversal, and moves which
     combine these [state swap] have no need for the engine). Maybe that
@@ -273,7 +273,7 @@ class PathMover(TreeMixin, StorableNamedObject):
 
     def _ensemble_signature(self, as_set=False):
         """Return tuple form of (input_ensembles, output_ensembles).
-        
+
         Useful for MoveScheme, e.g., identifying which movers should be
         removed as part of a replacement.
         """
@@ -441,9 +441,9 @@ class PathMover(TreeMixin, StorableNamedObject):
         ----------
         sample_set : SampleSet
             the initially used sampleset
-        
+
         Returns
-        -------        
+        -------
         samples : MoveChange
             the MoveChange instance describing the change from the old to
             the new SampleSet
@@ -528,7 +528,7 @@ class SampleMover(PathMover):
         accepted = True
         probability = 1.0
 
-        # TODO: This isn't right. `bias` should be associated with the 
+        # TODO: This isn't right. `bias` should be associated with the
         # change; not with each individual sample. ~~~DWHS
         for ens, sample in trial_dict.iteritems():
             valid = ens(sample.trajectory)
@@ -551,7 +551,13 @@ class SampleMover(PathMover):
             'metropolis_random': rand
         }
 
-        logger.info("Trial was " + ("accepted" if accepted else "rejected"))
+        if accepted:
+            result_str = "accepted"
+        else:
+            result_str = ("rejected. Acceptance probabilty "
+                          + str(probability))
+
+        logger.info("Trial was " + result_str)
 
         return accepted, details
 

@@ -2,7 +2,7 @@ from test_helpers import (raises_with_message_like, data_filename,
                           CalvinistDynamics, make_1d_traj)
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal, assert_true)
-from nose.plugins.skip import SkipTest
+# from nose.plugins.skip import SkipTest
 
 from openpathsampling.pathsimulator import *
 import openpathsampling as paths
@@ -297,7 +297,6 @@ class testCommittorSimulation(object):
         assert_equal(count, {self.snap0: 10, snap1: 10})
 
     def test_randomized_committor(self):
-        raise SkipTest
         # this shows that we get both states even with forward-only
         # shooting, if the randomizer gives the negative velocities
         randomizer = paths.RandomVelocities(beta=1.0)
@@ -360,6 +359,32 @@ class testDirectSimulation(object):
         self.sim.run(200)
         assert_true(len(self.sim.transition_count) > 1)
         assert_true(len(self.sim.flux_events[self.flux_pairs[0]]) > 1)
+
+    def test_results(self):
+        self.sim.run(200)
+        results = self.sim.results
+        assert_equal(len(results), 2)
+        assert_equal(set(results.keys()),
+                     set(['transition_count', 'flux_events']))
+        assert_equal(results['transition_count'], self.sim.transition_count)
+        assert_equal(results['flux_events'], self.sim.flux_events)
+
+    def test_load_results(self):
+        left_interface = paths.CVDefinedVolume(self.cv, -0.3, float("inf"))
+        right_interface = paths.CVDefinedVolume(self.cv, float("-inf"), 0.3)
+        fake_transition_count = [
+            (self.center, 1), (self.outside, 4), (self.center, 7),
+            (self.extra, 10), (self.center, 12), (self.outside, 14)
+        ]
+        fake_flux_events = {(self.center, right_interface):
+                            [(15, 3), (23, 15), (48, 23)],
+                            (self.center, left_interface):
+                            [(97, 34), (160, 97)]}
+        results = {'transition_count': fake_transition_count,
+                   'flux_events': fake_flux_events}
+        self.sim.load_results(results)
+        assert_equal(self.sim.transition_count, fake_transition_count)
+        assert_equal(self.sim.flux_events, fake_flux_events)
 
     def test_transitions(self):
         # set fake data

@@ -4,13 +4,13 @@ Created on 03.09.2014
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 """
 
+import abc
 import logging
 import itertools
 
 from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
-import abc
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -20,6 +20,18 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 
 def join_ensembles(ensemble_list):
+    """Join several ensembles using a set theory union.
+
+    Parameters
+    ----------
+    ensemble_list : list of :class:`.Ensemble`
+        list of ensembles to join
+
+    Returns
+    -------
+    :class:`.Ensemble`
+        union of all given ensembles
+    """
     ensemble = None
     for ens in ensemble_list:
         if ensemble is None:
@@ -197,6 +209,7 @@ class Ensemble(StorableNamedObject):
         A path volume defines a set of paths.
         """
         super(Ensemble, self).__init__()
+        self._saved_str = None  # cached first time it is requested
 
         self._min_length = None
         self._max_length = None
@@ -261,7 +274,7 @@ class Ensemble(StorableNamedObject):
         if it is appended by a frame. To check, it assumes that the
         trajectory to length L-1 is okay. This is mainly for interactive
         usage, when a trajectory is generated.
-        
+
         Parameters
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
@@ -269,7 +282,7 @@ class Ensemble(StorableNamedObject):
         trusted : bool
             If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
-        
+
         Returns
         -------
         bool
@@ -285,7 +298,7 @@ class Ensemble(StorableNamedObject):
         if it is prepended by a frame. To check, it assumes that the
         trajectory from index 1 is okay. This is mainly for interactive
         usage, when a trajectory is generated using a backward move.
-        
+
         Parameters
         ----------
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
@@ -293,7 +306,7 @@ class Ensemble(StorableNamedObject):
         trusted : bool
             If trusted=True, some ensembles can be computed more efficiently
             (e.g., by checking only one frame)
-        
+
         Returns
         -------
         bool
@@ -429,6 +442,10 @@ class Ensemble(StorableNamedObject):
                         pad = min(overlap + 1, end - start - 2)
                         start = end - pad
                     else:
+                        # TODO: for some ensembles, there are better ways to
+                        # change start. For frame-by-frame ensembles
+                        # (AllInX, AllOutX) we know that we can completely
+                        # stop for all subtrajectories.
                         start += 1
                     end = start + min_length
 
@@ -997,12 +1014,12 @@ class Ensemble(StorableNamedObject):
                     ('splitting - found %d slices of lengths '
                      '[%d, ..., %d, ..., %d] '
                      'ordered by `%s`\n') % (
-                        len(parts),
-                        min(lens),
-                        sorted(lens)[len(parts) / 2],
-                        max(lens),
-                        unique
-                    ))
+                         len(parts),
+                         min(lens),
+                         sorted(lens)[len(parts) / 2],
+                         max(lens),
+                         unique
+                     ))
         except TypeError:
             pass
 
@@ -1046,6 +1063,11 @@ class Ensemble(StorableNamedObject):
         return None
 
     def __str__(self):
+        if self._saved_str is None:
+            self._saved_str = self._str()
+        return self._saved_str
+
+    def _str(self):
         """
         Returns a complete mathematical expression that defines the current
         ensemble in a readable form.
@@ -1076,7 +1098,7 @@ class Ensemble(StorableNamedObject):
             # elif type(other) is EmptyEnsemble:
             # return self
             # elif type(other) is FullEnsemble:
-            # return NegatedEnsemble(self)        
+            # return NegatedEnsemble(self)
             # else:
             # return SymmetricDifferenceEnsemble(self, other)
 
@@ -1144,7 +1166,7 @@ class EmptyEnsemble(Ensemble):
     def __or__(self, other):
         return other
 
-    def __str__(self):
+    def _str(self):
         return 'empty'
 
     def ensemble_probability(self):
@@ -1197,7 +1219,7 @@ class FullEnsemble(Ensemble):
     def __or__(self, other):
         return self
 
-    def __str__(self):
+    def _str(self):
         return 'all'
 
     def ensemble_probability(self):
@@ -1229,7 +1251,7 @@ class NegatedEnsemble(Ensemble):
         # We cannot guess the result here so keep on running forever
         return True
 
-    def __str__(self):
+    def _str(self):
         return 'not ' + str(self.ensemble)
 
     def ensemble_probability(self):
@@ -1355,7 +1377,7 @@ class EnsembleCombination(Ensemble):
             fname="strict_can_prepend"
         )
 
-    def __str__(self):
+    def _str(self):
         # print self.sfnc, self.ensemble1, self.ensemble2,
         # print self.sfnc.format(
         #     '(' + str(self.ensemble1) + ')',
@@ -1574,7 +1596,7 @@ class SequentialEnsemble(Ensemble):
         logger.debug("Looking for transitions in trajectory " + str(trajectory))
         transitions = self.transition_frames(trajectory, trusted)
         logger.debug("Found transitions: " + str(transitions))
-        # if we don't have the right number of transitions, or if the last 
+        # if we don't have the right number of transitions, or if the last
         # print transitions
         if len(transitions) != len(self.ensembles):
             # print "Returns false b/c not enough ensembles"
@@ -1627,7 +1649,7 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ((ens.can_append(subtraj, trusted=True) or
                 ens(subtraj, trusted=True)
-                ) and subtraj_final < traj_final):
+               ) and subtraj_final < traj_final):
             subtraj_final += 1
             # TODO: replace with append; probably faster
             subtraj = traj[slice(subtraj_first, subtraj_final + 1)]
@@ -1651,7 +1673,7 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         while ((ens.can_prepend(subtraj, trusted=True) or
                 ens.check_reverse(subtraj, trusted=True)
-                ) and subtraj_first >= traj_first):
+               ) and subtraj_first >= traj_first):
             subtraj_first -= 1
             subtraj = traj[slice(subtraj_first, subtraj_final)]
             logger.debug(" Traj slice " + str(subtraj_first + 1) + " " +
@@ -1665,7 +1687,7 @@ class SequentialEnsemble(Ensemble):
         # 1. subtraj_final - subtraj_first > 0: Do we obtain a subtrajectory?
         # 2. subtraj_final == traj_final: Have we assigned all the frames?
         # 3. ens_num == final_ens: are we looking at the last ensemble
-        # Vaious combinations of these result in three possible outcomes:
+        # Various combinations of these result in three possible outcomes:
         # (a) return True (we can append)
         # (b) return False (we can't append)
         # (c) loop around to text another subtrajectory (we can't tell)
@@ -1852,9 +1874,10 @@ class SequentialEnsemble(Ensemble):
                 self.update_cache(cache, ens_num, first_ens, subtraj_final)
                 self.assign_frames(cache, None)
             else:
-                logger.debug("len(traj)=" + str(len(trajectory)) +
-                             "cache_from=" + str(
-                    cache.contents['subtraj_from']))
+                logger.debug(
+                    "len(traj)=" + str(len(trajectory))
+                    + "cache_from=" + str(cache.contents['subtraj_from'])
+                )
                 subtraj_from = cache.contents['subtraj_from']
                 if subtraj_from is None:
                     subtraj_from = 0
@@ -1863,10 +1886,11 @@ class SequentialEnsemble(Ensemble):
                 ens_final = cache.contents['ens_from']
 
         # logging startup
-        logger.debug("Beginning can_prepend with ens_num:" + str(ens_num) +
-                     "  ens_final:" + str(ens_final) + "  subtraj_final " +
-                     str(subtraj_final) + "; strict=" + str(strict)
-                     )
+        logger.debug(
+            "Beginning can_prepend with ens_num:" + str(ens_num)
+            + "  ens_final:" + str(ens_final) + "  subtraj_final "
+            + str(subtraj_final) + "; strict=" + str(strict)
+        )
         if cache.trusted:
             logger.debug("Cache contents: " + str(cache.contents))
             logger.debug("cache.prev_start_frame: " +
@@ -1991,7 +2015,7 @@ class SequentialEnsemble(Ensemble):
     def strict_can_prepend(self, trajectory, trusted=False):
         return self._generic_can_prepend(trajectory, trusted, strict=True)
 
-    def __str__(self):
+    def _str(self):
         head = "[\n"
         tail = "\n]"
         sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
@@ -2050,7 +2074,7 @@ class LengthEnsemble(Ensemble):
     def can_prepend(self, trajectory, trusted=False):
         return self.can_append(trajectory)
 
-    def __str__(self):
+    def _str(self):
         if type(self.length) is int:
             return 'len(x) = {0}'.format(self.length)
         else:
@@ -2201,7 +2225,7 @@ class AllInXEnsemble(VolumeEnsemble):
     def __invert__(self):
         return PartOutXEnsemble(self.volume, self.trusted)
 
-    def __str__(self):
+    def _str(self):
         return 'x[t] in {0} for all t'.format(self._volume)
 
 
@@ -2214,7 +2238,7 @@ class AllOutXEnsemble(AllInXEnsemble):
     def _volume(self):
         return ~self.volume
 
-    def __str__(self):
+    def _str(self):
         return 'x[t] in {0} for all t'.format(self._volume)
 
     def __invert__(self):
@@ -2228,7 +2252,7 @@ class PartInXEnsemble(VolumeEnsemble):
     Ensemble of trajectory with at least one frame in the volume
     """
 
-    def __str__(self):
+    def _str(self):
         return 'exists t such that x[t] in {0}'.format(self._volume)
 
     def __call__(self, trajectory, trusted=None):
@@ -2254,7 +2278,7 @@ class PartOutXEnsemble(PartInXEnsemble):
     Ensemble of trajectories with at least one frame outside the volume
     """
 
-    def __str__(self):
+    def _str(self):
         return 'exists t such that x[t] in {0}'.format(self._volume)
 
     @property
@@ -2282,7 +2306,7 @@ class ExitsXEnsemble(VolumeEnsemble):
         # changing the defaults for frames and trusted; prevent single frame
         super(ExitsXEnsemble, self).__init__(volume, trusted)
 
-    def __str__(self):
+    def _str(self):
         domain = 'exists x[t], x[t+1] '
         result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
             self._volume)
@@ -2305,7 +2329,7 @@ class EntersXEnsemble(ExitsXEnsemble):
     frames of the trajectory crossing from outside to inside the given volume.
     """
 
-    def __str__(self):
+    def _str(self):
         domain = 'exists x[t], x[t+1] '
         result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
             self._volume)
@@ -2386,14 +2410,14 @@ class SlicedTrajectoryEnsemble(WrappedEnsemble):
     def _alter(self, trajectory):
         return trajectory[self.region]
 
-    def __str__(self):
+    def _str(self):
         # TODO: someday may add different string support for slices with
         # only one frame
         start = "" if self.region.start is None else str(self.region.start)
         stop = "" if self.region.stop is None else str(self.region.stop)
         step = "" if self.region.step is None else " every " + str(
             self.region.step)
-        return ("(" + self.ensemble.__str__() +
+        return ("(" + str(self.ensemble) +
                 " in {" + start + ":" + stop + "}" + step + ")")
 
 
@@ -2506,8 +2530,8 @@ class AppendedNameEnsemble(WrappedEnsemble):
         self.label = label
         super(AppendedNameEnsemble, self).__init__(ensemble)
 
-    def __str__(self):
-        return self.ensemble.__str__() + " " + self.label
+    def _str(self):
+        return str(self.ensemble) + " " + self.label
 
 
 class OptionalEnsemble(WrappedEnsemble):
@@ -2519,8 +2543,8 @@ class OptionalEnsemble(WrappedEnsemble):
         super(OptionalEnsemble, self).__init__(ensemble)
         self._new_ensemble = LengthEnsemble(0) | self.ensemble
 
-    def __str__(self):
-        return "{" + self.ensemble.__str__() + "} (OPTIONAL)"
+    def _str(self):
+        return "{" + str(self.ensemble) + "} (OPTIONAL)"
 
 
 class SingleFrameEnsemble(WrappedEnsemble):
@@ -2548,8 +2572,8 @@ class SingleFrameEnsemble(WrappedEnsemble):
         super(SingleFrameEnsemble, self).__init__(ensemble)
         self._new_ensemble = LengthEnsemble(1) & self.ensemble
 
-    def __str__(self):
-        return "{" + self.ensemble.__str__() + "} (SINGLE FRAME)"
+    def _str(self):
+        return "{" + str(self.ensemble) + "} (SINGLE FRAME)"
 
 
 class MinusInterfaceEnsemble(SequentialEnsemble):
