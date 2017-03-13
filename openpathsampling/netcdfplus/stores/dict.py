@@ -95,7 +95,7 @@ class DictStore(NamedObjectStore):
         return obj
 
     def restore(self):
-        pass
+        self.update_name_cache()
 
     def save(self, obj, idx=None):
         """

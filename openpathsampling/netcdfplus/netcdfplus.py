@@ -321,9 +321,10 @@ class NetCDFPlus(netCDF4.Dataset):
             # register all stores that are listed in self.stores
 
             for store in self.stores:
-                logger.debug("Register store %s in the storage" % store.name)
-                self.register_store(store.name, store)
-                store.register(self, store.name)
+                if store is not None:
+                    logger.debug("Register store %s in the storage" % store.name)
+                    self.register_store(store.name, store)
+                    store.register(self, store.name)
 
             self.update_delegates()
             self._restore_storages()

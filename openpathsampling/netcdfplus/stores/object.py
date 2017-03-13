@@ -85,6 +85,8 @@ class ObjectStore(StorableNamedObject):
 
     default_store_chunk_size = 256
 
+    _log_debug = False
+
     class DictDelegator(object):
         def __init__(self, store, dct):
             self.prefix = store.prefix + '_'
@@ -728,15 +730,18 @@ class ObjectStore(StorableNamedObject):
         # if it is in the cache, return it
         try:
             obj = self.cache[n_idx]
-            logger.debug('Found IDX #' + str(idx) + ' in cache. Not loading!')
+            if self._log_debug:
+                logger.debug(
+                    'Found IDX #' + str(idx) + ' in cache. Not loading!')
             return obj
 
         except KeyError:
             pass
 
-        logger.debug(
-            'Calling load object of type `%s` @ IDX #%d' %
-            (self.content_class.__name__, n_idx))
+        if self._log_debug:
+            logger.debug(
+                'Calling load object of type `%s` @ IDX #%d' %
+                (self.content_class.__name__, n_idx))
 
         if n_idx >= len(self):
             logger.warning(
@@ -753,9 +758,10 @@ class ObjectStore(StorableNamedObject):
         else:
             obj = self._load(n_idx)
 
-        logger.debug(
-            'Calling load object of type %s and IDX # %d ... DONE' %
-            (self.content_class.__name__, n_idx))
+        if self._log_debug:
+            logger.debug(
+                'Calling load object of type %s and IDX # %d ... DONE' %
+                (self.content_class.__name__, n_idx))
 
         if obj is not None:
             self._get_id(n_idx, obj)
@@ -763,13 +769,15 @@ class ObjectStore(StorableNamedObject):
             # update cache there might have been a change due to naming
             self.cache[n_idx] = obj
 
-            logger.debug(
-                'Try loading UUID object of type %s and IDX # %d ... DONE' %
-                (self.content_class.__name__, n_idx))
+            if self._log_debug:
+                logger.debug(
+                    'Try loading UUID object of type %s and IDX # %d ... DONE' %
+                    (self.content_class.__name__, n_idx))
 
-        logger.debug(
-            'Finished load object of type %s and IDX # %d ... DONE' %
-            (self.content_class.__name__, n_idx))
+        if self._log_debug:
+            logger.debug(
+                'Finished load object of type %s and IDX # %d ... DONE' %
+                (self.content_class.__name__, n_idx))
 
         return obj
 
