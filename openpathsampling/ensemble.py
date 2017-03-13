@@ -217,7 +217,7 @@ class Ensemble(StorableNamedObject):
         return str(self) == str(other)
 
     @abc.abstractmethod
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         """
         Return `True` if the trajectory is part of the path ensemble.
 
@@ -1139,7 +1139,7 @@ class EmptyEnsemble(Ensemble):
     def __init__(self):
         super(EmptyEnsemble, self).__init__()
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         return False
 
     def can_append(self, trajectory, trusted=False):
@@ -1175,7 +1175,7 @@ class FullEnsemble(Ensemble):
     def __init__(self):
         super(FullEnsemble, self).__init__()
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         return True
 
     def can_append(self, trajectory, trusted=False):
@@ -1223,8 +1223,8 @@ class NegatedEnsemble(Ensemble):
         super(NegatedEnsemble, self).__init__()
         self.ensemble = ensemble
 
-    def __call__(self, trajectory, trusted=None):
-        return not self.ensemble(trajectory, trusted)
+    def __call__(self, trajectory, trusted=None, candidate=False):
+        return not self.ensemble(trajectory, trusted, candidate)
 
     def can_append(self, trajectory, trusted=False):
         # We cannot guess the result here so keep on running forever
@@ -1301,7 +1301,7 @@ class EnsembleCombination(Ensemble):
             #              str(b) + str(self.fnc(a,b)))
             return self.fnc(a, b)
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         return self._generalized_short_circuit(
             combo=self.fnc,
             f1=self.ensemble1,
@@ -1552,7 +1552,7 @@ class SequentialEnsemble(Ensemble):
                 else:
                     return transitions
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         logger.debug("Looking for transitions in trajectory " + str(trajectory))
         transitions = self.transition_frames(trajectory, trusted)
         logger.debug("Found transitions: " + str(transitions))
@@ -1997,11 +1997,12 @@ class LengthEnsemble(Ensemble):
             The specific length (int) or the range of allowed trajectory
             lengths (slice)
         """
+        #TODO: remove support for slice?
 
         super(LengthEnsemble, self).__init__()
         self.length = length
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         length = len(trajectory)
         if type(self.length) is int:
             return length == self.length
@@ -2142,7 +2143,7 @@ class AllInXEnsemble(VolumeEnsemble):
         else:
             return self(trajectory)
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         if len(trajectory) == 0:
             return False
         # TODO: We might be able to speed this up based on can_append
@@ -2202,7 +2203,7 @@ class PartInXEnsemble(VolumeEnsemble):
     def _str(self):
         return 'exists t such that x[t] in {0}'.format(self._volume)
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         """
         Returns True if the trajectory is part of the PathEnsemble
 
@@ -2236,7 +2237,7 @@ class PartOutXEnsemble(PartInXEnsemble):
     def __invert__(self):
         return AllInXEnsemble(self.volume, self.trusted)
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         for frame in trajectory.as_proxies():
             if self._volume(frame):
                 return True
@@ -2259,7 +2260,7 @@ class ExitsXEnsemble(VolumeEnsemble):
             self._volume)
         return domain + result
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         subtraj = trajectory
         for i in range(len(subtraj) - 1):
             frame_i = subtraj.get_as_proxy(i)
@@ -2282,7 +2283,7 @@ class EntersXEnsemble(ExitsXEnsemble):
             self._volume)
         return domain + result
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         subtraj = trajectory
         for i in range(len(subtraj) - 1):
             frame_i = subtraj.get_as_proxy(i)
@@ -2316,7 +2317,7 @@ class WrappedEnsemble(Ensemble):
         self._cache_can_prepend = EnsembleCache(+1)
         self._cache_strict_can_prepend = EnsembleCache(+1)
 
-    def __call__(self, trajectory, trusted=None):
+    def __call__(self, trajectory, trusted=None, candidate=False):
         return self._new_ensemble(self._alter(trajectory), trusted)
 
     def _alter(self, trajectory):
@@ -2795,7 +2796,31 @@ class TISEnsemble(SequentialEnsemble):
         self.interface = interface
         #        self.name = interface.name
         self.orderparameter = orderparameter
+        # TODO: add max_orderparameter as a traj CV
         self.lambda_i = lambda_i
+        self._initial_volumes = volume_a
+        self._final_volumes = volume_b | volume_a
+
+    def __call__(self, trajectory, trusted=None, candidate=False):
+        use_candidate = (candidate and self.lambda_i is not None
+                         and self.orderparameter is not None)
+        if use_candidate:
+            # as a candidate trajectory, we assume that only the first and
+            # final frames can be in a state
+            #logger.debug("initial: " +
+                         #str(self._initial_volumes(trajectory[0])))
+            #logger.debug("final: " +
+                         #str(self._final_volumes(trajectory[0])))
+            #logger.debug("max: " +
+                         #str(max(self.orderparameter(trajectory))))
+            return (
+                self._initial_volumes(trajectory[0])
+                & self._final_volumes(trajectory[-1])
+                & (max(self.orderparameter(trajectory)) > self.lambda_i)
+            )
+        else:
+            # it still works fine if we use the slower algorithm
+            return super(TISEnsemble, self).__call__(trajectory, trusted)
 
     def trajectory_summary(self, trajectory):
         initial_state_i = None
