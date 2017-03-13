@@ -212,7 +212,6 @@ class SnapshotWrapperStore(ObjectStore):
         store_idx = int(self.variables['store'][idx // 2])
 
         if store_idx < 0:
-            # print store_idx, self.storage, self.name, idx
             if self.fallback_store is not None:
                 return self.fallback_store.load(idx)
             elif self.storage.fallback is not None:
@@ -223,7 +222,6 @@ class SnapshotWrapperStore(ObjectStore):
         else:
             store = self.store_snapshot_list[store_idx]
             snap = store[int(idx)]
-            # print 'FROM', store, int(idx) in store.index, idx, snap
             return snap
 
     def __len__(self):
