@@ -257,10 +257,18 @@ class TISTransition(Transition):
         hist_data = {}
         buflen = -1
         sample_buf = []
+        prev_sample = {h: None for h in run_it}
+        prev_result = {h: None for h in run_it}
         for sample in in_ens_samples:
             for hist in run_it:
-                hist_info = self.ensemble_histogram_info[hist]
-                hist_data_sample = hist_info.f(sample, **hist_info.f_args)
+                if sample is prev_sample[hist]:
+                    hist_data_sample = prev_result[hist]
+                else:
+                    hist_info = self.ensemble_histogram_info[hist]
+                    hist_data_sample = hist_info.f(sample,
+                                                   **hist_info.f_args)
+                prev_result[hist] = hist_data_sample
+                prev_sample[hist] = sample
                 try:
                     hist_data[hist].append(hist_data_sample)
                 except KeyError:
