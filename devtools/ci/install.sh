@@ -21,6 +21,6 @@ export PATH=$HOME/miniconda2/bin:$PATH
 
 # add omnia and update
 conda config --add channels http://conda.anaconda.org/omnia
-# conda update --yes conda=4.
+conda update --yes conda
 
 echo travis_fold:end:install.conda
