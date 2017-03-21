@@ -154,6 +154,74 @@ class testFullBootstrapping(object):
         bootstrap.output_stream = open(os.devnull, "w")
         gs = bootstrap.run(max_ensemble_rounds=1)
 
+
+class testShootFromSnapshotsSimulation(object):
+    # note that most of ShootFromSnapshotSimulation is tested in the tests
+    # for CommittorSimulation. This is just an additional test to show that
+    # using different ensembles from the ones used for the committor will
+    # also work.
+    def setup(self):
+        # As a test system, let's use 1D motion on a flat potential. If the
+        # velocity is positive, you right the state on the right. If it is
+        # negative, you hit the state on the left.
+        pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
+        topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        integrator = toys.LeapfrogVerletIntegrator(0.1)
+        options = {
+            'integ': integrator,
+            'n_frames_max': 100000,
+            'n_steps_per_frame': 5
+        }
+        self.engine = toys.Engine(options=options, topology=topology)
+        self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
+                                   velocities=np.array([[1.0]]),
+                                   engine=self.engine)
+        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        starting_volume = paths.CVDefinedVolume(cv, -0.01, 0.01)
+        forward_ensemble = paths.LengthEnsemble(5)
+        backward_ensemble = paths.LengthEnsemble(3)
+        randomizer = paths.NoModification()
+
+        self.filename = data_filename("shoot_from_snaps.nc")
+        self.storage = paths.Storage(self.filename, 'w')
+        self.simulation = ShootFromSnapshotsSimulation(
+            storage=self.storage,
+            engine=self.engine,
+            starting_volume=starting_volume,
+            forward_ensemble=forward_ensemble,
+            backward_ensemble=backward_ensemble,
+            randomizer=randomizer,
+            initial_snapshots=self.snap0
+        )
+        self.simulation.output_stream = open(os.devnull, "w")
+
+    def teardown(self):
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
+        paths.EngineMover.default_engine = None
+
+    def test_run_arbitrary_ensemble(self):
+        # integration test of the whole thing, including storage
+        self.simulation.run(10)
+        self.storage.close()
+        analysis = paths.Storage(self.filename, 'r')
+        sim = analysis.pathsimulators[0]
+        assert_equal(len(analysis.steps), 10)
+        length_to_submover = {5: [], 3: []}
+        for step in analysis.steps:
+            step.active.sanity_check()
+            assert_equal(len(step.active), 1)
+            active_sample = step.active[0]
+            change = step.change
+            assert_equal(change.mover, sim.mover)
+            # KeyError here indicates problem with lengths generated
+            length_to_submover[len(active_sample)] += change.subchange.mover
+
+        for k in length_to_submover:
+            # allow 0 or 1  because maybe we made no trials with submover
+            assert_true(len(set(length_to_submover[k])) <= 1)
+
+
 class testCommittorSimulation(object):
     def setup(self):
         # As a test system, let's use 1D motion on a flat potential. If the
@@ -181,7 +249,7 @@ class testCommittorSimulation(object):
         randomizer = paths.NoModification()
 
         self.filename = data_filename("committor_test.nc")
-        self.storage = paths.Storage(self.filename, 
+        self.storage = paths.Storage(self.filename,
                                      mode="w")
         self.storage.save(self.snap0)
 
@@ -201,6 +269,18 @@ class testCommittorSimulation(object):
         sim = self.simulation  # convenience
         assert_equal(len(sim.initial_snapshots), 1)
         assert_true(isinstance(sim.mover, paths.RandomChoiceMover))
+
+    def test_storage(self):
+        self.storage.tag['simulation'] = self.simulation
+        self.storage.close()
+        read_store = paths.Storage(self.filename, 'r')
+        sim = read_store.tag['simulation']
+        new_filename = data_filename("test2.nc")
+        sim.storage = paths.Storage(new_filename, 'w')
+        sim.output_stream = open(os.devnull, 'w')
+        sim.run(n_per_snapshot=2)
+        if os.path.isfile(new_filename):
+            os.remove(new_filename)
 
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=20)
@@ -237,6 +317,7 @@ class testCommittorSimulation(object):
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=self.snap0,
                                   direction=1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=10)
         assert_equal(len(sim.storage.steps), 10)
         for step in self.simulation.storage.steps:
@@ -257,6 +338,7 @@ class testCommittorSimulation(object):
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=self.snap0,
                                   direction=-1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=10)
         assert_equal(len(sim.storage.steps), 10)
         for step in self.simulation.storage.steps:
@@ -279,6 +361,7 @@ class testCommittorSimulation(object):
                                   states=[self.left, self.right],
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=[self.snap0, snap1])
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(10)
         assert_equal(len(self.storage.steps), 20)
         snap0_coords = self.snap0.coordinates.tolist()
@@ -306,6 +389,7 @@ class testCommittorSimulation(object):
                                   randomizer=randomizer,
                                   initial_snapshots=self.snap0,
                                   direction=1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(50)
         assert_equal(len(sim.storage.steps), 50)
         counts = {'None-Right' : 0,
@@ -359,6 +443,32 @@ class testDirectSimulation(object):
         self.sim.run(200)
         assert_true(len(self.sim.transition_count) > 1)
         assert_true(len(self.sim.flux_events[self.flux_pairs[0]]) > 1)
+
+    def test_results(self):
+        self.sim.run(200)
+        results = self.sim.results
+        assert_equal(len(results), 2)
+        assert_equal(set(results.keys()),
+                     set(['transition_count', 'flux_events']))
+        assert_equal(results['transition_count'], self.sim.transition_count)
+        assert_equal(results['flux_events'], self.sim.flux_events)
+
+    def test_load_results(self):
+        left_interface = paths.CVDefinedVolume(self.cv, -0.3, float("inf"))
+        right_interface = paths.CVDefinedVolume(self.cv, float("-inf"), 0.3)
+        fake_transition_count = [
+            (self.center, 1), (self.outside, 4), (self.center, 7),
+            (self.extra, 10), (self.center, 12), (self.outside, 14)
+        ]
+        fake_flux_events = {(self.center, right_interface):
+                            [(15, 3), (23, 15), (48, 23)],
+                            (self.center, left_interface):
+                            [(97, 34), (160, 97)]}
+        results = {'transition_count': fake_transition_count,
+                   'flux_events': fake_flux_events}
+        self.sim.load_results(results)
+        assert_equal(self.sim.transition_count, fake_transition_count)
+        assert_equal(self.sim.flux_events, fake_flux_events)
 
     def test_transitions(self):
         # set fake data

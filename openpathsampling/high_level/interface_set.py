@@ -27,9 +27,9 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
             # we guess based on the values of lambda
             # if they aren't monotone, we can't tell and return 0
             count = len(lambdas)-1
-            increasing = sum([lambdas[i+1] >= lambdas[i] 
+            increasing = sum([lambdas[i+1] >= lambdas[i]
                               for i in range(len(lambdas)-1)]) == count
-            decreasing = sum([lambdas[i+1] <= lambdas[i] 
+            decreasing = sum([lambdas[i+1] <= lambdas[i]
                               for i in range(len(lambdas)-1)]) == count
 
             if increasing:
@@ -45,7 +45,7 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
         vlambdas = self.lambdas
         if vlambdas is None:
             vlambdas = [None]*len(self.volumes)
-        self._lambda_dict = {vol: lmbda 
+        self._lambda_dict = {vol: lmbda
                              for (vol, lmbda) in zip(self.volumes, vlambdas)}
 
     def get_lambda(self, volume):
@@ -143,9 +143,9 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         if self.direction == 0:
             self.volume_func = volume_func
         elif self.direction > 0:
-            self.volume_func = lambda maxv : volume_func(self.minvals, maxv)
+            self.volume_func = lambda maxv: volume_func(self.minvals, maxv)
         elif self.direction < 0:
-            self.volume_func = lambda minv : volume_func(minv, self.maxvals)
+            self.volume_func = lambda minv: volume_func(minv, self.maxvals)
 
     def to_dict(self):
         return {'cv': self.cv,
@@ -213,7 +213,7 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         elif len_min > len_max == 1:
             direction = -1
         else:
-            raise RuntimeError("Can't reconcile array lengths: " 
+            raise RuntimeError("Can't reconcile array lengths: "
                                + str(minvals) + ", " + str(maxvals))
 
         minvs = minvals

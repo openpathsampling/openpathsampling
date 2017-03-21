@@ -221,13 +221,14 @@ class ObjectJSON(object):
                     self.update_class_list()
                     if obj['_cls'] not in self.class_list:
                         # updating did not help, so there is nothing we can do.
-                        raise ValueError((
-                            'Cannot create obj of class `%s`.\n' +
-                            'Class is not registered as creatable! '
-                            'You might have to define\n' +
-                            'the class locally and call '
-                            '`update_storable_classes()` on your storage.') %
-                            obj['_cls'])
+                        return None
+                        # raise ValueError((
+                        #     'Cannot create obj of class `%s`.\n' +
+                        #     'Class is not registered as creatable! '
+                        #     'You might have to define\n' +
+                        #     'the class locally and call '
+                        #     '`update_storable_classes()` on your storage.') %
+                        #     obj['_cls'])
 
                 attributes = self.build(obj['_dict'])
                 return self.class_list[obj['_cls']].from_dict(attributes)
