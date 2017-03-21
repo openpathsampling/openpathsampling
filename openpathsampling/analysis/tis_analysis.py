@@ -34,6 +34,10 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
     def from_weighted_trajectories(self, input_dict):
         raise NotImplementedError
 
+    def append_results_from(self, other):
+        # to be used to simplify parallelization
+        raise NotImplementedError
+
 ######## CALCULATING THE FLUX
 
 #class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
@@ -52,6 +56,9 @@ class DictFlux(MultiEnsembleSamplingAnalyzer):
 
     def from_weighted_trajectories(self, input_dict):
         return self.flux_dict
+
+    def append_results_from(self, other):
+        return self
 
 ########## GENERAL HISTOGRAMMING
 
@@ -98,7 +105,7 @@ class FullHistogramMaxLambdas(EnsembleHistogrammer):
             max_lambda_func = lambda t: max(transition.interfaces.cv(t))
             #max_lambda_func = transition.interfaces.max_cv  # TODO traj-cv
         self.lambdas = {e: l for (e, l) in zip(transition.ensembles,
-                                               transition.lambdas)}
+                                               transition.interfaces.lambdas)}
         super(FullHistogramMaxLambdas, self).__init__(
             ensembles=transition.ensembles,
             f=max_lambda_func,
@@ -122,7 +129,7 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
         hists = self.max_lambda_calc.from_weighted_trajectories(input_dict)
         return self.from_ensemble_histograms(hists)
 
-    def from_ensemble_histograms(self, hists)
+    def from_ensemble_histograms(self, hists):
         tcp_results = {}
         for trans in hists:
             df = paths.numerics.histograms_to_pandas_dataframe(
