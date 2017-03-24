@@ -41,6 +41,42 @@ class TrajectoryStore(ObjectStore):
         trajectory = Trajectory(self.vars['snapshots'][idx])
         return trajectory
 
+    def cache_all(self):
+        """Load all samples as fast as possible into the cache
+
+        """
+        if not self._cached_all:
+            idxs = range(len(self))
+            snaps = self.vars['snapshots'][:]
+
+            [self.add_single_to_cache(i, j) for i, j in zip(
+                idxs,
+                snaps)]
+
+            self._cached_all = True
+
+    def add_single_to_cache(self, idx, snaps):
+        """
+        Add a single object to cache by json
+
+        Parameters
+        ----------
+        idx : int
+            the index where the object was stored
+        snaps : list of `BaseSnapshot`
+            json string the represents a serialized version of the stored object
+        """
+
+        if idx not in self.cache:
+            obj = Trajectory(snaps)
+
+            self._get_id(idx, obj)
+
+            self.cache[idx] = obj
+            self.index[obj.__uuid__] = idx
+
+            return obj
+
     def snapshot_indices(self, idx):
         """
         Load snapshot indices for trajectory with ID 'idx' from the storage
