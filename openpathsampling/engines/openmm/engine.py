@@ -13,13 +13,13 @@ logger = logging.getLogger(__name__)
 
 def restore_custom_integrator_interface(integrator):
     """
-    Restore the interface to a custom integrator. 
+    Restore the interface to a custom integrator.
 
     When subclasses of CustomIntegrator are deserialized, they only show up
     as `CustomIntegrator`, and therefore lose any additional interface
     provided by the subclass.
 
-    So far, only subclasses of `openmmtools.ThermostatedIntegrator` are
+    So far, only subclasses of `openmmtools.RestorableIntegrator` are
     supported. Hopefully, we can establish some sort of more widely-used
     approach based on the tricks established in there.
     """
@@ -29,10 +29,9 @@ def restore_custom_integrator_interface(integrator):
     except ImportError:  # pragma: no cover
         pass  # if openmmtools doesn't exist, can't restore interface
     else:
-        ThermostatedIntegrator = \
-                openmmtools.integrators.ThermostatedIntegrator
-        if ThermostatedIntegrator.is_thermostated(integrator):
-            success = ThermostatedIntegrator.restore_interface(integrator)
+        RestorableIntegrator = openmmtools.integrators.RestorableIntegrator
+        if RestorableIntegrator.is_restorable(integrator):
+            success = RestorableIntegrator.restore_interface(integrator)
             logger.debug("Restored interface to integrator: " + str(success))
             # this return a bool based on success; we could error on fail,
             # but I think it is better to just log it and use the integrator
