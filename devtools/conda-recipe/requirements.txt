@@ -3,7 +3,6 @@ scipy
 pandas
 jupyter
 netcdf4
-hdf4=4.2.12
 openmm
 openmmtools
 mdtraj
