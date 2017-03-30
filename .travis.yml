@@ -13,7 +13,7 @@ install:
 
 script:
   - echo travis_fold:start:conda.build.package
-  - conda install --yes
+  - conda install --yes conda-build
   - conda build devtools/conda-recipe
   - echo travis_fold:end:conda.build.package
 
