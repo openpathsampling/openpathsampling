@@ -8,7 +8,6 @@ requirements:
     - numpy
     - scipy
     - pandas
-    - hdf4 4.2.12
     - netcdf4
     - openmm
     - openmmtools
