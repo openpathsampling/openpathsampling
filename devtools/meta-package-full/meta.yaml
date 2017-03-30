@@ -1,0 +1,27 @@
+package:
+  name: openpathsampling-full
+  version: "0.9.2"
+
+requirements:
+  run:
+    - python
+    - numpy
+    - scipy
+    - pandas
+    - hdf4 4.2.12
+    - netcdf4
+    - openmm
+    - openmmtools
+    - jupyter
+    - mdtraj
+    - svgwrite
+    - networkx
+    - matplotlib
+    - ujson
+    - pyemma
+
+
+about:
+  home: http://github.com/openpathsampling/openpathsampling
+  license: LGPL 2.1 or later
+  summary: 'OpenPathSampling: A python package to do path sampling simulations'
