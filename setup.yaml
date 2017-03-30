@@ -74,9 +74,6 @@ requires:
   - netcdf4
   - openmm
   - openmmtools
-  - pymbar
-  - docopt
-  - pyyaml
   - mdtraj
   - svgwrite
   - networkx
