@@ -22,7 +22,7 @@ script:
   - conda info --envs
   - source activate test
   - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma ipynbtest
-  - conda update --all --yes --use-local
+  # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
