@@ -1,15 +1,12 @@
 python
-numpy=1.10
 scipy
 pandas
 jupyter
 netcdf4
 openmm
 openmmtools
-pyyaml
 mdtraj
 svgwrite
 networkx
 matplotlib
 ujson
-pyqt
