@@ -14,7 +14,7 @@ requirements:
   build:
     - python
     - setuptools
-    - pyyaml
+#    - pyyaml
 
   run:
     - python
@@ -25,11 +25,11 @@ requirements:
     - openmm
     - openmmtools
     - jupyter
-    - pyyaml
+#    - pyyaml
     - mdtraj
     - svgwrite
     - networkx
-    - pyqt
+#    - pyqt
     - matplotlib
     - ujson
 
