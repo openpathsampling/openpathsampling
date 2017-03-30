@@ -14,23 +14,20 @@ requirements:
   build:
     - python
     - setuptools
-#    - pyyaml
 
   run:
     - python
     - numpy
     - scipy
     - pandas
-    - hdf4 4.2.12
+#    - hdf4 4.2.12
     - netcdf4
     - openmm
     - openmmtools
     - jupyter
-#    - pyyaml
     - mdtraj
     - svgwrite
     - networkx
-#    - pyqt
     - matplotlib
     - ujson
 
