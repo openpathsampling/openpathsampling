@@ -1,4 +1,4 @@
-from shifting import *
+from openpathsampling.shifting import *
 import openpathsampling.tests.test_helpers as ops_test
 from openpathsampling.tests.test_helpers import make_1d_traj
 from openpathsampling.tests.test_helpers import CalvinistDynamics

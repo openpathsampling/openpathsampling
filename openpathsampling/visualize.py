@@ -1827,7 +1827,7 @@ class PathTreeBuilder(Builder):
             'ShiftingMover': {
                 'name': 'Shifting',
                 'suffix': '',
-                'css_class': ['extend']
+                'css_class': ['extend'],
                 'overlap': 'line'
             },
 
