@@ -106,8 +106,6 @@ def pretty_print_seconds(seconds, n_labels=0, separator=" "):
         precision.
     separator : string
         separator between levels of the time decomposition
-    on_zero : string
-        string to return in the case of 0 seconds
     """
     ordered_keys = ['day', 'hour', 'minute', 'second']
     divisors = {
@@ -119,14 +117,18 @@ def pretty_print_seconds(seconds, n_labels=0, separator=" "):
 
     s = int(seconds)
 
-    parts = {}
-    fractional_parts = {}
-    for k in ordered_keys:
-        fractional_parts[k] = float(s) / divisors[k]
-        parts[k], s = divmod(s, divisors[k])
+    def decompose_seconds(s):
+        parts = {}
+        fractional_parts = {}
+        for k in ordered_keys:
+            fractional_parts[k] = float(s) / divisors[k]
+            parts[k], s = divmod(s, divisors[k])
+        return parts, fractional_parts
 
-    part_labels = {k: k if parts[k] == 1 else k + "s"
-                   for k in ordered_keys}
+    def make_seconds(parts):
+        return sum([parts[p] * divisors[p] for p in parts.keys()])
+
+    parts, fractional_parts = decompose_seconds(s)
 
     decimalize_final = (n_labels < 0)
 
@@ -137,9 +139,27 @@ def pretty_print_seconds(seconds, n_labels=0, separator=" "):
             break
     first_key_index = ordered_keys.index(first_key)
 
-    max_labels = len(ordered_keys) - first_key_index
-    if n_labels != 0 and abs(n_labels) < max_labels:
-        max_labels = abs(n_labels)
+    n_labels_real = len(ordered_keys) - first_key_index
+    if n_labels != 0 and abs(n_labels) < n_labels_real:
+        n_labels_real = abs(n_labels)
+
+    max_label_index = first_key_index + (len(ordered_keys) - n_labels_real)
+    max_label = ordered_keys[max_label_index]
+
+    if first_key != "second" and n_labels > 0:
+        # round it!
+        if fractional_parts[max_label] - parts[max_label] >= 0.5:
+            parts[max_label] += 1
+        else:
+            pass
+        for key in ordered_keys[max_label_index + 1:]:
+            parts[key] = 0
+
+    new_s = make_seconds(parts)
+    parts, frac_parts = decompose_seconds(new_s)
+
+    part_labels = {k: k if parts[k] == 1 else k + "s"
+                   for k in ordered_keys}
 
     label_count = 0
     output_str = ""
@@ -147,14 +167,14 @@ def pretty_print_seconds(seconds, n_labels=0, separator=" "):
         part = parts[key]
         label_str = part_labels[key]
         frac = fractional_parts[key]
-        if part > 0 and label_count < max_labels - 1:
+        if part > 0 and label_count < n_labels_real - 1:
             output_str += str(part) + " " + label_str + separator
             label_count += 1
-        elif label_count == max_labels - 1:
+        elif label_count == n_labels_real - 1:
             if decimalize_final and key != 'second':
                 output_str += "%.2f %s" % (frac, key+'s')
             else:
-                output_str += str(int(round(frac))) + " " + label_str
+                output_str += str(part) + " " + label_str
             label_count += 1
 
     return output_str
