@@ -43,14 +43,10 @@ class ShiftingMover(EngineMover):
 
     def _run(self, trajectory , shooting_index):
 
-<<<<<<< HEAD
         shift = random.choice([-1,1])*self.shift_length
 
         details = {'Shift': shift}
-=======
-        shift = random.choice([-1,1]*self.shift_length)
-        details = {'Shift': self.shift}
->>>>>>> a58eaac7d6055961f06a01eddc8d977c5bcfc887
+
 
         if shift > 0: #forward shift condition
             #print self.shift_length
