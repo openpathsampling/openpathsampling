@@ -143,7 +143,9 @@ def pretty_print_seconds(seconds, n_labels=0, separator=" "):
     if n_labels != 0 and abs(n_labels) < n_labels_real:
         n_labels_real = abs(n_labels)
 
-    max_label_index = first_key_index + (len(ordered_keys) - n_labels_real)
+    max_label_index = first_key_index + len(ordered_keys) - n_labels_real
+    if max_label_index >= len(ordered_keys):
+        max_label_index = len(ordered_keys) - 1
     max_label = ordered_keys[max_label_index]
 
     if first_key != "second" and n_labels > 0:
