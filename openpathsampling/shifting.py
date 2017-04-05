@@ -44,6 +44,7 @@ class ShiftingMover(EngineMover):
     def _run(self, trajectory , shooting_index):
 
         shift = random.choice([-1,1]*self.shift_length)
+        details = {'Shift': self.shift}
 
         if shift > 0: #forward shift condition
             #print self.shift_length
@@ -55,7 +56,6 @@ class ShiftingMover(EngineMover):
             self.engine.current_snapshot = chopped_traj[-1]  # pick last frame
             right_part = self.engine.generate_n_frames(self.shift_length) #gen time steps in future to add to
                                                                           #chopped traj
-            details = {"Forward Shift":self.shift_length}
 
             #print 'Right part', right_part[1:]
             return  chopped_traj + right_part, details
@@ -70,7 +70,6 @@ class ShiftingMover(EngineMover):
 	    #print self.shift_length, self.engine.current_snapshot
 
             left_part = self.engine.generate_n_frames(self.shift_length)
-            details= {"Backward Shift":self.shift_length}
 
 
             return  left_part.reversed + chopped_traj, details
