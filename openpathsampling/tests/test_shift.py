@@ -129,9 +129,9 @@ class TestShiftingMover(object):
 
 	def test_run_details(self):
 	#check keys and values of the dictonary output from the _run function of the Mover
-	#keys are the name of the shift - 2 choices Forward Shift and Backward Shift
-	#values are the shift length only 1 choice the input shift length 2 
-	#also test the value of the shift length is 2 in all cases
+	#keys are the name of the move which has 1 choice - "Shift" 
+	#values are the shift which has 2 choices, either +2 or -2 depending if fwd or bkwd shift.  
+	#also test the value of the shift length is +/-2 in all cases
 	
 		
 		value_list = []
@@ -146,36 +146,51 @@ class TestShiftingMover(object):
 		key_set = set(key_list)
 		value_set = set(value_list)
 		
-		assert_equal(len(value_set), 1) #test the number of unique values is 1
-		assert_equal(len(key_set), 2)  #test the number of unique keys is 2
+		assert_equal(len(value_set), 2) #test the number of unique values is 2, either+/-2
+		assert_equal(len(key_set), 1)  #test the number of unique keys is 1
 		
-		#assert_in(str(key_list), str('Forward Shift'))
-		#assert_in(str(key_list), str('Backward Shift'))
-		
+		#assert_equal(str(key_list), str('Shift'))
 		
 		
-		for j in value_list:
-			assert_equal(j, 2)
-			assert_not_equal(j, 3)
+		#for j in value_list:
+		#	assert_in(j, 2)
+		#	assert_in(j, -2)
+		#	assert_not_in(j, 3)
 
-			#print(type(j))
+		        #print(type(j))
+
+		shift_list = []
+		for k in key_list:
+			if k in "Shift":
+				shift_list.append(k)
+				assert_equal(str(k),"Shift")
+
+		assert_equal(len(shift_list), 100)
+
+		
 		fwd_list = []
 		bwd_list = []
 
-		for k in key_list:
-			if k in "Forward Shift":
-				fwd_list.append(k)
-				
+		for l in value_list:
+			if l > 0:
+				fwd_list.append(l)
+				assert_equal(l, 2)
+				assert_not_equal(l,1)
+			elif l <0:
+				bwd_list.append(l)
+				assert_equal(l, -2)
+				assert_not_equal(l, -1)
 
-			 	assert_equal(str(k),"Forward Shift")
+		assert_equal(len(fwd_list) + len(bwd_list), 100)
 
-			elif k in "Backward Shift":
-				bwd_list.append(k)			
+		#for x in fwd_list:
+		#	print(x)
 
-				assert_equal(str(k), "Backward Shift")
+		#for y in bwd_list:
+		#	print(y)
 
-		assert_equal(len(fwd_list)+len(bwd_list), 100)
-		#print(len(bwd_list))
+		#print(len(fwd_list)
+		#print(len(bwd_list)
 
 		
 #Test the Shifting Strategy by creating Test Setup to include state definitions, interfaces and
