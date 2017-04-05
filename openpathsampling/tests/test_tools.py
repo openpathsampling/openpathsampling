@@ -31,3 +31,11 @@ def test_pretty_print_seconds():
     # test separators
     assert_equal(pretty_print_seconds(93784, separator=", "),
                  "1 day, 2 hours, 3 minutes, 4 seconds")
+
+def test_progress_string():
+    assert_equal(progress_string(0, 100, 10),
+                 "Starting simulation...\nWorking on first step\n")
+    assert_equal(progress_string(1, 11, 9378.4),
+                 "Running for 2 hours 36 minutes 18 seconds - "
+                 + "9378.40 seconds per step\n"
+                 + "Estimated time remaining: 1 day 2.05 hours\n")
