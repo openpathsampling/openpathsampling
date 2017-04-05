@@ -1,14 +1,13 @@
+import numpy as np
+import random
 import openpathsampling as paths
 import openpathsampling.engines.toy as toy
-import numpy as np
-import openpathsampling.visualize as vis
-from IPython.display import SVG, display
+import openpathsampling.high_level.move_strategy as strategies
 from openpathsampling import EngineMover
 from openpathsampling.high_level.move_strategy import MoveStrategy
 from openpathsampling.high_level.move_strategy import levels
-import random
 from openpathsampling.shooting import NullShootingSelector
-import openpathsampling.high_level.move_strategy as strategies
+
 
 class ShiftingMover(EngineMover):
     """

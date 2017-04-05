@@ -1,60 +1,44 @@
 from openpathsampling.shifting import *
+import openpathsampling as paths
 import openpathsampling.tests.test_helpers as ops_test
 from openpathsampling.tests.test_helpers import make_1d_traj
 from openpathsampling.tests.test_helpers import CalvinistDynamics
 
-from nose.plugins.skip import SkipTest
+from nose.plugins.skip import Skip, SkipTest
+
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_true, assert_in, assert_not_in)
+
 from numpy.testing import assert_allclose
 
 from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
-from openpathsampling.ensemble import EnsembleFactory as ef
+#from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
-from openpathsampling.pathmover import IdentityPathMover
+#from openpathsampling.pathmover import IdentityPathMover
 from openpathsampling.sample import Sample, SampleSet
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.volume import CVDefinedVolume
 import openpathsampling.engines.toy as toys
-import openpathsampling as paths
 
+from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
+from openpathsampling.high_level.move_strategy import *
+#from openpathsampling import VolumeFactory as vf
 
-#logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 
-#logging.getLogger('openpathsampling.pathmover').propagate = False
-#logging.getLogger('openpathsampling.initialization').propagate = False
 import collections
 
 
-from nose.plugins.skip import Skip, SkipTest
 from openpathsampling.tests.test_helpers import (
     true_func, assert_equal_array_array, MoverWithSignature,
     setify_ensemble_signature, reorder_ensemble_signature
 )
-
-
-from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
-from openpathsampling.high_level.move_strategy import *
-from openpathsampling import VolumeFactory as vf
-
-import collections
-
-import logging
-logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
-logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
-logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
-logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
-		
-
-
-
 
 
 class TestShiftingMover(object):
@@ -101,18 +85,18 @@ class TestShiftingMover(object):
 	#test if exact trajectory coordinates for a backward and forward shift are present in the generated
 	#trajectories (by the predetermined Calvinist Dynamics Engine)
 
-		traj_fwd = ops_test.make_1d_traj([2,3,4,5,6])
+		traj_fwd  = ops_test.make_1d_traj([2,3,4,5,6])
 		traj_bkwd = ops_test.make_1d_traj([-2,-1,0,1,2])
 
-		traj_list=[]
+		traj_list = []
 	
 		for i in range(100):
 			x, d = self.pathmover._run(self.traj, 0)
 			traj_list.append(x.xyz.tostring())
-		traj_set=set(traj_list)
+		traj_set = set(traj_list)
 
-		assert_in(traj_fwd.xyz.tostring(),traj_set)
-		assert_in(traj_bkwd.xyz.tostring(),traj_set)
+		assert_in(traj_fwd.xyz.tostring(), traj_set)
+		assert_in(traj_bkwd.xyz.tostring(), traj_set)
 		
 
 		
@@ -123,10 +107,10 @@ class TestShiftingMover(object):
 	#fwd and bkwd traj all of which are length 5, this may be redundent but means test will work
 	#if length of ensemble is changed.
 		
-		traj_fwd = ops_test.make_1d_traj([2,3,4,5,6])
+		traj_fwd  = ops_test.make_1d_traj([2,3,4,5,6])
 		traj_bkwd = ops_test.make_1d_traj([-2,-1,0,1,2])
 
-		traj_list=[]
+		traj_list = []
 	
 		for i in range(50):
 			x, d = self.pathmover._run(self.traj, 0)
@@ -150,8 +134,8 @@ class TestShiftingMover(object):
 	#also test the value of the shift length is 2 in all cases
 	
 		
-		value_list=[]
-		key_list=[]		
+		value_list = []
+		key_list = []		
 		for i in range(100):
 			x, d = self.pathmover._run(self.traj, 0)
 			for keys,values in d.iteritems():
@@ -159,8 +143,8 @@ class TestShiftingMover(object):
 				value_list.append(values)
 					
 		
-		key_set=set(key_list)
-		value_set=set(value_list)
+		key_set = set(key_list)
+		value_set = set(value_list)
 		
 		assert_equal(len(value_set), 1) #test the number of unique values is 1
 		assert_equal(len(key_set), 2)  #test the number of unique keys is 2
@@ -175,8 +159,8 @@ class TestShiftingMover(object):
 			assert_not_equal(j, 3)
 
 			#print(type(j))
-		fwd_list=[]
-		bwd_list=[]
+		fwd_list = []
+		bwd_list = []
 
 		for k in key_list:
 			if k in "Forward Shift":
@@ -189,6 +173,7 @@ class TestShiftingMover(object):
 				bwd_list.append(k)			
 
 				assert_equal(str(k), "Backward Shift")
+
 		assert_equal(len(fwd_list)+len(bwd_list), 100)
 		#print(len(bwd_list))
 
