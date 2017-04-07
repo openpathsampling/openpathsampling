@@ -94,27 +94,3 @@ class MDTrajTopology(Topology):
 
             return cls(md_topology)
 
-
-class OpenMMSystemTopology(Topology):
-    """A Topology that is based on an openmm.system object
-
-    This uses the XmlSerializer class from OpenMM itself to transform the
-    system object into an XML string which is then stored in the JSON.
-    This is rather inefficient but works very stable.
-
-    """
-    def __init__(self, openmm_system):
-        super(OpenMMSystemTopology, self).__init__(
-            n_atoms=int(self.system.getNumParticles())
-        )
-        self.system = openmm_system
-
-    def to_dict(self):
-        system_xml = XmlSerializer.serialize(self.system)
-        return {'system_xml': system_xml}
-
-    @classmethod
-    def from_dict(cls, dct):
-        system_xml = dct['system_xml']
-
-        return cls(XmlSerializer.deserialize(system_xml))
