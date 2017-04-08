@@ -340,7 +340,8 @@ class testPathReversalMover(object):
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
-        self.tis = paths.TISEnsemble(volA, volB, volX)
+        self.tis = paths.TISEnsemble(volA, volB, volX, orderparameter=op,
+                                     lambda_i=0.25)
         self.move = PathReversalMover(ensemble=self.tis)
         self.op = op
 
@@ -409,10 +410,12 @@ class testReplicaExchangeMover(object):
         state2 = CVDefinedVolume(op, 1, 100)
         volA = CVDefinedVolume(op, -100, 0.25)
         volB = CVDefinedVolume(op, -100, 0.50)
-        self.tisA = paths.TISEnsemble(state1, state2, volA)
-        self.tisB = paths.TISEnsemble(state1, state2, volB)
+        self.tisA = paths.TISEnsemble(state1, state2, volA,
+                                      orderparameter=op, lambda_i=0.25)
+        self.tisB = paths.TISEnsemble(state1, state2, volB,
+                                      orderparameter=op, lambda_i=0.50)
         self.traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
-        self.traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15]) 
+        self.traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15])
         self.traj2 = make_1d_traj([-0.1, 0.2, 0.3, 0.7, 0.6, 0.4, 0.1, -0.15])
         self.sampA0 = Sample(replica=0, trajectory=self.traj0, ensemble=self.tisA)
         self.sampB1 = Sample(replica=1, trajectory=self.traj1, ensemble=self.tisB)

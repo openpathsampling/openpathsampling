@@ -657,6 +657,13 @@ class SnapshotWrapperStore(ObjectStore):
 
         else:
             chunksize = self.default_store_chunk_size
+
+            # todo: Remove once netcdf4/python bug in Unidata/netcdf4-python#566 has
+            # been resolved. It seems that so far, after data has been written to a
+            # dimension you have to use chunksize 1 for any new variables in that
+            # dimension Even if the other variables all share the same chunksize
+            chunksize = 1
+
             if shape is not None:
                 shape = tuple(['snapshots'] + list(shape))
                 chunksizes = tuple([chunksize] + list(chunksizes))
