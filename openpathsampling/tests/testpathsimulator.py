@@ -1,7 +1,8 @@
 from test_helpers import (raises_with_message_like, data_filename,
                           CalvinistDynamics, make_1d_traj)
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal, assert_true)
+                        raises, assert_almost_equal, assert_true,
+                        assert_greater)
 # from nose.plugins.skip import SkipTest
 
 from openpathsampling.pathsimulator import *
@@ -610,3 +611,126 @@ class testDirectSimulation(object):
         assert_equal(len(traj), 201)
         read_store.close()
         os.remove(tmpfile)
+
+
+class testReactiveFluxSimulation(object):
+    def setup(self):
+        # PES is one-dimensional linear slope (y(x) = -x)
+        pes = toys.LinearSlope(m=[-1.0], c=[0.0])
+        # one particle with mass 1.0
+        topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        integrator = toys.LeapfrogVerletIntegrator(0.02)
+        options = {
+            'integ' : integrator,
+            'n_frames_max' : 1000,
+            'n_steps_per_frame' : 5
+        }
+        self.engine = toys.Engine(options=options, topology=topology)
+        # test uses three snapshots with different velocities
+        # 0: direction ok, velocity too low => falls back to dividing surface
+        # 1: wrong direction => backward shot towards B
+        # 2: direction ok, velocity high enough => successfull new trajectory
+        self.initial_snapshots = [toys.Snapshot(
+                                      coordinates=np.array([[0.0]]),
+                                      velocities=np.array([[1.0]]),
+                                      engine=self.engine),
+                                  toys.Snapshot(
+                                      coordinates=np.array([[0.0]]),
+                                      velocities=np.array([[-1.0]]),
+                                      engine=self.engine),
+                                  toys.Snapshot(
+                                      coordinates=np.array([[0.0]]),
+                                      velocities=np.array([[2.0]]),
+                                      engine=self.engine)]
+        # reaction coordinate is just x coordinate
+        rc = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        # state A: [-inf, -1]
+        self.state_A = paths.CVDefinedVolume(rc, float("-inf"), -1.0)
+        # area between A and dividing surface: [-1, 0]
+        self.towards_A = paths.CVDefinedVolume(rc, -1.0, 0.0)
+        # state B: [1, inf]
+        self.state_B = paths.CVDefinedVolume(rc, 1.0, float("inf"))
+        # define state labels
+        self.state_labels = {
+            "A" : self.state_A,
+            "B" : self.state_B,
+            "ToA": self.towards_A,
+            "None" :~(self.state_A | self.state_B | self.towards_A)}
+
+        # velocities are not randomized
+        randomizer = paths.NoModification()
+
+        self.filename = data_filename("rf_test.nc")
+        self.storage = paths.Storage(self.filename, mode="w")
+        self.storage.save(self.initial_snapshots)
+
+        self.simulation = ReactiveFluxSimulation(
+                              storage=self.storage,
+                              engine=self.engine,
+                              states=[self.state_A, self.state_B],
+                              randomizer=randomizer,
+                              initial_snapshots=self.initial_snapshots,
+                              rc=rc)
+        self.simulation.output_stream = open(os.devnull, 'w')
+
+    def teardown(self):
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
+        paths.EngineMover.default_engine = None
+
+    def test_initialization(self):
+        sim = self.simulation
+        assert_equal(len(sim.initial_snapshots), 3)
+        assert_true(isinstance(sim.mover, paths.ConditionalSequentialMover))
+
+    def test_simulation_run(self):
+        self.simulation.run(n_per_snapshot=1)
+        assert_equal(len(self.simulation.storage.steps), 3)
+
+        # snapshot 0, fails at backward shot
+        step = self.simulation.storage.steps[0]
+        # last mover should be backward_mover of simulation
+        assert_equal(step.change.canonical.mover,
+                     self.simulation.backward_mover)
+        # active ensemble should be starting ensemble
+        assert_equal(step.active[0].ensemble,
+                     self.simulation.starting_ensemble)
+        # analyze trajectory, last step should be in 'None', the rest in 'ToA'
+        traj = step.change.trials[0].trajectory
+        traj_summary = traj.summarize_by_volumes(self.state_labels)
+        assert_equal(traj_summary[0], ('None', 1))
+        assert_equal(traj_summary[1][0], 'ToA')
+        assert_greater(traj_summary[1][1], 1)
+
+        # snapshot 1, fails at backward shot
+        step = self.simulation.storage.steps[1]
+        # last mover should be backward_mover of simulation
+        assert_equal(step.change.canonical.mover,
+                     self.simulation.backward_mover)
+        # active ensemble should be starting ensemble
+        assert_equal(step.active[0].ensemble,
+                     self.simulation.starting_ensemble)
+        # analyze trajectory, last step should be in 'None', the rest in 'ToA'
+        traj = step.change.trials[0].trajectory
+        traj_summary = traj.summarize_by_volumes(self.state_labels)
+        assert_equal(traj_summary[0], ('None', 1))
+        assert_equal(traj_summary[1][0], 'ToA')
+        assert_equal(traj_summary[1][1], 1)
+
+        # snapshot 2, is accepted
+        step = self.simulation.storage.steps[2]
+        # last mover should be forward_mover of simulation
+        assert_equal(step.change.canonical.mover,
+                     self.simulation.forward_mover)
+        # active ensemble should not be starting ensemble
+        assert_not_equal(step.active[0].ensemble,
+                     self.simulation.starting_ensemble)
+        # analyze active trajectory, trajectory should start in 'A', end in 'B'
+        traj = step.active[0].trajectory
+        traj_summary = traj.summarize_by_volumes(self.state_labels)
+        assert_equal(traj_summary[0], ('A', 1))
+        assert_equal(traj_summary[1][0], 'ToA')
+        assert_greater(traj_summary[1][1], 1)
+        assert_equal(traj_summary[2][0], 'None')
+        assert_greater(traj_summary[2][1], 1)
+        assert_equal(traj_summary[3], ('B', 1))
