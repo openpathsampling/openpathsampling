@@ -2,16 +2,26 @@
 Tools for resampling functions that output pandas.DataFrame objects.
 """
 
+# NOTE: there may be a better way to do this, by converting the results to
+# numpy arrays and using the numpy functions. However, you'd have to be very
+# careful that the rows and columns still correspond to the same things,
+# i.e., that there's no permutation of index order. Using pandas protects us
+# from such problems.
+
 def mean_df(objects):
     """Basic calculation of mean (average) of a list of objects.
 
     Parameters
     ----------
-    objects : list of objects
-        the objects to be averaged; must be summable (i.e., sum(objects)
-        must work and return an object of the same type) and dividable by
-        float (i.e., dividing by a float must work and return an object of
-        the same type).
+    objects : list of pandas.DataFrame
+        the DataFrames to calculate the mean (NB: technically, these don't
+        have to be DataFrames. They must be closed on the `sum` operation
+        and over division by a float.
+
+    Returns
+    -------
+    pandas.DataFrame :
+        the mean of each element in the DataFrame
     """
     return sum(objects) / float(len(objects))
 
@@ -38,11 +48,17 @@ def std_df(objects, mean_x=None):
 
 class ResamplingStatistics(object):
     """
+    Attributes
+    ----------
+    results : list of pandas.DataFrame
+    mean : pandas.DataFrame
+    std : pandas.DataFrame
+
     Parameters
     ----------
     function : callable
-        the function to apply the statistics to.
-        Must take one item from the list `inputs` and return a pandas.DataFrame
+        the function to apply the statistics to; must take one item from
+        the list `inputs` and return a pandas.DataFrame
     inputs : list
         each element of inputs is can be used as input to `function`
     """
@@ -57,12 +73,30 @@ class ResamplingStatistics(object):
         pass
 
 class BlockResampling(object):
-    def __init__(self, all_samples, n_blocks=20, n_samples_per_block=None):
-        self.n_samples = len(all_samples)
-        if n_samples_per_block is not None:
-            n_blocks = self.n_samples / n_samples_per_block
-        else:
-            n_samples_per_block = self.n_samples / n_blocks
+    """Select samples according to block resampling.
 
-        self.blocks = [all_samples[i:i+n_samples_per_block]
+    If neither n_blocks nor n_per_block are set (as is the default
+    behavior) then n_blocks=20 is used.
+
+    Parameters
+    ----------
+    all_samples : list
+        list of all samples
+    n_blocks : int
+        number of blocks (resampling sets)
+    n_per_block : int
+        number of samples per block
+    """
+    def __init__(self, all_samples, n_blocks=None, n_per_block=None):
+        self.n_total_samples = len(all_samples)
+        if n_blocks is None and n_per_block is None:
+            n_blocks = 20
+        elif n_blocks is None and n_per_block is not None:
+            n_blocks = self.n_samples / n_per_block
+        elif n_blocks is not None and n_per_block is None:
+            n_per_block = self.n_samples / n_blocks
+
+        self.blocks = [all_samples[i*n_per_block:i+n_per_block]
                        for i in range(n_blocks)]
+        self.unassigned = all_samples[n_blocks*n_per_block:]
+        self.n_resampled = self.n_total_samples - len(self.unassigned)
