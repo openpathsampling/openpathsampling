@@ -908,15 +908,19 @@ class Ensemble(StorableNamedObject):
             the number of attemps on a trajectory to extend
         """
 
+        logger.info("Starting extend_sample_from_trajectories with level "
+                    + str(level))
         if level == 'native':
             sub_ensemble = self
         else:
             if not hasattr(self, 'extendable_sub_ensembles'):
+                logger.info("Missing ensemble.extendable_sub_ensembles")
                 return None
 
             sub_ensembles = self.extendable_sub_ensembles
 
             if level not in sub_ensembles:
+                logger.info("Missing level: " + repr(level))
                 return None
 
             sub_ensemble = sub_ensembles[level]
@@ -963,6 +967,7 @@ class Ensemble(StorableNamedObject):
                                 direction=-1
                             ).reversed + part[1:]
 
+                        logger.info("Candidate trajectory: " + str(part))
                         if self(part):  # make sure we found a sample
                             return paths.Sample(
                                 trajectory=part,
@@ -978,6 +983,7 @@ class Ensemble(StorableNamedObject):
                             # This should not happen!
                             pass
 
+        logger.info("Returning None because nothing worked")
         return None
 
     def _get_trajectory_parts_in_order(self, traj, unique='first'):

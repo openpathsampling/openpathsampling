@@ -1,6 +1,7 @@
 python
 scipy
 pandas
+hdf4=4.2.12
 jupyter
 netcdf4
 openmm
