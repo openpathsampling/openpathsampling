@@ -1,5 +1,13 @@
 """
 Tools for resampling functions that output pandas.DataFrame objects.
+
+Typically, you use these tools in 3 steps:
+
+1. Create resampling groups of data, using, e.g., BlockResampling
+2. Create a function that maps a list of input data into the desired output
+   DataFrame
+3. Create a ResamplingStatistics object using the `input` from step 1 and
+   the `function` from step 2.
 """
 
 import numpy as np
@@ -18,7 +26,7 @@ import pandas as pd
 # things we'll be doing).
 
 def mean_df(objects):
-    """Basic calculation of mean (average) of a list of objects.
+    """Basic calculation of mean (average) of a list of DataFrames.
 
     Parameters
     ----------
@@ -27,7 +35,7 @@ def mean_df(objects):
         have to be DataFrames. They must be closed on the `sum` operation
         and over division by a float.
 
-    Returns
+Returns
     -------
     pandas.DataFrame :
         the mean of each element in the DataFrame
@@ -35,7 +43,8 @@ def mean_df(objects):
     return sum(objects) / float(len(objects))
 
 def std_df(objects, mean_x=None):
-    """
+    """Standard deviation of a list of DataFrames.
+
     Parameters
     ----------
     objects : list of pandas.DataFrame
@@ -57,11 +66,16 @@ def std_df(objects, mean_x=None):
 
 class ResamplingStatistics(object):
     """
+    Contains and organizes resampled statistics.
+
     Attributes
     ----------
     results : list of pandas.DataFrame
+        the result DataFrames after applying the function
     mean : pandas.DataFrame
+        DataFrame containing mean of the result DataFrames
     std : pandas.DataFrame
+        DataFrame containing standard deviation of the result DataFrames
 
     Parameters
     ----------

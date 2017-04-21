@@ -32,6 +32,16 @@ class TestResamplingStatistics(object):
                                 columns=['B', 'A'], index=['B', 'A'])
         self.inputs = [self.df1, self.df2, self.df3, self.df4]
 
+    def test_std(self):
+        # extra test to get the one line that isn't otherwise used
+        from openpathsampling.numerics.resampling_statistics import std_df
+        expected_std = pd.DataFrame(
+            [[0.17677669529663689, 0.17677669529663689],
+             [0.10606601717798207, 0.17677669529663689]],
+            columns=['A', 'B'], index=['A', 'B']
+        )
+        assert_frame_equal(std_df(self.inputs), expected_std)
+
     def test_initialization(self):
         stats = paths.numerics.ResamplingStatistics(
             function=lambda x: x,
