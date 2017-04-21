@@ -2,6 +2,8 @@
 Tools for resampling functions that output pandas.DataFrame objects.
 """
 
+import numpy as np
+
 # NOTE: there may be a better way to do this, by converting the results to
 # numpy arrays and using the numpy functions. However, you'd have to be very
 # careful that the rows and columns still correspond to the same things,
@@ -44,7 +46,7 @@ def std_df(objects, mean_x=None):
         mean_x = mean_df(objects)
     sq = [o**2 for o in objects]
     variance = mean_df(sq) - mean_x**2
-    return variance.applymap(math.sqrt)
+    return variance.applymap(np.sqrt)
 
 class ResamplingStatistics(object):
     """
@@ -67,7 +69,7 @@ class ResamplingStatistics(object):
         self.inputs = inputs
         self.results = [self.function(inp) for inp in self.inputs]
         self.mean = mean_df(self.results)
-        self.std = std_df(self.results, mean=self.mean)
+        self.std = std_df(self.results, mean_x=self.mean)
 
     def percentile_range(self, min_percentile, max_percentile):
         pass
@@ -91,12 +93,14 @@ class BlockResampling(object):
         self.n_total_samples = len(all_samples)
         if n_blocks is None and n_per_block is None:
             n_blocks = 20
-        elif n_blocks is None and n_per_block is not None:
-            n_blocks = self.n_samples / n_per_block
+        if n_blocks is None and n_per_block is not None:
+            n_blocks = self.n_total_samples / n_per_block
         elif n_blocks is not None and n_per_block is None:
-            n_per_block = self.n_samples / n_blocks
+            n_per_block = self.n_total_samples / n_blocks
 
-        self.blocks = [all_samples[i*n_per_block:i+n_per_block]
+        self.n_blocks = n_blocks
+        self.n_per_block = n_per_block
+        self.blocks = [all_samples[i*n_per_block:(i+1)*n_per_block]
                        for i in range(n_blocks)]
         self.unassigned = all_samples[n_blocks*n_per_block:]
         self.n_resampled = self.n_total_samples - len(self.unassigned)

@@ -6,3 +6,4 @@ from wham import WHAM
 from lookup_function import (LookupFunction, LookupFunctionGroup,
                              VoxelLookupFunction)
 
+from resampling_statistics import ResamplingStatistics, BlockResampling
