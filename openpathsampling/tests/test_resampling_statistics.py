@@ -20,9 +20,11 @@ class TestResamplingStatistics(object):
     # NOTE: we test the mean_df and std_df functions within this
     def setup(self):
         # order of the column/index labels should not matter
-        self.df1 = pd.DataFrame([[1.0, 2.0], [2.1, 3.0]],
+        self.list_AB = ['A', 'B']
+        self.list_BA = ['B', 'A']
+        self.df1 = pd.DataFrame([[1.5, 2.0], [2.1, 3.0]],
                                 columns=['A', 'B'], index=['A', 'B'])
-        self.df2 = pd.DataFrame([[2.5, 1.5], [3.5, 2.4]],
+        self.df2 = pd.DataFrame([[2.5, 1.0], [3.5, 2.4]],
                                 columns=['B', 'A'], index=['A', 'B'])
         self.df3 = pd.DataFrame([[2.25, 3.25], [1.25, 2.25]],
                                 columns=['A', 'B'], index=['B', 'A'])
@@ -42,7 +44,6 @@ class TestResamplingStatistics(object):
         expected_mean = pd.DataFrame([[1.25, 2.25], [2.25, 3.25]],
                                      columns=['A', 'B'], index=['A', 'B'])
         assert_frame_equal(stats.mean, expected_mean)
-        # TODO: add test for std
         expected_std = pd.DataFrame(
             [[0.17677669529663689, 0.17677669529663689],
              [0.10606601717798207, 0.17677669529663689]],
@@ -50,7 +51,34 @@ class TestResamplingStatistics(object):
         )
         assert_frame_equal(stats.std, expected_std)
 
-    def test_percentile_range(self):
+    def test_percentile(self):
+        # TODO: this would benefit from more tests (with more input frames)
+        stats = paths.numerics.ResamplingStatistics(
+            function=lambda x: x,
+            inputs=self.inputs
+        )
+
+        assert_frame_equal(
+            stats.percentile(0),
+            pd.DataFrame([[1.0, 2.0], [2.1, 3.0]],
+                         index=self.list_AB, columns=self.list_AB),
+            check_dtype=False  # better if this wasn't needed
+        )
+
+        assert_frame_equal(
+            stats.percentile(100),
+            pd.DataFrame([[1.5, 2.5], [2.4, 3.5]],
+                         index=self.list_AB, columns=self.list_AB),
+            check_dtype=False
+        )
+
+        assert_frame_equal(
+            stats.percentile(50),
+            pd.DataFrame([[1.25, 2.25], [2.25, 3.25]],
+                         index=self.list_AB, columns=self.list_AB),
+            check_dtype=False
+        )
+
         raise SkipTest
 
 class TestBlockResampling(object):

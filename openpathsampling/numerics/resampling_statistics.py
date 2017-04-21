@@ -3,6 +3,8 @@ Tools for resampling functions that output pandas.DataFrame objects.
 """
 
 import numpy as np
+import itertools
+import pandas as pd
 
 # NOTE: there may be a better way to do this, by converting the results to
 # numpy arrays and using the numpy functions. However, you'd have to be very
@@ -76,8 +78,36 @@ class ResamplingStatistics(object):
         self.mean = mean_df(self.results)
         self.std = std_df(self.results, mean_x=self.mean)
 
-    def percentile_range(self, min_percentile, max_percentile):
-        pass
+        # index and columns should always be the same; take them from mean
+        self.index = self.mean.index
+        self.columns = self.mean.columns
+
+        self.sorted_series = {
+            loc: pd.Series(df.loc[loc] for df in self.results).sort_values()
+            for loc in itertools.product(self.index, self.columns)
+        }
+
+
+    def percentile(self, percent):
+        """Percentile, using Nearest Rank method.
+
+        Parameters
+        ----------
+        percent : float
+            the percentile desired
+
+        Returns
+        -------
+        pd.DataFrame
+            the DataFrame nearest to that percentile
+        """
+        n_entries = len(self.results)
+        rank = min(int(percent / 100.0 * n_entries), n_entries - 1)
+        df = pd.DataFrame(index=self.index, columns=self.columns)
+        for idx in self.index:
+            for col in self.columns:
+                df.loc[idx, col] = self.sorted_series[(idx, col)].iloc[rank]
+        return df
 
 class BlockResampling(object):
     """Select samples according to block resampling.
