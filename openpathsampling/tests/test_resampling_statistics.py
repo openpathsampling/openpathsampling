@@ -71,7 +71,57 @@ class TestBlockResampling(object):
         assert_items_equal(resampler.blocks[-1], list(range(95, 100)))
 
     def test_n_blocks_initialization(self):
-        raise SkipTest
+        resampler = paths.numerics.BlockResampling(self.samples, n_blocks=10)
+        assert_equal(resampler.n_total_samples, 100)
+        assert_equal(resampler.n_blocks, 10)
+        assert_equal(resampler.n_per_block, 10)
+        assert_equal(len(resampler.blocks), 10)
+        assert_equal(resampler.n_resampled, 100)
+        assert_equal(resampler.unassigned, [])
+        assert_items_equal(resampler.blocks[0], list(range(0, 10)))
+        assert_items_equal(resampler.blocks[1], list(range(10, 20)))
+        assert_items_equal(resampler.blocks[5], list(range(50, 60)))
+        assert_items_equal(resampler.blocks[-1], list(range(90, 100)))
+
+        resampler_2 = paths.numerics.BlockResampling(self.samples, n_blocks=8)
+        assert_equal(resampler_2.n_total_samples, 100)
+        assert_equal(resampler_2.n_blocks, 8)
+        assert_equal(resampler_2.n_per_block, 12)
+        assert_equal(resampler_2.n_resampled, 96)
+        assert_items_equal(resampler_2.blocks[-1], list(range(84, 96)))
+        assert_items_equal(resampler_2.unassigned, list(range(96, 100)))
 
     def test_n_per_block_initialization(self):
-        raise SkipTest
+        resampler = paths.numerics.BlockResampling(self.samples, n_per_block=10)
+        assert_equal(resampler.n_total_samples, 100)
+        assert_equal(resampler.n_blocks, 10)
+        assert_equal(resampler.n_per_block, 10)
+        assert_equal(len(resampler.blocks), 10)
+        assert_equal(resampler.n_resampled, 100)
+        assert_equal(resampler.unassigned, [])
+        assert_items_equal(resampler.blocks[0], list(range(0, 10)))
+        assert_items_equal(resampler.blocks[1], list(range(10, 20)))
+        assert_items_equal(resampler.blocks[5], list(range(50, 60)))
+        assert_items_equal(resampler.blocks[-1], list(range(90, 100)))
+
+        resampler_2 = paths.numerics.BlockResampling(self.samples,
+                                                     n_per_block=8)
+        assert_equal(resampler_2.n_total_samples, 100)
+        assert_equal(resampler_2.n_blocks, 12)
+        assert_equal(resampler_2.n_resampled, 96)
+        assert_items_equal(resampler_2.blocks[-1], list(range(88, 96)))
+        assert_items_equal(resampler_2.unassigned, list(range(96, 100)))
+
+    def test_n_blocks_and_n_per_block_initialization(self):
+        resampler = paths.numerics.BlockResampling(self.samples, n_blocks=9,
+                                                   n_per_block=10)
+        assert_equal(resampler.n_total_samples, 100)
+        assert_equal(resampler.n_blocks, 9)
+        assert_equal(resampler.n_per_block, 10)
+        assert_equal(len(resampler.blocks), 9)
+        assert_equal(resampler.n_resampled, 90)
+        assert_items_equal(resampler.unassigned, list(range(90, 100)))
+        assert_items_equal(resampler.blocks[0], list(range(0, 10)))
+        assert_items_equal(resampler.blocks[1], list(range(10, 20)))
+        assert_items_equal(resampler.blocks[5], list(range(50, 60)))
+        assert_items_equal(resampler.blocks[-1], list(range(80, 90)))

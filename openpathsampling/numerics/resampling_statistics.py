@@ -8,7 +8,12 @@ import numpy as np
 # numpy arrays and using the numpy functions. However, you'd have to be very
 # careful that the rows and columns still correspond to the same things,
 # i.e., that there's no permutation of index order. Using pandas protects us
-# from such problems.
+# from such problems. Alternatively, it may be possible to bunch these into
+# a pandas.Panel, and use pandas functions. All requires some performance
+# testing; the advantange of the approach below is that when we want both
+# mean and std, the mean can be calculated first and passed to the std to
+# speed it up. (However, performance probably won't matter much for the
+# things we'll be doing).
 
 def mean_df(objects):
     """Basic calculation of mean (average) of a list of objects.
@@ -78,7 +83,9 @@ class BlockResampling(object):
     """Select samples according to block resampling.
 
     If neither n_blocks nor n_per_block are set (as is the default
-    behavior) then n_blocks=20 is used.
+    behavior) then n_blocks=20 is used. The blocks are always of the same
+    size, if the number of samples doesn't divide evenly, then the extra
+    samples are placed in the `unassigned` attribute.
 
     Parameters
     ----------
