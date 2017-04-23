@@ -63,6 +63,7 @@ def std_df(objects, mean_x=None):
     """
     if mean_x is None:
         mean_x = mean_df(objects)
+    n_obj = float(len(objects))
     sq = [o**2 for o in objects]
     variance = mean_df(sq) - mean_x**2
     return variance.applymap(np.sqrt)

@@ -547,8 +547,8 @@ class MSTISNetwork(TISNetwork):
         """
         # for each transition in from_state:
         # 1. Calculate the flux and the TCP
-        self._rate_matrix = pd.DataFrame(columns=self.states,
-                                         index=self.states)
+        names = [s.name for s in self.states]
+        self._rate_matrix = pd.DataFrame(columns=names, index=names)
         for stateA in self.from_state.keys():
             transition = self.from_state[stateA]
             # set up the hist_args if necessary
@@ -568,7 +568,9 @@ class MSTISNetwork(TISNetwork):
 
         for trans in self.transitions.values():
             rate = trans.rate(steps)
-            self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
+            self._rate_matrix.set_value(trans.stateA.name,
+                                        trans.stateB.name,
+                                        rate)
             #print trans.stateA.name, trans.stateB.name,
             #print rate
 
@@ -800,8 +802,10 @@ class MISTISNetwork(TISNetwork):
 
 
     def rate_matrix(self, steps, force=False):
-        self._rate_matrix = pd.DataFrame(columns=self.final_states,
-                                         index=self.initial_states)
+        initial_names = [s.name for s in self.initial_states]
+        final_names = [s.name for s in self.final_states]
+        self._rate_matrix = pd.DataFrame(columns=final_names,
+                                         index=initial_names)
         for trans in self.transitions.values():
             # set up the hist_args if necessary
             for histname in self.hist_args.keys():
@@ -818,6 +822,8 @@ class MISTISNetwork(TISNetwork):
                 # probability automatically
 
             rate = trans.rate(steps)
-            self._rate_matrix.set_value(trans.stateA, trans.stateB, rate)
+            self._rate_matrix.set_value(trans.stateA.name,
+                                        trans.stateB.name,
+                                        rate)
 
         return self._rate_matrix
