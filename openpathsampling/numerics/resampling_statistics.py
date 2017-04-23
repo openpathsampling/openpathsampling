@@ -14,6 +14,9 @@ import numpy as np
 import itertools
 import pandas as pd
 
+import logging
+logger = logging.getLogger(__name__)
+
 # NOTE: there may be a better way to do this, by converting the results to
 # numpy arrays and using the numpy functions. However, you'd have to be very
 # careful that the rows and columns still correspond to the same things,
@@ -88,19 +91,60 @@ class ResamplingStatistics(object):
     def __init__(self, function, inputs):
         self.function = function
         self.inputs = inputs
+
+        # DEBUG
+        #self.results = []
+        #for inp in self.inputs:
+            #logger.debug("Starting input # " + str(self.inputs.index(inp)) +
+                         #"\n")
+            #self.results.append(self.function(inp))
+        # END DEBUG
+
         self.results = [self.function(inp) for inp in self.inputs]
-        self.mean = mean_df(self.results)
-        self.std = std_df(self.results, mean_x=self.mean)
+        #self.mean = mean_df(self.results)
+        #self.std = std_df(self.results, mean_x=self.mean)
+        self._mean = None
+        self._std = None
+        self._sorted_series = None
 
         # index and columns should always be the same; take them from mean
-        self.index = self.mean.index
-        self.columns = self.mean.columns
+        #self.index = self.mean.index
+        #self.columns = self.mean.columns
 
-        self.sorted_series = {
-            loc: pd.Series(df.loc[loc] for df in self.results).sort_values()
-            for loc in itertools.product(self.index, self.columns)
-        }
+        #self.sorted_series = {
+            #loc: pd.Series(df.loc[loc] for df in self.results).sort_values()
+            #for loc in itertools.product(self.index, self.columns)
+        #}
 
+    @property
+    def mean(self):
+        if self._mean is None:
+            self._mean  = mean_df(self.results)
+        return self._mean
+
+    @property
+    def std(self):
+        if self._std is None:
+            self._std = std_df(self.results, mean_x=self.mean)
+        return self._std
+
+    @property
+    def index(self):
+        return self.mean.index
+
+    @property
+    def columns(self):
+        return self.mean.columns
+
+    @property
+    def sorted_series(self):
+        if self._sorted_series is None:
+            self._sorted_series = {
+                loc: pd.Series(df.loc[loc]
+                               for df in self.results).sort_values()
+                for loc in itertools.product(self.index, self.columns)
+            }
+        return self._sorted_series
 
     def percentile(self, percent):
         """Percentile, using Nearest Rank method.

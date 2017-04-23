@@ -89,8 +89,6 @@ class TestResamplingStatistics(object):
             check_dtype=False
         )
 
-        raise SkipTest
-
 class TestBlockResampling(object):
     def setup(self):
         self.samples = list(range(100))
