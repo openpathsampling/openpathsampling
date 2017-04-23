@@ -115,7 +115,7 @@ def build_keyword_dictionary(prefs):
 
     for key in [
         'name', 'version', 'license', 'url', 'download_url', 'packages',
-        'package_dir', 'platforms', 'description', 'requires',
+        'package_dir', 'platforms', 'description', 'install_requires',
         'long_description', 'package_data', 'include_package_data'
     ]:
         if key in prefs:
@@ -206,7 +206,7 @@ Operating System :: MacOS
         'openpathsampling.numerics'],
     'platforms': ['Linux', 'Mac OS X', 'Windows'],
     'released': False,
-    'requires': [
+    'install_requires': [
         'python',
         'numpy',
         'scipy',
@@ -215,9 +215,9 @@ Operating System :: MacOS
         'netcdf4',
         'openmm',
         'openmmtools',
-        'pymbar',
-        'docopt',
-        'pyyaml',
+        # 'pymbar',
+        # 'docopt',
+        # 'pyyaml',
         'mdtraj',
         'svgwrite',
         'networkx',

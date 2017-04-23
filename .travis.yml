@@ -13,7 +13,7 @@ install:
 
 script:
   - echo travis_fold:start:conda.build.package
-  - conda install --yes conda-build=2.1.5
+  - conda install --yes conda-build
   - conda build devtools/conda-recipe
   - echo travis_fold:end:conda.build.package
 
@@ -22,6 +22,7 @@ script:
   - conda info --envs
   - source activate test
   - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma ipynbtest
+  # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
   - source devtools/ci/ipythontests.sh
