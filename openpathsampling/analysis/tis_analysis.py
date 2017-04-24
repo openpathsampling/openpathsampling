@@ -1,6 +1,7 @@
 import collections
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.numerics import LookupFunction
 
 def steps_to_weighted_trajectories(steps, ensembles):
     """Bare function to convert to the weighted trajs dictionary.
@@ -101,6 +102,7 @@ class FullHistogramMaxLambdas(EnsembleHistogrammer):
     One of these per transition.
     """
     def __init__(self, transition, hist_parameters, max_lambda_func=None):
+        self.transition = transition
         if max_lambda_func is None:
             max_lambda_func = lambda t: max(transition.interfaces.cv(t))
             #max_lambda_func = transition.interfaces.max_cv  # TODO traj-cv
@@ -131,14 +133,12 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
 
     def from_ensemble_histograms(self, hists):
         tcp_results = {}
-        for trans in hists:
-            df = paths.numerics.histograms_to_pandas_dataframe(
-                hists.values(),
-                fcn="reverse_cumulative"
-            ).sort_index(axis=1)
-            tcp = wham.wham_bam_histogram(df).to_dict()
-            tcp_results[trans] = LookupFunction(tcp.keys(), tcp.values())
-        return tcp_results
+        df = paths.numerics.histograms_to_pandas_dataframe(
+            hists.values(),
+            fcn="reverse_cumulative"
+        ).sort_index(axis=1)
+        tcp = self.combiner.wham_bam_histogram(df).to_dict()
+        return LookupFunction(tcp.keys(), tcp.values())
 
 
 class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
@@ -149,15 +149,17 @@ class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
     def from_weighted_trajectories(self, input_dict):
         ctp = {}
         for ens in self.ensembles:
-            acc = collecton.Counter()
-            n_try = len(input_dict[ens])
-            final_frames = [traj.get_as_proxy(1) for
+            acc = collections.Counter()
+            n_try = sum(input_dict[ens].values())
+            final_frames = [traj.get_as_proxy(-1) for
                             traj in input_dict[ens].keys()]
             weights = input_dict[ens].values()
             for (f, w) in zip(final_frames, weights):
-                acc += collection.Counter({s: w for s in states if s(f)})
+                local = collections.Counter({s: w for s in self.states
+                                             if s(f)})
+                acc += local
 
-            ctp[ens] = {s : float(acc[s]) / n_try}
+            ctp[ens] = {s : float(acc[s]) / n_try for s in acc.keys()}
             # TODO: add logging to report here
         return ctp
 
@@ -177,7 +179,7 @@ class TransitionDictResults(StorableNamedObject):
             result = self.results_dict[self.network.transitions[key]]
         return result
 
-class TISAnalysis(StorableNamedObject):
+class StandardTISAnalysis(StorableNamedObject):
     """
     Generic class for TIS analysis. One of these for each network.
     """
