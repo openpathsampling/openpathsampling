@@ -2,6 +2,7 @@ import collections
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.numerics import LookupFunction
+import pandas as pd
 
 def steps_to_weighted_trajectories(steps, ensembles):
     """Bare function to convert to the weighted trajs dictionary.
@@ -79,7 +80,7 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
                       for e in self.ensembles}
 
     def from_weighted_trajectories(self, input_dict):
-        for ens in input_dict:
+        for ens in self.hists:
             trajs = input_dict[ens].keys()
             weights = input_dict[ens].values()
             data = [self.f(traj) for traj in trajs]
@@ -126,8 +127,9 @@ class FullHistogramMaxLambdas(EnsembleHistogrammer):
 class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
     def __init__(self, max_lambda_calc, combiner=None):
         self.max_lambda_calc = max_lambda_calc
+        self.transition = max_lambda_calc.transition
         if combiner is None:
-            lambdas = self.max_lambda_calc.transition.interfaces.lambdas
+            lambdas = self.transition.interfaces.lambdas
             combiner = paths.numerics.WHAM(interfaces=lambdas)
         self.combiner = combiner
 
@@ -137,8 +139,9 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
 
     def from_ensemble_histograms(self, hists):
         tcp_results = {}
+        input_hists = [hists[ens] for ens in self.transition.ensembles]
         df = paths.numerics.histograms_to_pandas_dataframe(
-            hists.values(),
+            input_hists,
             fcn="reverse_cumulative"
         ).sort_index(axis=1)
         tcp = self.combiner.wham_bam_histogram(df).to_dict()
@@ -168,16 +171,18 @@ class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
         return ctp
 
 class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
-    def __init__(self, transition, tcp_method=None, ctp_method=None):
+    def __init__(self, transition, tcp_method, ctp_method):
         self.transition = transition
+        self.tcp_method = tcp_method
+        self.ctp_method = ctp_method
         self.final_state = self.transition.stateB
         self.outermost_ensemble = self.transition.ensembles[-1]
         interfaces = transition.interfaces
         self.outermost_lambda = interfaces.get_lambda(interfaces[-1])
 
     def from_weighted_trajectories(self, input_dict):
-        tcp = tcp_method.from_weighted_trajectories(input_dict)
-        ctp = ctp_method.from_intermediate_results(input_dict)
+        tcp = self.tcp_method.from_weighted_trajectories(input_dict)
+        ctp = self.ctp_method.from_weighted_trajectories(input_dict)
         return self.from_intermediate_results(tcp, ctp)
 
     def from_intermediate_results(self, tcp, ctp):
@@ -203,15 +208,39 @@ class TransitionDictResults(StorableNamedObject):
             result = self.results_dict[self.network.transitions[key]]
         return result
 
-    def to_pandas(self):
-        pass  # TODO
+    def to_pandas(self, order=None):
+        key_map = lambda key: key.name
+        keys = self.results_dict.keys()
+        idx_vols = [k[0] for k in keys]
+        col_vols = [k[1] for k in keys]
+        if order is None:
+            order = set(idx_vols + col_vols)
+        index = [key_map(k) for k in order if k in idx_vols]
+        columns = [key_map(k) for k in order if k in col_vols]
+        result = pd.DataFrame(index=index, columns=columns)
+        for k in keys:
+            result.set_value(key_map(k[0]), key_map(k[1]),
+                             self.results_dict[k])
+        return result
+
+    def __str__(self):
+        return self.to_pandas().__str__()
+
+    def __repr__(self):
+        return self.to_pandas().__repr__()
 
 
 class TISAnalysis(StorableNamedObject):
     """
     Generic class for TIS analysis. One of these for each network.
+
+    Parameters
+    ----------
+    network : :class:`.TransitionNetwork`
+    flux_method : flux calculation method
+    transition_probability_methods : dict of :class:`.Transition` to method
     """
-    def __init__(self, network, flux_method, transition_probability_method):
+    def __init__(self, network, flux_method, transition_probability_methods):
         self.network = network
         self.transitions = network.transitions
         self.flux_method = flux_method
@@ -222,9 +251,9 @@ class TISAnalysis(StorableNamedObject):
         self.results = {}
         weighted_trajs = steps_to_weighted_trajectories(
             steps,
-            network.sampling_ensembles
+            self.network.sampling_ensembles
         )
-        self.from_weighted_trajectories(self.weighted_trajs)
+        self.from_weighted_trajectories(weighted_trajs)
 
     def from_weighted_trajectories(self, input_dict):
         flux_m = self.flux_method
@@ -234,9 +263,10 @@ class TISAnalysis(StorableNamedObject):
         trans_prob = {t: tp_m[t].from_weighted_trajectories(input_dict)
                       for t in tp_m.keys()}
         self.results['flux'] = fluxes
-        self.results['transition_probability'] = {
-            (t.stateA, t.stateB) : trans_prob[t] for t in trans_prob
-        }
+        self.results['transition_probability'] = TransitionDictResults(
+            {(t.stateA, t.stateB) : trans_prob[t] for t in trans_prob},
+            self.network
+        )
 
         rates = {}
         for (trans, transition_probability) in trans_prob.iteritems():
@@ -244,14 +274,14 @@ class TISAnalysis(StorableNamedObject):
             rates[(trans.stateA, trans.stateB)] = \
                     trans_flux * transition_probability
 
-        self.results['rate'] = rates
+        self.results['rate'] = TransitionDictResults(rates, self.network)
         return self.results
 
     def _access_cached_result(self, key):
         try:
             return self.results[key]
         except KeyError:
-            raise AttributeError("Can't access results for '" + key 
+            raise AttributeError("Can't access results for '" + key
                                  + "' until analysis is performed")
 
     @property
@@ -281,8 +311,7 @@ class TISAnalysis(StorableNamedObject):
     def rate_matrix(self, steps=None):
         if steps is not None:
             self.calculate(steps)
-        rates = self._access_cached_result('rate')
-        pass  # TODO
+        return self._access_cached_result('rate')
 
     def rate(self, from_state, to_state):
         return self._access_cached_result('rate')[(from_state, to_state)]
