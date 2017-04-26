@@ -11,10 +11,10 @@ def steps_to_weighted_trajectories(steps, ensembles):
     """
     results = {e: collections.Counter() for e in ensembles}
 
-    my_steps = steps
     # loop over blocks # TODO: add blocksize parameter, test various sizes
+    block_steps = steps
     block = collections.defaultdict(list)
-    for step in my_steps:
+    for step in block_steps:
         for ens in ensembles:
             block[ens].append(step.active[ens].trajectory)
 
@@ -24,6 +24,7 @@ def steps_to_weighted_trajectories(steps, ensembles):
         results[e] += block_counter[e]
 
     return results
+
 
 class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
     """Abstract class for getting statistics for MC steps sampling multiple
@@ -35,7 +36,7 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
     def from_weighted_trajectories(self, input_dict):
         raise NotImplementedError
 
-    def append_results_from(self, other):
+    def combine_results(self, result_1, result_2):
         # to be used to simplify parallelization
         raise NotImplementedError
 
@@ -58,7 +59,9 @@ class DictFlux(MultiEnsembleSamplingAnalyzer):
     def from_weighted_trajectories(self, input_dict):
         return self.flux_dict
 
-    def append_results_from(self, other):
+    def combine_results(self, result_1, result_2):
+        if result_1 != result_2:
+            raise RuntimeError("Combining results from different DictFlux")
         return self
 
 ########## GENERAL HISTOGRAMMING
@@ -82,6 +85,7 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
             data = [self.f(traj) for traj in trajs]
             self.hists[ens].histogram(data, weights)
         return self.hists
+
 
 class PathLengthHistogrammer(EnsembleHistogrammer):
     """Histogramming path length distribution"""
@@ -163,6 +167,26 @@ class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
             # TODO: add logging to report here
         return ctp
 
+class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
+    def __init__(self, transition, tcp_method=None, ctp_method=None):
+        self.transition = transition
+        self.final_state = self.transition.stateB
+        self.outermost_ensemble = self.transition.ensembles[-1]
+        interfaces = transition.interfaces
+        self.outermost_lambda = interfaces.get_lambda(interfaces[-1])
+
+    def from_weighted_trajectories(self, input_dict):
+        tcp = tcp_method.from_weighted_trajectories(input_dict)
+        ctp = ctp_method.from_intermediate_results(input_dict)
+        return self.from_intermediate_results(tcp, ctp)
+
+    def from_intermediate_results(self, tcp, ctp):
+        outermost_ctp = ctp[self.outermost_ensemble][self.final_state]
+        tcp_at_outermost = tcp(self.outermost_lambda)
+        # TODO: log things here
+        return outermost_ctp * tcp_at_outermost
+
+
 class TransitionDictResults(StorableNamedObject):
     # allows you to use analysis transition, 2-tuple of states, or sampling
     # transition as the key to retrieve the stored results
@@ -179,49 +203,133 @@ class TransitionDictResults(StorableNamedObject):
             result = self.results_dict[self.network.transitions[key]]
         return result
 
-class StandardTISAnalysis(StorableNamedObject):
+    def to_pandas(self):
+        pass  # TODO
+
+
+class TISAnalysis(StorableNamedObject):
     """
     Generic class for TIS analysis. One of these for each network.
     """
-    def __init__(self, network, steps=None, flux=None, tcp=None, ctp=None):
+    def __init__(self, network, flux_method, transition_probability_method):
+        self.network = network
+        self.transitions = network.transitions
+        self.flux_method = flux_method
+        self.transition_probability_methods = transition_probability_methods
+        self.results = {}
+
+    def calculate(self, steps):
+        self.results = {}
+        weighted_trajs = steps_to_weighted_trajectories(
+            steps,
+            network.sampling_ensembles
+        )
+        self.from_weighted_trajectories(self.weighted_trajs)
+
+    def from_weighted_trajectories(self, input_dict):
+        flux_m = self.flux_method
+        tp_m = self.transition_probability_methods
+        fluxes = flux_m.from_weighted_trajectories(input_dict)
+        # dict of transition to transition probability
+        trans_prob = {t: tp_m[t].from_weighted_trajectories(input_dict)
+                      for t in tp_m.keys()}
+        self.results['flux'] = fluxes
+        self.results['transition_probability'] = {
+            (t.stateA, t.stateB) : trans_prob[t] for t in trans_prob
+        }
+
+        rates = {}
+        for (trans, transition_probability) in trans_prob.iteritems():
+            trans_flux = fluxes[(trans.stateA, trans.interfaces[0])]
+            rates[(trans.stateA, trans.stateB)] = \
+                    trans_flux * transition_probability
+
+        self.results['rate'] = rates
+        return self.results
+
+    def _access_cached_result(self, key):
+        try:
+            return self.results[key]
+        except KeyError:
+            raise AttributeError("Can't access results for '" + key 
+                                 + "' until analysis is performed")
+
+    @property
+    def flux_matrix(self):
+        return self._access_cached_result('flux')
+
+    def flux(self, from_state, through_interface=None):
+        fluxes = self._access_cached_result('flux')
+        if through_interface is None:
+            through_interface = from_state
+
+        return fluxes[(from_state, through_interface)]
+
+    def state_fluxes(self, from_state):
+        fluxes = self._access_cached_result('flux')
+        state_keys = [k for k in fluxes.keys() if k[0] == from_state]
+        return {k: fluxes[k] for k in state_keys}
+
+    @property
+    def transition_probability_matrix(self):
+        return self._access_cached_result('transition_probability')
+
+    def transition_probability(self, from_state, to_state):
+        trans_probs = self._access_cached_result('transition_probability')
+        return trans_probs[(from_state, to_state)]
+
+    def rate_matrix(self, steps=None):
+        if steps is not None:
+            self.calculate(steps)
+        rates = self._access_cached_result('rate')
+        pass  # TODO
+
+    def rate(self, from_state, to_state):
+        return self._access_cached_result('rate')[(from_state, to_state)]
+
+
+class StandardTISAnalysis(TISAnalysis):
+    def __init__(self, network, steps=None, flux_method=None,
+                 tcp_methods=None, ctp_method=None, max_lambda_calcs=None):
         # NOTE: each of flux, ctp, tcp refer to the methods used; in
         # principle, these should have the option of being provided as a
         # single example (to be applied to all) or as a dict showing which
         # to apply to which analysis transition
         self.network = network
-
-        # set default analysis behaviors
-        if flux is None:
-            flux_pairs = None  # TODO
-            self.flux = MinusMoveFlux(flux_pairs)
-        if tcp is None:
-            self.tcp = {transition: PerEnsembleTCP(transition.ensembles)
-                        for transition in self.network.sampling_transitions}
-        if ctp is None:
-            outermost_ensembles = [t.ensembles[-1]
-                                   for t in self.network.sampling_transitions]
-            self.ctp = ConditionalTransitionProbability(outermost_ensembles)
-
         self.transitions = network.transitions
 
-        self.weighted_trajs = None  # default if there are no steps
+        # set default analysis behaviors
+        if flux_method is None:
+            flux_pairs = None  # TODO
+            self.flux_method = MinusMoveFlux(flux_pairs)
+        if tcp_methods is None:
+            if max_lambda_calcs in None:
+                raise RuntimeError("Must set either max_lambda_calcs or "
+                                   + "tcp_methods in StandardTISAnalysis")
+            max_lambda_calc_list = []
+            for calc in max_lambda_calcs:
+                if isinstance(calc, EnsembleHistogrammer):
+                    max_lambda_calc_list.append(calc)
+                elif isinstance(calc, dict):
+                    pass
+            self.tcp_methods = {
+                transition: TotalCrossingProbability(transition.ensembles)
+                for transition in self.network.sampling_transitions
+            }
+        if ctp_method is None:
+            outermost_ensembles = [t.ensembles[-1]
+                                   for t in self.network.sampling_transitions]
+            self.ctp_method = \
+                    ConditionalTransitionProbability(outermost_ensembles)
+
         if steps is not None:
-            self.weighted_trajs = steps_to_weighted_trajectories(
-                steps,
-                network.sampling_ensembles
-            )
-            pass  # do *all* the analysis!
+            self.calculate(steps)
 
-    def rate_matrix(self, steps=None):
-        pass
-
-    def rate(self, from_state, to_state):
+    def from_weighted_trajectories(self, input_dict):
+        # override super's so we can autocache more things
         pass
 
     def crossing_probability(self, ensemble):
-        pass
-
-    def flux(self, from_state, through_interface=None):
         pass
 
     @property
@@ -230,23 +338,4 @@ class StandardTISAnalysis(StorableNamedObject):
 
     @property
     def total_crossing_probability(self):
-        pass
-
-    def calc_flux(self, weighted_trajs):
-        pass
-
-    def calc_total_crossing_probability(self, weighted_trajs):
-        sampling_tcps = {
-            trans: self.tcp[traj].from_weighted_trajectories(weighted_trajs)
-            for trans in self.network.sampling_transitions
-        }
-
-        for sampling_trans in sampling_tcps:
-            pass
-
-        # map the TCP from the sampling transitions to the analysis
-        # transitions
-        pass
-
-    def calc_conditional_transition_probability(self, weighted_trajs):
         pass
