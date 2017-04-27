@@ -384,15 +384,49 @@ class StandardTISAnalysis(TISAnalysis):
 
     def from_weighted_trajectories(self, input_dict):
         # calculate fluxes
+        flux_m = self.flux_method
+        fluxes = flux_m.from_weighted_trajectories(input_dict)
+        self.results['flux'] = fluxes
 
         # calculate the max_lambda hists
+        max_lambda_calcs = [tcp_m.max_lambda_calc
+                            for tcp_m in self.tcp_methods.values()]
+        max_lambda_hists = {}
+        for calc in max_lambda_calcs:
+            max_lambda_hists.update(
+                calc.from_weighted_trajectories(input_dict)
+            )
+        self.results['max_lambda'] = max_lambda_hists
 
         # calculate the TCPs
+        tcp_methods = self.tcp_methods
+        tcps = TransitionDictResults(
+            {
+                (trans.stateA, trans.stateB):
+                tcp_methods[trans].from_ensemble_histograms(max_lambda_hists)
+                for trans in tcp_methods
+            },
+            network=self.network
+        )
+        self.results['total_crossing_probability'] = tcps
 
         # calculate the CTPs
+        ctps = self.ctp_method.from_weighted_trajectories(input_dict)
+        self.results['conditional_transition_probability'] = ctps
 
         # calculate the transition probability from existing TCP, CTP
-
+        #tp_m = self.transition_probability_methods
+        #transition_probabilities = TransitionDictResults(
+            #{
+                #(t.stateA, t.stateB):
+                #tp_m[t].from_intermediate_results(
+                    #tcp=tcps[(t.stateA, t.stateB)],
+                    #ctp=ctps
+                #)
+                #for t in tp_m
+            #}
+        #)
+        #self.results['transition_probability'] = transition_probabilities
 
         pass
 
