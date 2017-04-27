@@ -199,7 +199,7 @@ class TransitionDictResults(StorableNamedObject):
         self.results_dict = results_dict
         self.network = network
 
-    def __getattr__(self, key):
+    def __getitem__(self, key):
         if key in self.network.sampling_transitions:
             key = self.network.sampling_to_analysis(key)
         try:
@@ -319,43 +319,81 @@ class TISAnalysis(StorableNamedObject):
 
 class StandardTISAnalysis(TISAnalysis):
     def __init__(self, network, steps=None, flux_method=None,
-                 tcp_methods=None, ctp_method=None, max_lambda_calcs=None):
+                 ctp_method=None, max_lambda_calcs=None, combiners=None):
         # NOTE: each of flux, ctp, tcp refer to the methods used; in
         # principle, these should have the option of being provided as a
         # single example (to be applied to all) or as a dict showing which
         # to apply to which analysis transition
-        self.network = network
-        self.transitions = network.transitions
 
         # set default analysis behaviors
         if flux_method is None:
             flux_pairs = None  # TODO
-            self.flux_method = MinusMoveFlux(flux_pairs)
-        if tcp_methods is None:
-            if max_lambda_calcs in None:
-                raise RuntimeError("Must set either max_lambda_calcs or "
-                                   + "tcp_methods in StandardTISAnalysis")
-            max_lambda_calc_list = []
-            for calc in max_lambda_calcs:
-                if isinstance(calc, EnsembleHistogrammer):
-                    max_lambda_calc_list.append(calc)
-                elif isinstance(calc, dict):
-                    pass
-            self.tcp_methods = {
-                transition: TotalCrossingProbability(transition.ensembles)
-                for transition in self.network.sampling_transitions
+            flux_method = MinusMoveFlux(flux_pairs)
+
+        if max_lambda_calcs is None:
+            raise RuntimeError("Must set either max_lambda_calcs "
+                               " in StandardTISAnalysis")
+        max_lambda_calc_dict = {}
+        for (transition, calc) in max_lambda_calcs.iteritems():
+            if isinstance(calc, EnsembleHistogrammer):
+                max_lambda_calc_dict[transition] = calc
+            elif isinstance(calc, dict):
+                max_lambda_calc_dict[transition] = FullHistogramMaxLambdas(
+                    transition=transition,
+                    hist_parameters=calc
+                )
+        if combiners is None:
+            combiners = {
+                transition.interfaces:
+                paths.numerics.WHAM(interfaces=transition.interfaces.lambdas)
+                for transition in network.sampling_transitions
             }
+        self.tcp_methods = {
+            transition: TotalCrossingProbability(
+                max_lambda_calc=max_lambda_calc_dict[transition],
+                combiner=combiners[transition.interfaces]
+            )
+            for transition in network.sampling_transitions
+        }
         if ctp_method is None:
             outermost_ensembles = [t.ensembles[-1]
-                                   for t in self.network.sampling_transitions]
+                                   for t in network.sampling_transitions]
             self.ctp_method = \
-                    ConditionalTransitionProbability(outermost_ensembles)
+                    ConditionalTransitionProbability(
+                        ensembles=outermost_ensembles,
+                        states=network.all_states
+                    )
+
+        trans_prob_methods = {
+            trans: StandardTransitionProbability(
+                transition=trans,
+                tcp_method=self.tcp_methods[trans],
+                ctp_method=self.ctp_method
+            )
+            for trans in network.sampling_transitions
+        }
+
+        super(StandardTISAnalysis, self).__init__(
+            network=network,
+            flux_method=flux_method,
+            transition_probability_methods=trans_prob_methods
+        )
 
         if steps is not None:
             self.calculate(steps)
 
     def from_weighted_trajectories(self, input_dict):
-        # override super's so we can autocache more things
+        # calculate fluxes
+
+        # calculate the max_lambda hists
+
+        # calculate the TCPs
+
+        # calculate the CTPs
+
+        # calculate the transition probability from existing TCP, CTP
+
+
         pass
 
     def crossing_probability(self, ensemble):
