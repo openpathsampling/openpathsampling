@@ -349,7 +349,7 @@ class StandardTISAnalysis(TISAnalysis):
                 for transition in network.sampling_transitions
             }
         self.tcp_methods = {
-            transition: TotalCrossingProbability(
+            transition.interfaces: TotalCrossingProbability(
                 max_lambda_calc=max_lambda_calc_dict[transition],
                 combiner=combiners[transition.interfaces]
             )
@@ -367,10 +367,10 @@ class StandardTISAnalysis(TISAnalysis):
         trans_prob_methods = {
             trans: StandardTransitionProbability(
                 transition=trans,
-                tcp_method=self.tcp_methods[trans],
+                tcp_method=self.tcp_methods[trans.interfaces],
                 ctp_method=self.ctp_method
             )
-            for trans in network.sampling_transitions
+            for trans in network.transitions.values()
         }
 
         super(StandardTISAnalysis, self).__init__(
@@ -399,15 +399,20 @@ class StandardTISAnalysis(TISAnalysis):
         self.results['max_lambda'] = max_lambda_hists
 
         # calculate the TCPs
+        # * raw_tcps take the sampling transitions, and map from interface set
+        #   to results
+        # * tcps create the map from (analysis) transition to (already
+        #   calculated) results
         tcp_methods = self.tcp_methods
-        tcps = TransitionDictResults(
-            {
-                (trans.stateA, trans.stateB):
-                tcp_methods[trans].from_ensemble_histograms(max_lambda_hists)
-                for trans in tcp_methods
-            },
-            network=self.network
-        )
+        raw_tcps = {
+            ifaces:
+            tcp_methods[ifaces].from_ensemble_histograms(max_lambda_hists)
+            for ifaces in tcp_methods
+        }
+        tcps = {
+            (trans.stateA, trans.stateB): raw_tcps[trans.interfaces]
+            for trans in self.network.transitions.values()
+        }
         self.results['total_crossing_probability'] = tcps
 
         # calculate the CTPs
@@ -415,20 +420,31 @@ class StandardTISAnalysis(TISAnalysis):
         self.results['conditional_transition_probability'] = ctps
 
         # calculate the transition probability from existing TCP, CTP
-        #tp_m = self.transition_probability_methods
-        #transition_probabilities = TransitionDictResults(
-            #{
-                #(t.stateA, t.stateB):
-                #tp_m[t].from_intermediate_results(
-                    #tcp=tcps[(t.stateA, t.stateB)],
-                    #ctp=ctps
-                #)
-                #for t in tp_m
-            #}
-        #)
-        #self.results['transition_probability'] = transition_probabilities
+        tp_methods = self.transition_probability_methods
+        trans_prob = {
+            trans:
+            tp_methods[trans].from_intermediate_results(
+                tcp=tcps[(trans.stateA, trans.stateB)],
+                ctp=ctps
+            )
+            for trans in tp_methods
+        }
+        transition_probabilities = TransitionDictResults(trans_prob,
+                                                         self.network)
+        self.results['transition_probability'] = TransitionDictResults(
+            {(t.stateA, t.stateB) : trans_prob[t] for t in trans_prob},
+            self.network
+        )
 
-        pass
+        rates = {}
+        for (trans, transition_probability) in trans_prob.iteritems():
+            trans_flux = fluxes[(trans.stateA, trans.interfaces[0])]
+            rates[(trans.stateA, trans.stateB)] = \
+                    trans_flux * transition_probability
+
+        self.results['rate'] = TransitionDictResults(rates, self.network)
+        return self.results
+
 
     def crossing_probability(self, ensemble):
         pass
