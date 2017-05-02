@@ -348,6 +348,10 @@ class TrajectoryTransitionAnalysis(object):
             raise RuntimeError("Can't calculate the flux without `dt`")
 
         flux_dict = self.analyze_flux(trajectories, state, interface)
+        return self.flux_from_flux_dict(flux_dict)
+
+    @staticmethod
+    def flux_from_flux_dict(flux_dict):
         in_segs = flux_dict['in']
         out_segs = flux_dict['out']
         flux = 1.0 / (np.mean(in_segs.times) + np.mean(out_segs.times))

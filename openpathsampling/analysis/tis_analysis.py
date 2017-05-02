@@ -3,6 +3,7 @@ import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.numerics import LookupFunction
 import pandas as pd
+import numpy as np
 
 def steps_to_weighted_trajectories(steps, ensembles):
     """Bare function to convert to the weighted trajs dictionary.
@@ -43,9 +44,120 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
 
 ######## CALCULATING THE FLUX
 
-#class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
-    #def from_weighted_trajectories(self, input_dict):
-        #pass
+class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
+    """
+    Parameters
+    ----------
+    network: :class:`.TransitionNetwork`
+    flux_pairs: list of 2-tuple of :class:`.Volume`
+    """
+    def __init__(self, scheme, flux_pairs=None):
+        super(MinusMoveFlux, self).__init__()
+        self.scheme = scheme
+        self.network = scheme.network
+        self.minus_movers = scheme.movers['minus']
+        for mover in self.minus_movers:
+            if len(mover.innermost_ensembles) != 1:
+                raise ValueError("Cannot use minus move flux with minus "
+                                 + "movers with more than 1 innermost "
+                                 + "interface")
+
+        if flux_pairs is None:
+            # get flux_pairs from network
+            flux_pairs = []
+            for minus_ens in self.network.minus_ensembles:
+                trans = self.network.special_ensembles['minus'][minus_ens]
+                innermost = trans.interfaces[0]
+                state = trans.stateA
+                # a couple assertions as a sanity check
+                assert minus_ens.state_vol == state
+                assert minus_ens.innermost_vol == innermost
+                flux_pairs.append((state, innermost))
+
+        self.flux_pairs = flux_pairs
+
+    def _get_minus_steps(self, steps):
+        return [s for s in steps
+                if s.change.canonical.mover in self.minus_movers
+                and s.change.accepted]
+
+    def trajectory_transition_flux_dict(self, minus_steps):
+        """
+        """
+        # set up a few mappings that make it easier set up other things
+        flux_pair_to_transition = {
+            (trans.stateA, trans.interfaces[0]): trans
+            for trans in self.network.sampling_transitions
+        }
+
+        flux_pair_to_minus_mover = {
+            (m.minus_ensemble.state_vol, m.minus_ensemble.innermost_vol): m
+            for m in self.minus_movers
+        }
+
+        minus_mover_to_flux_pair = {flux_pair_to_minus_mover[k]: k
+                                    for k in flux_pair_to_minus_mover}
+
+        # sanity checks -- only run once per analysis, so keep them in
+        for pair in self.flux_pairs:
+            assert pair in flux_pair_to_transition.keys()
+            assert pair in flux_pair_to_minus_mover.keys()
+        assert len(self.flux_pairs) == len(minus_mover_to_flux_pair)
+
+        # organize the steps by mover used
+        mover_to_steps = collection.defaultdict(list)
+        for step in minus_steps:
+            move_to_steps[step.change.canonical.mover].append(step)
+
+        # create the actual TrajectoryTransitionAnalysis objects to use
+        transition_flux_calculators = {
+            k: paths.TrajectoryTransitionAnalysis(
+                transition=flux_pair_to_transition[k],
+                dt=flux_pair_to_minus_mover[k].engine.snapshot_timestep
+            )
+            for k in self.flux_pairs
+        }
+
+        # do the analysis
+        results = {}
+        for flux_pair in self.flux_pairs:
+            (state, innermost) = flux_pair
+            mover = flux_pair_to_minus_mover[flux_pair]
+            calculator = transition_flux_calculators[flux_pair]
+            trajectories = [s.active.trajectory
+                            for s in mover_to_steps[mover]]
+            results[flux_pair] = calculator.analyze_flux(
+                trajecvtories=trajectories,
+                state=state,
+                interface=innermost
+            )
+
+        return results
+
+    @staticmethod
+    def from_trajectory_transition_flux_dict(flux_dicts):
+        TTA = paths.TrajectoryTransitionAnalysis  # readability on 80 col
+        return {k: TTA.flux_from_flux_dict(flux_dicts[k])
+                for k in flux_dicts}
+
+    def from_weighted_trajectories(self, input_dict):
+        # this can't be done, e.g., in the case of the single replica minus
+        # mover, where the final accepted trajectory
+        raise NotImplementedError(
+            "Can not calculate minus move from weighted trajectories."
+        )
+
+    def calculate(self, steps):
+        intermediates = self.intermediates(steps)
+        return self.calculate_from_intermediates(*intermediates)
+
+    def intermediates(self, steps):
+        minus_steps = self._get_minus_steps(steps)
+        return [self.trajectory_transition_flux_dict(minus_steps)]
+
+    def calculate_from_intermediates(self, *intermediates):
+        flux_dicts = intermediates[0]
+        return self.from_trajectory_transition_flux_dict(flux_dicts)
 
 class DictFlux(MultiEnsembleSamplingAnalyzer):
     """Pre-calculated flux, provided as a dict.
@@ -58,6 +170,12 @@ class DictFlux(MultiEnsembleSamplingAnalyzer):
         return self.flux_dict
 
     def from_weighted_trajectories(self, input_dict):
+        return self.flux_dict
+
+    def intermediates(self, steps):
+        return []
+
+    def calculate_from_intermediates(self, *intermediates):
         return self.flux_dict
 
     def combine_results(self, result_1, result_2):
