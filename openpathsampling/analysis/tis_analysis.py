@@ -53,20 +53,29 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
     """
     def __init__(self, scheme, flux_pairs=None):
         super(MinusMoveFlux, self).__init__()
+        # error string we'll re-use in a few places
+        mistis_err_str = ("Cannot use minus move flux with multiple "
+                          + "interface sets. ")
         self.scheme = scheme
         self.network = scheme.network
         self.minus_movers = scheme.movers['minus']
         for mover in self.minus_movers:
             if len(mover.innermost_ensembles) != 1:
-                raise ValueError("Cannot use minus move flux with minus "
-                                 + "movers with more than 1 innermost "
-                                 + "interface")
+                raise ValueError(mistis_err_str + "Mover " + str(mover)
+                                 + " has too many innermost ensembles "
+                                 + str(len(mover.innermost_ensembles)) + ".")
 
         if flux_pairs is None:
             # get flux_pairs from network
             flux_pairs = []
+            minus_ens_to_trans = self.network.special_ensembles['minus']
             for minus_ens in self.network.minus_ensembles:
-                trans = self.network.special_ensembles['minus'][minus_ens]
+                if len(minus_ens_to_trans[minus_ens]) > 1:
+                    n_trans = len(minus_ens_to_trans[minus_ens])
+                    raise ValueError(mistis_err_str + "Ensemble "
+                                     + repr(minus_ens) + " connects "
+                                     + str(n_trans) + " transitions.")
+                trans = minus_ens_to_trans[minus_ens][0]
                 innermost = trans.interfaces[0]
                 state = trans.stateA
                 # a couple assertions as a sanity check
@@ -98,6 +107,11 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         minus_mover_to_flux_pair = {flux_pair_to_minus_mover[k]: k
                                     for k in flux_pair_to_minus_mover}
 
+        flux_pair_to_minus_ensemble = {
+            (minus_ens.state_vol, minus_ens.innermost_vol): minus_ens
+            for minus_ens in self.network.minus_ensembles
+        }
+
         # sanity checks -- only run once per analysis, so keep them in
         for pair in self.flux_pairs:
             assert pair in flux_pair_to_transition.keys()
@@ -105,9 +119,9 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         assert len(self.flux_pairs) == len(minus_mover_to_flux_pair)
 
         # organize the steps by mover used
-        mover_to_steps = collection.defaultdict(list)
+        mover_to_steps = collections.defaultdict(list)
         for step in minus_steps:
-            move_to_steps[step.change.canonical.mover].append(step)
+            mover_to_steps[step.change.canonical.mover].append(step)
 
         # create the actual TrajectoryTransitionAnalysis objects to use
         transition_flux_calculators = {
@@ -124,10 +138,13 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
             (state, innermost) = flux_pair
             mover = flux_pair_to_minus_mover[flux_pair]
             calculator = transition_flux_calculators[flux_pair]
-            trajectories = [s.active.trajectory
+            minus_ens = flux_pair_to_minus_ensemble[flux_pair]
+            # TODO: this won't work for SR minus, I don't think
+            # (but neither would our old version)
+            trajectories = [s.active[minus_ens].trajectory
                             for s in mover_to_steps[mover]]
             results[flux_pair] = calculator.analyze_flux(
-                trajecvtories=trajectories,
+                trajectories=trajectories,
                 state=state,
                 interface=innermost
             )
