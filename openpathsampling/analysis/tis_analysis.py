@@ -384,6 +384,9 @@ class TISAnalysis(StorableNamedObject):
 
     def calculate(self, steps):
         self.results = {}
+        flux_m = self.flux_method
+        fluxes = flux_m.calculate(steps)
+        self.results['flux'] = fluxes
         weighted_trajs = steps_to_weighted_trajectories(
             steps,
             self.network.sampling_ensembles
@@ -391,13 +394,10 @@ class TISAnalysis(StorableNamedObject):
         self.from_weighted_trajectories(weighted_trajs)
 
     def from_weighted_trajectories(self, input_dict):
-        flux_m = self.flux_method
-        tp_m = self.transition_probability_methods
-        fluxes = flux_m.from_weighted_trajectories(input_dict)
         # dict of transition to transition probability
+        tp_m = self.transition_probability_methods
         trans_prob = {t: tp_m[t].from_weighted_trajectories(input_dict)
                       for t in tp_m.keys()}
-        self.results['flux'] = fluxes
         self.results['transition_probability'] = TransitionDictResults(
             {(t.stateA, t.stateB) : trans_prob[t] for t in trans_prob},
             self.network
@@ -453,7 +453,7 @@ class TISAnalysis(StorableNamedObject):
 
 
 class StandardTISAnalysis(TISAnalysis):
-    def __init__(self, network, steps=None, flux_method=None,
+    def __init__(self, network, steps=None, flux_method=None, scheme=None,
                  ctp_method=None, max_lambda_calcs=None, combiners=None):
         # NOTE: each of flux, ctp, tcp refer to the methods used; in
         # principle, these should have the option of being provided as a
@@ -462,8 +462,10 @@ class StandardTISAnalysis(TISAnalysis):
 
         # set default analysis behaviors
         if flux_method is None:
-            flux_pairs = None  # TODO
-            flux_method = MinusMoveFlux(flux_pairs)
+            if scheme is None:
+                raise TypeError("StandardTISAnalysis requires either "
+                                + "flux_method or scheme as argument.")
+            flux_method = MinusMoveFlux(scheme)
 
         if max_lambda_calcs is None:
             raise RuntimeError("Must set either max_lambda_calcs "
@@ -518,11 +520,6 @@ class StandardTISAnalysis(TISAnalysis):
             self.calculate(steps)
 
     def from_weighted_trajectories(self, input_dict):
-        # calculate fluxes
-        flux_m = self.flux_method
-        fluxes = flux_m.from_weighted_trajectories(input_dict)
-        self.results['flux'] = fluxes
-
         # calculate the max_lambda hists
         max_lambda_calcs = [tcp_m.max_lambda_calc
                             for tcp_m in self.tcp_methods.values()]
