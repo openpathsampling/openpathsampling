@@ -321,7 +321,12 @@ class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
         return self.from_intermediate_results(tcp, ctp)
 
     def from_intermediate_results(self, tcp, ctp):
-        outermost_ctp = ctp[self.outermost_ensemble][self.final_state]
+        outermost_ensemble_ctps = ctp[self.outermost_ensemble]
+        try:
+            outermost_ctp = outermost_ensemble_ctps[self.final_state]
+        except KeyError:
+            # no transition ends in that state
+            outermost_ctp = float('nan')
         tcp_at_outermost = tcp(self.outermost_lambda)
         # TODO: log things here
         return outermost_ctp * tcp_at_outermost
@@ -552,6 +557,7 @@ class StandardTISAnalysis(TISAnalysis):
         self.results['conditional_transition_probability'] = ctps
 
         # calculate the transition probability from existing TCP, CTP
+        fluxes = self.results['flux']
         tp_methods = self.transition_probability_methods
         trans_prob = {
             trans:
