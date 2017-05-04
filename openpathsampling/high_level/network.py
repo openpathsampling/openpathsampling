@@ -337,15 +337,6 @@ class TISNetwork(TransitionNetwork):
                 self._sampling_ensemble_for[ens] = sampling_ens
         return self._sampling_ensemble_for
 
-    @property
-    def interface_set_ensembles(self):
-        return {t.interfaces: t.ensembles for t in self.sampling_transitions}
-
-    @property
-    def transition_interface_sets(self):
-        # override this in subclasses with more than one interface set
-        return {t: [t.interfaces] for t in self.transitions}
-
     def set_fluxes(self, flux_dictionary):
         """
         Parameters
