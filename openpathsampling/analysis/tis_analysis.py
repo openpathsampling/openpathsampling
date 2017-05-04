@@ -326,7 +326,7 @@ class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
             outermost_ctp = outermost_ensemble_ctps[self.final_state]
         except KeyError:
             # no transition ends in that state
-            outermost_ctp = float('nan')
+            outermost_ctp = 0.0  #  float('nan') # if you'd rather
         tcp_at_outermost = tcp(self.outermost_lambda)
         # TODO: log things here
         return outermost_ctp * tcp_at_outermost
@@ -335,18 +335,24 @@ class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
 class TransitionDictResults(StorableNamedObject):
     # allows you to use analysis transition, 2-tuple of states, or sampling
     # transition as the key to retrieve the stored results
-    def __init__(self, results_dict, network):
+    def __init__(self, results_dict, network, allow_sampling=True):
+        # allow_sampling: can the sampling transitions be input?
         self.results_dict = results_dict
         self.network = network
+        self.allow_sampling = allow_sampling
+
+    def __iter__(self):
+        return self.results_dict.__iter__()
 
     def __getitem__(self, key):
-        if key in self.network.sampling_transitions:
-            key = self.network.sampling_to_analysis(key)
+        if key in self.network.sampling_transitions and self.allow_sampling:
+            key = self.network.sampling_to_analysis[key][0]
         try:
-            result = self.results_dict[key]
-        except KeyError:
-            result = self.results_dict[self.network.transitions[key]]
-        return result
+            key = (key.stateA, key.stateB)
+        except AttributeError:
+            # we have a stateA, stateB tuple
+            pass
+        return self.results_dict[key]
 
     def to_pandas(self, order=None):
         key_map = lambda key: key.name
@@ -408,6 +414,7 @@ class TISAnalysis(StorableNamedObject):
             self.network
         )
 
+        fluxes = self.flux_matrix
         rates = {}
         for (trans, transition_probability) in trans_prob.iteritems():
             trans_flux = fluxes[(trans.stateA, trans.interfaces[0])]
@@ -530,9 +537,9 @@ class StandardTISAnalysis(TISAnalysis):
                             for tcp_m in self.tcp_methods.values()]
         max_lambda_hists = {}
         for calc in max_lambda_calcs:
-            max_lambda_hists.update(
-                calc.from_weighted_trajectories(input_dict)
-            )
+            calc_results = calc.from_weighted_trajectories(input_dict)
+            # TODO: change this to a 2D mapping, CV and ensemble
+            max_lambda_hists.update(calc_results)
         self.results['max_lambda'] = max_lambda_hists
 
         # calculate the TCPs
@@ -546,10 +553,11 @@ class StandardTISAnalysis(TISAnalysis):
             tcp_methods[ifaces].from_ensemble_histograms(max_lambda_hists)
             for ifaces in tcp_methods
         }
-        tcps = {
-            (trans.stateA, trans.stateB): raw_tcps[trans.interfaces]
-            for trans in self.network.transitions.values()
-        }
+        tcps = TransitionDictResults(
+            {(trans.stateA, trans.stateB): raw_tcps[trans.interfaces]
+             for trans in self.network.transitions.values()},
+            network=self.network
+        )
         self.results['total_crossing_probability'] = tcps
 
         # calculate the CTPs
@@ -584,13 +592,28 @@ class StandardTISAnalysis(TISAnalysis):
         return self.results
 
 
-    def crossing_probability(self, ensemble):
-        pass
+    def crossing_probability(self, ensemble, cv=None):
+        sampling_ens = self.network.sampling_ensemble_for[ensemble]
+        if cv is None:
+            possible_cvs = [t.interfaces.cv 
+                            for t in self.network.sampling_transitions
+                            if sampling_ens in t.ensembles]
+            assert len(possible_cvs) == 1
+            cv = possible_cvs[0]
+
+        all_max_lambdas = self._access_cached_result('max_lambda')
+        max_lambda = all_max_lambdas[sampling_ens]
+        return max_lambda.reverse_cumulative()
+
 
     @property
     def conditional_transition_probability(self):
-        pass
+        ctp = self._access_cached_result('conditional_transition_probability')
+        df = pd.DataFrame.from_dict(ctp, orient='index')
+        df.index = [idx.name for idx in df.index]
+        df.columns = [col.name for col in df.columns]
+        return df
 
     @property
     def total_crossing_probability(self):
-        pass
+        return self._access_cached_result('total_crossing_probability')
