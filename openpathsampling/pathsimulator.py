@@ -707,19 +707,13 @@ class PathSampling(PathSimulator):
 
                 paths.tools.refresh_output(
                     "Working on Monte Carlo cycle number " + str(self.step)
-                    + "\n"
-                    + "Running for %d seconds - %5.2f steps per second\n" % (
-                        elapsed,
-                        1.0 / time_per_step
-                    )
-                    + "Expected time to finish: %d seconds\n" % (
-                        1.0 * (n_steps - nn) * time_per_step
-                    ),
+                    + "\n" + paths.tools.progress_string(nn, n_steps,
+                                                         elapsed),
                     refresh=refresh,
                     output_stream=self.output_stream
                 )
 
-            time_start = time.time() 
+            time_start = time.time()
             movepath = self._mover.move(self.sample_set, step=self.step)
             samples = movepath.results
             new_sampleset = self.sample_set.apply_samples(samples)
