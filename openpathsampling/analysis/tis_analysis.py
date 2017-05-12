@@ -214,6 +214,11 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
         self.hists = {e: paths.numerics.Histogram(**self.hist_parameters)
                       for e in self.ensembles}
 
+    def calculate(self, steps, ensembles=None):
+        if ensembles is None:
+            ensembles = self.ensembles
+        return super(EnsembleHistogrammer, self).calculate(steps, ensembles)
+
     def from_weighted_trajectories(self, input_dict):
         for ens in self.hists:
             trajs = input_dict[ens].keys()
@@ -227,7 +232,9 @@ class PathLengthHistogrammer(EnsembleHistogrammer):
     """Histogramming path length distribution"""
     def __init__(self, ensembles, hist_parameters=None):
         if hist_parameters is None:
-            pass  # set defaults
+            # TODO: check with PGB about these defaults
+            hist_parameters = {'bin_width': 5, 'bin_range': (0, 1000)}
+
         super(PathLengthHistogrammer, self).__init__(
             ensembles=ensembles,
             f=lambda t: len(t),

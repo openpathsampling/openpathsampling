@@ -46,13 +46,14 @@ class TISAnalysisTester(object):
         return steps
 
     def _make_fake_sampling_sets(self, network):
-        analysis_AB = network.transitions[(self.state_A, self.state_B)]
-        analysis_BA = network.transitions[(self.state_B, self.state_A)]
+        ensembles_AB = self.sampling_ensembles_for_transition(
+            network, self.state_A, self.state_B
+        )
+        ensembles_BA = self.sampling_ensembles_for_transition(
+            network, self.state_B, self.state_A
+        )
 
-        sampling_AB = network.analysis_to_sampling[analysis_AB][0]
-        sampling_BA = network.analysis_to_sampling[analysis_BA][0]
-
-        all_ensembles = sampling_AB.ensembles + sampling_BA.ensembles
+        all_ensembles = ensembles_AB + ensembles_BA
         replicas = range(len(all_ensembles))
 
         # This encodes how the SampleSets are at each time step. This is the
@@ -81,6 +82,11 @@ class TISAnalysisTester(object):
             sample_sets.append(sample_set)
         return sample_sets
 
+    def sampling_ensembles_for_transition(self, network, state_A, state_B):
+        analysis_AB = network.transitions[(state_A, state_B)]
+        sampling_AB = network.analysis_to_sampling[analysis_AB][0]
+        return sampling_AB.ensembles
+
     def setup(self):
         # set up the trajectories, ensembles, etc. for this test
         cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
@@ -94,12 +100,13 @@ class TISAnalysisTester(object):
 
         # trajectory that crosses each interface, one state-to-state
         self.trajs_AB = [make_tis_traj_fixed_steps(i) for i in [0, 1, 2]]
-        self.trajs_AB += make_1d_traj([(-0.5 + i) * 0.1 for i in range(12)])
+        self.trajs_AB += [make_1d_traj([(-0.5 + i) * 0.1 
+                                        for i in range(12)])]
 
         self.trajs_BA = [make_tis_traj_fixed_steps(i, reverse=True)
                          for i in [0, 1, 2]]
-        self.trajs_BA += make_1d_traj([1.0 - (-0.5 + i) * 0.1
-                                       for i in range(12)])
+        self.trajs_BA += [make_1d_traj([1.0 - (-0.5 + i) * 0.1
+                                        for i in range(12)])]
 
         # set up mistis
         self.mistis = paths.MISTISNetwork([
@@ -138,12 +145,12 @@ class TISAnalysisTester(object):
 class TestWeightedTrajectories(TISAnalysisTester):
     def _check_network_results(self, network, weighted_trajs):
         # works for both MISTIS and MSTIS, since they use equivalent data
-        analysis_AB = network.transitions[(self.state_A, self.state_B)]
-        analysis_BA = network.transitions[(self.state_B, self.state_A)]
-        sampling_AB = network.analysis_to_sampling[analysis_AB][0]
-        sampling_BA = network.analysis_to_sampling[analysis_BA][0]
-        ensembles_AB = sampling_AB.ensembles
-        ensembles_BA = sampling_BA.ensembles
+        ensembles_AB = self.sampling_ensembles_for_transition(
+            network, self.state_A, self.state_B
+        )
+        ensembles_BA = self.sampling_ensembles_for_transition(
+            network, self.state_B, self.state_A
+        )
 
         # (ensemble_number, trajectory_number): count
         results = {(0, 0): 2, (0, 1): 1, (0, 2): 1, (0, 3): 0,
@@ -186,19 +193,52 @@ class TestDictFlux(TISAnalysisTester):
         raise SkipTest
 
 
-class TestPathLengthHistogrammer(TISAnalysisTester):
-    def test_calculate(self):
-        raise SkipTest
+class TestMinusMoveFlux(TISAnalysisTester):
+    pass
 
-    def test_from_weighted_trajectories(self):
-        raise SkipTest
+
+class TestPathLengthHistogrammer(TISAnalysisTester):
+    def _check_network_results(self, network, hists):
+        results = {0: {(3.0,): 2, (5.0,): 1, (7.0,): 1},
+                   1: {(5.0,): 2, (7.0,): 1, (12.0,): 1},
+                   2: {(7.0,): 2, (12.0,): 2}}
+
+        ensembles_AB = self.sampling_ensembles_for_transition(network,
+                                                              self.state_A,
+                                                              self.state_B)
+        ensembles_BA = self.sampling_ensembles_for_transition(network,
+                                                              self.state_B,
+                                                              self.state_A)
+        for (key, dct) in results.iteritems():
+            hist_dct_AB = hists[ensembles_AB[key]]._histogram
+            assert_equal(dict(hist_dct_AB), dct)
+            hist_dct_BA = hists[ensembles_BA[key]]._histogram
+            assert_equal(dict(hist_dct_BA), dct)
+
+
+    def test_calculate(self):
+        default_histogrammer = \
+                PathLengthHistogrammer(self.mistis.sampling_ensembles)
+        assert_equal(default_histogrammer.hist_parameters,
+                     {'bin_width': 5, 'bin_range': (0, 1000)})
+
+        mistis_histogrammer = PathLengthHistogrammer(
+            ensembles=self.mistis.sampling_ensembles,
+            hist_parameters={'bin_width': 1, 'bin_range': (0, 10)}
+        )
+        mistis_hists = mistis_histogrammer.calculate(self.mistis_steps)
+        self._check_network_results(self.mistis, mistis_hists)
+
+        mstis_histogrammer = PathLengthHistogrammer(
+            ensembles=self.mstis.sampling_ensembles,
+            hist_parameters={'bin_width': 1, 'bin_range': (0, 10)}
+        )
+        mstis_hists = mstis_histogrammer.calculate(self.mstis_steps)
+        self._check_network_results(self.mstis, mstis_hists)
 
 
 class TestFullHistogramMaxLambda(TISAnalysisTester):
     def test_calculate(self):
-        raise SkipTest
-
-    def test_from_weighted_trajectories(self):
         raise SkipTest
 
 
