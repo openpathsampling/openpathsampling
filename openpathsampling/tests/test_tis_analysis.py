@@ -238,8 +238,49 @@ class TestPathLengthHistogrammer(TISAnalysisTester):
 
 
 class TestFullHistogramMaxLambda(TISAnalysisTester):
+    def _check_transition_results(self, transition, hists):
+        raw_lambda_results = {
+            0: {-0.05: 0, 0.05: 2, 0.15: 1, 0.25: 1},
+            1: {-0.05: 0, 0.05: 0, 0.15: 2, 0.25: 1, 0.35: 0, 1.05: 1},
+            2: {-0.05: 0, 0.05: 0, 0.15: 0, 0.25: 2, 0.35: 0, 1.05: 2}
+        }
+        for (ens, result_dct) in raw_lambda_results.iteritems():
+            hist = hists[transition.ensembles[ens]]()
+            for key in result_dct.keys():
+                assert_almost_equal(result_dct[key], hist(key))
+
     def test_calculate(self):
-        raise SkipTest
+        mistis_AB = self.mistis.transitions[(self.state_A, self.state_B)]
+        mistis_AB_histogrammer = FullHistogramMaxLambdas(
+            transition=mistis_AB,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+        mistis_AB_hists = mistis_AB_histogrammer.calculate(self.mistis_steps)
+        self._check_transition_results(mistis_AB, mistis_AB_hists)
+
+        mistis_BA = self.mistis.transitions[(self.state_B, self.state_A)]
+        mistis_BA_histogrammer = FullHistogramMaxLambdas(
+            transition=mistis_BA,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+        mistis_BA_hists = mistis_BA_histogrammer.calculate(self.mistis_steps)
+        self._check_transition_results(mistis_BA, mistis_BA_hists)
+
+        mstis_AB = self.mstis.transitions[(self.state_A, self.state_B)]
+        mstis_AB_histogrammer = FullHistogramMaxLambdas(
+            transition=mstis_AB,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+        mstis_AB_hists = mstis_AB_histogrammer.calculate(self.mstis_steps)
+        self._check_transition_results(mstis_AB, mstis_AB_hists)
+
+        mstis_BA = self.mstis.transitions[(self.state_B, self.state_A)]
+        mstis_BA_histogrammer = FullHistogramMaxLambdas(
+            transition=mstis_BA,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+        mstis_BA_hists = mstis_BA_histogrammer.calculate(self.mstis_steps)
+        self._check_transition_results(mstis_BA, mstis_BA_hists)
 
 
 class TestTotalCrossingProbability(TISAnalysisTester):
