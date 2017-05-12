@@ -295,6 +295,13 @@ class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
         self.states = states
         self.ensembles = ensembles
 
+    def calculate(self, steps, ensembles=None):
+        if ensembles is None:
+            ensembles = self.ensembles
+        return super(ConditionalTransitionProbability, self).calculate(
+            steps, ensembles
+        )
+
     def from_weighted_trajectories(self, input_dict):
         ctp = {}
         for ens in self.ensembles:

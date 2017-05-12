@@ -283,9 +283,66 @@ class TestFullHistogramMaxLambda(TISAnalysisTester):
         self._check_transition_results(mstis_BA, mstis_BA_hists)
 
 
+class TestConditionalTransitionProbability(TISAnalysisTester):
+    def _check_network_results(self, network, ctp_results):
+        results = {0: 0.0, 1: 0.25, 2: 0.5}
+        ensembles_AB = self.sampling_ensembles_for_transition(network,
+                                                              self.state_A,
+                                                              self.state_B)
+        ensembles_BA = self.sampling_ensembles_for_transition(network,
+                                                              self.state_B,
+                                                              self.state_A)
+
+        for ens_num in range(len(ensembles_AB)):
+            dct_AB = ctp_results[ensembles_AB[ens_num]]
+            result = results[ens_num]
+            if result != 0.0:
+                assert_equal(dct_AB[self.state_B], result)
+            if result != 1.0:
+                assert_equal(dct_AB[self.state_A], 1.0-result)
+
+        for ens_num in range(len(ensembles_BA)):
+            dct_BA = ctp_results[ensembles_BA[ens_num]]
+            result = results[ens_num]
+            if result != 0.0:
+                assert_equal(dct_BA[self.state_A], result)
+            if result != 1.0:
+                assert_equal(dct_BA[self.state_B], 1.0-result)
+
+
+    def test_calculate(self):
+        mistis_ctp_calc = ConditionalTransitionProbability(
+            ensembles=self.mistis.sampling_ensembles,
+            states=[self.state_A, self.state_B]
+        )
+        mistis_ctp = mistis_ctp_calc.calculate(self.mistis_steps)
+        self._check_network_results(self.mistis, mistis_ctp)
+
+        mstis_ctp_calc = ConditionalTransitionProbability(
+            ensembles=self.mstis.sampling_ensembles,
+            states=[self.state_A, self.state_B]
+        )
+        mstis_ctp = mstis_ctp_calc.calculate(self.mstis_steps)
+        self._check_network_results(self.mstis, mstis_ctp)
+
+
 class TestTotalCrossingProbability(TISAnalysisTester):
     def test_calculate(self):
         raise SkipTest
 
     def test_from_weighted_trajectories(self):
         raise SkipTest
+
+
+class TestStandardTransitionProbability(TISAnalysisTester):
+    pass
+
+class TestTransitionDictResults(TISAnalysisTester):
+    pass
+
+
+class TestTISAnalysis(TISAnalysisTester):
+    pass
+
+class TestStandardTISAnalysis(TISAnalysisTester):
+    pass
