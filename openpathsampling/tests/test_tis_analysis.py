@@ -27,7 +27,6 @@ def make_tis_traj_fixed_steps(n_steps, step_size=0.1, reverse=False):
     return make_1d_traj(rising + falling)
 
 
-
 class TISAnalysisTester(object):
     # abstract class to give the same setup to all the test functions
 
@@ -120,12 +119,57 @@ class TISAnalysisTester(object):
         )
 
         # TODO: set up mstis
-        pass
+        self.mstis = paths.MSTISNetwork([
+            (self.state_A, interfaces_AB),
+            (self.state_B, interfaces_BA)
+        ])
+        mover_stub_mstis = MoverWithSignature(self.mstis.all_ensembles,
+                                              self.mstis.all_ensembles)
+        mstis_ssets = self._make_fake_sampling_sets(self.mstis)
+        self.mstis_steps = self._make_fake_steps(mstis_ssets,
+                                                 mover_stub_mstis)
+
+        self.mstis_weighted_trajectories = steps_to_weighted_trajectories(
+            self.mstis_steps,
+            self.mstis.sampling_ensembles
+        )
 
 
 class TestWeightedTrajectories(TISAnalysisTester):
+    def _check_network_results(self, network, weighted_trajs):
+        # works for both MISTIS and MSTIS, since they use equivalent data
+        analysis_AB = network.transitions[(self.state_A, self.state_B)]
+        analysis_BA = network.transitions[(self.state_B, self.state_A)]
+        sampling_AB = network.analysis_to_sampling[analysis_AB][0]
+        sampling_BA = network.analysis_to_sampling[analysis_BA][0]
+        ensembles_AB = sampling_AB.ensembles
+        ensembles_BA = sampling_BA.ensembles
+
+        # (ensemble_number, trajectory_number): count
+        results = {(0, 0): 2, (0, 1): 1, (0, 2): 1, (0, 3): 0,
+                   (1, 0): 0, (1, 1): 2, (1, 2): 1, (1, 3): 1,
+                   (2, 0): 0, (2, 1): 0, (2, 2): 2, (2, 3): 2}
+
+        for ((ens, traj), result) in results.iteritems():
+            assert_equal(
+                weighted_trajs[ensembles_AB[ens]][self.trajs_AB[traj]],
+                result
+            )
+            assert_equal(
+                weighted_trajs[ensembles_BA[ens]][self.trajs_BA[traj]],
+                result
+            )
+
     def test_steps_to_weighted_trajectories(self):
-        raise SkipTest
+        assert_equal(len(self.mistis_weighted_trajectories),
+                     len(self.mistis.sampling_ensembles))
+        self._check_network_results(self.mistis,
+                                    self.mistis_weighted_trajectories)
+
+        assert_equal(len(self.mstis_weighted_trajectories),
+                     len(self.mstis.sampling_ensembles))
+        self._check_network_results(self.mstis,
+                                    self.mstis_weighted_trajectories)
 
 
 class TestDictFlux(TISAnalysisTester):
