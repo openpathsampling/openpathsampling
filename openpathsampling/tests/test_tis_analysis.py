@@ -182,7 +182,17 @@ class TestWeightedTrajectories(TISAnalysisTester):
 class TestDictFlux(TISAnalysisTester):
     def setup(self):
         super(TestDictFlux, self).setup()
-        self.flux_dict = {}  # TODO: add actual values here
+        self.innermost_interface_A = \
+                self.sampling_ensembles_for_transition(self.mistis,
+                                                       self.state_A,
+                                                       self.state_B)[0]
+        self.innermost_interface_B = \
+                self.sampling_ensembles_for_transition(self.mistis,
+                                                       self.state_B,
+                                                       self.state_A)[0]
+
+        self.flux_dict = {(self.state_A, self.innermost_interface_A): 1.0,
+                          (self.state_B, self.innermost_interface_B): 1.0}
         self.flux_method = DictFlux(self.flux_dict)
 
     def test_calculate(self):
@@ -190,7 +200,36 @@ class TestDictFlux(TISAnalysisTester):
                      self.flux_dict)
 
     def test_from_weighted_trajectories(self):
-        raise SkipTest
+        assert_equal(
+            self.flux_method.from_weighted_trajectories(self.mistis_steps),
+            self.flux_dict
+        )
+
+    def test_intermediates(self):
+        assert_equal(self.flux_method.intermediates(self.mistis_steps), [])
+
+    def test_calculate_from_intermediates(self):
+        intermediates = self.flux_method.intermediates(self.mistis_steps)
+        assert_equal(
+            self.flux_method.calculate_from_intermediates(*intermediates),
+            self.flux_dict
+        )
+
+    def test_combine_results(self):
+        my_result = self.flux_method.calculate(self.mistis_steps)
+        same_result = {(self.state_A, self.innermost_interface_A): 1.0,
+                       (self.state_B, self.innermost_interface_B): 1.0}
+        assert_equal(
+            self.flux_method.combine_results(my_result, same_result),
+            my_result
+        )
+
+    @raises(RuntimeError)
+    def test_bad_combine_results(self):
+        my_result = self.flux_method.calculate(self.mistis_steps)
+        bad_result = {(self.state_A, self.innermost_interface_A): 2.0,
+                      (self.state_B, self.innermost_interface_B): 2.0}
+        self.flux_method.combine_results(my_result, bad_result)
 
 
 class TestMinusMoveFlux(TISAnalysisTester):

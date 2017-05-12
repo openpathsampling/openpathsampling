@@ -198,7 +198,7 @@ class DictFlux(MultiEnsembleSamplingAnalyzer):
     def combine_results(self, result_1, result_2):
         if result_1 != result_2:
             raise RuntimeError("Combining results from different DictFlux")
-        return self
+        return result_1
 
 ########## GENERAL HISTOGRAMMING
 
@@ -383,7 +383,7 @@ class TransitionDictResults(StorableNamedObject):
                              self.results_dict[k])
         return result
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return self.to_pandas().__str__()
 
     def __repr__(self):
