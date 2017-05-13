@@ -31,7 +31,16 @@ def steps_to_weighted_trajectories(steps, ensembles):
 class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
     """Abstract class for getting statistics for MC steps sampling multiple
     ensembles."""
-    def calculate(self, steps, ensembles):
+    def __init__(self, ensembles=None):
+        self.ensembles = ensembles
+
+    def calculate(self, steps, ensembles=None):
+        if ensembles is None:
+            ensembles = self.ensembles
+        if ensembles is None:
+            raise RuntimeError("If self.ensembles is not set, then "
+                               + "ensembles must be given as argument to "
+                               + "calculate")
         weighted_trajs = steps_to_weighted_trajectories(steps, ensembles)
         return self.from_weighted_trajectories(weighted_trajs)
 
@@ -208,16 +217,11 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
     properties per ensemble.
     """
     def __init__(self, ensembles, f, hist_parameters):
-        self.ensembles = ensembles
+        super(EnsembleHistogrammer, self).__init__(ensembles)
         self.f = f
         self.hist_parameters = hist_parameters
         self.hists = {e: paths.numerics.Histogram(**self.hist_parameters)
                       for e in self.ensembles}
-
-    def calculate(self, steps, ensembles=None):
-        if ensembles is None:
-            ensembles = self.ensembles
-        return super(EnsembleHistogrammer, self).calculate(steps, ensembles)
 
     def from_weighted_trajectories(self, input_dict):
         for ens in self.hists:
@@ -268,8 +272,10 @@ class FullHistogramMaxLambdas(EnsembleHistogrammer):
 
 class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
     def __init__(self, max_lambda_calc, combiner=None):
+        transition = max_lambda_calc.transition
+        super(TotalCrossingProbability, self).__init__(transition.ensembles)
         self.max_lambda_calc = max_lambda_calc
-        self.transition = max_lambda_calc.transition
+        self.transition = transition
         if combiner is None:
             lambdas = self.transition.interfaces.lambdas
             combiner = paths.numerics.WHAM(interfaces=lambdas)
@@ -292,15 +298,8 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
 
 class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
     def __init__(self, ensembles, states):
+        super(ConditionalTransitionProbability, self).__init__(ensembles)
         self.states = states
-        self.ensembles = ensembles
-
-    def calculate(self, steps, ensembles=None):
-        if ensembles is None:
-            ensembles = self.ensembles
-        return super(ConditionalTransitionProbability, self).calculate(
-            steps, ensembles
-        )
 
     def from_weighted_trajectories(self, input_dict):
         ctp = {}

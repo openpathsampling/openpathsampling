@@ -367,10 +367,49 @@ class TestConditionalTransitionProbability(TISAnalysisTester):
 
 class TestTotalCrossingProbability(TISAnalysisTester):
     def test_calculate(self):
-        raise SkipTest
+        # a bit of integration test, until we make a MaxLambdaStub
+        results = {0.0: 1.0, 0.1: 0.5, 0.2: 0.25, 0.3: 0.125,
+                   0.5: 0.125, 1.0: 0.125}
 
-    def test_from_weighted_trajectories(self):
-        raise SkipTest
+        mistis_AB = self.mistis.transitions[(self.state_A, self.state_B)]
+        mistis_AB_max_lambda = FullHistogramMaxLambdas(
+            transition=mistis_AB,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+        mistis_AB_tcp = TotalCrossingProbability(mistis_AB_max_lambda)
+        tcp_AB = mistis_AB_tcp.calculate(self.mistis_steps)
+        for (x, result) in results.iteritems():
+            assert_almost_equal(tcp_AB(x), result)
+
+        mistis_BA = self.mistis.transitions[(self.state_B, self.state_A)]
+        mistis_BA_max_lambda = FullHistogramMaxLambdas(
+            transition=mistis_BA,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+        mistis_BA_tcp = TotalCrossingProbability(mistis_BA_max_lambda)
+        tcp_BA = mistis_BA_tcp.calculate(self.mistis_steps)
+        for (x, result) in results.iteritems():
+            assert_almost_equal(tcp_AB(x), result)
+
+        mstis_AB = self.mstis.transitions[(self.state_A, self.state_B)]
+        mstis_AB_max_lambda = FullHistogramMaxLambdas(
+            transition=mstis_AB,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+        mstis_AB_tcp = TotalCrossingProbability(mstis_AB_max_lambda)
+        tcp_AB = mstis_AB_tcp.calculate(self.mstis_steps)
+        for (x, result) in results.iteritems():
+            assert_almost_equal(tcp_AB(x), result)
+
+        mstis_BA = self.mstis.transitions[(self.state_B, self.state_A)]
+        mstis_BA_max_lambda = FullHistogramMaxLambdas(
+            transition=mstis_BA,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+        mstis_BA_tcp = TotalCrossingProbability(mstis_BA_max_lambda)
+        tcp_BA = mstis_BA_tcp.calculate(self.mstis_steps)
+        for (x, result) in results.iteritems():
+            assert_almost_equal(tcp_AB(x), result)
 
 
 class TestStandardTransitionProbability(TISAnalysisTester):
