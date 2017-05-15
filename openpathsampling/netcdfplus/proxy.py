@@ -55,11 +55,17 @@ class LoaderProxy(object):
 
         return NotImplemented
 
+    def __getitem__(self, item):
+        return self.__subject__[item]
+
     def __ne__(self, other):
         return not self == other
 
     def __hash__(self):
         return hash(self._idx)
+
+    def __len__(self):
+        return len(self.__subject__)
 
     @property
     def __class__(self):
