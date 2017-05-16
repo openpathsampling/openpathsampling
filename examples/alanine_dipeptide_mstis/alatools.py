@@ -1,25 +1,28 @@
-import matplotlib.pyplot as plt
-
 import openpathsampling as paths
+import math
+
 import numpy as np
 
-import math
+import matplotlib.pyplot as plt
+
 
 class CVSphere(paths.Volume):
     """
     Defines a sphere in multi-CV space with center and distance
     """
+
     def __init__(self, cvs, center, radius):
+        super(CVSphere, self).__init__()
         self.cvs = cvs
         self.center = center
         self.radius = radius
 
-        assert(len(cvs) == len(center) == len(radius))
+        assert (len(cvs) == len(center) == len(radius))
 
     def __call__(self, snapshot):
         return math.sqrt(sum(
             map(
-                lambda cv : cv(snapshot)**2
+                lambda cv: cv(snapshot) ** 2
             ), self.cvs
         ))
 
@@ -61,6 +64,8 @@ class TwoCVSpherePlot(object):
             self.ranges = ((-180, 180), (-180, 180))
         else:
             self.ranges = ranges
+
+        self.markersize = 2
         self.color_fnc = lambda x: (x, x, 0.6)
         self.color_fnc = lambda x: (x * 0.5 + 0.4, 0.5 * x + 0.4, 1 * x, 1.0)
 
@@ -85,7 +90,7 @@ class TwoCVSpherePlot(object):
         mirror = [
             [-1, 0, 1] if p is not None else [0]
             for p in periodic
-        ]
+            ]
 
         # replace None with zero
         periodic = [p or 0 for p in periodic]
@@ -93,7 +98,8 @@ class TwoCVSpherePlot(object):
         plt.plot(
             [x[self._ax1] for x in centers],
             [x[self._ax2] for x in centers],
-            'ko')
+            'ko',
+            markersize=self.markersize)
 
         fig = plt.gcf()
 
@@ -121,14 +127,14 @@ class TwoCVSpherePlot(object):
                         plt.annotate(
                             name,
                             xy=center,
-                            xytext=(center[0]+10 + 1, center[1] - 1),
+                            xytext=(center[0] + 10 + 1, center[1] - 1),
                             fontsize=20,
                             color='k'
                         )
                         plt.annotate(
                             name,
                             xy=center,
-                            xytext=(center[0]+10, center[1]),
+                            xytext=(center[0] + 10, center[1]),
                             fontsize=20,
                             color='w'
                         )
@@ -138,17 +144,21 @@ class TwoCVSpherePlot(object):
                             for yp in mirror[1]:
                                 if colored:
                                     circle = plt.Circle(
-                                        (center[0] + xp * periodic[0] * zoom * 2,
-                                         center[1] + yp * periodic[1] * zoom * 2),
+                                        (center[0] + xp * periodic[
+                                            0] * zoom * 2,
+                                         center[1] + yp * periodic[
+                                             1] * zoom * 2),
                                         level,
                                         color='w'
-                                        )
+                                    )
                                     fig.gca().add_artist(circle)
                                 else:
                                     l = 1.0 * level / max_level
                                     circle = plt.Circle(
-                                        (center[0] + xp * periodic[0] * zoom * 2,
-                                         center[1] + yp * periodic[1] * zoom * 2),
+                                        (center[0] + xp * periodic[
+                                            0] * zoom * 2,
+                                         center[1] + yp * periodic[
+                                             1] * zoom * 2),
                                         level - 1,
                                         color=self.color_fnc(l)
                                     )
@@ -171,22 +181,23 @@ class TwoCVSpherePlot(object):
                 for c in range(len(cvs)):
                     if self.periodic[c] is not None and self._periodicflip(
                             all_points[c][d],
-                            all_points[c][d-1],
+                            all_points[c][d - 1],
                             self.periodic[c]
                     ):
                         flip = True
 
                 if flip:
-                    ret.append([all_points[c][first:d] for c in range(len(cvs))])
+                    ret.append(
+                        [all_points[c][first:d] for c in range(len(cvs))])
                     first = d
 
-            ret.append([all_points[c][first:d+1] for c in range(len(cvs))])
+            ret.append([all_points[c][first:d + 1] for c in range(len(cvs))])
 
         return ret
 
     @staticmethod
     def _periodicflip(val1, val2, period):
-        return (period**2 - (val1 - val2)**2) < (val1 - val2)**2
+        return (period ** 2 - (val1 - val2) ** 2) < (val1 - val2) ** 2
 
     def add_trajectory(self, trajectory, line=True, points=True):
         angles = self._cvlines(trajectory)
@@ -198,12 +209,14 @@ class TwoCVSpherePlot(object):
                     zoom * np.array(angle[self._ax1])[:],
                     zoom * np.array(angle[self._ax2])[:],
                     'ko',
+                    markersize=self.markersize,
                     linewidth=0.5)
             if line:
                 plt.plot(
                     zoom * np.array(angle[self._ax1])[:],
                     zoom * np.array(angle[self._ax2])[:],
                     'k-',
+                    markersize=self.markersize,
                     linewidth=0.5)
 
     def add_snapshot(self, snapshot, label=None):
