@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class ExternalEngine(DynamicsEngine):
     """
-    Generic object to handle arbitrary external engines. 
+    Generic object to handle arbitrary external engines.
 
     Typically, this will be subclassed for any given engine. As written, it
     will work with the trivial `engine.c` developed for testing purposes.
@@ -79,7 +79,7 @@ class ExternalEngine(DynamicsEngine):
             else:  # pragma: no cover
                 raise RuntimeError("Strange return value from read_next_frame_from_file")
             if self.auto_optimize_sleep and self.n_frames_since_start > 0:
-                self.sleep_ms = ((now - self.start_time) / 
+                self.sleep_ms = ((now - self.start_time) /
                                  self.n_frames_since_start) * 1000.0
         return self.current_snapshot
 
@@ -112,7 +112,7 @@ class ExternalEngine(DynamicsEngine):
     # FROM HERE ARE THE FUNCTIONS TO OVERRIDE IN SUBCLASSES:
     def read_frame_from_file(self, filename, frame_num):
         """Reads given frame number from file, and returns snapshot.
-        
+
         If no frame is available, returns None. If the frame appears to be
         partially written, returns string "partial".
         """
@@ -120,7 +120,7 @@ class ExternalEngine(DynamicsEngine):
         # setting the value of the first line
         linecache.checkcache(filename)
         first_line = frame_num + 1
-    
+
         # create a snapshot out of lines starting with first_line... if
         # nothing exists, linecache returns '', so we return None.
         # Otherwise, try to make a snapshot and return "partial" if we fail
@@ -151,7 +151,7 @@ class ExternalEngine(DynamicsEngine):
 
     def who_to_kill(self):
         """Returns psutil.Process object to send kill signal to.
-        
+
         Might override to send kill signal to a process other than the one
         directly spawned above (e.g., when launching parallel runs)
         """
@@ -177,6 +177,3 @@ class ExternalEngine(DynamicsEngine):
             engine_path = "engine"
         return (engine_path + " " + str(self.engine_sleep)
                 + " " + str(self.output_file) + " " + str(self.input_file))
-                        
-
-
