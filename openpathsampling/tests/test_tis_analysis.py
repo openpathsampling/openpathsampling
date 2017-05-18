@@ -233,7 +233,41 @@ class TestDictFlux(TISAnalysisTester):
 
 
 class TestMinusMoveFlux(TISAnalysisTester):
-    pass
+    @staticmethod
+    def _stub_minus_mover_for_state(network, state):
+        assert_equal(len(network.minus_ensembles), 2)
+        minus_possibles = [ens for ens in network.minus_ensembles
+                             if ens.state_vol == state]
+        assert_equal(len(minus_possibles), 1)
+        minus = minus_possibles[0]
+        assert_equal(len(network.special_ensembles['minus'][minus]), 1)
+        sample_trans= network.special_ensembles['minus'][minus][0]
+        stub_minus = paths.MinusMover(
+            minus_ensemble=minus,
+            innermost_ensembles=[sample_trans],
+            engine=None
+        )
+        return stub_minus
+
+    def setup(self):
+        super(TestMinusMoveFlux, self).setup()
+        self.mistis_stub_minus_A = self._stub_minus_mover_for_state(
+            network=self.mistis,
+            state=self.state_A
+        )
+        self.mistis_minus_A = self.mistis_stub_minus_A.minus_ensemble
+
+        self.mistis_stub_minus_B = self._stub_minus_mover_for_state(
+            network=self.mistis,
+            state=self.state_B
+        )
+        self.mistis_minus_B = self.mistis_stub_minus_B.minus_ensemble
+
+        a = 0.1  # just a number to simplify the trajectory-making
+        minus_move_descriptions = [
+            [-a, a, a, -a, -a, -a, -a, -a, a, a, a, a, a, -a],
+            [-a, a, a, a, -a, -a, -a, a, a, a, -a]
+        ]
 
 
 class TestPathLengthHistogrammer(TISAnalysisTester):

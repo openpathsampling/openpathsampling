@@ -608,7 +608,7 @@ class StandardTISAnalysis(TISAnalysis):
     def crossing_probability(self, ensemble, cv=None):
         sampling_ens = self.network.sampling_ensemble_for[ensemble]
         if cv is None:
-            possible_cvs = [t.interfaces.cv 
+            possible_cvs = [t.interfaces.cv
                             for t in self.network.sampling_transitions
                             if sampling_ens in t.ensembles]
             assert len(possible_cvs) == 1
