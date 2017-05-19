@@ -310,10 +310,19 @@ class TestMinusMoveFlux(TISAnalysisTester):
         # this could be repeated for MSTIS, but why?
 
     def test_calculate(self):
-        results = self.mistis_minus_flux.calculate(self.mistis_minus_steps)
-        print results
+        avg_t_in = (5.0 + 3.0) / 2
+        avg_t_out = (2.0 + 5.0 + 3.0 + 3.0) / 4
+        expected_flux = 1.0 / (avg_t_in + avg_t_out)
 
+        mistis_flux = \
+                self.mistis_minus_flux.calculate(self.mistis_minus_steps)
+        for flux in mistis_flux.values():  # all values are the same
+            assert_almost_equal(flux, expected_flux)
 
+        mstis_flux = \
+                self.mstis_minus_flux.calculate(self.mstis_minus_steps)
+        for flux in mstis_flux.values():  # all values are the same
+            assert_almost_equal(flux, expected_flux)
 
 
 class TestPathLengthHistogrammer(TISAnalysisTester):
