@@ -69,18 +69,23 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         self.network = scheme.network
         self.minus_movers = scheme.movers['minus']
         for mover in self.minus_movers:
-            if len(mover.innermost_ensembles) != 1:
-                raise ValueError(mistis_err_str + "Mover " + str(mover)
-                                 + " has too many innermost ensembles "
-                                 + str(len(mover.innermost_ensembles)) + ".")
+            n_innermost = len(mover.innermost_ensembles)
+            if n_innermost != 1:
+                raise ValueError(
+                    mistis_err_str + "Mover " + str(mover) + " does not "
+                    + "have exactly one innermost ensemble. Found "
+                    + str(len(mover.innermost_ensembles)) + ")."
+                )
 
         if flux_pairs is None:
             # get flux_pairs from network
             flux_pairs = []
             minus_ens_to_trans = self.network.special_ensembles['minus']
             for minus_ens in self.network.minus_ensembles:
-                if len(minus_ens_to_trans[minus_ens]) > 1:
-                    n_trans = len(minus_ens_to_trans[minus_ens])
+                n_trans = len(minus_ens_to_trans[minus_ens])
+                if n_trans > 1:  # pragma: no cover
+                    # Should have been caught be the previous ValueError. If
+                    # you hit this, something unexpected happened.
                     raise ValueError(mistis_err_str + "Ensemble "
                                      + repr(minus_ens) + " connects "
                                      + str(n_trans) + " transitions.")

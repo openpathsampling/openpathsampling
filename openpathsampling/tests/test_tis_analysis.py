@@ -91,6 +91,7 @@ class TISAnalysisTester(object):
         # set up the trajectories, ensembles, etc. for this test
         cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
         cv_B = paths.FunctionCV('1-Id', lambda s: 1.0-s.xyz[0][0])
+        self.cv_x = cv_A
         self.state_A = paths.CVDefinedVolume(cv_A, float("-inf"), 0.0)
         self.state_B = paths.CVDefinedVolume(cv_B, float("-inf"), 0.0)
         interfaces_AB = paths.VolumeInterfaceSet(cv_A, float("-inf"),
@@ -323,6 +324,25 @@ class TestMinusMoveFlux(TISAnalysisTester):
                 self.mstis_minus_flux.calculate(self.mstis_minus_steps)
         for flux in mstis_flux.values():  # all values are the same
             assert_almost_equal(flux, expected_flux)
+
+    @raises(ValueError)
+    def test_bad_network(self):
+        # raises error if more than one transition shares a minus ensemble
+        # (flux cannot be calculated with multiple interface set minus move)
+        state_C = paths.CVDefinedVolume(self.cv_x, 0.5, 0.7)
+        trans_AB = self.mistis.transitions[(self.state_A, self.state_B)]
+        trans_BA = self.mistis.transitions[(self.state_B, self.state_A)]
+        interfaces_AB = trans_AB.interfaces
+        interfaces_BA = trans_BA.interfaces
+        interfaces_AC = trans_AB.interfaces
+        bad_mistis = paths.MISTISNetwork([
+            (self.state_A, interfaces_AB, self.state_B),
+            (self.state_B, interfaces_BA, self.state_A),
+            (self.state_A, interfaces_AC, state_C)
+        ])
+        scheme = paths.DefaultScheme(bad_mistis)
+        scheme.build_move_decision_tree()
+        minus_flux = MinusMoveFlux(scheme)
 
 
 class TestPathLengthHistogrammer(TISAnalysisTester):
