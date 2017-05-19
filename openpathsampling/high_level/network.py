@@ -781,7 +781,7 @@ class MISTISNetwork(TISNetwork):
                                                   set([stateA, stateB]))
                 ensemble_to_intersect = paths.AllOutXEnsemble(other_states)
             else:
-                final_state = all_states
+                final_state = paths.join_volumes(all_states_set)
                 ensemble_to_intersect = paths.FullEnsemble()
 
             sample_trans = paths.TISTransition(

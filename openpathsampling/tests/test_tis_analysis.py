@@ -3,7 +3,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
-    MoverWithSignature
+    MoverWithSignature, RandomMDEngine
 )
 
 from openpathsampling.analysis.tis_analysis import *
@@ -90,7 +90,7 @@ class TISAnalysisTester(object):
     def setup(self):
         # set up the trajectories, ensembles, etc. for this test
         cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
-        cv_B = paths.FunctionCV('-Id', lambda s: 1.0-s.xyz[0][0])
+        cv_B = paths.FunctionCV('1-Id', lambda s: 1.0-s.xyz[0][0])
         self.state_A = paths.CVDefinedVolume(cv_A, float("-inf"), 0.0)
         self.state_B = paths.CVDefinedVolume(cv_B, float("-inf"), 0.0)
         interfaces_AB = paths.VolumeInterfaceSet(cv_A, float("-inf"),
@@ -233,41 +233,87 @@ class TestDictFlux(TISAnalysisTester):
 
 
 class TestMinusMoveFlux(TISAnalysisTester):
-    @staticmethod
-    def _stub_minus_mover_for_state(network, state):
-        assert_equal(len(network.minus_ensembles), 2)
-        minus_possibles = [ens for ens in network.minus_ensembles
-                             if ens.state_vol == state]
-        assert_equal(len(minus_possibles), 1)
-        minus = minus_possibles[0]
-        assert_equal(len(network.special_ensembles['minus'][minus]), 1)
-        sample_trans= network.special_ensembles['minus'][minus][0]
-        stub_minus = paths.MinusMover(
-            minus_ensemble=minus,
-            innermost_ensembles=[sample_trans],
-            engine=None
-        )
-        return stub_minus
-
     def setup(self):
         super(TestMinusMoveFlux, self).setup()
-        self.mistis_stub_minus_A = self._stub_minus_mover_for_state(
-            network=self.mistis,
-            state=self.state_A
-        )
-        self.mistis_minus_A = self.mistis_stub_minus_A.minus_ensemble
-
-        self.mistis_stub_minus_B = self._stub_minus_mover_for_state(
-            network=self.mistis,
-            state=self.state_B
-        )
-        self.mistis_minus_B = self.mistis_stub_minus_B.minus_ensemble
 
         a = 0.1  # just a number to simplify the trajectory-making
         minus_move_descriptions = [
             [-a, a, a, -a, -a, -a, -a, -a, a, a, a, a, a, -a],
             [-a, a, a, a, -a, -a, -a, a, a, a, -a]
         ]
+
+        engine = RandomMDEngine()  # to get snapshot_timestep
+
+        self.mistis_scheme = paths.DefaultScheme(self.mistis, engine)
+        self.mistis_scheme.build_move_decision_tree()
+        self.mistis_minus_steps = self._make_fake_minus_steps(
+            scheme=self.mistis_scheme,
+            descriptions=minus_move_descriptions
+        )
+        self.mistis_minus_flux = MinusMoveFlux(self.mistis_scheme)
+
+        self.mstis_scheme = paths.DefaultScheme(self.mstis, engine)
+        self.mstis_scheme.build_move_decision_tree()
+        self.mstis_minus_steps = self._make_fake_minus_steps(
+            scheme=self.mstis_scheme,
+            descriptions=minus_move_descriptions
+        )
+        self.mstis_minus_flux = MinusMoveFlux(self.mstis_scheme)
+
+    def _make_fake_minus_steps(self, scheme, descriptions):
+        network = scheme.network
+        state_adjustment = {
+            self.state_A: lambda x: x,
+            self.state_B: lambda x: 1.0 - x
+        }
+
+        minus_ensemble_to_mover = {m.minus_ensemble: m
+                                   for m in scheme.movers['minus']}
+
+        assert_equal(set(minus_ensemble_to_mover.keys()),
+                     set(network.minus_ensembles))
+        steps = []
+        mccycle = 0
+        for minus_traj in descriptions:
+            for i, minus_ensemble in enumerate(network.minus_ensembles):
+                replica = -1 - i
+                adjustment = state_adjustment[minus_ensemble.state_vol]
+                traj = make_1d_traj([adjustment(s) for s in minus_traj])
+                assert_equal(minus_ensemble(traj), True)
+                samp = paths.Sample(trajectory=traj,
+                                    ensemble=minus_ensemble,
+                                    replica=replica)
+                sample_set = paths.SampleSet([samp])
+                change = paths.AcceptedSampleMoveChange(
+                    samples=[samp],
+                    mover=minus_ensemble_to_mover[samp.ensemble],
+                    details=paths.Details()
+                )
+                # NOTE: this makes it so that only one ensemble is
+                # represented in the same set at any time, which isn't quite
+                # how it actually works. However, this is doesn't matter for
+                # the current implementation
+                steps.append(paths.MCStep(mccycle=mccycle,
+                                          active=sample_set,
+                                          change=change))
+
+                mccycle += 1
+        assert_equal(len(steps), 4)
+        return steps
+
+    def test_get_minus_steps(self):
+        all_mistis_steps = self.mistis_steps + self.mistis_minus_steps
+        mistis_minus_steps = \
+                self.mistis_minus_flux._get_minus_steps(all_mistis_steps)
+        assert_equal(len(mistis_minus_steps), len(self.mistis_minus_steps))
+        assert_items_equal(mistis_minus_steps, self.mistis_minus_steps)
+        # this could be repeated for MSTIS, but why?
+
+    def test_calculate(self):
+        results = self.mistis_minus_flux.calculate(self.mistis_minus_steps)
+        print results
+
+
 
 
 class TestPathLengthHistogrammer(TISAnalysisTester):

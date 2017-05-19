@@ -250,6 +250,10 @@ class RandomMDEngine(DynamicsEngine):
     def current_snapshot(self, snapshot):
         self._current_snapshot = snapshot
 
+    @property
+    def snapshot_timestep(self):
+        return 1.0
+
     def generate_next_frame(self):
         self._current_snapshot = None
         return self.current_snapshot

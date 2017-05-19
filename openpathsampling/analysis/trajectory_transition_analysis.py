@@ -98,7 +98,7 @@ class TrajectoryTransitionAnalysis(object):
         self.transition = transition
         self.dt = dt
         self.stateA = transition.stateA
-        self.stateB = transition.stateB
+        self.stateB = transition.stateB - transition.stateA
         self.reset_analysis()
 
     def reset_analysis(self):
