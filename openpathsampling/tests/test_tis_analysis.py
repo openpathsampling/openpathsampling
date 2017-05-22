@@ -8,6 +8,9 @@ from test_helpers import (
 
 from openpathsampling.analysis.tis_analysis import *
 
+import pandas as pd
+import pandas.util.testing as pdt
+
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
@@ -92,8 +95,10 @@ class TISAnalysisTester(object):
         cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
         cv_B = paths.FunctionCV('1-Id', lambda s: 1.0-s.xyz[0][0])
         self.cv_x = cv_A
-        self.state_A = paths.CVDefinedVolume(cv_A, float("-inf"), 0.0)
-        self.state_B = paths.CVDefinedVolume(cv_B, float("-inf"), 0.0)
+        self.state_A = paths.CVDefinedVolume(cv_A, 
+                                             float("-inf"), 0.0).named("A")
+        self.state_B = paths.CVDefinedVolume(cv_B,
+                                             float("-inf"), 0.0).named("B")
         interfaces_AB = paths.VolumeInterfaceSet(cv_A, float("-inf"),
                                                  [0.0, 0.1, 0.2])
         interfaces_BA = paths.VolumeInterfaceSet(cv_B, float("-inf"),
@@ -543,12 +548,79 @@ class TestStandardTransitionProbability(TISAnalysisTester):
         self._check_network_results(self.mistis, self.mistis_steps)
         self._check_network_results(self.mstis, self.mstis_steps)
 
-class TestTransitionDictResults(TISAnalysisTester):
-    pass
 
+class TestTransitionDictResults(TISAnalysisTester):
+    def setup(self):
+        super(TestTransitionDictResults, self).setup()
+        results_dict = {(self.state_A, self.state_B): 1,
+                        (self.state_B, self.state_A): 2}
+        self.mistis_transition_dict = TransitionDictResults(
+            results_dict=results_dict,
+            network=self.mistis,
+            allow_sampling=False
+        )
+        self.mstis_transition_dict = TransitionDictResults(
+            results_dict=results_dict,
+            network=self.mstis,
+            allow_sampling=True
+        )
+
+    def test_iter(self):
+        assert_equal(set(pair for pair in self.mistis_transition_dict),
+                     set(pair for pair in self.mstis_transition_dict))
+
+    def test_get_by_pair(self):
+        assert_equal(
+            self.mstis_transition_dict[(self.state_A, self.state_B)], 1
+        )
+        assert_equal(
+            self.mstis_transition_dict[(self.state_A, self.state_B)],
+            self.mistis_transition_dict[(self.state_A, self.state_B)]
+        )
+        assert_equal(
+            self.mstis_transition_dict[(self.state_B, self.state_A)], 2
+        )
+        assert_equal(
+            self.mstis_transition_dict[(self.state_B, self.state_A)],
+            self.mistis_transition_dict[(self.state_B, self.state_A)]
+        )
+
+    @raises(KeyError)
+    def test_get_bad_pair(self):
+        self.mistis_transition_dict[(self.state_A, self.state_A)]
+
+    def test_get_by_transition(self):
+        mistis_AB = self.mistis.transitions[(self.state_A, self.state_B)]
+        mstis_AB = self.mstis.transitions[(self.state_A, self.state_B)]
+        assert_equal(self.mistis_transition_dict[mistis_AB], 1)
+        assert_equal(self.mistis_transition_dict[mistis_AB],
+                     self.mstis_transition_dict[mstis_AB])
+
+    def test_get_by_sampling_transition(self):
+        from_A = self.mstis.from_state[self.state_A]
+        from_B = self.mstis.from_state[self.state_B]
+        assert_equal(self.mstis_transition_dict[from_A], 1)
+        assert_equal(self.mstis_transition_dict[from_B], 2)
+
+    @raises(KeyError)
+    def test_bad_get_sampling_transition(self):
+        sampling_trans = self.mistis.sampling_transitions[0]
+        self.mistis_transition_dict[sampling_trans]
+
+    def test_to_pandas(self):
+        result = [[float("nan"), 1], [2, float("nan")]]
+        order = [self.state_A, self.state_B]
+        ordered_names = ["A", "B"]
+        pd_result = pd.DataFrame(data=result, index=ordered_names,
+                                 columns=ordered_names)
+        pd_mistis = self.mistis_transition_dict.to_pandas(order=order)
+        pd_mstis = self.mstis_transition_dict.to_pandas()
+        pdt.assert_frame_equal(pd_mistis, pd_mstis)
+        pdt.assert_frame_equal(pd_mistis, pd_result, check_dtype=False)
 
 class TestTISAnalysis(TISAnalysisTester):
     pass
+
 
 class TestStandardTISAnalysis(TISAnalysisTester):
     pass
