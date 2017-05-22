@@ -522,7 +522,26 @@ class TestTotalCrossingProbability(TISAnalysisTester):
 
 
 class TestStandardTransitionProbability(TISAnalysisTester):
-    pass
+    def _check_network_results(self, network, steps):
+        for transition in network.transitions.values():
+            max_lambda_calc = FullHistogramMaxLambdas(
+                transition=transition,
+                hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+            )
+            std_tp = StandardTransitionProbability(
+                transition=transition,
+                tcp_method=TotalCrossingProbability(max_lambda_calc),
+                ctp_method=ConditionalTransitionProbability(
+                    ensembles=[transition.ensembles[-1]],
+                    states=[self.state_A, self.state_B]
+                )
+            )
+            results = std_tp.calculate(steps)
+            assert_almost_equal(results, 0.125)
+
+    def test_calculate(self):
+        self._check_network_results(self.mistis, self.mistis_steps)
+        self._check_network_results(self.mstis, self.mstis_steps)
 
 class TestTransitionDictResults(TISAnalysisTester):
     pass

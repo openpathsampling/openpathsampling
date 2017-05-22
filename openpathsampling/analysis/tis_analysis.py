@@ -329,6 +329,7 @@ class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
         self.tcp_method = tcp_method
         self.ctp_method = ctp_method
         self.final_state = self.transition.stateB
+        self.ensembles = transition.ensembles
         self.outermost_ensemble = self.transition.ensembles[-1]
         interfaces = transition.interfaces
         self.outermost_lambda = interfaces.get_lambda(interfaces[-1])
@@ -489,6 +490,9 @@ class StandardTISAnalysis(TISAnalysis):
         # principle, these should have the option of being provided as a
         # single example (to be applied to all) or as a dict showing which
         # to apply to which analysis transition
+
+        # TODO: add logging to initialization to describe how the setup is
+        # being interpreted
 
         # set default analysis behaviors
         if flux_method is None:
