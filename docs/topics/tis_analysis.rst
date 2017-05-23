@@ -196,3 +196,4 @@ to provide access to intermediate results for further analysis and ???
 Summary: Visual overview of the standard analysis
 -------------------------------------------------
 
+.. image:: tis_analysis_structure.png
