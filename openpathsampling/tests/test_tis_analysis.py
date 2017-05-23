@@ -29,6 +29,14 @@ def make_tis_traj_fixed_steps(n_steps, step_size=0.1, reverse=False):
     falling = list(reversed(rising))[1:]
     return make_1d_traj(rising + falling)
 
+class TestMultiEnsembleSamplingAnalyzer(object):
+    # this only has to check the error generation; everything else gets
+    # covered by tests of subclasses
+    @raises(RuntimeError)
+    def test_no_ensembles(self):
+        histogrammer = MultiEnsembleSamplingAnalyzer()
+        histogrammer.calculate([])
+
 
 class TISAnalysisTester(object):
     # abstract class to give the same setup to all the test functions
@@ -368,7 +376,6 @@ class TestPathLengthHistogrammer(TISAnalysisTester):
             hist_dct_BA = hists[ensembles_BA[key]]._histogram
             assert_equal(dict(hist_dct_BA), dct)
 
-
     def test_calculate(self):
         default_histogrammer = \
                 PathLengthHistogrammer(self.mistis.sampling_ensembles)
@@ -462,7 +469,6 @@ class TestConditionalTransitionProbability(TISAnalysisTester):
             if result != 1.0:
                 assert_equal(dct_BA[self.state_B], 1.0-result)
 
-
     def test_calculate(self):
         mistis_ctp_calc = ConditionalTransitionProbability(
             ensembles=self.mistis.sampling_ensembles,
@@ -547,6 +553,40 @@ class TestStandardTransitionProbability(TISAnalysisTester):
     def test_calculate(self):
         self._check_network_results(self.mistis, self.mistis_steps)
         self._check_network_results(self.mstis, self.mstis_steps)
+
+    def test_missing_ctp(self):
+        set_trajectories = [self.trajs_AB[2]]*3 + [self.trajs_BA[2]]*3
+        zipped = zip(set_trajectories, self.mistis.all_ensembles,
+                     range(len(self.mistis.all_ensembles)))
+        mover_stub_mistis = MoverWithSignature(self.mistis.all_ensembles,
+                                               self.mistis.all_ensembles)
+        sample_sets = []
+        n_steps = 3
+        for step in range(n_steps):
+            sample_set = paths.SampleSet([
+                paths.Sample(trajectory=traj,
+                             ensemble=ens,
+                             replica=rep)
+                for (traj, ens, rep) in zipped
+            ])
+            sample_sets.append(sample_set)
+
+        steps = self._make_fake_steps(sample_sets, mover_stub_mistis)
+        for transition in self.mistis.transitions.values():
+            max_lambda_calc = FullHistogramMaxLambdas(
+                transition=transition,
+                hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+            )
+            std_tp = StandardTransitionProbability(
+                transition=transition,
+                tcp_method=TotalCrossingProbability(max_lambda_calc),
+                ctp_method=ConditionalTransitionProbability(
+                    ensembles=[transition.ensembles[-1]],
+                    states=[self.state_A, self.state_B]
+                )
+            )
+            results = std_tp.calculate(steps)
+            assert_almost_equal(results, 0.0)
 
 
 class TestTransitionDictResults(TISAnalysisTester):
@@ -685,6 +725,36 @@ class TestTISAnalysis(TISAnalysisTester):
             state = transition.stateA
             innermost = transition.interfaces[0]
             assert_equal(self.mstis_analysis.flux(state, innermost), 0.1)
+
+    def test_flux_through_state(self):
+        flux_dict = {(t.stateA, t.interfaces[0]): 0.1
+                      for t in self.mistis.sampling_transitions}
+        flux_dict.update({(self.state_A, self.state_A): 0.5})
+        tis = TISAnalysis(
+            network=self.mistis,
+            flux_method=DictFlux(flux_dict),
+            transition_probability_methods={
+                transition: StandardTransitionProbability(
+                    transition=transition,
+                    tcp_method=TotalCrossingProbability(
+                        max_lambda_calc=FullHistogramMaxLambdas(
+                            transition=transition,
+                            hist_parameters={'bin_width': 0.1,
+                                             'bin_range': (-0.1, 1.1)}
+                        )
+                    ),
+                    ctp_method=ConditionalTransitionProbability(
+                        ensembles=[transition.ensembles[-1]],
+                        states=[self.state_A, self.state_B]
+                    )
+                )
+                for transition in self.mistis.transitions.values()
+            }
+        )
+        tis.calculate(self.mistis_steps)
+        trans_AB = self.mistis.transitions[(self.state_A, self.state_B)]
+        assert_equal(tis.flux(self.state_A, trans_AB.interfaces[0]), 0.1)
+        assert_equal(tis.flux(self.state_A), 0.5)
 
     def test_state_fluxes(self):
         for transition in self.mistis.sampling_transitions:
@@ -830,3 +900,12 @@ class TestStandardTISAnalysis(TestTISAnalysis):
             tcp = mstis_tcp[transition]
             for x in results:
                 assert_almost_equal(results[x], tcp(x))
+
+    def test_init_minus_flux_from_scheme(self):
+        raise SkipTest
+
+    def test_bad_max_lambda_calcs(self):
+        raise SkipTest
+
+    def test_init_ensemble_histogrammer_max_lambda(self):
+        raise SkipTest
