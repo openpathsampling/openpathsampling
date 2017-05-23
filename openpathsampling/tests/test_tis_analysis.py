@@ -619,7 +619,129 @@ class TestTransitionDictResults(TISAnalysisTester):
         pdt.assert_frame_equal(pd_mistis, pd_result, check_dtype=False)
 
 class TestTISAnalysis(TISAnalysisTester):
-    pass
+    def _make_tis_analysis(self, network):
+        # NOTE: this might be useful as a description of the overall nested
+        # structure of these TISAnalysis objects. However, this isn't a
+        # practical way to do the calculation, because it repeats effort
+        # (hence the StandardTISAnalysis object)
+        tis_analysis = TISAnalysis(
+            network=network,
+            flux_method=DictFlux({
+                (t[0].stateA, t[0].interfaces[0]): 0.1
+                for t in network.special_ensembles['minus'].values()
+            }),
+            transition_probability_methods={
+                transition: StandardTransitionProbability(
+                    transition=transition,
+                    tcp_method=TotalCrossingProbability(
+                        max_lambda_calc=FullHistogramMaxLambdas(
+                            transition=transition,
+                            hist_parameters={'bin_width': 0.1,
+                                             'bin_range': (-0.1, 1.1)}
+                        )
+                    ),
+                    ctp_method=ConditionalTransitionProbability(
+                        ensembles=[transition.ensembles[-1]],
+                        states=[self.state_A, self.state_B]
+                    )
+                )
+                for transition in network.transitions.values()
+            }
+        )
+        return tis_analysis
+
+    def setup(self):
+        super(TestTISAnalysis, self).setup()
+        self.mistis_analysis = self._make_tis_analysis(self.mistis)
+        self.mistis_analysis.calculate(self.mistis_steps)
+        self.mstis_analysis = self._make_tis_analysis(self.mstis)
+        self.mstis_analysis.calculate(self.mstis_steps)
+
+    def test_bad_access_cached_results(self):
+        no_results = self._make_tis_analysis(self.mistis)
+        rate = self.mistis_analysis._access_cached_result('rate')
+        # use a try/except here instead of @raises so that we also test that
+        # the calculated version (previous line) works as expected
+        try:
+            no_results._access_cached_result('rate')
+        except AttributeError:
+            pass  # this is the expected test result
+
+    def test_flux_matrix(self):
+        assert_equal(self.mistis_analysis.flux_matrix,
+                     {(t.stateA, t.interfaces[0]): 0.1
+                      for t in self.mistis.sampling_transitions})
+        assert_equal(self.mstis_analysis.flux_matrix,
+                     {(t.stateA, t.interfaces[0]): 0.1
+                      for t in self.mstis.sampling_transitions})
+
+    def test_flux(self):
+        for transition in self.mistis.sampling_transitions:
+            state = transition.stateA
+            innermost = transition.interfaces[0]
+            assert_equal(self.mistis_analysis.flux(state, innermost), 0.1)
+
+        for transition in self.mstis.sampling_transitions:
+            state = transition.stateA
+            innermost = transition.interfaces[0]
+            assert_equal(self.mstis_analysis.flux(state, innermost), 0.1)
+
+    def test_state_fluxes(self):
+        for transition in self.mistis.sampling_transitions:
+            state = transition.stateA
+            innermost = transition.interfaces[0]
+            assert_equal(self.mistis_analysis.state_fluxes(state),
+                         {(state, innermost): 0.1})
+
+        for transition in self.mstis.sampling_transitions:
+            state = transition.stateA
+            innermost = transition.interfaces[0]
+            assert_equal(self.mstis_analysis.state_fluxes(state),
+                         {(state, innermost): 0.1})
+
+    def test_transition_probability_matrix(self):
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        mistis_tp = self.mistis_analysis.transition_probability_matrix
+        mstis_tp = self.mstis_analysis.transition_probability_matrix
+        for trans_pair in pairs:
+            assert_almost_equal(mistis_tp[trans_pair], 0.125)
+            assert_almost_equal(mstis_tp[trans_pair], 0.125)
+
+
+    def test_transition_probability(self):
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(
+                self.mistis_analysis.transition_probability(vol_1, vol_2),
+                0.125
+            )
+            assert_almost_equal(
+                self.mstis_analysis.transition_probability(vol_1, vol_2),
+                0.125
+            )
+
+    def test_rate_matrix(self):
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        mistis_rate = self.mistis_analysis.rate_matrix()
+        mstis_rate = self.mstis_analysis.rate_matrix()
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(mistis_rate[(vol_1, vol_2)], 0.0125)
+            assert_almost_equal(mstis_rate[(vol_1, vol_2)], 0.0125)
+
+    def test_rate_matrix_calculation(self):
+        mistis_analysis = self._make_tis_analysis(self.mistis)
+        mistis_rate = mistis_analysis.rate_matrix(steps=self.mistis_steps)
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(mistis_rate[(vol_1, vol_2)], 0.0125)
+
+    def test_rate(self):
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(self.mistis_analysis.rate(vol_1, vol_2),
+                                0.0125)
+            assert_almost_equal(self.mstis_analysis.rate(vol_1, vol_2),
+                                0.0125)
 
 
 class TestStandardTISAnalysis(TISAnalysisTester):
