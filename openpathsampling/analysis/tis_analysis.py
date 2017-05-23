@@ -614,15 +614,8 @@ class StandardTISAnalysis(TISAnalysis):
         return self.results
 
 
-    def crossing_probability(self, ensemble, cv=None):
+    def crossing_probability(self, ensemble):
         sampling_ens = self.network.sampling_ensemble_for[ensemble]
-        if cv is None:
-            possible_cvs = [t.interfaces.cv
-                            for t in self.network.sampling_transitions
-                            if sampling_ens in t.ensembles]
-            assert len(possible_cvs) == 1
-            cv = possible_cvs[0]
-
         all_max_lambdas = self._access_cached_result('max_lambda')
         max_lambda = all_max_lambdas[sampling_ens]
         return max_lambda.reverse_cumulative()

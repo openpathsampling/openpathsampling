@@ -744,5 +744,89 @@ class TestTISAnalysis(TISAnalysisTester):
                                 0.0125)
 
 
-class TestStandardTISAnalysis(TISAnalysisTester):
-    pass
+class TestStandardTISAnalysis(TestTISAnalysis):
+    # inherit from TestTISAnalysis to retest all the same results
+    def _make_tis_analysis(self, network, steps=None):
+        tis_analysis = StandardTISAnalysis(
+            network=network,
+            flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
+                                  for t in network.sampling_transitions}),
+            max_lambda_calcs={t: {'bin_width': 0.1,
+                                  'bin_range': (-0.1, 1.1)}
+                              for t in network.sampling_transitions},
+            steps=steps
+        )
+        return tis_analysis
+
+    def test_init_with_steps(self):
+        mistis_analysis = self._make_tis_analysis(self.mistis,
+                                                  self.mistis_steps)
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(
+                mistis_analysis.rate_matrix()[(vol_1, vol_2)],
+                0.0125
+            )
+
+    def test_crossing_probability(self):
+        results = {
+            0: {0.0: 1.0, 0.1: 0.5, 0.2: 0.25},
+            1: {0.0: 1.0, 0.1: 1.0, 0.2: 0.5, 0.3: 0.25, 1.0: 0.25},
+            2: {0.0: 1.0, 0.1: 1.0, 0.2: 1.0, 0.3: 0.5, 1.0: 0.5}
+        }
+
+        def check_cp(transition, analysis, results):
+            # a little nested function to that does the actual check
+            for (i, ens) in enumerate(transition.ensembles):
+                cp_ens = analysis.crossing_probability(ens)
+                for x in results[i]:
+                    assert_almost_equal(results[i][x], cp_ens(x))
+
+        for (network, analysis) in [(self.mistis, self.mistis_analysis),
+                                    (self.mstis, self.mstis_analysis)]:
+            for transition in network.transitions.values():
+                check_cp(transition, analysis, results)
+
+    def test_conditional_transition_probability(self):
+        expected_data = [[0.5, 0.5], [0.5, 0.5]]
+        states = ['A', 'B']
+        mistis_interfaces = ['A->B 2', 'B->A 2']
+        mstis_interfaces = ['Out A 2', 'Out B 2']
+
+        expected_mistis = pd.DataFrame(data=expected_data,
+                                       index=mistis_interfaces,
+                                       columns=states)
+        mistis_ctp = self.mistis_analysis.conditional_transition_probability
+        assert_equal(set(states), set(mistis_ctp.columns))
+        assert_equal(set(mistis_interfaces), set(mistis_ctp.index))
+        for iface in mistis_interfaces:
+            for state in states:
+                assert_equal(expected_mistis.loc[(iface, state)],
+                             mistis_ctp.loc[(iface, state)])
+
+        expected_mstis = pd.DataFrame(data=expected_data,
+                                      index=mstis_interfaces,
+                                      columns=states)
+        mstis_ctp = self.mstis_analysis.conditional_transition_probability
+        assert_equal(set(states), set(mstis_ctp.columns))
+        assert_equal(set(mstis_interfaces), set(mstis_ctp.index))
+        for iface in mstis_interfaces:
+            for state in states:
+                assert_equal(expected_mstis.loc[(iface, state)],
+                             mstis_ctp.loc[(iface, state)])
+
+    def test_total_crossing_probability(self):
+        results = {0.0: 1.0, 0.1: 0.5, 0.2: 0.25, 0.3: 0.125,
+                   0.5: 0.125, 1.0: 0.125}
+
+        mistis_tcp = self.mistis_analysis.total_crossing_probability
+        for transition in self.mistis.transitions.values():
+            tcp = mistis_tcp[transition]
+            for x in results:
+                assert_almost_equal(results[x], tcp(x))
+
+        mstis_tcp = self.mstis_analysis.total_crossing_probability
+        for transition in self.mstis.transitions.values():
+            tcp = mstis_tcp[transition]
+            for x in results:
+                assert_almost_equal(results[x], tcp(x))
