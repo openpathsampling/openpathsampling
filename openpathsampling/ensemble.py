@@ -849,7 +849,7 @@ class Ensemble(StorableNamedObject):
             trajectories,
             engine,
             replica=0,
-            unique='median',
+            unique='shortest',
             level='complex',
             on_error='retry',
             attempts=2):
@@ -995,7 +995,7 @@ class Ensemble(StorableNamedObject):
         elif unique == 'median':
             # resort the found trajectories so that the middle one is
             # first, then the one right to it, then the one before, etc
-            # e.g. [0,1,2,3,4,5,6,7,8,9] is rearranges into
+            # e.g. [0,1,2,3,4,5,6,7,8,9] is rearranged into
             # [5,4,6,3,7,2,8,1,9,0]
             ordered = sorted(self.split(traj), key=len)
             parts = list([p for p2 in zip(
