@@ -502,8 +502,8 @@ class StandardTISAnalysis(TISAnalysis):
             flux_method = MinusMoveFlux(scheme)
 
         if max_lambda_calcs is None:
-            raise RuntimeError("Must set either max_lambda_calcs "
-                               " in StandardTISAnalysis")
+            raise RuntimeError("Must set max_lambda_calcs in "
+                               + "StandardTISAnalysis")
         max_lambda_calc_dict = {}
         for (transition, calc) in max_lambda_calcs.iteritems():
             if isinstance(calc, EnsembleHistogrammer):

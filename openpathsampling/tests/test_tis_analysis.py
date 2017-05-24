@@ -103,7 +103,7 @@ class TISAnalysisTester(object):
         cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
         cv_B = paths.FunctionCV('1-Id', lambda s: 1.0-s.xyz[0][0])
         self.cv_x = cv_A
-        self.state_A = paths.CVDefinedVolume(cv_A, 
+        self.state_A = paths.CVDefinedVolume(cv_A,
                                              float("-inf"), 0.0).named("A")
         self.state_B = paths.CVDefinedVolume(cv_B,
                                              float("-inf"), 0.0).named("B")
@@ -114,7 +114,7 @@ class TISAnalysisTester(object):
 
         # trajectory that crosses each interface, one state-to-state
         self.trajs_AB = [make_tis_traj_fixed_steps(i) for i in [0, 1, 2]]
-        self.trajs_AB += [make_1d_traj([(-0.5 + i) * 0.1 
+        self.trajs_AB += [make_1d_traj([(-0.5 + i) * 0.1
                                         for i in range(12)])]
 
         self.trajs_BA = [make_tis_traj_fixed_steps(i, reverse=True)
@@ -913,8 +913,42 @@ class TestStandardTISAnalysis(TestTISAnalysis):
     def test_init_minus_flux_from_scheme(self):
         raise SkipTest
 
+    @raises(TypeError)
+    def test_bad_no_flux(self):
+        network = self.mistis
+        tis_analysis = StandardTISAnalysis(
+            network=network,
+            max_lambda_calcs={t: {'bin_width': 0.1,
+                                  'bin_range': (-0.1, 1.1)}
+                              for t in network.sampling_transitions},
+        )
+
+    @raises(RuntimeError)
     def test_bad_max_lambda_calcs(self):
-        raise SkipTest
+        network = self.mistis
+        tis_analysis = StandardTISAnalysis(
+            network=network,
+            flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
+                                  for t in network.sampling_transitions}),
+        )
 
     def test_init_ensemble_histogrammer_max_lambda(self):
-        raise SkipTest
+        network = self.mistis
+        max_lambda_calcs = {
+            t: FullHistogramMaxLambdas(
+                transition=t,
+                hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+            )
+            for t in network.sampling_transitions
+        }
+        tis_analysis = StandardTISAnalysis(
+            network=network,
+            flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
+                                  for t in network.sampling_transitions}),
+            max_lambda_calcs=max_lambda_calcs,
+            steps=self.mistis_steps
+        )
+        rate = tis_analysis.rate_matrix()
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(rate[(vol_1, vol_2)], 0.0125)
