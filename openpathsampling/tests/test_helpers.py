@@ -11,7 +11,9 @@ from functools import wraps
 import numpy as np
 import numpy.testing as npt
 import simtk.unit as u
-from nose.tools import assert_items_equal, assert_equal, assert_in
+from nose.tools import (
+    assert_items_equal, assert_equal, assert_in, assert_true
+)
 from pkg_resources import resource_filename
 
 import openpathsampling as paths
@@ -280,3 +282,17 @@ def raises_with_message_like(err, message=None):
         return _wrapper
 
     return decorator
+
+def assert_frame_equal(truth, beauty):
+    assert_equal(len(truth.index), len(beauty.index))
+    assert_equal(len(truth.columns), len(beauty.columns))
+    assert_equal(set(truth.index), set(beauty.index))
+    assert_equal(set(truth.columns), set(beauty.columns))
+    for idx in truth.index:
+        for col in truth.columns:
+            truth_val = truth.loc[idx, col]
+            beauty_val = beauty.loc[idx, col]
+            if np.isnan(truth_val):
+                assert_true(np.isnan(beauty_val))
+            else:
+                assert_equal(truth_val, beauty_val)

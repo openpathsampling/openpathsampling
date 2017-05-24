@@ -3,7 +3,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
 from nose.plugins.skip import Skip, SkipTest
 from test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
-    MoverWithSignature, RandomMDEngine
+    MoverWithSignature, RandomMDEngine, assert_frame_equal
 )
 
 from openpathsampling.analysis.tis_analysis import *
@@ -555,9 +555,17 @@ class TestStandardTransitionProbability(TISAnalysisTester):
         self._check_network_results(self.mstis, self.mstis_steps)
 
     def test_missing_ctp(self):
+        ensembles_AB = self.sampling_ensembles_for_transition(
+            self.mistis, self.state_A, self.state_B
+        )
+        ensembles_BA = self.sampling_ensembles_for_transition(
+            self.mistis, self.state_B, self.state_A
+        )
+
+        all_ensembles = ensembles_AB + ensembles_BA
+        replicas = range(len(all_ensembles))
         set_trajectories = [self.trajs_AB[2]]*3 + [self.trajs_BA[2]]*3
-        zipped = zip(set_trajectories, self.mistis.all_ensembles,
-                     range(len(self.mistis.all_ensembles)))
+        zipped = zip(set_trajectories, all_ensembles, replicas)
         mover_stub_mistis = MoverWithSignature(self.mistis.all_ensembles,
                                                self.mistis.all_ensembles)
         sample_sets = []
@@ -569,6 +577,7 @@ class TestStandardTransitionProbability(TISAnalysisTester):
                              replica=rep)
                 for (traj, ens, rep) in zipped
             ])
+            sample_set.sanity_check()
             sample_sets.append(sample_set)
 
         steps = self._make_fake_steps(sample_sets, mover_stub_mistis)
@@ -655,8 +664,8 @@ class TestTransitionDictResults(TISAnalysisTester):
                                  columns=ordered_names)
         pd_mistis = self.mistis_transition_dict.to_pandas(order=order)
         pd_mstis = self.mstis_transition_dict.to_pandas()
-        pdt.assert_frame_equal(pd_mistis, pd_mstis)
-        pdt.assert_frame_equal(pd_mistis, pd_result, check_dtype=False)
+        assert_frame_equal(pd_mistis, pd_mstis)
+        assert_frame_equal(pd_mistis, pd_result)
 
 class TestTISAnalysis(TISAnalysisTester):
     def _make_tis_analysis(self, network):
