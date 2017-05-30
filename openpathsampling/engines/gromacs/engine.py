@@ -16,6 +16,8 @@ from openpathsampling.engines.snapshot import BaseSnapshot
 import features as gmx_features
 
 import os
+import psutil
+import shlex
 import numpy as np
 
 # TODO: all gmx_features should be moved to external_md
@@ -100,9 +102,14 @@ class Gromacs5Engine(ExternalEngine):
         file_number = int(basename.split('.')[0])
         try:
             self.read_frame_data(filename, frame_num)
+        except IndexError:
+            # this means that no such frame exists yet, so we return None
+            return None
         except Exception as e:
             # TODO: what kind of exception is this?
             print e
+            # how to get partial?
+            raise e
             return 'partial'
         else:
             return ExternalMDSnapshot(file_number=file_number,
@@ -117,6 +124,7 @@ class Gromacs5Engine(ExternalEngine):
             raise RuntimeError("File " + str(filename) + " exists. "
                                + "Preventing overwrite.")
         trr = TRRTrajectoryFile(filename, mode)
+        # type control before passing things to Cython code
         xyz = np.asarray([snapshot.xyz], dtype=np.float32)
         time = np.asarray([0.0], dtype=np.float32)
         step = np.asarray([0], dtype=np.int32)
@@ -124,17 +132,33 @@ class Gromacs5Engine(ExternalEngine):
         lambd = np.asarray([0.0], dtype=np.float32)
         vel = np.asarray([snapshot.velocities], dtype=np.float32)
         trr._write(xyz, time, step, box, lambd, vel)
+        trr.close()
 
     def trajectory_filename(self, number):
         trr_dir = self.name + "_trr/"
         return trr_dir + '{:07d}'.format(number) + '.trr'
 
     def set_filenames(self, number):
-        pass
+        self.input_file = "initial_frame.trr"
+        self.output_file = self.trajectory_filename(number + 1)
+        num_str = '{:07d}'.format(number)
+        self.edr_file = os.path.join([self.name + "_edr", num_str + '.edr'])
+        self.log_file = os.path.join([self.name + "_log", num_str + '.log'])
+
+    def prepare(self):
+        # gmx grompp -c conf.gro -f md.mdp -t initial_frame.trr -p topol.top
+        cmd = "gmx grompp -c {gro} -f {mdp} -p {top} -t {inp}".format(
+            gro=self.gro, mdp=self.mdp, top=self.top, inp=self.input_file
+        )
+        run_cmd = shlex.split(cmd)
+        return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
+        print return_code  # TODO: what are the appropriate values here?
 
     def engine_command(self):
-        # first prepare the system with
-        # gmx grompp -c conf.gro -f md.mdp -t initial_frame.trr -p topol.top
-        # then run with
         # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log
-        pass
+        cmd = "gmx mdrun -s topol.tpr -o {out} -e {edr} -g {log} {args}"
+        cmd = cmd.format(out=self.output_file,
+                         edr=self.edr_file,
+                         log=self.log_file,
+                         args=self.options['mdrun_args'])
+        return cmd
