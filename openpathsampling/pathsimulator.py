@@ -1051,7 +1051,7 @@ class DirectSimulation(PathSimulator):
         was_in_interface = {p: None for p in self.flux_pairs}
         local_traj = paths.Trajectory([self.initial_snapshot])
         self.engine.current_snapshot = self.initial_snapshot
-        for step in range(n_steps):
+        for step in xrange(n_steps):
             frame = self.engine.generate_next_frame()
 
             # update the most recent state if we're in a state
