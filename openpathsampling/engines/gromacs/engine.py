@@ -105,11 +105,8 @@ class Gromacs5Engine(ExternalEngine):
         except IndexError:
             # this means that no such frame exists yet, so we return None
             return None
-        except Exception as e:
-            # TODO: what kind of exception is this?
-            print e
-            # how to get partial?
-            raise e
+        except RuntimeError as e:
+            # TODO: matches "TRR read error"
             return 'partial'
         else:
             return ExternalMDSnapshot(file_number=file_number,
