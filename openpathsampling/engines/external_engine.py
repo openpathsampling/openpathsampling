@@ -38,12 +38,13 @@ class ExternalEngine(DynamicsEngine):
 
     killsig = signal.SIGTERM
 
-    def __init__(self, options, template):
+    def __init__(self, options, template, first_frame_in_file=False):
         # needs to be overridden for each engine
         super(ExternalEngine, self).__init__(options=options)
         self.template = template
         self.sleep_ms = self.default_sleep_ms
         self.start_time = None
+        self.first_frame_in_file = first_frame_in_file
         self._traj_num = -1
 
     @property
@@ -99,6 +100,9 @@ class ExternalEngine(DynamicsEngine):
                                      preexec_fn=os.setsid)
         except OSError:  # pragma: no cover
             raise  #TODO: need to handle this, but do what?
+
+        if self.first_frame_in_file:
+            _ = self.generate_next_frame()  # throw away repeat first frame
 
     def stop(self, trajectory):
         super(ExternalEngine, self).stop(trajectory)
