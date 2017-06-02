@@ -67,9 +67,16 @@ class ExternalMDSnapshot(BaseSnapshot):
 
 
 class Gromacs5Engine(ExternalEngine):
+    _default_options = dict(ExternalEngine._default_options,
+        **{
+            'mdrun_args': "",
+            'gmx_executable': "gmx"
+        }
+    )
     def __init__(self, gro, mdp, top, options, name="gmx"):
         self.gro = gro
         self.mdp = mdp
+        self.top = top
         self._file = None  # file open/close efficiency
         self._last_filename = None
         # TODO: update options with correct n_spatial, n_atoms
@@ -138,9 +145,9 @@ class Gromacs5Engine(ExternalEngine):
     def set_filenames(self, number):
         self.input_file = "initial_frame.trr"
         self.output_file = self.trajectory_filename(number + 1)
-        num_str = '{:07d}'.format(number)
-        self.edr_file = os.path.join([self.name + "_edr", num_str + '.edr'])
-        self.log_file = os.path.join([self.name + "_log", num_str + '.log'])
+        num_str = '{:07d}'.format(number + 1)
+        self.edr_file = os.path.join(self.name + "_edr", num_str + '.edr')
+        self.log_file = os.path.join(self.name + "_log", num_str + '.log')
 
     def prepare(self):
         # gmx grompp -c conf.gro -f md.mdp -t initial_frame.trr -p topol.top
@@ -153,9 +160,11 @@ class Gromacs5Engine(ExternalEngine):
 
     def engine_command(self):
         # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log
+        args = self.options['mdrun_args'].format(prev_traj=self._traj_num-1,
+                                                 next_traj=self._traj_num)
         cmd = "gmx mdrun -s topol.tpr -o {out} -e {edr} -g {log} {args}"
         cmd = cmd.format(out=self.output_file,
                          edr=self.edr_file,
                          log=self.log_file,
-                         args=self.options['mdrun_args'])
+                         args=args)
         return cmd
