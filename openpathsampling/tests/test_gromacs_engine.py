@@ -6,11 +6,14 @@ import numpy.testing as npt
 from test_helpers import data_filename
 
 import openpathsampling as paths
+import mdtraj as md
 
 from openpathsampling.engines.gromacs import *
 
 import logging
 import numpy as np
+
+import shutil
 
 
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -45,6 +48,17 @@ class TestGromacsEngine(object):
                              options={},
                              base_dir=self.test_dir,
                              prefix="project")
+
+    def teardown(self):
+        files = ['topol.tpr', 'mdout.mdp', 'initial_frame.trr',
+                 self.engine.trajectory_filename(1)]
+        for f in files:
+            if os.path.isfile(f):
+                os.remove(f)
+            if os.path.isfile(os.path.join(self.engine.base_dir, f)):
+                os.remove(os.path.join(self.engine.base_dir, f))
+        shutil.rmtree(self.engine.prefix + "_log")
+        shutil.rmtree(self.engine.prefix + "_edr")
 
     def test_read_frame_from_file_success(self):
         # when the frame is present, we should return it
@@ -132,24 +146,40 @@ class TestGromacsEngine(object):
                      + "-o proj_trr/0000001.trr -e proj_edr/0000001.edr "
                      + "-g proj_log/0000001.log ")
 
-    def test_start_stop(self):
+    def test_generate(self):
         if not has_gmx:
             raise SkipTest("Gromacs 5 (gmx) not found. Skipping test.")
-        # run LengthEnsemble(3) with alanine dipeptide
-        pass
+
+        traj_0 = self.engine.trajectory_filename(0)
+        snap = self.engine.read_frame_from_file(traj_0, 0)
+        self.engine.set_filenames(0)
+
+        ens = paths.LengthEnsemble(3)
+        traj = self.engine.generate(snap, running=[ens.can_append])
+        assert_equal(self.engine.proc.is_running(), False)
+        assert_equal(len(traj), 3)
+        ttraj = md.load(self.engine.trajectory_filename(1),
+                        top=self.engine.gro)
+        # the mdp suggests a max length of 100 frames
+        assert_true(len(ttraj) < 100)
 
     def test_prepare(self):
         if not has_gmx:
             raise SkipTest("Gromacs 5 (gmx) not found. Skipping test.")
         self.engine.set_filenames(0)
+        traj_0 = self.engine.trajectory_filename(0)
+        snap = self.engine.read_frame_from_file(traj_0, 0)
+        self.engine.write_frame_to_file(self.engine.input_file, snap)
         files = ['topol.tpr', 'mdout.mdp']
         for f in files:
             if os.path.isfile(f):
                 raise AssertionError("File " + str(f) + " already exists!")
+
         assert_equal(self.engine.prepare(), 0)
         for f in files:
             if not os.path.isfile(f):
                 raise AssertionError("File " + str(f) + " was not created!")
+
         for f in files:
             os.remove(f)
 

@@ -127,6 +127,14 @@ class GromacsEngine(ExternalEngine):
         self.mdp = os.path.join(base_dir, mdp)
         self.top = os.path.join(base_dir, top)
         self.prefix = os.path.join(base_dir, prefix)
+
+        dirs = [self.prefix + s for s in ['_trr', '_log', '_edr']]
+        for d in dirs:
+            try:
+                os.mkdir(d)
+            except OSError:
+                pass  # the directory already exists
+
         self._file = None  # file open/close efficiency
         self._last_filename = None
         # TODO: update options with correct n_spatial, n_atoms
@@ -210,6 +218,10 @@ class GromacsEngine(ExternalEngine):
         run_cmd = shlex.split(cmd)
         return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
         return return_code
+
+    def cleanup(self):
+        if os.path.isfile(self.input_file):
+            os.remove(self.input_file)
 
     def engine_command(self):
         # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log

@@ -59,8 +59,15 @@ class ExternalEngine(DynamicsEngine):
         # should be completely general
         next_frame_found = False
         while not next_frame_found:
-            next_frame = self.read_frame_from_file(self.output_file,
-                                                   self.frame_num)
+            try:
+                next_frame = self.read_frame_from_file(self.output_file,
+                                                       self.frame_num)
+            except IOError:
+                # maybe the file doesn't exist
+                if self.proc.is_running():
+                    next_frame = None
+                else:
+                    raise
             #print self.frame_num, next_frame # DEBUG LOGGER
             now = time.time()
             if next_frame == "partial":
