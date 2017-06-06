@@ -72,11 +72,33 @@ class TestGromacsEngine(object):
 
     def test_set_filenames(self):
         # just check the filenames for 0 and 99
-        pass
+        test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
+                             options={}, prefix="proj")
+        test_engine.set_filenames(0)
+        assert_equal(test_engine.input_file, "initial_frame.trr")
+        assert_equal(test_engine.output_file,
+                     os.path.join("proj_trr", "0000001.trr"))
+        assert_equal(test_engine.edr_file,
+                     os.path.join("proj_edr", "0000001.edr"))
+        assert_equal(test_engine.log_file,
+                     os.path.join("proj_log", "0000001.log"))
+
+        test_engine.set_filenames(99)
+        assert_equal(test_engine.input_file, "initial_frame.trr")
+        assert_equal(test_engine.output_file,
+                     os.path.join("proj_trr", "0000100.trr"))
+        assert_equal(test_engine.edr_file,
+                     os.path.join("proj_edr", "0000100.edr"))
+        assert_equal(test_engine.log_file,
+                     os.path.join("proj_log", "0000100.log"))
 
     def test_engine_command(self):
-        # check the engine command for 0 and 99
-        pass
+        test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
+                             options={}, prefix="proj")
+        test_engine.set_filenames(0)
+        assert_equal(test_engine.engine_command(), "gmx mdrun -s topol.tpr "
+                     + "-o proj_trr/0000001.trr -e proj_edr/0000001.edr "
+                     + "-g proj_log/0000001.log ")
 
     def test_start_stop(self):
         if not has_gmx:

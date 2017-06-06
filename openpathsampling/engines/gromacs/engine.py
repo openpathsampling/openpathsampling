@@ -18,7 +18,6 @@ import features as gmx_features
 import os
 import psutil
 import shlex
-import shutil
 import numpy as np
 
 # TODO: all gmx_features should be moved to external_md; along with the
@@ -83,6 +82,8 @@ class GromacsEngine(ExternalEngine):
         .mdp file
     top : string
         .top file
+    base_dir : string
+        root directory where all files will be found (defaults to pwd)
     options : dict
         Dictionary of option name to value. Gromacs-specific option names
         are
@@ -107,8 +108,7 @@ class GromacsEngine(ExternalEngine):
             'mdrun_args': ""
         }
     )
-    def __init__(self, gro, mdp, top, options, base_dir="", prefix="gmx",
-                 initial_trr=None):
+    def __init__(self, gro, mdp, top, options, base_dir="", prefix="gmx"):
         self.base_dir = base_dir
         self.gro = os.path.join(base_dir, gro)
         self.mdp = os.path.join(base_dir, mdp)
@@ -118,14 +118,6 @@ class GromacsEngine(ExternalEngine):
         self._last_filename = None
         # TODO: update options with correct n_spatial, n_atoms
         # TODO: add snapshot_timestep; first via options, later read mdp
-        traj_0 = self.trajectory_filename(0)
-        if initial_trr is None:
-            if not os.path.isfile(traj_0):
-                raise RuntimeError("No initial trajectory. Expected "
-                                   + traj_0)
-        else:
-            shutil.copy(initial_trr, traj_0)
-
         template = None  # TODO: extract a template from the gro
         super(GromacsEngine, self).__init__(options, template,
                                              first_frame_in_file=True)
