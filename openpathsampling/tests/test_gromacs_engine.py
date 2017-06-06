@@ -1,6 +1,7 @@
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
+import numpy.testing as npt
 
 from test_helpers import data_filename
 
@@ -9,12 +10,15 @@ import openpathsampling as paths
 from openpathsampling.engines.gromacs import *
 
 import logging
+import numpy as np
+
 
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+# check whether we have Gromacs 5 available; otherwise some tests skipped
 # lazily use subprocess here; in case we ever change use of psutil
 import subprocess
 import os
@@ -27,7 +31,12 @@ except OSError:
 finally:
     devnull.close()
 
+
 class TestGromacsEngine(object):
+    # Files used (in test_data/gromacs_engine/)
+    # conf.gro, md.mdp, topol.top : standard Gromacs input files
+    # project_trr/0000000.trr : working file, 4 frames
+    # project_trr/0000099.trr : 49 working frames, final frame partial
     def setup(self):
         self.test_dir = data_filename("gromacs_engine")
         self.engine = Engine(gro="conf.gro",
@@ -38,7 +47,7 @@ class TestGromacsEngine(object):
                              prefix="project")
 
     def test_read_frame_from_file_success(self):
-        # create file with 3 frames 0000000
+        # when the frame is present, we should return it
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 0)
         assert_true(isinstance(result, ExternalMDSnapshot))
@@ -53,7 +62,7 @@ class TestGromacsEngine(object):
         assert_equal(result.file_position, 3)
 
     def test_read_frame_from_file_partial(self):
-        # create file with 3rd frame broken 0000099
+        # if a frame is partial, return 'partial'
         fname = os.path.join(self.test_dir, "project_trr", "0000099.trr")
         frame_2 = self.engine.read_frame_from_file(fname, 49)
         assert_true(isinstance(frame_2, ExternalMDSnapshot))
@@ -61,17 +70,40 @@ class TestGromacsEngine(object):
         assert_equal(frame_3, "partial")
 
     def test_read_frame_from_file_none(self):
-        # use first file 0000000
+        # if a frame is beyond the last frame, return None
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 4)
         assert_equal(result, None)
 
     def test_write_frame_to_file_read_back(self):
         # write random frame; read back
-        pass
+        # sinfully, we start by reading in a frame to get the correct dims
+        fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
+        tmp = self.engine.read_frame_from_file(fname, 0)
+        shape = tmp.xyz.shape
+        xyz = np.random.randn(*shape)
+        vel = np.random.randn(*shape)
+        box = np.random.randn(3, 3)
+        traj_50 = self.engine.trajectory_filename(50)
+        # clear it out, in case it exists from a previous failed test
+        if os.path.isfile(traj_50):
+            os.remove(traj_50)
+        snap = ExternalMDSnapshot(file_number=49, file_position=2,
+                                  engine=self.engine)
+        snap.set_details(xyz, vel, box)
+        self.engine.write_frame_to_file(traj_50, snap)
+
+        snap2 = self.engine.read_frame_from_file(traj_50, 0)
+        assert_equal(snap2.file_number, 50)
+        assert_equal(snap2.file_position, 0)
+        npt.assert_array_almost_equal(snap.xyz, snap2.xyz)
+        npt.assert_array_almost_equal(snap.velocities, snap2.velocities)
+        npt.assert_array_almost_equal(snap.box_vectors, snap2.box_vectors)
+
+        if os.path.isfile(traj_50):
+            os.remove(traj_50)
 
     def test_set_filenames(self):
-        # just check the filenames for 0 and 99
         test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
                              options={}, prefix="proj")
         test_engine.set_filenames(0)
@@ -124,8 +156,4 @@ class TestGromacsEngine(object):
     def test_open_file_caching(self):
         # read several frames from one file, then switch to another file
         # first read from 0000000, then 0000099
-        pass
-
-    def test_trajectory_filename(self):
-        # check trajectory filenames for 0, 99
         pass

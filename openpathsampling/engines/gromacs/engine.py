@@ -55,6 +55,18 @@ class ExternalMDSnapshot(BaseSnapshot):
         self._velocities = vel
         self._box_vectors = box
 
+    def set_details(self, xyz, velocities, box_vectors):
+        try:
+            self.load_details()
+        except:
+            pass
+        else:
+            raise RuntimeError("Can't set details if frame already exists.")
+        finally:
+            self._xyz = xyz
+            self._velocities = velocities
+            self._box_vectors = box_vectors
+
     def clear_cache(self):
         self._xyz = None
         self._velocities = None
@@ -188,8 +200,8 @@ class GromacsEngine(ExternalEngine):
         self.log_file = os.path.join(self.prefix + "_log", num_str + '.log')
 
     def prepare(self):  # pragma: no cover
-        # coverage ignored here b/c Travis tests won't have gmx, however, we
-        # do have a (skippable) test for it
+        # coverage ignored b/c Travis won't have gmx. However, we do have a
+        # test that covers this if gmx is present (otherwise it is skipped)
         cmd = "gmx grompp -c {gro} -f {mdp} -p {top} -t {inp} {xtra}".format(
             gro=self.gro, mdp=self.mdp, top=self.top, inp=self.input_file,
             xtra=self.options['grompp_args']
