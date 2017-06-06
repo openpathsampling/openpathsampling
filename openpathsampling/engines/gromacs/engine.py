@@ -7,6 +7,7 @@ intermediary to monitor when a path needs to be terminated.
 """
 
 import logging
+logger = logging.getLogger(__name__)
 
 from mdtraj.formats import TRRTrajectoryFile
 
@@ -180,20 +181,23 @@ class GromacsEngine(ExternalEngine):
         return trr_dir + '{:07d}'.format(number) + '.trr'
 
     def set_filenames(self, number):
-        self.input_file = "initial_frame.trr"
+        self.input_file = os.path.join(self.base_dir, "initial_frame.trr")
         self.output_file = self.trajectory_filename(number + 1)
         num_str = '{:07d}'.format(number + 1)
         self.edr_file = os.path.join(self.prefix + "_edr", num_str + '.edr')
         self.log_file = os.path.join(self.prefix + "_log", num_str + '.log')
 
-    def prepare(self):
-        # gmx grompp -c conf.gro -f md.mdp -t initial_frame.trr -p topol.top
-        cmd = "gmx grompp -c {gro} -f {mdp} -p {top} -t {inp}".format(
-            gro=self.gro, mdp=self.mdp, top=self.top, inp=self.input_file
+    def prepare(self):  # pragma: no cover
+        # coverage ignored here b/c Travis tests won't have gmx, however, we
+        # do have a (skippable) test for it
+        cmd = "gmx grompp -c {gro} -f {mdp} -p {top} -t {inp} {xtra}".format(
+            gro=self.gro, mdp=self.mdp, top=self.top, inp=self.input_file,
+            xtra=self.options['grompp_args']
         )
+        logger.info(cmd)
         run_cmd = shlex.split(cmd)
         return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
-        print return_code  # TODO: what are the appropriate values here?
+        return return_code
 
     def engine_command(self):
         # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log

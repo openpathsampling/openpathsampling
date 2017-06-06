@@ -109,9 +109,17 @@ class TestGromacsEngine(object):
     def test_prepare(self):
         if not has_gmx:
             raise SkipTest("Gromacs 5 (gmx) not found. Skipping test.")
-        # test prepare command works for 0. Make sure we write out the
-        # correct files, then delete them
-        pass
+        self.engine.set_filenames(0)
+        files = ['topol.tpr', 'mdout.mdp']
+        for f in files:
+            if os.path.isfile(f):
+                raise AssertionError("File " + str(f) + " already exists!")
+        assert_equal(self.engine.prepare(), 0)
+        for f in files:
+            if not os.path.isfile(f):
+                raise AssertionError("File " + str(f) + " was not created!")
+        for f in files:
+            os.remove(f)
 
     def test_open_file_caching(self):
         # read several frames from one file, then switch to another file
