@@ -38,8 +38,20 @@ class ExternalMDSnapshot(BaseSnapshot):
     Internally, this only stores the file_number and the file_position. All
     specific details (positions, velocities, box vectors) are loaded from
     file when requested.
+
+    Parameters
+    ----------
+    file_number : int
+        the number associated with the file for this snapshot; its engine
+        should be able to convert this to a filename
+    file_position : int
+        position within the file; the engine should be able to load data for
+        this specific snapshot based on this number
+    engine : :class:`.DynamicsEngine`
+        the engine associated with this snapshot
     """
     def __init__(self, file_number=None, file_position=None, engine=None):
+        super(ExternalMDSnapshot, self).__init__()
         self.file_number = file_number
         self.file_position = file_position
         self.engine = engine
@@ -48,6 +60,7 @@ class ExternalMDSnapshot(BaseSnapshot):
         self._box_vectors = None
 
     def load_details(self):
+        """Cache coords, velocities, box vectors from the external file"""
         filename = self.engine.trajectory_filename(self.file_number)
         (xyz, vel, box) = self.engine.read_frame_data(filename,
                                                       self.file_position)
@@ -56,6 +69,19 @@ class ExternalMDSnapshot(BaseSnapshot):
         self._box_vectors = box
 
     def set_details(self, xyz, velocities, box_vectors):
+        """Set coords, velocities, and box vectors.
+
+        This is mainly used if OPS must modify/create a snapshot.
+
+        Parameters
+        ----------
+        xyz : np.array
+            unitless coordinates
+        velocities : np.array
+            velocities
+        box_vectors : np.array
+            unit cell for the periodic box
+        """
         try:
             self.load_details()
         except:
@@ -68,6 +94,12 @@ class ExternalMDSnapshot(BaseSnapshot):
             self._box_vectors = box_vectors
 
     def clear_cache(self):
+        """Remove internal details from snapshot.
+
+        These details should always be accessible later using
+        :method:`.load_details`. Removing them allows them memory to be
+        freed.
+        """
         self._xyz = None
         self._velocities = None
         self._box_vectors = None
@@ -207,13 +239,17 @@ class GromacsEngine(ExternalEngine):
         self.edr_file = os.path.join(self.prefix + "_edr", num_str + '.edr')
         self.log_file = os.path.join(self.prefix + "_log", num_str + '.log')
 
-    def prepare(self):  # pragma: no cover
-        # coverage ignored b/c Travis won't have gmx. However, we do have a
-        # test that covers this if gmx is present (otherwise it is skipped)
+    @property
+    def grompp_command(self):
         cmd = "gmx grompp -c {gro} -f {mdp} -p {top} -t {inp} {xtra}".format(
             gro=self.gro, mdp=self.mdp, top=self.top, inp=self.input_file,
             xtra=self.options['grompp_args']
         )
+
+    def prepare(self):  # pragma: no cover
+        # coverage ignored b/c Travis won't have gmx. However, we do have a
+        # test that covers this if gmx is present (otherwise it is skipped)
+        cmd = self.grompp_command
         logger.info(cmd)
         run_cmd = shlex.split(cmd)
         return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
@@ -227,8 +263,9 @@ class GromacsEngine(ExternalEngine):
         # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log
         args = self.options['mdrun_args'].format(prev_traj=self._traj_num-1,
                                                  next_traj=self._traj_num)
-        cmd = "gmx mdrun -s topol.tpr -o {out} -e {edr} -g {log} {args}"
-        cmd = cmd.format(out=self.output_file,
+        cmd = "{gmx}mdrun -s topol.tpr -o {out} -e {edr} -g {log} {args}"
+        cmd = cmd.format(gmx=self.options['gmx_executable'],
+                         out=self.output_file,
                          edr=self.edr_file,
                          log=self.log_file,
                          args=args)
