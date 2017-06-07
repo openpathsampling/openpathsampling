@@ -51,10 +51,14 @@ class ExternalMDSnapshot(BaseSnapshot):
         the engine associated with this snapshot
     """
     def __init__(self, file_number=None, file_position=None, engine=None):
-        super(ExternalMDSnapshot, self).__init__()
+        # these are done in place of calling super
+        self._reversed = None
+        self.__uuid__ = self.get_uuid()
+        # these are the requried attributes
         self.file_number = file_number
         self.file_position = file_position
         self.engine = engine
+        # these are containers for temporary data
         self._xyz = None
         self._velocities = None
         self._box_vectors = None
@@ -245,6 +249,7 @@ class GromacsEngine(ExternalEngine):
             gro=self.gro, mdp=self.mdp, top=self.top, inp=self.input_file,
             xtra=self.options['grompp_args']
         )
+        return cmd
 
     def prepare(self):  # pragma: no cover
         # coverage ignored b/c Travis won't have gmx. However, we do have a

@@ -58,6 +58,7 @@ class ExternalEngine(DynamicsEngine):
     def generate_next_frame(self):
         # should be completely general
         next_frame_found = False
+        logger.debug("Looking for frame")
         while not next_frame_found:
             try:
                 next_frame = self.read_frame_from_file(self.output_file,
@@ -65,6 +66,7 @@ class ExternalEngine(DynamicsEngine):
             except IOError:
                 # maybe the file doesn't exist
                 if self.proc.is_running():
+                    logger.info("Waiting for file to be written")
                     next_frame = None
                 else:
                     raise
