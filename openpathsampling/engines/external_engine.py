@@ -33,7 +33,8 @@ class ExternalEngine(DynamicsEngine):
         'engine_sleep' : 100,
         'engine_directory' : "",
         'n_spatial' : 1,
-        'n_atoms' : 1
+        'n_atoms' : 1,
+        'n_poll_per_step': 1
     }
 
     killsig = signal.SIGTERM
@@ -86,8 +87,10 @@ class ExternalEngine(DynamicsEngine):
             else:  # pragma: no cover
                 raise RuntimeError("Strange return value from read_next_frame_from_file")
             if self.auto_optimize_sleep and self.n_frames_since_start > 0:
-                self.sleep_ms = ((now - self.start_time) /
-                                 self.n_frames_since_start) * 1000.0
+                n_poll_per_step = self.options['n_poll_per_step']
+                elapsed = now - self.start_time
+                time_per_step = elapsed / self.n_frames_since_start
+                self.sleep_ms = time_per_step / n_poll_per_step * 1000.0
         return self.current_snapshot
 
     def start(self, snapshot=None):
