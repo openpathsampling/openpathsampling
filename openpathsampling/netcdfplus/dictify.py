@@ -1,8 +1,3 @@
-from __future__ import division
-from builtins import hex
-from builtins import str
-from builtins import object
-from past.utils import old_div
 import base64
 import importlib
 
@@ -31,8 +26,6 @@ import sys
 if sys.version_info > (3, ):
     long = int
 
-
-
 class ObjectJSON(object):
     """
     A simple implementation of a pickle algorithm to create object that can be
@@ -45,7 +38,7 @@ class ObjectJSON(object):
     prevent_unsafe_modules = False
 
     allowed_storable_atomic_types = [
-        int, float, bool, int, str,
+        int, float, bool, long, str,
         np.float32, np.float64,
         np.int8, np.int16, np.int32, np.int64,
         np.uint8, np.uint16, np.uint32, np.uint64,
@@ -77,7 +70,7 @@ class ObjectJSON(object):
             cls.__name__: cls for cls in self.allowed_storable_atomic_types}
         self.type_names.update(self.class_list)
         self.type_classes = {
-            cls: name for name, cls in self.type_names.items()}
+            cls: name for name, cls in self.type_names.iteritems()}
 
     def simplify_object(self, obj):
         return {
@@ -122,7 +115,7 @@ class ObjectJSON(object):
                     }
                 else:
                     return {
-                        '_value': self.simplify(old_div(obj, obj.unit), base_type),
+                        '_value': self.simplify(obj / obj.unit, base_type),
                         '_units': self.unit_to_dict(obj.unit)
                     }
             elif obj.__class__ is np.ndarray:
@@ -157,7 +150,7 @@ class ObjectJSON(object):
             # dicts with care and store them using tuples
 
             simple = [
-                key for key in list(obj.keys())
+                key for key in obj.keys()
                 if type(key) is str or type(key) is int]
 
             if len(simple) < len(obj):
@@ -165,14 +158,14 @@ class ObjectJSON(object):
                 result = {
                     '_dict': [
                         self.simplify(tuple([key, o]))
-                        for key, o in obj.items()
+                        for key, o in obj.iteritems()
                         if key not in self.excluded_keys
                     ]}
             else:
                 # simple enough, do it the old way
                 # FASTER VERSION NORMALLY
                 result = {
-                    key: self.simplify(o) for key, o in obj.items()
+                    key: self.simplify(o) for key, o in obj.iteritems()
                     if key not in self.excluded_keys
                 }
 
@@ -196,7 +189,7 @@ class ObjectJSON(object):
 
     @staticmethod
     def _unicode2str(s):
-        if type(s) is str:
+        if type(s) is unicode:
             return str(s)
         else:
             return s
@@ -270,13 +263,13 @@ class ObjectJSON(object):
             else:
                 return {
                     self._unicode2str(key): self.build(o)
-                    for key, o in obj.items()
+                    for key, o in obj.iteritems()
                 }
 
         elif type(obj) is list:
             return [self.build(o) for o in obj]
 
-        elif type(obj) is str:
+        elif type(obj) is unicode:
             return str(obj)
 
         else:
@@ -295,7 +288,7 @@ class ObjectJSON(object):
     @staticmethod
     def unit_from_dict(unit_dict):
         unit = units.Unit({})
-        for unit_name, unit_multiplication in unit_dict.items():
+        for unit_name, unit_multiplication in unit_dict.iteritems():
             unit *= getattr(units, unit_name) ** unit_multiplication
 
         return unit
@@ -354,25 +347,25 @@ class ObjectJSON(object):
                 err += '\n1. be replaced by constants'
                 err += '\n2. be defined inside your function,' + \
                        '\n\n' + '\n'.join(
-                           [' ' * 8 + x + '= ...' for x in global_vars]
+                           map(lambda x: ' ' * 8 + x + '= ...', global_vars)
                        ) + '\n'
                 err += '\n3. imports need to be "re"-imported inside your ' \
                        'function' + \
                        '\n\n' + '\n'.join(
-                           [' ' * 8 + 'import ' + x for x in global_vars]
+                           map(lambda x: ' ' * 8 + 'import ' + x, global_vars)
                        ) + '\n'
                 err += '\n4. be passed as an external parameter ' \
                        '(not for imports!)'
                 err += '\n\n        my_cv = FunctionCV("cv_name", ' + \
-                       c.__name__ + ', \n' + \
+                       c.func_name + ', \n' + \
                        ',\n'.join(
-                           [' ' * 20 + x + '=' + x for x in global_vars]
+                           map(lambda x: ' ' * 20 + x + '=' + x, global_vars)
                        ) + ')' + '\n'
                 err += '\n    and change your function definition like this'
                 err += '\n\n        def ' + \
-                       c.__name__ + '(snapshot, ...,  ' + \
+                       c.func_name + '(snapshot, ...,  ' + \
                        '\n' + ',\n'.join(
-                           [' ' * 16 + x for x in global_vars]
+                           map(lambda x: ' ' * 16 + x, global_vars)
                        ) + '):'
 
             unsafe_modules = [
@@ -390,7 +383,7 @@ class ObjectJSON(object):
                 err += 'You can change the list of safe modules using '
                 err += '\n\n        ObjectJSON.safe_modules.extend(['
                 err += '\n' + ',\n'.join(
-                       [' ' * 12 + x for x in unsafe_modules]
+                       map(lambda x: ' ' * 12 + x, unsafe_modules)
                 )
                 err += '\n        ])'
                 err += '\n\n'
@@ -404,7 +397,7 @@ class ObjectJSON(object):
 
             return {
                 '_marshal': base64.b64encode(
-                    marshal.dumps(c.__code__)),
+                    marshal.dumps(c.func_code)),
                 '_global_vars': global_vars,
                 '_module_vars': import_vars
             }
@@ -465,7 +458,7 @@ class ObjectJSON(object):
         """
 
         # TODO: Clean this up. It now works only for codes that use co_names
-        opcodes = code.__code__.co_code
+        opcodes = code.func_code.co_code
         i = 0
         ret = []
         while i < len(opcodes):
@@ -478,7 +471,7 @@ class ObjectJSON(object):
             else:
                 i += 3
 
-        return [code.__code__.co_names[i[1]] for i in ret]
+        return [code.func_code.co_names[i[1]] for i in ret]
 
     def to_json(self, obj, base_type=''):
         simplified = self.simplify(obj, base_type)
@@ -604,7 +597,7 @@ class UUIDObjectJSON(ObjectJSON):
 
             if '_hex_uuid' in obj and '_store' in obj:
                 store = self.storage._stores[obj['_store']]
-                result = store.load(int(obj['_hex_uuid'], 16))
+                result = store.load(long(obj['_hex_uuid'], 16))
 
                 return result
 
@@ -660,7 +653,7 @@ class CachedUUIDObjectJSON(ObjectJSON):
                     return obj
                 else:
                     # this should not happen!
-                    raise 'What happend here. JSN `%s`'
+                    raise ('What happend here. JSN `%s`' % jsn)
                     pass
 
         return super(CachedUUIDObjectJSON, self).build(jsn)

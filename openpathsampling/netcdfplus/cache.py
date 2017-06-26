@@ -1,9 +1,3 @@
-from __future__ import division
-from builtins import map
-from builtins import str
-from builtins import range
-from past.utils import old_div
-from builtins import object
 from collections import OrderedDict
 import weakref
 
@@ -322,16 +316,16 @@ class WeakLRUCache(Cache):
         return item in self._cache or item in self._weak_cache
 
     def keys(self):
-        return list(self._cache.keys()) + list(self._weak_cache.keys())
+        return self._cache.keys() + self._weak_cache.keys()
 
     def values(self):
-        return list(self._cache.values()) + list(self._weak_cache.values())
+        return self._cache.values() + self._weak_cache.values()
 
     def __len__(self):
         return len(self._cache) + len(self._weak_cache)
 
     def __iter__(self):
-        for key in list(self.keys()):
+        for key in self.keys():
             yield key
 
     def __reversed__(self):
@@ -394,11 +388,11 @@ class LRUChunkLoadingCache(Cache):
         else:
             self._size = 0
 
-        self._lastchunk_idx = old_div(self._size, self.chunksize)
+        self._lastchunk_idx = self._size / self.chunksize
 
     @property
     def count(self):
-        return sum(map(len, iter(self._chunkdict.values()))), 0
+        return sum(map(len, self._chunkdict.itervalues())), 0
 
     @property
     def size(self):
@@ -428,7 +422,7 @@ class LRUChunkLoadingCache(Cache):
         else:
             self._size = size
 
-        self._lastchunk_idx = old_div((self._size - 1), self.chunksize)
+        self._lastchunk_idx = (self._size - 1) / self.chunksize
 
     def load_chunk(self, chunk_idx):
         """
@@ -471,7 +465,7 @@ class LRUChunkLoadingCache(Cache):
 
     def __getitem__(self, item):
         chunksize = self.chunksize
-        chunk_idx = old_div(item, chunksize)
+        chunk_idx = item / chunksize
         if chunk_idx in self._chunkdict:
             try:
                 obj = self._chunkdict[chunk_idx][item % chunksize]
@@ -493,14 +487,14 @@ class LRUChunkLoadingCache(Cache):
 
         """
         self.update_size()
-        list(map(self.load_chunk,
-            list(range(0, min(
-                1 + old_div((self._size - 1), self.chunksize),
+        map(self.load_chunk,
+            range(0, min(
+                1 + (self._size - 1) / self.chunksize,
                 self.max_chunks
-            )))))
+            )))
 
     def __setitem__(self, key, value, **kwargs):
-        chunk_idx = old_div(key, self.chunksize)
+        chunk_idx = key / self.chunksize
         if chunk_idx in self._chunkdict:
             chunk = self._chunkdict[chunk_idx]
         else:
@@ -529,20 +523,20 @@ class LRUChunkLoadingCache(Cache):
         return any(item in chunk for chunk in self._chunkdict)
 
     def keys(self):
-        return sum([list(x.keys()) for x in self._chunkdict])
+        return sum(map(lambda x: x.keys(), self._chunkdict))
 
     def values(self):
-        return sum([list(x.values()) for x in self._chunkdict])
+        return sum(map(lambda x: x.values(), self._chunkdict))
 
     def __len__(self):
         return sum(map(len, self._chunkdict))
 
     def __iter__(self):
-        for chunk in self._chunkdict.values():
-            for key in list(chunk.keys()):
+        for chunk in self._chunkdict.itervalues():
+            for key in chunk.keys():
                 yield key
 
     def __reversed__(self):
-        for chunk in reversed(list(self._chunkdict.values())):
-            for key in reversed(list(chunk.keys())):
+        for chunk in reversed(self._chunkdict.values()):
+            for key in reversed(chunk.keys()):
                 yield key
