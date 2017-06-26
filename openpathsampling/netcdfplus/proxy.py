@@ -2,10 +2,13 @@
 
 @author: JH Prinz
 """
+from __future__ import absolute_import
+#from builtins import object
 import functools
 import weakref
 
-from base import StorableObject
+from .base import StorableObject
+from six import exec_
 
 
 # =============================================================================
@@ -156,7 +159,8 @@ def lazy_loading_attributes(*attributes):
 
         source_code = '\n'.join(code)
         cc = compile(source_code, '<string>', 'exec')
-        exec cc in locals()
+        #exec cc in locals()
+        exec_(cc, locals())
 
         @functools.wraps(cls.__init__)
         def _init(self, *args, **kwargs):

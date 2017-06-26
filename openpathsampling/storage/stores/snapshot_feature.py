@@ -1,6 +1,6 @@
 import logging
 
-from snapshot_base import BaseSnapshotStore
+from .snapshot_base import BaseSnapshotStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')

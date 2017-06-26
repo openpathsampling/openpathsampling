@@ -1,4 +1,4 @@
-import chaindict as cd
+from . import chaindict as cd
 from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, \
     ObjectJSON, create_to_dict, ObjectStore
 

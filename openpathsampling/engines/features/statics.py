@@ -1,5 +1,5 @@
 import numpy as np
-from shared import StaticContainerStore, StaticContainer
+from .shared import StaticContainerStore, StaticContainer
 import mdtraj
 from openpathsampling.netcdfplus import WeakLRUCache
 

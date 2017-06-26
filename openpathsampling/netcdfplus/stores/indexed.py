@@ -1,4 +1,4 @@
-from object import ObjectStore
+from .object import ObjectStore
 
 import logging
 

@@ -1,6 +1,8 @@
 from openpathsampling.netcdfplus import DelayedLoader
-from numpydoctools import NumpyDocTools
+from .numpydoctools import NumpyDocTools
 import openpathsampling as paths
+
+from six import exec_
 
 from collections import namedtuple
 
@@ -49,7 +51,8 @@ def _register_function(cls, name, code, __features__):
     try:
         source_code = '\n'.join(code)
         cc = compile(source_code, '<string>', 'exec')
-        exec cc in locals()
+        #exec cc in locals()
+        exec_(cc, locals())
 
         if name not in cls.__dict__:
             if hasattr(cls, '__features__') and cls.__features__.debug[name] is None:

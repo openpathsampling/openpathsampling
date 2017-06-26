@@ -1,7 +1,13 @@
 """
 author
 """
+from __future__ import division
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from builtins import object
 import abc
 import logging
 import os.path
@@ -10,9 +16,9 @@ from uuid import UUID
 
 import netCDF4
 import numpy as np
-from dictify import UUIDObjectJSON
-from stores import NamedObjectStore, ObjectStore
-from proxy import LoaderProxy
+from .dictify import UUIDObjectJSON
+from .stores import NamedObjectStore, ObjectStore
+from .proxy import LoaderProxy
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -426,12 +432,12 @@ class NetCDFPlus(netCDF4.Dataset):
         unique order of creation can be found. Thus you first create stores
         with all their dependencies and then finalize all of them together.
         """
-        for store in self._stores.values():
+        for store in list(self._stores.values()):
             if not store.is_created():
                 logger.info("Initializing store '%s'" % store.name)
                 store.initialize()
 
-        for store in self._stores.values():
+        for store in list(self._stores.values()):
             if not store.is_created():
                 logger.info("Initializing store '%s'" % store.name)
                 store.initialize()
@@ -511,7 +517,7 @@ class NetCDFPlus(netCDF4.Dataset):
         Only runs when the storage is created.
         """
 
-        for storage in self._stores.values():
+        for storage in list(self._stores.values()):
             storage.initialize()
 
         self.update_delegates()
@@ -525,7 +531,7 @@ class NetCDFPlus(netCDF4.Dataset):
         Only runs when an existing storage is opened.
         """
 
-        for storage in self._stores.values():
+        for storage in list(self._stores.values()):
             storage.restore()
             storage._created = True
 
@@ -538,7 +544,7 @@ class NetCDFPlus(netCDF4.Dataset):
         list of str
             list of stores that can be accessed using `storage.[store]`
         """
-        return [store.prefix for store in self._stores.values()]
+        return [store.prefix for store in list(self._stores.values())]
 
     def list_storable_objects(self):
         """
@@ -551,7 +557,7 @@ class NetCDFPlus(netCDF4.Dataset):
         """
         return [
             store.content_class
-            for store in self.objects.values()
+            for store in list(self.objects.values())
             if store.content_class is not None]
 
     def save(self, obj, idx=None):
@@ -628,7 +634,7 @@ class NetCDFPlus(netCDF4.Dataset):
         substores
         """
 
-        for store in self.objects.values():
+        for store in list(self.objects.values()):
             if uuid in store.index:
                 return store[uuid]
 
@@ -708,7 +714,7 @@ class NetCDFPlus(netCDF4.Dataset):
         total_file = 0
         total_index = 0
 
-        for name, store in self.objects.iteritems():
+        for name, store in self.objects.items():
             size = store.cache.size
             count = store.cache.count
             profile = {
@@ -750,11 +756,11 @@ class NetCDFPlus(netCDF4.Dataset):
         list of str
             the list of variable types
         """
-        types = NetCDFPlus._type_conversion.keys()
-        types += ['obj.' + x for x in self.objects.keys()]
-        types += ['lazyobj.' + x for x in self.objects.keys()]
-        types += ['uuid.' + x for x in self.objects.keys()]
-        types += ['lazyuuid.' + x for x in self.objects.keys()]
+        types = list(NetCDFPlus._type_conversion.keys())
+        types += ['obj.' + x for x in list(self.objects.keys())]
+        types += ['lazyobj.' + x for x in list(self.objects.keys())]
+        types += ['uuid.' + x for x in list(self.objects.keys())]
+        types += ['lazyuuid.' + x for x in list(self.objects.keys())]
         return sorted(types)
 
     @staticmethod
@@ -863,10 +869,10 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif var_type.startswith('uuid.'):
             getter = lambda v: [
-                None if w[0] == '-' else store.load(long(w, 16))
+                None if w[0] == '-' else store.load(int(w, 16))
                 for w in v
             ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else store.load(long(v, 16))
+                None if v[0] == '-' else store.load(int(v, 16))
 
             setter = lambda v: ''.join(
                 ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
@@ -876,10 +882,10 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif var_type.startswith('lazyuuid.'):
             getter = lambda v: [
-                None if w[0] == '-' else LoaderProxy(store, long(w, 16))
+                None if w[0] == '-' else LoaderProxy(store, int(w, 16))
                 for w in v
             ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else LoaderProxy(store, long(v, 16))
+                None if v[0] == '-' else LoaderProxy(store, int(v, 16))
 
             setter = lambda v: ''.join(
                 ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
@@ -903,7 +909,7 @@ class NetCDFPlus(netCDF4.Dataset):
         elif var_type == 'uuid':
             getter = lambda v: \
                 [None if w[0] == '-' else int(UUID(w)) for w in v] \
-                if type(v) is not unicode else None \
+                if type(v) is not str else None \
                 if v[0] == '-' else int(UUID(v))
             setter = lambda v: \
                 ''.join([
@@ -970,21 +976,21 @@ class NetCDFPlus(netCDF4.Dataset):
                 if var.var_type.startswith('uuid.'):
                     getter = lambda v: [[
                         None if u[0] == '-' else store.load(
-                            long(u, 16))
+                            int(u, 16))
                         for u in to_uuid_chunks34(w)
                         ] for w in v
                     ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else store.load(long(u, 16))
+                        None if u[0] == '-' else store.load(int(u, 16))
                         for u in to_uuid_chunks34(v)
                     ]
                 elif var.var_type.startswith('lazyuuid.'):
                     getter = lambda v: [[
                         None if u[0] == '-' else LoaderProxy(
-                            store, long(u, 16))
+                            store, int(u, 16))
                         for u in to_uuid_chunks34(w)
                         ] for w in v
                     ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else LoaderProxy(store, long(u, 16))
+                        None if u[0] == '-' else LoaderProxy(store, int(u, 16))
                         for u in to_uuid_chunks34(v)
                     ]
             if True or self.support_simtk_unit:
@@ -1003,9 +1009,9 @@ class NetCDFPlus(netCDF4.Dataset):
 
                     def _set(my_setter):
                         if my_setter is None:
-                            return lambda v: v / unit
+                            return lambda v: old_div(v, unit)
                         else:
-                            return lambda v: my_setter(v / unit)
+                            return lambda v: my_setter(old_div(v, unit))
 
                     getter = _get(getter)
                     setter = _set(setter)
@@ -1116,7 +1122,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         nc_type = self.var_type_to_nc_type(var_type)
 
-        for dim_name, size in new_dimensions.items():
+        for dim_name, size in list(new_dimensions.items()):
             ncfile.create_dimension(dim_name, size)
 
         dimensions = tuple(dimensions)
@@ -1182,9 +1188,7 @@ class NetCDFPlus(netCDF4.Dataset):
             if type(dimensions) is str:
                 dim_names = [dimensions]
             else:
-                dim_names = map(
-                    lambda p: '#ix{0}:{1}'.format(*p),
-                    enumerate(dimensions))
+                dim_names = ['#ix{0}:{1}'.format(*p) for p in enumerate(dimensions)]
 
             idx_desc = '[' + ']['.join(dim_names) + ']'
             description = var_name + idx_desc + ' is ' + \

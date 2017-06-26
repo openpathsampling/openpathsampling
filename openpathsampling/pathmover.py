@@ -13,8 +13,8 @@ import numpy as np
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 from openpathsampling.pathmover_inout import InOutSet, InOut
-from ops_logging import initialization_logging
-from treelogic import TreeMixin
+from .ops_logging import initialization_logging
+from .treelogic import TreeMixin
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')

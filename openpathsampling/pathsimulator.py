@@ -10,7 +10,7 @@ import openpathsampling as paths
 import openpathsampling.tools
 
 from openpathsampling.pathmover import SubPathMover
-from ops_logging import initialization_logging
+from .ops_logging import initialization_logging
 import abc
 
 logger = logging.getLogger(__name__)

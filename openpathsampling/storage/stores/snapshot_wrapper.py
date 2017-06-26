@@ -5,8 +5,8 @@ import openpathsampling.engines as peng
 from openpathsampling.netcdfplus import ObjectStore, with_timing_logging, \
     NetCDFPlus, LoaderProxy
 
-from snapshot_feature import FeatureSnapshotStore
-from snapshot_value import SnapshotValueStore
+from .snapshot_feature import FeatureSnapshotStore
+from .snapshot_value import SnapshotValueStore
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')

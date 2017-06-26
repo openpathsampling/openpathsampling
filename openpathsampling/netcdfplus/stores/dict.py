@@ -1,4 +1,4 @@
-from named import NamedObjectStore
+from .named import NamedObjectStore
 
 import logging
 

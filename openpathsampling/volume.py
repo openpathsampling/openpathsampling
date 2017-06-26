@@ -4,7 +4,7 @@ Created on 03.09.2014
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 
-import range_logic
+from . import range_logic
 import abc
 from openpathsampling.netcdfplus import StorableNamedObject
 

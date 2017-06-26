@@ -5,7 +5,7 @@ import logging
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 from openpathsampling.netcdfplus import DelayedLoader
-from treelogic import TreeMixin
+from .treelogic import TreeMixin
 
 logger = logging.getLogger(__name__)
 

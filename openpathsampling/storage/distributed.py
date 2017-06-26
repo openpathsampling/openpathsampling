@@ -1,10 +1,11 @@
+from __future__ import print_function
 import openpathsampling as paths
 
 from openpathsampling.netcdfplus import NamedObjectStore, ImmutableDictStore
 import openpathsampling.engines as peng
 
-from stores import SnapshotWrapperStore
-from storage import Storage
+from .stores import SnapshotWrapperStore
+from .storage import Storage
 
 
 class TrajectoryStorage(Storage):
@@ -75,7 +76,7 @@ class DistributedUUIDStorage(object):
             return len(self.index)
 
         def load(self, idx):
-            print idx
+            print(idx)  # @JHP: is this supposed to be here?
             return self[idx]
 
     def __init__(self, storages=None):

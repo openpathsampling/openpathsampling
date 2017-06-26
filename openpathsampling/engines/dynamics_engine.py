@@ -12,10 +12,10 @@ import simtk.unit as u
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
-from snapshot import BaseSnapshot
-from trajectory import Trajectory
+from .snapshot import BaseSnapshot
+from .trajectory import Trajectory
 
-from delayedinterrupt import DelayedInterrupt
+from .delayedinterrupt import DelayedInterrupt
 
 logger = logging.getLogger(__name__)
 

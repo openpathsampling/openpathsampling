@@ -7,7 +7,7 @@
 import abc
 
 from openpathsampling.netcdfplus import StorableObject
-import features as feats
+from . import features as feats
 
 
 # =============================================================================

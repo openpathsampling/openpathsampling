@@ -3,7 +3,7 @@ import pandas as pd
 import scipy
 import matplotlib.pyplot as plt
 import math
-from lookup_function import LookupFunction, VoxelLookupFunction
+from .lookup_function import LookupFunction, VoxelLookupFunction
 import collections
 
 class SparseHistogram(object):
@@ -709,18 +709,18 @@ class HistogramPlotter2D(object):
         df = hist_fcn.df_2d(x_range=self.xrange_, y_range=self.yrange_)
         self.df = df
 
-	mesh = plt.pcolormesh(df.fillna(0.0).transpose(), **kwargs)
+        mesh = plt.pcolormesh(df.fillna(0.0).transpose(), **kwargs)
 
         (xticks, xlabels) = self.ticks_and_labels(xticks_, mesh.axes, dof=0)
         (yticks, ylabels) = self.ticks_and_labels(yticks_, mesh.axes, dof=1)
 
         mesh.axes.set_xticks(xticks)
         mesh.axes.set_yticks(yticks)
-	mesh.axes.set_xticklabels(xlabels)
-	mesh.axes.set_yticklabels(ylabels)
-	plt.xlim(xlim_[0], xlim_[1])
-	plt.ylim(ylim_[0], ylim_[1])
-	plt.colorbar()
+        mesh.axes.set_xticklabels(xlabels)
+        mesh.axes.set_yticklabels(ylabels)
+        plt.xlim(xlim_[0], xlim_[1])
+        plt.ylim(ylim_[0], ylim_[1])
+        plt.colorbar()
         return mesh
 
     def plot_trajectory(self, trajectory, *args, **kwargs):

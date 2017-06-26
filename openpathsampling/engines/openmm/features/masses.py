@@ -24,7 +24,7 @@ def masses_per_mole(snapshot):
         masses_per_mole = [system.getParticleMass(i)
                   for i in range(system.getNumParticles())]
     masses_per_mole = u.Quantity(
-        value=np.array([m.value_in_unit(u.dalton) 
+        value=np.array([m.value_in_unit(u.dalton)
                         for m in masses_per_mole]),
         unit=u.dalton
     )

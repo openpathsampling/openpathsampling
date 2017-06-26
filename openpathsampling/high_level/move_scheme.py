@@ -1,9 +1,8 @@
 import openpathsampling as paths
 from openpathsampling.tools import refresh_output
 
-from move_strategy import levels as strategy_levels
-# import move_strategy as move_strategy
-import move_strategy
+from . import move_strategy
+from .move_strategy import levels as strategy_levels
 from openpathsampling.netcdfplus import StorableNamedObject
 
 try:
