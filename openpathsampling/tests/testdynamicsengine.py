@@ -1,8 +1,10 @@
+from __future__ import absolute_import
+from builtins import object
 import openpathsampling as paths
 
 from nose.tools import (assert_equal, assert_not_equal, raises)
 from nose.plugins.skip import SkipTest
-from test_helpers import make_1d_traj, raises_with_message_like
+from .test_helpers import make_1d_traj, raises_with_message_like
 
 
 class StupidEngine(paths.engines.DynamicsEngine):
@@ -40,12 +42,12 @@ class testDynamicsEngine(object):
     def test_getattr_from_options(self):
         assert_equal(self.stupid.random_option, True)
 
-    @raises_with_message_like(AttributeError, 
-                              "'object' object has no attribute 'b'")
+    @raises_with_message_like(AttributeError,
+                              "'newobject' object has no attribute 'b'")
     def test_getattr_property_fails(self):
         self.stupid.bad_property
 
-    @raises_with_message_like(AttributeError, 
+    @raises_with_message_like(AttributeError,
                               "Unknown problem occurred in property")
     def test_getattr_property_recovers(self):
         self.stupid.property_recovers

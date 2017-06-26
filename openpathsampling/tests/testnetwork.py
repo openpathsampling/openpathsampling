@@ -1,10 +1,13 @@
+from __future__ import absolute_import
+from builtins import zip
+from builtins import object
 import os
 import numpy as np
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (
+from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename
 )
 
@@ -100,7 +103,7 @@ class testMSTISNetwork(testMultipleStateTIS):
                                         (ifacesB, -0.2, 0.2),
                                         (ifacesC, 0.5, float("inf"))]
         ]
-        ms_outer_ifaces, ms_outer_volumes = zip(*ms_outer_info)
+        ms_outer_ifaces, ms_outer_volumes = list(zip(*ms_outer_info))
         ms_outer_obj = paths.MSOuterTISInterface(ms_outer_ifaces,
                                                  ms_outer_volumes)
 
@@ -319,7 +322,7 @@ class testMISTISNetwork(testMultipleStateTIS):
 
 class testTPSNetwork(object):
     def setup(self):
-        from test_helpers import CallIdentity
+        from .test_helpers import CallIdentity
         xval = paths.FunctionCV("xval", lambda snap: snap.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(xval, -0.1, 0.1)
@@ -496,7 +499,7 @@ class testFixedLengthTPSNetwork(testTPSNetwork):
         for network in [self.network2a, self.network2b, self.network2c,
                         self.network3a, self.network3b, self.network3c]:
             assert_equal(network.sampling_transitions[0].length, 10)
-            assert_equal(network.transitions.values()[0].length, 10)
+            assert_equal(list(network.transitions.values())[0].length, 10)
 
     def test_allow_self_transitions_false(self):
         network = FixedLengthTPSNetwork.from_states_all_to_all(

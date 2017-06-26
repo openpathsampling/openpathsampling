@@ -5,6 +5,9 @@ a duck.
 @author David W.H. Swenson
 """
 
+from builtins import zip
+from builtins import str
+from builtins import object
 import os
 from functools import wraps
 

@@ -2,6 +2,8 @@
 @author: David W.H. Swenson
 '''
 
+from builtins import range
+from builtins import object
 from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_items_equal,
                         raises)
@@ -129,10 +131,10 @@ class testSampleSet(object):
     def test_del_sample(self):
         del self.testset[self.s2B]
         assert_equal(len(self.testset), 2)
-        assert_equal(self.ensB in self.testset.ensemble_dict.keys(), False)
-        assert_equal(self.ensA in self.testset.ensemble_dict.keys(), True)
-        assert_equal(2 in self.testset.replica_dict.keys(), False)
-        assert_equal(0 in self.testset.replica_dict.keys(), True)
+        assert_equal(self.ensB in list(self.testset.ensemble_dict.keys()), False)
+        assert_equal(self.ensA in list(self.testset.ensemble_dict.keys()), True)
+        assert_equal(2 in list(self.testset.replica_dict.keys()), False)
+        assert_equal(0 in list(self.testset.replica_dict.keys()), True)
 
     def test_del_ensemble(self):
         raise SkipTest

@@ -1,7 +1,12 @@
 '''
 @author: David W.H. Swenson
 '''
+from __future__ import division
+from __future__ import absolute_import
 
+from builtins import zip
+from past.utils import old_div
+from builtins import object
 import os
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
@@ -11,7 +16,7 @@ from nose.plugins.skip import SkipTest
 
 import openpathsampling as paths
 import openpathsampling.engines.toy as toy
-from test_helpers import true_func, assert_equal_array_array
+from .test_helpers import true_func, assert_equal_array_array
 
 import numpy as np
 
@@ -170,7 +175,7 @@ class testToyEngine(object):
 
     def test_sanity(self):
         assert_items_equal(self.sim._mass, sys_mass)
-        assert_items_equal(self.sim._minv, [1.0/m_i for m_i in sys_mass])
+        assert_items_equal(self.sim._minv, [old_div(1.0,m_i) for m_i in sys_mass])
         assert_equal(self.sim.n_steps_per_frame, 10)
 
     def test_snapshot_timestep(self):

@@ -1,7 +1,12 @@
+from __future__ import division
+from __future__ import absolute_import
+from builtins import zip
+from past.utils import old_div
+from builtins import object
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal)
 from nose.plugins.skip import SkipTest
-from test_helpers import make_1d_traj
+from .test_helpers import make_1d_traj
 
 import openpathsampling as paths
 
@@ -116,7 +121,7 @@ class testTrajectoryTransitionAnalysis(object):
         delta = 0.05
         for char in traj_str:
             params = char_to_parameters[char]
-            n_max = int((params['hi'] - params['lo'])/delta)
+            n_max = int(old_div((params['hi'] - params['lo']),delta))
             sequence.append(params['lo'] + delta*random.randint(1, n_max-1))
 
         return make_1d_traj(coordinates=sequence,
@@ -199,9 +204,9 @@ class testTrajectoryTransitionAnalysis(object):
         flux = self.analyzer.flux(trajectories=[flux_traj],
                                   state=self.stateA,
                                   interface=self.interfaceA0)
-        average_out = (3.0 + 5.0 + 1.0 + 2.0) / 4.0
-        average_in = (3.0 + 1.0 + 2.0 + 3.0) / 4.0
-        assert_almost_equal(flux, 1.0 / (average_out + average_in))
+        average_out = old_div((3.0 + 5.0 + 1.0 + 2.0), 4.0)
+        average_in = old_div((3.0 + 1.0 + 2.0 + 3.0), 4.0)
+        assert_almost_equal(flux, old_div(1.0, (average_out + average_in)))
         self.analyzer.dt = None
 
     @raises(RuntimeError)

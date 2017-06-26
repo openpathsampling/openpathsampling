@@ -1,7 +1,11 @@
+from __future__ import division
+from __future__ import absolute_import
+from past.utils import old_div
+from builtins import object
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_almost_equal)
 from nose.plugins.skip import SkipTest
-from test_helpers import assert_items_almost_equal
+from .test_helpers import assert_items_almost_equal
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -116,15 +120,15 @@ class testHistogram(object):
     def test_normalized(self):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data)
-        assert_items_equal(histo.normalized().values(),
+        assert_items_equal(list(histo.normalized().values()),
                            [1.0, 0.0, 0.4, 0.2, 0.2, 0.2])
-        assert_items_equal(histo.normalized(raw_probability=True).values(),
+        assert_items_equal(list(histo.normalized(raw_probability=True).values()),
                            [0.5, 0.0, 0.2, 0.1, 0.1, 0.1])
 
     def test_cumulative(self):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data)
-        cumulative = histo.cumulative(None).values()
+        cumulative = list(histo.cumulative(None).values())
         assert_items_almost_equal(cumulative, [5.0, 5.0, 7.0, 8.0, 9.0, 10.0])
         assert_items_almost_equal(histo.cumulative(maximum=1.0), 
                                   [0.5, 0.5, 0.7, 0.8, 0.9, 1.0])
@@ -133,10 +137,10 @@ class testHistogram(object):
         histo = Histogram(n_bins=5)
         hist = histo.histogram(self.data)
         rev_cumulative = histo.reverse_cumulative(maximum=None)
-        assert_items_almost_equal(rev_cumulative.values(),
+        assert_items_almost_equal(list(rev_cumulative.values()),
                                   [10, 5, 5, 3, 2, 1])
         rev_cumulative = histo.reverse_cumulative(maximum=1.0)
-        assert_items_almost_equal(rev_cumulative.values(),
+        assert_items_almost_equal(list(rev_cumulative.values()),
                                   [1.0, 0.5, 0.5, 0.3, 0.2, 0.1])
 
 
@@ -171,9 +175,9 @@ class testSparseHistogram(object):
         assert_almost_equal(raw_prob_normed((0.01, 0.09)), 0.25)
         assert_almost_equal(raw_prob_normed((0.61, 0.89)), 0.25)
         normed_fcn = self.histo.normalized()
-        assert_almost_equal(normed_fcn((0.25, 0.65)), 0.5/0.15)
-        assert_almost_equal(normed_fcn((0.01, 0.09)), 0.25/0.15)
-        assert_almost_equal(normed_fcn((0.61, 0.89)), 0.25/0.15)
+        assert_almost_equal(normed_fcn((0.25, 0.65)), old_div(0.5,0.15))
+        assert_almost_equal(normed_fcn((0.01, 0.09)), old_div(0.25,0.15))
+        assert_almost_equal(normed_fcn((0.61, 0.89)), old_div(0.25,0.15))
 
 
 class testHistogramPlotter2D(object):

@@ -1,8 +1,11 @@
 """
 @author David W.H. Swenson
 """
+from __future__ import absolute_import
 
-from test_helpers import data_filename, assert_close_unit
+from builtins import zip
+from builtins import object
+from .test_helpers import data_filename, assert_close_unit
 
 import mdtraj as md
 import numpy as np

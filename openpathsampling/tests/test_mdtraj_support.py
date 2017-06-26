@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from builtins import object
 import logging
 
 from nose.tools import (
@@ -5,7 +7,7 @@ from nose.tools import (
 )
 from nose.plugins.skip import SkipTest
 import numpy.testing as nptest
-from test_helpers import data_filename
+from .test_helpers import data_filename
 
 import openpathsampling as paths
 import mdtraj as md

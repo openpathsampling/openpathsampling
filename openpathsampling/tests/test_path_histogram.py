@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+from builtins import object
 import os
 import numpy as np
 
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         assert_almost_equal, raises)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (
+from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
     assert_items_almost_equal
 )
@@ -92,7 +94,7 @@ class testPathHistogram(object):
                              bin_widths=(0.5, 0.5),
                              interpolate=True, per_traj=False)
         hist.add_trajectory(traj)
-        assert_equal(len(hist._histogram.keys()), 2)
+        assert_equal(len(list(hist._histogram.keys())), 2)
         assert_equal(hist._histogram[(0,0)], 3)
         assert_equal(hist._histogram[(0,1)], 1)
 

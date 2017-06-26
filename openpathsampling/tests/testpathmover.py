@@ -1,7 +1,13 @@
 '''
 @author: David W.H. Swenson
 '''
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
                         raises, assert_true, assert_in, assert_not_in)
@@ -17,8 +23,8 @@ from openpathsampling.sample import Sample, SampleSet
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.volume import CVDefinedVolume
 import openpathsampling.engines.toy as toys
-from test_helpers import CallIdentity, raises_with_message_like
-from test_helpers import (assert_equal_array_array, items_equal,
+from .test_helpers import CallIdentity, raises_with_message_like
+from .test_helpers import (assert_equal_array_array, items_equal,
                           make_1d_traj,
                           CalvinistDynamics)
 
@@ -271,14 +277,14 @@ class testForwardFirstTwoWayShootingMover(testShootingMover):
         )
         traj, details = mover._run(self.init_samp[0].trajectory, 4)
         assert_allclose(traj.xyz[:,0,0], [-0.1, 0.2, 0.4, 0.6, 0.8])
-        assert_equal(details.keys(), ['modified_shooting_snapshot'])
+        assert_equal(list(details.keys()), ['modified_shooting_snapshot'])
         assert_equal(details['modified_shooting_snapshot'], traj[2])
         assert_not_in(details['modified_shooting_snapshot'],
                       self.init_samp[0].trajectory)
 
         traj, details = mover._run(self.init_samp[0].trajectory, 3)
         assert_allclose(traj.xyz[:,0,0], [-0.1, 0.1, 0.3, 0.5, 0.7])
-        assert_equal(details.keys(), ['modified_shooting_snapshot'])
+        assert_equal(list(details.keys()), ['modified_shooting_snapshot'])
         assert_equal(details['modified_shooting_snapshot'], traj[2])
         assert_not_in(details['modified_shooting_snapshot'],
                       self.init_samp[0].trajectory)
@@ -663,36 +669,28 @@ class testSequentialMover(object):
         len3 = LengthEnsemble(3)
         len2 = LengthEnsemble(2)
         self.hop_to_tis = RandomAllowedChoiceMover(
-            map(lambda ens : EnsembleHopMover(*ens),
-                [[tis, tis],
+            [EnsembleHopMover(*ens) for ens in [[tis, tis],
                  [tps, tis],
                  [len3, tis],
-                 [len2, tis]]
-            )
+                 [len2, tis]]]
         )
         self.hop_to_tps = RandomAllowedChoiceMover(
-            map(lambda ens : EnsembleHopMover(*ens),
-                [[tis, tps],
+            [EnsembleHopMover(*ens) for ens in [[tis, tps],
                  [tps, tps],
                  [len3, tps],
-                 [len2, tps]]
-            )
+                 [len2, tps]]]
         )
         self.hop_to_len3 = RandomAllowedChoiceMover(
-            map(lambda ens : EnsembleHopMover(*ens),
-                [[tis, len3],
+            [EnsembleHopMover(*ens) for ens in [[tis, len3],
                  [tps, len3],
                  [len3, len3],
-                 [len2, len3]]
-            )
+                 [len2, len3]]]
         )
         self.hop_to_len2 = RandomAllowedChoiceMover(
-            map(lambda ens : EnsembleHopMover(*ens),
-                [[tis, len2],
+            [EnsembleHopMover(*ens) for ens in [[tis, len2],
                  [tps, len2],
                  [len3, len2],
-                 [len2, len2]]
-            )
+                 [len2, len2]]]
         )
         self.init_sample = Sample(trajectory=traj,
                                   ensemble=len3,
@@ -1114,7 +1112,7 @@ class testMinusMover(object):
             elif items_equal(s_inner0_xvals, self.second_segment):
                 key += "2"
             else:
-                print "s_inner0_xvals:", s_inner0_xvals
+                print("s_inner0_xvals:", s_inner0_xvals)
                 raise RuntimeError("Chosen segment neither first nor last!")
 
             # final sample s_minus is accepted
@@ -1124,14 +1122,14 @@ class testMinusMover(object):
             elif items_equal(s_minus_xvals, extend_backward):
                 key += "b"
             else:
-                print "s_minus_xvals:", s_minus_xvals
+                print("s_minus_xvals:", s_minus_xvals)
                 raise RuntimeError("Unexpected minus extension result!")
 
             try:
                 seg_dir[key] += 1
             except KeyError:
                 seg_dir[key] = 1
-        assert_equal(len(seg_dir.keys()), 4)
+        assert_equal(len(list(seg_dir.keys())), 4)
 
     def test_repex_fails_other_ensemble(self):
         innermost_other_ensemble = make_1d_traj([-0.11, 0.1, -0.12])
@@ -1317,7 +1315,7 @@ class testSingleReplicaMinusMover(object):
             if items_equal(s_seg0_xvals, self.list_innermost):
                 key += "0"
             else:
-                print "s_seg0_xvals:", s_seg0_xvals
+                print("s_seg0_xvals:", s_seg0_xvals)
                 raise RuntimeError("Chosen segment neither first nor last!")
 
             # s_minus is the intermediate
@@ -1335,7 +1333,7 @@ class testSingleReplicaMinusMover(object):
                     output_backward
                 )
             else:
-                print "s_minus_xvals:", s_minus_xvals
+                print("s_minus_xvals:", s_minus_xvals)
                 raise RuntimeError("Unexpected minus extension result!")
 
 
@@ -1343,7 +1341,7 @@ class testSingleReplicaMinusMover(object):
                 seg_dir[key] += 1
             except KeyError:
                 seg_dir[key] = 1
-        assert_equal(len(seg_dir.keys()), 2)
+        assert_equal(len(list(seg_dir.keys())), 2)
 
     def test_first_hop_fails(self):
         crossing_traj = make_1d_traj([-0.11, 0.11, 0.31, 1.01], [1.0]*4)
