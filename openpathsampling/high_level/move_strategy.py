@@ -607,7 +607,7 @@ class MinusMoveStrategy(MoveStrategy):
                     state_sorted_minus[minus.state_vol].append(minus)
                 except KeyError:
                     state_sorted_minus[minus.state_vol] = [minus]
-            ensembles = state_sorted_minus.values()
+            ensembles = list(state_sorted_minus.values())
 
         # now we use super's ability to turn it into list-of-list
         res_ensembles = super(MinusMoveStrategy, self).get_ensembles(scheme,
@@ -686,8 +686,8 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
         mover_weights.
         """
         chooser = paths.RandomChoiceMover(
-            movers=mover_weights.keys(),
-            weights=mover_weights.values()
+            movers=list(mover_weights.keys()),
+            weights=list(mover_weights.values())
         )
         chooser.named(choosername)
         return chooser
@@ -810,7 +810,7 @@ class OrganizeByMoveGroupStrategy(MoveStrategy):
 
             # normalize here based on making the most common within the
             # group the baseline (1)
-            most_common[group] = most_common_value(group_probs.values())
+            most_common[group] = most_common_value(list(group_probs.values()))
 
 
             for m in group_probs:

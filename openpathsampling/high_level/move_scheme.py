@@ -241,7 +241,7 @@ class MoveScheme(StorableNamedObject):
             output_sig = m.output_ensembles
             for ens in input_sig + output_sig:
                 mover_ensemble_dict[ens] = 1
-        mover_ensembles = mover_ensemble_dict.keys()
+        mover_ensembles = list(mover_ensemble_dict.keys())
         return mover_ensembles
 
     def find_hidden_ensembles(self, root=None):
@@ -725,7 +725,7 @@ class MoveScheme(StorableNamedObject):
         my_movers = {}
         expected_frequency = {}
         if movers is None:
-            movers = self.movers.keys()
+            movers = list(self.movers.keys())
         if type(movers) is str:
             movers = self.movers[movers]
         for key in movers:

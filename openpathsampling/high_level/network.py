@@ -54,7 +54,7 @@ class TransitionNetwork(StorableNamedObject):
         """
         all_ens = self.sampling_ensembles
         for special_dict in self.special_ensembles.values():
-            all_ens.extend(special_dict.keys())
+            all_ens.extend(list(special_dict.keys()))
         return all_ens
 
     @property
@@ -706,6 +706,7 @@ class MISTISNetwork(TISNetwork):
 
     def build_sampling_transitions(self, transitions):
         # identify transition pairs
+        transitions = list(transitions)  # input may be iterator
         transition_pair_set_dict = {}
         for initial in self.initial_states:
             for t1 in [t for t in transitions if t.stateA==initial]:
@@ -768,6 +769,7 @@ class MISTISNetwork(TISNetwork):
         # combining the minus interfaces
         for initial in self.initial_states:
             innermosts = []
+            # trans_from_initial: list of transition from initial
             trans_from_initial = [
                 t for t in self.x_sampling_transitions
                 if t.stateA==initial
@@ -777,7 +779,7 @@ class MISTISNetwork(TISNetwork):
             minus = paths.MinusInterfaceEnsemble(
                 state_vol=initial,
                 innermost_vols=innermosts
-            ).named(t.stateA.name + " MIS minus")
+            ).named(initial.name + " MIS minus")
             try:
                 self.special_ensembles['minus'][minus] = trans_from_initial
             except KeyError:

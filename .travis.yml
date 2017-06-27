@@ -3,6 +3,7 @@ language: python
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
   - "2.7"
+  - "3.6"
 
 install:
   - deactivate
@@ -38,8 +39,7 @@ addons:
 env:
   matrix:
     - python=2.7  CONDA_PY=27  CONDA_NPY=110
-# - python=3.4  CONDA_PY=34  CONDA_NPY=110
-# - python=3.5  CONDA_PY=35  CONDA_NPY=110
+    - python=3.6  CONDA_PY=36  CONDA_NPY=110
 
   global:
   - secure: "NJvoSrLNd2ZR3HluJjEqI36gD5lsucwIvgnYjNmM4cwnnA77aLV9FRYTwlLRZn3XY9FL8KOzL5l0amNzMD7sQrf7bWwWv7iCUBddH549q9RSgiuOugtodYJ6VaXi76hk1rOgcJpDoCj9wTCIlMtWibPUzr1QHmdihfdM2iA2kkE="

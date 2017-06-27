@@ -221,7 +221,9 @@ class testShootingPointAnalysis(object):
 
         rehash = lambda snap : 2 * snap.xyz[0][0]
         committor_A_rehash = self.analyzer.committor(self.left, rehash)
-        assert_items_equal(list(committor_A.values()), list(committor_A_rehash.values()))
+        orig_values = sorted(committor_A.values())
+        rehash_values = sorted(committor_A_rehash.values())
+        assert_items_equal(orig_values, rehash_values)
         for snap in list(committor_A.keys()):
             assert_in(rehash(snap), list(committor_A_rehash.keys()))
 

@@ -410,9 +410,11 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
         strategy = MinusMoveStrategy()
         innerA = self.network.sampling_transitions[0].ensembles[0]
         innerB = self.network.sampling_transitions[1].ensembles[0]
+        inner_vol_A = self.network.sampling_transitions[0].interfaces[0]
+        inner_vol_B = self.network.sampling_transitions[1].interfaces[0]
         extra_minus = paths.MinusInterfaceEnsemble(
             state_vol=self.network.sampling_transitions[0].stateA,
-            innermost_vols=[innerA, innerB]
+            innermost_vols=[inner_vol_A, inner_vol_B]
         )
         self.network.special_ensembles['minus'][extra_minus] = [innerA, innerB]
         scheme = MoveScheme(self.network)

@@ -2514,7 +2514,7 @@ def NeighborEnsembleReplicaExchange(ensemble_list):
 
 
 def PathReversalSet(ensembles):
-    return map(PathReversalMover, ensembles)
+    return list(map(PathReversalMover, ensembles))
 
 
 class PathMoverFactory(object):
