@@ -5,6 +5,8 @@ import abc
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 
+from functools import reduce  # not built in for py3
+
 LevelLabels = collections.namedtuple(
     "LevelLabels", 
     ["SIGNATURE", "MOVER", "GROUP", "SUPERGROUP", "GLOBAL"]

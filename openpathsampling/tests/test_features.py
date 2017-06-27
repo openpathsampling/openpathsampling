@@ -1,11 +1,12 @@
 from __future__ import absolute_import
 from builtins import hex
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
+from nose.tools import (assert_equal, assert_not_equal,
                         assert_almost_equal, raises, assert_in)
 
 from nose.plugins.skip import Skip, SkipTest
-from .test_helpers import true_func, assert_equal_array_array, make_1d_traj
+from .test_helpers import (true_func, assert_equal_array_array,
+                           make_1d_traj, assert_items_equal)
 
 import logging
 

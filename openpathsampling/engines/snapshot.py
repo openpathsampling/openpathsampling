@@ -109,7 +109,7 @@ class BaseSnapshot(StorableObject):
 
     def copy_with_replacement(self, **kwargs):
         cp = self.copy()  # this will copy all, but it is simple
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             if hasattr(cp, key):
                 setattr(cp, key, value)
             else:

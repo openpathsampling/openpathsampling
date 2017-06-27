@@ -34,7 +34,7 @@ def join_volumes(volume_list):
 
 class Volume(StorableNamedObject):
     """
-    A Volume describes a set of snapshots 
+    A Volume describes a set of snapshots
     """
 
     __metaclass__ = abc.ABCMeta
@@ -47,14 +47,16 @@ class Volume(StorableNamedObject):
         '''
         Returns `True` if the given snapshot is part of the defined Region
         '''
-        
         return False # pragma: no cover
-                
+
     def __str__(self):
         '''
         Returns a string representation of the volume
         '''
         return 'volume' # pragma: no cover
+
+    def __hash__(self):
+        return hash(str(self))
 
     def __or__(self, other):
         if self is other:

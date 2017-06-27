@@ -5,11 +5,12 @@ from builtins import zip
 from builtins import range
 from builtins import object
 from past.utils import old_div
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, assert_in, raises, assert_is,
-                        assert_is_not, assert_true)
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+                        assert_in, raises, assert_is, assert_is_not,
+                        assert_true)
 from nose.plugins.skip import Skip, SkipTest
-from .test_helpers import true_func, assert_equal_array_array, make_1d_traj
+from .test_helpers import (true_func, assert_equal_array_array,
+                           make_1d_traj, assert_items_equal)
 
 import copy
 

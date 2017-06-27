@@ -25,9 +25,14 @@ __author__ = 'Jan-Hendrik Prinz'
 import sys
 if sys.version_info > (3, ):
     long = int
+    unicode = str
     builtin_module = 'builtins'
+    get_code = lambda func: func.__code__
+    intify_byte = lambda b: b
 else:
     builtin_module = '__builtin__'
+    get_code = lambda func: func.func_code
+    intify_byte = lambda b: ord(b)
 
 class ObjectJSON(object):
     """
@@ -400,7 +405,7 @@ class ObjectJSON(object):
 
             return {
                 '_marshal': base64.b64encode(
-                    marshal.dumps(c.func_code)),
+                    marshal.dumps(get_code(c))),
                 '_global_vars': global_vars,
                 '_module_vars': import_vars
             }
@@ -461,20 +466,21 @@ class ObjectJSON(object):
         """
 
         # TODO: Clean this up. It now works only for codes that use co_names
-        opcodes = code.func_code.co_code
+        opcodes = get_code(code).co_code
         i = 0
         ret = []
         while i < len(opcodes):
-            int_code = ord(opcodes[i])
+            int_code = intify_byte(opcodes[i])
             if int_code == op:
-                ret.append((i, ord(opcodes[i + 1]) + ord(opcodes[i + 2]) * 256))
+                ret.append((i, intify_byte(opcodes[i + 1]) +
+                            intify_byte(opcodes[i + 2]) * 256))
 
             if int_code < opcode.HAVE_ARGUMENT:
                 i += 1
             else:
                 i += 3
 
-        return [code.func_code.co_names[i[1]] for i in ret]
+        return [get_code(code).co_names[i[1]] for i in ret]
 
     def to_json(self, obj, base_type=''):
         simplified = self.simplify(obj, base_type)

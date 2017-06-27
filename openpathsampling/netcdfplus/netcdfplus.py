@@ -14,6 +14,10 @@ from .dictify import UUIDObjectJSON
 from .stores import NamedObjectStore, ObjectStore
 from .proxy import LoaderProxy
 
+import sys
+if sys.version_info > (3, ):
+    unicode = str
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 

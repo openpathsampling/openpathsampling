@@ -4,8 +4,7 @@ from builtins import map
 from builtins import str
 from builtins import range
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises)
+from nose.tools import (assert_equal, assert_not_equal, raises)
 from nose.plugins.skip import SkipTest
 from .test_helpers import (CallIdentity, prepend_exception_message,
                           make_1d_traj, raises_with_message_like,
@@ -1100,50 +1099,50 @@ class testSequentialEnsembleCombination(EnsembleTest):
         self._test_everything(self.combo_and, and_passes, False)
 
     def test_can_append(self):
-	ens1_true = [
-	    'hit',
-	    'in',
-	    'in_cross',
-	    'in_out',
-	    'in_out_cross',
-	    'in_out_out_out',
-	    'out',
-	    'out_cross',
-	    'out_out',
-	    'out_out_out'
-	]
+        ens1_true = [
+            'hit',
+            'in',
+            'in_cross',
+            'in_out',
+            'in_out_cross',
+            'in_out_out_out',
+            'out',
+            'out_cross',
+            'out_out',
+            'out_out_out'
+        ]
         self._test_everything(self.ens1.can_append, ens1_true, False)
         ens2_true = [
-	    'hit',
-	    'in',
-	    'in_cross',
-	    'in_cross_in',
-	    'in_cross_in_cross',
-	    'in_hit_in',
-	    'in_hit_out',
-	    'in_in',
-	    'in_in_cross_in',
-	    'in_in_in',
-	    'in_in_in_out',
-	    'in_in_out',
-	    'in_in_out_in',
-	    'in_out',
-	    'in_out_cross',
-	    'in_out_in',
-	    'in_out_in_in',
-	    'in_out_in_out',
-	    'in_out_out_in',
-	    'in_out_out_out',
-	    'out',
-	    'out_cross',
-	    'out_hit_in',
-	    'out_hit_out',
-	    'out_in',
-	    'out_in_in',
-	    'out_in_out',
-	    'out_out',
-	    'out_out_in',
-	    'out_out_out'
+            'hit',
+            'in',
+            'in_cross',
+            'in_cross_in',
+            'in_cross_in_cross',
+            'in_hit_in',
+            'in_hit_out',
+            'in_in',
+            'in_in_cross_in',
+            'in_in_in',
+            'in_in_in_out',
+            'in_in_out',
+            'in_in_out_in',
+            'in_out',
+            'in_out_cross',
+            'in_out_in',
+            'in_out_in_in',
+            'in_out_in_out',
+            'in_out_out_in',
+            'in_out_out_out',
+            'out',
+            'out_cross',
+            'out_hit_in',
+            'out_hit_out',
+            'out_in',
+            'out_in_in',
+            'out_in_out',
+            'out_out',
+            'out_out_in',
+            'out_out_out'
         ]
         self._test_everything(self.ens2.can_append, ens2_true, False)
         
@@ -1155,18 +1154,18 @@ class testSequentialEnsembleCombination(EnsembleTest):
 
     def test_can_prepend(self):
         ens1_true = [
-	    'hit',
-	    'in',
-	    'out',
-	    'out_cross',
-	    'out_in',
-	    'out_out',
-	    'out_out_in',
-	    'out_out_out',
-	    'out_out_out_in'
+            'hit',
+            'in',
+            'out',
+            'out_cross',
+            'out_in',
+            'out_out',
+            'out_out_in',
+            'out_out_out',
+            'out_out_out_in'
         ]
         self._test_everything(self.ens1.can_prepend, ens1_true, False)
-	ens2_true = [
+        ens2_true = [
             'cross_in_cross_in',
             'hit',
             'in',
@@ -1198,7 +1197,7 @@ class testSequentialEnsembleCombination(EnsembleTest):
             'out_out_in',
             'out_out_out',
             'out_out_out_in'
-	]
+        ]
         self._test_everything(self.ens2.can_prepend, ens2_true, False)
         
         or_true = list(set(ens1_true + ens2_true))
@@ -1208,36 +1207,36 @@ class testSequentialEnsembleCombination(EnsembleTest):
         self._test_everything(self.combo_and.can_prepend, and_true, False)
 
     def test_strict_can_append(self):
-	ens1_true = [
-	    'hit',
-	    'in',
-	    'in_cross',
-	    'in_out',
-	    'in_out_cross',
-	    'in_out_out_out',
-	]
+        ens1_true = [
+            'hit',
+            'in',
+            'in_cross',
+            'in_out',
+            'in_out_cross',
+            'in_out_out_out',
+        ]
         self._test_everything(self.ens1.strict_can_append, ens1_true, False)
         ens2_true = [
-	    'hit',
-	    'in',
-	    'in_cross',
-	    'in_cross_in',
-	    'in_cross_in_cross',
-	    'in_hit_in',
-	    'in_hit_out',
-	    'in_in',
-	    'in_in_cross_in',
-	    'in_in_in',
-	    'in_in_in_out',
-	    'in_in_out',
-	    'in_in_out_in',
-	    'in_out',
-	    'in_out_cross',
-	    'in_out_in',
-	    'in_out_in_in',
-	    'in_out_in_out',
-	    'in_out_out_in',
-	    'in_out_out_out',
+            'hit',
+            'in',
+            'in_cross',
+            'in_cross_in',
+            'in_cross_in_cross',
+            'in_hit_in',
+            'in_hit_out',
+            'in_in',
+            'in_in_cross_in',
+            'in_in_in',
+            'in_in_in_out',
+            'in_in_out',
+            'in_in_out_in',
+            'in_out',
+            'in_out_cross',
+            'in_out_in',
+            'in_out_in_in',
+            'in_out_in_out',
+            'in_out_out_in',
+            'in_out_out_out',
         ]
         self._test_everything(self.ens2.strict_can_append, ens2_true, False)
 
@@ -1249,14 +1248,14 @@ class testSequentialEnsembleCombination(EnsembleTest):
 
     def test_strict_can_prepend(self):
         ens1_true = [
-	    'hit',
-	    'in',
-	    'out_in',
-	    'out_out_in',
-	    'out_out_out_in'
+            'hit',
+            'in',
+            'out_in',
+            'out_out_in',
+            'out_out_out_in'
         ]
         self._test_everything(self.ens1.strict_can_prepend, ens1_true, False)
-	ens2_true = [
+        ens2_true = [
             'cross_in_cross_in',
             'hit',
             'in',
@@ -1277,7 +1276,7 @@ class testSequentialEnsembleCombination(EnsembleTest):
             'out_in_out_in',
             'out_out_in',
             'out_out_out_in'
-	]
+        ]
         self._test_everything(self.ens2.strict_can_prepend, ens2_true, False)
 
         or_true = list(set(ens1_true + ens2_true))

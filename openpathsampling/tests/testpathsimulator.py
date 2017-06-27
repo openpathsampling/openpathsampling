@@ -5,9 +5,10 @@ from builtins import range
 from past.utils import old_div
 from builtins import object
 from .test_helpers import (raises_with_message_like, data_filename,
-                          CalvinistDynamics, make_1d_traj)
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal, assert_true)
+                           CalvinistDynamics, make_1d_traj,
+                           assert_items_equal)
+from nose.tools import (assert_equal, assert_not_equal, raises,
+                        assert_almost_equal, assert_true)
 # from nose.plugins.skip import SkipTest
 
 from openpathsampling.pathsimulator import *

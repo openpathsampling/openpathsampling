@@ -1,10 +1,10 @@
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+                        raises)
 from nose.plugins.skip import Skip, SkipTest
 from openpathsampling.tests.test_helpers import (assert_equal_array_array,
                           assert_not_equal_array_array,
-                          make_1d_traj,
+                          make_1d_traj, assert_items_equal,
                           CalvinistDynamics
                          )
 from openpathsampling.shooting import *

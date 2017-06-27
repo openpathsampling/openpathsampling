@@ -8,6 +8,11 @@ from openpathsampling.netcdfplus import ObjectStore, with_timing_logging, \
 from .snapshot_feature import FeatureSnapshotStore
 from .snapshot_value import SnapshotValueStore
 
+import sys
+if sys.version_info > (3, ):
+    unicode = str
+    long = int
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 

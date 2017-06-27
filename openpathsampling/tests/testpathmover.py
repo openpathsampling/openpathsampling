@@ -9,8 +9,8 @@ from builtins import str
 from builtins import range
 from builtins import object
 from nose.plugins.skip import SkipTest
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_true, assert_in, assert_not_in)
+from nose.tools import (assert_equal, assert_not_equal, raises, assert_true,
+                        assert_in, assert_not_in)
 from numpy.testing import assert_allclose
 
 from openpathsampling.collectivevariable import FunctionCV
@@ -25,7 +25,7 @@ from openpathsampling.volume import CVDefinedVolume
 import openpathsampling.engines.toy as toys
 from .test_helpers import CallIdentity, raises_with_message_like
 from .test_helpers import (assert_equal_array_array, items_equal,
-                          make_1d_traj,
+                          make_1d_traj, assert_items_equal,
                           CalvinistDynamics)
 
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)

@@ -262,7 +262,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         r_store = rehashed.store
         count_all = {k : sum(r_store[k].values()) for k in r_store}
         count_state = {k : r_store[k][state] for k in r_store}
-        ndim = self._get_key_dim(r_store.keys()[0])
+        ndim = self._get_key_dim(list(r_store.keys())[0])
         if ndim == 1:
             (all_hist, b) = np.histogram(count_all.keys(),
                                          weights=count_all.values(), 

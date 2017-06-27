@@ -73,7 +73,7 @@ class ChainDict(object):
                 self._set_list(nones, rep)
 
                 it = iter(rep)
-                return [it.next() if p[1] is None else p[1]
+                return [next(it) if p[1] is None else p[1]
                         for p in zip(items, results)]
 
         return results

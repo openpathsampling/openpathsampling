@@ -9,14 +9,14 @@ from past.utils import old_div
 from builtins import object
 import os
 
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal)
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal)
 
 from nose.plugins.skip import SkipTest
 
 import openpathsampling as paths
 import openpathsampling.engines.toy as toy
-from .test_helpers import true_func, assert_equal_array_array
+from .test_helpers import (true_func, assert_equal_array_array,
+                           assert_items_equal)
 
 import numpy as np
 

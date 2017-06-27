@@ -3,8 +3,8 @@ from __future__ import absolute_import
 from builtins import zip
 from past.utils import old_div
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal)
+from nose.tools import (assert_equal, assert_not_equal, raises,
+                        assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from .test_helpers import make_1d_traj
 

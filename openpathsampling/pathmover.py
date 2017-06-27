@@ -531,7 +531,7 @@ class SampleMover(PathMover):
 
         # TODO: This isn't right. `bias` should be associated with the
         # change; not with each individual sample. ~~~DWHS
-        for ens, sample in trial_dict.iteritems():
+        for ens, sample in trial_dict.items():
             valid = ens(sample.trajectory, candidate=self._trust_candidate)
             if not valid:
                 # one sample not valid reject
@@ -2550,7 +2550,7 @@ class Details(StorableObject):
 
     def __init__(self, **kwargs):
         super(Details, self).__init__()
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             setattr(self, key, value)
 
     _print_repr_types = [paths.Ensemble]

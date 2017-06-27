@@ -3,10 +3,11 @@ from builtins import object
 import logging
 
 from nose.tools import (
-    assert_equal, assert_not_equal, assert_items_equal, raises
+    assert_equal, assert_not_equal, raises
 )
 from nose.plugins.skip import SkipTest
-from .test_helpers import CallIdentity, prepend_exception_message, make_1d_traj
+from .test_helpers import (CallIdentity, prepend_exception_message,
+                           make_1d_traj, assert_items_equal)
 
 
 import openpathsampling as paths

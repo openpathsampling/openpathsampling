@@ -6,6 +6,8 @@ import math
 from .lookup_function import LookupFunction, VoxelLookupFunction
 import collections
 
+from functools import reduce
+
 class SparseHistogram(object):
     """
     Base class for sparse-based histograms.
@@ -287,7 +289,7 @@ class Histogram(SparseHistogram):
         return super(Histogram, self).histogram(data, weights)
 
     def xvals(self, bin_edge_type="l"):
-        int_bins = np.array(self._histogram.keys())[:,0]
+        int_bins = np.array(list(self._histogram.keys()))[:,0]
         # always include left_edge_bin as 0 point; always include 0 and
         # greater bin values (but allow negative)
         min_bin = min(min(int_bins), 0)

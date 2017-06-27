@@ -211,6 +211,9 @@ class Ensemble(StorableNamedObject):
         super(Ensemble, self).__init__()
         self._saved_str = None  # cached first time it is requested
 
+    def __hash__(self):
+        return hash(str(self))
+
     def __eq__(self, other):
         if self is other:
             return True
@@ -999,8 +1002,8 @@ class Ensemble(StorableNamedObject):
             # [5,4,6,3,7,2,8,1,9,0]
             ordered = sorted(self.split(traj), key=len)
             parts = list([p for p2 in zip(
-                ordered[len(ordered) / 2:],
-                reversed(ordered[:len(ordered) / 2])
+                ordered[len(ordered) // 2:],
+                reversed(ordered[:len(ordered) // 2])
             ) for p in p2])
 
             if len(ordered) & 1:
@@ -2098,7 +2101,7 @@ class AllInXEnsemble(VolumeEnsemble):
         bool :
             result of __call__
         """
-        frame_num = -(cache.direction + 1) / 2  # 1 -> -1; -1 -> 0
+        frame_num = -(cache.direction + 1) // 2  # 1 -> -1; -1 -> 0
         reset = cache.check(trajectory)
         if reset:
             if len(trajectory) < 2:

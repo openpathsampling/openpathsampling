@@ -16,6 +16,12 @@ import abc
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+# python 3 support
+try:
+    xrange
+except NameError:
+    xrange = range
+
 
 class MCStep(StorableObject):
     """

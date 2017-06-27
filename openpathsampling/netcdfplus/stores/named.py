@@ -7,6 +7,10 @@ import logging
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+import sys
+if sys.version_info > (3, ):
+    long = int
+
 
 class NamedObjectStore(ObjectStore):
     def __init__(self, content_class, json=True, nestable=False):

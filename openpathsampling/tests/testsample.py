@@ -5,8 +5,8 @@
 from builtins import range
 from builtins import object
 from nose.plugins.skip import SkipTest
-from nose.tools import (assert_equal, assert_items_equal,
-                        raises)
+from nose.tools import (assert_equal, raises)
+from .test_helpers import assert_items_equal
 
 from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import LengthEnsemble

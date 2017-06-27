@@ -36,7 +36,7 @@ class ChannelAnalysis(StorableNamedObject):
         self.replica = replica
 
         self._treat_multiples = 'all'
-        self._results = {c: [] for c in self.channels.keys() + [None]}
+        self._results = {c: [] for c in list(self.channels.keys()) + [None]}
         if len(steps) > 0:
             self._analyze(steps)
 

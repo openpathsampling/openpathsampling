@@ -7,12 +7,14 @@ import pandas as pd
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 
+from functools import reduce  # not built-in for py3
+
 logger = logging.getLogger(__name__)
 
 def index_to_string(index):
-    n_underscore = index / 26
+    n_underscore = index // 26
     letter_value = index % 26
-    mystr = "_"*n_underscore + chr(65+letter_value)
+    mystr = "_"*n_underscore + chr(65 + letter_value)
     return mystr
 
 class TransitionNetwork(StorableNamedObject):
@@ -285,7 +287,7 @@ class TISNetwork(TransitionNetwork):
     def __init__(self, trans_info, ms_outers):
         self.trans_info = trans_info
         try:
-            _ = len(ms_outers)
+            ms_outers = list(ms_outers)
         except TypeError:
             if ms_outers is not None:
                 ms_outers = [ms_outers]
@@ -318,11 +320,11 @@ class TISNetwork(TransitionNetwork):
 
     @property
     def minus_ensembles(self):
-        return self.special_ensembles['minus'].keys()
+        return list(self.special_ensembles['minus'].keys())
 
     @property
     def ms_outers(self):
-        return self.special_ensembles['ms_outer'].keys()
+        return list(self.special_ensembles['ms_outer'].keys())
 
     def add_ms_outer_interface(self, ms_outer, transitions, forbidden=None):
         relevant = ms_outer.relevant_transitions(transitions)
@@ -426,10 +428,10 @@ class MSTISNetwork(TISNetwork):
             self.build_fromstate_transitions(trans_info)
             if self.ms_outer_objects is not None:
                 for ms_outer in self.ms_outer_objects:
-                    all_transitions = self.from_state.values()
+                    all_transitions = list(self.from_state.values())
                     self.add_ms_outer_interface(ms_outer, all_transitions)
 
-        self._sampling_transitions = self.from_state.values()
+        self._sampling_transitions = list(self.from_state.values())
 
         # by default, we set assign these values to all ensembles
         self.hist_args = {}

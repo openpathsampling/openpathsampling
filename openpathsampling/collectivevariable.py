@@ -5,6 +5,11 @@ from openpathsampling.netcdfplus import StorableNamedObject, WeakKeyCache, \
 import openpathsampling.engines as peng
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 
+import sys
+if sys.version_info > (3, ):
+    get_code = lambda func: func.__code__
+else:
+    get_code = lambda func: func.func_code
 
 # ==============================================================================
 #  CLASS CollectiveVariable
@@ -396,10 +401,11 @@ class CallableCV(CollectiveVariable):
             if self.cv_callable is None or other.cv_callable is None:
                 return False
 
-            if hasattr(self.cv_callable.func_code, 'op_code') \
-                    and hasattr(other.cv_callable.func_code, 'op_code') \
-                    and self.cv_callable.func_code.op_code != \
-                    other.cv_callable.func_code.op_code:
+            self_code = get_code(self.cv_callable)
+            other_code = get_code(other.cv_callable)
+            if hasattr(self_code, 'op_code') \
+                    and hasattr(other_code, 'op_code') \
+                    and self_code.op_code != other_code.op_code:
                 # Compare Bytecode. Not perfect, but should be good enough
                 return False
 
