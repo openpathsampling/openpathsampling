@@ -187,21 +187,21 @@ class DynamicsEngine(StorableNamedObject):
         okay_options = {}
 
         # self.default_options overrides default ones from DynamicsEngine
-        for variable, value in self.default_options.iteritems():
+        for variable, value in self.default_options.items():
             my_options[variable] = value
 
         if hasattr(self, 'options') and self.options is not None:
             # self.options overrides default ones
-            for variable, value in self.options.iteritems():
+            for variable, value in self.options.items():
                 my_options[variable] = value
 
         if options is not None:
             # given options override even default and already stored ones
-            for variable, value in options.iteritems():
+            for variable, value in options.items():
                 my_options[variable] = value
 
         if my_options is not None:
-            for variable, default_value in self.default_options.iteritems():
+            for variable, default_value in self.default_options.items():
                 # create an empty member variable if not yet present
                 if not hasattr(self, variable):
                     okay_options[variable] = None
@@ -262,7 +262,7 @@ class DynamicsEngine(StorableNamedObject):
                     # alternately, trust the fixed result with
                     # return result  # miraculously fixed
                     raise AttributeError(
-                        "Unknown problem occurred in property" + 
+                        "Unknown problem occurred in property" +
                         str(p.fget.func_name) + ": Second attempt returned"
                         + str(result)
                     )
@@ -277,7 +277,9 @@ class DynamicsEngine(StorableNamedObject):
 
         # fallback is to look for an option and return it's value
         try:
-            return self.options[item]
+            # extra step here seems to avoid recursion problem in Py3
+            option_dict = object.__getattribute__(self, 'options')
+            return option_dict[item]
         except KeyError:
             # convert KeyError to AttributeError
             default_msg = "'{0}' has no attribute '{1}'"

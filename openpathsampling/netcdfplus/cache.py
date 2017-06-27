@@ -388,7 +388,7 @@ class LRUChunkLoadingCache(Cache):
         else:
             self._size = 0
 
-        self._lastchunk_idx = self._size / self.chunksize
+        self._lastchunk_idx = self._size // self.chunksize
 
     @property
     def count(self):
@@ -422,7 +422,7 @@ class LRUChunkLoadingCache(Cache):
         else:
             self._size = size
 
-        self._lastchunk_idx = (self._size - 1) / self.chunksize
+        self._lastchunk_idx = (self._size - 1) // self.chunksize
 
     def load_chunk(self, chunk_idx):
         """
@@ -465,7 +465,7 @@ class LRUChunkLoadingCache(Cache):
 
     def __getitem__(self, item):
         chunksize = self.chunksize
-        chunk_idx = item / chunksize
+        chunk_idx = item // chunksize
         if chunk_idx in self._chunkdict:
             try:
                 obj = self._chunkdict[chunk_idx][item % chunksize]
@@ -489,12 +489,12 @@ class LRUChunkLoadingCache(Cache):
         self.update_size()
         map(self.load_chunk,
             range(0, min(
-                1 + (self._size - 1) / self.chunksize,
+                1 + (self._size - 1) // self.chunksize,
                 self.max_chunks
             )))
 
     def __setitem__(self, key, value, **kwargs):
-        chunk_idx = key / self.chunksize
+        chunk_idx = key // self.chunksize
         if chunk_idx in self._chunkdict:
             chunk = self._chunkdict[chunk_idx]
         else:

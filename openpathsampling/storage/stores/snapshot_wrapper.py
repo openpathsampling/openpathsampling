@@ -35,7 +35,7 @@ class ReversalHashedList(dict):
         # we will always store the ones with even keys
         dict.__setitem__(self, key & ~1, value ^ (key & 1))
         # we will always store the ones with even value
-        self._list[value / 2] = key ^ (value & 1)
+        self._list[value // 2] = key ^ (value & 1)
 
     def get(self, key, d=None):
         uu = dict.get(self, key & ~1, d)
@@ -51,7 +51,7 @@ class ReversalHashedList(dict):
         return dict.__contains__(self, key & ~1)
 
     def index(self, key):
-        return self._list[key / 2] ^ (key & 1)
+        return self._list[key // 2] ^ (key & 1)
 
     def mark(self, key):
         k = key & ~1
@@ -195,7 +195,7 @@ class SnapshotWrapperStore(ObjectStore):
         return obj
 
     def _load(self, idx):
-        store_idx = int(self.variables['store'][idx / 2])
+        store_idx = int(self.variables['store'][idx // 2])
 
         if store_idx < 0:
             # print store_idx, self.storage, self.name, idx
@@ -329,7 +329,7 @@ class SnapshotWrapperStore(ObjectStore):
 
         if n_idx is not None:
             # snapshot is mentioned
-            store_idx = int(self.variables['store'][n_idx / 2])
+            store_idx = int(self.variables['store'][n_idx // 2])
             if not store_idx == -1:
                 # and stored
                 return self.reference(obj)
@@ -339,7 +339,7 @@ class SnapshotWrapperStore(ObjectStore):
                 n_idx = len(self.index)
 
                 # only mention but not really store snapshots
-                self.vars['store'][n_idx / 2] = -1
+                self.vars['store'][n_idx // 2] = -1
                 self.index.append(obj.__uuid__)
                 self._auto_complete_single_snapshot(obj, n_idx)
                 self._set_id(n_idx, obj)
@@ -362,7 +362,7 @@ class SnapshotWrapperStore(ObjectStore):
             self._set_id(n_idx, obj)
         else:
             store, store_idx = self.type_list[obj.engine.descriptor]
-            self.vars['store'][n_idx / 2] = store_idx
+            self.vars['store'][n_idx // 2] = store_idx
             store[n_idx] = obj
 
         self.cache[n_idx] = obj
@@ -372,7 +372,7 @@ class SnapshotWrapperStore(ObjectStore):
     def _save(self, obj, n_idx):
         try:
             store, store_idx = self.type_list[obj.engine.descriptor]
-            self.vars['store'][n_idx / 2] = store_idx
+            self.vars['store'][n_idx // 2] = store_idx
             self.index.append(obj.__uuid__)
             store[n_idx] = obj
             return store
@@ -385,14 +385,14 @@ class SnapshotWrapperStore(ObjectStore):
                              len(self.storage.dimensions['snapshottype']) == 0):
                 # we just create space for it
                 store, store_idx = self.add_type(obj.engine.descriptor)
-                self.vars['store'][n_idx / 2] = store_idx
+                self.vars['store'][n_idx // 2] = store_idx
                 self.index.append(obj.__uuid__)
                 store[n_idx] = obj
                 return store
 
             elif self.treat_missing_snapshot_type == 'ignore':
                 # we keep silent about it
-                self.vars['store'][n_idx / 2] = -1
+                self.vars['store'][n_idx // 2] = -1
                 return None
             else:
                 # we fail with cannot store
@@ -421,7 +421,7 @@ class SnapshotWrapperStore(ObjectStore):
                         cv_store[obj] = value
                     else:
                         if cv_store.time_reversible:
-                            n_idx = pos / 2
+                            n_idx = pos // 2
                         else:
                             n_idx = pos
 
@@ -530,7 +530,7 @@ class SnapshotWrapperStore(ObjectStore):
         if cv_store.allow_incomplete:
 
             # loop all objects in the fast CV cache
-            for obj, value in cv._cache_dict.cache.iteritems():
+            for obj, value in cv._cache_dict.cache.items():
                 if value is not None:
                     pos = self.pos(obj)
 
@@ -539,7 +539,7 @@ class SnapshotWrapperStore(ObjectStore):
                         continue
 
                     if cv_store.time_reversible:
-                        pos /= 2
+                        pos //= 2
 
                     if pos in cv_store.index:
                         # this value is stored so skip it
@@ -570,7 +570,7 @@ class SnapshotWrapperStore(ObjectStore):
     #         # store only a reference and not the full object
     #         # this can later be done using .save(obj)
     #         n_idx = self.free()
-    #         self.variables['store'][n_idx / 2] = -1
+    #         self.variables['store'][n_idx // 2] = -1
     #         self.index[obj.__uuid__] = n_idx
     #         self._set_id(n_idx, obj)
 
@@ -722,7 +722,7 @@ class SnapshotWrapperStore(ObjectStore):
             obj._reversed.__uuid__ = uuid ^ 1
 
     def _set_id(self, idx, obj):
-        self.vars['uuid'][idx / 2] = obj.__uuid__
+        self.vars['uuid'][idx // 2] = obj.__uuid__
 
     def idx(self, obj):
         """

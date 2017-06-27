@@ -7,6 +7,11 @@ from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, \
     WeakLRUCache
 from openpathsampling.netcdfplus.proxy import LoaderProxy
 
+import sys
+if sys.version_info > (3, ):
+    long = int
+    unicode = str
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 

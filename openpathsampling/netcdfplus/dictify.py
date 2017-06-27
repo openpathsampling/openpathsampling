@@ -73,7 +73,7 @@ class ObjectJSON(object):
             cls.__name__: cls for cls in self.allowed_storable_atomic_types}
         self.type_names.update(self.class_list)
         self.type_classes = {
-            cls: name for name, cls in self.type_names.iteritems()}
+            cls: name for name, cls in self.type_names.items()}
 
     def simplify_object(self, obj):
         return {
@@ -161,20 +161,20 @@ class ObjectJSON(object):
                 result = {
                     '_dict': [
                         self.simplify(tuple([key, o]))
-                        for key, o in obj.iteritems()
+                        for key, o in obj.items()
                         if key not in self.excluded_keys
                     ]}
             else:
                 # simple enough, do it the old way
                 # FASTER VERSION NORMALLY
                 result = {
-                    key: self.simplify(o) for key, o in obj.iteritems()
+                    key: self.simplify(o) for key, o in obj.items()
                     if key not in self.excluded_keys
                 }
 
                 # SLOWER VERSION FOR DEBUGGING
                 # result = {}
-                # for key, o in obj.iteritems():
+                # for key, o in obj.items():
                 # logger.debug("Making dict entry of " + str(key) + " : "
                 # + str(o))
                 # if key not in self.excluded_keys:
@@ -266,7 +266,7 @@ class ObjectJSON(object):
             else:
                 return {
                     self._unicode2str(key): self.build(o)
-                    for key, o in obj.iteritems()
+                    for key, o in obj.items()
                 }
 
         elif type(obj) is list:
@@ -291,7 +291,7 @@ class ObjectJSON(object):
     @staticmethod
     def unit_from_dict(unit_dict):
         unit = units.Unit({})
-        for unit_name, unit_multiplication in unit_dict.iteritems():
+        for unit_name, unit_multiplication in unit_dict.items():
             unit *= getattr(units, unit_name) ** unit_multiplication
 
         return unit

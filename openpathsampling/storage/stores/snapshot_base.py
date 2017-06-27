@@ -80,7 +80,7 @@ class BaseSnapshotStore(IndexedObjectStore):
         }
 
     def load(self, idx):
-        pos = idx / 2
+        pos = idx // 2
 
         # we want to load by uuid and it was not in cache.
         if pos in self.index:
@@ -135,13 +135,13 @@ class BaseSnapshotStore(IndexedObjectStore):
         return obj
 
     def save(self, obj, idx=None):
-        pos = idx / 2
+        pos = idx // 2
 
         if pos in self.index:
             # has been saved so quit and do nothing
             return idx
 
-        # n_idx = self.free() / 2
+        # n_idx = self.free() // 2
         n_idx = len(self.index)
 
         # mark as saved so circular dependencies will not cause infinite loops

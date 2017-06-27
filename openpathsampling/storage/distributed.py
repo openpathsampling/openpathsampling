@@ -127,7 +127,7 @@ class DistributedUUIDStorage(object):
 
             delegate.stores.append(store)
 
-            for uuid, key in store.index.iteritems():
+            for uuid, key in store.index.items():
                 u = str(uuid)
                 if u not in delegate.index:
                     delegate.index[u] = (store, key)

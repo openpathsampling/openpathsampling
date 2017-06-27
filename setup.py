@@ -171,7 +171,7 @@ Public License v2.1 or later (LGPLv2.1+)
 Programming Language :: C
 Programming Language :: Python
 Programming Language :: Python :: 2.7
-Programming Language :: Python :: 3.5
+Programming Language :: Python :: 3.6
 Topic :: Scientific/Engineering :: Bio-Informatics
 Topic :: Scientific/Engineering :: Chemistry
 Operating System :: Microsoft :: Windows

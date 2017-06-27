@@ -497,7 +497,14 @@ class NetCDFPlus(netCDF4.Dataset):
         try:
             return self.__dict__[item]
         except KeyError:
-            return self.__class__.__dict__[item]
+            try:
+                return self.__class__.__dict__[item]
+            except KeyError:
+                raise AttributeError(
+                    "'{cls}' object has no attribute '{itm}'".format(
+                        cls=self.__class__, itm=item
+                    )
+                )
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
@@ -1182,9 +1189,11 @@ class NetCDFPlus(netCDF4.Dataset):
             if type(dimensions) is str:
                 dim_names = [dimensions]
             else:
-                dim_names = map(
-                    lambda p: '#ix{0}:{1}'.format(*p),
-                    enumerate(dimensions))
+                #dim_names = map(
+                    #lambda p: '#ix{0}:{1}'.format(*p),
+                    #enumerate(dimensions))
+                dim_names = ['#ix{0}:{1}'.format(*p) for p in
+                             enumerate(dimensions)]
 
             idx_desc = '[' + ']['.join(dim_names) + ']'
             description = var_name + idx_desc + ' is ' + \

@@ -32,7 +32,7 @@ class FeatureSnapshotStore(BaseSnapshotStore):
     def initialize(self):
         super(FeatureSnapshotStore, self).initialize()
 
-        for dim, size in self._dimensions.iteritems():
+        for dim, size in self._dimensions.items():
             self.storage.create_dimension(self.prefix + dim, size)
 
         for feature in self.classes:
