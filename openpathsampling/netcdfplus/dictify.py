@@ -25,6 +25,9 @@ __author__ = 'Jan-Hendrik Prinz'
 import sys
 if sys.version_info > (3, ):
     long = int
+    builtin_module = 'builtins'
+else:
+    builtin_module = '__builtin__'
 
 class ObjectJSON(object):
     """
@@ -103,7 +106,7 @@ class ObjectJSON(object):
             return {
                 '_integer': str(obj)}
 
-        elif obj.__class__.__module__ != 'builtins':
+        elif obj.__class__.__module__ != builtin_module:
             if obj.__class__ is units.Quantity:
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
@@ -522,7 +525,7 @@ class StorableObjectJSON(ObjectJSON):
     def simplify(self, obj, base_type=''):
         if obj is self.storage:
             return {'_storage': 'self'}
-        if obj.__class__.__module__ != 'builtins':
+        if obj.__class__.__module__ != builtin_module:
             if obj.__class__ in self.storage._obj_store:
                 store = self.storage._obj_store[obj.__class__]
                 if not store.nestable or obj.base_cls_name != base_type:
@@ -565,7 +568,7 @@ class UUIDObjectJSON(ObjectJSON):
         if obj is self.storage:
             return {'_storage': 'self'}
 
-        if obj.__class__.__module__ != 'builtins':
+        if obj.__class__.__module__ != builtin_module:
             if obj.__class__ in self.storage._obj_store:
                 store = self.storage._obj_store[obj.__class__]
                 if not store.nestable or obj.base_cls_name != base_type:
@@ -611,7 +614,7 @@ class CachedUUIDObjectJSON(ObjectJSON):
         self.uuid_cache = WeakValueCache()
 
     def simplify(self, obj, base_type=''):
-        if obj.__class__.__module__ != 'builtins':
+        if obj.__class__.__module__ != builtin_module:
             if hasattr(obj, 'to_dict') and hasattr(obj, '__uuid__'):
                 # the object knows how to dismantle itself into a json string
                 if obj.__uuid__ not in self.uuid_cache:
