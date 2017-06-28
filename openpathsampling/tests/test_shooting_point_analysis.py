@@ -8,7 +8,8 @@ from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal, assert_true, assert_in)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
-from .test_helpers import make_1d_traj, data_filename, assert_items_equal
+from .test_helpers import (make_1d_traj, data_filename, assert_items_equal,
+                           assert_same_items)
 
 import openpathsampling as paths
 import openpathsampling.engines as peng
