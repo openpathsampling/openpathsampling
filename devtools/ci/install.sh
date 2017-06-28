@@ -6,7 +6,7 @@
 echo travis_fold:start:install.conda
 echo Install conda
 
-MINICONDA=Miniconda2-latest-Linux-x86_64.sh
+MINICONDA=Miniconda3-latest-Linux-x86_64.sh
 MINICONDA_MD5=$(curl -s https://repo.continuum.io/miniconda/ | grep -A3 $MINICONDA | sed -n '4p' | sed -n 's/ *<td>\(.*\)<\/td> */\1/p')
 wget https://repo.continuum.io/miniconda/$MINICONDA
 if [[ $MINICONDA_MD5 != $(md5sum $MINICONDA | cut -d ' ' -f 1) ]]; then
@@ -17,7 +17,7 @@ if [[ $MINICONDA_MD5 != $(md5sum $MINICONDA | cut -d ' ' -f 1) ]]; then
 fi
 bash $MINICONDA -b
 
-export PATH=$HOME/miniconda2/bin:$PATH
+export PATH=$HOME/miniconda3/bin:$PATH
 
 # add omnia and update
 conda config --add channels http://conda.anaconda.org/omnia
