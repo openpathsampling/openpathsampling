@@ -764,7 +764,8 @@ class MISTISNetwork(TISNetwork):
             sample_trans.named("Sampling " + str(stateA) + "->" + str(stateB))
             self.transition_to_sampling[transition] = sample_trans
 
-        self.x_sampling_transitions = self.transition_to_sampling.values()
+        self.x_sampling_transitions = \
+                list(self.transition_to_sampling.values())
 
         # combining the minus interfaces
         for initial in self.initial_states:

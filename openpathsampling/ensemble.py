@@ -211,8 +211,8 @@ class Ensemble(StorableNamedObject):
         super(Ensemble, self).__init__()
         self._saved_str = None  # cached first time it is requested
 
-    def __hash__(self):
-        return hash(str(self))
+    # https://docs.python.org/3/reference/datamodel.html#object.__hash__
+    __hash__ = StorableNamedObject.__hash__
 
     def __eq__(self, other):
         if self is other:

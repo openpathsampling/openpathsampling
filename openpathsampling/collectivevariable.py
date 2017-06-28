@@ -203,6 +203,8 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
 
         return NotImplemented
 
+    __hash__ = StorableNamedObject.__hash__
+
     def __ne__(self, other):
         """Define a non-equality test"""
         if isinstance(other, self.__class__):
@@ -412,6 +414,8 @@ class CallableCV(CollectiveVariable):
             return True
 
         return NotImplemented
+
+    __hash__ = CollectiveVariable.__hash__
 
     def _eval(self, items):
         return items

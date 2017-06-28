@@ -55,8 +55,7 @@ class Volume(StorableNamedObject):
         '''
         return 'volume' # pragma: no cover
 
-    def __hash__(self):
-        return hash(str(self))
+    __hash__ = StorableNamedObject.__hash__
 
     def __or__(self, other):
         if self is other:

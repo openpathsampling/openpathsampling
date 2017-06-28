@@ -628,7 +628,7 @@ class HistogramPlotter2D(object):
             xlim = self.xlim
         if ylim is None:
             ylim = self.ylim
-        x, y = zip(*self.histogram._histogram.keys())
+        x, y = list(zip(*self.histogram._histogram.keys()))
         xticks_, xrange_, xlim_ = self.axis_input(x, xticklabels, xlim, dof=0)
         yticks_, yrange_, ylim_ = self.axis_input(y, yticklabels, ylim, dof=1)
         self.xrange_ = xrange_
@@ -736,7 +736,7 @@ class HistogramPlotter2D(object):
             list to plot; paths.Trajectory allowed if the histogram can
             convert it to CVs.
         """
-        x, y = zip(*self.histogram.map_to_float_bins(trajectory))
+        x, y = list(zip(*self.histogram.map_to_float_bins(trajectory)))
         px = np.asarray(x) - self.xrange_[0]
         py = np.asarray(y) - self.yrange_[0]
         plt.plot(px, py, *args, **kwargs)
