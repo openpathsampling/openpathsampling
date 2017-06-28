@@ -61,7 +61,7 @@ class DistributedUUIDStorage(object):
             self.index = index
 
         def __iter__(self):
-            for store, idx in self.index.itervalues():
+            for store, idx in self.index.values():
                 yield store[idx]
 
         def __getitem__(self, item):

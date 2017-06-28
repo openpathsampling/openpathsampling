@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 if sys.version_info > (3, ):
     property_name = lambda p: str(p.fget.__name__)
 else:
-    property_name = lambda p: str(p.fget.func_name)
+    # property_name = lambda p: str(p.fget.func_name)
+    property_name = lambda p: str(p.fget.__name__)
 
 # =============================================================================
 # SOURCE CONTROL

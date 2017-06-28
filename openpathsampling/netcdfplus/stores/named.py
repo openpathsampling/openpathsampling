@@ -200,8 +200,10 @@ class NamedObjectStore(ObjectStore):
             the loaded object
         """
 
-        if type(idx) is int and idx < 0:
-            return None
+        print(idx)
+        print(self.index.list)
+        print(self.index)
+        print(idx in self.index)
 
         if type(idx) is str:
             # we want to load by name and it was not in cache.
@@ -219,7 +221,7 @@ class NamedObjectStore(ObjectStore):
 
         # --- start super of ObjectStore ---
 
-        elif type(idx) is long:
+        else:
             if idx in self.index:
                 n_idx = self.index[idx]
             else:
@@ -231,13 +233,13 @@ class NamedObjectStore(ObjectStore):
                     raise ValueError(
                         'str %s not found in storage or fallback' % idx)
 
-        elif type(idx) is not int:
-            raise ValueError((
-                 'indices of type "%s" are not allowed in named storage '
-                 '(only str and int)') % type(idx).__name__
-                             )
-        else:
-            n_idx = int(idx)
+        # elif type(idx) is not int:
+        #     raise ValueError((
+        #          'indices of type "%s" are not allowed in named storage '
+        #          '(only str and int)') % type(idx).__name__
+        #                      )
+        # else:
+        #     n_idx = int(idx)
 
         if n_idx < 0:
             return None

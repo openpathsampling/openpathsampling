@@ -392,7 +392,7 @@ class LRUChunkLoadingCache(Cache):
 
     @property
     def count(self):
-        return sum(map(len, self._chunkdict.itervalues())), 0
+        return sum(map(len, self._chunkdict.values())), 0
 
     @property
     def size(self):
@@ -532,7 +532,7 @@ class LRUChunkLoadingCache(Cache):
         return sum(map(len, self._chunkdict))
 
     def __iter__(self):
-        for chunk in self._chunkdict.itervalues():
+        for chunk in self._chunkdict.values():
             for key in chunk.keys():
                 yield key
 
