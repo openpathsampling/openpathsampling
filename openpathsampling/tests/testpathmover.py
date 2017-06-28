@@ -26,7 +26,7 @@ import openpathsampling.engines.toy as toys
 from .test_helpers import CallIdentity, raises_with_message_like
 from .test_helpers import (assert_equal_array_array, items_equal,
                           make_1d_traj, assert_items_equal,
-                          CalvinistDynamics)
+                          CalvinistDynamics, assert_same_items)
 
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -92,11 +92,11 @@ class testPathMover(object):
         self.sset = SampleSet([self.s1, self.s2, self.s3, self.s4])
 
     def test_legal_sample_set(self):
-        assert_items_equal(
+        assert_same_items(
             paths.PathMover.legal_sample_set(self.sset, ensembles=self.l1),
             [self.s2, self.s3]
         )
-        assert_items_equal(
+        assert_same_items(
             paths.PathMover.legal_sample_set(self.sset, ensembles=[self.l1]),
             [self.s2, self.s3]
         )

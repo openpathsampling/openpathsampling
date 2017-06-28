@@ -6,7 +6,7 @@ from builtins import range
 from builtins import object
 from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, raises)
-from .test_helpers import assert_items_equal
+from .test_helpers import assert_items_equal, assert_same_items
 
 from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import LengthEnsemble
@@ -168,7 +168,7 @@ class testSampleSet(object):
         assert_items_equal(self.testset.replica_list(), [0, 1, 2])
 
     def test_ensemble_list(self):
-        assert_items_equal(self.testset.ensemble_list(), [self.ensA, self.ensB])
+        assert_same_items(self.testset.ensemble_list(), [self.ensA, self.ensB])
 
     def test_all_from_ensemble(self):
         assert_items_equal(self.testset.all_from_ensemble(self.ensA),

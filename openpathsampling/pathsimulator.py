@@ -13,6 +13,8 @@ from openpathsampling.pathmover import SubPathMover
 from .ops_logging import initialization_logging
 import abc
 
+from future.utils import with_metaclass
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -60,7 +62,7 @@ class MCStep(StorableObject):
         self.mccycle = mccycle
 
 
-class PathSimulator(StorableNamedObject):
+class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
     """Abstract class for the "main" function of a simulation.
 
     Parameters
@@ -82,7 +84,7 @@ class PathSimulator(StorableNamedObject):
         This is likely to be overridden when a pathsimulator is wrapped in
         another simulation.
     """
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
     _excluded_attr = ['sample_set', 'step', 'save_frequency',

@@ -16,6 +16,8 @@ from openpathsampling.pathmover_inout import InOutSet, InOut
 from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
+from future.utils import with_metaclass
+
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
@@ -88,7 +90,7 @@ class MoveChangeNaNError(Exception):
     pass
 
 
-class PathMover(TreeMixin, StorableNamedObject):
+class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
     """
     A PathMover is the description of a move in replica space.
 
@@ -123,7 +125,7 @@ class PathMover(TreeMixin, StorableNamedObject):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
     def __init__(self):
         StorableNamedObject.__init__(self)

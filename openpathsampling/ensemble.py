@@ -11,6 +11,8 @@ import itertools
 from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
+from future.utils import with_metaclass
+
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -180,7 +182,7 @@ class EnsembleCache(object):
         return reset
 
 
-class Ensemble(StorableNamedObject):
+class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
     """
     Path ensemble object.
 
@@ -202,7 +204,7 @@ class Ensemble(StorableNamedObject):
     Maybe replace - by / to get better notation. So far it has not been used
     """
 
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
     def __init__(self):
         """
