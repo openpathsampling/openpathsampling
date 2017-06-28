@@ -19,11 +19,12 @@ script:
   - conda info --envs
   - source activate test
   - conda install --yes future
-  - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma ipynbtest
+  - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
   # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
-  - source devtools/ci/ipythontests.sh
+  - if [ ${CONDA_NPY:0:1} -eq 2 ]; then conda install --yes ipynbtest; source devtools/ci/ipythontests.sh; fi
+  #- source devtools/ci/ipythontests.sh
 
   # Upload new docs
   - bash -x devtools/ci/after_sucess.sh
