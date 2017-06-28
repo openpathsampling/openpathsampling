@@ -214,6 +214,7 @@ Operating System :: MacOS
         'numpy',
         'scipy',
         'pandas',
+        'future',
         'jupyter',
         'netcdf4',
         'openmm',
