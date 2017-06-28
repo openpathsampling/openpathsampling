@@ -271,5 +271,5 @@ class testShootingPointAnalysis(object):
         assert_equal(df1.shape, (2,2))
         assert_items_equal(df1.index, list(range(2)))
         assert_items_equal(df2.index, [0.0, 0.1])
-        assert_items_equal(df1.columns, [self.left.name, self.right.name])
+        assert_same_items(df1.columns, [self.left.name, self.right.name])
 
