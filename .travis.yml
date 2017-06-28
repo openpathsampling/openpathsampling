@@ -23,7 +23,8 @@ script:
   # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
-  - if [ ${CONDA_NPY:0:1} -eq 2 ]; then conda install --yes ipynbtest; source devtools/ci/ipythontests.sh; fi
+  - echo ${CONDA_NPY:0:1}
+  - if [ ${CONDA_NPY:0:1} -eq "2" ]; then conda install --yes ipynbtest; source devtools/ci/ipythontests.sh; fi
   #- source devtools/ci/ipythontests.sh
 
   # Upload new docs
