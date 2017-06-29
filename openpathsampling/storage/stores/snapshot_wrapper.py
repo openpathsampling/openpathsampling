@@ -72,6 +72,10 @@ class ReversalHashedList(dict):
         if k in self:
             dict.__delitem__(self, k)
 
+    @property
+    def list(self):
+        return self._list
+
 
 class SnapshotWrapperStore(ObjectStore):
     """
