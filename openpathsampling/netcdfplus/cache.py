@@ -325,7 +325,9 @@ class WeakLRUCache(Cache):
         return len(self._cache) + len(self._weak_cache)
 
     def __iter__(self):
-        for key in self.keys():
+        for key in self._cache.keys():
+            yield key
+        for key in self._weak_cache.keys():
             yield key
 
     def __reversed__(self):

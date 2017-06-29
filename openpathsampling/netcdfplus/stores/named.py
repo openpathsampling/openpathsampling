@@ -200,11 +200,6 @@ class NamedObjectStore(ObjectStore):
             the loaded object
         """
 
-        print(idx)
-        print(self.index.list)
-        print(self.index)
-        print(idx in self.index)
-
         if type(idx) is str:
             # we want to load by name and it was not in cache.
             if idx in self.name_idx:
@@ -221,8 +216,10 @@ class NamedObjectStore(ObjectStore):
 
         # --- start super of ObjectStore ---
 
-        else:
-            if idx in self.index:
+        elif isinstance(idx, (int, long)):
+            if idx < 1000000000:
+                n_idx = idx
+            elif idx in self.index:
                 n_idx = self.index[idx]
             else:
                 if self.fallback_store is not None:

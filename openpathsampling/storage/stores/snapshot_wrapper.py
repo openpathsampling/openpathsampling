@@ -29,8 +29,12 @@ class ReversalHashedList(dict):
     def extend(self, t):
         l = len(self._list)
         # t = filter(t, lambda x : x not in self)
-        map(lambda x, y: dict.__setitem__(self, x & ~1, y * 2 ^ (x & 1)), t,
-            range(l, l + len(t)))
+        dict.update(
+            self,
+            map(lambda x, y: (x & ~1, y * 2 ^ (x & 1)), t, range(l, l + len(t)))
+        )
+        # map(lambda x, y: dict.__setitem__(self, x & ~1, y * 2 ^ (x & 1)), t,
+        #     range(l, l + len(t)))
         self._list.extend(t)
 
     def __len__(self):
