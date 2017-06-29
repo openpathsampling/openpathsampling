@@ -108,12 +108,9 @@ class NetCDFPlus(netCDF4.Dataset):
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, key):
-            print(self.variable[key])
-            print(type(self.variable[key]))
-            r = self.getter(self.variable[key])
-            print("okay")
-            print(r)
-            return r
+            # print(self.variable[key])
+            # print(type(self.variable[key]))
+            return self.getter(self.variable[key])
 
         def __getattr__(self, item):
             return getattr(self.variable, item)
