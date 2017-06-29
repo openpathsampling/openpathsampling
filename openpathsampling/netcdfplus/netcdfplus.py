@@ -108,7 +108,12 @@ class NetCDFPlus(netCDF4.Dataset):
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, key):
-            return self.getter(self.variable[key])
+            print(self.variable[key])
+            print(type(self.variable[key]))
+            r = self.getter(self.variable[key])
+            print("okay")
+            print(r)
+            return r
 
         def __getattr__(self, item):
             return getattr(self.variable, item)
@@ -902,8 +907,9 @@ class NetCDFPlus(netCDF4.Dataset):
             getter = lambda v: [
                 None if w[0] == '-' else LoaderProxy(store, int(UUID(w)))
                 for w in v
-            ] if get_is_iterable(v) else \
+            ] if isinstance(v, np.ndarray) else \
                 None if v[0] == '-' else LoaderProxy(store, int(UUID(v)))
+
             setter = lambda v: \
                 ''.join([
                     '-' * 36 if w is None else str(UUID(int=store.save(w)))
