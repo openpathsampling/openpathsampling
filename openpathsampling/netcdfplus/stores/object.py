@@ -1,5 +1,5 @@
 import logging
-from uuid import UUID
+# from uuid import UUID
 from weakref import WeakValueDictionary
 
 from openpathsampling.netcdfplus.base import StorableNamedObject, StorableObject
@@ -29,7 +29,7 @@ class HashedList(dict):
     # noinspection PyCallByClass
     def extend(self, t):
         l = len(self)
-        map(lambda x, y: dict.__setitem__(self, x, y), t, range(l, l + len(t)))
+        dict.update(self, zip(t, range(l, l + len(t))))
         self._list.extend(t)
 
     def __setitem__(self, key, value):
@@ -375,18 +375,22 @@ class ObjectStore(StorableNamedObject):
         if item is None:
             return None
 
-        tt = type(item)
-        if tt is int:
-            idx = self.vars['uuid'][item]
-        elif tt is long:
-            idx = item
-        elif tt in [str, unicode]:
-            if item[0] == '-':
-                return None
-            idx = int(UUID(item))
-        else:
+        try:
             idx = item.__uuid__
+        except AttributeError:
+            idx = item
 
+        # tt = type(item)
+        # if tt is int:
+        #     idx = self.vars['uuid'][item]
+        # elif tt is long:
+        #     idx = item
+        # elif tt in [str, unicode]:
+        #     if item[0] == '-':
+        #         return None
+        #     idx = int(UUID(item))
+        # else:
+        #
         return LoaderProxy(self, idx)
 
     def __contains__(self, item):
@@ -406,11 +410,11 @@ class ObjectStore(StorableNamedObject):
         Enable numpy style selection of object in the store
         """
         try:
-            if type(item) is int:
+            if isinstance(item, (long, int)):
                 if item < 0:
                     item += len(self)
                 return self.load(item)
-            elif type(item) is str or type(item) is long:
+            elif type(item) is str:
                 return self.load(item)
             elif type(item) is slice:
                 return [self.load(idx)
@@ -707,8 +711,10 @@ class ObjectStore(StorableNamedObject):
             the loaded object
         """
 
-        if type(idx) is long:
-            if idx in self.index:
+        if isinstance(idx, (long, int)):
+            if idx < 1000000000:
+                n_idx = idx
+            elif idx in self.index:
                 n_idx = self.index[idx]
             else:
                 if self.fallback_store is not None:
@@ -719,13 +725,9 @@ class ObjectStore(StorableNamedObject):
                     raise ValueError(
                         'str %s not found in storage or fallback' % idx)
 
-        elif type(idx) is not int:
-            raise ValueError((
-                'indices of type "%s" are not allowed in named storage '
-                '(only str and int)') % type(idx).__name__
-            )
         else:
-            n_idx = int(idx)
+            raise ValueError(
+                'indices need to be a 32-byte UUID in long format or a simple int ')
 
         if n_idx < 0:
             return None

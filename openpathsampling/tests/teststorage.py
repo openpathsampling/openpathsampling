@@ -217,7 +217,7 @@ class testStorage(object):
 
             store.save(tm)
 
-            px = store.snapshots.proxy(0)
+            px = store.snapshots.proxy(store.snapshots.index.list[0])
 
             # make sure that the proxy and
             assert(hash(px) == hash(tm))
@@ -232,7 +232,7 @@ class testStorage(object):
             compare_snapshot(px, tm)
             compare_snapshot(s0, tm)
 
-            px = store.snapshots.proxy(0)
+            px = store.snapshots.proxy(store.snapshots.index.list[0])
 
             # make sure that after reloading it still works
             assert(hash(px) == hash(tm))

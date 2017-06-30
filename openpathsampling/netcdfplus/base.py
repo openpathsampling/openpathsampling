@@ -17,7 +17,7 @@ class StorableObject(object):
     """
 
     _weak_cache = weakref.WeakKeyDictionary()
-    _weak_index = long(0)
+    _weak_index = 0
 
     _base = None
     _args = None
@@ -25,7 +25,7 @@ class StorableObject(object):
     observe_objects = False
 
     INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
-    CREATION_COUNT = long(0)
+    CREATION_COUNT = 0
     ACTIVE_LONG = int(uuid.UUID(
             fields=tuple(
                 INSTANCE_UUID +
@@ -309,7 +309,7 @@ class StorableObject(object):
                         key: dct[key] for key in dct if key not in args}
 
                     if len(non_init_dct) > 0:
-                        for key, value in non_init_dct.iteritems():
+                        for key, value in non_init_dct.items():
                             setattr(obj, key, value)
 
                 return obj

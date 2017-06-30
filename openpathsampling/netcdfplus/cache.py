@@ -325,7 +325,9 @@ class WeakLRUCache(Cache):
         return len(self._cache) + len(self._weak_cache)
 
     def __iter__(self):
-        for key in self.keys():
+        for key in self._cache.keys():
+            yield key
+        for key in self._weak_cache.keys():
             yield key
 
     def __reversed__(self):
@@ -392,7 +394,7 @@ class LRUChunkLoadingCache(Cache):
 
     @property
     def count(self):
-        return sum(map(len, self._chunkdict.itervalues())), 0
+        return sum(map(len, self._chunkdict.values())), 0
 
     @property
     def size(self):
@@ -532,7 +534,7 @@ class LRUChunkLoadingCache(Cache):
         return sum(map(len, self._chunkdict))
 
     def __iter__(self):
-        for chunk in self._chunkdict.itervalues():
+        for chunk in self._chunkdict.values():
             for key in chunk.keys():
                 yield key
 

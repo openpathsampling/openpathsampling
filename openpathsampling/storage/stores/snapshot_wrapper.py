@@ -29,8 +29,12 @@ class ReversalHashedList(dict):
     def extend(self, t):
         l = len(self._list)
         # t = filter(t, lambda x : x not in self)
-        map(lambda x, y: dict.__setitem__(self, x & ~1, y * 2 ^ (x & 1)), t,
-            range(l, l + len(t)))
+        dict.update(
+            self,
+            map(lambda x, y: (x & ~1, y * 2 ^ (x & 1)), t, range(l, l + len(t)))
+        )
+        # map(lambda x, y: dict.__setitem__(self, x & ~1, y * 2 ^ (x & 1)), t,
+        #     range(l, l + len(t)))
         self._list.extend(t)
 
     def __len__(self):
@@ -67,6 +71,10 @@ class ReversalHashedList(dict):
         k = key & ~1
         if k in self:
             dict.__delitem__(self, k)
+
+    @property
+    def list(self):
+        return self._list
 
 
 class SnapshotWrapperStore(ObjectStore):
@@ -122,9 +130,11 @@ class SnapshotWrapperStore(ObjectStore):
             the loaded object
         """
 
-        if type(idx) is long:
+        if isinstance(idx, (int, long)):
             # we want to load by uuid and it was not in cache.
-            if idx in self.index:
+            if idx < 10000000000:
+                n_idx = idx
+            elif idx in self.index:
                 n_idx = self.index[idx]
             else:
                 if self.fallback_store is not None:
@@ -761,13 +771,16 @@ class SnapshotWrapperStore(ObjectStore):
         return self.index.get(obj.__uuid__)
 
     def all(self):
-        return peng.Trajectory(map(self.proxy, self.vars['uuid'][:]))
+        return peng.Trajectory(map(self.proxy, self.index.list))
 
     def __getitem__(self, item):
         """
         Enable numpy style selection of object in the store
         """
-        if type(item) is int or type(item) is str or type(item) is long:
+        if isinstance(item, (int, long)):
+
+            return self.load(item)
+        elif type(item) is str:
             return self.load(item)
         elif type(item) is slice:
             return [self.load(idx)

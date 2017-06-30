@@ -108,6 +108,8 @@ class NetCDFPlus(netCDF4.Dataset):
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, key):
+            # print(self.variable[key])
+            # print(type(self.variable[key]))
             return self.getter(self.variable[key])
 
         def __getattr__(self, item):
@@ -719,7 +721,7 @@ class NetCDFPlus(netCDF4.Dataset):
         total_file = 0
         total_index = 0
 
-        for name, store in self.objects.iteritems():
+        for name, store in self.objects.items():
             size = store.cache.size
             count = store.cache.count
             profile = {
@@ -859,6 +861,32 @@ class NetCDFPlus(netCDF4.Dataset):
             setter = lambda v: self.simplifier.to_json(v)
             getter = lambda v: self.simplifier.from_json(v)
 
+        # elif var_type.startswith('uuid.'):
+        #     getter = lambda v: [
+        #         None if w[0] == '-' else store.load(long(w, 16))
+        #         for w in v
+        #     ] if get_numpy_iterable(v) else \
+        #         None if v[0] == '-' else store.load(long(v, 16))
+        #
+        #     setter = lambda v: ''.join(
+        #         ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
+        #             for w in list.__iter__(v)]) \
+        #         if set_is_iterable(v) else \
+        #         '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
+        #
+        # elif var_type.startswith('lazyuuid.'):
+        #     getter = lambda v: [
+        #         None if w[0] == '-' else LoaderProxy(store, long(w, 16))
+        #         for w in v
+        #     ] if get_numpy_iterable(v) else \
+        #         None if v[0] == '-' else LoaderProxy(store, long(v, 16))
+        #
+        #     setter = lambda v: ''.join(
+        #         ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
+        #              for w in list.__iter__(v)]) \
+        #         if set_is_iterable(v) else \
+        #         '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
+
         elif var_type.startswith('obj.'):
             getter = lambda v: [
                 None if w[0] == '-' else store.load(int(UUID(w)))
@@ -872,38 +900,13 @@ class NetCDFPlus(netCDF4.Dataset):
                 if set_is_iterable(v) else \
                 '-' * 36 if v is None else str(UUID(int=store.save(v)))
 
-        elif var_type.startswith('uuid.'):
-            getter = lambda v: [
-                None if w[0] == '-' else store.load(long(w, 16))
-                for w in v
-            ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else store.load(long(v, 16))
-
-            setter = lambda v: ''.join(
-                ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
-                    for w in list.__iter__(v)]) \
-                if set_is_iterable(v) else \
-                '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
-
-        elif var_type.startswith('lazyuuid.'):
-            getter = lambda v: [
-                None if w[0] == '-' else LoaderProxy(store, long(w, 16))
-                for w in v
-            ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else LoaderProxy(store, long(v, 16))
-
-            setter = lambda v: ''.join(
-                ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
-                     for w in list.__iter__(v)]) \
-                if set_is_iterable(v) else \
-                '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
-
         elif var_type.startswith('lazyobj.'):
             getter = lambda v: [
                 None if w[0] == '-' else LoaderProxy(store, int(UUID(w)))
                 for w in v
-            ] if get_is_iterable(v) else \
+            ] if isinstance(v, np.ndarray) else \
                 None if v[0] == '-' else LoaderProxy(store, int(UUID(v)))
+
             setter = lambda v: \
                 ''.join([
                     '-' * 36 if w is None else str(UUID(int=store.save(w)))
@@ -978,26 +981,26 @@ class NetCDFPlus(netCDF4.Dataset):
                         LoaderProxy(store, int(UUID(u)))
                         for u in to_uuid_chunks(v)
                     ]
-                if var.var_type.startswith('uuid.'):
-                    getter = lambda v: [[
-                        None if u[0] == '-' else store.load(
-                            long(u, 16))
-                        for u in to_uuid_chunks34(w)
-                        ] for w in v
-                    ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else store.load(long(u, 16))
-                        for u in to_uuid_chunks34(v)
-                    ]
-                elif var.var_type.startswith('lazyuuid.'):
-                    getter = lambda v: [[
-                        None if u[0] == '-' else LoaderProxy(
-                            store, long(u, 16))
-                        for u in to_uuid_chunks34(w)
-                        ] for w in v
-                    ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else LoaderProxy(store, long(u, 16))
-                        for u in to_uuid_chunks34(v)
-                    ]
+                # if var.var_type.startswith('uuid.'):
+                #     getter = lambda v: [[
+                #         None if u[0] == '-' else store.load(
+                #             long(u, 16))
+                #         for u in to_uuid_chunks34(w)
+                #         ] for w in v
+                #     ] if isinstance(v, np.ndarray) else [
+                #         None if u[0] == '-' else store.load(long(u, 16))
+                #         for u in to_uuid_chunks34(v)
+                #     ]
+                # elif var.var_type.startswith('lazyuuid.'):
+                #     getter = lambda v: [[
+                #         None if u[0] == '-' else LoaderProxy(
+                #             store, long(u, 16))
+                #         for u in to_uuid_chunks34(w)
+                #         ] for w in v
+                #     ] if isinstance(v, np.ndarray) else [
+                #         None if u[0] == '-' else LoaderProxy(store, long(u, 16))
+                #         for u in to_uuid_chunks34(v)
+                #     ]
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
                     if var_name not in self.units:
