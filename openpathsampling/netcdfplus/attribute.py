@@ -118,7 +118,7 @@ class PseudoAttribute(cd.Wrap, StorableNamedObject):
             self._update_store_dict()
 
     def _update_store_dict(self):
-        cv_stores = map(cd.StoredDict, self.stores)
+        cv_stores = list(map(cd.StoredDict, self.stores))
 
         last_cv = self._eval_dict
         for s in reversed(cv_stores):
