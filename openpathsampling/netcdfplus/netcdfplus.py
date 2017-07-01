@@ -10,9 +10,9 @@ from uuid import UUID
 
 import netCDF4
 import numpy as np
-from dictify import UUIDObjectJSON
-from stores import NamedObjectStore, ObjectStore, PseudoAttributeStore
-from proxy import LoaderProxy
+from .dictify import UUIDObjectJSON
+from .stores import NamedObjectStore, ObjectStore, PseudoAttributeStore
+from .proxy import LoaderProxy
 
 import sys
 if sys.version_info > (3, ):
