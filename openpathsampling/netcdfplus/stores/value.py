@@ -1,6 +1,6 @@
 import logging
 
-from object import ObjectStore
+from .object import ObjectStore
 from openpathsampling.netcdfplus.cache import LRUChunkLoadingCache
 
 logger = logging.getLogger(__name__)

@@ -1,4 +1,4 @@
-from named import UniqueNamedObjectStore
+from .named import UniqueNamedObjectStore
 from openpathsampling.netcdfplus.attribute import PseudoAttribute
 from openpathsampling.netcdfplus.stores.value import ValueStore
 

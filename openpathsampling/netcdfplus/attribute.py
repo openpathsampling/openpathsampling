@@ -1,8 +1,8 @@
-import chaindict as cd
-from base import StorableNamedObject, create_to_dict
-from cache import WeakKeyCache
-from dictify import ObjectJSON
-from stores.object import ObjectStore
+from . import chaindict as cd
+from .base import StorableNamedObject, create_to_dict
+from .cache import WeakKeyCache
+from .dictify import ObjectJSON
+from .stores.object import ObjectStore
 
 
 # ==============================================================================

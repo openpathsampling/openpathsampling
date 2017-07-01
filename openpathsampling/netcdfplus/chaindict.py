@@ -1,7 +1,7 @@
 import collections
 import numpy as np
 
-from proxy import LoaderProxy
+from .proxy import LoaderProxy
 
 __author__ = 'Jan-Hendrik Prinz'
 
