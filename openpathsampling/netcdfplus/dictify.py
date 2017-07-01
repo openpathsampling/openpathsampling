@@ -104,17 +104,12 @@ class ObjectJSON(object):
                 return None
 
         elif type(obj) is float and math.isinf(obj):
-            print(obj, "float inf")
-
             return {
                 '_float': str(obj)}
 
         elif type(obj) is int and math.isinf(obj):
             return {
                 '_integer': str(obj)}
-
-        # elif math.isinf(obj):
-        #     print(obj, 'ERROR!')
 
         elif obj.__class__.__module__ != builtin_module:
             if obj.__class__ is units.Quantity:
@@ -198,8 +193,6 @@ class ObjectJSON(object):
                 '_slice': [obj.start, obj.stop, obj.step]}
         else:
             oo = obj
-            print(type(obj), obj)
-
             return oo
 
     @staticmethod
