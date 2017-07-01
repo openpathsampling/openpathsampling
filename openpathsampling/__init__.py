@@ -3,7 +3,7 @@
 try:
     # should work if installed through normal means: setup.py-based with
     # pip, conda, easy_install, etc.
-    import version
+    from . import version
 except ImportError:  # pragma: no cover
     import os
     # should work if someone just set the $PYTHONPATH to include OPS
