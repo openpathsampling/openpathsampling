@@ -19,12 +19,6 @@ from .delayedinterrupt import DelayedInterrupt
 
 logger = logging.getLogger(__name__)
 
-if sys.version_info > (3, ):
-    property_name = lambda p: str(p.fget.__name__)
-else:
-    # property_name = lambda p: str(p.fget.func_name)
-    property_name = lambda p: str(p.fget.__name__)
-
 # =============================================================================
 # SOURCE CONTROL
 # =============================================================================
@@ -269,7 +263,7 @@ class DynamicsEngine(StorableNamedObject):
                     # return result  # miraculously fixed
                     raise AttributeError(
                         "Unknown problem occurred in property"
-                        + property_name(p) + ": Second attempt returned"
+                        + str(p.fget.__name__) + ": Second attempt returned"
                         + str(result)
                     )
             # for now, items in dict that fail with AttributeError will just
