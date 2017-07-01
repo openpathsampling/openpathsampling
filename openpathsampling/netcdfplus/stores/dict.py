@@ -1,5 +1,7 @@
 from .named import NamedObjectStore
 
+from future.utils import iterkeys
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -152,7 +154,7 @@ class DictStore(NamedObjectStore):
     #     return self.name_idx.keys()
 
     def __iter__(self):
-        return self.keys()
+        return iterkeys(self.name_idx)
 
     def iteritems(self):
         for name in self:
