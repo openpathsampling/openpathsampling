@@ -5,6 +5,12 @@ from .dictify import ObjectJSON
 from .stores.object import ObjectStore
 
 
+import sys
+if sys.version_info > (3, ):
+    long = int
+    unicode = str
+
+
 # ==============================================================================
 #  CLASS PseudoAttribute
 # ==============================================================================
@@ -332,6 +338,9 @@ class CallablePseudoAttribute(PseudoAttribute):
             return True
 
         return NotImplemented
+
+    # overriding __eq__ will block inheritance
+    __hash__ = StorableNamedObject.__hash__
 
     def _eval(self, items):
         return items

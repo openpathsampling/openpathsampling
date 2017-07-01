@@ -7,6 +7,8 @@ from openpathsampling.netcdfplus.cache import MaxCache, Cache, NoCache, \
     WeakLRUCache
 from openpathsampling.netcdfplus.proxy import LoaderProxy
 
+from future.utils import iteritems
+
 import sys
 if sys.version_info > (3, ):
     long = int
@@ -1055,7 +1057,7 @@ class ObjectStore(StorableNamedObject):
         if attribute_store.allow_incomplete:
 
             # loop all objects in the fast CV cache
-            for obj, value in attribute._cache_dict.cache.iteritems():
+            for obj, value in iteritems(attribute._cache_dict.cache):
                 if value is not None:
                     pos = self.pos(obj)
 
