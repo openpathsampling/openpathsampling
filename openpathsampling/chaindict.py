@@ -72,10 +72,6 @@ class ChainDict(object):
                 rep = list(self._post[nones])
                 self._set_list(nones, rep)
 
-                print('rep', rep)
-                print('items', items)
-                print('results', results)
-
                 it = iter(rep)
                 return [next(it) if p[1] is None else p[1]
                         for p in zip(items, results)]
