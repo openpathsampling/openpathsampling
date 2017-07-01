@@ -2,14 +2,13 @@
 @author David W.H. Swenson
 """
 
-from test_helpers import data_filename, assert_close_unit
+from .test_helpers import data_filename, assert_close_unit, make_1d_traj
 
 import mdtraj as md
 import openpathsampling.engines.openmm as peng
 from openpathsampling.netcdfplus import FunctionPseudoAttribute
 
 import openpathsampling as paths
-from openpathsampling.tests.test_helpers import make_1d_traj
 import os
 
 
