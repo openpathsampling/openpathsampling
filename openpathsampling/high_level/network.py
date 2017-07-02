@@ -723,7 +723,7 @@ class MISTISNetwork(TISNetwork):
                     raise RuntimeError("More than one reverse transition")
                 # if len(t_reverse) is 0, we just pass
 
-        self.transition_pairs = transition_pair_set_dict.values()
+        self.transition_pairs = list(transition_pair_set_dict.values())
 
         if len(self.transition_pairs) > 0:
             all_in_pairs = reduce(list.__add__, map(lambda x: list(x),
