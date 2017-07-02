@@ -131,13 +131,6 @@ class PseudoAttributeStore(UniqueNamedObjectStore):
                     'Need either at least one stored snapshot or a '
                     'template snapshot to determine type and shape of the CV.')
 
-        print(type(template), template)
-        print(type(cv), cv)
-
-        print(hash(cv))
-
-        print(cv in [])
-
         self.key_store(cv).add_attribute(
             ValueStore,
             cv,
