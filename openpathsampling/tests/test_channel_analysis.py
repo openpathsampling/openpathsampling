@@ -1,8 +1,10 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal)
+from __future__ import absolute_import
+from builtins import object
+from nose.tools import (assert_equal, assert_not_equal, raises,
+                        assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
-from test_helpers import make_1d_traj, data_filename
+from .test_helpers import make_1d_traj, data_filename, assert_items_equal
 
 import openpathsampling as paths
 import numpy as np
@@ -201,7 +203,7 @@ class testChannelAnalysis(object):
 
     def test_empty(self):
         obj = paths.ChannelAnalysis(steps=None, channels=self.channels)
-        empty_results = {c: [] for c in self.channels.keys() + [None]}
+        empty_results = {c: [] for c in list(self.channels.keys()) + [None]}
         assert_equal(obj._results, empty_results)
 
     def test_treat_multiples(self):

@@ -5,7 +5,7 @@ import logging
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 from openpathsampling.netcdfplus import DelayedLoader
-from treelogic import TreeMixin
+from .treelogic import TreeMixin
 
 logger = logging.getLogger(__name__)
 
@@ -531,20 +531,20 @@ class FilterByEnsembleMoveChange(SubMoveChange):
     def _get_results(self):
         all_samples = self.subchange.results
 
-        filtered_samples = filter(
+        filtered_samples = list(filter(
             lambda s : s.ensemble in self.mover.ensembles,
             all_samples
-        )
+        ))
 
         return filtered_samples
 
     def _get_trials(self):
         all_samples = self.subchange.trials
 
-        filtered_samples = filter(
+        filtered_samples = list(filter(
             lambda s : s.ensemble in self.mover.ensembles,
             all_samples
-        )
+        ))
 
         return filtered_samples
 

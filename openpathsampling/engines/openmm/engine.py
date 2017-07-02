@@ -6,7 +6,7 @@ import simtk.openmm.app
 import simtk.unit as u
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
-from snapshot import Snapshot
+from .snapshot import Snapshot
 import numpy as np
 
 logger = logging.getLogger(__name__)
