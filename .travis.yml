@@ -1,9 +1,5 @@
 language: python
 
-python:
-  # We don't actually use the Travis Python, but this keeps it organized.
-  - "2.7"
-
 install:
   - deactivate
   # Sets up a MINIConda enviroment in the name of the selected python version
@@ -12,6 +8,7 @@ install:
   - export PYTHONUNBUFFERED=true
 
 script:
+  - python --version
   - echo travis_fold:start:conda.build.package
   - conda install --yes conda-build
   - conda build devtools/conda-recipe
@@ -21,11 +18,13 @@ script:
   - conda create --yes --name test --use-local openpathsampling-dev
   - conda info --envs
   - source activate test
-  - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma ipynbtest
+  - conda install --yes future
+  - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
   # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
-  - source devtools/ci/ipythontests.sh
+  - if [ ${CONDA_PY:0:1} -eq "2" ]; then conda install --yes ipynbtest; source devtools/ci/ipythontests.sh; fi
+  #- source devtools/ci/ipythontests.sh
 
   # Upload new docs
   - bash -x devtools/ci/after_sucess.sh
@@ -36,12 +35,10 @@ addons:
     - pandoc
 
 env:
-  matrix:
-    - python=2.7  CONDA_PY=27  CONDA_NPY=110
-# - python=3.4  CONDA_PY=34  CONDA_NPY=110
-# - python=3.5  CONDA_PY=35  CONDA_NPY=110
+    - CONDA_PY=2.7  CONDA_NPY=1.10
+    - CONDA_PY=3.6  CONDA_NPY=1.10
 
-  global:
+global:
   - secure: "NJvoSrLNd2ZR3HluJjEqI36gD5lsucwIvgnYjNmM4cwnnA77aLV9FRYTwlLRZn3XY9FL8KOzL5l0amNzMD7sQrf7bWwWv7iCUBddH549q9RSgiuOugtodYJ6VaXi76hk1rOgcJpDoCj9wTCIlMtWibPUzr1QHmdihfdM2iA2kkE="
   - secure: "l9NJkZDD0ALhkErUvhRrreLsrcWErd+CXpWv8dxHGtkjemNx6CwVtyL+a30jz/QwMANSZbKll/cPK5yJQvuwDaWxja6UPLLKVNGtma+CmwKcIC/wwTwbMoxcS62fyLJ3kS0qR8oCQz2nCPKiYyRGADtPLWVMZckY1SJfNYcKuCM="
 

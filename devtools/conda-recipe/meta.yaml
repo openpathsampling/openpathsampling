@@ -13,12 +13,14 @@ build:
 requirements:
   build:
     - python
+    - future
     - setuptools
 
   run:
     - python
     - numpy
     - scipy
+    - future
     - pandas
     - hdf4 4.2.12
     - netcdf4

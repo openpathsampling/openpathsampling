@@ -2,8 +2,8 @@ import mdtraj as md
 import numpy as np
 import simtk.unit as u
 
-from snapshot import Snapshot
-from topology import Topology, MDTrajTopology
+from .snapshot import Snapshot
+from .topology import Topology, MDTrajTopology
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
 __author__ = 'Jan-Hendrik Prinz'

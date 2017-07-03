@@ -11,7 +11,7 @@ import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, \
     ImmutableDictStore, NamedObjectStore
 
-from stores import SnapshotWrapperStore
+from .stores import SnapshotWrapperStore
 
 import openpathsampling.engines as peng
 

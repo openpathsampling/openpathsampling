@@ -1,5 +1,5 @@
-from engine import OpenMMEngine as Engine
-from tools import (
+from .engine import OpenMMEngine as Engine
+from .tools import (
     empty_snapshot_from_openmm_topology,
     snapshot_from_pdb,
     snapshot_from_testsystem,
@@ -8,7 +8,7 @@ from tools import (
     trajectory_to_mdtraj
 )
 
-import features
+from . import features
 
-from snapshot import Snapshot, MDSnapshot
+from .snapshot import Snapshot, MDSnapshot
 from openpathsampling.engines import NoEngine, SnapshotDescriptor

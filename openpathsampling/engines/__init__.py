@@ -1,11 +1,11 @@
-from snapshot import BaseSnapshot, SnapshotFactory, SnapshotDescriptor
-from trajectory import Trajectory
+from .snapshot import BaseSnapshot, SnapshotFactory, SnapshotDescriptor
+from .trajectory import Trajectory
 
-from topology import Topology
+from .topology import Topology
 
-import features
+from . import features
 
-from dynamics_engine import (
+from .dynamics_engine import (
     DynamicsEngine, NoEngine, EngineError,
     EngineNaNError, EngineMaxLengthError)
 
