@@ -1,7 +1,10 @@
+from __future__ import division
+from __future__ import absolute_import
+from builtins import object
 import openpathsampling.engines.openmm as omm_engine
 import openpathsampling as paths
 from nose.tools import assert_equal, assert_almost_equal, assert_not_equal
-from test_helpers import data_filename, assert_close_unit
+from .test_helpers import data_filename, assert_close_unit
 
 import openmmtools as omt
 import simtk.unit as u

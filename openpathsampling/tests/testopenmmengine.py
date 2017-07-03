@@ -1,7 +1,12 @@
 """
 @author David W.H. Swenson
 """
+from __future__ import division
+from __future__ import absolute_import
 
+from builtins import range
+from builtins import object
+from past.utils import old_div
 import numpy as np
 import simtk.openmm as mm
 from nose.tools import (assert_equal)
@@ -15,7 +20,7 @@ import openpathsampling as paths
 
 from openpathsampling.ensemble import EnsembleFactory as ef
 
-from test_helpers import (
+from .test_helpers import (
     true_func, data_filename,
     assert_equal_array_array,
     assert_not_equal_array_array,
@@ -66,7 +71,7 @@ class testOpenMMEngine(object):
         # OpenMM Integrator
         integrator = mm.LangevinIntegrator(
             300*u.kelvin,
-            1.0/u.picoseconds,
+            old_div(1.0,u.picoseconds),
             2.0*u.femtoseconds
         )
         integrator.setConstraintTolerance(0.00001)
@@ -88,7 +93,7 @@ class testOpenMMEngine(object):
         context = self.engine.simulation.context
         zero_array = np.zeros((template.topology.n_atoms, 3))
         context.setPositions(template.coordinates)
-        context.setVelocities(u.Quantity(zero_array, u.nanometers / u.picoseconds))
+        context.setVelocities(u.Quantity(zero_array, old_div(u.nanometers, u.picoseconds)))
 
     def teardown(self):
         pass
@@ -103,14 +108,14 @@ class testOpenMMEngine(object):
         snap = self.engine.current_snapshot
         state = self.engine.simulation.context.getState(getVelocities=True,
                                                         getPositions=True)
-        pos = state.getPositions(asNumpy=True) / u.nanometers
-        vel = state.getVelocities(asNumpy=True) / (u.nanometers / u.picoseconds)
-        assert_equal_array_array(snap.coordinates / u.nanometers, pos)
-        assert_equal_array_array(snap.velocities / (u.nanometers / u.picoseconds),
+        pos = old_div(state.getPositions(asNumpy=True), u.nanometers)
+        vel = old_div(state.getVelocities(asNumpy=True), (old_div(u.nanometers, u.picoseconds)))
+        assert_equal_array_array(old_div(snap.coordinates, u.nanometers), pos)
+        assert_equal_array_array(old_div(snap.velocities, (old_div(u.nanometers, u.picoseconds))),
                                  vel)
 
     def test_snapshot_set(self):
-        pdb_pos = (template.coordinates / u.nanometers)
+        pdb_pos = (old_div(template.coordinates, u.nanometers))
         testvel = []
         testpos = []
         for i in range(len(pdb_pos)):
@@ -128,9 +133,9 @@ class testOpenMMEngine(object):
         )
         state = self.engine.simulation.context.getState(getPositions=True,
                                                         getVelocities=True)
-        sim_coords = state.getPositions(asNumpy=True) / u.nanometers
-        sim_bvecs = state.getPeriodicBoxVectors(asNumpy=True) / u.nanometers
-        sim_vels = state.getVelocities(asNumpy=True) / (u.nanometers/u.picoseconds)
+        sim_coords = old_div(state.getPositions(asNumpy=True), u.nanometers)
+        sim_bvecs = old_div(state.getPeriodicBoxVectors(asNumpy=True), u.nanometers)
+        sim_vels = old_div(state.getVelocities(asNumpy=True), (old_div(u.nanometers,u.picoseconds)))
 
         np.testing.assert_almost_equal(testpos, sim_coords, decimal=5)
         np.testing.assert_almost_equal(testbvecs, sim_bvecs, decimal=5)
@@ -145,10 +150,10 @@ class testOpenMMEngine(object):
         assert(new_snap is not snap0)
         assert(new_snap.statics is not snap0.statics)
         assert(new_snap.kinetics is not snap0.kinetics)
-        old_pos = snap0.coordinates / u.nanometers
-        new_pos = new_snap.coordinates / u.nanometers
-        old_vel = snap0.velocities / (u.nanometers / u.picoseconds)
-        new_vel = new_snap.velocities / (u.nanometers / u.picoseconds)
+        old_pos = old_div(snap0.coordinates, u.nanometers)
+        new_pos = old_div(new_snap.coordinates, u.nanometers)
+        old_vel = old_div(snap0.velocities, (old_div(u.nanometers, u.picoseconds)))
+        new_vel = old_div(new_snap.velocities, (old_div(u.nanometers, u.picoseconds)))
         assert_equal(old_pos.shape, new_pos.shape)
         assert_equal(old_vel.shape, new_vel.shape)
         assert_not_equal_array_array(old_pos, new_pos)

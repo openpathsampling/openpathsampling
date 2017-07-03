@@ -1,8 +1,11 @@
 """
 @author David W.H. Swenson
 """
+from __future__ import absolute_import
 
-from test_helpers import data_filename, assert_close_unit
+from builtins import zip
+from builtins import object
+from .test_helpers import data_filename, assert_close_unit
 
 import mdtraj as md
 import numpy as np
@@ -252,6 +255,7 @@ class test_FunctionCV(object):
                 snap = storage_w.snapshots[
                     storage_w.snapshots.vars['uuid'][idx]]
 
+                print(snap, snap.__uuid__, value)
                 assert_close_unit(cv1(snap), value)
 
             storage_w.close()

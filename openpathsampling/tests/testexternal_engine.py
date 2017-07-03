@@ -1,6 +1,7 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises, assert_true)
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+                        raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
+from .test_helpers import assert_items_equal
 
 import openpathsampling as paths
 import openpathsampling.engines as peng

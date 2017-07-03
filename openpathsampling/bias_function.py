@@ -68,8 +68,8 @@ class BiasEnsembleTable(BiasFunction):
         # the following craziness is to get the ensembles listed in the
         # right order: self-only, other-only, both; all preserving the order
         # in the original (preferring self's order for things in both)
-        self_ensembles = self.ensembles_to_ids.keys()
-        other_ensembles = other.ensembles_to_ids.keys()
+        self_ensembles = list(self.ensembles_to_ids.keys())
+        other_ensembles = list(other.ensembles_to_ids.keys())
         self_only = set(self_ensembles) - set(other_ensembles)
         other_only = set(other_ensembles) - set(self_ensembles)
         both = set(self_ensembles) & set(other_ensembles)
@@ -174,8 +174,9 @@ class BiasEnsembleTable(BiasFunction):
         :class:`.BiasEnsembleTable`
             bias table
         """
-        ensembles_to_ids = {e : ratio_dictionary.keys().index(e) 
-                            for e in ratio_dictionary.keys()}
+        ratio_dict_keys = list(ratio_dictionary.keys())
+        ensembles_to_ids = {e : ratio_dict_keys.index(e)
+                            for e in ratio_dict_keys}
         id_based_df = pd.DataFrame(index=ensembles_to_ids.values(),
                                    columns=ensembles_to_ids.values())
         for e_from in ratio_dictionary:
@@ -272,7 +273,7 @@ def SRTISBiasFromNetwork(network, steps=None):
             + "Analyze the network first!")
 
     try:
-        ms_outer_ensembles = network.special_ensembles['ms_outer'].keys()
+        ms_outer_ensembles = list(network.special_ensembles['ms_outer'].keys())
     except KeyError:
         ms_outer_ensembles= []
     bias = BiasEnsembleTable(pd.DataFrame(), {})

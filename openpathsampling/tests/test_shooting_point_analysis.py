@@ -1,8 +1,15 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal, assert_true, assert_in)
+from __future__ import division
+from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from past.utils import old_div
+from builtins import object
+from nose.tools import (assert_equal, assert_not_equal, raises,
+                        assert_almost_equal, assert_true, assert_in)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
-from test_helpers import make_1d_traj, data_filename
+from .test_helpers import (make_1d_traj, data_filename, assert_items_equal,
+                           assert_same_items)
 
 import openpathsampling as paths
 import openpathsampling.engines as peng
@@ -54,7 +61,7 @@ class testTransformedDict(object):
 
     def test_iter(self):
         iterated = [k for k in self.test_dict]
-        for (truth, beauty) in zip(self.transformed.keys(), iterated):
+        for (truth, beauty) in zip(list(self.transformed.keys()), iterated):
             assert_equal(truth, beauty)
 
     def test_len(self):
@@ -200,24 +207,26 @@ class testShootingPointAnalysis(object):
         assert_true(len(committor_A) == len(committor_B) == 2)
         keys = [self.snap0, self.snap1]
         hashes0 = [self.analyzer.hash_function(k) for k in keys]
-        for kA, kB in zip(committor_A.keys(), committor_B.keys()):
+        for kA, kB in zip(list(committor_A.keys()), list(committor_B.keys())):
             hashA = self.analyzer.hash_function(kA)
             hashB = self.analyzer.hash_function(kB)
             assert_equal(hashA, hashB)
             assert_in(hashA, hashes0)
             # hash is the same; snapshot is not
         for snap in committor_A:
-            assert_equal(committor_A[snap], 
-                         float(self.analyzer[snap][self.left]) / 20.0)
+            assert_equal(committor_A[snap],
+                         old_div(float(self.analyzer[snap][self.left]), 20.0))
             assert_almost_equal(committor_A[snap] + committor_B[snap], 1.0)
-            assert_equal(committor_B[snap], 
-                         float(self.analyzer[snap][self.right]) / 20.0)
+            assert_equal(committor_B[snap],
+                         old_div(float(self.analyzer[snap][self.right]), 20.0))
 
         rehash = lambda snap : 2 * snap.xyz[0][0]
         committor_A_rehash = self.analyzer.committor(self.left, rehash)
-        assert_items_equal(committor_A.values(), committor_A_rehash.values())
-        for snap in committor_A.keys():
-            assert_in(rehash(snap), committor_A_rehash.keys())
+        orig_values = sorted(committor_A.values())
+        rehash_values = sorted(committor_A_rehash.values())
+        assert_items_equal(orig_values, rehash_values)
+        for snap in list(committor_A.keys()):
+            assert_in(rehash(snap), list(committor_A_rehash.keys()))
 
     def test_committor_histogram_1d(self):
         rehash = lambda snap : 2 * snap.xyz[0][0]
@@ -261,7 +270,7 @@ class testShootingPointAnalysis(object):
         df1 = self.analyzer.to_pandas()
         df2 = self.analyzer.to_pandas(lambda x : x.xyz[0][0])
         assert_equal(df1.shape, (2,2))
-        assert_items_equal(df1.index, range(2))
+        assert_items_equal(df1.index, list(range(2)))
         assert_items_equal(df2.index, [0.0, 0.1])
-        assert_items_equal(df1.columns, [self.left.name, self.right.name])
+        assert_same_items(df1.columns, [self.left.name, self.right.name])
 

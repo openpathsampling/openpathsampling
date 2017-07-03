@@ -7,7 +7,7 @@
 import abc
 
 from openpathsampling.netcdfplus import StorableObject
-import features as feats
+from . import features as feats
 
 
 # =============================================================================
@@ -109,7 +109,7 @@ class BaseSnapshot(StorableObject):
 
     def copy_with_replacement(self, **kwargs):
         cp = self.copy()  # this will copy all, but it is simple
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             if hasattr(cp, key):
                 setattr(cp, key, value)
             else:

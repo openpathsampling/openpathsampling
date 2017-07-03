@@ -13,8 +13,10 @@ import numpy as np
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 from openpathsampling.pathmover_inout import InOutSet, InOut
-from ops_logging import initialization_logging
-from treelogic import TreeMixin
+from .ops_logging import initialization_logging
+from .treelogic import TreeMixin
+
+from future.utils import with_metaclass
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -88,7 +90,7 @@ class MoveChangeNaNError(Exception):
     pass
 
 
-class PathMover(TreeMixin, StorableNamedObject):
+class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
     """
     A PathMover is the description of a move in replica space.
 
@@ -123,7 +125,7 @@ class PathMover(TreeMixin, StorableNamedObject):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
     def __init__(self):
         StorableNamedObject.__init__(self)
@@ -531,7 +533,7 @@ class SampleMover(PathMover):
 
         # TODO: This isn't right. `bias` should be associated with the
         # change; not with each individual sample. ~~~DWHS
-        for ens, sample in trial_dict.iteritems():
+        for ens, sample in trial_dict.items():
             valid = ens(sample.trajectory, candidate=self._trust_candidate)
             if not valid:
                 # one sample not valid reject
@@ -2514,7 +2516,7 @@ def NeighborEnsembleReplicaExchange(ensemble_list):
 
 
 def PathReversalSet(ensembles):
-    return map(PathReversalMover, ensembles)
+    return list(map(PathReversalMover, ensembles))
 
 
 class PathMoverFactory(object):
@@ -2550,7 +2552,7 @@ class Details(StorableObject):
 
     def __init__(self, **kwargs):
         super(Details, self).__init__()
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             setattr(self, key, value)
 
     _print_repr_types = [paths.Ensemble]
