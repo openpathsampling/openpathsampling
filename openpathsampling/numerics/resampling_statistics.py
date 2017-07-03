@@ -170,9 +170,9 @@ class BlockResampling(object):
         if n_blocks is None and n_per_block is None:
             n_blocks = 20
         if n_blocks is None and n_per_block is not None:
-            n_blocks = self.n_total_samples / n_per_block
+            n_blocks = self.n_total_samples // n_per_block
         elif n_blocks is not None and n_per_block is None:
-            n_per_block = self.n_total_samples / n_blocks
+            n_per_block = self.n_total_samples // n_blocks
 
         self.n_blocks = n_blocks
         self.n_per_block = n_per_block
