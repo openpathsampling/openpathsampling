@@ -80,7 +80,7 @@ class BaseSnapshotStore(IndexedObjectStore):
         }
 
     def load(self, idx):
-        pos = idx / 2
+        pos = idx // 2
 
         # we want to load by uuid and it was not in cache.
         if pos in self.index:
@@ -91,20 +91,7 @@ class BaseSnapshotStore(IndexedObjectStore):
         if n_idx < 0:
             return None
 
-        # # if it is in the cache, return it
-        # try:
-        #     obj = self.cache[n_idx]
-        #     if idx & 1:
-        #         obj = obj.reversed
-        #
-        #     return obj
-        #
-        # except KeyError:
-        #     pass
-
         obj = self._load(n_idx)
-
-        # self.cache[n_idx] = obj
 
         if idx & 1:
             obj = obj.reversed
@@ -135,20 +122,18 @@ class BaseSnapshotStore(IndexedObjectStore):
         return obj
 
     def save(self, obj, idx=None):
-        pos = idx / 2
+        pos = idx // 2
 
         if pos in self.index:
             # has been saved so quit and do nothing
             return idx
 
-        # n_idx = self.free() / 2
         n_idx = len(self.index)
 
         # mark as saved so circular dependencies will not cause infinite loops
         self.index.append(pos)
 
         # make sure in nested saving that an IDX is not used twice!
-        # self.reserve_idx(n_idx)
 
         logger.debug('Saving ' + str(type(obj)) + ' using IDX #' + str(n_idx))
 
@@ -157,17 +142,14 @@ class BaseSnapshotStore(IndexedObjectStore):
             self.vars['index'][n_idx] = pos
 
             # store the name in the cache
-            # if hasattr(self, 'cache'):
             self.cache[n_idx] = obj
 
         except:
             logger.debug('Problem saving %d !' % n_idx)
             # in case we did not succeed remove the mark as being saved
             del self.index[pos]
-            # self.release_idx(n_idx)
             raise
 
-        # self.release_idx(n_idx)
         self._set_id(n_idx, obj)
 
         return idx
@@ -204,7 +186,7 @@ class BaseSnapshotStore(IndexedObjectStore):
         self.index.extend(self.vars['index'])
 
     def all(self):
-        return peng.Trajectory(map(self.proxy, range(len(self))))
+        return peng.Trajectory(map(self.proxy, self.index.list))
 
     def __iter__(self):
         for idx in range(0, len(self), 2):

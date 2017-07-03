@@ -145,11 +145,12 @@
     text-anchor: start;
 }
 .movetree .connector.input {
-    fill: green;
+    fill: blue;
 }
 .movetree .connector.output {
     fill: red;
 }
 .movetree .unknown {
-    fill: gray;
+    fill: #aaa;
+    /*stroke: white;*/
 }

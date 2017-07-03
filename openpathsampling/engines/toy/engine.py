@@ -1,7 +1,7 @@
 import numpy as np
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
-from snapshot import ToySnapshot as Snapshot
+from .snapshot import ToySnapshot as Snapshot
 
 
 class ToyEngine(DynamicsEngine):

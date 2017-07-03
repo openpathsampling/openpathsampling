@@ -1,10 +1,12 @@
 """
 @author David W.H. Swenson
 """
+from __future__ import absolute_import
 
+from builtins import object
 from nose.tools import assert_equal, assert_not_equal, assert_is, raises
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import CallIdentity, raises_with_message_like
+from .test_helpers import CallIdentity, raises_with_message_like
 
 import unittest
 

@@ -270,7 +270,7 @@ class PathDensityHistogram(PathHistogram):
         # TODO: add something so that we don't recalc the same traj twice
         for (traj, w) in zip(trajectories, weights):
             cv_traj = [cv(traj) for cv in self.cvs]
-            self.add_trajectory(zip(*cv_traj), w)
+            self.add_trajectory(list(zip(*cv_traj)), w)
 
         return self._histogram.copy()
 
@@ -294,7 +294,7 @@ class PathDensityHistogram(PathHistogram):
             un-rounded bin value for each frame in the input trajectory
         """
         if isinstance(trajectory, paths.Trajectory):
-            cv_traj = zip(*[cv(trajectory) for cv in self.cvs])
+            cv_traj = list(zip(*[cv(trajectory) for cv in self.cvs]))
         else:
             cv_traj = trajectory
         return super(PathDensityHistogram, self).map_to_float_bins(cv_traj)

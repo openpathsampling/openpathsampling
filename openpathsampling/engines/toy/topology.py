@@ -1,5 +1,5 @@
 from openpathsampling.engines import Topology, SnapshotDescriptor
-from snapshot import ToySnapshot
+from .snapshot import ToySnapshot
 
 
 class ToyTopology(Topology):
