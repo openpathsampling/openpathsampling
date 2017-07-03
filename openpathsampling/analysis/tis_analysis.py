@@ -230,8 +230,8 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
 
     def from_weighted_trajectories(self, input_dict):
         for ens in self.hists:
-            trajs = input_dict[ens].keys()
-            weights = input_dict[ens].values()
+            trajs = list(input_dict[ens].keys())
+            weights = list(input_dict[ens].values())
             data = [self.f(traj) for traj in trajs]
             self.hists[ens].histogram(data, weights)
         return self.hists
@@ -375,7 +375,7 @@ class TransitionDictResults(StorableNamedObject):
 
     def to_pandas(self, order=None):
         key_map = lambda key: key.name
-        keys = self.results_dict.keys()
+        keys = list(self.results_dict.keys())
         idx_vols = [k[0] for k in keys]
         col_vols = [k[1] for k in keys]
         if order is None:
@@ -435,7 +435,7 @@ class TISAnalysis(StorableNamedObject):
 
         fluxes = self.flux_matrix
         rates = {}
-        for (trans, transition_probability) in trans_prob.iteritems():
+        for (trans, transition_probability) in trans_prob.items():
             trans_flux = fluxes[(trans.stateA, trans.interfaces[0])]
             rates[(trans.stateA, trans.stateB)] = \
                     trans_flux * transition_probability
@@ -505,7 +505,7 @@ class StandardTISAnalysis(TISAnalysis):
             raise RuntimeError("Must set max_lambda_calcs in "
                                + "StandardTISAnalysis")
         max_lambda_calc_dict = {}
-        for (transition, calc) in max_lambda_calcs.iteritems():
+        for (transition, calc) in max_lambda_calcs.items():
             if isinstance(calc, EnsembleHistogrammer):
                 max_lambda_calc_dict[transition] = calc
             elif isinstance(calc, dict):
@@ -605,7 +605,7 @@ class StandardTISAnalysis(TISAnalysis):
         )
 
         rates = {}
-        for (trans, transition_probability) in trans_prob.iteritems():
+        for (trans, transition_probability) in trans_prob.items():
             trans_flux = fluxes[(trans.stateA, trans.interfaces[0])]
             rates[(trans.stateA, trans.stateB)] = \
                     trans_flux * transition_probability

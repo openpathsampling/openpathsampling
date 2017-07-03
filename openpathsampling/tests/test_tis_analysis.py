@@ -1,7 +1,7 @@
-from nose.tools import (assert_equal, assert_not_equal assert_almost_equal,
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (
+from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
     MoverWithSignature, RandomMDEngine, assert_frame_equal,
     assert_items_equal
@@ -172,7 +172,7 @@ class TestWeightedTrajectories(TISAnalysisTester):
                    (1, 0): 0, (1, 1): 2, (1, 2): 1, (1, 3): 1,
                    (2, 0): 0, (2, 1): 0, (2, 2): 2, (2, 3): 2}
 
-        for ((ens, traj), result) in results.iteritems():
+        for ((ens, traj), result) in results.items():
             assert_equal(
                 weighted_trajs[ensembles_AB[ens]][self.trajs_AB[traj]],
                 result
@@ -371,7 +371,7 @@ class TestPathLengthHistogrammer(TISAnalysisTester):
         ensembles_BA = self.sampling_ensembles_for_transition(network,
                                                               self.state_B,
                                                               self.state_A)
-        for (key, dct) in results.iteritems():
+        for (key, dct) in results.items():
             hist_dct_AB = hists[ensembles_AB[key]]._histogram
             assert_equal(dict(hist_dct_AB), dct)
             hist_dct_BA = hists[ensembles_BA[key]]._histogram
@@ -405,7 +405,7 @@ class TestFullHistogramMaxLambda(TISAnalysisTester):
             1: {-0.05: 0, 0.05: 0, 0.15: 2, 0.25: 1, 0.35: 0, 1.05: 1},
             2: {-0.05: 0, 0.05: 0, 0.15: 0, 0.25: 2, 0.35: 0, 1.05: 2}
         }
-        for (ens, result_dct) in raw_lambda_results.iteritems():
+        for (ens, result_dct) in raw_lambda_results.items():
             hist = hists[transition.ensembles[ens]]()
             for key in result_dct.keys():
                 assert_almost_equal(result_dct[key], hist(key))
@@ -499,7 +499,7 @@ class TestTotalCrossingProbability(TISAnalysisTester):
         )
         mistis_AB_tcp = TotalCrossingProbability(mistis_AB_max_lambda)
         tcp_AB = mistis_AB_tcp.calculate(self.mistis_steps)
-        for (x, result) in results.iteritems():
+        for (x, result) in results.items():
             assert_almost_equal(tcp_AB(x), result)
 
         mistis_BA = self.mistis.transitions[(self.state_B, self.state_A)]
@@ -509,7 +509,7 @@ class TestTotalCrossingProbability(TISAnalysisTester):
         )
         mistis_BA_tcp = TotalCrossingProbability(mistis_BA_max_lambda)
         tcp_BA = mistis_BA_tcp.calculate(self.mistis_steps)
-        for (x, result) in results.iteritems():
+        for (x, result) in results.items():
             assert_almost_equal(tcp_AB(x), result)
 
         mstis_AB = self.mstis.transitions[(self.state_A, self.state_B)]
@@ -519,7 +519,7 @@ class TestTotalCrossingProbability(TISAnalysisTester):
         )
         mstis_AB_tcp = TotalCrossingProbability(mstis_AB_max_lambda)
         tcp_AB = mstis_AB_tcp.calculate(self.mstis_steps)
-        for (x, result) in results.iteritems():
+        for (x, result) in results.items():
             assert_almost_equal(tcp_AB(x), result)
 
         mstis_BA = self.mstis.transitions[(self.state_B, self.state_A)]
@@ -529,7 +529,7 @@ class TestTotalCrossingProbability(TISAnalysisTester):
         )
         mstis_BA_tcp = TotalCrossingProbability(mstis_BA_max_lambda)
         tcp_BA = mstis_BA_tcp.calculate(self.mstis_steps)
-        for (x, result) in results.iteritems():
+        for (x, result) in results.items():
             assert_almost_equal(tcp_AB(x), result)
 
 
@@ -566,7 +566,7 @@ class TestStandardTransitionProbability(TISAnalysisTester):
         all_ensembles = ensembles_AB + ensembles_BA
         replicas = range(len(all_ensembles))
         set_trajectories = [self.trajs_AB[2]]*3 + [self.trajs_BA[2]]*3
-        zipped = zip(set_trajectories, all_ensembles, replicas)
+        zipped = list(zip(set_trajectories, all_ensembles, replicas))
         mover_stub_mistis = MoverWithSignature(self.mistis.all_ensembles,
                                                self.mistis.all_ensembles)
         sample_sets = []
