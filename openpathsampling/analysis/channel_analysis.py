@@ -36,7 +36,7 @@ class ChannelAnalysis(StorableNamedObject):
         self.replica = replica
 
         self._treat_multiples = 'all'
-        self._results = {c: [] for c in self.channels.keys() + [None]}
+        self._results = {c: [] for c in list(self.channels.keys()) + [None]}
         if len(steps) > 0:
             self._analyze(steps)
 
@@ -375,8 +375,14 @@ class ChannelAnalysis(StorableNamedObject):
             first element is the length of the input set, followed by
             the input as a sorted list
         """
-        ll = sorted(list(label))
-        return [len(ll)] + ll
+        label_list = list(label)
+        if None in label_list:
+            has_None = [None]
+            label_list.remove(None)
+        else:
+            has_None = []
+        ll = sorted(label_list)
+        return [len(ll)] + has_None + ll
 
     @staticmethod
     def label_to_string(label):

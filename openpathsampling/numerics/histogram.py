@@ -3,8 +3,10 @@ import pandas as pd
 import scipy
 import matplotlib.pyplot as plt
 import math
-from lookup_function import LookupFunction, VoxelLookupFunction
+from .lookup_function import LookupFunction, VoxelLookupFunction
 import collections
+
+from functools import reduce
 
 class SparseHistogram(object):
     """
@@ -287,7 +289,7 @@ class Histogram(SparseHistogram):
         return super(Histogram, self).histogram(data, weights)
 
     def xvals(self, bin_edge_type="l"):
-        int_bins = np.array(self._histogram.keys())[:,0]
+        int_bins = np.array(list(self._histogram.keys()))[:,0]
         # always include left_edge_bin as 0 point; always include 0 and
         # greater bin values (but allow negative)
         min_bin = min(min(int_bins), 0)
@@ -626,7 +628,7 @@ class HistogramPlotter2D(object):
             xlim = self.xlim
         if ylim is None:
             ylim = self.ylim
-        x, y = zip(*self.histogram._histogram.keys())
+        x, y = list(zip(*self.histogram._histogram.keys()))
         xticks_, xrange_, xlim_ = self.axis_input(x, xticklabels, xlim, dof=0)
         yticks_, yrange_, ylim_ = self.axis_input(y, yticklabels, ylim, dof=1)
         self.xrange_ = xrange_
@@ -709,18 +711,18 @@ class HistogramPlotter2D(object):
         df = hist_fcn.df_2d(x_range=self.xrange_, y_range=self.yrange_)
         self.df = df
 
-	mesh = plt.pcolormesh(df.fillna(0.0).transpose(), **kwargs)
+        mesh = plt.pcolormesh(df.fillna(0.0).transpose(), **kwargs)
 
         (xticks, xlabels) = self.ticks_and_labels(xticks_, mesh.axes, dof=0)
         (yticks, ylabels) = self.ticks_and_labels(yticks_, mesh.axes, dof=1)
 
         mesh.axes.set_xticks(xticks)
         mesh.axes.set_yticks(yticks)
-	mesh.axes.set_xticklabels(xlabels)
-	mesh.axes.set_yticklabels(ylabels)
-	plt.xlim(xlim_[0], xlim_[1])
-	plt.ylim(ylim_[0], ylim_[1])
-	plt.colorbar()
+        mesh.axes.set_xticklabels(xlabels)
+        mesh.axes.set_yticklabels(ylabels)
+        plt.xlim(xlim_[0], xlim_[1])
+        plt.ylim(ylim_[0], ylim_[1])
+        plt.colorbar()
         return mesh
 
     def plot_trajectory(self, trajectory, *args, **kwargs):
@@ -734,7 +736,7 @@ class HistogramPlotter2D(object):
             list to plot; paths.Trajectory allowed if the histogram can
             convert it to CVs.
         """
-        x, y = zip(*self.histogram.map_to_float_bins(trajectory))
+        x, y = list(zip(*self.histogram.map_to_float_bins(trajectory)))
         px = np.asarray(x) - self.xrange_[0]
         py = np.asarray(y) - self.yrange_[0]
         plt.plot(px, py, *args, **kwargs)

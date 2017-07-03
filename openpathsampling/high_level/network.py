@@ -7,12 +7,14 @@ import pandas as pd
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 
+from functools import reduce  # not built-in for py3
+
 logger = logging.getLogger(__name__)
 
 def index_to_string(index):
-    n_underscore = index / 26
+    n_underscore = index // 26
     letter_value = index % 26
-    mystr = "_"*n_underscore + chr(65+letter_value)
+    mystr = "_"*n_underscore + chr(65 + letter_value)
     return mystr
 
 class TransitionNetwork(StorableNamedObject):
@@ -52,7 +54,7 @@ class TransitionNetwork(StorableNamedObject):
         """
         all_ens = self.sampling_ensembles
         for special_dict in self.special_ensembles.values():
-            all_ens.extend(special_dict.keys())
+            all_ens.extend(list(special_dict.keys()))
         return all_ens
 
     @property
@@ -285,7 +287,7 @@ class TISNetwork(TransitionNetwork):
     def __init__(self, trans_info, ms_outers):
         self.trans_info = trans_info
         try:
-            _ = len(ms_outers)
+            ms_outers = list(ms_outers)
         except TypeError:
             if ms_outers is not None:
                 ms_outers = [ms_outers]
@@ -318,11 +320,11 @@ class TISNetwork(TransitionNetwork):
 
     @property
     def minus_ensembles(self):
-        return self.special_ensembles['minus'].keys()
+        return list(self.special_ensembles['minus'].keys())
 
     @property
     def ms_outers(self):
-        return self.special_ensembles['ms_outer'].keys()
+        return list(self.special_ensembles['ms_outer'].keys())
 
     def add_ms_outer_interface(self, ms_outer, transitions, forbidden=None):
         relevant = ms_outer.relevant_transitions(transitions)
@@ -426,10 +428,10 @@ class MSTISNetwork(TISNetwork):
             self.build_fromstate_transitions(trans_info)
             if self.ms_outer_objects is not None:
                 for ms_outer in self.ms_outer_objects:
-                    all_transitions = self.from_state.values()
+                    all_transitions = list(self.from_state.values())
                     self.add_ms_outer_interface(ms_outer, all_transitions)
 
-        self._sampling_transitions = self.from_state.values()
+        self._sampling_transitions = list(self.from_state.values())
 
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
@@ -706,6 +708,7 @@ class MISTISNetwork(TISNetwork):
 
     def build_sampling_transitions(self, transitions):
         # identify transition pairs
+        transitions = list(transitions)  # input may be iterator
         transition_pair_set_dict = {}
         for initial in self.initial_states:
             for t1 in [t for t in transitions if t.stateA==initial]:
@@ -722,7 +725,7 @@ class MISTISNetwork(TISNetwork):
                     raise RuntimeError("More than one reverse transition")
                 # if len(t_reverse) is 0, we just pass
 
-        self.transition_pairs = transition_pair_set_dict.values()
+        self.transition_pairs = list(transition_pair_set_dict.values())
 
         if len(self.transition_pairs) > 0:
             all_in_pairs = reduce(list.__add__, map(lambda x: list(x),
@@ -763,11 +766,13 @@ class MISTISNetwork(TISNetwork):
             sample_trans.named("Sampling " + str(stateA) + "->" + str(stateB))
             self.transition_to_sampling[transition] = sample_trans
 
-        self.x_sampling_transitions = self.transition_to_sampling.values()
+        self.x_sampling_transitions = \
+                list(self.transition_to_sampling.values())
 
         # combining the minus interfaces
         for initial in self.initial_states:
             innermosts = []
+            # trans_from_initial: list of transition from initial
             trans_from_initial = [
                 t for t in self.x_sampling_transitions
                 if t.stateA==initial
@@ -777,7 +782,7 @@ class MISTISNetwork(TISNetwork):
             minus = paths.MinusInterfaceEnsemble(
                 state_vol=initial,
                 innermost_vols=innermosts
-            ).named(t.stateA.name + " MIS minus")
+            ).named(initial.name + " MIS minus")
             try:
                 self.special_ensembles['minus'][minus] = trans_from_initial
             except KeyError:

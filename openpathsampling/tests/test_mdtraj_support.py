@@ -1,11 +1,13 @@
+from __future__ import absolute_import
+from builtins import object
 import logging
 
 from nose.tools import (
-    assert_equal, assert_not_equal, assert_items_equal, raises
+    assert_equal, assert_not_equal, raises
 )
 from nose.plugins.skip import SkipTest
 import numpy.testing as nptest
-from test_helpers import data_filename
+from .test_helpers import data_filename, assert_items_equal
 
 import openpathsampling as paths
 import mdtraj as md

@@ -1,4 +1,4 @@
-import interface_set
-import ms_outer_interface
-import move_scheme
-import move_strategy
+from . import interface_set
+from . import ms_outer_interface
+from . import move_scheme
+from . import move_strategy

@@ -4,7 +4,7 @@ Created on 03.09.2014
 @author: Jan-Hendrik Prinz, David W.H. Swenson
 '''
 
-import range_logic
+from . import range_logic
 import abc
 from openpathsampling.netcdfplus import StorableNamedObject
 
@@ -34,7 +34,7 @@ def join_volumes(volume_list):
 
 class Volume(StorableNamedObject):
     """
-    A Volume describes a set of snapshots 
+    A Volume describes a set of snapshots
     """
 
     __metaclass__ = abc.ABCMeta
@@ -47,14 +47,15 @@ class Volume(StorableNamedObject):
         '''
         Returns `True` if the given snapshot is part of the defined Region
         '''
-        
         return False # pragma: no cover
-                
+
     def __str__(self):
         '''
         Returns a string representation of the volume
         '''
         return 'volume' # pragma: no cover
+
+    __hash__ = StorableNamedObject.__hash__
 
     def __or__(self, other):
         if self is other:
