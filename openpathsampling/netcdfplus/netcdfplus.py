@@ -763,7 +763,7 @@ class NetCDFPlus(netCDF4.Dataset):
         list of str
             the list of variable types
         """
-        types = NetCDFPlus._type_conversion.keys()
+        types = list(NetCDFPlus._type_conversion.keys())
         types += ['obj.' + x for x in self.objects.keys()]
         types += ['lazyobj.' + x for x in self.objects.keys()]
         types += ['uuid.' + x for x in self.objects.keys()]
