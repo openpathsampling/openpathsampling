@@ -1,7 +1,11 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal)
+from __future__ import division
+from __future__ import absolute_import
+from builtins import object
+from past.utils import old_div
+from nose.tools import (assert_equal, assert_not_equal, raises,
+                        assert_almost_equal)
 from nose.plugins.skip import SkipTest
-from test_helpers import assert_items_almost_equal
+from .test_helpers import assert_items_almost_equal, assert_items_equal
 
 import pandas as pd
 import numpy as np
@@ -109,7 +113,7 @@ class testWHAM(object):
 
     def test_generate_lnZ(self):
         guess = [1.0, 1.0, 1.0]
-        expected_lnZ = np.log([1.0, 1.0/4.0, 7.0/120.0])
+        expected_lnZ = np.log([1.0, old_div(1.0,4.0), old_div(7.0,120.0)])
         # TODO: I'm not sure the last is log(7/120) 
         # however, I got the same result out of the old version, too, and
         # this does combine into the correct result in the end (see
@@ -130,7 +134,7 @@ class testWHAM(object):
         unweighting = self.wham.unweighting_tis(self.cleaned)
         weighted_counts = self.wham.weighted_counts_tis(unweighting,
                                                         n_entries)
-        lnZ = pd.Series(data=np.log([1.0, 1.0/4.0, 7.0/120.0]),
+        lnZ = pd.Series(data=np.log([1.0, old_div(1.0,4.0), old_div(7.0,120.0)]),
                         index=n_entries.index)
         wham_hist = self.wham.output_histogram(lnZ, sum_k_Hk_Q,
                                                weighted_counts)

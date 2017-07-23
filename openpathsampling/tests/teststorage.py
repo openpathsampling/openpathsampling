@@ -2,6 +2,10 @@
 @author David W.H. Swenson
 @author Jan-Hendrik Prinz
 """
+from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from builtins import object
 import os
 
 import mdtraj as md
@@ -14,7 +18,7 @@ import openpathsampling.engines.toy as toys
 
 from openpathsampling.netcdfplus import ObjectJSON
 from openpathsampling.storage import Storage
-from test_helpers import (data_filename,
+from .test_helpers import (data_filename,
                           compare_snapshot
                           )
 
@@ -33,7 +37,7 @@ class testStorage(object):
 
         self.simplifier = ObjectJSON()
         self.template_snapshot = self.traj[0]
-        self.solute_indices = range(22)
+        self.solute_indices = list(range(22))
 
         self.toy_topology = toys.Topology(
             n_spatial=2,
@@ -213,7 +217,7 @@ class testStorage(object):
 
             store.save(tm)
 
-            px = store.snapshots.proxy(0)
+            px = store.snapshots.proxy(store.snapshots.index.list[0])
 
             # make sure that the proxy and
             assert(hash(px) == hash(tm))
@@ -228,7 +232,7 @@ class testStorage(object):
             compare_snapshot(px, tm)
             compare_snapshot(s0, tm)
 
-            px = store.snapshots.proxy(0)
+            px = store.snapshots.proxy(store.snapshots.index.list[0])
 
             # make sure that after reloading it still works
             assert(hash(px) == hash(tm))

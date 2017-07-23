@@ -12,7 +12,7 @@ def with_timing_logging(func):
             t1 = tt()
             result = func(*args, **kwargs)
             t2 = tt()
-            logger.info('Ran %s in time %f' % (func.func_name, t2 - t1))
+            logger.info('Ran %s in time %f' % (func.__name__, t2 - t1))
             return result
 
         return _wrapped

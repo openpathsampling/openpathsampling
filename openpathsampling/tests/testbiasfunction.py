@@ -1,8 +1,14 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises, assert_in)
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import range
+from builtins import object
+from past.utils import old_div
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+                        raises, assert_in)
 
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import true_func, assert_equal_array_array, make_1d_traj
+from .test_helpers import true_func, assert_equal_array_array, make_1d_traj
 
 import numpy as np
 
@@ -73,12 +79,12 @@ class testBiasEnsembleTable(object):
         change_vals = { 
             self.change_01 : 0.5,
             self.change_02 : 0.2,
-            self.change_12 : 0.2 / 0.5,
-            self.change_10 : 1.0 / 0.5,
-            self.change_20 : 1.0 / 0.2,
-            self.change_21 : 0.5 / 0.2
+            self.change_12 : old_div(0.2, 0.5),
+            self.change_10 : old_div(1.0, 0.5),
+            self.change_20 : old_div(1.0, 0.2),
+            self.change_21 : old_div(0.5, 0.2)
         }
-        for change in change_vals.keys():
+        for change in list(change_vals.keys()):
             test_val = min(1.0, change_vals[change])
             assert_almost_equal(
                 self.bias.probability_new_to_old(self.sample_set, change),
@@ -93,12 +99,12 @@ class testBiasEnsembleTable(object):
         change_vals = {
             self.change_10 : 0.5,
             self.change_20 : 0.2,
-            self.change_21 : 0.2 / 0.5,
-            self.change_01 : 1.0 / 0.5,
-            self.change_02 : 1.0 / 0.2,
-            self.change_12 : 0.5 / 0.2
+            self.change_21 : old_div(0.2, 0.5),
+            self.change_01 : old_div(1.0, 0.5),
+            self.change_02 : old_div(1.0, 0.2),
+            self.change_12 : old_div(0.5, 0.2)
         }
-        for change in change_vals.keys():
+        for change in list(change_vals.keys()):
             test_val = min(1.0, change_vals[change])
             assert_almost_equal(
                 self.bias.probability_old_to_new(self.sample_set, change),
@@ -156,7 +162,7 @@ class testBiasEnsembleTable(object):
         ens_A = network.transitions[(self.stateA, self.stateB)].ensembles
         ens_B = network.transitions[(self.stateB, self.stateA)].ensembles
         ens_C = network.transitions[(stateC, self.stateA)].ensembles
-        ms_outer = network.special_ensembles['ms_outer'].keys()[0]
+        ms_outer = list(network.special_ensembles['ms_outer'].keys())[0]
         dict_A = {ens_A[0]: 1.0,
                   ens_A[1]: 0.5,
                   ens_A[2]: 0.2,
@@ -253,13 +259,13 @@ class testSRTISBiasFromNetwork(object):
         ])
         network.sampling_transitions[0].tcp = self.tcp_A
         bias = paths.SRTISBiasFromNetwork(network)
-        transition = network.transitions.values()[0]  # only one
+        transition = list(network.transitions.values())[0]  # only one
 
         # check reciprocal of symmetric partners
         for i in range(4):
             for j in range(i, 4):
                 assert_equal(bias.dataframe.loc[i, j],
-                             1.0 / bias.dataframe.loc[j, i])
+                             old_div(1.0, bias.dataframe.loc[j, i]))
 
         for i in range(len(transition.ensembles) - 1):
             ens_to = transition.ensembles[i]
@@ -308,8 +314,8 @@ class testSRTISBiasFromNetwork(object):
                 t.tcp = self.tcp_B
                 transition_BA = t
             else:
-                print [t.stateA, t.stateB]
-                print [self.stateA, self.stateB]
+                print([t.stateA, t.stateB])
+                print([self.stateA, self.stateB])
                 raise RuntimeError("Weird states in test transition")
 
         bias = paths.SRTISBiasFromNetwork(network)
@@ -320,7 +326,7 @@ class testSRTISBiasFromNetwork(object):
                 if not np.isnan(bias.dataframe.loc[i, j]):
                     np.testing.assert_almost_equal(
                         bias.dataframe.loc[i, j],
-                        1.0 / bias.dataframe.loc[j, i]
+                        old_div(1.0, bias.dataframe.loc[j, i])
                     )
 
         for i in range(len(transition_AB.ensembles) - 1):
@@ -340,10 +346,10 @@ class testSRTISBiasFromNetwork(object):
 
         assert_almost_equal(bias.bias_value(transition_BA.ensembles[-1],
                                             network.ms_outers[0]),
-                            5.0 / 2)
+                            old_div(5.0, 2))
         assert_almost_equal(bias.bias_value(transition_AB.ensembles[-1],
                                             network.ms_outers[0]),
-                            2.0 / 2)
+                            old_div(2.0, 2))
 
 
 
