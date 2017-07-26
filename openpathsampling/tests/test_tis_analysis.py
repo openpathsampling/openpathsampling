@@ -911,9 +911,6 @@ class TestStandardTISAnalysis(TestTISAnalysis):
             for x in results:
                 assert_almost_equal(results[x], tcp(x))
 
-    def test_init_minus_flux_from_scheme(self):
-        raise SkipTest
-
     @raises(TypeError)
     def test_bad_no_flux(self):
         network = self.mistis
@@ -1019,6 +1016,15 @@ class TestStandardTISAnalysis(TestTISAnalysis):
                               for t in network.sampling_transitions},
             steps=steps
         )
-        raise SkipTest
+
         # now we actually verify correctness
+        avg_t_in = (5.0 + 3.0) / 2
+        avg_t_out = (2.0 + 5.0 + 3.0 + 3.0) / 4
+        expected_flux = 1.0 / (avg_t_in + avg_t_out)
+
+        # NOTE: Apparently this approach screws up the TCP calculation. I
+        # think this is a problem in the fake data, not the simulation.
+        for flux in analysis.flux_matrix.values():
+            assert_almost_equal(flux, expected_flux)
+
 
