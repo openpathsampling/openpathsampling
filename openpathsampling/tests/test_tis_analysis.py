@@ -953,3 +953,72 @@ class TestStandardTISAnalysis(TestTISAnalysis):
         pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
         for (vol_1, vol_2) in pairs:
             assert_almost_equal(rate[(vol_1, vol_2)], 0.0125)
+
+    def test_with_minus_move_flux(self):
+        network = self.mstis
+        scheme = paths.DefaultScheme(network, engine=RandomMDEngine())
+        scheme.build_move_decision_tree()
+
+        # create the minus move steps
+        # `center` is the edge of the state/innermost interface
+        center = {self.state_A: 0.0, self.state_B: 1.0}
+        replica = {self.state_A: -1, self.state_B: -2}
+        minus_ensemble_to_mover = {m.minus_ensemble: m
+                                   for m in scheme.movers['minus']}
+        state_to_minus_ensemble = {ens.state_vol: ens
+                                   for ens in network.minus_ensembles}
+        minus_changes = []
+        # `delta` is the change on either side for in vs. out
+        for (state, delta) in [(self.state_A, 0.1), (self.state_B, -0.1)]:
+            minus_ens = state_to_minus_ensemble[state]
+            minus_mover = minus_ensemble_to_mover[minus_ens]
+            a_in = center[state] - delta
+            a_out = center[state] + delta
+            # note that these trajs are equivalent to minus move
+            # descriptions in TestMinusMoveFlux
+            seq_1 = [a_in] + [a_out]*2 + [a_in]*5 + [a_out]*5 + [a_in]
+            seq_2 = [a_in] + [a_out]*3 + [a_in]*3 + [a_out]*3 + [a_in]
+
+            for seq in [seq_1, seq_2]:
+                traj = make_1d_traj(seq)
+                assert_equal(minus_ens(traj), True)
+                samp = paths.Sample(trajectory=traj,
+                                    ensemble=minus_ens,
+                                    replica=replica[state])
+                sample_set = paths.SampleSet([samp])
+                change = paths.AcceptedSampleMoveChange(
+                    samples=[samp],
+                    mover=minus_mover,
+                    details=paths.Details()
+                )
+                minus_changes.append(change)
+
+        active = self.mstis_steps[0].active
+        steps = []
+        cycle = -1
+        for m_change in minus_changes:
+            cycle += 1
+            active = active.apply_samples(m_change.samples)
+            step = paths.MCStep(mccycle=cycle,
+                                active=active,
+                                change=m_change)
+            steps.append(step)
+            for old_step in self.mstis_steps[1:]:
+                cycle += 1
+                active = active.apply_samples(old_step.change.samples)
+                step = paths.MCStep(mccycle=cycle,
+                                    active=active,
+                                    change=old_step.change)
+                steps.append(step)
+
+        analysis = StandardTISAnalysis(
+            network=self.mstis,
+            scheme=scheme,
+            max_lambda_calcs={t: {'bin_width': 0.1,
+                                  'bin_range': (-0.1, 1.1)}
+                              for t in network.sampling_transitions},
+            steps=steps
+        )
+        raise SkipTest
+        # now we actually verify correctness
+
