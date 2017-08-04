@@ -1857,25 +1857,27 @@ class SequentialEnsemble(Ensemble):
                 ens_final = cache.contents['ens_from']
 
         # logging startup
-        logger.debug(
-            "Beginning can_prepend with ens_num:" + str(ens_num)
-            + "  ens_final:" + str(ens_final) + "  subtraj_final "
-            + str(subtraj_final) + "; strict=" + str(strict)
-        )
-        if cache.trusted:
-            logger.debug("Cache contents: " + str(cache.contents))
-            logger.debug("cache.prev_start_frame: " +
-                         str(trajectory.index(cache.start_frame)))
-        for i in range(len(self.ensembles)):
+        if logger.isEnabledFor(logging.DEBUG):
             logger.debug(
-                "Ensemble " + str(i) +
-                " : " + self.ensembles[i].__class__.__name__
+                "Beginning can_prepend with ens_num:" + str(ens_num)
+                + "  ens_final:" + str(ens_final) + "  subtraj_final "
+                + str(subtraj_final) + "; strict=" + str(strict)
             )
+            if cache.trusted:
+                logger.debug("Cache contents: " + str(cache.contents))
+                logger.debug("cache.prev_start_frame: " +
+                             str(trajectory.index(cache.start_frame)))
+            for i in range(len(self.ensembles)):
+                logger.debug(
+                    "Ensemble " + str(i) +
+                    " : " + self.ensembles[i].__class__.__name__
+                )
 
         while True:
             if self._use_cache and cache.trusted:
                 # offset = 1
                 offset = 0
+                # TODO: trajectory.index is expensive... how to speed up?
                 last_checked = trajectory.index(cache.prev_last_frame) + offset
             else:
                 last_checked = None
