@@ -6,10 +6,38 @@ import simtk.openmm.app
 import simtk.unit as u
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
-from snapshot import Snapshot
+from .snapshot import Snapshot
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+def restore_custom_integrator_interface(integrator):
+    """
+    Restore the interface to a custom integrator.
+
+    When subclasses of CustomIntegrator are deserialized, they only show up
+    as `CustomIntegrator`, and therefore lose any additional interface
+    provided by the subclass.
+
+    So far, only subclasses of `openmmtools.RestorableIntegrator` are
+    supported. Hopefully, we can establish some sort of more widely-used
+    approach based on the tricks established in there.
+    """
+    # for openmmtools integrators
+    try:
+        import openmmtools
+    except ImportError:  # pragma: no cover
+        pass  # if openmmtools doesn't exist, can't restore interface
+    else:
+        RestorableIntegrator = openmmtools.integrators.RestorableIntegrator
+        if RestorableIntegrator.is_restorable(integrator):
+            success = RestorableIntegrator.restore_interface(integrator)
+            logger.debug("Restored interface to integrator: " + str(success))
+            # this return a bool based on success; we could error on fail,
+            # but I think it is better to just log it and use the integrator
+            # without full interface if necessary
+
+    return integrator
 
 
 class OpenMMEngine(DynamicsEngine):
@@ -294,10 +322,12 @@ class OpenMMEngine(DynamicsEngine):
         properties = {str(key): str(value)
                       for key, value in properties.iteritems()}
 
+        integrator = simtk.openmm.XmlSerializer.deserialize(integrator_xml)
+        integrator = restore_custom_integrator_interface(integrator)
         return OpenMMEngine(
             topology=topology,
             system=simtk.openmm.XmlSerializer.deserialize(system_xml),
-            integrator=simtk.openmm.XmlSerializer.deserialize(integrator_xml),
+            integrator=integrator,
             options=options,
             openmm_properties=properties
         )

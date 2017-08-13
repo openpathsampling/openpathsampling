@@ -1,8 +1,10 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal, 
-                        assert_almost_equal, raises, assert_in)
+from __future__ import absolute_import
+from builtins import object
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+                        raises, assert_in)
 from nose.plugins.skip import SkipTest
 from numpy import isnan
-from test_helpers import assert_items_almost_equal
+from .test_helpers import assert_items_almost_equal, assert_items_equal
 import collections
 
 import logging
@@ -82,14 +84,14 @@ class testVoxelLookupFunction(object):
 
     def test_keys(self):
         keys = [(0,0), (0,2), (1,4), (-1,-1)]
-        assert_equal(len(self.lookup.keys()), len(keys))
-        for key in self.lookup.keys():
+        assert_equal(len(list(self.lookup.keys())), len(keys))
+        for key in list(self.lookup.keys()):
             assert_in(key, keys)
 
     def test_values(self):
         values = [1.0, 2.0, 4.0, 5.0]
-        assert_equal(len(self.lookup.values()), len(values))
-        for val in self.lookup.values():
+        assert_equal(len(list(self.lookup.values())), len(values))
+        for val in list(self.lookup.values()):
             assert_in(val, values)
 
     def test_bin_to_left_edge(self):
@@ -106,7 +108,7 @@ class testVoxelLookupFunction(object):
         expected = {(-1.0, 1.0): 1.0, (-1.0,1.5): 2.0, (-0.5, 2.0): 4.0,
                     (-1.5, 0.75): 5.0}
         assert_equal(len(expected), len(bin_edge_counter))
-        for k in expected.keys():
+        for k in list(expected.keys()):
             assert_equal(bin_edge_counter[k], expected[k])
 
     def test_df_2d(self):

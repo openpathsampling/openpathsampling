@@ -1,3 +1,4 @@
+from builtins import object
 import openpathsampling.engines.toy as toys
 import numpy as np
 

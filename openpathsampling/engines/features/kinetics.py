@@ -1,4 +1,4 @@
-from shared import KineticContainerStore, KineticContainer
+from .shared import KineticContainerStore, KineticContainer
 from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['kinetics', 'is_reversed']

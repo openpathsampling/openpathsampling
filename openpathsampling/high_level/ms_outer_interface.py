@@ -103,8 +103,8 @@ class MSOuterTISInterface(netcdfplus.StorableNamedObject):
         MSOuterTISInterface :
             the desired object with correct volumes and lambdas
         """
-        interface_sets = interface_sets_lambdas.keys()
-        lambdas = interface_sets_lambdas.values()
+        interface_sets = list(interface_sets_lambdas.keys())
+        lambdas = list(interface_sets_lambdas.values())
         volumes = [iface_set.new_interface(interface_sets_lambdas[iface_set])
                    for iface_set in interface_sets]
         return MSOuterTISInterface(interface_sets, volumes, lambdas)

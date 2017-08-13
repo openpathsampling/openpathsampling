@@ -13,8 +13,10 @@ import numpy as np
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 from openpathsampling.pathmover_inout import InOutSet, InOut
-from ops_logging import initialization_logging
-from treelogic import TreeMixin
+from .ops_logging import initialization_logging
+from .treelogic import TreeMixin
+
+from future.utils import with_metaclass
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -88,7 +90,7 @@ class MoveChangeNaNError(Exception):
     pass
 
 
-class PathMover(TreeMixin, StorableNamedObject):
+class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
     """
     A PathMover is the description of a move in replica space.
 
@@ -123,7 +125,7 @@ class PathMover(TreeMixin, StorableNamedObject):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
     def __init__(self):
         StorableNamedObject.__init__(self)
@@ -132,6 +134,7 @@ class PathMover(TreeMixin, StorableNamedObject):
         self._out_ensembles = None
         self._len = None
         self._inout = None
+        self._trust_candidate = False
 
     #        initialization_logging(logger=init_log, obj=self,
     #                               entries=['ensembles'])
@@ -494,8 +497,7 @@ class SampleMover(PathMover):
     def __init__(self):
         super(SampleMover, self).__init__()
 
-    @classmethod
-    def metropolis(cls, trials):
+    def metropolis(self, trials):
         """Implements the Metropolis acceptance for a list of trial samples
 
         The Metropolis uses the .bias for each sample and checks of samples
@@ -519,7 +521,8 @@ class SampleMover(PathMover):
         """
 
         shoot_str = "MC in {cls} using samples {trials}"
-        logger.info(shoot_str.format(cls=cls.__name__, trials=trials))
+        logger.info(shoot_str.format(cls=self.__class__.__name__,
+                                     trials=trials))
 
         trial_dict = dict()
         for trial in trials:
@@ -530,8 +533,8 @@ class SampleMover(PathMover):
 
         # TODO: This isn't right. `bias` should be associated with the
         # change; not with each individual sample. ~~~DWHS
-        for ens, sample in trial_dict.iteritems():
-            valid = ens(sample.trajectory)
+        for ens, sample in trial_dict.items():
+            valid = ens(sample.trajectory, candidate=self._trust_candidate)
             if not valid:
                 # one sample not valid reject
                 accepted = False
@@ -955,6 +958,7 @@ class ReplicaExchangeMover(SampleMover):
         self.bias = bias
         self.ensemble1 = ensemble1
         self.ensemble2 = ensemble2
+        self._trust_candidate = True
 
         initialization_logging(logger=init_log, obj=self,
                                entries=['bias', 'ensemble1', 'ensemble2'])
@@ -985,11 +989,11 @@ class ReplicaExchangeMover(SampleMover):
         replica1 = sample1.replica
         replica2 = sample2.replica
 
-        from1to2 = ensemble2(trajectory1)
+        from1to2 = ensemble2(trajectory1, candidate=self._trust_candidate)
         logger.debug("trajectory " + repr(trajectory1) +
                      " into ensemble " + repr(ensemble2) +
                      " : " + str(from1to2))
-        from2to1 = ensemble1(trajectory2)
+        from2to1 = ensemble1(trajectory2, candidate=self._trust_candidate)
         logger.debug("trajectory " + repr(trajectory2) +
                      " into ensemble " + repr(ensemble1) +
                      " : " + str(from2to1))
@@ -1267,6 +1271,7 @@ class PathReversalMover(SampleMover):
         """
         super(PathReversalMover, self).__init__()
         self.ensemble = ensemble
+        self._trust_candidate = True
 
     def _called_ensembles(self):
         return [self.ensemble]
@@ -1288,7 +1293,8 @@ class PathReversalMover(SampleMover):
 
         reversed_trajectory = trajectory.reversed
 
-        valid = ensemble(reversed_trajectory)
+        valid = ensemble(reversed_trajectory,
+                         candidate=self._trust_candidate)
         logger.info("PathReversal move accepted: " + str(valid))
 
         bias = 1.0
@@ -2510,7 +2516,7 @@ def NeighborEnsembleReplicaExchange(ensemble_list):
 
 
 def PathReversalSet(ensembles):
-    return map(PathReversalMover, ensembles)
+    return list(map(PathReversalMover, ensembles))
 
 
 class PathMoverFactory(object):
@@ -2546,7 +2552,7 @@ class Details(StorableObject):
 
     def __init__(self, **kwargs):
         super(Details, self).__init__()
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             setattr(self, key, value)
 
     _print_repr_types = [paths.Ensemble]

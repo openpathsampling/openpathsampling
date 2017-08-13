@@ -13,23 +13,23 @@ build:
 requirements:
   build:
     - python
+    - future
     - setuptools
-    - pyyaml
 
   run:
     - python
-    - numpy 1.10.*
+    - numpy
     - scipy
+    - future
     - pandas
+    - hdf4 4.2.12
     - netcdf4
     - openmm
     - openmmtools
     - jupyter
-    - pyyaml
     - mdtraj
     - svgwrite
     - networkx
-    - pyqt
     - matplotlib
     - ujson
 

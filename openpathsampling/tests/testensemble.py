@@ -1,7 +1,12 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises)
+from __future__ import absolute_import
+from builtins import zip
+from builtins import map
+from builtins import str
+from builtins import range
+from builtins import object
+from nose.tools import (assert_equal, assert_not_equal, raises)
 from nose.plugins.skip import SkipTest
-from test_helpers import (CallIdentity, prepend_exception_message,
+from .test_helpers import (CallIdentity, prepend_exception_message,
                           make_1d_traj, raises_with_message_like,
                           CalvinistDynamics)
 
@@ -64,10 +69,10 @@ def build_trajdict(trajtypes, lower, upper):
             lowersubkey += "_"+lowersubdict[char]
             delta.append(adjustdict[char](random.randint(1, 4)))
 
-        mydict[upperaddkey] = map(upper.__add__, delta)
-        mydict[loweraddkey] = map(lower.__add__, delta)
-        mydict[uppersubkey] = map(upper.__sub__, delta)
-        mydict[lowersubkey] = map(lower.__sub__, delta)
+        mydict[upperaddkey] = list(map(upper.__add__, delta))
+        mydict[loweraddkey] = list(map(lower.__add__, delta))
+        mydict[uppersubkey] = list(map(upper.__sub__, delta))
+        mydict[lowersubkey] = list(map(lower.__sub__, delta))
     return mydict 
 
 def tstr(ttraj):
@@ -75,7 +80,7 @@ def tstr(ttraj):
 
 def results_upper_lower(adict):
     res_dict = {}
-    for test in adict.keys():
+    for test in list(adict.keys()):
         res_dict['upper_'+test] = adict[test]
         res_dict['lower_'+test] = adict[test]
     return res_dict
@@ -107,7 +112,7 @@ def setUp():
     ttraj = build_trajdict(trajtypes, lower, upper)
 
     # make the tests from lists into trajectories
-    for test in ttraj.keys():
+    for test in list(ttraj.keys()):
         ttraj[test] = make_1d_traj(coordinates=ttraj[test],
                                    velocities=[1.0]*len(ttraj[test]))
 
@@ -150,18 +155,18 @@ class EnsembleTest(object):
         ultimate in test-running simplicity!!
         """
         results = {}
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             results[test] = default
         nondef_dict = {}
         for test in non_default:
-            if test in ttraj.keys():
+            if test in list(ttraj.keys()):
                 results[test] = not default
-            if "lower_"+test in ttraj.keys():
+            if "lower_"+test in list(ttraj.keys()):
                 results["lower_"+test] = not default
-            if "upper_"+test in ttraj.keys():
+            if "upper_"+test in list(ttraj.keys()):
                 results["upper_"+test] = not default
 
-        for test in results.keys():
+        for test in list(results.keys()):
             logging.getLogger('openpathsampling.ensemble').debug(
                 "Starting test for " + test + "("+str(ttraj[test])+")"
             )
@@ -176,7 +181,7 @@ class EnsembleTest(object):
         messages (using prepend_exception_message) we can wrap the many tests
         into loops instead of making tons of lines of code.
         """
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.ensemble, ttraj[test], results[test], failmsg)
 
@@ -196,7 +201,7 @@ class testPartOutXEnsemble(EnsembleTest):
 
     def test_leaveX(self):
         """PartOutXEnsemble passes the trajectory test suite"""
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "out" in in_out_parser(test):
                 res = True
             else:
@@ -206,7 +211,7 @@ class testPartOutXEnsemble(EnsembleTest):
 
     def test_invert(self):
         inverted = ~self.leaveX
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "out" in in_out_parser(test):
                 res = False
             else:
@@ -243,7 +248,7 @@ class testAllInXEnsemble(EnsembleTest):
 
     def test_inX(self):
         """AllInXEnsemble passes the trajectory test suite"""
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "out" in in_out_parser(test):
                 res = False
             else:
@@ -252,7 +257,7 @@ class testAllInXEnsemble(EnsembleTest):
             self._single_test(self.inX, ttraj[test], res, failmsg)
 
     def test_can_append(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "out" in in_out_parser(test):
                 res = False
             else:
@@ -261,7 +266,7 @@ class testAllInXEnsemble(EnsembleTest):
             self._single_test(self.inX.can_append, ttraj[test], res, failmsg)
 
     def test_can_prepend(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "out" in in_out_parser(test):
                 res = False
             else:
@@ -271,7 +276,7 @@ class testAllInXEnsemble(EnsembleTest):
                               failmsg)
 
     def test_strict_can_append(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "out" in in_out_parser(test):
                 res = False
             else:
@@ -281,7 +286,7 @@ class testAllInXEnsemble(EnsembleTest):
                               failmsg)
 
     def test_strict_can_prepend(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "out" in in_out_parser(test):
                 res = False
             else:
@@ -307,7 +312,7 @@ class testAllOutXEnsemble(EnsembleTest):
 
     def test_outX(self):
         """AllOutXEnsemble passes the trajectory test suite"""
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "in" in in_out_parser(test):
                 res = False
             else:
@@ -316,7 +321,7 @@ class testAllOutXEnsemble(EnsembleTest):
             self._single_test(self.outX, ttraj[test], res, failmsg)
 
     def test_can_append(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "in" in in_out_parser(test):
                 res = False
             else:
@@ -325,7 +330,7 @@ class testAllOutXEnsemble(EnsembleTest):
             self._single_test(self.outX.can_append, ttraj[test], res, failmsg)
 
     def test_can_prepend(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "in" in in_out_parser(test):
                 res = False
             else:
@@ -334,7 +339,7 @@ class testAllOutXEnsemble(EnsembleTest):
             self._single_test(self.outX.can_prepend, ttraj[test], res, failmsg)
 
     def test_strict_can_append(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "in" in in_out_parser(test):
                 res = False
             else:
@@ -344,7 +349,7 @@ class testAllOutXEnsemble(EnsembleTest):
                               failmsg)
 
     def test_strict_can_prepend(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "in" in in_out_parser(test):
                 res = False
             else:
@@ -370,7 +375,7 @@ class testPartInXEnsemble(EnsembleTest):
 
     def test_hitX(self):
         """PartInXEnsemble passes the trajectory test suite"""
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             if "in" in in_out_parser(test):
                 res = True
             else:
@@ -643,7 +648,7 @@ class testSequentialEnsemble(EnsembleTest):
                         'upper_in_out_in_out_in' : False,
                         'lower_in_out_in_out_in' : False
                     }   
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_tis.can_append, 
                                 ttraj[test], results[test], failmsg)
@@ -669,7 +674,7 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_in_out_in_out_in' : False,
             'lower_in_out_in_out_in' : False
         }   
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_tis.strict_can_append, 
                                 ttraj[test], results[test], failmsg)
@@ -714,7 +719,7 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_in_cross_in_cross_in' : False,
             'lower_in_cross_in_cross_in' : False
         }   
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus.can_append, 
                                 ttraj[test], results[test], failmsg)
@@ -758,7 +763,7 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_in_cross_in_cross_in' : False,
             'lower_in_cross_in_cross_in' : False
         }   
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus.strict_can_append, 
                                 ttraj[test], results[test], failmsg)
@@ -785,7 +790,7 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_in_out_in_out_in' : False,
             'lower_in_out_in_out_in' : False
         }   
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_tis.can_prepend, 
                                 ttraj[test], results[test], failmsg)
@@ -811,7 +816,7 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_in_out_in_out_in' : False,
             'lower_in_out_in_out_in' : False
         }   
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_tis.strict_can_prepend, 
                                 ttraj[test], results[test], failmsg)
@@ -848,7 +853,7 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_out_in_in_out_in' : True,
             'lower_out_in_in_out_in' : True
         }   
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus.can_prepend, 
                                 ttraj[test], results[test], failmsg)
@@ -885,7 +890,7 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_out_in_in_out_in' : True,
             'lower_out_in_in_out_in' : True
         }   
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus.strict_can_prepend, 
                                 ttraj[test], results[test], failmsg)
@@ -900,7 +905,7 @@ class testSequentialEnsemble(EnsembleTest):
                    'upper_in_out_in' : [1,2],
                    'upper_in_out' : [1,2]
                   }
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(ensemble.transition_frames, 
                                 ttraj[test], results[test], failmsg)
@@ -913,7 +918,7 @@ class testSequentialEnsemble(EnsembleTest):
                    'upper_in_out_in' : False,
                    'upper_in_out' : True
                   }
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(ensemble, 
                                 ttraj[test], results[test], failmsg)
@@ -925,7 +930,7 @@ class testSequentialEnsemble(EnsembleTest):
         # idea: for each ttraj, use the key name to define in/out behavior,
         # dynamically construct a SequentialEnsemble
         ens_dict = {'in' : self.inX, 'out' : self.outX }
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             ens_list = in_out_parser(test)
             ens = []
 
@@ -940,7 +945,7 @@ class testSequentialEnsemble(EnsembleTest):
     def test_sequential_pseudo_tis(self):
         """SequentialEnsemble as Pseudo-TISEnsemble identifies paths"""
         results = {}
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             results[test] = False
         results['upper_in_out_in'] = True
         results['lower_in_out_in'] = True
@@ -950,7 +955,7 @@ class testSequentialEnsemble(EnsembleTest):
         results['upper_in_out_cross_out_in'] = True
         results['upper_in_cross_in'] = True
         results['lower_in_cross_in'] = True
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_tis, ttraj[test], results[test],
                               failmsg)
@@ -958,7 +963,7 @@ class testSequentialEnsemble(EnsembleTest):
     def test_sequential_pseudo_minus(self):
         """SequentialEnsemble as Pseudo-MinusEnsemble identifies paths"""
         results = {}
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             results[test] = False
         results['upper_in_out_in_out_in'] = True
         results['lower_in_out_in_out_in'] = True
@@ -966,7 +971,7 @@ class testSequentialEnsemble(EnsembleTest):
         results['lower_in_out_in_in_out_in'] = True
         results['upper_in_cross_in_cross_in'] = True
         results['lower_in_cross_in_cross_in'] = True
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_minus, ttraj[test], results[test],
                               failmsg)
@@ -974,13 +979,13 @@ class testSequentialEnsemble(EnsembleTest):
     def test_sequential_tis(self):
         """SequentialEnsemble as TISEnsemble identifies paths"""
         results = {}
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             results[test] = False
         results['upper_in_out_cross_out_in'] = True
         results['lower_in_out_cross_out_in'] = True
         results['upper_in_cross_in'] = True
         results['lower_in_cross_in'] = True
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.tis, ttraj[test], results[test], failmsg)
     
@@ -1001,7 +1006,7 @@ class testSequentialEnsemble(EnsembleTest):
             'lower_in_cross_in' : True
         }
         logging.getLogger('openpathsampling.ensemble').info("Starting tests....")
-        for test in match_results.keys():
+        for test in list(match_results.keys()):
             failmsg = "Match failure in "+test+"("+str(ttraj[test])+"): "
             logging.getLogger('openpathsampling.ensemble').info(
                 "Testing: "+str(test)
@@ -1019,7 +1024,7 @@ class testSequentialEnsemble(EnsembleTest):
             'upper_out_in_out' : True,
             'upper_out_in_out_in' : False
         }
-        for test in append_results.keys():
+        for test in list(append_results.keys()):
             failmsg = "Append failure in "+test+"("+str(ttraj[test])+"): "
             logging.getLogger('opentis.ensemble').info(
                 "Testing: "+str(test)
@@ -1094,50 +1099,50 @@ class testSequentialEnsembleCombination(EnsembleTest):
         self._test_everything(self.combo_and, and_passes, False)
 
     def test_can_append(self):
-	ens1_true = [
-	    'hit',
-	    'in',
-	    'in_cross',
-	    'in_out',
-	    'in_out_cross',
-	    'in_out_out_out',
-	    'out',
-	    'out_cross',
-	    'out_out',
-	    'out_out_out'
-	]
+        ens1_true = [
+            'hit',
+            'in',
+            'in_cross',
+            'in_out',
+            'in_out_cross',
+            'in_out_out_out',
+            'out',
+            'out_cross',
+            'out_out',
+            'out_out_out'
+        ]
         self._test_everything(self.ens1.can_append, ens1_true, False)
         ens2_true = [
-	    'hit',
-	    'in',
-	    'in_cross',
-	    'in_cross_in',
-	    'in_cross_in_cross',
-	    'in_hit_in',
-	    'in_hit_out',
-	    'in_in',
-	    'in_in_cross_in',
-	    'in_in_in',
-	    'in_in_in_out',
-	    'in_in_out',
-	    'in_in_out_in',
-	    'in_out',
-	    'in_out_cross',
-	    'in_out_in',
-	    'in_out_in_in',
-	    'in_out_in_out',
-	    'in_out_out_in',
-	    'in_out_out_out',
-	    'out',
-	    'out_cross',
-	    'out_hit_in',
-	    'out_hit_out',
-	    'out_in',
-	    'out_in_in',
-	    'out_in_out',
-	    'out_out',
-	    'out_out_in',
-	    'out_out_out'
+            'hit',
+            'in',
+            'in_cross',
+            'in_cross_in',
+            'in_cross_in_cross',
+            'in_hit_in',
+            'in_hit_out',
+            'in_in',
+            'in_in_cross_in',
+            'in_in_in',
+            'in_in_in_out',
+            'in_in_out',
+            'in_in_out_in',
+            'in_out',
+            'in_out_cross',
+            'in_out_in',
+            'in_out_in_in',
+            'in_out_in_out',
+            'in_out_out_in',
+            'in_out_out_out',
+            'out',
+            'out_cross',
+            'out_hit_in',
+            'out_hit_out',
+            'out_in',
+            'out_in_in',
+            'out_in_out',
+            'out_out',
+            'out_out_in',
+            'out_out_out'
         ]
         self._test_everything(self.ens2.can_append, ens2_true, False)
         
@@ -1149,18 +1154,18 @@ class testSequentialEnsembleCombination(EnsembleTest):
 
     def test_can_prepend(self):
         ens1_true = [
-	    'hit',
-	    'in',
-	    'out',
-	    'out_cross',
-	    'out_in',
-	    'out_out',
-	    'out_out_in',
-	    'out_out_out',
-	    'out_out_out_in'
+            'hit',
+            'in',
+            'out',
+            'out_cross',
+            'out_in',
+            'out_out',
+            'out_out_in',
+            'out_out_out',
+            'out_out_out_in'
         ]
         self._test_everything(self.ens1.can_prepend, ens1_true, False)
-	ens2_true = [
+        ens2_true = [
             'cross_in_cross_in',
             'hit',
             'in',
@@ -1192,7 +1197,7 @@ class testSequentialEnsembleCombination(EnsembleTest):
             'out_out_in',
             'out_out_out',
             'out_out_out_in'
-	]
+        ]
         self._test_everything(self.ens2.can_prepend, ens2_true, False)
         
         or_true = list(set(ens1_true + ens2_true))
@@ -1202,36 +1207,36 @@ class testSequentialEnsembleCombination(EnsembleTest):
         self._test_everything(self.combo_and.can_prepend, and_true, False)
 
     def test_strict_can_append(self):
-	ens1_true = [
-	    'hit',
-	    'in',
-	    'in_cross',
-	    'in_out',
-	    'in_out_cross',
-	    'in_out_out_out',
-	]
+        ens1_true = [
+            'hit',
+            'in',
+            'in_cross',
+            'in_out',
+            'in_out_cross',
+            'in_out_out_out',
+        ]
         self._test_everything(self.ens1.strict_can_append, ens1_true, False)
         ens2_true = [
-	    'hit',
-	    'in',
-	    'in_cross',
-	    'in_cross_in',
-	    'in_cross_in_cross',
-	    'in_hit_in',
-	    'in_hit_out',
-	    'in_in',
-	    'in_in_cross_in',
-	    'in_in_in',
-	    'in_in_in_out',
-	    'in_in_out',
-	    'in_in_out_in',
-	    'in_out',
-	    'in_out_cross',
-	    'in_out_in',
-	    'in_out_in_in',
-	    'in_out_in_out',
-	    'in_out_out_in',
-	    'in_out_out_out',
+            'hit',
+            'in',
+            'in_cross',
+            'in_cross_in',
+            'in_cross_in_cross',
+            'in_hit_in',
+            'in_hit_out',
+            'in_in',
+            'in_in_cross_in',
+            'in_in_in',
+            'in_in_in_out',
+            'in_in_out',
+            'in_in_out_in',
+            'in_out',
+            'in_out_cross',
+            'in_out_in',
+            'in_out_in_in',
+            'in_out_in_out',
+            'in_out_out_in',
+            'in_out_out_out',
         ]
         self._test_everything(self.ens2.strict_can_append, ens2_true, False)
 
@@ -1243,14 +1248,14 @@ class testSequentialEnsembleCombination(EnsembleTest):
 
     def test_strict_can_prepend(self):
         ens1_true = [
-	    'hit',
-	    'in',
-	    'out_in',
-	    'out_out_in',
-	    'out_out_out_in'
+            'hit',
+            'in',
+            'out_in',
+            'out_out_in',
+            'out_out_out_in'
         ]
         self._test_everything(self.ens1.strict_can_prepend, ens1_true, False)
-	ens2_true = [
+        ens2_true = [
             'cross_in_cross_in',
             'hit',
             'in',
@@ -1271,7 +1276,7 @@ class testSequentialEnsembleCombination(EnsembleTest):
             'out_in_out_in',
             'out_out_in',
             'out_out_out_in'
-	]
+        ]
         self._test_everything(self.ens2.strict_can_prepend, ens2_true, False)
 
         or_true = list(set(ens1_true + ens2_true))
@@ -1282,7 +1287,7 @@ class testSequentialEnsembleCombination(EnsembleTest):
 
 class testTISEnsemble(EnsembleTest):
     def setUp(self):
-        self.tis = TISEnsemble(vol1, vol3, vol2, op) 
+        self.tis = TISEnsemble(vol1, vol3, vol2, op)
         self.traj = ttraj['upper_in_out_cross_out_in']
         self.minl = min(op(self.traj))
         self.maxl = max(op(self.traj))
@@ -1299,6 +1304,26 @@ class testTISEnsemble(EnsembleTest):
         teststr = ("initial_state=stateA final_state=stateA min_lambda=" +
                    str(self.minl) + " max_lambda=" + str(self.maxl) + " ")
         assert_equal(mystr, teststr)
+
+    def test_tis_ensemble_candidate(self):
+        tis = TISEnsemble(vol1, vol3, vol2, op, lambda_i=0.7)
+        test_f = lambda t: tis(t, candidate=True)
+        results = {}
+        upper_keys = [k for k in list(ttraj.keys()) if k[:6] == "upper_"]
+        for test in upper_keys:
+            results[test] = False
+        # results where we SHOULD get True
+        results['upper_in_out_cross_out_in'] = True
+        results['upper_in_cross_in'] = True
+        # results where the input isn't actually a candidate trajectory, so
+        # it accepts the path even though it shouldn't
+        results['upper_in_cross_in_cross_in'] = True
+        results['upper_in_out_cross_out_in_out_in_out_cross_out_in'] = True
+        results['upper_in_in_cross_in'] = True
+
+        for test in list(results.keys()):
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(test_f, ttraj[test], results[test], failmsg)
 
 class EnsembleCacheTest(EnsembleTest):
     def _was_cache_reset(self, cache):
@@ -1531,7 +1556,7 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
             AllInXEnsemble(vol1 | vol3) & LengthEnsemble(1)
         ])
         real_tis = paths.TISEnsemble(vol1, vol3, vol2)
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(real_tis, ttraj[test],
                               sequential_tis(ttraj[test]), failmsg)
@@ -1560,7 +1585,7 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
                         'in_cross_in_cross' : True
                        }
         results = results_upper_lower(bare_results)
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(ens, ttraj[test], results[test], failmsg)
 
@@ -1581,7 +1606,7 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
                         'in_out_in' : False
                        }
         results = results_upper_lower(bare_results)
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(ens, ttraj[test], results[test], failmsg)
 
@@ -1601,7 +1626,7 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
                         'in_out_in_in_out_in' : False
                        }
         results = results_upper_lower(bare_results)
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(ens, ttraj[test], results[test], failmsg)
 
@@ -1615,7 +1640,7 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
         bare_results = {'in_in_out_out_in_in' : False
                        }
         results = results_upper_lower(bare_results)
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(ens, ttraj[test], results[test], failmsg)
 
@@ -1664,7 +1689,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.start_opt
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1679,7 +1704,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.start_opt.can_append
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1694,7 +1719,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.start_opt.strict_can_append
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1712,7 +1737,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.start_opt.can_prepend
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1730,7 +1755,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.start_opt.strict_can_prepend
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1743,7 +1768,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.mid_opt
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1759,7 +1784,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.mid_opt.can_append
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1775,7 +1800,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.mid_opt.strict_can_append
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1790,7 +1815,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.mid_opt.can_prepend
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1805,7 +1830,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.mid_opt.strict_can_prepend
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1818,7 +1843,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.end_opt
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1834,7 +1859,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.end_opt.can_append
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1850,7 +1875,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.end_opt.strict_can_append
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1866,7 +1891,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.end_opt.can_prepend
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -1882,7 +1907,7 @@ class testOptionalEnsemble(EnsembleTest):
                        }
         results = results_upper_lower(bare_results)
         fcn = self.end_opt.strict_can_prepend
-        for test in results.keys():
+        for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+tstr(ttraj[test])+"): "
             self._single_test(fcn, ttraj[test], results[test], failmsg)
 
@@ -2362,7 +2387,7 @@ class testSingleEnsembleSequentialEnsemble(EnsembleTest):
         self.ens = SequentialEnsemble([self.inner_ens])
 
     def test_it_all(self):
-        for test in ttraj.keys():
+        for test in list(ttraj.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.ens, ttraj[test],
                               self.inner_ens(ttraj[test]), failmsg)
@@ -2485,7 +2510,7 @@ class testVolumeCombinations(EnsembleTest):
         self.partinA_and_partinB = self.partinA & self.partinB
         extras = build_trajdict(['babbc', 'ca', 'bcbba', 'abbc', 'cbba',
                                  'abbcb', 'cbbab'], lower, upper)
-        for test in extras.keys():
+        for test in list(extras.keys()):
             extras[test] = make_1d_traj(coordinates=extras[test],
                                        velocities=[1.0]*len(extras[test]))
         self.local_ttraj = dict(ttraj)
@@ -2500,7 +2525,7 @@ class testVolumeCombinations(EnsembleTest):
             cache_results = {}
 
         # clear the caches before starting
-        for cache in cache_results.keys():
+        for cache in list(cache_results.keys()):
             cache.__init__(direction=cache.direction)
 
         for i in range(len(trajectory)-start_traj_len):
@@ -2516,7 +2541,7 @@ class testVolumeCombinations(EnsembleTest):
             trusted_val = function(trajectory[start:end], trusted=True)
             # print i, "["+str(start)+":"+str(end)+"]", trusted_val, results[i]
             assert_equal(trusted_val, results[i])
-            for cache in cache_results.keys():
+            for cache in list(cache_results.keys()):
                 # TODO: this is currently very specific to the caches used
                 # by volumes ensembles. That should be generalized by
                 # allowing several different tags within contents.

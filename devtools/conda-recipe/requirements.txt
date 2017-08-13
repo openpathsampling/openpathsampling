@@ -1,15 +1,14 @@
 python
-numpy=1.10
 scipy
 pandas
+future
+hdf4=4.2.12
 jupyter
 netcdf4
 openmm
 openmmtools
-pyyaml
 mdtraj
 svgwrite
 networkx
 matplotlib
 ujson
-pyqt

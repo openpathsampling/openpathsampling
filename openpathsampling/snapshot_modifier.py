@@ -426,7 +426,7 @@ class VelocityDirectionModifier(GeneralizedDirectionModifier):
     SingleAtomVelocityDirectionModifier
     """
     def _select_atoms_to_modify(self, n_subset_atoms):
-        return range(n_subset_atoms)
+        return list(range(n_subset_atoms))
 
 class SingleAtomVelocityDirectionModifier(GeneralizedDirectionModifier):
     """

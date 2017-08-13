@@ -63,7 +63,7 @@ class SnapshotValueStore(ObjectStore):
             return None
 
         if self.time_reversible:
-            pos /= 2
+            pos //= 2
 
         if self.allow_incomplete:
             # we want to load by uuid and it was not in cache.
@@ -100,7 +100,7 @@ class SnapshotValueStore(ObjectStore):
             return
 
         if self.time_reversible:
-            pos /= 2
+            pos //= 2
 
         if self.allow_incomplete:
             if pos in self.index:

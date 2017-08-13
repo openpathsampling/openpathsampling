@@ -1,10 +1,16 @@
 '''
 @author: David W.H. Swenson
 '''
+from __future__ import print_function
+from __future__ import absolute_import
 
+from builtins import zip
+from builtins import str
+from builtins import range
+from builtins import object
 from nose.plugins.skip import SkipTest
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_true, assert_in, assert_not_in)
+from nose.tools import (assert_equal, assert_not_equal, raises, assert_true,
+                        assert_in, assert_not_in)
 from numpy.testing import assert_allclose
 
 from openpathsampling.collectivevariable import FunctionCV
@@ -17,10 +23,10 @@ from openpathsampling.sample import Sample, SampleSet
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.volume import CVDefinedVolume
 import openpathsampling.engines.toy as toys
-from test_helpers import CallIdentity, raises_with_message_like
-from test_helpers import (assert_equal_array_array, items_equal,
-                          make_1d_traj,
-                          CalvinistDynamics)
+from .test_helpers import CallIdentity, raises_with_message_like
+from .test_helpers import (assert_equal_array_array, items_equal,
+                          make_1d_traj, assert_items_equal,
+                          CalvinistDynamics, assert_same_items)
 
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -86,11 +92,11 @@ class testPathMover(object):
         self.sset = SampleSet([self.s1, self.s2, self.s3, self.s4])
 
     def test_legal_sample_set(self):
-        assert_items_equal(
+        assert_same_items(
             paths.PathMover.legal_sample_set(self.sset, ensembles=self.l1),
             [self.s2, self.s3]
         )
-        assert_items_equal(
+        assert_same_items(
             paths.PathMover.legal_sample_set(self.sset, ensembles=[self.l1]),
             [self.s2, self.s3]
         )
@@ -271,14 +277,14 @@ class testForwardFirstTwoWayShootingMover(testShootingMover):
         )
         traj, details = mover._run(self.init_samp[0].trajectory, 4)
         assert_allclose(traj.xyz[:,0,0], [-0.1, 0.2, 0.4, 0.6, 0.8])
-        assert_equal(details.keys(), ['modified_shooting_snapshot'])
+        assert_equal(list(details.keys()), ['modified_shooting_snapshot'])
         assert_equal(details['modified_shooting_snapshot'], traj[2])
         assert_not_in(details['modified_shooting_snapshot'],
                       self.init_samp[0].trajectory)
 
         traj, details = mover._run(self.init_samp[0].trajectory, 3)
         assert_allclose(traj.xyz[:,0,0], [-0.1, 0.1, 0.3, 0.5, 0.7])
-        assert_equal(details.keys(), ['modified_shooting_snapshot'])
+        assert_equal(list(details.keys()), ['modified_shooting_snapshot'])
         assert_equal(details['modified_shooting_snapshot'], traj[2])
         assert_not_in(details['modified_shooting_snapshot'],
                       self.init_samp[0].trajectory)
@@ -340,7 +346,8 @@ class testPathReversalMover(object):
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
-        self.tis = paths.TISEnsemble(volA, volB, volX)
+        self.tis = paths.TISEnsemble(volA, volB, volX, orderparameter=op,
+                                     lambda_i=0.25)
         self.move = PathReversalMover(ensemble=self.tis)
         self.op = op
 
@@ -409,10 +416,12 @@ class testReplicaExchangeMover(object):
         state2 = CVDefinedVolume(op, 1, 100)
         volA = CVDefinedVolume(op, -100, 0.25)
         volB = CVDefinedVolume(op, -100, 0.50)
-        self.tisA = paths.TISEnsemble(state1, state2, volA)
-        self.tisB = paths.TISEnsemble(state1, state2, volB)
+        self.tisA = paths.TISEnsemble(state1, state2, volA,
+                                      orderparameter=op, lambda_i=0.25)
+        self.tisB = paths.TISEnsemble(state1, state2, volB,
+                                      orderparameter=op, lambda_i=0.50)
         self.traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
-        self.traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15]) 
+        self.traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15])
         self.traj2 = make_1d_traj([-0.1, 0.2, 0.3, 0.7, 0.6, 0.4, 0.1, -0.15])
         self.sampA0 = Sample(replica=0, trajectory=self.traj0, ensemble=self.tisA)
         self.sampB1 = Sample(replica=1, trajectory=self.traj1, ensemble=self.tisB)
@@ -660,36 +669,28 @@ class testSequentialMover(object):
         len3 = LengthEnsemble(3)
         len2 = LengthEnsemble(2)
         self.hop_to_tis = RandomAllowedChoiceMover(
-            map(lambda ens : EnsembleHopMover(*ens),
-                [[tis, tis],
+            [EnsembleHopMover(*ens) for ens in [[tis, tis],
                  [tps, tis],
                  [len3, tis],
-                 [len2, tis]]
-            )
+                 [len2, tis]]]
         )
         self.hop_to_tps = RandomAllowedChoiceMover(
-            map(lambda ens : EnsembleHopMover(*ens),
-                [[tis, tps],
+            [EnsembleHopMover(*ens) for ens in [[tis, tps],
                  [tps, tps],
                  [len3, tps],
-                 [len2, tps]]
-            )
+                 [len2, tps]]]
         )
         self.hop_to_len3 = RandomAllowedChoiceMover(
-            map(lambda ens : EnsembleHopMover(*ens),
-                [[tis, len3],
+            [EnsembleHopMover(*ens) for ens in [[tis, len3],
                  [tps, len3],
                  [len3, len3],
-                 [len2, len3]]
-            )
+                 [len2, len3]]]
         )
         self.hop_to_len2 = RandomAllowedChoiceMover(
-            map(lambda ens : EnsembleHopMover(*ens),
-                [[tis, len2],
+            [EnsembleHopMover(*ens) for ens in [[tis, len2],
                  [tps, len2],
                  [len3, len2],
-                 [len2, len2]]
-            )
+                 [len2, len2]]]
         )
         self.init_sample = Sample(trajectory=traj,
                                   ensemble=len3,
@@ -1111,7 +1112,7 @@ class testMinusMover(object):
             elif items_equal(s_inner0_xvals, self.second_segment):
                 key += "2"
             else:
-                print "s_inner0_xvals:", s_inner0_xvals
+                print("s_inner0_xvals:", s_inner0_xvals)
                 raise RuntimeError("Chosen segment neither first nor last!")
 
             # final sample s_minus is accepted
@@ -1121,14 +1122,14 @@ class testMinusMover(object):
             elif items_equal(s_minus_xvals, extend_backward):
                 key += "b"
             else:
-                print "s_minus_xvals:", s_minus_xvals
+                print("s_minus_xvals:", s_minus_xvals)
                 raise RuntimeError("Unexpected minus extension result!")
 
             try:
                 seg_dir[key] += 1
             except KeyError:
                 seg_dir[key] = 1
-        assert_equal(len(seg_dir.keys()), 4)
+        assert_equal(len(list(seg_dir.keys())), 4)
 
     def test_repex_fails_other_ensemble(self):
         innermost_other_ensemble = make_1d_traj([-0.11, 0.1, -0.12])
@@ -1314,7 +1315,7 @@ class testSingleReplicaMinusMover(object):
             if items_equal(s_seg0_xvals, self.list_innermost):
                 key += "0"
             else:
-                print "s_seg0_xvals:", s_seg0_xvals
+                print("s_seg0_xvals:", s_seg0_xvals)
                 raise RuntimeError("Chosen segment neither first nor last!")
 
             # s_minus is the intermediate
@@ -1332,7 +1333,7 @@ class testSingleReplicaMinusMover(object):
                     output_backward
                 )
             else:
-                print "s_minus_xvals:", s_minus_xvals
+                print("s_minus_xvals:", s_minus_xvals)
                 raise RuntimeError("Unexpected minus extension result!")
 
 
@@ -1340,7 +1341,7 @@ class testSingleReplicaMinusMover(object):
                 seg_dir[key] += 1
             except KeyError:
                 seg_dir[key] = 1
-        assert_equal(len(seg_dir.keys()), 2)
+        assert_equal(len(list(seg_dir.keys())), 2)
 
     def test_first_hop_fails(self):
         crossing_traj = make_1d_traj([-0.11, 0.11, 0.31, 1.01], [1.0]*4)

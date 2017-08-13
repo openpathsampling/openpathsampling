@@ -10,11 +10,19 @@ import openpathsampling as paths
 import openpathsampling.tools
 
 from openpathsampling.pathmover import SubPathMover
-from ops_logging import initialization_logging
+from .ops_logging import initialization_logging
 import abc
+
+from future.utils import with_metaclass
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
+
+# python 3 support
+try:
+    xrange
+except NameError:
+    xrange = range
 
 
 class MCStep(StorableObject):
@@ -54,7 +62,7 @@ class MCStep(StorableObject):
         self.mccycle = mccycle
 
 
-class PathSimulator(StorableNamedObject):
+class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
     """Abstract class for the "main" function of a simulation.
 
     Parameters
@@ -76,7 +84,7 @@ class PathSimulator(StorableNamedObject):
         This is likely to be overridden when a pathsimulator is wrapped in
         another simulation.
     """
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
     calc_name = "PathSimulator"
     _excluded_attr = ['sample_set', 'step', 'save_frequency',
@@ -707,19 +715,13 @@ class PathSampling(PathSimulator):
 
                 paths.tools.refresh_output(
                     "Working on Monte Carlo cycle number " + str(self.step)
-                    + "\n"
-                    + "Running for %d seconds - %5.2f steps per second\n" % (
-                        elapsed,
-                        1.0 / time_per_step
-                    )
-                    + "Expected time to finish: %d seconds\n" % (
-                        1.0 * (n_steps - nn) * time_per_step
-                    ),
+                    + "\n" + paths.tools.progress_string(nn, n_steps,
+                                                         elapsed),
                     refresh=refresh,
                     output_stream=self.output_stream
                 )
 
-            time_start = time.time() 
+            time_start = time.time()
             movepath = self._mover.move(self.sample_set, step=self.step)
             samples = movepath.results
             new_sampleset = self.sample_set.apply_samples(samples)
@@ -766,8 +768,18 @@ class PathSampling(PathSimulator):
         )
 
 
-class CommittorSimulation(PathSimulator):
-    """Committor simulations. What state do you hit from a given snapshot?
+class ShootFromSnapshotsSimulation(PathSimulator):
+    """
+    Generic class for shooting from a set of snapshots.
+
+    This mainly serves as a base class for other simulation types
+    (committor, reactive flux, etc.) All of these take initial snapshots
+    from within some defined volume, modify the velocities in some way, and
+    run the dynamics until some ensemble tells them to stop.
+
+    While this is usually subclassed, it isn't technically abstract, so a
+    user can create a simulation of this sort on-the-fly for some weird
+    ensembles.
 
     Parameters
     ----------
@@ -775,48 +787,36 @@ class CommittorSimulation(PathSimulator):
         the file to store simulations in
     engine : :class:`.DynamicsEngine`
         the dynamics engine to use to run the simulation
-    states : list of :class:`.Volume`
-        the volumes representing the stable states
+    starting_volume : :class:`.Volume`
+        volume initial frames must be inside of
+    forward_ensemble : :class:`.Ensemble`
+        ensemble for shots in the forward direction
+    backward_ensemble : :class:`.Ensemble`
+        ensemble for shots in the backward direction
     randomizer : :class:`.SnapshotModifier`
         the method used to modify the input snapshot before each shot
     initial_snapshots : list of :class:`.Snapshot`
         initial snapshots to use
-    direction : int or None
-        if direction > 0, only forward shooting is used, if direction < 0,
-        only backward, and if direction is None, mix of forward and
-        backward. Useful if using no modification on the randomizer.
     """
-    def __init__(self, storage, engine=None, states=None, randomizer=None,
-                 initial_snapshots=None, direction=None):
-        super(CommittorSimulation, self).__init__(storage)
+    def __init__(self, storage, engine, starting_volume, forward_ensemble,
+                 backward_ensemble, randomizer, initial_snapshots):
+        super(ShootFromSnapshotsSimulation, self).__init__(storage)
         self.engine = engine
+        # FIXME: this next line seems weird; but tests fail without it
         paths.EngineMover.default_engine = engine
-        self.states = states
-        self.randomizer = randomizer
         try:
             initial_snapshots = list(initial_snapshots)
         except TypeError:
             initial_snapshots = [initial_snapshots]
         self.initial_snapshots = initial_snapshots
-        self.direction = direction
+        self.randomizer = randomizer
 
-        all_state_volume = paths.join_volumes(states)
-
-        # we should always start from a single frame not in any state
         self.starting_ensemble = (
-            paths.AllOutXEnsemble(all_state_volume) &
-            paths.LengthEnsemble(1)
+            paths.AllInXEnsemble(starting_volume) & paths.LengthEnsemble(1)
         )
-        # shoot forward until we hit a state
-        self.forward_ensemble = paths.SequentialEnsemble([
-            paths.AllOutXEnsemble(all_state_volume),
-            paths.AllInXEnsemble(all_state_volume) & paths.LengthEnsemble(1)
-        ])
-        # or shoot backward until we hit a state
-        self.backward_ensemble = paths.SequentialEnsemble([
-            paths.AllInXEnsemble(all_state_volume) & paths.LengthEnsemble(1),
-            paths.AllOutXEnsemble(all_state_volume)
-        ])
+
+        self.forward_ensemble = forward_ensemble
+        self.backward_ensemble = backward_ensemble
 
         self.forward_mover = paths.ForwardExtendMover(
             ensemble=self.starting_ensemble,
@@ -827,13 +827,36 @@ class CommittorSimulation(PathSimulator):
             target_ensemble=self.backward_ensemble
         )
 
-        if self.direction is None:
-            self.mover = paths.RandomChoiceMover([self.forward_mover,
-                                                  self.backward_mover])
-        elif self.direction > 0:
-            self.mover = self.forward_mover
-        elif self.direction < 0:
-            self.mover = self.backward_mover
+        # subclasses will often override this
+        self.mover = paths.RandomChoiceMover([self.forward_mover,
+                                              self.backward_mover])
+
+    def to_dict(self):
+        dct = {
+            'engine': self.engine,
+            'initial_snapshots': self.initial_snapshots,
+            'randomizer': self.randomizer,
+            'starting_ensemble': self.starting_ensemble,
+            'forward_ensemble': self.forward_ensemble,
+            'backward_ensemble': self.backward_ensemble,
+            'mover': self.mover
+        }
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = cls.__new__(cls)
+        # user must manually set a storage!
+        super(ShootFromSnapshotsSimulation, obj).__init__(storage=None)
+        obj.engine = dct['engine']
+        obj.initial_snapshots = dct['initial_snapshots']
+        obj.randomizer = dct['randomizer']
+        obj.starting_ensemble = dct['starting_ensemble']
+        obj.forward_ensemble = dct['forward_ensemble']
+        obj.backward_ensemble = dct['backward_ensemble']
+        obj.mover = dct['mover']
+        return obj
+
 
     def run(self, n_per_snapshot, as_chain=False):
         """Run the simulation.
@@ -894,6 +917,76 @@ class CommittorSimulation(PathSimulator):
 
                 self.step += 1
             snap_num += 1
+
+
+
+class CommittorSimulation(ShootFromSnapshotsSimulation):
+    """Committor simulations. What state do you hit from a given snapshot?
+
+    Parameters
+    ----------
+    storage : :class:`.Storage`
+        the file to store simulations in
+    engine : :class:`.DynamicsEngine`
+        the dynamics engine to use to run the simulation
+    states : list of :class:`.Volume`
+        the volumes representing the stable states
+    randomizer : :class:`.SnapshotModifier`
+        the method used to modify the input snapshot before each shot
+    initial_snapshots : list of :class:`.Snapshot`
+        initial snapshots to use
+    direction : int or None
+        if direction > 0, only forward shooting is used, if direction < 0,
+        only backward, and if direction is None, mix of forward and
+        backward. Useful if using no modification on the randomizer.
+    """
+    def __init__(self, storage, engine=None, states=None, randomizer=None,
+                 initial_snapshots=None, direction=None):
+        all_state_volume = paths.join_volumes(states)
+        no_state_volume = ~all_state_volume
+        # shoot forward until we hit a state
+        forward_ensemble = paths.SequentialEnsemble([
+            paths.AllOutXEnsemble(all_state_volume),
+            paths.AllInXEnsemble(all_state_volume) & paths.LengthEnsemble(1)
+        ])
+        # or shoot backward until we hit a state
+        backward_ensemble = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(all_state_volume) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(all_state_volume)
+        ])
+        super(CommittorSimulation, self).__init__(
+            storage=storage,
+            engine=engine,
+            starting_volume=no_state_volume,
+            forward_ensemble=forward_ensemble,
+            backward_ensemble=backward_ensemble,
+            randomizer=randomizer,
+            initial_snapshots=initial_snapshots
+        )
+        self.states = states
+        self.direction = direction
+
+        # override the default self.mover given by the superclass
+        if self.direction is None:
+            self.mover = paths.RandomChoiceMover([self.forward_mover,
+                                                  self.backward_mover])
+        elif self.direction > 0:
+            self.mover = self.forward_mover
+        elif self.direction < 0:
+            self.mover = self.backward_mover
+
+    def to_dict(self):
+        dct = super(CommittorSimulation, self).to_dict()
+        dct['states'] = self.states
+        dct['direction'] = self.direction
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = super(CommittorSimulation, cls).from_dict(dct)
+        obj.states = dct['states']
+        obj.direction = dct['direction']
+        return obj
 
 
 class DirectSimulation(PathSimulator):
@@ -966,7 +1059,7 @@ class DirectSimulation(PathSimulator):
         was_in_interface = {p: None for p in self.flux_pairs}
         local_traj = paths.Trajectory([self.initial_snapshot])
         self.engine.current_snapshot = self.initial_snapshot
-        for step in range(n_steps):
+        for step in xrange(n_steps):
             frame = self.engine.generate_next_frame()
 
             # update the most recent state if we're in a state

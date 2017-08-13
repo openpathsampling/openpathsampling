@@ -1,7 +1,14 @@
-from test_helpers import (raises_with_message_like, data_filename,
-                          CalvinistDynamics, make_1d_traj)
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal, assert_true)
+from __future__ import division
+from __future__ import absolute_import
+from builtins import str
+from builtins import range
+from past.utils import old_div
+from builtins import object
+from .test_helpers import (raises_with_message_like, data_filename,
+                           CalvinistDynamics, make_1d_traj,
+                           assert_items_equal)
+from nose.tools import (assert_equal, assert_not_equal, raises,
+                        assert_almost_equal, assert_true)
 # from nose.plugins.skip import SkipTest
 
 from openpathsampling.pathsimulator import *
@@ -154,6 +161,74 @@ class testFullBootstrapping(object):
         bootstrap.output_stream = open(os.devnull, "w")
         gs = bootstrap.run(max_ensemble_rounds=1)
 
+
+class testShootFromSnapshotsSimulation(object):
+    # note that most of ShootFromSnapshotSimulation is tested in the tests
+    # for CommittorSimulation. This is just an additional test to show that
+    # using different ensembles from the ones used for the committor will
+    # also work.
+    def setup(self):
+        # As a test system, let's use 1D motion on a flat potential. If the
+        # velocity is positive, you right the state on the right. If it is
+        # negative, you hit the state on the left.
+        pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
+        topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        integrator = toys.LeapfrogVerletIntegrator(0.1)
+        options = {
+            'integ': integrator,
+            'n_frames_max': 100000,
+            'n_steps_per_frame': 5
+        }
+        self.engine = toys.Engine(options=options, topology=topology)
+        self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
+                                   velocities=np.array([[1.0]]),
+                                   engine=self.engine)
+        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        starting_volume = paths.CVDefinedVolume(cv, -0.01, 0.01)
+        forward_ensemble = paths.LengthEnsemble(5)
+        backward_ensemble = paths.LengthEnsemble(3)
+        randomizer = paths.NoModification()
+
+        self.filename = data_filename("shoot_from_snaps.nc")
+        self.storage = paths.Storage(self.filename, 'w')
+        self.simulation = ShootFromSnapshotsSimulation(
+            storage=self.storage,
+            engine=self.engine,
+            starting_volume=starting_volume,
+            forward_ensemble=forward_ensemble,
+            backward_ensemble=backward_ensemble,
+            randomizer=randomizer,
+            initial_snapshots=self.snap0
+        )
+        self.simulation.output_stream = open(os.devnull, "w")
+
+    def teardown(self):
+        if os.path.isfile(self.filename):
+            os.remove(self.filename)
+        paths.EngineMover.default_engine = None
+
+    def test_run_arbitrary_ensemble(self):
+        # integration test of the whole thing, including storage
+        self.simulation.run(10)
+        self.storage.close()
+        analysis = paths.Storage(self.filename, 'r')
+        sim = analysis.pathsimulators[0]
+        assert_equal(len(analysis.steps), 10)
+        length_to_submover = {5: [], 3: []}
+        for step in analysis.steps:
+            step.active.sanity_check()
+            assert_equal(len(step.active), 1)
+            active_sample = step.active[0]
+            change = step.change
+            assert_equal(change.mover, sim.mover)
+            # KeyError here indicates problem with lengths generated
+            length_to_submover[len(active_sample)] += change.subchange.mover
+
+        for k in length_to_submover:
+            # allow 0 or 1  because maybe we made no trials with submover
+            assert_true(len(set(length_to_submover[k])) <= 1)
+
+
 class testCommittorSimulation(object):
     def setup(self):
         # As a test system, let's use 1D motion on a flat potential. If the
@@ -181,7 +256,7 @@ class testCommittorSimulation(object):
         randomizer = paths.NoModification()
 
         self.filename = data_filename("committor_test.nc")
-        self.storage = paths.Storage(self.filename, 
+        self.storage = paths.Storage(self.filename,
                                      mode="w")
         self.storage.save(self.snap0)
 
@@ -201,6 +276,18 @@ class testCommittorSimulation(object):
         sim = self.simulation  # convenience
         assert_equal(len(sim.initial_snapshots), 1)
         assert_true(isinstance(sim.mover, paths.RandomChoiceMover))
+
+    def test_storage(self):
+        self.storage.tag['simulation'] = self.simulation
+        self.storage.close()
+        read_store = paths.Storage(self.filename, 'r')
+        sim = read_store.tag['simulation']
+        new_filename = data_filename("test2.nc")
+        sim.storage = paths.Storage(new_filename, 'w')
+        sim.output_stream = open(os.devnull, 'w')
+        sim.run(n_per_snapshot=2)
+        if os.path.isfile(new_filename):
+            os.remove(new_filename)
 
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=20)
@@ -237,6 +324,7 @@ class testCommittorSimulation(object):
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=self.snap0,
                                   direction=1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=10)
         assert_equal(len(sim.storage.steps), 10)
         for step in self.simulation.storage.steps:
@@ -257,6 +345,7 @@ class testCommittorSimulation(object):
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=self.snap0,
                                   direction=-1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=10)
         assert_equal(len(sim.storage.steps), 10)
         for step in self.simulation.storage.steps:
@@ -279,6 +368,7 @@ class testCommittorSimulation(object):
                                   states=[self.left, self.right],
                                   randomizer=paths.NoModification(),
                                   initial_snapshots=[self.snap0, snap1])
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(10)
         assert_equal(len(self.storage.steps), 20)
         snap0_coords = self.snap0.coordinates.tolist()
@@ -306,6 +396,7 @@ class testCommittorSimulation(object):
                                   randomizer=randomizer,
                                   initial_snapshots=self.snap0,
                                   direction=1)
+        sim.output_stream = open(os.devnull, 'w')
         sim.run(50)
         assert_equal(len(sim.storage.steps), 50)
         counts = {'None-Right' : 0,
@@ -414,9 +505,9 @@ class testDirectSimulation(object):
         # our dataframes, this sucks for us. Raise an issue with pandas?
         rate_matrix = self.sim.rate_matrix.as_matrix()
         nan = float("nan")
-        test_matrix = np.array([[nan, 1.0/2.5, 1.0/3.0],
-                                [1.0/3.0, nan, nan],
-                                [1.0/2.0, nan, nan]])
+        test_matrix = np.array([[nan, old_div(1.0,2.5), old_div(1.0,3.0)],
+                                [old_div(1.0,3.0), nan, nan],
+                                [old_div(1.0,2.0), nan, nan]])
         # for some reason, np.testing.assert_allclose(..., equal_nan=True)
         # was raising errors on this input. this hack gets the behavior
         for i in range(len(self.sim.states)):
@@ -445,9 +536,9 @@ class testDirectSimulation(object):
                          (self.center, left_interface): 2}
         assert_equal(sim.n_flux_events, n_flux_events)
         expected_fluxes = {(self.center, right_interface):
-                           1.0 / (((15-3) + (23-15) + (48-23))/3.0),
+                           old_div(1.0, (old_div(((15-3) + (23-15) + (48-23)),3.0))),
                            (self.center, left_interface):
-                           1.0 / (((97-34) + (160-97))/2.0)}
+                           old_div(1.0, (old_div(((97-34) + (160-97)),2.0)))}
         for p in expected_fluxes:
             assert_almost_equal(sim.fluxes[p], expected_fluxes[p])
 
@@ -463,17 +554,17 @@ class testDirectSimulation(object):
         cv1 = self.cv
         cv2 = paths.FunctionCV("abs_sin",
                                lambda snap : np.abs(np.sin(snap.xyz[0][0])))
-        state = paths.CVDefinedVolume(cv1, -np.pi/8.0, np.pi/8.0)
+        state = paths.CVDefinedVolume(cv1, old_div(-np.pi,8.0), old_div(np.pi,8.0))
         other_state = paths.CVDefinedVolume(cv1, -5.0/8.0*np.pi, -3.0/8.0*np.pi)
         alpha = paths.CVDefinedVolume(cv1, float("-inf"), 3.0/8.0*np.pi)
-        beta = paths.CVDefinedVolume(cv2, float("-inf"), np.sqrt(2)/2.0)
+        beta = paths.CVDefinedVolume(cv2, float("-inf"), old_div(np.sqrt(2),2.0))
         # approx     alpha: x < 1.17   beta: abs(sin(x)) < 0.70
         S = 0              # cv1 =  0.00; cv2 = 0.00
-        I = np.pi/5.0      # cv1 =  0.63; cv2 = 0.59
+        I = old_div(np.pi,5.0)      # cv1 =  0.63; cv2 = 0.59
         X_a = np.pi        # cv1 =  3.14; cv2 = 0.00
-        X_b = -np.pi/3.0   # cv1 = -1.05; cv2 = 0.87
-        X_ab = np.pi/2.0   # cv1 =  1.57; cv2 = 1.00
-        other = -np.pi/2.0 # cv1 = -1.57; cv2 = 1.00
+        X_b = old_div(-np.pi,3.0)   # cv1 = -1.05; cv2 = 0.87
+        X_ab = old_div(np.pi,2.0)   # cv1 =  1.57; cv2 = 1.00
+        other = old_div(-np.pi,2.0) # cv1 = -1.57; cv2 = 1.00
         # That hack is utterly crazy, but I'm kinda proud of it!
         predetermined = [S, S, I, X_a,   # (2) first exit 
                          S, X_a,         # (4) cross A

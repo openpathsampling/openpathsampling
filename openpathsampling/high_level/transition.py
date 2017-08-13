@@ -242,7 +242,7 @@ class TISTransition(Transition):
             # TODO figure out which need to be rerun
             pass
         else:
-            run_it = self.ensemble_histogram_info.keys()
+            run_it = list(self.ensemble_histogram_info.keys())
 
         for hist in run_it:
             hist_info = self.ensemble_histogram_info[hist]
