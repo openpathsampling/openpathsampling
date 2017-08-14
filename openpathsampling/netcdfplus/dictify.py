@@ -13,6 +13,7 @@ import marshal
 import types
 import opcode
 import builtins
+import sys
 
 from .base import StorableObject
 
@@ -22,7 +23,7 @@ from .cache import WeakValueCache
 
 __author__ = 'Jan-Hendrik Prinz'
 
-import sys
+
 if sys.version_info > (3, ):
     long = int
     unicode = str
@@ -33,6 +34,7 @@ else:
     builtin_module = '__builtin__'
     get_code = lambda func: func.func_code
     intify_byte = lambda b: ord(b)
+
 
 class ObjectJSON(object):
     """
@@ -69,6 +71,7 @@ class ObjectJSON(object):
         self.allowed_storable_types = dict()
         self.type_names = {}
         self.type_classes = {}
+        self.safemode = False
 
         self.update_class_list()
 
@@ -266,6 +269,9 @@ class ObjectJSON(object):
                     return None
 
             elif '_marshal' in obj or '_module' in obj:
+                if self.safemode:
+                    return None
+
                 return self.callable_from_dict(obj)
 
             else:
