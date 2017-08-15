@@ -606,7 +606,7 @@ class UUIDObjectJSON(ObjectJSON):
 
             if '_hex_uuid' in obj and '_store' in obj:
                 store = self.storage._stores[obj['_store']]
-                result = store.load(long(obj['_hex_uuid'], 16))
+                result = store.load(int(obj['_hex_uuid'].strip('L'), 16))
 
                 return result
 
