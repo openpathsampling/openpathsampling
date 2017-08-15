@@ -820,9 +820,9 @@ class NetCDFPlus(netCDF4.Dataset):
 
             base_type = store.content_class
 
-            get_is_iterable = lambda v: \
-                v.base_cls is not base_type if hasattr(v, 'base_cls') else \
-                hasattr(v, '__iter__')
+            # get_is_iterable = lambda v: \
+            #     v.base_cls is not base_type if hasattr(v, 'base_cls') else \
+            #     hasattr(v, '__iter__')
 
             get_numpy_iterable = lambda v: isinstance(v, np.ndarray)
 
@@ -909,9 +909,6 @@ class NetCDFPlus(netCDF4.Dataset):
     to_uuid_chunks = staticmethod(
         lambda x: [x[i:i + 36] for i in range(0, len(x), 36)])
 
-    to_uuid_chunks34 = staticmethod(
-        lambda x: [x[i:i + 34] for i in range(0, len(x), 34)])
-
     def create_variable_delegate(self, var_name):
         """
         Create a delegate property that wraps the netcdf.Variable and takes care
@@ -933,7 +930,7 @@ class NetCDFPlus(netCDF4.Dataset):
             getter, setter, store = self.create_type_delegate(var.var_type)
 
             to_uuid_chunks = NetCDFPlus.to_uuid_chunks
-            to_uuid_chunks34 = NetCDFPlus.to_uuid_chunks34
+            # to_uuid_chunks34 = NetCDFPlus.to_uuid_chunks34
 
             if hasattr(var, 'var_vlen'):
                 if var.var_type.startswith('obj.'):
@@ -1151,9 +1148,6 @@ class NetCDFPlus(netCDF4.Dataset):
             if type(dimensions) is str:
                 dim_names = [dimensions]
             else:
-                #dim_names = map(
-                    #lambda p: '#ix{0}:{1}'.format(*p),
-                    #enumerate(dimensions))
                 dim_names = ['#ix{0}:{1}'.format(*p) for p in
                              enumerate(dimensions)]
 
