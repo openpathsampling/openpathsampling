@@ -7,8 +7,9 @@ import numpy as np
 import mdtraj as md
 import simtk.unit as u
 
-from openpathsampling.netcdfplus import StorableObject
+from openpathsampling.netcdfplus import StorableObject, LoaderProxy
 import openpathsampling as paths
+
 
 # ==============================================================================
 # TRAJECTORY
@@ -211,7 +212,7 @@ class Trajectory(list, StorableObject):
 
         if type(ret) is list:
             ret = Trajectory(ret)
-        elif hasattr(ret, '_idx'):
+        elif type(ret) is LoaderProxy:
             ret = ret.__subject__
 
         return ret

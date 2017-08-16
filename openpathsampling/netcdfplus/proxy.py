@@ -17,10 +17,10 @@ class LoaderProxy(object):
     """
     A proxy that loads an underlying object if attributes are accessed
     """
-    __slots__ = ['_subject', '_idx', '_store', '__weakref__']
+    __slots__ = ['_subject', '__uuid__', '_store', '__weakref__']
 
-    def __init__(self, store, idx):
-        self._idx = idx
+    def __init__(self, store, uid):
+        self.__uuid__ = uid
         self._store = store
         self._subject = None
 
@@ -41,11 +41,11 @@ class LoaderProxy(object):
 
     @property
     def reversed(self):
-        return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
+        return LoaderProxy(self._store, StorableObject.ruuid(self.__uuid__))
 
     @property
     def _reversed(self):
-        return LoaderProxy(self._store, StorableObject.ruuid(self._idx))
+        return LoaderProxy(self._store, StorableObject.ruuid(self.__uuid__))
 
     def __eq__(self, other):
         if self is other:
@@ -63,7 +63,7 @@ class LoaderProxy(object):
         return not self == other
 
     def __hash__(self):
-        return hash(self._idx)
+        return hash(self.__uuid__)
 
     def __len__(self):
         return len(self.__subject__)
@@ -71,10 +71,6 @@ class LoaderProxy(object):
     @property
     def __class__(self):
         return self._store.content_class
-
-    @property
-    def __uuid__(self):
-        return self._idx
 
     def __getattr__(self, item):
         return getattr(self.__subject__, item)
@@ -84,10 +80,9 @@ class LoaderProxy(object):
         Call the loader and get the referenced object
         """
         try:
-            # print 'load', self.__class__.__name__, self._idx
-            return self._store[self._idx]
+            return self._store.load(self.__uuid__)
         except KeyError:
-            if type(self._idx) is int:
+            if type(self.__uuid__) is int:
                 raise RuntimeWarning(
                     'Index %s is not in store. This should never happen!' %
                     self._idx)

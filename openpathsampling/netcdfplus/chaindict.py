@@ -105,6 +105,7 @@ class ChainDict(object):
         Default implementation is to not store anything.
         This is mostly used in caching and stores
         """
+        print(self.__class__)
         [self._set(item, value) for item, value in zip(items, values)
          if values is not None]
 
@@ -394,19 +395,19 @@ class CacheChainDict(ChainDict):
         self.cache = cache
 
     def _contains(self, item):
-        return item.__uuid__ in self.cache
+        return item in self.cache
 
     def _get(self, item):
         if item is None:
             return None
 
         try:
-            return self.cache[item.__uuid__]
+            return self.cache[item]
         except KeyError:
             return None
 
     def _set(self, item, value):
-        self.cache[item.__uuid__] = value
+        self.cache[item] = value
 
 
 class ReversibleCacheChainDict(CacheChainDict):
@@ -430,13 +431,14 @@ class ReversibleCacheChainDict(CacheChainDict):
         try:
             return self.cache[item]
         except KeyError:
-            if self.reversible and item._reversed is not None:
-                try:
-                    return self.cache[item._reversed]
-                except KeyError:
-                    return None
-            else:
-                return None
+            if type(item) is not LoaderProxy:
+                if self.reversible and item._reversed is not None:
+                    try:
+                        return self.cache[item._reversed]
+                    except KeyError:
+                        return None
+
+            return None
 
 
 class StoredDict(ChainDict):

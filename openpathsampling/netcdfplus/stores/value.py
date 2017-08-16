@@ -151,8 +151,8 @@ class ValueStore(ObjectStore):
     def get(self, item):
         if self.allow_incomplete:
             try:
-                return self[item]
+                return self.load(item)
             except KeyError:
                 return None
         else:
-            return self[item]
+            return self.load(item)

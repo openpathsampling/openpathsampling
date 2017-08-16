@@ -64,7 +64,9 @@ class CollectiveVariable(PseudoAttribute):
             reversible=cv_time_reversible
         )
 
-        self._post = self._single_dict > self._cache_dict
+        self._single_dict._post = self._cache_dict
+
+        # self._post = self._single_dict > self._cache_dict
 
     to_dict = create_to_dict(['name', 'cv_time_reversible'])
 

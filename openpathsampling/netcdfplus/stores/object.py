@@ -1061,12 +1061,12 @@ class ObjectStore(StorableNamedObject):
                 if value is not None:
                     pos = self.pos(obj)
 
-                    # if the attribute is not saved, nothing we can do
+                    # if the attribute is not saved, there is nothing we can do
                     if pos is None:
                         continue
 
+                    # if the value is stored, skip it
                     if pos in attribute_store.index:
-                        # this value is stored so skip it
                         continue
 
                     n_idx = attribute_store.free()
@@ -1082,6 +1082,9 @@ class ObjectStore(StorableNamedObject):
 
     def pos(self, obj):
         return self.index.get(obj.__uuid__)
+
+    def pos_uuid(self, uid):
+        return self.index.get(uid)
 
     def add_attribute(
             self, store_cls, attribute, template,
