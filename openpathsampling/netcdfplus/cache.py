@@ -459,11 +459,10 @@ class LRUChunkLoadingCache(Cache):
                     chunk.extend(self.variable[left:right])
 
     def _update_chunk_order(self, chunk_idx):
-        if chunk_idx != self._firstchunk:
-            chunk = self._chunkdict[chunk_idx]
-            del self._chunkdict[chunk_idx]
-            self._chunkdict[chunk_idx] = chunk
-            self._firstchunk = chunk_idx
+        chunk = self._chunkdict[chunk_idx]
+        del self._chunkdict[chunk_idx]
+        self._chunkdict[chunk_idx] = chunk
+        self._firstchunk = chunk_idx
 
     def __getitem__(self, item):
         chunksize = self.chunksize
@@ -471,7 +470,8 @@ class LRUChunkLoadingCache(Cache):
         if chunk_idx in self._chunkdict:
             try:
                 obj = self._chunkdict[chunk_idx][item % chunksize]
-                self._update_chunk_order(chunk_idx)
+                if chunk_idx != self._firstchunk:
+                    self._update_chunk_order(chunk_idx)
                 return obj
             except IndexError:
                 pass
@@ -511,7 +511,9 @@ class LRUChunkLoadingCache(Cache):
 
         chunk.append(value)
 
-        self._update_chunk_order(chunk_idx)
+        if chunk_idx != self._firstchunk:
+            self._update_chunk_order(chunk_idx)
+
         self._check_size_limit()
 
         if key >= self._size:
