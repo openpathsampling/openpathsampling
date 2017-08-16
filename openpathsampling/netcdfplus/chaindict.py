@@ -394,19 +394,19 @@ class CacheChainDict(ChainDict):
         self.cache = cache
 
     def _contains(self, item):
-        return item in self.cache
+        return item.__uuid__ in self.cache
 
     def _get(self, item):
         if item is None:
             return None
 
         try:
-            return self.cache[item]
+            return self.cache[item.__uuid__]
         except KeyError:
             return None
 
     def _set(self, item, value):
-        self.cache[item] = value
+        self.cache[item.__uuid__] = value
 
 
 class ReversibleCacheChainDict(CacheChainDict):

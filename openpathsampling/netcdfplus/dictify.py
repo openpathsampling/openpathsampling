@@ -12,7 +12,6 @@ import ujson
 import marshal
 import types
 import opcode
-import builtins
 
 from .base import StorableObject
 
@@ -29,10 +28,12 @@ if sys.version_info > (3, ):
     builtin_module = 'builtins'
     get_code = lambda func: func.__code__
     intify_byte = lambda b: b
+    import builtins
 else:
     builtin_module = '__builtin__'
     get_code = lambda func: func.func_code
     intify_byte = lambda b: ord(b)
+    import builtins
 
 class ObjectJSON(object):
     """
