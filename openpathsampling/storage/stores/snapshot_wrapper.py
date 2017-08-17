@@ -676,7 +676,7 @@ class SnapshotWrapperStore(ObjectStore):
 
             for pos, idx in enumerate(indices):
 
-                proxy = LoaderProxy(self.storage.snapshots, idx)
+                proxy = LoaderProxy.get(self.storage.snapshots, idx)
                 value = cv._cache_dict._get(proxy)
 
                 if value is None:

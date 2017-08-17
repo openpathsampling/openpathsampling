@@ -19,6 +19,19 @@ class LoaderProxy(object):
     """
     __slots__ = ['_subject', '__uuid__', '_store', '__weakref__']
 
+    # add a global stash to remember existing Proxy objects
+    _stash = weakref.WeakValueDictionary()
+
+    @classmethod
+    def get(cls, store, uid):
+        obj = LoaderProxy._stash.get(uid)
+        if obj is not None:
+            return obj
+        else:
+            obj = cls(store, uid)
+            LoaderProxy._stash[uid] = obj
+            return obj
+
     def __init__(self, store, uid):
         self.__uuid__ = uid
         self._store = store
@@ -41,11 +54,11 @@ class LoaderProxy(object):
 
     @property
     def reversed(self):
-        return LoaderProxy(self._store, StorableObject.ruuid(self.__uuid__))
+        return LoaderProxy.get(self._store, StorableObject.ruuid(self.__uuid__))
 
     @property
     def _reversed(self):
-        return LoaderProxy(self._store, StorableObject.ruuid(self.__uuid__))
+        return LoaderProxy.get(self._store, StorableObject.ruuid(self.__uuid__))
 
     def __eq__(self, other):
         if self is other:
@@ -63,7 +76,7 @@ class LoaderProxy(object):
         return not self == other
 
     def __hash__(self):
-        return hash(self.__uuid__)
+        return self.__uuid__ & 1152921504606846975
 
     def __len__(self):
         return len(self.__subject__)
