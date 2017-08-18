@@ -17,6 +17,7 @@ from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
 from future.utils import with_metaclass
+from promise import Promise
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -202,7 +203,7 @@ class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
     # | analyze effects of sample sets
     # +-------------------------------------------------------------------------
 
-    def move_replica_state(self, replica_states):
+    def _move_replica_state(self, replica_states):
         return self.in_out.move(replica_states)
 
     def sub_replica_state(self, replica_states):
@@ -435,8 +436,11 @@ class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
             ")")
         return selected
 
-    @abc.abstractmethod
     def move(self, sample_set):
+        return self._move(sample_set)
+
+    @abc.abstractmethod
+    def _move(self, sample_set):
         """
         Run the generation starting with the initial sample_set specified.
 
@@ -484,7 +488,7 @@ class IdentityPathMover(PathMover):
         super(IdentityPathMover, self).__init__()
         self.counts_as_trial=counts_as_trial
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         mover = self if self.counts_as_trial else None
         return paths.EmptyMoveChange(mover=mover)
 
@@ -582,7 +586,7 @@ class SampleMover(PathMover):
         # Default is that the list of ensembles is in self.ensembles
         return []
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         # 1. pick a set of ensembles (in case we allow to pick several ones)
         ensembles = self._called_ensembles()
 
@@ -1488,7 +1492,7 @@ class SelectionMover(PathMover):
     def _selector(self, sample_set):
         pass
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         weights = self._selector(sample_set)
 
         rand = np.random.random() * sum(weights)
@@ -1532,6 +1536,9 @@ class SelectionMover(PathMover):
         )
 
         return path
+
+    def move(self, sample_set):
+        return Promise.promisify(self._move)
 
 
 class RandomChoiceMover(SelectionMover):
@@ -1731,7 +1738,7 @@ class ConditionalMover(PathMover):
     def _get_out_ensembles(self):
         return [sub.output_ensembles for sub in self.submovers]
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         subglobal = sample_set
 
         ifclause = self.if_mover.move(subglobal)
@@ -1818,7 +1825,7 @@ class SequentialMover(PathMover):
     def _get_out_ensembles(self):
         return [sub.output_ensembles for sub in self.submovers]
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         logger.debug("Starting sequential move")
 
         subglobal = sample_set
@@ -1862,7 +1869,7 @@ class PartialAcceptanceSequentialMover(SequentialMover):
 
         return total
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         logger.debug("==== BEGINNING " + self.name + " ====")
         subglobal = paths.SampleSet(sample_set)
         movechanges = []
@@ -1901,7 +1908,7 @@ class ConditionalSequentialMover(SequentialMover):
     def _generate_in_out(self):
         return InOutSet(sum([sub.in_out for sub in self.submovers], InOutSet()))
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         logger.debug("Starting conditional sequential move")
 
         subglobal = sample_set
@@ -1934,7 +1941,7 @@ class ConditionalSequentialMover(SequentialMover):
 #         initialization_logging(logger=init_log, obj=self,
 #                                entries=['replica_pairs'])
 #
-#     def move(self, sample_set):
+#     def _move(self, sample_set):
 #         rep_from = self.replica_pair[0]
 #         rep_to = self.replica_pair[1]
 #         rep_sample = self.select_sample(sample_set,
@@ -2013,7 +2020,7 @@ class SubPathMover(PathMover):
     def sub_replica_state(self, replica_states):
         return [replica_states]
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         subchange = self.mover.move(sample_set)
         change = paths.SubMoveChange(
             subchange=subchange,
@@ -2045,7 +2052,7 @@ class EnsembleFilterMover(SubPathMover):
                 'Your filter removes the underlying move completely. ' +
                 'Please check your ensembles and submovers!')
 
-    def move(self, sample_set):
+    def _move(self, sample_set):
         # TODO: This will only pass filtered samples. We might split
         # this into an separate input and output filter if only one
         # side is needed
@@ -2488,7 +2495,7 @@ class PathSimulatorMover(SubPathMover):
         super(PathSimulatorMover, self).__init__(mover)
         self.pathsimulator = pathsimulator
 
-    def move(self, sample_set, step=-1):
+    def _move(self, sample_set, step=-1):
         details = MoveDetails(
             step=step
         )

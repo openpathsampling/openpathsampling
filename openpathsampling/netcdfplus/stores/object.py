@@ -399,7 +399,7 @@ class ObjectStore(StorableNamedObject):
         #     idx = int(UUID(item))
         # else:
         #
-        return LoaderProxy.new(self, idx)
+        return LoaderProxy.get(self, idx)
 
     def __contains__(self, item):
         if item.__uuid__ in self.index:
@@ -1015,7 +1015,7 @@ class ObjectStore(StorableNamedObject):
                 if pos not in attribute_store.index:
                     # this value is not stored to go ahead
 
-                    proxy = LoaderProxy.new(key_store, idx)
+                    proxy = LoaderProxy.get(key_store, idx)
 
                     # # get from cache first, this is fastest
                     # value = attribute._cache_dict._get(proxy)
@@ -1203,7 +1203,7 @@ class ObjectStore(StorableNamedObject):
 
             for pos, idx in enumerate(indices):
 
-                proxy = LoaderProxy.new(key_store, idx)
+                proxy = LoaderProxy.get(key_store, idx)
 
                 # value = attribute._cache_dict._get(proxy)
                 #

@@ -891,10 +891,10 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif var_type.startswith('lazyobj.'):
             getter = lambda v: [
-                None if w[0] == '-' else LoaderProxy.new(store, int(UUID(w)))
+                None if w[0] == '-' else LoaderProxy.get(store, int(UUID(w)))
                 for w in v
             ] if isinstance(v, np.ndarray) else \
-                None if v[0] == '-' else LoaderProxy.new(store, int(UUID(v)))
+                None if v[0] == '-' else LoaderProxy.get(store, int(UUID(v)))
 
             setter = lambda v: \
                 ''.join([
@@ -960,11 +960,11 @@ class NetCDFPlus(netCDF4.Dataset):
                 elif var.var_type.startswith('lazyobj.'):
                     getter = lambda v: [[
                         None if u[0] == '-' else
-                        LoaderProxy.new(store, int(UUID(u)))
+                        LoaderProxy.get(store, int(UUID(u)))
                         for u in to_uuid_chunks(w)] for w in v
                     ] if isinstance(v, np.ndarray) else [
                         None if u[0] == '-' else
-                        LoaderProxy.new(store, int(UUID(u)))
+                        LoaderProxy.get(store, int(UUID(u)))
                         for u in to_uuid_chunks(v)
                     ]
 
