@@ -40,6 +40,13 @@ class ObjectJSON(object):
     """
     A simple implementation of a pickle algorithm to create object that can be
     converted to json and back
+
+    Attributes
+    ----------
+    safemode: bool
+        If set to `True` the recreation of marshalled objects like functions is
+        switched off and these objects are replaced by None. Can be used to load
+        from incompatible python versions or potential unsafe trajectory files.
     """
 
     allow_marshal = True
