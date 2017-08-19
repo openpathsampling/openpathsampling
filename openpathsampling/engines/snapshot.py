@@ -35,20 +35,20 @@ class BaseSnapshot(StorableObject):
         self._reversed = None
         self.topology = topology
 
-    def __eq__(self, other):
-        if self is other:
-            return True
+    # def __eq__(self, other):
+    #     if self is other:
+    #         return True
+    #
+    #     if isinstance(other, BaseSnapshot):
+    #         return self.__uuid__ == other.__uuid__
+    #
+    #     return NotImplemented
+    #
+    # def __ne__(self, other):
+    #     return not self == other
 
-        if isinstance(other, BaseSnapshot):
-            return self.__uuid__ == other.__uuid__
-
-        return NotImplemented
-
-    def __ne__(self, other):
-        return not self == other
-
-    def __hash__(self):
-        return hash(self.__uuid__)
+    # def __hash__(self):
+    #     return self.__uuid__ & 1152921504606846975
 
     @property
     def reversed(self):

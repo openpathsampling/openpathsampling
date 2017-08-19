@@ -171,7 +171,7 @@ class StorableObject(object):
         return cls._base
 
     def __hash__(self):
-        return hash(self.__uuid__)
+        return self.__uuid__ & 1152921504606846975
 
     @property
     def base_cls_name(self):

@@ -219,7 +219,12 @@ class testStorage(object):
 
             px = store.snapshots.proxy(store.snapshots.index.list[0])
 
+            print(tm.__uuid__)
+            print(px.__uuid__)
+
             # make sure that the proxy and
+            print(hash(px))
+            print(hash(tm))
             assert(hash(px) == hash(tm))
             assert(px == tm)
 

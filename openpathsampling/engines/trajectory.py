@@ -195,6 +195,9 @@ class Trajectory(list, StorableObject):
 
         return ret
 
+    # this is intuitive. hash(Trajectory(traj)) == hash(traj)
+    # but hash(LoaderProxy(..., traj.__uuid__)) != hash(traj)
+
     def __hash__(self):
         if len(self) == 0:
             return hash(tuple())
@@ -203,6 +206,16 @@ class Trajectory(list, StorableObject):
                 (list.__getitem__(self, 0), len(self),
                  list.__getitem__(self, -1)))
 
+    # this might be faster, but does not allow to compare arbitrary
+    # trajectories as one might expect. hash(Trajectory(traj)) != hash(traj)
+    # but hash(LoaderProxy(..., traj.__uuid__)) == hash(traj)
+    # it could also lead to better caching and memory behaviour
+
+    # __hash__ = StorableObject.__hash__
+    #
+    # __eq__ = StorableObject.__eq__
+    # __ne__ = StorableObject.__ne__
+    #
     def __getitem__(self, index):
         # Allow for numpy style selection using lists
         if hasattr(index, '__iter__'):
