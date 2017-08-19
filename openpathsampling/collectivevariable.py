@@ -193,24 +193,24 @@ class CollectiveVariable(cd.Wrap, StorableNamedObject):
         if self._store_dict:
             self._store_dict.cache_all()
 
-    def __eq__(self, other):
-        """Override the default Equals behavior"""
-        if isinstance(other, self.__class__):
-            if self.name != other.name:
-                    return False
+    # def __eq__(self, other):
+    #     """Override the default Equals behavior"""
+    #     if isinstance(other, self.__class__):
+    #         if self.name != other.name:
+    #                 return False
+    #
+    #         return True
+    #
+    #     return NotImplemented
 
-            return True
-
-        return NotImplemented
-
-    __hash__ = StorableNamedObject.__hash__
-
-    def __ne__(self, other):
-        """Define a non-equality test"""
-        if isinstance(other, self.__class__):
-            return not self.__eq__(other)
-
-        return NotImplemented
+    # __hash__ = StorableNamedObject.__hash__
+    #
+    # def __ne__(self, other):
+    #     """Define a non-equality test"""
+    #     if isinstance(other, self.__class__):
+    #         return not self.__eq__(other)
+    #
+    #     return NotImplemented
 
     to_dict = create_to_dict(['name', 'cv_time_reversible'])
 
@@ -393,27 +393,27 @@ class CallableCV(CollectiveVariable):
 
         return obj
 
-    def __eq__(self, other):
-        """Override the default Equals behavior"""
-        if isinstance(other, self.__class__):
-            if self.name != other.name:
-                return False
-            if self.kwargs != other.kwargs:
-                return False
-            if self.cv_callable is None or other.cv_callable is None:
-                return False
-
-            self_code = get_code(self.cv_callable)
-            other_code = get_code(other.cv_callable)
-            if hasattr(self_code, 'op_code') \
-                    and hasattr(other_code, 'op_code') \
-                    and self_code.op_code != other_code.op_code:
-                # Compare Bytecode. Not perfect, but should be good enough
-                return False
-
-            return True
-
-        return NotImplemented
+    # def __eq__(self, other):
+    #     """Override the default Equals behavior"""
+    #     if isinstance(other, self.__class__):
+    #         if self.name != other.name:
+    #             return False
+    #         if self.kwargs != other.kwargs:
+    #             return False
+    #         if self.cv_callable is None or other.cv_callable is None:
+    #             return False
+    #
+    #         self_code = get_code(self.cv_callable)
+    #         other_code = get_code(other.cv_callable)
+    #         if hasattr(self_code, 'op_code') \
+    #                 and hasattr(other_code, 'op_code') \
+    #                 and self_code.op_code != other_code.op_code:
+    #             # Compare Bytecode. Not perfect, but should be good enough
+    #             return False
+    #
+    #         return True
+    #
+    #     return NotImplemented
 
     __hash__ = CollectiveVariable.__hash__
 
