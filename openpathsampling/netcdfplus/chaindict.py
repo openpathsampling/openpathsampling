@@ -105,7 +105,6 @@ class ChainDict(object):
         Default implementation is to not store anything.
         This is mostly used in caching and stores
         """
-        print(self.__class__)
         [self._set(item, value) for item, value in zip(items, values)
          if values is not None]
 

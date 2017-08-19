@@ -255,7 +255,7 @@ class test_FunctionCV(object):
                 snap = storage_w.snapshots[
                     storage_w.snapshots.vars['uuid'][idx]]
 
-                print(snap, snap.__uuid__, value)
+                # print(snap, snap.__uuid__, value)
                 assert_close_unit(cv1(snap), value)
 
             storage_w.close()

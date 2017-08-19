@@ -43,7 +43,7 @@ class test_FunctionPseudoAttribute(object):
         # (2) using partial yes, no all of these must work
         for allow_incomplete in (True, False):
 
-            print('ALLOW INCOMPLETE', allow_incomplete)
+            # print('ALLOW INCOMPLETE', allow_incomplete)
 
             fname = data_filename("attr_storage_test.nc")
             if os.path.isfile(fname):

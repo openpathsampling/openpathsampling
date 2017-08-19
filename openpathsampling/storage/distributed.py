@@ -76,7 +76,6 @@ class DistributedUUIDStorage(object):
             return len(self.index)
 
         def load(self, idx):
-            print(idx)  # @JHP: is this supposed to be here?
             return self[idx]
 
     def __init__(self, storages=None):
