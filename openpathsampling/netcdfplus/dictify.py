@@ -269,6 +269,7 @@ class ObjectJSON(object):
                     return None
 
             elif '_marshal' in obj or '_module' in obj:
+                print(self.safemode)
                 if self.safemode:
                     return None
 
