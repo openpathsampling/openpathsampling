@@ -75,8 +75,7 @@ class LoaderProxy(object):
     def __ne__(self, other):
         return not self == other
 
-    def __hash__(self):
-        return self.__uuid__ & 1152921504606846975
+    __hash__ = StorableObject.__hash__
 
     def __len__(self):
         return len(self.__subject__)
