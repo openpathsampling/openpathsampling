@@ -128,6 +128,9 @@ class SampleSet(StorableObject):
     def __eq__(self, other):
         return Counter(self.samples) == Counter(other.samples)
 
+    def __ne__(self, other):
+        return not self == other
+
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
         self.replica_dict[sample.replica].remove(sample)
