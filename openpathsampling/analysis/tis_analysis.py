@@ -10,6 +10,20 @@ def steps_to_weighted_trajectories(steps, ensembles):
 
     This prepares data for the faster analysis format. This preparation only
     need to be done once, and it will cover a lot of the analysis cases.
+
+    Parameters
+    ----------
+    steps: iterable of :class:`.MCStep`
+        steps to be analyzed
+    ensembles: list of :class:`.Ensemble`
+        ensembles to include in the list. Note: ensemble must be given!
+
+    Returns
+    -------
+    dict of {:class:`.Ensemble`: collections.Counter}
+        the result, with the ensemble as key, and a counter mapping each
+        trajectory associated with that ensemble to its counter of time
+        spent in the ensemble.
     """
     results = {e: collections.Counter() for e in ensembles}
 
@@ -55,10 +69,24 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
 
 class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
     """
+    Calculating the flux from the minus move.
+
+    Raises
+    ------
+    ValueError
+        if the number of interface sets per minus move is greater than one.
+        Cannot use Minus Move flux calculation with multiple interface set
+        TIS.
+
     Parameters
     ----------
-    network: :class:`.TransitionNetwork`
+    scheme: :class:`.MoveScheme`
+        move scheme that was used (includes information on the minus movers
+        and on the network)
     flux_pairs: list of 2-tuple of :class:`.Volume`
+        pairs of (state, interface) for calculating the flux out of the
+        volume and through the state. Default is `None`, in which case the
+        state and innermost interface are used.
     """
     def __init__(self, scheme, flux_pairs=None):
         super(MinusMoveFlux, self).__init__()
@@ -106,6 +134,20 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
 
     def trajectory_transition_flux_dict(self, minus_steps):
         """
+        Main minus move-based flux analysis routine.
+
+        Parameters
+        ----------
+        minus_steps: list of :class:`.MCStep`
+            steps that used the minus movers
+
+        Returns
+        -------
+        dict of {(:class:`.Volume, :class:`.Volume`): dict}
+            keys are (state, interface); values are the result dict from
+            :method:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
+            strings 'in' and 'out', mapping to
+            :class:`.TrajectorySegmentContainer` with appropriate frames.
         """
         # set up a few mappings that make it easier set up other things
         flux_pair_to_transition = {
@@ -167,13 +209,28 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
 
     @staticmethod
     def from_trajectory_transition_flux_dict(flux_dicts):
+        """Load from existing TrajectoryTransitionAnalysis calculations.
+
+        Parameters
+        ----------
+        flux_dicts: dict of {(:class:`.Volume, :class:`.Volume`): dict}
+            keys are (state, interface); values are the result dict from
+            :method:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
+            strings 'in' and 'out', mapping to
+            :class:`.TrajectorySegmentContainer` with appropriate frames.
+
+        Returns
+        -------
+        dict of {(:class:`.Volume, :class:`.Volume`): float}
+            keys are (state, interface); values are the associated flux
+        """
         TTA = paths.TrajectoryTransitionAnalysis  # readability on 80 col
         return {k: TTA.flux_from_flux_dict(flux_dicts[k])
                 for k in flux_dicts}
 
     def from_weighted_trajectories(self, input_dict):
         # this can't be done, e.g., in the case of the single replica minus
-        # mover, where the final accepted trajectory
+        # mover, where the minus trajectory isn't in the active samples
         raise NotImplementedError(
             "Can not calculate minus move from weighted trajectories."
         )
@@ -192,6 +249,11 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
 
 class DictFlux(MultiEnsembleSamplingAnalyzer):
     """Pre-calculated flux, provided as a dict.
+
+    Parameters
+    ----------
+    flux_dict: dict of {(:class:`.Volume`, :class:`.Volume`): float}
+        keys are (state, interface) pairs; values are associated flux
     """
     def __init__(self, flux_dict):
         super(DictFlux, self).__init__()
@@ -220,6 +282,17 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
     """
     Generic code to calculate the properly weighted histograms of trajectory
     properties per ensemble.
+
+    Parameters
+    ----------
+    ensembles: list of :class:`.Ensemble`
+        ensembles to be included in the histogram
+    f: callable
+        the function to be histogrammed
+    hist_parameters: dict
+        allowed keys are 'bin_width' and 'bin_range'; value for 'bin_width'
+        is a float; for 'bin_range' is a tuple with `(left_edge,
+        right_edge)` (only left edge is used)
     """
     def __init__(self, ensembles, f, hist_parameters):
         super(EnsembleHistogrammer, self).__init__(ensembles)
