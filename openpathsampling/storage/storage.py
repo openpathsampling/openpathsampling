@@ -115,6 +115,10 @@ class Storage(NetCDFPlus):
 
         self.create_store('tag', ImmutableDictStore())
 
+    @property
+    def tags(self):
+        return self.tag
+
     def write_meta(self):
         self.setncattr('storage_format', 'openpathsampling')
         self.setncattr('storage_version', paths.version.version)
