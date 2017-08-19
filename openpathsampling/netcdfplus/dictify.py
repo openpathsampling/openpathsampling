@@ -35,10 +35,18 @@ else:
     intify_byte = lambda b: ord(b)
     import builtins
 
+
 class ObjectJSON(object):
     """
     A simple implementation of a pickle algorithm to create object that can be
     converted to json and back
+
+    Attributes
+    ----------
+    safemode: bool
+        If set to `True` the recreation of marshalled objects like functions is
+        switched off and these objects are replaced by None. Can be used to load
+        from incompatible python versions or potential unsafe trajectory files.
     """
 
     allow_marshal = True
@@ -70,6 +78,7 @@ class ObjectJSON(object):
         self.allowed_storable_types = dict()
         self.type_names = {}
         self.type_classes = {}
+        self.safemode = False
 
         self.update_class_list()
 
@@ -267,6 +276,9 @@ class ObjectJSON(object):
                     return None
 
             elif '_marshal' in obj or '_module' in obj:
+                if self.safemode:
+                    return None
+
                 return self.callable_from_dict(obj)
 
             else:

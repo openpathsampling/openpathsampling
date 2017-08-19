@@ -63,6 +63,10 @@ class Storage(NetCDFPlus):
             mode,
             fallback=fallback)
 
+    def _create_simplifier(self):
+        super(Storage, self)._create_simplifier()
+        self.simplifier.safemode = False
+
     def _create_storages(self):
         """
         Register all Stores used in the OpenPathSampling Storage
@@ -112,6 +116,10 @@ class Storage(NetCDFPlus):
         # special stores
 
         self.create_store('tag', ImmutableDictStore())
+
+    @property
+    def tags(self):
+        return self.tag
 
     def write_meta(self):
         self.setncattr('storage_format', 'openpathsampling')
