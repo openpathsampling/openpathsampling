@@ -5,7 +5,7 @@
 from builtins import range
 from builtins import object
 from nose.plugins.skip import SkipTest
-from nose.tools import (assert_equal, raises)
+from nose.tools import (assert_equal, raises, assert_true, assert_false)
 from .test_helpers import assert_items_equal, assert_same_items
 
 from openpathsampling.engines.trajectory import Trajectory
@@ -27,6 +27,11 @@ class testSampleSet(object):
         self.s2B = Sample(replica=2, trajectory=traj2B, ensemble=self.ensB)
         self.s2B_ = Sample(replica=2, trajectory=traj2B_, ensemble=self.ensB)
         self.testset = SampleSet([self.s0A, self.s1A, self.s2B])
+
+    def test_equality(self):
+        testset2 = SampleSet([self.s0A, self.s1A, self.s2B])
+        assert_true(self.testset == testset2)
+        assert_false(self.testset != testset2)
 
     def test_initialization(self):
         self.testset.consistency_check()
