@@ -350,6 +350,20 @@ class SnapshotWrapperStore(ObjectStore):
                 (self.content_class, obj.__class__.__name__)
             )
 
+        if isinstance(obj, LoaderProxy):
+            if obj._store is self:
+                # is a proxy of a saved object so do nothing
+                return obj.__uuid__
+            else:
+                # it is stored but not in this store so we try storing the
+                # full attribute which might be still in cache or memory
+                # if that is not the case it will be stored again. This can
+                # happen when you load from one store save to another. And load
+                # again after some time while the cache has been changed and try
+                # to save again the loaded object. We will not explicitly store
+                # a table that matches objects between different storages.
+                return self.save(obj.__subject__)
+
         if n_idx is None:
             n_idx = len(self.index)
 
@@ -676,7 +690,7 @@ class SnapshotWrapperStore(ObjectStore):
 
             for pos, idx in enumerate(indices):
 
-                proxy = LoaderProxy.get(self.storage.snapshots, idx)
+                proxy = LoaderProxy.new(self.storage.snapshots, idx)
                 value = cv._cache_dict._get(proxy)
 
                 if value is None:
