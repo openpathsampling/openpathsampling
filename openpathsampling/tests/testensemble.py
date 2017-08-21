@@ -4,7 +4,8 @@ from builtins import map
 from builtins import str
 from builtins import range
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, raises)
+from nose.tools import (assert_equal, assert_not_equal, raises, assert_true,
+                        assert_false)
 from nose.plugins.skip import SkipTest
 from .test_helpers import (CallIdentity, prepend_exception_message,
                           make_1d_traj, raises_with_message_like,
@@ -73,7 +74,7 @@ def build_trajdict(trajtypes, lower, upper):
         mydict[loweraddkey] = list(map(lower.__add__, delta))
         mydict[uppersubkey] = list(map(upper.__sub__, delta))
         mydict[lowersubkey] = list(map(lower.__sub__, delta))
-    return mydict 
+    return mydict
 
 def tstr(ttraj):
     return list(ttraj).__str__()
@@ -2757,3 +2758,16 @@ class testAbstract(object):
     def test_abstract_volumeensemble(self):
         mover = paths.VolumeEnsemble()
 
+class TestEnsembleEquality(object):
+    # generic tests for ensemble equality; we use the EmptyEnsemble as
+    # example. See:
+    # * https://github.com/openpathsampling/openpathsampling/issues/700
+    # * https://github.com/openpathsampling/openpathsampling/issues/701
+    def test_empty_ensemble_equality(self):
+        ens1 = paths.EmptyEnsemble()
+        ens2 = paths.EmptyEnsemble()
+        assert_true(ens1 == ens2)
+        assert_false(ens1 != ens2)
+
+    # TODO: may add tests for other ensembles, or may move this test
+    # somewhere else
