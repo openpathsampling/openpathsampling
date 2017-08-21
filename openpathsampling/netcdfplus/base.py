@@ -173,6 +173,15 @@ class StorableObject(object):
     def __hash__(self):
         return hash(self.__uuid__)
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+
+        if hasattr(other, '__uuid__'):
+            return self.__uuid__ == other.__uuid__
+
+        return NotImplemented
+
     @property
     def base_cls_name(self):
         """

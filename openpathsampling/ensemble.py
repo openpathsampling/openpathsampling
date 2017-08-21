@@ -227,6 +227,9 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
             return True
         return str(self) == str(other)
 
+    def __ne__(self, other):
+        return not self == other
+
     @abc.abstractmethod
     def __call__(self, trajectory, trusted=None, candidate=False):
         """
