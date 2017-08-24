@@ -1,11 +1,15 @@
 from openpathsampling.netcdfplus.base import StorableNamedObject
 
-from object import ObjectStore
+from .object import ObjectStore
 
 import logging
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
+
+import sys
+if sys.version_info > (3, ):
+    long = int
 
 
 class NamedObjectStore(ObjectStore):
@@ -196,9 +200,6 @@ class NamedObjectStore(ObjectStore):
             the loaded object
         """
 
-        if type(idx) is int and idx < 0:
-            return None
-
         if type(idx) is str:
             # we want to load by name and it was not in cache.
             if idx in self.name_idx:
@@ -215,8 +216,10 @@ class NamedObjectStore(ObjectStore):
 
         # --- start super of ObjectStore ---
 
-        elif type(idx) is long:
-            if idx in self.index:
+        elif isinstance(idx, (int, long)):
+            if idx < 1000000000:
+                n_idx = idx
+            elif idx in self.index:
                 n_idx = self.index[idx]
             else:
                 if self.fallback_store is not None:
@@ -227,13 +230,13 @@ class NamedObjectStore(ObjectStore):
                     raise ValueError(
                         'str %s not found in storage or fallback' % idx)
 
-        elif type(idx) is not int:
-            raise ValueError((
-                 'indices of type "%s" are not allowed in named storage '
-                 '(only str and int)') % type(idx).__name__
-                             )
-        else:
-            n_idx = int(idx)
+        # elif type(idx) is not int:
+        #     raise ValueError((
+        #          'indices of type "%s" are not allowed in named storage '
+        #          '(only str and int)') % type(idx).__name__
+        #                      )
+        # else:
+        #     n_idx = int(idx)
 
         if n_idx < 0:
             return None

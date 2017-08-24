@@ -1,9 +1,8 @@
 import openpathsampling as paths
 from openpathsampling.tools import refresh_output
 
-from move_strategy import levels as strategy_levels
-# import move_strategy as move_strategy
-import move_strategy
+from . import move_strategy
+from .move_strategy import levels as strategy_levels
 from openpathsampling.netcdfplus import StorableNamedObject
 
 try:
@@ -242,7 +241,7 @@ class MoveScheme(StorableNamedObject):
             output_sig = m.output_ensembles
             for ens in input_sig + output_sig:
                 mover_ensemble_dict[ens] = 1
-        mover_ensembles = mover_ensemble_dict.keys()
+        mover_ensembles = list(mover_ensemble_dict.keys())
         return mover_ensembles
 
     def find_hidden_ensembles(self, root=None):
@@ -726,7 +725,7 @@ class MoveScheme(StorableNamedObject):
         my_movers = {}
         expected_frequency = {}
         if movers is None:
-            movers = self.movers.keys()
+            movers = list(self.movers.keys())
         if type(movers) is str:
             movers = self.movers[movers]
         for key in movers:
@@ -766,7 +765,7 @@ class MoveScheme(StorableNamedObject):
             group = my_movers[groupname]
             for mover in group:
                 key_iter = (k for k in self._mover_acceptance.keys()
-                            if k[0] is mover)
+                            if k[0] == mover)
 
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]

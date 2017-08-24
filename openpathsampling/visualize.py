@@ -1550,7 +1550,7 @@ class PathTreeBuilder(Builder):
         # STATE COLORING
 
         if self.states is not None:
-            for color, op in self.states.iteritems():
+            for color, op in self.states.items():
                 xp = None
                 for pos_y, data in enumerate(self._plot_sample_list):
                     num = data['sample_idx']
@@ -2153,7 +2153,7 @@ class SampleList(OrderedDict):
         try:
             # see, if the filter function accepts two parameters
             self.set_samples([
-                samp for samp, data in self.iteritems() if filter_func(samp, data)
+                samp for samp, data in self.items() if filter_func(samp, data)
             ])
         except:
             self.set_samples([
@@ -2308,7 +2308,7 @@ class SampleList(OrderedDict):
 
         """
         l = SampleList([
-            samp for samp, data in self.iteritems()
+            samp for samp, data in self.items()
             if data['length_shared'] < data['length']])
         l.flip_time_direction = self.flip_time_direction
         l.time_symmetric = self.time_symmetric
@@ -2324,7 +2324,7 @@ class SampleList(OrderedDict):
 
         """
         l = [
-            samp for samp, data in self.iteritems()
+            samp for samp, data in self.items()
             if data['length_shared'] < data['length']]
         self.set_samples(l)
 
@@ -2337,7 +2337,7 @@ class SampleList(OrderedDict):
         like `time_symmetric` and `flip_time_direction`
 
         """
-        l = [samp for samp, data in self.iteritems() if data['level'] == 0]
+        l = [samp for samp, data in self.items() if data['level'] == 0]
         self.set_samples(l)
 
     @property

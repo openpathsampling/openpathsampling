@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import os
 
 from openpathsampling.storage import Storage
@@ -6,7 +7,7 @@ import openpathsampling.engines.openmm as peng
 
 import mdtraj as md
 
-from test_helpers import data_filename
+from .test_helpers import data_filename
 
 def setup_package():
     # this should generate the trajectory.nc file which we'll use for

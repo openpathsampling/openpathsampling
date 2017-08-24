@@ -11,6 +11,8 @@ import itertools
 from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
+from future.utils import with_metaclass
+
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -180,7 +182,7 @@ class EnsembleCache(object):
         return reset
 
 
-class Ensemble(StorableNamedObject):
+class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
     """
     Path ensemble object.
 
@@ -202,7 +204,7 @@ class Ensemble(StorableNamedObject):
     Maybe replace - by / to get better notation. So far it has not been used
     """
 
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
     def __init__(self):
         """
@@ -211,10 +213,16 @@ class Ensemble(StorableNamedObject):
         super(Ensemble, self).__init__()
         self._saved_str = None  # cached first time it is requested
 
+    # https://docs.python.org/3/reference/datamodel.html#object.__hash__
+    __hash__ = StorableNamedObject.__hash__
+
     def __eq__(self, other):
         if self is other:
             return True
         return str(self) == str(other)
+
+    def __ne__(self, other):
+        return not self == other
 
     @abc.abstractmethod
     def __call__(self, trajectory, trusted=None, candidate=False):
@@ -999,8 +1007,8 @@ class Ensemble(StorableNamedObject):
             # [5,4,6,3,7,2,8,1,9,0]
             ordered = sorted(self.split(traj), key=len)
             parts = list([p for p2 in zip(
-                ordered[len(ordered) / 2:],
-                reversed(ordered[:len(ordered) / 2])
+                ordered[len(ordered) // 2:],
+                reversed(ordered[:len(ordered) // 2])
             ) for p in p2])
 
             if len(ordered) & 1:
@@ -2098,7 +2106,7 @@ class AllInXEnsemble(VolumeEnsemble):
         bool :
             result of __call__
         """
-        frame_num = -(cache.direction + 1) / 2  # 1 -> -1; -1 -> 0
+        frame_num = -(cache.direction + 1) // 2  # 1 -> -1; -1 -> 0
         reset = cache.check(trajectory)
         if reset:
             if len(trajectory) < 2:

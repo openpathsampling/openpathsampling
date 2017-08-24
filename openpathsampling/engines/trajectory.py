@@ -318,7 +318,7 @@ class Trajectory(list, StorableObject):
 
         This will always give real :class:`openpathsampling.snapshot.Snapshot`
         objects and never proxies to snapshots.
-        If you prefer proxies (if available) use `.iteritems()`
+        If you prefer proxies (if available) use `.items()`
 
         Returns
         -------

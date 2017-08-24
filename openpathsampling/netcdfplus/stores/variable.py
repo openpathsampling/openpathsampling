@@ -1,6 +1,6 @@
 from openpathsampling.netcdfplus.base import StorableObject
 
-from object import ObjectStore
+from .object import ObjectStore
 
 import logging
 

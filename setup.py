@@ -4,6 +4,8 @@ OpenPathSampling (http://github.com/choderalab/openpathsampling) is a
 python library to do transition interface sampling.
 """
 
+from __future__ import print_function
+from builtins import str
 from setuptools import setup
 import sys
 import os
@@ -91,7 +93,7 @@ if not release:
     if not preferences['released']:
         full_version += '.dev-' + git_version[:7]
 
-    print 'writing version file at %s' % filename
+    print('writing version file at %s' % filename)
 
     a = open(filename, 'w')
     try:
@@ -137,7 +139,7 @@ def build_keyword_dictionary(prefs):
     output = ""
     first_tab = 40
     second_tab = 60
-    for key in sorted(keywords.iterkeys()):
+    for key in sorted(keywords.keys()):
         value = keywords[key]
         output += key.rjust(first_tab) + str(value).rjust(second_tab) + ""
 
@@ -168,7 +170,8 @@ License :: OSI Approved :: GNU Lesser General
 Public License v2.1 or later (LGPLv2.1+)
 Programming Language :: C
 Programming Language :: Python
-Programming Language :: Python :: 2
+Programming Language :: Python :: 2.7
+Programming Language :: Python :: 3.6
 Topic :: Scientific/Engineering :: Bio-Informatics
 Topic :: Scientific/Engineering :: Chemistry
 Operating System :: Microsoft :: Windows
@@ -207,10 +210,11 @@ Operating System :: MacOS
     'platforms': ['Linux', 'Mac OS X', 'Windows'],
     'released': False,
     'install_requires': [
-        'python',
+        #'python',
         'numpy',
         'scipy',
         'pandas',
+        'future',
         'jupyter',
         'netcdf4',
         'openmm',

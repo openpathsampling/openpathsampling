@@ -11,7 +11,7 @@ import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, \
     ImmutableDictStore, NamedObjectStore
 
-from stores import SnapshotWrapperStore
+from .stores import SnapshotWrapperStore
 
 import openpathsampling.engines as peng
 
@@ -62,6 +62,10 @@ class Storage(NetCDFPlus):
             filename,
             mode,
             fallback=fallback)
+
+    def _create_simplifier(self):
+        super(Storage, self)._create_simplifier()
+        self.simplifier.safemode = False
 
     def _create_storages(self):
         """
@@ -114,6 +118,10 @@ class Storage(NetCDFPlus):
         # special stores
 
         self.create_store('tag', ImmutableDictStore())
+
+    @property
+    def tags(self):
+        return self.tag
 
     def write_meta(self):
         self.setncattr('storage_format', 'openpathsampling')

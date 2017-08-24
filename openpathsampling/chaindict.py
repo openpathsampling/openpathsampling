@@ -69,11 +69,11 @@ class ChainDict(object):
             if len(nones) == 0:
                 return results
             else:
-                rep = self._post[nones]
+                rep = list(self._post[nones])
                 self._set_list(nones, rep)
 
                 it = iter(rep)
-                return [it.next() if p[1] is None else p[1]
+                return [next(it) if p[1] is None else p[1]
                         for p in zip(items, results)]
 
         return results
@@ -442,7 +442,7 @@ class StoredDict(ChainDict):
         return self.value_store.get(item)
 
     def _get_list(self, items):
-        return map(self._get, items)
+        return list(map(self._get, items))
 
     def sync(self):
         pass

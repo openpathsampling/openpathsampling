@@ -5,4 +5,4 @@ from openpathsampling.engines.features import (
     engine
 )
 
-import instantaneous_temperature
+from . import instantaneous_temperature

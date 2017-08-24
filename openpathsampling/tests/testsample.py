@@ -2,9 +2,11 @@
 @author: David W.H. Swenson
 '''
 
+from builtins import range
+from builtins import object
 from nose.plugins.skip import SkipTest
-from nose.tools import (assert_equal, assert_items_equal,
-                        raises)
+from nose.tools import (assert_equal, raises, assert_true, assert_false)
+from .test_helpers import assert_items_equal, assert_same_items
 
 from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import LengthEnsemble
@@ -25,6 +27,11 @@ class testSampleSet(object):
         self.s2B = Sample(replica=2, trajectory=traj2B, ensemble=self.ensB)
         self.s2B_ = Sample(replica=2, trajectory=traj2B_, ensemble=self.ensB)
         self.testset = SampleSet([self.s0A, self.s1A, self.s2B])
+
+    def test_equality(self):
+        testset2 = SampleSet([self.s0A, self.s1A, self.s2B])
+        assert_true(self.testset == testset2)
+        assert_false(self.testset != testset2)
 
     def test_initialization(self):
         self.testset.consistency_check()
@@ -129,10 +136,10 @@ class testSampleSet(object):
     def test_del_sample(self):
         del self.testset[self.s2B]
         assert_equal(len(self.testset), 2)
-        assert_equal(self.ensB in self.testset.ensemble_dict.keys(), False)
-        assert_equal(self.ensA in self.testset.ensemble_dict.keys(), True)
-        assert_equal(2 in self.testset.replica_dict.keys(), False)
-        assert_equal(0 in self.testset.replica_dict.keys(), True)
+        assert_equal(self.ensB in list(self.testset.ensemble_dict.keys()), False)
+        assert_equal(self.ensA in list(self.testset.ensemble_dict.keys()), True)
+        assert_equal(2 in list(self.testset.replica_dict.keys()), False)
+        assert_equal(0 in list(self.testset.replica_dict.keys()), True)
 
     def test_del_ensemble(self):
         raise SkipTest
@@ -166,7 +173,7 @@ class testSampleSet(object):
         assert_items_equal(self.testset.replica_list(), [0, 1, 2])
 
     def test_ensemble_list(self):
-        assert_items_equal(self.testset.ensemble_list(), [self.ensA, self.ensB])
+        assert_same_items(self.testset.ensemble_list(), [self.ensA, self.ensB])
 
     def test_all_from_ensemble(self):
         assert_items_equal(self.testset.all_from_ensemble(self.ensA),

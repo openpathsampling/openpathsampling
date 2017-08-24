@@ -149,7 +149,10 @@ class LookupFunctionGroup(LookupFunction):
         for fcn in self.functions:
             self.shared_x = self.shared_x & set(fcn.x)
             self.all_x = self.all_x | set(fcn.x)
-        
+
+        self.shared_x = sorted(self.shared_x)
+        self.all_x = sorted(self.all_x)
+
         self.use_x = use_x
 
 

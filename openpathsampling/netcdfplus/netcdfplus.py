@@ -10,9 +10,13 @@ from uuid import UUID
 
 import netCDF4
 import numpy as np
-from dictify import UUIDObjectJSON
-from stores import NamedObjectStore, ObjectStore
-from proxy import LoaderProxy
+from .dictify import UUIDObjectJSON
+from .stores import NamedObjectStore, ObjectStore
+from .proxy import LoaderProxy
+
+import sys
+if sys.version_info > (3, ):
+    unicode = str
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -104,6 +108,8 @@ class NetCDFPlus(netCDF4.Dataset):
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, key):
+            # print(self.variable[key])
+            # print(type(self.variable[key]))
             return self.getter(self.variable[key])
 
         def __getattr__(self, item):
@@ -497,7 +503,14 @@ class NetCDFPlus(netCDF4.Dataset):
         try:
             return self.__dict__[item]
         except KeyError:
-            return self.__class__.__dict__[item]
+            try:
+                return self.__class__.__dict__[item]
+            except KeyError:
+                raise AttributeError(
+                    "'{cls}' object has no attribute '{itm}'".format(
+                        cls=self.__class__, itm=item
+                    )
+                )
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
@@ -708,7 +721,7 @@ class NetCDFPlus(netCDF4.Dataset):
         total_file = 0
         total_index = 0
 
-        for name, store in self.objects.iteritems():
+        for name, store in self.objects.items():
             size = store.cache.size
             count = store.cache.count
             profile = {
@@ -807,9 +820,9 @@ class NetCDFPlus(netCDF4.Dataset):
 
             base_type = store.content_class
 
-            get_is_iterable = lambda v: \
-                v.base_cls is not base_type if hasattr(v, 'base_cls') else \
-                hasattr(v, '__iter__')
+            # get_is_iterable = lambda v: \
+            #     v.base_cls is not base_type if hasattr(v, 'base_cls') else \
+            #     hasattr(v, '__iter__')
 
             get_numpy_iterable = lambda v: isinstance(v, np.ndarray)
 
@@ -861,38 +874,13 @@ class NetCDFPlus(netCDF4.Dataset):
                 if set_is_iterable(v) else \
                 '-' * 36 if v is None else str(UUID(int=store.save(v)))
 
-        elif var_type.startswith('uuid.'):
-            getter = lambda v: [
-                None if w[0] == '-' else store.load(long(w, 16))
-                for w in v
-            ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else store.load(long(v, 16))
-
-            setter = lambda v: ''.join(
-                ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
-                    for w in list.__iter__(v)]) \
-                if set_is_iterable(v) else \
-                '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
-
-        elif var_type.startswith('lazyuuid.'):
-            getter = lambda v: [
-                None if w[0] == '-' else LoaderProxy(store, long(w, 16))
-                for w in v
-            ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else LoaderProxy(store, long(v, 16))
-
-            setter = lambda v: ''.join(
-                ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
-                     for w in list.__iter__(v)]) \
-                if set_is_iterable(v) else \
-                '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
-
         elif var_type.startswith('lazyobj.'):
             getter = lambda v: [
                 None if w[0] == '-' else LoaderProxy(store, int(UUID(w)))
                 for w in v
-            ] if get_is_iterable(v) else \
+            ] if isinstance(v, np.ndarray) else \
                 None if v[0] == '-' else LoaderProxy(store, int(UUID(v)))
+
             setter = lambda v: \
                 ''.join([
                     '-' * 36 if w is None else str(UUID(int=store.save(w)))
@@ -921,9 +909,6 @@ class NetCDFPlus(netCDF4.Dataset):
     to_uuid_chunks = staticmethod(
         lambda x: [x[i:i + 36] for i in range(0, len(x), 36)])
 
-    to_uuid_chunks34 = staticmethod(
-        lambda x: [x[i:i + 34] for i in range(0, len(x), 34)])
-
     def create_variable_delegate(self, var_name):
         """
         Create a delegate property that wraps the netcdf.Variable and takes care
@@ -945,7 +930,7 @@ class NetCDFPlus(netCDF4.Dataset):
             getter, setter, store = self.create_type_delegate(var.var_type)
 
             to_uuid_chunks = NetCDFPlus.to_uuid_chunks
-            to_uuid_chunks34 = NetCDFPlus.to_uuid_chunks34
+            # to_uuid_chunks34 = NetCDFPlus.to_uuid_chunks34
 
             if hasattr(var, 'var_vlen'):
                 if var.var_type.startswith('obj.'):
@@ -967,26 +952,7 @@ class NetCDFPlus(netCDF4.Dataset):
                         LoaderProxy(store, int(UUID(u)))
                         for u in to_uuid_chunks(v)
                     ]
-                if var.var_type.startswith('uuid.'):
-                    getter = lambda v: [[
-                        None if u[0] == '-' else store.load(
-                            long(u, 16))
-                        for u in to_uuid_chunks34(w)
-                        ] for w in v
-                    ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else store.load(long(u, 16))
-                        for u in to_uuid_chunks34(v)
-                    ]
-                elif var.var_type.startswith('lazyuuid.'):
-                    getter = lambda v: [[
-                        None if u[0] == '-' else LoaderProxy(
-                            store, long(u, 16))
-                        for u in to_uuid_chunks34(w)
-                        ] for w in v
-                    ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else LoaderProxy(store, long(u, 16))
-                        for u in to_uuid_chunks34(v)
-                    ]
+
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
                     if var_name not in self.units:
@@ -1182,9 +1148,8 @@ class NetCDFPlus(netCDF4.Dataset):
             if type(dimensions) is str:
                 dim_names = [dimensions]
             else:
-                dim_names = map(
-                    lambda p: '#ix{0}:{1}'.format(*p),
-                    enumerate(dimensions))
+                dim_names = ['#ix{0}:{1}'.format(*p) for p in
+                             enumerate(dimensions)]
 
             idx_desc = '[' + ']['.join(dim_names) + ']'
             description = var_name + idx_desc + ' is ' + \

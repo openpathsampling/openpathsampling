@@ -1,10 +1,13 @@
 """
 @author David W.H. Swenson
 """
+from __future__ import absolute_import
 
-from nose.tools import assert_equal, assert_not_equal, assert_is, raises
+from builtins import object
+from nose.tools import (assert_equal, assert_not_equal, assert_is, raises,
+                        assert_true, assert_false)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import CallIdentity, raises_with_message_like
+from .test_helpers import CallIdentity, raises_with_message_like
 
 import unittest
 
@@ -45,6 +48,13 @@ class testEmptyVolume(object):
         assert_is((empty ^ volA), volA)
         assert_is((volA ^ empty), volA)
         assert_equal((~ empty).__str__(), "all")
+
+    def test_empty_volume_equality(self):
+        empty1 = volume.EmptyVolume()
+        empty2 = volume.EmptyVolume()
+        assert_true(empty1 == empty2)
+        assert_false(empty1 != empty2)
+
 
 class testFullVolume(object):
     def test_full_volume(self):

@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 # wham.py
 # The Weighted Histogram Analysis Method (WHAM) for combining histograms
 # from several files.
@@ -540,11 +542,13 @@ if __name__ == "__main__":  # pragma: no cover
         import time
         start = time.time()
         cProfile.run("print wham.wham_bam_histogram(df)", opts.pstats)
-        print time.time() - start
+        print(time.time() - start)
     else:
         wham_hist = wham.wham_bam_histogram(df)
-        print wham_hist.to_string(header=False, 
-                                  float_format=lambda x : "{:10.8f}".format(x))
+        print(wham_hist.to_string(
+            header=False,
+            float_format=lambda x : "{:10.8f}".format(x)
+        ))
 
 
 

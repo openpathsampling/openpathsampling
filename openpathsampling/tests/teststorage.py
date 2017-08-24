@@ -2,6 +2,10 @@
 @author David W.H. Swenson
 @author Jan-Hendrik Prinz
 """
+from __future__ import absolute_import
+from builtins import zip
+from builtins import range
+from builtins import object
 import os
 
 import mdtraj as md
@@ -14,7 +18,7 @@ import openpathsampling.engines.toy as toys
 
 from openpathsampling.netcdfplus import ObjectJSON
 from openpathsampling.storage import Storage
-from test_helpers import (data_filename,
+from .test_helpers import (data_filename,
                           compare_snapshot
                           )
 
@@ -33,7 +37,7 @@ class testStorage(object):
 
         self.simplifier = ObjectJSON()
         self.template_snapshot = self.traj[0]
-        self.solute_indices = range(22)
+        self.solute_indices = list(range(22))
 
         self.toy_topology = toys.Topology(
             n_spatial=2,
@@ -80,6 +84,36 @@ class testStorage(object):
         )
 
         store.close()
+
+    def test_safemode(self):
+        fname = data_filename("cv_storage_safemode_test.nc")
+        if os.path.isfile(fname):
+            os.remove(fname)
+
+        cv = paths.CoordinateFunctionCV('cv', lambda x: x)
+
+        traj = paths.Trajectory(list(self.traj))
+        template = traj[0]
+
+        storage_w = paths.Storage(fname, "w")
+        storage_w.snapshots.save(template)
+        storage_w.cvs.save(cv)
+        storage_w.close()
+
+        storage_r = paths.Storage(fname, 'r')
+        # default safemode = False
+        assert(storage_r.simplifier.safemode is False)
+        cv_r = storage_r.cvs[0]
+        assert(cv_r == cv)
+        assert(cv.cv_callable is not None)
+        storage_r.close()
+
+        storage_r = paths.Storage(fname, 'r')
+        storage_r.simplifier.safemode = True
+        cv_r = storage_r.cvs[0]
+        assert(cv_r == cv)
+        assert(cv_r.cv_callable is None)
+        storage_r.close()
 
     def test_store_snapshots(self):
         fname = data_filename("cv_storage_test.nc")
@@ -213,7 +247,7 @@ class testStorage(object):
 
             store.save(tm)
 
-            px = store.snapshots.proxy(0)
+            px = store.snapshots.proxy(store.snapshots.index.list[0])
 
             # make sure that the proxy and
             assert(hash(px) == hash(tm))
@@ -228,7 +262,7 @@ class testStorage(object):
             compare_snapshot(px, tm)
             compare_snapshot(s0, tm)
 
-            px = store.snapshots.proxy(0)
+            px = store.snapshots.proxy(store.snapshots.index.list[0])
 
             # make sure that after reloading it still works
             assert(hash(px) == hash(tm))

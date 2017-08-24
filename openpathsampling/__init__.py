@@ -3,7 +3,7 @@
 try:
     # should work if installed through normal means: setup.py-based with
     # pip, conda, easy_install, etc.
-    import version
+    from . import version
 except ImportError:  # pragma: no cover
     import os
     # should work if someone just set the $PYTHONPATH to include OPS
@@ -30,51 +30,51 @@ except ImportError:  # pragma: no cover
     isrelease = str(ops_setup.preferences['released'])
 
 
-from high_level.move_scheme import (
+from .high_level.move_scheme import (
     MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
     OneWayShootingMoveScheme
 )
 
-from high_level.transition import (
+from .high_level.transition import (
     TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
 )
 
-from high_level.network import (
+from .high_level.network import (
     MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
     FixedLengthTPSNetwork
 )
 
-from analysis.path_histogram import PathDensityHistogram
+from .analysis.path_histogram import PathDensityHistogram
 
-from analysis.replica_network import (
+from .analysis.replica_network import (
     ReplicaNetwork, trace_ensembles_for_replica,
     trace_replicas_for_ensemble, condense_repeats,
     ReplicaNetworkGraph
 )
 
-from analysis.shooting_point_analysis import (
+from .analysis.shooting_point_analysis import (
     ShootingPointAnalysis, SnapshotByCoordinateDict
 )
 
-from analysis.trajectory_transition_analysis import (
+from .analysis.trajectory_transition_analysis import (
     TrajectoryTransitionAnalysis,
     TrajectorySegmentContainer
 )
 
-from analysis.channel_analysis import ChannelAnalysis
+from .analysis.channel_analysis import ChannelAnalysis
 
-from bias_function import (
+from .bias_function import (
     BiasFunction, BiasLookupFunction, BiasEnsembleTable,
     SRTISBiasFromNetwork
 )
 
-from collectivevariable import (
+from .collectivevariable import (
     FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
     InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
     CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
     GeneratorCV)
 
-from ensemble import (
+from .ensemble import (
     Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
     EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
     AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
@@ -86,15 +86,15 @@ from ensemble import (
     OptionalEnsemble, join_ensembles
 )
 
-from high_level.interface_set import (
+from .high_level.interface_set import (
     InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
 )
 
-from high_level.ms_outer_interface import MSOuterTISInterface
+from .high_level.ms_outer_interface import MSOuterTISInterface
 
-from step_visualizer_2D import StepVisualizer2D
+from .step_visualizer_2D import StepVisualizer2D
 
-from movechange import (
+from .movechange import (
     EmptyMoveChange, ConditionalSequentialMoveChange,
     MoveChange, PartialAcceptanceSequentialMoveChange,
     RandomChoiceMoveChange, SampleMoveChange,
@@ -106,9 +106,9 @@ from movechange import (
     RejectedMaxLengthSampleMoveChange
 )
 
-from pathmover import Details, MoveDetails, SampleDetails
+from .pathmover import Details, MoveDetails, SampleDetails
 
-from pathmover import (
+from .pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
     BackwardExtendMover, ForwardExtendMover, MinusMover,
@@ -126,33 +126,33 @@ from pathmover import (
     BackwardFirstTwoWayShootingMover
 )
 
-from shifting import ShiftingMover, ShiftingStrategy
+from .shifting import ShiftingMover, ShiftingStrategy
 
-from pathsimulator import (
+from .pathsimulator import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
     CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation
 )
 
-from sample import Sample, SampleSet
+from .sample import Sample, SampleSet
 
-from shooting import ShootingPointSelector, UniformSelector, \
+from .shooting import ShootingPointSelector, UniformSelector, \
     GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
 
-from snapshot_modifier import (
+from .snapshot_modifier import (
     NoModification, RandomVelocities, VelocityDirectionModifier,
     SingleAtomVelocityDirectionModifier
 )
 
-from storage.storage import Storage, AnalysisStorage
+from .storage.storage import Storage, AnalysisStorage
 
-from volume import (
+from .volume import (
     Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
     EmptyVolume, FullVolume, CVDefinedVolume, PeriodicCVDefinedVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )
 
-from high_level import move_strategy as strategies
+from .high_level import move_strategy as strategies
 
 import openpathsampling.numerics as numerics
 

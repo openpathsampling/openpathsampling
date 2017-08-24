@@ -5,13 +5,17 @@ a duck.
 @author David W.H. Swenson
 """
 
+from builtins import zip
+from builtins import str
+from builtins import object
 import os
 from functools import wraps
 
 import numpy as np
 import numpy.testing as npt
 import simtk.unit as u
-from nose.tools import assert_items_equal, assert_equal, assert_in
+from nose.tools import assert_equal, assert_in
+#from nose.tools import assert_items_equal
 from pkg_resources import resource_filename
 
 import openpathsampling as paths
@@ -48,6 +52,11 @@ def items_equal(truth, beauty):
         if t != b:
             return False
     return True
+
+def assert_items_equal(truth, beauty):
+    assert_equal(len(truth), len(beauty))
+    for (t, b) in zip(truth, beauty):
+        assert_equal(t, b)
 
 def assert_items_almost_equal(truth, beauty, tol=10e-7):
     for (t,b) in zip(truth, beauty):

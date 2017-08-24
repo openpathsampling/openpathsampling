@@ -4,6 +4,10 @@ import weakref
 import uuid
 from types import MethodType
 
+import sys
+if sys.version_info > (3, ):
+    long = int
+
 logger = logging.getLogger(__name__)
 
 
@@ -13,7 +17,7 @@ class StorableObject(object):
     """
 
     _weak_cache = weakref.WeakKeyDictionary()
-    _weak_index = 0L
+    _weak_index = 0
 
     _base = None
     _args = None
@@ -21,7 +25,7 @@ class StorableObject(object):
     observe_objects = False
 
     INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
-    CREATION_COUNT = 0L
+    CREATION_COUNT = 0
     ACTIVE_LONG = int(uuid.UUID(
             fields=tuple(
                 INSTANCE_UUID +
@@ -169,6 +173,15 @@ class StorableObject(object):
     def __hash__(self):
         return hash(self.__uuid__)
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+
+        if hasattr(other, '__uuid__'):
+            return self.__uuid__ == other.__uuid__
+
+        return NotImplemented
+
     @property
     def base_cls_name(self):
         """
@@ -305,7 +318,7 @@ class StorableObject(object):
                         key: dct[key] for key in dct if key not in args}
 
                     if len(non_init_dct) > 0:
-                        for key, value in non_init_dct.iteritems():
+                        for key, value in non_init_dct.items():
                             setattr(obj, key, value)
 
                 return obj
