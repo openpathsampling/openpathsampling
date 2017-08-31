@@ -80,6 +80,7 @@ def assert_same_items(list_a, list_b):
 
 class MoverWithSignature(paths.PathMover):
     def __init__(self, input_ensembles, output_ensembles):
+        super(MoverWithSignature, self).__init__()
         self._in_ensembles = input_ensembles
         self._out_ensembles = output_ensembles
 
