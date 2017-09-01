@@ -9,6 +9,8 @@ from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 import openpathsampling as paths
 import openpathsampling.tools
 
+import collections
+
 from openpathsampling.pathmover import SubPathMover
 from .ops_logging import initialization_logging
 import abc
@@ -1122,12 +1124,23 @@ class DirectSimulation(PathSimulator):
     @property
     def rate_matrix(self):
         transitions = self.transitions
-        rates = {t : 1.0 / np.array(transitions[t]).mean()
+        try:
+            time_per_step = self.engine.snapshot_timestep
+        except AttributeError:
+            time_per_step = 1.0
+        total_time = {s: sum(sum((transitions[t] for t in transitions
+                                  if t[0] == s), [])) * time_per_step
+                      for s in self.states}
+
+        rates = {t : len(transitions[t]) / total_time[t[0]]
                  for t in transitions}
-        rate_matrix = pd.DataFrame(columns=self.states,
-                                   index=self.states)
+        # rates = {t : 1.0 / np.array(transitions[t]).mean()
+                 # for t in transitions}
+
+        state_names = [s.name for s in self.states]
+        rate_matrix = pd.DataFrame(columns=state_names, index=state_names)
         for t in rates:
-            rate_matrix.set_value(t[0], t[1], rates[t])
+            rate_matrix.set_value(t[0].name, t[1].name, rates[t])
         return rate_matrix
 
     @property
