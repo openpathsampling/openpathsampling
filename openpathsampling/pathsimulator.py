@@ -1146,9 +1146,14 @@ class DirectSimulation(PathSimulator):
     @property
     def fluxes(self):
         results = {}
+        try:
+            time_per_step = self.engine.snapshot_timestep
+        except AttributeError:
+            time_per_step = 1.0
+
         for p in self.flux_events:
             lags = [t[0] - t[1] for t in self.flux_events[p]]
-            results[p] = 1.0 / np.mean(lags)
+            results[p] = 1.0 / np.mean(lags) / time_per_step
         return results
 
         # return {p : 1.0 / np.array(self.flux_events[p]).mean()

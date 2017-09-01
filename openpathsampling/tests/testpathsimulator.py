@@ -540,10 +540,11 @@ class testDirectSimulation(object):
         n_flux_events = {(self.center, right_interface): 3,
                          (self.center, left_interface): 2}
         assert_equal(sim.n_flux_events, n_flux_events)
+        time_step = sim.engine.snapshot_timestep
         expected_fluxes = {(self.center, right_interface):
-                           old_div(1.0, (old_div(((15-3) + (23-15) + (48-23)),3.0))),
+                           1.0 / (((15-3) + (23-15) + (48-23))/3.0) / time_step,
                            (self.center, left_interface):
-                           old_div(1.0, (old_div(((97-34) + (160-97)),2.0)))}
+                           1.0 / (((97-34) + (160-97))/2.0) / time_step}
         for p in expected_fluxes:
             assert_almost_equal(sim.fluxes[p], expected_fluxes[p])
 
