@@ -423,6 +423,19 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
 
 
 class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
+    """
+    Calculate the conditional transition probability, P(B|A_m)
+
+    The conditional transition probablity is the probability that paths from
+    a given interface end in each possible state.
+
+    Parameters
+    ----------
+    ensembles : list of :class:`.Ensemble`
+        sampled ensembles to calculate the CTP for
+    states : list of :class:`.Volume`
+        possible final states for trajectories in the given ensembles
+    """
     def __init__(self, ensembles, states):
         super(ConditionalTransitionProbability, self).__init__(ensembles)
         self.states = states
@@ -445,6 +458,31 @@ class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
         return ctp
 
 class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
+    """
+    Calculate the transition probability according to the TCP/CTP split.
+
+    The transition probability is the probability that a path that starts
+    from interface A_0 ends in some other state B, and is denoted P(B|A_0).
+    What we call the "standard" approach to calculate this splits that
+    probability into P(B|A_0) = P(B|A_m) P(A_m|A_0), where the first term in
+    the product is the :class:`.ConditionalTransitionProbability` and the
+    second term is determined by the :class:`.TotalCrossingProbability`. In
+    practice, one instance of this object is created for each transition.
+
+    Parameters
+    ----------
+    transition : :class:`.TISTransition`
+        the transition to calculate the transition probability for
+    tcp_method : :class:`.TotalCrossingProbability`
+        the object to calculate the total crossing probability function;
+        many details can be modified here including the details of the
+        histograms that are generated or of the method used to combine the
+        histograms
+    ctp_method : :class:`.ConditionalTransitionProbability`
+        the object to calculate the conditional transition probability
+        (details on which ensembles and which states to analyze can be
+        modified here)
+    """
     def __init__(self, transition, tcp_method, ctp_method):
         self.transition = transition
         self.tcp_method = tcp_method
@@ -519,6 +557,9 @@ class TransitionDictResults(StorableNamedObject):
 class TISAnalysis(StorableNamedObject):
     """
     Generic class for TIS analysis. One of these for each network.
+
+    In general, the TIS rate is split into the flux and the transition
+    probability.
 
     Parameters
     ----------
