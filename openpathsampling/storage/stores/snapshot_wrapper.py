@@ -142,7 +142,7 @@ class SnapshotWrapperStore(ObjectStore):
                     return self.storage.fallback.stores[self.name].load(idx)
                 else:
                     raise ValueError(
-                        'long %s not found in storage or fallback' % idx)
+                        'int %s not found in storage or fallback' % idx)
 
         elif type(idx) is not int:
             raise ValueError(

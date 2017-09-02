@@ -57,7 +57,7 @@ class ChainDict(object):
 
     def __init__(self):
         self._post = None
-        self._iterables = (list, tuple)
+        self._iterables = (list, tuple, set, frozenset)
         self._singles = ()
 
     def __getitem__(self, items):

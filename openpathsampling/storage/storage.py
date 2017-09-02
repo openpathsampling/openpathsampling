@@ -139,7 +139,7 @@ class Storage(NetCDFPlus):
 
         if hasattr(self, 'cvs'):
             logger.info('Opening an old version that handles CVs differently. '
-                        'You cannot extend this file, only savely read it.')
+                        'You cannot extend this file, only read it.')
 
             if self.mode != 'r':
                 logger.info('Cannot open in append mode. Closing')
