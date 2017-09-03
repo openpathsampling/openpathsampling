@@ -308,7 +308,7 @@ class testMISTISNetwork(testMultipleStateTIS):
         storage_w = paths.Storage(fname, "w")
         storage_w.snapshots.save(template)
 
-        print(storage_w.simplifier.simplify(self.mistis))
+        # print(storage_w.simplifier.simplify(self.mistis))
 
         storage_w.save(self.mistis)
         storage_w.sync_all()

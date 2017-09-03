@@ -11,7 +11,7 @@ from uuid import UUID
 import netCDF4
 import numpy as np
 from .dictify import UUIDObjectJSON
-from .stores import NamedObjectStore, ObjectStore
+from .stores import NamedObjectStore, ObjectStore, PseudoAttributeStore
 from .proxy import LoaderProxy
 
 import sys
@@ -174,6 +174,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         This will usually only be called in subclassed storages.
         """
+        # todo: add CVStore, rename to attribute
         pass
 
     def __init__(self, filename, mode=None, fallback=None):
@@ -203,6 +204,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if mode is None:
             mode = 'a'
+
+        self.mode = mode
 
         exists = os.path.isfile(filename)
         if exists and mode == 'a':
@@ -272,6 +275,8 @@ class NetCDFPlus(netCDF4.Dataset):
             # now create all storages in subclasses
             self._create_storages()
 
+            self.create_store('attributes', PseudoAttributeStore())
+
             # call the subclass specific initialization
             self._initialize()
 
@@ -281,6 +286,8 @@ class NetCDFPlus(netCDF4.Dataset):
             self.finalize_stores()
 
             logger.info("Finished setting up netCDF file")
+
+            self.sync()
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
@@ -328,11 +335,19 @@ class NetCDFPlus(netCDF4.Dataset):
             self.update_delegates()
             self._restore_storages()
 
+            # only if we have a new style file
+            if hasattr(self, 'attributes'):
+                for attribute, store in zip(
+                        self.attributes,
+                        self.attributes.vars['cache']
+                ):
+                    key_store = self.attributes.key_store(attribute)
+                    key_store.attribute_list[attribute] = store
+
             # call the subclass specific restore in case there is more stuff
             # to prepare
             self._restore()
 
-        self.sync()
 
     def _create_simplifier(self):
         self.simplifier = UUIDObjectJSON(self)
@@ -467,7 +482,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if register_attr:
             if hasattr(self, name):
-                raise ValueError('Attribute name %s is already in use!' % name)
+                raise ValueError('Store name %s is already in use!' % name)
 
             setattr(self, store.prefix, store)
 
@@ -876,10 +891,10 @@ class NetCDFPlus(netCDF4.Dataset):
 
         elif var_type.startswith('lazyobj.'):
             getter = lambda v: [
-                None if w[0] == '-' else LoaderProxy(store, int(UUID(w)))
+                None if w[0] == '-' else LoaderProxy.new(store, int(UUID(w)))
                 for w in v
             ] if isinstance(v, np.ndarray) else \
-                None if v[0] == '-' else LoaderProxy(store, int(UUID(v)))
+                None if v[0] == '-' else LoaderProxy.new(store, int(UUID(v)))
 
             setter = lambda v: \
                 ''.join([
@@ -945,11 +960,11 @@ class NetCDFPlus(netCDF4.Dataset):
                 elif var.var_type.startswith('lazyobj.'):
                     getter = lambda v: [[
                         None if u[0] == '-' else
-                        LoaderProxy(store, int(UUID(u)))
+                        LoaderProxy.new(store, int(UUID(u)))
                         for u in to_uuid_chunks(w)] for w in v
                     ] if isinstance(v, np.ndarray) else [
                         None if u[0] == '-' else
-                        LoaderProxy(store, int(UUID(u)))
+                        LoaderProxy.new(store, int(UUID(u)))
                         for u in to_uuid_chunks(v)
                     ]
 
