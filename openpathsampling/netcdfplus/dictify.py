@@ -12,8 +12,6 @@ import ujson
 import marshal
 import types
 import opcode
-import builtins
-import sys
 
 from .base import StorableObject
 
@@ -23,17 +21,19 @@ from .cache import WeakValueCache
 
 __author__ = 'Jan-Hendrik Prinz'
 
-
+import sys
 if sys.version_info > (3, ):
     long = int
     unicode = str
     builtin_module = 'builtins'
     get_code = lambda func: func.__code__
     intify_byte = lambda b: b
+    import builtins
 else:
     builtin_module = '__builtin__'
     get_code = lambda func: func.func_code
     intify_byte = lambda b: ord(b)
+    import builtins
 
 
 class ObjectJSON(object):

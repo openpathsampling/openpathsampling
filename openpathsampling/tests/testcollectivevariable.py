@@ -162,11 +162,11 @@ class test_FunctionCV(object):
                 # print snap.reversed.__uuid__
                 # print snap.create_reversed().__uuid__
                 #
-                # print 'POS', cv_cache.snapshot_pos(snap),
+                # print 'POS', cv_cache.object_pos(snap),
                 # print 'POS', storage_r.snapshots.pos(snap),
                 # print 'POS', storage_r.snapshots.index[snap]
                 #
-                # print 'POS', cv_cache.snapshot_pos(snap.reversed),
+                # print 'POS', cv_cache.object_pos(snap.reversed),
                 # print 'POS', storage_r.snapshots.pos(snap.reversed),
                 # print 'POS', storage_r.snapshots.index[snap.reversed]
 
@@ -255,7 +255,7 @@ class test_FunctionCV(object):
                 snap = storage_w.snapshots[
                     storage_w.snapshots.vars['uuid'][idx]]
 
-                print(snap, snap.__uuid__, value)
+                # print(snap, snap.__uuid__, value)
                 assert_close_unit(cv1(snap), value)
 
             storage_w.close()
