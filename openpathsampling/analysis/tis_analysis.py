@@ -511,6 +511,34 @@ class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
 
 
 class TransitionDictResults(StorableNamedObject):
+    """Analysis result object for properties of a transition.
+
+    Each value is associated with a specific (analysis/physical) transition.
+    This object allows those values to be accessed either using (as a key,
+    i.e., in square brackets) any of
+    
+    * the transition object for the (initial_state, final_state) pair
+    * the tuple of (initial_state, final_state) for the transition
+    * the sampling transition object, if ``allow_sampling==True``; this is
+      only desired if the quantity is only dependent on the sampling
+      transition
+
+    Note that results cannot be changed in this; a new object must be made
+    if that is desired (but the original input can be accessed with the
+    .results_dict attribute, and then modified as needed).
+
+    Parameters
+    ----------
+    results_dict : dict of 2-tuple of :class:`.Volume` to float or Quantity
+        dict connecting tuple of (initial_state, final_state) to the
+        associated quantity
+    network : :class:`.TransitionNetwork`
+        the transition network associated with these results
+    allow_sampling : bool
+        whether to allow elements of network.sampling_transitions to be used
+        as keys for to retrieve the stored results; this only makes sense if
+        the stored result is only dependent on the sampling transition
+    """
     # allows you to use analysis transition, 2-tuple of states, or sampling
     # transition as the key to retrieve the stored results
     def __init__(self, results_dict, network, allow_sampling=True):
@@ -533,6 +561,20 @@ class TransitionDictResults(StorableNamedObject):
         return self.results_dict[key]
 
     def to_pandas(self, order=None):
+        """Output stored results as pandas.DataFrame
+
+        Parameters
+        ----------
+        order : list of :class:`.Volume`
+            order in which to list the states; if not used, the order may be
+            unpredictable
+
+        Returns
+        -------
+        :class:`pandas.DataFrame`
+            DataFrame with initial states as rows and final states as
+            columns
+        """
         key_map = lambda key: key.name
         keys = list(self.results_dict.keys())
         idx_vols = [k[0] for k in keys]
@@ -564,8 +606,13 @@ class TISAnalysis(StorableNamedObject):
     Parameters
     ----------
     network : :class:`.TransitionNetwork`
+        the reaction network to be analyzed
     flux_method : flux calculation method
+        the method to use to calculate the flux; typical classes are
+        :class:`.MinusMoveFlux` and :class:`.DictFlux`
     transition_probability_methods : dict of :class:`.Transition` to method
+        the method for calculating the transition probability (one for each
+        transition).
     """
     def __init__(self, network, flux_method, transition_probability_methods):
         self.network = network
@@ -617,6 +664,23 @@ class TISAnalysis(StorableNamedObject):
         return self._access_cached_result('flux')
 
     def flux(self, from_state, through_interface=None):
+        """Flux from a volume and through and interface.
+
+        Shortcut to be used after the actual calculation has been performed.
+
+        Parameters
+        ----------
+        from_state : :class:`.Volume`
+            the volume the flux should start from
+        through_interface : :class:`.Volume`
+            the interface the flux should cross; default is None which uses
+            the ``from_state`` volume
+
+        Returns
+        -------
+        float or Quantity
+            the flux out of the given state and through the given interface
+        """
         fluxes = self._access_cached_result('flux')
         if through_interface is None:
             through_interface = from_state
@@ -624,6 +688,22 @@ class TISAnalysis(StorableNamedObject):
         return fluxes[(from_state, through_interface)]
 
     def state_fluxes(self, from_state):
+        """All fluxes associated with a given initial state.
+
+        Shortcut to be used after the actual calculation has been performed.
+
+        Parameters
+        ----------
+        from_state : :class:`.Volume`
+            the volume the fluxes should start from
+
+        Returns
+        -------
+        dict of 2-tuple of :class:`.Volume` to float
+            dictionary of (state, interface) to the associated flux -- same
+            as the flux dictionary given be :method:`.flux_matrix`, but only
+            including the cases with the desired state volume
+        """
         fluxes = self._access_cached_result('flux')
         state_keys = [k for k in fluxes.keys() if k[0] == from_state]
         return {k: fluxes[k] for k in state_keys}
@@ -637,6 +717,19 @@ class TISAnalysis(StorableNamedObject):
         return trans_probs[(from_state, to_state)]
 
     def rate_matrix(self, steps=None):
+        """Calculate the rate matrix.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep`
+            the steps from a simulation to use for calculating the rate. If
+            `None` (default), then use the existing cached results.
+
+        Returns
+        -------
+        :class:`.TransitionDictResults`
+            the rate matrix
+        """
         if steps is not None:
             self.calculate(steps)
         return self._access_cached_result('rate')
