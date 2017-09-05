@@ -2,8 +2,8 @@
 
 .. currentmodule:: openpathsampling.pathmover
 
-PathMover Functions
-===================
+PathMover API
+=============
 
 :class:`openpathsampling.PathMover`
 
