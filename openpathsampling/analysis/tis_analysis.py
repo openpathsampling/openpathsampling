@@ -1028,6 +1028,63 @@ class TISAnalysis(StorableNamedObject):
 
 
 class StandardTISAnalysis(TISAnalysis):
+    """
+    Standard TIS analysis: flux, TCP, CTP.
+
+    This is what we call the "standard" TIS analysis. It splits the rate
+    equation into a flux, a total crossing probability (calculated using
+    ensemble crossing probability functions), and a conditional transition
+    probability from the outermost interface.
+
+    Whenever possible, this code allows you to use default values.
+
+    For the **flux**, you must provide either a flux method or a move scheme
+    (which will use the :class:`.MinusMoveFlux`).
+
+    For the **conditional transition probability**, you may optionally
+    provide a :class:`.ConditionalTransitionProbability` object, otherwise
+    the code will create one for the outermost interfaces of each
+    transition.
+
+    For the **total crossing probability**, you must provide a dictionary
+    for the ``max_lambda_calcs``. The keys of this dictionary are the
+    sampling transitions; the values can either be an
+    :class:`.EnsembleHistogrammer` (such as a
+    :class:`.FullHistogramMaxLambdas`) or a dictionary of histogram
+    parameters, in which case the histogram parameters will be passed to
+    :class:`.FullHistogramMaxLambdas`. In addition, you may optionally
+    provide a dictionary for ``combiners``, which maps the interface set
+    within the sampling transitions to a combining function, such as
+    :class:`.WHAM`. The default is to use :class:`.WHAM`.
+
+    Parameters
+    ----------
+    network : :class:`.TISNetwork`
+        the network to analyze
+    steps : iterable of :class:`.MCStep`
+        if given, the analysis is performed immediately using these steps;
+        otherwise, the analysis can be performed later with
+        :meth:`.calculate`
+    flux_method : flux calculation method
+        the method to use to calculate the flux; typical classes are
+        :class:`.MinusMoveFlux` and :class:`.DictFlux`. Optional, but if not
+        given then ``scheme`` must be given.
+    scheme : :class:`.MoveScheme`
+        used to create a :class:`.MinusMoveFlux` if ``flux_method`` is not
+        provided. Not used if ``flux_method`` is given.
+    ctp_method : :class:`ConditionalTransitionProbability`
+        object for calculating the conditional transition probability
+        (optional)
+    max_lambda_calcs : dict
+        determines how the ensemble crossing probability histograms are
+        build. Keys are sampling transitions, and values can be either
+        :class:`.EnsembleHistogrammer` subclasses, or a list of histogram
+        parameters to pass to :class:`.FullHistogramMaxLambdas`.
+    combiners : dict {:class:`.InterfaceSet`: combination method}
+        links the interface set to the method that will be used to combine
+        individual ensembles into the total crossing probability function.
+        Default is to use :class:`.WHAM`.
+    """
     def __init__(self, network, steps=None, flux_method=None, scheme=None,
                  ctp_method=None, max_lambda_calcs=None, combiners=None):
         # NOTE: each of flux, ctp, tcp refer to the methods used; in
@@ -1098,6 +1155,20 @@ class StandardTISAnalysis(TISAnalysis):
             self.calculate(steps)
 
     def from_weighted_trajectories(self, input_dict):
+        """Calculate results from weighted trajectories dictionary.
+
+        Parameters
+        ----------
+        input_dict : dict of {:class:`.Ensemble`: collections.Counter}
+            ensemble as key, and a counter mapping each trajectory
+            associated with that ensemble to its counter of time spent in
+            the ensemble (output of `steps_to_weighted_trajectories`)
+
+        Returns
+        -------
+        dict
+            dictionary with all the results
+        """
         # calculate the max_lambda hists
         max_lambda_calcs = [tcp_m.max_lambda_calc
                             for tcp_m in self.tcp_methods.values()]
@@ -1159,6 +1230,18 @@ class StandardTISAnalysis(TISAnalysis):
 
 
     def crossing_probability(self, ensemble):
+        """Crossing probability function for a given ensemble
+
+        Parameters
+        ----------
+        ensemble : :class:`.Ensemble`
+            the ensemble for which the crossing probability is desired
+
+        Returns
+        -------
+        :class:`.LookupFunction`
+            crossing probability function for the given ensemble
+        """
         sampling_ens = self.network.sampling_ensemble_for[ensemble]
         all_max_lambdas = self._access_cached_result('max_lambda')
         max_lambda = all_max_lambdas[sampling_ens]
@@ -1167,6 +1250,10 @@ class StandardTISAnalysis(TISAnalysis):
 
     @property
     def conditional_transition_probability(self):
+        """``pandas.DataFrame``: conditional transition probabilities
+
+        rows are ensemble names, columns are state names
+        """
         ctp = self._access_cached_result('conditional_transition_probability')
         df = pd.DataFrame.from_dict(ctp, orient='index')
         df.index = [idx.name for idx in df.index]
@@ -1175,4 +1262,6 @@ class StandardTISAnalysis(TISAnalysis):
 
     @property
     def total_crossing_probability(self):
+        """:class:`.LookupFunction`: total crossing probability
+        """
         return self._access_cached_result('total_crossing_probability')
