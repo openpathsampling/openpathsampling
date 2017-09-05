@@ -87,10 +87,20 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
         return self.from_weighted_trajectories(weighted_trajs)
 
     def from_weighted_trajectories(self, input_dict):
+        """Calculate results from weighted trajectories dictionary.
+
+        Must be implemented in subclass.
+        """
         raise NotImplementedError
 
     @staticmethod
     def combine_results(result_1, result_2):
+        """Combine two sets of results from this analysis.
+
+        This can be used to combine results after parallelizing the
+        analysis. The default is not implemented; it will only be
+        implemented in cases where such a combination is feasible.
+        """
         # to be used to simplify parallelization
         # TODO: implement this in subclasses in the future
         raise NotImplementedError
@@ -262,6 +272,7 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
                 for k in flux_dicts}
 
     def from_weighted_trajectories(self, input_dict):
+        """Not implemented for flux calculation."""
         # this can't be done, e.g., in the case of the single replica minus
         # mover, where the minus trajectory isn't in the active samples
         raise NotImplementedError(
@@ -332,19 +343,87 @@ class DictFlux(MultiEnsembleSamplingAnalyzer):
         self.flux_dict = flux_dict
 
     def calculate(self, steps):
+        """Perform the analysis, using `steps` as input.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep`
+            the steps to use as input for this analysis
+
+        Returns
+        -------
+        dict of {(:class:`.Volume`, :class:`.Volume`): float}
+            keys are (state, interface); values are the associated flux
+        """
         return self.flux_dict
 
     def from_weighted_trajectories(self, input_dict):
+        """Calculate results from weighted trajectories dictionary.
+
+        For :class:`.DictFlux`, this ignores the input.
+
+        Parameters
+        ----------
+        input_dict : dict of {:class:`.Ensemble`: collections.Counter}
+            ensemble as key, and a counter mapping each trajectory
+            associated with that ensemble to its counter of time spent in
+            the ensemble.
+
+        Returns
+        -------
+        dict of {(:class:`.Volume`, :class:`.Volume`): float}
+            keys are (state, interface); values are the associated flux
+        """
         return self.flux_dict
 
     def intermediates(self, steps):
+        """Calculate intermediates, using `steps` as input.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep`
+            the steps to use as input for this analysis
+
+        Returns
+        -------
+        list
+            empty list; the method is a placeholder for this class
+        """
         return []
 
     def calculate_from_intermediates(self, *intermediates):
+        """Perform the analysis, using intermediates as input.
+
+        Parameters
+        ----------
+        intermediates :
+            output of :method:`.intermediates`
+
+        Returns
+        -------
+        dict of {(:class:`.Volume, :class:`.Volume`): float}
+            keys are (state, interface); values are the associated flux
+        """
         return self.flux_dict
 
     @staticmethod
     def combine_results(result_1, result_2):
+        """Combine two sets of results from this analysis.
+
+        For :class:`.DictFlux`, the results must be identical.
+
+        Parameters
+        ----------
+        result_1 : dict of {(:class:`.Volume, :class:`.Volume`): float}
+            first set of results from a flux calculation
+        result_2 : dict of {(:class:`.Volume, :class:`.Volume`): float}
+            second set of results from a flux calculation
+
+        Returns
+        -------
+        dict of {(:class:`.Volume, :class:`.Volume`): float}
+            keys are (state, interface); values are the associated flux
+        """
         if result_1 != result_2:
             raise RuntimeError("Combining results from different DictFlux")
         return result_1
@@ -375,6 +454,20 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
                       for e in self.ensembles}
 
     def from_weighted_trajectories(self, input_dict):
+        """Calculate results from a weighted trajectories dictionary.
+
+        Parameters
+        ----------
+        input_dict : dict of {:class:`.Ensemble`: collections.Counter}
+            ensemble as key, and a counter mapping each trajectory
+            associated with that ensemble to its counter of time spent in
+            the ensemble (output of `steps_to_weighted_trajectories`)
+
+        Returns
+        -------
+        dict of {:class:`.Ensemble`: :class:`.numerics.Histogram`}
+            calculated histogram for each ensemble
+        """
         for ens in self.hists:
             trajs = list(input_dict[ens].keys())
             weights = list(input_dict[ens].values())
@@ -480,6 +573,20 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
         self.combiner = combiner
 
     def from_weighted_trajectories(self, input_dict):
+        """Calculate results from a weighted trajectories dictionary.
+
+        Parameters
+        ----------
+        input_dict : dict of {:class:`.Ensemble`: collections.Counter}
+            ensemble as key, and a counter mapping each trajectory
+            associated with that ensemble to its counter of time spent in
+            the ensemble (output of `steps_to_weighted_trajectories`)
+
+        Results
+        -------
+        :class:`.LookupFunction`
+            the total crossing probability function
+        """
         hists = self.max_lambda_calc.from_weighted_trajectories(input_dict)
         return self.from_ensemble_histograms(hists)
 
