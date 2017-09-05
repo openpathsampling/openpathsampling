@@ -591,6 +591,18 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
         return self.from_ensemble_histograms(hists)
 
     def from_ensemble_histograms(self, hists):
+        """Calculate results from a dict of ensemble histograms.
+
+        Parameters
+        ----------
+        hists : dict of {:class:`.Ensemble`: :class:`.numerics.Histogram`}
+            histogram for each ensemble (from ``self.max_lambda_calc``)
+
+        Returns
+        -------
+        :class:`.LookupFunction`
+            the total crossing probability function
+        """
         tcp_results = {}
         input_hists = [hists[ens] for ens in self.transition.ensembles]
         df = paths.numerics.histograms_to_pandas_dataframe(
@@ -621,6 +633,23 @@ class ConditionalTransitionProbability(MultiEnsembleSamplingAnalyzer):
         self.states = states
 
     def from_weighted_trajectories(self, input_dict):
+        """Calculate results from a weighted trajectories dictionary.
+
+        Parameters
+        ----------
+        input_dict : dict of {:class:`.Ensemble`: collections.Counter}
+            ensemble as key, and a counter mapping each trajectory
+            associated with that ensemble to its counter of time spent in
+            the ensemble (output of `steps_to_weighted_trajectories`)
+
+        Returns
+        -------
+        dict of {:class:`.Ensemble`: {:class:`.Volume`: float}}
+            first key, an ensemble, selects the results from a given
+            sampling ensemble; second key, a volume, selects the value for
+            a given state. Value is the conditional transition probability
+            for that state from that ensemble.
+        """
         ctp = {}
         for ens in self.ensembles:
             acc = collections.Counter()
@@ -674,11 +703,40 @@ class StandardTransitionProbability(MultiEnsembleSamplingAnalyzer):
         self.outermost_lambda = interfaces.get_lambda(interfaces[-1])
 
     def from_weighted_trajectories(self, input_dict):
+        """Calculate results from a weighted trajectories dictionary.
+
+        Parameters
+        ----------
+        input_dict : dict of {:class:`.Ensemble`: collections.Counter}
+            ensemble as key, and a counter mapping each trajectory
+            associated with that ensemble to its counter of time spent in
+            the ensemble (output of `steps_to_weighted_trajectories`)
+
+        Returns
+        -------
+        float
+            the transition probability for this transition
+        """
         tcp = self.tcp_method.from_weighted_trajectories(input_dict)
         ctp = self.ctp_method.from_weighted_trajectories(input_dict)
         return self.from_intermediate_results(tcp, ctp)
 
     def from_intermediate_results(self, tcp, ctp):
+        """Calculate results from intermediates.
+
+        Parameters
+        ----------
+        tcp : :class:`.LookupFunction`
+            results for the total crossing probability for this transition
+        ctp : dict of {:class:`.Ensemble`: {:class:`.Volume`: float}}
+            results for the conditional transition probability for this
+            transition
+
+        Returns
+        -------
+        float
+            the transition probability for this transition
+        """
         outermost_ensemble_ctps = ctp[self.outermost_ensemble]
         try:
             outermost_ctp = outermost_ensemble_ctps[self.final_state]
@@ -802,6 +860,13 @@ class TISAnalysis(StorableNamedObject):
         self.results = {}
 
     def calculate(self, steps):
+        """Perform the analysis, using `steps` as input.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep`
+            the steps to use as input for this analysis
+        """
         self.results = {}
         flux_m = self.flux_method
         fluxes = flux_m.calculate(steps)
@@ -813,6 +878,15 @@ class TISAnalysis(StorableNamedObject):
         self.from_weighted_trajectories(weighted_trajs)
 
     def from_weighted_trajectories(self, input_dict):
+        """Calculate results from weighted trajectories dictionary.
+
+        Parameters
+        ----------
+        input_dict : dict of {:class:`.Ensemble`: collections.Counter}
+            ensemble as key, and a counter mapping each trajectory
+            associated with that ensemble to its counter of time spent in
+            the ensemble (output of `steps_to_weighted_trajectories`)
+        """
         # dict of transition to transition probability
         tp_m = self.transition_probability_methods
         trans_prob = {t: tp_m[t].from_weighted_trajectories(input_dict)
@@ -841,6 +915,9 @@ class TISAnalysis(StorableNamedObject):
 
     @property
     def flux_matrix(self):
+        """dict of {(:class:`.Volume`, :class:`.Volume`): float}: keys are
+        (state, interface); values are the associated flux
+        """
         return self._access_cached_result('flux')
 
     def flux(self, from_state, through_interface=None):
@@ -890,9 +967,27 @@ class TISAnalysis(StorableNamedObject):
 
     @property
     def transition_probability_matrix(self):
+        """
+        :class:`.TransitionDictResults`: matrix of transition probabilities
+        """
         return self._access_cached_result('transition_probability')
 
     def transition_probability(self, from_state, to_state):
+        """Transition probability between two states.
+
+        Parameters
+        ----------
+        from_state : :class:`.Volume`
+            initial state in the transition
+        to_state : :class:`.Volume`
+            final state in the transition
+
+        Returns
+        -------
+        float
+            transition probability for the `from_state`->`to_state`
+            transition
+        """
         trans_probs = self._access_cached_result('transition_probability')
         return trans_probs[(from_state, to_state)]
 
@@ -915,6 +1010,20 @@ class TISAnalysis(StorableNamedObject):
         return self._access_cached_result('rate')
 
     def rate(self, from_state, to_state):
+        """Rate for the transition between two states
+
+        Parameters
+        ----------
+        from_state : :class:`.Volume`
+            initial state in the transition
+        to_state : :class:`.Volume`
+            final state in the transition
+
+        Returns
+        -------
+        float or Quantity
+            rate for the `from_state`->`to_state` transition
+        """
         return self._access_cached_result('rate')[(from_state, to_state)]
 
 
