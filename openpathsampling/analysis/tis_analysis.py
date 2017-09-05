@@ -43,12 +43,40 @@ def steps_to_weighted_trajectories(steps, ensembles):
 
 
 class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
-    """Abstract class for getting statistics for MC steps sampling multiple
-    ensembles."""
+    """
+    Abstract class for statistics from MC steps sampling multiple ensembles.
+
+    Parameters
+    ----------
+    ensembles : list of :class:`.Ensemble`
+        ensembles to be used in the calculation; can be overridden by
+        :method:`.calculate`
+    """
     def __init__(self, ensembles=None):
         self.ensembles = ensembles
 
     def calculate(self, steps, ensembles=None):
+        """Perform the analysis, using `steps` as input.
+
+        This is the main analysis for the abstract
+        :class:`.MultiEnsembleSamplingAnalyzer`. Specific results depend on
+        the specific subclass. Most objects simply need to override
+        :method:`.from_weighted_trajectories` in order to obtain reasonable
+        behavior.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep`
+            the steps to use as input for this analysis
+        ensembles : list of :class:`.Ensemble
+            ensembles to include in the calculation (other ensembles will be
+            stripped); default is `None` meaning all ensembles given during
+            initialization.
+
+        Returns
+        -------
+        See .from_weighted_trajectories for this class.
+        """
         if ensembles is None:
             ensembles = self.ensembles
         if ensembles is None:
@@ -61,8 +89,10 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
     def from_weighted_trajectories(self, input_dict):
         raise NotImplementedError
 
-    def combine_results(self, result_1, result_2):
+    @staticmethod
+    def combine_results(result_1, result_2):
         # to be used to simplify parallelization
+        # TODO: implement this in subclasses in the future
         raise NotImplementedError
 
 ######## CALCULATING THE FLUX
@@ -128,6 +158,9 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         self.flux_pairs = flux_pairs
 
     def _get_minus_steps(self, steps):
+        """
+        Selects steps that used this object's minus movers
+        """
         return [s for s in steps
                 if s.change.canonical.mover in self.minus_movers
                 and s.change.accepted]
@@ -213,7 +246,7 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
 
         Parameters
         ----------
-        flux_dicts: dict of {(:class:`.Volume, :class:`.Volume`): dict}
+        flux_dicts: dict of {(:class:`.Volume`, :class:`.Volume`): dict}
             keys are (state, interface); values are the result dict from
             :method:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
             strings 'in' and 'out', mapping to
@@ -236,14 +269,53 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         )
 
     def calculate(self, steps):
+        """Perform the analysis, using `steps` as input.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep`
+            the steps to use as input for this analysis
+
+        Returns
+        -------
+        dict of {(:class:`.Volume`, :class:`.Volume`): float}
+            keys are (state, interface); values are the associated flux
+        """
         intermediates = self.intermediates(steps)
         return self.calculate_from_intermediates(*intermediates)
 
     def intermediates(self, steps):
+        """Calculate intermediates, using `steps` as input.
+
+        Parameters
+        ----------
+        steps : iterable of :class:`.MCStep`
+            the steps to use as input for this analysis
+
+        Returns
+        -------
+        list (len 1) of dict of {(:class:`.Volume`, :class:`.Volume`): dict}
+            keys are (state, interface); values are the result dict from
+            :method:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
+            strings 'in' and 'out', mapping to
+            :class:`.TrajectorySegmentContainer` with appropriate frames.
+        """
         minus_steps = self._get_minus_steps(steps)
         return [self.trajectory_transition_flux_dict(minus_steps)]
 
     def calculate_from_intermediates(self, *intermediates):
+        """Perform the analysis, using intermediates as input.
+
+        Parameters
+        ----------
+        intermediates :
+            output of :method:`.intermediates`
+
+        Returns
+        -------
+        dict of {(:class:`.Volume, :class:`.Volume`): float}
+            keys are (state, interface); values are the associated flux
+        """
         flux_dicts = intermediates[0]
         return self.from_trajectory_transition_flux_dict(flux_dicts)
 
@@ -271,7 +343,8 @@ class DictFlux(MultiEnsembleSamplingAnalyzer):
     def calculate_from_intermediates(self, *intermediates):
         return self.flux_dict
 
-    def combine_results(self, result_1, result_2):
+    @staticmethod
+    def combine_results(result_1, result_2):
         if result_1 != result_2:
             raise RuntimeError("Combining results from different DictFlux")
         return result_1
@@ -515,8 +588,8 @@ class TransitionDictResults(StorableNamedObject):
 
     Each value is associated with a specific (analysis/physical) transition.
     This object allows those values to be accessed either using (as a key,
-    i.e., in square brackets) any of
-    
+    i.e., in square brackets) any of:
+
     * the transition object for the (initial_state, final_state) pair
     * the tuple of (initial_state, final_state) for the transition
     * the sampling transition object, if ``allow_sampling==True``; this is
