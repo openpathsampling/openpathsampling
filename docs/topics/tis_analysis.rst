@@ -32,11 +32,15 @@ interface :math:`\lambda_0`, and the :math:`P_A(B|\lambda_0)` is the
 conditional probability that a path ends in :math:`B` (before any other
 state) given that it exits :math:`\lambda_0`. We refer to this conditional
 probability as the "transition probability" for the transition :math:`A\to
-B`. Note that the formally, :math:`\lambda` should also be subscripted by
-the interface set that it refers to (and in MSTIS, the state label is often
-used to stand in for the only interface set). In the :math:`A\to B`
-transition, there is only one interface set, so there is no possibility of
-confusion.
+B`. Note that the formally, :math:`\lambda` should also be labeled by the
+interface set that it refers to (and in MSTIS, the state label is often used
+to stand in for the only interface set). In the :math:`A\to B` transition,
+there is only one interface set, so there is no possibility of confusion.
+
+This equation focuses on the rate, but one of the important advantages of
+TIS is that other quantities, such as projections of the committor
+probability or of the free energy landscape, can be obtained from the same
+information as the TIS rates by using the reweighted path ensemble.
 
 All TIS simulations make this split. In the following, we'll discuss the
 various ways to calculate the flux, and then we'll discuss approaches for
@@ -168,8 +172,9 @@ terminology):
 
 .. math::
 
-    P_A(B|\lambda_0) = \prod_{0}^{m-1} P_A(\lambda_{i+1}|\lambda_{i})\ 
-                       P_A(B|\lambda_m)
+    P^\text{tot}_A(B|\lambda_0) = \prod_{0}^{m-1} 
+                                  P_A(\lambda_{i+1}|\lambda_{i})\ 
+                                  P_A(B|\lambda_m)
 
 There are a few ways that this can be calculated. What we term the
 "standard" approach involves calculating the crossing probability
@@ -219,10 +224,30 @@ As discussed previously, the full TIS analysis always involves splitting the
 rate into flux and transition probability. The :class:`.TISAnalysis` objects
 maintain this split, and also cache the results from other parts of the
 analysis. This caching is useful both to speed up the overall analysis and
-to provide access to intermediate results for further analysis and ???
+to provide access to intermediate results for further investigation.
+
+The plain :class:`.TISAnalysis` object just requires a flux calculation and
+a transition probability calculation. However, when performing analysis
+according to the "standard" approach, it is better to use the
+:class:`.StandardTISAnalysis` class. This caches several results, and is
+therefore much more efficient than manually setting up the same approach
+using a plain :class:`.TISAnalysis` object.
+
+There are many options for setting up the :class:`.StandardTISAnalysis`; see
+the documentation of that class for more details. A few simple examples are
+shown in the following example notebook:
+
+* TODO: examples with ``StandardTISAnalysis``
 
 -------------------------------------------------
 Summary: Visual overview of the standard analysis
 -------------------------------------------------
+
+In the image below, we provide a visual overview of the standard analysis.
+Each box represents a specific part of the calculation, and the name, as
+well as mathematical symbol, are included in the box. The color of the box
+indicates how many of these objects there are in the OPS standard analysis:
+blue boxes indicate one per reaction network, green boxes indicate one per
+transition, and purple boxes indicate one per ensemble.
 
 .. image:: tis_analysis_structure.png
