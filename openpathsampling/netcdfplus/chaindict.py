@@ -1,7 +1,7 @@
 import collections
 import numpy as np
 
-from openpathsampling.netcdfplus import LoaderProxy
+from .proxy import LoaderProxy
 
 __author__ = 'Jan-Hendrik Prinz'
 
@@ -57,6 +57,8 @@ class ChainDict(object):
 
     def __init__(self):
         self._post = None
+        self._iterables = (list, tuple, set, frozenset)
+        self._singles = ()
 
     def __getitem__(self, items):
         # first apply the own _get functions to compute
@@ -81,11 +83,7 @@ class ChainDict(object):
     __call__ = __getitem__
 
     def __setitem__(self, key, value):
-        if isinstance(key, collections.Iterable):
-            self._set_list(key, value)
-        else:
-            if value is not None:
-                self._set(key, value)
+        self._set_list(key, value)
 
         # pass __setitem__ to underlying dicts as default
         if self._post is not None:
@@ -253,11 +251,16 @@ class ExpandSingle(ChainDict):
     """
     Iterables will be unrolled and passed as a list
     """
+    def __init__(self, key_class):
+        super(ExpandSingle, self).__init__()
+        self.key_class = key_class
 
     def __getitem__(self, items):
-        if type(items) is LoaderProxy:
+        if isinstance(items, self.key_class):
             return self._post[[items]][0]
-        if hasattr(items, '__iter__'):
+        # elif type(items) is LoaderProxy:
+        #     return self._post[[items]][0]
+        elif hasattr(items.__class__, '__iter__'):
             try:
                 _ = len(items)
             except AttributeError:
@@ -266,7 +269,6 @@ class ExpandSingle(ChainDict):
                     'Iterators that do not have __len__ implemented are not '
                     'supported. You can wrap your iterator in list() if you '
                     'know that it will finish.')
-
             try:
                 return self._post[items.as_proxies()]
             except AttributeError:
@@ -278,8 +280,28 @@ class ExpandSingle(ChainDict):
 
     __call__ = __getitem__
 
-    def __setitem__(self, key, value):
-        self._post[key] = value
+    def __setitem__(self, items, values):
+        if isinstance(items, self.key_class):
+            self._post[[items]] = [values]
+        elif type(items) is LoaderProxy:
+            self._post[[items]] = [values]
+        elif hasattr(items, '__iter__'):
+            try:
+                _ = len(items)
+            except AttributeError:
+                # no length means unbound iterator and we cannot handle these
+                raise AttributeError(
+                    'Iterators that do not have __len__ implemented are not '
+                    'supported. You can wrap your iterator in list() if you '
+                    'know that it will finish.')
+            try:
+                self._post[items.as_proxies()] = values
+            except AttributeError:
+                # turn possible iterators into a list if possible
+                self._post[list(items)] = values
+
+        else:
+            self._post[[items]] = values
 
 
 class Function(ChainDict):
@@ -408,13 +430,14 @@ class ReversibleCacheChainDict(CacheChainDict):
         try:
             return self.cache[item]
         except KeyError:
-            if self.reversible and item._reversed is not None:
-                try:
-                    return self.cache[item._reversed]
-                except KeyError:
-                    return None
-            else:
-                return None
+            if type(item) is not LoaderProxy:
+                if self.reversible and item._reversed is not None:
+                    try:
+                        return self.cache[item._reversed]
+                    except KeyError:
+                        return None
+
+            return None
 
 
 class StoredDict(ChainDict):

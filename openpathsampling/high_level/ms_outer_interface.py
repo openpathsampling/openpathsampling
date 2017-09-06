@@ -151,7 +151,12 @@ class MSOuterTISInterface(netcdfplus.StorableNamedObject):
         if forbidden is None:
             ensemble_to_intersect = paths.FullEnsemble()
         else:
-            ensemble_to_intersect = paths.AllOutXEnsemble(forbidden)
+            try:
+                _ = len(forbidden)
+            except TypeError:
+                forbidden = [forbidden]
+            forbidden_vol = paths.join_volumes(forbidden)
+            ensemble_to_intersect = paths.AllOutXEnsemble(forbidden_vol)
 
         # TODO: maybe we should crash if given transitions aren't relevant?
         relevant_transitions = self.relevant_transitions(transitions)

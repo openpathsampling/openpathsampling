@@ -500,14 +500,19 @@ class testDirectSimulation(object):
             (self.center, 1), (self.outside, 4), (self.center, 7),
             (self.extra, 10), (self.center, 12), (self.outside, 14)
         ]
+        step_size = self.sim.engine.snapshot_timestep
         # As of pandas 0.18.1, callables can be used in `df.loc`, etc. Since
         # we're using (callable) volumes for labels of columns/indices in
         # our dataframes, this sucks for us. Raise an issue with pandas?
         rate_matrix = self.sim.rate_matrix.as_matrix()
+        # order is center, outside, extra
         nan = float("nan")
-        test_matrix = np.array([[nan, old_div(1.0,2.5), old_div(1.0,3.0)],
-                                [old_div(1.0,3.0), nan, nan],
-                                [old_div(1.0,2.0), nan, nan]])
+        t_center = 3.0 + 3.0 + 2.0
+        t_outside = 3.0
+        t_extra = 2.0
+        test_matrix = np.array([[nan, 2.0/t_center, 1.0/t_center],
+                                [1.0/t_outside, nan, nan],
+                                [1.0/t_extra, nan, nan]]) / step_size
         # for some reason, np.testing.assert_allclose(..., equal_nan=True)
         # was raising errors on this input. this hack gets the behavior
         for i in range(len(self.sim.states)):
@@ -535,10 +540,11 @@ class testDirectSimulation(object):
         n_flux_events = {(self.center, right_interface): 3,
                          (self.center, left_interface): 2}
         assert_equal(sim.n_flux_events, n_flux_events)
+        time_step = sim.engine.snapshot_timestep
         expected_fluxes = {(self.center, right_interface):
-                           old_div(1.0, (old_div(((15-3) + (23-15) + (48-23)),3.0))),
+                           1.0 / (((15-3) + (23-15) + (48-23))/3.0) / time_step,
                            (self.center, left_interface):
-                           old_div(1.0, (old_div(((97-34) + (160-97)),2.0)))}
+                           1.0 / (((97-34) + (160-97))/2.0) / time_step}
         for p in expected_fluxes:
             assert_almost_equal(sim.fluxes[p], expected_fluxes[p])
 
