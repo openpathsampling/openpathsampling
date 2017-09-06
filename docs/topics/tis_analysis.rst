@@ -25,13 +25,18 @@ equation is:
 
 .. math::
 
-    k_{AB} = \phi_{A_0} P(B|A_0)
+    k_{AB} = \phi_{A_0} P_A(B|\lambda_0)
 
 where :math:`\phi_{A_0}` is the flux out of state :math:`A` and through
-interface :math:`A_0`, and the :math:`P(B|A_0)` is the conditional
-probability that a path ends in :math:`B` (before any other state) given
-that it exits :math:`A_0`. We refer to this conditional probability as the
-"transition probability" for the transition :math:`A\to B`.
+interface :math:`\lambda_0`, and the :math:`P_A(B|\lambda_0)` is the
+conditional probability that a path ends in :math:`B` (before any other
+state) given that it exits :math:`\lambda_0`. We refer to this conditional
+probability as the "transition probability" for the transition :math:`A\to
+B`. Note that the formally, :math:`\lambda` should also be subscripted by
+the interface set that it refers to (and in MSTIS, the state label is often
+used to stand in for the only interface set). In the :math:`A\to B`
+transition, there is only one interface set, so there is no possibility of
+confusion.
 
 All TIS simulations make this split. In the following, we'll discuss the
 various ways to calculate the flux, and then we'll discuss approaches for
@@ -43,30 +48,40 @@ mathematical notation to be used.
 Glossary
 --------
 
-+----------------+------------------------+--------------------------------+
-| Term           |  Math Notation         | Description                    |
-+================+========================+================================+
-| flux           | :math:`\phi_{A_0}`     |                                |
-+----------------+------------------------+--------------------------------+
-| transition     | :math:`P(B|A_0)`       | probability that a path that   |
-| probability    |                        | leaves the innermost           |
-|                |                        | interface  :math:`A_0` next    |
-|                |                        | hits state :math:`B`           |
-+----------------+------------------------+--------------------------------+
-| (ensemble)     | :math:`P_S(\lambda |   | probability that a path that   |
-| crossing       | A_i)`                  | crosses (is sampled from)      |
-| probability    |                        | interface :math:`A_i` reaches  |
-|                |                        | :math:`\lambda`                |
-+----------------+------------------------+--------------------------------+
-| total crossing | :math:`P(\lambda |     | the probability (calculated    |
-| probablity     | A_0)`                  | from all data) that a path     |
-|                |                        | that crosses :math:`A_0` will  |
-|                |                        | reach :math:`\lambda`          |
-+----------------+------------------------+--------------------------------+
-| conditional    | :math:`P_S(B|A_m)`     | the probabiility               |
-| transition     |                        |                                |
-| probability    |                        |                                |
-+----------------+------------------------+--------------------------------+
++----------------+-------------------------+-------------------------------+
+| Term           |  Math Notation          | Description                   |
++================+=========================+===============================+
+| flux           | :math:`\phi_{A_0}`      | frequency at which a path     |
+|                |                         | starting in :math:`A` crosses |
+|                |                         | the innermost interface       |
+|                |                         | :math:`\lambda_0`             |
++----------------+-------------------------+-------------------------------+
+| transition     | :math:`P^\text{tot}_A(B | probability that a path that  |
+| probability    | | \lambda_0)`           | starts in :math:`A` and       |
+|                |                         | crosses the innermost         |
+|                |                         | interface :math:`\lambda_0`   |
+|                |                         | will next hit state :math:`B` |
++----------------+-------------------------+-------------------------------+
+| (ensemble)     | :math:`P_A(\lambda |    | probability that a path that  |
+| crossing       | \lambda_i)`             | starts in :math:`A` and       |
+| probability    |                         | crosses (is sampled from)     |
+| function       |                         | interface :math:`\lambda_i`   |
+|                |                         | reaches :math:`\lambda`       |
++----------------+-------------------------+-------------------------------+
+| total crossing | :math:`P^\text{tot}_A(  | probability (calculated       |
+| probability    | \lambda | \lambda_0)`   | from all data) that a path    |
+| function       |                         | that starts in state          |
+|                |                         | :math:`A` and crosses the     |
+|                |                         | innermost interface           |
+|                |                         | :math:`\lambda_0` will        |
+|                |                         | reach :math:`\lambda`         |
++----------------+-------------------------+-------------------------------+
+| conditional    | :math:`P_A( B |         | probabiility that a path that |
+| transition     | \lambda_m)`             | starts in :math:`A` and       |
+| probability    |                         | crosses (is sampled from)     |
+|                |                         | interface :math:`\lambda_m`   |
+|                |                         | will next hit state :math:`B` |
++----------------+-------------------------+-------------------------------+
 
 The probabilities above can be separated along two axes. The first is
 whether the are a crossing probability (a function of some order parameter
@@ -76,26 +91,36 @@ directly sampled during the simulation, or whether they are calculated from
 the full simulation data. This distinction is illustrated in the table
 below.
 
-+----------------+-----------------------------+-------------------------+
-|                |  Crossing probability       |  Transition probability |
-+================+=============================+=========================+
-| **Sampled**    | :math:`P_S(\lambda | A_i)`  | :math:`P_S(B | A_m)`    |
-+----------------+-----------------------------+-------------------------+
-| **Calculated** | :math:`P(\lambda | A_0)`    | :math:`P(B | A_0)`      |
-+----------------+-----------------------------+-------------------------+
++-------------+--------------------------+---------------------------------+
+|             |  Crossing probability    |  Transition probability         |
+|             |  function                |                                 |
++=============+==========================+=================================+
+| **Sampled** | :math:`P_A(\lambda |     | :math:`P_A(B | \lambda_m)`      |
+|             | \lambda_i)`              |                                 |
++-------------+--------------------------+---------------------------------+
+| **Total**   | :math:`P^\text{tot}_A(   | :math:`P^\text{tot}_A(B | A_0)` |
+|             | \lambda | \lambda_0)`    |                                 |
++-------------+--------------------------+---------------------------------+
 
 In the limit of infinite sampling, the sampled and calculated versions
 should be identical. That is, the crossing probability sampled from
-interface :math:`A_0`, :math:`P_S(\lambda | A_0)`, would equal the total
-crossing probability :math:`P(\lambda | A_0)`. And similarly, the
-conditional transition probability sampled from :math:`A_0`, :math:`P_S(B |
-A_0)`, would equal the total transition probability :math:`P(B|A_0)`.
+interface :math:`\lambda_0`, :math:`P_A(\lambda | A_0)`, would equal the
+total crossing probability :math:`P^\text{tot}_A(\lambda | A_0)`. And
+similarly, the conditional transition probability sampled from
+:math:`\lambda_0`, :math:`P_A(B | \lambda_0)`, would equal the total
+transition probability :math:`P^\text{tot}_A(B|\lambda_0)`.
 
 Of course, the entire point of TIS is that infinite sampling is not
 possible. In fact, the very definition of the transition being a rare event
-is that, under feasible sampling, :math:`P(B | A_0) \approx 0`. By sampling
-multiple path ensembles, TIS allows us to get a good estimate for
-:math:`P(B|A_0)` with much less sampling effort.
+is that, under feasible sampling, :math:`P_A(B | \lambda_0) \approx 0`. By
+sampling multiple path ensembles, TIS allows us to get a good estimate for
+:math:`P_A(B|\lambda_0)` with much less sampling effort.
+
+We typically only discuss the "total" examples (both total crossing
+probability and total transition probability) with the innermost interface
+as the condition. When it comes to the (sampled) conditional transition
+probability, we typically use the outermost interface (traditionally denoted
+with the subscript :math:`m`).
 
 For simple cases, the value of :math:`\lambda` is the sole feature defining
 both states. In that case, the transition probabilites are equivalent to
@@ -127,9 +152,9 @@ statistics in this approach. However, this *is* the default (when possible),
 and can be explicitly selected by using the :class:`.MinusMoveFlux`
 object.
 
-* Example using ``DirectSimulation`` to determine the flux
-* Example using ``TrajectoryTransitionAnalysis`` to determine the flux
-* Example using ``MinusMoveFlux`` to determine the flux
+* TODO: Example using ``DirectSimulation`` to determine the flux
+* TODO: Example using ``TrajectoryTransitionAnalysis`` to determine the flux
+* TODO: Example using ``MinusMoveFlux`` to determine the flux
 
 --------------------------------------
 Calculating the transition probability
@@ -143,42 +168,46 @@ terminology):
 
 .. math::
 
-    P(B|A_0) = \prod_{0}^{m-1} P(A_{i+1}|A_{i})\ P(B|A_m)
+    P_A(B|\lambda_0) = \prod_{0}^{m-1} P_A(\lambda_{i+1}|\lambda_{i})\ 
+                       P_A(B|\lambda_m)
 
 There are a few ways that this can be calculated. What we term the
 "standard" approach involves calculating the crossing probability
-:math:`P(\lambda | A_i)` for each interface :math:`A_i`, and using a
-combining procedure (WHAM by default) to create the total crossing
-probability :math:`\bar{P}(\lambda | A_0)`, and then use 
-:math:`\prod_0^{m-1} P(A_{i+1}|A_i) = \bar{P}(\lambda=A_{m} | A_0)`.  The
-bar is to distinguish total crossing probability, which is computed based on
+:math:`P_A(\lambda | \lambda_i)` for each interface :math:`\lambda_i`, and
+using a combining procedure (WHAM by default) to create the total crossing
+probability :math:`P^\text{tot}_A(\lambda | \lambda_0)`, and then use
+:math:`\prod_0^{m-1} P_A(\lambda_{i+1}|\lambda_i) =
+P^\text{tot}_A(\lambda=\lambda_{m} | \lambda_0)`.  The superscript "tot" is
+to distinguish the total crossing probability, which is computed based on
 all ensembles, from the crossing probability sampled from ensemble
-:math:`A_0` (see below). Finally, we calculate :math:`P(B|A_m)` (the
-"conditional crossing probability" to :math:`B`, given interface
-:math:`A_m`), and multiply these to get to transition probability.
+:math:`\lambda_0` (see below). Finally, we calculate
+:math:`P_A(B|\lambda_m)` (the "conditional crossing probability" to
+:math:`B`, given interface :math:`\lambda_m`), and multiply these to get to
+transition probability.
 
 Other approaches include the path-type analysis, and per-ensemble histograms
-(i.e., a coarser estimate of :math:`P(\lambda|A_0)`, only obtaining
+(i.e., a coarser estimate of :math:`P(\lambda|\lambda_0)`, only obtaining
 estimates when :math:`\lambda` is at an interface boundary.) These have not yet
 been implemented in OPS, but will be soon.
 
 Total crossing probability
 ==========================
 
-As discussed above, the quantity :math:`\prod_0^{m-1} P(A_{i+1}|A_i)` is
-calculated from the total crossing probability :math:`\bar{P}(\lambda|A_0)`.
-In particular, it is determined from the individual ensemble crossing
-probabilities :math:`P(\lambda | A_i)`, which are sampled during the
-simulation.
+As discussed above, the quantity :math:`\prod_0^{m-1}
+P_A(\lambda_{i+1}|\lambda_i)` is calculated from the total crossing
+probability :math:`P^\text{tot}_A(\lambda | \lambda_0)`.  In particular, it
+is determined from the individual ensemble crossing probabilities
+:math:`P_A(\lambda | \lambda_i)`, which are sampled during the simulation.
 
 Conditional transition probability
 ==================================
 
-The conditional transition probability is :math:`P(B|A_m)`, the probability
-of reaching state :math:`B` given that the path was sampled from the
-outermost interface, :math:`A_m`. Note that, in the case of multiple states,
-the only difference between calculating the rate for :math:`A\to B` and
-:math:`A\to C` is that the conditional transition probability changes.
+The conditional transition probability is :math:`P(B|\lambda_m)`, the
+probability of reaching state :math:`B` given that the path was sampled from
+the outermost interface, :math:`\lambda_m`. Note that, in the case of
+multiple states, the only difference between calculating the rate for
+:math:`A\to B` and :math:`A\to C` is that the conditional transition
+probability changes.
 
 * Example manually setting up ``StandardTransitionProbability``
 
