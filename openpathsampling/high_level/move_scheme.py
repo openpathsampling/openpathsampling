@@ -765,7 +765,7 @@ class MoveScheme(StorableNamedObject):
             group = my_movers[groupname]
             for mover in group:
                 key_iter = (k for k in self._mover_acceptance.keys()
-                            if k[0] is mover)
+                            if k[0] == mover)
 
                 for k in key_iter:
                     stats[groupname][0] += self._mover_acceptance[k][0]

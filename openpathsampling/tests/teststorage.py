@@ -85,6 +85,36 @@ class testStorage(object):
 
         store.close()
 
+    def test_safemode(self):
+        fname = data_filename("cv_storage_safemode_test.nc")
+        if os.path.isfile(fname):
+            os.remove(fname)
+
+        cv = paths.CoordinateFunctionCV('cv', lambda x: x)
+
+        traj = paths.Trajectory(list(self.traj))
+        template = traj[0]
+
+        storage_w = paths.Storage(fname, "w")
+        storage_w.snapshots.save(template)
+        storage_w.cvs.save(cv)
+        storage_w.close()
+
+        storage_r = paths.Storage(fname, 'r')
+        # default safemode = False
+        assert(storage_r.simplifier.safemode is False)
+        cv_r = storage_r.cvs[0]
+        assert(cv_r == cv)
+        assert(cv.cv_callable is not None)
+        storage_r.close()
+
+        storage_r = paths.Storage(fname, 'r')
+        storage_r.simplifier.safemode = True
+        cv_r = storage_r.cvs[0]
+        assert(cv_r == cv)
+        assert(cv_r.cv_callable is None)
+        storage_r.close()
+
     def test_store_snapshots(self):
         fname = data_filename("cv_storage_test.nc")
         if os.path.isfile(fname):
