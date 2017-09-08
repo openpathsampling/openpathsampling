@@ -32,7 +32,7 @@ requirements:
     - networkx
     - matplotlib
     - ujson
-    - msmbuilder
+    #- msmbuilder
     - pyemma
 
 test:

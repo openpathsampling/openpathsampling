@@ -22,6 +22,7 @@ script:
   #- conda install --yes future
   #- conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
   - conda install --yes nose python-coveralls ipynbtest
+  - conda install --yes msmbuilder
   # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
