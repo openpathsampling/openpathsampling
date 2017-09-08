@@ -32,6 +32,8 @@ requirements:
     - networkx
     - matplotlib
     - ujson
+    - msmbuilder
+    - pyemma
 
 test:
   imports:
