@@ -5,7 +5,7 @@ TIS Analysis
 ============
 
 OpenPathSampling tries to give reasonable default approaches to analyze
-results from transition interface smapling. These defaults are run
+results from transition interface sampling. These defaults are run
 through the :class:`.TransitionNetwork` objects, after using the
 ``rate_matrix`` method for that network. The main analysis sections of the
 main examples show how to use the default analysis.
@@ -156,9 +156,18 @@ statistics in this approach. However, this *is* the default (when possible),
 and can be explicitly selected by using the :class:`.MinusMoveFlux`
 object.
 
-* TODO: Example using ``DirectSimulation`` to determine the flux
-* TODO: Example using ``TrajectoryTransitionAnalysis`` to determine the flux
-* TODO: Example using ``MinusMoveFlux`` to determine the flux
+* An example of how to use the :class:`.DirectSimulation` object to
+  determine the flux is given in the :ref:`MISTIS example
+  <toy_model_mistis>`. The flux result returned by
+  :class:`.DirectSimulation` can be used as input to a :class:`.DictFlux`.
+* An example of how to use the :class:`.TrajectoryTransitionAnalysis` object
+  to calculate the flux can be seen in one of the `OPS additional examples
+  <https://gitlab.e-cam2020.eu/dwhswenson/ops_additional_examples/blob/master/transition_analysis_Abl.ipynb>`_.
+  The flux returned from that can easily be turned into the correct format
+  for the :class:`.DictFlux` object in order to use it for TIS analysis.
+* Using the :class:`.MinusMoveFlux` is the default when it is possible.
+  Details on how to use this are in the example notebook for the TIS
+  analysis.
 
 --------------------------------------
 Calculating the transition probability
@@ -172,7 +181,7 @@ terminology):
 
 .. math::
 
-    P^\text{tot}_A(B|\lambda_0) = \prod_{0}^{m-1} 
+    P^\text{tot}_A(B|\lambda_0) = \prod_{i=0}^{m-1} 
                                   P_A(\lambda_{i+1}|\lambda_{i})\ 
                                   P_A(B|\lambda_m)
 
@@ -180,12 +189,12 @@ There are a few ways that this can be calculated. What we term the
 "standard" approach involves calculating the crossing probability
 :math:`P_A(\lambda | \lambda_i)` for each interface :math:`\lambda_i`, and
 using a combining procedure (WHAM by default) to create the total crossing
-probability :math:`P^\text{tot}_A(\lambda | \lambda_0)`, and then use
-:math:`\prod_0^{m-1} P_A(\lambda_{i+1}|\lambda_i) =
-P^\text{tot}_A(\lambda=\lambda_{m} | \lambda_0)`.  The superscript "tot" is
-to distinguish the total crossing probability, which is computed based on
-all ensembles, from the crossing probability sampled from ensemble
-:math:`\lambda_0` (see below). Finally, we calculate
+probability :math:`P^\text{tot}_A(\lambda | \lambda_0)`, set :math:`\lambda
+= \lambda_m` in that, and then use :math:`\prod_{i=0}^{m-1}
+P_A(\lambda_{i+1}|\lambda_i) = P^\text{tot}_A(\lambda_{m} | \lambda_0)`.
+The superscript "tot" is to distinguish the total crossing probability,
+which is computed based on all ensembles, from the crossing probability
+sampled from ensemble :math:`\lambda_0` (see below). Finally, we calculate
 :math:`P_A(B|\lambda_m)` (the "conditional crossing probability" to
 :math:`B`, given interface :math:`\lambda_m`), and multiply these to get to
 transition probability.
@@ -198,7 +207,7 @@ been implemented in OPS, but will be soon.
 Total crossing probability
 ==========================
 
-As discussed above, the quantity :math:`\prod_0^{m-1}
+As discussed above, the quantity :math:`\prod_{i=0}^{m-1}
 P_A(\lambda_{i+1}|\lambda_i)` is calculated from the total crossing
 probability :math:`P^\text{tot}_A(\lambda | \lambda_0)`.  In particular, it
 is determined from the individual ensemble crossing probabilities
@@ -214,7 +223,10 @@ multiple states, the only difference between calculating the rate for
 :math:`A\to B` and :math:`A\to C` is that the conditional transition
 probability changes.
 
-* Example manually setting up ``StandardTransitionProbability``
+The example notebook on the TIS analysis framework includes examples of how
+to create the :class:`.TotalCrossingProbability`,
+:class:`.ConditionalTransitionProbability`, and
+:class:`.TransitionProbability` objects.
 
 ------------------------------------------------------
 Putting it all together: :class:`.TISAnalysis` objects
@@ -237,7 +249,9 @@ There are many options for setting up the :class:`.StandardTISAnalysis`; see
 the documentation of that class for more details. A few simple examples are
 shown in the following example notebook:
 
-* TODO: examples with ``StandardTISAnalysis``
+The example notebook about the TIS analysis subsystem includes an example of
+the :class:`.StandardTISAnalysis`, as well as a description of how to set up
+the more genreal :class:`.TISAnalysis` object.
 
 -------------------------------------------------
 Summary: Visual overview of the standard analysis
