@@ -18,6 +18,7 @@ script:
   - conda create --yes --name test --use-local openpathsampling-dev
   - conda info --envs
   - source activate test
+  - conda list -n test
   #- conda install --yes future
   #- conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
   - conda install --yes nose python-coveralls ipynbtest
