@@ -12,3 +12,5 @@ svgwrite
 networkx
 matplotlib
 ujson
+msmbuilder
+pyemma
