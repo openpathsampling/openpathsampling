@@ -7,7 +7,10 @@ from .test_helpers import (
     assert_items_equal
 )
 
-from openpathsampling.analysis.tis_analysis import *
+from openpathsampling.analysis.tis import *
+from openpathsampling.analysis.tis.core import \
+    steps_to_weighted_trajectories
+import openpathsampling as paths
 
 import pandas as pd
 import pandas.util.testing as pdt
