@@ -145,7 +145,7 @@ is to directly calculate the flux, using either the
 in OPS. This is relatively simple, and since you are likely to have run MD
 to ensure that your state is stable (and to select a location for the
 innermost interface), it is likely that you'll already have enough data to
-get very precise results. When doing this, you'll use the :class:`.FluxDict`
+get very precise results. When doing this, you'll use the :class:`.DictFlux`
 object to store the flux.
 
 The second approach is to calculate the flux using the minus interface. This

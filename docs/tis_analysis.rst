@@ -1,6 +1,6 @@
 .. _tis_analysis:
 
-.. currentmodule:: openpathsampling.analysis.tis_analysis
+.. currentmodule:: openpathsampling.analysis.tis
 
 
 TIS Analysis API
