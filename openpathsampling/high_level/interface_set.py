@@ -21,6 +21,16 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
         super(InterfaceSet, self).__init__()
         self.volumes = volumes
         self.cv = cv
+        if self.cv is not None:
+            max_cv_lambda = lambda t, cv_: max(cv_(t))
+            self.max_cv = paths.netcdfplus.FunctionPseudoAttribute(
+                name="max " + self.cv.name,
+                key_class=paths.Trajectory,
+                f=lambda t: max_cv_lambda(t, cv_=self.cv)
+            )
+        else:
+            self.max_cv = None
+
         self.lambdas = lambdas
         self.direction = direction
         if direction is None and lambdas is not None:

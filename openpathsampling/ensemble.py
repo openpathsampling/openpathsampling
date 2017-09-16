@@ -2811,7 +2811,7 @@ class TISEnsemble(SequentialEnsemble):
         }
 
     def __init__(self, initial_states, final_states, interface,
-                 orderparameter=None, lambda_i=None):
+                 orderparameter=None, max_cv=None, lambda_i=None):
         # regularize to list of volumes
         # without orderparameter, some info can't be obtained
         try:
@@ -2837,16 +2837,21 @@ class TISEnsemble(SequentialEnsemble):
         self.final_states = final_states
         self.interface = interface
         #        self.name = interface.name
-        self.orderparameter = orderparameter
-        # TODO: add max_orderparameter as a traj CV
+        self.orderparameter = orderparameter  # TODO: is this used? remove?
+        self.max_cv = max_cv
         self.lambda_i = lambda_i
         self._initial_volumes = volume_a
         self._final_volumes = volume_b | volume_a
 
     def __call__(self, trajectory, trusted=None, candidate=False):
-        use_candidate = (candidate and self.lambda_i is not None
-                         and self.orderparameter is not None)
-        if use_candidate:
+        use_candidate = (candidate and self.lambda_i is not None)
+        if use_candidate and self.max_cv is not None:
+            return (
+                self._initial_volumes(trajectory[0])
+                & self._final_volumes(trajectory[-1])
+                & (self.max_cv(trajectory) > self.lambda_i)
+            )
+        elif use_candidate and self.orderparameter is not None:
             # as a candidate trajectory, we assume that only the first and
             # final frames can be in a state
             #logger.debug("initial: " +
