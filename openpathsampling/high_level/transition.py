@@ -215,9 +215,34 @@ class TISTransition(Transition):
 
 
     def build_ensembles(self, stateA, stateB, interfaces, orderparameter):
-        self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
-            stateA, stateB, self.interfaces, orderparameter
-        )
+        try:
+            cv = interfaces.cv
+        except AttributeError:
+            cv = orderparameter
+        if cv is None:
+            # in case interface.cv is None and orderparameter is not None
+            cv = orderparameter
+
+        try:
+            max_cv = interfaces.max_cv
+        except AttributeError:
+            max_cv = None
+
+        self.ensembles = [
+            paths.TISEnsemble(
+                initial_states=stateA,
+                final_states=stateB,
+                interface=iface_vol,
+                orderparameter=cv,
+                max_cv=max_cv,
+                lambda_i=interfaces.get_lambda(iface_vol)
+            )
+            for iface_vol in interfaces
+        ]
+
+        #self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
+            #stateA, stateB, self.interfaces, orderparameter
+        #)
         for ensemble in self.ensembles:
             ensemble.named(self.name + " " +
                            str(self.ensembles.index(ensemble)))

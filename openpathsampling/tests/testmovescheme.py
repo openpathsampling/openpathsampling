@@ -33,6 +33,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class testMoveScheme(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
@@ -369,6 +370,7 @@ class testMoveScheme(object):
 
 class testDefaultScheme(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
@@ -752,6 +754,7 @@ class testDefaultScheme(object):
 
 class testLockedMoveScheme(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
@@ -814,6 +817,7 @@ class testLockedMoveScheme(object):
 
 class testOneWayShootingMoveScheme(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
