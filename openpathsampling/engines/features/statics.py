@@ -98,7 +98,12 @@ def md(snapshot):
         output = np.zeros([1, n_atoms, 3], np.float32)
         output[0, :, :] = snapshot.coordinates
 
-        return mdtraj.Trajectory(output, snapshot.topology.mdtraj)
+        box_vectors = np.zeros([1, 3, 3], np.float32)
+        box_vectors[0, :, :] = snapshot.box_vectors
+
+        traj = mdtraj.Trajectory(output, snapshot.topology.mdtraj)
+        traj.unitcell_vectors = box_vectors
+        return traj
 
 
 @property

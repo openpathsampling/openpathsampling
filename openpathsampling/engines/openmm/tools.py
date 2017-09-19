@@ -327,5 +327,22 @@ def trajectory_to_mdtraj(trajectory, md_topology=None):
     # traj.unitcell_vectors = trajectory.box_vectors
     return trajectory.to_mdtraj(md_topology)
 
+
 def ops_load_trajectory(filename, **kwargs):
+    """
+    Load a trajectory like you would use mdtraj but return a :obj:`Trajectory` object
+
+    Parameters
+    ----------
+    filename : str
+        the filename of the trajectory to be loaded
+    kwargs
+        the arguments you would use also for mdtraj.load
+
+    Returns
+    -------
+    :obj:`Trajectory`
+        an openpathsampling compatible :obj:`Trajectory` object.
+
+    """
     return trajectory_from_mdtraj(md.load(filename, **kwargs))
