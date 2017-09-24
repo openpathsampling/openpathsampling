@@ -16,6 +16,7 @@ OpenPathSampling API
     network
     engines/index
     netcdfplus/index
+    tis_analysis
 
     Full API <api>
 

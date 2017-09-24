@@ -2,8 +2,8 @@
 
 .. currentmodule:: openpathsampling.shooting
 
-ShootingPointSelector Functions
-===============================
+ShootingPointSelector API
+=========================
 
 basic selector
 --------------

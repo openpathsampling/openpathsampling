@@ -292,12 +292,52 @@ class TISNetwork(TransitionNetwork):
             if ms_outers is not None:
                 ms_outers = [ms_outers]
         self.ms_outer_objects = ms_outers
+        self._sampling_to_analysis = None
+        self._analysis_to_sampling = None
+        self._sampling_ensemble_for = None
         super(TISNetwork, self).__init__()
 
-    def from_transitions(self, transitions, interfaces=None):
-        # this will have to be disabled until I can do something
-        # better with it
-        pass
+    @property
+    def sampling_to_analysis(self):
+        """dict mapping sampling transitions to analysis transitions"""
+        if self._sampling_to_analysis is None:
+            self._sampling_to_analysis = {
+                sampling_t: [t for t in self.transitions.values()
+                             if sampling_t.interfaces == t.interfaces]
+                for sampling_t in self.sampling_transitions
+            }
+        return self._sampling_to_analysis
+
+    @property
+    def analysis_to_sampling(self):
+        """dict mapping analysis transitions to sampling transitions"""
+        # in current examples, the result list here is always length 1, but
+        # perhaps future methods will use multiple sampling transitions
+        # (different order parameters?) to describe one physical transition
+        if self._analysis_to_sampling is None:
+            self._analysis_to_sampling = {
+                t: [sampling_t for sampling_t in self.sampling_to_analysis
+                    if t in self.sampling_to_analysis[sampling_t]]
+                for t in self.transitions.values()
+            }
+        return self._analysis_to_sampling
+
+    @property
+    def sampling_ensemble_for(self):
+        """dict mapping ensembles (incl. sampling) to sampling ensemble"""
+        if self._sampling_ensemble_for is None:
+            self._sampling_ensemble_for = {ens: ens
+                                           for ens in self.sampling_ensembles}
+            for ens in self.analysis_ensembles:
+                analysis_transitions = [t for t in self.transitions.values()
+                                        if ens in t.ensembles]
+                analysis_trans = analysis_transitions[0]  # could use any
+                ens_idx = analysis_trans.ensembles.index(ens)
+                sampling_trans = self.analysis_to_sampling[analysis_trans]
+                assert len(sampling_trans) == 1  # this only works in this case
+                sampling_ens = sampling_trans[0].ensembles[ens_idx]
+                self._sampling_ensemble_for[ens] = sampling_ens
+        return self._sampling_ensemble_for
 
     def set_fluxes(self, flux_dictionary):
         """
@@ -746,7 +786,7 @@ class MISTISNetwork(TISNetwork):
                                                   set([stateA, stateB]))
                 ensemble_to_intersect = paths.AllOutXEnsemble(other_states)
             else:
-                final_state = all_states
+                final_state = paths.join_volumes(all_states_set)
                 ensemble_to_intersect = paths.FullEnsemble()
 
             sample_trans = paths.TISTransition(

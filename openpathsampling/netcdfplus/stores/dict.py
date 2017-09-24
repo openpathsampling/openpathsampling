@@ -154,7 +154,7 @@ class DictStore(NamedObjectStore):
     #     return self.name_idx.keys()
 
     def __iter__(self):
-        return iterkeys(self.name_idx)
+        return iter(iterkeys(self.name_idx))
 
     def iteritems(self):
         for name in self:

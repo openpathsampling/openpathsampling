@@ -5,6 +5,8 @@
 
 /*.iml
 *.nc
+cover
+*pstat
 
 ## Directory-based project format:
 .idea/
