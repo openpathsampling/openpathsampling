@@ -6,9 +6,9 @@ if [[ "$TRAVIS_PULL_REQUEST" != "false" ]]; then
     echo "This is a pull request. No deployment will be done."; exit 0
 fi
 
-if [[ "$TRAVIS_BRANCH" != "master" ]]; then
-    echo "No deployment on BRANCH='$TRAVIS_BRANCH'"; exit 0
-fi
+#if [[ "$TRAVIS_BRANCH" != "master" ]]; then
+    #echo "No deployment on BRANCH='$TRAVIS_BRANCH'"; exit 0
+#fi
 
 PACKAGE_NAME=openpathsampling-dev
 GROUP_NAME=omnia
@@ -18,7 +18,11 @@ echo travis_fold:start:binstar.upload
 if [[ $CONDA_PY -eq $DEPLOY_PY ]]; then
     conda install --yes anaconda-client jinja2
     conda convert -p all ${BUILD_PATH}/linux-64/${PACKAGE_NAME}*.tar.bz2 -o ${BUILD_PATH}/
-    anaconda -t ${ANACONDA_TOKEN}  upload  --force -u ${GROUP_NAME} -p ${PACKAGE_NAME} ${BUILD_PATH}/*/${PACKAGE_NAME}*.tar.bz2
+    if [[ "$TRAVIS_BRANCH" != "master" ]]; then
+        echo "No conda deploy on branch $TRAVIS_BRANCH"
+    else
+        anaconda -t ${ANACONDA_TOKEN}  upload  --force -u ${GROUP_NAME} -p ${PACKAGE_NAME} ${BUILD_PATH}/*/${PACKAGE_NAME}*.tar.bz2
+    fi
 else
     echo "Only deploy from Python ${DEPLOY_PY}. This is Python ${CONDA_PY}."
     exit 0
@@ -45,5 +49,9 @@ pwd
 echo travis_fold:end:build.docs
 
 echo travis_fold:start:upload.docs
-python devtools/ci/push-docs-to-s3.py
+if [[ "$TRAVIS_BRANCH" != "master" ]]; then
+    echo "No docs deploy on branch $TRAVIS_BRANCH"
+else
+    python devtools/ci/push-docs-to-s3.py
+fi
 echo travis_fold:end:upload.docs
