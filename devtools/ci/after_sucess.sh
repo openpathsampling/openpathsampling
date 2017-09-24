@@ -15,7 +15,7 @@ GROUP_NAME=omnia
 BUILD_PATH=~/miniconda2/conda-bld
 
 echo travis_fold:start:binstar.upload
-if [[ $CONDA_PY -eq $DEPLOY_PY ]]; then
+if [[ "$CONDA_PY" == "$DEPLOY_PY" ]]; then
     conda install --yes anaconda-client jinja2
     conda convert -p all ${BUILD_PATH}/linux-64/${PACKAGE_NAME}*.tar.bz2 -o ${BUILD_PATH}/
     if [[ "$TRAVIS_BRANCH" != "master" ]]; then
