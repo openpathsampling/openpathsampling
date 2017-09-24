@@ -65,10 +65,12 @@ class EnsembleCache(object):
     def __init__(self, direction=None):
         self.start_frame = None
         self.prev_last_frame = None
+        self.prev_last_index = None
         self.last_length = None
         self.direction = direction
         self.contents = {}
         self.trusted = False
+        self.debug_enabled = False
 
     def bad_direction_error(self):
         raise RuntimeError("EnsembleCache.direction = " +
@@ -113,6 +115,7 @@ class EnsembleCache(object):
         # logger.debug("traj " + str([id(s) for s in trajectory]))
         logger.debug("start_frame " + str(id(self.start_frame)))
         logger.debug("prev_last " + str(id(self.prev_last_frame)))
+        logger.debug("prev_last_idx " + str(self.prev_last_index))
 
         if trajectory is not None:
             # if the first frame has changed, we should reset
@@ -155,6 +158,7 @@ class EnsembleCache(object):
         self.trusted = not reset
         self.last_length = len(trajectory)
         if reset:
+            self.debug_enabled = logger.isEnabledFor(logging.DEBUG)
             logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
                 self.start_frame = trajectory.get_as_proxy(0)
@@ -174,8 +178,10 @@ class EnsembleCache(object):
         # other things as well
         if self.direction > 0:
             self.prev_last_frame = trajectory.get_as_proxy(-1)
+            self.prev_last_index = len(trajectory) - 1
         elif self.direction < 0:
             self.prev_last_frame = trajectory.get_as_proxy(0)
+            self.prev_last_index = 0
         else:
             self.bad_direction_error()
 
@@ -1692,30 +1698,43 @@ class SequentialEnsemble(Ensemble):
         final_ens = len(self.ensembles) - 1
         # print traj_final, final_ens
         # logging startup
-        logger.debug(
-            "Beginning can_append with subtraj_first=" + str(subtraj_first) +
-            "; ens_first=" + str(ens_first) + "; ens_num=" + str(ens_num) +
-            "; strict=" + str(strict)
-        )
-        logger.debug(
-            "Can-append sees a trusted cache: " + str(cache.trusted)
-        )
-        if cache.trusted:
-            logger.debug("Cache contents: " + str(cache.contents))
-            logger.debug("cache.prev_last_frame: " +
-                         str(trajectory.index(cache.prev_last_frame)))
-        for i in range(len(self.ensembles)):
-            ens = self.ensembles[i]
-            logger.debug("Ensemble " + str(i) + " : " + ens.__class__.__name__)
+        if cache.debug_enabled:
+            logger.debug(
+                "Beginning can_append with subtraj_first="
+                + str(subtraj_first) + "; ens_first=" + str(ens_first)
+                + "; ens_num=" + str(ens_num)
+                + "; strict=" + str(strict)
+            )
+            logger.debug(
+                "Can-append sees a trusted cache: " + str(cache.trusted)
+            )
+            if cache.trusted:
+                logger.debug("Cache contents: " + str(cache.contents))
+                logger.debug("cache.prev_last_frame: " +
+                             str(trajectory.index(cache.prev_last_frame)))
+            for i in range(len(self.ensembles)):
+                ens = self.ensembles[i]
+                logger.debug("Ensemble " + str(i) + " : "
+                             + ens.__class__.__name__)
 
         while True:  # main loop, with various
             if self._use_cache and cache.trusted:
+                # TODO: trajectory.index is expensive... how to speed up?
                 # offset = 1
                 offset = 0
                 # if cache.last_length == len(trajectory):
                 # offset += 1
-                last_checked = trajectory.index(cache.prev_last_frame) - offset
+                try:
+                    last_checked_index = cache.prev_last_index - offset
+                except:  # on any exception
+                    # TODO: ideally, this won't be covered by tests, and can
+                    # eventually be removed (along with try/except)
+                    last_checked_index = \
+                        trajectory.index(cache.prev_last_frame) - offset
+                #last_checked = trajectory.index(cache.prev_last_frame) - offset
+                last_checked = last_checked_index
             else:
+                last_checked_index = None
                 last_checked = None
             logger.debug("last_checked = " + str(last_checked))
             subtraj_final = self._find_subtraj_final(
@@ -1860,27 +1879,36 @@ class SequentialEnsemble(Ensemble):
                 ens_final = cache.contents['ens_from']
 
         # logging startup
-        logger.debug(
-            "Beginning can_prepend with ens_num:" + str(ens_num)
-            + "  ens_final:" + str(ens_final) + "  subtraj_final "
-            + str(subtraj_final) + "; strict=" + str(strict)
-        )
-        if cache.trusted:
-            logger.debug("Cache contents: " + str(cache.contents))
-            logger.debug("cache.prev_start_frame: " +
-                         str(trajectory.index(cache.start_frame)))
-        for i in range(len(self.ensembles)):
+        if logger.isEnabledFor(logging.DEBUG):
             logger.debug(
-                "Ensemble " + str(i) +
-                " : " + self.ensembles[i].__class__.__name__
+                "Beginning can_prepend with ens_num:" + str(ens_num)
+                + "  ens_final:" + str(ens_final) + "  subtraj_final "
+                + str(subtraj_final) + "; strict=" + str(strict)
             )
+            if cache.trusted:
+                logger.debug("Cache contents: " + str(cache.contents))
+                logger.debug("cache.prev_start_frame: " +
+                             str(trajectory.index(cache.start_frame)))
+            for i in range(len(self.ensembles)):
+                logger.debug(
+                    "Ensemble " + str(i) +
+                    " : " + self.ensembles[i].__class__.__name__
+                )
 
         while True:
             if self._use_cache and cache.trusted:
                 # offset = 1
                 offset = 0
+                try:
+                    last_checked_index = cache.prev_last_index + offset
+                except:  # on any exception
+                    # TODO: ideally, this won't be covered by tests, and can
+                    # eventually be removed (along with try/except)
+                    last_checked_index = \
+                        trajectory.index(cache.prev_last_frame) + offset
                 last_checked = trajectory.index(cache.prev_last_frame) + offset
             else:
+                last_checked_index = None
                 last_checked = None
             subtraj_first = self._find_subtraj_first(
                 trajectory, subtraj_final, ens_num, last_checked)
