@@ -89,7 +89,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenPathSampling'
-copyright = u'2016, Jan-Hendrik Prinz, David W.H. Swenson, John Chodera, Peter Bolhuis'
+copyright = u'2014-2017, Jan-Hendrik Prinz, David W.H. Swenson, John Chodera, Peter Bolhuis'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
