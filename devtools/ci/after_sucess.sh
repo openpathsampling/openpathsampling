@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+DEPLOY_PY="2.7"
+
 if [[ "$TRAVIS_PULL_REQUEST" != "false" ]]; then
     echo "This is a pull request. No deployment will be done."; exit 0
 fi
@@ -12,14 +15,13 @@ GROUP_NAME=omnia
 BUILD_PATH=~/miniconda2/conda-bld
 
 echo travis_fold:start:binstar.upload
-if [[ "2.7" =~ "$python" ]]; then
+if [[ $CONDA_PY -eq $DEPLOY_PY ]]; then
     conda install --yes anaconda-client jinja2
     conda convert -p all ${BUILD_PATH}/linux-64/${PACKAGE_NAME}*.tar.bz2 -o ${BUILD_PATH}/
     anaconda -t ${ANACONDA_TOKEN}  upload  --force -u ${GROUP_NAME} -p ${PACKAGE_NAME} ${BUILD_PATH}/*/${PACKAGE_NAME}*.tar.bz2
-fi
-
-if [[ "$python" != "2.7" ]]; then
-    echo "No deploy on PYTHON_VERSION=${python}"; exit 0
+else
+    echo "Only deploy from Python ${DEPLOY_PY}. This is Python ${CONDA_PY}."
+    exit 0
 fi
 
 echo travis_fold:end:binstar.upload
