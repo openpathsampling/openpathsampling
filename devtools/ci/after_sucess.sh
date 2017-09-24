@@ -20,7 +20,7 @@ if [[ $CONDA_PY -eq $DEPLOY_PY ]]; then
     conda convert -p all ${BUILD_PATH}/linux-64/${PACKAGE_NAME}*.tar.bz2 -o ${BUILD_PATH}/
     anaconda -t ${ANACONDA_TOKEN}  upload  --force -u ${GROUP_NAME} -p ${PACKAGE_NAME} ${BUILD_PATH}/*/${PACKAGE_NAME}*.tar.bz2
 else
-    echo "Docs only deploy from Python ${DEPLOY_PY}. This is Python ${CONDA_PY}."
+    echo "Only deploy from Python ${DEPLOY_PY}. This is Python ${CONDA_PY}."
     exit 0
 fi
 
