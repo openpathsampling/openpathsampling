@@ -7,6 +7,8 @@ from builtins import zip
 from builtins import object
 from .test_helpers import data_filename, assert_close_unit
 
+from nose.plugins.skip import SkipTest
+
 import mdtraj as md
 import numpy as np
 
@@ -14,7 +16,12 @@ import openpathsampling.collectivevariable as op
 import openpathsampling.engines.openmm as peng
 from openpathsampling.netcdfplus import NetCDFPlus
 
-from msmbuilder.featurizer import AtomPairsFeaturizer
+try:
+    from msmbuilder.featurizer import AtomPairsFeaturizer
+except ImportError:
+    has_msmbuilder = False
+else:
+    has_msmbuilder = True
 
 import openpathsampling as paths
 from openpathsampling.tests.test_helpers import make_1d_traj
@@ -76,6 +83,8 @@ class test_FunctionCV(object):
     def test_atom_pair_featurizer(self):
         """ Create an atom pair collectivevariable using MSMSBuilder3 """
 
+        if not has_msmbuilder:
+            raise SkipTest("MSMBuilder not installed")
         atom_pairs = [[0, 1], [10, 14]]
         atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
