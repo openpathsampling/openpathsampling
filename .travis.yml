@@ -18,12 +18,15 @@ script:
   - conda create --yes --name test --use-local openpathsampling-dev
   - conda info --envs
   - source activate test
-  - conda install --yes future
-  - conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
+  - conda list -n test
+  #- conda install --yes future
+  #- conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
+  - conda install --yes nose python-coveralls ipynbtest
+  - conda install --yes msmbuilder
   # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
-  - if [ ${CONDA_PY:0:1} -eq "2" ]; then conda install --yes ipynbtest; source devtools/ci/ipythontests.sh; fi
+  - if [ ${CONDA_PY:0:1} -eq "2" ]; then source devtools/ci/ipythontests.sh; fi
   #- source devtools/ci/ipythontests.sh
 
   # Upload new docs

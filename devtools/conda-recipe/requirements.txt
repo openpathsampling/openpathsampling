@@ -11,3 +11,4 @@ svgwrite
 networkx
 matplotlib
 ujson
+pyemma
