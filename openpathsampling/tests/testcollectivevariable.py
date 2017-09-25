@@ -45,6 +45,18 @@ class test_FunctionCV(object):
         storage.save(cv)
         storage.close()
 
+    def test_pickle_cv_with_imports(self):
+        template = make_1d_traj([0.0])[0]
+
+        def test_cv_func(snap):
+            import math
+            return math.ceil(snap.coordinates[0][0])
+
+        cv = paths.FunctionCV("y", test_cv_func)
+        storage = paths.Storage("myfile.nc", "w", template)
+        storage.save(cv)
+        storage.close()
+
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
         psi_atoms = [6, 8, 14, 16]

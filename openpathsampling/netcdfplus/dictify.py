@@ -35,6 +35,14 @@ else:
     intify_byte = lambda b: ord(b)
     import builtins
 
+# in Python 3.6 the opcodes have changed width
+if sys.version_info > (3, 6):
+    opcode_arg_width = 1
+    opcode_no_arg_width = 1
+else:
+    opcode_arg_width = 2
+    opcode_no_arg_width = 0
+
 
 class ObjectJSON(object):
     """
@@ -461,6 +469,48 @@ class ObjectJSON(object):
         return c
 
     @staticmethod
+    def _to_opcode(code):
+        """
+       Yields the tuple opcode + argument for code
+
+        Parameters
+        ----------
+        code : function
+            the python bytecode to be searched
+
+        Returns
+        -------
+        generator of (int, int)
+            generator the returns tuples of opcode + argument
+        """
+
+        opcode_stream = get_code(code).co_code
+        i = 0
+        extended = 0
+        length = len(opcode_stream)
+        while i < length:
+            int_code = intify_byte(opcode_stream[i])
+            i += 1
+            if int_code >= opcode.HAVE_ARGUMENT:
+                opargs = intify_byte(opcode_stream[i]) + extended
+                if opcode_arg_width == 2:
+                    # before Python 3.6
+                    opargs += intify_byte(opcode_stream[i + 1]) * 256
+
+                extended = 0
+                i += opcode_arg_width
+
+                if int_code == opcode.EXTENDED_ARG:
+                    extended = (256 ** opcode_arg_width) * opargs
+                    continue
+
+            else:
+                i += opcode_no_arg_width
+                opargs = None
+
+            yield int_code, opargs
+
+    @staticmethod
     def _find_var(code, op):
         """
         Helper function to search in python bytecode for specific function calls
@@ -478,22 +528,21 @@ class ObjectJSON(object):
             a list of co_names used in this function when calling op
         """
 
-        # TODO: Clean this up. It now works only for codes that use co_names
-        opcodes = get_code(code).co_code
-        i = 0
-        ret = []
-        while i < len(opcodes):
-            int_code = intify_byte(opcodes[i])
-            if int_code == op:
-                ret.append((i, intify_byte(opcodes[i + 1]) +
-                            intify_byte(opcodes[i + 2]) * 256))
+        code_object = get_code(code)
+        if op in opcode.hasconst:
+            variable = code_object.co_consts
+        elif op in opcode.haslocal:
+            variable = code_object.co_varnames
+        elif op in opcode.hasname:
+            variable = code_object.co_names
+        elif op in opcode.hasfree:
+            variable = code_object.co_freevars
+        else:
+            return []
 
-            if int_code < opcode.HAVE_ARGUMENT:
-                i += 1
-            else:
-                i += 3
-
-        return [get_code(code).co_names[i[1]] for i in ret]
+        return list(set([
+            variable[arg] for code, arg in ObjectJSON._to_opcode(code)
+            if code == op and arg is not None]))
 
     def to_json(self, obj, base_type=''):
         simplified = self.simplify(obj, base_type)

@@ -1,6 +1,6 @@
 .. _network:
 
-.. currentmodule:: openpathsampling.analysis.network
+.. currentmodule:: openpathsampling.high_level.network
 
 Networks
 ========
