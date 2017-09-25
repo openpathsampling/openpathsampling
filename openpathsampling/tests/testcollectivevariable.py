@@ -101,6 +101,8 @@ class test_FunctionCV(object):
 
     def test_return_parameters_from_template(self):
 
+        if not has_msmbuilder:
+            raise SkipTest("MSMBuilder not installed")
         atom_pairs = [[0, 1], [10, 14]]
         atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
