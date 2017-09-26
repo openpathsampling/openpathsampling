@@ -16,7 +16,7 @@ Main functions
    Engine
    engine.OpenMMEngine
    topology.MDTrajTopology
-   topology.OpenMMSystemTopology
+..   topology.OpenMMSystemTopology
 
 
 Utility functions
