@@ -241,6 +241,21 @@ class testMISTISNetwork(testMultipleStateTIS):
         assert_equal(len(transitions[self.stateA, self.stateC].ensembles), 3)
         # TODO: add more checks here
 
+    def test_sampling_ensembles(self):
+        assert_equal(len(self.mistis.sampling_ensembles), 7)
+        all_sampling_ens = sum(
+            [t.ensembles for t in self.mistis.sampling_transitions], []
+        )
+        assert_equal(set(self.mistis.sampling_ensembles),
+                     set(all_sampling_ens))
+        # test that sampling ensembles has cv_max set
+        assert_equal(len(paths.InterfaceSet._cv_max_dict), 1)
+        cv_max = list(paths.InterfaceSet._cv_max_dict.values())[0]
+        for transition in self.mistis.sampling_transitions:
+            assert_equal(transition.interfaces.cv_max, cv_max)
+        for ens in self.mistis.sampling_ensembles:
+            assert_equal(ens.max_cv, cv_max)
+
     def test_ms_outers(self):
         ms_outer_ens = self.mistis.ms_outers[0]
         for traj_label in ['AB', 'BA']:
