@@ -129,7 +129,7 @@ class testMSTISNetwork(testMultipleStateTIS):
             assert_equal(self.mstis.transitions[trans]._flux, myflux)
 
     def test_all_states(self):
-        assert_equal(set(self.mstis.all_states), 
+        assert_equal(set(self.mstis.all_states),
                      set([self.stateA, self.stateB, self.stateC]))
 
     def test_trajectories(self):
@@ -162,6 +162,25 @@ class testMSTISNetwork(testMultipleStateTIS):
         assert_equal(len(self.mstis.from_state[self.stateA].ensembles), 2)
         assert_equal(len(self.mstis.from_state[self.stateB].ensembles), 2)
         assert_equal(len(self.mstis.from_state[self.stateC].ensembles), 2)
+
+        # test that .sampling_ensembles is as expected
+        assert_equal(len(self.mstis.sampling_ensembles), 6)
+        all_sampling_ens = sum(
+            [self.mstis.from_state[state].ensembles
+             for state in [self.stateA, self.stateB, self.stateC]],
+            []
+        )
+        assert_equal(set(self.mstis.sampling_ensembles),
+                     set(all_sampling_ens))
+
+        # test that sampling ensembles has cv_max set
+        assert_equal(len(paths.InterfaceSet._cv_max_dict), 1)
+        cv_max = list(paths.InterfaceSet._cv_max_dict.values())[0]
+        for transition in self.mstis.sampling_transitions:
+            assert_equal(transition.interfaces.cv_max, cv_max)
+        for ens in self.mstis.sampling_ensembles:
+            assert_equal(ens.max_cv, cv_max)
+
 
     def test_autonaming(self):
         assert_equal(self.stateA.name, "A")

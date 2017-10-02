@@ -1698,7 +1698,7 @@ class SequentialEnsemble(Ensemble):
         final_ens = len(self.ensembles) - 1
         # print traj_final, final_ens
         # logging startup
-        if cache.debug_enabled:
+        if cache.debug_enabled:  # pragma: no cover
             logger.debug(
                 "Beginning can_append with subtraj_first="
                 + str(subtraj_first) + "; ens_first=" + str(ens_first)
@@ -1879,7 +1879,7 @@ class SequentialEnsemble(Ensemble):
                 ens_final = cache.contents['ens_from']
 
         # logging startup
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
             logger.debug(
                 "Beginning can_prepend with ens_num:" + str(ens_num)
                 + "  ens_final:" + str(ens_final) + "  subtraj_final "

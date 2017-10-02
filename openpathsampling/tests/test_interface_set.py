@@ -108,12 +108,19 @@ class testVolumeInterfaceSet(object):
                                                   maxvals=[0.1, 0.2])
 
     def test_initialization(self):
+        assert_equal(len(paths.InterfaceSet._cv_max_dict), 1)
+        cv_max = list(paths.InterfaceSet._cv_max_dict.values())[0]
+
         assert_equal(len(self.increasing_set), 2)
         assert_equal(self.increasing_set.direction, 1)
         assert_equal(self.increasing_set.lambdas, [0.0, 0.1])
+        assert_equal(self.increasing_set.cv_max, cv_max)
+
         assert_equal(len(self.decreasing_set), 2)
         assert_equal(self.decreasing_set.direction, -1)
         assert_equal(self.decreasing_set.lambdas, [0.0, -0.1])
+        # TODO: decide what to do about cv_max for decreasing/weird
+
         assert_equal(len(self.weird_set), 2)
         assert_equal(self.weird_set.direction, 0)
         assert_equal(self.weird_set.lambdas, None)
@@ -136,6 +143,7 @@ class testVolumeInterfaceSet(object):
         storage_w = paths.Storage(fname, "w", template)
         storage_w.save(self.increasing_set)
         storage_w.sync_all()
+        storage_w.close()
 
         storage_r = paths.AnalysisStorage(fname)
         reloaded = storage_r.interfacesets[0]

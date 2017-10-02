@@ -17,11 +17,14 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
         order parameter for this interface set
     lambdas : list
         values associated with the CV at each interface
+    cv_max : :class:`.netcdfplus.PseudoAttribute`
+        function to calculate the maximum value of the CV (if not given,
+        will be generated from ``cv`` if that is given)
     """
     # This is a class variable because more than one interface set may use
     # the same CV (with different interface values) -- common in testing.
-    # We need to be able to identify find the correct CV in order to 
     _cv_max_dict = {}
+
     def __init__(self, volumes, cv=None, lambdas=None, cv_max=None,
                  direction=None):
         super(InterfaceSet, self).__init__()
@@ -38,7 +41,8 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
                 self.cv_max = paths.netcdfplus.FunctionPseudoAttribute(
                     name="max " + self.cv.name,
                     key_class=paths.Trajectory,
-                    f=lambda t: cv_max_func(t, cv_=self.cv)
+                    f=cv_max_func,
+                    cv_=self.cv
                 )
             else:
                 self.cv_max = None
@@ -188,6 +192,7 @@ class GenericVolumeInterfaceSet(InterfaceSet):
 
     def to_dict(self):
         return {'cv': self.cv,
+                'cv_max': self.cv_max,
                 'minvals': self.minvals,
                 'maxvals': self.maxvals,
                 'intersect_with': self.intersect_with,
@@ -197,6 +202,7 @@ class GenericVolumeInterfaceSet(InterfaceSet):
 
     def _load_from_dict(self, dct):
         self.cv = dct['cv']
+        self.cv_max = dct['cv_max']
         self.minvals = dct['minvals']
         self.maxvals = dct['maxvals']
         self.intersect_with = dct['intersect_with']

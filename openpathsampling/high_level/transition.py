@@ -224,7 +224,7 @@ class TISTransition(Transition):
             cv = orderparameter
 
         try:
-            max_cv = interfaces.max_cv
+            max_cv = interfaces.cv_max
         except AttributeError:
             max_cv = None
 
