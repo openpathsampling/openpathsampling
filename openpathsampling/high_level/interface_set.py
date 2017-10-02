@@ -202,7 +202,11 @@ class GenericVolumeInterfaceSet(InterfaceSet):
 
     def _load_from_dict(self, dct):
         self.cv = dct['cv']
-        self.cv_max = dct['cv_max']
+        try:
+            self.cv_max = dct['cv_max']
+        except KeyError:  # pragma: no cover
+            # reverse compatibility; deprecated in 0.9.4, remove in 2.0
+            pass
         self.minvals = dct['minvals']
         self.maxvals = dct['maxvals']
         self.intersect_with = dct['intersect_with']
