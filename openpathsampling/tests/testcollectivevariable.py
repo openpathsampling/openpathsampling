@@ -7,6 +7,8 @@ from builtins import zip
 from builtins import object
 from .test_helpers import data_filename, assert_close_unit
 
+from nose.plugins.skip import SkipTest
+
 import mdtraj as md
 import numpy as np
 
@@ -14,7 +16,12 @@ import openpathsampling.collectivevariable as op
 import openpathsampling.engines.openmm as peng
 from openpathsampling.netcdfplus import NetCDFPlus
 
-from msmbuilder.featurizer import AtomPairsFeaturizer
+try:
+    from msmbuilder.featurizer import AtomPairsFeaturizer
+except ImportError:
+    has_msmbuilder = False
+else:
+    has_msmbuilder = True
 
 import openpathsampling as paths
 from openpathsampling.tests.test_helpers import make_1d_traj
@@ -45,6 +52,18 @@ class test_FunctionCV(object):
         storage.save(cv)
         storage.close()
 
+    def test_pickle_cv_with_imports(self):
+        template = make_1d_traj([0.0])[0]
+
+        def test_cv_func(snap):
+            import math
+            return math.ceil(snap.coordinates[0][0])
+
+        cv = paths.FunctionCV("y", test_cv_func)
+        storage = paths.Storage("myfile.nc", "w", template)
+        storage.save(cv)
+        storage.close()
+
     def test_dihedral_op(self):
         """ Create a dihedral order parameter """
         psi_atoms = [6, 8, 14, 16]
@@ -64,6 +83,8 @@ class test_FunctionCV(object):
     def test_atom_pair_featurizer(self):
         """ Create an atom pair collectivevariable using MSMSBuilder3 """
 
+        if not has_msmbuilder:
+            raise SkipTest("MSMBuilder not installed")
         atom_pairs = [[0, 1], [10, 14]]
         atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
@@ -80,6 +101,8 @@ class test_FunctionCV(object):
 
     def test_return_parameters_from_template(self):
 
+        if not has_msmbuilder:
+            raise SkipTest("MSMBuilder not installed")
         atom_pairs = [[0, 1], [10, 14]]
         atom_pair_op = op.MSMBFeaturizerCV(
             "atom_pairs",
