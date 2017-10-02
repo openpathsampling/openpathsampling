@@ -9,3 +9,4 @@ This part covers discussions about various topics.
    common_setups
    which_network
    transitions_and_networks
+   tis_analysis

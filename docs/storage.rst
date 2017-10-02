@@ -26,11 +26,12 @@ stores
 .. autosummary::
     :toctree: api/generated/
 
-    SampleStore
-    MoveChangeStore
-    MCStepStore
-    SampleStore
-    SampleSetStore
-    TrajectoryStore
-    BaseSnapshotStore
-    FeatureSnapshotStore
+    stores.CVStore
+    stores.SampleStore
+    stores.MoveChangeStore
+    stores.MCStepStore
+    stores.SampleStore
+    stores.SampleSetStore
+    stores.TrajectoryStore
+    stores.SnapshotWrapperStore
+    stores.PathSimulatorStore

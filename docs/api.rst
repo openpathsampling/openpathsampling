@@ -46,14 +46,14 @@ Ensemble
 Volume
 ******
 
-.. automodule:: volume
+.. automodule:: openpathsampling.volume
 	:members:
 	
 *********
 PathMover
 *********
 
-.. automodule:: pathmover
+.. automodule:: openpathsampling.pathmover
 	:members:
 	
 *******
