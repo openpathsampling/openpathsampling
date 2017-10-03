@@ -179,7 +179,7 @@ class testMSTISNetwork(testMultipleStateTIS):
         for transition in self.mstis.sampling_transitions:
             assert_equal(transition.interfaces.cv_max, cv_max)
         for ens in self.mstis.sampling_ensembles:
-            assert_equal(ens.max_cv, cv_max)
+            assert_equal(ens.cv_max, cv_max)
 
 
     def test_autonaming(self):
@@ -254,7 +254,7 @@ class testMISTISNetwork(testMultipleStateTIS):
         for transition in self.mistis.sampling_transitions:
             assert_equal(transition.interfaces.cv_max, cv_max)
         for ens in self.mistis.sampling_ensembles:
-            assert_equal(ens.max_cv, cv_max)
+            assert_equal(ens.cv_max, cv_max)
 
     def test_ms_outers(self):
         ms_outer_ens = self.mistis.ms_outers[0]
@@ -342,9 +342,8 @@ class testMISTISNetwork(testMultipleStateTIS):
         fname = data_filename("mistis_storage_test.nc")
         if os.path.isfile(fname):
             os.remove(fname)
-        template = self.traj['AA'][0]
         storage_w = paths.Storage(fname, "w")
-        storage_w.snapshots.save(template)
+        storage_w.save(self.traj['AA'])  # template
 
         # print(storage_w.simplifier.simplify(self.mistis))
 

@@ -1326,14 +1326,14 @@ class testTISEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(test_f, ttraj[test], results[test], failmsg)
 
-    def test_tis_ensemble_candidate_max_cv(self):
+    def test_tis_ensemble_candidate_cv_max(self):
         cv_max_func = lambda t, cv_: max(cv_(t))
-        max_cv = paths.netcdfplus.FunctionPseudoAttribute(
+        cv_max = paths.netcdfplus.FunctionPseudoAttribute(
             name="max " + op.name,
             key_class=paths.Trajectory,
             f=lambda t: cv_max_func(t, cv_=op)
         )
-        tis = TISEnsemble(vol1, vol3, vol2, max_cv=max_cv, lambda_i=0.7)
+        tis = TISEnsemble(vol1, vol3, vol2, cv_max=cv_max, lambda_i=0.7)
 
         test_f = lambda t: tis(t, candidate=True)
         results = {}

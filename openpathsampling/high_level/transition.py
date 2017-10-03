@@ -224,9 +224,9 @@ class TISTransition(Transition):
             cv = orderparameter
 
         try:
-            max_cv = interfaces.cv_max
+            cv_max = interfaces.cv_max
         except AttributeError:
-            max_cv = None
+            cv_max = None
 
         self.ensembles = [
             paths.TISEnsemble(
@@ -234,7 +234,7 @@ class TISTransition(Transition):
                 final_states=stateB,
                 interface=iface_vol,
                 orderparameter=cv,
-                max_cv=max_cv,
+                cv_max=cv_max,
                 lambda_i=interfaces.get_lambda(iface_vol)
             )
             for iface_vol in interfaces
