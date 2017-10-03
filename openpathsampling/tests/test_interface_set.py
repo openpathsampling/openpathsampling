@@ -186,8 +186,10 @@ class testPeriodicVolumeInterfaceSet(object):
         fname = data_filename("interface_set_storage_test.nc")
         if os.path.isfile(fname):
             os.remove(fname)
-        template = make_1d_traj([0.0])[0]
-        storage_w = paths.Storage(fname, "w", template)
+        template_traj = make_1d_traj([0.0])
+        template = template_traj[0]
+        storage_w = paths.Storage(fname, "w")
+        storage_w.save(template_traj)
         storage_w.save(self.increasing_set)
         storage_w.sync_all()
 

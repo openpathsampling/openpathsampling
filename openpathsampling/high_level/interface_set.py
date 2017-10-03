@@ -43,7 +43,7 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
                     key_class=paths.Trajectory,
                     f=cv_max_func,
                     cv_=self.cv
-                )
+                ).with_diskcache(allow_incomplete=True)
             else:
                 self.cv_max = None
         else:
