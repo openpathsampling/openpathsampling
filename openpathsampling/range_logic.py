@@ -210,7 +210,7 @@ def recover_periodic_range(lrange, order, adict, aa_is_full=False):
     else:
         retval = []
         for pair in lrange:
-            opair = [order.index(pval) for pval in pair ]
+            opair = [order.index(pval) for pval in pair]
             opair = [order.index(pval) for pval in pair]
             mytup = tuple(map(adict.get, opair))
             if (mytup[0] == mytup[1]):

@@ -440,7 +440,7 @@ class FullBootstrapping(PathSimulator):
             build_attempts=20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
-        subtraj=None
+        subtraj = None
         while not has_AA_path:
             self.engine.current_snapshot = self.snapshot.copy()
             self.engine.snapshot = self.snapshot.copy()

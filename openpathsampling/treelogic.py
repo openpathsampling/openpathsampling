@@ -107,15 +107,15 @@ class TreeMixin(object):
 
     def key(self, change):
         tree = self.keylist()
-        return [leave for leave in tree if leave[1] is change ][0][0]
+        return [leave for leave in tree if leave[1] is change][0][0]
 
     @classmethod
     def _check_tree(cls, tree, branch, match):
         WILDCATS = {
-            '*' : lambda s : slice(0,None),
-            '.' : lambda s : slice(1,2),
-            '?' : lambda s : slice(0,2),
-            ':' : lambda s : slice(*map(int, s.split(':')))
+            '*': lambda s: slice(0, None),
+            '.': lambda s: slice(1, 2),
+            '?': lambda s: slice(0, 2),
+            ':': lambda s: slice(*map(int, s.split(':')))
         }
         MATCH_ONE = ['.', '?', '*']
 
@@ -272,7 +272,7 @@ class TreeMixin(object):
         nested list of nodes
             the tree in nested list format
         """
-        return [self] + [ ch.tree() for ch in self._subnodes]
+        return [self] + [ch.tree() for ch in self._subnodes]
 
     def map_tree(self, fnc):
         """
@@ -291,7 +291,7 @@ class TreeMixin(object):
         tree (fnc(node, \*\*kwargs))
             nested list of the results of the map
         """
-        return [fnc(self)] + [ ch.map_tree(fnc) for ch in self._subnodes]
+        return [fnc(self)] + [ch.map_tree(fnc) for ch in self._subnodes]
 
     @property
     def identifier(self):
@@ -322,11 +322,11 @@ class TreeMixin(object):
         path = [self.identifier]
 
         result = list()
-        result.append( ( path, self ) )
+        result.append((path, self))
         mp = []
         for sub in self._subnodes:
             subtree = sub.keylist()
-            result.extend([ ( path + mp + [m[0]], m[1] ) for m in subtree ])
+            result.extend([(path + mp + [m[0]], m[1]) for m in subtree])
             mp.extend([subtree[-1][0]])
 
         return result
@@ -360,7 +360,7 @@ class TreeMixin(object):
         --------
         map_pre_order, map_post_order, level_pre_order, level_post_order
         """
-        return [ fnc(node, **kwargs) for node in reversed(self) ]
+        return [fnc(node, **kwargs) for node in reversed(self)]
 
     def depth_post_order(self, fnc, level=0, **kwargs):
         """
@@ -427,7 +427,7 @@ class TreeMixin(object):
         --------
         map_pre_order, map_post_order, level_pre_order, level_post_order
         """
-        return [ fnc(node, **kwargs) for node in iter(self) ]
+        return [fnc(node, **kwargs) for node in iter(self)]
 
     def depth_pre_order(self, fnc, level=0, only_canonical=False, **kwargs):
         """
