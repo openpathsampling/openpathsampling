@@ -1283,12 +1283,12 @@ class EnsembleCombination(Ensemble):
 
         Parameters
         ----------
-        combo : 
+        combo :
             the combination function
         f1 :
             ensemble1's function. Takes trajectory, returns bool. Examples
             include `__call__`, `can_append`, etc.
-        f2 : 
+        f2 :
             ensemble2's function. As with f1, but for ensemble 2.
         trajectory : :class:`.Trajectory`
             input trajectory
