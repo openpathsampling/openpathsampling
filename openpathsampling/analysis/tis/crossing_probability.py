@@ -33,8 +33,11 @@ class FullHistogramMaxLambdas(EnsembleHistogrammer):
     def __init__(self, transition, hist_parameters, max_lambda_func=None):
         self.transition = transition
         if max_lambda_func is None:
-            max_lambda_func = lambda t: max(transition.interfaces.cv(t))
-            #max_lambda_func = transition.interfaces.max_cv  # TODO traj-cv
+            try:
+                max_lambda_func = transition.interfaces.cv_max
+            except AttributeError:
+                max_lambda_func = lambda t: max(transition.interfaces.cv(t))
+
         self.lambdas = {e: l for (e, l) in zip(transition.ensembles,
                                                transition.interfaces.lambdas)}
         super(FullHistogramMaxLambdas, self).__init__(
