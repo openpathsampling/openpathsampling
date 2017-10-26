@@ -2844,14 +2844,17 @@ class TISEnsemble(SequentialEnsemble):
         self._final_volumes = volume_b | volume_a
 
     def __call__(self, trajectory, trusted=None, candidate=False):
+        logger.debug("TIS ENSEMBLE: candidate={0}".format(str(candidate)))
         use_candidate = (candidate and self.lambda_i is not None)
         if use_candidate and self.cv_max is not None:
+            logger.debug("Using candidate shortcut with self.cv_max")
             return (
                 self._initial_volumes(trajectory[0])
                 & self._final_volumes(trajectory[-1])
                 & (self.cv_max(trajectory) > self.lambda_i)
             )
         elif use_candidate and self.orderparameter is not None:
+            logger.debug("Using candidate shortcut with max(orderparameter)")
             # as a candidate trajectory, we assume that only the first and
             # final frames can be in a state
             #logger.debug("initial: " +
@@ -2866,6 +2869,7 @@ class TISEnsemble(SequentialEnsemble):
                 & (max(self.orderparameter(trajectory)) > self.lambda_i)
             )
         else:
+            logger.debug("No shortcut possible")
             # it still works fine if we use the slower algorithm
             return super(TISEnsemble, self).__call__(trajectory, trusted)
 
