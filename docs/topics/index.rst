@@ -3,7 +3,12 @@
 Topics
 ======
 
-This part covers discussions about various topics.
+So far, the OPS documentation is very disorganized. However, we've been
+writing up detailed descriptions on various topics as the need arises, based
+on user feedback. There are those documents. Eventually, this will be
+reorganized into a structured user guide. However, we want our early users
+to have access to as much documentation as possible, so we're providing it
+in the unorganized form.
 
 .. toctree::
    ops_output
