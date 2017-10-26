@@ -36,8 +36,13 @@ class FullHistogramMaxLambdas(EnsembleHistogrammer):
             try:
                 max_lambda_func = transition.interfaces.cv_max
             except AttributeError:
-                max_lambda_func = lambda t: max(transition.interfaces.cv(t))
+                pass  # leave max_lambda_func as None
 
+        if max_lambda_func is None:
+            raise RuntimeError("Can't identify function to determine max "
+                               + "value of order parameter.")
+
+        # TODO: is this used?
         self.lambdas = {e: l for (e, l) in zip(transition.ensembles,
                                                transition.interfaces.lambdas)}
         super(FullHistogramMaxLambdas, self).__init__(

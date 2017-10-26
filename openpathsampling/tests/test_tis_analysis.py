@@ -447,6 +447,21 @@ class TestFullHistogramMaxLambda(TISAnalysisTester):
         mstis_BA_hists = mstis_BA_histogrammer.calculate(self.mstis_steps)
         self._check_transition_results(mstis_BA, mstis_BA_hists)
 
+    @raises(RuntimeError)
+    def test_calculate_no_max_lambda(self):
+        mistis_AB = self.mistis.transitions[(self.state_A, self.state_B)]
+        modified_transition = paths.TISTransition(
+            stateA=mistis_AB.stateA,
+            stateB=mistis_AB.stateB,
+            interfaces=mistis_AB.interfaces.volumes,
+            orderparameter=mistis_AB.orderparameter
+        )
+        mistis_AB_histogrammer = FullHistogramMaxLambdas(
+            transition=modified_transition,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+
+
 
 class TestConditionalTransitionProbability(TISAnalysisTester):
     def _check_network_results(self, network, ctp_results):

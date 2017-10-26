@@ -228,6 +228,12 @@ class TISTransition(Transition):
         except AttributeError:
             cv_max = None
 
+        try:
+            lambdas = [interfaces.get_lambda(iface_vol)
+                       for iface_vol in interfaces]
+        except AttributeError:
+            lambdas = [None] * len(interfaces)
+
         self.ensembles = [
             paths.TISEnsemble(
                 initial_states=stateA,
@@ -235,9 +241,9 @@ class TISTransition(Transition):
                 interface=iface_vol,
                 orderparameter=cv,
                 cv_max=cv_max,
-                lambda_i=interfaces.get_lambda(iface_vol)
+                lambda_i=lambda_i
             )
-            for iface_vol in interfaces
+            for (iface_vol, lambda_i) in zip(interfaces, lambdas)
         ]
 
         #self.ensembles = paths.EnsembleFactory.TISEnsembleSet(

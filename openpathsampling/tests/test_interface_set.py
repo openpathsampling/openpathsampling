@@ -24,7 +24,7 @@ class testInterfaceSet(object):
         paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0])
         self.lambdas = [0.0, 0.1, 0.2, 0.3]
-        self.volumes = paths.VolumeFactory.CVRangeVolumeSet(self.cv, 
+        self.volumes = paths.VolumeFactory.CVRangeVolumeSet(self.cv,
                                                             float("-inf"),
                                                             self.lambdas)
         self.interface_set = paths.InterfaceSet(self.volumes, self.cv,
@@ -63,10 +63,21 @@ class testInterfaceSet(object):
         for vol in self.interface_set:
             assert_equal(vol in self.volumes, True)
         # reversed
-        i = 0 
+        i = 0
         for vol in reversed(self.interface_set):
             assert_equal(vol, self.volumes[3-i])
             i += 1
+
+    def test_no_direction_possible(self):
+        volumes = paths.VolumeFactory.CVRangeVolumeSet(
+            op=self.cv,
+            minvals=[-0.1, -0.2, -0.3],
+            maxvals=[0.1, 0.2, 0.3]
+        )
+        ifaces = paths.InterfaceSet(volumes)
+        assert_equal(ifaces.cv, None)
+        assert_equal(ifaces.cv_max, None)
+        assert_equal(ifaces.direction, 0)
 
 
 class testGenericVolumeInterfaceSet(object):
@@ -91,7 +102,7 @@ class testGenericVolumeInterfaceSet(object):
     def test_bad_sanitize(self):
         GenericVolumeInterfaceSet._sanitize_input([0.0, -0.1],
                                                   [0.1, 0.2, 0.3])
-        
+
 
 class testVolumeInterfaceSet(object):
     def setup(self):
