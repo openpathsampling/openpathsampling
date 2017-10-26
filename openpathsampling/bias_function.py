@@ -86,7 +86,7 @@ class BiasEnsembleTable(BiasFunction):
         # fill the dataframe
         # to do this, we split the matrix into regions based on self_only,
         # other_only, and both. We have to check that we don't have two
-        # versions of the 
+        # versions of the same thing
         for ens_from in self_only:
             orig_from_id = self.ensembles_to_ids[ens_from]
             for ens_to in self_only | both:
