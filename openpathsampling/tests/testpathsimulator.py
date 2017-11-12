@@ -549,8 +549,8 @@ class testDirectSimulation(object):
         for p in expected_fluxes:
             assert_almost_equal(sim.fluxes[p], expected_fluxes[p])
 
-    def test_flux_from_calvinist_dynamics(self):
-        # To check for the multiple interface set case, we need to have two 
+    def test_multiple_cv_flux(self):
+        # To check for the multiple interface set case, we need to have two
         # dimensions. We can hack two "independent" dimensions from a one
         # dimensional system by making the second CV non-monotonic with the
         # first. For the full trajectory, we need snapshots `S` (in the
@@ -573,7 +573,7 @@ class testDirectSimulation(object):
         X_ab = old_div(np.pi,2.0)   # cv1 =  1.57; cv2 = 1.00
         other = old_div(-np.pi,2.0) # cv1 = -1.57; cv2 = 1.00
         # That hack is utterly crazy, but I'm kinda proud of it!
-        predetermined = [S, S, I, X_a,   # (2) first exit 
+        predetermined = [S, S, I, X_a,   # (2) first exit
                          S, X_a,         # (4) cross A
                          S, X_ab,        # (6) cross A & B
                          I, S, X_b,      # (9) cross B
@@ -604,6 +604,28 @@ class testDirectSimulation(object):
                      expected_flux_events[(state, alpha)])
         assert_equal(sim.flux_events[(state, beta)],
                      expected_flux_events[(state, beta)])
+
+    def test_simple_flux(self):
+        state = self.center
+        interface = self.interface
+        A = 0.0
+        I = 0.25
+        X = 0.35
+        # 0 index of traj comes after first found step in CalvinistDyn
+        # FRAME INDEX:      0              5             10    12
+        predetermined = [X, A, I, X, I, X, I, A, I, A, I, X, I, A]
+        engine = CalvinistDynamics(predetermined)
+        init = make_1d_traj([X])
+        sim = DirectSimulation(storage=None,
+                               engine=engine,
+                               states=[state],
+                               flux_pairs=[(state, interface)],
+                               initial_snapshot=init[0])
+        sim.run(len(predetermined) - 1)
+        expected_flux_events = {(state, interface): [(10, 2)]}
+        assert_equal(len(sim.flux_events), 1)
+        assert_equal(sim.flux_events[(state, interface)],
+                     expected_flux_events[(state, interface)])
 
     def test_sim_with_storage(self):
         tmpfile = data_filename("direct_sim_test.nc")
