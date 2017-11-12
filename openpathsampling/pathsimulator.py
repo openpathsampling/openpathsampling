@@ -1056,7 +1056,7 @@ class DirectSimulation(PathSimulator):
 
     def run(self, n_steps):
         most_recent_state = None
-        last_interface_exit = {p: -1 for p in self.flux_pairs}
+        first_interface_exit = {p: -1 for p in self.flux_pairs}
         last_state_visit = {s: -1 for s in self.states}
         was_in_interface = {p: None for p in self.flux_pairs}
         local_traj = paths.Trajectory([self.initial_snapshot])
@@ -1077,7 +1077,7 @@ class DirectSimulation(PathSimulator):
                     state_flux_pairs = [p for p in self.flux_pairs
                                         if p[0] == state]
                     for p in state_flux_pairs:
-                        last_interface_exit[p] = -1
+                        first_interface_exit[p] = -1
                     # if this isn't the first change of state, we add the
                     # transition
                     if most_recent_state:
@@ -1089,14 +1089,20 @@ class DirectSimulation(PathSimulator):
                 state = p[0]
                 interface = p[1]
                 is_in_interface = interface(frame)
-                if not is_in_interface and was_in_interface[p]:
-                    if state is most_recent_state:
-                        last_exit = last_interface_exit[p]
-                        # successful exit
-                        if 0 < last_exit < last_state_visit[state]:
-                            flux_time_range = (step, last_exit)
-                            self.flux_events[p].append(flux_time_range)
-                        last_interface_exit[p] = step
+                # by line: (1) this is a crossing; (2) the most recent state
+                # is correct; (3) this is the FIRST crossing
+                first_exit_condition = (
+                    not is_in_interface and was_in_interface[p]  # crossing
+                    and state is most_recent_state  # correct recent state
+                    and first_interface_exit[p] < last_state_visit[state]
+                )
+                if first_exit_condition:
+                    first_exit = first_interface_exit[p]
+                    # successful exit
+                    if 0 < first_exit < last_state_visit[state]:
+                        flux_time_range = (step, first_exit)
+                        self.flux_events[p].append(flux_time_range)
+                    first_interface_exit[p] = step
                 was_in_interface[p] = is_in_interface
 
             if self.storage is not None:
