@@ -1,4 +1,4 @@
-.. ensembles-apply-trajectories-not-frames::
+.. _ensembles-apply-trajectories-not-frames:
 
 ###########################################
 Ensembles apply to trajectories, not frames

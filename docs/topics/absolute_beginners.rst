@@ -1,4 +1,4 @@
-.. absolute-beginners::
+.. _absolute-beginners:
 
 #############################################
 Conceptual introduction for absolute beginner

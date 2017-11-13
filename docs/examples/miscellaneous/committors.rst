@@ -1,4 +1,4 @@
-.. basic_committor::
+.. _basic_committor:
 
 Basic Committor/Shooting Point Analysis
 =======================================

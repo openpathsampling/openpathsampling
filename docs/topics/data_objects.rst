@@ -1,4 +1,4 @@
-.. data-objects::
+.. _data-objects:
 
 ============
 Data Objects
@@ -91,7 +91,10 @@ Objects describing how sampling happens
 Canonical ``MoveChange``
 ------------------------
 
-TODO: canonical movers
+The ``change`` attribute of an :class:`.MCStep` covers the entire move,
+including all the structural elements involved in making the decision. As
+such, its details are very general, and not the details (such as shooting
+point) that you are probably most interested in.
 
 Getting coordinates (etc.) from snapshots
 -----------------------------------------
