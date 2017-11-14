@@ -88,13 +88,26 @@ Objects describing how sampling happens
   additional information that might be of interest for analysis should be
   stored in the :class:`.Details`.
 
-Canonical ``MoveChange``
-------------------------
+Getting details for the move of interest
+----------------------------------------
 
 The ``change`` attribute of an :class:`.MCStep` covers the entire move,
 including all the structural elements involved in making the decision. As
 such, its details are very general, and not the details (such as shooting
 point) that you are probably most interested in.
+
+You can walk through the structural elements using the ``.subchanges``
+attribute of a :class:`.MoveChange`, but in order to skip to the details
+that you are most likely to be interested in, one :class:`.MoveChange` is
+designated "canonical." For one-way shooting, the change from either the
+forward or backward shot is canonical. The change from the replica exchange
+mover or path reversal mover or minus mover is canonical.  The canonical
+change is always within the nested ``subchanges`` of the
+:class:`MoveChange`, but can be accessed directly with ``change.canonical``.
+Note that this returns a :class:`.MoveChange`; to get the associated
+:class:`.PathMover`, use ``change.canonical.mover``.  The
+``change.canonical.details`` dictionary is where you can find the details of
+what happened during this move.
 
 Getting coordinates (etc.) from snapshots
 -----------------------------------------
@@ -102,9 +115,11 @@ Getting coordinates (etc.) from snapshots
 Of course, each ``Snapshot`` is a record consisting of several fields, or as
 there are referred to in OPS, "features." Because OPS is independent of the
 underlying engine (indeed, the engine need not represent molecular dynamics
-at all), these features are engine-dependent. However, we recommend several
-specific feature names in order to facilitate integration with tools in OPS
-and to simplify communication between engines:
+at all), these features are engine-dependent. However, we recommend that
+particle-based simulation engines use consistent feature names in order to
+facilitate integration with tools in OPS and to simplify communication
+between engines. These are the features we include for all particle-based
+engines in OPS:
 
 * ``coordinates``: Positions of the particles with units attached (for
   engines that have explicit units, such as OpenMM). List of list: the outer
@@ -117,7 +132,7 @@ and to simplify communication between engines:
 * ``masses``: The masses of the system. Units (whether implicit or explicit)
   should be of actual mass, not mass/mole (as is often done in cases where
   energies are reported per mole). This may be used to calculate kinetic
-  energy. Shape is ???TODO
+  energy. Shape is the length of a 
 * ``box_vectors``: Box vectors for a periodic system, or ``None`` if system
   is not periodic. This is usually a 3x3 matrix. OPS uses the same format as
   MDTraj.
@@ -131,14 +146,15 @@ storage). However, these are still accessible from the snapshot itself.
 
 Engines with specific needs may include other features. For example,
 wavefunction information might be included for an engine based on *ab
-initio* dynamics. 
+initio* dynamics. For other features, see the documentation for the specific
+OPS engine wrapper.
 
 Snapshots and trajectories generated using the OPS OpenMM engine can be
 easily converted to `MDTraj <http://mdtraj.org>`_ trajectories with the
-:meth:`openpathsampling.engines.openmm.tools.trajectory_to_mdtraj`
-method. From there,
-one can use all analysis tools in MDTraj, as well is its ability to write
-trajectories to many file formats for input to other analysis programs. In
-addition, you can use MDTraj as a gateway to other libraries: for example,
-its integration with `nglview <https://github.com/arose/nglview/>`_ can be
-used for molecular structure visualization.
+:meth:`openpathsampling.engines.openmm.tools.trajectory_to_mdtraj` method.
+From there, one can use all analysis tools in MDTraj, as well is its ability
+to write trajectories to many file formats for input to other analysis
+programs. In addition, you can use MDTraj as a gateway to other libraries:
+for example, its integration with `nglview
+<https://github.com/arose/nglview/>`_ can be used for molecular structure
+visualization.
