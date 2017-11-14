@@ -2,6 +2,7 @@ import numpy as np
 from .shared import StaticContainerStore, StaticContainer
 import mdtraj
 from openpathsampling.netcdfplus import WeakLRUCache
+import openpathsampling as paths
 
 variables = ['statics']
 lazy = ['statics']
@@ -91,14 +92,8 @@ def md(snapshot):
     -----
     Rather slow since the topology has to be made each time. Try to avoid it
     """
-
     if snapshot.statics is not None:
-        n_atoms = snapshot.coordinates.shape[0]
-
-        output = np.zeros([1, n_atoms, 3], np.float32)
-        output[0, :, :] = snapshot.coordinates
-
-        return mdtraj.Trajectory(output, snapshot.topology.mdtraj)
+        return paths.Trajectory([snapshot]).to_mdtraj()
 
 
 @property
