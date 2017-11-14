@@ -11,6 +11,7 @@ frames. To explain this, let’s consider a couple simple common misconceptions.
 Combining volume ensembles doesn’t combine volumes
 ==================================================
 
+
 In might seem like ``Ensemble(volume_A) & Ensemble(volume_B)`` should be the
 same as ``Ensemble(volume_A & volume_B)``. But this is absolutely *not* the
 case.  We can see this easily by using ``PartOutXEnsemble`` as the example
@@ -27,6 +28,7 @@ volumes can be described like this:
   which is outside of ``volume_A & volume_B``, which is the intersection of
   ``volume_A`` and ``volume_B``.
 
+
 Note that the second case does NOT mean that a single frame is
 simultaneously outside of both ``volume_A`` and ``volume_B``: it is outside
 the intersection, not the union. If what you want is a ensemble of
@@ -34,17 +36,17 @@ trajectories which contain at least one frame that is simultaneously outside
 of ``volume_A`` and outside of ``volume_B``, you can write that as
 ``PartOutXEnsemble(volume_A | volume_B)``.
 
-.. figure:: ensembles_frames.png
+.. image:: ensembles_frames.png
     :alt: A trajectory in `PartOutXEnsemble(volumeA & volumeB)` but not in
          `PartOutXEnsemble(volumeA) & PartOutXEnsemble(volumeB)`
-    :figwidth: 75 %
+    :align: center
+    :scale: 25 %
 
-    This trajectory is in ``PartOutXEnsemble(volume_A & volume_B)`` but
-    not in ``PartOutXEnsemble(volume_A) & PartOutXEnsemble(volume_B)``.
-    To be in that ensemble, it would need to have a frame in the red
-    area, or the outside both volumes in the white area. The volume
-    given by ``volume_A & volume_B`` is the purple area, and some frames
-    are outside of that.
+The above trajectory is in ``PartOutXEnsemble(volume_A & volume_B)`` but not
+in ``PartOutXEnsemble(volume_A) & PartOutXEnsemble(volume_B)``.  To be in
+that ensemble, it would need to have a frame in the red area, or the outside
+both volumes in the white area. The volume given by ``volume_A & volume_B``
+is the purple area, and some frames are outside of that.
 
 
 Complementary frames do not generate the logical inverse ensemble
