@@ -540,13 +540,10 @@ class Trajectory(list, StorableObject):
         :class:`mdtraj.Trajectory`
             the trajectory
         """
-
-
         if topology is None:
             # TODO: maybe add better error output?
             # if AttributeError here, engine doesAn't support mdtraj
-            topology = self.mdtraj_topology
-
+            topology = self[0].engine.mdtraj_topology
 
         output = self.xyz
 

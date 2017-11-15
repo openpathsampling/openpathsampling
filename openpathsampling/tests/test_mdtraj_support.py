@@ -36,7 +36,7 @@ class testMDTrajSupport(object):
                                self.md_trajectory.xyz)
         nptest.assert_allclose(self.ops_trajectory.box_vectors,
                                self.md_trajectory.unitcell_vectors)
-    
+
         # switch back to mdtraj
         md_trajectory_2 = trajectory_to_mdtraj(self.ops_trajectory,
                                                self.md_topology)

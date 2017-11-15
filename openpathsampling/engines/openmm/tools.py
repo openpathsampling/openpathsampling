@@ -28,6 +28,10 @@ class TopologyEngine(NoEngine):
 
         self.topology = topology
 
+    @property
+    def mdtraj_topology(self):
+        return self.topology.mdtraj
+
     def to_dict(self):
         return {
             'topology': self.topology,
