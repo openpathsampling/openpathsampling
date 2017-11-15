@@ -543,7 +543,10 @@ class Trajectory(list, StorableObject):
 
 
         if topology is None:
-            topology = self.topology.mdtraj
+            # TODO: maybe add better error output?
+            # if AttributeError here, engine doesAn't support mdtraj
+            topology = self.mdtraj_topology
+
 
         output = self.xyz
 

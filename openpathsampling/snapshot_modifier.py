@@ -244,7 +244,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
 
         if n_dofs != n_dofs_required:
             raise RuntimeError("Snapshot has " + str(n_dofs)
-                               + " degrees of freedom, not " 
+                               + " degrees of freedom, not "
                                + str(n_dofs_required) + ". "
                                + "Are there constraints? Constraints can't"
                                + " be used with this modifier.")

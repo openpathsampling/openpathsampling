@@ -90,7 +90,8 @@ def md(snapshot):
 
     Notes
     -----
-    Rather slow since the topology has to be made each time. Try to avoid it
+    Rather slow since the topology has to be made each time. Try to avoid
+    it. This will only work if the engine has an mdtraj_topology property.
     """
     if snapshot.statics is not None:
         return paths.Trajectory([snapshot]).to_mdtraj()

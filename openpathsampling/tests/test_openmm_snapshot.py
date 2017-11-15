@@ -81,4 +81,3 @@ class testOpenMMSnapshot(object):
         assert_equal(len(traj_2), 1)
         assert_is_not(traj_2.xyz, None)
         assert_is_not(traj_2.unitcell_vectors, None)
-
