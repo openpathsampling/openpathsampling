@@ -588,6 +588,8 @@ class HistogramPlotter2D(object):
                   int(max(list(hist) + ticks + lims)))
         if lims_ is None:
             lims_ = (0, range_[1] - range_[0])
+        else:
+            lims_ = (lims_[0] - range_[0], lims_[1] - range_[0])
         return (ticks_, range_, lims_)
 
     def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
@@ -613,10 +615,10 @@ class HistogramPlotter2D(object):
         -------
         xticks_ : list of float or None
             user-set xticks in bin-space
-        yticks_ : list of float or None
-            user-set yticks in bin-space
         xlim_ : 2-tuple (float, float)
             range in x for plot visualization (bin-space)
+        yticks_ : list of float or None
+            user-set yticks in bin-space
         ylim_ : 2-tuple (float, float)
             range in y for plot visualization (bin-space)
         """
@@ -703,6 +705,7 @@ class HistogramPlotter2D(object):
         xticks_, xlim_, yticks_, ylim_ = self.axes_setup(
             xticklabels, yticklabels, xlim, ylim
         )
+        print xticks_, xlim_
 
         if normed:
             hist_fcn = self.histogram.normalized(raw_probability=True)
@@ -715,6 +718,8 @@ class HistogramPlotter2D(object):
 
         (xticks, xlabels) = self.ticks_and_labels(xticks_, mesh.axes, dof=0)
         (yticks, ylabels) = self.ticks_and_labels(yticks_, mesh.axes, dof=1)
+
+        print xticks, xlabels, xlim_
 
         mesh.axes.set_xticks(xticks)
         mesh.axes.set_yticks(yticks)
