@@ -705,7 +705,6 @@ class HistogramPlotter2D(object):
         xticks_, xlim_, yticks_, ylim_ = self.axes_setup(
             xticklabels, yticklabels, xlim, ylim
         )
-        print xticks_, xlim_
 
         if normed:
             hist_fcn = self.histogram.normalized(raw_probability=True)
@@ -718,8 +717,6 @@ class HistogramPlotter2D(object):
 
         (xticks, xlabels) = self.ticks_and_labels(xticks_, mesh.axes, dof=0)
         (yticks, ylabels) = self.ticks_and_labels(yticks_, mesh.axes, dof=1)
-
-        print xticks, xlabels, xlim_
 
         mesh.axes.set_xticks(xticks)
         mesh.axes.set_yticks(yticks)
