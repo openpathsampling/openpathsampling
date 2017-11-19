@@ -1,3 +1,5 @@
+import itertools
+import random
 from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises)
 from nose.plugins.skip import Skip, SkipTest
@@ -10,6 +12,7 @@ from .test_helpers import (
 from openpathsampling.analysis.tis import *
 from openpathsampling.analysis.tis.core import \
     steps_to_weighted_trajectories
+from openpathsampling.analysis.tis.flux import default_flux_sort
 import openpathsampling as paths
 
 import pandas as pd
@@ -195,6 +198,36 @@ class TestWeightedTrajectories(TISAnalysisTester):
                      len(self.mstis.sampling_ensembles))
         self._check_network_results(self.mstis,
                                     self.mstis_weighted_trajectories)
+
+
+class TestFluxToPandas(TISAnalysisTester):
+    # includes tests for default_flux_sort and flux_matrix_pd
+    # as a class to simplify setup of flux objects
+    def setup(self):
+        super(TestFluxToPandas, self).setup()
+        interfaces_A = self.mstis.from_state[self.state_A].interfaces
+        interfaces_B = self.mstis.from_state[self.state_B].interfaces
+        pairs_A = list(itertools.product([self.state_A], interfaces_A))
+        pairs_B = list(itertools.product([self.state_B], interfaces_B))
+        # note that this gives the canonical order we desire
+        self.all_pairs = pairs_A + pairs_B
+
+    def test_default_flux_sort(self):
+        shuffled = self.all_pairs[:]
+        random.shuffle(shuffled)
+        sorted_result = default_flux_sort(shuffled)
+        assert_items_equal(sorted_result, self.all_pairs)
+
+    def test_flux_matrix_pd_default(self):
+        raise SkipTest
+
+    def test_flux_matrix_pd_None(self):
+        raise SkipTest
+
+    def test_flux_matrix_pd_unknown_str(self):
+        raise SkipTest
+
+
 
 
 class TestDictFlux(TISAnalysisTester):

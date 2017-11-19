@@ -6,6 +6,58 @@ import numpy as np
 
 from .core import MultiEnsembleSamplingAnalyzer
 
+def flux_matrix_pd(flux_matrix, sort_method="default"):
+    """Convert dict form of flux to a pandas.Series
+
+    Parameters
+    ----------
+    flux_matrix : dict of {(state, interface): flux}
+        the output of a flux calculation; flux out of state and through
+        interface
+    sort_method : callable or str
+        method that takes a list of 2-tuple key from flux_matrix and returns
+        a sorted list. Strings can be used to select internally-defined
+        methods. Currently implemented: "default"
+        (:meth:`.default_flux_sort`).
+
+    Returns
+    -------
+    :class:`pandas.Series` :
+        The flux represented in a pandas series
+    """
+    keys = list(flux_matrix.keys())
+    known_method_names = {
+        'default': default_flux_sort
+    }
+    if isinstance(sort_method, str):
+        try:
+            sort_method = known_method_names[sort_method.lower()]
+        except KeyError:
+            raise KeyError("Unknown sort_method name: " + str(sort_method))
+
+    if sort_method is not None:
+        ordered = sort_method(keys)
+    else:
+        ordered = keys
+    values = [flux_matrix[k] for k in ordered]
+    index_vals = [(k[0].name, k[1].name) for k in ordered]
+    index = pd.MultiIndex.from_tuples(list(index_vals),
+                                      names=["State", "Interface"])
+    return pd.Series(values, index=index, name="Flux")
+
+
+def default_flux_sort(tuple_list):
+    """Default sort for flux pairs.
+
+    Flux results are reported in terms of flux pairs like ``(state,
+    interface)``. This sorts them using the ``.name`` strings for the
+    volumes.
+    """
+    name_to_volumes = {(t[0].name, t[1].name): t for t in tuple_list}
+    sorted_results = sorted(name_to_volumes.keys())
+    return [name_to_volumes[key] for key in sorted_results]
+
+
 class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
     """
     Calculating the flux from the minus move.
