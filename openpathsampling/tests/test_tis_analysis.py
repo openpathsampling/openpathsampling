@@ -211,6 +211,27 @@ class TestFluxToPandas(TISAnalysisTester):
         pairs_B = list(itertools.product([self.state_B], interfaces_B))
         # note that this gives the canonical order we desire
         self.all_pairs = pairs_A + pairs_B
+        self.default_ordered_results = [
+            ((self.state_A, interfaces_A[0]), 10.0),
+            ((self.state_A, interfaces_A[1]), 5.0),
+            ((self.state_A, interfaces_A[2]), 2.0),
+            ((self.state_B, interfaces_B[0]), 1.0),
+            ((self.state_B, interfaces_B[1]), 0.5),
+            ((self.state_B, interfaces_B[2]), 0.2)
+        ]
+        shuffled_fluxes = self.default_ordered_results[:]
+        random.shuffle(shuffled_fluxes)
+        self.fluxes = {key: value for (key, value) in shuffled_fluxes}
+        self.indices = [
+            ("A", "-inf<Id<0.0"), ("A", "-inf<Id<0.1"), ("A", "-inf<Id<0.2"),
+            ("B", "-inf<1-Id<0.0"), ("B", "-inf<1-Id<0.1"),
+            ("B", "-inf<1-Id<0.2")
+        ]
+        values = [value for (key, value) in self.default_ordered_results]
+        index = pd.MultiIndex.from_tuples(self.indices,
+                                          names=["State", "Interface"])
+        self.expected_series = pd.Series(values, name="Flux", index=index)
+
 
     def test_default_flux_sort(self):
         shuffled = self.all_pairs[:]
@@ -219,15 +240,17 @@ class TestFluxToPandas(TISAnalysisTester):
         assert_items_equal(sorted_result, self.all_pairs)
 
     def test_flux_matrix_pd_default(self):
-        raise SkipTest
+        series = flux_matrix_pd(self.fluxes)
+        pdt.assert_series_equal(series, self.expected_series)
 
     def test_flux_matrix_pd_None(self):
-        raise SkipTest
+        series = flux_matrix_pd(self.fluxes, sort_method=None)
+        for idx in self.indices:
+            assert_almost_equal(series[idx], self.expected_series[idx])
 
+    @raises(KeyError)
     def test_flux_matrix_pd_unknown_str(self):
-        raise SkipTest
-
-
+        series = flux_matrix_pd(self.fluxes, sort_method="foo")
 
 
 class TestDictFlux(TISAnalysisTester):
