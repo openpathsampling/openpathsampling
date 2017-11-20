@@ -1,9 +1,9 @@
+import collections
 import openpathsampling as paths
 import pandas as pd
 import scipy.sparse
 from scipy.sparse.csgraph import reverse_cuthill_mckee
 import networkx as nx
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -25,8 +25,8 @@ class ReplicaNetwork(object):
 
         self.ensemble_to_number = {}
         self.ensemble_to_string = {}
-        self.analysis = { } 
-        self.traces = { } 
+        self.analysis = { }
+        self.traces = { }
         self.transitions = { }
 
         self.initial_order()
@@ -46,7 +46,7 @@ class ReplicaNetwork(object):
         """
         # ensemble_to_string : returns a string value for the ensemble
         # ensemble_to_number : returns a non-neg int value (column order)
-        if ens2str == None: 
+        if ens2str == None:
             if self.ensemble_to_string == {}:
                 ens2str = {k : str(self.ensemble_to_number[k]) 
                            for k in self.ensemble_to_number.keys()}
@@ -59,7 +59,7 @@ class ReplicaNetwork(object):
             self.ensemble_to_number[k] : self.ensemble_to_string[k]
             for k in self.ensemble_to_number.keys()
         }
-        self.string_to_number = {self.number_to_string[k] : k 
+        self.string_to_number = {self.number_to_string[k] : k
                                    for k in self.number_to_string.keys()}
         self.n_ensembles = len(self.ensemble_to_number.keys())
 
@@ -77,13 +77,13 @@ class ReplicaNetwork(object):
         # dictionaries to be used to translate between orderings (these are
         # the defaults)
         if index_order == None:
-            ensemble_to_number = {ens : self.ensembles.index(ens) 
+            ensemble_to_number = {ens : self.ensembles.index(ens)
                                   for ens in self.ensembles}
         else:
-            ensemble_to_number = {ens : index_order.index(ens) 
+            ensemble_to_number = {ens : index_order.index(ens)
                                   for ens in index_order}
         self.ensemble_to_number = ensemble_to_number
-        self.number_to_ensemble = {ensemble_to_number[k] : k 
+        self.number_to_ensemble = {ensemble_to_number[k] : k
                                    for k in ensemble_to_number.keys()}
         self.set_labels()
         self.n_ensembles = len(self.ensemble_to_number)
@@ -132,14 +132,24 @@ class ReplicaNetwork(object):
         """
         if force == False and self.traces != { }:
             return self.traces
-        for ensemble in [s.ensemble for s in steps[0].active]:
-            self.traces[ensemble] = condense_repeats(
-                trace_replicas_for_ensemble(ensemble, steps)
-            )
-        for replica in [s.replica for s in steps[0].active]:
-            self.traces[replica] = condense_repeats(
-                trace_ensembles_for_replica(replica, steps)
-            )
+        full_traces = collections.defaultdict(list)
+        for step in steps:
+            for sample in step.active:
+                ens = sample.ensemble
+                rep = sample.replica
+                full_traces[ens].append(rep)
+                full_traces[rep].append(ens)
+
+        self.traces = {k: condense_repeats(full_traces[k])
+                       for k in full_traces}
+        #for ensemble in [s.ensemble for s in steps[0].active]:
+            #self.traces[ensemble] = condense_repeats(
+                #trace_replicas_for_ensemble(ensemble, steps)
+            #)
+        #for replica in [s.replica for s in steps[0].active]:
+            #self.traces[replica] = condense_repeats(
+                #trace_ensembles_for_replica(replica, steps)
+            #)
         return self.traces
 
 
@@ -556,7 +566,7 @@ def trace_replicas_for_ensemble(ensemble, steps):
     return trace
 
 
-def condense_repeats(ll):
+def condense_repeats(ll, use_is=True):
     """
     Count the number of consecutive repeats in a list.
 
@@ -574,14 +584,14 @@ def condense_repeats(ll):
         the element from the list, and repeats is the number of consecutive
         times it appeared
     """
-    count = 0 
+    count = 0
     old = None
     vals = []
     for e in ll:
-        if e == old:
+        if (use_is and e is old) or (not use_is and e == old):
             count += 1
         else:
-            if old != None:
+            if old is not None:
                 vals.append((old, count))
             count = 1
             old = e
