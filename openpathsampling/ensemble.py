@@ -111,11 +111,12 @@ class EnsembleCache(object):
         bool :
             the value of reset
         """
-        logger.debug("Checking cache....")
-        # logger.debug("traj " + str([id(s) for s in trajectory]))
-        logger.debug("start_frame " + str(id(self.start_frame)))
-        logger.debug("prev_last " + str(id(self.prev_last_frame)))
-        logger.debug("prev_last_idx " + str(self.prev_last_index))
+        if self.debug_enabled:
+            logger.debug("Checking cache....")
+            # logger.debug("traj " + str([id(s) for s in trajectory]))
+            logger.debug("start_frame " + str(id(self.start_frame)))
+            logger.debug("prev_last " + str(id(self.prev_last_frame)))
+            logger.debug("prev_last_idx " + str(self.prev_last_index))
 
         if trajectory is not None:
             # if the first frame has changed, we should reset
@@ -159,7 +160,8 @@ class EnsembleCache(object):
         self.last_length = len(trajectory)
         if reset:
             self.debug_enabled = logger.isEnabledFor(logging.DEBUG)
-            logger.debug("Resetting cache " + str(self))
+            if self.debug_enabled:
+                logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
                 self.start_frame = trajectory.get_as_proxy(0)
                 self.prev_last_frame = trajectory.get_as_proxy(-1)
@@ -1269,6 +1271,7 @@ class EnsembleCombination(Ensemble):
         self.ensemble2 = ensemble2
         self.fnc = fnc
         self.sfnc = str_fnc
+        self.debug = logger.isEnabledFor(logging.DEBUG)
 
     def to_dict(self):
         return {'ensemble1': self.ensemble1, 'ensemble2': self.ensemble2}
@@ -1280,6 +1283,13 @@ class EnsembleCombination(Ensemble):
 
         Short-circuit logic skips the second part of the combination if the
         result doesn't depend on it.
+
+        Note
+        ----
+            If you want to enable debug logging for this, it either needs to
+            be enabled when the class is instantiated or set with the .debug
+            instance variable. This is to improve performance since this
+            method is called very frequently.
 
         Parameters
         ----------
@@ -1297,9 +1307,10 @@ class EnsembleCombination(Ensemble):
         fname : string
             name of the functions f1 and f2. Only used in debug output.
         """
-        logger.debug("Combination is " + self.__class__.__name__)
+        if self.debug:  # pragma: no cover
+            logger.debug("Combination is " + self.__class__.__name__)
         a = f1(trajectory, trusted)
-        if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
+        if self.debug:  # pragma: no cover
             logger.debug("Combination." + fname + ": " +
                          self.ensemble1.__class__.__name__ + " is " + str(a))
             ens2 = f2(trajectory, trusted)
@@ -1736,15 +1747,17 @@ class SequentialEnsemble(Ensemble):
             else:
                 last_checked_index = None
                 last_checked = None
-            logger.debug("last_checked = " + str(last_checked))
+            if cache.debug_enabled:
+                logger.debug("last_checked = " + str(last_checked))
             subtraj_final = self._find_subtraj_final(
                 trajectory, subtraj_first, ens_num, last_checked
             )
             cache.last_length = subtraj_final
-            logger.debug(
-                "Subtraj for ens " + str(ens_num) + " : " +
-                "(" + str(subtraj_first) + "," + str(subtraj_final) + ")"
-            )
+            if cache.debug_enabled:
+                logger.debug(
+                    "Subtraj for ens " + str(ens_num) + " : " +
+                    "(" + str(subtraj_first) + "," + str(subtraj_final) + ")"
+                )
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
@@ -1752,8 +1765,9 @@ class SequentialEnsemble(Ensemble):
                         # we're in the last ensemble and the whole
                         # trajectory is assigned: can we append?
                         ens = self.ensembles[ens_num]
-                        logger.debug("Returning can_append for " +
-                                     str(ens.__class__.__name__))
+                        if cache.debug_enabled:
+                            logger.debug("Returning can_append for " +
+                                         str(ens.__class__.__name__))
                         self.update_cache(cache, ens_num,
                                           ens_first, subtraj_first)
                         return ens.can_append(subtraj, trusted=True)
