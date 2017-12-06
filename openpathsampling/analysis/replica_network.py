@@ -48,12 +48,12 @@ class ReplicaNetwork(object):
         # ensemble_to_number : returns a non-neg int value (column order)
         if ens2str == None:
             if self.ensemble_to_string == {}:
-                ens2str = {k : str(self.ensemble_to_number[k]) 
+                ens2str = {k : str(self.ensemble_to_number[k])
                            for k in self.ensemble_to_number.keys()}
             else:
                 ens2str = self.ensemble_to_string
         self.ensemble_to_string = ens2str
-        self.string_to_ensemble = {self.ensemble_to_string[k] : k 
+        self.string_to_ensemble = {self.ensemble_to_string[k] : k
                                    for k in self.ensemble_to_string.keys()}
         self.number_to_string = {
             self.ensemble_to_number[k] : self.ensemble_to_string[k]
@@ -99,9 +99,8 @@ class ReplicaNetwork(object):
         self.analysis['n_accepted'] = {}
         prev = None
         for step in steps:
-            pmc = step.change
-
-            if pmc.canonical.mover is not None and pmc.canonical.mover.is_ensemble_change_mover:
+            canonical_mover = step.change.canonical.mover
+            if canonical_mover and canonical_mover.is_ensemble_change_mover:
                 n_trials += 1
                 hops = []
                 for old in prev.active:
@@ -156,7 +155,7 @@ class ReplicaNetwork(object):
 
     def reorder_matrix(self, matrix, index_order):
         """Return dataframe with matrix row/columns in index_order.
-        
+
         Parameters
         ----------
         matrix : a SciPy COO sparse matrix
@@ -180,12 +179,12 @@ class ReplicaNetwork(object):
             perm_j = [rev_perm_dict[jj] for jj in matrix.col]
 
             new_matrix = scipy.sparse.coo_matrix(
-                (matrix.data, (perm_i, perm_j)), 
+                (matrix.data, (perm_i, perm_j)),
                 shape=(self.n_ensembles, self.n_ensembles)
             )
             reordered_labels = [self.number_to_string[k] for k in rcm_perm]
         else:
-            reordered_labels = [self.number_to_string[k] 
+            reordered_labels = [self.number_to_string[k]
                                 for k in self.number_to_string.keys()]
             new_matrix = matrix
 
@@ -205,7 +204,7 @@ class ReplicaNetwork(object):
         ens_j : list of ensembles
             the "to" ensemble
         data : list of floats
-            the data for the transition ensA->ensB, such that 
+            the data for the transition ensA->ensB, such that
             matrix[ensA, ensB] = data[k] with ens_i[k]=ensA, ens_j[k]=ensB
         index_order : order of ensembles for output
             see `reorder_matrix`
@@ -214,7 +213,7 @@ class ReplicaNetwork(object):
         i = [self.ensemble_to_number[e] for e in ens_i]
         j = [self.ensemble_to_number[e] for e in ens_j]
         matrix = scipy.sparse.coo_matrix(
-            (data, (i, j)), 
+            (data, (i, j)),
             shape=(self.n_ensembles, self.n_ensembles)
         )
         df = self.reorder_matrix(matrix, index_order)
@@ -350,7 +349,7 @@ class ReplicaNetwork(object):
         """
         traces = self.analyze_traces(steps, force)
         n_up = { ens : 0 for ens in self.ensembles }
-        n_visit = { ens : 0 for ens in self.ensembles } 
+        n_visit = { ens : 0 for ens in self.ensembles }
         for replica in self.replicas:
             trace = self.traces[replica]
             direction = 0
@@ -373,7 +372,7 @@ class ReplicaNetwork(object):
         flow_dict = self.flow(bottom, top, steps, force)
         inverted = {flow_dict[k]: k for k in flow_dict.keys()}
         sorted_inverted = list(reversed(sorted(inverted.keys())))
-        re_keyed = {k: sorted_inverted[k] 
+        re_keyed = {k: sorted_inverted[k]
                     for k in range(len(sorted_inverted))}
         return pd.Series(re_keyed)
 
@@ -466,16 +465,15 @@ class ReplicaNetworkGraph(object):
                 n_accs_adj[k] = 0
 
         largest_weight = max(n_accs_adj.values())
-        
+
         for entry in n_try.keys():
             self.graph.add_edge(
-                entry[0], entry[1], 
+                entry[0], entry[1],
                 weight=float(n_accs_adj[entry])/largest_weight
             )
-        
-        self.weights = [10*self.graph[u][v]['weight'] 
+
+        self.weights = [10*self.graph[u][v]['weight']
                         for u,v in self.graph.edges()]
-        
 
     def draw(self, layout="graphviz"):
         """
@@ -485,7 +483,7 @@ class ReplicaNetworkGraph(object):
         ----------
         layout : string ("graphviz")
             layout method. Default is "graphviz", which also requires
-            installation of pygraphviz. 
+            installation of pygraphviz.
         """
         if layout == "graphviz":
             pos = nx.graphviz_layout(self.graph)
@@ -506,12 +504,12 @@ class ReplicaNetworkGraph(object):
                 minus.append(node)
             else:
                 msouter.append(node)
-        
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal, 
+
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal,
                                node_color='r', node_size=500)
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=minus, 
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=minus,
                                node_color='b', node_size=500)
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=msouter, 
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=msouter,
                                node_color='g', node_size=500)
 
         nx.draw_networkx_edges(self.graph, pos, width=self.weights)
@@ -525,7 +523,7 @@ def trace_ensembles_for_replica(replica, steps):
 
     Parameters
     ----------
-    replica : 
+    replica :
         replica ID
     steps : iterable of :class:`.MCStep`
         input data
