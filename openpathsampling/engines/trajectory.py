@@ -539,11 +539,22 @@ class Trajectory(list, StorableObject):
         -------
         :class:`mdtraj.Trajectory`
             the trajectory
+
+        Notes
+        -----
+
+        If the OPS trajectory is zero-length (has no snapshots), then this
+        fails. MDTraj trajectories must have at least one frame.
         """
+        try:
+            snap = self[0]
+        except IndexError:
+            raise ValueError("Cannot convert length-zero trajectory "
+                             + "to MDTraj")
         if topology is None:
             # TODO: maybe add better error output?
-            # if AttributeError here, engine doesAn't support mdtraj
-            topology = self[0].engine.mdtraj_topology
+            # if AttributeError here, engine doesn't support mdtraj
+            topology = snap.engine.mdtraj_topology
 
         output = self.xyz
 

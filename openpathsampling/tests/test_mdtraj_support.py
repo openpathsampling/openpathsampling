@@ -44,6 +44,11 @@ class testMDTrajSupport(object):
         nptest.assert_allclose(self.md_trajectory.unitcell_vectors,
                                md_trajectory_2.unitcell_vectors)
 
+    @raises(ValueError)
+    def test_empty_traj_to_mdtraj(self):
+        empty = paths.Trajectory([])
+        empty.to_mdtraj()
+
     def test_trajectory_to_mdtraj_other_input(self):
         snap = self.ops_trajectory[0]
         md1 = trajectory_to_mdtraj(snap)
