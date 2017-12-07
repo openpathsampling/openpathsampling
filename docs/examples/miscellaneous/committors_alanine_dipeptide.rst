@@ -1,4 +1,4 @@
-.. ad_committor::
+.. _ad_committor:
 
 Committor Simulation and Analysis for Alanine Dipeptide
 =======================================================

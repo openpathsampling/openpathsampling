@@ -626,8 +626,10 @@ class MISTISNetwork(TISNetwork):
     Multiple interface set TIS network.
 
     Input is given as a list of 4-tuples. Each 4-tuple represents a
-    transition, and is in the order:
+    transition, and is in the order::
+
         (initial_state, interfaces, order_parameter, final_states)
+
     This will create the `input_transitions` objects.
 
     Attributes
