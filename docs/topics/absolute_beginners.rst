@@ -54,7 +54,7 @@ Ensembles apply to trajectories
 We also have a class of objects called :class:`.Ensemble`. More correctly,
 we should call these "path ensembles" (or even more correctly, "path
 ensemble functions.") The most important function this provides is the
-indicator function, which tells you whether or a given trajectory is in the
+indicator function, which tells you whether a given trajectory is in the
 path ensemble or not.  In the same way that a volume takes a snapshot from a
 trajectory and tells you whether it includes it or not, an ensemble takes a
 *whole* trajectory and tells you whether it is included.

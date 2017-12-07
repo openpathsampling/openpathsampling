@@ -12,7 +12,7 @@ Combining volume ensembles doesn’t combine volumes
 ==================================================
 
 
-In might seem like ``Ensemble(volume_A) & Ensemble(volume_B)`` should be the
+It might seem like ``Ensemble(volume_A) & Ensemble(volume_B)`` should be the
 same as ``Ensemble(volume_A & volume_B)``. But this is absolutely *not* the
 case.  We can see this easily by using ``PartOutXEnsemble`` as the example
 ensemble.  ``PartOutXEnsemble(volume)`` creates an ensemble in which at
