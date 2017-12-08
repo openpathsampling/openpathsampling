@@ -28,11 +28,13 @@ if sys.version_info > (3, ):
     builtin_module = 'builtins'
     get_code = lambda func: func.__code__
     intify_byte = lambda b: b
+    decodebytes = lambda s: base64.decodebytes(s.encode())
     import builtins
 else:
     builtin_module = '__builtin__'
     get_code = lambda func: func.func_code
     intify_byte = lambda b: ord(b)
+    decodebytes = base64.decodestring
     import builtins
 
 # in Python 3.6 the opcodes have changed width
@@ -231,7 +233,7 @@ class ObjectJSON(object):
 
             elif '_numpy' in obj:
                 return np.frombuffer(
-                    base64.decodestring(obj['_data']),
+                    decodebytes(obj['_data']),
                     dtype=np.dtype(obj['_dtype'])).reshape(
                         self.build(obj['_numpy'])
                 )
