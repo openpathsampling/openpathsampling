@@ -425,13 +425,16 @@ class ObjectJSON(object):
                                    word_wrap(err, 60))
 
             return {
-                '_marshal': base64.b64encode(
-                    marshal.dumps(get_code(c))),
+                '_marshal': ObjectJSON._to_marshal(c),
                 '_global_vars': global_vars,
                 '_module_vars': import_vars
             }
 
         raise RuntimeError('Locally defined classes are not storable yet')
+
+    @staticmethod
+    def _to_marshal(c):
+        return base64.b64encode(marshal.dumps(get_code(c)))
 
     @staticmethod
     def callable_from_dict(c_dict):

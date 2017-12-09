@@ -88,10 +88,12 @@ class EnsembleCache(object):
         The trajectory is considered trustworthy based on checking several
         factors, compared to the last time the cache was checked. For
         forward caches (direction > 0), these are
+
         * the first frame has not changed
         * the length is the same, or has changed by 1
         * if length unchanged, the final frame is the same; if length
           changed by 1, the penultimate frame is the old final frame
+
         Similar rules apply for backward caches (direction < 0), with
         obvious changes of "final" and "first" frames.
 
@@ -2570,21 +2572,21 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     """
     This creates an ensemble for the minus interface.
 
-    Parameters
-    ----------
-    state_vol : :class:`openpathsampling.volume.Volume`
-        The Volume which defines the state for this minus interface
-    innermost_vols : :class:`list of openpathsampling.volume.Volume`
-        The Volume defining the innermost interface with which this minus
-        interface does its replica exchange.
-    n_l : integer (greater than one)
-        The number of segments crossing innermost_vol for this interface.
-
     The specific implementation allows us to use the multiple-segment minus
     ensemble described by Swenson and Bolhuis. The minus interface was
     originally developed by van Erp. For more details, see the section
     "Anatomy of a PathMover: the Minus Move" in the OpenPathSampling
     Documentation.
+
+    Parameters
+    ----------
+    state_vol : :class:`.Volume`
+        The Volume which defines the state for this minus interface
+    innermost_vols : list of :class:`.Volume`
+        The Volume defining the innermost interface with which this minus
+        interface does its replica exchange.
+    n_l : integer (greater than one)
+        The number of segments crossing innermost_vol for this interface.
 
     References
     ----------

@@ -1003,17 +1003,17 @@ class DirectSimulation(PathSimulator):
 
     Parameters
     ----------
-    storage : paths.Storage
+    storage : :class:`.Storage`
         file to store the trajectory in. Default is None, meaning that the
         trajectory isn't stored (also faster)
-    engine : paths.engine.DynamicsEngine
+    engine : :class:`.DynamicsEngine`
         the engine for the molecular dynamics
-    states : list of paths.Volume
+    states : list of :class:`.Volume`
         states to look for transitions between
-    flux_pairs : list of 2-tuples of (state, interface)
+    flux_pairs : list of 2-tuples of ``(state, interface)``
         fluxes will calculate the flux out of `state` and through
         `interface` for each pair in this list
-    initial_snapshot : paths.engines.Snapshot
+    initial_snapshot : :class:`.Snapshot`
         initial snapshot for the MD
 
     Attributes

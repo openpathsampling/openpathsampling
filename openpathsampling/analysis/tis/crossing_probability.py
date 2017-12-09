@@ -96,9 +96,9 @@ class TotalCrossingProbability(MultiEnsembleSamplingAnalyzer):
         input_dict : dict of {:class:`.Ensemble`: collections.Counter}
             ensemble as key, and a counter mapping each trajectory
             associated with that ensemble to its counter of time spent in
-            the ensemble (output of `steps_to_weighted_trajectories`)
+            the ensemble (output of ``steps_to_weighted_trajectories``)
 
-        Results
+        Returns
         -------
         :class:`.LookupFunction`
             the total crossing probability function
