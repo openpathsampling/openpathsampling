@@ -19,9 +19,21 @@
        background-color: #153347;  /* OPS navy blue */
    }
 
-   .rst-content .note .admonition-title {
-       background-color: #5595ad;  /* OPS mid blue */
+    .rst-content .note {
+        /*background-color: #D3F1FF;  [> modified from orig <]*/
+        /*background-color: #DCF7FF;*/
+        background-color: #E3F6FF;
     }
+
+   .rst-content .note .admonition-title {
+        background-color: #5595ad;  /* OPS mid blue */
+    }
+
+    .wy-side-nav-search>div.version {
+        color: #6fb3c5;  /* OPS light blue 2 (darker) */
+        font-weight: bold;
+    }
+
 }
 
 .div.figure.align-center { text-align: left; }
