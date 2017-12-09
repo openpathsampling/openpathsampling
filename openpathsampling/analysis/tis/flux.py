@@ -87,7 +87,7 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         -------
         dict of {(:class:`.Volume, :class:`.Volume`): dict}
             keys are (state, interface); values are the result dict from
-            :method:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
+            :meth:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
             strings 'in' and 'out', mapping to
             :class:`.TrajectorySegmentContainer` with appropriate frames.
         """
@@ -157,7 +157,7 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         ----------
         flux_dicts: dict of {(:class:`.Volume`, :class:`.Volume`): dict}
             keys are (state, interface); values are the result dict from
-            :method:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
+            :meth:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
             strings 'in' and 'out', mapping to
             :class:`.TrajectorySegmentContainer` with appropriate frames.
 
@@ -206,7 +206,7 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         -------
         list (len 1) of dict of {(:class:`.Volume`, :class:`.Volume`): dict}
             keys are (state, interface); values are the result dict from
-            :method:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
+            :meth:`.TrajectoryTransitionAnalysis.analyze_flux` (keys are
             strings 'in' and 'out', mapping to
             :class:`.TrajectorySegmentContainer` with appropriate frames.
         """
@@ -219,7 +219,7 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
         Parameters
         ----------
         intermediates :
-            output of :method:`.intermediates`
+            output of :meth:`.intermediates`
 
         Returns
         -------
@@ -297,7 +297,7 @@ class DictFlux(MultiEnsembleSamplingAnalyzer):
         Parameters
         ----------
         intermediates :
-            output of :method:`.intermediates`
+            output of :meth:`.intermediates`
 
         Returns
         -------

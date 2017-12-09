@@ -134,7 +134,7 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
     ----------
     ensembles : list of :class:`.Ensemble`
         ensembles to be used in the calculation; can be overridden by
-        :method:`.calculate`
+        :meth:`.calculate`
     """
     def __init__(self, ensembles=None):
         self.ensembles = ensembles
@@ -145,14 +145,14 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
         This is the main analysis for the abstract
         :class:`.MultiEnsembleSamplingAnalyzer`. Specific results depend on
         the specific subclass. Most objects simply need to override
-        :method:`.from_weighted_trajectories` in order to obtain reasonable
+        :meth:`.from_weighted_trajectories` in order to obtain reasonable
         behavior.
 
         Parameters
         ----------
         steps : iterable of :class:`.MCStep`
             the steps to use as input for this analysis
-        ensembles : list of :class:`.Ensemble
+        ensembles : list of :class:`.Ensemble`
             ensembles to include in the calculation (other ensembles will be
             stripped); default is `None` meaning all ensembles given during
             initialization.
@@ -359,7 +359,7 @@ class TISAnalysis(StorableNamedObject):
         -------
         dict of 2-tuple of :class:`.Volume` to float
             dictionary of (state, interface) to the associated flux -- same
-            as the flux dictionary given be :method:`.flux_matrix`, but only
+            as the flux dictionary given be :meth:`.flux_matrix`, but only
             including the cases with the desired state volume
         """
         fluxes = self._access_cached_result('flux')

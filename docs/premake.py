@@ -7,7 +7,7 @@ docs_prefix = "docs"
 
 # We should have thing_to_wrap.md, wrap it in rst
 things_to_wrap = [
-    "guides/absolute_beginners", "guides/power_users", "guides/user_levels"
+    #"guides/absolute_beginners", "guides/power_users", "guides/user_levels"
 ]
 
 def clean_filename(fname, strip_path=True):
@@ -21,7 +21,7 @@ def wrap_file(basename):
     assert(os.path.isfile(md_file))
     clean_name = clean_filename(basename, strip_path=True)
     rst_file = basename + ".rst"
-    lines = [".. _"+clean_name+":\n", 
+    lines = [".. _"+clean_name+":\n",
              ".. markdown:: " + docs_prefix + "/" + md_file]
     rst = open(rst_file, "w")
     for line in lines:
