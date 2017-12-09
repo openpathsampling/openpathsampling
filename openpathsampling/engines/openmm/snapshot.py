@@ -69,11 +69,11 @@ class Snapshot(BaseSnapshot):
 
         Parameters
         ----------
-        coordinates : numpy.array, shape = (n_atoms, n_spatial)
+        coordinates : numpy.array, shape ``(n_atoms, n_spatial)``
             the atomic coordinates
-        box_vectors : numpy.array, shape = (n_spatial, n_spatial)
+        box_vectors : numpy.array, shape ``(n_spatial, n_spatial)``
             the box vectors
-        velocities : numpy.array, shape = (n_atoms, n_spatial)
+        velocities : numpy.array, shape ``(n_atoms, n_spatial)``
             the atomic velocities
         statics : `openpathsampling.engines.openmm.StaticContainer`
             the statics container if it already exists
