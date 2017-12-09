@@ -54,7 +54,7 @@ class BiasEnsembleTable(BiasFunction):
     # TODO: bias seems kind of fixed to Metropolis acceptance criterion --
     # is that okay elsewhere?
     def __init__(self, dataframe, ensembles_to_ids):
-        super(BiasEnsembleTable, self).__init__() 
+        super(BiasEnsembleTable, self).__init__()
         self.dataframe = dataframe
         self.ensembles_to_ids = ensembles_to_ids
         self._ids_to_ensembles = {self.ensembles_to_ids[e] : e
@@ -78,7 +78,7 @@ class BiasEnsembleTable(BiasFunction):
         all_ensembles += [e for e in self_ensembles if e in both]
 
         # set up the structures for initialization of the return
-        ensembles_to_ids = {ens : all_ensembles.index(ens) 
+        ensembles_to_ids = {ens : all_ensembles.index(ens)
                             for ens in all_ensembles}
         dataframe = pd.DataFrame(index=ensembles_to_ids.values(),
                                  columns=ensembles_to_ids.values())
@@ -86,7 +86,7 @@ class BiasEnsembleTable(BiasFunction):
         # fill the dataframe
         # to do this, we split the matrix into regions based on self_only,
         # other_only, and both. We have to check that we don't have two
-        # versions of the 
+        # versions of the same thing
         for ens_from in self_only:
             orig_from_id = self.ensembles_to_ids[ens_from]
             for ens_to in self_only | both:
@@ -142,9 +142,9 @@ class BiasEnsembleTable(BiasFunction):
                         msg += str(self.dataframe) + "\n"
                         msg += str(other.dataframe) + "\n"
                         msg += ens_from.name + "=>" + ens_to.name
-                        msg += ("  (" + str(self_from_id) + "," 
-                                + str(self_to_id) + ")  (" 
-                                + str(other_from_id) + "," 
+                        msg += ("  (" + str(self_from_id) + ","
+                                + str(self_to_id) + ")  ("
+                                + str(other_from_id) + ","
                                 + str(other_to_id) + ")")
                         raise ValueError(msg)
                 value = self_value if self_value is not None else other_value
@@ -275,7 +275,7 @@ def SRTISBiasFromNetwork(network, steps=None):
     try:
         ms_outer_ensembles = list(network.special_ensembles['ms_outer'].keys())
     except KeyError:
-        ms_outer_ensembles= []
+        ms_outer_ensembles = []
     bias = BiasEnsembleTable(pd.DataFrame(), {})
     for trans in network.sampling_transitions:
         ensembles = trans.ensembles + ms_outer_ensembles

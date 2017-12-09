@@ -23,7 +23,7 @@ class ShootingPointSelector(StorableNamedObject):
     def f(self, snapshot, trajectory):
         '''
         Returns the unnormalized proposal probability of a snapshot
-        
+
         Notes
         -----
         In principle this is an collectivevariable so we could easily add
@@ -54,13 +54,13 @@ class ShootingPointSelector(StorableNamedObject):
         '''
         Returns the unnormalized probability probability of a trajectory.
         This is just the sum of all proposal probabilities in a trajectory.
-        
+
         Notes
         -----
         For a uniform distribution this is proportional to the length of the
         trajectory. In this case we can estimate the maximal accepted
         trajectory length for a given acceptance probability.
-        
+
         After we have generated a new trajectory the acceptance probability
         only for the non-symmetric proposal of different snapshots is given
         by `probability(old_trajectory) / probability(new_trajectory)`
@@ -71,7 +71,7 @@ class ShootingPointSelector(StorableNamedObject):
     def pick(self, trajectory):
         '''
         Returns the index of the chosen snapshot within `trajectory`
-        
+
         Notes
         -----
         The native implementation is very slow. Simple picking algorithm
@@ -132,7 +132,7 @@ class UniformSelector(ShootingPointSelector):
         return float(len(trajectory) - self.pad_start - self.pad_end)
 
     def pick(self, trajectory):
-        idx = np.random.random_integers(self.pad_start, 
+        idx = np.random.random_integers(self.pad_start,
                                         len(trajectory) - self.pad_end - 1)
         return idx
 

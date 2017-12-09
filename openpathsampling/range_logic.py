@@ -27,7 +27,7 @@ function:
                     -1  | `FullVolume`
                   None  | `EmptyVolume`
  list with one 2-tuple  | `CVDefinedVolume` with range given by 2-tuple
-list with two 2-tuples  | `VolumeCombination` of or'd together 
+list with two 2-tuples  | `VolumeCombination` of or'd together
                         | `CVDefinedVolume`s with ranges given by the 2-tuples
 ------------------------+--------------------------------------------------
 
@@ -173,7 +173,7 @@ def periodic_ordering(amin, amax, bmin, bmax):
     list of int 0-3
         Order index of amin, amax, bmin, bmax in that order; i.e. the return
         value [0, 2, 1, 3] means amin < bmin < amax < bmax; amin in order
-        spot 0, amax in 2, bmin in 1, bmax in 3. 
+        spot 0, amax in 2, bmin in 1, bmax in 3.
     """
     dict2 = {'a' : amin, 'A' : amax, 'b' : bmin, 'B' : bmax}
     order = ['a']
@@ -197,10 +197,10 @@ def periodic_ordering(amin, amax, bmin, bmax):
     for i in range(4):
         out.append(order[(idx0+i) % 4])
     if out[3] == 'b':
-        out = [out[3]] + out[slice(0,3)]
+        out = [out[3]] + out[slice(0, 3)]
     # at this point we have a canonically ordered list of the letter a, A,
-    # b, and B. 
-    final = [out.index(a) for a in ['a','A','b','B']]
+    # b, and B.
+    final = [out.index(a) for a in ['a', 'A', 'b', 'B']]
     return final
 
 def recover_periodic_range(lrange, order, adict, aa_is_full=False):
@@ -210,8 +210,8 @@ def recover_periodic_range(lrange, order, adict, aa_is_full=False):
     else:
         retval = []
         for pair in lrange:
-            opair = [ order.index(pval) for pval in pair ]
-            opair = [ order.index(pval) for pval in pair ]
+            opair = [order.index(pval) for pval in pair]
+            opair = [order.index(pval) for pval in pair]
             mytup = tuple(map(adict.get, opair))
             if (mytup[0] == mytup[1]):
                 # periodic ordering sometimes leads to [a:a] ranges; for
@@ -229,7 +229,7 @@ def recover_periodic_range(lrange, order, adict, aa_is_full=False):
             return retval
 
 def periodic_range_and(amin, amax, bmin, bmax):
-    adict = {0 : amin, 1 : amax, 2 : bmin, 3 : bmax}
+    adict = {0: amin, 1: amax, 2: bmin, 3: bmax}
     if amin == bmin and amax == bmax:
         return 1
     if amin == bmax and bmin == amax:
