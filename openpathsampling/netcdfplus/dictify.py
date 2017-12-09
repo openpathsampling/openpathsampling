@@ -28,11 +28,13 @@ if sys.version_info > (3, ):
     builtin_module = 'builtins'
     get_code = lambda func: func.__code__
     intify_byte = lambda b: b
+    decodebytes = lambda s: base64.decodebytes(s.encode())
     import builtins
 else:
     builtin_module = '__builtin__'
     get_code = lambda func: func.func_code
     intify_byte = lambda b: ord(b)
+    decodebytes = base64.decodestring
     import builtins
 
 # in Python 3.6 the opcodes have changed width
@@ -231,7 +233,7 @@ class ObjectJSON(object):
 
             elif '_numpy' in obj:
                 return np.frombuffer(
-                    base64.decodestring(obj['_data']),
+                    decodebytes(obj['_data']),
                     dtype=np.dtype(obj['_dtype'])).reshape(
                         self.build(obj['_numpy'])
                 )
@@ -425,13 +427,16 @@ class ObjectJSON(object):
                                    word_wrap(err, 60))
 
             return {
-                '_marshal': base64.b64encode(
-                    marshal.dumps(get_code(c))),
+                '_marshal': ObjectJSON._to_marshal(c),
                 '_global_vars': global_vars,
                 '_module_vars': import_vars
             }
 
         raise RuntimeError('Locally defined classes are not storable yet')
+
+    @staticmethod
+    def _to_marshal(c):
+        return base64.b64encode(marshal.dumps(get_code(c)))
 
     @staticmethod
     def callable_from_dict(c_dict):

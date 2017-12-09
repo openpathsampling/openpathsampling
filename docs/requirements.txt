@@ -8,3 +8,4 @@ runipy
 openmm
 pytables
 scikit-learn
+packaging

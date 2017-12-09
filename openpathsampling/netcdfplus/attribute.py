@@ -4,9 +4,9 @@ from .cache import WeakKeyCache
 from .dictify import ObjectJSON
 from .stores.object import ObjectStore
 
-
 import sys
-if sys.version_info > (3, ):
+
+if sys.version_info > (3,):
     long = int
     unicode = str
 
@@ -92,7 +92,7 @@ class PseudoAttribute(cd.Wrap, StorableNamedObject):
             self.diskcache_chunksize = chunksize
 
         return self
-    
+
     def disable_diskcache(self):
         self.diskcache_enabled = False
         return self
@@ -163,7 +163,7 @@ class PseudoAttribute(cd.Wrap, StorableNamedObject):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
             if self.name != other.name:
-                    return False
+                return False
 
             return True
 
@@ -325,14 +325,14 @@ class CallablePseudoAttribute(PseudoAttribute):
                 return False
             if self.kwargs != other.kwargs:
                 return False
-            if self.cv_callable is None or other.cv_callable is None:
-                return False
+            if self.cv_callable is None:
+                if other.cv_callable is None:
+                    return True
+                else:
+                    return False
 
-            if hasattr(self.cv_callable.func_code, 'op_code') \
-                    and hasattr(other.cv_callable.func_code, 'op_code') \
-                    and self.cv_callable.func_code.op_code != \
-                    other.cv_callable.func_code.op_code:
-                # Compare Bytecode. Not perfect, but should be good enough
+            if (ObjectJSON._to_marshal(self.cv_callable) !=
+                    ObjectJSON._to_marshal(other.cv_callable)):
                 return False
 
             return True
