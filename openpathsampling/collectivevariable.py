@@ -673,7 +673,8 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
 
     This is identical to `CoordinateGeneratorCV` except that the function is
     called with an mdraj.Trajetory object instead of the
-    openpathsampling.Trajectory one using `fnc(traj.to_mdtraj(), **kwargs)`
+    openpathsampling.Trajectory one using ``fnc(traj.to_mdtraj(),
+    **kwargs)``
 
     """
 
@@ -694,12 +695,13 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
         topology : :obj:`openpathsampling.engines.openmm.MDTopology`
             the mdtraj topology wrapper from OPS that is used to initialize
             the featurizer in `pyemma.coordinates.featurizer(topology)`
-        **kwargs : **kwargs
+        \*\*kwargs : dict
             a dictionary of named arguments which should be given to the
             `featurizer` (for example, the atoms which define a specific
             distance/angle).
-            Finally an instance `instance = cls(**kwargs)` is create when the
-            CV is created and using the CV will call `instance(snapshots)`
+            Finally an instance ``instance = cls(**kwargs)`` is create when
+            the CV is created and using the CV will call
+            ``instance(snapshots)``
 
         Notes
         -----

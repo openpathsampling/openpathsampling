@@ -32,7 +32,9 @@ the development process on GitHub_, and follow `@pathsampling
           Overall, OPS is ready for production work. We're already writing
           two papers that used it, in addition to the paper in prep about
           the code itself. Version 1.0 will be released once the paper about
-          the code has been accepted for publication.
+          the code has been accepted for publication. Documentation is still
+          in progress; if you have questions, please contact the development
+          team.
 
 --------------------------------------------------------------------------------
 
@@ -44,7 +46,6 @@ For Users
 
     install
     examples/index
-    guides/index
     topics/index
     whatsnew
     faq
