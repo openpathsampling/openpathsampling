@@ -1,0 +1,27 @@
+/* override table width restrictions */
+@media screen and (min-width: 767px) {
+
+   .wy-table-responsive table td {
+      /* !important prevents the common CSS stylesheets from overriding
+         this as on RTD they are loaded after this stylesheet */
+      white-space: normal !important;
+   }
+
+   .wy-table-responsive {
+      overflow: visible !important;
+   }
+
+   .wy-side-nav-search {
+       background-color: #3b728d;  /* OPS dark blue */
+   }
+
+   .wy-nav-side {
+       background-color: #153347;  /* OPS navy blue */
+   }
+
+   .rst-content .note .admonition-title {
+       background-color: #5595ad;  /* OPS mid blue */
+    }
+}
+
+.div.figure.align-center { text-align: left; }

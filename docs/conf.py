@@ -151,6 +151,9 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 
 html_theme = "sphinx_rtd_theme"
+html_theme_options = {
+    'logo_only': True
+}
 #html_theme_path = ['_themes']
 #html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
@@ -189,7 +192,7 @@ html_theme = "sphinx_rtd_theme"
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = "logo/logo+whitetext.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
