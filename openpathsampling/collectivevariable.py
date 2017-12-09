@@ -21,9 +21,6 @@ class CollectiveVariable(PseudoAttribute):
 
     Parameters
     ----------
-    name : string
-        A descriptive name of the collectivevariable. It is used in the string
-        representation.
     cv_time_reversible : bool
         If `True` (default) the CV assumes that reversed snapshots have the
         same value. This is the default case when CVs do not depend on momenta
@@ -32,7 +29,6 @@ class CollectiveVariable(PseudoAttribute):
 
     Attributes
     ----------
-    name
     cv_time_reversible
 
     _cache_dict : :class:`openpathsampling.chaindict.ChainDict`
@@ -50,10 +46,9 @@ class CollectiveVariable(PseudoAttribute):
 
     def __init__(
             self,
-            name,
             cv_time_reversible=False
     ):
-        super(CollectiveVariable, self).__init__(name, peng.BaseSnapshot)
+        super(CollectiveVariable, self).__init__(peng.BaseSnapshot)
 
         self.cv_time_reversible = cv_time_reversible
         self.diskcache_allow_incomplete = not self.cv_time_reversible
@@ -68,7 +63,7 @@ class CollectiveVariable(PseudoAttribute):
 
         # self._post = self._single_dict > self._cache_dict
 
-    to_dict = create_to_dict(['name', 'cv_time_reversible'])
+    to_dict = create_to_dict(['cv_time_reversible'])
 
 
 class InVolumeCV(CollectiveVariable):
@@ -76,23 +71,19 @@ class InVolumeCV(CollectiveVariable):
 
     Attributes
     ----------
-    name
     volume
     """
 
-    def __init__(self, name, volume):
+    def __init__(self, volume):
         """
         Parameters
         ----------
-        name : string
-            name of the collective variable
         volume : openpathsampling.Volume
             the Volume instance to be treated as a (storable) CV
 
         """
 
         super(InVolumeCV, self).__init__(
-            name,
             cv_time_reversible=True
         )
         self.volume = volume
@@ -107,7 +98,7 @@ class InVolumeCV(CollectiveVariable):
     def _eval(self, items):
         return bool(self.volume(items))
 
-    to_dict = create_to_dict(['name', 'volume'])
+    to_dict = create_to_dict(['volume'])
 
 
 class CallableCV(CollectiveVariable):
@@ -122,7 +113,6 @@ class CallableCV(CollectiveVariable):
 
     def __init__(
             self,
-            name,
             cv_callable,
             cv_time_reversible=False,
             cv_requires_lists=False,
@@ -133,7 +123,6 @@ class CallableCV(CollectiveVariable):
         """
         Parameters
         ----------
-        name
         cv_callable : callable (function or class with __call__)
             The callable to be used
         cv_time_reversible
@@ -202,7 +191,6 @@ class CallableCV(CollectiveVariable):
         """
 
         super(CallableCV, self).__init__(
-            name,
             cv_time_reversible=cv_time_reversible
         )
         self.cv_requires_lists = cv_requires_lists
@@ -249,28 +237,6 @@ class CallableCV(CollectiveVariable):
 
         return obj
 
-    # def __eq__(self, other):
-    #     """Override the default Equals behavior"""
-    #     if isinstance(other, self.__class__):
-    #         if self.name != other.name:
-    #             return False
-    #         if self.kwargs != other.kwargs:
-    #             return False
-    #         if self.cv_callable is None or other.cv_callable is None:
-    #             return False
-    #
-    #         self_code = get_code(self.cv_callable)
-    #         other_code = get_code(other.cv_callable)
-    #         if hasattr(self_code, 'op_code') \
-    #                 and hasattr(other_code, 'op_code') \
-    #                 and self_code.op_code != other_code.op_code:
-    #             # Compare Bytecode. Not perfect, but should be good enough
-    #             return False
-    #
-    #         return True
-    #
-    #     return NotImplemented
-
     __hash__ = CollectiveVariable.__hash__
 
     def _eval(self, items):
@@ -287,7 +253,6 @@ class FunctionCV(CallableCV):
 
     def __init__(
             self,
-            name,
             f,
             cv_time_reversible=False,
             cv_requires_lists=False,
@@ -298,7 +263,6 @@ class FunctionCV(CallableCV):
         r"""
         Parameters
         ----------
-        name : str
         f : (callable) function
             The function to be used
         cv_time_reversible
@@ -318,7 +282,6 @@ class FunctionCV(CallableCV):
         """
 
         super(FunctionCV, self).__init__(
-            name,
             cv_callable=f,
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
@@ -346,7 +309,6 @@ class CoordinateFunctionCV(FunctionCV):
 
     def __init__(
             self,
-            name,
             f,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
@@ -356,7 +318,6 @@ class CoordinateFunctionCV(FunctionCV):
         """
         Parameters
         ----------
-        name
         f
         cv_requires_lists
         cv_wrap_numpy_array
@@ -370,7 +331,6 @@ class CoordinateFunctionCV(FunctionCV):
         """
 
         super(FunctionCV, self).__init__(
-            name,
             cv_callable=f,
             cv_time_reversible=True,
             cv_requires_lists=cv_requires_lists,
@@ -394,7 +354,6 @@ class GeneratorCV(CallableCV):
 
     def __init__(
             self,
-            name,
             generator,
             cv_time_reversible=False,
             cv_requires_lists=False,
@@ -405,7 +364,6 @@ class GeneratorCV(CallableCV):
         r"""
         Parameters
         ----------
-        name
         generator : callable class
             a class where instances have a `__call__` attribute
         cv_time_reversible
@@ -425,7 +383,6 @@ class GeneratorCV(CallableCV):
         """
 
         super(GeneratorCV, self).__init__(
-            name,
             cv_callable=generator,
             cv_time_reversible=cv_time_reversible,
             cv_requires_lists=cv_requires_lists,
@@ -459,7 +416,6 @@ class CoordinateGeneratorCV(GeneratorCV):
 
     def __init__(
             self,
-            name,
             generator,
             cv_requires_lists=False,
             cv_wrap_numpy_array=False,
@@ -469,7 +425,6 @@ class CoordinateGeneratorCV(GeneratorCV):
         r"""
         Parameters
         ----------
-        name
         generator
         cv_requires_lists
         cv_wrap_numpy_array
@@ -483,7 +438,6 @@ class CoordinateGeneratorCV(GeneratorCV):
         """
 
         super(CoordinateGeneratorCV, self).__init__(
-            name,
             cv_callable=generator,
             cv_time_reversible=True,
             cv_requires_lists=cv_requires_lists,
@@ -519,7 +473,6 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
     """
 
     def __init__(self,
-                 name,
                  f,
                  topology,
                  cv_requires_lists=True,
@@ -530,7 +483,6 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
         """
         Parameters
         ----------
-        name : str
         f
         topology : :obj:`openpathsampling.engines.openmm.MDTopology`
             the mdtraj topology wrapper from OPS that is used to initialize
@@ -547,7 +499,6 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
         """
 
         super(MDTrajFunctionCV, self).__init__(
-            name,
             f,
             cv_requires_lists=cv_requires_lists,
             cv_wrap_numpy_array=cv_wrap_numpy_array,
@@ -569,7 +520,6 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
 
     def to_dict(self):
         return {
-            'name': self.name,
             'f': ObjectJSON.callable_to_dict(self.f),
             'topology': self.topology,
             'kwargs': self.kwargs,
@@ -590,7 +540,6 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
 
     def __init__(
             self,
-            name,
             featurizer,
             topology,
             cv_wrap_numpy_array=True,
@@ -601,7 +550,6 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
 
         Parameters
         ----------
-        name
         featurizer : msmbuilder.Featurizer, callable
             the featurizer used as a callable class
         topology : :obj:`openpathsampling.engines.openmm.MDTopology`
@@ -635,7 +583,6 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
         self.topology = topology
 
         super(GeneratorCV, self).__init__(
-            name,
             cv_callable=featurizer,
             cv_time_reversible=True,
             cv_requires_lists=True,
@@ -659,7 +606,6 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
 
     def to_dict(self):
         return {
-            'name': self.name,
             'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
             'topology': self.topology,
             'kwargs': self.kwargs,
@@ -680,7 +626,6 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
 
     def __init__(
             self,
-            name,
             featurizer,
             topology,
             **kwargs
@@ -689,7 +634,6 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
 
         Parameters
         ----------
-        name
         featurizer : `pyemma.coordinates.featurizer`
             the pyemma featurizer used as a callable class
         topology : :obj:`openpathsampling.engines.openmm.MDTopology`
@@ -727,7 +671,6 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
         featurizer(self._instance, **md_kwargs)
 
         super(GeneratorCV, self).__init__(
-            name,
             cv_callable=featurizer,
             cv_requires_lists=True,
             cv_wrap_numpy_array=True,
@@ -743,7 +686,6 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
 
     def to_dict(self):
         return {
-            'name': self.name,
             'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
             'topology': self.topology,
             'kwargs': self.kwargs

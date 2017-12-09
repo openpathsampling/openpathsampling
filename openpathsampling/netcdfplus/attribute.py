@@ -21,14 +21,12 @@ class PseudoAttribute(cd.Wrap, StorableNamedObject):
 
     Parameters
     ----------
-    name : string
-        A descriptive name of the collectivevariable. It is used in the string
-        representation.
+    key_class : :class:`StorableObject`
+        A class (not the instance) of a storable object that the attribute applies
+        to. Typical choices are :obj:`.Snapshot` or :obj:`.Trajectory`
 
     Attributes
     ----------
-    name
-
     _single_dict : :class:`openpathsampling.chaindict.ChainDict`
         The ChainDict that takes care of using only a single element instead of
         an iterable. In the case of a single object. It will be wrapped in a
@@ -48,16 +46,10 @@ class PseudoAttribute(cd.Wrap, StorableNamedObject):
 
     def __init__(
             self,
-            name,
             key_class
     ):
-        if (type(name) is not str and type(name) is not unicode) or len(
-                name) == 0:
-            raise ValueError('name must be a non-empty string')
-
         StorableNamedObject.__init__(self)
 
-        self.name = name
         self.key_class = key_class
 
         # default settings if we should create a disk cache
@@ -162,10 +154,10 @@ class PseudoAttribute(cd.Wrap, StorableNamedObject):
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
-            if self.name != other.name:
-                return False
+            if self.__uuid__ == other.__uuid__:
+                return True
 
-            return True
+            return False
 
         return NotImplemented
 
@@ -191,7 +183,6 @@ class CallablePseudoAttribute(PseudoAttribute):
 
     def __init__(
             self,
-            name,
             key_class,
             cv_callable,
             cv_requires_lists=False,
@@ -202,7 +193,6 @@ class CallablePseudoAttribute(PseudoAttribute):
         """
         Parameters
         ----------
-        name
         key_class
         cv_callable : callable (function or class with __call__)
             The callable to be used
@@ -271,7 +261,6 @@ class CallablePseudoAttribute(PseudoAttribute):
         """
 
         super(CallablePseudoAttribute, self).__init__(
-            name,
             key_class
         )
         self.cv_requires_lists = cv_requires_lists
@@ -321,6 +310,8 @@ class CallablePseudoAttribute(PseudoAttribute):
     def __eq__(self, other):
         """Override the default Equals behavior"""
         if isinstance(other, self.__class__):
+            if self.__uuid__ == other.__uuid__:
+                return True
             if self.name != other.name:
                 return False
             if self.kwargs != other.kwargs:
@@ -356,7 +347,6 @@ class FunctionPseudoAttribute(CallablePseudoAttribute):
 
     def __init__(
             self,
-            name,
             key_class,
             f,
             cv_requires_lists=False,
@@ -367,7 +357,6 @@ class FunctionPseudoAttribute(CallablePseudoAttribute):
         r"""
         Parameters
         ----------
-        name : str
         f : (callable) function
             The function to be used
         cv_requires_lists
@@ -413,7 +402,6 @@ class GeneratorPseudoAttribute(CallablePseudoAttribute):
 
     def __init__(
             self,
-            name,
             key_class,
             generator,
             cv_requires_lists=False,
@@ -424,7 +412,6 @@ class GeneratorPseudoAttribute(CallablePseudoAttribute):
         r"""
         Parameters
         ----------
-        name
         key_class
         generator : callable class
             a class where instances have a `__call__` attribute
@@ -444,7 +431,6 @@ class GeneratorPseudoAttribute(CallablePseudoAttribute):
         """
 
         super(GeneratorPseudoAttribute, self).__init__(
-            name,
             key_class,
             cv_callable=generator,
             cv_requires_lists=cv_requires_lists,
