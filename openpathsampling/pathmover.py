@@ -482,7 +482,7 @@ class IdentityPathMover(PathMover):
     """
     def __init__(self, counts_as_trial=False):
         super(IdentityPathMover, self).__init__()
-        self.counts_as_trial=counts_as_trial
+        self.counts_as_trial = counts_as_trial
 
     def move(self, sample_set):
         mover = self if self.counts_as_trial else None

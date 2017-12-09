@@ -13,8 +13,8 @@ except ImportError:  # pragma: no cover
 
     if not os.path.exists(setupfile):
         # now we're screwed
-        raise ImportError("Unable to identify OPS version. " + 
-			  "OPS probably not installed correctly.")
+        raise ImportError("Unable to identify OPS version. "
+                          + "OPS probably not installed correctly.")
 
     # continue force-setting version based on `setup.py`
     import imp  # may be Py2 only!
@@ -23,7 +23,7 @@ except ImportError:  # pragma: no cover
 
     version.version = ops_setup.preferences['version']
     version.short_version = ops_setup.preferences['version']
-    version.git_version  = ops_setup.get_git_version()
+    version.git_version = ops_setup.get_git_version()
     version.full_version = ops_setup.preferences['version']
     if not ops_setup.preferences['released']:
         version.full_version += ".dev-" + version.git_version[:7]

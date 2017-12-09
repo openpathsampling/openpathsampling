@@ -252,9 +252,13 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         return False
 
     def check_reverse(self, trajectory, trusted=False):
+        """
+        See __call__; same thing, but potentially in reverse frame order
+        """
         return self(trajectory, trusted=False)
 
     def check(self, trajectory):
+        """Alias for __call__"""
         return self(trajectory, trusted=False)
 
     def trajectory_summary(self, trajectory):
@@ -1285,12 +1289,12 @@ class EnsembleCombination(Ensemble):
 
         Parameters
         ----------
-        combo : 
+        combo :
             the combination function
         f1 :
             ensemble1's function. Takes trajectory, returns bool. Examples
             include `__call__`, `can_append`, etc.
-        f2 : 
+        f2 :
             ensemble2's function. As with f1, but for ensemble 2.
         trajectory : :class:`.Trajectory`
             input trajectory
@@ -1719,7 +1723,7 @@ class SequentialEnsemble(Ensemble):
                 logger.debug("Ensemble " + str(i) + " : "
                              + ens.__class__.__name__)
 
-        while True:  # main loop, with various
+        while True:  # main loop, with various exits
             if self._use_cache and cache.trusted:
                 # TODO: trajectory.index is expensive... how to speed up?
                 # offset = 1
@@ -1768,9 +1772,10 @@ class SequentialEnsemble(Ensemble):
                 else:
                     # subtraj existed, but not yet final ensemble
                     # so we start with the next ensemble
-                    if subtraj_final != traj_final and \
-                            not self.ensembles[ens_num](
-                                subtraj, trusted=cache.trusted):
+                    end_traj = (subtraj_final == traj_final)
+                    ensemble = self.ensembles[ens_num]
+                    if not end_traj and not ensemble(subtraj,
+                                                     trusted=cache.trusted):
                         logger.debug(
                             "Couldn't assign frames " + str(subtraj_first) +
                             " through " + str(subtraj_final) +
