@@ -11,6 +11,7 @@ CollectiveVariable
 	
 .. automodule:: collectivevariable
 	:members:
+        :noindex:
 	:inherited-members:
 	:show-inheritance:
 
@@ -21,6 +22,7 @@ Dynamics Engines
 	
 .. automodule:: engines
 	:members:
+        :noindex:
 	:inherited-members:
 	:show-inheritance:
         :imported-members:
@@ -32,6 +34,7 @@ Shooting
 	
 .. automodule:: shooting
 	:members:
+        :noindex:
 	:inherited-members:
 	:show-inheritance:
 	
@@ -41,6 +44,7 @@ Ensemble
 
 .. automodule:: ensemble 
 	:members:
+        :noindex:
 
 ******
 Volume
@@ -48,6 +52,7 @@ Volume
 
 .. automodule:: openpathsampling.volume
 	:members:
+        :noindex:
 	
 *********
 PathMover
@@ -55,6 +60,7 @@ PathMover
 
 .. automodule:: openpathsampling.pathmover
 	:members:
+        :noindex:
 	
 *******
 Storage
@@ -62,13 +68,15 @@ Storage
 
 .. automodule:: storage
 	:members:
+        :noindex:
 	
 ********
 Snapshot
 ********
 
-.. automodule:: openpathsampling.engines.snapshot
+.. automodule:: engines.snapshot
 	:members:
+        :noindex:
 
 **********
 Trajectory
@@ -76,4 +84,5 @@ Trajectory
 
 .. automodule:: openpathsampling.engines.trajectory
 	:members:
+        :noindex:
 

@@ -1,4 +1,4 @@
-.. ops-output::
+.. _ops-output:
 
 =========================
 Output during simulations

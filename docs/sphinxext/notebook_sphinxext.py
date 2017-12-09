@@ -6,7 +6,7 @@ from __future__ import print_function
 
 import time
 import os, shutil, glob, re
-from sphinx.util.compat import Directive
+from docutils.parsers.rst import Directive
 from docutils import nodes
 from docutils.parsers.rst import directives
 from nbconvert.exporters import HTMLExporter, PythonExporter
