@@ -104,8 +104,8 @@ class TISAnalysisTester(object):
 
     def setup(self):
         # set up the trajectories, ensembles, etc. for this test
-        cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
-        cv_B = paths.FunctionCV('1-Id', lambda s: 1.0-s.xyz[0][0])
+        cv_A = paths.FunctionCV(lambda s: s.xyz[0][0]).named("Id")
+        cv_B = paths.FunctionCV(lambda s: 1.0-s.xyz[0][0]).named("1-Id")
         self.cv_x = cv_A
         self.state_A = paths.CVDefinedVolume(cv_A,
                                              float("-inf"), 0.0).named("A")

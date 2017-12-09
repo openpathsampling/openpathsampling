@@ -27,7 +27,7 @@ for logger in quiet_loggers:
 class testBiasEnsembleTable(object):
     def setup(self):
         # create the network
-        xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV(f=lambda s : s.xyz[0][0]).named("xA")
         self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
         self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
         ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0), 
@@ -145,10 +145,10 @@ class testBiasEnsembleTable(object):
     def test_add_biases(self):
         # this is where we combine multiple biases into one
         ifacesA = self.ifacesA[:-1]
-        xval2 = paths.FunctionCV(name="xB", f=lambda s : 0.5-s.xyz[0][0])
+        xval2 = paths.FunctionCV(f=lambda s : 0.5-s.xyz[0][0]).named("xB")
         ifacesB = paths.VolumeInterfaceSet(xval2, float("-inf"),
                                            [0.0, 0.1, 0.2])
-        xval3 = paths.FunctionCV(name="xC", f=lambda s : s.xyz[0][0]-2.0)
+        xval3 = paths.FunctionCV(f=lambda s : s.xyz[0][0]-2.0).named("xC")
         stateC = paths.CVDefinedVolume(self.xval, -3.0, 2.0)
         ifacesC = paths.VolumeInterfaceSet(xval3, -1.0, [0.0, 0.1, 0.2, 0.3])
         network = paths.MISTISNetwork(
@@ -234,8 +234,7 @@ class testBiasEnsembleTable(object):
 
 class testSRTISBiasFromNetwork(object):
     def setup(self):
-        xval = paths.CoordinateFunctionCV(name="xA",
-                                          f=lambda s : s.xyz[0][0])
+        xval = paths.CoordinateFunctionCV(f=lambda s : s.xyz[0][0]).named("xA")
         self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
         self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
         self.ifacesA = paths.VolumeInterfaceSet(xval, -1.0, 
@@ -350,9 +349,5 @@ class testSRTISBiasFromNetwork(object):
         assert_almost_equal(bias.bias_value(transition_AB.ensembles[-1],
                                             network.ms_outers[0]),
                             old_div(2.0, 2))
-
-
-
-
 
         raise SkipTest

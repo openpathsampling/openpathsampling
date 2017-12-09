@@ -29,7 +29,7 @@ class testTISTransition(object):
 
 class testFixedLengthTPSTransition(object):
     def setup(self):
-        op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        op = paths.FunctionCV(lambda snap : snap.coordinates[0][0]).named("Id")
         self.stateA = paths.CVDefinedVolume(op, 0.1, 0.5)
         self.stateB = paths.CVDefinedVolume(op, 2.0, 2.5)
 
@@ -76,7 +76,7 @@ class testFixedLengthTPSTransition(object):
 
 class testMinusSidesSummary(object):
     def setup(self):
-        op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        op = paths.FunctionCV(lambda snap : snap.coordinates[0][0]).named("Id")
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
         vol3 = paths.CVDefinedVolume(op, 2.0, 2.5)

@@ -32,8 +32,8 @@ class testAbstract(object):
 
 class testFullBootstrapping(object):
     def setup(self):
-        self.cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
-        cv_neg = paths.FunctionCV("Neg", lambda snap: -snap.xyz[0][0])
+        self.cv = paths.FunctionCV(lambda snap: snap.xyz[0][0]).named("Id")
+        cv_neg = paths.FunctionCV(lambda snap: -snap.xyz[0][0]).named("Neg")
         self.stateA = paths.CVDefinedVolume(self.cv, -1.0, 0.0)
         self.stateB = paths.CVDefinedVolume(self.cv, 1.0, 2.0)
         self.stateC = paths.CVDefinedVolume(self.cv, 3.0, 4.0)
@@ -183,7 +183,7 @@ class testShootFromSnapshotsSimulation(object):
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
-        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV(lambda snap : snap.coordinates[0][0]).named("Id")
         starting_volume = paths.CVDefinedVolume(cv, -0.01, 0.01)
         forward_ensemble = paths.LengthEnsemble(5)
         backward_ensemble = paths.LengthEnsemble(3)
@@ -246,7 +246,7 @@ class testCommittorSimulation(object):
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
-        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV(lambda snap : snap.coordinates[0][0]).named("Id")
         self.left = paths.CVDefinedVolume(cv, float("-inf"), -1.0)
         self.right = paths.CVDefinedVolume(cv, 1.0, float("inf"))
         self.state_labels = {"Left" : self.left,
@@ -433,7 +433,7 @@ class testDirectSimulation(object):
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
-        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV(lambda snap : snap.coordinates[0][0]).named("Id")
         self.cv = cv
         self.center = paths.CVDefinedVolume(cv, -0.2, 0.2)
         self.interface = paths.CVDefinedVolume(cv, -0.3, 0.3)
@@ -558,8 +558,8 @@ class testDirectSimulation(object):
         # interface beta); `X_b` (outside interface beta, not outside
         # interface alpha); and `X_ab` (outside interface alpha and beta).
         cv1 = self.cv
-        cv2 = paths.FunctionCV("abs_sin",
-                               lambda snap : np.abs(np.sin(snap.xyz[0][0])))
+        cv2 = paths.FunctionCV(lambda snap : np.abs(np.sin(snap.xyz[0][0]))
+                               ).named("abs_sin")
         state = paths.CVDefinedVolume(cv1, old_div(-np.pi,8.0), old_div(np.pi,8.0))
         other_state = paths.CVDefinedVolume(cv1, -5.0/8.0*np.pi, -3.0/8.0*np.pi)
         alpha = paths.CVDefinedVolume(cv1, float("-inf"), 3.0/8.0*np.pi)

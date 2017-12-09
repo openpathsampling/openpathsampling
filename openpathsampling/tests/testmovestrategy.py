@@ -51,8 +51,8 @@ class testStrategyLevels(object):
 
 class MoveStrategyTestSetup(object):
     def setup(self):
-        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(f=lambda s : s.xyz[0][0]).named("xA")
+        cvB = paths.FunctionCV(f=lambda s : -s.xyz[0][0]).named("xB")
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
         interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 

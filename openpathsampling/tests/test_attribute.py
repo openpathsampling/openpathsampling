@@ -31,7 +31,7 @@ class test_FunctionPseudoAttribute(object):
 
     def test_pickle_external_attr(self):
         template = make_1d_traj([0.0])[0]
-        attr = FunctionPseudoAttribute("x", paths.Trajectory, lambda x: x)
+        attr = FunctionPseudoAttribute(paths.Trajectory, lambda x: x).named("x")
         storage = paths.Storage("myfile.nc", "w", template)
         storage.save(attr)
         storage.close()
@@ -58,12 +58,11 @@ class test_FunctionPseudoAttribute(object):
 
             # compute distance in x[0]
             attr1 = FunctionPseudoAttribute(
-                'f1',
                 paths.Trajectory,
                 lambda x: x[0].coordinates[0] - x[-1].coordinates[0]
             ).with_diskcache(
                 allow_incomplete=allow_incomplete
-            )
+            ).named('f1')
 
             storage_w.save(attr1)
 
@@ -116,12 +115,11 @@ class test_FunctionPseudoAttribute(object):
 
         # compute distance in x[0]
         attr1 = FunctionPseudoAttribute(
-            'f1',
             paths.Trajectory,
             lambda x: x[0].coordinates[0] - x[-1].coordinates[0]
         ).with_diskcache(
             allow_incomplete=allow_incomplete
-        )
+        ).named("f1")
 
         storage_w.save(attr1)
 
@@ -163,12 +161,11 @@ class test_FunctionPseudoAttribute(object):
 
         # compute distance in x[0]
         attr1 = FunctionPseudoAttribute(
-            'f1',
             paths.Trajectory,
             lambda x: x[0].coordinates[0] - x[-1].coordinates[0]
         ).with_diskcache(
             allow_incomplete=allow_incomplete
-        )
+        ).named("f1")
 
         storage_w.save(attr1)
 

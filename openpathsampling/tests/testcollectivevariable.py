@@ -47,7 +47,7 @@ class test_FunctionCV(object):
 
     def test_pickle_external_cv(self):
         template = make_1d_traj([0.0])[0]
-        cv = paths.FunctionCV("x", lambda snap: snap.coordinates[0][0])
+        cv = paths.FunctionCV(lambda snap: snap.coordinates[0][0]).named("x")
         storage = paths.Storage("myfile.nc", "w", template)
         storage.save(cv)
         storage.close()
@@ -59,7 +59,7 @@ class test_FunctionCV(object):
             import math
             return math.ceil(snap.coordinates[0][0])
 
-        cv = paths.FunctionCV("y", test_cv_func)
+        cv = paths.FunctionCV(test_cv_func).named("y")
         storage = paths.Storage("myfile.nc", "w", template)
         storage.save(cv)
         storage.close()
@@ -68,10 +68,9 @@ class test_FunctionCV(object):
         """ Create a dihedral order parameter """
         psi_atoms = [6, 8, 14, 16]
         dihedral_op = op.MDTrajFunctionCV(
-            "psi",
             md.compute_dihedrals,
             topology=self.topology,
-            indices=[psi_atoms])
+            indices=[psi_atoms]).named("psi")
 
         md_dihed = md.compute_dihedrals(self.mdtraj, indices=[psi_atoms])
         my_dihed = dihedral_op(self.traj_topology)
@@ -87,10 +86,9 @@ class test_FunctionCV(object):
             raise SkipTest("MSMBuilder not installed")
         atom_pairs = [[0, 1], [10, 14]]
         atom_pair_op = op.MSMBFeaturizerCV(
-            "atom_pairs",
             AtomPairsFeaturizer,
             topology=self.topology,
-            pair_indices=atom_pairs)
+            pair_indices=atom_pairs).named("atom_pairs")
 
         md_distances = md.compute_distances(self.mdtraj, atom_pairs)
 
@@ -105,10 +103,9 @@ class test_FunctionCV(object):
             raise SkipTest("MSMBuilder not installed")
         atom_pairs = [[0, 1], [10, 14]]
         atom_pair_op = op.MSMBFeaturizerCV(
-            "atom_pairs",
             AtomPairsFeaturizer,
             topology=self.topology,
-            pair_indices=atom_pairs)
+            pair_indices=atom_pairs).named("atom_pairs")
 
         # little trick. We just pretend the atom_pairs_op is a function we want
         # to use it cannot be stored though, but for from_template it is enough
@@ -142,11 +139,10 @@ class test_FunctionCV(object):
             storage_w.snapshots.save(template)
 
             cv1 = paths.CoordinateFunctionCV(
-                'f1',
                 lambda x: x.coordinates[0]
             ).with_diskcache(
                 allow_incomplete=allow_incomplete
-            )
+            ).named("f1")
 
             storage_w.save(cv1)
 
@@ -247,11 +243,10 @@ class test_FunctionCV(object):
             storage_w.snapshots.save(template)
 
             cv1 = paths.CoordinateFunctionCV(
-                'f1',
                 lambda snapshot: snapshot.coordinates[0]
             ).with_diskcache(
                 allow_incomplete=allow_incomplete
-            )
+            ).named("f1")
 
             # let's mess up the order in which we save and include
             # reversed ones as well
@@ -314,10 +309,10 @@ class test_FunctionCV(object):
             storage_w.snapshots.save(template)
 
             cv1 = paths.CoordinateFunctionCV(
-                'f1',
                 lambda snapshot: snapshot.coordinates[0]
             ).with_diskcache(
-                allow_incomplete=allow_incomplete)
+                allow_incomplete=allow_incomplete
+            ).named("f1")
 
             # let's mess up the order in which we save and
             # include reversed ones as well

@@ -19,7 +19,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
 class testSummarizeTrajectoryVolumes(object):
     def setup(self):
-        op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        op = paths.FunctionCV(lambda snap : snap.coordinates[0][0]).named("Id")
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
         vol3 = paths.CVDefinedVolume(op, 2.0, 2.5)
@@ -85,7 +85,7 @@ class testSummarizeTrajectoryVolumes(object):
 
 class testSubtrajectoryIndices(object):
     def setup(self):
-        op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        op = paths.FunctionCV(lambda snap : snap.coordinates[0][0]).named("Id")
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
         vol3 = paths.CVDefinedVolume(op, 2.0, 2.5)

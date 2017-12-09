@@ -151,12 +151,9 @@ class testPathHistogram(object):
 
 class testPathDensityHistogram(object):
     def setup(self):
-        id_cv = paths.FunctionCV("Id",
-                                 lambda snap : snap.xyz[0][0])
-        sin_cv = paths.FunctionCV("sin",
-                                  lambda snap : np.sin(snap.xyz[0][0]))
-        square_cv = paths.FunctionCV("x^2",
-                                     lambda snap : snap.xyz[0][0]**2)
+        id_cv = paths.FunctionCV(lambda snap : snap.xyz[0][0]).named("Id")
+        sin_cv = paths.FunctionCV(lambda snap : np.sin(snap.xyz[0][0])).named("sin")
+        square_cv = paths.FunctionCV(lambda snap : snap.xyz[0][0]**2).named("x^2")
         self.cvs = [id_cv, sin_cv, square_cv]
         self.left_bin_edges = (0,0,0)
         self.bin_widths = (0.25, 0.5, 0.4)

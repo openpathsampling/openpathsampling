@@ -90,7 +90,7 @@ class testStorage(object):
         if os.path.isfile(fname):
             os.remove(fname)
 
-        cv = paths.CoordinateFunctionCV('cv', lambda x: x)
+        cv = paths.CoordinateFunctionCV(lambda x: x)
 
         traj = paths.Trajectory(list(self.traj))
         template = traj[0]

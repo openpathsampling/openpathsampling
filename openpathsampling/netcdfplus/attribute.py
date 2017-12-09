@@ -168,7 +168,7 @@ class PseudoAttribute(cd.Wrap, StorableNamedObject):
 
         return NotImplemented
 
-    to_dict = create_to_dict(['name', 'key_class'])
+    to_dict = create_to_dict(['key_class'])
 
 
 class CallablePseudoAttribute(PseudoAttribute):
@@ -289,7 +289,7 @@ class CallablePseudoAttribute(PseudoAttribute):
 
     def to_dict(self):
         dct = super(CallablePseudoAttribute, self).to_dict()
-        callable_argument = self.__class__.args()[3]
+        callable_argument = self.__class__.args()[2]
         dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
         dct['cv_wrap_numpy_array'] = self.cv_wrap_numpy_array
@@ -375,7 +375,6 @@ class FunctionPseudoAttribute(CallablePseudoAttribute):
         """
 
         super(FunctionPseudoAttribute, self).__init__(
-            name,
             key_class,
             cv_callable=f,
             cv_requires_lists=cv_requires_lists,

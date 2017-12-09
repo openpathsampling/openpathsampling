@@ -219,7 +219,7 @@ class CallableCV(CollectiveVariable):
 
     def to_dict(self):
         dct = super(CallableCV, self).to_dict()
-        callable_argument = self.__class__.args()[2]
+        callable_argument = self.__class__.args()[1]
         dct[callable_argument] = ObjectJSON.callable_to_dict(self.cv_callable)
         dct['cv_requires_lists'] = self.cv_requires_lists
         dct['cv_wrap_numpy_array'] = self.cv_wrap_numpy_array
