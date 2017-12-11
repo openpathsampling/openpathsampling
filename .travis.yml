@@ -26,8 +26,7 @@ script:
   # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
-  - if [ ${CONDA_PY:0:1} -eq "2" ]; then source devtools/ci/ipythontests.sh; fi
-  #- source devtools/ci/ipythontests.sh
+  - source devtools/ci/ipythontests.sh
 
   # Upload new docs
   - bash -x devtools/ci/after_sucess.sh
