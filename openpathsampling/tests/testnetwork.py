@@ -27,6 +27,9 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 class testMultipleStateTIS(object):
     # generic class to set up states and ifaces
     def setup(self):
+        # need to clear this before each run, otherwise it saves the
+        # previous setup
+        paths.InterfaceSet._reset()
         xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(xval, -0.1, 0.1)
@@ -126,7 +129,7 @@ class testMSTISNetwork(testMultipleStateTIS):
             assert_equal(self.mstis.transitions[trans]._flux, myflux)
 
     def test_all_states(self):
-        assert_equal(set(self.mstis.all_states), 
+        assert_equal(set(self.mstis.all_states),
                      set([self.stateA, self.stateB, self.stateC]))
 
     def test_trajectories(self):
@@ -160,6 +163,25 @@ class testMSTISNetwork(testMultipleStateTIS):
         assert_equal(len(self.mstis.from_state[self.stateB].ensembles), 2)
         assert_equal(len(self.mstis.from_state[self.stateC].ensembles), 2)
 
+        # test that .sampling_ensembles is as expected
+        assert_equal(len(self.mstis.sampling_ensembles), 6)
+        all_sampling_ens = sum(
+            [self.mstis.from_state[state].ensembles
+             for state in [self.stateA, self.stateB, self.stateC]],
+            []
+        )
+        assert_equal(set(self.mstis.sampling_ensembles),
+                     set(all_sampling_ens))
+
+        # test that sampling ensembles has cv_max set
+        assert_equal(len(paths.InterfaceSet._cv_max_dict), 1)
+        cv_max = list(paths.InterfaceSet._cv_max_dict.values())[0]
+        for transition in self.mstis.sampling_transitions:
+            assert_equal(transition.interfaces.cv_max, cv_max)
+        for ens in self.mstis.sampling_ensembles:
+            assert_equal(ens.cv_max, cv_max)
+
+
     def test_autonaming(self):
         assert_equal(self.stateA.name, "A")
         assert_equal(self.stateB.name, "B")
@@ -173,6 +195,7 @@ class testMSTISNetwork(testMultipleStateTIS):
         self.stateA.name = "B"
         self.stateB.name = "A"
         self.stateC._name = ""
+        paths.InterfaceSet._reset()
         xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
                                            [-0.5, -0.4, -0.3])
@@ -217,6 +240,21 @@ class testMISTISNetwork(testMultipleStateTIS):
         assert_equal(len(transitions[self.stateB, self.stateA].ensembles), 2)
         assert_equal(len(transitions[self.stateA, self.stateC].ensembles), 3)
         # TODO: add more checks here
+
+    def test_sampling_ensembles(self):
+        assert_equal(len(self.mistis.sampling_ensembles), 7)
+        all_sampling_ens = sum(
+            [t.ensembles for t in self.mistis.sampling_transitions], []
+        )
+        assert_equal(set(self.mistis.sampling_ensembles),
+                     set(all_sampling_ens))
+        # test that sampling ensembles has cv_max set
+        assert_equal(len(paths.InterfaceSet._cv_max_dict), 1)
+        cv_max = list(paths.InterfaceSet._cv_max_dict.values())[0]
+        for transition in self.mistis.sampling_transitions:
+            assert_equal(transition.interfaces.cv_max, cv_max)
+        for ens in self.mistis.sampling_ensembles:
+            assert_equal(ens.cv_max, cv_max)
 
     def test_ms_outers(self):
         ms_outer_ens = self.mistis.ms_outers[0]
@@ -304,9 +342,8 @@ class testMISTISNetwork(testMultipleStateTIS):
         fname = data_filename("mistis_storage_test.nc")
         if os.path.isfile(fname):
             os.remove(fname)
-        template = self.traj['AA'][0]
         storage_w = paths.Storage(fname, "w")
-        storage_w.snapshots.save(template)
+        storage_w.save(self.traj['AA'])  # template
 
         # print(storage_w.simplifier.simplify(self.mistis))
 

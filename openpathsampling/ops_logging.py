@@ -12,7 +12,7 @@ def initialization_logging(logger, obj, entries):
         for entry in entries:
             working_dict[entry] = obj.__dict__[entry]
 
-    logger.info("Initializing <%s> (%s)", 
+    logger.info("Initializing <%s> (%s)",
                 str(hex(id(obj))), str(obj.__class__.__name__))
     for entry in working_dict.keys():
         logger.info("Parameter: %s : %s", str(entry), str(working_dict[entry]))
