@@ -107,6 +107,7 @@ class TISAnalysisTester(object):
 
     def setup(self):
         # set up the trajectories, ensembles, etc. for this test
+        paths.InterfaceSet._reset()
         cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
         cv_B = paths.FunctionCV('1-Id', lambda s: 1.0-s.xyz[0][0])
         self.cv_x = cv_A
@@ -501,6 +502,21 @@ class TestFullHistogramMaxLambda(TISAnalysisTester):
         )
         mstis_BA_hists = mstis_BA_histogrammer.calculate(self.mstis_steps)
         self._check_transition_results(mstis_BA, mstis_BA_hists)
+
+    @raises(RuntimeError)
+    def test_calculate_no_max_lambda(self):
+        mistis_AB = self.mistis.transitions[(self.state_A, self.state_B)]
+        modified_transition = paths.TISTransition(
+            stateA=mistis_AB.stateA,
+            stateB=mistis_AB.stateB,
+            interfaces=mistis_AB.interfaces.volumes,
+            orderparameter=mistis_AB.orderparameter
+        )
+        mistis_AB_histogrammer = FullHistogramMaxLambdas(
+            transition=modified_transition,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+
 
 
 class TestConditionalTransitionProbability(TISAnalysisTester):

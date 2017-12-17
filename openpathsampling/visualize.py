@@ -554,7 +554,7 @@ class MoveTreeBuilder(Builder):
         ensembles = scheme.network.all_ensembles
         if hidden_ensembles:
             ensembles += list(scheme.find_hidden_ensembles())
-        
+
         return MoveTreeBuilder(
             pathmover=scheme.root_mover,
             ensembles=ensembles,
@@ -603,7 +603,7 @@ class MoveTreeBuilder(Builder):
             elif self.options.analysis['label_with'] == "class":
                 sub_name = sub_type.__name__[:-5]
             else:  # pragma: no cover (should never occur)
-                raise ValueError("Bad option for 'label_with': " 
+                raise ValueError("Bad option for 'label_with': "
                                  + str(self.options.analysis['label_width']))
 
 
@@ -747,7 +747,7 @@ class MoveTreeBuilder(Builder):
                             css_class=['output'])
                     )
                     show = True
-    
+
                 if show:
                     group.add(
                         doc.connector(
@@ -1027,7 +1027,7 @@ class PathTreeBuilder(Builder):
     op : :obj:`openpathsampling.CollectiveVariable`-like
         a function that returns a value when passed a snapshot. The value will
         be put on single snapshots.
-    
+
     """
     def __init__(self):
         super(PathTreeBuilder, self).__init__(['movers'])
