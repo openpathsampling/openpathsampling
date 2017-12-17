@@ -563,6 +563,8 @@ class PathSampling(PathSimulator):
         self.root = self.sample_set
 
         if self.storage is not None:
+            template_trajectory = self.sample_set.samples[0].trajectory
+            self.storage.save(template_trajectory)
             self.save_current_step()
 
     def to_dict(self):
