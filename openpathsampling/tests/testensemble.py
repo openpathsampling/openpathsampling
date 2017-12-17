@@ -1326,6 +1326,40 @@ class testTISEnsemble(EnsembleTest):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(test_f, ttraj[test], results[test], failmsg)
 
+    def test_tis_ensemble_candidate_cv_max(self):
+        cv_max_func = lambda t, cv_: max(cv_(t))
+        cv_max = paths.netcdfplus.FunctionPseudoAttribute(
+            name="max " + op.name,
+            key_class=paths.Trajectory,
+            f=lambda t: cv_max_func(t, cv_=op)
+        )
+        tis = TISEnsemble(vol1, vol3, vol2, cv_max=cv_max, lambda_i=0.7)
+
+        test_f = lambda t: tis(t, candidate=True)
+        results = {}
+        upper_keys = [k for k in list(ttraj.keys()) if k[:6] == "upper_"]
+        for test in upper_keys:
+            results[test] = False
+        # results where we SHOULD get True
+        results['upper_in_out_cross_out_in'] = True
+        results['upper_in_cross_in'] = True
+        # results where the input isn't actually a candidate trajectory, so
+        # it accepts the path even though it shouldn't
+        results['upper_in_cross_in_cross_in'] = True
+        results['upper_in_out_cross_out_in_out_in_out_cross_out_in'] = True
+        results['upper_in_in_cross_in'] = True
+
+        # first test should cache the results
+        for test in list(results.keys()):
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(test_f, ttraj[test], results[test], failmsg)
+
+        # second test should check the cache
+        for test in list(results.keys()):
+            failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
+            self._single_test(test_f, ttraj[test], results[test], failmsg)
+
+
 class EnsembleCacheTest(EnsembleTest):
     def _was_cache_reset(self, cache):
         return cache.contents == { }
