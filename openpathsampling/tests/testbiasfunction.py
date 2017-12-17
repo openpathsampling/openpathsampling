@@ -27,6 +27,7 @@ for logger in quiet_loggers:
 class testBiasEnsembleTable(object):
     def setup(self):
         # create the network
+        paths.InterfaceSet._reset()
         xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
         self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
@@ -234,6 +235,7 @@ class testBiasEnsembleTable(object):
 
 class testSRTISBiasFromNetwork(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         xval = paths.CoordinateFunctionCV(name="xA",
                                           f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
