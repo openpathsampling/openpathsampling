@@ -17,11 +17,14 @@ case $PYTHON_VERSION in
         mistis=$dropbox_base_url/qaeczkugwxkrdfy/toy_mistis_1k_OPS1.nc
         ;;
     "3.5")
-        echo "No tests for Python 3.5 yet"
+        mstis=$dropbox_base_url/1ulzssv5p4lr61f/toy_mstis_1k_OPS1_py36.nc
         ;;
     "3.6")
         mstis=$dropbox_base_url/1ulzssv5p4lr61f/toy_mstis_1k_OPS1_py36.nc
         ;;
+    *)
+        echo "Unsupported Python version: $PYTHON_VERSION"
+esac
 
 curl -OLk $mstis
 curl -OLk $mistis
