@@ -48,14 +48,8 @@ class MCStep(StorableObject):
     change : MoveChange
         the movechange describing the transition from pre to post
     """
-    def __init__(self,
-                 simulation=None,
-                 mccycle=-1,
-                 previous=None,
-                 active=None,
-                 change=None
-                 ):
-
+    def __init__(self, simulation=None, mccycle=-1, previous=None,
+                 active=None, change=None):
         super(MCStep, self).__init__()
         self.simulation = simulation
         self.previous = previous
@@ -104,7 +98,7 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         )
         self.sample_set = None
         self.output_stream = sys.stdout  # user can change to file handler
-        self.allow_refresh =  True
+        self.allow_refresh = True
 
     def sync_storage(self):
         """
@@ -174,7 +168,7 @@ class BootstrapPromotionMove(SubPathMover):
 
         # Bootstrapping sets numeric replica IDs. If the user wants it done
         # differently, the user can change it.
-        self._ensemble_dict = {ens : rep for rep, ens in enumerate(ensembles) }
+        self._ensemble_dict = {ens: rep for rep, ens in enumerate(ensembles)}
 
         # Create all possible hoppers so we do not have to recreate these
         # every time which will result in more efficient storage
@@ -282,7 +276,7 @@ class Bootstrapping(PathSimulator):
             paths.tools.refresh_output(
                 ("Working on Bootstrapping cycle step %d" +
                 " in ensemble %d/%d .\n") %
-                ( self.step, ens_num + 1, len(self.ensembles) ),
+                (self.step, ens_num + 1, len(self.ensembles)),
                 output_stream=self.output_stream,
                 refresh=self.allow_refresh
             )
@@ -341,9 +335,9 @@ class Bootstrapping(PathSimulator):
         self.sync_storage()
 
         paths.tools.refresh_output(
-            ("DONE! Completed Bootstrapping cycle step %d" +
-            " in ensemble %d/%d.\n") %
-            ( self.step, ens_num + 1, len(self.ensembles) ),
+            ("DONE! Completed Bootstrapping cycle step %d"
+             + " in ensemble %d/%d.\n") %
+            (self.step, ens_num + 1, len(self.ensembles)),
             output_stream=self.output_stream,
             refresh=self.allow_refresh
         )
@@ -410,8 +404,8 @@ class FullBootstrapping(PathSimulator):
 
         if self.initial_max_length is not None:
             self.first_traj_ensemble = (
-                paths.LengthEnsemble(slice(0, self.initial_max_length)) & 
-                self.first_traj_ensemble
+                paths.LengthEnsemble(slice(0, self.initial_max_length))
+                & self.first_traj_ensemble
             )
 
         if extra_ensembles is None:
@@ -423,16 +417,16 @@ class FullBootstrapping(PathSimulator):
         ] + extra_ensembles
 
         self.transition_shooters = [
-            paths.OneWayShootingMover(selector=paths.UniformSelector(), 
+            paths.OneWayShootingMover(selector=paths.UniformSelector(),
                                       ensemble=ens,
-                                      engine=self.engine) 
+                                      engine=self.engine)
             for ens in transition.ensembles
         ]
 
         self.extra_shooters = [
-            paths.OneWayShootingMover(selector=paths.UniformSelector(), 
+            paths.OneWayShootingMover(selector=paths.UniformSelector(),
                                       ensemble=ens,
-                                      engine=self.engine) 
+                                      engine=self.engine)
             for ens in self.extra_ensembles
         ]
         self.snapshot = snapshot.copy()
@@ -446,14 +440,14 @@ class FullBootstrapping(PathSimulator):
             build_attempts=20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
-        subtraj=None
+        subtraj = None
         while not has_AA_path:
             self.engine.current_snapshot = self.snapshot.copy()
             self.engine.snapshot = self.snapshot.copy()
             self.output_stream.write("Building first trajectory\n")
             sys.stdout.flush()
             first_traj = self.engine.generate(
-                self.engine.current_snapshot, 
+                self.engine.current_snapshot,
                 [self.first_traj_ensemble.can_append]
             )
             self.output_stream.write("Selecting segment\n")
@@ -507,21 +501,16 @@ class FullBootstrapping(PathSimulator):
 
 class PathSampling(PathSimulator):
     """
-    General path sampling code. 
-    
+    General path sampling code.
+
     Takes a single move_scheme and generates samples from that, keeping one
-    per replica after each move. 
+    per replica after each move.
     """
 
     calc_name = "PathSampling"
 
-    def __init__(
-            self,
-            storage,
-            move_scheme=None,
-            sample_set=None,
-            initialize=True
-    ):
+    def __init__(self, storage, move_scheme=None, sample_set=None,
+                 initialize=True):
         """
         Parameters
         ----------
@@ -574,6 +563,8 @@ class PathSampling(PathSimulator):
         self.root = self.sample_set
 
         if self.storage is not None:
+            template_trajectory = self.sample_set.samples[0].trajectory
+            self.storage.save(template_trajectory)
             self.save_current_step()
 
     def to_dict(self):
