@@ -244,7 +244,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
 
         if n_dofs != n_dofs_required:
             raise RuntimeError("Snapshot has " + str(n_dofs)
-                               + " degrees of freedom, not " 
+                               + " degrees of freedom, not "
                                + str(n_dofs_required) + ". "
                                + "Are there constraints? Constraints can't"
                                + " be used with this modifier.")
@@ -301,7 +301,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         # to do most of this? and get KE from a snapshot feature?
         n_atoms = len(masses)
         inv_masses = 1.0 / masses
-        momenta = velocities * masses[:, np.newaxis] 
+        momenta = velocities * masses[:, np.newaxis]
         total_momenta = sum(momenta, 0*momenta[0])
         remove_momenta = total_momenta / n_atoms
         remove_velocities = inv_masses[:, np.newaxis] * remove_momenta
