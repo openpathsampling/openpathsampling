@@ -138,31 +138,51 @@ class VolumeCombination(Volume):
         return '(' + self.sfnc.format(str(self.volume1), str(self.volume2)) + ')'
 
     def to_dict(self):
-        return { 'volume1' : self.volume1, 'volume2' : self.volume2 }
+        return {'volume1': self.volume1, 'volume2': self.volume2}
 
 
 class UnionVolume(VolumeCombination):
     """ "Or" combination (union) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(UnionVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
+        super(UnionVolume, self).__init__(
+            volume1=volume1,
+            volume2=volume2,
+            fnc=lambda a, b: a or b,
+            str_fnc='{0} or {1}'
+        )
 
 
 class IntersectionVolume(VolumeCombination):
     """ "And" combination (intersection) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(IntersectionVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
+        super(IntersectionVolume, self).__init__(
+            volume1=volume1,
+            volume2=volume2,
+            fnc=lambda a, b: a and b,
+            str_fnc='{0} and {1}'
+        )
 
 
 class SymmetricDifferenceVolume(VolumeCombination):
     """ "Xor" combination of two volumes."""
     def __init__(self, volume1, volume2):
-        super(SymmetricDifferenceVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
+        super(SymmetricDifferenceVolume, self).__init__(
+            volume1=volume1,
+            volume2=volume2,
+            fnc=lambda a, b: a ^ b,
+            str_fnc='{0} xor {1}'
+        )
 
 
 class RelativeComplementVolume(VolumeCombination):
     """ "Subtraction" combination (relative complement) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(RelativeComplementVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
+        super(RelativeComplementVolume, self).__init__(
+            volume1=volume1,
+            volume2=volume2,
+            fnc=lambda a, b: a and not b,
+            str_fnc='{0} and not {1}'
+        )
 
 
 class NegatedVolume(Volume):
@@ -239,7 +259,7 @@ class CVDefinedVolume(Volume):
     Contains all snapshots `snap` for which `lamba_min <
     collectivevariable(snap)` and `lambda_max > collectivevariable(snap)`.
     """
-    def __init__(self, collectivevariable, lambda_min = 0.0, lambda_max = 1.0):
+    def __init__(self, collectivevariable, lambda_min=0.0, lambda_max=1.0):
         '''
         Attributes
         ----------
@@ -273,9 +293,9 @@ class CVDefinedVolume(Volume):
 
     @property
     def default_name(self):
-        return (str(self.lambda_min) + "<" +
-                     str(self.collectivevariable.name) + "<" +
-                     str(self.lambda_max))
+        return (str(self.lambda_min) + "<"
+                + str(self.collectivevariable.name) + "<"
+                + str(self.lambda_max))
 
     def _copy_with_new_range(self, lmin, lmax):
         """Shortcut to make a CVDefinedVolume with all parameters the same as

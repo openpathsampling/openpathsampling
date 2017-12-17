@@ -32,6 +32,7 @@ class testAbstract(object):
 
 class testFullBootstrapping(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
         cv_neg = paths.FunctionCV("Neg", lambda snap: -snap.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(self.cv, -1.0, 0.0)

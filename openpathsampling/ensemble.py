@@ -252,9 +252,13 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         return False
 
     def check_reverse(self, trajectory, trusted=False):
+        """
+        See __call__; same thing, but potentially in reverse frame order
+        """
         return self(trajectory, trusted=False)
 
     def check(self, trajectory):
+        """Alias for __call__"""
         return self(trajectory, trusted=False)
 
     def trajectory_summary(self, trajectory):
@@ -1285,12 +1289,12 @@ class EnsembleCombination(Ensemble):
 
         Parameters
         ----------
-        combo : 
+        combo :
             the combination function
         f1 :
             ensemble1's function. Takes trajectory, returns bool. Examples
             include `__call__`, `can_append`, etc.
-        f2 : 
+        f2 :
             ensemble2's function. As with f1, but for ensemble 2.
         trajectory : :class:`.Trajectory`
             input trajectory
@@ -1700,7 +1704,7 @@ class SequentialEnsemble(Ensemble):
         final_ens = len(self.ensembles) - 1
         # print traj_final, final_ens
         # logging startup
-        if cache.debug_enabled:
+        if cache.debug_enabled:  # pragma: no cover
             logger.debug(
                 "Beginning can_append with subtraj_first="
                 + str(subtraj_first) + "; ens_first=" + str(ens_first)
@@ -1719,7 +1723,7 @@ class SequentialEnsemble(Ensemble):
                 logger.debug("Ensemble " + str(i) + " : "
                              + ens.__class__.__name__)
 
-        while True:  # main loop, with various
+        while True:  # main loop, with various exits
             if self._use_cache and cache.trusted:
                 # TODO: trajectory.index is expensive... how to speed up?
                 # offset = 1
@@ -1768,9 +1772,10 @@ class SequentialEnsemble(Ensemble):
                 else:
                     # subtraj existed, but not yet final ensemble
                     # so we start with the next ensemble
-                    if subtraj_final != traj_final and \
-                            not self.ensembles[ens_num](
-                                subtraj, trusted=cache.trusted):
+                    end_traj = (subtraj_final == traj_final)
+                    ensemble = self.ensembles[ens_num]
+                    if not end_traj and not ensemble(subtraj,
+                                                     trusted=cache.trusted):
                         logger.debug(
                             "Couldn't assign frames " + str(subtraj_first) +
                             " through " + str(subtraj_final) +
@@ -1881,7 +1886,7 @@ class SequentialEnsemble(Ensemble):
                 ens_final = cache.contents['ens_from']
 
         # logging startup
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
             logger.debug(
                 "Beginning can_prepend with ens_num:" + str(ens_num)
                 + "  ens_final:" + str(ens_final) + "  subtraj_final "
@@ -2813,7 +2818,7 @@ class TISEnsemble(SequentialEnsemble):
         }
 
     def __init__(self, initial_states, final_states, interface,
-                 orderparameter=None, lambda_i=None):
+                 orderparameter=None, cv_max=None, lambda_i=None):
         # regularize to list of volumes
         # without orderparameter, some info can't be obtained
         try:
@@ -2839,16 +2844,24 @@ class TISEnsemble(SequentialEnsemble):
         self.final_states = final_states
         self.interface = interface
         #        self.name = interface.name
-        self.orderparameter = orderparameter
-        # TODO: add max_orderparameter as a traj CV
+        self.orderparameter = orderparameter  # TODO: is this used? remove?
+        self.cv_max = cv_max
         self.lambda_i = lambda_i
         self._initial_volumes = volume_a
         self._final_volumes = volume_b | volume_a
 
     def __call__(self, trajectory, trusted=None, candidate=False):
-        use_candidate = (candidate and self.lambda_i is not None
-                         and self.orderparameter is not None)
-        if use_candidate:
+        logger.debug("TIS ENSEMBLE: candidate={0}".format(str(candidate)))
+        use_candidate = (candidate and self.lambda_i is not None)
+        if use_candidate and self.cv_max is not None:
+            logger.debug("Using candidate shortcut with self.cv_max")
+            return (
+                self._initial_volumes(trajectory[0])
+                & self._final_volumes(trajectory[-1])
+                & (self.cv_max(trajectory) > self.lambda_i)
+            )
+        elif use_candidate and self.orderparameter is not None:
+            logger.debug("Using candidate shortcut with max(orderparameter)")
             # as a candidate trajectory, we assume that only the first and
             # final frames can be in a state
             #logger.debug("initial: " +
@@ -2863,6 +2876,7 @@ class TISEnsemble(SequentialEnsemble):
                 & (max(self.orderparameter(trajectory)) > self.lambda_i)
             )
         else:
+            logger.debug("No shortcut possible")
             # it still works fine if we use the slower algorithm
             return super(TISEnsemble, self).__call__(trajectory, trusted)
 

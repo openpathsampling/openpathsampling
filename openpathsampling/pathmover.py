@@ -482,7 +482,7 @@ class IdentityPathMover(PathMover):
     """
     def __init__(self, counts_as_trial=False):
         super(IdentityPathMover, self).__init__()
-        self.counts_as_trial=counts_as_trial
+        self.counts_as_trial = counts_as_trial
 
     def move(self, sample_set):
         mover = self if self.counts_as_trial else None
@@ -703,6 +703,12 @@ class EngineMover(SampleMover):
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
         self._engine = engine
+        self._trust_candidate = True  # can I safely do that?
+        # I think that is safe. Note for future: if we come across a bug
+        # based on this, an alternative would be to have the move strategy
+        # set _trust_candidate when it builds the movers; that is likely to
+        # be a little safer (although I think we can trust all candidates
+        # from engine movers to actually be candidates)
 
     def to_dict(self):
         dct = super(EngineMover, self).to_dict()
