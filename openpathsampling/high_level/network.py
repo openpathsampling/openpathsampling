@@ -513,7 +513,7 @@ class MSTISNetwork(TISNetwork):
         Builds the sampling transitions (the self.from_state dictionary).
 
         This also sets self.states (list of states volumes), self.outers
-        (list of interface volumes making the MS-outer interface), and 
+        (list of interface volumes making the MS-outer interface), and
         self.outer_ensembles (list of TISEnsembles associated with the
         self.outers interfaces). Additionally, it gives default names
         volumes, interfaces, and transitions.
