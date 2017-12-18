@@ -544,12 +544,14 @@ class Trajectory(list, StorableObject):
         -----
 
         If the OPS trajectory is zero-length (has no snapshots), then this
-        fails. MDTraj trajectories must have at least one frame.
+        fails. OPS cannot currently convert zero-length trajectories to
+        MDTraj, because an OPS zero-length trajectory cannot determine its
+        MDTraj topology.
         """
         try:
             snap = self[0]
         except IndexError:
-            raise ValueError("Cannot convert length-zero trajectory "
+            raise ValueError("Cannot convert zero-length trajectory "
                              + "to MDTraj")
         if topology is None:
             # TODO: maybe add better error output?
