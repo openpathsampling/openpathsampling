@@ -9,20 +9,19 @@ install:
 
 script:
   - python --version
-  #- echo travis_fold:start:conda.build.package
-  - conda install --yes conda-build
+  - echo travis_fold:start:conda_build
   - conda build --quiet devtools/conda-recipe
-  #- echo travis_fold:end:conda.build.package
+  - echo travis_fold:end:conda_build
 
   # Run tests in _test environment
-  - conda create --yes --name test --use-local openpathsampling-dev
+  - conda create --quiet --yes --name test --use-local openpathsampling-dev
   - conda info --envs
   - source activate test
   - conda list -n test
   #- conda install --yes future
   #- conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
-  - conda install --yes nose python-coveralls ipynbtest
   - conda install --yes msmbuilder
+  - conda install --yes nose python-coveralls ipynbtest
   # - conda update --all --yes --use-local
   - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh

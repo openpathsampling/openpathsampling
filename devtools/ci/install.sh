@@ -3,9 +3,6 @@
 
 ### Install Miniconda
 
-echo travis_fold:start:install.conda
-echo Install conda
-
 if [ -z "$CONDA_PY" ]
 then
     CONDA_PY=2.7
@@ -30,4 +27,6 @@ export PATH=$HOME/miniconda${pyV}/bin:$PATH
 conda config --add channels http://conda.anaconda.org/omnia
 conda update --yes conda
 
-echo travis_fold:end:install.conda
+echo travis_fold:start:install.conda_build
+conda install --yes conda-build
+echo travis_fold:end:install.conda_build
