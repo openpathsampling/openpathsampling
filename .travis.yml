@@ -9,14 +9,16 @@ install:
 
 script:
   - python --version
-  - echo travis_fold:start:conda_build
+  - echo "Building OPS (with conda)" && echo -en 'travis_fold:start:build\\r'
   - conda build --quiet devtools/conda-recipe
-  - echo travis_fold:end:conda_build
+  - echo -en 'travis_fold:end:build\\r'
 
   # Run tests in _test environment
+  - echo "Create test environment" && echo -en 'travis_fold:start:create_env\\r'
   - conda create --quiet --yes --name test --use-local openpathsampling-dev
   - conda info --envs
   - source activate test
+  - echo -en 'travisfold:end:create_env\\r'
   - conda list -n test
   #- conda install --yes future
   #- conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
