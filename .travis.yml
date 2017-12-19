@@ -2,30 +2,30 @@ language: python
 
 install:
   - deactivate
-  # Sets up a MINIConda enviroment in the name of the selected python version
-  - source devtools/ci/install.sh
-  # Do not buffer output of python outputs but flush them directly to the terminal
+  # Do not buffer python outputs; flush them directly to the terminal
   - export PYTHONUNBUFFERED=true
+  # Sets up a miniconda environment
+  - source devtools/ci/install.sh
+  - conda build --quiet devtools/conda-recipe
+  - conda create --quiet --yes --name test --use-local openpathsampling-dev
+  - source activate test
+  - conda info --envs
+  - conda install --quiet --yes msmbuilder
+  - conda install -quiet --yes nose python-coveralls ipynbtest
+  - conda update --all --yes --use-local --quiet
 
 script:
   - python --version
-  - echo "Building OPS (with conda)" && echo -en 'travis_fold:start:build\\r'
-  - conda build --quiet devtools/conda-recipe
-  - echo -en 'travis_fold:end:build\\r'
+  - source devtools/ci/git_hash.sh
+  #- echo "Building OPS (with conda)" && echo -en 'travis_fold:start:build\\r'
+  #- echo -en 'travis_fold:end:build\\r'
 
-  # Run tests in _test environment
-  - echo "Create test environment" && echo -en 'travis_fold:start:create_env\\r'
-  - conda create --quiet --yes --name test --use-local openpathsampling-dev
-  - conda info --envs
-  - source activate test
-  - echo -en 'travisfold:end:create_env\\r'
+  # Run tests in test environment
+  #- echo "Create test environment" && echo -en 'travis_fold:start:create_env\\r'
+  #- echo -en 'travisfold:end:create_env\\r'
   - conda list -n test
   #- conda install --yes future
   #- conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
-  - conda install --yes msmbuilder
-  - conda install --yes nose python-coveralls ipynbtest
-  # - conda update --all --yes --use-local
-  - source devtools/ci/git_hash.sh
   - source devtools/ci/nosetests.sh
   - if [ ${CONDA_PY:0:1} -eq "2" ]; then source devtools/ci/ipythontests.sh; fi
   #- source devtools/ci/ipythontests.sh
