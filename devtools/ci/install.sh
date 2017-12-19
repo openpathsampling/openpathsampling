@@ -26,8 +26,3 @@ export PATH=$HOME/miniconda${pyV}/bin:$PATH
 # add omnia and update
 conda config --add channels http://conda.anaconda.org/omnia
 conda update --yes conda
-
-echo travis_fold:start:install.conda_build
-echo Installing conda-build
-conda install --yes conda-build
-echo travis_fold:end:install.conda_build

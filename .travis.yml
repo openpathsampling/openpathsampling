@@ -6,12 +6,13 @@ install:
   - export PYTHONUNBUFFERED=true
   # Sets up a miniconda environment
   - source devtools/ci/install.sh
+  = conda install --yes conda-build
   - conda build --quiet devtools/conda-recipe
   - conda create --quiet --yes --name test --use-local openpathsampling-dev
   - source activate test
   - conda info --envs
   - conda install --quiet --yes msmbuilder
-  - conda install -quiet --yes nose python-coveralls ipynbtest
+  - conda install --quiet --yes nose python-coveralls ipynbtest
   - conda update --all --yes --use-local --quiet
 
 script:
