@@ -92,18 +92,18 @@ class BiasEnsembleTable(BiasFunction):
             for ens_to in self_only | both:
                 orig_to_id = self.ensembles_to_ids[ens_to]
                 orig_value = self.dataframe.loc[orig_from_id, orig_to_id]
-                dataframe.set_value(index=ensembles_to_ids[ens_from],
-                                    col=ensembles_to_ids[ens_to],
-                                    value=orig_value)
+                idx = ensembles_to_ids[ens_from]
+                col = ensembles_to_ids[ens_to]
+                dataframe.at[idx, col] = orig_value
 
         for ens_from in other_only:
             orig_from_id = other.ensembles_to_ids[ens_from]
             for ens_to in other_only | both:
                 orig_to_id = other.ensembles_to_ids[ens_to]
                 orig_value = other.dataframe.loc[orig_from_id, orig_to_id]
-                dataframe.set_value(index=ensembles_to_ids[ens_from],
-                                    col=ensembles_to_ids[ens_to],
-                                    value=orig_value)
+                idx = ensembles_to_ids[ens_from]
+                col = ensembles_to_ids[ens_to]
+                dataframe.at[idx, col] = orig_value
 
         for ens_from in both:
             self_from_id = self.ensembles_to_ids[ens_from]
@@ -111,15 +111,15 @@ class BiasEnsembleTable(BiasFunction):
             for ens_to in self_only:
                 to_id = self.ensembles_to_ids[ens_to]
                 orig_value = self.dataframe.loc[self_from_id, to_id]
-                dataframe.set_value(index=ensembles_to_ids[ens_from],
-                                    col=ensembles_to_ids[ens_to],
-                                    value=orig_value)
+                idx = ensembles_to_ids[ens_from]
+                col = ensembles_to_ids[ens_to]
+                dataframe.at[idx, col] = orig_value
             for ens_to in other_only:
                 to_id = other.ensembles_to_ids[ens_to]
                 orig_value = other.dataframe.loc[other_from_id, to_id]
-                dataframe.set_value(index=ensembles_to_ids[ens_from],
-                                    col=ensembles_to_ids[ens_to],
-                                    value=orig_value)
+                idx = ensembles_to_ids[ens_from]
+                col = ensembles_to_ids[ens_to]
+                dataframe.at[idx, col] = orig_value
             for ens_to in both:
                 self_to_id = self.ensembles_to_ids[ens_to]
                 other_to_id = other.ensembles_to_ids[ens_to]
@@ -149,9 +149,9 @@ class BiasEnsembleTable(BiasFunction):
                         raise ValueError(msg)
                 value = self_value if self_value is not None else other_value
                 if value is not None:
-                    dataframe.set_value(index=ensembles_to_ids[ens_from],
-                                        col=ensembles_to_ids[ens_to],
-                                        value=value)
+                    idx = ensembles_to_ids[ens_from]
+                    col = ensembles_to_ids[ens_to]
+                    dataframe.at[idx, col] = value
                 # if both self_value and other_value are None, df unchanged
 
         return BiasEnsembleTable(dataframe, ensembles_to_ids)
@@ -185,7 +185,7 @@ class BiasEnsembleTable(BiasFunction):
             for e_to in ratio_dictionary:
                 id_to = ensembles_to_ids[e_to]
                 w_to = ratio_dictionary[e_to]
-                id_based_df.set_value(id_from, id_to, w_from/w_to)
+                id_based_df.at[id_from, id_to] = w_from / w_to
         return BiasEnsembleTable(id_based_df, ensembles_to_ids)
 
 
@@ -304,10 +304,8 @@ def SRTISBiasFromNetwork(network, steps=None):
         outer_count = len(network.special_ensembles['ms_outer'][outer])
         for col in bias.dataframe.columns:
             val_from_outer = bias.dataframe.loc[outer_id, col]
-            bias.dataframe.set_value(index=outer_id, col=col,
-                                     value=val_from_outer * outer_count)
+            bias.dataframe.at[outer_id, col] = val_from_outer * outer_count
             val_to_outer = bias.dataframe.loc[col, outer_id]
-            bias.dataframe.set_value(index=col, col=outer_id,
-                                     value=val_to_outer / outer_count)
+            bias.dataframe.at[col, outer_id] = val_to_outer / outer_count
     return bias
 
