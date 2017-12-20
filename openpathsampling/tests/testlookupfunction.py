@@ -115,15 +115,15 @@ class testVoxelLookupFunction(object):
         df1 = self.lookup.df_2d()
         assert_items_equal(df1.index, [-1, 0, 1])
         assert_items_equal(df1.columns, [-1, 0, 2, 4])
-        assert_equal(df1.get_value(-1, -1), 5.0)
-        assert_equal(isnan(df1.get_value(0, 4)), True)
+        assert_equal(df1.at[-1, -1], 5.0)
+        assert_equal(isnan(df1.at[0, 4]), True)
 
         df2 = self.lookup.df_2d(x_range=(-1, 3), y_range=(-1, 4))
         assert_items_equal(df2.index, [-1, 0, 1, 2, 3])
         assert_items_equal(df2.columns, [-1, 0, 1, 2, 3, 4])
-        assert_equal(df2.get_value(-1, -1), 5.0)
-        assert_equal(isnan(df2.get_value(0, 4)), True)
-        assert_equal(isnan(df2.get_value(2, 3)), True)
+        assert_equal(df2.at[-1, -1], 5.0)
+        assert_equal(isnan(df2.at[0, 4]), True)
+        assert_equal(isnan(df2.at[2, 3]), True)
 
     @raises(RuntimeError)
     def test_df_2d_not_2d(self):
