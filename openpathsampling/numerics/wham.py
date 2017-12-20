@@ -333,7 +333,10 @@ class WHAM(object):
                 sum_over_Z_byQ = wc.dot(reciprocal_Z_old)
 
                 # divide each entry, and add them (integrate over Q in F&S)
-                addends_k = np.divide(numerator_byQ, sum_over_Z_byQ)
+                # we intentially allow invalid (0/0) to give NaN; gets
+                # removed by using the np.nansum)
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    addends_k = np.divide(numerator_byQ, sum_over_Z_byQ)
                 Z_new[hists[i]] = np.nansum(addends_k)
 
             lnZ_new = np.log(Z_new)
@@ -406,7 +409,11 @@ class WHAM(object):
                 weighted_counts.loc[val, hist_i] * Z0_over_Zi[hist_i]
                 for hist_i in Z.index
             ])
-            output[val] = sum_k_Hk_Q[val] / sum_w_over_Z
+            # explicitly allow NaN results for simplcity (should only occur
+            # when numerator and denominator are 0
+            # TODO: where exactly is the output cleaned on this?
+            with np.errstate(divide='ignore', invalid='ignore'):
+                output[val] = sum_k_Hk_Q[val] / sum_w_over_Z
 
         return output
 
