@@ -18,15 +18,7 @@ install:
 script:
   - python --version
   - source devtools/ci/git_hash.sh
-  #- echo "Building OPS (with conda)" && echo -en 'travis_fold:start:build\\r'
-  #- echo -en 'travis_fold:end:build\\r'
-
-  # Run tests in test environment
-  #- echo "Create test environment" && echo -en 'travis_fold:start:create_env\\r'
-  #- echo -en 'travisfold:end:create_env\\r'
   - conda list -n test
-  #- conda install --yes future
-  #- conda install --yes jupyter nose nose-timer python-coveralls msmbuilder pyemma #ipynbtest
   - source devtools/ci/nosetests.sh
   - if [ ${CONDA_PY:0:1} -eq "2" ]; then source devtools/ci/ipythontests.sh; fi
   #- source devtools/ci/ipythontests.sh
