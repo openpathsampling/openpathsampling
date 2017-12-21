@@ -410,8 +410,10 @@ class WHAM(object):
                 for hist_i in Z.index
             ])
             # explicitly allow NaN results for simplcity (should only occur
-            # when numerator and denominator are 0
-            # TODO: where exactly is the output cleaned on this?
+            # when numerator and denominator are 0) ... this will leave NaNs
+            # in the histogram in those locations; if all values of the
+            # total histogram are NaN, that gets caught in the main
+            # wham_bam_histogram routine
             with np.errstate(divide='ignore', invalid='ignore'):
                 output[val] = sum_k_Hk_Q[val] / sum_w_over_Z
 
