@@ -562,7 +562,7 @@ class TISTransition(Transition):
             raise RuntimeError(str(len(minus_movers_used)) +
                                " minus movers for the same ensemble?")
 
-        engine_dt = minus_movers_used.keys()[0].engine.snapshot_timestep
+        engine_dt = list(minus_movers_used.keys())[0].engine.snapshot_timestep
         flux = 1.0 / (t_in_avg + t_out_avg) / engine_dt
         self._flux = flux
         return self._flux

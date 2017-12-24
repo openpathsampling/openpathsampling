@@ -404,7 +404,7 @@ class CVDefinedVolume(Volume):
         return True
 
     def __str__(self):
-        return '{{x|{2}(x) in [{0}, {1}]}}'.format(
+        return '{{x|{2}(x) in [{0:g}, {1:g}]}}'.format(
             self.lambda_min, self.lambda_max, self.collectivevariable.name)
 
 
@@ -504,19 +504,19 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
 
     def __str__(self):
         if self.wrap:
-            fcn = 'x|({0}(x) - {2}) % {1} + {2}'.format(
+            fcn = 'x|({0}(x) - {2:g}) % {1:g} + {2:g}'.format(
                         self.collectivevariable.name,
                         self._period_len, self._period_shift)
             if self.lambda_min < self.lambda_max:
-                domain = '[{0}, {1}]'.format(
+                domain = '[{0:g}, {1:g}]'.format(
                         self.lambda_min, self.lambda_max)
             else:
-                domain = '[{0}, {1}] union [{2}, {3}]'.format(
+                domain = '[{0:g}, {1:g}] union [{2:g}, {3:g}]'.format(
                         self._period_shift, self.lambda_max,
                         self.lambda_min, self._period_shift+self._period_len)
             return '{'+fcn+' in '+domain+'}'
         else:
-            return '{{x|{2}(x) [periodic] in [{0}, {1}]}}'.format(
+            return '{{x|{2}(x) [periodic] in [{0:g}, {1:g}]}}'.format(
                         self.lambda_min, self.lambda_max,
                         self.collectivevariable.name)
 
