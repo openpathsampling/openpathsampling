@@ -1137,7 +1137,7 @@ class DirectSimulation(PathSimulator):
         state_names = [s.name for s in self.states]
         rate_matrix = pd.DataFrame(columns=state_names, index=state_names)
         for t in rates:
-            rate_matrix.set_value(t[0].name, t[1].name, rates[t])
+            rate_matrix.at[t[0].name, t[1].name] = rates[t]
         return rate_matrix
 
     @property
