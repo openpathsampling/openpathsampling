@@ -23,71 +23,63 @@ class ReplicaNetwork(object):
         self.scheme = scheme
         self.ensembles = scheme.network.all_ensembles
 
-        self.ensemble_to_number = {}
-        self.ensemble_to_string = {}
+        # set defaults
+        self._ensemble_to_string = {}
+        self.ensemble_order = scheme.network.all_ensembles
+
         self.analysis = { }
         self.traces = { }
         self.transitions = { }
 
-        self.initial_order()
         self.analyze_traces(steps)
         self.analyze_exchanges(steps)
 
 
-    def set_labels(self, ens2str=None):
-        """
-        Sets label dictionaries. Requires that you run self.initial_order
-        for something first.
+    @property
+    def number_to_ensemble(self):
+        return {i: ens for (i, ens) in enumerate(self.ensemble_order)}
 
-        Parameters
-        ----------
-        ens2str : dict of { Ensemble : string } pairs
-            conversion of Ensemble to string label
-        """
-        # ensemble_to_string : returns a string value for the ensemble
-        # ensemble_to_number : returns a non-neg int value (column order)
-        if ens2str == None:
-            if self.ensemble_to_string == {}:
-                ens2str = {k : str(self.ensemble_to_number[k])
-                           for k in self.ensemble_to_number.keys()}
-            else:
-                ens2str = self.ensemble_to_string
-        self.ensemble_to_string = ens2str
-        self.string_to_ensemble = {self.ensemble_to_string[k] : k
-                                   for k in self.ensemble_to_string.keys()}
-        self.number_to_string = {
-            self.ensemble_to_number[k] : self.ensemble_to_string[k]
-            for k in self.ensemble_to_number.keys()
-        }
-        self.string_to_number = {self.number_to_string[k] : k
-                                   for k in self.number_to_string.keys()}
-        self.n_ensembles = len(self.ensemble_to_number.keys())
+    @property
+    def ensemble_to_number(self):
+        return {ens: i for (i, ens) in enumerate(self.ensemble_order)}
 
+    @property
+    def string_to_ensemble(self):
+        return {v: k for (k, v) in self.ensemble_to_string.items()}
 
-    def initial_order(self, index_order=None):
-        """
-        Sets order-based dictionaries.
+    @property
+    def n_ensembles(self):
+        return len(self.ensemble_order)
 
-        Parameters
-        ----------
-        index_order : list of Ensembles
-            the ensembles in the desired order. Defaults order in
-            self.ensembles
-        """
-        # dictionaries to be used to translate between orderings (these are
-        # the defaults)
-        if index_order == None:
-            ensemble_to_number = {ens : self.ensembles.index(ens)
-                                  for ens in self.ensembles}
-        else:
-            ensemble_to_number = {ens : index_order.index(ens)
-                                  for ens in index_order}
-        self.ensemble_to_number = ensemble_to_number
-        self.number_to_ensemble = {ensemble_to_number[k] : k
-                                   for k in ensemble_to_number.keys()}
-        self.set_labels()
-        self.n_ensembles = len(self.ensemble_to_number)
-        return ensemble_to_number
+    @property
+    def number_to_string(self):
+        ens2str = self.ensemble_to_string
+        num2ens = self.number_to_ensemble
+        return {i: ens2str[ens] for (i, ens) in num2ens.items()}
+
+    @property
+    def string_to_number(self):
+        str2ens = self.string_to_ensemble
+        ens2num = self.ensemble_to_number
+        return {s: ens2num[ens] for (s, ens) in str2ens.items()}
+
+    @property
+    def ensemble_order(self):
+        return self._ensemble_order
+
+    @ensemble_order.setter
+    def ensemble_order(self, value):
+        self._ensemble_order = value
+        self.ensemble_to_string = {ens: ens.name for ens in value}
+
+    @property
+    def ensemble_to_string(self):
+        return self._ensemble_to_string
+
+    @ensemble_to_string.setter
+    def ensemble_to_string(self, value):
+        self._ensemble_to_string.update(value)
+
 
     def analyze_exchanges(self, steps=None, force=False):
         if force == False and self.analysis != { }:
@@ -152,7 +144,6 @@ class ReplicaNetwork(object):
         return self.traces
 
 
-
     def reorder_matrix(self, matrix, index_order):
         """Return dataframe with matrix row/columns in index_order.
 
@@ -209,7 +200,7 @@ class ReplicaNetwork(object):
         index_order : order of ensembles for output
             see `reorder_matrix`
         """
-        self.initial_order(index_order)
+        #self.initial_order(index_order)
         i = [self.ensemble_to_number[e] for e in ens_i]
         j = [self.ensemble_to_number[e] for e in ens_j]
         matrix = scipy.sparse.coo_matrix(
@@ -321,7 +312,8 @@ class ReplicaNetwork(object):
         return transitions
 
 
-    def flow(self, bottom, top, steps=None, force=False):
+    def flow(self, bottom, top, included_ensembles=None, steps=None,
+             force=False):
         """
         Replica "flow" between ensembles `bottom` and `top`.
 
@@ -347,6 +339,8 @@ class ReplicaNetwork(object):
             Katzgraber, Trebst, Huse, and Troyer. J. Stat. Mech. 2006,
             P03018 (2006). doi:10.1088/1742-5468/2006/03/P03018
         """
+        if included_ensembles is None:
+            included_ensembles = self.ensembles
         traces = self.analyze_traces(steps, force)
         n_up = { ens : 0 for ens in self.ensembles }
         n_visit = { ens : 0 for ens in self.ensembles }
@@ -365,7 +359,7 @@ class ReplicaNetwork(object):
         self._flow_up = n_up
         self._flow_count = n_visit
         as_dict =  {e : float(n_up[e])/n_visit[e] if n_visit[e] > 0 else 0.0
-                    for e in self.ensembles}
+                    for e in included_ensembles}
         return as_dict
 
     def flow_pd(self, bottom, top, steps=None, force=False):
