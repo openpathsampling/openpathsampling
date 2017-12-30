@@ -27,14 +27,10 @@ class ReplicaNetwork(object):
         self._ensemble_to_string = {}
         self.ensemble_order = scheme.network.all_ensembles
 
-        if steps is not None:
-            self.traces = self._traces_from_steps(steps)
-            self.transitions = self._transitions_from_traces(self.traces)
-            self.analysis = self._analysis_from_steps(steps)
-        else:
-            self.traces = {}
-            self.transitions = {}
-            self.analysis = {}
+        self.traces = self._traces_from_steps(steps)
+        self.transitions = self._transitions_from_traces(self.traces)
+        self.analysis = self._analysis_from_steps(steps)
+
 
     def to_dict(self):
         dct = {
