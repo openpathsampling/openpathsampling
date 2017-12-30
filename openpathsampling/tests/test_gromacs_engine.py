@@ -65,14 +65,14 @@ class TestGromacsEngine(object):
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 0)
         assert_true(isinstance(result, ExternalMDSnapshot))
-        assert_equal(result.file_number, 0)
+        assert_equal(result.file_name, fname)
         assert_equal(result.file_position, 0)
         # TODO: add caching of xyz, vel, box; check that we have it now
 
         fname = os.path.join(self.test_dir, "project_trr", "0000000.trr")
         result = self.engine.read_frame_from_file(fname, 3)
         assert_true(isinstance(result, ExternalMDSnapshot))
-        assert_equal(result.file_number, 0)
+        assert_equal(result.file_name, fname)
         assert_equal(result.file_position, 3)
 
     def test_read_frame_from_file_partial(self):
@@ -102,13 +102,14 @@ class TestGromacsEngine(object):
         # clear it out, in case it exists from a previous failed test
         if os.path.isfile(traj_50):
             os.remove(traj_50)
-        snap = ExternalMDSnapshot(file_number=49, file_position=2,
+        file_49 = os.path.join(self.test_dir, "project_trr", "0000049.trr")
+        snap = ExternalMDSnapshot(file_name=file_49, file_position=2,
                                   engine=self.engine)
         snap.set_details(xyz, vel, box)
         self.engine.write_frame_to_file(traj_50, snap)
 
         snap2 = self.engine.read_frame_from_file(traj_50, 0)
-        assert_equal(snap2.file_number, 50)
+        assert_equal(snap2.file_name, traj_50)
         assert_equal(snap2.file_position, 0)
         npt.assert_array_almost_equal(snap.xyz, snap2.xyz)
         npt.assert_array_almost_equal(snap.velocities, snap2.velocities)

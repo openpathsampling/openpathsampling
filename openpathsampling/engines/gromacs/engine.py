@@ -41,21 +41,21 @@ class ExternalMDSnapshot(BaseSnapshot):
 
     Parameters
     ----------
-    file_number : int
-        the number associated with the file for this snapshot; its engine
-        should be able to convert this to a filename
+    file_name : string
+        the name of the external file where the positions/velocities/etc.
+        reside
     file_position : int
         position within the file; the engine should be able to load data for
         this specific snapshot based on this number
     engine : :class:`.DynamicsEngine`
         the engine associated with this snapshot
     """
-    def __init__(self, file_number=None, file_position=None, engine=None):
+    def __init__(self, file_name=None, file_position=None, engine=None):
         # these are done in place of calling super
         self._reversed = None
         self.__uuid__ = self.get_uuid()
         # these are the requried attributes
-        self.file_number = file_number
+        self.file_name = file_name
         self.file_position = file_position
         self.engine = engine
         # these are containers for temporary data
@@ -65,8 +65,7 @@ class ExternalMDSnapshot(BaseSnapshot):
 
     def load_details(self):
         """Cache coords, velocities, box vectors from the external file"""
-        filename = self.engine.trajectory_filename(self.file_number)
-        (xyz, vel, box) = self.engine.read_frame_data(filename,
+        (xyz, vel, box) = self.engine.read_frame_data(self.file_name,
                                                       self.file_position)
         self._xyz = xyz
         self._velocities = vel
@@ -109,7 +108,7 @@ class ExternalMDSnapshot(BaseSnapshot):
         self._box_vectors = None
 
     def __repr__(self):
-        num_str = "file_number=" + str(self.file_number)
+        num_str = "file_name=" + str(self.file_name)
         pos_str = "file_position=" + str(self.file_position)
         eng_str = "engine=" + repr(self.engine)
         args = ", ".join([num_str, pos_str, eng_str])
@@ -194,15 +193,15 @@ class GromacsEngine(ExternalEngine):
                                 get_velocities=True)
         return data[0][0], data[5][0], data[3][0]
 
-    def read_frame_from_file(self, filename, frame_num):
+    def read_frame_from_file(self, file_name, frame_num):
         # note: this only needs to return the file pointers -- but should
         # only do so once that frame has been written!
-        basename = os.path.basename(filename)
+        basename = os.path.basename(file_name)
         # basename should be in the format [0-9]+\.trr (as set by the
         # trajectory_filename method)
         file_number = int(basename.split('.')[0])
         try:
-            xyz, vel, box = self.read_frame_data(filename, frame_num)
+            xyz, vel, box = self.read_frame_data(file_name, frame_num)
         except IndexError:
             # this means that no such frame exists yet, so we return None
             return None
@@ -210,7 +209,7 @@ class GromacsEngine(ExternalEngine):
             # TODO: matches "TRR read error"
             return 'partial'
         else:
-            return ExternalMDSnapshot(file_number=file_number,
+            return ExternalMDSnapshot(file_name=file_name,
                                       file_position=frame_num,
                                       engine=self)
 
