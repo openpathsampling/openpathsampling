@@ -331,6 +331,9 @@ class OpenMMEngine(DynamicsEngine):
             options=options,
             openmm_properties=properties
         )
+    @property
+    def mdtraj_topology(self):
+        return self.topology.mdtraj
 
     @property
     def snapshot_timestep(self):

@@ -219,7 +219,7 @@ class testHistogramPlotter2D(object):
                                              dof=0)
         assert_items_equal(xt, [-2.0, 0.0, 2.0])
         assert_items_equal(xr, (-5.0, 2.0))
-        assert_items_equal(xl, (-5.0, 0.0))
+        assert_items_equal(xl, (0.0, 5.0))
 
     def test_ticks_and_labels(self):
         # mock axes, make sure they work as expected

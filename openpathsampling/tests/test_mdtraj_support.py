@@ -36,13 +36,18 @@ class testMDTrajSupport(object):
                                self.md_trajectory.xyz)
         nptest.assert_allclose(self.ops_trajectory.box_vectors,
                                self.md_trajectory.unitcell_vectors)
-    
+
         # switch back to mdtraj
         md_trajectory_2 = trajectory_to_mdtraj(self.ops_trajectory,
                                                self.md_topology)
         nptest.assert_allclose(self.md_trajectory.xyz, md_trajectory_2.xyz)
         nptest.assert_allclose(self.md_trajectory.unitcell_vectors,
                                md_trajectory_2.unitcell_vectors)
+
+    @raises(ValueError)
+    def test_empty_traj_to_mdtraj(self):
+        empty = paths.Trajectory([])
+        empty.to_mdtraj()
 
     def test_trajectory_to_mdtraj_other_input(self):
         snap = self.ops_trajectory[0]
