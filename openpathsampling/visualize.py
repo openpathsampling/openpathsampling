@@ -2362,11 +2362,11 @@ class SampleList(OrderedDict):
 
     def __getitem__(self, item):
         if type(item) is slice:
-            return SampleList(self.keys()[item])
+            return SampleList(list(self.keys())[item])
         elif isinstance(item, list):
             return [self[s] for s in item]
         elif type(item) is int:
-            return self.keys()[item]
+            return list(self.keys())[item]
         else:
             return OrderedDict.__getitem__(self, item)
 
@@ -2383,7 +2383,7 @@ class SampleList(OrderedDict):
         int
             the index if present in the list. Throw an exception otherwise
         """
-        return self.keys().index(value)
+        return list(self.keys()).index(value)
 
     def parent(self, idx):
         """
@@ -2415,7 +2415,7 @@ class SampleList(OrderedDict):
             while parent not in self and parent is not None:
                 parent = parent.parent
 
-            return self.keys().index(parent)
+            return list(self.keys()).index(parent)
 
         except ValueError:
             return None
@@ -2819,7 +2819,7 @@ class StepList(list):
 
     @property
     def samples(self):
-        return self._sample_created_step_list.keys()
+        return list(self._sample_created_step_list.keys())
 
 
 class SampleListGenerator(SampleList):

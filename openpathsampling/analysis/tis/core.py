@@ -116,8 +116,8 @@ class TransitionDictResults(StorableNamedObject):
         columns = [key_map(k) for k in order if k in col_vols]
         result = pd.DataFrame(index=index, columns=columns)
         for k in keys:
-            result.set_value(key_map(k[0]), key_map(k[1]),
-                             self.results_dict[k])
+            result.at[key_map(k[0]), key_map(k[1])] = self.results_dict[k]
+
         return result
 
     def __str__(self):  # pragma: no cover

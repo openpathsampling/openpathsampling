@@ -534,21 +534,40 @@ class Trajectory(list, StorableObject):
             If not None this topology will be used to construct the mdtraj
             objects otherwise the topology object will be taken from the
             configurations in the trajectory snapshots.
-        
+
         Returns
-        -------        
+        -------
         :class:`mdtraj.Trajectory`
             the trajectory
+
+        Notes
+        -----
+
+        If the OPS trajectory is zero-length (has no snapshots), then this
+        fails. OPS cannot currently convert zero-length trajectories to
+        MDTraj, because an OPS zero-length trajectory cannot determine its
+        MDTraj topology.
         """
-
-
+        try:
+            snap = self[0]
+        except IndexError:
+            raise ValueError("Cannot convert zero-length trajectory "
+                             + "to MDTraj")
         if topology is None:
-            topology = self.topology.mdtraj
+            # TODO: maybe add better error output?
+            # if AttributeError here, engine doesn't support mdtraj
+            topology = snap.engine.mdtraj_topology
 
         output = self.xyz
 
         traj = md.Trajectory(output, topology)
-        traj.unitcell_vectors = self.box_vectors
+        box_vectors = self.box_vectors
+        # box_vectors is a list with an entry for each frame of the traj
+        # if they're all None, we return None, not [None, None, ..., None]
+        if not np.any(box_vectors):
+            box_vectors = None
+
+        traj.unitcell_vectors = box_vectors
         return traj
 
     @property

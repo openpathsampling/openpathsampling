@@ -2,11 +2,11 @@
 
 .. module:: openpathsampling.engines.openmm
 
-OpenMM Functions
-================
+OpenMM OPS Engine
+=================
 
-Main functions
---------------
+Primary Classes
+---------------
 
 .. autosummary::
    :toctree: ../api/generated/
