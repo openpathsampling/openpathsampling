@@ -36,6 +36,10 @@ the development process on GitHub_, and follow `@pathsampling
           in progress; if you have questions, please contact the development
           team.
 
+To see the most recent updates to the code, see the `release notes
+<https://github.com/openpathsampling/openpathsampling/releases>`_ page on
+GitHub.
+
 --------------------------------------------------------------------------------
 
 For Users
@@ -47,7 +51,6 @@ For Users
     install
     examples/index
     topics/index
-    whatsnew
     faq
 
 

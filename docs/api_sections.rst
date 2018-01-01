@@ -4,6 +4,7 @@ OpenPathSampling API
 .. toctree::
     :maxdepth: 1
 
+    data_objects
     collectivevariable
     volume
     ensemble
