@@ -149,12 +149,11 @@ wavefunction information might be included for an engine based on *ab
 initio* dynamics. For other features, see the documentation for the specific
 OPS engine wrapper.
 
-Snapshots and trajectories generated using the OPS OpenMM engine can be
-easily converted to `MDTraj <http://mdtraj.org>`_ trajectories with the
-:meth:`openpathsampling.engines.openmm.tools.trajectory_to_mdtraj` method.
-From there, one can use all analysis tools in MDTraj, as well is its ability
-to write trajectories to many file formats for input to other analysis
-programs. In addition, you can use MDTraj as a gateway to other libraries:
-for example, its integration with `nglview
-<https://github.com/arose/nglview/>`_ can be used for molecular structure
-visualization.
+For OPS engines that support it (including the OpenMM engine), trajectories
+can be easily converted to `MDTraj <http://mdtraj.org>`_ trajectories with 
+``mdtraj_trajectory = trajectory.to_mdtraj()``.  From there, one can use all
+analysis tools in MDTraj, as well is its ability to write trajectories to
+many file formats for input to other analysis programs. In addition, you can
+use MDTraj as a gateway to other libraries: for example, its integration
+with `nglview <https://github.com/arose/nglview/>`_ can be used for
+molecular structure visualization.
