@@ -28,6 +28,10 @@ class TopologyEngine(NoEngine):
 
         self.topology = topology
 
+    @property
+    def mdtraj_topology(self):
+        return self.topology.mdtraj
+
     def to_dict(self):
         return {
             'topology': self.topology,
@@ -135,7 +139,8 @@ def topology_from_pdb(pdb_file, simple_topology=False):
     return topology
 
 
-def snapshot_from_testsystem(testsystem, simple_topology=False):
+def snapshot_from_testsystem(testsystem, simple_topology=False,
+                             periodic=True):
     """
     Construct a Snapshot from openmm topology and state objects
 
@@ -146,6 +151,8 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
     simple_topology : bool
         if `True` only a simple topology with n_atoms will be created.
         This cannot be used with complex CVs but loads and stores very fast
+    periodic : bool
+        True (default) if system is periodic; if False, box vectors are None
 
     Returns
     -------
@@ -162,10 +169,13 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
     else:
         topology = MDTrajTopology(md.Topology.from_openmm(testsystem.topology))
 
-    box_vectors = \
-        np.array([
-            v / u.nanometers for v in
-            testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
+    if periodic:
+        box_vectors = \
+            np.array([
+                v / u.nanometers for v in
+                testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
+    else:
+        box_vectors = None
 
     snapshot = Snapshot.construct(
         coordinates=testsystem.positions,

@@ -30,7 +30,7 @@ You generally won't need to modify or subclass these (except for
 :class:`Snapshots <.Snapshot>`, which some :class:`DynamicsEngines
 <.DynamicsEngine>` might need to subclass).  If you're writing new analysis
 tools, you'll need to be familiar with how these work. See the section on
-analyzing OPS output.  ???TODO: WRITE THAT???
+:ref:`data objects in OPS <data-objects>`.
 
 Running Dynamics (Engines)
 --------------------------
