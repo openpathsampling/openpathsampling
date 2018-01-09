@@ -46,7 +46,7 @@ conda list -e
 (cd docs && python premake.py && make html && cd -)
 ls -lt docs/_build
 ls -lt docs/_build/html
-ls -lt docs/_build/html/static/
+ls -lt docs/_build/html/_static/
 pwd
 echo travis_fold:end:build.docs
 
