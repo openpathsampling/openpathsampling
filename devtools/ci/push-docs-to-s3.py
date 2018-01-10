@@ -57,7 +57,7 @@ secret_key = {AWS_SECRET_ACCESS_KEY}
         s3cmd = s3cmd_core + " sync "
 
     # get the relevant docs onto S3
-    template = s3cmd + "docs/_build/html/ s3://{bucket}/{prefix}"
+    template = s3cmd + "docs/_build/html/ s3://{bucket}/{prefix}/"
     print(run_cmd(template, f.name, dry=opts.dry))
     #cmd = template.format(
             #config=f.name,
