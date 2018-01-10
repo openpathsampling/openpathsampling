@@ -46,14 +46,16 @@ conda list -e
 (cd docs && python premake.py && make html && cd -)
 ls -lt docs/_build
 ls -lt docs/_build/html
-ls -lt docs/_build/html/_static/
 pwd
 echo travis_fold:end:build.docs
 
 echo travis_fold:start:upload.docs
-if [[ "$TRAVIS_BRANCH" != "master" ]]; then
-    echo "No docs deploy on branch $TRAVIS_BRANCH"
-else
+
+if [[ $"TRAVIS_BRANCH" == "master" ]]; then
     python devtools/ci/push-docs-to-s3.py
+elif [[ "$TRAVIS_BRANCH" != "docs_deploy" ]]; then
+    python devtools/ci/push-docs-to-s3.py --clobber
+else
+    echo "No docs deploy on branch $TRAVIS_BRANCH"
 fi
 echo travis_fold:end:upload.docs
