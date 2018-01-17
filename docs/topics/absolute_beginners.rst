@@ -1,7 +1,7 @@
 .. _absolute-beginners:
 
 ############################
-OpenPathSampling Terminology
+OpenPathSampling terminology
 ############################
 
 We assume that most people interested in OpenPathSampling are familiar with

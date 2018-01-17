@@ -1,7 +1,7 @@
 .. _data-objects:
 
 ============
-Data Objects
+Data objects
 ============
 
 *Or: How do I see the trajectory I generated?*

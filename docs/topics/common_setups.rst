@@ -1,7 +1,7 @@
 .. _common-setups:
 
 =============
-Common Setups
+Common setups
 =============
 
 OpenPathSampling is very flexible and simplifies many different approaches
