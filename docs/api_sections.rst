@@ -9,6 +9,7 @@ OpenPathSampling API
     volume
     ensemble
     shooting
+    snapshot_modifiers
     pathmover
     movestrategy
     pathsimulator

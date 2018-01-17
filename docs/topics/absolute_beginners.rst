@@ -1,8 +1,8 @@
 .. _absolute-beginners:
 
-#############################################
-Conceptual introduction for absolute beginner
-#############################################
+############################
+OpenPathSampling Terminology
+############################
 
 We assume that most people interested in OpenPathSampling are familiar with
 the basic tools of molecular simulation: molecular dynamics and Monte Carlo
