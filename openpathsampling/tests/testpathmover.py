@@ -389,7 +389,20 @@ class testForwardFirstTwoWayShootingMover(testShootingMover):
     def test_sequential_shots(self):
         # make sure that, with no modification, the trajectory doesn't
         # change
-        raise SkipTest
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=paths.NoModification(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.init_samp)
+        real_traj = change.trials[0].trajectory
+        real_sample_set = SampleSet(change.trials)
+        real_sample_set.sanity_check()
+
+        new_change = mover.move(real_sample_set)
+        new_traj = new_change.trials[0].trajectory
+        assert_allclose(new_traj.xyz[:,0,0], real_traj.xyz[:,0,0])
 
 
 class testBackwardFirstTwoWayShootingMover(testForwardFirstTwoWayShootingMover):
