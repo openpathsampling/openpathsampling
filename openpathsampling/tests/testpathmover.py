@@ -145,7 +145,7 @@ class testShootingMover(object):
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
         self.toy_opts = {'integ': integ,
                          'n_frames_max': 1000,
-                         'n_steps_per_frame': 5}
+                         'n_steps_per_frame': 1}
         # self.toy_engine: perfectly flat
         # self.toy_engine_AA: sloped to give AA trajectories
         # self.toy_engine_BB = sloped to give BB trajectories
@@ -367,9 +367,6 @@ class testForwardFirstTwoWayShootingMover(testShootingMover):
 
             expected_early_reject = path_type in expected_rejections
             ran_full_two_way = ensemble(change.trials[0].trajectory)
-            if expected_early_reject == ran_full_two_way:
-                print(path_type)
-                print(change.trials[0].trajectory.xyz)
             assert_equal(expected_early_reject, not ran_full_two_way)
 
     def test_early_reject_tps(self):
