@@ -6,14 +6,15 @@ Setting up path sampling
 
 *Or: What OpenPathSampling does not do for you*
 
-While OpenPathSampling does a lot to simplify the process of doing a path
-sampling simulation, it doesn't do everything for you. In particular,
+While OpenPathSampling does a lot to simplify the process of performing a
+path sampling simulation, it doesn't do everything for you. In particular,
 setting up a path sampling simulation can still be challenging.
 
 Just as configurational Monte Carlo requires an initial configuration and
 a description of the ensemble (e.g., setting a temperature in an :math:`NVT`
 simulation), path sampling requires an initial trajectory and a description
-of the path ensemble. However, both describing the ensemble and creating an
+of the path ensemble. In both cases, you use Monte Carlo to obtain the
+equilibrated ensemble. However, both describing the ensemble and creating an
 initial trajectory are more difficult in path sampling than the equivalent
 problems in configurational sampling.
 
@@ -67,15 +68,27 @@ long time before visiting any other state.
 The topic of state definitions has been included in several review articles.
 For more, see:
 
-* `Bolhuis and Dellago. "Trajectory-based rare event simulations." in
-  Reviews Computation Chemistry vol. 27 (2010)
-  <http://onlinelibrary.wiley.com/doi/10.1002/9780470890905.ch3/summary>`_
+* |TrajBasedRareEvents|_
+* |PractPathSampling|_
 
-In TIS, the role of the minus move in decorrelating trajectories should also
-be considered. Ideally, a single minus move trajectory should be just long
-enough to fully decorrelate (lose all memory) within the state. This puts
-restrictions on both the volume of the state as well as that of the
-innermost interface.
+.. |TrajBasedRareEvents| replace::
+    Bolhuis and Dellago. "Trajectory-based rare event simulations." in
+    Reviews in Computational Chemistry, **27** (2010)
+
+.. _TrajBasedRareEvents: http://onlinelibrary.wiley.com/doi/10.1002/9780470890905.ch3/summary
+
+.. |PractPathSampling| replace::
+    Bolhuis and Dellago. "Practical and conceptual path sampling issues."
+    Eur. Phys. J. Spec. Top. **224**, 209 (2015)
+
+.. _PractPathSampling: https://doi.org/10.1140/epjst/e2015-02419-6
+
+
+In replica exchange TIS, the role of the minus move in decorrelating
+trajectories should also be considered. Ideally, a single minus move
+trajectory should be just long enough to fully decorrelate (lose all memory)
+within the state. This puts restrictions on both the volume of the state as
+well as that of the innermost interface.
 
 
 Defining good interfaces
@@ -88,8 +101,8 @@ fully contained by outer interfaces. In other words, for every volume in the
 ordered set of the state, interface 0, interface 1, etc.; any point in phase
 space that is inside interface :math:`i` is also inside interface :math:`i+1`.
 Importantly, this includes the state: the innermost interface must entirely
-encapsulate the state. Note that there is no way for OPS to check this for
-arbitrary state definitions; it requires user attention.
+encapsulate the state. Note that OPS does not check this; it requires user
+attention.
 
 Interface placement in TIS is essential to its efficiency. If interfaces are
 too far apart, the statistics in the estimate for
@@ -110,16 +123,17 @@ Getting an initial trajectory
 
 Even with configurational sampling, initial conditions are not always
 completely trivial. A PDB entry might be missing hydrogens, and probably
-needs to be solvated (and energy-minimized). However, obtaining initial
-conditions for path sampling of rare events is much more difficult. Path
-sampling makes it possible to generate many rare trajectories once a first
-rare trajectory is given as input. But how can you get that first rare
-trajectory?
+needs to be solvated (and energy-minimized). MC simulations of a liquid
+might be started on a lattice, and then melted during an equilibration
+phase.  However, obtaining initial conditions for path sampling of rare
+events is much more difficult. Path sampling makes it possible to generate
+many rare trajectories once a first rare trajectory is given as input. But
+how can you get that first rare trajectory?
 
 The answer is, "any way that works." Some approaches include running long
 MD, or using a ratcheting approach (such as, or similar to, adaptive
-multilevel splitting) to get natural trajectories that go further and
-further toward the products.
+multilevel splitting or forward flux sampling) to get natural trajectories
+that go further and further toward the products.
 
 Another important idea is that the initial trajectory does not need to be a
 valid physical trajectory from the dynamics of this path ensemble. For
@@ -143,7 +157,11 @@ Generating with OPS
 There are a few approaches within OPS for generating initial trajectories.
 One approach is to use run with a higher temperature. This is used in the
 alanine dipeptide examples, such as the notebooks for :ref:`AD-tps`. This
-can work in practical cases for transitions that are not too rare.
+can work in practical cases for transitions that are not too rare. However,
+here the dynamics is often altered dramatically, and so special attention is
+needed. One option is to do a quick committor analysis on the high
+temperature trajectories, close to the expected transition. A configuration
+with a non-zero committor can be used as a valid good initial trajectory.
 
 Another approach is to use the :class:`.FullBootstrapping` approach, which
 starts from a snapshot and rachets up through the path ensembles for a given
@@ -161,7 +179,8 @@ systems, it may fail.
 Loading from a file
 -------------------
 
-You can also load a trajectory from a file. This enables you to get an
+In addition to creating a trajectory from scratch using OPS, you can also
+load a trajectory from an existing file. This enables you to get an
 initial trajectory using whatever tool you're already familiar with (e.g.,
 metadynamics with PLUMED). For example, to load a Gromacs XTC file:
 
