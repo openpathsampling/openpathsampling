@@ -10,10 +10,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 from mdtraj.formats import TRRTrajectoryFile
+import mdtraj as md
 
 from openpathsampling.engines import ExternalEngine
 from openpathsampling.engines import features
-from openpathsampling.engines.snapshot import BaseSnapshot
+from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
+from openpathsampling.engines.openmm.topology import MDTrajTopology
 import features as gmx_features
 
 import os
@@ -35,13 +37,13 @@ class ExternalMDSnapshot(BaseSnapshot):
     """
     Snapshot for external MD engines
 
-    Internally, this only stores the file_number and the file_position. All
+    Internally, this only stores the file_name and the file_position. All
     specific details (positions, velocities, box vectors) are loaded from
     file when requested.
 
     Parameters
     ----------
-    file_name : string
+    file_name : str
         the name of the external file where the positions/velocities/etc.
         reside
     file_position : int
@@ -58,6 +60,7 @@ class ExternalMDSnapshot(BaseSnapshot):
         self.file_name = file_name
         self.file_position = file_position
         self.engine = engine
+        self.velocity_direction = 1  # by default; reversed flips it
         # these are containers for temporary data
         self._xyz = None
         self._velocities = None
@@ -113,6 +116,36 @@ class ExternalMDSnapshot(BaseSnapshot):
         eng_str = "engine=" + repr(self.engine)
         args = ", ".join([num_str, pos_str, eng_str])
         return "{cls_str}(".format(cls_str=self.cls) + args + ")"
+
+
+def snapshot_from_gro(gro_file):
+    class GroFileEngine(ExternalEngine):
+        def __init__(self, gro):
+            traj = md.load(gro)
+            self.topology = MDTrajTopology(traj.topology)
+            n_atoms = self.topology.n_atoms
+            n_spatial = self.topology.n_spatial
+            descriptor = SnapshotDescriptor.construct(
+                snapshot_class=ExternalMDSnapshot,
+                snapshot_dimensions={'n_spatial': n_spatial,
+                                     'n_atoms': n_atoms}
+            )
+            super(GroFileEngine, self).__init__(options={},
+                                                descriptor=descriptor,
+                                                template=None)
+
+        def read_frame_data(self, file_name, file_position):
+            traj = md.load(file_name)
+            xyz = traj.xyz[0]
+            vel = np.zeros(shape=xyz.shape)
+            box = traj.unitcell_vectors[0]
+            return (xyz, vel, box)
+
+    template_engine = GroFileEngine(gro_file)
+    snapshot = ExternalMDSnapshot(file_name=gro_file,
+                                  file_position=0,
+                                  engine=template_engine)
+    return snapshot
 
 
 class GromacsEngine(ExternalEngine):
@@ -172,10 +205,12 @@ class GromacsEngine(ExternalEngine):
 
         self._file = None  # file open/close efficiency
         self._last_filename = None
-        # TODO: update options with correct n_spatial, n_atoms
         # TODO: add snapshot_timestep; first via options, later read mdp
-        template = None  # TODO: extract a template from the gro
-        super(GromacsEngine, self).__init__(options, template,
+        template = snapshot_from_gro(self.gro)
+        self.topology = template.topology
+        descriptor = template.engine.descriptor  # descriptor from gro file
+
+        super(GromacsEngine, self).__init__(options, descriptor, template,
                                              first_frame_in_file=True)
 
     def read_frame_data(self, filename, frame_num):
@@ -244,8 +279,9 @@ class GromacsEngine(ExternalEngine):
 
     @property
     def grompp_command(self):
-        cmd = "gmx grompp -c {gro} -f {mdp} -p {top} -t {inp} {xtra}".format(
-            gro=self.gro, mdp=self.mdp, top=self.top, inp=self.input_file,
+        cmd = "{gmx}grompp -c {gro} -f {mdp} -p {top} -t {inp} {xtra}".format(
+            gmx=self.options['gmx_executable'], gro=self.gro, mdp=self.mdp,
+            top=self.top, inp=self.input_file,
             xtra=self.options['grompp_args']
         )
         return cmd

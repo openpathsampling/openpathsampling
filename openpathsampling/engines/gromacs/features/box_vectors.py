@@ -1,3 +1,5 @@
+default_none = ['_box_vectors']
+
 @property
 def box_vectors(snapshot):
     """

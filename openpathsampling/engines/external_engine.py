@@ -39,14 +39,17 @@ class ExternalEngine(DynamicsEngine):
 
     killsig = signal.SIGTERM
 
-    def __init__(self, options, template, first_frame_in_file=False):
+    def __init__(self, options, descriptor, template,
+                 first_frame_in_file=False):
         # needs to be overridden for each engine
-        super(ExternalEngine, self).__init__(options=options)
+        super(ExternalEngine, self).__init__(options=options,
+                                             descriptor=descriptor)
         self.template = template
         self.sleep_ms = self.default_sleep_ms
         self.start_time = None
         self.first_frame_in_file = first_frame_in_file
         self._traj_num = -1
+        self._current_snapshot = template
 
     @property
     def current_snapshot(self):
@@ -76,6 +79,8 @@ class ExternalEngine(DynamicsEngine):
             if next_frame == "partial":
                 time.sleep(0.001) # wait a millisec and rerun
             elif next_frame is None:
+                if not self.proc.is_running():
+                    raise RuntimeError("External engine died unexpectedly")
                 logger.info("Sleeping for {:.2f}ms".format(self.sleep_ms))
                 time.sleep(self.sleep_ms/1000.0)
             elif isinstance(next_frame, BaseSnapshot): # success

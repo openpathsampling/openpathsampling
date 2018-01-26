@@ -1,3 +1,5 @@
+default_none = ['_xyz']
+
 @property
 def xyz(snapshot):
     """
