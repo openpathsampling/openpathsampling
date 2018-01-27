@@ -10,3 +10,5 @@ from .dynamics_engine import (
     EngineNaNError, EngineMaxLengthError)
 
 from .external_engine import ExternalEngine
+
+from . import gromacs

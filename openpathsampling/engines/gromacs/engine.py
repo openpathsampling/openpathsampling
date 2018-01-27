@@ -213,6 +213,18 @@ class GromacsEngine(ExternalEngine):
         super(GromacsEngine, self).__init__(options, descriptor, template,
                                              first_frame_in_file=True)
 
+    def to_dict(self):
+        # TODO: eventually, read files in and store the text
+        return {
+            'base_dir': self.base_dir,
+            'gro': self.gro,
+            'mdp': self.mdp,
+            'top': self.top,
+            'options': self.options,
+            'base_dir': self.base_dir,
+            'prefix': self.prefix
+        }
+
     def read_frame_data(self, filename, frame_num):
         """
         Returns pos, vel, box or raises error

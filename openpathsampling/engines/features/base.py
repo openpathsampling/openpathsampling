@@ -400,6 +400,9 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             code.add_uuid('this')
+            default_none_code = [line.format(obj='this')
+                                 for line in default_none_lines]
+            code += default_none_code
 
             if has_lazy:
                 code += [
@@ -583,6 +586,9 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             code.add_uuid('self')
+            default_none_code = [line.format(obj='self')
+                                 for line in default_none_lines]
+            code += default_none_code
 
             # dict for lazy attributes using DelayedLoader descriptor
             if has_lazy:
@@ -615,6 +621,10 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             code.add_uuid('self')
+
+            default_none_code = [line.format(obj='self')
+                                 for line in default_none_lines]
+            code += default_none_code
 
             # dict for lazy attributes using DelayedLoader descriptor
             if has_lazy:
