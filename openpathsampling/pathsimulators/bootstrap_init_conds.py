@@ -1,31 +1,16 @@
-import time
 import sys
+import collections
 import logging
-import numpy as np
-import pandas as pd
-
-from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
 import openpathsampling as paths
-import openpathsampling.tools
 
-import collections
 
 from openpathsampling.pathmover import SubPathMover
-from .ops_logging import initialization_logging
-import abc
-
-from future.utils import with_metaclass
+from .path_simulator import PathSimulator
+from ..ops_logging import initialization_logging
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
-
-# python 3 support
-try:
-    xrange
-except NameError:
-    xrange = range
-
 
 class BootstrapPromotionMove(SubPathMover):
     """
@@ -167,7 +152,7 @@ class Bootstrapping(PathSimulator):
                        )
             paths.tools.refresh_output(
                 ("Working on Bootstrapping cycle step %d" +
-                " in ensemble %d/%d .\n") %
+                 " in ensemble %d/%d .\n") %
                 (self.step, ens_num + 1, len(self.ensembles)),
                 output_stream=self.output_stream,
                 refresh=self.allow_refresh
@@ -389,4 +374,3 @@ class FullBootstrapping(PathSimulator):
             n_filled = len(bootstrap.sample_set)
 
         return bootstrap.sample_set
-

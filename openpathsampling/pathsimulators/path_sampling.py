@@ -1,30 +1,13 @@
 import time
-import sys
 import logging
-import numpy as np
-import pandas as pd
-
-from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
 import openpathsampling as paths
-import openpathsampling.tools
+from .path_simulator import PathSimulator, MCStep
+from ..ops_logging import initialization_logging
 
-import collections
-
-from openpathsampling.pathmover import SubPathMover
-from .ops_logging import initialization_logging
-import abc
-
-from future.utils import with_metaclass
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
-
-# python 3 support
-try:
-    xrange
-except NameError:
-    xrange = range
 
 class PathSampling(PathSimulator):
     """
