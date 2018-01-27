@@ -4,9 +4,8 @@ import logging
 
 import openpathsampling as paths
 
-
 from openpathsampling.pathmover import SubPathMover
-from .path_simulator import PathSimulator
+from .path_simulator import PathSimulator, MCStep
 from ..ops_logging import initialization_logging
 
 logger = logging.getLogger(__name__)

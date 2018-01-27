@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 import openpathsampling as paths
+from .path_simulator import PathSimulator, MCStep
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
