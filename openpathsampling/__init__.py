@@ -126,7 +126,7 @@ from .pathmover import (
     BackwardFirstTwoWayShootingMover
 )
 
-from .pathsimulators import (
+from openpathsampling.pathsimulators import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
     CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation
 )
