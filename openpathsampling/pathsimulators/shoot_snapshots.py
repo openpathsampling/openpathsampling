@@ -4,12 +4,6 @@ import openpathsampling as paths
 logger = logging.getLogger(__name__)
 from .path_simulator import PathSimulator, MCStep
 
-# python 3 support
-try:
-    xrange
-except NameError:
-    xrange = range
-
 class ShootFromSnapshotsSimulation(PathSimulator):
     """
     Generic class for shooting from a set of snapshots.
