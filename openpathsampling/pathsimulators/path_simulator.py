@@ -65,8 +65,6 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         This is likely to be overridden when a pathsimulator is wrapped in
         another simulation.
     """
-    #__metaclass__ = abc.ABCMeta
-
     calc_name = "PathSimulator"
     _excluded_attr = ['sample_set', 'step', 'save_frequency',
                       'output_stream']
@@ -84,6 +82,8 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         self.sample_set = None
         self.output_stream = sys.stdout  # user can change to file handler
         self.allow_refresh = True
+        self.hooks = {k: [] for k in ['before_simulation', 'before_step',
+                                      'after_step', 'after_simulation']}
 
     def sync_storage(self):
         """
@@ -91,6 +91,17 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         """
         if self.storage is not None:
             self.storage.sync_all()
+
+    def attach_hook(self, hook, hook_for=None):
+        if hook_for is None:
+            for hook_name in hook.implemented_for:
+                self[hook_name].append(getattr(hook, hook_name))
+        else:
+            self[hook_for].append(hook)
+
+    def run_hooks(self, hook_name, **kwargs):
+        for hook in self.hooks[hook_name]:
+            hook(**kwargs)
 
     @abc.abstractmethod
     def run(self, n_steps):
@@ -102,7 +113,7 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         n_steps : int
             number of step to be run
         """
-        pass
+        raise NotImplementedError()
 
     def save_initial_step(self):
         """
