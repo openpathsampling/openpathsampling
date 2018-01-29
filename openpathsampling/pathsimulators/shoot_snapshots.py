@@ -3,6 +3,7 @@ import openpathsampling as paths
 
 logger = logging.getLogger(__name__)
 from .path_simulator import PathSimulator, MCStep
+from . import hooks
 
 class ShootFromSnapshotsSimulation(PathSimulator):
     """
@@ -73,9 +74,6 @@ class ShootFromSnapshotsSimulation(PathSimulator):
             ensemble=self.starting_ensemble,
             target_ensemble=self.backward_ensemble
         )
-
-        self.hooks.update({'before_snapshot': [], 'after_snapshot': []})
-
         # subclasses will often override this
         self.mover = paths.RandomChoiceMover([self.forward_mover,
                                               self.backward_mover])
@@ -106,6 +104,9 @@ class ShootFromSnapshotsSimulation(PathSimulator):
         obj.mover = dct['mover']
         return obj
 
+    def attach_default_hooks(self):
+        self.attach_hook(hooks.StorageHook())
+        self.attach_hook(hooks.ShootFromSnapshotsOutputHook())
 
     def run(self, n_per_snapshot, as_chain=False):
         """Run the simulation.
@@ -130,20 +131,11 @@ class ShootFromSnapshotsSimulation(PathSimulator):
             start_snap = snapshot
             # do what we need to get the snapshot set up
             for step in range(n_per_snapshot):
-                step_number = snap_num * n_per_snapshot + step
+                step_number = self.step
                 step_info = (snap_num, n_snapshots, step, n_per_snapshot)
                 self.run_hooks('before_step', sim=self,
                                step_number=step_number, step_info=step_info,
                                state=start_snap)
-                # this is ShootFromSnapshotsOutputHook.before_step
-                paths.tools.refresh_output(
-                    "Working on snapshot %d / %d; shot %d / %d" % (
-                        snap_num+1, len(self.initial_snapshots),
-                        step+1, n_per_snapshot
-                    ),
-                    output_stream=self.output_stream,
-                    refresh=self.allow_refresh
-                )
 
                 if as_chain:
                     start_snap = self.randomizer(start_snap)
@@ -174,11 +166,6 @@ class ShootFromSnapshotsSimulation(PathSimulator):
                 self.run_hooks('after_step', sim=self,
                                step_number=step_number, step_info=step_info,
                                state=start_snap, results=mcstep)
-                # this is StorageHook.after_step
-                if self.storage is not None:
-                    self.storage.steps.save(mcstep)
-                    if self.step % self.save_frequency == 0:
-                        self.sync_storage()
 
                 self.step += 1
             # after_snapshot

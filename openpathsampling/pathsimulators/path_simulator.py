@@ -85,6 +85,7 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         self.output_stream = sys.stdout  # user can change to file handler
         self.allow_refresh = True
         self.hooks = self.empty_hooks()
+        self.attach_default_hooks()
 
     def sync_storage(self):
         """
@@ -92,6 +93,9 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         """
         if self.storage is not None:
             self.storage.sync_all()
+
+    def attach_default_hooks(self):
+        pass
 
     def empty_hooks(self):
         """Return a hook dictionary with no hooks."""

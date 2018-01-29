@@ -1,5 +1,5 @@
 import openpathsampling as paths
-from openpathsampling import PathSimulator
+from .path_simulator import PathSimulator
 from openpathsampling.netcdfplus import StorableNamedObject
 
 """
@@ -73,7 +73,7 @@ class ShootFromSnapshotsOutputHook(PathSimulatorHook):
         ``None`` uses the simulation's value
     """
     implemented_for = ['before_simulation', 'before_step']
-    def __init__(output_stream=None, allow_refresh=None):
+    def __init__(self, output_stream=None, allow_refresh=None):
         self.output_stream = output_stream
         self.allow_refresh = allow_refresh
 
