@@ -17,6 +17,17 @@ class ShootFromSnapshotsSimulation(PathSimulator):
     user can create a simulation of this sort on-the-fly for some weird
     ensembles.
 
+    .. note::
+
+        **Hooks**: This can interact with the :class:`.PathSimulatorHook`
+        framework. In these hooks, ``step_info`` is the 4-tuple
+        ``(snap, n_snaps, step, n_steps)`` where ``snap`` is the snapshot
+        number, ``step`` is the step number within that snapshot, and
+        ``n_snaps`` and ``n_steps`` are the total number of each,
+        respectively. The ``state`` will provide the initial snapshot we are
+        shooting from, and ``results`` is the :class:`.MCStep` that comes
+        out of each step.
+
     Parameters
     ----------
     storage : :class:`.Storage`
