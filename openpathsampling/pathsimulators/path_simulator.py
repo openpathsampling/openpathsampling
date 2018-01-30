@@ -130,8 +130,13 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
 
     def run_hooks(self, hook_name, **kwargs):
         """Run the hooks for the given ``hook_name``"""
+        hook_name_state = {}
         for hook in self.hooks[hook_name]:
-            hook(**kwargs)
+            result = hook(**kwargs)
+            if result is not None:
+                hook_name_state.update({hook: result})
+        if hook_name_state != {}:
+            return hook_name_state
 
     @abc.abstractmethod
     def run(self, n_steps):

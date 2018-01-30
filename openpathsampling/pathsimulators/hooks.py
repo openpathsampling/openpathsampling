@@ -25,7 +25,8 @@ class PathSimulatorHook(StorableNamedObject):
     def before_step(self, sim, step_number, step_info, state):
         pass
 
-    def after_step(self, sim, step_number, step_info, state, results):
+    def after_step(self, sim, step_number, step_info, state, results,
+                   hook_state):
         pass
 
     def after_simulation(self, sim):
@@ -47,7 +48,8 @@ class StorageHook(PathSimulatorHook):
         if self.frequency is None:
             self.frequency = sim.save_frequency
 
-    def after_step(self, sim, step_number, step_info, state, results):
+    def after_step(self, sim, step_number, step_info, state, results,
+                   hook_state):
         if self.storage is not None:
             self.storage.save(results)
             if step_number % self.frequency == 0:
