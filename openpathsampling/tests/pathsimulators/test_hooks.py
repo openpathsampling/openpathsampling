@@ -32,7 +32,7 @@ class TrivialPathSimulator(paths.PathSimulator):
             state += result
             self.run_hooks('after_step', sim=self, step_number=step,
                            step_info=(step, n_steps), state=state,
-                           results=result)
+                           results=result, hook_state=hook_state)
         self.run_hooks('after_simulation', sim=self)
 
 class NoStepHookPathSimulator(paths.PathSimulator):
@@ -56,7 +56,8 @@ class StupidHook(PathSimulatorHook):
     def before_step(self, sim, step_number, step_info, state):
         self.began_steps +=1
 
-    def after_step(self, sim, step_number, step_info, state, results):
+    def after_step(self, sim, step_number, step_info, state, results,
+                   hook_state):
         self.finished_steps += 1
 
     def after_simulation(self, sim):
