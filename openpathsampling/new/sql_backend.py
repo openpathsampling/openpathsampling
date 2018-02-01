@@ -51,7 +51,6 @@ class SQLStorageBackend(object):
         if self.mode == "w":
             self.register_schema(universal_schema)
 
-
     @property
     def metadata(self):
         return self._metadata
@@ -171,26 +170,39 @@ class SQLStorageBackend(object):
         """
         # this will insert objects into the table
         table = self.metadata.tables[table_name]
-        insert_statements = [table.insert().values(**obj)
-                             for obj in objects]
-        # TODO: run the inserts on the database
-        # TODO: how do I get the autoincr row numbers from that? how do I get
-        # autoincr to work? (get from ResultProxy.inserted_primary_key!)
         table_num = self.table_to_number[table_name]
-        uuid_to_rows = {}
+
+        # this is if we don't use the UUID in the schema... but doing so
+        # would be another option (redundant data, but better sanity checks)
+        pop_uuids = [{k: v for (k, v) in obj.items() if k != 'uuid'}
+                     for obj in objects]
+        insert_statements = [table.insert().values(**obj)
+                             for obj in pop_uuids]
+
+        with self.engine.connect() as conn:
+            # can't use executemany here because we need the resulting
+            # primary key values
+            uuid_to_rows = {
+                obj['uuid']: conn.execute(ins).inserted_primary_key[0]
+                for (obj, ins) in zip(objects, insert_statements)
+            }
+
         uuid_table = self.metadata.tables['uuid']
-        uuid_inserts = [
-            uuid_table.insert().values(uuid=k, table=table_num, row=v)
-            for (k, v) in uuid_to_rows.items()
-        ]
-        # TODO: run the inserts on the database
-        pass
+        uuid_insert_dicts = [{'uuid': k, 'table': table_num, 'row':v}
+                             for (k, v) in uuid_to_rows.items()]
+
+        with self.engine.connect() as conn:
+            # here we use executemany for performance
+            conn.execute(uuid_table.insert(), uuid_insert_dicts)
 
     def load_n_rows_from_table(self, table_name, first_row, n_rows):
         pass
 
     def load_uuids(self, uuids, ignore_missing=False):
         """Loads uuids, rows
+
+        This can also be used to identify which UUIDs already exist in the
+        database.
         """
         uuid_table = self.metadata.tables['uuid']
         uuid_or_stmt = sql.or_(*(uuid_table.c.uuid == uuid
@@ -202,7 +214,6 @@ class SQLStorageBackend(object):
         if not ignore_missing and len(results) != len(uuid):
             # figure out which UUID is missing, raise error on first found
             pass
-
 
     def load_table_data(self, uuids):
         # this pulls out a table the information for the relevant UUIDs

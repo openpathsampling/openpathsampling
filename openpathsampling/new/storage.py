@@ -11,6 +11,7 @@ universal_schema = {
 class GeneralStorage(object):
     def __init__(self, filename, mode='r', template=None, fallback=None,
                  backend=None):
+        self.simulation_objects = self._cache_simulation_objects()
         pass
 
     @classmethod
@@ -22,6 +23,7 @@ class GeneralStorage(object):
         obj.fallback = backend.fallback
         obj.backend = backend.backend
         obj.db = backend
+        obj.simulation_objects = obj._cache_simulation_objects()
 
 
     def _cache_simulation_objects(self):
@@ -34,10 +36,15 @@ class GeneralStorage(object):
 
     def save(self, obj):
         # prepare a single object for storage
+        # check if obj is in DB
         pass
 
     def save_list(self, list_of_objs):
-        self.db.add_to_table(list_of_objs)
+        # get the UUIDs of all objs
+        # figure out which objs are already in the DB
+        # organize by type
+        # convert object to appropriate dict
+        pass
 
 ops_schema = {}
 ops_schema_sql_metadata = {}
@@ -49,6 +56,10 @@ ops_class_to_table = {
     paths.MoveChange: 'move_changes'
 }
 
+ops_class_to_serialization = {
+    paths.Sample: (paths.Sample.to_dict, paths.Sample.from_dict),
+    # this allows us to override the to_dict behavior for new storage
+}
 
 class OPSStorage(GeneralStorage):
     pass
