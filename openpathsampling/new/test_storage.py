@@ -55,8 +55,8 @@ class TestSQLStorageBackend(object):
         table_names = self.storage.engine.table_names()
         assert set(table_names) == set(['uuid', 'samples'])
         assert self._col_names_set('uuid') == set(['uuid', 'table', 'row'])
-        assert self._col_names_set('samples') == set(['replica', 'ensemble',
-                                                      'trajectory'])
+        assert self._col_names_set('samples') == \
+                set(['idx', 'replica', 'ensemble', 'trajectory'])
 
     def test_register_schema(self):
         new_schema = {
@@ -66,7 +66,7 @@ class TestSQLStorageBackend(object):
         self.storage.register_schema(new_schema)
         table_names = self.storage.engine.table_names()
         assert set(table_names) == set(['uuid', 'samples', 'snapshot0'])
-        assert self._col_names_set('snapshot0') == set(['filename',
+        assert self._col_names_set('snapshot0') == set(['idx', 'filename',
                                                         'index'])
 
     def test_register_schema_modify_fails(self):
