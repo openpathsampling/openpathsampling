@@ -25,14 +25,17 @@ class TrivialPathSimulator(paths.PathSimulator):
     def run(self, n_steps):
         self.run_hooks('before_simulation', sim=self)
         state = ""
+        hook_state = {}
         for step in range(n_steps):
             self.run_hooks('before_step', sim=self, step_number=step,
                            step_info=(step, n_steps), state=state)
             result = str(step)
             state += result
-            self.run_hooks('after_step', sim=self, step_number=step,
-                           step_info=(step, n_steps), state=state,
-                           results=result, hook_state=hook_state)
+            hook_state = self.run_hooks('after_step', sim=self,
+                                        step_number=step,
+                                        step_info=(step, n_steps),
+                                        state=state, results=result,
+                                        hook_state=hook_state)
         self.run_hooks('after_simulation', sim=self)
 
 class NoStepHookPathSimulator(paths.PathSimulator):
