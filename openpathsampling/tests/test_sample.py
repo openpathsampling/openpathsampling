@@ -14,7 +14,7 @@ from openpathsampling.sample import *
 from openpathsampling.sample import Sample
 
 
-class testSampleSet(object):
+class TestSampleSet(object):
     def setup(self):
         self.ensA = LengthEnsemble(1)
         self.ensB = LengthEnsemble(2)
