@@ -1,5 +1,12 @@
+import os
 import collections
 import openpathsampling as paths
+
+# these two tables are required in *all* schema
+universal_schema = {
+    'uuid': [('uuid', 'uuid'), ('table', 'int'), ('row', 'int')],
+    'tables': [('name', 'str'), ('idx', 'int')]
+}
 
 class GeneralStorage(object):
     def __init__(self, filename, mode='r', template=None, fallback=None,

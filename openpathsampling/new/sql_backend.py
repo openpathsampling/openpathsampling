@@ -1,6 +1,7 @@
 import os
 import collections
 import sqlalchemy as sql
+from storage import universal_schema
 
 # dict to convert from OPS string type descriptors to SQL types
 sql_type = {
@@ -10,12 +11,6 @@ sql_type = {
     'json': sql.String,
     'int': sql.Integer,
     #TODO add more
-}
-
-# these two tables are required in *all* schema
-universal_schema = {
-    'uuid': [('uuid', 'uuid'), ('table', 'int'), ('row', 'int')],
-    'tables': [('name', 'str'), ('idx', 'int')]
 }
 
 universal_sql_meta = {
@@ -53,6 +48,9 @@ class SQLStorageBackend(object):
         # for everything else; just connect to the database
         connection_uri = self.filename_from_backend(filename, backend)
         self.engine = sql.create_engine(connection_uri)
+        if self.mode == "w":
+            self.register_schema(universal_schema)
+
 
     @property
     def metadata(self):
@@ -112,7 +110,7 @@ class SQLStorageBackend(object):
         # note that this return the number of tables in 'tables', which does
         # not include 'uuid' or 'tables'
         # There must be a better way to do this, but this seems to get the
-        # job done, 
+        # job done,
         tables = self.metadata.tables['tables']
         with self.engine.connect() as conn:
             res = conn.execute(tables.select())
@@ -191,11 +189,26 @@ class SQLStorageBackend(object):
     def load_n_rows_from_table(self, table_name, first_row, n_rows):
         pass
 
-    def load_table_data(self, uuids):
-        # this pulls out a table the information for the relevant UUIDs
-        # TODO: something like this
+    def load_uuids(self, uuids, ignore_missing=False):
+        """Loads uuids, rows
+        """
         uuid_table = self.metadata.tables['uuid']
         uuid_or_stmt = sql.or_(*(uuid_table.c.uuid == uuid
                                  for uuid in uuids))
-        uuid_sel = uuid_table.select()
+        uuid_sel = uuid_table.select(uuid_or_stmt)
+        # TODO: something like this
+        # pull `results` from the DB
+        results = {}
+        if not ignore_missing and len(results) != len(uuid):
+            # figure out which UUID is missing, raise error on first found
+            pass
+
+
+    def load_table_data(self, uuids):
+        # this pulls out a table the information for the relevant UUIDs
+        uuid_table_row = self.load_uuids(uuids)
+        # group by table
+        # load each table
+        # return dict of uuid: dict for row
+
         pass

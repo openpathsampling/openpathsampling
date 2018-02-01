@@ -1,4 +1,4 @@
-from storage import *
+from sql_backend import *
 import pytest
 
 class TestSQLStorageBackend(object):
@@ -13,7 +13,6 @@ class TestSQLStorageBackend(object):
                         ('ensemble', 'uuid'),
                         ('trajectory', 'uuid')]
         }
-        self.storage.register_schema(self.schema)
 
     def teardown(self):
         self._delete_tmp_files()
@@ -21,7 +20,7 @@ class TestSQLStorageBackend(object):
     @property
     def _default_backend(self):
         # NOTE: test other SQL backends by subclassing and changing this
-        return SQLStorageBackend(":memory:")
+        return SQLStorageBackend(":memory:", mode='w')
 
     @staticmethod
     def _delete_tmp_files():
@@ -53,10 +52,9 @@ class TestSQLStorageBackend(object):
 
     def test_setup(self):
         table_names = self.storage.engine.table_names()
-        assert set(table_names) == set(['uuid', 'samples'])
+        assert set(table_names) == set(['uuid', 'tables'])
         assert self._col_names_set('uuid') == set(['uuid', 'table', 'row'])
-        assert self._col_names_set('samples') == \
-                set(['idx', 'replica', 'ensemble', 'trajectory'])
+        assert self._col_names_set('tables') == set(['name', 'idx'])
 
     def test_register_schema(self):
         new_schema = {
@@ -65,7 +63,7 @@ class TestSQLStorageBackend(object):
         }
         self.storage.register_schema(new_schema)
         table_names = self.storage.engine.table_names()
-        assert set(table_names) == set(['uuid', 'samples', 'snapshot0'])
+        assert set(table_names) == set(['uuid', 'tables', 'snapshot0'])
         assert self._col_names_set('snapshot0') == set(['idx', 'filename',
                                                         'index'])
 
