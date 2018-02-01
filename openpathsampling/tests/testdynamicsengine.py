@@ -23,7 +23,7 @@ class StupidEngine(paths.engines.DynamicsEngine):
         return self.attempted
 
 
-class testDynamicsEngine(object):
+class TestDynamicsEngine(object):
     def setup(self):
         options = {'n_frames_max' : 100, 'random_option' : True}
 
