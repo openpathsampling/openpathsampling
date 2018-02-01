@@ -174,6 +174,7 @@ class SQLStorageBackend(object):
 
         # this is if we don't use the UUID in the schema... but doing so
         # would be another option (redundant data, but better sanity checks)
+        # TODO: I think the sanity checks will be worth it
         pop_uuids = [{k: v for (k, v) in obj.items() if k != 'uuid'}
                      for obj in objects]
         insert_statements = [table.insert().values(**obj)
@@ -195,25 +196,38 @@ class SQLStorageBackend(object):
             # here we use executemany for performance
             conn.execute(uuid_table.insert(), uuid_insert_dicts)
 
+    def _load_from_table(self, table_name, idx_list):
+        # this is not public API (assumes idx_list, which is reserved by not
+        # guaranteed)
+        table = self.metadata.tables[table]
+        or_stmt = sql.or_(*(table.c.idx == idx for idx in idx_list))
+        sel = table.select(or_stmt)
+        with engine.connection() as conn:
+            results = list(conn.execute(sel))
+        return results
+
     def load_n_rows_from_table(self, table_name, first_row, n_rows):
-        pass
+        idx_list = list(range(first_row, first_row + n_rows))
+        return self._load_from_table(table_name, idx_list)
 
     def load_uuids(self, uuids, ignore_missing=False):
-        """Loads uuids, rows
+        """Loads uuids and info on finding data within the table.
 
         This can also be used to identify which UUIDs already exist in the
-        database.
+        database (with ignore_missing=True).
         """
         uuid_table = self.metadata.tables['uuid']
         uuid_or_stmt = sql.or_(*(uuid_table.c.uuid == uuid
                                  for uuid in uuids))
         uuid_sel = uuid_table.select(uuid_or_stmt)
-        # TODO: something like this
-        # pull `results` from the DB
-        results = {}
+        with self.engine.connection() as conn:
+            results = list(conn.execute(uuid_sel))
         if not ignore_missing and len(results) != len(uuid):
+            # TODO
             # figure out which UUID is missing, raise error on first found
             pass
+
+        return results
 
     def load_table_data(self, uuids):
         # this pulls out a table the information for the relevant UUIDs

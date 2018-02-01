@@ -44,6 +44,7 @@ class GeneralStorage(object):
         # figure out which objs are already in the DB
         # organize by type
         # convert object to appropriate dict
+        # gather UUIDs to construct
         pass
 
 ops_schema = {}

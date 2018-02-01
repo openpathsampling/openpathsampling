@@ -6,12 +6,10 @@ class TestSQLStorageBackend(object):
         self._delete_tmp_files()
         self.storage = self._default_backend
         self.schema = {
-            'uuid': [('uuid', 'uuid'),
-                     ('table', 'int'),
-                     ('row', 'int')],
             'samples': [('replica', 'int'),
                         ('ensemble', 'uuid'),
-                        ('trajectory', 'uuid')]
+                        ('trajectory', 'uuid')],
+            'snapshot0': [('filename', 'str'), ('index', 'int')]
         }
 
     def teardown(self):
@@ -58,20 +56,27 @@ class TestSQLStorageBackend(object):
 
     def test_register_schema(self):
         new_schema = {
-            'snapshot0': [('filename', 'str'),
-                          ('index', 'int')]
+            'snapshot1': [('filename', 'str'), ('index', 'int')]
         }
         self.storage.register_schema(new_schema)
         table_names = self.storage.engine.table_names()
-        assert set(table_names) == set(['uuid', 'tables', 'snapshot0'])
-        assert self._col_names_set('snapshot0') == set(['idx', 'filename',
+        assert set(table_names) == set(['uuid', 'tables', 'snapshot1'])
+        assert self._col_names_set('snapshot1') == set(['idx', 'filename',
                                                         'index'])
 
     def test_register_schema_modify_fails(self):
+        self.storage.register_schema(self.schema)
         with pytest.raises(TypeError):
             self.storage.register_schema(self.schema)
 
+    def test_load_uuids(self):
+        pytest.skip()
+
+    def test_load_n_rows_from_table(self):
+        pytest.skip()
+
     def test_add_to_table(self):
+
         pytest.skip()
 
     def test_load_table_data(self):
@@ -79,3 +84,4 @@ class TestSQLStorageBackend(object):
 
     def test_persistence(self):
         pytest.skip()
+
