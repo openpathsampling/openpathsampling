@@ -26,7 +26,7 @@ class MockAxes(object):
     def get_xticks(self): return self.xticks
     def get_yticks(self): return self.yticks
 
-class testHistogram(object):
+class TestHistogram(object):
     def setup(self):
         self.data = [1.0, 1.1, 1.2, 1.3, 2.0, 1.4, 2.3, 2.5, 3.1, 3.5]
         self.nbins = 5
@@ -144,8 +144,7 @@ class testHistogram(object):
                                   [1.0, 0.5, 0.5, 0.3, 0.2, 0.1])
 
 
-
-class testSparseHistogram(object):
+class TestSparseHistogram(object):
     def setup(self):
         data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
         self.histo = SparseHistogram(bin_widths=(0.5, 0.3),
@@ -180,7 +179,7 @@ class testSparseHistogram(object):
         assert_almost_equal(normed_fcn((0.61, 0.89)), old_div(0.25,0.15))
 
 
-class testHistogramPlotter2D(object):
+class TestHistogramPlotter2D(object):
     def setup(self):
         data = [(0.0, 0.1), (0.2, 0.7), (0.3, 0.6), (0.6, 0.9)]
         histo = SparseHistogram(bin_widths=(0.5, 0.3),
