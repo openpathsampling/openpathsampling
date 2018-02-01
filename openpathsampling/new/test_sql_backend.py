@@ -61,7 +61,8 @@ class TestSQLStorageBackend(object):
         self.storage.register_schema(new_schema)
         table_names = self.storage.engine.table_names()
         assert set(table_names) == set(['uuid', 'tables', 'snapshot1'])
-        assert self._col_names_set('snapshot1') == set(['idx', 'filename',
+        assert self._col_names_set('snapshot1') == set(['idx', 'uuid',
+                                                        'filename',
                                                         'index'])
 
     def test_register_schema_modify_fails(self):
@@ -76,7 +77,6 @@ class TestSQLStorageBackend(object):
         pytest.skip()
 
     def test_add_to_table(self):
-
         pytest.skip()
 
     def test_load_table_data(self):

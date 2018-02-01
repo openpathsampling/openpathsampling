@@ -2,6 +2,7 @@ import os
 import collections
 import sqlalchemy as sql
 from storage import universal_schema
+from tools import group_by
 
 # dict to convert from OPS string type descriptors to SQL types
 sql_type = {
@@ -139,6 +140,7 @@ class SQLStorageBackend(object):
             if table_name not in ['uuid', 'tables']:
                 columns.append(sql.Column('idx', sql.Integer,
                                           primary_key=True))
+                columns.append(sql.Column('uuid', sql.String))
             columns += [
                 sql.Column(
                     col, sql_type[type_name],
@@ -175,10 +177,10 @@ class SQLStorageBackend(object):
         # this is if we don't use the UUID in the schema... but doing so
         # would be another option (redundant data, but better sanity checks)
         # TODO: I think the sanity checks will be worth it
-        pop_uuids = [{k: v for (k, v) in obj.items() if k != 'uuid'}
-                     for obj in objects]
+        # pop_uuids = [{k: v for (k, v) in obj.items() if k != 'uuid'}
+                     # for obj in objects]
         insert_statements = [table.insert().values(**obj)
-                             for obj in pop_uuids]
+                             for obj in objects]
 
         with self.engine.connect() as conn:
             # can't use executemany here because we need the resulting
@@ -232,8 +234,13 @@ class SQLStorageBackend(object):
     def load_table_data(self, uuids):
         # this pulls out a table the information for the relevant UUIDs
         uuid_table_row = self.load_uuids(uuids)
-        # group by table
-        # load each table
-        # return dict of uuid: dict for row
+        by_table_number = group_by(uuid_table_row, 1)
+        by_table_name = {self.number_to_table[k]: v
+                         for (k, v) in by_table_number}
+        loaded_results = []
+        for table in by_table_name:
+            idxs = [val[2] for val in by_table_name[table]]
+            loaded_results += self._load_from_table(table, idxs)
 
+        # TODO: check that the UUIDs match
         pass

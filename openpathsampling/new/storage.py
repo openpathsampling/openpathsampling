@@ -2,6 +2,23 @@ import os
 import collections
 import openpathsampling as paths
 
+"""
+A simple storage interface for simulation objects and data objects.
+
+Reserved words
+--------------
+
+Table names:
+
+* ``uuid``
+* ``tables``
+
+Column names:
+
+* ``uuid``
+* ``idx``
+"""
+
 # these two tables are required in *all* schema
 universal_schema = {
     'uuid': [('uuid', 'uuid'), ('table', 'int'), ('row', 'int')],
