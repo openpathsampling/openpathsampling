@@ -29,7 +29,11 @@ class TestSQLStorageBackend(object):
             os.remove("test.sql")
 
     def test_extract_metadata(self):
-        pytest.skip()
+        sql_meta = {
+            'uuid': {'uuid': {'primary_key': True}}
+        }
+        meta = self.storage._extract_metadata(sql_meta, 'uuid', 'uuid')
+        assert meta == {'primary_key': True}
 
     @pytest.mark.parametrize('test_input,expected', [
         (("file.sql", "sqlite"), "sqlite:///file.sql"),
