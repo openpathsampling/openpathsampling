@@ -17,7 +17,7 @@ logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testTISTransition(object):
+class TestTISTransition(object):
     def setup(self):
         pass
 
@@ -27,7 +27,7 @@ class testTISTransition(object):
     def test_ensemble_statistics(self):
         pass
 
-class testFixedLengthTPSTransition(object):
+class TestFixedLengthTPSTransition(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.stateA = paths.CVDefinedVolume(op, 0.1, 0.5)
@@ -74,7 +74,7 @@ class testFixedLengthTPSTransition(object):
         if os.path.isfile(filename):
             os.remove(filename)
 
-class testMinusSidesSummary(object):
+class TestMinusSidesSummary(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)

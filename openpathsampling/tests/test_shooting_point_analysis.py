@@ -101,7 +101,7 @@ class TestSnapshotByCoordinateDict(object):
 
 class TestShootingPointAnalysis(object):
     def setup(self):
-        # taken from the testCommittorSimulation
+        # taken from the TestCommittorSimulation
         import openpathsampling.engines.toy as toys
         pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
