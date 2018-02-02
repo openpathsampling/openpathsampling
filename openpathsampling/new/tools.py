@@ -18,7 +18,7 @@ def flatten(inputs, value_iter, classes):
     results = []
     for val in value_iter(inputs):
         if isinstance(val, classes):
-            results += flatter(val, value_iter, classes)
+            results += flatten(val, value_iter, classes)
         else:
             results.append(val)
     return results
@@ -27,4 +27,12 @@ def flatten_dict(dct):
     return flatten(dct, lambda x: x.values(), dict)
 
 def flatten_iterable(ll):
-    return flatter(ll, lambda x: x, (list, tuple, set))
+    return flatten(ll, lambda x: x, (list, tuple, set))
+
+def is_mappable(obj):
+    return isinstance(dict)  # for now
+
+def flatten_all(obj):
+    return flatten(obj,
+                   lambda x: x.values() if is_mappable(x) else x.__iter__(),
+                   (list, tuple, set, dict))

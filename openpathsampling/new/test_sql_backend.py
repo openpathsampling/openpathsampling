@@ -12,6 +12,18 @@ class TestSQLStorageBackend(object):
             'snapshot0': [('filename', 'str'), ('index', 'int')]
         }
 
+    def _sample_data_dict(self):
+        sample_list = [(0, 'ens1', 'traj1'),
+                       (1, 'ens2', 'traj2'),
+                       (0, 'ens1', 'traj2')]
+        sample_dict = [
+            {'replica': s[0], 'ensemble': s[1], 'trajectory': s[2]}
+            for s in sample_list
+        ]
+        for s in sample_dict:
+            s.update({'uuid': str(hex(hash(str(sample_dict))))})
+        return sample_dict
+
     def teardown(self):
         self._delete_tmp_files()
 
@@ -103,15 +115,7 @@ class TestSQLStorageBackend(object):
                              ('ensemble', 'uuid'),
                              ('trajectory', 'uuid')]}
         self.storage.register_schema(schema)
-        sample_list = [(0, 'ens1', 'traj1'),
-                       (1, 'ens2', 'traj2'),
-                       (0, 'ens1', 'traj2')]
-        sample_dict = [
-            {'replica': s[0], 'ensemble': s[1], 'trajectory': s[2]}
-            for s in sample_list
-        ]
-        for s in sample_dict:
-            s.update({'uuid': str(hex(hash(str(sample_dict))))})
+        sample_dict = self._sample_data_dict()
         self.storage.add_to_table('samples', sample_dict)
 
         # load created data
@@ -141,8 +145,6 @@ class TestSQLStorageBackend(object):
         # tested above
         for dct in returned_sample_dict:
             assert dct in sample_dict
-
-        pytest.skip()
 
     def test_load_table_data(self):
         pytest.skip()
