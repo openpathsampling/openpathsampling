@@ -2,7 +2,7 @@ import os
 import collections
 import sqlalchemy as sql
 from storage import universal_schema
-from tools import group_by
+from tools import group_by, compare_sets
 
 # dict to convert from OPS string type descriptors to SQL types
 sql_type = {
@@ -18,6 +18,21 @@ universal_sql_meta = {
     'uuid': {'uuid': {'primary_key': True}},
     'tables': {'name': {'primary_key': True}}
 }
+
+# TODO: test this, and then see if I can refactor existing code to use it
+def sql_db_execute(engine, statements, execmany_dict=None):
+    """Convenience for interacting with the database."""
+    if not isinstance(statements, list):
+        listified = True
+        statements = [statements]
+    if execmany_dict is None:
+        execmany_dict = {}
+    with engine.connect() as conn:
+        results = [conn.execute(statement, execmany_dict)
+                   for statement in statements]
+    if listify:
+        results = results[0]
+    return results
 
 class SQLStorageBackend(object):
     """Generic storage backend for SQL.
@@ -92,7 +107,7 @@ class SQLStorageBackend(object):
         number_to_table = {v: k for (k, v) in table_to_number.items()}
         return table_to_number, number_to_table
 
-    def is_consistent(self):
+    def table_list_is_consistent(self):
         """Test whether the DB, schema, and internal table list agree.
         """
         db_tables = set(self.engine.table_names())
@@ -104,6 +119,40 @@ class SQLStorageBackend(object):
                       == interal_tables_2)
         return consistent
 
+    def table_inconsistencies(self, table_name):
+        """Test whether a given table is consistent with its entries in the
+        UUID table.
+        """
+        tables = self.storage.metadata.tables
+        table_num = self.table_to_number[table_name]
+        uuid_db = tables['uuid']
+        uuid_sel = uuid_db.select().where(uuid_db.c.table == table_num)
+        with self.engine.connect() as conn:
+            table_data = list(conn.execute(tables[table_name].select()))
+            uuid_data = list(conn.execute(uuid_sel))
+        table_uuids = set([val.uuid for val in table_data])
+        uuid_uuids = set([val.uuid for val in uuid_data])
+        (table_only, uuid_only) = compare_sets(table_uuids, uuid_uuids)
+        return table_only, uuid_only
+
+    def table_is_consistent(self, table_name):
+        """
+        Are all UUIDs in this table also in the UUID table, and vice versa?
+
+        More specifically, this compares all UUIDs in this table with all
+        the objects pointing to this table in the UUID table.
+
+        Note that this is an expensive process, and should be guaranteed by
+        the insertion process. But this can act as a useful check on the
+        data. The :meth:`.table_inconsistencies` method gives the detailed
+        results of the comparison, for debugging purposes.
+        """
+        table_only, uuid_only = self.table_inconsistencies(table_name)
+        if table_only == set([]) and uuid_only == set([]):
+            return True
+        else:
+            return False
+
     def _add_table_to_tables_list(self, table_name):
         if table_name in ['uuid', 'tables']:
             return
@@ -114,7 +163,7 @@ class SQLStorageBackend(object):
         tables = self.metadata.tables['tables']
         with self.engine.connect() as conn:
             res = conn.execute(tables.select())
-            n_tables = len([r for r in res])
+            n_tables = len(list(res))
 
         with self.engine.connect() as conn:
             conn.execute(tables.insert().values(name=table_name,
@@ -122,6 +171,16 @@ class SQLStorageBackend(object):
 
         self.table_to_number.update({table_name: n_tables})
         self.number_to_table.update({n_tables: table_name})
+
+    def _load_from_table(self, table_name, idx_list):
+        # this is not public API (assumes idx_list, which is reserved by not
+        # guaranteed)
+        table = self.metadata.tables[table_name]
+        or_stmt = sql.or_(*(table.c.idx == idx for idx in idx_list))
+        sel = table.select(or_stmt)
+        with self.engine.connect() as conn:
+            results = list(conn.execute(sel))
+        return results
 
 
     ### FROM HERE IS THE GENERIC PUBLIC API
@@ -176,7 +235,6 @@ class SQLStorageBackend(object):
 
         # this is if we don't use the UUID in the schema... but doing so
         # would be another option (redundant data, but better sanity checks)
-        # TODO: I think the sanity checks will be worth it
         # pop_uuids = [{k: v for (k, v) in obj.items() if k != 'uuid'}
                      # for obj in objects]
         insert_statements = [table.insert().values(**obj)
@@ -198,21 +256,11 @@ class SQLStorageBackend(object):
             # here we use executemany for performance
             conn.execute(uuid_table.insert(), uuid_insert_dicts)
 
-    def _load_from_table(self, table_name, idx_list):
-        # this is not public API (assumes idx_list, which is reserved by not
-        # guaranteed)
-        table = self.metadata.tables[table_name]
-        or_stmt = sql.or_(*(table.c.idx == idx for idx in idx_list))
-        sel = table.select(or_stmt)
-        with self.engine.connect() as conn:
-            results = list(conn.execute(sel))
-        return results
-
     def load_n_rows_from_table(self, table_name, first_row, n_rows):
         idx_list = list(range(first_row, first_row + n_rows))
         return self._load_from_table(table_name, idx_list)
 
-    def load_uuids(self, uuids, ignore_missing=False):
+    def load_uuids_table(self, uuids, ignore_missing=False):
         """Loads uuids and info on finding data within the table.
 
         This can also be used to identify which UUIDs already exist in the
@@ -233,7 +281,7 @@ class SQLStorageBackend(object):
 
     def load_table_data(self, uuids):
         # this pulls out a table the information for the relevant UUIDs
-        uuid_table_row = self.load_uuids(uuids)
+        uuid_table_row = self.load_uuids_table(uuids)
         by_table_number = group_by(uuid_table_row, 1)
         by_table_name = {self.number_to_table[k]: v
                          for (k, v) in by_table_number.items()}

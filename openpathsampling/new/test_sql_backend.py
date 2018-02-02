@@ -83,16 +83,65 @@ class TestSQLStorageBackend(object):
         assert tab2num == name2num
         assert num2tab == num2name
 
-    def test_is_consistent(self):
+    def test_table_list_is_consistent(self):
         pytest.skip()
 
-    def test_load_uuids(self):
+    def test_table_inconsistencies(self):
+        pytest.skip()
+
+    def test_table_is_consistent(self):
+        pytest.skip()
+
+    def test_load_uuids_table(self):
         pytest.skip()
 
     def test_load_n_rows_from_table(self):
         pytest.skip()
 
     def test_add_to_table(self):
+        schema = {'samples': [('replica', 'int'),
+                             ('ensemble', 'uuid'),
+                             ('trajectory', 'uuid')]}
+        self.storage.register_schema(schema)
+        sample_list = [(0, 'ens1', 'traj1'),
+                       (1, 'ens2', 'traj2'),
+                       (0, 'ens1', 'traj2')]
+        sample_dict = [
+            {'replica': s[0], 'ensemble': s[1], 'trajectory': s[2]}
+            for s in sample_list
+        ]
+        for s in sample_dict:
+            s.update({'uuid': str(hex(hash(str(sample_dict))))})
+        self.storage.add_to_table('samples', sample_dict)
+
+        # load created data
+        tables = self.storage.metadata.tables
+        with self.storage.engine.connect() as conn:
+            samples = list(conn.execute(tables['samples'].select()))
+            uuids = list(conn.execute(tables['uuid'].select()))
+
+        # tests
+        assert len(samples) == 3
+        assert len(uuids) == 3
+        for uuid in uuids:
+            assert uuid.table == 0
+        # check that row numbers match to right UUID
+        uuid_dict = {u.uuid: u.row for u in uuids}
+        samples_uuid_dict = {s.idx: s.uuid for s in samples}
+        for uuid_val in uuid_dict:
+            assert samples_uuid_dict[uuid_dict[uuid_val]] == uuid_val
+
+        # check that we got back the objects we created
+        returned_sample_dict = [
+            {'uuid': s.uuid, 'replica': s.replica, 'ensemble': s.ensemble,
+             'trajectory': s.trajectory}
+            for s in samples
+        ]
+        # effectively test sets; but dict isn't hashable; length already
+        # tested above
+        for dct in returned_sample_dict:
+            assert dct in sample_dict
+
         pytest.skip()
 
     def test_load_table_data(self):
