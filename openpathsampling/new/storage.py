@@ -12,6 +12,7 @@ Table names:
 
 * ``uuid``
 * ``tables``
+* ``metadata``
 
 Column names:
 

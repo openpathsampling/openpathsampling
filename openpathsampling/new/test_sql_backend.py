@@ -70,6 +70,22 @@ class TestSQLStorageBackend(object):
         with pytest.raises(TypeError):
             self.storage.register_schema(self.schema)
 
+    def test_internal_tables_from_db(self):
+        self.storage.register_schema(self.schema)
+        tab2num, num2tab = self.storage.internal_tables_from_db()
+        tables_db = self.storage.metadata.tables['tables']
+        with self.storage.engine.connect() as conn:
+            res = list(conn.execute(tables_db.select()))
+
+        assert len(res) == 2
+        num2name = {r.idx: r.name for r in res}
+        name2num = {r.name: r.idx for r in res}
+        assert tab2num == name2num
+        assert num2tab == num2name
+
+    def test_is_consistent(self):
+        pytest.skip()
+
     def test_load_uuids(self):
         pytest.skip()
 

@@ -89,7 +89,7 @@ class SQLStorageBackend(object):
         with self.engine.connect() as conn:
             res = conn.execute(tables.select())
             table_to_number = {r.name: r.idx for r in res}
-        number_to_table = {v: k for (k, v) in table_to_number.items}
+        number_to_table = {v: k for (k, v) in table_to_number.items()}
         return table_to_number, number_to_table
 
     def is_consistent(self):
@@ -201,10 +201,10 @@ class SQLStorageBackend(object):
     def _load_from_table(self, table_name, idx_list):
         # this is not public API (assumes idx_list, which is reserved by not
         # guaranteed)
-        table = self.metadata.tables[table]
+        table = self.metadata.tables[table_name]
         or_stmt = sql.or_(*(table.c.idx == idx for idx in idx_list))
         sel = table.select(or_stmt)
-        with engine.connection() as conn:
+        with self.engine.connect() as conn:
             results = list(conn.execute(sel))
         return results
 
@@ -222,9 +222,9 @@ class SQLStorageBackend(object):
         uuid_or_stmt = sql.or_(*(uuid_table.c.uuid == uuid
                                  for uuid in uuids))
         uuid_sel = uuid_table.select(uuid_or_stmt)
-        with self.engine.connection() as conn:
+        with self.engine.connect() as conn:
             results = list(conn.execute(uuid_sel))
-        if not ignore_missing and len(results) != len(uuid):
+        if not ignore_missing and len(results) != len(uuids):
             # TODO
             # figure out which UUID is missing, raise error on first found
             pass
@@ -236,11 +236,12 @@ class SQLStorageBackend(object):
         uuid_table_row = self.load_uuids(uuids)
         by_table_number = group_by(uuid_table_row, 1)
         by_table_name = {self.number_to_table[k]: v
-                         for (k, v) in by_table_number}
+                         for (k, v) in by_table_number.items()}
         loaded_results = []
         for table in by_table_name:
             idxs = [val[2] for val in by_table_name[table]]
             loaded_results += self._load_from_table(table, idxs)
 
-        # TODO: check that the UUIDs match
-        pass
+        loaded_uuids = [res.uuid for res in loaded_results]
+        assert set(uuids) == set(loaded_uuids)  # sanity check
+        return loaded_results
