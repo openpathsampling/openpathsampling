@@ -2,6 +2,11 @@ import collections
 
 # TODO: write tests!
 
+def none_to_default(option, default):
+    if option is None:
+        option = default
+    return option
+
 def group_by(list_of_iterable, column_number):
     results = collections.defaultdict(list)
     for obj in list_of_iterable:
@@ -28,9 +33,6 @@ def flatten_dict(dct):
 
 def flatten_iterable(ll):
     return flatten(ll, lambda x: x, (list, tuple, set))
-
-def is_mappable(obj):
-    return isinstance(dict)  # for now
 
 def flatten_all(obj):
     return flatten(obj,
