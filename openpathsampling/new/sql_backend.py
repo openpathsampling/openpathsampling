@@ -279,17 +279,21 @@ class SQLStorageBackend(object):
 
         return results
 
-    def load_table_data(self, uuids):
+    def load_table_data(self, uuids, lazy=True):
         # this pulls out a table the information for the relevant UUIDs
         uuid_table_row = self.load_uuids_table(uuids)
         by_table_number = group_by(uuid_table_row, 1)
         by_table_name = {self.number_to_table[k]: v
                          for (k, v) in by_table_number.items()}
         loaded_results = []
+        lazy_results = {}
+        if lazy:
+            lazy_results = {table: by_table_name.pop(table)
+                            for table in self.lazy_tables}
         for table in by_table_name:
             idxs = [val[2] for val in by_table_name[table]]
             loaded_results += self._load_from_table(table, idxs)
 
         loaded_uuids = [res.uuid for res in loaded_results]
         assert set(uuids) == set(loaded_uuids)  # sanity check
-        return loaded_results
+        return (loaded_results, lazy_results)

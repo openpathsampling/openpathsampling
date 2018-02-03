@@ -1,16 +1,18 @@
 import importlib
+import collections
 import ujson
 import networkx as nx
 import networkx.algorithms.dag as nx_dag
-from tools import flatten_all
+from tools import flatten_all, nested_update
 
 # mappable/iterable identification ##################################
+# TODO: may just hard-code these; this seems to be the proper way
 
 def is_mappable(obj):
-    return isinstance(obj, dict)  # for now
+    return isinstance(obj, collections.Mapping)
 
 def is_iterable(obj):
-    return isinstance(obj, (list, set, tuple))
+    return isinstance(obj, collections.Iterable)
 
 # UUID recognition and encoding #####################################
 
@@ -113,27 +115,41 @@ def reconstruction_dag(uuid_json_dict, dag=None)
     return dag
 
 
+# TODO: move this to storage
 def serialize(list_of_objects):
     uuid_object_dict = {}
     for obj in list_of_objects:
         uuid_object_dict.update(get_all_uuids(obj))
 
+    # TODO: replace to_json with something that gets the serializer
     uuid_json_dict = {uuid: to_json(obj)
                       for (uuid, obj) in uuid_object_dict.item()}
     return uuid_json_dict
 
 
-def deserialize(uuid_json_dict, storage):
+def deserialize(uuid_json_dict, lazies, storage):
     dag = reconstruction_dag(uuid_json_dict)
     missing = check_dag(dag, uuid_json_dict)
     while missing:
-        more_json = storage.backend.load_table_data(missing)
+        (more_json, loc_lazies) = storage.backend.load_table_data(missing)
+        uuid_json_dict.update(more_json)
+        lazies = nested_update(lazies, loc_lazies)
         dag = reconstruction_dag(uuid_json_dict, dag)
         missing = check_dag(dag, uuid_json_dict)
 
     new_uuids = {}
     known_uuids = storage.known_uuids
+    for lazy_table in lazies:
+        lazy_uuid_objects = {
+            lazy.uuid: storage.make_lazy(lazy_table, lazy.uuid)
+            for lazy in lazies[lazy_table]
+            if lazy.uuid not in known_uuids
+        }
+        new_uuids.update(lazy_uuid_objects)
+        known_uuids.update(lazy_uuid_objects)
+
     ordered_nodes = list(reversed(list(nx_dag.topological_sort(dag))))
     for node in ordered_nodes:
+        # TODO: replace from_json with something that gets the deserializer
         new_uuids[node] = from_json(all_json[node], new_uuids, known_uuids)
     return new_uuids

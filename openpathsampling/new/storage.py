@@ -26,19 +26,38 @@ universal_schema = {
     'tables': [('name', 'str'), ('idx', 'int')]
 }
 
+def make_lazy_class(cls_):
+    # this is to mix-in inheritence
+    class LazyClass(LazyLoader, cls_):
+        pass
+    return LazyClass
+
 class LazyLoader(object):
-    def __init__(self, uuid, storage):
-        self.uuid = self
+    def __init__(self, uuid, class_, storage):
+        self.__uuid__ = uuid
         self.storage = storage
+        self.class_= class_
         self._loaded_object = None
 
-    def __getattr__(self, attr):
+    def load(self):
         if self._loaded_object is None:
-            self._loaded_object = storage.load(self.uuid, lazy=False)
-        return getattr(self._loaded_object, attr)
+            self._loaded_object = storage.load(self.__uuid__, lazy=False)
+        return self._loaded_object
 
+    def __getattr__(self, attr):
+        return getattr(self.load(), attr)
+
+    def __iter__(self):
+        loaded = self.load()
+        if not hasattr(loaded, '__iter__'):
+            raise TypeError() # TODO: message
+        # TODO: load all objects in the list
+        return loaded.__iter__
+
+    # TODO: how to handle isinstance? each lazy-loading class needs a sub
     def repr(self):
-        return "<LazyLoader for " + str(self.uuid) + ">"
+        return ("<LazyLoader for " + str(self.class_.__name__) + " UUID "
+                + str(self.__uuid__) + ">")
 
 
 class GeneralStorage(object):
@@ -53,6 +72,8 @@ class GeneralStorage(object):
         self.schema = {}
         self.serialization = {}
         self.class_to_table = {}
+        self.table_to_class = {}
+        self.lazy_tables = {}
 
     @classmethod
     def from_backend(cls, backend):
@@ -70,14 +91,25 @@ class GeneralStorage(object):
         # load up all the simulation objects
         pass
 
-    def register_schema(self, schema, backend_metadata, class_to_table,
-                        serialization):
+    def make_lazy(self, table, uuid):
+        return self.lazy_classes[table](uuid=uuid,
+                                        cls=self.table_to_class[table],
+                                        storage=self)
+
+    def register_schema(self, schema, class_to_table, serialization,
+                        lazy_tables=None, backend_metadata=None):
         # check validity
         self.backend.register_schema(schema, backend_metadata)
         self.schema.update(schema)
         self.class_to_table.update(class_to_table)
+        self.table_to_class.update({
+            table: cls_ for (cls_, table) in class_to_table.items()
+        })
         self.serialization.update(serialization)
-        pass
+        if lazy_tables:
+            if lazy_tables is True:
+                lazy_tables = list(schema.keys())
+            self.lazy_tables += lazy_tables
 
     def table_for_class(self, class_):
         return self.class_to_table[class_]
@@ -102,6 +134,10 @@ class GeneralStorage(object):
         # gather UUIDs to construct
         pass
 
+    def __getattr__(self, attr):
+        # override getattr to create iterators over the tables
+        pass
+
 ops_schema = {
     'samples': {},
     'sample_sets': {},
@@ -119,6 +155,8 @@ ops_class_to_table = {
     paths.MCStep: 'steps'
 }
 
+ops_lazy_tables = ['trajectories', 'details']
+
 ops_class_to_serialization = {
     paths.Sample: (paths.Sample.to_dict, paths.Sample.from_dict),
     # this allows us to override the to_dict behavior for new storage
@@ -135,17 +173,15 @@ class OPSStorage(GeneralStorage):
                 table = None
         return table
 
-class StorageCache(object):
-    def __init__(self, n_subcaches):
-        pass
-
-class StorageList(object):
-    def __init__(self):
-        # set self.cache
-        pass
+class TableIterator(object):
+    def __init__(self, storage):
+        self.cache = storage.simulation_objects.copy()
 
     def __iter__(self):
-        # iter fills the cache
+        # iter manages the cache
+        pass
+
+    def _get_single(self, value):
         pass
 
     def __getitem__(self):
@@ -153,14 +189,3 @@ class StorageList(object):
         # is is possible that using local lists of UUIDs to get might make
         # this just as fast? (stopping at trajectory level; no snapshots)
         pass
-
-class SampleStore(StorageList):
-    def cache_table(self, start_idx, end_idx):
-        pass
-
-    def cache_table_to_husks(self, cache_table):
-        pass
-
-    def fill_husks(self, husks):
-        pass
-

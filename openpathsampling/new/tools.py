@@ -28,6 +28,14 @@ def flatten(inputs, value_iter, classes):
             results.append(val)
     return results
 
+def nested_update(original, update):
+    for (k, v) in update.items():
+        if isinstance(v, collections.Mapping):
+            original[k] = nested_update(original.get(k, {}), v)
+        else:
+            original[k] = v
+    return original
+
 def flatten_dict(dct):
     return flatten(dct, lambda x: x.values(), dict)
 
@@ -35,6 +43,7 @@ def flatten_iterable(ll):
     return flatten(ll, lambda x: x, (list, tuple, set))
 
 def flatten_all(obj):
+    is_mappable = lambda x: isinstance(x, collections.Mappable)
     return flatten(obj,
                    lambda x: x.values() if is_mappable(x) else x.__iter__(),
-                   (list, tuple, set, dict))
+                   (collections.Mappable, collections.Iterable))
