@@ -395,7 +395,7 @@ class TestForwardFirstTwoWayShootingMover(TestShootingMover):
             modifier=paths.NoModification(),
             engine=self.toy_engine
         )
-        change = mover.move(self.init_samp)
+        change = mover.move(self.toy_samp)
         real_traj = change.trials[0].trajectory
         real_sample_set = SampleSet(change.trials)
         real_sample_set.sanity_check()
