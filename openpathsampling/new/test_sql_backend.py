@@ -4,7 +4,7 @@ import pytest
 class TestSQLStorageBackend(object):
     def setup(self):
         self._delete_tmp_files()
-        self.storage = self._default_backend
+        self.backend = self._default_backend
         self.schema = {
             'samples': [('replica', 'int'),
                         ('ensemble', 'uuid'),
@@ -24,6 +24,16 @@ class TestSQLStorageBackend(object):
             s.update({'uuid': str(hex(hash(str(sample_dict))))})
         return sample_dict
 
+    def _add_sample_data(self):
+        # use this as a fixture when you need sample data
+        schema = {'samples': [('replica', 'int'),
+                             ('ensemble', 'uuid'),
+                             ('trajectory', 'uuid')]}
+        self.backend.register_schema(schema)
+        sample_dict = self._sample_data_dict()
+        self.backend.add_to_table('samples', sample_dict)
+        return sample_dict
+
     def teardown(self):
         self._delete_tmp_files()
 
@@ -41,7 +51,7 @@ class TestSQLStorageBackend(object):
         sql_meta = {
             'uuid': {'uuid': {'primary_key': True}}
         }
-        meta = self.storage._extract_metadata(sql_meta, 'uuid', 'uuid')
+        meta = self.backend._extract_metadata(sql_meta, 'uuid', 'uuid')
         assert meta == {'primary_key': True}
 
     @pytest.mark.parametrize('test_input,expected', [
@@ -49,19 +59,19 @@ class TestSQLStorageBackend(object):
         ((":memory:", "sqlite"), "sqlite:///:memory:")
     ])
     def test_filename_from_backend(self, test_input, expected):
-        filename_from_backend = self.storage.filename_from_backend
+        filename_from_backend = self.backend.filename_from_backend
         assert filename_from_backend(*test_input) == expected
 
     def test_filename_from_backend_unknown(self):
         with pytest.raises(KeyError):
-            self.storage.filename_from_backend("file.sql", "foo")
+            self.backend.filename_from_backend("file.sql", "foo")
 
     def _col_names_set(self, table):
-        meta = self.storage.metadata
+        meta = self.backend.metadata
         return set([col.name for col in meta.tables[table].columns])
 
     def test_setup(self):
-        table_names = self.storage.engine.table_names()
+        table_names = self.backend.engine.table_names()
         assert set(table_names) == set(['uuid', 'tables'])
         assert self._col_names_set('uuid') == set(['uuid', 'table', 'row'])
         assert self._col_names_set('tables') == set(['name', 'idx'])
@@ -70,23 +80,23 @@ class TestSQLStorageBackend(object):
         new_schema = {
             'snapshot1': [('filename', 'str'), ('index', 'int')]
         }
-        self.storage.register_schema(new_schema)
-        table_names = self.storage.engine.table_names()
+        self.backend.register_schema(new_schema)
+        table_names = self.backend.engine.table_names()
         assert set(table_names) == set(['uuid', 'tables', 'snapshot1'])
         assert self._col_names_set('snapshot1') == set(['idx', 'uuid',
                                                         'filename',
                                                         'index'])
 
     def test_register_schema_modify_fails(self):
-        self.storage.register_schema(self.schema)
+        self.backend.register_schema(self.schema)
         with pytest.raises(TypeError):
-            self.storage.register_schema(self.schema)
+            self.backend.register_schema(self.schema)
 
     def test_internal_tables_from_db(self):
-        self.storage.register_schema(self.schema)
-        tab2num, num2tab = self.storage.internal_tables_from_db()
-        tables_db = self.storage.metadata.tables['tables']
-        with self.storage.engine.connect() as conn:
+        self.backend.register_schema(self.schema)
+        tab2num, num2tab = self.backend.internal_tables_from_db()
+        tables_db = self.backend.metadata.tables['tables']
+        with self.backend.engine.connect() as conn:
             res = list(conn.execute(tables_db.select()))
 
         assert len(res) == 2
@@ -105,7 +115,13 @@ class TestSQLStorageBackend(object):
         pytest.skip()
 
     def test_load_uuids_table(self):
-        pytest.skip()
+        sample_dict = self._add_sample_data()
+        uuids = [s['uuid'] for s in sample_dict]
+        loaded_uuids = self.backend.load_uuids_table(uuids)
+        assert len(loaded_uuids) == 3
+        for uuid in loaded_uuids:
+            assert uuid.uuid in uuids
+            assert uuid.table == 0
 
     def test_load_n_rows_from_table(self):
         pytest.skip()
@@ -114,13 +130,13 @@ class TestSQLStorageBackend(object):
         schema = {'samples': [('replica', 'int'),
                              ('ensemble', 'uuid'),
                              ('trajectory', 'uuid')]}
-        self.storage.register_schema(schema)
+        self.backend.register_schema(schema)
         sample_dict = self._sample_data_dict()
-        self.storage.add_to_table('samples', sample_dict)
+        self.backend.add_to_table('samples', sample_dict)
 
         # load created data
-        tables = self.storage.metadata.tables
-        with self.storage.engine.connect() as conn:
+        tables = self.backend.metadata.tables
+        with self.backend.engine.connect() as conn:
             samples = list(conn.execute(tables['samples'].select()))
             uuids = list(conn.execute(tables['uuid'].select()))
 
@@ -147,6 +163,19 @@ class TestSQLStorageBackend(object):
             assert dct in sample_dict
 
     def test_load_table_data(self):
+        sample_dict = self._add_sample_data()
+        uuids = [s['uuid'] for s in sample_dict]
+        # (loaded_table, loaded_lazy) = self.backend.load_table_data(uuids)
+        # assert len(loaded.table) == 3
+        pytest.skip()
+
+    def test_load_table_data_missing(self):
+        pytest.skip()
+
+    def test_load_table_data_missing_ignored(self):
+        pytest.skip()
+
+    def test_load_table_data_lazy(self):
         pytest.skip()
 
     def test_persistence(self):

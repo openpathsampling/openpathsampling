@@ -88,11 +88,17 @@ def to_json(obj):
                 '__class__': obj.__class__.__name__})
     return ujson.dumps(dct)
 
+def import_class(mod, cls):
+    # TODO: this needs some error-checking
+    mod = importlib.import_module(mod)
+    cls = getattr(mod, cls)
+    return cls
+
+
 def from_json(json_str, existing_uuids):
-    # NOTE: from_json only works with existing_uuids
+    # NOTE: from_json only works with existing_uuids (DAG-ordering)
     dct = ujson.loads(json_str)
-    mod = importlib.import_module(dct.pop('__module__'))
-    cls = getattr(mod, dct.pop('__class__'))
+    cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
     for (key, value) in dct.items():
         if is_uuid_string(value):
             # raises KeyError if object hasn't been visited

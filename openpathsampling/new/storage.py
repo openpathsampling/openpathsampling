@@ -162,8 +162,6 @@ ops_class_to_table = {
     paths.MCStep: 'steps'
 }
 
-ops_lazy_tables = ['trajectories', 'details']
-
 ops_class_to_serialization = {
     paths.Sample: (paths.Sample.to_dict, paths.Sample.from_dict),
     # this allows us to override the to_dict behavior for new storage
