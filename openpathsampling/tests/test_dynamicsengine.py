@@ -36,6 +36,7 @@ class TestDynamicsEngine(object):
             snapshot_class=paths.engines.toy.Snapshot,
             snapshot_dimensions=snapshot_dimensions
         )
+        self.descriptor = descriptor
         self.engine = paths.engines.DynamicsEngine(options, descriptor)
         self.stupid = StupidEngine(options, descriptor)
 
@@ -61,7 +62,7 @@ class TestDynamicsEngine(object):
         self.stupid.property_recovers
 
     @raises_with_message_like(AttributeError,
-                              "'StupidEngine' has no attribute 'foo'" +  
+                              "'StupidEngine' has no attribute 'foo'" +
                               ", nor does its options dictionary")
     def test_getattr_does_not_exist(self):
         self.stupid.foo
@@ -71,3 +72,8 @@ class TestDynamicsEngine(object):
         assert (self.engine.n_spatial == 1)
         assert(self.stupid.n_atoms == 1)
         assert (self.stupid.n_spatial == 1)
+
+    def test_unicode_options(self):
+        # regression test: this should NOT raise an error
+        options = {'on_nan': u'fail'}
+        engine = paths.engines.DynamicsEngine(options, self.descriptor)
