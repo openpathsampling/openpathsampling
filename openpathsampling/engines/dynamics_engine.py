@@ -19,6 +19,9 @@ from .delayedinterrupt import DelayedInterrupt
 
 logger = logging.getLogger(__name__)
 
+if sys.version_info > (3, ):
+    basestring = str
+
 # =============================================================================
 # SOURCE CONTROL
 # =============================================================================
@@ -240,6 +243,9 @@ class DynamicsEngine(StorableNamedObject):
                         else:
                             okay_options[variable] = my_options[variable]
                     elif isinstance(my_options[variable], type(default_value)):
+                        okay_options[variable] = my_options[variable]
+                    elif isinstance(my_options[variable], basestring) \
+                            and isinstance(default_value, basestring):
                         okay_options[variable] = my_options[variable]
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
