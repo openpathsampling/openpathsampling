@@ -21,7 +21,7 @@
     font-family: Consolas, "Andale Mono WT", "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Liberation Mono", "Nimbus Mono L", Monaco, "Courier New", Courier, monospace;
     font-size: 12px;
     line-height: 1.0;
-    display: block;
+    display: none;
     overflow: auto;
     color: #404040;
 }
@@ -34,7 +34,7 @@ pre, code {
     padding: 12px 12px;
     background: #f6f6f6;
     border-bottom: solid 1px #e1e4e5;
-    font-size: 75%;
+    font-size: 85%;
     font-family: Consolas, "Andale Mono WT", "Andale Mono", "Lucida Console", "Lucida Sans Typewriter", "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Liberation Mono", "Nimbus Mono L", Monaco, "Courier New", Courier, monospace;
     color: #404040;
     overflow-x: auto;
@@ -48,6 +48,12 @@ div[class^='highlight'] {
     overflow-x: auto;
     background: #fff;
     margin: 0 0 20px 0;
+}
+
+h1 code, h2 code, h3 code, h4 code, h5 code, h6 code {
+    border: solid 0 #000 !important;
+    border-bottom: solid 1px #e1e4e5 !important;
+    font-size: 90% !important;
 }
 
 code {
@@ -102,6 +108,7 @@ code {
 .input_area {
     margin-left: 12px;
     margin-right: 12px;
+    margin-bottom: 24px;
 }
 
 .dataframe td, .dataframe th {
