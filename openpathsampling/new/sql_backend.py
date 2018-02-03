@@ -7,10 +7,12 @@ from tools import group_by, compare_sets
 # dict to convert from OPS string type descriptors to SQL types
 sql_type = {
     'uuid': sql.String,
-    'list_of_uuid': sql.String,
+    'list_uuid': sql.String,
+    'lazy': sql.String,
     'str': sql.String,
     'json': sql.String,
     'int': sql.Integer,
+    'float': sql.Float,
     #TODO add more
 }
 

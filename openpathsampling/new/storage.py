@@ -139,11 +139,18 @@ class GeneralStorage(object):
         pass
 
 ops_schema = {
-    'samples': {},
-    'sample_sets': {},
-    'trajectories': {},
-    'move_changes': {},
-    'steps': {}
+    'samples': [('trajectory', 'lazy'), ('ensemble', 'uuid'),
+                ('replica', 'int'),
+                # in my opinion, the next 3 should be removed
+                ('parent', 'lazy'), ('bias', 'float'),
+                ('mover', 'uuid')],
+    'sample_sets': [('samples', 'list_uuid'), ('movepath', 'lazy')],
+    'trajectories': [('snapshots', 'list_uuid')],
+    'move_changes': [('mover', 'uuid'), ('details', 'lazy'), ('cls', 'str'),
+                     ('subchanges', 'list_uuid'), ('samples', 'list_uuid'),
+                     ('input_samples', 'list_uuid')],
+    'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'uuid'),
+              ('simulation', 'uuid'), ('mccycle', 'int')]
 }
 ops_schema_sql_metadata = {}
 ops_class_to_table = {
