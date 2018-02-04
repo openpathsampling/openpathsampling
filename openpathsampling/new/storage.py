@@ -3,7 +3,13 @@ import collections
 import itertools
 import openpathsampling as paths
 from serialization import get_uuid
+from serialization import to_json as serialize_sim
+from serialization import from_json as deserialize_sim
+# TODO: both of these are from
+from serialization import to_dict_with_uuids as serialize_data
+from serialization import deserialize as deserialize_data
 import tools
+from openpathsampling.netcdfplus import StorableNamedObject
 
 """
 A simple storage interface for simulation objects and data objects.
@@ -31,8 +37,34 @@ universal_schema = {
 
 ClassInfo = collections.namedtuple(
     'ClassInfo',
-    ['table', 'class', 'serializer', 'deserializer']
+    ['table', 'cls', 'serializer', 'deserializer']
 )
+
+#TODO: should this become a collections.Sequence?
+class ClassInfoContainer(object):
+    def __init__(self, default_info, class_info_list=None):
+        class_info_list = tools.none_to_default(class_info_list, [])
+        self.class_to_info = {}
+        self.table_to_info = {}
+        self.class_to_table = {}
+        self.table_to_class = {}
+        self.default_info = default_info
+        for info in class_info_list:
+            self.add_class_info(info)
+
+    def add_class_info(self, info_node):
+        # check that we're not in any existing
+        self.class_to_info.update({info_node.cls: info_node})
+        self.table_to_info.update({info_node.table: info_node})
+        self.class_to_table.update({info_node.cls: info_node.table})
+        self.table_to_class.update({info_node.table: info_node.cls})
+
+    def __getitem__(self, item):
+        if tools.is_string(item):
+            return self.table_to_info[item]
+        else:
+            return self.class_to_info[item]
+
 
 def make_lazy_class(cls_):
     # this is to mix-in inheritence
@@ -101,58 +133,34 @@ class MixedCache(collections.MutableMapping):
 
 
 class GeneralStorage(object):
-    def __init__(self, filename, mode='r', template=None, fallback=None,
-                 backend=None):
+    def __init__(self, backend, schema, class_info, fallbacks=None):
         self._init_new()
+        self.scheme = scheme
+        self.class_info = class_info
+        self._lazy_classes = {}
         self.simulation_objects = self._cache_simulation_objects()
         self.cache = MixedCache(self.simulation_objects)
 
-    def _init_new(self):
-        """Initial empty version of various dictionaries"""
-        self.schema = {}
-        self.serialization = {}
-        self.class_to_table = {}
-        self.table_to_class = {}
-        self.lazy_tables = {}
-
-    @classmethod
-    def from_backend(cls, backend):
-        obj = cls.__new__()
-        obj._init_new()
-        obj.filename = backend.filename
-        obj.mode = backend.mode
-        obj.template = backend._template
-        obj.fallback = backend.fallback
-        obj.backend = backend.backend
-        obj.db = backend
-        obj.simulation_objects = obj._cache_simulation_objects()
-
     def _cache_simulation_objects(self):
         # load up all the simulation objects
-        pass
+        return {}
 
     def make_lazy(self, table, uuid):
         class_ = self.table_to_class[table]
-        if table not in self.lazy_classes:
-            self.lazy_classes[table] = make_lazy_class(class_)
-        return self.lazy_classes[table](uuid=uuid,
-                                        cls=class_,
-                                        storage=self)
+        if table not in self._lazy_classes:
+            self._lazy_classes[table] = make_lazy_class(class_)
+        return self._lazy_classes[table](uuid=uuid,
+                                         cls=class_,
+                                         storage=self)
 
-    def register_schema(self, schema, class_to_table, serialization,
-                        lazy_tables=None, backend_metadata=None):
+    def register_schema(self, schema, class_info_list,
+                        backend_metadata=None):
         # check validity
         self.backend.register_schema(schema, backend_metadata)
         self.schema.update(schema)
-        self.class_to_table.update(class_to_table)
-        self.table_to_class.update({
-            table: cls_ for (cls_, table) in class_to_table.items()
-        })
-        self.serialization.update(serialization)
-        if lazy_tables:
-            if lazy_tables is True:
-                lazy_tables = list(schema.keys())
-            self.lazy_tables += lazy_tables
+        for info in class_info_list:
+            self.class_info.add_class_info(info)
+
 
     def table_for_class(self, class_):
         return self.class_to_table[class_]
@@ -214,34 +222,34 @@ ops_schema = {
                      ('input_samples', 'list_uuid')],
     'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'uuid'),
               ('simulation', 'uuid'), ('mccycle', 'int')],
-    'details': [('json', 'json')]
+    'details': [('json', 'json')],
     'simulation_objects': [('json', 'json'), ('class_idx', 'int')]
 }
+
 ops_schema_sql_metadata = {}
-ops_class_to_table = {
-    # this is only for data objects
-    paths.Sample: 'samples',
-    paths.SampleSet: 'sample_sets',
-    paths.Trajectory: 'trajectories',
-    paths.MoveChange: 'move_changes',
-    paths.MCStep: 'steps'
-}
 
-ops_class_to_serialization = {
-    paths.Sample: (paths.Sample.to_dict, paths.Sample.from_dict),
-    # this allows us to override the to_dict behavior for new storage
-}
-
-class OPSStorage(GeneralStorage):
-    def table_for_class(self, class_):
-        try:
-            table = ops_class_to_table[class_]
-        except KeyError:
-            if issubclass(class_, paths.netcdfplus.StorableNamedObject):
-                table = 'simulation_object'
-            else:
-                table = None
-        return table
+ops_class_info = ClassInfoContainer(
+    default_info=ClassInfo('simulation_objects', cls=StorableNamedObject,
+                           serializer=serialize_sim,
+                           deserializer=deserialize_sim),
+    class_info_list=[
+        ClassInfo(table='samples', cls=paths.Sample,
+                  serializer=serialize_data,
+                  deserializer=deserialize_data),
+        ClassInfo(table='sample_sets', cls=paths.SampleSet,
+                  serializer=serialize_data,
+                  deserializer=deserialize_data),
+        ClassInfo(table='trajectories', cls=paths.Trajectory,
+                  serializer=serialize_data,
+                  deserializer=deserialize_data),
+        ClassInfo(table='move_changes', cls=paths.MoveChange,
+                  serializer=deserialize_data,
+                  deserializer=deserialize_data),  #TODO: may need custoom
+        ClassInfo(table='steps', cls=paths.MCStep,
+                  serializer=serialize_data,
+                  deserializer=deserialize_data)
+    ]
+)
 
 class TableIterator(object):
     def __init__(self, storage):

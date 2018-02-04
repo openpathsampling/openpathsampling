@@ -3,6 +3,7 @@ import collections
 import sqlalchemy as sql
 from storage import universal_schema
 from tools import group_by, compare_sets
+import tools
 
 # dict to convert from OPS string type descriptors to SQL types
 sql_type = {
@@ -42,11 +43,9 @@ class SQLStorageBackend(object):
     Uses SQLAlchemy; could easily duck-type an object that implements the
     necessary methods for other backends.
     """
-    def __init__(self, filename, mode='r', template=None, fallback=None,
-                 backend=None):
-        self.template = template
+    def __init__(self, filename, mode='r', sql_dialect=None):
         self.filename = filename
-        self.fallback = fallback
+        sql_dialect = tools.none_to_default(sql_dialect, 'sqlite')
         self.mode = mode
 
         # override later if mode == 'r' or 'a'
@@ -55,16 +54,13 @@ class SQLStorageBackend(object):
         self.table_to_number = {}
         self.number_to_table = {}
 
-        if backend is None:
-            backend = 'sqlite'
-
         if self.mode == "w" and os.path.exists(filename):
             # delete existing file; write after
             os.remove(filename)
 
         # we prevent writes by disallowing write method in read mode;
         # for everything else; just connect to the database
-        connection_uri = self.filename_from_backend(filename, backend)
+        connection_uri = self.filename_from_dialect(filename, sql_dialect)
         self.engine = sql.create_engine(connection_uri)
         if self.mode == "w":
             self.register_schema(universal_schema)
@@ -74,13 +70,13 @@ class SQLStorageBackend(object):
         return self._metadata
 
     @staticmethod
-    def filename_from_backend(filename, backend):
-        # take backends like "sqlite", etc and return proper file connection
+    def filename_from_dialect(filename, dialect):
+        # take dialects like "sqlite", etc and return proper file connection
         # URI; would be essentially no-op for regular file opening as with
         # .nc
         uri_root = {
             'sqlite': "sqlite:///{filename}",
-        }[backend]
+        }[dialect]
         return uri_root.format(filename=filename)
 
     @staticmethod

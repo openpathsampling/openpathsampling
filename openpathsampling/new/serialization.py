@@ -6,15 +6,16 @@ import networkx.algorithms.dag as nx_dag
 from tools import flatten_all, nested_update, is_iterable, is_mappable
 
 # UUID recognition and encoding #####################################
+# Things in here might be modified for performance optimization. In
+# particular, it might be worth using a string representation of the UUID
+# whenever possible (dicts with string keys have a special fast-path)
 
 def has_uuid(obj):
-    # TODO: (perf) or isinstance? or other? try a few
     return hasattr(obj, '__uuid__')
 
 def get_uuid(obj):
     return obj.__uuid__
 
-# TODO: (perf) try a few UUID encodings for performance
 def encode_uuid(uuid):
     return "UUID(" + str(uuid) + ")"
 
@@ -27,10 +28,6 @@ def is_uuid_string(obj):
         and obj[:5] == 'UUID(' and obj[-1] == ')'
     )
 
-# TODO: (perf) have a special UUID encoding for dict keys? string keys have
-# special fast-path
-
-
 # Getting the list of UUIDs bsed on initial objets ###################
 
 # NOTE: this needs find everything, including if the iterable/mapping has a
@@ -40,7 +37,7 @@ def get_all_uuids(initial_object):
     with_uuid = [o for o in flatten_all(initial_object.to_dict())
                  if has_uuid(o)]
     for obj in with_uuid:
-        uuid_dict.update({obj.__uuid__: obj})
+        uuid_dict.update({get_uuid(obj): obj})
         uuid_dict.update(get_all_uuids(obj))
     return uuid_dict
 
@@ -101,7 +98,7 @@ def from_json(json_str, existing_uuids):
             dct[key] = value_obj
     return cls.from_dict(dct)
 
-def reconstruction_dag(uuid_json_dict, dag=None)
+def reconstruction_dag(uuid_json_dict, dag=None):
     dependent_uuids = {uuid: find_dependent_uuids(json_str)
                        for (uuid, json_str) in uuid_json_dict.items()}
     if dag is None:

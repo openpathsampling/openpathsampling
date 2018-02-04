@@ -6,12 +6,15 @@ if sys.version_info > (3, ):
 else:
     basestring = basestring
 
+# simplifications for the necessary type-checking
+def is_string(obj):
+    return isinstance(obj, basestring)
+
 def is_mappable(obj):
     return isinstance(obj, collections.Mapping)
 
 def is_iterable(obj):
-    return (isinstance(obj, collections.Iterable)
-            and not isinstance(obj, basestring))
+    return isinstance(obj, collections.Iterable) and not is_string(obj)
 
 
 def none_to_default(option, default):
@@ -19,6 +22,7 @@ def none_to_default(option, default):
         option = default
     return option
 
+# group_by and variants
 def group_by(list_of_iterable, group, grouping_function):
     results = collections.defaultdict(list)
     for obj in list_of_iterable:
@@ -34,7 +38,7 @@ def group_by_index(list_of_iterable, column_number):
 def group_by_attribute(list_of_iterable, attr):
     return group_by(list_of_iterable, attr, getattr)
 
-def dict_group_by(dct, group, key_extract):
+def dict_group_by(dct, key_extract):
     results = collections.defaultdict(dict)
     for (key, value) in dct.items():
         results[key_extract(key, value)].update({key: value})
@@ -46,6 +50,7 @@ def compare_sets(set1, set2):
     only_in_2 = set2 - set1
     return (only_in_1, only_in_2)
 
+# flatten and variants
 def flatten(inputs, value_iter, classes):
     results = []
     for val in value_iter(inputs):
