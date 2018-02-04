@@ -2,14 +2,14 @@ import os
 import collections
 import itertools
 import openpathsampling as paths
-from serialization import get_uuid
+from serialization import get_uuid, get_all_uuids
 from serialization import to_json as serialize_sim
 from serialization import from_json as deserialize_sim
 # TODO: both of these are from
 from serialization import to_dict_with_uuids as serialize_data
 from serialization import deserialize as deserialize_data
 import tools
-from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.netcdfplus import StorableObject
 
 """
 A simple storage interface for simulation objects and data objects.
@@ -48,12 +48,14 @@ class ClassInfoContainer(object):
         self.table_to_info = {}
         self.class_to_table = {}
         self.table_to_class = {}
+        self.class_info_list = []
         self.default_info = default_info
         for info in class_info_list:
             self.add_class_info(info)
 
     def add_class_info(self, info_node):
         # check that we're not in any existing
+        self.class_info_list.append(info_node)
         self.class_to_info.update({info_node.cls: info_node})
         self.table_to_info.update({info_node.table: info_node})
         self.class_to_table.update({info_node.cls: info_node.table})
@@ -63,7 +65,18 @@ class ClassInfoContainer(object):
         if tools.is_string(item):
             return self.table_to_info[item]
         else:
-            return self.class_to_info[item]
+            try:
+                return self.class_to_info[item]
+            except KeyError as e:
+                if issubclass(item, self.default_info.cls):
+                    return self.default_info
+                else:
+                    raise e
+
+    def __repr__(self):  # pragma: no cover
+        return ("ClassInfoContainer(default_info=" + repr(self.default_info)
+                + ", class_info_list=" + repr(self.class_info_list) + ")")
+
 
 
 def make_lazy_class(cls_):
@@ -134,8 +147,8 @@ class MixedCache(collections.MutableMapping):
 
 class GeneralStorage(object):
     def __init__(self, backend, schema, class_info, fallbacks=None):
-        self._init_new()
-        self.scheme = scheme
+        self.backend = backend
+        self.schema = schema
         self.class_info = class_info
         self._lazy_classes = {}
         self.simulation_objects = self._cache_simulation_objects()
@@ -176,7 +189,7 @@ class GeneralStorage(object):
         pass
 
     def serialize(self, obj):
-        class_info = self.get_class_info(obj.__class__)
+        class_info = self.class_info[obj.__class__]
         return class_info.serializer(obj)
 
     def save(self, obj):
@@ -196,12 +209,15 @@ class GeneralStorage(object):
         # group by table, then save appropriately
         # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
         get_table_name = lambda uuid, obj_: \
-                self.get_class_info(obj_.__class__).table
+                self.class_info[obj_.__class__].table
 
-        by_table = dict_group_by(uuids, key_extract=get_table_name)
+        by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         for table in by_table:
-            storables_list = [self.serialize(o) for o in by_table[table]]
+            print table
+            print by_table
+            storables_list = [self.serialize(o)
+                              for o in by_table[table].values()]
             self.backend.add_to_table(table, storables_list)
 
 
@@ -229,7 +245,7 @@ ops_schema = {
 ops_schema_sql_metadata = {}
 
 ops_class_info = ClassInfoContainer(
-    default_info=ClassInfo('simulation_objects', cls=StorableNamedObject,
+    default_info=ClassInfo('simulation_objects', cls=StorableObject,
                            serializer=serialize_sim,
                            deserializer=deserialize_sim),
     class_info_list=[

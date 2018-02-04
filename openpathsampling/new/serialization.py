@@ -14,7 +14,8 @@ def has_uuid(obj):
     return hasattr(obj, '__uuid__')
 
 def get_uuid(obj):
-    return obj.__uuid__
+    # TODO: I can come up with a better string encoding than this
+    return str(obj.__uuid__)
 
 def encode_uuid(uuid):
     return "UUID(" + str(uuid) + ")"
@@ -86,16 +87,20 @@ def import_class(mod, cls):
     return cls
 
 
-def from_json(json_str, existing_uuids):
-    # NOTE: from_json only works with existing_uuids (DAG-ordering)
-    dct = ujson.loads(json_str)
-    cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
+def from_dict_with_uuids(dct, existing_uuids):
     for (key, value) in dct.items():
         if is_uuid_string(value):
             # raises KeyError if object hasn't been visited
             # (indicates problem in DAG reconstruction)
             value_obj = existing_uuids[decode_uuid(value)]
             dct[key] = value_obj
+    return dct
+
+def from_json(json_str, existing_uuids):
+    # NOTE: from_json only works with existing_uuids (DAG-ordering)
+    dct = ujson.loads(json_str)
+    cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
+    dct = from_dict_with_uuids(dct, existing_uuids)
     return cls.from_dict(dct)
 
 def reconstruction_dag(uuid_json_dict, dag=None):
