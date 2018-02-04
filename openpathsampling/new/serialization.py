@@ -3,7 +3,8 @@ import collections
 import ujson
 import networkx as nx
 import networkx.algorithms.dag as nx_dag
-from tools import flatten_all, nested_update, is_iterable, is_mappable
+from tools import flatten_all, nested_update
+from tools import is_iterable, is_mappable, is_numpy_iterable
 
 # UUID recognition and encoding #####################################
 # Things in here might be modified for performance optimization. In
@@ -64,7 +65,7 @@ def replace_uuid(obj):
         replacement = encode_uuid(obj.__uuid__)
     elif is_mappable(obj):
         replacement = {k: replace_uuid(v) for (k, v) in replacement.items()}
-    elif is_iterable(obj):
+    elif is_iterable(obj) and not is_numpy_iterable(obj):
         replace_type = type(obj)
         replacement = replace_type([replace_uuid(o) for o in obj])
     return replacement

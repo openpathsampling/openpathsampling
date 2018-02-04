@@ -1,4 +1,5 @@
 import collections
+from numpy import ndarray
 
 import sys
 if sys.version_info > (3, ):
@@ -15,6 +16,9 @@ def is_mappable(obj):
 
 def is_iterable(obj):
     return isinstance(obj, collections.Iterable) and not is_string(obj)
+
+def is_numpy_iterable(obj):
+    return isinstance(obj, ndarray)
 
 
 def none_to_default(option, default):

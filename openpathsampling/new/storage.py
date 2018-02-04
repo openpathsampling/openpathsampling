@@ -153,6 +153,7 @@ class GeneralStorage(object):
         self._lazy_classes = {}
         self.simulation_objects = self._cache_simulation_objects()
         self.cache = MixedCache(self.simulation_objects)
+        self.register_schema(self.schema, class_info_list=[])
 
     def _cache_simulation_objects(self):
         # load up all the simulation objects
@@ -214,10 +215,9 @@ class GeneralStorage(object):
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         for table in by_table:
-            print table
-            print by_table
             storables_list = [self.serialize(o)
                               for o in by_table[table].values()]
+            print storables_list
             self.backend.add_to_table(table, storables_list)
 
 
