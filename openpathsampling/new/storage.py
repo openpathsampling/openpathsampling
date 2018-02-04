@@ -150,7 +150,8 @@ ops_schema = {
                      ('subchanges', 'list_uuid'), ('samples', 'list_uuid'),
                      ('input_samples', 'list_uuid')],
     'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'uuid'),
-              ('simulation', 'uuid'), ('mccycle', 'int')]
+              ('simulation', 'uuid'), ('mccycle', 'int')],
+    'simulation_objects': [('json', 'json'), ('class_idx', 'int')]
 }
 ops_schema_sql_metadata = {}
 ops_class_to_table = {

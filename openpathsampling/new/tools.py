@@ -1,5 +1,9 @@
 import collections
 
+import sys
+if sys.version_info > (3, ):
+    basestring = str
+
 # TODO: write tests!
 
 def none_to_default(option, default):
@@ -11,7 +15,6 @@ def group_by(list_of_iterable, column_number):
     results = collections.defaultdict(list)
     for obj in list_of_iterable:
         results[obj[column_number]].append(obj)
-
     return results
 
 def compare_sets(set1, set2):
@@ -22,11 +25,23 @@ def compare_sets(set1, set2):
 def flatten(inputs, value_iter, classes):
     results = []
     for val in value_iter(inputs):
-        if isinstance(val, classes):
+        if isinstance(val, classes) and not isinstance(val, basestring):
             results += flatten(val, value_iter, classes)
         else:
             results.append(val)
     return results
+
+def flatten_dict(dct):
+    return flatten(dct, lambda x: x.values(), dict)
+
+def flatten_iterable(ll):
+    return flatten(ll, lambda x: x, (list, tuple, set))
+
+def flatten_all(obj):
+    is_mappable = lambda x: isinstance(x, collections.Mapping)
+    return flatten(obj,
+                   lambda x: x.values() if is_mappable(x) else x.__iter__(),
+                   (collections.Mapping, collections.Iterable))
 
 def nested_update(original, update):
     for (k, v) in update.items():
@@ -36,14 +51,3 @@ def nested_update(original, update):
             original[k] = v
     return original
 
-def flatten_dict(dct):
-    return flatten(dct, lambda x: x.values(), dict)
-
-def flatten_iterable(ll):
-    return flatten(ll, lambda x: x, (list, tuple, set))
-
-def flatten_all(obj):
-    is_mappable = lambda x: isinstance(x, collections.Mappable)
-    return flatten(obj,
-                   lambda x: x.values() if is_mappable(x) else x.__iter__(),
-                   (collections.Mappable, collections.Iterable))
