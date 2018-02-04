@@ -1,6 +1,9 @@
 import os
 import collections
+import itertools
 import openpathsampling as paths
+from serialization import get_uuid
+import tools
 
 """
 A simple storage interface for simulation objects and data objects.
@@ -26,6 +29,11 @@ universal_schema = {
     'tables': [('name', 'str'), ('idx', 'int')]
 }
 
+ClassInfo = collections.namedtuple(
+    'ClassInfo',
+    ['table', 'class', 'serializer', 'deserializer']
+)
+
 def make_lazy_class(cls_):
     # this is to mix-in inheritence
     class LazyClass(LazyLoader, cls_):
@@ -41,7 +49,7 @@ class LazyLoader(object):
 
     def load(self):
         if self._loaded_object is None:
-            self._loaded_object = storage.load(self.__uuid__, lazy=False)
+            self._loaded_object = self.storage.load(self.__uuid__, lazy=False)
         return self._loaded_object
 
     def __getattr__(self, attr):
@@ -60,12 +68,44 @@ class LazyLoader(object):
                 + str(self.__uuid__) + ">")
 
 
+class MixedCache(collections.MutableMapping):
+    """Combine a frozen cache and a mutable cache"""
+    def __init__(self, fixed_cache=None):
+        self.fixed_cache = tools.none_to_default(fixed_cache, default={})
+        self.cache = {}
+
+    def __getitem__(self, key):
+        if key in self.fixed_cache:
+            return self.fixed_cache[key]
+        else:
+            return self.cache[key]
+
+    def __setitem__(self, key, value):
+        self.cache[key] = value
+
+    def __delitem__(self, key, value):
+        try:
+            del self.cache[key]
+        except KeyError as e:
+            if key in self.fixed_cache:
+                raise TypeError("Can't delete from fixed cache")
+            else:
+                raise e
+
+    def __len__(self):
+        return len(self.fixed_cache) + len(self.cache)
+
+    def __iter__(self):
+        return itertools.chain(self.fixed_cache, self.cache)
+
+
+
 class GeneralStorage(object):
     def __init__(self, filename, mode='r', template=None, fallback=None,
                  backend=None):
-
         self._init_new()
         self.simulation_objects = self._cache_simulation_objects()
+        self.cache = MixedCache(self.simulation_objects)
 
     def _init_new(self):
         """Initial empty version of various dictionaries"""
@@ -92,8 +132,11 @@ class GeneralStorage(object):
         pass
 
     def make_lazy(self, table, uuid):
+        class_ = self.table_to_class[table]
+        if table not in self.lazy_classes:
+            self.lazy_classes[table] = make_lazy_class(class_)
         return self.lazy_classes[table](uuid=uuid,
-                                        cls=self.table_to_class[table],
+                                        cls=class_,
                                         storage=self)
 
     def register_schema(self, schema, class_to_table, serialization,
@@ -118,21 +161,41 @@ class GeneralStorage(object):
         # create virtual stores for simulation objects (e.g., .volume, etc)
         pass
 
-    def load(self, uuid, lazy=True):
+    def load(self, uuid, lazy=None):
+        # get UUIDs and tables associated
+        # if lazy, return the lazy object
+        # if table has custom loader, use that
         pass
+
+    def serialize(self, obj):
+        class_info = self.get_class_info(obj.__class__)
+        return class_info.serializer(obj)
 
     def save(self, obj):
-        # prepare a single object for storage
         # check if obj is in DB
-        pass
+        exists = self.backend.load_uuids_table(uuids=[get_uuid(obj)],
+                                               ignore_missing=True)
+        if exists:
+            return
+        # find all UUIDs we need to save with this object
+        # TODO: (perf) is this faster if we stop traversal on cached UUID?
+        uuids = get_all_uuids(obj)
+        # remove any UUIDs that have already been saved
+        exists = self.backend.load_uuids_table(uuids=list(uuids.keys()),
+                                               ignore_missing=True)
+        for existing in exists:
+            del uuids[existing.uuid]
+        # group by table, then save appropriately
+        # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
+        get_table_name = lambda uuid, obj_: \
+                self.get_class_info(obj_.__class__).table
 
-    def save_list(self, list_of_objs):
-        # get the UUIDs of all objs
-        # figure out which objs are already in the DB
-        # organize by type
-        # convert object to appropriate dict
-        # gather UUIDs to construct
-        pass
+        by_table = dict_group_by(uuids, key_extract=get_table_name)
+
+        for table in by_table:
+            storables_list = [self.serialize(o) for o in by_table[table]]
+            self.backend.add_to_table(table, storables_list)
+
 
     def __getattr__(self, attr):
         # override getattr to create iterators over the tables
@@ -151,6 +214,7 @@ ops_schema = {
                      ('input_samples', 'list_uuid')],
     'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'uuid'),
               ('simulation', 'uuid'), ('mccycle', 'int')],
+    'details': [('json', 'json')]
     'simulation_objects': [('json', 'json'), ('class_idx', 'int')]
 }
 ops_schema_sql_metadata = {}

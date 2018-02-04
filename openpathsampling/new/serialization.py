@@ -3,24 +3,18 @@ import collections
 import ujson
 import networkx as nx
 import networkx.algorithms.dag as nx_dag
-from tools import flatten_all, nested_update
-
-# mappable/iterable identification ##################################
-# TODO: may just hard-code these; this seems to be the proper way
-
-def is_mappable(obj):
-    return isinstance(obj, collections.Mapping)
-
-def is_iterable(obj):
-    return isinstance(obj, collections.Iterable)
+from tools import flatten_all, nested_update, is_iterable, is_mappable
 
 # UUID recognition and encoding #####################################
 
-def uuid_test(obj):
-    # TODO: or isinstance? or other? try a few for performance checks
+def has_uuid(obj):
+    # TODO: (perf) or isinstance? or other? try a few
     return hasattr(obj, '__uuid__')
 
-# TODO: try a few UUID encodings for performance
+def get_uuid(obj):
+    return obj.__uuid__
+
+# TODO: (perf) try a few UUID encodings for performance
 def encode_uuid(uuid):
     return "UUID(" + str(uuid) + ")"
 
@@ -33,19 +27,18 @@ def is_uuid_string(obj):
         and obj[:5] == 'UUID(' and obj[-1] == ')'
     )
 
-# TODO: have a special UUID encoding for dict keys? string keys have special
-# fast-path
+# TODO: (perf) have a special UUID encoding for dict keys? string keys have
+# special fast-path
 
 
 # Getting the list of UUIDs bsed on initial objets ###################
 
-# TODO: does this work with arbitrary nested yet? (flatten_all?)
 # NOTE: this needs find everything, including if the iterable/mapping has a
 # UUID, find that and things under it
 def get_all_uuids(initial_object):
-    uuid_dict = {initial_object.__uuid__: initial_object}
+    uuid_dict = {get_uuid(initial_object): initial_object}
     with_uuid = [o for o in flatten_all(initial_object.to_dict())
-                 if uuid_test(o)]
+                 if has_uuid(o)]
     for obj in with_uuid:
         uuid_dict.update({obj.__uuid__: obj})
         uuid_dict.update(get_all_uuids(obj))
@@ -68,7 +61,7 @@ def get_all_uuid_strings(dct):
 # UUIDs aren't necessary here
 def replace_uuid(obj):
     replacement = obj
-    if uuid_test(obj):
+    if has_uuid(obj):
         # TODO: compact representation of UUID
         replacement = encode_uuid(obj.__uuid__)
     elif is_mappable(obj):
@@ -78,6 +71,7 @@ def replace_uuid(obj):
         replacement = replace_type([replace_uuid(o) for o in obj])
     return replacement
 
+# NOTE: I think this is the generic serializer for data objects
 def to_dict_with_uuids(obj):
     dct = obj.to_dict()
     return replace_uuid(dct)
@@ -122,15 +116,21 @@ def reconstruction_dag(uuid_json_dict, dag=None)
 
 
 # TODO: move this to storage
-def serialize(list_of_objects):
+def serialize_simulation_objects(list_of_objects):
     uuid_object_dict = {}
     for obj in list_of_objects:
         uuid_object_dict.update(get_all_uuids(obj))
 
-    # TODO: replace to_json with something that gets the serializer
-    uuid_json_dict = {uuid: to_json(obj)
-                      for (uuid, obj) in uuid_object_dict.item()}
-    return uuid_json_dict
+    storables_list = []
+    # TODO: make storable versions of data objects here
+
+    # uuid_json_dict = {uuid: to_json(obj)
+                      # for (uuid, obj) in uuid_object_dict.items()}
+    storables_list = [
+        {'uuid': uuid, 'json': to_json(obj)}
+        for (uuid, obj) in uuid_object_dict.items()
+    ]
+    return storables_list
 
 
 def deserialize(uuid_json_dict, lazies, storage):
