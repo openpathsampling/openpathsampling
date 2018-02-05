@@ -217,7 +217,6 @@ class GeneralStorage(object):
         for table in by_table:
             storables_list = [self.serialize(o)
                               for o in by_table[table].values()]
-            print storables_list
             self.backend.add_to_table(table, storables_list)
 
 

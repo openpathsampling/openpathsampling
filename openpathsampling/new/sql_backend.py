@@ -5,7 +5,7 @@ from storage import universal_schema
 from tools import group_by, compare_sets
 import tools
 
-# dict to convert from OPS string type descriptors to SQL types
+# dict to convert from OPS type descriptors to SQL types
 sql_type = {
     'uuid': sql.String,
     'lazy': sql.String,
@@ -14,6 +14,8 @@ sql_type = {
     'json': sql.String,
     'int': sql.Integer,
     'float': sql.Float,
+    'ndarray.float64': sql.LargeBinary,  #TODO: numpy store/load
+    'ndarray.float32': sql.LargeBinary
     #TODO add more
 }
 
@@ -198,20 +200,20 @@ class SQLStorageBackend(object):
                 columns.append(sql.Column('idx', sql.Integer,
                                           primary_key=True))
                 columns.append(sql.Column('uuid', sql.String))
-            columns += [
-                sql.Column(
-                    col, sql_type[type_name],
-                    **self._extract_metadata(sql_schema_metadata,
-                                             table_name, col)
-                )
-                for (col, type_name) in schema[table_name]
-            ]
+            for col, type_name in schema[table_name]:
+                # TODO: more general creation of type name
+                col_type = sql_type[type_name]
+                metadata = self._extract_metadata(sql_schema_metadata,
+                                                  table_name, col)
+                columns.append(sql.Column(col, col_type, **metadata))
+
             try:
                 table = sql.Table(table_name, self.metadata, *columns)
             except sql.exc.InvalidRequestError:
                 raise TypeError("Schema registration problem. Your schema "
                                 "may already have tables of the same names.")
 
+            #TODO: add schema to schema table
             self._add_table_to_tables_list(table_name)
 
         self.metadata.create_all(self.engine)
