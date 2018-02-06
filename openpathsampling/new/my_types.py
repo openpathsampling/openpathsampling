@@ -6,7 +6,7 @@ ndarray_re = \
 def parse_ndarray_type(type_name):
     m_ndarray = ndarray_re.match(type_name)
     if m_ndarray:
-        dtype = getattr(np, m_ndarray.group('dtype')),
+        dtype = getattr(np, m_ndarray.group('dtype'))
         shape = tuple(map(int, m_ndarray.group('shape')[1:-1].split(',')))
         return dtype, shape
     return None

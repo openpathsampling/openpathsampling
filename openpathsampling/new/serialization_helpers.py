@@ -70,7 +70,6 @@ def replace_uuid(obj):
         replacement = replace_type([replace_uuid(o) for o in obj])
     return replacement
 
-# NOTE: I think this is the generic serializer for data objects
 def to_dict_with_uuids(obj):
     dct = obj.to_dict()
     return replace_uuid(dct)

@@ -40,6 +40,7 @@ ClassInfo = collections.namedtuple(
     ['table', 'cls', 'serializer', 'deserializer']
 )
 
+
 #TODO: should this become a collections.Sequence?
 class ClassInfoContainer(object):
     def __init__(self, default_info, class_info_list=None):
@@ -76,41 +77,6 @@ class ClassInfoContainer(object):
     def __repr__(self):  # pragma: no cover
         return ("ClassInfoContainer(default_info=" + repr(self.default_info)
                 + ", class_info_list=" + repr(self.class_info_list) + ")")
-
-
-
-def make_lazy_class(cls_):
-    # this is to mix-in inheritence
-    class LazyClass(LazyLoader, cls_):
-        pass
-    return LazyClass
-
-class LazyLoader(object):
-    def __init__(self, uuid, class_, storage):
-        self.__uuid__ = uuid
-        self.storage = storage
-        self.class_= class_
-        self._loaded_object = None
-
-    def load(self):
-        if self._loaded_object is None:
-            self._loaded_object = self.storage.load(self.__uuid__, lazy=False)
-        return self._loaded_object
-
-    def __getattr__(self, attr):
-        return getattr(self.load(), attr)
-
-    def __iter__(self):
-        loaded = self.load()
-        if not hasattr(loaded, '__iter__'):
-            raise TypeError() # TODO: message
-        # TODO: load all objects in the list
-        return loaded.__iter__
-
-    # TODO: how to handle isinstance? each lazy-loading class needs a sub
-    def repr(self):
-        return ("<LazyLoader for " + str(self.class_.__name__) + " UUID "
-                + str(self.__uuid__) + ">")
 
 
 class MixedCache(collections.MutableMapping):
