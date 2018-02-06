@@ -62,7 +62,7 @@ def replace_uuid(obj):
     replacement = obj
     if has_uuid(obj):
         # TODO: compact representation of UUID
-        replacement = encode_uuid(obj.__uuid__)
+        replacement = encode_uuid(get_uuid(obj))
     elif is_mappable(obj):
         replacement = {k: replace_uuid(v) for (k, v) in replacement.items()}
     elif is_iterable(obj) and not is_numpy_iterable(obj):
@@ -75,7 +75,15 @@ def to_dict_with_uuids(obj):
     dct = obj.to_dict()
     return replace_uuid(dct)
 
-def to_json(obj):
+def to_bare_json(obj):
+    replaced = replace_uuid(obj)
+    return ujson.dumps(replaced)
+
+def from_bare_json(json_str, existing_uuids):
+    pass  #TODO
+
+
+def to_json_obj(obj):
     dct = to_dict_with_uuids(obj)
     dct.update({'__module__': obj.__class__.__module__,
                 '__class__': obj.__class__.__name__})
@@ -87,7 +95,6 @@ def import_class(mod, cls):
     cls = getattr(mod, cls)
     return cls
 
-
 def from_dict_with_uuids(dct, existing_uuids):
     for (key, value) in dct.items():
         if is_uuid_string(value):
@@ -97,7 +104,7 @@ def from_dict_with_uuids(dct, existing_uuids):
             dct[key] = value_obj
     return dct
 
-def from_json(json_str, existing_uuids):
+def from_json_obj(json_str, existing_uuids):
     # NOTE: from_json only works with existing_uuids (DAG-ordering)
     dct = ujson.loads(json_str)
     cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
@@ -118,24 +125,7 @@ def reconstruction_dag(uuid_json_dict, dag=None):
     return dag
 
 
-# TODO: move this to storage
-def serialize_simulation_objects(list_of_objects):
-    uuid_object_dict = {}
-    for obj in list_of_objects:
-        uuid_object_dict.update(get_all_uuids(obj))
-
-    storables_list = []
-    # TODO: make storable versions of data objects here
-
-    # uuid_json_dict = {uuid: to_json(obj)
-                      # for (uuid, obj) in uuid_object_dict.items()}
-    storables_list = [
-        {'uuid': uuid, 'json': to_json(obj)}
-        for (uuid, obj) in uuid_object_dict.items()
-    ]
-    return storables_list
-
-
+# TODO: replace this with something in storage
 def deserialize(uuid_json_dict, lazies, storage):
     dag = reconstruction_dag(uuid_json_dict)
     missing = check_dag(dag, uuid_json_dict)
@@ -160,5 +150,5 @@ def deserialize(uuid_json_dict, lazies, storage):
     ordered_nodes = list(reversed(list(nx_dag.topological_sort(dag))))
     for node in ordered_nodes:
         # TODO: replace from_json with something that gets the deserializer
-        new_uuids[node] = from_json(all_json[node], new_uuids, known_uuids)
+        new_uuids[node] = from_json_obj(all_json[node], new_uuids, known_uuids)
     return new_uuids

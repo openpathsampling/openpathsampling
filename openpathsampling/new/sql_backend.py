@@ -4,6 +4,9 @@ import sqlalchemy as sql
 from storage import universal_schema
 from tools import group_by, compare_sets
 import tools
+import ujson as json
+
+from my_types import parse_ndarray_type
 
 # dict to convert from OPS type descriptors to SQL types
 sql_type = {
@@ -12,10 +15,10 @@ sql_type = {
     'list_uuid': sql.String,
     'str': sql.String,
     'json': sql.String,
+    'json_obj': sql.String,
     'int': sql.Integer,
     'float': sql.Float,
-    'ndarray.float64': sql.LargeBinary,  #TODO: numpy store/load
-    'ndarray.float32': sql.LargeBinary
+    'ndarray': sql.LargeBinary,  #TODO: numpy store/load
     #TODO add more
 }
 
@@ -45,7 +48,7 @@ class SQLStorageBackend(object):
     Uses SQLAlchemy; could easily duck-type an object that implements the
     necessary methods for other backends.
     """
-    def __init__(self, filename, mode='r', sql_dialect=None):
+    def __init__(self, filename, mode='r', sql_dialect=None, echo=False):
         self.filename = filename
         sql_dialect = tools.none_to_default(sql_dialect, 'sqlite')
         self.mode = mode
@@ -63,7 +66,11 @@ class SQLStorageBackend(object):
         # we prevent writes by disallowing write method in read mode;
         # for everything else; just connect to the database
         connection_uri = self.filename_from_dialect(filename, sql_dialect)
-        self.engine = sql.create_engine(connection_uri)
+        self.engine = sql.create_engine(connection_uri, echo=echo)
+        schema_table = sql.Table('schema', self.metadata,
+                                 sql.Column('table', sql.String),
+                                 sql.Column('schema', sql.String))
+        self.metadata.create_all(self.engine)
         if self.mode == "w":
             self.register_schema(universal_schema)
 
@@ -153,7 +160,7 @@ class SQLStorageBackend(object):
         else:
             return False
 
-    def _add_table_to_tables_list(self, table_name):
+    def _add_table_to_tables_list(self, table_name, table_schema):
         if table_name in ['uuid', 'tables']:
             return
         # note that this return the number of tables in 'tables', which does
@@ -165,9 +172,15 @@ class SQLStorageBackend(object):
             res = conn.execute(tables.select())
             n_tables = len(list(res))
 
+        schema_table = self.metadata.tables['schema']
+
         with self.engine.connect() as conn:
             conn.execute(tables.insert().values(name=table_name,
                                                 idx=n_tables))
+            conn.execute(schema_table.insert().values(
+                table=table_name,
+                schema=json.dumps(table_schema)
+            ))
 
         self.table_to_number.update({table_name: n_tables})
         self.number_to_table.update({n_tables: table_name})
@@ -182,6 +195,13 @@ class SQLStorageBackend(object):
             results = list(conn.execute(sel))
         return results
 
+
+    def parse_registration_type(self, type_name):
+        ops_type = type_name
+        ndarray_info = parse_ndarray_type(type_name)
+        if parse_ndarray_type(type_name):
+            ops_type = 'ndarray'
+        return ops_type
 
     ### FROM HERE IS THE GENERIC PUBLIC API
     def register_schema(self, schema, sql_schema_metadata=None):
@@ -202,19 +222,20 @@ class SQLStorageBackend(object):
                 columns.append(sql.Column('uuid', sql.String))
             for col, type_name in schema[table_name]:
                 # TODO: more general creation of type name
-                col_type = sql_type[type_name]
+                col_type = sql_type[self.parse_registration_type(type_name)]
                 metadata = self._extract_metadata(sql_schema_metadata,
                                                   table_name, col)
                 columns.append(sql.Column(col, col_type, **metadata))
 
             try:
+                print table_name
                 table = sql.Table(table_name, self.metadata, *columns)
             except sql.exc.InvalidRequestError:
                 raise TypeError("Schema registration problem. Your schema "
                                 "may already have tables of the same names.")
 
             #TODO: add schema to schema table
-            self._add_table_to_tables_list(table_name)
+            self._add_table_to_tables_list(table_name, schema[table_name])
 
         self.metadata.create_all(self.engine)
         self.schema.update(schema)

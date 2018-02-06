@@ -3,8 +3,8 @@ import collections
 import itertools
 import openpathsampling as paths
 from serialization import get_uuid, get_all_uuids
-from serialization import to_json as serialize_sim
-from serialization import from_json as deserialize_sim
+from serialization import to_json_obj as serialize_sim
+from serialization import from_json_obj as deserialize_sim
 # TODO: both of these are from
 from serialization import to_dict_with_uuids as serialize_data
 from serialization import deserialize as deserialize_data
@@ -115,6 +115,7 @@ class LazyLoader(object):
 
 class MixedCache(collections.MutableMapping):
     """Combine a frozen cache and a mutable cache"""
+    # TODO: benchmark with single dict instead; might be just as fast!
     def __init__(self, fixed_cache=None):
         self.fixed_cache = tools.none_to_default(fixed_cache, default={})
         self.cache = {}
@@ -144,7 +145,6 @@ class MixedCache(collections.MutableMapping):
         return itertools.chain(self.fixed_cache, self.cache)
 
 
-
 class GeneralStorage(object):
     def __init__(self, backend, schema, class_info, fallbacks=None):
         self.backend = backend
@@ -160,7 +160,7 @@ class GeneralStorage(object):
         return {}
 
     def make_lazy(self, table, uuid):
-        class_ = self.table_to_class[table]
+        class_ = self.class_info(table).cls
         if table not in self._lazy_classes:
             self._lazy_classes[table] = make_lazy_class(class_)
         return self._lazy_classes[table](uuid=uuid,
@@ -174,10 +174,6 @@ class GeneralStorage(object):
         self.schema.update(schema)
         for info in class_info_list:
             self.class_info.add_class_info(info)
-
-
-    def table_for_class(self, class_):
-        return self.class_to_table[class_]
 
     def _create_virtual_stores(self, store_categories):
         # create virtual stores for simulation objects (e.g., .volume, etc)
@@ -194,7 +190,7 @@ class GeneralStorage(object):
         return class_info.serializer(obj)
 
     def save(self, obj):
-        # check if obj is in DB
+        # check if obj is in DB (maybe this can be removed?)
         exists = self.backend.load_uuids_table(uuids=[get_uuid(obj)],
                                                ignore_missing=True)
         if exists:
@@ -235,10 +231,10 @@ ops_schema = {
     'move_changes': [('mover', 'uuid'), ('details', 'lazy'), ('cls', 'str'),
                      ('subchanges', 'list_uuid'), ('samples', 'list_uuid'),
                      ('input_samples', 'list_uuid')],
-    'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'uuid'),
+    'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'lazy'),
               ('simulation', 'uuid'), ('mccycle', 'int')],
     'details': [('json', 'json')],
-    'simulation_objects': [('json', 'json'), ('class_idx', 'int')]
+    'simulation_objects': [('json', 'json_obj'), ('class_idx', 'int')]
 }
 
 ops_schema_sql_metadata = {}
@@ -267,8 +263,8 @@ ops_class_info = ClassInfoContainer(
 )
 
 class TableIterator(object):
-    def __init__(self, storage):
-        self.cache = storage.simulation_objects.copy()
+    def __init__(self, storage, table):
+        self.storage = storage
 
     def __iter__(self):
         # iter manages the cache
@@ -282,3 +278,10 @@ class TableIterator(object):
         # is is possible that using local lists of UUIDs to get might make
         # this just as fast? (stopping at trajectory level; no snapshots)
         pass
+
+    def store_order(self):
+        # return in order of the idx
+        pass
+
+    # TODO: subclass for MCSteps with additional method .ordered, returning
+    # things in the order of the mccycle number
