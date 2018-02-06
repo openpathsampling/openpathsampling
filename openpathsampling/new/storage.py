@@ -2,14 +2,15 @@ import os
 import collections
 import itertools
 import openpathsampling as paths
-from serialization import get_uuid, get_all_uuids
-from serialization import to_json_obj as serialize_sim
-from serialization import from_json_obj as deserialize_sim
+from serialization_helpers import get_uuid, get_all_uuids
+from serialization_helpers import to_json_obj as serialize_sim
+from serialization_helpers import from_json_obj as deserialize_sim
 # TODO: both of these are from
-from serialization import to_dict_with_uuids as serialize_data
-from serialization import deserialize as deserialize_data
+from serialization_helpers import to_dict_with_uuids as serialize_data
+from serialization_helpers import deserialize as deserialize_data
 import tools
 from openpathsampling.netcdfplus import StorableObject
+from serialization import Serialization
 
 """
 A simple storage interface for simulation objects and data objects.
@@ -51,6 +52,7 @@ class ClassInfoContainer(object):
         self.table_to_class = {}
         self.class_info_list = []
         self.default_info = default_info
+        self.add_class_info(default_info)
         for info in class_info_list:
             self.add_class_info(info)
 
@@ -116,22 +118,10 @@ class GeneralStorage(object):
         self.backend = backend
         self.schema = schema
         self.class_info = class_info
-        self._lazy_classes = {}
         self.simulation_objects = self._cache_simulation_objects()
         self.cache = MixedCache(self.simulation_objects)
+        self.serialization = Serialization(self)
         self.register_schema(self.schema, class_info_list=[])
-
-    def _cache_simulation_objects(self):
-        # load up all the simulation objects
-        return {}
-
-    def make_lazy(self, table, uuid):
-        class_ = self.class_info(table).cls
-        if table not in self._lazy_classes:
-            self._lazy_classes[table] = make_lazy_class(class_)
-        return self._lazy_classes[table](uuid=uuid,
-                                         cls=class_,
-                                         storage=self)
 
     def register_schema(self, schema, class_info_list,
                         backend_metadata=None):
@@ -140,10 +130,8 @@ class GeneralStorage(object):
         self.schema.update(schema)
         for info in class_info_list:
             self.class_info.add_class_info(info)
+        self.serialization.register_serialization(schema, self.class_info)
 
-    def _create_virtual_stores(self, store_categories):
-        # create virtual stores for simulation objects (e.g., .volume, etc)
-        pass
 
     def load(self, uuid, lazy=None):
         # get UUIDs and tables associated
@@ -177,14 +165,21 @@ class GeneralStorage(object):
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         for table in by_table:
-            storables_list = [self.serialize(o)
+            storables_list = [self.serialization.serialize[table](o)
                               for o in by_table[table].values()]
             self.backend.add_to_table(table, storables_list)
 
+    def _cache_simulation_objects(self):
+        # load up all the simulation objects
+        return {}
 
-    def __getattr__(self, attr):
-        # override getattr to create iterators over the tables
+    def _create_virtual_stores(self, store_categories):
+        # create virtual stores for simulation objects (e.g., .volume, etc)
         pass
+
+    #def __getattr__(self, attr):
+        # override getattr to create iterators over the tables (stores)
+    #    pass
 
 ops_schema = {
     'samples': [('trajectory', 'lazy'), ('ensemble', 'uuid'),
@@ -211,20 +206,17 @@ ops_class_info = ClassInfoContainer(
                            deserializer=deserialize_sim),
     class_info_list=[
         ClassInfo(table='samples', cls=paths.Sample,
-                  serializer=serialize_data,
-                  deserializer=deserialize_data),
+                  serializer=None, deserializer=None),
         ClassInfo(table='sample_sets', cls=paths.SampleSet,
-                  serializer=serialize_data,
-                  deserializer=deserialize_data),
+                  serializer=None, deserializer=None),
         ClassInfo(table='trajectories', cls=paths.Trajectory,
-                  serializer=serialize_data,
-                  deserializer=deserialize_data),
+                  serializer=None, deserializer=None),
         ClassInfo(table='move_changes', cls=paths.MoveChange,
-                  serializer=deserialize_data,
-                  deserializer=deserialize_data),  #TODO: may need custoom
+                  serializer=None, deserializer=None),
         ClassInfo(table='steps', cls=paths.MCStep,
-                  serializer=serialize_data,
-                  deserializer=deserialize_data)
+                  serializer=None, deserializer=None),
+        ClassInfo(table='details', cls=paths.Details,
+                  serializer=None, deserializer=None)
     ]
 )
 
