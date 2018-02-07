@@ -222,6 +222,7 @@ ops_class_info = ClassInfoContainer(
     ]
 )
 
+
 class TableIterator(object):
     def __init__(self, storage, table):
         self.storage = storage

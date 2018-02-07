@@ -2,10 +2,12 @@
 Attributes
 ----------
 engine : :class:`openpathsampling.DynamicsEngine`
-    referenec to the engine used to generate the snapshot
+    reference to the engine used to generate the snapshot
 """
 
 variables = ['engine']
+
+schema_entries = [('engine', 'uuid')]
 
 
 def netcdfplus_init(store):

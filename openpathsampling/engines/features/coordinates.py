@@ -10,7 +10,7 @@ numpy = ['coordinates']
 
 dimensions = ['n_atoms', 'n_spatial']
 
-schema_entries = [('coordinates', 'ndarray.float64(n_atoms,n_spatial)')]
+schema_entries = [('coordinates', 'ndarray.float32({n_atoms},{n_spatial})')]
 
 
 def netcdfplus_init(store):
