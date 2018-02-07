@@ -71,6 +71,7 @@ class ClassInfoContainer(object):
         self.table_to_info = {}
         self.class_info_list = []
         self.default_info = default_info
+        self.missing_table = ClassInfo(table="__missing__", cls=None)
         self.add_class_info(default_info)
         for info in class_info_list:
             self.add_class_info(info)
@@ -84,8 +85,15 @@ class ClassInfoContainer(object):
     def is_special(self, item):
         return False
 
-    def get_special(self, item):
+    def special_lookup(self, item):
         return NotImplementedError("No special types implemented")
+
+    def get_special(self, item):
+        lookup = self.special_lookup(item)
+        try:
+            self.lookup_to_info[lookup]
+        except KeyError:
+            return self.missing_table
 
     def __getitem__(self, item):
         if tools.is_string(item):
@@ -93,8 +101,9 @@ class ClassInfoContainer(object):
         elif self.is_special(item):
             return self.get_special(item)
         else:
+            lookup = item.__class__  # default lookup
             try:
-                return self.lookup_to_info[item.__class__]
+                return self.lookup_to_info[lookup]
             except KeyError as e:
                 if isinstance(item, self.default_info.cls):
                     return self.default_info
@@ -148,8 +157,6 @@ class GeneralStorage(object):
         self.serialization = Serialization(self)
         self.register_schema(self.schema, class_info_list=[])
 
-        self.n_snapshot_types = 0  # TODO: OPS-SPECIFIC!
-
     def register_schema(self, schema, class_info_list,
                         backend_metadata=None):
         # check validity
@@ -166,24 +173,19 @@ class GeneralStorage(object):
         # if table has custom loader, use that
        pass
 
-    # OPS-specific stuff on registering snapshots
-    def should_register(self, cls_):
-        return issubclass(cls_, paths.engines.BaseSnapshot)
+    def register_missing_from_instance(self, obj):
+       return NotImplementedError("Registration of missing classes")
 
-    def register_class_from_instance(self, obj):
-        # we assume all on-the-fly registrations are snapshots
-        table_name = "snapshot" + str(self.n_snapshot_types)
-        schema[table_name] = obj._schema['snapshot']  # after replacement
-        # loop catching nested structures
-        class_info_list = [
-            ClassInfo(cls=obj.__class__, table=table_name,
-                      serializer=None, deserializer=None)
-            for table_name in schema
-        ]
-        self.register_schema(schema, class_info_list)
-
-    # back to generic
     def register_unregistered(self, obj_list):
+        """
+
+        Notes
+        -----
+        This is only expected to be used on classes that the
+        ClassInfoContainer identified as "missing" (i.e., special cases).
+        Normally, class registration should be through the
+        :meth:`.register_schema` method.
+        """
         # TODO: snapshots and related are connected to engine, not class
         classes = {}
         registered = []
@@ -191,7 +193,7 @@ class GeneralStorage(object):
            cls_ = obj.__class__
            if cls_ not in classes and self.should_register(cls_):
                logger.info("Registering " + str(cls_) + " for storage")
-               self.register_class_from_instance(obj)
+               self.register_missing_from_instance(obj)
                registered.append(cls_)
            classes |= {obj.__class__}
         return registered
@@ -219,7 +221,15 @@ class GeneralStorage(object):
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         # check default table for things to register; register them
-
+        if '__missing__' in by_table:
+            # __missing__ is a special result returned by the
+            # ClassInfoContainer if this is object is expected to have a
+            # table, but the table doesn't exist (e.g., for dynamically
+            # added tables)
+            missing = by_table.pop('__missing__')
+            self.register_missing_tables_for_objects(missing)
+            missing_by_table = tools.dict_group_by(missing, get_table_name)
+            by_table.update(missing_by_table)
 
         for table in by_table:
             storables_list = [self.serialization.serialize[table](o)

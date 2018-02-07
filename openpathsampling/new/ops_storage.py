@@ -27,13 +27,13 @@ ops_schema = {
 
 ops_schema_sql_metadata = {}
 
-class OPSClasInfoContact(storage.ClassInfoContainer):
+class OPSClassInfoContact(storage.ClassInfoContainer):
     def is_special(self, item):
         return isinstance(item, paths.BaseSnapshot)
 
-    def get_special(self, item):
-        lookup = (item.engine, item.__class__)
-        return self.lookup_to_info[lookup]
+    def special_lookup(self, item):
+        if isinstance(item, paths.BaseSnapshot):
+            return (item.engine, item.__class__)
 
 ops_class_info = OPSClassInfoContainer(
     default_info=ClassInfo('simulation_objects', cls=StorableObject,
@@ -51,5 +51,8 @@ ops_class_info = OPSClassInfoContainer(
 
 
 class OPSStorage(storage.GeneralStorage):
-    pass
+    def __init__(self, backend, schema, class_info, fallbacks=None):
+        super(OPSStorage, self).__init__(backend, schema, class_info,
+                                         fallbacks)
+        self.n_snapshot_types = 0
 
