@@ -8,6 +8,9 @@ import ujson as json
 
 from my_types import parse_ndarray_type
 
+import logging
+logger = logging.getLogger(__name__)
+
 # dict to convert from OPS type descriptors to SQL types
 sql_type = {
     'uuid': sql.String,
@@ -228,7 +231,7 @@ class SQLStorageBackend(object):
                 columns.append(sql.Column(col, col_type, **metadata))
 
             try:
-                print table_name
+                logger.info("Add schema table" + str(table_name))
                 table = sql.Table(table_name, self.metadata, *columns)
             except sql.exc.InvalidRequestError:
                 raise TypeError("Schema registration problem. Your schema "

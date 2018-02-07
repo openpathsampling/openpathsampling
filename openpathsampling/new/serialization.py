@@ -3,17 +3,19 @@ from my_types import parse_ndarray_type, ndarray_re
 import serialization_helpers as serialization
 from tools import is_mappable
 
+
 def make_lazy_class(cls_):
     # this is to mix-in inheritence
-    class LazyClass(LazyLoader, cls_):
+    class LazyLoader(GenericLazyLoader, cls_):
         pass
-    return LazyClass
+    return LazyLoader
 
-class LazyLoader(object):
+
+class GenericLazyLoader(object):
     def __init__(self, uuid, class_, storage):
         self.__uuid__ = uuid
         self.storage = storage
-        self.class_= class_
+        self.class_ = class_
         self._loaded_object = None
 
     def load(self):
@@ -30,19 +32,20 @@ class LazyLoader(object):
     def __iter__(self):
         loaded = self.load()
         if not hasattr(loaded, '__iter__'):
-            raise TypeError() # TODO: message
-        # TODO: load all objects in the list
+            raise TypeError()  # TODO: message
+        # TODO: load all objects in the list?
         return loaded.__iter__
 
-    # TODO: how to handle isinstance? each lazy-loading class needs a sub
     def repr(self):
         return ("<LazyLoader for " + str(self.class_.__name__) + " UUID "
                 + str(self.__uuid__) + ">")
+
 
 class Serialization(object):
     builtin_types = ['int', 'float', 'str']
     uuid_types = ['uuid', 'list_uuid', 'lazy']
     # TODO: to_json here might not quite be correct; need to_bare_json?
+
     def __init__(self, storage):
         self.storage = storage
         self.cache = self.storage.cache
@@ -138,7 +141,6 @@ class Serialization(object):
         return results
 
     def default_serialize(self, obj, table):
-        all_objects = []
         dct = {'uuid': serialization.get_uuid(obj)}
         serializer_dict = self._ser_dict[table]
         for (attr, type_name) in self.schema[table]:
@@ -163,4 +165,3 @@ class Serialization(object):
         obj = cls.from_dict(dct)
         obj.__uuid__ = uuid
         return obj
-

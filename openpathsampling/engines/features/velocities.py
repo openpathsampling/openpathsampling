@@ -11,6 +11,7 @@ numpy = ['velocities']
 
 dimensions = ['n_atoms', 'n_spatial']
 
+schema_entries = [('velocities', 'ndarray.float64(n_atoms,n_spatial)')]
 
 def netcdfplus_init(store):
 

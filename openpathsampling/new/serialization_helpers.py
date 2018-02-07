@@ -1,5 +1,4 @@
 import importlib
-import collections
 import ujson
 import networkx as nx
 import networkx.algorithms.dag as nx_dag
@@ -11,24 +10,30 @@ from tools import is_iterable, is_mappable, is_numpy_iterable
 # particular, it might be worth using a string representation of the UUID
 # whenever possible (dicts with string keys have a special fast-path)
 
+
 def has_uuid(obj):
     return hasattr(obj, '__uuid__')
+
 
 def get_uuid(obj):
     # TODO: I can come up with a better string encoding than this
     return str(obj.__uuid__)
 
+
 def encode_uuid(uuid):
     return "UUID(" + str(uuid) + ")"
 
+
 def decode_uuid(uuid_str):
     return long(uuid_str[5:-1])
+
 
 def is_uuid_string(obj):
     return (
         isinstance(obj, (str, unicode))
         and obj[:5] == 'UUID(' and obj[-1] == ')'
     )
+
 
 # Getting the list of UUIDs bsed on initial objets ###################
 
@@ -43,11 +48,13 @@ def get_all_uuids(initial_object):
         uuid_dict.update(get_all_uuids(obj))
     return uuid_dict
 
+
 def find_dependent_uuids(json_dct):
     dct = ujson.loads(json_dct)
     uuids = [decode_uuid(obj) for obj in flatten_all(dct)
              if is_uuid_string(obj)]
     return uuids
+
 
 def get_all_uuid_strings(dct):
     all_uuids = []
@@ -55,6 +62,7 @@ def get_all_uuid_strings(dct):
         all_uuids.append(uuid)
         all_uuids += find_dependent_uuids(dct[uuid])
     return all_uuids
+
 
 # NOTE: this only need to find until the first UUID: iterables/mapping with
 # UUIDs aren't necessary here
@@ -70,16 +78,19 @@ def replace_uuid(obj):
         replacement = replace_type([replace_uuid(o) for o in obj])
     return replacement
 
+
 def to_dict_with_uuids(obj):
     dct = obj.to_dict()
     return replace_uuid(dct)
+
 
 def to_bare_json(obj):
     replaced = replace_uuid(obj)
     return ujson.dumps(replaced)
 
+
 def from_bare_json(json_str, existing_uuids):
-    pass  #TODO
+    pass  # TODO
 
 
 def to_json_obj(obj):
@@ -88,11 +99,13 @@ def to_json_obj(obj):
                 '__class__': obj.__class__.__name__})
     return ujson.dumps(dct)
 
+
 def import_class(mod, cls):
     # TODO: this needs some error-checking
     mod = importlib.import_module(mod)
     cls = getattr(mod, cls)
     return cls
+
 
 def from_dict_with_uuids(dct, existing_uuids):
     for (key, value) in dct.items():
@@ -103,12 +116,14 @@ def from_dict_with_uuids(dct, existing_uuids):
             dct[key] = value_obj
     return dct
 
+
 def from_json_obj(json_str, existing_uuids):
     # NOTE: from_json only works with existing_uuids (DAG-ordering)
     dct = ujson.loads(json_str)
     cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
     dct = from_dict_with_uuids(dct, existing_uuids)
     return cls.from_dict(dct)
+
 
 def reconstruction_dag(uuid_json_dict, dag=None):
     dependent_uuids = {uuid: find_dependent_uuids(json_str)

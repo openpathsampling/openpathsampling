@@ -12,6 +12,9 @@ import tools
 from openpathsampling.netcdfplus import StorableObject
 from serialization import Serialization
 
+import logging
+logger = logging.getLogger(__name__)
+
 """
 A simple storage interface for simulation objects and data objects.
 
@@ -139,10 +142,6 @@ class GeneralStorage(object):
         # if table has custom loader, use that
         pass
 
-    def serialize(self, obj):
-        class_info = self.class_info[obj.__class__]
-        return class_info.serializer(obj)
-
     def save(self, obj):
         # check if obj is in DB (maybe this can be removed?)
         exists = self.backend.load_uuids_table(uuids=[get_uuid(obj)],
@@ -167,7 +166,10 @@ class GeneralStorage(object):
         for table in by_table:
             storables_list = [self.serialization.serialize[table](o)
                               for o in by_table[table].values()]
+            logger.info("Storing {} UUIDs to table {}".\
+                        format(len(storables_list), table))
             self.backend.add_to_table(table, storables_list)
+            logger.info("Storing complete")
 
     def _cache_simulation_objects(self):
         # load up all the simulation objects
