@@ -39,20 +39,36 @@ universal_schema = {
     'tables': [('name', 'str'), ('idx', 'int')]
 }
 
-ClassInfo = collections.namedtuple(
-    'ClassInfo',
-    ['table', 'cls', 'serializer', 'deserializer']
-)
+class ClassInfo(object):
+    # I so wanted this to be a namedtuple, but it needs more attention
+    """
+    Parameters
+    ----------
+    table : str
+        the table name for this object type
+    cls : class
+        the class for this object type (used in the default deserializer)
+    serializer : callable
+        serializer for this object type (None gives the default serializer)
+    deserializer : callable
+        deserializer for this object type (None gives the default
+        deserializer)
+    lookup_result : any
+        the result when ClassInfoContainer looks up objects in this table
+    """
+    def __init__(self, table, cls, serializer=None, deserializer=None,
+                 lookup_result=None):
+        self.table = table
+        self.cls = cls
+        self.serializer = serializer
+        self.deserializer = deserializer
+        self.lookup_result = lookup_result
 
-
-#TODO: should this become a collections.Sequence?
 class ClassInfoContainer(object):
     def __init__(self, default_info, class_info_list=None):
         class_info_list = tools.none_to_default(class_info_list, [])
-        self.class_to_info = {}
+        self.lookup_to_info = {}
         self.table_to_info = {}
-        self.class_to_table = {}
-        self.table_to_class = {}
         self.class_info_list = []
         self.default_info = default_info
         self.add_class_info(default_info)
@@ -62,19 +78,25 @@ class ClassInfoContainer(object):
     def add_class_info(self, info_node):
         # check that we're not in any existing
         self.class_info_list.append(info_node)
-        self.class_to_info.update({info_node.cls: info_node})
+        self.lookup_to_info.update({info_node.lookup_result: info_node})
         self.table_to_info.update({info_node.table: info_node})
-        self.class_to_table.update({info_node.cls: info_node.table})
-        self.table_to_class.update({info_node.table: info_node.cls})
+
+    def is_special(self, item):
+        return False
+
+    def get_special(self, item):
+        return NotImplementedError("No special types implemented")
 
     def __getitem__(self, item):
         if tools.is_string(item):
             return self.table_to_info[item]
+        elif self.is_special(item):
+            return self.get_special(item)
         else:
             try:
-                return self.class_to_info[item]
+                return self.lookup_to_info[item.__class__]
             except KeyError as e:
-                if issubclass(item, self.default_info.cls):
+                if isinstance(item, self.default_info.cls):
                     return self.default_info
                 else:
                     raise e
@@ -126,6 +148,8 @@ class GeneralStorage(object):
         self.serialization = Serialization(self)
         self.register_schema(self.schema, class_info_list=[])
 
+        self.n_snapshot_types = 0  # TODO: OPS-SPECIFIC!
+
     def register_schema(self, schema, class_info_list,
                         backend_metadata=None):
         # check validity
@@ -140,7 +164,38 @@ class GeneralStorage(object):
         # get UUIDs and tables associated
         # if lazy, return the lazy object
         # if table has custom loader, use that
-        pass
+       pass
+
+    # OPS-specific stuff on registering snapshots
+    def should_register(self, cls_):
+        return issubclass(cls_, paths.engines.BaseSnapshot)
+
+    def register_class_from_instance(self, obj):
+        # we assume all on-the-fly registrations are snapshots
+        table_name = "snapshot" + str(self.n_snapshot_types)
+        schema[table_name] = obj._schema['snapshot']  # after replacement
+        # loop catching nested structures
+        class_info_list = [
+            ClassInfo(cls=obj.__class__, table=table_name,
+                      serializer=None, deserializer=None)
+            for table_name in schema
+        ]
+        self.register_schema(schema, class_info_list)
+
+    # back to generic
+    def register_unregistered(self, obj_list):
+        # TODO: snapshots and related are connected to engine, not class
+        classes = {}
+        registered = []
+        for obj in obj_list:
+           cls_ = obj.__class__
+           if cls_ not in classes and self.should_register(cls_):
+               logger.info("Registering " + str(cls_) + " for storage")
+               self.register_class_from_instance(obj)
+               registered.append(cls_)
+           classes |= {obj.__class__}
+        return registered
+
 
     def save(self, obj):
         # check if obj is in DB (maybe this can be removed?)
@@ -159,9 +214,12 @@ class GeneralStorage(object):
         # group by table, then save appropriately
         # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
         get_table_name = lambda uuid, obj_: \
-                self.class_info[obj_.__class__].table
+                self.class_info[obj_].table
 
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
+
+        # check default table for things to register; register them
+
 
         for table in by_table:
             storables_list = [self.serialization.serialize[table](o)
@@ -182,45 +240,6 @@ class GeneralStorage(object):
     #def __getattr__(self, attr):
         # override getattr to create iterators over the tables (stores)
     #    pass
-
-ops_schema = {
-    'samples': [('trajectory', 'lazy'), ('ensemble', 'uuid'),
-                ('replica', 'int'),
-                # in my opinion, the next 3 should be removed
-                ('parent', 'lazy'), ('bias', 'float'),
-                ('mover', 'uuid')],
-    'sample_sets': [('samples', 'list_uuid'), ('movepath', 'lazy')],
-    'trajectories': [('snapshots', 'list_uuid')],
-    'move_changes': [('mover', 'uuid'), ('details', 'lazy'), ('cls', 'str'),
-                     ('subchanges', 'list_uuid'), ('samples', 'list_uuid'),
-                     ('input_samples', 'list_uuid')],
-    'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'lazy'),
-              ('simulation', 'uuid'), ('mccycle', 'int')],
-    'details': [('json', 'json')],
-    'simulation_objects': [('json', 'json_obj'), ('class_idx', 'int')]
-}
-
-ops_schema_sql_metadata = {}
-
-ops_class_info = ClassInfoContainer(
-    default_info=ClassInfo('simulation_objects', cls=StorableObject,
-                           serializer=serialize_sim,
-                           deserializer=deserialize_sim),
-    class_info_list=[
-        ClassInfo(table='samples', cls=paths.Sample,
-                  serializer=None, deserializer=None),
-        ClassInfo(table='sample_sets', cls=paths.SampleSet,
-                  serializer=None, deserializer=None),
-        ClassInfo(table='trajectories', cls=paths.Trajectory,
-                  serializer=None, deserializer=None),
-        ClassInfo(table='move_changes', cls=paths.MoveChange,
-                  serializer=None, deserializer=None),
-        ClassInfo(table='steps', cls=paths.MCStep,
-                  serializer=None, deserializer=None),
-        ClassInfo(table='details', cls=paths.Details,
-                  serializer=None, deserializer=None)
-    ]
-)
 
 
 class TableIterator(object):

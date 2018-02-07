@@ -96,6 +96,7 @@ class Serialization(object):
         if type_name in self.attribute_serializers:
             return self.attribute_serializers[type_name]
         if ndarray_re.match(type_name):
+            # TODO: cast to correct dtype
             return lambda arr: arr.tostring()
         else:
             raise TypeError("Unknown type for serialization: " + type_name)
