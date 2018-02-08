@@ -31,6 +31,9 @@ universal_sql_meta = {
 }
 
 # TODO: test this, and then see if I can refactor existing code to use it
+# NOTE: looks like the results have to be loaded into memory before this
+# function ends (otherwise the DB connection closes and errors .. so make a
+# list of them at the end, only use when we want the whole list?
 def sql_db_execute(engine, statements, execmany_dict=None):
     """Convenience for interacting with the database."""
     if not isinstance(statements, list):
@@ -41,7 +44,7 @@ def sql_db_execute(engine, statements, execmany_dict=None):
     with engine.connect() as conn:
         results = [conn.execute(statement, execmany_dict)
                    for statement in statements]
-    if listify:
+    if listified:
         results = results[0]
     return results
 
@@ -50,15 +53,29 @@ class SQLStorageBackend(object):
 
     Uses SQLAlchemy; could easily duck-type an object that implements the
     necessary methods for other backends.
+
+    Parameters
+    ----------
+    filename : str
+        name of the sqlite file or connection URI for a service-based
+        database
+    mode : 'r', 'w', or 'a'
+        "file mode", as with files -- this is a little strange for
+        databases, but keeps the interface consistent
+    sql_dialect : str
+        name of the SQL dialect to use; default is sqlite
+    echo : bool
+        whether the engine to echo SQL commands to stdout (useful for
+        debugging)
     """
     def __init__(self, filename, mode='r', sql_dialect=None, echo=False):
         self.filename = filename
         sql_dialect = tools.none_to_default(sql_dialect, 'sqlite')
         self.mode = mode
+        self.debug = False
 
         # override later if mode == 'r' or 'a'
-        self._metadata = sql.MetaData()
-        self.schema = {}  # TODO: how to load these correctly?
+        self.schema = {} 
         self.table_to_number = {}
         self.number_to_table = {}
 
@@ -69,13 +86,43 @@ class SQLStorageBackend(object):
         # we prevent writes by disallowing write method in read mode;
         # for everything else; just connect to the database
         connection_uri = self.filename_from_dialect(filename, sql_dialect)
-        self.engine = sql.create_engine(connection_uri, echo=echo)
-        schema_table = sql.Table('schema', self.metadata,
-                                 sql.Column('table', sql.String),
-                                 sql.Column('schema', sql.String))
-        self.metadata.create_all(self.engine)
-        if self.mode == "w":
+        self.engine = sql.create_engine(connection_uri,
+                                        echo=echo)
+        self._metadata = sql.MetaData(bind=self.engine)
+        self.initialize_with_mode(self.mode)
+
+    def initialize_with_mode(self, mode):
+        if mode == "w":
+            # TODO: drop tables
+            schema_table = sql.Table('schema', self.metadata,
+                                     sql.Column('table', sql.String),
+                                     sql.Column('schema', sql.String))
+            metadata_table = sql.Table('metadata', self.metadata,
+                                       sql.Column('key', sql.String),
+                                       sql.Column('value', sql.String))
+            self.metadata.create_all(self.engine)
             self.register_schema(universal_schema)
+        elif mode == "r" or mode == "a":
+            self.metadata.reflect(self.engine)
+            self.schema = self.database_schema()
+            self.table_to_number, self.number_to_table = \
+                    self.internal_tables_from_db()
+
+    @classmethod
+    def from_engine(cls, engine, mode='r'):
+        obj = cls.__new__(cls)
+        self._metadata = sql.MetaData()
+        self.schema = {} 
+        self.table_to_number = {}
+        self.number_to_table = {}
+        self.engine = engine
+        self.mode = mode
+        self.initialize_with_mode(self.mode)
+
+
+    def close(self):
+        # is this necessary?
+        self.engine.dispose()
 
     @property
     def metadata(self):
@@ -303,10 +350,10 @@ class SQLStorageBackend(object):
 
         return results
 
-    def load_table_data(self, uuids, lazy=True):
+    def load_table_data(self, uuid_table_rows):
         # this pulls out a table the information for the relevant UUIDs
-        uuid_table_row = self.load_uuids_table(uuids)
-        by_table_number = tools.group_by_index(uuid_table_row, 1)
+        uuid_table_rows = list(uuid_table_rows)  # iterator to list
+        by_table_number = tools.group_by_index(uuid_table_rows, 1)
         by_table_name = {self.number_to_table[k]: v
                          for (k, v) in by_table_number.items()}
         loaded_results = []
@@ -314,6 +361,17 @@ class SQLStorageBackend(object):
             idxs = [val[2] for val in by_table_name[table]]
             loaded_results += self._load_from_table(table, idxs)
 
-        loaded_uuids = [res.uuid for res in loaded_results]
-        assert set(uuids) == set(loaded_uuids)  # sanity check
+        if self.debug:
+            loaded_uuids = [res.uuid for res in loaded_results]
+            input_uuids = [row.uuid for row in uuid_table_rows]
+            assert set(input_uuids) == set(loaded_uuids)  # sanity check
         return loaded_results
+
+    def database_schema(self):
+        schema_table = self.metadata.tables['schema']
+        sel = schema_table.select()
+        with self.engine.connect() as conn:
+            schema_rows = list(conn.execute(schema_table.select()))
+        schema = {r.table: map(tuple, json.loads(r.schema))
+                  for r in schema_rows}
+        return schema

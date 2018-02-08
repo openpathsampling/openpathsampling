@@ -178,14 +178,24 @@ class MixedCache(collections.MutableMapping):
 
 
 class GeneralStorage(object):
-    def __init__(self, backend, schema, class_info, fallbacks=None):
+    def __init__(self, backend, class_info, schema=None, fallbacks=None):
         self.backend = backend
         self.schema = schema
         self.class_info = class_info
+        # TODO: implement fallbacks
+        self.fallbacks = tools.none_to_default(fallbacks, [])
         self.simulation_objects = self._cache_simulation_objects()
         self.cache = MixedCache(self.simulation_objects)
         self.serialization = Serialization(self)
+        if schema is None:
+            schema = backend.schema
         self.register_schema(self.schema, class_info_list=[])
+
+    def close(self):
+        # TODO: should sync on close
+        self.backend.close()
+        for fallback in self.fallbacks:
+            fallback.close()
 
     def register_schema(self, schema, class_info_list,
                         backend_metadata=None):
@@ -196,12 +206,6 @@ class GeneralStorage(object):
             self.class_info.add_class_info(info)
         self.serialization.register_serialization(schema, self.class_info)
 
-
-    def load(self, uuid, lazy=None):
-        # get UUIDs and tables associated
-        # if lazy, return the lazy object
-        # if table has custom loader, use that
-       pass
 
     def register_from_instance(self, lookup, obj):
         raise NotImplementedError("No way to register from an instance")
@@ -260,6 +264,12 @@ class GeneralStorage(object):
                         format(len(storables_list), table))
             self.backend.add_to_table(table, storables_list)
             logger.info("Storing complete")
+
+    def load(self, uuid, lazy=None):
+        # get UUIDs and tables associated
+        # if lazy, return the lazy object
+        # if table has custom loader, use that
+        pass
 
     def _cache_simulation_objects(self):
         # load up all the simulation objects

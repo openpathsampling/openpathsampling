@@ -5,12 +5,14 @@ class TestSQLStorageBackend(object):
     def setup(self):
         self._delete_tmp_files()
         self.database = self._default_database
+        self.database.debug = True
         self.schema = {
             'samples': [('replica', 'int'),
                         ('ensemble', 'uuid'),
                         ('trajectory', 'uuid')],
             'snapshot0': [('filename', 'str'), ('index', 'int')]
         }
+        self.default_table_names = {'uuid', 'tables', 'schema', 'metadata'}
 
     def _sample_data_dict(self):
         sample_list = [(0, 'ens1', 'traj1'),
@@ -72,9 +74,10 @@ class TestSQLStorageBackend(object):
 
     def test_setup(self):
         table_names = self.database.engine.table_names()
-        assert set(table_names) == set(['uuid', 'tables'])
-        assert self._col_names_set('uuid') == set(['uuid', 'table', 'row'])
-        assert self._col_names_set('tables') == set(['name', 'idx'])
+        assert set(table_names) == self.default_table_names
+        assert self._col_names_set('uuid') == {'uuid', 'table', 'row'}
+        assert self._col_names_set('tables') == {'name', 'idx'}
+        assert self._col_names_set('schema') == {'table', 'schema'}
 
     def test_register_schema(self):
         new_schema = {
@@ -82,10 +85,9 @@ class TestSQLStorageBackend(object):
         }
         self.database.register_schema(new_schema)
         table_names = self.database.engine.table_names()
-        assert set(table_names) == set(['uuid', 'tables', 'snapshot1'])
-        assert self._col_names_set('snapshot1') == set(['idx', 'uuid',
-                                                        'filename',
-                                                        'index'])
+        assert set(table_names) == self.default_table_names | {'snapshot1'}
+        assert self._col_names_set('snapshot1') == {'idx', 'uuid',
+                                                    'filename', 'index'}
 
     def test_register_schema_modify_fails(self):
         self.database.register_schema(self.schema)
@@ -165,8 +167,9 @@ class TestSQLStorageBackend(object):
     def test_load_table_data(self):
         sample_dict = self._add_sample_data()
         uuids = [s['uuid'] for s in sample_dict]
-        # (loaded_table, loaded_lazy) = self.database.load_table_data(uuids)
-        # assert len(loaded.table) == 3
+        uuid_table_rows = self.database.load_uuids_table(uuids)
+        loaded_table = self.database.load_table_data(uuid_table_rows)
+        assert len(loaded_table) == 3
         pytest.skip()
 
     def test_load_table_data_missing(self):
@@ -180,4 +183,9 @@ class TestSQLStorageBackend(object):
 
     def test_persistence(self):
         pytest.skip()
+
+    def test_database_schema(self):
+        self.database.register_schema(self.schema)
+        db_schema = self.database.database_schema()
+        assert db_schema == self.schema
 
