@@ -236,20 +236,23 @@ class GeneralStorage(object):
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         # check default table for things to register; register them
+        # TODO: convert to while?
         if '__missing__' in by_table:
             # __missing__ is a special result returned by the
             # ClassInfoContainer if this is object is expected to have a
             # table, but the table doesn't exist (e.g., for dynamically
             # added tables)
             missing = by_table.pop('__missing__')
-            print by_table.keys()
+            logger.info("Attempting to register for {} missing objects".\
+                        format(len(missing)))
             self.register_missing_tables_for_objects(missing)
-            print missing
             missing_by_table = tools.dict_group_by(missing, get_table_name)
-            print missing_by_table
+            logger.info("Registered {} new tables: {}".\
+                        format(len(missing_by_table),
+                               str(list(missing_by_table.keys()))))
             by_table.update(missing_by_table)
 
-
+        # this is the actual serialization
         for table in by_table:
             storables_list = [self.serialization.serialize[table](o)
                               for o in by_table[table].values()]

@@ -55,9 +55,23 @@ ops_class_info = OPSClassInfoContainer(
 
 class OPSStorage(storage.GeneralStorage):
     def __init__(self, backend, schema, class_info, fallbacks=None):
+        # TODO: this will change to match the current notation
         super(OPSStorage, self).__init__(backend, schema, class_info,
                                          fallbacks)
         self.n_snapshot_types = 0
+
+    @classmethod
+    def from_backend(cls, backend, schema=None, class_info=None,
+                     fallbacks=None):
+        obj = cls.__new__(cls)
+        if schema is None:
+            scheme = ops_schema
+        if class_info is None:
+            class_info = ops_class_info
+        super(OPSStorage, obj).__init__(backend, schema, class_info,
+                                        fallbacks)
+        obj.n_snapshot_types = 0
+        return obj
 
     def register_from_instance(self, lookup, obj):
         if isinstance(obj, paths.BaseSnapshot):
