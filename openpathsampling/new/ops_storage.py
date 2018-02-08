@@ -74,6 +74,9 @@ class OPSStorage(storage.GeneralStorage):
         obj.n_snapshot_types = 0
         return obj
 
+    def register_from_table(self, table_name):
+        pass
+
     def register_from_instance(self, lookup, obj):
         if isinstance(obj, paths.BaseSnapshot):
             schema, class_info_list = snapshots.snapshot_registration_info(

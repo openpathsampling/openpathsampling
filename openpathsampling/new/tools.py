@@ -20,6 +20,10 @@ def is_iterable(obj):
 def is_numpy_iterable(obj):
     return isinstance(obj, ndarray)
 
+def listify(obj):
+    if not is_iterable(obj):
+        obj = [obj]
+    return obj
 
 def none_to_default(option, default):
     if option is None:
@@ -31,6 +35,12 @@ def group_by(list_of_iterable, group, grouping_function):
     results = collections.defaultdict(list)
     for obj in list_of_iterable:
         results[grouping_function(obj, group)].append(obj)
+    return results
+
+def group_by_function(ll, function):
+    results = collections.defaultdict(list)
+    for obj in ll:
+        results[function(obj)].append(obj)
     return results
 
 def group_by_index(list_of_iterable, column_number):

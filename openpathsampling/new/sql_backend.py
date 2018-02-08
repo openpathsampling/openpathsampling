@@ -7,6 +7,7 @@ import tools
 import ujson as json
 
 from my_types import parse_ndarray_type
+from serialization_helpers import import_class
 
 import logging
 logger = logging.getLogger(__name__)
@@ -386,3 +387,27 @@ class SQLStorageBackend(object):
         schema = {r.table: map(tuple, json.loads(r.schema))
                   for r in schema_rows}
         return schema
+
+    def get_representative(self, table_name):
+        table = self.metadata.tables[table_name]
+        with self.engine.connect() as conn:
+            results = conn.execute(table.select())
+            representative = results.fetchone()
+            results.close()
+        return representative
+
+    @property
+    def table_to_class(self):
+        tables_table = self.metadata.tables['tables']
+        with self.engine.connect() as conn:
+            rows = list(conn.execute(tables_table.select()))
+        table_to_class = {}
+        for row in rows:
+            table = row.name
+            cls = import_class(row.module, row.class_name)
+            table_to_class[table] = cls
+        return table_to_class
+
+    def uuid_row_to_table_name(self, uuid_row):
+        return self.number_to_table[uuid_row.table]
+

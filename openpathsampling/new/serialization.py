@@ -20,7 +20,7 @@ class GenericLazyLoader(object):
 
     def load(self):
         if self._loaded_object is None:
-            self._loaded_object = self.storage.load(self.__uuid__, lazy=False)
+            self._loaded_object = self.storage.load(self.__uuid__)
         if self._loaded_object is None:
             raise RuntimeError("UUID not found in storage: " +
                                str(self.__uuid__))

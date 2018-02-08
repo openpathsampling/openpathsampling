@@ -58,23 +58,34 @@ class GeneralStorage(object):
 
     def initialize_with_mode(self, mode):
         if mode == 'r' or mode == 'a':
-            missing_info_tables = [tbl for tbl in self.schema
-                                   if tbl not in self.class_info.tables]
-            for missing in missing_info_tables:
-                # TODO: this is waiting on iterables over tables
-                # instance = getattr(self, missing)[0]
-                # lookup = self.class_info.lookup_key(instance)
-                # self.register_from_instance(lookup, instance)
-                pass
-            # should have gotten them all, just checking
-            missing_info_tables = [tbl for tbl in self.schema
-                                   if tbl not in self.class_info.tables]
-            if missing_info_tables:
-                raise RuntimeError("Unable to register existing tables: "
-                                   + str(missing))
+            table_to_class = self.backend.table_to_class
+            self._load_missing_info_tables(table_to_class)
 
         elif mode == 'w':
             self.register_schema(self.schema, class_info_list=[])
+
+    def _load_missing_info_tables(self, table_to_class):
+        missing_info_tables = [tbl for tbl in self.schema
+                               if tbl not in self.class_info.tables]
+        for missing in missing_info_tables:
+            deserializer = table_to_class[missing].from_dict
+            representative = self.backend.get_representative(missing)
+            print "loading (partial) representative of " + missing
+            dct = {attr: getattr(representative, attr)
+                   for (attr, type_name) in self.schema[missing]}
+            print dct
+            obj = deserializer(dct)
+            # TODO: this is waiting on iterables over tables
+            # instance = getattr(self, missing)[0]
+            # lookup = self.class_info.lookup_key(instance)
+            # self.register_from_instance(lookup, instance)
+            pass
+        # should have gotten them all, just checking
+        missing_info_tables = [tbl for tbl in self.schema
+                               if tbl not in self.class_info.tables]
+        if missing_info_tables:
+            raise RuntimeError("Unable to register existing tables: "
+                               + str(missing))
 
     def close(self):
         # TODO: should sync on close
@@ -156,7 +167,14 @@ class GeneralStorage(object):
             self.backend.add_to_table(table, storables_list)
             logger.info("Storing complete")
 
-    def load(self, uuid, lazy=None):
+    def load(self, uuid_list):
+        uuid_list = tools.listify(uuid_list)
+        uuid_rows = self.backend.load_uuids_table(uuid_list)
+
+        by_table = tools.group_by_function(uuid_rows,
+                                           self.backend.uuid_row_to_table_name)
+
+
         # get UUIDs and tables associated
         # if lazy, return the lazy object
         # if table has custom loader, use that
@@ -170,9 +188,10 @@ class GeneralStorage(object):
         # create virtual stores for simulation objects (e.g., .volume, etc)
         pass
 
-    #def __getattr__(self, attr):
+    # def __getattr__(self, attr):
         # override getattr to create iterators over the tables (stores)
-    #    pass
+        # if attr in schema:
+            # return TableIterator(self, attr)
 
 
 class MixedCache(collections.MutableMapping):

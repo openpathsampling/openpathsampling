@@ -2,7 +2,7 @@ import importlib
 import ujson
 import networkx as nx
 import networkx.algorithms.dag as nx_dag
-from tools import flatten_all, nested_update
+from tools import flatten_all, nested_update, group_by_function
 from tools import is_iterable, is_mappable, is_numpy_iterable
 
 # UUID recognition and encoding #####################################
@@ -123,6 +123,54 @@ def from_json_obj(json_str, existing_uuids):
     cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
     dct = from_dict_with_uuids(dct, existing_uuids)
     return cls.from_dict(dct)
+
+
+def uuids_from_table_row(table_row, schema_entries):
+    # take the schema entries here, not the whole schema
+    lazy = []
+    uuid = []
+    # TODO implement this
+    for (attr, attr_type) in schema_entries:
+        if attr_type == 'uuid':
+            pass
+        elif attr_type == 'list_uuid':
+            pass
+        elif attr_type == 'lazy':
+            pass
+
+
+
+def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
+    if existing_uuids is None:
+        existing_uuids = {}
+    known_uuids = set(existing_uuids.keys())
+    uuid_to_table = {}
+    all_table_rows = []
+    lazy = []
+    while uuid_list:
+        new_uuids = {uuid for uuid in uuid_list if uuid not in known_uuids}
+        uuid_rows = backend.load_uuids_table(new_uuids)
+        new_table_rows = backend.load_table_data(uuid_rows)
+        uuid_to_table.update({r.uuid: backend.uuid_row_to_table_name(r)
+                              for r in uuid_rows})
+        uuid_list = []
+        for row in new_table_rows:
+            entries = schema[uuid_to_table[row.uuid]]
+            loc_uuid, loc_lazy = uuids_from_table_row(row, entries)
+            uuid_list += loc_uuid
+            lazy += loc_lazy
+
+        # find everything for the next uuid_list
+        # TODO: this needs to be solved; requires using the schema
+
+        all_table_rows += new_table_rows
+        known_uuids |= new_uuids
+
+    by_table = group_by_function(all_table_rows,
+                                 lambda r: uuid_to_table[r.uuid])
+    return (by_table, lazy)  # let the next level deal with this
+
+
 
 
 def reconstruction_dag(uuid_json_dict, dag=None):

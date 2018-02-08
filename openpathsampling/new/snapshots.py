@@ -61,6 +61,15 @@ def replace_schema_dimensions(schema, descriptor):
     return schema
 
 
+def snapshot_registration_from_db(storage, schema, table_name):
+    cls = storage.backend.table_to_class[table_name]
+    representative = storage.backend.get_representative(table_name)
+    lookup_result = (decode_uuid(representative.engine), cls)
+    attributes = scheme[table_name]
+    for (attr, type_name) in attributes:
+        pass
+
+
 def snapshot_registration_info(snapshot_instance, snapshot_number):
     schema = schema_for_snapshot(snapshot_instance)
     real_table = {table: table + str(snapshot_number) for table in schema}
@@ -69,13 +78,14 @@ def snapshot_registration_info(snapshot_instance, snapshot_number):
     engine = snapshot_instance.engine
     snapshot_info = ClassInfo(table=real_table['snapshot'],
                               cls=snapshot_instance.__class__,
-                              lookup_result=(engine,
+                              lookup_result=(engine.__uuid__,
                                              snapshot_instance.__class__))
     attr_infos = []
     for table in [tbl for tbl in schema.keys() if tbl != 'snapshot']:
         obj = getattr(snapshot_instance, table)
         attr_infos.append(ClassInfo(table=real_table,
                                     cls=obj.__class__,
-                                    lookup_result=(engine, obj.__class__)))
+                                    lookup_result=(engine.__uuid__,
+                                                   obj.__class__)))
     class_info_list = [snapshot_info] + attr_infos
     return real_schema, class_info_list
