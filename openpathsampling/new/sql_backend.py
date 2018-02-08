@@ -21,6 +21,7 @@ sql_type = {
     'json_obj': sql.String,
     'int': sql.Integer,
     'float': sql.Float,
+    'function': sql.String,
     'ndarray': sql.LargeBinary,  #TODO: numpy store/load
     #TODO add more
 }
@@ -75,7 +76,7 @@ class SQLStorageBackend(object):
         self.debug = False
 
         # override later if mode == 'r' or 'a'
-        self.schema = {} 
+        self.schema = {}
         self.table_to_number = {}
         self.number_to_table = {}
 
@@ -100,8 +101,9 @@ class SQLStorageBackend(object):
             metadata_table = sql.Table('metadata', self.metadata,
                                        sql.Column('key', sql.String),
                                        sql.Column('value', sql.String))
+
             self.metadata.create_all(self.engine)
-            self.register_schema(universal_schema)
+            self.register_schema(universal_schema, {})
         elif mode == "r" or mode == "a":
             self.metadata.reflect(self.engine)
             self.schema = self.database_schema()
@@ -112,7 +114,7 @@ class SQLStorageBackend(object):
     def from_engine(cls, engine, mode='r'):
         obj = cls.__new__(cls)
         self._metadata = sql.MetaData()
-        self.schema = {} 
+        self.schema = {}
         self.table_to_number = {}
         self.number_to_table = {}
         self.engine = engine
@@ -210,7 +212,7 @@ class SQLStorageBackend(object):
         else:
             return False
 
-    def _add_table_to_tables_list(self, table_name, table_schema):
+    def _add_table_to_tables_list(self, table_name, table_schema, cls_):
         if table_name in ['uuid', 'tables']:
             return
         # note that this return the number of tables in 'tables', which does
@@ -224,9 +226,14 @@ class SQLStorageBackend(object):
 
         schema_table = self.metadata.tables['schema']
 
+        module = cls_.__module__
+        class_name = cls_.__name__
+
         with self.engine.connect() as conn:
             conn.execute(tables.insert().values(name=table_name,
-                                                idx=n_tables))
+                                                idx=n_tables,
+                                                module=module,
+                                                class_name=class_name))
             conn.execute(schema_table.insert().values(
                 table=table_name,
                 schema=json.dumps(table_schema)
@@ -254,7 +261,8 @@ class SQLStorageBackend(object):
         return ops_type
 
     ### FROM HERE IS THE GENERIC PUBLIC API
-    def register_schema(self, schema, sql_schema_metadata=None):
+    def register_schema(self, schema, table_to_class,
+                        sql_schema_metadata=None):
         """Register (part of) a schema (create necessary tables in DB)
 
         Raises
@@ -285,7 +293,10 @@ class SQLStorageBackend(object):
                                 "may already have tables of the same names.")
 
             #TODO: add schema to schema table
-            self._add_table_to_tables_list(table_name, schema[table_name])
+            if table_name not in ['uuid', 'tables']:
+                self._add_table_to_tables_list(table_name,
+                                               schema[table_name],
+                                               table_to_class[table_name])
 
         self.metadata.create_all(self.engine)
         self.schema.update(schema)

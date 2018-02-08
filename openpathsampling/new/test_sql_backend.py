@@ -12,6 +12,9 @@ class TestSQLStorageBackend(object):
                         ('trajectory', 'uuid')],
             'snapshot0': [('filename', 'str'), ('index', 'int')]
         }
+        self.table_to_class = {'samples': tuple,
+                               'snapshot0': tuple,
+                               'snapshot1': tuple}
         self.default_table_names = {'uuid', 'tables', 'schema', 'metadata'}
 
     def _sample_data_dict(self):
@@ -31,7 +34,7 @@ class TestSQLStorageBackend(object):
         schema = {'samples': [('replica', 'int'),
                              ('ensemble', 'uuid'),
                              ('trajectory', 'uuid')]}
-        self.database.register_schema(schema)
+        self.database.register_schema(schema, self.table_to_class)
         sample_dict = self._sample_data_dict()
         self.database.add_to_table('samples', sample_dict)
         return sample_dict
@@ -76,26 +79,27 @@ class TestSQLStorageBackend(object):
         table_names = self.database.engine.table_names()
         assert set(table_names) == self.default_table_names
         assert self._col_names_set('uuid') == {'uuid', 'table', 'row'}
-        assert self._col_names_set('tables') == {'name', 'idx'}
+        assert self._col_names_set('tables') == {'name', 'idx', 'module',
+                                                 'class_name'}
         assert self._col_names_set('schema') == {'table', 'schema'}
 
     def test_register_schema(self):
         new_schema = {
             'snapshot1': [('filename', 'str'), ('index', 'int')]
         }
-        self.database.register_schema(new_schema)
+        self.database.register_schema(new_schema, self.table_to_class)
         table_names = self.database.engine.table_names()
         assert set(table_names) == self.default_table_names | {'snapshot1'}
         assert self._col_names_set('snapshot1') == {'idx', 'uuid',
                                                     'filename', 'index'}
 
     def test_register_schema_modify_fails(self):
-        self.database.register_schema(self.schema)
+        self.database.register_schema(self.schema, self.table_to_class)
         with pytest.raises(TypeError):
-            self.database.register_schema(self.schema)
+            self.database.register_schema(self.schema, self.table_to_class)
 
     def test_internal_tables_from_db(self):
-        self.database.register_schema(self.schema)
+        self.database.register_schema(self.schema, self.table_to_class)
         tab2num, num2tab = self.database.internal_tables_from_db()
         tables_db = self.database.metadata.tables['tables']
         with self.database.engine.connect() as conn:
@@ -132,7 +136,7 @@ class TestSQLStorageBackend(object):
         schema = {'samples': [('replica', 'int'),
                              ('ensemble', 'uuid'),
                              ('trajectory', 'uuid')]}
-        self.database.register_schema(schema)
+        self.database.register_schema(schema, self.table_to_class)
         sample_dict = self._sample_data_dict()
         self.database.add_to_table('samples', sample_dict)
 
@@ -185,7 +189,7 @@ class TestSQLStorageBackend(object):
         pytest.skip()
 
     def test_database_schema(self):
-        self.database.register_schema(self.schema)
+        self.database.register_schema(self.schema, self.table_to_class)
         db_schema = self.database.database_schema()
         assert db_schema == self.schema
 

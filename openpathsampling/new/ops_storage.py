@@ -68,8 +68,9 @@ class OPSStorage(storage.GeneralStorage):
             scheme = ops_schema
         if class_info is None:
             class_info = ops_class_info
-        super(OPSStorage, obj).__init__(backend, schema, class_info,
-                                        fallbacks)
+        super(OPSStorage, obj).__init__(backend=backend, schema=schema,
+                                        class_info=class_info,
+                                        fallbacks=fallbacks)
         obj.n_snapshot_types = 0
         return obj
 
