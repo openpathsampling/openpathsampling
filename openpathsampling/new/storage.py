@@ -65,6 +65,26 @@ class ClassInfo(object):
         self.lookup_result = lookup_result
 
 class ClassInfoContainer(object):
+    """Connect table to serialization information.
+
+    This is the primary location for information connecting application
+    objects (i.e., OPS) to the serialization mechanisms. In particular, the
+    __getattr__ in this can take either an instance or a table name, and in
+    either case links it to the ClassInfo. This lets us link an object
+    instance to the name of the table where it should be stored, and to
+    link the table to the serialization methods.
+
+    Notes
+    -----
+    Linking instances to tables can require special treatment. The default
+    behavior is to use the class of the object to identify the table, and
+    this works for most cases. However, sometimes a class can map to more
+    than one table, and therefore is not a unique key. For example, a single
+    class might be used to represent data with different dimensions, and
+    therefore require different tables (e.g, coordinates for different
+    systems). In such cases, the ClassInfoContainer needs to be subclassed
+    with specialized information.
+    """
     def __init__(self, default_info, class_info_list=None):
         class_info_list = tools.none_to_default(class_info_list, [])
         self.lookup_to_info = {}
@@ -79,19 +99,29 @@ class ClassInfoContainer(object):
     def add_class_info(self, info_node):
         # check that we're not in any existing
         self.class_info_list.append(info_node)
+        # TODO: is it possible to generalize the special cases (use the type
+        # of the expected return to identify the function to call -- won't
+        # be completely general, but may simplify some)
         self.lookup_to_info.update({info_node.lookup_result: info_node})
         self.table_to_info.update({info_node.table: info_node})
+
+    def lookup_key(self, item):
+        if not self.is_special(item):
+            lookup_key = item.__class__
+        else:
+            lookup_key = self.special_lookup_key(item)
+        return lookup_key
 
     def is_special(self, item):
         return False
 
-    def special_lookup(self, item):
+    def special_lookup_key(self, item):
         return NotImplementedError("No special types implemented")
 
     def get_special(self, item):
-        lookup = self.special_lookup(item)
+        lookup = self.special_lookup_key(item)
         try:
-            self.lookup_to_info[lookup]
+            return self.lookup_to_info[lookup]
         except KeyError:
             return self.missing_table
 
@@ -101,7 +131,7 @@ class ClassInfoContainer(object):
         elif self.is_special(item):
             return self.get_special(item)
         else:
-            lookup = item.__class__  # default lookup
+            lookup = self.lookup_key(item)
             try:
                 return self.lookup_to_info[lookup]
             except KeyError as e:
@@ -173,31 +203,16 @@ class GeneralStorage(object):
         # if table has custom loader, use that
        pass
 
-    def register_missing_from_instance(self, obj):
-       return NotImplementedError("Registration of missing classes")
+    def register_from_instance(self, lookup, obj):
+        raise NotImplementedError("No way to register from an instance")
 
-    def register_unregistered(self, obj_list):
-        """
-
-        Notes
-        -----
-        This is only expected to be used on classes that the
-        ClassInfoContainer identified as "missing" (i.e., special cases).
-        Normally, class registration should be through the
-        :meth:`.register_schema` method.
-        """
-        # TODO: snapshots and related are connected to engine, not class
-        classes = {}
-        registered = []
-        for obj in obj_list:
-           cls_ = obj.__class__
-           if cls_ not in classes and self.should_register(cls_):
-               logger.info("Registering " + str(cls_) + " for storage")
-               self.register_missing_from_instance(obj)
-               registered.append(cls_)
-           classes |= {obj.__class__}
-        return registered
-
+    def register_missing_tables_for_objects(self, uuid_obj_dict):
+        # mistting items are handled by the special_lookup
+        lookup_examples = {}
+        for obj in uuid_obj_dict.values():
+            lookup = self.class_info.lookup_key(obj)
+            if lookup not in lookup_examples:
+                self.register_from_instance(lookup, obj)
 
     def save(self, obj):
         # check if obj is in DB (maybe this can be removed?)
@@ -227,9 +242,13 @@ class GeneralStorage(object):
             # table, but the table doesn't exist (e.g., for dynamically
             # added tables)
             missing = by_table.pop('__missing__')
+            print by_table.keys()
             self.register_missing_tables_for_objects(missing)
+            print missing
             missing_by_table = tools.dict_group_by(missing, get_table_name)
+            print missing_by_table
             by_table.update(missing_by_table)
+
 
         for table in by_table:
             storables_list = [self.serialization.serialize[table](o)

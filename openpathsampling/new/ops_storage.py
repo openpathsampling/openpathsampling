@@ -5,8 +5,11 @@ from serialization_helpers import to_json_obj as serialize_sim
 from serialization_helpers import from_json_obj as deserialize_sim
 
 import openpathsampling as paths
+from openpathsampling.netcdfplus import StorableObject
 
 from storage import ClassInfo
+
+import snapshots
 
 ops_schema = {
     'samples': [('trajectory', 'lazy'), ('ensemble', 'uuid'),
@@ -27,11 +30,11 @@ ops_schema = {
 
 ops_schema_sql_metadata = {}
 
-class OPSClassInfoContact(storage.ClassInfoContainer):
+class OPSClassInfoContainer(storage.ClassInfoContainer):
     def is_special(self, item):
         return isinstance(item, paths.BaseSnapshot)
 
-    def special_lookup(self, item):
+    def special_lookup_key(self, item):
         if isinstance(item, paths.BaseSnapshot):
             return (item.engine, item.__class__)
 
@@ -40,12 +43,12 @@ ops_class_info = OPSClassInfoContainer(
                            serializer=serialize_sim,
                            deserializer=deserialize_sim),
     class_info_list=[
-        ClassInfo(table='samples', cls=paths.Sample)
-        ClassInfo(table='sample_sets', cls=paths.SampleSet)
-        ClassInfo(table='trajectories', cls=paths.Trajectory)
-        ClassInfo(table='move_changes', cls=paths.MoveChange)
-        ClassInfo(table='steps', cls=paths.MCStep)
-        ClassInfo(table='details', cls=paths.Details)
+        ClassInfo(table='samples', cls=paths.Sample),
+        ClassInfo(table='sample_sets', cls=paths.SampleSet),
+        ClassInfo(table='trajectories', cls=paths.Trajectory),
+        ClassInfo(table='move_changes', cls=paths.MoveChange),
+        ClassInfo(table='steps', cls=paths.MCStep),
+        ClassInfo(table='details', cls=paths.Details),
     ]
 )
 
@@ -55,4 +58,15 @@ class OPSStorage(storage.GeneralStorage):
         super(OPSStorage, self).__init__(backend, schema, class_info,
                                          fallbacks)
         self.n_snapshot_types = 0
+
+    def register_from_instance(self, lookup, obj):
+        if isinstance(obj, paths.BaseSnapshot):
+            schema, class_info_list = snapshots.snapshot_registration_info(
+                obj, self.n_snapshot_types
+            )
+            schema = snapshots.replace_schema_dimensions(
+                schema, obj.engine.descriptor
+            )
+            self.register_schema(schema, class_info_list)
+            self.n_snapshot_types += 1
 

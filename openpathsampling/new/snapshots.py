@@ -66,10 +66,16 @@ def snapshot_registration_info(snapshot_instance, snapshot_number):
     real_table = {table: table + str(snapshot_number) for table in schema}
     real_schema = {real_table[table]: entries
                    for (table, entries) in schema.items()}
+    engine = snapshot_instance.engine
     snapshot_info = ClassInfo(table=real_table['snapshot'],
-                              cls=snapshot_instance.__class__)
-    extra_infos =  [ClassInfo(table=real_table[table],
-                              cls=getattr(snapshot_instance, table))
-                   for table in schema if table != 'snapshot']
-    class_info_list = [snapshot_info] + extra_infos
+                              cls=snapshot_instance.__class__,
+                              lookup_result=(engine,
+                                             snapshot_instance.__class__))
+    attr_infos = []
+    for table in [tbl for tbl in schema.keys() if tbl != 'snapshot']:
+        obj = getattr(snapshot_instance, table)
+        attr_infos.append(ClassInfo(table=real_table,
+                                    cls=obj.__class__,
+                                    lookup_result=(engine, obj.__class__)))
+    class_info_list = [snapshot_info] + attr_infos
     return real_schema, class_info_list
