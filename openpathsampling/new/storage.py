@@ -158,8 +158,8 @@ class GeneralStorage(object):
 
         # this is the actual serialization
         for table in by_table:
-            storables_list = [self.serialization.serialize[table](o)
-                              for o in by_table[table].values()]
+            serialize = self.class_info[table].serializer
+            storables_list = [serialize(o) for o in by_table[table].values()]
             logger.info("Storing {} objects to table {}".\
                         format(len(storables_list), table))
             self.backend.add_to_table(table, storables_list)
@@ -191,14 +191,14 @@ class GeneralStorage(object):
         # deserialize in order
         uuid_to_table_row = {r.uuid: r for r in to_load}
         for uuid in dag_reload_order(dag):
-            table = uuid_to_table[uuid]
-            table_row = uuid_to_table_row[uuid]
-            table_dict = {attr: getattr(table_row, attr)
-                          for (attr, type_name) in self.schema[table]}
-            # TODO: improve this
-            deserialize = self.class_info[table].deserializer
-            obj = deserialize(uuid, table_dict, [new_uuids, self.cache])
-            new_uuids[uuid] = obj
+            if uuid not in self.cache:
+                table = uuid_to_table[uuid]
+                table_row = uuid_to_table_row[uuid]
+                table_dict = {attr: getattr(table_row, attr)
+                              for (attr, type_name) in self.schema[table]}
+                deserialize = self.class_info[table].deserializer
+                obj = deserialize(uuid, table_dict, [new_uuids, self.cache])
+                new_uuids[uuid] = obj
 
         self.cache.update(new_uuids)
         results.update(new_uuids)

@@ -69,26 +69,28 @@ def get_all_uuid_strings(dct):
 
 # NOTE: this only need to find until the first UUID: iterables/mapping with
 # UUIDs aren't necessary here
-def replace_uuid(obj):
+def replace_uuid(obj, uuid_encoding):
     # this is UUID => string
     replacement = obj
     if has_uuid(obj):
-        replacement = encode_uuid(get_uuid(obj))
+        replacement = uuid_encoding(get_uuid(obj))
     elif is_mappable(obj):
-        replacement = {k: replace_uuid(v) for (k, v) in replacement.items()}
+        replacement = {k: replace_uuid(v, uuid_encoding)
+                       for (k, v) in replacement.items()}
     elif is_iterable(obj) and not is_numpy_iterable(obj):
         replace_type = type(obj)
-        replacement = replace_type([replace_uuid(o) for o in obj])
+        replacement = replace_type([replace_uuid(o, uuid_encoding)
+                                    for o in obj])
     return replacement
 
 
 def to_dict_with_uuids(obj):
     dct = obj.to_dict()
-    return replace_uuid(dct)
+    return replace_uuid(dct, uuid_encoding=encode_uuid)
 
 
 def to_bare_json(obj):
-    replaced = replace_uuid(obj)
+    replaced = replace_uuid(obj, uuid_encoding=encode_uuid)
     return ujson.dumps(replaced)
 
 
@@ -203,6 +205,7 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
 
         all_table_rows += new_table_rows
         known_uuids |= new_uuids
+        uuid_list = {uuid for uuid in uuid_list if uuid not in known_uuids}
 
     return (all_table_rows, lazy, dependencies, uuid_to_table)
 
