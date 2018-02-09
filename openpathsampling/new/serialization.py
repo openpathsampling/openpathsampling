@@ -75,6 +75,16 @@ class Serialization(object):
                                        class_=cls,
                                        storage=self.storage)
 
+    def make_all_lazies(self, lazies):
+        # lazies is dict of {table_name: list_of_lazy_uuid_rows}
+        all_lazies = {}
+        for (table, lazy_uuid_rows) in lazies.items():
+            cls = self.table_to_class[table]
+            for row in lazy_uuid_rows:
+                all_lazies[row.uuid] = self.make_lazy(cls, row.uuid)
+        return all_lazies
+
+
     def register_serialization(self, schema, class_info):
         for table in schema:
             if class_info[table].serializer:
@@ -166,3 +176,4 @@ class Serialization(object):
         obj = cls.from_dict(dct)
         obj.__uuid__ = uuid
         return obj
+

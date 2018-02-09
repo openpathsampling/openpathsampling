@@ -91,9 +91,10 @@ class SQLStorageBackend(object):
         self.engine = sql.create_engine(connection_uri,
                                         echo=echo)
         self._metadata = sql.MetaData(bind=self.engine)
-        self.initialize_with_mode(self.mode)
+        self._initialize_with_mode(self.mode)
 
-    def initialize_with_mode(self, mode):
+    def _initialize_with_mode(self, mode):
+        """setup of tables; etc, as varies between w and r/a modes"""
         if mode == "w":
             # TODO: drop tables
             schema_table = sql.Table('schema', self.metadata,
@@ -113,6 +114,12 @@ class SQLStorageBackend(object):
 
     @classmethod
     def from_engine(cls, engine, mode='r'):
+        """Constructor allowing user to specify the SQLAlchemy Engine.
+
+        The default constructor doesn't allow all the options to the engine
+        that SQLAlchemy can provide. Use this if you want more customization
+        of the database engine.
+        """
         obj = cls.__new__(cls)
         self._metadata = sql.MetaData()
         self.schema = {}
@@ -120,7 +127,7 @@ class SQLStorageBackend(object):
         self.number_to_table = {}
         self.engine = engine
         self.mode = mode
-        self.initialize_with_mode(self.mode)
+        self._initialize_with_mode(self.mode)
 
 
     def close(self):
@@ -410,4 +417,3 @@ class SQLStorageBackend(object):
 
     def uuid_row_to_table_name(self, uuid_row):
         return self.number_to_table[uuid_row.table]
-

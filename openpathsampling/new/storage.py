@@ -5,6 +5,8 @@ import openpathsampling as paths
 from serialization_helpers import get_uuid, get_all_uuids
 from serialization_helpers import to_json_obj as serialize_sim
 from serialization_helpers import from_json_obj as deserialize_sim
+from serialization_helpers import get_all_uuids_loading
+from serialization_helpers import dependency_dag, dag_reload_order
 # TODO: both of these are from
 from serialization_helpers import to_dict_with_uuids as serialize_data
 from serialization_helpers import deserialize as deserialize_data
@@ -168,17 +170,31 @@ class GeneralStorage(object):
             logger.info("Storing complete")
 
     def load(self, uuid_list):
-        uuid_list = tools.listify(uuid_list)
-        uuid_rows = self.backend.load_uuids_table(uuid_list)
+        # loading happens in 4 parts:
+        # 1. Get UUIDs that need to be loaded
+        # 2. Build the DAG to determine loading order
+        # 3. Make all lazy objects
+        # 4. Reserialize remaining in DAG order
+        uuid_list = [uuid for uuid in uuid_list if uuid not in self.cache]
+        to_load, lazies, dependencies, uuid_to_table = \
+                get_all_uuids_loading(uuid_list=uuid_list,
+                                      backend=self.backend,
+                                      schema=self.schema,
+                                      existing_uuids=self.cache)
 
-        by_table = tools.group_by_function(uuid_rows,
-                                           self.backend.uuid_row_to_table_name)
+        # build the dag
+        dag = dependency_dag(dependencies)
+        # lazies can't have dependencies
+        new_uuids = self.serialization.make_all_lazies(lazies)
 
+        # deserialize in order
+        for uuid in dag_reload_order(dag):
+            table = uuid_to_table[uuid]
+            deserialize = self.serialization.deserialize[table]
+            new_uuids[uuid] = deserialize(table_row[table])
 
-        # get UUIDs and tables associated
-        # if lazy, return the lazy object
-        # if table has custom loader, use that
-        pass
+        self.cache.update(new_uuids)
+        return [new_uuids[uuid] for uuid in uuid_list]
 
     def _cache_simulation_objects(self):
         # load up all the simulation objects
@@ -226,13 +242,16 @@ class MixedCache(collections.MutableMapping):
         return itertools.chain(self.fixed_cache, self.cache)
 
 
-class TableIterator(object):
+# TODO: collections.Sequence?
+class StorageTable(object):
     def __init__(self, storage, table):
         self.storage = storage
+        self.table = table
 
     def __iter__(self):
-        # iter manages the cache
-        pass
+        backend_iterator = self.storage.backend.table_iterator(self.table)
+        for row in backend_iterator:
+            yield self.storage.load([row.uuid])
 
     def _get_single(self, value):
         pass
