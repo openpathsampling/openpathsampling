@@ -211,7 +211,7 @@ class DefaultDeserializer(object):
                 as_ndarray = parse_ndarray_type(type_name)
                 if as_ndarray:
                     (dtype, shape) = as_ndarray
-                    handler = make_numpy_handler
+                    handler = self.make_numpy_handler
             if handler:
                 attribute_handlers[attr] = handler
 
@@ -242,6 +242,6 @@ class DefaultSerializer(DefaultDeserializer):
 
     def __call__(self, obj):
         dct = obj.to_dict()
-        dct = replace_uuid(dct)
-        dct.update({'uuid': get_uuid(obj)})
+        dct = serialization.replace_uuid(dct)
+        dct.update({'uuid': serialization.get_uuid(obj)})
         return dct

@@ -69,25 +69,19 @@ class GeneralStorage(object):
     def _load_missing_info_tables(self, table_to_class):
         missing_info_tables = [tbl for tbl in self.schema
                                if tbl not in self.class_info.tables]
-        for missing in missing_info_tables:
-            deserializer = table_to_class[missing].from_dict
-            representative = self.backend.get_representative(missing)
-            print "loading (partial) representative of " + missing
-            dct = {attr: getattr(representative, attr)
-                   for (attr, type_name) in self.schema[missing]}
-            print dct
-            obj = deserializer(dct)
-            # TODO: this is waiting on iterables over tables
-            # instance = getattr(self, missing)[0]
-            # lookup = self.class_info.lookup_key(instance)
-            # self.register_from_instance(lookup, instance)
-            pass
-        # should have gotten them all, just checking
+        n_missing = len(missing_info_tables)
+        logger.info("Missing info from {} dynamically-registered tables"\
+                    .format(n_missing))
+        classes = [table_to_class[tbl] for tbl in missing_info_tables]
+        self.register_from_tables(missing_info_tables, classes)
         missing_info_tables = [tbl for tbl in self.schema
                                if tbl not in self.class_info.tables]
+        logger.info("Successfully registered {} missing tables"\
+                    .format(n_missing - len(missing_info_tables)))
+
         if missing_info_tables:
-            raise RuntimeError("Unable to register existing tables: "
-                               + str(missing))
+            raise RuntimeError("Unable to register existing database "
+                               + "tables: " + str(missing_info_tables))
 
     def close(self):
         # TODO: should sync on close
@@ -152,6 +146,7 @@ class GeneralStorage(object):
             # table, but the table doesn't exist (e.g., for dynamically
             # added tables)
             missing = by_table.pop('__missing__')
+            print missing
             logger.info("Attempting to register for {} missing objects".\
                         format(len(missing)))
             self.register_missing_tables_for_objects(missing)
@@ -165,7 +160,7 @@ class GeneralStorage(object):
         for table in by_table:
             storables_list = [self.serialization.serialize[table](o)
                               for o in by_table[table].values()]
-            logger.info("Storing {} UUIDs to table {}".\
+            logger.info("Storing {} objects to table {}".\
                         format(len(storables_list), table))
             self.backend.add_to_table(table, storables_list)
             logger.info("Storing complete")

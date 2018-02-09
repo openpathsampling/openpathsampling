@@ -1,5 +1,7 @@
 from storage import ClassInfo
 
+from serialization_helpers import get_uuid
+
 def _nested_schema_entries(schema_entries, lazies):
     """Recursive algorithm to create all schema entries
     """
@@ -65,18 +67,17 @@ def snapshot_registration_from_db(storage, schema, class_info, table_name):
     # TODO: snapshot tables always have `snapshotNUM`; this should be used
     # to identify other related tables in the DB
     cls = storage.backend.table_to_class[table_name]
-    representative = storage.backend.get_representative(table_name)
-    engine_uuid = get_uuid(representative.engine)
+    representative_row = storage.backend.get_representative(table_name)
+    engine_uuid = representative_row.engine
     lookup_result = (engine_uuid, cls)
     proposed_lookups = {table_name: lookup_result}
-    attributes = scheme[table_name]
+    attributes = schema[table_name]
     for (attr, type_name) in attributes:
         is_object = type_name in ['lazy', 'uuid', 'uuid_list']
         is_table = attr in schema
         if is_object and is_table:
             cls = storage.backend.table_to_class[attr]
             proposed_lookups[attr] = (engine_uuid, cls)
-    class_info_list = []
     return proposed_lookups
 
 
@@ -86,16 +87,17 @@ def snapshot_registration_info(snapshot_instance, snapshot_number):
     real_schema = {real_table[table]: entries
                    for (table, entries) in schema.items()}
     engine = snapshot_instance.engine
+    engine_uuid = get_uuid(engine)
     snapshot_info = ClassInfo(table=real_table['snapshot'],
                               cls=snapshot_instance.__class__,
-                              lookup_result=(engine.__uuid__,
+                              lookup_result=(engine_uuid,
                                              snapshot_instance.__class__))
     attr_infos = []
     for table in [tbl for tbl in schema.keys() if tbl != 'snapshot']:
         obj = getattr(snapshot_instance, table)
         attr_infos.append(ClassInfo(table=real_table,
                                     cls=obj.__class__,
-                                    lookup_result=(engine.__uuid__,
+                                    lookup_result=(engine_uuid,
                                                    obj.__class__)))
     class_info_list = [snapshot_info] + attr_infos
     return real_schema, class_info_list

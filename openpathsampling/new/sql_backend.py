@@ -294,7 +294,7 @@ class SQLStorageBackend(object):
                 columns.append(sql.Column(col, col_type, **metadata))
 
             try:
-                logger.info("Add schema table" + str(table_name))
+                logger.info("Add schema table " + str(table_name))
                 table = sql.Table(table_name, self.metadata, *columns)
             except sql.exc.InvalidRequestError:
                 raise TypeError("Schema registration problem. Your schema "

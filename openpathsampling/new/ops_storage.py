@@ -7,9 +7,13 @@ from serialization_helpers import from_json_obj as deserialize_sim
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
+from serialization_helpers import get_uuid
+
 from storage import ClassInfo
 
 import snapshots
+import logging
+logger = logging.getLogger(__name__)
 
 ops_schema = {
     'samples': [('trajectory', 'lazy'), ('ensemble', 'uuid'),
@@ -36,7 +40,7 @@ class OPSClassInfoContainer(storage.ClassInfoContainer):
 
     def special_lookup_key(self, item):
         if isinstance(item, paths.BaseSnapshot):
-            return (item.engine, item.__class__)
+            return (get_uuid(item.engine), item.__class__)
 
 ops_class_info = OPSClassInfoContainer(
     default_info=ClassInfo('simulation_objects', cls=StorableObject,
@@ -74,8 +78,29 @@ class OPSStorage(storage.GeneralStorage):
         obj.n_snapshot_types = 0
         return obj
 
-    def register_from_table(self, table_name):
-        pass
+    def register_from_tables(self, table_names, classes):
+        lookups = {}
+        table_to_class = {tbl: cls for tbl, cls in zip(table_names, classes)}
+        for table in table_names:
+            logger.info("Attempting to register missing table {} ({})"\
+                        .format(table, str(table_to_class[table])))
+            if issubclass(table_to_class[table], paths.BaseSnapshot):
+                lookups.update(snapshots.snapshot_registration_from_db(
+                    storage=self,
+                    schema=self.schema,
+                    class_info=self.class_info,
+                    table_name=table
+                ))
+        logger.info("Found {} possible lookups".format(len(lookups)))
+        logger.info("Lookups for tables: " + str(lookups.keys()))
+        class_info_list = [ClassInfo(table=table,
+                                     cls=table_to_class[table],
+                                     lookup_result=lookups[table])
+                           for table in lookups]
+        for info in class_info_list:
+            info.set_defaults(self.schema)
+            self.class_info.add_class_info(info)
+
 
     def register_from_instance(self, lookup, obj):
         if isinstance(obj, paths.BaseSnapshot):
@@ -85,6 +110,7 @@ class OPSStorage(storage.GeneralStorage):
             schema = snapshots.replace_schema_dimensions(
                 schema, obj.engine.descriptor
             )
+
             self.register_schema(schema, class_info_list)
             self.n_snapshot_types += 1
 
