@@ -61,13 +61,23 @@ def replace_schema_dimensions(schema, descriptor):
     return schema
 
 
-def snapshot_registration_from_db(storage, schema, table_name):
+def snapshot_registration_from_db(storage, schema, class_info, table_name):
+    # TODO: snapshot tables always have `snapshotNUM`; this should be used
+    # to identify other related tables in the DB
     cls = storage.backend.table_to_class[table_name]
     representative = storage.backend.get_representative(table_name)
-    lookup_result = (decode_uuid(representative.engine), cls)
+    engine_uuid = get_uuid(representative.engine)
+    lookup_result = (engine_uuid, cls)
+    proposed_lookups = {table_name: lookup_result}
     attributes = scheme[table_name]
     for (attr, type_name) in attributes:
-        pass
+        is_object = type_name in ['lazy', 'uuid', 'uuid_list']
+        is_table = attr in schema
+        if is_object and is_table:
+            cls = storage.backend.table_to_class[attr]
+            proposed_lookups[attr] = (engine_uuid, cls)
+    class_info_list = []
+    return proposed_lookups
 
 
 def snapshot_registration_info(snapshot_instance, snapshot_number):

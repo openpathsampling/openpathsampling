@@ -13,7 +13,7 @@ from serialization_helpers import deserialize as deserialize_data
 from class_info import ClassInfo, ClassInfoContainer
 import tools
 from openpathsampling.netcdfplus import StorableObject
-from serialization import Serialization
+from serialization import Serialization, DefaultDeserializer
 
 import logging
 logger = logging.getLogger(__name__)
@@ -99,6 +99,7 @@ class GeneralStorage(object):
                         backend_metadata=None, read_mode=False):
         # check validity
         for info in class_info_list:
+            info.set_defaults(schema)
             self.class_info.add_class_info(info)
 
         table_to_class = {table: self.class_info[table].cls
@@ -169,13 +170,15 @@ class GeneralStorage(object):
             self.backend.add_to_table(table, storables_list)
             logger.info("Storing complete")
 
-    def load(self, uuid_list):
+    def load(self, input_uuids):
         # loading happens in 4 parts:
         # 1. Get UUIDs that need to be loaded
         # 2. Build the DAG to determine loading order
         # 3. Make all lazy objects
         # 4. Reserialize remaining in DAG order
-        uuid_list = [uuid for uuid in uuid_list if uuid not in self.cache]
+        results = {uuid: self.cache[uuid] for uuid in input_uuids
+                   if uuid in self.cache}
+        uuid_list = [uuid for uuid in input_uuids if uuid not in self.cache]
         to_load, lazies, dependencies, uuid_to_table = \
                 get_all_uuids_loading(uuid_list=uuid_list,
                                       backend=self.backend,
@@ -185,16 +188,26 @@ class GeneralStorage(object):
         # build the dag
         dag = dependency_dag(dependencies)
         # lazies can't have dependencies
+        lazies = tools.group_by_function(lazies,
+                                         lambda r: uuid_to_table[r.uuid])
         new_uuids = self.serialization.make_all_lazies(lazies)
 
+
         # deserialize in order
+        uuid_to_table_row = {r.uuid: r for r in to_load}
         for uuid in dag_reload_order(dag):
             table = uuid_to_table[uuid]
-            deserialize = self.serialization.deserialize[table]
-            new_uuids[uuid] = deserialize(table_row[table])
+            table_row = uuid_to_table_row[uuid]
+            table_dict = {attr: getattr(table_row, attr)
+                          for (attr, type_name) in self.schema[table]}
+            # TODO: improve this
+            deserialize = self.class_info[table].deserializer
+            obj = deserialize(uuid, table_dict, [new_uuids, self.cache])
+            new_uuids[uuid] = obj
 
         self.cache.update(new_uuids)
-        return [new_uuids[uuid] for uuid in uuid_list]
+        results.update(new_uuids)
+        return [results[uuid] for uuid in input_uuids]
 
     def _cache_simulation_objects(self):
         # load up all the simulation objects

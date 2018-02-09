@@ -2,6 +2,13 @@ import numpy as np
 from my_types import parse_ndarray_type, ndarray_re
 import serialization_helpers as serialization
 from tools import is_mappable
+import tools
+import ujson as json
+
+
+def load_list_uuid(json_str, cache_list):
+    uuid_list = json.loads(json_str)
+    return [search_caches(uuid, cache_list) for uuid in uuid_list]
 
 
 def make_lazy_class(cls_):
@@ -162,7 +169,7 @@ class Serialization(object):
                 dct[attr] = serializer_dict[attr](attr_obj)
         return dct
 
-    def default_deserialize(self, uuid, dct, table):
+    def default_deserialize(self, uuid, dct, table, existing_uuids):
         # this must be called in the DAG order; otherwise error
         deserializer_dict = self._deser_dict[table]
         cls = self.table_to_class[table]
@@ -173,7 +180,68 @@ class Serialization(object):
                 dct[attr] = deserializer_dict[attr](dct[attr], self.cache)
             else:
                 dct[attr] = deserializer_dict[attr](dct[attr])
+        return dct
+
+
+class DefaultDeserializer(object):
+    default_handlers = {
+        'lazy': serialization.search_caches,
+        'uuid': serialization.search_caches,
+        'list_uuid': load_list_uuid,
+    }
+
+    def __init__(self, schema, table, cls):
+        self.schema = schema
+        self.table = table
+        self.entries = schema[table]
+        self.cls = cls
+        self.attribute_handler = self.init_attribute_handlers()
+
+    @staticmethod
+    def make_numpy_handler(dtype, shape):
+        return lambda data: np.fromstring(data, dtype=dtype).reshape(shape)
+
+    def init_attribute_handlers(self):
+        attribute_handlers = {}
+        for (attr, type_name) in self.entries:
+            handler = None
+            if type_name in self.default_handlers:
+                handler = self.default_handlers[type_name]
+            else:
+                as_ndarray = parse_ndarray_type(type_name)
+                if as_ndarray:
+                    (dtype, shape) = as_ndarray
+                    handler = make_numpy_handler
+            if handler:
+                attribute_handlers[attr] = handler
+
+    def make_dct(self, table_dct, cache_list):
+        for attr in self.attribute_handlers:
+            table_dct[attr] = self.attribute_handlers[attr](table_dct[attr],
+                                                            cache_list)
+        return table_dct
+
+    def __call__(self, uuid, table_dct, cache_list):
+        dct = self.make_dct(table_dct, cache_list)
         obj = cls.from_dict(dct)
-        obj.__uuid__ = uuid
+        set_uuid(obj, uuid)
         return obj
 
+
+class DefaultSerializer(DefaultDeserializer):
+    handlers = {
+        'uuid': serialization.get_uuid,
+        'lazy': serialization.get_uuid,
+        'json': serialization.to_bare_json,
+        'list_uuid': serialization.to_bare_json
+    }
+
+    @staticmethod
+    def make_numpy_handler(dtype, shape):
+        return lambda arr: arr.astype(dtype=dtype, copy=False).tostring()
+
+    def __call__(self, obj):
+        dct = obj.to_dict()
+        dct = replace_uuid(dct)
+        dct.update({'uuid': get_uuid(obj)})
+        return dct

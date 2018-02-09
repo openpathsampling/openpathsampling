@@ -28,7 +28,7 @@ def encode_uuid(uuid):
 
 
 def decode_uuid(uuid_str):
-    return long(uuid_str[5:-1])
+    return uuid_str[5:-1]
 
 
 def is_uuid_string(obj):
@@ -70,9 +70,9 @@ def get_all_uuid_strings(dct):
 # NOTE: this only need to find until the first UUID: iterables/mapping with
 # UUIDs aren't necessary here
 def replace_uuid(obj):
+    # this is UUID => string
     replacement = obj
     if has_uuid(obj):
-        # TODO: compact representation of UUID
         replacement = encode_uuid(get_uuid(obj))
     elif is_mappable(obj):
         replacement = {k: replace_uuid(v) for (k, v) in replacement.items()}
@@ -109,23 +109,44 @@ def import_class(mod, cls):
     cls = getattr(mod, cls)
     return cls
 
+def search_caches(key, cache_list, raise_error=True):
+    if not isinstance(cache_list, list):
+        cache_list = [cache_list]
+    obj = None
+    for cache in cache_list:
+        if key in cache:
+            obj = cache[key]
+            break
+    if obj is None and raise_error:
+        raise KeyError("Missing key: " + str(key))
+    return obj
 
-def from_dict_with_uuids(dct, existing_uuids):
-    for (key, value) in dct.items():
-        if is_uuid_string(value):
-            # raises KeyError if object hasn't been visited
-            # (indicates problem in DAG reconstruction)
-            value_obj = existing_uuids[decode_uuid(value)]
-            dct[key] = value_obj
-    return dct
+
+def from_dict_with_uuids(obj, cache_list):
+    replacement = obj
+    if is_uuid_string(obj):
+        # raises KeyError if object hasn't been visited
+        # (indicates problem in DAG reconstruction)
+        uuid = decode_uuid(obj)
+        replacement = search_caches(uuid, cache_list)
+    elif is_mappable(obj):
+        replacement = {k: from_dict_with_uuids(v, cache_list)
+                       for (k, v) in obj.items()}
+    elif is_iterable(obj) and not is_numpy_iterable(obj):
+        replace_type = type(obj)
+        replacement = replace_type([from_dict_with_uuids(o, cache_list)
+                                    for o in obj])
+    return replacement
 
 
-def from_json_obj(json_str, existing_uuids):
+def from_json_obj(uuid, table_row, cache_list):
     # NOTE: from_json only works with existing_uuids (DAG-ordering)
-    dct = ujson.loads(json_str)
+    dct = ujson.loads(table_row['json'])
     cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
-    dct = from_dict_with_uuids(dct, existing_uuids)
-    return cls.from_dict(dct)
+    dct = from_dict_with_uuids(dct, cache_list)
+    obj = cls.from_dict(dct)
+    set_uuid(obj, uuid)
+    return obj
 
 
 def uuids_from_table_row(table_row, schema_entries):
@@ -183,11 +204,7 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
         all_table_rows += new_table_rows
         known_uuids |= new_uuids
 
-    row_to_table = lambda r: uuid_to_table[r.uuid]
-    to_load = group_by_function(all_table_rows, row_to_table)
-    lazies = group_by_function(lazy, row_to_table)
-
-    return (to_load, lazies, dependencies, uuid_to_table) 
+    return (all_table_rows, lazy, dependencies, uuid_to_table)
 
 
 def reconstruction_dag(uuid_json_dict, dag=None):
