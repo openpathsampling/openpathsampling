@@ -7,7 +7,7 @@ from openpathsampling.netcdfplus import DelayedLoader
 
 from openpathsampling.tools import refresh_output
 
-from collections import Counter
+from collections import Counter, Mapping
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class SampleKeyError(Exception):
 
 
 # @lazy_loading_attributes('movepath')
-class SampleSet(StorableObject):
+class SampleSet(StorableObject, Mapping):
     """
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -78,6 +78,9 @@ class SampleSet(StorableObject):
     @property
     def ensembles(self):
         return self.ensemble_dict.keys()
+
+    def values(self):
+        return self.samples
 
     @property
     def replicas(self):

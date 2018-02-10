@@ -111,21 +111,25 @@ class GeneralStorage(object):
 
     def register_missing_tables_for_objects(self, uuid_obj_dict):
         # mistting items are handled by the special_lookup
-        lookup_examples = {}
+        lookup_examples = set([])
         for obj in uuid_obj_dict.values():
             lookup = self.class_info.lookup_key(obj)
             if lookup not in lookup_examples:
                 self.register_from_instance(lookup, obj)
+                lookup_examples |= {lookup}
 
     def save(self, obj):
         # check if obj is in DB (maybe this can be removed?)
+        logger.debug("Starting save")
         exists = self.backend.load_uuids_table(uuids=[get_uuid(obj)],
                                                ignore_missing=True)
         if exists:
             return
         # find all UUIDs we need to save with this object
         # TODO: (perf) is this faster if we stop traversal on cached UUID?
+        logger.debug("Listing all objects to save")
         uuids = get_all_uuids(obj)
+        logger.debug("Checking if objects already exist in database")
         # remove any UUIDs that have already been saved
         exists = self.backend.load_uuids_table(uuids=list(uuids.keys()),
                                                ignore_missing=True)
@@ -146,7 +150,6 @@ class GeneralStorage(object):
             # table, but the table doesn't exist (e.g., for dynamically
             # added tables)
             missing = by_table.pop('__missing__')
-            print missing
             logger.info("Attempting to register for {} missing objects".\
                         format(len(missing)))
             self.register_missing_tables_for_objects(missing)
@@ -157,13 +160,15 @@ class GeneralStorage(object):
             by_table.update(missing_by_table)
 
         # this is the actual serialization
+        logger.debug("Filling {} tables: {}"\
+                     .format( len(by_table), str(list(by_table.keys()))))
         for table in by_table:
             serialize = self.class_info[table].serializer
             storables_list = [serialize(o) for o in by_table[table].values()]
-            logger.info("Storing {} objects to table {}".\
+            logger.debug("Storing {} objects to table {}".\
                         format(len(storables_list), table))
             self.backend.add_to_table(table, storables_list)
-            logger.info("Storing complete")
+            logger.debug("Storing complete")
 
     def load(self, input_uuids):
         # loading happens in 4 parts:

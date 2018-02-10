@@ -58,6 +58,17 @@ def dict_group_by(dct, key_extract):
         results[key_extract(key, value)].update({key: value})
     return results
 
+def block(sliceable, length):
+    max_len = len(sliceable)
+    n_iterations = max_len // length + 1
+    min_val = 0
+    max_val = length
+    while max_val < max_len:
+        yield sliceable[slice(min_val, max_val)]
+        min_val += length
+        max_val += length
+        max_val = min(max_val, max_len)
+
 
 def compare_sets(set1, set2):
     only_in_1 = set1 - set2

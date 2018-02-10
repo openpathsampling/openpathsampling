@@ -21,7 +21,8 @@ ops_schema = {
                 # in my opinion, the next 3 should be removed
                 ('parent', 'lazy'), ('bias', 'float'),
                 ('mover', 'uuid')],
-    'sample_sets': [('samples', 'list_uuid'), ('movepath', 'lazy')],
+    # movepath no longer exists in sample sets?
+    'sample_sets': [('samples', 'list_uuid')], #, ('movepath', 'lazy')],
     'trajectories': [('snapshots', 'list_uuid')],
     'move_changes': [('mover', 'uuid'), ('details', 'lazy'), ('cls', 'str'),
                      ('subchanges', 'list_uuid'), ('samples', 'list_uuid'),
@@ -55,6 +56,9 @@ ops_class_info = OPSClassInfoContainer(
         ClassInfo(table='details', cls=paths.Details),
     ]
 )
+
+for info in ops_class_info.class_info_list:
+    info.set_defaults(ops_schema)
 
 
 class OPSStorage(storage.GeneralStorage):

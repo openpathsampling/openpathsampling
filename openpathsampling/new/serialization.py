@@ -231,7 +231,7 @@ class DefaultDeserializer(object):
         return obj
 
 
-class DefaultSerializer(DefaultDeserializer):
+class ToDictSerializer(DefaultDeserializer):
     default_handlers = {
         'uuid': serialization.get_uuid,
         'lazy': serialization.get_uuid,
@@ -251,3 +251,17 @@ class DefaultSerializer(DefaultDeserializer):
                                          uuid_encoding=lambda x: x)
         dct.update({'uuid': serialization.get_uuid(obj)})
         return dct
+
+class DefaultSerializer(ToDictSerializer):
+    def __call__(self, obj):
+        dct = {attr: getattr(obj, attr)
+               for (attr, type_name) in self.entries}
+        replace = {attr: handler(dct[attr])
+                   for (attr, handler) in self.attribute_handlers.items()}
+        replace = serialization.replace_uuid(replace,
+                                             uuid_encoding=lambda x: x)
+        dct.update(replace)
+        dct.update({'uuid': serialization.get_uuid(obj)})
+        return dct
+
+

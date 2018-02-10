@@ -75,6 +75,7 @@ class SQLStorageBackend(object):
         sql_dialect = tools.none_to_default(sql_dialect, 'sqlite')
         self.mode = mode
         self.debug = False
+        self.max_query_size = 500
 
         # override later if mode == 'r' or 'a'
         self.schema = {}
@@ -327,8 +328,12 @@ class SQLStorageBackend(object):
         # would be another option (redundant data, but better sanity checks)
         # pop_uuids = [{k: v for (k, v) in obj.items() if k != 'uuid'}
                      # for obj in objects]
-        insert_statements = [table.insert().values(**obj)
-                             for obj in objects]
+        # insert_statements = [table.insert().values(**obj)
+                             # for obj in objects]
+        insert_statements = []
+        for obj in objects:
+            print obj
+            insert_statements.append(table.insert().values(**obj))
 
         with self.engine.connect() as conn:
             # can't use executemany here because we need the resulting
@@ -357,15 +362,21 @@ class SQLStorageBackend(object):
         database (with ignore_missing=True).
         """
         uuid_table = self.metadata.tables['uuid']
-        uuid_or_stmt = sql.or_(*(uuid_table.c.uuid == uuid
-                                 for uuid in uuids))
-        uuid_sel = uuid_table.select(uuid_or_stmt)
-        with self.engine.connect() as conn:
-            results = list(conn.execute(uuid_sel))
-        if not ignore_missing and len(results) != len(uuids):
-            # TODO
-            # figure out which UUID is missing, raise error on first found
-            pass
+        logger.debug("Looking for {} UUIDs".format(len(uuids)))
+        results = []
+        for uuid_block in tools.block(uuids, self.max_query_size):
+            uuid_sel = uuid_table.select().\
+                    where(uuid_table.c.uuid.in_(uuid_block))
+            # uuid_or_stmt = sql.or_(*(uuid_table.c.uuid == uuid
+                                     # for uuid in uuids))
+            # uuid_sel = uuid_table.select(uuid_or_stmt)
+            with self.engine.connect() as conn:
+                res = list(conn.execute(uuid_sel))
+            if not ignore_missing and len(results) != len(uuids):
+                # TODO
+                # figure out which UUID is missing, raise error on first found
+                pass
+            results += res
 
         return results
 
