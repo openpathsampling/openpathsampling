@@ -332,7 +332,7 @@ class SQLStorageBackend(object):
                              # for obj in objects]
         insert_statements = []
         for obj in objects:
-            print obj
+            # print obj  # extreme debugging, not even worth logging
             insert_statements.append(table.insert().values(**obj))
 
         with self.engine.connect() as conn:

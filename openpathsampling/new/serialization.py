@@ -185,6 +185,11 @@ class Serialization(object):
         return dct
 
 
+class SimulationObjectSerializer(object):
+    def __call__(self, obj):
+        return {'uuid': serialization.get_uuid(obj),
+                'json': serialization.to_json_obj(obj)}
+
 class DefaultDeserializer(object):
     default_handlers = {
         'lazy': serialization.search_caches,
@@ -236,6 +241,7 @@ class ToDictSerializer(DefaultDeserializer):
         'uuid': serialization.get_uuid,
         'lazy': serialization.get_uuid,
         'json': serialization.to_bare_json,
+        'json_obj': serialization.to_json_obj,
         'list_uuid': serialization.to_bare_json
     }
 

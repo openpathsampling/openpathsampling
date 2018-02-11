@@ -9,6 +9,11 @@ from openpathsampling.netcdfplus import StorableObject
 
 from serialization_helpers import get_uuid
 
+from serialization import (
+    ToDictSerializer, DefaultSerializer, DefaultDeserializer,
+    SimulationObjectSerializer
+)
+
 from storage import ClassInfo
 
 import snapshots
@@ -45,7 +50,7 @@ class OPSClassInfoContainer(storage.ClassInfoContainer):
 
 ops_class_info = OPSClassInfoContainer(
     default_info=ClassInfo('simulation_objects', cls=StorableObject,
-                           serializer=serialize_sim,
+                           serializer=SimulationObjectSerializer(),
                            deserializer=deserialize_sim),
     class_info_list=[
         ClassInfo(table='samples', cls=paths.Sample),
