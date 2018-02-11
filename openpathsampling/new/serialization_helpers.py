@@ -1,6 +1,7 @@
 import importlib
 import ujson
 import networkx as nx
+import numpy as np
 import networkx.algorithms.dag as nx_dag
 from tools import flatten_all, nested_update, group_by_function
 from tools import is_iterable, is_mappable, is_numpy_iterable
@@ -42,14 +43,50 @@ def is_uuid_string(obj):
 
 # NOTE: this needs find everything, including if the iterable/mapping has a
 # UUID, find that and things under it
-def get_all_uuids(initial_object):
-    uuid_dict = {get_uuid(initial_object): initial_object}
-    with_uuid = [o for o in flatten_all(initial_object.to_dict())
-                 if has_uuid(o)]
-    for obj in with_uuid:
-        uuid_dict.update({get_uuid(obj): obj})
-        uuid_dict.update(get_all_uuids(obj))
-    return uuid_dict
+def get_all_uuids(initial_object, excluded_iterables=None, known_uuids=None):
+    if excluded_iterables is None:
+        excluded_iterables = np.ndarray
+    if known_uuids is None:
+        known_uuids = {}
+    objects = {initial_object}
+    uuids = {}
+    while objects:
+        new_objects = set([])
+        for obj in objects:
+            obj_uuid = get_uuid(obj) if has_uuid(obj) else None
+            # filter known uuids: skip processing if known
+            if obj_uuid in uuids or obj_uuid in known_uuids:
+                continue
+            # UUID objects
+            if has_uuid(obj):
+                uuids.update({obj_uuid: obj})
+                # this part might be optimized
+                dct = obj.to_dict()
+                # get iterable/mappable UUID objects that would be flattened,
+                # then get objects in lists/dicts
+                new_objects.update({o for o in dct.values() if has_uuid(o)})
+                # this is really slow in test because the lazy snapshots
+                # have to be reloaded
+                new_objects.update({o for o in flatten_all(dct) if has_uuid(o)})
+
+            # mappables and iterables
+            if is_mappable(obj):
+                new_objects.update(set(obj.values()))
+            elif is_iterable(obj) and not is_numpy_iterable(obj):
+                new_objects.update(set(obj))
+        objects = new_objects
+    return uuids
+
+
+# older version
+# def get_all_uuids(initial_object):
+#    uuid_dict = {get_uuid(initial_object): initial_object}
+#    with_uuid = [o for o in flatten_all(initial_object.to_dict())
+#                 if has_uuid(o)]
+#    for obj in with_uuid:
+#        uuid_dict.update({get_uuid(obj): obj})
+#        uuid_dict.update(get_all_uuids(obj))
+#    return uuid_dict
 
 
 def find_dependent_uuids(json_dct):

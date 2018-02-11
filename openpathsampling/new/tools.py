@@ -76,11 +76,13 @@ def compare_sets(set1, set2):
     return (only_in_1, only_in_2)
 
 # flatten and variants
-def flatten(inputs, value_iter, classes):
+def flatten(inputs, value_iter, classes, excluded=None):
+    if excluded is None:
+        excluded = basestring
     results = []
     for val in value_iter(inputs):
-        if isinstance(val, classes) and not isinstance(val, basestring):
-            results += flatten(val, value_iter, classes)
+        if isinstance(val, classes) and not isinstance(val, excluded):
+            results += flatten(val, value_iter, classes, excluded)
         else:
             results.append(val)
     return results
@@ -95,7 +97,8 @@ def flatten_all(obj):
     is_mappable = lambda x: isinstance(x, collections.Mapping)
     return flatten(obj,
                    lambda x: x.values() if is_mappable(x) else x.__iter__(),
-                   (collections.Mapping, collections.Iterable))
+                   (collections.Mapping, collections.Iterable),
+                   (basestring, ndarray))
 
 def nested_update(original, update):
     for (k, v) in update.items():
