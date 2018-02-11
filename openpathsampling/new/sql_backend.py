@@ -75,7 +75,7 @@ class SQLStorageBackend(object):
         sql_dialect = tools.none_to_default(sql_dialect, 'sqlite')
         self.mode = mode
         self.debug = False
-        self.max_query_size = 500
+        self.max_query_size = 900
 
         # override later if mode == 'r' or 'a'
         self.schema = {}
@@ -365,6 +365,7 @@ class SQLStorageBackend(object):
         logger.debug("Looking for {} UUIDs".format(len(uuids)))
         results = []
         for uuid_block in tools.block(uuids, self.max_query_size):
+            logger.debug("New block of {} UUIDs".format(len(uuid_block)))
             uuid_sel = uuid_table.select().\
                     where(uuid_table.c.uuid.in_(uuid_block))
             # uuid_or_stmt = sql.or_(*(uuid_table.c.uuid == uuid
@@ -377,6 +378,8 @@ class SQLStorageBackend(object):
                 # figure out which UUID is missing, raise error on first found
                 pass
             results += res
+
+        logger.debug("Found {} UUIDs".format(len(results)))
 
         return results
 

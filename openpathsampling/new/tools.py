@@ -59,11 +59,12 @@ def dict_group_by(dct, key_extract):
     return results
 
 def block(sliceable, length):
+    sliceable = list(sliceable)
     max_len = len(sliceable)
     n_iterations = max_len // length + 1
     min_val = 0
-    max_val = length
-    while max_val < max_len:
+    max_val = min(length, max_len)
+    while min_val <= max_len:
         yield sliceable[slice(min_val, max_val)]
         min_val += length
         max_val += length
