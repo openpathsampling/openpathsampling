@@ -22,11 +22,11 @@ logger = logging.getLogger(__name__)
 
 ops_schema = {
     'samples': [('trajectory', 'lazy'), ('ensemble', 'uuid'),
-                ('replica', 'int'),
+                ('replica', 'int')],
                 # in my opinion, the next 3 should be removed
-                ('parent', 'lazy'), ('bias', 'float'),
-                ('mover', 'uuid')],
-    # movepath no longer exists in sample sets?
+                # ('parent', 'lazy'), ('bias', 'float'),
+                # ('mover', 'lazy')],
+    # # movepath no longer exists in sample sets?
     'sample_sets': [('samples', 'list_uuid')], #, ('movepath', 'lazy')],
     'trajectories': [('snapshots', 'list_uuid')],
     'move_changes': [('mover', 'uuid'), ('details', 'lazy'), ('cls', 'str'),

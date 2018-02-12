@@ -190,7 +190,7 @@ def from_json_obj(uuid, table_row, cache_list):
 
 def uuids_from_table_row(table_row, schema_entries):
     # take the schema entries here, not the whole schema
-    lazy = []
+    lazy = set([])
     uuid = []
     for (attr, attr_type) in schema_entries:
         if attr_type == 'uuid':
@@ -198,15 +198,16 @@ def uuids_from_table_row(table_row, schema_entries):
         elif attr_type == 'list_uuid':
             # TODO: can find_dependent_uuids work here?
             uuid_list = ujson.loads(getattr(table_row, attr))
+            uuid_list = [decode_uuid(u) for u in uuid_list]
             uuid.extend(uuid_list)
         elif attr_type == 'json_obj':
             json_dct = getattr(table_row, attr)
             uuid_list = find_dependent_uuids(json_dct)
             uuid.extend([str(u) for u in uuid_list])
         elif attr_type == 'lazy':
-            lazy.append(getattr(table_row, attr))
+            lazy.add(getattr(table_row, attr))
         # other cases aren't UUIDs and are ignored
-    dependencies = {table_row.uuid: uuid + lazy}
+    dependencies = {table_row.uuid: uuid + list(lazy)}
     return (uuid, lazy, dependencies)
 
 
@@ -223,7 +224,7 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
     known_uuids = set(existing_uuids.keys())
     uuid_to_table = {}
     all_table_rows = []
-    lazy = []
+    lazy = set([])
     dependencies = {}
     while uuid_list:
         new_uuids = {uuid for uuid in uuid_list if uuid not in known_uuids}
@@ -237,7 +238,7 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
             entries = schema[uuid_to_table[row.uuid]]
             loc_uuid, loc_lazy, deps = uuids_from_table_row(row, entries)
             uuid_list += loc_uuid
-            lazy += loc_lazy
+            lazy.update(loc_lazy)
             dependencies.update(deps)
 
         all_table_rows += new_table_rows

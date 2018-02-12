@@ -150,7 +150,7 @@ class GeneralStorage(object):
             # table, but the table doesn't exist (e.g., for dynamically
             # added tables)
             missing = by_table.pop('__missing__')
-            logger.info("Attempting to register for {} missing objects".\
+            logger.info("Registering tables for {} missing objects".\
                         format(len(missing)))
             self.register_missing_tables_for_objects(missing)
             missing_by_table = tools.dict_group_by(missing, get_table_name)
@@ -170,33 +170,58 @@ class GeneralStorage(object):
             self.backend.add_to_table(table, storables_list)
             logger.debug("Storing complete")
 
-    def load(self, input_uuids):
+    def load(self, input_uuids, force=False):
         # loading happens in 4 parts:
         # 1. Get UUIDs that need to be loaded
         # 2. Build the DAG to determine loading order
         # 3. Make all lazy objects
         # 4. Reserialize remaining in DAG order
-        results = {uuid: self.cache[uuid] for uuid in input_uuids
-                   if uuid in self.cache}
-        uuid_list = [uuid for uuid in input_uuids if uuid not in self.cache]
-        to_load, lazies, dependencies, uuid_to_table = \
+        # set force=True to make it reload this full object (used for
+        # loading a lazy-loaded object)
+        if isinstance(input_uuids, basestring):
+            # TEMP: remove; for now, prevents my stupidity
+            raise RuntimeError("David, you forgot to wrap UUID in list")
+
+        logger.debug("Starting to load {} objects".format(len(input_uuids)))
+        if force:
+            cache = {}
+            for uuid in input_uuids:
+                if uuid in self.cache:
+                    del self.cache[uuid]
+        else:
+            cache = self.cache
+
+        cache = self.cache
+
+        results = {uuid: cache[uuid] for uuid in input_uuids
+                   if uuid in cache}
+        uuid_list = [uuid for uuid in input_uuids if uuid not in cache]
+        logger.debug("Getting internal structure of {} non-cached objects"\
+                     .format(len(uuid_list)))
+        to_load, lazy_uuids, dependencies, uuid_to_table = \
                 get_all_uuids_loading(uuid_list=uuid_list,
                                       backend=self.backend,
                                       schema=self.schema,
-                                      existing_uuids=self.cache)
+                                      existing_uuids=cache)
+        logger.debug("Loading {} objects; creating {} lazy proxies"\
+                     .format(len(to_load), len(lazy_uuids)))
 
         # build the dag
         dag = dependency_dag(dependencies)
         # lazies can't have dependencies
-        lazies = tools.group_by_function(lazies,
-                                         lambda r: uuid_to_table[r.uuid])
+        logger.debug("Identifying classes for {} lazy proxies"\
+                     .format(len(lazy_uuids)))
+        lazy_uuid_rows = self.backend.load_uuids_table(lazy_uuids)
+        group_table = self.backend.uuid_row_to_table_name
+        lazies = tools.group_by_function(lazy_uuid_rows, group_table)
         new_uuids = self.serialization.make_all_lazies(lazies)
 
-
+        logger.debug("Reconstructing from {} objects".format(len(dag)))
         # deserialize in order
         uuid_to_table_row = {r.uuid: r for r in to_load}
         for uuid in dag_reload_order(dag):
-            if uuid not in self.cache:
+            if uuid not in self.cache and uuid not in new_uuids:
+                is_in = [k for (k, v) in dependencies.items() if v==uuid]
                 table = uuid_to_table[uuid]
                 table_row = uuid_to_table_row[uuid]
                 table_dict = {attr: getattr(table_row, attr)
@@ -239,7 +264,7 @@ class MixedCache(collections.MutableMapping):
     def __setitem__(self, key, value):
         self.cache[key] = value
 
-    def __delitem__(self, key, value):
+    def __delitem__(self, key):
         try:
             del self.cache[key]
         except KeyError as e:

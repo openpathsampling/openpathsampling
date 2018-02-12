@@ -10,7 +10,9 @@ logger = logging.getLogger(__name__)
 
 def load_list_uuid(json_str, cache_list):
     uuid_list = json.loads(json_str)
-    return [search_caches(uuid, cache_list) for uuid in uuid_list]
+    uuid_list = [serialization.decode_uuid(u) for u in uuid_list]
+    return [serialization.search_caches(uuid, cache_list)
+            for uuid in uuid_list]
 
 
 def make_lazy_class(cls_):
@@ -22,32 +24,45 @@ def make_lazy_class(cls_):
 
 class GenericLazyLoader(object):
     def __init__(self, uuid, class_, storage):
-        self.__uuid__ = uuid
+        serialization.set_uuid(self, uuid)
         self.storage = storage
         self.class_ = class_
         self._loaded_object = None
 
     def load(self):
         if self._loaded_object is None:
-            self._loaded_object = self.storage.load(self.__uuid__)
+            self._loaded_object = \
+                    self.storage.load([serialization.get_uuid(self)],
+                                      force=True)[0]
         if self._loaded_object is None:
             raise RuntimeError("UUID not found in storage: " +
-                               str(self.__uuid__))
+                               serialization.get_uuid(self))
         return self._loaded_object
 
     def __getattr__(self, attr):
+        # apparently IPython pretty-printing looks for a bunch of
+        # attributes; this means we auto-load if we try to autoprint the
+        # repr in IPython (TODO)
         return getattr(self.load(), attr)
 
-    def __iter__(self):
-        loaded = self.load()
-        if not hasattr(loaded, '__iter__'):
-            raise TypeError()  # TODO: message
-        # TODO: load all objects in the list?
-        return loaded.__iter__
+    def __getitem__(self, item):
+        return self.load()[item]
 
-    def repr(self):
-        return ("<LazyLoader for " + str(self.class_.__name__) + " UUID "
-                + str(self.__uuid__) + ">")
+    def __iter__(self):
+        return self.load().__iter__()
+
+    def __str__(self):
+        if self._loaded_object:
+            return str(self._loaded_object)
+        else:
+            return repr(self)
+
+    def __repr__(self):
+        if self._loaded_object:
+            return repr(self._loaded_object)
+        else:
+            return ("<LazyLoader for " + str(self.class_.__name__)
+                    + " UUID " + str(self.__uuid__) + ">")
 
 
 class Serialization(object):
@@ -88,6 +103,8 @@ class Serialization(object):
         # lazies is dict of {table_name: list_of_lazy_uuid_rows}
         all_lazies = {}
         for (table, lazy_uuid_rows) in lazies.items():
+            logger.debug("Making {} lazy proxies for objects in table '{}'"\
+                         .format(len(lazy_uuid_rows), table))
             cls = self.table_to_class[table]
             for row in lazy_uuid_rows:
                 all_lazies[row.uuid] = self.make_lazy(cls, row.uuid)
