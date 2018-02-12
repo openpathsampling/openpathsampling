@@ -326,22 +326,20 @@ class SQLStorageBackend(object):
 
         # this is if we don't use the UUID in the schema... but doing so
         # would be another option (redundant data, but better sanity checks)
-        # pop_uuids = [{k: v for (k, v) in obj.items() if k != 'uuid'}
-                     # for obj in objects]
-        # insert_statements = [table.insert().values(**obj)
-                             # for obj in objects]
-        insert_statements = []
-        for obj in objects:
-            # print obj  # extreme debugging, not even worth logging
-            insert_statements.append(table.insert().values(**obj))
 
         with self.engine.connect() as conn:
-            # can't use executemany here because we need the resulting
-            # primary key values
-            uuid_to_rows = {
-                obj['uuid']: conn.execute(ins).inserted_primary_key[0]
-                for (obj, ins) in zip(objects, insert_statements)
-            }
+            conn.execute(table.insert(), objects)
+
+        res = []
+        uuids = [obj['uuid'] for obj in objects]
+        for uuid_block in tools.block(uuids, self.max_query_size):
+            sel_uuids_idx = sql.select([table.c.uuid, table.c.idx]).\
+                    where(table.c.uuid.in_(uuid_block))
+            with self.engine.connect() as conn:
+                res += list(conn.execute(sel_uuids_idx))
+
+        uuid_to_rows = {r[0]: r[1] for r in res}
+
 
         uuid_table = self.metadata.tables['uuid']
         uuid_insert_dicts = [{'uuid': k, 'table': table_num, 'row':v}
