@@ -3,8 +3,10 @@ import ujson
 import networkx as nx
 import numpy as np
 import networkx.algorithms.dag as nx_dag
+import collections
 from tools import flatten_all, nested_update, group_by_function
 from tools import is_iterable, is_mappable, is_numpy_iterable
+import tools
 
 # UUID recognition and encoding #####################################
 # Things in here might be modified for performance optimization. In
@@ -50,30 +52,39 @@ def get_all_uuids(initial_object, excluded_iterables=None, known_uuids=None):
         known_uuids = {}
     objects = {initial_object}
     uuids = {}
+    uuid_or_none = lambda o: get_uuid(o) if has_uuid(o) else None
+    flatten_uuids = lambda obj: tools.flatten_unique(
+        inputs=obj,
+        value_iter=lambda x: x.values() if is_mappable(x) else x.__iter__(),
+        classes=(collections.Mapping, collections.Iterable),
+        excluded=(basestring, np.ndarray),
+        unique_hash=uuid_or_none
+    )
     while objects:
-        new_objects = set([])
+        new_objects = []
         for obj in objects:
-            obj_uuid = get_uuid(obj) if has_uuid(obj) else None
+            obj_uuid = uuid_or_none(obj)
             # filter known uuids: skip processing if known
             if obj_uuid in uuids or obj_uuid in known_uuids:
                 continue
             # UUID objects
-            if has_uuid(obj):
+            if obj_uuid:
                 uuids.update({obj_uuid: obj})
                 # this part might be optimized
                 dct = obj.to_dict()
                 # get iterable/mappable UUID objects that would be flattened,
                 # then get objects in lists/dicts
-                new_objects.update({o for o in dct.values() if has_uuid(o)})
+                new_objects.extend(dct.values())
+                # new_objects.extend([o for o in dct.values() if has_uuid(o)])
                 # this is really slow in test because the lazy snapshots
                 # have to be reloaded
-                new_objects.update({o for o in flatten_all(dct) if has_uuid(o)})
+                # new_objects.update({o for o in flatten_uuids(dct)})
 
             # mappables and iterables
             if is_mappable(obj):
-                new_objects.update(set(obj.values()))
+                new_objects.extend(list(obj.values()))
             elif is_iterable(obj) and not is_numpy_iterable(obj):
-                new_objects.update(set(obj))
+                new_objects.extend(list(obj))
         objects = new_objects
     return uuids
 

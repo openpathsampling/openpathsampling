@@ -191,14 +191,20 @@ class GenericVolumeInterfaceSet(InterfaceSet):
             self.volume_func = lambda minv: volume_func(minv, self.maxvals)
 
     def to_dict(self):
-        return {'cv': self.cv,
-                'cv_max': self.cv_max,
-                'minvals': self.minvals,
-                'maxvals': self.maxvals,
-                'intersect_with': self.intersect_with,
-                'lambdas': self.lambdas,
-                'direction': self.direction,
-                'volumes': self.volumes}
+        dct = {'cv': self.cv,
+               'minvals': self.minvals,
+               'maxvals': self.maxvals,
+               'intersect_with': self.intersect_with,
+               'lambdas': self.lambdas,
+               'direction': self.direction,
+               'volumes': self.volumes}
+        try:
+            dct.update({'cv_max': self.cv_max})
+        except AttributeError:  # pragma: no cover
+            # reverse compatibility; deprecated in 0.9.5, remove in 2.0
+            pass
+
+        return dct
 
     def _load_from_dict(self, dct):
         self.cv = dct['cv']

@@ -78,8 +78,7 @@ def compare_sets(set1, set2):
 
 # flatten and variants
 def flatten(inputs, value_iter, classes, excluded=None):
-    if excluded is None:
-        excluded = basestring
+    excluded = none_to_default(excluded, basestring)
     results = []
     for val in value_iter(inputs):
         if isinstance(val, classes) and not isinstance(val, excluded):
@@ -87,6 +86,7 @@ def flatten(inputs, value_iter, classes, excluded=None):
         else:
             results.append(val)
     return results
+
 
 def flatten_dict(dct):
     return flatten(dct, lambda x: x.values(), dict)
