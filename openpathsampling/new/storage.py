@@ -51,6 +51,8 @@ class GeneralStorage(object):
         self.mode = self.backend.mode
         # TODO: implement fallbacks
         self.fallbacks = tools.none_to_default(fallbacks, [])
+
+        self._storage_tables = {}  # stores .steps, .snapshots
         self.simulation_objects = self._cache_simulation_objects()
         self.cache = MixedCache(self.simulation_objects)
         self.serialization = Serialization(self)
@@ -102,7 +104,9 @@ class GeneralStorage(object):
         self.backend.register_schema(schema, table_to_class,
                                      backend_metadata)
         self.schema.update(schema)
-            # here's where we add the class_info to the backend
+        for table in self.schema:
+            self._storage_tables[table] = StorageTable(self, table)
+        # here's where we add the class_info to the backend
         self.serialization.register_serialization(schema, self.class_info)
 
 
@@ -240,10 +244,13 @@ class GeneralStorage(object):
         # create virtual stores for simulation objects (e.g., .volume, etc)
         pass
 
-    # def __getattr__(self, attr):
+    def __getattr__(self, attr):
         # override getattr to create iterators over the tables (stores)
-        # if attr in schema:
-            # return TableIterator(self, attr)
+        if attr in self._storage_tables:
+            return self._storage_tables[attr]
+        else:
+            raise AttributeError("'{}' object has no attribute '{}'"\
+                                 .format(self.__class__.__name__, attr))
 
 
 class MixedCache(collections.MutableMapping):
@@ -284,7 +291,7 @@ class StorageTable(collections.Sequence):
     def __init__(self, storage, table, cache=None):
         self.storage = storage
         self.table = table
-        self.cache = tools.none_to_default(cache, {})
+        self.cache = tools.none_to_default(cache, storage.cache)
 
     def __iter__(self):
         # TODO: ensure that this gives us things in idx order
