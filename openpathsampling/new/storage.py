@@ -279,6 +279,8 @@ class MixedCache(collections.MutableMapping):
 
 
 class StorageTable(collections.Sequence):
+    # NOTE: currently you still need to be able to hold the whole table in
+    # memory ... at least, with the SQL backend.
     def __init__(self, storage, table, cache=None):
         self.storage = storage
         self.table = table
@@ -288,15 +290,22 @@ class StorageTable(collections.Sequence):
         # TODO: ensure that this gives us things in idx order
         backend_iterator = self.storage.backend.table_iterator(self.table)
         for row in backend_iterator:
-            yield self.storage.load([row.uuid])
+            yield self.storage.load([row.uuid])[0]
 
     def __getitem__(self, item):
         backend_iterator = self.storage.backend.table_iterator(self.table)
-        return self.storage.load([backend_iterator[item].uuid])
+        if item < 0:
+            item += len(self)
+        n_iter = 0
+        row = backend_iterator.next()
+        while row and n_iter < item:
+            row = backend_iterator.next()
+            n_iter += 1
+        return self.storage.load([row.uuid])[0]
 
     def __len__(self):
         backend_iterator = self.storage.backend.table_iterator(self.table)
-        return len(backend_iterator)
+        return len(list(backend_iterator))
 
     def save(self, obj):
         # this is to match with the netcdfplus API
