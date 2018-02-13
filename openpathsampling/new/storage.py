@@ -184,12 +184,10 @@ class GeneralStorage(object):
 
         logger.debug("Starting to load {} objects".format(len(input_uuids)))
         if force:
-            cache = {}
+            # call this del_cache(self.cache, input_uuids)
             for uuid in input_uuids:
                 if uuid in self.cache:
                     del self.cache[uuid]
-        else:
-            cache = self.cache
 
         cache = self.cache
 
@@ -280,29 +278,30 @@ class MixedCache(collections.MutableMapping):
         return itertools.chain(self.fixed_cache, self.cache)
 
 
-# TODO: collections.Sequence?
-class StorageTable(object):
-    def __init__(self, storage, table):
+class StorageTable(collections.Sequence):
+    def __init__(self, storage, table, cache=None):
         self.storage = storage
         self.table = table
+        self.cache = tools.none_to_default(cache, {})
 
     def __iter__(self):
+        # TODO: ensure that this gives us things in idx order
         backend_iterator = self.storage.backend.table_iterator(self.table)
         for row in backend_iterator:
             yield self.storage.load([row.uuid])
 
-    def _get_single(self, value):
-        pass
+    def __getitem__(self, item):
+        backend_iterator = self.storage.backend.table_iterator(self.table)
+        return self.storage.load([backend_iterator[item].uuid])
 
-    def __getitem__(self):
-        # getitem builds the complete object
-        # is is possible that using local lists of UUIDs to get might make
-        # this just as fast? (stopping at trajectory level; no snapshots)
-        pass
+    def __len__(self):
+        backend_iterator = self.storage.backend.table_iterator(self.table)
+        return len(backend_iterator)
 
-    def store_order(self):
-        # return in order of the idx
-        pass
+    def save(self, obj):
+        # this is to match with the netcdfplus API
+        self.storage.save(obj)
 
     # TODO: subclass for MCSteps with additional method .ordered, returning
-    # things in the order of the mccycle number
+    # things in the order of the mccycle number -- also, manage special
+    # caching

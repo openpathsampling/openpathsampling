@@ -429,3 +429,10 @@ class SQLStorageBackend(object):
 
     def uuid_row_to_table_name(self, uuid_row):
         return self.number_to_table[uuid_row.table]
+
+    def table_iterator(self, table_name):
+        table = self.metadata.tables[table_name]
+        with self.engine.connect() as conn:
+            results = list(conn.execute(table.select()))
+        for row in results:
+            yield row
