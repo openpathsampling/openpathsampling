@@ -78,6 +78,7 @@ class TestChannelAnalysis(object):
         analyzer._results = self.toy_results
         analyzer.treat_multiples = 'newest'
         storage = paths.Storage(data_filename('test.nc'), 'w')
+        storage.save(self.incr_1[0])  # template snapshot
         storage.tag['analyzer'] = analyzer
         storage.sync()
         storage.close()
