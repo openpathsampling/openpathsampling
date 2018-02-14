@@ -26,8 +26,8 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 # Includes tests of trajectory conversion to and from MDTraj; should also
 # add tests for topology conversions as well
 
-class testMDTrajSupport(object):
-    def setUp(self):
+class TestMDTrajSupport(object):
+    def setup(self):
         self.md_trajectory = md.load(data_filename("ala_small_traj.pdb"))
         self.ops_trajectory = trajectory_from_mdtraj(self.md_trajectory)
         self.md_topology = self.ops_trajectory.topology.mdtraj

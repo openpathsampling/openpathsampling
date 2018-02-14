@@ -38,7 +38,7 @@ def find_mover(scheme, group, sig):
     return mover
 
 
-class testStrategyLevels(object):
+class TestStrategyLevels(object):
     def test_level_type(self):
         assert_equal(levels.level_type(10), levels.SIGNATURE)
         assert_equal(levels.level_type(1), levels.SIGNATURE)
@@ -69,7 +69,7 @@ class MoveStrategyTestSetup(object):
         )
 
 
-class testMoveStrategy(MoveStrategyTestSetup):
+class TestMoveStrategy(MoveStrategyTestSetup):
     def test_levels(self):
         strategy = MockMoveStrategy(ensembles=None, group="test", replace=True)
         assert_equal(strategy.level, -1)
@@ -118,7 +118,7 @@ class testMoveStrategy(MoveStrategyTestSetup):
         assert_equal(len(ensembles[0]), 1)
         assert_equal(ensembles[0][0], extra_ens)
 
-class testOneWayShootingStrategy(MoveStrategyTestSetup):
+class TestOneWayShootingStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = OneWayShootingStrategy()
         scheme = MoveScheme(self.network)
@@ -128,7 +128,7 @@ class testOneWayShootingStrategy(MoveStrategyTestSetup):
             assert_equal(type(mover), paths.OneWayShootingMover)
             assert_equal(type(mover.selector), paths.UniformSelector)
 
-class testTwoWayShootingStrategy(MoveStrategyTestSetup):
+class TestTwoWayShootingStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = TwoWayShootingStrategy(modifier=paths.NoModification())
         scheme = MoveScheme(self.network)
@@ -151,7 +151,7 @@ class testTwoWayShootingStrategy(MoveStrategyTestSetup):
             assert_equal(type(mover.modifier), paths.NoModification)
 
 
-class testNearestNeighborRepExStrategy(MoveStrategyTestSetup):
+class TestNearestNeighborRepExStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = NearestNeighborRepExStrategy()
         scheme = MoveScheme(self.network)
@@ -168,7 +168,7 @@ class testNearestNeighborRepExStrategy(MoveStrategyTestSetup):
         assert_equal(movers[3].ensemble_signature_set,
                      (set([ens1[1], ens1[2]]), set([ens1[1], ens1[2]])))
 
-class testAllSetRepExStrategy(MoveStrategyTestSetup):
+class TestAllSetRepExStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = AllSetRepExStrategy()
         scheme = MoveScheme(self.network)
@@ -191,7 +191,7 @@ class testAllSetRepExStrategy(MoveStrategyTestSetup):
             set_sig = (set(sig[0]), set(sig[1]))
             assert_in(set_sig, signatures)
 
-class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
+class TestSelectedPairsRepExStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         ens00 = self.network.sampling_transitions[0].ensembles[0]
         ens02 = self.network.sampling_transitions[0].ensembles[2]
@@ -228,7 +228,7 @@ class testSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         assert_equal(movers[2].ensemble_signature_set,
                      ({ens01, ens02}, {ens01, ens02}))
 
-class testReplicaExchangeStrategy(MoveStrategyTestSetup):
+class TestReplicaExchangeStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = ReplicaExchangeStrategy()
         scheme = MoveScheme(self.network)
@@ -266,7 +266,7 @@ class testReplicaExchangeStrategy(MoveStrategyTestSetup):
         strategy.make_movers(scheme)
 
 
-class testEnsembleHopStrategy(MoveStrategyTestSetup):
+class TestEnsembleHopStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = EnsembleHopStrategy()
         scheme = MoveScheme(self.network)
@@ -387,7 +387,7 @@ class testEnsembleHopStrategy(MoveStrategyTestSetup):
         assert_equal(len(scheme.movers['repex']), 18)
 
 
-class testPathReversalStrategy(MoveStrategyTestSetup):
+class TestPathReversalStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = PathReversalStrategy()
         scheme = MoveScheme(self.network)
@@ -397,7 +397,7 @@ class testPathReversalStrategy(MoveStrategyTestSetup):
             assert_equal(type(m), paths.PathReversalMover)
 
 
-class testMinusMoveStrategy(MoveStrategyTestSetup):
+class TestMinusMoveStrategy(MoveStrategyTestSetup):
     def test_get_ensembles(self):
         strategy = MinusMoveStrategy()
         scheme = MoveScheme(self.network)
@@ -472,7 +472,7 @@ class testMinusMoveStrategy(MoveStrategyTestSetup):
             )
 
 
-class testSingleReplicaMinusMoveStrategy(MoveStrategyTestSetup):
+class TestSingleReplicaMinusMoveStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = SingleReplicaMinusMoveStrategy()
         scheme = MoveScheme(self.network)
@@ -489,7 +489,7 @@ class testSingleReplicaMinusMoveStrategy(MoveStrategyTestSetup):
         all_ens_sigs = [m.ensemble_signature_set for m in movers]
 
 
-class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
+class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def scheme_setup_shooting_repex(self):
         scheme = MoveScheme(self.network)
         ens0 = self.network.sampling_transitions[0].ensembles[0]
@@ -1044,10 +1044,10 @@ class testOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         assert_almost_equal(group_weights['repex'], 3.0)
 
 
-class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
+class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
     StrategyClass = OrganizeByEnsembleStrategy
     def setup(self):
-        super(testOrganizeByEnsembleStrategy, self).setup()
+        super(TestOrganizeByEnsembleStrategy, self).setup()
         scheme = MoveScheme(self.network)
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
@@ -1313,7 +1313,7 @@ class testOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         for m in choice_prob_1a:
             assert(abs(choice_prob_1a[m] - choice_prob_2a[m]) > 0.001)
 
-class testPoorSingleReplicaStrategy(testOrganizeByEnsembleStrategy):
+class TestPoorSingleReplicaStrategy(TestOrganizeByEnsembleStrategy):
     StrategyClass = PoorSingleReplicaStrategy
 
     def test_chooser_mover_weights(self):

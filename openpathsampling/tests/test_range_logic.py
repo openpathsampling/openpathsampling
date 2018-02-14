@@ -4,7 +4,7 @@ from nose.tools import assert_equal, assert_not_equal, raises
 from nose.plugins.skip import Skip, SkipTest
 from openpathsampling.range_logic import *
 
-class testRangeLogic(object):
+class TestRangeLogic(object):
     def test_range_and(self):
         assert_equal(range_and(1, 3, 2, 4), [(2, 3)])
         assert_equal(range_and(2, 4, 1, 3), [(2, 3)])
@@ -35,7 +35,7 @@ class testRangeLogic(object):
         assert_equal(range_sub(0.1, 0.4, 0.1, 0.3), [(0.3, 0.4)])
 
 
-class testPeriodicRangeLogic(object):
+class TestPeriodicRangeLogic(object):
 
     def test_periodic_order(self):
         # orders without wrapping

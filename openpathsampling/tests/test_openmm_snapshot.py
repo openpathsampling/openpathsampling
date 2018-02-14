@@ -18,7 +18,7 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testOpenMMSnapshot(object):
+class TestOpenMMSnapshot(object):
     def setup(self):
         self.test_system = omt.testsystems.AlanineDipeptideVacuum()
         self.template = omm_engine.snapshot_from_testsystem(self.test_system)

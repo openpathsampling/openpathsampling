@@ -19,7 +19,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testTrajectorySegmentContainer(object):
+class TestTrajectorySegmentContainer(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
@@ -91,7 +91,7 @@ class testTrajectorySegmentContainer(object):
         assert_equal(container_B_id, id(container_B))
 
 
-class testTrajectoryTransitionAnalysis(object):
+class TestTrajectoryTransitionAnalysis(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
