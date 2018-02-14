@@ -223,10 +223,11 @@ class GeneralStorage(object):
         no_deps = {r.uuid for r in to_load}
         no_deps.difference_update(set(dag.nodes))
 
-        logger.debug("Reconstructing from {} objects".format(len(dag)))
         # deserialize in order
         uuid_to_table_row = {r.uuid: r for r in to_load}
         ordered_uuids = list(no_deps) + dag_reload_order(dag)
+        logger.debug("Reconstructing from {} objects"\
+                     .format(len(ordered_uuids)))
         for uuid in ordered_uuids:
             if uuid not in self.cache and uuid not in new_uuids:
                 is_in = [k for (k, v) in dependencies.items() if v==uuid]

@@ -1,4 +1,5 @@
 import importlib
+import re
 import ujson
 import networkx as nx
 import numpy as np
@@ -34,6 +35,9 @@ def decode_uuid(uuid_str):
     return uuid_str[5:-1]
 
 
+encoded_uuid_re = re.compile("UUID\((?P<uuid>[0-9]+)\)")
+
+
 def is_uuid_string(obj):
     return (
         isinstance(obj, (str, unicode))
@@ -46,20 +50,10 @@ def is_uuid_string(obj):
 # NOTE: this needs find everything, including if the iterable/mapping has a
 # UUID, find that and things under it
 def get_all_uuids(initial_object, excluded_iterables=None, known_uuids=None):
-    if excluded_iterables is None:
-        excluded_iterables = np.ndarray
-    if known_uuids is None:
-        known_uuids = {}
+    known_uuids = tools.none_to_default(known_uuids, {})
     objects = {initial_object}
     uuids = {}
     uuid_or_none = lambda o: get_uuid(o) if has_uuid(o) else None
-    flatten_uuids = lambda obj: tools.flatten_unique(
-        inputs=obj,
-        value_iter=lambda x: x.values() if is_mappable(x) else x.__iter__(),
-        classes=(collections.Mapping, collections.Iterable),
-        excluded=(basestring, np.ndarray),
-        unique_hash=uuid_or_none
-    )
     while objects:
         new_objects = []
         for obj in objects:
@@ -70,34 +64,16 @@ def get_all_uuids(initial_object, excluded_iterables=None, known_uuids=None):
             # UUID objects
             if obj_uuid:
                 uuids.update({obj_uuid: obj})
-                # this part might be optimized
-                dct = obj.to_dict()
-                # get iterable/mappable UUID objects that would be flattened,
-                # then get objects in lists/dicts
-                new_objects.extend(dct.values())
-                # new_objects.extend([o for o in dct.values() if has_uuid(o)])
-                # this is really slow in test because the lazy snapshots
-                # have to be reloaded
-                # new_objects.update({o for o in flatten_uuids(dct)})
+                new_objects.extend(list(obj.to_dict().values()))
 
             # mappables and iterables
             if is_mappable(obj):
+                new_objects.extend([o for o in obj.keys() if has_uuid(o)])
                 new_objects.extend(list(obj.values()))
             elif is_iterable(obj) and not is_numpy_iterable(obj):
                 new_objects.extend(list(obj))
         objects = new_objects
     return uuids
-
-
-# older version
-# def get_all_uuids(initial_object):
-#    uuid_dict = {get_uuid(initial_object): initial_object}
-#    with_uuid = [o for o in flatten_all(initial_object.to_dict())
-#                 if has_uuid(o)]
-#    for obj in with_uuid:
-#        uuid_dict.update({get_uuid(obj): obj})
-#        uuid_dict.update(get_all_uuids(obj))
-#    return uuid_dict
 
 
 def find_dependent_uuids(json_dct):
@@ -120,11 +96,16 @@ def get_all_uuid_strings(dct):
 def replace_uuid(obj, uuid_encoding):
     # this is UUID => string
     replacement = obj
+    # fast exit for string keys
+    if tools.is_string(obj):
+        return replacement
     if has_uuid(obj):
         replacement = uuid_encoding(get_uuid(obj))
     elif is_mappable(obj):
-        replacement = {k: replace_uuid(v, uuid_encoding)
-                       for (k, v) in replacement.items()}
+        replacement = {
+            replace_uuid(k, uuid_encoding): replace_uuid(v, uuid_encoding)
+            for (k, v) in replacement.items()
+        }
     elif is_iterable(obj) and not is_numpy_iterable(obj):
         replace_type = type(obj)
         replacement = replace_type([replace_uuid(o, uuid_encoding)
@@ -179,8 +160,12 @@ def from_dict_with_uuids(obj, cache_list):
         # (indicates problem in DAG reconstruction)
         uuid = decode_uuid(obj)
         replacement = search_caches(uuid, cache_list)
+    elif tools.is_string(obj):
+        # fast exit for string keys
+        return obj
     elif is_mappable(obj):
-        replacement = {k: from_dict_with_uuids(v, cache_list)
+        replacement = {from_dict_with_uuids(k, cache_list): \
+                       from_dict_with_uuids(v, cache_list)
                        for (k, v) in obj.items()}
     elif is_iterable(obj) and not is_numpy_iterable(obj):
         replace_type = type(obj)
@@ -213,8 +198,7 @@ def uuids_from_table_row(table_row, schema_entries):
             uuid.extend(uuid_list)
         elif attr_type == 'json_obj':
             json_dct = getattr(table_row, attr)
-            uuid_list = find_dependent_uuids(json_dct)
-            uuid.extend([str(u) for u in uuid_list])
+            uuid.extend(encoded_uuid_re.findall(json_dct))
         elif attr_type == 'lazy':
             lazy.add(getattr(table_row, attr))
         # other cases aren't UUIDs and are ignored

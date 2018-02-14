@@ -1,7 +1,8 @@
 import re
 import numpy as np
-ndarray_re = \
-        re.compile("ndarray\.(?P<dtype>[a-z0-9]+)(?P<shape>\([0-9\,\ ]+\))")
+ndarray_re = re.compile(
+    "ndarray\.(?P<dtype>[a-z0-9]+)(?P<shape>\([0-9\,\ ]+\))"
+)
 
 def parse_ndarray_type(type_name):
     m_ndarray = ndarray_re.match(type_name)
