@@ -41,12 +41,15 @@ ops_schema = {
 ops_schema_sql_metadata = {}
 
 class OPSClassInfoContainer(storage.ClassInfoContainer):
+    special_superclasses = (paths.BaseSnapshot, paths.MoveChange)
     def is_special(self, item):
-        return isinstance(item, paths.BaseSnapshot)
+        return isinstance(item, self.special_superclasses)
 
     def special_lookup_key(self, item):
         if isinstance(item, paths.BaseSnapshot):
             return (get_uuid(item.engine), item.__class__)
+        elif isinstance(item, paths.MoveChange):
+            return paths.MoveChange
 
 ops_class_info = OPSClassInfoContainer(
     default_info=ClassInfo('simulation_objects', cls=StorableObject,
@@ -64,6 +67,16 @@ ops_class_info = OPSClassInfoContainer(
 
 for info in ops_class_info.class_info_list:
     info.set_defaults(ops_schema)
+
+
+ops_simulation_classes = {
+    'volumes': paths.Volume,
+    'ensembles': paths.Ensemble,
+    'pathsimulators': paths.PathSimulator,
+    'pathmovers': paths.PathMover,
+    'networks': paths.TransitionNetwork,
+    'cvs': paths.CollectiveVariable
+}
 
 
 class OPSStorage(storage.GeneralStorage):

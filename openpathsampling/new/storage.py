@@ -130,8 +130,8 @@ class GeneralStorage(object):
         if exists:
             return
         # find all UUIDs we need to save with this object
-        # TODO: (perf) is this faster if we stop traversal on cached UUID?
         logger.debug("Listing all objects to save")
+        # TODO: use self.cache as the known_uuids
         uuids = get_all_uuids(obj)
         logger.debug("Checking if objects already exist in database")
         # remove any UUIDs that have already been saved
@@ -244,6 +244,9 @@ class GeneralStorage(object):
         return [results[uuid] for uuid in input_uuids]
 
     def _cache_simulation_objects(self):
+        # backend_iterator = self.backend.table_iterator('simulation_objects')
+        # sim_obj_uuids = [row.uuid for row in backend_iterator]
+        # objs = self.load(sim_obj_uuids)
         # load up all the simulation objects
         return {}
 

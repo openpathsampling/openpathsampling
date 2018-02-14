@@ -851,8 +851,8 @@ class Sample(StorableObject):
         # mystr  = "Replica: "+str(self.replica)+"\n"
         # mystr += "Trajectory: "+str(self.trajectory)+"\n"
         # mystr += "Ensemble: "+repr(self.ensemble)+"\n"
-        mystr = 'Sample(RepID: %d, Ens: %s, %d steps)' % (
-            self.replica, repr(self.ensemble), len(self.trajectory))
+        mystr = 'Sample(RepID: %d, Ens: %s, %s)' % (
+            self.replica, repr(self.ensemble), repr(self.trajectory))
         return mystr
 
     @property

@@ -51,6 +51,9 @@ class GenericLazyLoader(object):
     def __iter__(self):
         return self.load().__iter__()
 
+    def __len__(self):
+        return len(self.load())
+
     def __str__(self):
         if self._loaded_object:
             return str(self._loaded_object)
