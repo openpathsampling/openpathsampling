@@ -53,8 +53,8 @@ class GeneralStorage(object):
         self.fallbacks = tools.none_to_default(fallbacks, [])
 
         self._storage_tables = {}  # stores .steps, .snapshots
-        self.simulation_objects = self._cache_simulation_objects()
-        self.cache = MixedCache(self.simulation_objects)
+        self._simulation_objects = self._cache_simulation_objects()
+        self.cache = MixedCache(self._simulation_objects)
         self.serialization = Serialization(self)
         if self.schema is None:
             self.schema = backend.schema
@@ -218,10 +218,16 @@ class GeneralStorage(object):
         lazies = tools.group_by_function(lazy_uuid_rows, group_table)
         new_uuids = self.serialization.make_all_lazies(lazies)
 
+        # objects with no dependents don't show up in dag; deserialize those
+        # first
+        no_deps = {r.uuid for r in to_load}
+        no_deps.difference_update(set(dag.nodes))
+
         logger.debug("Reconstructing from {} objects".format(len(dag)))
         # deserialize in order
         uuid_to_table_row = {r.uuid: r for r in to_load}
-        for uuid in dag_reload_order(dag):
+        ordered_uuids = list(no_deps) + dag_reload_order(dag)
+        for uuid in ordered_uuids:
             if uuid not in self.cache and uuid not in new_uuids:
                 is_in = [k for (k, v) in dependencies.items() if v==uuid]
                 table = uuid_to_table[uuid]
