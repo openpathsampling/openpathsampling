@@ -44,13 +44,20 @@ universal_schema = {
 }
 
 class GeneralStorage(object):
-    def __init__(self, backend, class_info, schema=None, fallbacks=None):
+    def __init__(self, backend, class_info, schema=None,
+                 simulation_classes=None, fallbacks=None):
         self.backend = backend
         self.schema = schema
         self.class_info = class_info
         self.mode = self.backend.mode
         # TODO: implement fallbacks
         self.fallbacks = tools.none_to_default(fallbacks, [])
+
+        self.simulation_classes = tools.none_to_default(simulation_classes,
+                                                        {})
+
+        self._pseudo_tables = {table_name: dict()
+                               for table_name in self.simulation_classes}
 
         self._storage_tables = {}  # stores .steps, .snapshots
         self._simulation_objects = self._cache_simulation_objects()
@@ -172,6 +179,9 @@ class GeneralStorage(object):
             logger.debug("Storing {} objects to table {}".\
                         format(len(storables_list), table))
             self.backend.add_to_table(table, storables_list)
+            # special handling for simulation objects
+            if table == 'simulation_objects':
+                self._update_pseudo_tables(by_table[table])
             logger.debug("Storing complete")
 
     def load(self, input_uuids, force=False):
@@ -250,14 +260,21 @@ class GeneralStorage(object):
         # load up all the simulation objects
         return {}
 
-    def _create_virtual_stores(self, store_categories):
-        # create virtual stores for simulation objects (e.g., .volume, etc)
-        pass
+    def _update_pseudo_tables(self, simulation_objects):
+	for uuid, obj in simulation_objects.items():
+	    for (key, cls) in self.simulation_classes.items():
+		if isinstance(obj, cls):
+		    self._pseudo_tables[key][uuid] = obj
+		    if obj.is_named:
+			self._pseudo_tables[key][obj.name] = obj
+		    continue
 
     def __getattr__(self, attr):
         # override getattr to create iterators over the tables (stores)
         if attr in self._storage_tables:
             return self._storage_tables[attr]
+        elif attr in self._pseudo_tables:
+            return self._pseudo_tables[attr]
         else:
             raise AttributeError("'{}' object has no attribute '{}'"\
                                  .format(self.__class__.__name__, attr))

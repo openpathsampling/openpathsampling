@@ -8,6 +8,7 @@ import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
 from serialization_helpers import get_uuid
+import tools
 
 from serialization import (
     ToDictSerializer, DefaultSerializer, DefaultDeserializer,
@@ -69,6 +70,7 @@ for info in ops_class_info.class_info_list:
     info.set_defaults(ops_schema)
 
 
+# TODO: add more to these
 ops_simulation_classes = {
     'volumes': paths.Volume,
     'ensembles': paths.Ensemble,
@@ -88,15 +90,19 @@ class OPSStorage(storage.GeneralStorage):
 
     @classmethod
     def from_backend(cls, backend, schema=None, class_info=None,
-                     fallbacks=None):
+                     simulation_classes=None, fallbacks=None):
         obj = cls.__new__(cls)
-        if schema is None:
-            scheme = ops_schema
-        if class_info is None:
-            class_info = ops_class_info
-        super(OPSStorage, obj).__init__(backend=backend, schema=schema,
-                                        class_info=class_info,
-                                        fallbacks=fallbacks)
+        schema = tools.none_to_default(schema, ops_schema)
+        class_info = tools.none_to_default(class_info, ops_class_info)
+        simulation_classes = tools.none_to_default(simulation_classes,
+                                                   ops_simulation_classes)
+        super(OPSStorage, obj).__init__(
+            backend=backend,
+            schema=schema,
+            class_info=class_info,
+            simulation_classes=simulation_classes,
+            fallbacks=fallbacks
+        )
         obj.n_snapshot_types = 0
         return obj
 
