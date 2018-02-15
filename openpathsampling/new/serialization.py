@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 
 def load_list_uuid(json_str, cache_list):
     uuid_list = json.loads(json_str)
+    if uuid_list is None:
+        return uuid_list
     uuid_list = [serialization.decode_uuid(u) for u in uuid_list]
     return [serialization.search_caches(uuid, cache_list)
             for uuid in uuid_list]

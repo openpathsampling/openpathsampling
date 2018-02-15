@@ -63,6 +63,8 @@ def get_all_uuids(initial_object, excluded_iterables=None, known_uuids=None):
                 continue
             # UUID objects
             if obj_uuid:
+                # print repr(obj)
+                # print obj.to_dict().keys()
                 uuids.update({obj_uuid: obj})
                 new_objects.extend(list(obj.to_dict().values()))
 
@@ -194,8 +196,10 @@ def uuids_from_table_row(table_row, schema_entries):
         elif attr_type == 'list_uuid':
             # TODO: can find_dependent_uuids work here?
             uuid_list = ujson.loads(getattr(table_row, attr))
-            uuid_list = [decode_uuid(u) for u in uuid_list]
-            uuid.extend(uuid_list)
+            if uuid_list:
+                # skip if None (or empty)
+                uuid_list = [decode_uuid(u) for u in uuid_list]
+                uuid.extend(uuid_list)
         elif attr_type == 'json_obj':
             json_dct = getattr(table_row, attr)
             uuid.extend(encoded_uuid_re.findall(json_dct))

@@ -2583,6 +2583,11 @@ class Details(StorableObject):
         return mystr
 
 
+# these subclasses make no actual difference; just alias them
+# MoveDetails = Details
+# SampleDetails = Details
+# SampleDetails deprecated in OPS 0.9.3; will be removed in 2.0
+
 class MoveDetails(Details):
     """Details of the move as applied to a given replica
 

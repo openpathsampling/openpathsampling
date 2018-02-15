@@ -41,8 +41,36 @@ ops_schema = {
 
 ops_schema_sql_metadata = {}
 
+class MoveChangeDeserializer(DefaultDeserializer):
+    # in general, I think it would be better to reorg MoveChange to only be
+    # one class, but this is aimed at fixing problems with reloading
+    # MoveChange objects
+    def __init__(self, schema, table):
+        super(MoveChangeDeserializer, self).__init__(
+            schema=schema,
+            table=table,
+            cls=None
+        )
+
+    def __call__(self, uuid, table_dct, cache_list):
+        class_name = table_dct.pop('cls')
+        cls = serialization.import_class('openpathsampling.movechange',
+                                         class_name)
+        dct = self.make_dct(table_dct, cache_list)
+        # from here based on JHP's MoveChangeStore._load
+        obj = cls.__new__(cls)
+        paths.MoveChange.__init__(obj, mover=dct['mover'])
+        obj.samples = dct['samples']
+        obj.details = dct['details']
+        obj.subchanges = dct['subchanges']
+        obj.input_samples = dct['input_samples']
+        serialization.set_uuid(obj, uuid)
+        return obj
+
+
 class OPSClassInfoContainer(storage.ClassInfoContainer):
-    special_superclasses = (paths.BaseSnapshot, paths.MoveChange)
+    special_superclasses = (paths.BaseSnapshot, paths.MoveChange,
+                            paths.Details)
     def is_special(self, item):
         return isinstance(item, self.special_superclasses)
 
@@ -51,6 +79,11 @@ class OPSClassInfoContainer(storage.ClassInfoContainer):
             return (get_uuid(item.engine), item.__class__)
         elif isinstance(item, paths.MoveChange):
             return paths.MoveChange
+        elif isinstance(item, paths.Details):
+            # TODO: this should be removed, since all Details classes are
+            # equivalent -- unfortunately, JHP's LoaderProxy breaks in that
+            # case
+            return paths.Details
 
 ops_class_info = OPSClassInfoContainer(
     default_info=ClassInfo('simulation_objects', cls=StorableObject,
@@ -60,9 +93,15 @@ ops_class_info = OPSClassInfoContainer(
         ClassInfo(table='samples', cls=paths.Sample),
         ClassInfo(table='sample_sets', cls=paths.SampleSet),
         ClassInfo(table='trajectories', cls=paths.Trajectory),
-        ClassInfo(table='move_changes', cls=paths.MoveChange),
+        ClassInfo(table='move_changes', cls=paths.MoveChange,
+                  deserializer=MoveChangeDeserializer(
+                      schema=ops_schema,
+                      table='move_changes'
+                  )),
         ClassInfo(table='steps', cls=paths.MCStep),
-        ClassInfo(table='details', cls=paths.Details),
+        ClassInfo(table='details', cls=paths.Details,
+                  serializer=SimulationObjectSerializer(),
+                  deserializer=deserialize_sim),
     ]
 )
 
