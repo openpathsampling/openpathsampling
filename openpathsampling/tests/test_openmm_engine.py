@@ -32,7 +32,7 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-def setUp():
+def setup_module():
     global topology, template, system, nan_causing_template
     template = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
     topology = peng.to_openmm_topology(template)
@@ -65,8 +65,8 @@ def setUp():
     nan_causing_template.kinetics = kinetics
 
 
-class testOpenMMEngine(object):
-    def setUp(self):
+class TestOpenMMEngine(object):
+    def setup(self):
 
         # OpenMM Integrator
         integrator = mm.LangevinIntegrator(

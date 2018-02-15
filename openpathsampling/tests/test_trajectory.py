@@ -17,7 +17,7 @@ logging.getLogger('opentis.trajectory').setLevel(logging.DEBUG)
 logging.getLogger('opentis.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 
-class testSummarizeTrajectoryVolumes(object):
+class TestSummarizeTrajectoryVolumes(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
@@ -36,22 +36,22 @@ class testSummarizeTrajectoryVolumes(object):
         return make_1d_traj(coordinates=pretraj, velocities=[1.0]*len(pretraj))
 
     def test_summarize_trajectory_volumes(self):
-        voldict = {"A" : self.stateA, "B" : self.stateB, 
+        voldict = {"A" : self.stateA, "B" : self.stateB,
                    "I" : self.interstitial, "X" : self.outInterface}
         assert_items_equal(
-            self._make_traj("abix").summarize_by_volumes(voldict), 
+            self._make_traj("abix").summarize_by_volumes(voldict),
             [("A", 1), ("B", 1), ("I", 1), ("X", 1)]
         )
         assert_items_equal(
-            self._make_traj("aiiibbxxbx").summarize_by_volumes(voldict), 
+            self._make_traj("aiiibbxxbx").summarize_by_volumes(voldict),
             [("A", 1), ("I", 3), ("B", 2), ("X", 2), ("B", 1), ("X", 1)]
         )
 
     def test_summarize_trajectory_volumes_str(self):
-        voldict = {"A" : self.stateA, "B" : self.stateB, 
+        voldict = {"A" : self.stateA, "B" : self.stateB,
                    "I" : self.interstitial, "X" : self.outInterface}
         assert_items_equal(
-            self._make_traj("abix").summarize_by_volumes_str(voldict), 
+            self._make_traj("abix").summarize_by_volumes_str(voldict),
             "A-B-I-X"
         )
         assert_items_equal(
@@ -60,30 +60,30 @@ class testSummarizeTrajectoryVolumes(object):
         )
 
     def test_summarize_trajectory_volumes_with_nonevol(self):
-        voldict = {"A" : self.stateA, "B" : self.stateB, 
+        voldict = {"A" : self.stateA, "B" : self.stateB,
                    "I" : self.interstitial}
         assert_items_equal(
-            self._make_traj("abix").summarize_by_volumes(voldict), 
+            self._make_traj("abix").summarize_by_volumes(voldict),
             [("A", 1), ("B", 1), ("I", 1), (None, 1)]
         )
         assert_items_equal(
-            self._make_traj("aiiibbxxbx").summarize_by_volumes(voldict), 
+            self._make_traj("aiiibbxxbx").summarize_by_volumes(voldict),
             [("A", 1), ("I", 3), ("B", 2), (None, 2), ("B", 1), (None, 1)]
         )
 
     def test_summarize_trajectory_volumes_with_nonevol(self):
-        voldict = {"A" : self.stateA, "B" : self.stateB, 
+        voldict = {"A" : self.stateA, "B" : self.stateB,
                    "I" : self.interstitial}
         assert_items_equal(
-            self._make_traj("abix").summarize_by_volumes_str(voldict), 
+            self._make_traj("abix").summarize_by_volumes_str(voldict),
             "A-B-I-None"
         )
         assert_items_equal(
-            self._make_traj("aiiibbxxbx").summarize_by_volumes_str(voldict), 
+            self._make_traj("aiiibbxxbx").summarize_by_volumes_str(voldict),
             "A-I-B-None-B-None"
         )
 
-class testSubtrajectoryIndices(object):
+class TestSubtrajectoryIndices(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)

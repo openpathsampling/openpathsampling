@@ -24,7 +24,7 @@ for logger in quiet_loggers:
     logging.getLogger("openpathsampling."+logger).setLevel(logging.CRITICAL)
 
 
-class testBiasEnsembleTable(object):
+class TestBiasEnsembleTable(object):
     def setup(self):
         # create the network
         paths.InterfaceSet._reset()
@@ -233,7 +233,7 @@ class testBiasEnsembleTable(object):
         # just to make sure no errors raise when there are NaNs in table
         bias_ABC = bias_A + bias_B + bias_C
 
-class testSRTISBiasFromNetwork(object):
+class TestSRTISBiasFromNetwork(object):
     def setup(self):
         paths.InterfaceSet._reset()
         xval = paths.CoordinateFunctionCV(name="xA",
