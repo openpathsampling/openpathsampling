@@ -24,13 +24,13 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.engines').setLevel(logging.CRITICAL)
 
-class testAbstract(object):
+class TestAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_volume(self):
         mover = PathSimulator()
 
 
-class testFullBootstrapping(object):
+class TestFullBootstrapping(object):
     def setup(self):
         paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
@@ -163,7 +163,7 @@ class testFullBootstrapping(object):
         gs = bootstrap.run(max_ensemble_rounds=1)
 
 
-class testShootFromSnapshotsSimulation(object):
+class TestShootFromSnapshotsSimulation(object):
     # note that most of ShootFromSnapshotSimulation is tested in the tests
     # for CommittorSimulation. This is just an additional test to show that
     # using different ensembles from the ones used for the committor will
@@ -230,7 +230,7 @@ class testShootFromSnapshotsSimulation(object):
             assert_true(len(set(length_to_submover[k])) <= 1)
 
 
-class testCommittorSimulation(object):
+class TestCommittorSimulation(object):
     def setup(self):
         # As a test system, let's use 1D motion on a flat potential. If the
         # velocity is positive, you right the state on the right. If it is
@@ -420,7 +420,7 @@ class testCommittorSimulation(object):
         assert_true(counts['None-Right'] > 0)
         assert_equal(sum(counts.values()), 50)
 
-class testDirectSimulation(object):
+class TestDirectSimulation(object):
     def setup(self):
         pes = toys.HarmonicOscillator(A=[1.0], omega=[1.0], x0=[0.0])
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)

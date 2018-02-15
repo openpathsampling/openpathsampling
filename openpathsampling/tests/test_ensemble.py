@@ -87,10 +87,11 @@ def results_upper_lower(adict):
     return res_dict
 
 
-def setUp():
+def setup_module():
     ''' Setup for tests of classes in ensemble.py. '''
     #random.seed
-    global lower, upper, op, vol1, vol2, vol3, ttraj
+    global lower, upper, op, vol1, vol2, vol3, ttraj, length0
+    length0 = LengthEnsemble(0)
     lower = 0.1
     upper = 0.5
     op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
@@ -140,9 +141,6 @@ def in_out_parser(testname):
     return res
 
 class EnsembleTest(object):
-    def __init__(self):
-        self.length0 = LengthEnsemble(0)
-
     def _single_test(self, ensemble_fcn, traj, res, failmsg):
         try:
             assert_equal(ensemble_fcn(traj), res)
@@ -196,8 +194,8 @@ class EnsembleTest(object):
             self._single_test(self.slice_ens, wrapped, results[test], failmsg)
 
 
-class testPartOutXEnsemble(EnsembleTest):
-    def setUp(self):
+class TestPartOutXEnsemble(EnsembleTest):
+    def setup(self):
         self.leaveX = PartOutXEnsemble(vol1)
 
     def test_leaveX(self):
@@ -243,8 +241,8 @@ class testPartOutXEnsemble(EnsembleTest):
         assert_equal(self.leaveX.__str__(), 
                      "exists t such that x[t] in (not "+volstr+")")
 
-class testAllInXEnsemble(EnsembleTest):
-    def setUp(self):
+class TestAllInXEnsemble(EnsembleTest):
+    def setup(self):
         self.inX = AllInXEnsemble(vol1)
 
     def test_inX(self):
@@ -307,8 +305,8 @@ class testAllInXEnsemble(EnsembleTest):
         assert_equal(self.inX.__str__(),
                      "x[t] in "+volstr+" for all t")
 
-class testAllOutXEnsemble(EnsembleTest):
-    def setUp(self):
+class TestAllOutXEnsemble(EnsembleTest):
+    def setup(self):
         self.outX = AllOutXEnsemble(vol1)
 
     def test_outX(self):
@@ -370,8 +368,8 @@ class testAllOutXEnsemble(EnsembleTest):
         assert_equal(self.outX.__str__(),
                      "x[t] in (not "+volstr+") for all t")
 
-class testPartInXEnsemble(EnsembleTest):
-    def setUp(self):
+class TestPartInXEnsemble(EnsembleTest):
+    def setup(self):
         self.hitX = PartInXEnsemble(vol1)
 
     def test_hitX(self):
@@ -407,8 +405,8 @@ class testPartInXEnsemble(EnsembleTest):
         assert_equal(self.hitX.__str__(),
                      "exists t such that x[t] in "+volstr)
 
-class testExitsXEnsemble(EnsembleTest):
-    def setUp(self):
+class TestExitsXEnsemble(EnsembleTest):
+    def setup(self):
         self.ensemble = ExitsXEnsemble(vol1)
         # longest ttraj is 6 = 9-3 frames long
         self.slice_ens = ExitsXEnsemble(vol1, slice(3,9))
@@ -463,8 +461,8 @@ class testExitsXEnsemble(EnsembleTest):
         assert_equal(self.ensemble.__str__(),
             'exists x[t], x[t+1] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
 
-class testEntersXEnsemble(testExitsXEnsemble):
-    def setUp(self):
+class TestEntersXEnsemble(TestExitsXEnsemble):
+    def setup(self):
         self.ensemble = EntersXEnsemble(vol1)
         # longest ttraj is 6 = 9-3 frames long
         self.slice_ens = EntersXEnsemble(vol1, slice(3,9))
@@ -519,8 +517,8 @@ class testEntersXEnsemble(testExitsXEnsemble):
         assert_equal(self.ensemble.__str__(),
             'exists x[t], x[t+1] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
 
-class testSequentialEnsemble(EnsembleTest):
-    def setUp(self):
+class TestSequentialEnsemble(EnsembleTest):
+    def setup(self):
         self.inX = AllInXEnsemble(vol1)
         self.outX = AllOutXEnsemble(vol1)
         self.hitX = PartInXEnsemble(vol1)
@@ -989,11 +987,11 @@ class testSequentialEnsemble(EnsembleTest):
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.tis, ttraj[test], results[test], failmsg)
-    
+
     def test_sequential_generate_first_tis(self):
         """SequentialEnsemble to generate the first TIS path"""
         ensemble = SequentialEnsemble([
-            self.outX | self.length0,
+            self.outX | length0,
             self.inX,
             self.outX & self.leaveX0,
             self.inX & self.length1
@@ -1060,12 +1058,12 @@ and
 ]""")
 
 
-class testSequentialEnsembleCombination(EnsembleTest):
+class TestSequentialEnsembleCombination(EnsembleTest):
     # testing EnsembleCombinations of SequentialEnsembles -- this is mainly
     # useful to making sure that the ensemble combination of strict_can_*
     # works correctly, since this is where strict and normal have a
     # distinction
-    def setUp(self):
+    def setup(self):
         self.ens1 = SequentialEnsemble([
             AllInXEnsemble(vol1) & LengthEnsemble(1),
             AllOutXEnsemble(vol1) & PartOutXEnsemble(vol2),
@@ -1286,8 +1284,8 @@ class testSequentialEnsembleCombination(EnsembleTest):
         and_true = list(set(ens1_true) & set(ens2_true))
         self._test_everything(self.combo_and.strict_can_prepend, and_true, False)
 
-class testTISEnsemble(EnsembleTest):
-    def setUp(self):
+class TestTISEnsemble(EnsembleTest):
+    def setup(self):
         self.tis = TISEnsemble(vol1, vol3, vol2, op)
         self.traj = ttraj['upper_in_out_cross_out_in']
         self.minl = min(op(self.traj))
@@ -1364,8 +1362,8 @@ class EnsembleCacheTest(EnsembleTest):
     def _was_cache_reset(self, cache):
         return cache.contents == { }
 
-class testEnsembleCache(EnsembleCacheTest):
-    def setUp(self):
+class TestEnsembleCache(EnsembleCacheTest):
+    def setup(self):
         self.fwd = EnsembleCache(direction=+1)
         self.rev = EnsembleCache(direction=-1)
         self.traj = ttraj['lower_in_out_in_in_out_in']
@@ -1456,13 +1454,13 @@ class testEnsembleCache(EnsembleCacheTest):
         assert_equal(self._was_cache_reset(self.rev), True)
         self.rev.contents = { 'test' : 'object' }
         assert_equal(self._was_cache_reset(self.rev), False)
-        new_traj = self.traj[-4:-2] + self.traj[-1:] 
+        new_traj = self.traj[-4:-2] + self.traj[-1:]
         self.rev.check(new_traj)
         assert_equal(self._was_cache_reset(self.rev), True)
 
 
-class testSequentialEnsembleCache(EnsembleCacheTest):
-    def setUp(self):
+class TestSequentialEnsembleCache(EnsembleCacheTest):
+    def setup(self):
         self.inX = AllInXEnsemble(vol1)
         self.outX = AllOutXEnsemble(vol1)
         self.length1 = LengthEnsemble(1)
@@ -1471,7 +1469,7 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
             self.outX,
             self.inX,
             self.outX,
-            self.inX & self.length1 
+            self.inX & self.length1
         ])
         self.traj = ttraj['lower_in_out_in_in_out_in']
 
@@ -1569,7 +1567,7 @@ class testSequentialEnsembleCache(EnsembleCacheTest):
 
 
 
-class testSlicedTrajectoryEnsemble(EnsembleTest):
+class TestSlicedTrajectoryEnsemble(EnsembleTest):
     def test_sliced_ensemble_init(self):
         init_as_int = SlicedTrajectoryEnsemble(AllInXEnsemble(vol1), 3)
         init_as_slice = SlicedTrajectoryEnsemble(AllInXEnsemble(vol1),
@@ -1696,8 +1694,8 @@ class testSlicedTrajectoryEnsemble(EnsembleTest):
         assert_equal(SlicedTrajectoryEnsemble(inX, slice_no_ends).__str__(),
                      "("+inXstr+" in {1:-1})")
 
-class testOptionalEnsemble(EnsembleTest):
-    def setUp(self):
+class TestOptionalEnsemble(EnsembleTest):
+    def setup(self):
         self.start_opt = SequentialEnsemble([
             OptionalEnsemble(AllOutXEnsemble(vol1)),
             AllInXEnsemble(vol1),
@@ -1952,8 +1950,8 @@ class testOptionalEnsemble(EnsembleTest):
         opt_inX = OptionalEnsemble(inX)
         assert_equal(opt_inX.__str__(), "{"+inX.__str__()+"} (OPTIONAL)")
 
-class testPrefixTrajectoryEnsemble(EnsembleTest):
-    def setUp(self):
+class TestPrefixTrajectoryEnsemble(EnsembleTest):
+    def setup(self):
         self.inX = AllInXEnsemble(vol1)
 
     def test_bad_start_traj(self):
@@ -2024,8 +2022,8 @@ class testPrefixTrajectoryEnsemble(EnsembleTest):
         assert_equal(ens._cache_can_append.trusted, True)
 
 
-class testSuffixTrajectoryEnsemble(EnsembleTest):
-    def setUp(self):
+class TestSuffixTrajectoryEnsemble(EnsembleTest):
+    def setup(self):
         xval = paths.FunctionCV("x", lambda s : s.xyz[0][0])
         vol = paths.CVDefinedVolume(xval, 0.1, 0.5)
         self.inX = AllInXEnsemble(vol)
@@ -2104,8 +2102,8 @@ class testSuffixTrajectoryEnsemble(EnsembleTest):
         assert_equal(len(ens._cached_trajectory), 6)
         assert_equal(ens._cache_can_prepend.trusted, True)
 
-class testMinusInterfaceEnsemble(EnsembleTest):
-    def setUp(self):
+class TestMinusInterfaceEnsemble(EnsembleTest):
+    def setup(self):
         # Mostly we use minus ensembles where the state matches the first
         # interface. We also test the case where that isn't in, in which
         # case there's an interstitial zone. (Only test it for nl=2 to keep
@@ -2415,8 +2413,8 @@ class testMinusInterfaceEnsemble(EnsembleTest):
 
 
 # TODO: this whole class should become a single test in SeqEns
-class testSingleEnsembleSequentialEnsemble(EnsembleTest):
-    def setUp(self):
+class TestSingleEnsembleSequentialEnsemble(EnsembleTest):
+    def setup(self):
         #self.inner_ens = AllInXEnsemble(vol1 | vol2)
         self.inner_ens = LengthEnsemble(3) & AllInXEnsemble( vol1 | vol2 )
         self.ens = SequentialEnsemble([self.inner_ens])
@@ -2430,11 +2428,10 @@ class testSingleEnsembleSequentialEnsemble(EnsembleTest):
                               self.inner_ens.can_append(ttraj[test]), failmsg)
             self._single_test(self.ens.can_prepend, ttraj[test],
                               self.inner_ens.can_prepend(ttraj[test]), failmsg)
-            
 
 
-class testEnsembleSplit(EnsembleTest):
-    def setUp(self):
+class TestEnsembleSplit(EnsembleTest):
+    def setup(self):
         self.inA = AllInXEnsemble(vol1)
         self.outA = AllOutXEnsemble(vol1)
 
@@ -2531,7 +2528,7 @@ class testEnsembleSplit(EnsembleTest):
         sub_traj = ensembleAXA.find_last_subtrajectory(traj3)
         assert(traj3.subtrajectory_indices(sub_traj) == [2,3,4])
 
-class testVolumeCombinations(EnsembleTest):
+class TestVolumeCombinations(EnsembleTest):
     def setup(self):
         self.outA = paths.AllOutXEnsemble(vol1)
         self.outB = paths.AllOutXEnsemble(~vol2)
@@ -2783,7 +2780,7 @@ class testVolumeCombinations(EnsembleTest):
         )
 
 
-class testAbstract(object):
+class TestAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_ensemble(self):
         mover = paths.Ensemble()

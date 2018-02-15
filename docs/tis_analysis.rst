@@ -1,4 +1,4 @@
-.. _tis_analysis:
+.. _tis_analysis_api:
 
 .. currentmodule:: openpathsampling.analysis.tis
 

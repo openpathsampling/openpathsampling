@@ -27,7 +27,7 @@ class SelectorTest(object):
         ))
 
 
-class testFirstFrameSelector(SelectorTest):
+class TestFirstFrameSelector(SelectorTest):
     def test_pick(self):
         sel = FirstFrameSelector()
         sp = sel.pick(self.mytraj)
@@ -49,7 +49,7 @@ class testFirstFrameSelector(SelectorTest):
                            [s.coordinates[0][0] for s in samples[0].trajectory]
                           )
 
-class testFinalFrameSelector(SelectorTest):
+class TestFinalFrameSelector(SelectorTest):
     def test_pick(self):
         sel = FinalFrameSelector()
         sp = sel.pick(self.mytraj)

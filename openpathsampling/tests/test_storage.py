@@ -26,8 +26,8 @@ import numpy as np
 from nose.plugins.skip import SkipTest
 
 
-class testStorage(object):
-    def setUp(self):
+class TestStorage(object):
+    def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj = peng.trajectory_from_mdtraj(
             self.mdtraj, simple_topology=True)
