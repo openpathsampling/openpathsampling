@@ -3,11 +3,12 @@ import sql_backend
 
 from serialization_helpers import to_json_obj as serialize_sim
 from serialization_helpers import from_json_obj as deserialize_sim
+from serialization_helpers import import_class
+from serialization_helpers import get_uuid, set_uuid
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
-from serialization_helpers import get_uuid
 import tools
 
 from serialization import (
@@ -54,8 +55,7 @@ class MoveChangeDeserializer(DefaultDeserializer):
 
     def __call__(self, uuid, table_dct, cache_list):
         class_name = table_dct.pop('cls')
-        cls = serialization.import_class('openpathsampling.movechange',
-                                         class_name)
+        cls = import_class('openpathsampling.movechange', class_name)
         dct = self.make_dct(table_dct, cache_list)
         # from here based on JHP's MoveChangeStore._load
         obj = cls.__new__(cls)
@@ -64,7 +64,7 @@ class MoveChangeDeserializer(DefaultDeserializer):
         obj.details = dct['details']
         obj.subchanges = dct['subchanges']
         obj.input_samples = dct['input_samples']
-        serialization.set_uuid(obj, uuid)
+        set_uuid(obj, uuid)
         return obj
 
 
