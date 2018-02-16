@@ -25,7 +25,7 @@ sql_type = {
     'int': sql.Integer,
     'float': sql.Float,
     'function': sql.String,
-    'ndarray': sql.LargeBinary,  #TODO: numpy store/load
+    'ndarray': sql.LargeBinary,
     #TODO add more
 }
 
@@ -41,7 +41,6 @@ def make_columns(table_name, schema, sql_schema_metadata):
                                   primary_key=True))
         columns.append(sql.Column('uuid', sql.String))
     for col, type_name in schema[table_name]:
-        # TODO: more general creation of type name
         col_type = sql_type[backend_registration_type(type_name)]
         metadata = extract_backend_metadata(sql_schema_metadata,
                                             table_name, col)
@@ -238,7 +237,6 @@ class SQLStorageBackend(object):
                 raise TypeError("Schema registration problem. Your schema "
                                 "may already have tables of the same names.")
 
-            #TODO: add schema to schema table
             if table_name not in ['uuid', 'tables']:
                 self._add_table_to_tables_list(table_name,
                                                schema[table_name],

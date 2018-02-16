@@ -273,6 +273,13 @@ def dependency_dag(dependent_uuids, dag=None):
 def dag_reload_order(dag):
     return list(reversed(list(nx_dag.topological_sort(dag))))
 
+def get_reload_order(to_load, dependencies):
+    dag = dependency_dag(dependencies)
+    no_deps = {row.uuid for row in to_load}
+    no_deps.difference_update(set(dag.nodes))
+    ordered_uuids = list(no_deps) + dag_reload_order(dag)
+    return ordered_uuids
+
 
 # TODO: replace this with something in storage
 def deserialize(uuid_json_dict, lazies, storage):

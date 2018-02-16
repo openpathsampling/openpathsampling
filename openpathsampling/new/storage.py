@@ -7,6 +7,7 @@ from serialization_helpers import to_json_obj as serialize_sim
 from serialization_helpers import from_json_obj as deserialize_sim
 from serialization_helpers import get_all_uuids_loading
 from serialization_helpers import dependency_dag, dag_reload_order
+from serialization_helpers import get_reload_order
 # TODO: both of these are from
 from serialization_helpers import to_dict_with_uuids as serialize_data
 from serialization_helpers import deserialize as deserialize_data
@@ -194,9 +195,9 @@ class GeneralStorage(object):
     def load(self, input_uuids, force=False):
         # loading happens in 4 parts:
         # 1. Get UUIDs that need to be loaded
-        # 2. Build the DAG to determine loading order
-        # 3. Make all lazy objects
-        # 4. Reserialize remaining in DAG order
+        # 2. Make lazy-loading proxy objects
+        # 3. Identify the order in which we deserialize
+        # 4. Deserialize
         # set force=True to make it reload this full object (used for
         # loading a lazy-loaded object)
         if isinstance(input_uuids, basestring):
@@ -220,9 +221,7 @@ class GeneralStorage(object):
         logger.debug("Loading {} objects; creating {} lazy proxies"\
                      .format(len(to_load), len(lazy_uuids)))
 
-        # build the dag
-        dag = dependency_dag(dependencies)
-        # lazies can't have dependencies
+        # make lazies
         logger.debug("Identifying classes for {} lazy proxies"\
                      .format(len(lazy_uuids)))
         lazy_uuid_rows = self.backend.load_uuids_table(lazy_uuids)
@@ -230,19 +229,24 @@ class GeneralStorage(object):
         lazies = tools.group_by_function(lazy_uuid_rows, group_table)
         new_uuids = self.serialization.make_all_lazies(lazies)
 
-        # objects with no dependents don't show up in dag; deserialize those
-        # first
-        no_deps = {r.uuid for r in to_load}
-        no_deps.difference_update(set(dag.nodes))
-
-        # deserialize in order
+        # get order are deserialize
         uuid_to_table_row = {r.uuid: r for r in to_load}
-        ordered_uuids = list(no_deps) + dag_reload_order(dag)
+        ordered_uuids = get_reload_order(to_load, dependencies)
+        new_uuids = self.deserialize_uuids(ordered_uuids, uuid_to_table,
+                                           uuid_to_table_row, new_uuids)
+
+        self.cache.update(new_uuids)
+        results.update(new_uuids)
+        return [results[uuid] for uuid in input_uuids]
+
+    def deserialize_uuids(self, ordered_uuids, uuid_to_table,
+                          uuid_to_table_row, new_uuids=None):
         logger.debug("Reconstructing from {} objects"\
                      .format(len(ordered_uuids)))
+        new_uuids = tools.none_to_default(new_uuids, {})
         for uuid in ordered_uuids:
             if uuid not in self.cache and uuid not in new_uuids:
-                is_in = [k for (k, v) in dependencies.items() if v==uuid]
+                # is_in = [k for (k, v) in dependencies.items() if v==uuid]
                 table = uuid_to_table[uuid]
                 table_row = uuid_to_table_row[uuid]
                 table_dict = {attr: getattr(table_row, attr)
@@ -250,10 +254,8 @@ class GeneralStorage(object):
                 deserialize = self.class_info[table].deserializer
                 obj = deserialize(uuid, table_dict, [new_uuids, self.cache])
                 new_uuids[uuid] = obj
+        return new_uuids
 
-        self.cache.update(new_uuids)
-        results.update(new_uuids)
-        return [results[uuid] for uuid in input_uuids]
 
     def sync(self):
         pass
