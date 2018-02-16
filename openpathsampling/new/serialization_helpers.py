@@ -254,11 +254,6 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
     return (all_table_rows, lazy, dependencies, uuid_to_table)
 
 
-def reconstruction_dag(uuid_json_dict, dag=None):
-    dependent_uuids = {uuid: find_dependent_uuids(json_str)
-                       for (uuid, json_str) in uuid_json_dict.items()}
-    return dependency_dag(dependent_uuids, dag)
-
 def dependency_dag(dependent_uuids, dag=None):
     if dag is None:
         dag = nx.DiGraph()
@@ -279,32 +274,3 @@ def get_reload_order(to_load, dependencies):
     no_deps.difference_update(set(dag.nodes))
     ordered_uuids = list(no_deps) + dag_reload_order(dag)
     return ordered_uuids
-
-
-# TODO: replace this with something in storage
-def deserialize(uuid_json_dict, lazies, storage):
-    dag = reconstruction_dag(uuid_json_dict)
-    missing = check_dag(dag, uuid_json_dict)
-    while missing:
-        (more_json, loc_lazies) = storage.backend.load_table_data(missing)
-        uuid_json_dict.update(more_json)
-        lazies = nested_update(lazies, loc_lazies)
-        dag = reconstruction_dag(uuid_json_dict, dag)
-        missing = check_dag(dag, uuid_json_dict)
-
-    new_uuids = {}
-    known_uuids = storage.known_uuids
-    for lazy_table in lazies:
-        lazy_uuid_objects = {
-            lazy.uuid: storage.make_lazy(lazy_table, lazy.uuid)
-            for lazy in lazies[lazy_table]
-            if lazy.uuid not in known_uuids
-        }
-        new_uuids.update(lazy_uuid_objects)
-        known_uuids.update(lazy_uuid_objects)
-
-    ordered_nodes = list(reversed(list(nx_dag.topological_sort(dag))))
-    for node in ordered_nodes:
-        # TODO: replace from_json with something that gets the deserializer
-        new_uuids[node] = from_json_obj(all_json[node], new_uuids, known_uuids)
-    return new_uuids
