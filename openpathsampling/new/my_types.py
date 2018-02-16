@@ -13,6 +13,14 @@ def parse_ndarray_type(type_name):
     return None
 
 
+def backend_registration_type(type_name):
+    backend_type = type_name
+    ndarray_info = parse_ndarray_type(type_name)
+    if parse_ndarray_type(type_name):
+        backend_type = 'ndarray'
+    return backend_type
+
+
 uuid_types = ['uuid', 'lazy']
 list_uuid = ['list_uuid']
 builtin_types = ['str', 'int', 'float']

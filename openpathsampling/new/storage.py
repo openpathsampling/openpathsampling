@@ -269,13 +269,13 @@ class GeneralStorage(object):
         return {}
 
     def _update_pseudo_tables(self, simulation_objects):
-	for uuid, obj in simulation_objects.items():
-	    for (key, cls) in self.simulation_classes.items():
-		if isinstance(obj, cls):
-		    self._pseudo_tables[key][uuid] = obj
-		    if obj.is_named:
-			self._pseudo_tables[key][obj.name] = obj
-		    continue
+        for uuid, obj in simulation_objects.items():
+            for (key, cls) in self.simulation_classes.items():
+                if isinstance(obj, cls):
+                    self._pseudo_tables[key][uuid] = obj
+                    if obj.is_named:
+                        self._pseudo_tables[key][obj.name] = obj
+                    continue
 
     def __getattr__(self, attr):
         # override getattr to create iterators over the tables (stores)
@@ -333,11 +333,14 @@ class StorageTable(collections.Sequence):
     def __init__(self, storage, table, cache=None):
         self.storage = storage
         self.table = table
-        self.cache = tools.none_to_default(cache, storage.cache)
+        self.clear_cache_frequency = 1
+        self.iter_block_size = 1
 
     def __iter__(self):
         # TODO: ensure that this gives us things in idx order
         backend_iterator = self.storage.backend.table_iterator(self.table)
+        # TODO: implement use of self.iter_block_size
+        # TODO: implement use of self.clear_cache_frequency
         for row in backend_iterator:
             yield self.storage.load([row.uuid])[0]
 

@@ -52,12 +52,12 @@ class TestSQLStorageBackend(object):
         if os.path.isfile("test.sql"):
             os.remove("test.sql")
 
-    def test_extract_metadata(self):
-        sql_meta = {
-            'uuid': {'uuid': {'primary_key': True}}
-        }
-        meta = self.database._extract_metadata(sql_meta, 'uuid', 'uuid')
-        assert meta == {'primary_key': True}
+    # def test_extract_metadata(self):
+        # sql_meta = {
+            # 'uuid': {'uuid': {'primary_key': True}}
+        # }
+        # meta = self.database._extract_metadata(sql_meta, 'uuid', 'uuid')
+        # assert meta == {'primary_key': True}
 
     @pytest.mark.parametrize('test_input,expected', [
         (("file.sql", "sqlite"), "sqlite:///file.sql"),
@@ -110,15 +110,6 @@ class TestSQLStorageBackend(object):
         name2num = {r.name: r.idx for r in res}
         assert tab2num == name2num
         assert num2tab == num2name
-
-    def test_table_list_is_consistent(self):
-        pytest.skip()
-
-    def test_table_inconsistencies(self):
-        pytest.skip()
-
-    def test_table_is_consistent(self):
-        pytest.skip()
 
     def test_load_uuids_table(self):
         sample_dict = self._add_sample_data()
@@ -180,9 +171,6 @@ class TestSQLStorageBackend(object):
         pytest.skip()
 
     def test_load_table_data_missing_ignored(self):
-        pytest.skip()
-
-    def test_load_table_data_lazy(self):
         pytest.skip()
 
     def test_persistence(self):

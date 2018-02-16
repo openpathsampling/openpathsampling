@@ -6,8 +6,10 @@ from tools import group_by, compare_sets
 import tools
 import ujson as json
 
-from my_types import parse_ndarray_type
+from backend import extract_backend_metadata
+from my_types import backend_registration_type
 from serialization_helpers import import_class
+
 
 import logging
 logger = logging.getLogger(__name__)
@@ -31,6 +33,21 @@ universal_sql_meta = {
     'uuid': {'uuid': {'primary_key': True}},
     'tables': {'name': {'primary_key': True}}
 }
+
+def make_columns(table_name, schema, sql_schema_metadata):
+    columns = []
+    if table_name not in ['uuid', 'tables']:
+        columns.append(sql.Column('idx', sql.Integer,
+                                  primary_key=True))
+        columns.append(sql.Column('uuid', sql.String))
+    for col, type_name in schema[table_name]:
+        # TODO: more general creation of type name
+        col_type = sql_type[backend_registration_type(type_name)]
+        metadata = extract_backend_metadata(sql_schema_metadata,
+                                            table_name, col)
+        columns.append(sql.Column(col, col_type, **metadata))
+    return columns
+
 
 # TODO: test this, and then see if I can refactor existing code to use it
 # NOTE: looks like the results have to be loaded into memory before this
@@ -149,23 +166,6 @@ class SQLStorageBackend(object):
         }[dialect]
         return uri_root.format(filename=filename)
 
-    @staticmethod
-    # TODO: this is not going to be specific to SQL; refactor
-    # TODO: move to backend.py
-    def _extract_metadata(sql_schema_metadata, table, column):
-        if sql_schema_metadata:
-            try:
-                table_metadata = sql_schema_metadata[table]
-            except KeyError:
-                return {}
-            try:
-                col_metadata = table_metadata[column]
-            except KeyError:
-                return {}
-            return col_metadata
-        else:
-            return {}
-
     def internal_tables_from_db(self):
         """Obtain mappings of table name to number from database.
         """
@@ -175,55 +175,6 @@ class SQLStorageBackend(object):
             table_to_number = {r.name: r.idx for r in res}
         number_to_table = {v: k for (k, v) in table_to_number.items()}
         return table_to_number, number_to_table
-
-    # TODO: move to backend.py
-    def table_list_is_consistent(self):
-        """Test whether the DB, schema, and internal table list agree.
-        """
-        db_tables = set(self.engine.table_names())
-        db_tables_tables = self.metadata.tables['tables']
-        schema_tables = set(self.schema.keys())
-        internal_tables_1 = set(self.table_to_number.keys())
-        internal_tables_2 = set(self.number_to_table.values())
-        consistent = (db_table == scheme_tables == internal_tables_1
-                      == interal_tables_2)
-        return consistent
-
-    # TODO: move to backend.py
-    def table_inconsistencies(self, table_name):
-        """Test whether a given table is consistent with its entries in the
-        UUID table.
-        """
-        tables = self.storage.metadata.tables
-        table_num = self.table_to_number[table_name]
-        uuid_db = tables['uuid']
-        uuid_sel = uuid_db.select().where(uuid_db.c.table == table_num)
-        with self.engine.connect() as conn:
-            table_data = list(conn.execute(tables[table_name].select()))
-            uuid_data = list(conn.execute(uuid_sel))
-        table_uuids = set([val.uuid for val in table_data])
-        uuid_uuids = set([val.uuid for val in uuid_data])
-        (table_only, uuid_only) = compare_sets(table_uuids, uuid_uuids)
-        return table_only, uuid_only
-
-    # TODO: move to backend.py
-    def table_is_consistent(self, table_name):
-        """
-        Are all UUIDs in this table also in the UUID table, and vice versa?
-
-        More specifically, this compares all UUIDs in this table with all
-        the objects pointing to this table in the UUID table.
-
-        Note that this is an expensive process, and should be guaranteed by
-        the insertion process. But this can act as a useful check on the
-        data. The :meth:`.table_inconsistencies` method gives the detailed
-        results of the comparison, for debugging purposes.
-        """
-        table_only, uuid_only = self.table_inconsistencies(table_name)
-        if table_only == set([]) and uuid_only == set([]):
-            return True
-        else:
-            return False
 
     def _add_table_to_tables_list(self, table_name, table_schema, cls_):
         if table_name in ['uuid', 'tables']:
@@ -266,14 +217,6 @@ class SQLStorageBackend(object):
         return results
 
 
-    # TODO: move elsewhere (backend.py?)
-    def parse_registration_type(self, type_name):
-        ops_type = type_name
-        ndarray_info = parse_ndarray_type(type_name)
-        if parse_ndarray_type(type_name):
-            ops_type = 'ndarray'
-        return ops_type
-
     ### FROM HERE IS THE GENERIC PUBLIC API
     def register_schema(self, schema, table_to_class,
                         sql_schema_metadata=None):
@@ -287,20 +230,9 @@ class SQLStorageBackend(object):
 
         """
         for table_name in schema:
-            columns = []
-            if table_name not in ['uuid', 'tables']:
-                columns.append(sql.Column('idx', sql.Integer,
-                                          primary_key=True))
-                columns.append(sql.Column('uuid', sql.String))
-            for col, type_name in schema[table_name]:
-                # TODO: more general creation of type name
-                col_type = sql_type[self.parse_registration_type(type_name)]
-                metadata = self._extract_metadata(sql_schema_metadata,
-                                                  table_name, col)
-                columns.append(sql.Column(col, col_type, **metadata))
-
+            logger.info("Add schema table " + str(table_name))
+            columns = make_columns(table_name, schema, sql_schema_metadata)
             try:
-                logger.info("Add schema table " + str(table_name))
                 table = sql.Table(table_name, self.metadata, *columns)
             except sql.exc.InvalidRequestError:
                 raise TypeError("Schema registration problem. Your schema "
