@@ -174,10 +174,17 @@ class GeneralStorage(object):
         logger.debug("Filling {} tables: {}"\
                      .format( len(by_table), str(list(by_table.keys()))))
         for table in by_table:
-            serialize = self.class_info[table].serializer
-            storables_list = [serialize(o) for o in by_table[table].values()]
             logger.debug("Storing {} objects to table {}".\
-                        format(len(storables_list), table))
+                        format(len(by_table[table]), table))
+            serialize = self.class_info[table].serializer
+
+            # DEBUG
+            # if table == 'move_changes':
+                # for o in by_table[table].values():
+                    # print o
+                    # serialize(o)
+
+            storables_list = [serialize(o) for o in by_table[table].values()]
             self.backend.add_to_table(table, storables_list)
             # special handling for simulation objects
             if table == 'simulation_objects':
@@ -198,23 +205,18 @@ class GeneralStorage(object):
 
         logger.debug("Starting to load {} objects".format(len(input_uuids)))
         if force:
-            # call this del_cache(self.cache, input_uuids)
-            for uuid in input_uuids:
-                if uuid in self.cache:
-                    del self.cache[uuid]
+            self.cache.delete_items(input_uuids)
 
-        cache = self.cache
-
-        results = {uuid: cache[uuid] for uuid in input_uuids
-                   if uuid in cache}
-        uuid_list = [uuid for uuid in input_uuids if uuid not in cache]
+        results = {uuid: self.cache[uuid] for uuid in input_uuids
+                   if uuid in self.cache}
+        uuid_list = [uuid for uuid in input_uuids if uuid not in self.cache]
         logger.debug("Getting internal structure of {} non-cached objects"\
                      .format(len(uuid_list)))
         to_load, lazy_uuids, dependencies, uuid_to_table = \
                 get_all_uuids_loading(uuid_list=uuid_list,
                                       backend=self.backend,
                                       schema=self.schema,
-                                      existing_uuids=cache)
+                                      existing_uuids=self.cache)
         logger.debug("Loading {} objects; creating {} lazy proxies"\
                      .format(len(to_load), len(lazy_uuids)))
 
@@ -253,6 +255,12 @@ class GeneralStorage(object):
         results.update(new_uuids)
         return [results[uuid] for uuid in input_uuids]
 
+    def sync(self):
+        pass
+
+    def sync_all(self):
+        pass
+
     def _cache_simulation_objects(self):
         # backend_iterator = self.backend.table_iterator('simulation_objects')
         # sim_obj_uuids = [row.uuid for row in backend_iterator]
@@ -286,6 +294,13 @@ class MixedCache(collections.MutableMapping):
     def __init__(self, fixed_cache=None):
         self.fixed_cache = tools.none_to_default(fixed_cache, default={})
         self.cache = {}
+
+    def delete_items(list_of_items, error_if_missing=False):
+        for item in list_of_items:
+            if item in self:
+                del self[item]
+            elif error_if_missing:
+                raise KeyError()  # TODO: message and check error type
 
     def __getitem__(self, key):
         if key in self.fixed_cache:

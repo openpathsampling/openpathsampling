@@ -21,7 +21,13 @@ def has_uuid(obj):
 
 def get_uuid(obj):
     # TODO: I can come up with a better string encoding than this
-    return str(obj.__uuid__)
+    try:
+        return str(obj.__uuid__)
+    except AttributeError as e:
+        if obj is None:
+            return obj
+        else:
+            raise e
 
 def set_uuid(obj, uuid):
     obj.__uuid__ = long(uuid)
@@ -206,7 +212,8 @@ def uuids_from_table_row(table_row, schema_entries):
         elif attr_type == 'lazy':
             lazy.add(getattr(table_row, attr))
         # other cases aren't UUIDs and are ignored
-    dependencies = {table_row.uuid: uuid + list(lazy)}
+    # remove all existiences of None as a UUID to depend on
+    dependencies = {table_row.uuid: (set(uuid) | lazy) - {None}}
     return (uuid, lazy, dependencies)
 
 

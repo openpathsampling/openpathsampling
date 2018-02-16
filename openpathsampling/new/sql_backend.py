@@ -151,6 +151,7 @@ class SQLStorageBackend(object):
 
     @staticmethod
     # TODO: this is not going to be specific to SQL; refactor
+    # TODO: move to backend.py
     def _extract_metadata(sql_schema_metadata, table, column):
         if sql_schema_metadata:
             try:
@@ -175,6 +176,7 @@ class SQLStorageBackend(object):
         number_to_table = {v: k for (k, v) in table_to_number.items()}
         return table_to_number, number_to_table
 
+    # TODO: move to backend.py
     def table_list_is_consistent(self):
         """Test whether the DB, schema, and internal table list agree.
         """
@@ -187,6 +189,7 @@ class SQLStorageBackend(object):
                       == interal_tables_2)
         return consistent
 
+    # TODO: move to backend.py
     def table_inconsistencies(self, table_name):
         """Test whether a given table is consistent with its entries in the
         UUID table.
@@ -203,6 +206,7 @@ class SQLStorageBackend(object):
         (table_only, uuid_only) = compare_sets(table_uuids, uuid_uuids)
         return table_only, uuid_only
 
+    # TODO: move to backend.py
     def table_is_consistent(self, table_name):
         """
         Are all UUIDs in this table also in the UUID table, and vice versa?
@@ -262,6 +266,7 @@ class SQLStorageBackend(object):
         return results
 
 
+    # TODO: move elsewhere (backend.py?)
     def parse_registration_type(self, type_name):
         ops_type = type_name
         ndarray_info = parse_ndarray_type(type_name)
