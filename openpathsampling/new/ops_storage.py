@@ -16,7 +16,7 @@ from serialization import (
     SimulationObjectSerializer
 )
 
-from storage import ClassInfo
+from class_info import ClassInfo, ClassInfoContainer
 
 import snapshots
 import logging
@@ -68,7 +68,7 @@ class MoveChangeDeserializer(DefaultDeserializer):
         return obj
 
 
-class OPSClassInfoContainer(storage.ClassInfoContainer):
+class OPSClassInfoContainer(ClassInfoContainer):
     special_superclasses = (paths.BaseSnapshot, paths.MoveChange,
                             paths.Details)
     def is_special(self, item):

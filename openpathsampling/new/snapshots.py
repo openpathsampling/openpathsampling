@@ -1,4 +1,4 @@
-from storage import ClassInfo
+from class_info import ClassInfo
 
 from serialization_helpers import get_uuid
 

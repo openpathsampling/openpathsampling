@@ -1,24 +1,3 @@
-import os
-import collections
-import itertools
-import openpathsampling as paths
-from serialization_helpers import get_uuid, get_all_uuids
-from serialization_helpers import to_json_obj as serialize_sim
-from serialization_helpers import from_json_obj as deserialize_sim
-from serialization_helpers import get_all_uuids_loading
-from serialization_helpers import dependency_dag, dag_reload_order
-from serialization_helpers import get_reload_order
-# TODO: both of these are from
-from serialization_helpers import to_dict_with_uuids as serialize_data
-from serialization_helpers import deserialize as deserialize_data
-from class_info import ClassInfo, ClassInfoContainer
-import tools
-from openpathsampling.netcdfplus import StorableObject
-from serialization import Serialization, DefaultDeserializer
-
-import logging
-logger = logging.getLogger(__name__)
-
 """
 A simple storage interface for simulation objects and data objects.
 
@@ -36,6 +15,18 @@ Column names:
 * ``uuid``
 * ``idx``
 """
+
+import logging
+import collections
+import itertools
+
+import tools
+from serialization_helpers import get_uuid, get_all_uuids
+from serialization_helpers import get_all_uuids_loading
+from serialization_helpers import get_reload_order
+from serialization import Serialization
+
+logger = logging.getLogger(__name__)
 
 # these two tables are required in *all* schema
 universal_schema = {
@@ -80,14 +71,14 @@ class GeneralStorage(object):
         missing_info_tables = [tbl for tbl in self.schema
                                if tbl not in self.class_info.tables]
         n_missing = len(missing_info_tables)
-        logger.info("Missing info from {} dynamically-registered tables"\
-                    .format(n_missing))
+        logger.info("Missing info from %d dynamically-registered tables",
+                    n_missing)
         classes = [table_to_class[tbl] for tbl in missing_info_tables]
         self.register_from_tables(missing_info_tables, classes)
         missing_info_tables = [tbl for tbl in self.schema
                                if tbl not in self.class_info.tables]
-        logger.info("Successfully registered {} missing tables"\
-                    .format(n_missing - len(missing_info_tables)))
+        logger.info("Successfully registered %d missing tables",
+                    n_missing - len(missing_info_tables))
 
         if missing_info_tables:
             raise RuntimeError("Unable to register existing database "
@@ -149,8 +140,7 @@ class GeneralStorage(object):
             del uuids[existing.uuid]
         # group by table, then save appropriately
         # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
-        get_table_name = lambda uuid, obj_: \
-                self.class_info[obj_].table
+        get_table_name = lambda uuid, obj_: self.class_info[obj_].table
 
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
@@ -162,21 +152,21 @@ class GeneralStorage(object):
             # table, but the table doesn't exist (e.g., for dynamically
             # added tables)
             missing = by_table.pop('__missing__')
-            logger.info("Registering tables for {} missing objects".\
-                        format(len(missing)))
+            logger.info("Registering tables for %d missing objects",
+                        len(missing))
             self.register_missing_tables_for_objects(missing)
             missing_by_table = tools.dict_group_by(missing, get_table_name)
-            logger.info("Registered {} new tables: {}".\
-                        format(len(missing_by_table),
-                               str(list(missing_by_table.keys()))))
+            logger.info("Registered %d new tables: %s",
+                        len(missing_by_table),
+                        str(list(missing_by_table.keys())))
             by_table.update(missing_by_table)
 
         # this is the actual serialization
-        logger.debug("Filling {} tables: {}"\
-                     .format( len(by_table), str(list(by_table.keys()))))
+        logger.debug("Filling %d tables: %s", len(by_table),
+                     str(list(by_table.keys())))
         for table in by_table:
-            logger.debug("Storing {} objects to table {}".\
-                        format(len(by_table[table]), table))
+            logger.debug("Storing %d objects to table %s",
+                         len(by_table[table]), table)
             serialize = self.class_info[table].serializer
 
             # DEBUG
@@ -204,29 +194,29 @@ class GeneralStorage(object):
             # TEMP: remove; for now, prevents my stupidity
             raise RuntimeError("David, you forgot to wrap UUID in list")
 
-        logger.debug("Starting to load {} objects".format(len(input_uuids)))
+        logger.debug("Starting to load %d objects", len(input_uuids))
         if force:
             self.cache.delete_items(input_uuids)
 
         results = {uuid: self.cache[uuid] for uuid in input_uuids
                    if uuid in self.cache}
         uuid_list = [uuid for uuid in input_uuids if uuid not in self.cache]
-        logger.debug("Getting internal structure of {} non-cached objects"\
-                     .format(len(uuid_list)))
+        logger.debug("Getting internal structure of %d non-cached objects",
+                     len(uuid_list))
         to_load, lazy_uuids, dependencies, uuid_to_table = \
                 get_all_uuids_loading(uuid_list=uuid_list,
                                       backend=self.backend,
                                       schema=self.schema,
                                       existing_uuids=self.cache)
-        logger.debug("Loading {} objects; creating {} lazy proxies"\
-                     .format(len(to_load), len(lazy_uuids)))
+        logger.debug("Loading %d objects; creating %d lazy proxies",
+                     len(to_load), len(lazy_uuids))
 
         # make lazies
-        logger.debug("Identifying classes for {} lazy proxies"\
-                     .format(len(lazy_uuids)))
+        logger.debug("Identifying classes for %d lazy proxies",
+                     len(lazy_uuids))
         lazy_uuid_rows = self.backend.load_uuids_table(lazy_uuids)
-        group_table = self.backend.uuid_row_to_table_name
-        lazies = tools.group_by_function(lazy_uuid_rows, group_table)
+        lazies = tools.group_by_function(lazy_uuid_rows,
+                                         self.backend.uuid_row_to_table_name)
         new_uuids = self.serialization.make_all_lazies(lazies)
 
         # get order are deserialize
@@ -241,8 +231,7 @@ class GeneralStorage(object):
 
     def deserialize_uuids(self, ordered_uuids, uuid_to_table,
                           uuid_to_table_row, new_uuids=None):
-        logger.debug("Reconstructing from {} objects"\
-                     .format(len(ordered_uuids)))
+        logger.debug("Reconstructing from %d objects", len(ordered_uuids))
         new_uuids = tools.none_to_default(new_uuids, {})
         for uuid in ordered_uuids:
             if uuid not in self.cache and uuid not in new_uuids:
@@ -297,7 +286,7 @@ class MixedCache(collections.MutableMapping):
         self.fixed_cache = tools.none_to_default(fixed_cache, default={})
         self.cache = {}
 
-    def delete_items(list_of_items, error_if_missing=False):
+    def delete_items(self, list_of_items, error_if_missing=False):
         for item in list_of_items:
             if item in self:
                 del self[item]
@@ -306,9 +295,10 @@ class MixedCache(collections.MutableMapping):
 
     def __getitem__(self, key):
         if key in self.fixed_cache:
-            return self.fixed_cache[key]
+            value = self.fixed_cache[key]
         else:
-            return self.cache[key]
+            value = self.cache[key]
+        return value
 
     def __setitem__(self, key, value):
         self.cache[key] = value
@@ -316,11 +306,11 @@ class MixedCache(collections.MutableMapping):
     def __delitem__(self, key):
         try:
             del self.cache[key]
-        except KeyError as e:
+        except KeyError as err:
             if key in self.fixed_cache:
                 raise TypeError("Can't delete from fixed cache")
             else:
-                raise e
+                raise err
 
     def __len__(self):
         return len(self.fixed_cache) + len(self.cache)
