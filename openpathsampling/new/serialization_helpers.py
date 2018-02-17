@@ -55,7 +55,7 @@ def is_uuid_string(obj):
 
 # NOTE: this needs find everything, including if the iterable/mapping has a
 # UUID, find that and things under it
-def get_all_uuids(initial_object, excluded_iterables=None, known_uuids=None):
+def get_all_uuids(initial_object, known_uuids=None):
     known_uuids = tools.none_to_default(known_uuids, {})
     objects = {initial_object}
     uuids = {}
@@ -84,13 +84,14 @@ def get_all_uuids(initial_object, excluded_iterables=None, known_uuids=None):
     return uuids
 
 
+# TODO: I think this can be removed (only used by get_all_uuid_string)
 def find_dependent_uuids(json_dct):
     dct = ujson.loads(json_dct)
     uuids = [decode_uuid(obj) for obj in flatten_all(dct)
              if is_uuid_string(obj)]
     return uuids
 
-
+# TODO: I think this can be removed (not used?)
 def get_all_uuid_strings(dct):
     all_uuids = []
     for uuid in dct:
@@ -129,10 +130,6 @@ def to_dict_with_uuids(obj):
 def to_bare_json(obj):
     replaced = replace_uuid(obj, uuid_encoding=encode_uuid)
     return ujson.dumps(replaced)
-
-
-def from_bare_json(json_str, existing_uuids):
-    pass  # TODO
 
 
 def to_json_obj(obj):

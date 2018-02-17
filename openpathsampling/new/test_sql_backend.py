@@ -62,13 +62,6 @@ class TestSQLStorageBackend(object):
         if os.path.isfile("test.sql"):
             os.remove("test.sql")
 
-    # def test_extract_metadata(self):
-        # sql_meta = {
-            # 'uuid': {'uuid': {'primary_key': True}}
-        # }
-        # meta = self.database._extract_metadata(sql_meta, 'uuid', 'uuid')
-        # assert meta == {'primary_key': True}
-
     @pytest.mark.parametrize('test_input,expected', [
         (("file.sql", "sqlite"), "sqlite:///file.sql"),
         ((":memory:", "sqlite"), "sqlite:///:memory:")
