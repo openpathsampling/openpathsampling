@@ -1,6 +1,7 @@
 from sql_backend import *
 import pytest
 
+
 class TestSQLStorageBackend(object):
     def setup(self):
         self._delete_tmp_files()
@@ -38,6 +39,15 @@ class TestSQLStorageBackend(object):
         sample_dict = self._sample_data_dict()
         self.database.add_to_table('samples', sample_dict)
         return sample_dict
+
+    def _add_snapshot_data(self):
+        snapshot_schema = {'snapshot0': self.schema['snapshot0']}
+        self.database.register_schema(snapshot_schema, self.table_to_class)
+        snap_dicts = [{'filename': 'file.trr', 'index': 100,
+                       'uuid': 'snapuuid'}]
+        self.database.add_to_table('snapshot0', snap_dicts)
+        return snap_dicts
+
 
     def teardown(self):
         self._delete_tmp_files()
@@ -181,3 +191,44 @@ class TestSQLStorageBackend(object):
         db_schema = self.database.database_schema()
         assert db_schema == self.schema
 
+    def test_get_representative(self):
+        samps = self._add_sample_data()
+        snaps = self._add_snapshot_data()
+        samp_rep = self.database.get_representative('samples')
+        samp_dct = [s for s in samps if s['uuid'] == samp_rep.uuid][0]
+        assert samp_rep.replica == samp_dct['replica']
+        assert samp_rep.trajectory == samp_dct['trajectory']
+        assert samp_rep.ensemble == samp_dct['ensemble']
+        snap_rep = self.database.get_representative('snapshot0')
+        assert snap_rep.filename == 'file.trr'
+        assert snap_rep.index == 100
+
+    def test_table_to_class(self):
+        pytest.skip()
+
+    @pytest.mark.parametrize('table', ['samples', 'snapshot0'])
+    def test_uuid_row_to_table_name(self, table):
+        samps = self._add_sample_data()
+        snaps = self._add_snapshot_data()
+        input_dict = {'samples': samps, 'snapshot0': snaps}[table]
+        uuid_rows = sum([self.database.load_uuids_table([s['uuid']]) 
+                         for s in input_dict], [])
+        for row in uuid_rows:
+            assert self.database.uuid_row_to_table_name(row) == table
+
+    @pytest.mark.parametrize('table', ['samples', 'snapshot0'])
+    def test_table_iterator(self, table):
+        samps = self._add_sample_data()
+        snaps = self._add_snapshot_data()
+        input_dicts = {'samples': samps, 'snapshot0': snaps}[table]
+        table_iter = list(self.database.table_iterator(table))
+
+        # test the ordering of the iterator results
+        for row in table_iter:
+            assert table_iter.index(row) == row.idx - 1
+
+        # test correctness
+        for row in table_iter:
+            dct = [d for d in input_dicts if d['uuid'] == row.uuid][0]
+            for attr in dct:
+                assert getattr(row, attr) == dct[attr]

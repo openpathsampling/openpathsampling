@@ -334,6 +334,17 @@ class SQLStorageBackend(object):
         return loaded_results
 
     def database_schema(self):
+        """Reload the schema as stored in the database.
+
+        One of the special tables in the database stores the schema
+        information. This reloads that into the standard dict form for a
+        schema.
+
+        Returns
+        -------
+        schema : dict
+            schema dictionary
+        """
         schema_table = self.metadata.tables['schema']
         sel = schema_table.select()
         with self.engine.connect() as conn:
@@ -343,6 +354,22 @@ class SQLStorageBackend(object):
         return schema
 
     def get_representative(self, table_name):
+        """Get a row from the table (as a representative of table data)
+
+        This gets a single row from the given table. This can be useful for
+        introspection of table structure, or for providing an example object
+        (e.g., to use as a template for identifying results of applying a
+        function to that kind of object).
+
+        Parameters
+        ----------
+        table_name : str
+            name of the table
+
+        Returns
+        -------
+        ??? TODO
+        """
         table = self.metadata.tables[table_name]
         with self.engine.connect() as conn:
             results = conn.execute(table.select())
@@ -363,9 +390,13 @@ class SQLStorageBackend(object):
         return table_to_class
 
     def uuid_row_to_table_name(self, uuid_row):
+        """Identify the table name from a row from the UUIDs table
+        """
         return self.number_to_table[uuid_row.table]
 
     def table_iterator(self, table_name):
+        """Iterate over all rows in the table
+        """
         table = self.metadata.tables[table_name]
         with self.engine.connect() as conn:
             results = list(conn.execute(table.select()))
