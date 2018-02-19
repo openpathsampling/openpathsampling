@@ -41,6 +41,8 @@ def decode_uuid(uuid_str):
     return uuid_str[5:-1]
 
 
+# use the regular expression when looking through an entire JSON string; use
+# the is_uuid_string method for individual objects
 encoded_uuid_re = re.compile("UUID\((?P<uuid>[0-9]+)\)")
 
 
@@ -56,6 +58,25 @@ def is_uuid_string(obj):
 # NOTE: this needs find everything, including if the iterable/mapping has a
 # UUID, find that and things under it
 def get_all_uuids(initial_object, known_uuids=None):
+    """Find all UUID objects (to be stored)
+
+    This searches through an initial object, finding *all* nested objects
+    (including those in lists and dictionaries) that have UUIDs.
+
+    Parameters
+    ----------
+    initial_object : object with UUID
+        the object to search within
+    known_uuids : dict of {uuid: object}
+        objects that can be excluded from the search tree, presumably
+        because they have already been searched and any object beneath them
+        in the search tree also also already known
+
+    Returns
+    -------
+    dict of {uuid: object}
+        objects found in the search
+    """
     known_uuids = tools.none_to_default(known_uuids, {})
     objects = {initial_object}
     uuids = {}
@@ -75,6 +96,9 @@ def get_all_uuids(initial_object, known_uuids=None):
                 new_objects.extend(list(obj.to_dict().values()))
 
             # mappables and iterables
+            # TODO:  There might be a way, using a ClassInfoContainer, to
+            # simplify this for data objects. (We spend a significant
+            # fraction of time in is_mappable/is_iterable.)
             if is_mappable(obj):
                 new_objects.extend([o for o in obj.keys() if has_uuid(o)])
                 new_objects.extend(list(obj.values()))
