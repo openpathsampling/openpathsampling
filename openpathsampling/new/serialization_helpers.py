@@ -127,6 +127,35 @@ def get_all_uuid_strings(dct):
 # NOTE: this only need to find until the first UUID: iterables/mapping with
 # UUIDs aren't necessary here
 def replace_uuid(obj, uuid_encoding):
+    """Return storage-ready replacements for values in dict representation
+
+    This is used by first creating the dict representation of an object by
+    calling ``obj.to_dict()``. The resulting dict can be the ``obj``
+    parameter of ``replace_uuid``. This algorithm is implemented
+    recursively, so nested structures will call it again to create the
+    correct nested locations of any UUID objects.
+
+    Note that this does not go into the internal structure of any objects
+    with UUIDs (such as UUID objects that are also iterable or mappable).
+    The purpose here is to transform to the dict representation with UUIDs
+    in the place of objects.
+
+    Parameters
+    ----------
+    obj : object
+        input; replace with UUID if is has one, or search for nested
+        structures
+    uuid_encoding : callable
+        function that maps a UUID to a version that can be identified from
+        the (JSON) serialized string representation of the object.
+
+    Returns
+    -------
+    object
+        input object with UUID objects replaced by the encoded form,
+        leaving structure (of dicts, lists, etc) and all other objects the
+        same
+    """
     # this is UUID => string
     replacement = obj
     # fast exit for string keys
