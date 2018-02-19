@@ -199,6 +199,25 @@ def import_class(mod, cls):
     return cls
 
 def search_caches(key, cache_list, raise_error=True):
+    """Find UUID if it is in the cache_list dicts
+
+    Parameters
+    ----------
+    key : str
+        the UUID we're looking for
+    cache_list : mapping or list of mapping
+        caches that the objects are stored in (will be searched in order of
+        the list). Mapping is {uuid: object}
+    raise_error : bool
+        whether to raise a KeyError if UUID not found; default True. If
+        False, object not found returns None
+
+    Returns
+    -------
+    object or None
+        the object with the given UUID, or ``None`` if the object is not
+        found and ``raise_error`` is ``False``.
+    """
     if not isinstance(cache_list, list):
         cache_list = [cache_list]
     obj = None
@@ -212,6 +231,30 @@ def search_caches(key, cache_list, raise_error=True):
 
 
 def from_dict_with_uuids(obj, cache_list):
+    """Replace encoded UUIDs with the actual objects.
+
+    This is used to replace UUIDs as encoding for storage with actual
+    objects, to complete reconstruction of the dict representation.  This
+    method can be seen as the inverse process of :meth:`.replace_uuid`, an
+    must be done before using the ``cls.from_dict()`` to properly
+    instantiate the object.
+
+    All input objects for the object being reconstructed must already be in
+    the ``cache_list``. This means that the order is very important; that is
+    controlled by :meth:`.get_reload_order`.
+
+    Parameters
+    ----------
+    obj : object
+        object to reconstruct; replace UUID strings with the actual objects
+    cache_list : mapping or list of mapping
+        existing objects, keyed by their UUIDs
+
+    Returns
+    -------
+    object
+        input object with UUID strings replaced by the actual objects
+    """
     replacement = obj
     if is_uuid_string(obj):
         # raises KeyError if object hasn't been visited

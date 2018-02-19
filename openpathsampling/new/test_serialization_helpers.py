@@ -5,14 +5,14 @@ import pytest
 def toy_uuid_maker(name):
     return int(hash(name))
 
-def toy_uuid_encode(name):
-    return "U(" + str(toy_uuid_maker(name)) + ")"
+def uuid_encode(name):
+    return "UUID(" + str(toy_uuid_maker(name)) + ")"
 
 class MockUUIDObject(object):
     def __init__(self, name, normal_attr=None, obj_attr=None,
                  list_attr=None, dict_attr=None):
         self.name = name
-        self.__uuid__ = int(hash(name))
+        self.__uuid__ = toy_uuid_maker(name)
         self.dict_attr = dict_attr
         self.list_attr = list_attr
         self.obj_attr = obj_attr
@@ -110,32 +110,32 @@ def test_get_all_uuids_with_known(obj, included_objs):
     (all_objects['int'], {'name': 'int', 'normal_attr': 5}),
     (all_objects['str'], {'name': 'str', 'normal_attr': 'foo'}),
     (all_objects['obj'], {'name': 'obj',
-                          'obj_attr': toy_uuid_encode('int')}),
+                          'obj_attr': uuid_encode('int')}),
     (all_objects['lst'], {'name': 'lst',
-                          'list_attr': [toy_uuid_encode('int'),
-                                        toy_uuid_encode('str')]}),
+                          'list_attr': [uuid_encode('int'),
+                                        uuid_encode('str')]}),
     (all_objects['dct'], {'name': 'dct',
                           'dict_attr': {
-                              'foo': toy_uuid_encode('str'),
-                              toy_uuid_encode('int'): toy_uuid_encode('np')
+                              'foo': uuid_encode('str'),
+                              uuid_encode('int'): uuid_encode('np')
                           }}),
     (all_objects['nest'], {
         'name': 'nest',
         'dict_attr': {
-            'bar': [toy_uuid_encode('str'),
-                    {toy_uuid_encode('int'): [toy_uuid_encode('np'),
-                                              toy_uuid_encode('obj')]}]
+            'bar': [uuid_encode('str'),
+                    {uuid_encode('int'): [uuid_encode('np'),
+                                          uuid_encode('obj')]}]
         }}),
     (all_objects['rep'], {'name': 'rep',
-                          'list_attr': [toy_uuid_encode('int'),
-                                        [toy_uuid_encode('int')]]})
+                          'list_attr': [uuid_encode('int'),
+                                        [uuid_encode('int')]]})
 ])
 def test_replace_uuid(obj, replace_dct):
     after_replacement = {key: None
                          for key in ['name', 'dict_attr', 'list_attr',
                                      'normal_attr', 'obj_attr']}
     after_replacement.update(replace_dct)
-    encoding = lambda x: "U(" + str(x) + ")"
+    encoding = lambda x: "UUID(" + str(x) + ")"
     assert replace_uuid(obj.to_dict(), encoding) == after_replacement
 
 def test_replace_uuid_ndarray():
@@ -143,7 +143,7 @@ def test_replace_uuid_ndarray():
     after_replacement = {'name': 'np', 'dict_attr': None,
                          'list_attr': None, 'obj_attr': None,
                          'normal_attr': np.array([1.0, 2.0])}
-    encoding = lambda x: "U(" + str(x) + ")"
+    encoding = lambda x: "UUID(" + str(x) + ")"
     result = replace_uuid(all_objects['np'].to_dict(), encoding)
     assert set(result.keys()) == set(after_replacement.keys())
     for key in after_replacement:
@@ -164,6 +164,7 @@ def test_search_caches(cache_list):
     for key in ['int', 'str', 'obj']:
         uuid = get_uuid(all_objects[key])
         assert search_caches(uuid, cache_list) == all_objects[key]
+
     # seearch in a single cache (listify)
     for key in ['int', 'str']:
         uuid = get_uuid(all_objects[key])
@@ -184,6 +185,13 @@ def test_seach_caches_missing_error(cache_list):
 
 def test_from_dict_with_uuids(cache_list):
     # this one only uses lst
-    pytest.skip()
+    # this matches test_replace_uuid
+    lst_dict = {key: None
+                for key in ['name', 'dict_attr', 'list_attr', 'normal_attr',
+                            'obj_attr']}
+    lst_dict.update({'name': 'lst', 'list_attr': [uuid_encode('int'),
+                                                  uuid_encode('str')]})
 
-
+    lst_obj = from_dict_with_uuids(lst_dict, cache_list)
+    expected = all_objects['lst']
+    assert lst_obj == expected.to_dict()
