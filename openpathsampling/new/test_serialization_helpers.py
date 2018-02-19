@@ -109,8 +109,6 @@ def test_get_all_uuids_with_known(obj, included_objs):
 @pytest.mark.parametrize('obj,replace_dct', [
     (all_objects['int'], {'name': 'int', 'normal_attr': 5}),
     (all_objects['str'], {'name': 'str', 'normal_attr': 'foo'}),
-    # (all_objects['np'], {'name': 'np',
-                         # 'normal_attr': np.array([1.0, 2.0])}),
     (all_objects['obj'], {'name': 'obj',
                           'obj_attr': toy_uuid_encode('int')}),
     (all_objects['lst'], {'name': 'lst',
@@ -154,19 +152,38 @@ def test_replace_uuid_ndarray():
         else:
             assert result[key] == after_replacement[key]
 
+@pytest.fixture
+def cache_list():
+    make_cache = lambda keys: {get_uuid(all_objects[key]): all_objects[key]
+                               for key in keys}
+    cache_1 = make_cache(['int', 'str'])
+    cache_2 = make_cache(['obj'])
+    return [cache_1, cache_2]
 
+def test_search_caches(cache_list):
+    for key in ['int', 'str', 'obj']:
+        uuid = get_uuid(all_objects[key])
+        assert search_caches(uuid, cache_list) == all_objects[key]
+    # seearch in a single cache (listify)
+    for key in ['int', 'str']:
+        uuid = get_uuid(all_objects[key])
+        assert search_caches(uuid, cache_list[0]) == all_objects[key]
 
+def test_search_caches_missing(cache_list):
+    assert search_caches("foo", cache_list, raise_error=False) is None
+    uuid = get_uuid(all_objects['obj'])
+    assert search_caches(uuid, cache_list[0], raise_error=False) is None
 
-def test_search_caches():
-    pytest.skip()
+def test_seach_caches_missing_error(cache_list):
+    with pytest.raises(KeyError):
+        search_caches("foo", cache_list)
 
-def test_search_caches_missing():
-    pytest.skip()
+    with pytest.raises(KeyError):
+        uuid = get_uuid(all_objects['obj'])
+        search_caches(uuid, cache_list[0])
 
-def test_seach_caches_missing_error():
-    pytest.skip()
-
-def test_from_dict_with_uuids():
+def test_from_dict_with_uuids(cache_list):
+    # this one only uses lst
     pytest.skip()
 
 
