@@ -1,6 +1,7 @@
 from collections import namedtuple
 import json
 from serialization_helpers import *
+from serialization_helpers import _uuids_from_table_row
 import numpy as np
 import pytest
 
@@ -213,7 +214,7 @@ def test_uuids_from_table_row():
     entries = [('dict_attr', 'uuid'), ('list_attr', 'list_uuid'),
                ('obj_attr', 'uuid'), ('lazy_attr', 'lazy'),
                ('normal_attr', 'str')]
-    uuids, lazy, deps = uuids_from_table_row(row, entries)
+    uuids, lazy, deps = _uuids_from_table_row(row, entries)
 
     assert lazy == {str(toy_uuid_maker('nest'))}
     # TODO: do we want to allow None in the UUID list? Comes from dict_attr

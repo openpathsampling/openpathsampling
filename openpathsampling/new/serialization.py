@@ -73,7 +73,8 @@ class GenericLazyLoader(object):
 class Serialization(object):
     builtin_types = ['int', 'float', 'str']
     uuid_types = ['uuid', 'list_uuid', 'lazy']
-    # TODO: to_json here might not quite be correct; need to_bare_json?
+    # TODO: this whole object is deprecated; need better way to handle lazy
+    # proxies; serialization registration may move to the ClassInfoContainer
 
     def __init__(self, storage):
         self.storage = storage
@@ -88,8 +89,8 @@ class Serialization(object):
         self.attribute_deserializers = {
             'uuid': serialization.from_json_obj,
             'lazy': self.make_lazy,
-            'json': serialization.from_bare_json,
-            'list_uuid': serialization.from_bare_json
+            'json': None,
+            'list_uuid': None
         }
         self.schema = {}
         self.table_to_class = {}

@@ -1,8 +1,7 @@
 import tools
 
 from serialization import DefaultSerializer, DefaultDeserializer
-
-import cloudpickle
+from serialization_helpers import SchemaFindUUIDs
 
 class ClassInfo(object):
     """
@@ -21,7 +20,7 @@ class ClassInfo(object):
         the result when ClassInfoContainer looks up objects in this table
     """
     def __init__(self, table, cls, serializer=None, deserializer=None,
-                 lookup_result=None):
+                 lookup_result=None, find_uuids=None):
         self.table = table
         self.cls = cls
         self.serializer = serializer
@@ -29,14 +28,22 @@ class ClassInfo(object):
         if lookup_result is None:
             lookup_result = cls
         self.lookup_result = lookup_result
+        self.find_uuids = find_uuids
 
     def set_defaults(self, schema):
-        if self.serializer is None:
-            self.serializer = DefaultSerializer(schema, self.table,
-                                                self.cls)
-        if self.deserializer is None:
-            self.deserializer = DefaultDeserializer(schema, self.table,
-                                                    self.cls)
+        self.serializer = tools.none_to_default(
+            self.serializer,
+            DefaultSerializer(schema, self.table, self.cls)
+        )
+        self.deserializer = tools.none_to_default(
+            self.deserializer,
+            DefaultDeserializer(schema, self.table, self.cls)
+        )
+        self.find_uuids = tools.none_to_default(
+            self.find_uuids,
+            SchemaFindUUIDs(schema[self.table])
+        )
+
 
     def __repr__(self):
         return ("ClassInfo(table=" + self.table + ", cls=" + str(self.cls)
@@ -111,6 +118,7 @@ class ClassInfoContainer(object):
             return self.missing_table
 
     def __getitem__(self, item):
+        # TODO: base this off of info_from_instance
         if tools.is_string(item):
             return self.table_to_info[item]
         elif self.is_special(item):
@@ -124,6 +132,20 @@ class ClassInfoContainer(object):
                     return self.default_info
                 else:
                     raise e
+
+    def info_from_instance(self, item):
+        if self.is_special(item):
+            self.get_special(item)
+        else:
+            lookup = self.lookup_key(item)
+            if lookup in self.lookup_to_info:
+                return self.lookup_to_info[lookup]
+            elif isinstance(item, self.default_info.cls):
+                return self.default_info
+            else:
+                return None
+
+
 
     def __repr__(self):  # pragma: no cover
         return ("ClassInfoContainer(default_info=" + repr(self.default_info)

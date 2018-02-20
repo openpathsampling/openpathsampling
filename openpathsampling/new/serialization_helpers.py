@@ -54,10 +54,40 @@ def is_uuid_string(obj):
 
 
 # Getting the list of UUIDs bsed on initial objets ###################
+def caches_contain(key, cache_list):
+    for cache in cache_list:
+        if key in cache:
+            return True
+    return False
+
+def default_find_uuids(obj, cache_list):
+    uuids = {}
+    new_objects = []
+    obj_uuid = get_uuid(obj) if has_uuid(obj) else None
+    # filter known uuids: skip processing if known
+    if caches_contain(obj_uuid, [uuids] + cache_list):
+        return uuids, new_objects
+    # UUID objects
+    if obj_uuid:
+        # print repr(obj)
+        # print obj.to_dict().keys()
+        uuids.update({obj_uuid: obj})
+        new_objects.extend(list(obj.to_dict().values()))
+
+    # mappables and iterables
+    # TODO:  There might be a way, using a ClassInfoContainer, to
+    # simplify this for data objects. (We spend a significant
+    # fraction of time in is_mappable/is_iterable.)
+    if is_mappable(obj):
+        new_objects.extend([o for o in obj.keys() if has_uuid(o)])
+        new_objects.extend(list(obj.values()))
+    elif is_iterable(obj) and not is_numpy_iterable(obj):
+        new_objects.extend(list(obj))
+    return uuids, new_objects
 
 # NOTE: this needs find everything, including if the iterable/mapping has a
 # UUID, find that and things under it
-def get_all_uuids(initial_object, known_uuids=None):
+def get_all_uuids(initial_object, known_uuids=None, class_info=None):
     """Find all UUID objects (to be stored)
 
     This searches through an initial object, finding *all* nested objects
@@ -71,6 +101,7 @@ def get_all_uuids(initial_object, known_uuids=None):
         objects that can be excluded from the search tree, presumably
         because they have already been searched and any object beneath them
         in the search tree also also already known
+    class_info : 
 
     Returns
     -------
@@ -80,32 +111,43 @@ def get_all_uuids(initial_object, known_uuids=None):
     known_uuids = tools.none_to_default(known_uuids, {})
     objects = {initial_object}
     uuids = {}
-    uuid_or_none = lambda o: get_uuid(o) if has_uuid(o) else None
     while objects:
         new_objects = []
         for obj in objects:
-            obj_uuid = uuid_or_none(obj)
-            # filter known uuids: skip processing if known
-            if obj_uuid in uuids or obj_uuid in known_uuids:
-                continue
-            # UUID objects
-            if obj_uuid:
-                # print repr(obj)
-                # print obj.to_dict().keys()
-                uuids.update({obj_uuid: obj})
-                new_objects.extend(list(obj.to_dict().values()))
+            if class_info and class_info.info_from_instance(obj):
+                find_uuids = class_info.info_from_instance(obj).find_uuids
+            else:
+                find_uuids = default_find_uuids
 
-            # mappables and iterables
-            # TODO:  There might be a way, using a ClassInfoContainer, to
-            # simplify this for data objects. (We spend a significant
-            # fraction of time in is_mappable/is_iterable.)
-            if is_mappable(obj):
-                new_objects.extend([o for o in obj.keys() if has_uuid(o)])
-                new_objects.extend(list(obj.values()))
-            elif is_iterable(obj) and not is_numpy_iterable(obj):
-                new_objects.extend(list(obj))
+            new_uuids, new_objs = find_uuids(obj=obj, 
+                                             cache_list=[uuids, known_uuids])
+
+            uuids.update(new_uuids)
+            new_objects.extend(new_objs)
+
         objects = new_objects
     return uuids
+
+
+class SchemaFindUUIDs(object):
+    def __init__(self, schema_entries):
+        self.schema_entries = [
+            (attr, attr_type) for (attr, attr_type) in schema_entries
+            if attr_type in ['uuid', 'lazy', 'list_uuid']
+        ]
+
+    def __call__(self, obj, known_uuids):
+        uuids = {get_uuid(obj): obj}
+        new_objects = []
+
+        for (attr, attr_type) in self.schema_entries:
+            attr_obj = getattr(obj, attr)
+            if attr_type in ['uuid', 'lazy']:
+                new_objects.append(attr_obj)
+            elif attr_type == 'list_uuid':
+                new_objects.extend(attr_obj)
+
+        return uuids, new_objects
 
 
 # TODO: I think this can be removed (only used by get_all_uuid_string)

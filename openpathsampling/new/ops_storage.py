@@ -5,6 +5,7 @@ from serialization_helpers import to_json_obj as serialize_sim
 from serialization_helpers import from_json_obj as deserialize_sim
 from serialization_helpers import import_class
 from serialization_helpers import get_uuid, set_uuid
+from serialization_helpers import default_find_uuids
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
@@ -88,7 +89,8 @@ class OPSClassInfoContainer(ClassInfoContainer):
 ops_class_info = OPSClassInfoContainer(
     default_info=ClassInfo('simulation_objects', cls=StorableObject,
                            serializer=SimulationObjectSerializer(),
-                           deserializer=deserialize_sim),
+                           deserializer=deserialize_sim,
+                           find_uuids=default_find_uuids),
     class_info_list=[
         ClassInfo(table='samples', cls=paths.Sample),
         ClassInfo(table='sample_sets', cls=paths.SampleSet),

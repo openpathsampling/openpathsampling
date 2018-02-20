@@ -131,7 +131,7 @@ class GeneralStorage(object):
         # find all UUIDs we need to save with this object
         logger.debug("Listing all objects to save")
         # TODO: use self.cache as the known_uuids
-        uuids = get_all_uuids(obj)
+        uuids = get_all_uuids(obj, known_uuids=self.cache)
         logger.debug("Checking if objects already exist in database")
         # remove any UUIDs that have already been saved
         exists = self.backend.load_uuids_table(uuids=list(uuids.keys()),
