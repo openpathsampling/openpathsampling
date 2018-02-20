@@ -285,29 +285,61 @@ def from_json_obj(uuid, table_row, cache_list):
     return obj
 
 
-def uuids_from_table_row(table_row, schema_entries):
+def _uuids_from_table_row(table_row, schema_entries):
+    """Gather UUIDs from a table row (as provided by storage).
+
+    This organizes the UUIDS that are included in the table row based on
+    information from that row. It separated objects to be proxied ('lazy')
+    from objects to be directory loaded ('uuid', 'list_uuid', 'json_obj').
+    It also create the dependency dictionary (the entry for this row) that
+    will be used to create the reconstruction DAG.
+
+    This is for internal use; not to be part of the API.
+
+    Parameters
+    ----------
+    table_row : object
+        must have attributes as defined by ``schema_entries``, plus a
+        ``uuid`` attribute. Typically comes directly from the backend.
+    schema_entries : list of 2-tuple
+        the pairs of (attribute_name, attribute_type) describing the columns
+        from the ``table_row``. Should match the schema entry for the table
+        that the table row comes from.
+
+    Returns
+    -------
+    uuid : list
+        list of UUIDs to be fully loaded
+    lazy : set
+        set of UUIDs to a lazy-loaded (i.e., as proxy)
+    dependencies : dict
+        length 1 dict mapping the input row's UUID to all UUIDs that it
+        directly depends on (i.e., everything from ``uuid`` and ``lazy``).
+    """
     # take the schema entries here, not the whole schema
     lazy = set([])
-    uuid = []
+    uuid = set([])
     for (attr, attr_type) in schema_entries:
         if attr_type == 'uuid':
-            uuid.append(getattr(table_row, attr))
+            uuid.add(getattr(table_row, attr))
         elif attr_type == 'list_uuid':
-            # TODO: can find_dependent_uuids work here?
+            # TODO: better to use encoded_uuid_re here?
             uuid_list = ujson.loads(getattr(table_row, attr))
             if uuid_list:
                 # skip if None (or empty)
-                uuid_list = [decode_uuid(u) for u in uuid_list]
-                uuid.extend(uuid_list)
+                uuid_list = {decode_uuid(u) for u in uuid_list}
+                uuid.update(uuid_list)
         elif attr_type == 'json_obj':
             json_dct = getattr(table_row, attr)
-            uuid.extend(encoded_uuid_re.findall(json_dct))
+            uuid.update(set(encoded_uuid_re.findall(json_dct)))
         elif attr_type == 'lazy':
             lazy.add(getattr(table_row, attr))
         # other cases aren't UUIDs and are ignored
-    # remove all existiences of None as a UUID to depend on
-    dependencies = {table_row.uuid: (set(uuid) | lazy) - {None}}
-    return (uuid, lazy, dependencies)
+    # remove all cases of None as a UUID to depend on
+    # TODO: should None be in the UUID list even?
+    # TODO: can we return the set here?
+    dependencies = {table_row.uuid: (uuid | lazy) - {None}}
+    return (list(uuid), lazy, dependencies)
 
 
 def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
@@ -335,7 +367,7 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
         uuid_list = []
         for row in new_table_rows:
             entries = schema[uuid_to_table[row.uuid]]
-            loc_uuid, loc_lazy, deps = uuids_from_table_row(row, entries)
+            loc_uuid, loc_lazy, deps = _uuids_from_table_row(row, entries)
             uuid_list += loc_uuid
             lazy.update(loc_lazy)
             dependencies.update(deps)

@@ -1,3 +1,5 @@
+from collections import namedtuple
+import json
 from serialization_helpers import *
 import numpy as np
 import pytest
@@ -9,14 +11,17 @@ def uuid_encode(name):
     return "UUID(" + str(toy_uuid_maker(name)) + ")"
 
 class MockUUIDObject(object):
+    attr_list = ['name', 'normal_attr', 'obj_attr', 'list_attr',
+                 'dict_attr', 'lazy_attr']
     def __init__(self, name, normal_attr=None, obj_attr=None,
-                 list_attr=None, dict_attr=None):
+                 list_attr=None, dict_attr=None, lazy_attr=None):
         self.name = name
         self.__uuid__ = toy_uuid_maker(name)
         self.dict_attr = dict_attr
         self.list_attr = list_attr
         self.obj_attr = obj_attr
         self.normal_attr = normal_attr
+        self.lazy_attr = lazy_attr
 
     def to_dict(self):
         return {
@@ -24,7 +29,8 @@ class MockUUIDObject(object):
             'obj_attr': self.obj_attr,
             'list_attr': self.list_attr,
             'dict_attr': self.dict_attr,
-            'normal_attr': self.normal_attr
+            'normal_attr': self.normal_attr,
+            'lazy_attr': self.lazy_attr
         }
 
     @classmethod
@@ -131,16 +137,14 @@ def test_get_all_uuids_with_known(obj, included_objs):
                                         [uuid_encode('int')]]})
 ])
 def test_replace_uuid(obj, replace_dct):
-    after_replacement = {key: None
-                         for key in ['name', 'dict_attr', 'list_attr',
-                                     'normal_attr', 'obj_attr']}
+    after_replacement = {key: None for key in MockUUIDObject.attr_list}
     after_replacement.update(replace_dct)
     encoding = lambda x: "UUID(" + str(x) + ")"
     assert replace_uuid(obj.to_dict(), encoding) == after_replacement
 
 def test_replace_uuid_ndarray():
     # can't use assert == with arrays
-    after_replacement = {'name': 'np', 'dict_attr': None,
+    after_replacement = {'name': 'np', 'dict_attr': None, 'lazy_attr': None,
                          'list_attr': None, 'obj_attr': None,
                          'normal_attr': np.array([1.0, 2.0])}
     encoding = lambda x: "UUID(" + str(x) + ")"
@@ -186,12 +190,40 @@ def test_seach_caches_missing_error(cache_list):
 def test_from_dict_with_uuids(cache_list):
     # this one only uses lst
     # this matches test_replace_uuid
-    lst_dict = {key: None
-                for key in ['name', 'dict_attr', 'list_attr', 'normal_attr',
-                            'obj_attr']}
+    lst_dict = {key: None for key in MockUUIDObject.attr_list}
     lst_dict.update({'name': 'lst', 'list_attr': [uuid_encode('int'),
                                                   uuid_encode('str')]})
 
     lst_obj = from_dict_with_uuids(lst_dict, cache_list)
     expected = all_objects['lst']
     assert lst_obj == expected.to_dict()
+
+def test_uuids_from_table_row():
+    TableRow = namedtuple("TableRow",
+                          ['uuid', 'idx'] + MockUUIDObject.attr_list)
+    row = TableRow(name="row",
+                   dict_attr=None,
+                   list_attr=json.dumps([uuid_encode('int'),
+                                         uuid_encode('str')]),
+                   obj_attr=str(toy_uuid_maker('obj')),
+                   lazy_attr=str(toy_uuid_maker('nest')),
+                   normal_attr="bar",
+                   uuid=str(toy_uuid_maker('row')),
+                   idx=1)
+    entries = [('dict_attr', 'uuid'), ('list_attr', 'list_uuid'),
+               ('obj_attr', 'uuid'), ('lazy_attr', 'lazy'),
+               ('normal_attr', 'str')]
+    uuids, lazy, deps = uuids_from_table_row(row, entries)
+
+    assert lazy == {str(toy_uuid_maker('nest'))}
+    # TODO: do we want to allow None in the UUID list? Comes from dict_attr
+    assert set(uuids) == {str(toy_uuid_maker('int')),
+                          str(toy_uuid_maker('str')),
+                          str(toy_uuid_maker('obj')), None}
+    assert len(deps) == 1
+    assert set(deps[str(toy_uuid_maker('row'))]) == \
+            {str(toy_uuid_maker('int')), str(toy_uuid_maker('str')),
+             str(toy_uuid_maker('obj')), str(toy_uuid_maker('nest'))}
+
+def test_get_reload_order():
+    pytest.skip()
