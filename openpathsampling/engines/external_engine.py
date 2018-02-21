@@ -117,6 +117,8 @@ class ExternalEngine(DynamicsEngine):
                                      preexec_fn=os.setsid)
         except OSError:  # pragma: no cover
             raise  #TODO: need to handle this, but do what?
+        else:
+            logger.info("Started engine: " + str(self.proc))
 
         if self.first_frame_in_file:
             _ = self.generate_next_frame()  # throw away repeat first frame
@@ -125,8 +127,12 @@ class ExternalEngine(DynamicsEngine):
         super(ExternalEngine, self).stop(trajectory)
         logger.info("total_time {:.4f}".format(time.time() - self.start_time))
         proc = self.who_to_kill()
+        logger.info("About to send signal %s to %s", str(self.killsig),
+                    str(proc))
         proc.send_signal(self.killsig)
+        logger.debug("Signal has been sent")
         proc.wait()  # wait for the zombie to die
+        logger.debug("Zombie should be dead")
         self.cleanup()
 
     # FROM HERE ARE THE FUNCTIONS TO OVERRIDE IN SUBCLASSES:

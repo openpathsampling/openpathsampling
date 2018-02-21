@@ -18,7 +18,15 @@ def build_engine(template):
         'name_prefix' : "microtest",
         'engine_directory' : os.path.dirname(os.path.realpath(__file__))
     }
-    engine = peng.ExternalEngine(opts, template)
+    n_atoms, n_spatial = template.coordinates.shape
+    descriptor = paths.engines.SnapshotDescriptor.construct(
+        snapshot_class=peng.toy.Snapshot,
+        snapshot_dimensions={
+            'n_atoms': n_atoms,
+            'n_spatial': n_spatial
+        }
+    )
+    engine = peng.ExternalEngine(opts, descriptor, template)
     return engine
 
 def run():
