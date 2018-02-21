@@ -27,7 +27,7 @@ def run():
     ensemble = paths.LengthEnsemble(20)
     engine = build_engine(template)
     logging.basicConfig(level=logging.INFO)
-    engine.generate_forward(template, ensemble)
+    engine.generate(template, ensemble.can_append, direction=+1)
 
 if __name__ == "__main__":
     run()
