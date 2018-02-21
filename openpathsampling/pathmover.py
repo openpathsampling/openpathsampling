@@ -2292,11 +2292,16 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
 
         bkwd_partial = self._make_backward_trajectory(trajectory, modified,
                                                       shooting_index)
+        #logger.info("Complete backward shot (length " +
+                    #str(len(bkwd_partial)) + ")")
         # TODO: come up with a test that shows why you need mid_traj here;
         # should be a SeqEns with OptionalEnsembles. Exact example is hard!
         mid_traj = bkwd_partial.reversed + trajectory[shooting_index + 1:]
+        mid_traj_shoot_idx = len(bkwd_partial) - 1
         fwd_partial = self._make_forward_trajectory(mid_traj, modified,
-                                                    shooting_index)
+                                                    mid_traj_shoot_idx)
+        #logger.info("Complete forward shot (length " +
+                    #str(len(fwd_partial)) + ")")
 
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]

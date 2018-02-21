@@ -32,7 +32,7 @@ minus = lambda x: -x
 flip = lambda x: not x
 
 
-class testFeatures(object):
+class TestFeatures(object):
     def test_coordinates(self):
         Snapshot = SnapshotFactory('TestSnapshot', [features.coordinates], 'A simple testing snapshot')
         compate_attribute(Snapshot, 'coordinates', np.array([0.1, 2.0]), identity)
@@ -45,7 +45,7 @@ class testFeatures(object):
         Snapshot = SnapshotFactory('TestSnapshot', [features.box_vectors], 'A simple testing snapshot')
         compate_attribute(Snapshot, 'box_vectors', np.array([0.1, 2.0]), identity)
 
-class testSnapshotCopy(object):
+class TestSnapshotCopy(object):
     def test_copy_none(self):
         import openpathsampling.engines.openmm as paths_omm
         # let box_vectors and topology to default to None

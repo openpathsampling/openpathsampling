@@ -18,7 +18,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 
-class testWHAM(object):
+class TestWHAM(object):
     def setup(self):
         self.exact = [1.0, 0.5, 0.25, 0.125, 0.0625, 0.03125, 0.015625]
         self.iface1 = [2.0, 1.0, 0.5, 0.25, 0.125, 0.0625, 0.0]

@@ -38,14 +38,14 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 #logging.getLogger('openpathsampling.pathmover').propagate = False
 #logging.getLogger('openpathsampling.initialization').propagate = False
 
-class testMakeListOfPairs(object):
+class TestMakeListOfPairs(object):
     def setup(self):
         self.correct = [ [0, 1], [2, 3], [4, 5] ]
 
     @raises(TypeError)
     def test_not_iterable_type_error(self):
         result = make_list_of_pairs(1)
-    
+
     def test_list_of_list_pairs(self):
         result = make_list_of_pairs([[0, 1], [2, 3], [4, 5]])
         assert_equal_array_array(result, self.correct)
@@ -80,7 +80,7 @@ def assert_choice_of(result, choices):
 
     raise AssertionError("%s is not in list of choices [%s]" % (result, choices))
 
-class testPathMover(object):
+class TestPathMover(object):
     def setup(self):
         self.l1 = LengthEnsemble(1)
         self.l2 = LengthEnsemble(2)
@@ -120,9 +120,9 @@ class testPathMover(object):
         assert_equal(pm.is_canonical, True)
 
 
-class testShootingMover(object):
+class TestShootingMover(object):
     def setup(self):
-        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7,
                                       -0.1, 0.2, 0.4, 0.6, 0.8])
         op = FunctionCV("myid", f=lambda snap : snap.coordinates[0][0])
         self.stateA = CVDefinedVolume(op, -100, 0.0)
@@ -140,10 +140,16 @@ class testShootingMover(object):
 
         integ = toys.LeapfrogVerletIntegrator(dt=0.1)
         pes = toys.LinearSlope(m=[0.0], c=[0.0])
+        pes_AA = toys.LinearSlope(m=[10.0], c=[0.0])
+        pes_BB = toys.LinearSlope(m=[-10.0], c=[0.0])
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
-        self.toy_engine = toys.Engine(options={'integ': integ,
-                                               'n_frames_max': 1000,
-                                               'n_steps_per_frame': 5},
+        self.toy_opts = {'integ': integ,
+                         'n_frames_max': 1000,
+                         'n_steps_per_frame': 1}
+        # self.toy_engine: perfectly flat
+        # self.toy_engine_AA: sloped to give AA trajectories
+        # self.toy_engine_BB = sloped to give BB trajectories
+        self.toy_engine = toys.Engine(options=self.toy_opts,
                                       topology=topology)
         self.toy_snap = toys.Snapshot(coordinates=np.array([[0.3]]),
                                       velocities=np.array([[0.1]]),
@@ -154,8 +160,8 @@ class testShootingMover(object):
                           engine=self.toy_engine)
             for k in range(67)
         ])
-        self.toy_samp = SampleSet([Sample(trajectory=self.toy_traj, 
-                                          replica=0, 
+        self.toy_samp = SampleSet([Sample(trajectory=self.toy_traj,
+                                          replica=0,
                                           ensemble=self.tps)])
         # setup checks: keep around (commented) for debugging
         # assert_equal(self.stateA(self.toy_traj[0]), True)
@@ -164,7 +170,7 @@ class testShootingMover(object):
         # assert_equal(self.stateB(self.toy_traj[-1]), True)
         # assert_equal(self.tps(self.toy_traj), True)
 
-class testForwardShootMover(testShootingMover):
+class TestForwardShootMover(TestShootingMover):
     def test_move(self):
         mover = ForwardShootMover(
             ensemble=self.tps,
@@ -195,7 +201,7 @@ class testForwardShootMover(testShootingMover):
                      newsamp[0].trajectory[0])
         assert_not_equal(self.toy_samp[0].trajectory[-1],
                          newsamp[0].trajectory[-1])
-        
+
 
     def test_is_ensemble_change_mover(self):
         mover = ForwardShootMover(
@@ -205,7 +211,7 @@ class testForwardShootMover(testShootingMover):
 
         assert_equal(mover.is_ensemble_change_mover, False)
 
-class testBackwardShootMover(testShootingMover):
+class TestBackwardShootMover(TestShootingMover):
     def test_move(self):
         mover = BackwardShootMover(
             ensemble=self.tps,
@@ -251,7 +257,7 @@ class testBackwardShootMover(testShootingMover):
         )
         assert_equal(mover.is_ensemble_change_mover, False)
 
-class testOneWayShootingMover(testShootingMover):
+class TestOneWayShootingMover(TestShootingMover):
     def test_mover_initialization(self):
         mover = OneWayShootingMover(
             ensemble=self.tps,
@@ -265,7 +271,7 @@ class testOneWayShootingMover(testShootingMover):
         assert_equal(ForwardShootMover in moverclasses, True)
         assert_equal(BackwardShootMover in moverclasses, True)
 
-class testForwardFirstTwoWayShootingMover(testShootingMover):
+class TestForwardFirstTwoWayShootingMover(TestShootingMover):
     _MoverType = ForwardFirstTwoWayShootingMover
     # this allows us to run the exact same tests for backward-first
     def test_run(self):
@@ -303,13 +309,124 @@ class testForwardFirstTwoWayShootingMover(testShootingMover):
         assert_in(change.details.shooting_snapshot,
                   change.initial_trajectory)
 
+    def _setup_early_reject(self, pair):
+        zero_vel_traj = paths.Trajectory([
+            toys.Snapshot(coordinates=np.array([[0.01*k - 0.005]]),
+                          velocities=np.array([[0.0]]),
+                          engine=self.toy_engine)
+            for k in range(67)
+        ])
+        if pair == "AA":
+            pes = toys.LinearSlope(m=[10.0], c=[0.0])
+            traj = zero_vel_traj
+        elif pair == "BB":
+            pes = toys.LinearSlope(m=[-10.0], c=[0.0])
+            traj = zero_vel_traj
+        elif pair == "AB":
+            pes = toys.LinearSlope(m=[0.0], c=[0.0])
+            traj = self.init_samp[0].trajectory
+        else:
+            raise RuntimeError("unknown path type: " + pair)
 
-class testBackwardFirstTwoWayShootingMover(testForwardFirstTwoWayShootingMover):
+        topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
+        engine = toys.Engine(options=self.toy_opts, topology=topology)
+
+        mapping = {'A': self.stateA, 'B': self.stateB}
+        start = pair[0]
+        end = pair[1]
+        ensemble = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(mapping[start]) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(self.stateA | self.stateB),
+            paths.AllInXEnsemble(mapping[end]) & paths.LengthEnsemble(1)
+        ])
+        return (ensemble, engine, traj)
+
+    def _test_early_reject(self, test_ensemble, path_types,
+                           expected_rejections):
+        for path_type in path_types:
+            (ensemble, engine, traj) = self._setup_early_reject(path_type)
+            # the ensemble returned above tells us what ensemble we expect
+            # the trajectory to satisfy after the move, if *both* directions
+            # were shot. (This is determined by the PES, which varies for
+            # each path type.) We know whether we have early rejection based
+            # on whether the trial trajectory satisfies that ensemble: if it
+            # does, then we ran a full two-way shooting, and did not have
+            # early rejection. If it does not, then we had early rejection.
+            initial_sample_set = SampleSet([Sample(trajectory=traj,
+                                                   replica=0,
+                                                   ensemble=test_ensemble)])
+            initial_sample_set.sanity_check()
+
+            mover = self._MoverType(
+                ensemble=test_ensemble,
+                selector=UniformSelector(),
+                modifier=paths.NoModification(),
+                engine=engine
+            )
+            change = mover.move(initial_sample_set)
+
+            expected_early_reject = path_type in expected_rejections
+            ran_full_two_way = ensemble(change.trials[0].trajectory)
+            assert_equal(expected_early_reject, not ran_full_two_way)
+
+    def test_early_reject_tps(self):
+        self._test_early_reject(test_ensemble=self.tps,
+                                path_types=['AA', 'BB', 'AB'],
+                                expected_rejections=['AA'])
+
+    def test_early_reject_tis(self):
+        both = self.stateA | self.stateB
+        pseudo_tis_ensemble = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(self.stateA) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(both),
+            paths.AllInXEnsemble(both) & paths.LengthEnsemble(1)
+        ])
+        # when shooting forward-first, no TIS shot is ever rejected early
+        self._test_early_reject(test_ensemble=pseudo_tis_ensemble,
+                                path_types=['AA', 'BB', 'AB'],
+                                expected_rejections=[])
+
+    def test_sequential_shots(self):
+        # make sure that, with no modification, the trajectory doesn't
+        # change
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=paths.NoModification(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.toy_samp)
+        real_traj = change.trials[0].trajectory
+        real_sample_set = SampleSet(change.trials)
+        real_sample_set.sanity_check()
+
+        new_change = mover.move(real_sample_set)
+        new_traj = new_change.trials[0].trajectory
+        assert_allclose(new_traj.xyz[:,0,0], real_traj.xyz[:,0,0])
+
+
+class TestBackwardFirstTwoWayShootingMover(TestForwardFirstTwoWayShootingMover):
     _MoverType = BackwardFirstTwoWayShootingMover
     # runs the same tests as ForwardFirst
+    def test_early_reject_tps(self):
+        self._test_early_reject(test_ensemble=self.tps,
+                                path_types=['AA', 'BB', 'AB'],
+                                expected_rejections=['BB'])
+
+    def test_early_reject_tis(self):
+        both = self.stateA | self.stateB
+        pseudo_tis_ensemble = paths.SequentialEnsemble([
+            paths.AllInXEnsemble(self.stateA) & paths.LengthEnsemble(1),
+            paths.AllOutXEnsemble(both),
+            paths.AllInXEnsemble(both) & paths.LengthEnsemble(1)
+        ])
+        # when shooting forward-first, no TIS shot is ever rejected early
+        self._test_early_reject(test_ensemble=pseudo_tis_ensemble,
+                                path_types=['AA', 'BB', 'AB'],
+                                expected_rejections=['BB'])
 
 
-class testTwoWayShootingMover(testShootingMover):
+class TestTwoWayShootingMover(TestShootingMover):
     def test_properties(self):
         selector = UniformSelector()
         modifier = paths.NoModification()
@@ -338,7 +455,7 @@ class testTwoWayShootingMover(testShootingMover):
         assert_equal(mover.modifier, new_mover.modifier)
 
 
-class testPathReversalMover(object):
+class TestPathReversalMover(object):
     def setup(self):
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
@@ -396,7 +513,7 @@ class testPathReversalMover(object):
         assert_equal(change.accepted, True)
 
 
-class testReplicaIDChangeMover(object):
+class TestReplicaIDChangeMover(object):
     def setup(self):
         pass
 
@@ -407,7 +524,7 @@ class testReplicaIDChangeMover(object):
         raise SkipTest
 
 
-class testReplicaExchangeMover(object):
+class TestReplicaExchangeMover(object):
     def setup(self):
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
@@ -489,7 +606,7 @@ class testReplicaExchangeMover(object):
         assert_equal(A1[0].trajectory, self.traj1)
 
 
-class testRandomChoiceMover(object):
+class TestRandomChoiceMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
@@ -548,7 +665,7 @@ class testRandomChoiceMover(object):
         raise SkipTest
 
 
-class testRandomAllowedChoiceMover(object):
+class TestRandomAllowedChoiceMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
@@ -657,7 +774,7 @@ class testRandomAllowedChoiceMover(object):
                                  + str(count[self.ens2]))
 
 
-class testSequentialMover(object):
+class TestSequentialMover(object):
     def setup(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
@@ -759,7 +876,7 @@ class testSequentialMover(object):
     def test_restricted_by_ensemble(self):
         raise SkipTest
 
-class testPartialAcceptanceSequentialMover(testSequentialMover):
+class TestPartialAcceptanceSequentialMover(TestSequentialMover):
     def test_everything_accepted(self):
         move = PartialAcceptanceSequentialMover(movers=self.everything_accepted_movers)
         gs = SampleSet(self.init_sample)
@@ -809,7 +926,7 @@ class testPartialAcceptanceSequentialMover(testSequentialMover):
     def test_restricted_by_ensemble(self):
         raise SkipTest
 
-class testConditionalSequentialMover(testSequentialMover):
+class TestConditionalSequentialMover(TestSequentialMover):
     def test_everything_accepted(self):
         move = ConditionalSequentialMover(movers=self.everything_accepted_movers)
         gs = SampleSet(self.init_sample)
@@ -894,7 +1011,7 @@ class SubtrajectorySelectTester(object):
         assert_equal(self.subensemble(self.subtraj1), True)
         assert_equal(self.subensemble(self.subtraj2), True)
 
-class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
+class TestRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_accepts_all(self):
         mover = RandomSubtrajectorySelectMover(
             ensemble=self.ensemble,
@@ -939,7 +1056,7 @@ class testRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         # print change.samples
         assert_equal(len(change.samples), 0)
 
-class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
+class TestFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
         mover = FirstSubtrajectorySelectMover(
             ensemble=self.ensemble,
@@ -953,7 +1070,7 @@ class testFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
         assert_equal(self.ensemble(samples[0].trajectory), False)
         assert_equal(samples[0].trajectory, self.subtraj0)
 
-class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
+class TestFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
         mover = FinalSubtrajectorySelectMover(
             ensemble=self.ensemble,
@@ -967,7 +1084,7 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
         assert_equal(self.ensemble(samples[0].trajectory), False)
         assert_equal(samples[0].trajectory, self.subtraj2)
 
-# class testForceEnsembleChangeMover(object):
+# class TestForceEnsembleChangeMover(object):
 #     def setup(self):
 #         traj = Trajectory([-0.5, 0.7, 1.1])
 #         op = CallIdentity()
@@ -1001,7 +1118,7 @@ class testFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 #         assert_equal(samples[0].ensemble, self.len2)
 #         assert_equal(samples[0].ensemble(samples[0].trajectory), False)
 
-class testMinusMover(object):
+class TestMinusMover(object):
     def setup(self):
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
@@ -1228,7 +1345,7 @@ class testMinusMover(object):
         self.dyn.options['on_max_length'] = 'fail'
 
 
-class testSingleReplicaMinusMover(object):
+class TestSingleReplicaMinusMover(object):
     def setup(self):
         op = FunctionCV("myid", f=lambda snap :
                              snap.coordinates[0][0])
@@ -1369,7 +1486,7 @@ class testSingleReplicaMinusMover(object):
             trajectory=traj_bad_extension,
             ensemble=self.innermost
         )
-        
+
         assert_equal(self.innermost(traj_bad_extension), True)
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
@@ -1393,7 +1510,7 @@ class testSingleReplicaMinusMover(object):
         self.dyn.options['on_max_length'] = 'fail'
 
 
-class testAbstract(object):
+class TestAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_pathmover(self):
         mover = paths.PathMover()

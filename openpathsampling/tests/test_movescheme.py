@@ -31,7 +31,7 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testMoveScheme(object):
+class TestMoveScheme(object):
     def setup(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
@@ -124,7 +124,7 @@ class testMoveScheme(object):
             print("Full support of MoveStrategy implemented?")
             print("Time to remove legacy from tests.")
         else:
-            self.scheme.movers = {} 
+            self.scheme.movers = {}
 
         shoot_strat_1 = OneWayShootingStrategy(
             ensembles=self.scheme.network.sampling_transitions[0].ensembles,
@@ -132,7 +132,7 @@ class testMoveScheme(object):
         )
         shoot_strat_2 = OneWayShootingStrategy(
             ensembles=(
-                [self.scheme.network.sampling_transitions[0].ensembles[-1]] + 
+                [self.scheme.network.sampling_transitions[0].ensembles[-1]] +
                 self.scheme.network.sampling_transitions[1].ensembles
             ),
             replace=False
@@ -177,7 +177,7 @@ class testMoveScheme(object):
         repex = NearestNeighborRepExStrategy()
         default = OrganizeByMoveGroupStrategy()
         self.scheme.append([default, shoot, repex])
-    
+
         assert_equal(self.scheme.root_mover, None)
         root = self.scheme.move_decision_tree()
         assert_not_equal(self.scheme.root_mover, None)
@@ -201,7 +201,7 @@ class testMoveScheme(object):
         nn_repex = NearestNeighborRepExStrategy()
         all_repex = AllSetRepExStrategy()
         default = OrganizeByMoveGroupStrategy()
-        
+
         self.scheme.append([default, nn_repex])
         root = self.scheme.move_decision_tree(rebuild=True)
         assert_equal(len(self.scheme.movers['repex']), 4)
@@ -344,7 +344,7 @@ class testMoveScheme(object):
 
     def test_n_steps_for_trials(self):
         self.scheme.append([
-            OneWayShootingStrategy(), 
+            OneWayShootingStrategy(),
             NearestNeighborRepExStrategy(),
             OrganizeByMoveGroupStrategy()
         ])
@@ -368,7 +368,7 @@ class testMoveScheme(object):
 
 
 
-class testDefaultScheme(object):
+class TestDefaultScheme(object):
     def setup(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
@@ -389,7 +389,7 @@ class testDefaultScheme(object):
         self.no_ms_outer = paths.MSTISNetwork(
             [(self.stateA, interfacesA), (self.stateB, interfacesB)]
         )
-    
+
     def test_default_scheme(self):
         scheme = DefaultScheme(self.network)
         root = scheme.move_decision_tree()
@@ -479,7 +479,7 @@ class testDefaultScheme(object):
         scheme = DefaultScheme(self.network)
         root = scheme.move_decision_tree()
         unused = scheme.find_unused_ensembles()
-        assert_equal(len(unused), 0) # will change when minus/msouter 
+        assert_equal(len(unused), 0) # will change when minus/msouter
 
     def test_default_balance_partners(self):
         scheme = DefaultScheme(self.network)
@@ -520,7 +520,7 @@ class testDefaultScheme(object):
         scheme = DefaultScheme(self.network)
         # root = scheme.move_decision_tree()
         assert_equal(len(scheme.list_initial_ensembles()), 9)
-        
+
         traj1 = make_1d_traj([-0.6, -0.2, -0.6])
         traj2 = make_1d_traj([-0.6, -0.2, -0.05, -0.4, -0.6])
         traj3 = make_1d_traj([-0.6, -0.2, 0.2, 0.6])
@@ -752,7 +752,7 @@ class testDefaultScheme(object):
             assert_equal(result, expected_BA)
 
 
-class testLockedMoveScheme(object):
+class TestLockedMoveScheme(object):
     def setup(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
@@ -815,7 +815,7 @@ class testLockedMoveScheme(object):
         vals = scheme.movers
 
 
-class testOneWayShootingMoveScheme(object):
+class TestOneWayShootingMoveScheme(object):
     def setup(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])

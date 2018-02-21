@@ -23,7 +23,7 @@ for logger in quiet_loggers:
     logging.getLogger("openpathsampling."+logger).setLevel(logging.CRITICAL)
 
 
-class testFeatures(object):
+class TestFeatures(object):
     def test_copy_with_replacement_toy(self):
         # test a toy snapshot
         init_coord = np.array([1.0, 2.0])
