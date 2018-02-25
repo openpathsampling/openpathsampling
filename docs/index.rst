@@ -24,10 +24,10 @@ the development process on GitHub_, and follow `@pathsampling
 .. _GitHub: http://github.com/openpathsampling/openpathsampling
 
 .. note:: **Project status:** Currently we're at version 0.9.4.  There will
-          be some API cleanup before 1.0, but files created with current
-          this version will load in 1.0.  Note, however, that files
-          generated with Python 2 will not fully load with Python 3 or vice
-          versa (partial Python 3 support starting in 0.9.3).
+          be some API cleanup before 1.0, but files created with the current
+          version will load in 1.0.  Note, however, that files generated
+          with Python 2 will not fully load with Python 3 or vice versa
+          (partial Python 3 support starting in 0.9.3).
 
           Overall, OPS is ready for production work. We're already writing
           several papers that used it, in addition to the paper in prep
