@@ -10,7 +10,7 @@ fi
 
 pyV=${CONDA_PY:0:1}
 conda_version="latest"
-conda_version="4.4.10"  # temporary hack because 'latest' has bad MD5
+#conda_version="4.4.10"  # can pin a miniconda version like this, if needed
 
 MINICONDA=Miniconda${pyV}-${conda_version}-Linux-x86_64.sh
 MINICONDA_MD5=$(curl -s https://repo.continuum.io/miniconda/ | grep -A3 $MINICONDA | sed -n '4p' | sed -n 's/ *<td>\(.*\)<\/td> */\1/p')
