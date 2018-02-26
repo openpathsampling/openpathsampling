@@ -9,7 +9,7 @@ import time
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import NetCDFPlus, WeakLRUCache, ObjectStore, \
-    ImmutableDictStore, NamedObjectStore
+    ImmutableDictStore, NamedObjectStore, PseudoAttributeStore
 
 from .stores import SnapshotWrapperStore
 
@@ -63,6 +63,10 @@ class Storage(NetCDFPlus):
             mode,
             fallback=fallback)
 
+    def _create_simplifier(self):
+        super(Storage, self)._create_simplifier()
+        self.simplifier.safemode = False
+
     def _create_storages(self):
         """
         Register all Stores used in the OpenPathSampling Storage
@@ -74,16 +78,14 @@ class Storage(NetCDFPlus):
 
         # topologies might be needed fot CVs so put them here
         self.create_store('topologies', NamedObjectStore(peng.Topology))
-        self.create_store('cvs', paths.storage.CVStore())
 
-        self.create_store('snapshots', SnapshotWrapperStore())
+        snapshotstore = SnapshotWrapperStore()
+        self.create_store('snapshots', snapshotstore)
 
         self.create_store('samples', paths.storage.SampleStore())
         self.create_store('samplesets', paths.storage.SampleSetStore())
-        self.create_store(
-            'movechanges',
-            paths.storage.MoveChangeStore()
-        )
+        self.create_store('movechanges',
+                          paths.storage.MoveChangeStore())
         self.create_store('steps', paths.storage.MCStepStore())
 
         # normal objects
@@ -115,6 +117,10 @@ class Storage(NetCDFPlus):
 
         self.create_store('tag', ImmutableDictStore())
 
+    @property
+    def tags(self):
+        return self.tag
+
     def write_meta(self):
         self.setncattr('storage_format', 'openpathsampling')
         self.setncattr('storage_version', paths.version.version)
@@ -123,14 +129,25 @@ class Storage(NetCDFPlus):
         # Set global attributes.
         setattr(self, 'title', 'OpenPathSampling Storage')
 
-        self.set_caching_mode()
+        # backwards compatibility
+        self.cvs = self.attributes
 
-        # since we want to store stuff we need to finalize stores that have not
-        # been initialized yet
-        self.finalize_stores()
+        self.set_caching_mode()
 
     def _restore(self):
         self.set_caching_mode()
+
+        if hasattr(self, 'cvs'):
+            logger.info('Opening an old version that handles CVs differently. '
+                        'You cannot extend this file, only read it.')
+
+            if self.mode != 'r':
+                logger.info('Cannot open in append mode. Closing')
+                self.close()
+                raise RuntimeWarning('Closing. Cannot append incompatible '
+                                     'file. You can still open readable.')
+        else:
+            self.cvs = self.attributes
 
     def sync_all(self):
         """
@@ -213,6 +230,7 @@ class Storage(NetCDFPlus):
         """
 
         return {
+            'attributes': True,
             'trajectories': WeakLRUCache(10000),
             'snapshots': WeakLRUCache(10000),
             'statics': WeakLRUCache(10000),
@@ -247,6 +265,7 @@ class Storage(NetCDFPlus):
         """
 
         return {
+            'attributes': True,
             'trajectories': WeakLRUCache(1000),
             'snapshots': WeakLRUCache(1000),
             'statics': WeakLRUCache(10),
@@ -281,6 +300,7 @@ class Storage(NetCDFPlus):
 
         """
         return {
+            'attributes': WeakLRUCache(10),
             'trajectories': WeakLRUCache(10),
             'snapshots': WeakLRUCache(10),
             'statics': WeakLRUCache(10),
@@ -316,6 +336,7 @@ class Storage(NetCDFPlus):
 
         """
         return {
+            'attributes': True,
             'trajectories': WeakLRUCache(500000),
             'snapshots': WeakLRUCache(100000),
             'statics': WeakLRUCache(10000),
@@ -350,6 +371,7 @@ class Storage(NetCDFPlus):
 
         """
         return {
+            'attributes': True,
             'trajectories': WeakLRUCache(1000),
             'snapshots': WeakLRUCache(10000),
             'statics': WeakLRUCache(1000),
@@ -386,6 +408,7 @@ class Storage(NetCDFPlus):
         This is VERY SLOW and only used for debugging.
         """
         return {
+            'attributes': False,
             'trajectories': False,
             'snapshots': False,
             'statics': False,
@@ -490,9 +513,9 @@ class AnalysisStorage(Storage):
         """
 
         with AnalysisStorage.CacheTimer('Cached all CVs'):
-            for cv, (cv_store, cv_store_idx) in \
-                    storage.snapshots.cv_list.items():
-                cv_store.cache.load_max()
+            for cv, cv_store in storage.snapshots.attribute_list.items():
+                if cv_store:
+                    cv_store.cache.load_max()
 
         stores_to_cache = ['cvs',
                            'trajectories',
@@ -509,8 +532,6 @@ class AnalysisStorage(Storage):
             store = getattr(storage, store_name)
             with AnalysisStorage.CacheTimer('Cache all objects', store):
                 store.cache_all()
-
-#        storage.trajectories.cache_all()
 
     class CacheTimer(object):
         def __init__(self, context, store=None):

@@ -422,8 +422,7 @@ class ChannelAnalysis(StorableNamedObject):
         switch_count = collections.Counter(switches)
         df = pd.DataFrame(index=sorted_labels, columns=sorted_labels)
         for switch in switch_count:
-            df.set_value(index=switch[0], col=switch[1],
-                         value=switch_count[switch])
+            df.at[switch[0], switch[1]] = switch_count[switch]
 
         df = df.fillna(0)
         return df

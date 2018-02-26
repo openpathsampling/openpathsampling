@@ -9,7 +9,7 @@ from openpathsampling.engines.toy import Snapshot
 class CallablePES(object):
     def __init__(self, pes):
         self.pes = pes
-    
+
     def __call__(self, x, y):
         self.positions = [x, y]
         return self.pes.V(self)
@@ -17,7 +17,7 @@ class CallablePES(object):
 class CallableVolume(object):
     def __init__(self, vol):
         self.vol = vol
-    
+
     def __call__(self, x, y):
         snapshot = Snapshot(coordinates=np.array([[x,y,0.0]]))
         return 1.0 if self.vol(snapshot) else 0.0
@@ -29,7 +29,7 @@ class ToyPlot(object):
         self.extent = [range_x[0], range_x[-1], range_y[0], range_y[-1]]
         self.X, self.Y = np.meshgrid(range_x, range_y)
         pylab.rcParams['figure.figsize'] = 9, 6
-        self.repcolordict = {0 : 'k-', 1 : 'r-', 2 : 'g-', 3 : 'b-', 
+        self.repcolordict = {0 : 'k-', 1 : 'r-', 2 : 'g-', 3 : 'b-',
                              4 : 'r-'}
 
         self.contour_range = np.arange(0.0, 1.5, 0.1)
@@ -65,10 +65,10 @@ class ToyPlot(object):
     def plot_pes_initcond(self, trajectories):
         fig, ax = plt.subplots()
         if self._pes is not None:
-            plt.contour(self.X, self.Y, self._pes, 
+            plt.contour(self.X, self.Y, self._pes,
                         levels=np.arange(0.0, 1.5, 0.1), colors='k')
         if self._initcond is not None:
-            ax.plot(self._initcond.coordinates[0,0], 
+            ax.plot(self._initcond.coordinates[0,0],
                     self._initcond.coordinates[0,1],
                     'ro', zorder=3)
         for traj in trajectories:
@@ -83,14 +83,14 @@ class ToyPlot(object):
                        interpolation='nearest', vmin=0.0, vmax=2.0,
                        aspect='auto')
         if self._pes is not None:
-            plt.contour(self.X, self.Y, self._pes, 
+            plt.contour(self.X, self.Y, self._pes,
                         levels=self.contour_range, colors='k')
         if self._interfaces is not None:
             for iface in self._interfaces:
-                plt.contour(self.X, self.Y, iface, 
+                plt.contour(self.X, self.Y, iface,
                             colors='r', interpolation='none', levels=[0.5])
         if self._initcond is not None:
-            ax.plot(self._initcond.coordinates[0,0], 
+            ax.plot(self._initcond.coordinates[0,0],
                     self._initcond.coordinates[0,1],
                     'ro', zorder=3)
         for traj in bold:

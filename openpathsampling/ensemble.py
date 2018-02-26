@@ -65,10 +65,12 @@ class EnsembleCache(object):
     def __init__(self, direction=None):
         self.start_frame = None
         self.prev_last_frame = None
+        self.prev_last_index = None
         self.last_length = None
         self.direction = direction
         self.contents = {}
         self.trusted = False
+        self.debug_enabled = False
 
     def bad_direction_error(self):
         raise RuntimeError("EnsembleCache.direction = " +
@@ -86,10 +88,12 @@ class EnsembleCache(object):
         The trajectory is considered trustworthy based on checking several
         factors, compared to the last time the cache was checked. For
         forward caches (direction > 0), these are
+
         * the first frame has not changed
         * the length is the same, or has changed by 1
         * if length unchanged, the final frame is the same; if length
           changed by 1, the penultimate frame is the old final frame
+
         Similar rules apply for backward caches (direction < 0), with
         obvious changes of "final" and "first" frames.
 
@@ -113,6 +117,7 @@ class EnsembleCache(object):
         # logger.debug("traj " + str([id(s) for s in trajectory]))
         logger.debug("start_frame " + str(id(self.start_frame)))
         logger.debug("prev_last " + str(id(self.prev_last_frame)))
+        logger.debug("prev_last_idx " + str(self.prev_last_index))
 
         if trajectory is not None:
             # if the first frame has changed, we should reset
@@ -155,6 +160,7 @@ class EnsembleCache(object):
         self.trusted = not reset
         self.last_length = len(trajectory)
         if reset:
+            self.debug_enabled = logger.isEnabledFor(logging.DEBUG)
             logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
                 self.start_frame = trajectory.get_as_proxy(0)
@@ -174,8 +180,10 @@ class EnsembleCache(object):
         # other things as well
         if self.direction > 0:
             self.prev_last_frame = trajectory.get_as_proxy(-1)
+            self.prev_last_index = len(trajectory) - 1
         elif self.direction < 0:
             self.prev_last_frame = trajectory.get_as_proxy(0)
+            self.prev_last_index = 0
         else:
             self.bad_direction_error()
 
@@ -221,6 +229,9 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
             return True
         return str(self) == str(other)
 
+    def __ne__(self, other):
+        return not self == other
+
     @abc.abstractmethod
     def __call__(self, trajectory, trusted=None, candidate=False):
         """
@@ -241,9 +252,13 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         return False
 
     def check_reverse(self, trajectory, trusted=False):
+        """
+        See __call__; same thing, but potentially in reverse frame order
+        """
         return self(trajectory, trusted=False)
 
     def check(self, trajectory):
+        """Alias for __call__"""
         return self(trajectory, trusted=False)
 
     def trajectory_summary(self, trajectory):
@@ -1274,12 +1289,12 @@ class EnsembleCombination(Ensemble):
 
         Parameters
         ----------
-        combo : 
+        combo :
             the combination function
         f1 :
             ensemble1's function. Takes trajectory, returns bool. Examples
             include `__call__`, `can_append`, etc.
-        f2 : 
+        f2 :
             ensemble2's function. As with f1, but for ensemble 2.
         trajectory : :class:`.Trajectory`
             input trajectory
@@ -1689,30 +1704,43 @@ class SequentialEnsemble(Ensemble):
         final_ens = len(self.ensembles) - 1
         # print traj_final, final_ens
         # logging startup
-        logger.debug(
-            "Beginning can_append with subtraj_first=" + str(subtraj_first) +
-            "; ens_first=" + str(ens_first) + "; ens_num=" + str(ens_num) +
-            "; strict=" + str(strict)
-        )
-        logger.debug(
-            "Can-append sees a trusted cache: " + str(cache.trusted)
-        )
-        if cache.trusted:
-            logger.debug("Cache contents: " + str(cache.contents))
-            logger.debug("cache.prev_last_frame: " +
-                         str(trajectory.index(cache.prev_last_frame)))
-        for i in range(len(self.ensembles)):
-            ens = self.ensembles[i]
-            logger.debug("Ensemble " + str(i) + " : " + ens.__class__.__name__)
+        if cache.debug_enabled:  # pragma: no cover
+            logger.debug(
+                "Beginning can_append with subtraj_first="
+                + str(subtraj_first) + "; ens_first=" + str(ens_first)
+                + "; ens_num=" + str(ens_num)
+                + "; strict=" + str(strict)
+            )
+            logger.debug(
+                "Can-append sees a trusted cache: " + str(cache.trusted)
+            )
+            if cache.trusted:
+                logger.debug("Cache contents: " + str(cache.contents))
+                logger.debug("cache.prev_last_frame: " +
+                             str(trajectory.index(cache.prev_last_frame)))
+            for i in range(len(self.ensembles)):
+                ens = self.ensembles[i]
+                logger.debug("Ensemble " + str(i) + " : "
+                             + ens.__class__.__name__)
 
-        while True:  # main loop, with various
+        while True:  # main loop, with various exits
             if self._use_cache and cache.trusted:
+                # TODO: trajectory.index is expensive... how to speed up?
                 # offset = 1
                 offset = 0
                 # if cache.last_length == len(trajectory):
                 # offset += 1
-                last_checked = trajectory.index(cache.prev_last_frame) - offset
+                try:
+                    last_checked_index = cache.prev_last_index - offset
+                except:  # on any exception
+                    # TODO: ideally, this won't be covered by tests, and can
+                    # eventually be removed (along with try/except)
+                    last_checked_index = \
+                        trajectory.index(cache.prev_last_frame) - offset
+                #last_checked = trajectory.index(cache.prev_last_frame) - offset
+                last_checked = last_checked_index
             else:
+                last_checked_index = None
                 last_checked = None
             logger.debug("last_checked = " + str(last_checked))
             subtraj_final = self._find_subtraj_final(
@@ -1744,9 +1772,10 @@ class SequentialEnsemble(Ensemble):
                 else:
                     # subtraj existed, but not yet final ensemble
                     # so we start with the next ensemble
-                    if subtraj_final != traj_final and \
-                            not self.ensembles[ens_num](
-                                subtraj, trusted=cache.trusted):
+                    end_traj = (subtraj_final == traj_final)
+                    ensemble = self.ensembles[ens_num]
+                    if not end_traj and not ensemble(subtraj,
+                                                     trusted=cache.trusted):
                         logger.debug(
                             "Couldn't assign frames " + str(subtraj_first) +
                             " through " + str(subtraj_final) +
@@ -1857,27 +1886,36 @@ class SequentialEnsemble(Ensemble):
                 ens_final = cache.contents['ens_from']
 
         # logging startup
-        logger.debug(
-            "Beginning can_prepend with ens_num:" + str(ens_num)
-            + "  ens_final:" + str(ens_final) + "  subtraj_final "
-            + str(subtraj_final) + "; strict=" + str(strict)
-        )
-        if cache.trusted:
-            logger.debug("Cache contents: " + str(cache.contents))
-            logger.debug("cache.prev_start_frame: " +
-                         str(trajectory.index(cache.start_frame)))
-        for i in range(len(self.ensembles)):
+        if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
             logger.debug(
-                "Ensemble " + str(i) +
-                " : " + self.ensembles[i].__class__.__name__
+                "Beginning can_prepend with ens_num:" + str(ens_num)
+                + "  ens_final:" + str(ens_final) + "  subtraj_final "
+                + str(subtraj_final) + "; strict=" + str(strict)
             )
+            if cache.trusted:
+                logger.debug("Cache contents: " + str(cache.contents))
+                logger.debug("cache.prev_start_frame: " +
+                             str(trajectory.index(cache.start_frame)))
+            for i in range(len(self.ensembles)):
+                logger.debug(
+                    "Ensemble " + str(i) +
+                    " : " + self.ensembles[i].__class__.__name__
+                )
 
         while True:
             if self._use_cache and cache.trusted:
                 # offset = 1
                 offset = 0
+                try:
+                    last_checked_index = cache.prev_last_index + offset
+                except:  # on any exception
+                    # TODO: ideally, this won't be covered by tests, and can
+                    # eventually be removed (along with try/except)
+                    last_checked_index = \
+                        trajectory.index(cache.prev_last_frame) + offset
                 last_checked = trajectory.index(cache.prev_last_frame) + offset
             else:
+                last_checked_index = None
                 last_checked = None
             subtraj_first = self._find_subtraj_first(
                 trajectory, subtraj_final, ens_num, last_checked)
@@ -2539,21 +2577,21 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     """
     This creates an ensemble for the minus interface.
 
-    Parameters
-    ----------
-    state_vol : :class:`openpathsampling.volume.Volume`
-        The Volume which defines the state for this minus interface
-    innermost_vols : :class:`list of openpathsampling.volume.Volume`
-        The Volume defining the innermost interface with which this minus
-        interface does its replica exchange.
-    n_l : integer (greater than one)
-        The number of segments crossing innermost_vol for this interface.
-
     The specific implementation allows us to use the multiple-segment minus
     ensemble described by Swenson and Bolhuis. The minus interface was
     originally developed by van Erp. For more details, see the section
     "Anatomy of a PathMover: the Minus Move" in the OpenPathSampling
     Documentation.
+
+    Parameters
+    ----------
+    state_vol : :class:`.Volume`
+        The Volume which defines the state for this minus interface
+    innermost_vols : list of :class:`.Volume`
+        The Volume defining the innermost interface with which this minus
+        interface does its replica exchange.
+    n_l : integer (greater than one)
+        The number of segments crossing innermost_vol for this interface.
 
     References
     ----------
@@ -2780,7 +2818,7 @@ class TISEnsemble(SequentialEnsemble):
         }
 
     def __init__(self, initial_states, final_states, interface,
-                 orderparameter=None, lambda_i=None):
+                 orderparameter=None, cv_max=None, lambda_i=None):
         # regularize to list of volumes
         # without orderparameter, some info can't be obtained
         try:
@@ -2806,16 +2844,24 @@ class TISEnsemble(SequentialEnsemble):
         self.final_states = final_states
         self.interface = interface
         #        self.name = interface.name
-        self.orderparameter = orderparameter
-        # TODO: add max_orderparameter as a traj CV
+        self.orderparameter = orderparameter  # TODO: is this used? remove?
+        self.cv_max = cv_max
         self.lambda_i = lambda_i
         self._initial_volumes = volume_a
         self._final_volumes = volume_b | volume_a
 
     def __call__(self, trajectory, trusted=None, candidate=False):
-        use_candidate = (candidate and self.lambda_i is not None
-                         and self.orderparameter is not None)
-        if use_candidate:
+        logger.debug("TIS ENSEMBLE: candidate={0}".format(str(candidate)))
+        use_candidate = (candidate and self.lambda_i is not None)
+        if use_candidate and self.cv_max is not None:
+            logger.debug("Using candidate shortcut with self.cv_max")
+            return (
+                self._initial_volumes(trajectory[0])
+                & self._final_volumes(trajectory[-1])
+                & (self.cv_max(trajectory) > self.lambda_i)
+            )
+        elif use_candidate and self.orderparameter is not None:
+            logger.debug("Using candidate shortcut with max(orderparameter)")
             # as a candidate trajectory, we assume that only the first and
             # final frames can be in a state
             #logger.debug("initial: " +
@@ -2830,6 +2876,7 @@ class TISEnsemble(SequentialEnsemble):
                 & (max(self.orderparameter(trajectory)) > self.lambda_i)
             )
         else:
+            logger.debug("No shortcut possible")
             # it still works fine if we use the slower algorithm
             return super(TISEnsemble, self).__call__(trajectory, trusted)
 

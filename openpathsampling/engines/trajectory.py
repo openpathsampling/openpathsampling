@@ -7,8 +7,9 @@ import numpy as np
 import mdtraj as md
 import simtk.unit as u
 
-from openpathsampling.netcdfplus import StorableObject
+from openpathsampling.netcdfplus import StorableObject, LoaderProxy
 import openpathsampling as paths
+
 
 # ==============================================================================
 # TRAJECTORY
@@ -194,6 +195,9 @@ class Trajectory(list, StorableObject):
 
         return ret
 
+    # this is intuitive. hash(Trajectory(traj)) == hash(traj)
+    # but hash(LoaderProxy(..., traj.__uuid__)) != hash(traj)
+
     def __hash__(self):
         if len(self) == 0:
             return hash(tuple())
@@ -202,6 +206,16 @@ class Trajectory(list, StorableObject):
                 (list.__getitem__(self, 0), len(self),
                  list.__getitem__(self, -1)))
 
+    # this might be faster, but does not allow to compare arbitrary
+    # trajectories as one might expect. hash(Trajectory(traj)) != hash(traj)
+    # but hash(LoaderProxy(..., traj.__uuid__)) == hash(traj)
+    # it could also lead to better caching and memory behaviour
+
+    # __hash__ = StorableObject.__hash__
+    #
+    # __eq__ = StorableObject.__eq__
+    # __ne__ = StorableObject.__ne__
+    #
     def __getitem__(self, index):
         # Allow for numpy style selection using lists
         if hasattr(index, '__iter__'):
@@ -211,7 +225,7 @@ class Trajectory(list, StorableObject):
 
         if type(ret) is list:
             ret = Trajectory(ret)
-        elif hasattr(ret, '_idx'):
+        elif type(ret) is LoaderProxy:
             ret = ret.__subject__
 
         return ret
@@ -318,7 +332,7 @@ class Trajectory(list, StorableObject):
 
         This will always give real :class:`openpathsampling.snapshot.Snapshot`
         objects and never proxies to snapshots.
-        If you prefer proxies (if available) use `.iteritems()`
+        If you prefer proxies (if available) use `.items()`
 
         Returns
         -------
@@ -520,21 +534,40 @@ class Trajectory(list, StorableObject):
             If not None this topology will be used to construct the mdtraj
             objects otherwise the topology object will be taken from the
             configurations in the trajectory snapshots.
-        
+
         Returns
-        -------        
+        -------
         :class:`mdtraj.Trajectory`
             the trajectory
+
+        Notes
+        -----
+
+        If the OPS trajectory is zero-length (has no snapshots), then this
+        fails. OPS cannot currently convert zero-length trajectories to
+        MDTraj, because an OPS zero-length trajectory cannot determine its
+        MDTraj topology.
         """
-
-
+        try:
+            snap = self[0]
+        except IndexError:
+            raise ValueError("Cannot convert zero-length trajectory "
+                             + "to MDTraj")
         if topology is None:
-            topology = self.topology.mdtraj
+            # TODO: maybe add better error output?
+            # if AttributeError here, engine doesn't support mdtraj
+            topology = snap.engine.mdtraj_topology
 
         output = self.xyz
 
         traj = md.Trajectory(output, topology)
-        traj.unitcell_vectors = self.box_vectors
+        box_vectors = self.box_vectors
+        # box_vectors is a list with an entry for each frame of the traj
+        # if they're all None, we return None, not [None, None, ..., None]
+        if not np.any(box_vectors):
+            box_vectors = None
+
+        traj.unitcell_vectors = box_vectors
         return traj
 
     @property

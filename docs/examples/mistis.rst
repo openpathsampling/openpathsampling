@@ -1,3 +1,5 @@
+.. _toy_model_mistis:
+
 Multiple Interface Set TIS on a Toy Model
 =========================================
 

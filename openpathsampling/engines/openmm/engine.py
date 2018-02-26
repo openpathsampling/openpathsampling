@@ -320,7 +320,7 @@ class OpenMMEngine(DynamicsEngine):
 
         # we need to have str as keys
         properties = {str(key): str(value)
-                      for key, value in properties.iteritems()}
+                      for key, value in properties.items()}
 
         integrator = simtk.openmm.XmlSerializer.deserialize(integrator_xml)
         integrator = restore_custom_integrator_interface(integrator)
@@ -331,6 +331,9 @@ class OpenMMEngine(DynamicsEngine):
             options=options,
             openmm_properties=properties
         )
+    @property
+    def mdtraj_topology(self):
+        return self.topology.mdtraj
 
     @property
     def snapshot_timestep(self):
