@@ -5,10 +5,13 @@ import openpathsampling.engines.openmm as omm_engine
 import openpathsampling as paths
 from nose.tools import (assert_equal, assert_almost_equal, assert_not_equal,
                         assert_is_not, assert_is)
-from .test_helpers import data_filename, assert_close_unit
+from nose.plugins.skip import SkipTest
+from .test_helpers import data_filename, assert_close_unit, u
 
-import openmmtools as omt
-import simtk.unit as u
+try:
+    import openmmtools as omt
+except ImportError:
+    omt = None
 import numpy as np
 
 import logging
@@ -20,6 +23,9 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestOpenMMSnapshot(object):
     def setup(self):
+        if not omt:
+            raise SkipTest("OpenMMTools not installed; required for OpenMM "
+                           "tests.")
         self.test_system = omt.testsystems.AlanineDipeptideVacuum()
         self.template = omm_engine.snapshot_from_testsystem(self.test_system)
         self.engine = omm_engine.Engine(

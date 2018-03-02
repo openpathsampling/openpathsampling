@@ -10,7 +10,17 @@ from functools import wraps
 
 import numpy as np
 import numpy.testing as npt
-import simtk.unit as u
+
+try:
+    import simtk.unit as u
+except ImportError:
+    u = None
+
+try:
+    import mdtraj as md
+except ImportError:
+    md = None
+
 from nose.tools import assert_equal, assert_in, assert_true
 #from nose.tools import assert_items_equal
 from pkg_resources import resource_filename

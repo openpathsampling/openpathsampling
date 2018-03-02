@@ -8,14 +8,18 @@ from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
-from .test_helpers import make_1d_traj
+from .test_helpers import make_1d_traj, u
 
 import openpathsampling as paths
 import openpathsampling.engines as peng
 import numpy as np
 
-import openmmtools as omt
-import simtk.unit as u
+
+try:
+    import openmmtools as omt
+except ImportError:
+    omt = None
+
 import openpathsampling.engines.openmm as omm_engine
 
 from openpathsampling.snapshot_modifier import *
@@ -186,6 +190,8 @@ class TestRandomizeVelocities(object):
     def test_with_openmm_snapshot(self):
         # note: this is only a smoke test; correctness depends on OpenMM's
         # tests of its constraint approaches.
+        if not omt:
+            raise SkipTest("Requires OpenMMTools (not installed)")
         test_system = omt.testsystems.AlanineDipeptideVacuum()
         template = omm_engine.snapshot_from_testsystem(test_system)
         engine = omm_engine.Engine(
@@ -256,6 +262,10 @@ class TestGeneralizedDirectionModifier(object):
         )
 
         # create the OpenMM versions
+        if not omt:
+            raise SkipTest("Requires OpenMMTools (not installed)")
+        if not u:
+            raise SkipTest("Requires simtk.unit (not installed)")
         u_vel = old_div(u.nanometer, u.picosecond)
         self.openmm_modifier = GeneralizedDirectionModifier(1.2 * u_vel)
         ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
