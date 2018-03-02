@@ -1,10 +1,8 @@
 import copy
 
 import numpy as np
-from simtk import unit as u
-
 from openpathsampling.netcdfplus import StorableObject, ObjectStore, WeakLRUCache
-
+from openpathsampling.integration_tools import error_if_no_simtk_unit
 
 # =============================================================================
 # SIMULATION CONFIGURATION
@@ -154,6 +152,7 @@ class StaticContainerStore(ObjectStore):
 
     def initialize(self):
         super(StaticContainerStore, self).initialize()
+        error_if_no_simtk_unit("StaticContainerStore")
 
         self.create_variable(
             'coordinates', 'numpy.float32',
@@ -295,6 +294,7 @@ class KineticContainerStore(ObjectStore):
         """
         Initializes the associated storage to index momentums in it
         """
+        error_if_no_simtk_unit("KineticContainerStore")
 
         super(KineticContainerStore, self).initialize()
 

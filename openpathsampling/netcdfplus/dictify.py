@@ -2,12 +2,8 @@ import base64
 import importlib
 
 import numpy as np
-try:
-    from simtk import unit as units
-except ImportError:
-    is_simtk_quantity = lambda obj: False
-else:
-    is_simtk_quantity = lambda obj: obj.__class__ is units.Quantity
+
+from openpathsampling.integration_tools import is_simtk_quantity
 import math
 import abc
 from uuid import UUID
