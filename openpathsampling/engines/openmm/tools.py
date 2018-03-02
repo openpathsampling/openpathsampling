@@ -1,7 +1,8 @@
-import mdtraj as md
 import numpy as np
-import simtk.unit as u
 
+from openpathsampling.integration_tools import (
+    md, error_if_no_mdtraj, unit, error_if_no_simtk_unit
+)
 from .snapshot import Snapshot
 from .topology import Topology, MDTrajTopology
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
@@ -93,6 +94,8 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
         the constructed Snapshot
 
     """
+    error_if_no_mdtraj("snapshot_from_pdb")
+    error_if_no_simtk_unit("snapshot_from_pdb")
     pdb = md.load(pdb_file)
     velocities = np.zeros(pdb.xyz[0].shape)
 
@@ -102,9 +105,10 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
         topology = MDTrajTopology(pdb.topology)
 
     snapshot = Snapshot.construct(
-        coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
-        box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
-        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
+        coordinates=unit.Quantity(pdb.xyz[0], unit.nanometers),
+        box_vectors=unit.Quantity(pdb.unitcell_vectors[0], unit.nanometers),
+        velocities=unit.Quantity(velocities,
+                                 unit.nanometers / unit.picoseconds),
         engine=FileEngine(topology, pdb_file)
     )
 
@@ -160,9 +164,11 @@ def snapshot_from_testsystem(testsystem, simple_topology=False,
         the constructed Snapshot
 
     """
-
-    velocities = u.Quantity(
-        np.zeros(testsystem.positions.shape), u.nanometers / u.picoseconds)
+    error_if_no_simtk_unit("snapshot_from_testsystem")
+    u_nm = unit.nanometers
+    u_ps = unit.picoseconds
+    velocities = unit.Quantity(np.zeros(testsystem.positions.shape), 
+                               u_nm / u_ps)
 
     if simple_topology:
         topology = Topology(*testsystem.positions.shape)
@@ -173,7 +179,7 @@ def snapshot_from_testsystem(testsystem, simple_topology=False,
         box_vectors = \
             np.array([
                 v / u.nanometers for v in
-                testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
+                testsystem.system.getDefaultPeriodicBoxVectors()]) * u_nm
     else:
         box_vectors = None
 
@@ -207,8 +213,11 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
     openpathsampling.engines.Trajectory
         the constructed Trajectory instance
     """
+    error_if_no_simtk_unit("trajectory_from_mdtraj")
     trajectory = Trajectory()
-    vel_unit = u.nanometer / u.picosecond
+    u_nm = unit.nanometer
+    u_ps = unit.picosecond
+    vel_unit = u_nm / u_ps
 
     if simple_topology:
         topology = Topology(*mdtrajectory.xyz[0].shape)
@@ -216,23 +225,23 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
         topology = MDTrajTopology(mdtrajectory.topology)
 
     if velocities is None:
-        empty_vel = u.Quantity(np.zeros(mdtrajectory.xyz[0].shape),
-                               vel_unit)
+        empty_vel = unit.Quantity(np.zeros(mdtrajectory.xyz[0].shape),
+                                  vel_unit)
 
 
     engine = TopologyEngine(topology)
 
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
-        coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
+        coord = unit.Quantity(mdtrajectory.xyz[frame_num], u_nm)
         if velocities is not None:
-            vel = u.Quantity(velocities[frame_num], vel_unit)
+            vel = unit.Quantity(velocities[frame_num], vel_unit)
         else:
             vel = empty_vel
 
         if mdtrajectory.unitcell_vectors is not None:
-            box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
-                               u.nanometers)
+            box_v = unit.Quantity(mdtrajectory.unitcell_vectors[frame_num],
+                                  u_nm)
         else:
             box_v = None
 
@@ -272,18 +281,22 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
         the complete snapshot with zero coordinates and velocities
 
     """
+
+    error_if_no_simtk_unit("empty_snapshot_from_openmm_topology")
+    u_nm = unit.nanometers
+    u_ps = unit.picoseconds
     n_atoms = topology.n_atoms
 
     if simple_topology:
         topology = Topology(n_atoms, 3)
     else:
+        error_if_no_mdtraj("empty_snaphsot_from_openmm_topology")
         topology = MDTrajTopology(md.Topology.from_openmm(topology))
 
     snapshot = Snapshot.construct(
-        coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
-        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
-        velocities=u.Quantity(
-            np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
+        coordinates=unit.Quantity(np.zeros((n_atoms, 3)), u_nm),
+        box_vectors=unit.Quantity(topology.setUnitCellDimensions(), u_nm),
+        velocities=u.Quantity(np.zeros((n_atoms, 3)), u_nm / u_ps),
         engine=TopologyEngine(topology)
     )
 
@@ -349,4 +362,5 @@ def trajectory_to_mdtraj(trajectory, md_topology=None):
     return trajectory.to_mdtraj(md_topology)
 
 def ops_load_trajectory(filename, **kwargs):
+    error_if_no_mdtraj("ops_load_trajectory")
     return trajectory_from_mdtraj(md.load(filename, **kwargs))

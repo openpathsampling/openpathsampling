@@ -2,7 +2,7 @@ import copy
 
 import numpy as np
 from openpathsampling.netcdfplus import StorableObject, ObjectStore, WeakLRUCache
-from openpathsampling.integration_tools import error_if_no_simtk_unit
+from openpathsampling.integration_tools import error_if_no_simtk_unit, unit
 
 # =============================================================================
 # SIMULATION CONFIGURATION
@@ -44,7 +44,7 @@ class StaticContainer(StorableObject):
         # if self.coordinates is not None:
         #     # Check for nans in coordinates, and raise an exception if
         #     # something is wrong.
-        #     if type(self.coordinates) is u.Quantity:
+        #     if type(self.coordinates) is unit.Quantity:
         #         coords = self.coordinates._value
         #     else:
         #         coords = self.coordinates
@@ -160,13 +160,13 @@ class StaticContainerStore(ObjectStore):
             description="coordinate of atom '{ix[1]}' in dimension " +
                         "'{ix[2]}' of configuration '{ix[0]}'.",
             chunksizes=('n_atoms', 'n_spatial'),
-            simtk_unit=u.nanometers)
+            simtk_unit=unit.nanometers)
 
         self.create_variable(
             'box_vectors', 'numpy.float32',
             dimensions=('n_spatial', 'n_spatial'),
             chunksizes=('n_spatial', 'n_spatial'),
-            simtk_unit=u.nanometers)
+            simtk_unit=unit.nanometers)
 
 
 # =============================================================================
@@ -304,4 +304,4 @@ class KineticContainerStore(ObjectStore):
             description="the velocity of atom 'atom' in dimension " +
                         "'coordinate' of momentum 'momentum'.",
             chunksizes=('n_atoms', 'n_spatial'),
-            simtk_unit=u.nanometers / u.picoseconds)
+            simtk_unit=unit.nanometers / unit.picoseconds)

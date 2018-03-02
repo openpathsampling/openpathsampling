@@ -3,7 +3,7 @@ import importlib
 
 import numpy as np
 
-from openpathsampling.integration_tools import is_simtk_quantity
+from openpathsampling.integration_tools import is_simtk_quantity, unit
 import math
 import abc
 from uuid import UUID
@@ -321,11 +321,11 @@ class ObjectJSON(object):
     @staticmethod
     def unit_from_dict(unit_dict):
         # this will *only* work if simtk.unit is installed
-        unit = units.Unit({})
+        this_unit = unit.Unit({})
         for unit_name, unit_multiplication in unit_dict.items():
-            unit *= getattr(units, unit_name) ** unit_multiplication
+            this_unit *= getattr(unit, unit_name) ** unit_multiplication
 
-        return unit
+        return this_unit
 
     @staticmethod
     def callable_to_dict(c):

@@ -1,5 +1,6 @@
-import openpathsampling.engines as peng
+import openpathsampling as paths
 import openpathsampling.netcdfplus.chaindict as cd
+from openpathsampling.integration_tools import md, error_if_no_mdtraj
 from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 from openpathsampling.netcdfplus import WeakKeyCache, \
     ObjectJSON, create_to_dict, ObjectStore, PseudoAttribute
@@ -53,7 +54,7 @@ class CollectiveVariable(PseudoAttribute):
             name,
             cv_time_reversible=False
     ):
-        super(CollectiveVariable, self).__init__(name, peng.BaseSnapshot)
+        super(CollectiveVariable, self).__init__(name, paths.BaseSnapshot)
 
         self.cv_time_reversible = cv_time_reversible
         self.diskcache_allow_incomplete = not self.cv_time_reversible
@@ -189,11 +190,11 @@ class CallableCV(CollectiveVariable):
            with the function and this can only be done if they are passed as
            arguments to the function and added as kwargs to the FunctionCV
 
-        >>> import openpathsampling.engines as peng
+        >>> import openpathsampling as paths
         >>> def func(snapshot, indices):
         >>>     import mdtraj as md
         >>>     return md.compute_dihedrals(
-        >>>         peng.Trajectory([snapshot]).to_mdtraj(), indices=indices)
+        >>>         paths.Trajectory([snapshot]).to_mdtraj(), indices=indices)
 
         >>> cv = FunctionCV('my_cv', func, indices=[[4, 6, 8, 10]])
 
@@ -446,7 +447,7 @@ class GeneratorCV(CallableCV):
         return self.cv_callable
 
     def _eval(self, items):
-        trajectory = peng.Trajectory(items)
+        trajectory = paths.Trajectory(items)
         return [self._instance(snap) for snap in trajectory]
 
 
@@ -511,7 +512,7 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
     >>> # To create an order parameter which calculates the dihedral formed
     >>> # by atoms [7,9,15,17] (psi in Ala dipeptide):
     >>> import mdtraj as md
-    >>> traj = 'peng.Trajectory()'
+    >>> traj = 'paths.Trajectory()'
     >>> psi_atoms = [7,9,15,17]
     >>> psi_orderparam = FunctionCV("psi", md.compute_dihedrals,
     >>>                              indices=[[2,4,6,8]])
@@ -558,7 +559,7 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
         self.topology = topology
 
     def _eval(self, items):
-        trajectory = peng.Trajectory(items)
+        trajectory = paths.Trajectory(items)
 
         t = trajectory_to_mdtraj(trajectory, self.topology.mdtraj)
         return self.cv_callable(t, **self.kwargs)
@@ -626,9 +627,9 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
 
         # turn Snapshot and Trajectory into md.trajectory
         for key in md_kwargs:
-            if isinstance(md_kwargs[key], peng.BaseSnapshot):
+            if isinstance(md_kwargs[key], paths.BaseSnapshot):
                 md_kwargs[key] = md_kwargs[key].to_mdtraj()
-            elif isinstance(md_kwargs[key], peng.Trajectory):
+            elif isinstance(md_kwargs[key], paths.Trajectory):
                 md_kwargs[key] = md_kwargs[key].to_mdtraj()
 
         self._instance = featurizer(**md_kwargs)
@@ -649,7 +650,7 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
         return self.cv_callable
 
     def _eval(self, items):
-        trajectory = peng.Trajectory(items)
+        trajectory = paths.Trajectory(items)
 
         # create an mdtraj trajectory out of it
         ptraj = trajectory_to_mdtraj(trajectory, self.topology.mdtraj)
@@ -714,9 +715,9 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
 
         # turn Snapshot and Trajectory into md.trajectory
         for key in md_kwargs:
-            if isinstance(md_kwargs[key], peng.BaseSnapshot):
+            if isinstance(md_kwargs[key], paths.BaseSnapshot):
                 md_kwargs[key] = md_kwargs[key].to_mdtraj()
-            elif isinstance(md_kwargs[key], peng.Trajectory):
+            elif isinstance(md_kwargs[key], paths.Trajectory):
                 md_kwargs[key] = md_kwargs[key].to_mdtraj()
 
         self.topology = topology
@@ -736,7 +737,7 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
         )
 
     def _eval(self, items):
-        trajectory = peng.Trajectory(items)
+        trajectory = paths.Trajectory(items)
 
         t = trajectory_to_mdtraj(trajectory, self.topology.mdtraj)
         return self._instance.transform(t)

@@ -4,9 +4,10 @@
 """
 
 import numpy as np
-import mdtraj as md
-import simtk.unit as u
 
+from openpathsampling.integration_tools import (
+    error_if_no_mdtraj, is_simtk_quantity_type, md
+)
 from openpathsampling.netcdfplus import StorableObject, LoaderProxy
 import openpathsampling as paths
 
@@ -132,7 +133,8 @@ class Trajectory(list, StorableObject):
                     hasattr(snapshot_class, '__features__') \
                     and item in snapshot_class.__features__.variables:
                 first = getattr(self[0], item)
-                if type(first) is u.Quantity:
+                #if type(first) is u.Quantity:
+                if is_simtk_quantity_type(first):
                     inner = first._value
                     if type(inner) is np.ndarray:
                         dtype = inner.dtype
@@ -548,6 +550,7 @@ class Trajectory(list, StorableObject):
         MDTraj, because an OPS zero-length trajectory cannot determine its
         MDTraj topology.
         """
+        error_if_no_mdtraj("Converting to mdtraj")
         try:
             snap = self[0]
         except IndexError:
