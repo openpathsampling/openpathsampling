@@ -2,7 +2,12 @@ import base64
 import importlib
 
 import numpy as np
-from simtk import unit as units
+try:
+    from simtk import unit as units
+except ImportError:
+    is_simtk_quantity = lambda obj: False
+else:
+    is_simtk_quantity = lambda obj: obj.__class__ is units.Quantity
 import math
 import abc
 from uuid import UUID
@@ -132,7 +137,8 @@ class ObjectJSON(object):
                 '_integer': str(obj)}
 
         elif obj.__class__.__module__ != builtin_module:
-            if obj.__class__ is units.Quantity:
+            #if obj.__class__ is units.Quantity:
+            if is_simtk_quantity(obj):
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
                     return {
@@ -318,6 +324,7 @@ class ObjectJSON(object):
 
     @staticmethod
     def unit_from_dict(unit_dict):
+        # this will *only* work if simtk.unit is installed
         unit = units.Unit({})
         for unit_name, unit_multiplication in unit_dict.items():
             unit *= getattr(units, unit_name) ** unit_multiplication
