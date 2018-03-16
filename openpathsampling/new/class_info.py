@@ -3,6 +3,11 @@ import tools
 from serialization import DefaultSerializer, DefaultDeserializer
 from serialization_helpers import SchemaFindUUIDs
 
+try:
+    import ujson as json
+except ImportError:
+    import json
+
 class ClassInfo(object):
     """
     Parameters
@@ -50,7 +55,8 @@ class ClassInfo(object):
                 + ", lookup_result=" + str(self.lookup_result) + ")")
 
 
-class ClassInfoContainer(object):
+
+class SerializationSchema(object):
     """Connect table to serialization information.
 
     This is the primary location for information connecting application
@@ -71,16 +77,16 @@ class ClassInfoContainer(object):
     systems). In such cases, the ClassInfoContainer needs to be subclassed
     with specialized information.
     """
-    def __init__(self, default_info, class_info_list=None):
+    def __init__(self, default_info, schema=None, class_info_list=None):
         class_info_list = tools.none_to_default(class_info_list, [])
+        self.schema = {}
         self.lookup_to_info = {}
         self.table_to_info = {}
         self.class_info_list = []
         self.default_info = default_info
         self.missing_table = ClassInfo(table="__missing__", cls=None)
         self.add_class_info(default_info)
-        for info in class_info_list:
-            self.add_class_info(info)
+        self.register_info(class_info_list, schema)
 
     def add_class_info(self, info_node):
         # check that we're not in any existing
@@ -90,6 +96,13 @@ class ClassInfoContainer(object):
         # be completely general, but may simplify some)
         self.lookup_to_info.update({info_node.lookup_result: info_node})
         self.table_to_info.update({info_node.table: info_node})
+
+    def register_info(self, class_info_list, schema=None):
+        schema = tools.none_to_default(schema, {})
+        self.schema.update(schema)
+        for info in class_info_list:
+            info.set_defaults(schema)
+            self.add_class_info(info)
 
     @property
     def tables(self):
@@ -145,10 +158,85 @@ class ClassInfoContainer(object):
             else:
                 return None
 
+    def serialize(self, obj, storage=None):
+        """
+        Serialize all objects in ``obj`` to table-grouped JSON-ready dict.
+
+        Parameters
+        ----------
+        obj : object
+            the object to be serialized
+        storage : :class:`.Storage`
+            storage object with connection to backend and cache (if
+            relevant)
+
+        Returns
+        -------
+        dict :
+            {table: {uuid: {attr: value}}}
+        """
+        logger.debug("Starting serialization")
+        cache = [] if not storage else storage.cache
+        if storage:
+            # check if this object has already been stored
+            pass
+
+        logger.debug("Listing all included objects to serialize")
+        uuids = get_all_uuids(obj, cache)
+
+        if storage:
+            # remove any existing uuids from the dict
+            pass
+
+        get_table_name = lambda uuid, obj_: self[obj_].table
+        by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
+
+        # fix for missing tables
+
+        logger.debug("Serializing objects from %d tables: %s",
+                     len(by_table), str(list(by_table.keys())))
+        serialized_by_table = {}
+        for (table, objects) in by_table.items():
+            logger_debug("Serializing %d objects from table %s",
+                         len(by_table[table]), table)
+            serialize = self[table].serializer
+            serialized_by_table[table] = [serialize(o) for o in objects]
+
+        return serialized_by_table
+
+
+    def deserialize(self, serialized_by_table):
+        # 1. generate dependencies lists
+        # 2. get reload order
+        # 3. reconstruct UUIDs
+        dependencies = {}
+        to_load = []
+        uuid_to_table = {}
+        for (table, objects) in serialized_by_table.items():
+            schema_entries = self.schema[table]
+            for (uuid, item_dct) in objects.items():
+                uuid_to_table[uuid] = table
+                to_load.append(tools.SimpleNamespace(**item_dct))
+                item_json = json.dumps(item_dct)
+                dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
+
+        # TODO: this is the reload order now
+        ordered_uuids = get_reload_order(to_load, dependencies)
+        # TODO: self.reconstruct_uuids(ordered_uuids, uuid_to_table)
+        # (this is just the current storage.deserialize_uuids)
+
+
+
+
+
+
+
+
 
 
     def __repr__(self):  # pragma: no cover
-        return ("ClassInfoContainer(default_info=" + repr(self.default_info)
+        return ("SerializationSchema(default_info=" + repr(self.default_info)
                 + ", class_info_list=" + repr(self.class_info_list) + ")")
 
 
+ClassInfoContainer = SerializationSchema

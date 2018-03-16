@@ -69,7 +69,6 @@ class GenericLazyLoader(object):
             return ("<LazyLoader for " + str(self.class_.__name__)
                     + " UUID " + str(self.__uuid__) + ">")
 
-
 class Serialization(object):
     builtin_types = ['int', 'float', 'str']
     uuid_types = ['uuid', 'list_uuid', 'lazy']

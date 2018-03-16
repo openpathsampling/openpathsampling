@@ -93,19 +93,20 @@ class GeneralStorage(object):
     def register_schema(self, schema, class_info_list,
                         backend_metadata=None, read_mode=False):
         # check validity
-        for info in class_info_list:
-            info.set_defaults(schema)
-            self.class_info.add_class_info(info)
+        self.class_info.register_info(class_info_list, schema)
+        # for info in class_info_list:
+            # info.set_defaults(schema)
+            # self.class_info.add_class_info(info)
 
         table_to_class = {table: self.class_info[table].cls
                           for table in schema
                           if table not in ['uuid', 'tables']}
+        # here's where we add the class_info to the backend
         self.backend.register_schema(schema, table_to_class,
                                      backend_metadata)
         self.schema.update(schema)
         for table in self.schema:
             self._storage_tables[table] = StorageTable(self, table)
-        # here's where we add the class_info to the backend
         self.serialization.register_serialization(schema, self.class_info)
 
 
@@ -122,6 +123,7 @@ class GeneralStorage(object):
                 lookup_examples |= {lookup}
 
     def save(self, obj):
+        # self.class_info.serialize(obj, storage=self)
         # check if obj is in DB (maybe this can be removed?)
         logger.debug("Starting save")
         exists = self.backend.load_uuids_table(uuids=[get_uuid(obj)],
@@ -130,7 +132,6 @@ class GeneralStorage(object):
             return
         # find all UUIDs we need to save with this object
         logger.debug("Listing all objects to save")
-        # TODO: use self.cache as the known_uuids
         uuids = get_all_uuids(obj, known_uuids=self.cache)
         logger.debug("Checking if objects already exist in database")
         # remove any UUIDs that have already been saved

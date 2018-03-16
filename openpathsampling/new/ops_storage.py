@@ -91,6 +91,7 @@ ops_class_info = OPSClassInfoContainer(
                            serializer=SimulationObjectSerializer(),
                            deserializer=deserialize_sim,
                            find_uuids=default_find_uuids),
+    schema=ops_schema,
     class_info_list=[
         ClassInfo(table='samples', cls=paths.Sample),
         ClassInfo(table='sample_sets', cls=paths.SampleSet),
@@ -166,9 +167,10 @@ class OPSStorage(storage.GeneralStorage):
                                      cls=table_to_class[table],
                                      lookup_result=lookups[table])
                            for table in lookups]
-        for info in class_info_list:
-            info.set_defaults(self.schema)
-            self.class_info.add_class_info(info)
+        self.class_info.register_info(class_info_list, self.schema)
+        # for info in class_info_list:
+            # info.set_defaults(self.schema)
+            # self.class_info.add_class_info(info)
 
 
     def register_from_instance(self, lookup, obj):
