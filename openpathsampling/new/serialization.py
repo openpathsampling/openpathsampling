@@ -69,6 +69,31 @@ class GenericLazyLoader(object):
             return ("<LazyLoader for " + str(self.class_.__name__)
                     + " UUID " + str(self.__uuid__) + ">")
 
+class ProxyObjectFactory(object):
+    def __init__(self, storage, class_info):
+        self.storage =  storage
+        self.class_info = class_info
+        self.lazy_classes = {}
+
+    def make_lazy(self, cls, uuid):
+        if cls not in self.lazy_classes:
+            self.lazy_classes[cls] = make_lazy_class(cls)
+        return self.lazy_classes[cls](uuid=uuid,
+                                      class_=cls,
+                                      storage=self.storage)
+
+    def make_all_lazies(self, lazies):
+        # lazies is dict of {table_name: list_of_lazy_uuid_rows}
+        all_lazies = {}
+        for (table, lazy_uuid_rows) in lazies.items():
+            logger.debug("Making {} lazy proxies for objects in table '{}'"\
+                         .format(len(lazy_uuid_rows), table))
+            cls = self.table_to_class[table]
+            for row in lazy_uuid_rows:
+                all_lazies[row.uuid] = self.make_lazy(cls, row.uuid)
+        return all_lazies
+
+
 class Serialization(object):
     builtin_types = ['int', 'float', 'str']
     uuid_types = ['uuid', 'list_uuid', 'lazy']
