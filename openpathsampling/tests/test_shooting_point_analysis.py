@@ -50,9 +50,9 @@ class TestTransformedDict(object):
 
     def test_update(self):
         self.test_dict.update({(5,6): "d"})
-        assert_equal(self.test_dict.store, 
+        assert_equal(self.test_dict.store,
                      {0 : "a", 1 : "b", 2 : "c", 5 : "d"})
-        assert_equal(self.test_dict.hash_representatives, 
+        assert_equal(self.test_dict.hash_representatives,
                      {0: (0,1), 1: (1,2), 2: (2,3), 5: (5,6)})
 
     def test_del(self):
@@ -61,7 +61,7 @@ class TestTransformedDict(object):
 
     def test_iter(self):
         iterated = [k for k in self.test_dict]
-        for (truth, beauty) in zip(list(self.transformed.keys()), iterated):
+        for (truth, beauty) in zip(list(self.untransformed.keys()), iterated):
             assert_equal(truth, beauty)
 
     def test_len(self):
