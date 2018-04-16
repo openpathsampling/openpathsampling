@@ -26,6 +26,7 @@ def restore_custom_integrator_interface(integrator):
     # for openmmtools integrators
     try:
         import openmmtools
+        import openmmtools.integrators  # hash table, see #767
     except ImportError:  # pragma: no cover
         pass  # if openmmtools doesn't exist, can't restore interface
     else:
