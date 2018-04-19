@@ -126,6 +126,8 @@ from .pathmover import (
     BackwardFirstTwoWayShootingMover
 )
 
+from .shifting import ShiftingMover, ShiftingStrategy
+
 from .pathsimulator import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
     CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation

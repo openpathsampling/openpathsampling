@@ -1824,6 +1824,13 @@ class PathTreeBuilder(Builder):
                 'suffix': 'r',
                 'css_class': ['reversal']
             },
+            'ShiftingMover': {
+                'name': 'Shifting',
+                'suffix': '',
+                'css_class': ['extend'],
+                'overlap': 'line'
+            },
+
             'new': {
                 'name': 'New',
                 'suffix': '+',
