@@ -119,7 +119,7 @@ def get_all_uuids(initial_object, known_uuids=None, class_info=None):
             else:
                 find_uuids = default_find_uuids
 
-            new_uuids, new_objs = find_uuids(obj=obj, 
+            new_uuids, new_objs = find_uuids(obj=obj,
                                              cache_list=[uuids, known_uuids])
 
             uuids.update(new_uuids)

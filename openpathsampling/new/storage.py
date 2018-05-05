@@ -123,6 +123,9 @@ class GeneralStorage(object):
                 lookup_examples |= {lookup}
 
     def save(self, obj):
+        # TODO: convert the whole .save process to something based on the
+        # class_info.serialize method (enabling per-class approaches for
+        # finding UUIDs, which will be a massive serialization speed-up
         # self.class_info.serialize(obj, storage=self)
         # check if obj is in DB (maybe this can be removed?)
         logger.debug("Starting save")
@@ -218,9 +221,11 @@ class GeneralStorage(object):
         lazy_uuid_rows = self.backend.load_uuids_table(lazy_uuids)
         lazies = tools.group_by_function(lazy_uuid_rows,
                                          self.backend.uuid_row_to_table_name)
+        # TODO: replace this with something not based on Serialization
+        # object
         new_uuids = self.serialization.make_all_lazies(lazies)
 
-        # get order are deserialize
+        # get order and deserialize
         uuid_to_table_row = {r.uuid: r for r in to_load}
         ordered_uuids = get_reload_order(to_load, dependencies)
         new_uuids = self.deserialize_uuids(ordered_uuids, uuid_to_table,
