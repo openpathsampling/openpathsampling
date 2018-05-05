@@ -28,7 +28,7 @@ from openpathsampling.tests.test_helpers import make_1d_traj
 import os
 
 
-class test_FunctionCV(object):
+class TestFunctionCV(object):
     def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)

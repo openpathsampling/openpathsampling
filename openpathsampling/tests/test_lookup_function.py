@@ -13,7 +13,7 @@ from openpathsampling.numerics import (
     LookupFunction, LookupFunctionGroup, VoxelLookupFunction
 )
 
-class testLookupFunctionGroup(object):
+class TestLookupFunctionGroup(object):
     def setup(self):
         x1 = [0.0, 1.0, 2.0, 3.0, 4.0]
         y1 = [0.1, 1.3, 1.8, 3.3, 4.2]
@@ -74,12 +74,12 @@ class testLookupFunctionGroup(object):
         assert_almost_equal(self.group(1.0), 1.15)
 
 
-class testVoxelLookupFunction(object):
+class TestVoxelLookupFunction(object):
     def setup(self):
         counter = collections.Counter({(0,0): 1.0, (0,2): 2.0, (1,4): 4.0,
                                        (-1,-1): 5.0})
-        self.lookup = VoxelLookupFunction(left_bin_edges=(-1.0, 1.0), 
-                                          bin_widths=(0.5, 0.25), 
+        self.lookup = VoxelLookupFunction(left_bin_edges=(-1.0, 1.0),
+                                          bin_widths=(0.5, 0.25),
                                           counter=counter)
 
     def test_keys(self):

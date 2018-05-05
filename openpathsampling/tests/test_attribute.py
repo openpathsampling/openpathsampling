@@ -12,7 +12,7 @@ import openpathsampling as paths
 import os
 
 
-class test_FunctionPseudoAttribute(object):
+class TestFunctionPseudoAttribute(object):
     def setup(self):
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)

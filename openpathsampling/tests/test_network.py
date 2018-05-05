@@ -24,7 +24,7 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testMultipleStateTIS(object):
+class TestMultipleStateTIS(object):
     # generic class to set up states and ifaces
     def setup(self):
         # need to clear this before each run, otherwise it saves the
@@ -92,9 +92,9 @@ class testMultipleStateTIS(object):
             velocities=[1.0]*5
         )
 
-class testMSTISNetwork(testMultipleStateTIS):
+class TestMSTISNetwork(TestMultipleStateTIS):
     def setup(self):
-        super(testMSTISNetwork, self).setup()
+        super(TestMSTISNetwork, self).setup()
 
         ifacesA = self.ifacesA[:-1]
         ifacesB = self.ifacesB[:-1]
@@ -212,9 +212,9 @@ class testMSTISNetwork(testMultipleStateTIS):
         assert_equal(self.stateB.name, "A")
         assert_equal(self.stateC.name, "C")
 
-class testMISTISNetwork(testMultipleStateTIS):
+class TestMISTISNetwork(TestMultipleStateTIS):
     def setup(self):
-        super(testMISTISNetwork, self).setup()
+        super(TestMISTISNetwork, self).setup()
 
         ifacesA = self.ifacesA[:-1]
         ifacesB = self.ifacesB[:-1]
@@ -360,7 +360,7 @@ class testMISTISNetwork(testMultipleStateTIS):
             os.remove(fname)
 
 
-class testTPSNetwork(object):
+class TestTPSNetwork(object):
     def setup(self):
         from .test_helpers import CallIdentity
         xval = paths.FunctionCV("xval", lambda snap: snap.xyz[0][0])
@@ -376,13 +376,13 @@ class testTPSNetwork(object):
         self.traj['BC'] = make_1d_traj([0.01, 0.16, 0.25, 0.53])
         self.traj['CC'] = make_1d_traj([0.51, 0.35, 0.36, 0.55])
         self.traj['CA'] = make_1d_traj([0.52, 0.22, -0.22, -0.52])
-        
+
     # define all the test networks as properties: we can do something
     # similar then for the fixed path length, and just need to override
     # these properties to get all the same tests
     @property
     def network2a(self):
-        return TPSNetwork(initial_states=[self.stateA], 
+        return TPSNetwork(initial_states=[self.stateA],
                           final_states=[self.stateB])
 
     @property
@@ -495,7 +495,7 @@ class testTPSNetwork(object):
         assert_equal(ensemble(self.traj['BB']), True)
         assert_equal(ensemble(self.traj['CC']), True)
 
-class testFixedLengthTPSNetwork(testTPSNetwork):
+class TestFixedLengthTPSNetwork(TestTPSNetwork):
     @property
     def network2a(self):
         return FixedLengthTPSNetwork(initial_states=[self.stateA],
@@ -511,7 +511,7 @@ class testFixedLengthTPSNetwork(testTPSNetwork):
     @property
     def network2c(self):
         return FixedLengthTPSNetwork.from_state_pairs(
-            [(self.stateA, self.stateB)], 
+            [(self.stateA, self.stateB)],
             length=10
         )
 
