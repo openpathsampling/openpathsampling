@@ -17,7 +17,7 @@ class Identity2(CallIdentity):
     def __str__(self):
         return "Id2"
 
-def setUp():
+def setup_module():
     global op_id, volA, volB, volC, volD, volA2
     op_id = CallIdentity()
     volA = volume.CVDefinedVolume(op_id, -0.5, 0.5)
@@ -27,7 +27,7 @@ def setUp():
     volA2 = volume.CVDefinedVolume(Identity2(), -0.5, 0.5)
 
 
-class testEmptyVolume(object):
+class TestEmptyVolume(object):
     def test_empty_volume(self):
         """Empty volume is well-behaved"""
         empty = volume.EmptyVolume()
@@ -56,7 +56,7 @@ class testEmptyVolume(object):
         assert_false(empty1 != empty2)
 
 
-class testFullVolume(object):
+class TestFullVolume(object):
     def test_full_volume(self):
         """Full volume is well-behaved"""
         full = volume.FullVolume()
@@ -78,7 +78,7 @@ class testFullVolume(object):
         assert_equal((volA | full).__str__(), "all")
         assert_equal((~ full).__str__(), "empty")
 
-class testCVRangeVolume(object):
+class TestCVRangeVolume(object):
     def test_lower_boundary(self):
         assert_equal(volA(0.49), True)
         assert_equal(volA(0.50), True)
@@ -178,15 +178,15 @@ class testCVRangeVolume(object):
         assert (not vol(-70 * u.nanometers))
 
 
-class testCVRangeVolumePeriodic(object):
-    def setUp(self):
+class TestCVRangeVolumePeriodic(object):
+    def setup(self):
         self.pvolA = volume.PeriodicCVDefinedVolume(op_id, -100, 75)
         self.pvolA_ = volume.PeriodicCVDefinedVolume(op_id, 75, -100)
         self.pvolB = volume.PeriodicCVDefinedVolume(op_id, 50, 100)
         self.pvolC = volume.PeriodicCVDefinedVolume(op_id, -100, -50)
         self.pvolD = volume.PeriodicCVDefinedVolume(op_id, -100, 100)
         self.pvolE = volume.PeriodicCVDefinedVolume(op_id, -150, 150)
-    
+
     def test_normal(self):
         """min<max and both within periodic domain"""
         lambda_min = -150
@@ -360,7 +360,7 @@ class testCVRangeVolumePeriodic(object):
                      volume.PeriodicCVDefinedVolume(op_id, -100, 75))
 
 
-class testVolumeFactory(object):
+class TestVolumeFactory(object):
     def test_check_minmax(self):
         minmax1 = volume.VolumeFactory._check_minmax(0, [2, 2])
         minmax2 = volume.VolumeFactory._check_minmax([0, 0], 2)
@@ -401,7 +401,7 @@ class testVolumeFactory(object):
             volume.VolumeFactory.CVRangeVolumePeriodicSet(op_id, mins, maxs)
         )
 
-class testAbstract(object):
+class TestAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_volume(self):
         mover = volume.Volume()

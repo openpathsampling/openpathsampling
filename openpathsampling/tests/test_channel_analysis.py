@@ -17,7 +17,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testChannelAnalysis(object):
+class TestChannelAnalysis(object):
     def setup(self):
         cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
         self.state_A = paths.CVDefinedVolume(cv, -0.1, 0.1)
@@ -78,6 +78,7 @@ class testChannelAnalysis(object):
         analyzer._results = self.toy_results
         analyzer.treat_multiples = 'newest'
         storage = paths.Storage(data_filename('test.nc'), 'w')
+        storage.save(self.incr_1[0])  # template snapshot
         storage.tag['analyzer'] = analyzer
         storage.sync()
         storage.close()

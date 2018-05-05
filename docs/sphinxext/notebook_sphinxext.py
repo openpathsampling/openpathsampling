@@ -72,18 +72,17 @@ class NotebookDirective(Directive):
 
         skip_exceptions = 'skip_exceptions' in self.options
 
-        print('[NotebookDirective] Evaluating %s' % nb_filename)
-        start = time.time()
+        print('[NotebookDirective] Comverting %s' % nb_filename)
+#        start = time.time()
 #        evaluated_text = evaluate_notebook(nb_abs_path, dest_path_eval,
 #                                           skip_exceptions=skip_exceptions)
         evaluated_text = ''
-        print('[NotebookDirective] Took %8.3fs seconds' %
-              (time.time() - start))
+#        print('[NotebookDirective] Took %8.3fs seconds' %
+#              (time.time() - start))
 
         # Create link to notebook and script files
         link_rst = "(" + \
                    formatted_link(nb_basename) + "; " + \
-                   formatted_link(rel_path_eval) + "; " + \
                    formatted_link(rel_path_script) + \
                    ")"
 
@@ -161,6 +160,9 @@ def nb_to_html(nb_path):
         lambda x: not any([x.startswith(s) for s in line_begin_strings]), header_lines)
 
     header = '\n'.join(header_lines)
+
+    # fix wrong static links to headers
+    body = body.replace('class="anchor-link"', 'class="headerlink"')
 
     # concatenate raw html lines
     lines = ['<div class="ipynotebook">', header, body, '</div>']
