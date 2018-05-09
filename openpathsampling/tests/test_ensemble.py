@@ -1317,6 +1317,12 @@ class TestTISEnsemble(EnsembleTest):
                    str(self.minl) + " max_lambda=" + str(self.maxl) + " ")
         assert_equal(mystr, teststr)
 
+    def test_no_frame_after_interface(self):
+        traj_3 = make_1d_traj([0.2, 0.6,  2.1])
+        assert_equal(self.tis(traj_3), True)
+        traj_2 = make_1d_traj([0.2, 2.1])
+        assert_equal(self.tis(traj_2), True)
+
     def test_tis_ensemble_candidate(self):
         tis = TISEnsemble(vol1, vol3, vol2, op, lambda_i=0.7)
         test_f = lambda t: tis(t, candidate=True)
