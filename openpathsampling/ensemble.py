@@ -2782,7 +2782,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     #     return samp
 
 
-class TISEnsemble(SequentialEnsemble):
+class TISEnsemble(WrappedEnsemble):
     """An ensemble for TIS (or AMS).
 
     Begin in `initial_states`, end in either `initial_states` or
@@ -2836,11 +2836,12 @@ class TISEnsemble(SequentialEnsemble):
         volume_a = paths.volume.join_volumes(initial_states)
         volume_b = paths.volume.join_volumes(final_states)
 
-        super(TISEnsemble, self).__init__([
+        ensemble = SequentialEnsemble([
             AllInXEnsemble(volume_a) & LengthEnsemble(1),
-            AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(interface),
+            OptionalEnsemble(AllOutXEnsemble(volume_a | volume_b)),
             AllInXEnsemble(volume_a | volume_b) & LengthEnsemble(1)
-        ])
+        ]) & PartOutXEnsemble(interface)
+        super(TISEnsemble, self).__init__(ensemble)
 
         self.initial_states = initial_states
         self.final_states = final_states
@@ -2939,6 +2940,9 @@ class TISEnsemble(SequentialEnsemble):
             "max_lambda=" + max_l + " "
         )
         return mystr
+
+    def _str(self):
+        return str(self.ensemble)
 
 
 class EnsembleFactory(object):
