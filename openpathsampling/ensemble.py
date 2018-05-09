@@ -2626,7 +2626,9 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         out_A = AllOutXEnsemble(state_vol)
         in_X = AllInXEnsemble(self.innermost_vol)
         leave_X = PartOutXEnsemble(self.innermost_vol)
-        interstitial = out_A & in_X
+        # interstitial = out_A & in_X
+        interstitial = self.innermost_vol - state_vol
+        in_interstitial = AllInXEnsemble(interstitial)
         segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
                              for inner in self.innermost_vols]
 
@@ -2635,15 +2637,15 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         # interstitial = AllInXEnsemble(self.innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(in_A),
-            OptionalEnsemble(interstitial),
+            OptionalEnsemble(in_interstitial),
         ]
         loop = [
-            out_A & leave_X,
+            out_A, # & leave_X, # redundant b/c next stop for previous
             in_X  # & hitA # redundant due to stop req for previous outA
         ]
         end = [
-            out_A & leave_X,
-            OptionalEnsemble(interstitial),
+            out_A, #  & leave_X,
+            OptionalEnsemble(in_interstitial),
             SingleFrameEnsemble(in_A)
         ]
         ensembles = start + loop * (n_l - 1) + end
