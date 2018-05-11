@@ -1,7 +1,7 @@
 import tools
 
 from serialization import DefaultSerializer, DefaultDeserializer
-from serialization_helpers import SchemaFindUUIDs
+from serialization_helpers import SchemaFindUUIDs, has_uuid
 
 try:
     import ujson as json
@@ -147,6 +147,8 @@ class SerializationSchema(object):
                     raise e
 
     def info_from_instance(self, item):
+        if not has_uuid(item):
+            return None
         if self.is_special(item):
             self.get_special(item)
         else:
@@ -157,6 +159,7 @@ class SerializationSchema(object):
                 return self.default_info
             else:
                 return None
+
 
     def serialize(self, obj, storage=None):
         """
@@ -176,17 +179,18 @@ class SerializationSchema(object):
             {table: {uuid: {attr: value}}}
         """
         logger.debug("Starting serialization")
-        cache = [] if not storage else storage.cache
-        if storage:
-            # check if this object has already been stored
-            pass
+        results = {}
+        cache = {} if not storage else storage.cache
+        if storage and storage.uuids_in_storage([get_uuid(obj)]):
+            return  # return what? is None right?
 
         logger.debug("Listing all included objects to serialize")
-        uuids = get_all_uuids(obj, cache)
+        uuids = get_all_uuids(obj, cache)  # TODO: replace this
 
         if storage:
-            # remove any existing uuids from the dict
-            pass
+            exists = storage.uuids_in_storage(list(uuids.keys()))
+            for existing in exists:
+                del uuids[existing.uuid]
 
         get_table_name = lambda uuid, obj_: self[obj_].table
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
@@ -224,12 +228,6 @@ class SerializationSchema(object):
         ordered_uuids = get_reload_order(to_load, dependencies)
         # TODO: self.reconstruct_uuids(ordered_uuids, uuid_to_table)
         # (this is just the current storage.deserialize_uuids)
-
-
-
-
-
-
 
 
 

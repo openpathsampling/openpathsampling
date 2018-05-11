@@ -122,6 +122,10 @@ class GeneralStorage(object):
                 self.register_from_instance(lookup, obj)
                 lookup_examples |= {lookup}
 
+    def uuids_in_storage(self, uuid_list):
+        return self.backend.load_uuids_table(uuids=uuid_list,
+                                             ignore_missing=True)
+
     def save(self, obj):
         # TODO: convert the whole .save process to something based on the
         # class_info.serialize method (enabling per-class approaches for
@@ -135,7 +139,8 @@ class GeneralStorage(object):
             return
         # find all UUIDs we need to save with this object
         logger.debug("Listing all objects to save")
-        uuids = get_all_uuids(obj, known_uuids=self.cache)
+        uuids = get_all_uuids(obj, known_uuids=self.cache,
+                              class_info=self.class_info)
         logger.debug("Checking if objects already exist in database")
         # remove any UUIDs that have already been saved
         exists = self.backend.load_uuids_table(uuids=list(uuids.keys()),

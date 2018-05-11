@@ -60,6 +60,54 @@ def caches_contain(key, cache_list):
             return True
     return False
 
+def filter_known_uuids(uuid_dict, cache_list):
+    """Filters out UUIDs in the cache_list, returning what isn't cached"""
+    return {uuid: value for (uuid, value) in uuid_dict.items()
+            if not caches_contain(uuid, cache_list)}
+
+class DefaultFindUUIDs(object):
+    def __init__(self):
+        self._mappable_classes = set()
+        self._non_mappable_classes = set()
+        self._iterable_classes = set()
+        self._non_iterable_classes = set()
+
+    @staticmethod
+    def _get_with_cache(obj, key, true_set, false_set, check_method):
+        # TODO: this is probably best moved to utils; I think we may use it
+        # elsewhere as well
+        if key in false_set:
+            return False
+        elif key in true_set:
+            return True
+        else:
+            result = check_method(obj)
+            set_for_obj = {True: true_set, False: false_set}[result]
+            set_for_obj.add(key)
+            return result
+
+    def is_mappable(self, obj):
+        return self._get_with_cache(
+            obj=obj,
+            key=obj.__class__,
+            true_set=self._mappable_classes,
+            false_set=self._non_mappable_classes,
+            check_method=is_mappable
+        )
+
+    def is_iterable(self, obj):
+        return self._get_with_cache(
+            obj=obj,
+            key=obj.__class__,
+            true_set=self._iterable_classes,
+            false_set=self._non_iterable_classes,
+            check_method=lambda obj: \
+                is_iterable(obj) and not is_numpy_iterable(obj)
+        )
+
+    # TODO: FIXME: add default_find_uuids as __call__ here; this should
+    # really cut the time spent in is_iterable/is_mappable
+
 def default_find_uuids(obj, cache_list):
     uuids = {}
     new_objects = []
@@ -75,9 +123,6 @@ def default_find_uuids(obj, cache_list):
         new_objects.extend(list(obj.to_dict().values()))
 
     # mappables and iterables
-    # TODO:  There might be a way, using a ClassInfoContainer, to
-    # simplify this for data objects. (We spend a significant
-    # fraction of time in is_mappable/is_iterable.)
     if is_mappable(obj):
         new_objects.extend([o for o in obj.keys() if has_uuid(o)])
         new_objects.extend(list(obj.values()))
@@ -101,7 +146,7 @@ def get_all_uuids(initial_object, known_uuids=None, class_info=None):
         objects that can be excluded from the search tree, presumably
         because they have already been searched and any object beneath them
         in the search tree also also already known
-    class_info : 
+    class_info : :class:`.SerializationSchema`
 
     Returns
     -------
@@ -114,8 +159,10 @@ def get_all_uuids(initial_object, known_uuids=None, class_info=None):
     while objects:
         new_objects = []
         for obj in objects:
-            if class_info and class_info.info_from_instance(obj):
-                find_uuids = class_info.info_from_instance(obj).find_uuids
+            info = class_info.info_from_instance(obj) \
+                    if class_info else None
+            if info:
+                find_uuids = info.find_uuids
             else:
                 find_uuids = default_find_uuids
 
@@ -136,7 +183,7 @@ class SchemaFindUUIDs(object):
             if attr_type in ['uuid', 'lazy', 'list_uuid']
         ]
 
-    def __call__(self, obj, known_uuids):
+    def __call__(self, obj, cache_list):
         uuids = {get_uuid(obj): obj}
         new_objects = []
 

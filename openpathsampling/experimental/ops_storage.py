@@ -68,23 +68,68 @@ class MoveChangeDeserializer(DefaultDeserializer):
         set_uuid(obj, uuid)
         return obj
 
+class OPSSpecialLookup(object):
+    """Separate object to handle special lookups
 
-class OPSClassInfoContainer(ClassInfoContainer):
+    This is separate because, in addition to the functionality it encodes,
+    it also acts as a cache to reduce the number of isinstance calls (and
+    hopfully speed up the identification of types)
+    """
     special_superclasses = (paths.BaseSnapshot, paths.MoveChange,
                             paths.Details)
-    def is_special(self, item):
-        return isinstance(item, self.special_superclasses)
+    snapshot_lookup_function = \
+            lambda self, snap: (get_uuid(snap.engine), snap.__class__)
+    details_lookup_function = lambda self, details: paths.Details
+    movechange_lookup_function = lambda self, change: paths.MoveChange
 
-    def special_lookup_key(self, item):
+    def __init__(self):
+        self.secondary_lookups = {}
+        self.special_classes = set()
+        self.non_special_classes = set()
+
+    def is_special(self, item):
+        if item.__class__ in self.special_classes:
+            return True
+        elif item.__class__ in self.non_special_classes:
+            return False
+        else:
+            is_special = isinstance(item, self.special_superclasses)
+            my_set = {True: self.special_classes,
+                      False: self.non_special_classes}[is_special]
+            my_set.update([item.__class__])
+            return is_special
+
+
+    def __call__(self, item):
+        cls = item.__class__
+        if cls in self.secondary_lookups:
+            return self.secondary_lookups[cls](item)
+
         if isinstance(item, paths.BaseSnapshot):
-            return (get_uuid(item.engine), item.__class__)
+            self.secondary_lookups[cls] = self.snapshot_lookup_function
         elif isinstance(item, paths.MoveChange):
-            return paths.MoveChange
+            self.secondary_lookups[cls] = self.movechange_lookup_function
         elif isinstance(item, paths.Details):
             # TODO: this should be removed, since all Details classes are
             # equivalent -- unfortunately, JHP's LoaderProxy breaks in that
             # case
-            return paths.Details
+            self.secondary_lookups[cls] = self.details_lookup_function
+
+        return self.secondary_lookups[cls](item)
+
+class OPSClassInfoContainer(ClassInfoContainer):
+    def __init__(self, default_info, schema=None, class_info_list=None):
+        super(OPSClassInfoContainer, self).__init__(default_info,
+                                                    schema,
+                                                    class_info_list)
+        self.special_lookup_object = OPSSpecialLookup()
+
+    def is_special(self, item):
+        return self.special_lookup_object.is_special(item)
+
+    def special_lookup_key(self, item):
+        return self.special_lookup_object(item)
+
 
 ops_class_info = OPSClassInfoContainer(
     default_info=ClassInfo('simulation_objects', cls=StorableObject,
