@@ -207,8 +207,6 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.mode = mode
 
-        self.set_auto_mask(False)
-
         exists = os.path.isfile(filename)
         if exists and mode == 'a':
             logger.info(
@@ -349,6 +347,9 @@ class NetCDFPlus(netCDF4.Dataset):
             # call the subclass specific restore in case there is more stuff
             # to prepare
             self._restore()
+
+        self.set_auto_mask(False)
+
 
 
     def _create_simplifier(self):
