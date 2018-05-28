@@ -207,6 +207,8 @@ class NetCDFPlus(netCDF4.Dataset):
 
         self.mode = mode
 
+        self.set_auto_mask(False)
+
         exists = os.path.isfile(filename)
         if exists and mode == 'a':
             logger.info(
