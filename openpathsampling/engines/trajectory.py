@@ -564,7 +564,7 @@ class Trajectory(list, StorableObject):
         box_vectors = self.box_vectors
         # box_vectors is a list with an entry for each frame of the traj
         # if they're all None, we return None, not [None, None, ..., None]
-        if not np.any(box_vectors):
+        if not np.any(np.asarray(box_vectors)):
             box_vectors = None
 
         traj.unitcell_vectors = box_vectors
