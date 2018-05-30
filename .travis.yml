@@ -15,7 +15,6 @@ install:
   - conda install --quiet --yes msmbuilder
   - conda install --quiet --yes nose python-coveralls ipynbtest
   - conda update --all --yes --use-local --quiet
-  - conda update numpy --no-pin --yes  # notebook tests don't like numpy 1.12
 
 script:
   - python --version
