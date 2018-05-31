@@ -122,6 +122,7 @@ class OPSClassInfoContainer(ClassInfoContainer):
         super(OPSClassInfoContainer, self).__init__(default_info,
                                                     schema,
                                                     class_info_list)
+        self.n_snapshot_types = 0
         self.special_lookup_object = OPSSpecialLookup()
 
     def is_special(self, item):
@@ -129,6 +130,16 @@ class OPSClassInfoContainer(ClassInfoContainer):
 
     def special_lookup_key(self, item):
         return self.special_lookup_object(item)
+
+    def add_missing_table_from_instance(self, lookup, obj):
+        if isinstance(obj, paths.BaseSnapshot):
+            schema, class_info_list = snapshots.snapshot_registration_info(
+                obj, self.n_snapshot_types
+            )
+            schema = snapshots.replace_schema_dimensions(schema,
+                                                         obj.engine.descriptor)
+            self.register_info(class_info_list, schema)
+            self.n_snapshot_types += 1
 
 
 ops_class_info = OPSClassInfoContainer(

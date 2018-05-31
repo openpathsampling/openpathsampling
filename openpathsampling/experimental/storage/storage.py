@@ -242,6 +242,7 @@ class GeneralStorage(object):
 
     def deserialize_uuids(self, ordered_uuids, uuid_to_table,
                           uuid_to_table_row, new_uuids=None):
+        # TODO: remove this, replace with SerializationSchema
         logger.debug("Reconstructing from %d objects", len(ordered_uuids))
         new_uuids = tools.none_to_default(new_uuids, {})
         for uuid in ordered_uuids:

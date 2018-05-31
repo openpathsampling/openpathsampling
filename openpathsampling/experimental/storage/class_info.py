@@ -129,7 +129,7 @@ class SerializationSchema(object):
         return False
 
     def special_lookup_key(self, item):
-        return NotImplementedError("No special types implemented")
+        raise NotImplementedError("No special types implemented")
 
     def get_special(self, item):
         lookup = self.special_lookup_key(item)
@@ -168,6 +168,27 @@ class SerializationSchema(object):
             else:
                 return None
 
+    def add_missing_table_from_instance(self, lookup, obj):
+        raise NotImplementedError("No special types implemented")
+
+    def _missing_table_update(self, by_table):
+        missing = by_table.pop('__missing__')
+        logger.info("Identifying tables for %d objects of unknown "
+                     + "table type", len(missing))
+
+        lookup_examples = set([])
+        for obj in missing.values():
+            lookup = self.lookup_key(obj)
+            if lookup not in lookup_examples:
+                self.add_missing_table_from_instance(lookup, obj)
+                lookup_examples |= {lookup}
+
+        get_table_name = lambda uuid, obj_: self[obj_].table
+        missing_by_table = tools.dict_group_by(missing, get_table_name)
+        logger.info("Identified %d new tables: %s", len(missing_by_table),
+                    str(list(missing_by_table.keys())))
+        by_table.update(missing_by_table)
+        return by_table
 
     def serialize(self, obj, storage=None):
         """
@@ -204,6 +225,11 @@ class SerializationSchema(object):
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         # fix for missing tables
+        if '__missing__' in by_table:
+            by_table = self._missing_table_update(by_table)
+            # NOTE: if using a storage, this will still need to register the
+            # tables with the backend -- that should be handled as part of
+            # the save process TODO
 
         logger.debug("Serializing objects from %d tables: %s",
                      len(by_table), str(list(by_table.keys())))
@@ -218,10 +244,11 @@ class SerializationSchema(object):
         return serialized_by_table
 
 
-    def deserialize(self, serialized_by_table):
+    def deserialize(self, serialized_by_table, known_uuids=None):
         # 1. generate dependencies lists
         # 2. get reload order
         # 3. reconstruct UUIDs
+        known_uuids = tools.none_to_default(known_uuids, {})
         dependencies = {}
         to_load = {}
         uuid_to_table = {}
@@ -235,7 +262,8 @@ class SerializationSchema(object):
                 dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
 
         ordered_uuids = get_reload_order(list(to_load.values()), dependencies)
-        return self.reconstruct_uuids(ordered_uuids, uuid_to_table, to_load)
+        return self.reconstruct_uuids(ordered_uuids, uuid_to_table, to_load,
+                                      known_uuids)
 
     def reconstruct_uuids(self, ordered_uuids, uuid_to_table, to_load,
                           known_uuids=None, new_uuids=None):
