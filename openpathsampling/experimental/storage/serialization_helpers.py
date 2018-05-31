@@ -1,6 +1,6 @@
 import importlib
 import re
-import ujson
+import json
 import networkx as nx
 import numpy as np
 import networkx.algorithms.dag as nx_dag
@@ -199,7 +199,7 @@ class SchemaFindUUIDs(object):
 
 # TODO: I think this can be removed (only used by get_all_uuid_string)
 def find_dependent_uuids(json_dct):
-    dct = ujson.loads(json_dct)
+    dct = json.loads(json_dct)
     uuids = [decode_uuid(obj) for obj in flatten_all(dct)
              if is_uuid_string(obj)]
     return uuids
@@ -271,14 +271,14 @@ def to_dict_with_uuids(obj):
 
 def to_bare_json(obj):
     replaced = replace_uuid(obj, uuid_encoding=encode_uuid)
-    return ujson.dumps(replaced)
+    return json.dumps(replaced)
 
 
 def to_json_obj(obj):
     dct = to_dict_with_uuids(obj)
     dct.update({'__module__': obj.__class__.__module__,
                 '__class__': obj.__class__.__name__})
-    return ujson.dumps(dct)
+    return json.dumps(dct)
 
 
 def import_class(mod, cls):
@@ -366,7 +366,7 @@ def from_dict_with_uuids(obj, cache_list):
 
 def from_json_obj(uuid, table_row, cache_list):
     # NOTE: from_json only works with existing_uuids (DAG-ordering)
-    dct = ujson.loads(table_row['json'])
+    dct = json.loads(table_row['json'])
     cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
     dct = from_dict_with_uuids(dct, cache_list)
     obj = cls.from_dict(dct)
@@ -413,7 +413,7 @@ def _uuids_from_table_row(table_row, schema_entries):
             uuid.add(getattr(table_row, attr))
         elif attr_type == 'list_uuid':
             # TODO: better to use encoded_uuid_re here?
-            uuid_list = ujson.loads(getattr(table_row, attr))
+            uuid_list = json.loads(getattr(table_row, attr))
             if uuid_list:
                 # skip if None (or empty)
                 uuid_list = {decode_uuid(u) for u in uuid_list}

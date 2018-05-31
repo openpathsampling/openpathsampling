@@ -3,8 +3,12 @@ from numpy import ndarray
 
 class SimpleNamespace:
     # types.SimpleNameSpace in 3.3+
+    # this variants acts as either a dict or a namespace for getting
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+
+    def __getitem__(self, item):
+        return self.__dict__[item]
 
     def __repr__(self):
         keys = sorted(self.__dict__)

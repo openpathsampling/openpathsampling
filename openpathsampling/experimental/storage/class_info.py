@@ -1,12 +1,20 @@
-import tools
+import logging
 
-from serialization import DefaultSerializer, DefaultDeserializer
-from serialization_helpers import SchemaFindUUIDs, has_uuid
+from . import tools
+from .serialization import DefaultSerializer, DefaultDeserializer
+from .serialization_helpers import SchemaFindUUIDs, has_uuid
+from .serialization_helpers import encoded_uuid_re, get_reload_order
+from .serialization_helpers import get_all_uuids
 
-try:
-    import ujson as json
-except ImportError:
-    import json
+
+import json
+# try:
+    # import ujson as json
+# except ImportError:
+    # import json
+
+
+logger = logging.getLogger(__name__)
 
 class ClassInfo(object):
     """
@@ -185,7 +193,7 @@ class SerializationSchema(object):
             return  # return what? is None right?
 
         logger.debug("Listing all included objects to serialize")
-        uuids = get_all_uuids(obj, cache)  # TODO: replace this
+        uuids = get_all_uuids(obj, cache)  # TODO: replace w SchemaFindUUIDs
 
         if storage:
             exists = storage.uuids_in_storage(list(uuids.keys()))
@@ -200,11 +208,12 @@ class SerializationSchema(object):
         logger.debug("Serializing objects from %d tables: %s",
                      len(by_table), str(list(by_table.keys())))
         serialized_by_table = {}
-        for (table, objects) in by_table.items():
-            logger_debug("Serializing %d objects from table %s",
+        for (table, table_uuids) in by_table.items():
+            logger.debug("Serializing %d objects from table %s",
                          len(by_table[table]), table)
             serialize = self[table].serializer
-            serialized_by_table[table] = [serialize(o) for o in objects]
+            serialized_by_table[table] = [serialize(o)
+                                          for o in table_uuids.values()]
 
         return serialized_by_table
 
@@ -214,22 +223,46 @@ class SerializationSchema(object):
         # 2. get reload order
         # 3. reconstruct UUIDs
         dependencies = {}
-        to_load = []
+        to_load = {}
         uuid_to_table = {}
-        for (table, objects) in serialized_by_table.items():
+        for (table, object_list) in serialized_by_table.items():
             schema_entries = self.schema[table]
-            for (uuid, item_dct) in objects.items():
+            for item_dct in object_list:
+                uuid = item_dct['uuid']
                 uuid_to_table[uuid] = table
-                to_load.append(tools.SimpleNamespace(**item_dct))
+                to_load[uuid] = tools.SimpleNamespace(**item_dct)
                 item_json = json.dumps(item_dct)
                 dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
 
-        # TODO: this is the reload order now
-        ordered_uuids = get_reload_order(to_load, dependencies)
-        # TODO: self.reconstruct_uuids(ordered_uuids, uuid_to_table)
+        ordered_uuids = get_reload_order(list(to_load.values()), dependencies)
+        return self.reconstruct_uuids(ordered_uuids, uuid_to_table, to_load)
+
+    def reconstruct_uuids(self, ordered_uuids, uuid_to_table, to_load,
+                          known_uuids=None, new_uuids=None):
+        """
+        Parameters
+        ----------
+        ordered_uuids
+        uuid_to_table
+        known_uuids : dict {uuid: object}
+            immutable list of known uuids
+        new_uuids : dict {uuid: object}
+            mutable list of uuids that have been reloaded, updated after
+            these uuids have been reloaded (also returned)
+        """
         # (this is just the current storage.deserialize_uuids)
+        known_uuids = tools.none_to_default(known_uuids, {})
+        new_uuids = tools.none_to_default(new_uuids, {})
+        logger.debug("Reconstructing from %d objects", len(ordered_uuids))
+        for uuid in ordered_uuids:
+            if uuid not in known_uuids and uuid not in new_uuids:
+                table = uuid_to_table[uuid]
+                reconstruct = self[table].deserializer
+                obj = reconstruct(uuid, to_load[uuid],
+                                  [new_uuids, known_uuids])
+                new_uuids[uuid] = obj
 
-
+        return new_uuids
 
 
     def __repr__(self):  # pragma: no cover
