@@ -206,7 +206,10 @@ Operating System :: MacOS
         'openpathsampling.engines.openmm.features',
         'openpathsampling.engines.toy',
         'openpathsampling.engines.toy.features',
-        'openpathsampling.numerics'],
+        'openpathsampling.numerics',
+        'openpathsampling.experimental',
+        'openpathsampling.experimental.storage',
+    ],
     'platforms': ['Linux', 'Mac OS X', 'Windows'],
     'released': False,
     'install_requires': [
