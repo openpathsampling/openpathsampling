@@ -5,7 +5,7 @@ from .serialization import DefaultSerializer, DefaultDeserializer
 from .serialization_helpers import SchemaFindUUIDs, has_uuid
 from .serialization_helpers import encoded_uuid_re, get_reload_order
 from .serialization_helpers import get_all_uuids
-
+from .my_types import all_uuid_types
 
 import json
 # try:
@@ -258,12 +258,20 @@ class SerializationSchema(object):
                 uuid = item_dct['uuid']
                 uuid_to_table[uuid] = table
                 to_load[uuid] = tools.SimpleNamespace(**item_dct)
-                item_json = json.dumps(item_dct)
-                dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
+                if table == self.default_info.table:
+                    item_json = json.dumps(item_dct)
+                    dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
+                else:
+                    dependencies[uuid] = set([
+                        item_dct[entry]
+                        for (entry, entry_type) in schema_entries
+                        if entry_type in all_uuid_types
+                    ])
 
         ordered_uuids = get_reload_order(list(to_load.values()), dependencies)
         return self.reconstruct_uuids(ordered_uuids, uuid_to_table, to_load,
                                       known_uuids)
+
 
     def reconstruct_uuids(self, ordered_uuids, uuid_to_table, to_load,
                           known_uuids=None, new_uuids=None):

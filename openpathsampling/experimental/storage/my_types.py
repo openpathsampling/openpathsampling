@@ -27,5 +27,6 @@ builtin_types = ['str', 'int', 'float']
 ndarray_types = ['ndarray']
 
 all_types = uuid_types + list_uuid + builtin_types + ndarray_types
+all_uuid_types = ['uuid', 'lazy', 'list_uuid']
 
 
