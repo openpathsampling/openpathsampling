@@ -22,11 +22,11 @@ def backend_registration_type(type_name):
 
 
 uuid_types = ['uuid', 'lazy']
-list_uuid = ['list_uuid']
+uuid_list_types = ['list_uuid']
 builtin_types = ['str', 'int', 'float']
 ndarray_types = ['ndarray']
 
-all_types = uuid_types + list_uuid + builtin_types + ndarray_types
+all_types = uuid_types + uuid_list_types + builtin_types + ndarray_types
 all_uuid_types = ['uuid', 'lazy', 'list_uuid']
 
 

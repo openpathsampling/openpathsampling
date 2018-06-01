@@ -205,11 +205,8 @@ class DefaultDeserializer(object):
 
     def __call__(self, uuid, table_dct, cache_list):
         dct = self.make_dct(table_dct, cache_list)
-        logger.debug(str(dct))  # DEBUG
-        logger.debug(str(dct.__dict__))  # DEBUG
-        if 'uuid' in dct:
-            del dct['uuid']
-        logger.debug(str(dct))  # DEBUG
+        # if 'uuid' in dct:
+            # del dct['uuid']
         obj = self.cls.from_dict(dct)
         serialization.set_uuid(obj, uuid)
         return obj

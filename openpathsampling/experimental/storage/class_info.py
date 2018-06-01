@@ -5,7 +5,7 @@ from .serialization import DefaultSerializer, DefaultDeserializer
 from .serialization_helpers import SchemaFindUUIDs, has_uuid
 from .serialization_helpers import encoded_uuid_re, get_reload_order
 from .serialization_helpers import get_all_uuids
-from .my_types import all_uuid_types
+from .my_types import uuid_types, uuid_list_types
 
 import json
 # try:
@@ -194,6 +194,12 @@ class SerializationSchema(object):
         """
         Serialize all objects in ``obj`` to table-grouped JSON-ready dict.
 
+        Notes
+        -----
+
+        This can also take multiple objects, but they must be collected in a
+        hashable container (e.g., tuple, not a list).
+
         Parameters
         ----------
         obj : object
@@ -207,6 +213,8 @@ class SerializationSchema(object):
         dict :
             {table: {uuid: {attr: value}}}
         """
+        # TODO: correct the return type (no dict of uuid to description,
+        # just a list of dicts for each object, including uuid as attr
         logger.debug("Starting serialization")
         results = {}
         cache = {} if not storage else storage.cache
@@ -254,6 +262,8 @@ class SerializationSchema(object):
         uuid_to_table = {}
         for (table, object_list) in serialized_by_table.items():
             schema_entries = self.schema[table]
+            logger.debug("Restoring %d object from table %s",
+                         len(object_list), table)
             for item_dct in object_list:
                 uuid = item_dct['uuid']
                 uuid_to_table[uuid] = table
@@ -262,13 +272,20 @@ class SerializationSchema(object):
                     item_json = json.dumps(item_dct)
                     dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
                 else:
-                    dependencies[uuid] = set([
-                        item_dct[entry]
-                        for (entry, entry_type) in schema_entries
-                        if entry_type in all_uuid_types
-                    ])
+                    uuid_entries = [entry
+                                    for (entry, e_type) in schema_entries
+                                    if e_type in uuid_types]
+                    deps = set([item_dct[entry] for entry in uuid_entries])
+                    uuid_list_entries = [entry
+                                         for (entry, e_type) in schema_entries
+                                         if e_type in uuid_list_types]
+                    deps |= set(sum([encoded_uuid_re.findall(item_dct[entry])
+                                     for entry in uuid_list_entries], []))
+
+                    dependencies[uuid] = deps
 
         ordered_uuids = get_reload_order(list(to_load.values()), dependencies)
+        logger.debug("Restore order: %s", str(ordered_uuids))
         return self.reconstruct_uuids(ordered_uuids, uuid_to_table, to_load,
                                       known_uuids)
 
