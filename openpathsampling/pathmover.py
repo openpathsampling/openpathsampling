@@ -583,6 +583,24 @@ class SampleMover(PathMover):
         return []
 
     def _get_samples_from_sample_set(self, sample_set):
+        """
+        Select samples to use as input to the move core.
+
+        See Also
+        --------
+        move_core
+        move
+
+        Parameters
+        ----------
+        sample_set : :class:`.SampleSet`
+            current samples to use as potential input
+
+        Returns
+        -------
+        list of :class:`.Sample`
+            samples to use as input to the move core
+        """
         ensembles = self._called_ensembles()
         samples = [self.select_sample(sample_set, ens) for ens in ensembles]
         return samples
@@ -593,9 +611,27 @@ class SampleMover(PathMover):
         return change
 
     def move_core(self, samples):
+        """Core of the Monte Carlo move. Includes acceptance.
+
+        See Also
+        --------
+        move
+
+        Parameters
+        ----------
+        samples : list of :class:`.Sample`
+            input samples from the correct ensembles of this object
+
+        Returns
+        -------
+        :class:`.MoveChange`
+            result MoveChange for this move
+        """
+        # this is separated out for reuse and remove dependence core MC move
+        # dependence on the entire sample set (for parallelization)
         try:
-            #  pass these samples to the generator which might throw
-            # engine specific exceptions if something goes wrong.
+            # pass these samples to the trial move which might throw
+            # engine-specific exceptions if something goes wrong.
             # Most common should be `EngineNaNError` if nan is detected and
             # `EngineMaxLengthError`
             trials, call_details = self(*samples)
