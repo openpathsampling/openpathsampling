@@ -582,15 +582,19 @@ class SampleMover(PathMover):
         # Default is that the list of ensembles is in self.ensembles
         return []
 
-    def move(self, sample_set):
-        # 1. pick a set of ensembles (in case we allow to pick several ones)
+    def _get_samples_from_sample_set(self, sample_set):
         ensembles = self._called_ensembles()
-
-        # 2. pick samples from these ensembles
         samples = [self.select_sample(sample_set, ens) for ens in ensembles]
+        return samples
 
+    def move(self, sample_set):
+        samples = self._get_samples_from_sample_set(sample_set)
+        change = self.move_core(samples)
+        return change
+
+    def move_core(self, samples):
         try:
-            # 3. pass these samples to the generator which might throw
+            #  pass these samples to the generator which might throw
             # engine specific exceptions if something goes wrong.
             # Most common should be `EngineNaNError` if nan is detected and
             # `EngineMaxLengthError`
@@ -613,7 +617,6 @@ class SampleMover(PathMover):
                 details=paths.Details(**e.details)
             )
 
-        # 4. accept/reject
         accepted, acceptance_details = self._accept(trials)
 
         # update details
@@ -623,7 +626,7 @@ class SampleMover(PathMover):
 
         details = MoveDetails(**kwargs)
 
-        # 5. and return a PMC
+        # return change
         if accepted:
             return paths.AcceptedSampleMoveChange(
                 samples=trials,
