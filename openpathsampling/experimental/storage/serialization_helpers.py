@@ -154,11 +154,16 @@ def get_all_uuids(initial_object, known_uuids=None, class_info=None):
         objects found in the search
     """
     known_uuids = tools.none_to_default(known_uuids, {})
-    objects = {initial_object}
+    objects = [initial_object]
     uuids = {}
     while objects:
         new_objects = []
         for obj in objects:
+            # TODO: find a way to ensure that objects doesn't go over
+            # duplicates here; see lprofile of default_find_uuids to see how
+            # often abort due to being in cache in there, and whether we
+            # should move the skip in here instead (how expensive is
+            # info_from_instance?)
             info = class_info.info_from_instance(obj) \
                     if class_info else None
             if info:
