@@ -1537,9 +1537,7 @@ class SelectionMover(PathMover):
     def _selector(self, sample_set):
         pass
 
-    def move(self, sample_set):
-        weights = self._selector(sample_set)
-
+    def select_mover(self, weights):
         rand = np.random.random() * sum(weights)
 
         idx = 0
@@ -1573,9 +1571,15 @@ class SelectionMover(PathMover):
         }
 
         details = MoveDetails(**kwargs)
+        return mover, details
+
+    def move(self, sample_set):
+        weights = self._selector(sample_set)
+        mover, details = self.select_mover(weights)
+        subchange = mover.move(sample_set)
 
         path = paths.RandomChoiceMoveChange(
-            mover.move(sample_set),
+            subchange=subchange,
             mover=self,
             details=details
         )
@@ -2123,6 +2127,29 @@ class EnsembleFilterMover(SubPathMover):
     def sub_replica_state(self, replica_states):
         return [{rs.filter(self.ensembles) for rs in replica_states}]
 
+
+class SpecializedRandomChoiceMover(RandomChoiceMover):
+    """
+    Superclass for movers that are random choice between two SampleMovers
+
+    This requires that all submovers accept the same list of samples.
+    """
+    @classmethod
+    def from_dict(cls, dct):
+        mover = cls.__new__(cls)
+        super(cls, mover).__init__(movers=dct['movers'])
+        return mover
+
+    def move_core(self, samples):
+        weights = self.weights 
+        mover, details = self.select_mover(weights)
+        subchange = mover.move_core(samples)
+        change = paths.RandomChoiceMoveChange(
+            subchange=subchange,
+            mover=self,
+            details=details
+        )
+        return change
 
 class OneWayShootingMover(RandomChoiceMover):
     """
