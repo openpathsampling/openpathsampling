@@ -178,7 +178,7 @@ class Storage(NetCDFPlus):
             'off': self.no_cache_sizes,
             'lowmemory': self.lowmemory_cache_sizes,
             'memtest': self.memtest_cache_sizes,
-            'unlimited': self.unlimited_cache_sizes()
+            'unlimited': self.unlimited_cache_sizes
         }
 
         if mode in available_cache_sizes:
