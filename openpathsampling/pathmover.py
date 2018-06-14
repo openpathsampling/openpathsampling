@@ -2141,7 +2141,7 @@ class SpecializedRandomChoiceMover(RandomChoiceMover):
         return mover
 
     def move_core(self, samples):
-        weights = self.weights 
+        weights = self.weights
         mover, details = self.select_mover(weights)
         subchange = mover.move_core(samples)
         change = paths.RandomChoiceMoveChange(
@@ -2151,7 +2151,7 @@ class SpecializedRandomChoiceMover(RandomChoiceMover):
         )
         return change
 
-class OneWayShootingMover(RandomChoiceMover):
+class OneWayShootingMover(SpecializedRandomChoiceMover):
     """
     OneWayShootingMover is a special case of a RandomChoiceMover which
     combines gives a 50/50 chance of selecting either a ForwardShootMover or
@@ -2183,18 +2183,6 @@ class OneWayShootingMover(RandomChoiceMover):
             movers=movers
         )
 
-    @classmethod
-    def from_dict(cls, dct):
-        mover = cls.__new__(cls)
-
-        # override with stored movers and use the init of the super class
-        # this assumes that the super class has movers as its signature
-        super(cls, mover).__init__(
-            movers=dct['movers']
-        )
-
-        return mover
-
     @property
     def ensemble(self):
         return self.movers[0].ensemble
@@ -2204,7 +2192,7 @@ class OneWayShootingMover(RandomChoiceMover):
         return self.movers[0].selector
 
 
-class OneWayExtendMover(RandomChoiceMover):
+class OneWayExtendMover(SpecializedRandomChoiceMover):
     """
     OneWayShootingMover is a special case of a RandomChoiceMover which
     gives a 50/50 chance of selecting either a ForwardExtendMover or
@@ -2233,18 +2221,6 @@ class OneWayExtendMover(RandomChoiceMover):
         super(OneWayExtendMover, self).__init__(
             movers=movers
         )
-
-    @classmethod
-    def from_dict(cls, dct):
-        mover = cls.__new__(cls)
-
-        # override with stored movers and use the init of the super class
-        # this assumes that the super class has movers as its signature
-        super(cls, mover).__init__(
-            movers=dct['movers']
-        )
-
-        return mover
 
 
 class AbstractTwoWayShootingMover(EngineMover):
@@ -2380,7 +2356,7 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         return trial_trajectory, details
 
 
-class TwoWayShootingMover(RandomChoiceMover):
+class TwoWayShootingMover(SpecializedRandomChoiceMover):
     def __init__(self, ensemble, selector, modifier, engine=None):
         movers = [
             ForwardFirstTwoWayShootingMover(
@@ -2397,13 +2373,6 @@ class TwoWayShootingMover(RandomChoiceMover):
             )
         ]
         super(TwoWayShootingMover, self).__init__(movers=movers)
-
-    @classmethod
-    def from_dict(cls, dct):
-        # see also OneWayShootingMover for this
-        mover = cls.__new__(cls)
-        super(cls, mover).__init__(movers=dct['movers'])
-        return mover
 
     @property
     def ensemble(self):
@@ -2579,10 +2548,6 @@ class PathSimulatorMover(SubPathMover):
             mover=self,
             details=details
         )
-
-
-class MultipleSetMinusMover(RandomChoiceMover):
-    pass
 
 
 def NeighborEnsembleReplicaExchange(ensemble_list):
