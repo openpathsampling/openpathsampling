@@ -28,5 +28,6 @@ ndarray_types = ['ndarray']
 
 all_types = uuid_types + uuid_list_types + builtin_types + ndarray_types
 all_uuid_types = ['uuid', 'lazy', 'list_uuid']
+json_obj_types = ['json', 'json_obj']
 
 

@@ -5,7 +5,7 @@ from .serialization import DefaultSerializer, DefaultDeserializer
 from .serialization_helpers import SchemaFindUUIDs, has_uuid
 from .serialization_helpers import encoded_uuid_re, get_reload_order
 from .serialization_helpers import get_all_uuids
-from .my_types import uuid_types, uuid_list_types
+from .my_types import uuid_types, uuid_list_types, json_obj_types
 
 import json
 # try:
@@ -262,7 +262,7 @@ class SerializationSchema(object):
         uuid_to_table = {}
         for (table, object_list) in serialized_by_table.items():
             schema_entries = self.schema[table]
-            logger.debug("Restoring %d object from table %s",
+            logger.debug("Restoring %d objects from table %s",
                          len(object_list), table)
             for item_dct in object_list:
                 uuid = item_dct['uuid']
@@ -272,6 +272,12 @@ class SerializationSchema(object):
                     item_json = json.dumps(item_dct)
                     dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
                 else:
+                    # TODO: this can be cleaned up with a dict mapping types
+                    # to method for finding dependencies
+                    # find_deps is a defaultdict mapping to appropriate
+                    # functions, default is fcn returning empty set
+                    # for (entry, e_type) in schema_entries:
+                        # deps |= find_deps[e_type](entry)
                     uuid_entries = [entry
                                     for (entry, e_type) in schema_entries
                                     if e_type in uuid_types]
@@ -281,6 +287,13 @@ class SerializationSchema(object):
                                          if e_type in uuid_list_types]
                     deps |= set(sum([encoded_uuid_re.findall(item_dct[entry])
                                      for entry in uuid_list_entries], []))
+
+                    json_entries = [entry
+                                    for (entry, e_type) in schema_entries
+                                    if e_type in json_obj_types]
+                    for json_entry in json_entries:
+                        json_val = item_dct[json_entry]
+                        deps |= set(encoded_uuid_re.findall(json_val))
 
                     dependencies[uuid] = deps
 

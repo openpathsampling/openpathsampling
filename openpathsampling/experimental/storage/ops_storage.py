@@ -37,7 +37,7 @@ ops_schema = {
                      ('input_samples', 'list_uuid')],
     'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'lazy'),
               ('simulation', 'uuid'), ('mccycle', 'int')],
-    'details': [('json', 'json')],
+    'details': [('json', 'json_obj')],
     'simulation_objects': [('json', 'json_obj'), ('class_idx', 'int')]
 }
 
