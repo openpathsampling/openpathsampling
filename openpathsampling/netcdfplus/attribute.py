@@ -389,6 +389,7 @@ class FunctionPseudoAttribute(CallablePseudoAttribute):
 
     def _eval(self, items):
         # here the kwargs are used in the callable when it is evaluated
+        print(self.kwargs)
         return self.cv_callable(items, **self.kwargs)
 
 

@@ -175,7 +175,7 @@ class TestVolumeInterfaceSet(object):
 class TestPeriodicVolumeInterfaceSet(object):
     def setup(self):
         paths.InterfaceSet._reset()
-        self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0]).named("x")
+        self.cv = paths.FunctionCV(f=lambda s: s.xyz[0][0]).named("x")
 
         self.increasing_set = paths.PeriodicVolumeInterfaceSet(
             cv=self.cv,

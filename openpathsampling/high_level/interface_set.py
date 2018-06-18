@@ -39,11 +39,10 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
             elif self.cv is not None:
                 cv_max_func = lambda t, cv_: max(cv_(t))
                 self.cv_max = paths.netcdfplus.FunctionPseudoAttribute(
-                    name="max " + self.cv.name,
                     key_class=paths.Trajectory,
                     f=cv_max_func,
                     cv_=self.cv
-                ).with_diskcache(allow_incomplete=True)
+                ).with_diskcache(allow_incomplete=True).named("max " + self.cv.name)
             else:
                 self.cv_max = None
         else:

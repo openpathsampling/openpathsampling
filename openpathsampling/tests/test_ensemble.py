@@ -1346,10 +1346,9 @@ class TestTISEnsemble(EnsembleTest):
     def test_tis_ensemble_candidate_cv_max(self):
         cv_max_func = lambda t, cv_: max(cv_(t))
         cv_max = paths.netcdfplus.FunctionPseudoAttribute(
-            name="max " + op.name,
             key_class=paths.Trajectory,
             f=lambda t: cv_max_func(t, cv_=op)
-        )
+        ).named("max " + op.name)
         tis = TISEnsemble(vol1, vol3, vol2, cv_max=cv_max, lambda_i=0.7)
 
         test_f = lambda t: tis(t, candidate=True)
