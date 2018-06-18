@@ -221,6 +221,9 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         super(Ensemble, self).__init__()
         self._saved_str = None  # cached first time it is requested
 
+        self._min_length = None
+        self._max_length = None
+
     # https://docs.python.org/3/reference/datamodel.html#object.__hash__
     __hash__ = StorableNamedObject.__hash__
 
@@ -1192,6 +1195,13 @@ class EmptyEnsemble(Ensemble):
     def _str(self):
         return 'empty'
 
+    def ensemble_probability(self):
+        return 0.0, 0.0
+
+    @property
+    def path_probability(self):
+        # Zero matrix
+        return 0.0
 
 class FullEnsemble(Ensemble):
     """
@@ -1238,6 +1248,13 @@ class FullEnsemble(Ensemble):
     def _str(self):
         return 'all'
 
+    def ensemble_probability(self):
+        return (1.0, 1.0)
+
+    @property
+    def path_probability(self):
+        # Full matrix
+        return 1.0
 
 class NegatedEnsemble(Ensemble):
     """
@@ -1262,6 +1279,15 @@ class NegatedEnsemble(Ensemble):
 
     def _str(self):
         return 'not ' + str(self.ensemble)
+
+    def ensemble_probability(self):
+        res = self.ensemble.ensemble_proability()
+        return (1.0 - res[1], 1.0 - res[0])
+
+    @property
+    def path_probability(self):
+        # Full matrix
+        return 1.0 - self.ensemble.path_probability
 
 
 class EnsembleCombination(Ensemble):
@@ -1393,6 +1419,11 @@ class UnionEnsemble(EnsembleCombination):
                                             fnc=lambda a, b: a or b,
                                             str_fnc='{0}\nor\n{1}')
 
+    def ensemble_probability(self):
+        e1 = self.ensemble1.ensemble_probability()
+        e2 = self.ensemble2.ensemble_probability()
+        return max(e1[0], e2[0]), min(1.0, e1[1] + e2[1])
+
 
 class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
@@ -1400,6 +1431,10 @@ class IntersectionEnsemble(EnsembleCombination):
                                                    fnc=lambda a, b: a and b,
                                                    str_fnc='{0}\nand\n{1}')
 
+    def ensemble_probability(self):
+        e1 = self.ensemble1.ensemble_probability()
+        e2 = self.ensemble2.ensemble_probability()
+        return max(0.0, e1[0] + e2[0] - 1.0), min(e1[1], e2[1])
 
 # class SymmetricDifferenceEnsemble(EnsembleCombination):
 #     # TODO: this is not yet supported. Should be removed. ~DWHS
@@ -1425,6 +1460,11 @@ class IntersectionEnsemble(EnsembleCombination):
 #             ensemble2,
 #             fnc=lambda a, b: a and not b,
 #             str_fnc='{0}\nand not\n{1}')
+
+    def ensemble_probability(self):
+        e1 = self.ensemble1.ensemble_probability()
+        e2 = self.ensemble2.ensemble_probability()
+        return max(0.0, e1[0] - e2[1]), e1[1] - max(0.0, e1[1] + e2[0] - 1.0)
 
 
 class SequentialEnsemble(Ensemble):
@@ -2032,6 +2072,9 @@ class SequentialEnsemble(Ensemble):
         sequence_str = ",\n".join([str(ens) for ens in self.ensembles])
         return head + sequence_str + tail
 
+    def ensemble_probability(self):
+        return reduce(lambda a, b: a * b,
+            [ens.ensemble_probability() for ens in self.ensembles])
 
 class LengthEnsemble(Ensemble):
     """
@@ -2052,6 +2095,14 @@ class LengthEnsemble(Ensemble):
 
         super(LengthEnsemble, self).__init__()
         self.length = length
+
+        if type(length) is int:
+            self._max_length = length
+            self._min_length = length
+        else:
+            self._min_length = length.start
+            self._max_length = length.stop - 1
+        pass
 
     def __call__(self, trajectory, trusted=None, candidate=False):
         length = len(trajectory)
@@ -2245,6 +2296,8 @@ class AllOutXEnsemble(AllInXEnsemble):
     def __invert__(self):
         return PartInXEnsemble(self.volume, self.trusted)
 
+    def oo(self):
+        return
 
 class PartInXEnsemble(VolumeEnsemble):
     """

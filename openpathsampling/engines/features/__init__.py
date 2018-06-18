@@ -5,4 +5,5 @@ from . import kinetics
 from . import box_vectors
 from . import topology
 from . import engine
+from . import state
 from .base import attach_features

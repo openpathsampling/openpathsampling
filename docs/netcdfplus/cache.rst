@@ -1,6 +1,6 @@
 .. _cache:
 
-.. currentmodule:: openpathsampling.netcdfplus.cache
+.. currentmodule:: openpathsampling.netcdfplus
 
 Caching Functions
 =================

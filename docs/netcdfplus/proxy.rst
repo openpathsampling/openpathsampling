@@ -1,6 +1,6 @@
 .. _proxy:
 
-.. currentmodule:: openpathsampling.netcdfplus.proxy
+.. currentmodule:: openpathsampling.netcdfplus
 
 Loader Proxy Class
 ==================

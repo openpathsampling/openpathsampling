@@ -45,7 +45,7 @@ class WHAM(object):
     sample_every : int
         frequency (in iterations) to report debug information
     """
-    def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.05,
+    def __init__(self, tol=1e-10, max_iter=1000000, cutoff=0.005,
                  interfaces=None):
         self.tol = tol
         self.max_iter = max_iter
