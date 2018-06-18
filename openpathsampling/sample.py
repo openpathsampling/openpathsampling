@@ -128,6 +128,9 @@ class SampleSet(StorableObject):
     def __eq__(self, other):
         return Counter(self.samples) == Counter(other.samples)
 
+    def __ne__(self, other):
+        return not self == other
+
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
         self.replica_dict[sample.replica].remove(sample)
@@ -741,8 +744,8 @@ class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
     object from a PathMover. It and contains all information about the move,
-    initial trajectories, new trajectories (both as references). 
-    
+    initial trajectories, new trajectories (both as references).
+
     Since each Sample is a single representative of a single ensemble, each
     Sample consists of one replica ID, one trajectory, and one ensemble.
     This means that movers which generate more than one "draw" (often from

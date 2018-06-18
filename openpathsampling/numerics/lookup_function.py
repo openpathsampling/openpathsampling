@@ -264,7 +264,7 @@ class VoxelLookupFunction(object):
             columns = range(y_range[0], y_range[1]+1)
         df = pd.DataFrame(index=index, columns=columns)
         for (k,v) in counter.items():
-            df.set_value(k[0], k[1], v)
+            df.at[k[0], k[1]] = v
         df = df.sort_index(0).sort_index(1)
         return df
 

@@ -23,10 +23,10 @@ import numpy as np
 
 # =========================================================================
 # This single test module includes all the tests for the toy_dynamics
-# subpackage. 
+# subpackage.
 # =========================================================================
 
-def setUp():
+def setup_module():
     # set up globals
     global gaussian, linear, outer, harmonic
     gaussian = toy.Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
@@ -40,8 +40,8 @@ def setUp():
 
 # === TESTS FOR TOY POTENTIAL ENERGY SURFACES =============================
 
-class testHarmonicOscillator(object):
-    def setUp(self):
+class TestHarmonicOscillator(object):
+    def setup(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -61,8 +61,8 @@ class testHarmonicOscillator(object):
                                         [0.253125, -2.7]):
             assert_almost_equal(experiment, theory)
 
-class testGaussian(object):
-    def setUp(self):
+class TestGaussian(object):
+    def setup(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -77,8 +77,8 @@ class testGaussian(object):
         # -480*((0.65)-0.5)*exp(-2.5*((0.7)-0.8)^2-40*((0.65)-0.5)^2)
         assert_almost_equal(gaussian.dVdx(self)[1], -28.5502621734)
 
-class testOuterWalls(object):
-    def setUp(self):
+class TestOuterWalls(object):
+    def setup(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -93,8 +93,8 @@ class testOuterWalls(object):
         # 6*2.0*(0.65-(-0.25))^5 = 7.08588
         assert_almost_equal(outer.dVdx(self)[1], 7.08588)
 
-class testLinearSlope(object):
-    def setUp(self):
+class TestLinearSlope(object):
+    def setup(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -105,8 +105,8 @@ class testLinearSlope(object):
     def test_dVdx(self):
         assert_equal(linear.dVdx(self), [1.5, 0.75])
 
-class testCombinations(object):
-    def setUp(self):
+class TestCombinations(object):
+    def setup(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -132,7 +132,7 @@ class testCombinations(object):
 
 # === TESTS FOR TOY ENGINE OBJECT =========================================
 
-class test_convert_fcn(object):
+class Test_convert_fcn(object):
     def test_convert_to_3Ndim(v):
         raise SkipTest
 
@@ -143,8 +143,8 @@ class test_convert_fcn(object):
         assert_equal_array_array(toy.convert_to_3Ndim([1.0, 2.0, 3.0, 4.0]),
                                  np.array([[1.0, 2.0, 3.0], [4.0, 0.0, 0.0]]))
 
-class testToyEngine(object):
-    def setUp(self):
+class TestToyEngine(object):
+    def setup(self):
         pes = linear
         integ = toy.LeapfrogVerletIntegrator(dt=0.002)
         topology=toy.Topology(
@@ -242,8 +242,8 @@ class testToyEngine(object):
 
 # === TESTS FOR TOY INTEGRATORS ===========================================
 
-class testLeapfrogVerletIntegrator(object):
-    def setUp(self):
+class TestLeapfrogVerletIntegrator(object):
+    def setup(self):
         pes = linear
         integ = toy.LeapfrogVerletIntegrator(dt=0.002)
         topology=toy.Topology(
@@ -277,7 +277,7 @@ class testLeapfrogVerletIntegrator(object):
         #            = [0.598, 0.499]
         assert_equal(self.sim.velocities[0], 0.598)
         assert_equal(self.sim.velocities[1], 0.499)
-    
+
     def test_position_update(self):
         self.sim.integ._position_update(self.sim, 0.002)
         # positions = init_pos + velocities * dt
@@ -293,11 +293,11 @@ class testLeapfrogVerletIntegrator(object):
 
 
 
-class testLangevinBAOABIntegrator(object):
+class TestLangevinBAOABIntegrator(object):
     '''Testing for correctness is hard, since this is a stochastic
     calculation. However, we can at least run tests to make sure nothing
     crashes.'''
-    def setUp(self):
+    def setup(self):
         pes = linear
         integ = toy.LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                         gamma=1.0)

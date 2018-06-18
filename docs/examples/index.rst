@@ -32,17 +32,20 @@ sampling, and the analyzing the results.
    AD_tps
 
 We recommend beginning with those two examples: they cover most of the
-essential points of using OPS. However, we have several other examples which
-show how to use these approaches for specific cases. Here are several of
-those:
+essential points of using OPS. Additionally, there's a `tutorial version of
+the alanine dipeptide TPS example
+<http://gitlab.e-cam2020.eu/dwhswenson/ops_tutorial>`_, if you prefer a
+version where *you* have to add the missing pieces to make it run.
+We also have several other examples which show how to use these approaches
+for specific cases. Here are several of those:
 
 .. toctree::
     :maxdepth: 1
 
-    srtis
-    mistis
     AD_fixed_len_tps
     AD_mstis
+    mistis
+    srtis
 
 Note that some of those build off of the earlier examples. If working
 through the example notebooks yourself, each notebook in a sequence is
@@ -57,7 +60,6 @@ The advanced examples demonstrate some of the more specialized uses of OPS.
     :maxdepth: 1
 
     AD_tps_advanced_analysis
-    DNA_flux_example
     custom_movescheme
 
 Special Topics
@@ -76,6 +78,11 @@ you might find interesting.
     splitting_files
     customizing_visualization
     move_schemes_strategies
+
+In addition, there are a set of examples that are hosted outside the core
+OPS repository. These are the OPS additional examples, primarily developed
+as part of E-CAM, a European Union Horizon 2020 project. Those examples are
+available at https://gitlab.e-cam2020.eu/dwhswenson/ops_additional_examples.
 
 Miscellaneous Examples
 ----------------------
