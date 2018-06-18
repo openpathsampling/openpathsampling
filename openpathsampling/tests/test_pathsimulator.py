@@ -505,7 +505,7 @@ class TestDirectSimulation(object):
         # As of pandas 0.18.1, callables can be used in `df.loc`, etc. Since
         # we're using (callable) volumes for labels of columns/indices in
         # our dataframes, this sucks for us. Raise an issue with pandas?
-        rate_matrix = self.sim.rate_matrix.as_matrix()
+        rate_matrix = self.sim.rate_matrix.values
         # order is center, outside, extra
         nan = float("nan")
         t_center = 3.0 + 3.0 + 2.0
