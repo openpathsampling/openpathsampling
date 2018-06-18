@@ -1,3 +1,5 @@
+import itertools
+import random
 from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises)
 from nose.plugins.skip import Skip, SkipTest
@@ -10,6 +12,7 @@ from .test_helpers import (
 from openpathsampling.analysis.tis import *
 from openpathsampling.analysis.tis.core import \
     steps_to_weighted_trajectories
+from openpathsampling.analysis.tis.flux import default_flux_sort
 import openpathsampling as paths
 
 import pandas as pd
@@ -104,8 +107,10 @@ class TISAnalysisTester(object):
 
     def setup(self):
         # set up the trajectories, ensembles, etc. for this test
+        paths.InterfaceSet._reset()
         cv_A = paths.FunctionCV(lambda s: s.xyz[0][0]).named("Id")
         cv_B = paths.FunctionCV(lambda s: 1.0-s.xyz[0][0]).named("1-Id")
+
         self.cv_x = cv_A
         self.state_A = paths.CVDefinedVolume(cv_A,
                                              float("-inf"), 0.0).named("A")
@@ -195,6 +200,59 @@ class TestWeightedTrajectories(TISAnalysisTester):
                      len(self.mstis.sampling_ensembles))
         self._check_network_results(self.mstis,
                                     self.mstis_weighted_trajectories)
+
+
+class TestFluxToPandas(TISAnalysisTester):
+    # includes tests for default_flux_sort and flux_matrix_pd
+    # as a class to simplify setup of flux objects
+    def setup(self):
+        super(TestFluxToPandas, self).setup()
+        interfaces_A = self.mstis.from_state[self.state_A].interfaces
+        interfaces_B = self.mstis.from_state[self.state_B].interfaces
+        pairs_A = list(itertools.product([self.state_A], interfaces_A))
+        pairs_B = list(itertools.product([self.state_B], interfaces_B))
+        # note that this gives the canonical order we desire
+        self.all_pairs = pairs_A + pairs_B
+        self.default_ordered_results = [
+            ((self.state_A, interfaces_A[0]), 10.0),
+            ((self.state_A, interfaces_A[1]), 5.0),
+            ((self.state_A, interfaces_A[2]), 2.0),
+            ((self.state_B, interfaces_B[0]), 1.0),
+            ((self.state_B, interfaces_B[1]), 0.5),
+            ((self.state_B, interfaces_B[2]), 0.2)
+        ]
+        shuffled_fluxes = self.default_ordered_results[:]
+        random.shuffle(shuffled_fluxes)
+        self.fluxes = {key: value for (key, value) in shuffled_fluxes}
+        self.indices = [
+            ("A", "-inf<Id<0.0"), ("A", "-inf<Id<0.1"), ("A", "-inf<Id<0.2"),
+            ("B", "-inf<1-Id<0.0"), ("B", "-inf<1-Id<0.1"),
+            ("B", "-inf<1-Id<0.2")
+        ]
+        values = [value for (key, value) in self.default_ordered_results]
+        index = pd.MultiIndex.from_tuples(self.indices,
+                                          names=["State", "Interface"])
+        self.expected_series = pd.Series(values, name="Flux", index=index)
+
+
+    def test_default_flux_sort(self):
+        shuffled = self.all_pairs[:]
+        random.shuffle(shuffled)
+        sorted_result = default_flux_sort(shuffled)
+        assert_items_equal(sorted_result, self.all_pairs)
+
+    def test_flux_matrix_pd_default(self):
+        series = flux_matrix_pd(self.fluxes)
+        pdt.assert_series_equal(series, self.expected_series)
+
+    def test_flux_matrix_pd_None(self):
+        series = flux_matrix_pd(self.fluxes, sort_method=None)
+        for idx in self.indices:
+            assert_almost_equal(series[idx], self.expected_series[idx])
+
+    @raises(KeyError)
+    def test_flux_matrix_pd_unknown_str(self):
+        series = flux_matrix_pd(self.fluxes, sort_method="foo")
 
 
 class TestDictFlux(TISAnalysisTester):
@@ -445,6 +503,21 @@ class TestFullHistogramMaxLambda(TISAnalysisTester):
         )
         mstis_BA_hists = mstis_BA_histogrammer.calculate(self.mstis_steps)
         self._check_transition_results(mstis_BA, mstis_BA_hists)
+
+    @raises(RuntimeError)
+    def test_calculate_no_max_lambda(self):
+        mistis_AB = self.mistis.transitions[(self.state_A, self.state_B)]
+        modified_transition = paths.TISTransition(
+            stateA=mistis_AB.stateA,
+            stateB=mistis_AB.stateB,
+            interfaces=mistis_AB.interfaces.volumes,
+            orderparameter=mistis_AB.orderparameter
+        )
+        mistis_AB_histogrammer = FullHistogramMaxLambdas(
+            transition=modified_transition,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
+
 
 
 class TestConditionalTransitionProbability(TISAnalysisTester):

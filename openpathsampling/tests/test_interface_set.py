@@ -19,11 +19,12 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testInterfaceSet(object):
+class TestInterfaceSet(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV(f=lambda s: s.xyz[0][0]).named("")
         self.lambdas = [0.0, 0.1, 0.2, 0.3]
-        self.volumes = paths.VolumeFactory.CVRangeVolumeSet(self.cv, 
+        self.volumes = paths.VolumeFactory.CVRangeVolumeSet(self.cv,
                                                             float("-inf"),
                                                             self.lambdas)
         self.interface_set = paths.InterfaceSet(self.volumes, self.cv,
@@ -62,13 +63,24 @@ class testInterfaceSet(object):
         for vol in self.interface_set:
             assert_equal(vol in self.volumes, True)
         # reversed
-        i = 0 
+        i = 0
         for vol in reversed(self.interface_set):
             assert_equal(vol, self.volumes[3-i])
             i += 1
 
+    def test_no_direction_possible(self):
+        volumes = paths.VolumeFactory.CVRangeVolumeSet(
+            op=self.cv,
+            minvals=[-0.1, -0.2, -0.3],
+            maxvals=[0.1, 0.2, 0.3]
+        )
+        ifaces = paths.InterfaceSet(volumes)
+        assert_equal(ifaces.cv, None)
+        assert_equal(ifaces.cv_max, None)
+        assert_equal(ifaces.direction, 0)
 
-class testGenericVolumeInterfaceSet(object):
+
+class TestGenericVolumeInterfaceSet(object):
     def test_sanitize_input(self):
         # this is just to make the rest a little more readable
         sanitize = GenericVolumeInterfaceSet._sanitize_input
@@ -90,11 +102,13 @@ class testGenericVolumeInterfaceSet(object):
     def test_bad_sanitize(self):
         GenericVolumeInterfaceSet._sanitize_input([0.0, -0.1],
                                                   [0.1, 0.2, 0.3])
-        
 
-class testVolumeInterfaceSet(object):
+
+class TestVolumeInterfaceSet(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV(f=lambda s: s.xyz[0][0]).named("x")
+
         self.increasing_set = paths.VolumeInterfaceSet(cv=self.cv,
                                                        minvals=float("-inf"),
                                                        maxvals=[0.0, 0.1])
@@ -106,12 +120,19 @@ class testVolumeInterfaceSet(object):
                                                   maxvals=[0.1, 0.2])
 
     def test_initialization(self):
+        assert_equal(len(paths.InterfaceSet._cv_max_dict), 1)
+        cv_max = list(paths.InterfaceSet._cv_max_dict.values())[0]
+
         assert_equal(len(self.increasing_set), 2)
         assert_equal(self.increasing_set.direction, 1)
         assert_equal(self.increasing_set.lambdas, [0.0, 0.1])
+        assert_equal(self.increasing_set.cv_max, cv_max)
+
         assert_equal(len(self.decreasing_set), 2)
         assert_equal(self.decreasing_set.direction, -1)
         assert_equal(self.decreasing_set.lambdas, [0.0, -0.1])
+        # TODO: decide what to do about cv_max for decreasing/weird
+
         assert_equal(len(self.weird_set), 2)
         assert_equal(self.weird_set.direction, 0)
         assert_equal(self.weird_set.lambdas, None)
@@ -130,10 +151,12 @@ class testVolumeInterfaceSet(object):
         fname = data_filename("interface_set_storage_test.nc")
         if os.path.isfile(fname):
             os.remove(fname)
-        template = make_1d_traj([0.0])[0]
-        storage_w = paths.Storage(fname, "w", template)
+        template_traj = make_1d_traj([0.0])
+        storage_w = paths.Storage(fname, "w")
+        storage_w.save(template_traj)
         storage_w.save(self.increasing_set)
         storage_w.sync_all()
+        storage_w.close()
 
         storage_r = paths.AnalysisStorage(fname)
         reloaded = storage_r.interfacesets[0]
@@ -149,9 +172,11 @@ class testVolumeInterfaceSet(object):
             os.remove(fname)
 
 
-class testPeriodicVolumeInterfaceSet(object):
+class TestPeriodicVolumeInterfaceSet(object):
     def setup(self):
-        self.cv = paths.FunctionCV(f=lambda s: s.xyz[0][0]).named("")
+        paths.InterfaceSet._reset()
+        self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0]).named("x")
+
         self.increasing_set = paths.PeriodicVolumeInterfaceSet(
             cv=self.cv,
             minvals=0.0,
@@ -169,14 +194,16 @@ class testPeriodicVolumeInterfaceSet(object):
         new_iface = self.increasing_set.new_interface(-140)
         expected = paths.PeriodicCVDefinedVolume(self.cv, 0.0, -140, -180, 180)
         assert_equal(new_iface, expected)
-    
+
     def test_storage(self):
         import os
         fname = data_filename("interface_set_storage_test.nc")
         if os.path.isfile(fname):
             os.remove(fname)
-        template = make_1d_traj([0.0])[0]
-        storage_w = paths.Storage(fname, "w", template)
+        template_traj = make_1d_traj([0.0])
+        template = template_traj[0]
+        storage_w = paths.Storage(fname, "w")
+        storage_w.save(template_traj)
         storage_w.save(self.increasing_set)
         storage_w.sync_all()
 

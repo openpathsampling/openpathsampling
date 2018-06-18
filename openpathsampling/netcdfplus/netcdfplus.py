@@ -348,6 +348,9 @@ class NetCDFPlus(netCDF4.Dataset):
             # to prepare
             self._restore()
 
+        self.set_auto_mask(False)
+
+
 
     def _create_simplifier(self):
         self.simplifier = UUIDObjectJSON(self)

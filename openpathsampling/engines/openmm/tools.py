@@ -28,6 +28,10 @@ class TopologyEngine(NoEngine):
 
         self.topology = topology
 
+    @property
+    def mdtraj_topology(self):
+        return self.topology.mdtraj
+
     def to_dict(self):
         return {
             'topology': self.topology,
@@ -135,7 +139,8 @@ def topology_from_pdb(pdb_file, simple_topology=False):
     return topology
 
 
-def snapshot_from_testsystem(testsystem, simple_topology=False):
+def snapshot_from_testsystem(testsystem, simple_topology=False,
+                             periodic=True):
     """
     Construct a Snapshot from openmm topology and state objects
 
@@ -146,6 +151,8 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
     simple_topology : bool
         if `True` only a simple topology with n_atoms will be created.
         This cannot be used with complex CVs but loads and stores very fast
+    periodic : bool
+        True (default) if system is periodic; if False, box vectors are None
 
     Returns
     -------
@@ -162,10 +169,13 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
     else:
         topology = MDTrajTopology(md.Topology.from_openmm(testsystem.topology))
 
-    box_vectors = \
-        np.array([
-            v / u.nanometers for v in
-            testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
+    if periodic:
+        box_vectors = \
+            np.array([
+                v / u.nanometers for v in
+                testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
+    else:
+        box_vectors = None
 
     snapshot = Snapshot.construct(
         coordinates=testsystem.positions,
@@ -177,7 +187,8 @@ def snapshot_from_testsystem(testsystem, simple_topology=False):
     return snapshot
 
 
-def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
+def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
+                           velocities=None):
     """
     Construct a Trajectory object from an mdtraj.Trajectory object
 
@@ -188,28 +199,37 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     simple_topology : bool
         if `True` only a simple topology with n_atoms will be created.
         This cannot be used with complex CVs but loads and stores very fast
+    velocities : np.array
+        velocities in units of nm/ps
 
     Returns
     -------
     openpathsampling.engines.Trajectory
         the constructed Trajectory instance
     """
-
     trajectory = Trajectory()
-    empty_kinetics = Snapshot.KineticContainer(
-        velocities=u.Quantity(
-            np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
-    )
+    vel_unit = u.nanometer / u.picosecond
+
     if simple_topology:
         topology = Topology(*mdtrajectory.xyz[0].shape)
     else:
         topology = MDTrajTopology(mdtrajectory.topology)
+
+    if velocities is None:
+        empty_vel = u.Quantity(np.zeros(mdtrajectory.xyz[0].shape),
+                               vel_unit)
+
 
     engine = TopologyEngine(topology)
 
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
+        if velocities is not None:
+            vel = u.Quantity(velocities[frame_num], vel_unit)
+        else:
+            vel = empty_vel
+
         if mdtrajectory.unitcell_vectors is not None:
             box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
                                u.nanometers)
@@ -220,10 +240,11 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
             coordinates=coord,
             box_vectors=box_v
         )
+        kinetics = Snapshot.KineticContainer(velocities=vel)
 
         snap = Snapshot(
             statics=statics,
-            kinetics=empty_kinetics,
+            kinetics=kinetics,
             engine=engine
         )
         trajectory.append(snap)

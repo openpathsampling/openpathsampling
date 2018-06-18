@@ -703,6 +703,12 @@ class EngineMover(SampleMover):
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
         self._engine = engine
+        self._trust_candidate = True  # can I safely do that?
+        # I think that is safe. Note for future: if we come across a bug
+        # based on this, an alternative would be to have the move strategy
+        # set _trust_candidate when it builds the movers; that is likely to
+        # be a little safer (although I think we can trust all candidates
+        # from engine movers to actually be candidates)
 
     def to_dict(self):
         dct = super(EngineMover, self).to_dict()
@@ -812,6 +818,8 @@ class EngineMover(SampleMover):
                                                   running=[run_f])
         trial_trajectory = (trajectory[0:shooting_index] +
                             partial_trajectory)
+        # TODO: this should check for overshoot; only works now if ensemble
+        # doesn't overshoot
         return trial_trajectory
 
     def _make_backward_trajectory(self, trajectory, shooting_index):
@@ -823,6 +831,8 @@ class EngineMover(SampleMover):
                                                   running=[run_f])
         trial_trajectory = (partial_trajectory.reversed +
                             trajectory[shooting_index + 1:])
+        # TODO: this should check for overshoot; only works now if ensemble
+        # doesn't overshoot
         return trial_trajectory
 
     # direction is an abstract property to disallow instantiation
@@ -2286,11 +2296,16 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
 
         bkwd_partial = self._make_backward_trajectory(trajectory, modified,
                                                       shooting_index)
+        #logger.info("Complete backward shot (length " +
+                    #str(len(bkwd_partial)) + ")")
         # TODO: come up with a test that shows why you need mid_traj here;
         # should be a SeqEns with OptionalEnsembles. Exact example is hard!
         mid_traj = bkwd_partial.reversed + trajectory[shooting_index + 1:]
+        mid_traj_shoot_idx = len(bkwd_partial) - 1
         fwd_partial = self._make_forward_trajectory(mid_traj, modified,
-                                                    shooting_index)
+                                                    mid_traj_shoot_idx)
+        #logger.info("Complete forward shot (length " +
+                    #str(len(fwd_partial)) + ")")
 
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
