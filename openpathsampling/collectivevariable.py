@@ -232,8 +232,15 @@ class CallableCV(CollectiveVariable):
     def from_dict(cls, dct):
         kwargs = dct['kwargs']
         del dct['kwargs']
+        name = None
+        if 'name' in kwargs:
+            name = kwargs['name']
+            del kwargs['name']
         dct.update(kwargs)
         obj = cls(**dct)
+
+        if name is not None:
+            obj.named(name)
 
         return obj
 

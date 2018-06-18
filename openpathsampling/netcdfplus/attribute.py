@@ -302,8 +302,15 @@ class CallablePseudoAttribute(PseudoAttribute):
     def from_dict(cls, dct):
         kwargs = dct['kwargs']
         del dct['kwargs']
+        name = None
+        if 'name' in kwargs:
+            name = kwargs['name']
+            del kwargs['name']
         dct.update(kwargs)
         obj = cls(**dct)
+
+        if name is not None:
+            obj.named(name)
 
         return obj
 
@@ -389,7 +396,6 @@ class FunctionPseudoAttribute(CallablePseudoAttribute):
 
     def _eval(self, items):
         # here the kwargs are used in the callable when it is evaluated
-        print(self.kwargs)
         return self.cv_callable(items, **self.kwargs)
 
 
