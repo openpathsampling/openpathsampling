@@ -12,7 +12,7 @@ class PathHistogram(SparseHistogram):
 
     This allows features like interpolating between bins and normalizing the
     histogram to the number of trajectories.
-    
+
     Parameters
     ----------
     left_bin_edges : array-like
@@ -28,7 +28,7 @@ class PathHistogram(SparseHistogram):
     """
     def __init__(self, left_bin_edges, bin_widths, interpolate=True,
                  per_traj=True):
-        super(PathHistogram, self).__init__(left_bin_edges=left_bin_edges, 
+        super(PathHistogram, self).__init__(left_bin_edges=left_bin_edges,
                                             bin_widths=bin_widths)
         if interpolate is True:
             interpolate = "subdivide"
@@ -99,15 +99,15 @@ class PathHistogram(SparseHistogram):
         if np.all(abs(np.asarray(end_bin) - np.asarray(start_bin)) == 1):
             left_edges = self.left_bin_edges + self.bin_widths * end_bin
             test_array = (left_edges - start_pt) / delta
-            
+
             if np.allclose(test_array, test_array[0], atol=1e-6):
                 return [start_bin, end_bin]
             elif np.allclose(delta, [0.0]*len(delta), atol=1e-6):
                 return [start_bin, end_bin]
 
-        manhattan_dist_start = sum(abs(np.asarray(mid_bin) - 
+        manhattan_dist_start = sum(abs(np.asarray(mid_bin) -
                                        np.asarray(start_bin)))
-        manhattan_dist_end = sum(abs(np.asarray(end_bin) - 
+        manhattan_dist_end = sum(abs(np.asarray(end_bin) -
                                      np.asarray(mid_bin)))
 
         # how much work we have to do depends on what's already adjacent

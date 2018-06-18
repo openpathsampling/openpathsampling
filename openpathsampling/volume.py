@@ -96,17 +96,20 @@ class Volume(StorableNamedObject):
             return EmptyVolume()
         else:
             return RelativeComplementVolume(self, other)
-        
+
     def __invert__(self):
         return NegatedVolume(self)
 
     def __eq__(self, other):
         return str(self) == str(other)
 
+    def __ne__(self, other):
+        return not self == other
+
 
 class VolumeCombination(Volume):
     """
-    Logical combination of volumes. 
+    Logical combination of volumes.
 
     This should be treated as an abstract class. For storage purposes, use
     specific subclasses in practice.
@@ -130,36 +133,56 @@ class VolumeCombination(Volume):
             return self.fnc(a, b)
         #return self.fnc(self.volume1.__call__(snapshot),
                         #self.volume2.__call__(snapshot))
-    
+
     def __str__(self):
         return '(' + self.sfnc.format(str(self.volume1), str(self.volume2)) + ')'
 
     def to_dict(self):
-        return { 'volume1' : self.volume1, 'volume2' : self.volume2 }
+        return {'volume1': self.volume1, 'volume2': self.volume2}
 
 
 class UnionVolume(VolumeCombination):
     """ "Or" combination (union) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(UnionVolume, self).__init__(volume1, volume2, lambda a,b : a or b, str_fnc = '{0} or {1}')
+        super(UnionVolume, self).__init__(
+            volume1=volume1,
+            volume2=volume2,
+            fnc=lambda a, b: a or b,
+            str_fnc='{0} or {1}'
+        )
 
 
 class IntersectionVolume(VolumeCombination):
     """ "And" combination (intersection) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(IntersectionVolume, self).__init__(volume1, volume2, lambda a,b : a and b, str_fnc = '{0} and {1}')
+        super(IntersectionVolume, self).__init__(
+            volume1=volume1,
+            volume2=volume2,
+            fnc=lambda a, b: a and b,
+            str_fnc='{0} and {1}'
+        )
 
 
 class SymmetricDifferenceVolume(VolumeCombination):
     """ "Xor" combination of two volumes."""
     def __init__(self, volume1, volume2):
-        super(SymmetricDifferenceVolume, self).__init__(volume1, volume2, lambda a,b : a ^ b, str_fnc = '{0} xor {1}')
+        super(SymmetricDifferenceVolume, self).__init__(
+            volume1=volume1,
+            volume2=volume2,
+            fnc=lambda a, b: a ^ b,
+            str_fnc='{0} xor {1}'
+        )
 
 
 class RelativeComplementVolume(VolumeCombination):
     """ "Subtraction" combination (relative complement) of two volumes."""
     def __init__(self, volume1, volume2):
-        super(RelativeComplementVolume, self).__init__(volume1, volume2, lambda a,b : a and not b, str_fnc = '{0} and not {1}')
+        super(RelativeComplementVolume, self).__init__(
+            volume1=volume1,
+            volume2=volume2,
+            fnc=lambda a, b: a and not b,
+            str_fnc='{0} and not {1}'
+        )
 
 
 class NegatedVolume(Volume):
@@ -170,10 +193,10 @@ class NegatedVolume(Volume):
 
     def __call__(self, snapshot):
         return not self.volume(snapshot)
-    
+
     def __str__(self):
         return '(not ' + str(self.volume) + ')'
-    
+
 
 class EmptyVolume(Volume):
     """Empty volume: no snapshot can satisfy"""
@@ -236,7 +259,7 @@ class CVDefinedVolume(Volume):
     Contains all snapshots `snap` for which `lamba_min <
     collectivevariable(snap)` and `lambda_max > collectivevariable(snap)`.
     """
-    def __init__(self, collectivevariable, lambda_min = 0.0, lambda_max = 1.0):
+    def __init__(self, collectivevariable, lambda_min=0.0, lambda_max=1.0):
         '''
         Attributes
         ----------
@@ -270,9 +293,9 @@ class CVDefinedVolume(Volume):
 
     @property
     def default_name(self):
-        return (str(self.lambda_min) + "<" +
-                     str(self.collectivevariable.name) + "<" +
-                     str(self.lambda_max))
+        return (str(self.lambda_min) + "<"
+                + str(self.collectivevariable.name) + "<"
+                + str(self.lambda_max))
 
     def _copy_with_new_range(self, lmin, lmax):
         """Shortcut to make a CVDefinedVolume with all parameters the same as
@@ -332,7 +355,7 @@ class CVDefinedVolume(Volume):
             )  # pragma: no cover
 
     def __and__(self, other):
-        if (type(other) is type(self) and 
+        if (type(other) is type(self) and
                 self.collectivevariable == other.collectivevariable):
             lminmax = self.range_and(self.lambda_min, self.lambda_max,
                                 other.lambda_min, other.lambda_max)
@@ -341,7 +364,7 @@ class CVDefinedVolume(Volume):
             return super(CVDefinedVolume, self).__and__(other)
 
     def __or__(self, other):
-        if (type(other) is type(self) and 
+        if (type(other) is type(self) and
                 self.collectivevariable == other.collectivevariable):
             lminmax = self.range_or(self.lambda_min, self.lambda_max,
                                other.lambda_min, other.lambda_max)
@@ -350,7 +373,7 @@ class CVDefinedVolume(Volume):
             return super(CVDefinedVolume, self).__or__(other)
 
     def __xor__(self, other):
-        if (type(other) is type(self) and 
+        if (type(other) is type(self) and
                 self.collectivevariable == other.collectivevariable):
             # taking the shortcut here
             return (self | other) - (self & other)
@@ -358,7 +381,7 @@ class CVDefinedVolume(Volume):
             return super(CVDefinedVolume, self).__xor__(other)
 
     def __sub__(self, other):
-        if (type(other) is type(self) and 
+        if (type(other) is type(self) and
                 self.collectivevariable == other.collectivevariable):
             lminmax = self.range_sub(self.lambda_min, self.lambda_max,
                             other.lambda_min, other.lambda_max)
@@ -375,15 +398,14 @@ class CVDefinedVolume(Volume):
         if self.lambda_min != float('-inf') and self.lambda_min > l:
             return False
 
-        if self.lambda_min != float('inf') and self.lambda_max < l:
+        if self.lambda_min != float('inf') and self.lambda_max <= l:
             return False
 
         return True
 
     def __str__(self):
-        return '{{x|{2}(x) in [{0}, {1}]}}'.format(
+        return '{{x|{2}(x) in [{0:g}, {1:g}]}}'.format(
             self.lambda_min, self.lambda_max, self.collectivevariable.name)
-
 
 class PeriodicCVDefinedVolume(CVDefinedVolume):
     """
@@ -407,7 +429,7 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
             self, collectivevariable, lambda_min=0.0, lambda_max=1.0,
             period_min=None, period_max=None):
         super(PeriodicCVDefinedVolume, self).__init__(collectivevariable,
-                                                    lambda_min, lambda_max)        
+                                                    lambda_min, lambda_max)
         self.period_min = period_min
         self.period_max = period_max
         if (period_min is not None) and (period_max is not None):
@@ -416,8 +438,15 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
             if self.lambda_max - self.lambda_min > self._period_len:
                 raise Exception("Range of volume larger than periodic bounds.")
             elif self.lambda_max-self.lambda_min == self._period_len:
+                # this is only the case that we really have a FullVolume
                 self.lambda_min = period_min
                 self.lambda_max = period_max
+                # hack: better to create factory, returning FullVolume
+                # this hack: https://stackoverflow.com/questions/38541015/
+                class MonkeyPatch(type(self)):
+                    def __call__(self, *arg, **kwarg):
+                        return True
+                self.__class__ = MonkeyPatch
             else:
                 self.lambda_min = self.do_wrap(lambda_min)
                 self.lambda_max = self.do_wrap(lambda_max)
@@ -475,33 +504,33 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
         if self.wrap:
             l = self.do_wrap(l)
         if self.lambda_min > self.lambda_max:
-            return l >= self.lambda_min or l <= self.lambda_max
+            return l >= self.lambda_min or l < self.lambda_max
         else:
-            return self.lambda_min <= l <= self.lambda_max
+            return self.lambda_min <= l < self.lambda_max
 
     def __str__(self):
         if self.wrap:
-            fcn = 'x|({0}(x) - {2}) % {1} + {2}'.format(
+            fcn = 'x|({0}(x) - {2:g}) % {1:g} + {2:g}'.format(
                         self.collectivevariable.name,
                         self._period_len, self._period_shift)
             if self.lambda_min < self.lambda_max:
-                domain = '[{0}, {1}]'.format(
+                domain = '[{0:g}, {1:g}]'.format(
                         self.lambda_min, self.lambda_max)
             else:
-                domain = '[{0}, {1}] union [{2}, {3}]'.format(
+                domain = '[{0:g}, {1:g}] union [{2:g}, {3:g}]'.format(
                         self._period_shift, self.lambda_max,
                         self.lambda_min, self._period_shift+self._period_len)
             return '{'+fcn+' in '+domain+'}'
         else:
-            return '{{x|{2}(x) [periodic] in [{0}, {1}]}}'.format( 
-                        self.lambda_min, self.lambda_max, 
+            return '{{x|{2}(x) [periodic] in [{0:g}, {1:g}]}}'.format(
+                        self.lambda_min, self.lambda_max,
                         self.collectivevariable.name)
 
 
 class VoronoiVolume(Volume):
     '''
     Volume given by a Voronoi cell specified by a set of centers
-    
+
     Parameters
     ----------
     collectivevariable : MultiRMSDCV
@@ -517,21 +546,21 @@ class VoronoiVolume(Volume):
         the index of the center for the chosen voronoi cell
 
     '''
-    
+
     def __init__(self, collectivevariable, state):
         super(VoronoiVolume, self).__init__()
         self.collectivevariable = collectivevariable
         self.state = state
-        
+
     def cell(self, snapshot):
         '''
         Returns the index of the voronoicell snapshot is in
-        
+
         Parameters
         ----------
         snapshot : :class:`opensampling.engines.BaseSnapshot`
             the snapshot to be tested
-        
+
         Returns
         -------
         int
@@ -539,18 +568,18 @@ class VoronoiVolume(Volume):
         '''
         distances = self.collectivevariable(snapshot)
         min_val = 1000000000.0
-        min_idx = -1 
+        min_idx = -1
         for idx, d in enumerate(distances):
             if d < min_val:
                 min_val = d
                 min_idx = idx
-        
+
         return min_idx
 
     def __call__(self, snapshot, state=None):
         '''
         Returns `True` if snapshot belongs to voronoi cell in state
-        
+
         Parameters
         ----------
         snapshot : :class:`opensampling.engines.BaseSnapshot`
@@ -558,19 +587,16 @@ class VoronoiVolume(Volume):
         state : int or None
             index of the cell to be tested. If `None` (Default) then the
             internal self.state is used
-            
+
         Returns
         -------
         bool
             returns `True` is snapshot is on the specified voronoi cell
-        
+
         '''
-        
-        # short but slower would be 
-        
         if state is None:
             state = self.state
-        
+
         return self.cell(snapshot) == state
 
 

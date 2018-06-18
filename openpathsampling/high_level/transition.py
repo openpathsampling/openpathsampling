@@ -215,9 +215,40 @@ class TISTransition(Transition):
 
 
     def build_ensembles(self, stateA, stateB, interfaces, orderparameter):
-        self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
-            stateA, stateB, self.interfaces, orderparameter
-        )
+        try:
+            cv = interfaces.cv
+        except AttributeError:
+            cv = orderparameter
+        if cv is None:
+            # in case interface.cv is None and orderparameter is not None
+            cv = orderparameter
+
+        try:
+            cv_max = interfaces.cv_max
+        except AttributeError:
+            cv_max = None
+
+        try:
+            lambdas = [interfaces.get_lambda(iface_vol)
+                       for iface_vol in interfaces]
+        except AttributeError:
+            lambdas = [None] * len(interfaces)
+
+        self.ensembles = [
+            paths.TISEnsemble(
+                initial_states=stateA,
+                final_states=stateB,
+                interface=iface_vol,
+                orderparameter=cv,
+                cv_max=cv_max,
+                lambda_i=lambda_i
+            )
+            for (iface_vol, lambda_i) in zip(interfaces, lambdas)
+        ]
+
+        #self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
+            #stateA, stateB, self.interfaces, orderparameter
+        #)
         for ensemble in self.ensembles:
             ensemble.named(self.name + " " +
                            str(self.ensembles.index(ensemble)))
@@ -531,7 +562,7 @@ class TISTransition(Transition):
             raise RuntimeError(str(len(minus_movers_used)) +
                                " minus movers for the same ensemble?")
 
-        engine_dt = minus_movers_used.keys()[0].engine.snapshot_timestep
+        engine_dt = list(minus_movers_used.keys())[0].engine.snapshot_timestep
         flux = 1.0 / (t_in_avg + t_out_avg) / engine_dt
         self._flux = flux
         return self._flux

@@ -19,6 +19,9 @@ from .delayedinterrupt import DelayedInterrupt
 
 logger = logging.getLogger(__name__)
 
+if sys.version_info > (3, ):
+    basestring = str
+
 # =============================================================================
 # SOURCE CONTROL
 # =============================================================================
@@ -60,6 +63,7 @@ class DynamicsEngine(StorableNamedObject):
         1.  `fail` will raise an exception `EngineNaNError`
         2.  `retry` will rerun the trajectory in engine.generate, these moves
             do not satisfy detailed balance
+
     on_error : str
         set the behaviour of the engine when an exception happens.
         Possible is
@@ -67,6 +71,7 @@ class DynamicsEngine(StorableNamedObject):
         1.  `fail` will raise an exception `EngineError`
         2.  `retry` will rerun the trajectory in engine.generate, these moves
             do not satisfy detailed balance
+
     on_max_length : str
         set the behaviour if the trajectory length is `n_frames_max`.
         If `n_frames_max == 0` this will be ignored and nothing happens.
@@ -76,12 +81,16 @@ class DynamicsEngine(StorableNamedObject):
         2.  `stop` will stop and return the max length trajectory (default)
         3.  `retry` will rerun the trajectory in engine.generate, these moves
             do not satisfy detailed balance
+
     retries_when_nan : int, default: 2
         the number of retries (if chosen) before an exception is raised
+
     retries_when_error : int, default: 2
         the number of retries (if chosen) before an exception is raised
+
     retries_when_max_length : int, default: 0
         the number of retries (if chosen) before an exception is raised
+
     on_retry : str or callable
         the behaviour when a try is started. Since you have already generated
         some trajectory you might not restart completely. Possibilities are
@@ -235,6 +244,9 @@ class DynamicsEngine(StorableNamedObject):
                             okay_options[variable] = my_options[variable]
                     elif isinstance(my_options[variable], type(default_value)):
                         okay_options[variable] = my_options[variable]
+                    elif isinstance(my_options[variable], basestring) \
+                            and isinstance(default_value, basestring):
+                        okay_options[variable] = my_options[variable]
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
                     else:
@@ -375,10 +387,9 @@ class DynamicsEngine(StorableNamedObject):
 
         Parameters
         ----------
-        snapshot : :class:`openpathsampling.snapshot.Snapshot`
+        snapshot : :class:`.Snapshot`
             initial coordinates and velocities in form of a Snapshot object
-        running : (list of)
-        function(:class:`openpathsampling.trajectory.Trajectory`)
+        running : (list of) function(:class:`.Trajectory`)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
         direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
@@ -388,8 +399,8 @@ class DynamicsEngine(StorableNamedObject):
             trajectory that effectively ends in the initial snapshot
 
         Returns
-        -------    
-        trajectory : :class:`openpathsampling.trajectory.Trajectory`
+        -------
+        trajectory : :class:`.Trajectory`
             generated trajectory of initial conditions, including initial
             coordinate set
 
@@ -421,12 +432,10 @@ class DynamicsEngine(StorableNamedObject):
 
         Parameters
         ----------
-        initial : :class:`openpathsampling.Snapshot` or
-        :class:`openpathsampling.Trajectory`
+        initial : :class:`.Snapshot` or :class:`.Trajectory`
             initial coordinates and velocities in form of a Snapshot object
             or a trajectory
-        running : (list of)
-        function(:class:`openpathsampling.trajectory.Trajectory`)
+        running : (list of) function(:class:`.Trajectory`)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
         direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)

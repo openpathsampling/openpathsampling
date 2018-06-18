@@ -8,3 +8,5 @@ runipy
 openmm
 pytables
 scikit-learn
+packaging
+sphinx_rtd_theme

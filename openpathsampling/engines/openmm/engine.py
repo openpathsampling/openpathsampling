@@ -19,7 +19,7 @@ def restore_custom_integrator_interface(integrator):
     as `CustomIntegrator`, and therefore lose any additional interface
     provided by the subclass.
 
-    So far, only subclasses of `openmmtools.RestorableIntegrator` are
+    So far, only subclasses of `openmmtools.RestorableOpenMMObject` are
     supported. Hopefully, we can establish some sort of more widely-used
     approach based on the tricks established in there.
     """
@@ -29,9 +29,9 @@ def restore_custom_integrator_interface(integrator):
     except ImportError:  # pragma: no cover
         pass  # if openmmtools doesn't exist, can't restore interface
     else:
-        RestorableIntegrator = openmmtools.integrators.RestorableIntegrator
-        if RestorableIntegrator.is_restorable(integrator):
-            success = RestorableIntegrator.restore_interface(integrator)
+        RestorableObject = openmmtools.utils.RestorableOpenMMObject
+        if RestorableObject.is_restorable(integrator):
+            success = RestorableObject.restore_interface(integrator)
             logger.debug("Restored interface to integrator: " + str(success))
             # this return a bool based on success; we could error on fail,
             # but I think it is better to just log it and use the integrator
@@ -320,7 +320,7 @@ class OpenMMEngine(DynamicsEngine):
 
         # we need to have str as keys
         properties = {str(key): str(value)
-                      for key, value in properties.iteritems()}
+                      for key, value in properties.items()}
 
         integrator = simtk.openmm.XmlSerializer.deserialize(integrator_xml)
         integrator = restore_custom_integrator_interface(integrator)
@@ -331,6 +331,9 @@ class OpenMMEngine(DynamicsEngine):
             options=options,
             openmm_properties=properties
         )
+    @property
+    def mdtraj_topology(self):
+        return self.topology.mdtraj
 
     @property
     def snapshot_timestep(self):

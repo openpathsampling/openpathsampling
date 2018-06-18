@@ -27,7 +27,7 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testNoModification(object):
+class TestNoModification(object):
     def setup(self):
         self.modifier = NoModification()
         self.snapshot_1D = peng.toy.Snapshot(
@@ -103,7 +103,7 @@ class testNoModification(object):
         assert_true(self.snapshot_3D.velocities is not new_3D.velocities)
 
 
-class testRandomizeVelocities(object):
+class TestRandomizeVelocities(object):
     def setup(self):
         # TODO: check against several possibilities, including various
         # combinations of shapes of velocities and masses.
@@ -229,7 +229,7 @@ class testRandomizeVelocities(object):
         assert_equal(engine.current_snapshot, zero_snap)
         engine.generate(new_snap, [lambda x, foo: len(x) <= 4])
 
-class testGeneralizedDirectionModifier(object):
+class TestGeneralizedDirectionModifier(object):
     def setup(self):
         import openpathsampling.engines.toy as toys
         # applies one delta_v to all atoms
@@ -390,7 +390,7 @@ class testGeneralizedDirectionModifier(object):
         assert_almost_equal(new_ke._value, (20.0 * u_energy)._value)
 
 
-class testVelocityDirectionModifier(object):
+class TestVelocityDirectionModifier(object):
     def setup(self):
         import openpathsampling.engines.toy as toys
         self.toy_modifier = VelocityDirectionModifier(
@@ -492,7 +492,7 @@ class testVelocityDirectionModifier(object):
         assert_array_almost_equal(total_momenta,
                                   np.array([0.0]*3) * u_vel * u_mass)
 
-class testSingleAtomVelocityDirectionModifier(object):
+class TestSingleAtomVelocityDirectionModifier(object):
     def setup(self):
         import openpathsampling.engines.toy as toys
         self.toy_modifier = SingleAtomVelocityDirectionModifier(

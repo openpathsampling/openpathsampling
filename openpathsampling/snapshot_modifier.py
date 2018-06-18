@@ -98,18 +98,25 @@ class NoModification(SnapshotModifier):
 class RandomVelocities(SnapshotModifier):
     """Randomize velocities according to the Boltzmann distribution.
 
-    Note
-    ----
-    This modifier will only work with snapshots that have the `velocities`
-    feature and the `masses` feature. Furthermore, the units have to be such
-    that the input `beta` and the features `masses` and `velocities` are all
-    in the same unit system. In particular, `1.0 / beta * masses` must be in
-    units of `velocity**2`.
+    Notes
+    -----
+    This modifier will only work with snapshots that have the ``velocities``
+    feature and the ``masses`` feature. Furthermore, the units have to be
+    such that the input ``beta`` and the features `masses` and `velocities`
+    are all in the same unit system. In particular, ``1.0 / beta * masses``
+    must be in units of ``velocity**2``.
+
+    For the OpenMMEngine, for example (after ``from simtk import unit as
+    u``), the ``beta`` parameter for 300 K would be created with
+
+    .. code-block:: python
+
+        beta = 1.0 / (300.0 * u.kelvin * u.BOLTZMANN_CONSTANT_kB)
 
     Parameters
     ----------
-    beta : float
-        inverse temperature (in units of kB) for the distribution
+    beta : float or simtk.unit.Quantity
+        inverse temperature (including kB) for the distribution
     engine : :class:`.DynamicsEngine` or None
         engine to be used for constraints; if None, use the snapshot's
         engine
@@ -244,7 +251,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
 
         if n_dofs != n_dofs_required:
             raise RuntimeError("Snapshot has " + str(n_dofs)
-                               + " degrees of freedom, not " 
+                               + " degrees of freedom, not "
                                + str(n_dofs_required) + ". "
                                + "Are there constraints? Constraints can't"
                                + " be used with this modifier.")
@@ -301,7 +308,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         # to do most of this? and get KE from a snapshot feature?
         n_atoms = len(masses)
         inv_masses = 1.0 / masses
-        momenta = velocities * masses[:, np.newaxis] 
+        momenta = velocities * masses[:, np.newaxis]
         total_momenta = sum(momenta, 0*momenta[0])
         remove_momenta = total_momenta / n_atoms
         remove_velocities = inv_masses[:, np.newaxis] * remove_momenta

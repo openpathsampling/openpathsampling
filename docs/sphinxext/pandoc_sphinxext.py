@@ -8,12 +8,11 @@
 from __future__ import print_function
 
 import os
-from sphinx.util.compat import Directive
 from docutils.parsers.rst import directives
 
 from docutils.frontend import OptionParser
 from docutils.utils import new_document
-from docutils.parsers.rst import Parser
+from docutils.parsers.rst import Parser, Directive
 from nbconvert.utils.pandoc import pandoc
 
 

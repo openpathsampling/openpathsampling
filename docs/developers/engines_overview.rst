@@ -24,8 +24,9 @@ The two engine APIs
 -------------------
 
 OpenPathSampling supports two approaches to controlling an engine: through
-direct control (where each step ???) and through indirect control (where the
-engine runs as an external process).
+direct control (where a Python API enables you to directly control the MD
+and run until the next saved snapshot) and through indirect control (where
+the engine runs as an external process).
 
 In general, if your engine can be implemented using the direct control API,
 we would suggest using it. However, many existing engines are not designed
@@ -36,4 +37,16 @@ intermediary between the engine and OPS.
 Customizing snapshots
 ---------------------
 
-
+The :class:`.Snapshot` includes all the relevant information about the state
+of the system at a given instant in time. For molecular dynamics, this
+typically includes positions and velocities, as well as box vectors for
+periodic systems. In OPS, it is easy to add other information to snapshots,
+known as "snapshot features." This can include storing new information in
+each snapshot (such as wavefunction data), computing data based on other
+information in the snapshot (such as kinetic energy), or accessing other
+information (by reference) that doesn't change between snapshots (such as
+particle passes). Implementing particular snapshot features will also
+immediately enable more advanced techniques in OPS (such as two-way
+shooting, or support for interactions with MDTraj). This is designed to help
+you, as an engine developer, get the most functionality with the least
+effort.

@@ -1,5 +1,6 @@
 import openpathsampling as paths
 import openpathsampling.netcdfplus as netcdfplus
+import collections
 import copy
 
 class InterfaceSet(netcdfplus.StorableNamedObject):
@@ -16,11 +17,41 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
         order parameter for this interface set
     lambdas : list
         values associated with the CV at each interface
+    cv_max : :class:`.netcdfplus.PseudoAttribute`
+        function to calculate the maximum value of the CV (if not given,
+        will be generated from ``cv`` if that is given)
     """
-    def __init__(self, volumes, cv=None, lambdas=None, direction=None):
+    # This is a class variable because more than one interface set may use
+    # the same CV (with different interface values) -- common in testing.
+    _cv_max_dict = {}
+
+    def __init__(self, volumes, cv=None, lambdas=None, cv_max=None,
+                 direction=None):
         super(InterfaceSet, self).__init__()
         self.volumes = volumes
         self.cv = cv
+
+        known_cvs = list(self._cv_max_dict.keys())
+        if cv_max is None:
+            if self.cv in known_cvs:
+                self.cv_max = self._cv_max_dict[self.cv]
+                # NOTE: If KeyError occurs, see InterfaceSet._reset()
+            elif self.cv is not None:
+                cv_max_func = lambda t, cv_: max(cv_(t))
+                self.cv_max = paths.netcdfplus.FunctionPseudoAttribute(
+                    name="max " + self.cv.name,
+                    key_class=paths.Trajectory,
+                    f=cv_max_func,
+                    cv_=self.cv
+                ).with_diskcache(allow_incomplete=True)
+            else:
+                self.cv_max = None
+        else:
+            self.cv_max = cv_max
+
+        if self.cv is not None and self.cv not in known_cvs:
+            self._cv_max_dict[self.cv] = self.cv_max
+
         self.lambdas = lambdas
         self.direction = direction
         if direction is None and lambdas is not None:
@@ -40,6 +71,18 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
             self.direction = 0
 
         self._set_lambda_dict()
+
+    @classmethod
+    def _reset(cls):
+        """Reset the max_cv_dict.
+
+        Used in testing, when CVs of the same name get created multiple
+        times as part of tests. This is only a problem if you have (in
+        memory) multiple CV objects with the same name. That can occur in
+        tests (where the entire test suite is run on one import) but should
+        never happen in normal practice.
+        """
+        cls._cv_max_dict = {}
 
     def _set_lambda_dict(self):
         vlambdas = self.lambdas
@@ -123,8 +166,8 @@ class GenericVolumeInterfaceSet(InterfaceSet):
         lambdas = {1: maxvs, -1: minvs, 0: None}[direction]
         volumes = [self.intersect_with & volume_func(minv, maxv)
                    for (minv, maxv) in zip(minvs, maxvs)]
-        super(GenericVolumeInterfaceSet, self).__init__(volumes, cv,
-                                                        lambdas, direction)
+        super(GenericVolumeInterfaceSet, self).__init__(
+            volumes=volumes, cv=cv, lambdas=lambdas, direction=direction)
         self._set_volume_func(volume_func)
 
     def _slice_dict(self, slicer):
@@ -149,6 +192,7 @@ class GenericVolumeInterfaceSet(InterfaceSet):
 
     def to_dict(self):
         return {'cv': self.cv,
+                'cv_max': self.cv_max,
                 'minvals': self.minvals,
                 'maxvals': self.maxvals,
                 'intersect_with': self.intersect_with,
@@ -158,6 +202,11 @@ class GenericVolumeInterfaceSet(InterfaceSet):
 
     def _load_from_dict(self, dct):
         self.cv = dct['cv']
+        try:
+            self.cv_max = dct['cv_max']
+        except KeyError:  # pragma: no cover
+            # reverse compatibility; deprecated in 0.9.4, remove in 2.0
+            pass
         self.minvals = dct['minvals']
         self.maxvals = dct['maxvals']
         self.intersect_with = dct['intersect_with']

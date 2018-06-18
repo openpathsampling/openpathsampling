@@ -1,0 +1,43 @@
+/* override table width restrictions */
+@media screen and (min-width: 767px) {
+
+   .wy-table-responsive table td {
+      /* !important prevents the common CSS stylesheets from overriding
+         this as on RTD they are loaded after this stylesheet */
+      white-space: normal !important;
+   }
+
+   .wy-table-responsive {
+      overflow: visible !important;
+   }
+
+   .wy-side-nav-search {
+       background-color: #3b728d;  /* OPS dark blue */
+   }
+
+   .wy-nav-side {
+       background-color: #153347;  /* OPS navy blue */
+   }
+
+    .rst-content .note {
+        /*background-color: #D3F1FF;  [> modified from orig <]*/
+        /*background-color: #DCF7FF;*/
+        background-color: #E3F6FF;
+    }
+
+   .rst-content .note .admonition-title {
+        background-color: #5595ad;  /* OPS mid blue */
+    }
+
+    .wy-side-nav-search>div.version {
+        color: #6fb3c5;  /* OPS light blue 2 (darker) */
+        font-weight: bold;
+    }
+
+    h1, h2, h3, h4, h5, h6, legend {
+        font-family: Verdana, Arial, sans-serif;
+    }
+
+}
+
+.div.figure.align-center { text-align: left; }

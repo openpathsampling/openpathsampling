@@ -588,6 +588,8 @@ class HistogramPlotter2D(object):
                   int(max(list(hist) + ticks + lims)))
         if lims_ is None:
             lims_ = (0, range_[1] - range_[0])
+        else:
+            lims_ = (lims_[0] - range_[0], lims_[1] - range_[0])
         return (ticks_, range_, lims_)
 
     def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
@@ -613,10 +615,10 @@ class HistogramPlotter2D(object):
         -------
         xticks_ : list of float or None
             user-set xticks in bin-space
-        yticks_ : list of float or None
-            user-set yticks in bin-space
         xlim_ : 2-tuple (float, float)
             range in x for plot visualization (bin-space)
+        yticks_ : list of float or None
+            user-set yticks in bin-space
         ylim_ : 2-tuple (float, float)
             range in y for plot visualization (bin-space)
         """

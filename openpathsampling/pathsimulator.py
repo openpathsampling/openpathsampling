@@ -9,6 +9,8 @@ from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 import openpathsampling as paths
 import openpathsampling.tools
 
+import collections
+
 from openpathsampling.pathmover import SubPathMover
 from .ops_logging import initialization_logging
 import abc
@@ -46,14 +48,8 @@ class MCStep(StorableObject):
     change : MoveChange
         the movechange describing the transition from pre to post
     """
-    def __init__(self,
-                 simulation=None,
-                 mccycle=-1,
-                 previous=None,
-                 active=None,
-                 change=None
-                 ):
-
+    def __init__(self, simulation=None, mccycle=-1, previous=None,
+                 active=None, change=None):
         super(MCStep, self).__init__()
         self.simulation = simulation
         self.previous = previous
@@ -102,7 +98,7 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         )
         self.sample_set = None
         self.output_stream = sys.stdout  # user can change to file handler
-        self.allow_refresh =  True
+        self.allow_refresh = True
 
     def sync_storage(self):
         """
@@ -172,7 +168,7 @@ class BootstrapPromotionMove(SubPathMover):
 
         # Bootstrapping sets numeric replica IDs. If the user wants it done
         # differently, the user can change it.
-        self._ensemble_dict = {ens : rep for rep, ens in enumerate(ensembles) }
+        self._ensemble_dict = {ens: rep for rep, ens in enumerate(ensembles)}
 
         # Create all possible hoppers so we do not have to recreate these
         # every time which will result in more efficient storage
@@ -280,7 +276,7 @@ class Bootstrapping(PathSimulator):
             paths.tools.refresh_output(
                 ("Working on Bootstrapping cycle step %d" +
                 " in ensemble %d/%d .\n") %
-                ( self.step, ens_num + 1, len(self.ensembles) ),
+                (self.step, ens_num + 1, len(self.ensembles)),
                 output_stream=self.output_stream,
                 refresh=self.allow_refresh
             )
@@ -339,9 +335,9 @@ class Bootstrapping(PathSimulator):
         self.sync_storage()
 
         paths.tools.refresh_output(
-            ("DONE! Completed Bootstrapping cycle step %d" +
-            " in ensemble %d/%d.\n") %
-            ( self.step, ens_num + 1, len(self.ensembles) ),
+            ("DONE! Completed Bootstrapping cycle step %d"
+             + " in ensemble %d/%d.\n") %
+            (self.step, ens_num + 1, len(self.ensembles)),
             output_stream=self.output_stream,
             refresh=self.allow_refresh
         )
@@ -408,8 +404,8 @@ class FullBootstrapping(PathSimulator):
 
         if self.initial_max_length is not None:
             self.first_traj_ensemble = (
-                paths.LengthEnsemble(slice(0, self.initial_max_length)) & 
-                self.first_traj_ensemble
+                paths.LengthEnsemble(slice(0, self.initial_max_length))
+                & self.first_traj_ensemble
             )
 
         if extra_ensembles is None:
@@ -421,16 +417,16 @@ class FullBootstrapping(PathSimulator):
         ] + extra_ensembles
 
         self.transition_shooters = [
-            paths.OneWayShootingMover(selector=paths.UniformSelector(), 
+            paths.OneWayShootingMover(selector=paths.UniformSelector(),
                                       ensemble=ens,
-                                      engine=self.engine) 
+                                      engine=self.engine)
             for ens in transition.ensembles
         ]
 
         self.extra_shooters = [
-            paths.OneWayShootingMover(selector=paths.UniformSelector(), 
+            paths.OneWayShootingMover(selector=paths.UniformSelector(),
                                       ensemble=ens,
-                                      engine=self.engine) 
+                                      engine=self.engine)
             for ens in self.extra_ensembles
         ]
         self.snapshot = snapshot.copy()
@@ -444,14 +440,14 @@ class FullBootstrapping(PathSimulator):
             build_attempts=20):
         #print first_traj_ensemble #DEBUG
         has_AA_path = False
-        subtraj=None
+        subtraj = None
         while not has_AA_path:
             self.engine.current_snapshot = self.snapshot.copy()
             self.engine.snapshot = self.snapshot.copy()
             self.output_stream.write("Building first trajectory\n")
             sys.stdout.flush()
             first_traj = self.engine.generate(
-                self.engine.current_snapshot, 
+                self.engine.current_snapshot,
                 [self.first_traj_ensemble.can_append]
             )
             self.output_stream.write("Selecting segment\n")
@@ -505,21 +501,16 @@ class FullBootstrapping(PathSimulator):
 
 class PathSampling(PathSimulator):
     """
-    General path sampling code. 
-    
+    General path sampling code.
+
     Takes a single move_scheme and generates samples from that, keeping one
-    per replica after each move. 
+    per replica after each move.
     """
 
     calc_name = "PathSampling"
 
-    def __init__(
-            self,
-            storage,
-            move_scheme=None,
-            sample_set=None,
-            initialize=True
-    ):
+    def __init__(self, storage, move_scheme=None, sample_set=None,
+                 initialize=True):
         """
         Parameters
         ----------
@@ -572,6 +563,8 @@ class PathSampling(PathSimulator):
         self.root = self.sample_set
 
         if self.storage is not None:
+            template_trajectory = self.sample_set.samples[0].trajectory
+            self.storage.save(template_trajectory)
             self.save_current_step()
 
     def to_dict(self):
@@ -999,17 +992,17 @@ class DirectSimulation(PathSimulator):
 
     Parameters
     ----------
-    storage : paths.Storage
+    storage : :class:`.Storage`
         file to store the trajectory in. Default is None, meaning that the
         trajectory isn't stored (also faster)
-    engine : paths.engine.DynamicsEngine
+    engine : :class:`.DynamicsEngine`
         the engine for the molecular dynamics
-    states : list of paths.Volume
+    states : list of :class:`.Volume`
         states to look for transitions between
-    flux_pairs : list of 2-tuples of (state, interface)
+    flux_pairs : list of 2-tuples of ``(state, interface)``
         fluxes will calculate the flux out of `state` and through
         `interface` for each pair in this list
-    initial_snapshot : paths.engines.Snapshot
+    initial_snapshot : :class:`.Snapshot`
         initial snapshot for the MD
 
     Attributes
@@ -1054,7 +1047,7 @@ class DirectSimulation(PathSimulator):
 
     def run(self, n_steps):
         most_recent_state = None
-        last_interface_exit = {p: -1 for p in self.flux_pairs}
+        first_interface_exit = {p: -1 for p in self.flux_pairs}
         last_state_visit = {s: -1 for s in self.states}
         was_in_interface = {p: None for p in self.flux_pairs}
         local_traj = paths.Trajectory([self.initial_snapshot])
@@ -1075,7 +1068,7 @@ class DirectSimulation(PathSimulator):
                     state_flux_pairs = [p for p in self.flux_pairs
                                         if p[0] == state]
                     for p in state_flux_pairs:
-                        last_interface_exit[p] = -1
+                        first_interface_exit[p] = -1
                     # if this isn't the first change of state, we add the
                     # transition
                     if most_recent_state:
@@ -1087,14 +1080,20 @@ class DirectSimulation(PathSimulator):
                 state = p[0]
                 interface = p[1]
                 is_in_interface = interface(frame)
-                if not is_in_interface and was_in_interface[p]:
-                    if state is most_recent_state:
-                        last_exit = last_interface_exit[p]
-                        # successful exit
-                        if 0 < last_exit < last_state_visit[state]:
-                            flux_time_range = (step, last_exit)
-                            self.flux_events[p].append(flux_time_range)
-                        last_interface_exit[p] = step
+                # by line: (1) this is a crossing; (2) the most recent state
+                # is correct; (3) this is the FIRST crossing
+                first_exit_condition = (
+                    not is_in_interface and was_in_interface[p]  # crossing
+                    and state is most_recent_state  # correct recent state
+                    and first_interface_exit[p] < last_state_visit[state]
+                )
+                if first_exit_condition:
+                    first_exit = first_interface_exit[p]
+                    # successful exit
+                    if 0 < first_exit < last_state_visit[state]:
+                        flux_time_range = (step, first_exit)
+                        self.flux_events[p].append(flux_time_range)
+                    first_interface_exit[p] = step
                 was_in_interface[p] = is_in_interface
 
             if self.storage is not None:
@@ -1122,20 +1121,36 @@ class DirectSimulation(PathSimulator):
     @property
     def rate_matrix(self):
         transitions = self.transitions
-        rates = {t : 1.0 / np.array(transitions[t]).mean()
+        try:
+            time_per_step = self.engine.snapshot_timestep
+        except AttributeError:
+            time_per_step = 1.0
+        total_time = {s: sum(sum((transitions[t] for t in transitions
+                                  if t[0] == s), [])) * time_per_step
+                      for s in self.states}
+
+        rates = {t : len(transitions[t]) / total_time[t[0]]
                  for t in transitions}
-        rate_matrix = pd.DataFrame(columns=self.states,
-                                   index=self.states)
+        # rates = {t : 1.0 / np.array(transitions[t]).mean()
+                 # for t in transitions}
+
+        state_names = [s.name for s in self.states]
+        rate_matrix = pd.DataFrame(columns=state_names, index=state_names)
         for t in rates:
-            rate_matrix.set_value(t[0], t[1], rates[t])
+            rate_matrix.at[t[0].name, t[1].name] = rates[t]
         return rate_matrix
 
     @property
     def fluxes(self):
         results = {}
+        try:
+            time_per_step = self.engine.snapshot_timestep
+        except AttributeError:
+            time_per_step = 1.0
+
         for p in self.flux_events:
             lags = [t[0] - t[1] for t in self.flux_events[p]]
-            results[p] = 1.0 / np.mean(lags)
+            results[p] = 1.0 / np.mean(lags) / time_per_step
         return results
 
         # return {p : 1.0 / np.array(self.flux_events[p]).mean()
