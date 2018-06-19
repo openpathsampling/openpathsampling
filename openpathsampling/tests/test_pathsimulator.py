@@ -11,7 +11,7 @@ from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal, assert_true)
 # from nose.plugins.skip import SkipTest
 
-from openpathsampling.pathsimulator import *
+from openpathsampling.pathsimulators import *
 import openpathsampling as paths
 import openpathsampling.engines.toy as toys
 import numpy as np
