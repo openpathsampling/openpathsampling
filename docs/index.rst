@@ -23,7 +23,7 @@ the development process on GitHub_, and follow `@pathsampling
 
 .. _GitHub: http://github.com/openpathsampling/openpathsampling
 
-.. note:: **Project status:** Currently we're at version 0.9.4.  There will
+.. note:: **Project status:** Currently we're at version 0.9.5.  There will
           be some API cleanup before 1.0, but files created with the current
           version will load in 1.0.  Note, however, that files generated
           with Python 2 will not fully load with Python 3 or vice versa
