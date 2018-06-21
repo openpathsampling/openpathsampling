@@ -2140,6 +2140,11 @@ class SpecializedRandomChoiceMover(RandomChoiceMover):
         super(cls, mover).__init__(movers=dct['movers'])
         return mover
 
+    def to_dict(self):
+        dct = super(SpecializedRandomChoiceMover, self).to_dict()
+        dct['movers'] = self.movers
+        return dct
+
     def move_core(self, samples):
         weights = self.weights
         mover, details = self.select_mover(weights)
@@ -2645,3 +2650,4 @@ class SampleDetails(Details):
 
     def __init__(self, **kwargs):
         super(SampleDetails, self).__init__(**kwargs)
+
