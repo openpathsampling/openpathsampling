@@ -59,13 +59,13 @@ class TestWHAM(object):
 
     def test_prep_reverse_cumulative(self):
         cleaned = self.wham.prep_reverse_cumulative(self.input_df)
-        np.testing.assert_allclose(cleaned.as_matrix(),
+        np.testing.assert_allclose(cleaned.values,
                                    self.expected_cleaned)
 
     def test_prep_reverse_cumulative_with_interfaces(self):
         wham = paths.numerics.WHAM(cutoff=0.1, interfaces=[0.0, 0.2, 0.3])
         cleaned = wham.prep_reverse_cumulative(self.input_df)
-        np.testing.assert_allclose(cleaned.as_matrix(),
+        np.testing.assert_allclose(cleaned.values,
                                    np.array([[2.0, 0.0, 0.0],
                                              [1.0, 0.0, 0.0],
                                              [0.5, 1.0, 0.0],
@@ -84,17 +84,17 @@ class TestWHAM(object):
                              [0.0, 1.0, 1.0],
                              [0.0, 1.0, 1.0],
                              [0.0, 0.0, 1.0]])
-        np.testing.assert_allclose(unweighting.as_matrix(), expected)
+        np.testing.assert_allclose(unweighting.values, expected)
 
     def test_sum_k_Hk_Q(self):
         sum_k_Hk_Q = self.wham.sum_k_Hk_Q(self.cleaned)
         expected = np.array([2.0, 1.0, 1.5, 0.75, 3.25, 1.625, 0.75])
-        np.testing.assert_allclose(sum_k_Hk_Q.as_matrix(), expected)
+        np.testing.assert_allclose(sum_k_Hk_Q.values, expected)
 
     def test_n_entries(self):
         n_entries = self.wham.n_entries(self.cleaned)
         expected = np.array([3.75, 1.875, 5.25])
-        np.testing.assert_allclose(n_entries.as_matrix(), expected)
+        np.testing.assert_allclose(n_entries.values, expected)
 
     def test_weighted_counts_tis(self):
         n_entries = self.wham.n_entries(self.cleaned)
@@ -109,7 +109,7 @@ class TestWHAM(object):
                              [0.0, 1.875, 5.25],
                              [0.0, 0.0, 5.25]])
 
-        np.testing.assert_allclose(weighted_counts.as_matrix(), expected)
+        np.testing.assert_allclose(weighted_counts.values, expected)
 
     def test_generate_lnZ(self):
         guess = [1.0, 1.0, 1.0]
@@ -126,7 +126,7 @@ class TestWHAM(object):
         )
         lnZ = self.wham.generate_lnZ(guess, unweighting, weighted_counts,
                                      sum_k_Hk_Q)
-        np.testing.assert_allclose(lnZ.as_matrix(), expected_lnZ)
+        np.testing.assert_allclose(lnZ.values, expected_lnZ)
 
     def test_output_histogram(self):
         sum_k_Hk_Q = self.wham.sum_k_Hk_Q(self.cleaned)
@@ -139,7 +139,7 @@ class TestWHAM(object):
         wham_hist = self.wham.output_histogram(lnZ, sum_k_Hk_Q,
                                                weighted_counts)
         normed = self.wham.normalize_cumulative(wham_hist)
-        np.testing.assert_allclose(normed.as_matrix(), np.array(self.exact))
+        np.testing.assert_allclose(normed.values, np.array(self.exact))
 
 
     def test_guess_lnZ_crossing_probability(self):
@@ -155,11 +155,11 @@ class TestWHAM(object):
         cleaned = self.wham.prep_reverse_cumulative(input_df)
         guess_lnZ = self.wham.guess_lnZ_crossing_probability(cleaned)
         expected_Z = np.array([1.0, 0.25, 0.25*0.2])
-        np.testing.assert_allclose(guess_lnZ.as_matrix(), np.log(expected_Z))
+        np.testing.assert_allclose(guess_lnZ.values, np.log(expected_Z))
 
     def test_wham_bam_histogram(self):
         wham_hist = self.wham.wham_bam_histogram(self.input_df)
-        np.testing.assert_allclose(wham_hist.as_matrix(), self.exact)
+        np.testing.assert_allclose(wham_hist.values, self.exact)
 
     @raises(RuntimeError)
     def test_check_overlaps_no_overlap_with_first(self):

@@ -260,12 +260,12 @@ class TestChannelAnalysis(object):
         analysis.treat_multiples = 'newest'
         df = analysis.switching_matrix
         expected = np.array([[nan, 1, 0], [0, nan, 1], [1, 0, nan]])
-        assert_array_almost_equal(df.as_matrix(), expected)
+        assert_array_almost_equal(df.values, expected)
 
         analysis.treat_multiples = 'oldest'
         df = analysis.switching_matrix
         expected = np.array([[nan, 1], [1, nan]]) # no column for c!
-        assert_array_almost_equal(df.as_matrix(), expected)
+        assert_array_almost_equal(df.values, expected)
 
         analysis.treat_multiples = 'multiple'
         df = analysis.switching_matrix
@@ -275,7 +275,7 @@ class TestChannelAnalysis(object):
                              [0, 1, nan, 0, 0],
                              [0, 0, 0, nan, 1],
                              [1, 0, 0, 0, nan]])
-        assert_array_almost_equal(df.as_matrix(), expected)
+        assert_array_almost_equal(df.values, expected)
 
         # TODO: define switching when using 'all'
 
@@ -291,7 +291,7 @@ class TestChannelAnalysis(object):
         expected = np.array([[nan, 0, 1],
                              [1, nan, 1],
                              [0, 1, nan]])
-        assert_array_almost_equal(df.as_matrix(), expected)
+        assert_array_almost_equal(df.values, expected)
 
     def test_residence_times(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)

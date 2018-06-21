@@ -1648,7 +1648,9 @@ class PathTreeBuilder(Builder):
         for pos_y, data in enumerate(self._plot_sample_list):
             sample = data['sample']
 
-            if pos_y > 0:
+            css_class = data['css_class']
+
+            if pos_y > 0 and 'rejected' not in css_class:
                 if not paths.Trajectory.is_correlated(
                         sample.trajectory,
                         prev,
