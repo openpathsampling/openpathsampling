@@ -174,10 +174,6 @@ class TestFunctionCV(object):
             assert (cv_cache.allow_incomplete == allow_incomplete)
 
             for idx, snap in enumerate(storage_r.trajectories[1]):
-                # print idx, snap
-                # if hasattr(snap, '_idx'):
-                #     print 'Proxy IDX', snap._idx
-
                 # print 'ITEMS', storage_r.snapshots.index.items()
                 # print snap, type(snap), snap.__dict__
 
