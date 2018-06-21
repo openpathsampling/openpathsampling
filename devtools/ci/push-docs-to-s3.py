@@ -1,6 +1,6 @@
 from __future__ import print_function
 import os
-import pip
+import pkg_resources
 import tempfile
 import subprocess
 import openpathsampling.version
@@ -22,7 +22,7 @@ else:
     PREFIX = openpathsampling.version.short_version
 
 def is_s3cmd_installed():
-    dists = pip.get_installed_distributions()
+    dists = pkg_resources.working_set
     if not any(d.project_name == 's3cmd' for d in dists):
         raise ImportError('The s3cmd package is required. '
                           'try $ pip install s3cmd')

@@ -1,5 +1,7 @@
 .. _data-objects:
 
+.. currentmodule:: openpathsampling
+
 ============
 Data objects
 ============
