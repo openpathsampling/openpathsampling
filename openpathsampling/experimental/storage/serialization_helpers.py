@@ -384,7 +384,7 @@ def _uuids_from_table_row(table_row, schema_entries):
 
     This organizes the UUIDS that are included in the table row based on
     information from that row. It separated objects to be proxied ('lazy')
-    from objects to be directory loaded ('uuid', 'list_uuid', 'json_obj').
+    from objects to be directly loaded ('uuid', 'list_uuid', 'json_obj').
     It also create the dependency dictionary (the entry for this row) that
     will be used to create the reconstruction DAG.
 
