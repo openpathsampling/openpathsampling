@@ -56,8 +56,8 @@ if [[ "$TRAVIS_BRANCH" == "master" ]]; then
 elif [[ "$TRAVIS_BRANCH" == "docs_deploy" ]]; then
     # change the behavior for the docs testing branch (docs_deploy branch in
     # the openpathsampling/openpathsampling GitHub repo) in this block
-    echo "No docs deploy on branch $TRAVIS_BRANCH"
-    # python devtools/ci/push-docs-to-s3.py --clobber
+    # echo "No docs deploy on branch $TRAVIS_BRANCH"
+    python devtools/ci/push-docs-to-s3.py --clobber
 else
     echo "No docs deploy on branch $TRAVIS_BRANCH"
 fi
