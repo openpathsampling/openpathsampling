@@ -5,4 +5,4 @@ from .path_sampling import PathSampling
 from .shoot_snapshots import (
     ShootFromSnapshotsSimulation, CommittorSimulation
 )
-
+from .sshooting_simulator import SShootingSimulation

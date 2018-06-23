@@ -56,6 +56,10 @@ from .analysis.shooting_point_analysis import (
     ShootingPointAnalysis, SnapshotByCoordinateDict
 )
 
+from .analysis.sshooting_analysis import (
+    SShootingAnalysis
+)
+
 from .analysis.trajectory_transition_analysis import (
     TrajectoryTransitionAnalysis,
     TrajectorySegmentContainer
@@ -128,7 +132,8 @@ from .pathmover import (
 
 from .pathsimulators import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
-    CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation
+    CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation,
+    SShootingSimulation
 )
 
 from .sample import Sample, SampleSet
