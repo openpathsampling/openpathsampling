@@ -281,6 +281,58 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
         return init_ensembles
 
 
+class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
+    """
+    Strategy for Forwardhooting only. Allows choice of shooting point selector.
+
+    Parameters
+    ----------
+    selector : :class:`.ShootingPointSelector`
+        method used to select shooting point
+    ensembles : list of :class:`.Ensemble`
+        ensembles for which this strategy applies; None gives default
+        behavior
+    engine : :class:`.DynamicsEngine`
+        engine for the dynamics
+    group : str
+        mover group name, default "shooting"
+    replace : bool
+        whether to replace existing movers in the group; default True
+    """
+    _level = levels.MOVER
+    def __init__(self, selector=None, ensembles=None, engine=None,
+                 group="shooting", replace=True):
+        super(ForwardShootingStrategy, self).__init__(
+            ensembles=ensembles, group=group, replace=replace
+        )
+        if selector is None:
+            selector = paths.UniformSelector()
+        self.selector = selector
+        self.engine = engine
+
+    def make_movers(self, scheme):
+        #ensemble_list = self.get_ensembles(scheme, self.ensembles)
+        ensemble_list = self.get_init_ensembles(scheme)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+
+        selector=self.selector
+        if type(selector) is not list:
+            selector = [selector] * len(interface_set)
+            
+        shooters = []
+        for (sel, ens) in zip(selector, ensembles):
+            mover = paths.ForwardShootMover(
+                selector=sel,
+                ensemble=ens,
+                engine=self.engine
+            )
+            mover.named("ForwardShootingMover " + str(ens.name))
+            shooters.append(mover)
+
+        return shooters
+
+
+
 class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
     """
     Strategy for OneWayShooting. Allows choice of shooting point selector.
@@ -319,6 +371,7 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
                                                             self.engine)
         return shooters
 
+    
 
 class TwoWayShootingStrategy(SingleEnsembleMoveStrategy):
     """Strategy to make a group of 2-way shooting movers.
