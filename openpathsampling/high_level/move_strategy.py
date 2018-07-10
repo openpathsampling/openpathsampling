@@ -283,7 +283,7 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
 
 class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
     """
-    Strategy for Forwardhooting only. Allows choice of shooting point selector.
+    Strategy for Forwardhooting only. Allows choice of shooting point selector. Useful for e.g. Constrained Interface shooting.
 
     Parameters
     ----------
@@ -317,7 +317,7 @@ class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
 
         selector=self.selector
         if type(selector) is not list:
-            selector = [selector] * len(interface_set)
+            selector = [selector] * len(ensembles)
             
         shooters = []
         for (sel, ens) in zip(selector, ensembles):
