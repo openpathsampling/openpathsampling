@@ -88,9 +88,9 @@ class TestConstrainedSelector(SelectorTest):
         assert_equal(self.sel.pick(mytraj), 4)
 
     @raises(RuntimeError)
-    def test_allininterface(self):
+    def test_all_in_interface(self):
         mytraj = make_1d_traj(coordinates=[-0.5, -0.4, -0.3, -0.1,
-                                           0.1, 0.2, 0.3, 0.5])
+                                           -0.1, -0.2, -0.3])
         self.sel.pick(mytraj)
 
     def test_sum_bias(self):

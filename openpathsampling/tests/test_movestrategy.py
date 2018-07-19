@@ -144,7 +144,7 @@ class TestForwardShootingStrategy(MoveStrategyTestSetup):
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 6)
         assert_equal(len(list_of_selectors), 6)
-        for mover, sel in zip(movers, listofselectors):
+        for mover, sel in zip(movers, list_of_selectors):
             assert_equal(type(mover), paths.ForwardShootMover)
             assert_equal(type(mover.selector),
                          paths.shooting.InterfaceConstrainedSelector)
