@@ -8,9 +8,10 @@ from openpathsampling.netcdfplus import StorableNamedObject
 from functools import reduce  # not built in for py3
 
 LevelLabels = collections.namedtuple(
-    "LevelLabels", 
+    "LevelLabels",
     ["SIGNATURE", "MOVER", "GROUP", "SUPERGROUP", "GLOBAL"]
 )
+
 
 def most_common_value(ll):
     """
@@ -31,6 +32,7 @@ def most_common_value(ll):
             most_common_count = counts[v]
     return (most_common, most_common_count)
 
+
 class StrategyLevels(LevelLabels):
     """
     Custom version of a namedtuple to handle aspects of the `level`
@@ -43,15 +45,17 @@ class StrategyLevels(LevelLabels):
         """
         if lev < 0 or lev > 100:
             return None
-        levels = [self.SIGNATURE, self.MOVER, self.GROUP, self.SUPERGROUP, 
+        levels = [self.SIGNATURE, self.MOVER, self.GROUP, self.SUPERGROUP,
                   self.GLOBAL]
         distances = [abs(lev - v) for v in levels]
         mindist = min(distances)
-        indices = [i for i in range(len(distances)) if distances[i]==mindist]
+        indices = [i for i in range(len(distances))
+                   if distances[i] == mindist]
         if len(indices) > 1:
             return None
         else:
             return levels[indices[0]]
+
 
 # possible rename to make available as paths.strategy_levels?
 levels = StrategyLevels(
@@ -61,6 +65,7 @@ levels = StrategyLevels(
     SUPERGROUP=70,
     GLOBAL=90
 )
+
 
 class MoveStrategy(StorableNamedObject):
     """
@@ -114,7 +119,7 @@ class MoveStrategy(StorableNamedObject):
     @level.setter
     def level(self, value):
         self._level = value
-        self.set_replace(self.replace) # behavior of replace depends on level
+        self.set_replace(self.replace)  # behavior depends on level
 
     def set_replace(self, replace):
         """Sets values for replace_signatures and replace_movers."""
@@ -134,7 +139,7 @@ class MoveStrategy(StorableNamedObject):
         Regularizes ensemble input to list of list.
 
         Input None returns a list of lists for ensembles in each sampling
-        transition in the network. A list of ensembles is wrapped in a list. 
+        transition in the network. A list of ensembles is wrapped in a list.
 
         Parameters
         ----------
@@ -201,7 +206,7 @@ class MoveStrategy(StorableNamedObject):
         paths.PathMover or list of paths.PathMover
             the movers created by this part of the strategy
         """
-        raise NotImplementedError #TODO: use JHP's ABCError when 302 is merged
+        raise NotImplementedError # TODO: use ABCError when 302 is merged
 
 
 class SingleEnsembleMoveStrategy(MoveStrategy):
@@ -264,7 +269,7 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
         except KeyError:
             movers = []
 
-        # these are the conditions 
+        # these are the conditions
         conditions = (self.ensembles is not None
                       or len(movers) == 0
                       or self.replace_signatures or self.replace_movers)
@@ -283,7 +288,10 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
 
 class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
     """
-    Strategy for Forwardhooting only. Allows choice of shooting point selector. Useful for e.g. Constrained Interface shooting.
+    Strategy for Forwardhooting only.
+
+    Allows choice of shooting point selector. Useful for e.g. Constrained
+    Interface shooting.
 
     Parameters
     ----------
@@ -299,7 +307,9 @@ class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
     replace : bool
         whether to replace existing movers in the group; default True
     """
+
     _level = levels.MOVER
+
     def __init__(self, selector=None, ensembles=None, engine=None,
                  group="shooting", replace=True):
         super(ForwardShootingStrategy, self).__init__(
@@ -311,14 +321,14 @@ class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
         self.engine = engine
 
     def make_movers(self, scheme):
-        #ensemble_list = self.get_ensembles(scheme, self.ensembles)
         ensemble_list = self.get_init_ensembles(scheme)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        ensembles = reduce(list.__add__,
+                           map(lambda x: list(x), ensemble_list))
 
-        selector=self.selector
+        selector = self.selector
         if type(selector) is not list:
             selector = [selector] * len(ensembles)
-            
+
         shooters = []
         for (sel, ens) in zip(selector, ensembles):
             mover = paths.ForwardShootMover(
@@ -330,7 +340,6 @@ class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
             shooters.append(mover)
 
         return shooters
-
 
 
 class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
@@ -371,7 +380,6 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
                                                             self.engine)
         return shooters
 
-    
 
 class TwoWayShootingStrategy(SingleEnsembleMoveStrategy):
     """Strategy to make a group of 2-way shooting movers.
@@ -543,11 +551,11 @@ class ReplicaExchangeStrategy(MoveStrategy):
             # the exception if the test fails, and the assertion acts as a
             # backup. This is faster than a try: except: version.  see
             # http://stackoverflow.com/questions/1569049/#1569618
-            assert(len(sig[0])==len(sig[1]) or sig_error(sig))
+            assert(len(sig[0]) == len(sig[1]) or sig_error(sig))
             n_ens = len(sig[0])
-            if n_ens == 2: # replica exchange
+            if n_ens == 2:  # replica exchange
                 assert(
-                    set(sig[0])==set(sig[1]) or
+                    set(sig[0]) == set(sig[1]) or
                     sig_error(sig, errstr="Not replica exchange signature. ")
                 )
             elif n_ens == 1: # already ensemble hop (ish)
@@ -561,7 +569,7 @@ class ReplicaExchangeStrategy(MoveStrategy):
                           " ensembles.")
 
     def make_movers(self, scheme):
-        signatures = [m.ensemble_signature 
+        signatures = [m.ensemble_signature
                       for m in scheme.movers[self.from_group]]
         # a KeyError here indicates that there is no existing group of that
         # name: build scheme.movers[self.from_group] before trying to use it!
