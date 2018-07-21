@@ -4,8 +4,9 @@
 Installation
 ************
 
-OpenPathSampling currently only works on Mac and Linux, and requires Python
-2.7. Support for Windows and Python 3 will be coming soon.
+OpenPathSampling currently only works on Mac and Linux. For now, Python 27
+is recommended, although most of the code also supports Python 3. Support
+for Windows will be coming soon.
 
 Standard Install with Conda
 ===========================
