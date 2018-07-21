@@ -35,7 +35,7 @@ ops_schema = {
     'move_changes': [('mover', 'uuid'), ('details', 'lazy'), ('cls', 'str'),
                      ('subchanges', 'list_uuid'), ('samples', 'list_uuid'),
                      ('input_samples', 'list_uuid')],
-    'steps': [('change', 'uuid'), ('active', 'uuid'), ('previous', 'lazy'),
+    'steps': [('change', 'uuid'), ('active', 'uuid'), #('previous', 'lazy'),
               ('simulation', 'uuid'), ('mccycle', 'int')],
     'details': [('json', 'json_obj')],
     'simulation_objects': [('json', 'json_obj'), ('class_idx', 'int')]

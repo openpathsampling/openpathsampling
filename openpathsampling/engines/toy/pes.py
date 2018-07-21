@@ -192,6 +192,12 @@ class Gaussian(PES):
         self.x0 = np.array(x0)
         self._local_dVdx = np.zeros(self.x0.size)
 
+    def to_dict(self):
+        dct = super(Gaussian, self).to_dict()
+        dct['alpha'] = dct['alpha'].tolist()
+        dct['x0'] = dct['x0'].tolist()
+        return dct
+
     def V(self, sys):
         """Potential energy
 
@@ -244,6 +250,12 @@ class OuterWalls(PES):
         self.sigma = np.array(sigma)
         self.x0 = np.array(x0)
         self._local_dVdx = np.zeros(self.x0.size)
+
+    def to_dict(self):
+        dct = super(OuterWalls, self).to_dict()
+        dct['x0'] = dct['x0'].tolist()
+        dct['sigma'] = dct['sigma'].tolist()
+        return dct
 
     def V(self, sys):
         """Potential energy

@@ -246,8 +246,14 @@ class SerializationSchema(object):
             logger.debug("Serializing %d objects from table %s",
                          len(by_table[table]), table)
             serialize = self[table].serializer
-            serialized_by_table[table] = [serialize(o)
-                                          for o in table_uuids.values()]
+            serialized_table = []
+            for o in table_uuids.values():
+                if table == 'simulation_objects':
+                    logger.debug(str(o))
+                serialized_table.append(serialize(o))
+            serialized_by_table[table] = serialized_table
+            # serialized_by_table[table] = [serialize(o)
+                                          # for o in table_uuids.values()]
 
         return serialized_by_table
 
