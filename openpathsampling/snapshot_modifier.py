@@ -352,7 +352,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         """
         Primary call function to be used by subclasses.
 
-        Uses the :method:`._select_atoms_to_modify` method to determine
+        Uses the :meth:`._select_atoms_to_modify` method to determine
         exactly which atoms from the subset should be modified. This method
         must be written in subclasses.
 

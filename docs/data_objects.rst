@@ -1,4 +1,4 @@
-.. data-object-api::
+.. _data-object-api:
 
 Data Objects API
 ================
