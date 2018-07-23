@@ -17,17 +17,21 @@ discussed below can be found in the documentation for that class.
 Engines take an ``options`` dictionary to provide details of how they run.
 All direct control engines need to be able to use the options:
 
-* ``n_steps_per_frame``: the number of internal time steps per saved frame
-  (snapshot)
-* ``n_frames_max``: maximum number of snapshot allowed in a trajectory
-  before the simulation stops
+* ``n_steps_per_frame``: Number of internal time steps per saved frame
+  (snapshot).
+* ``n_frames_max``: Maximum number of snapshots allowed in a trajectory
+  before the simulation stops.
 
 You will need to implement these methods:
 
-* ``current_snapshot`` (``@property``): getter and setter for the current
-  snapshot
-* ``generate_next_frame()``: takes the (previously set) ``current_snapshot``
-  and generates the next saved frame
+* ``current_snapshot`` (``@property``): Getter and setter for the current
+  snapshot. We assume that the current state of the system (e.g., positions
+  and velocities) exists inside your engine; this is the code for
+  translating that internal representation to/from the OPS representation as
+  a :class:`.Snapshot`.
+* ``generate_next_frame()``: Takes the (previously set) ``current_snapshot``
+  and generates the next saved frame, i.e., it performs
+  ``n_steps_per_frame`` individual time steps.
 
 Optionally, you can override several other methods:
 
@@ -41,6 +45,32 @@ Optionally, you can override several other methods:
 
 Note that you are likely to also need to override the ``to_dict`` and
 ``from_dict`` methods; see the storage documentation for more details.
+
+
+How the Direct Engine API Runs
+------------------------------
+
+This subsection gives an overview of what order the methods that make up the
+direct engine API are called in the course of a trajectory. A simulation can
+consist of multiple trajectories, so
+
+* **Start of simulation:** Code that needs to be run before performing any
+  dynamics should be part of the standard ``__init__`` of your engine
+  subclass.
+* **Start of dynamics:** Before a specific dynamics run, we (1) set the
+  snapshot with ``engine.current_snapshot = snapshot``, using the current
+  snapshot property's setter; and (2) call ``engine.start()``.
+* **During dynamics:** During the dynamics, we call
+  ``generate_next_frame`` (or possibly ``generate_n_frames``), which will
+  typically call the getter for ``engine.current_snapshot`` internally (to
+  return the snapshot). The logic within OPS determines whether to ask for
+  most frames from the engine.
+* **After dynamics:** When the OPS logic says that no more frames are
+  required from the engine, we call ``engine.stop(trajectory)``, where
+  ``trajectory`` is the trajectory we have created. This is a good place to
+  do any per-trajectory clean-up that you need, but may simply be a no-op
+  for many direct API engines.
+
 
 Direct Engine API Step-by-Step
 ------------------------------
@@ -56,11 +86,13 @@ Direct API engines are generally straightforward.
 
 2. Create a snapshot descriptor for your snapshot class.
 
-3. Create the class, add options.
+3. Create the class, add options. Any options that you use should have some
+   default values set in the ``_default_options`` class variable (a
+   dictionary).
 
 4. Write required methods: ``current_snapshot`` stuff and
-   ``generate_next_frame()``
+   ``generate_next_frame()``.
 
 5. Write ``to_dict`` and ``from_dict``, if needed.
 
-6. If the optional methods are worth doing, write them too
+6. If the optional methods are needed for your engine, write them.
