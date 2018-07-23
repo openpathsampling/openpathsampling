@@ -72,16 +72,13 @@ One important point: **all snapshots should include the ``engine``
 feature.** Several parts of OPS storage and analysis assume that the
 ``engine`` property is available for any :class:`.Snapshot`.
 
-Built-In Snapshot Features
---------------------------
+For many molecular dynamics purposes, the built-in snapshot features will be
+sufficient, and you can just attach them to your engine. See the list of
+common snapshot features, along with their implementation details, for more
+information on the built-in snapshot features.
 
-For many moleculay dynamics purposes, the built-in snapshot features will be
-sufficient, and you can just attach them to your engine.
-
-TODO
-
-Creating Non-Stored Snapshot Features
--------------------------------------
+Creating Non-Stored (Property) Snapshot Features
+------------------------------------------------
 
 You may want to add properties to snapshots that are not explicitly stored.
 For example, the masses of each particle is commonly a constant for a given
@@ -112,6 +109,44 @@ Recommended Names for Snapshot Features
 In order to help simulation and analysis code to be useful for many engines,
 we have some recommended names for snapshot features. By using these names
 with the snapshots from your engines, you can automatically gain additional
-functionality from other parts of OPS.
+functionality from other parts of OPS. For example, this enables us to use
+the same API when dealing with coordinates whether they are directly
+attributes of the snapshot, as with the toy engine, or whether they are
+within an additional abstraction layer in a ``statics`` object, as in the
+OpenMM engine.
+
++---------------------+----------------------------------------------------+
+| Name                |  Description and implementation examples           |
++=====================+====================================================+
+| ``engine``          | :class:`.DynamicsEngine` instance that created     |
+|                     | this snapshot. Stored.                             |
++---------------------+----------------------------------------------------+
+| ``coordinates``     | Particle positions. Unitted. Stored.               |
++---------------------+----------------------------------------------------+
+| ``velocities``      | Particle velocities. Unitted. Stored.              |
++---------------------+----------------------------------------------------+
+| ``box_vectors``     | Unit cell vectors for the periodic box. Unitted.   |
+|                     | Stored.                                            |
++---------------------+----------------------------------------------------+
+| ``statics``         |                                                    |
++---------------------+----------------------------------------------------+
+| ``kinetics``        |                                                    |
++---------------------+----------------------------------------------------+
+| ``xyz``             | Particle positions, without units. Property.       |
++---------------------+----------------------------------------------------+
+| masses              | Particle masses (in actual mass units, not mass    |
+|                     | per mole, as used in some engines). Unitted.       |
+|                     | Property.                                          |
++---------------------+----------------------------------------------------+
+| mass_per_mole       | Particle mass per mole. Used in as mass in some    |
+|                     | engines to provide energies in per-mole units.     |
+|                     | Unitted.                                           |
++---------------------+----------------------------------------------------+
+| n_degrees_of_freedom| Number of degrees of freedom. Should account for   |
+|                     | any constraints (including, e.g., total linear     |
+|                     | momentum.)                                         |
++---------------------+----------------------------------------------------+
+| instantaneous_temperature |                                              |
++---------------------+----------------------------------------------------+
 
 
