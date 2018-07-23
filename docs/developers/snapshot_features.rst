@@ -1,0 +1,117 @@
+Snapshot Features
+=================
+
+The :class:`.Snapshot` in OpenPathSampling represents a point in phase
+space; that is, in includes all the information about a single time slice of
+the simulation. However, what variables define that phase space can vary
+from engine to engine. For example, most molecular dynamics engines include
+positions, velocities, and box vectors (to define the periodic unit cell).
+However, some (such as OpenMM) may require that these come with explicit
+units. Perhaps others won't require all of these -- 2D toy models might not
+need box vectors, or dynamics based on pure Monte Carlo might not require
+velocities. In addition, other engines may have an extended phase space. For
+example, there may be approaches that benefit from saving information about
+the quantum wavefunction at each time.
+
+Fundamentally, OPS doesn't care about the exact nature of the snapshot.
+Whether it has velocities and so forth only matters at a few specific
+points; mainly the :class:`.SnapshotModifier` objects or when exporting to
+other formats. OPS *does* need to have access to the full set of fields that
+define a snapshot, which we refer to as the snapshot features, but it
+doesn't usually care what those features represent. Because of this, it is
+relatively easy to create engines that use snapshots with arbitrary sets of
+features. The implementation of snapshot features in OPS is designed to
+allow you to mix and match features.
+
+Snapshot Features Overview
+--------------------------
+
+The basic idea of snapshot features in OPS is that you attach features to a
+:class:`.BaseSnapshot` subclass. Note that the features are attached to the
+subclass itself, not an instance thereof. Each engine should implement (at
+least) one subclass of a snapshot. Typically, the features are grouped into
+files, stored in a ``features`` subdirectory within the engine's directory,
+which is made into a package by adding an ``__init__.py`` (potentially
+empty).
+
+In the simplest way, a sublass of :class:`.BaseSnapshot` just requires using
+the ``@openpathsampling.engines.features.base.attach_features`` decorator,
+along with a list of modules within the features package. This allows one to
+create the entire class using just a list of the features. For example, we
+can write
+
+.. code:: python
+
+    from openpathsampling.engines.features.base import attach_features
+    from openpathsampling.engines import features
+    @attach_features([
+        features.velocities,
+        features.coordinates,
+        features.box_vectors,
+        features.engine
+    ])
+    class MySnapshot(BaseSnapshot):
+        """Fully functional snapshot"""
+        pass
+
+After that simple bit of code, the snapshot will automatically create all
+the relevant code for the snapshot This includes:
+
+* the ability to store these snapshots, based on information provided per
+  feature
+* information about how to copy the snapshot, including whether each feature
+  should be deep copied or shallow copied
+* all other properties related to the feature (for example, the default
+  ``coordinates`` feature may carry units with it -- the unitless version is
+  available in a numpy array accessible as ``snapshot.xyz``. This is
+  implemented as a property in the ``coordinates`` module, and is
+  automatically included when the ``coordinates`` feature module is attached
+  to the snapshot.
+
+One important point: **all snapshots should include the ``engine``
+feature.** Several parts of OPS storage and analysis assume that the
+``engine`` property is available for any :class:`.Snapshot`.
+
+Built-In Snapshot Features
+--------------------------
+
+For many moleculay dynamics purposes, the built-in snapshot features will be
+sufficient, and you can just attach them to your engine.
+
+TODO
+
+Creating Non-Stored Snapshot Features
+-------------------------------------
+
+You may want to add properties to snapshots that are not explicitly stored.
+For example, the masses of each particle is commonly a constant for a given
+instance of an MD engine. However, you might want to access them as
+``snapshot.masses``.
+
+To do this with a snapshot feature, you can use the ``@property`` decorator,
+just as you would with a property of a class instance. For example, this
+might be implemented as
+
+.. code:: python
+
+    @property
+    def masses(snapshot):
+        return snapshot.engine.get_masses()
+
+where we assume that ``engine.get_masses()`` returns the masses. By putting
+this in a module called ``masses.py`` and attaching that module as a
+feature, the snapshot will automatically have the ``masses``  property.
+
+Creating Stored Snapshot Features
+---------------------------------
+
+
+Recommended Names for Snapshot Features
+---------------------------------------
+
+In order to help simulation and analysis code to be useful for many engines,
+we have some recommended names for snapshot features. By using these names
+with the snapshots from your engines, you can automatically gain additional
+functionality from other parts of OPS.
+
+
