@@ -166,7 +166,7 @@ def get_all_uuids(initial_object, known_uuids=None, class_info=None):
             # info_from_instance?)
             info = class_info.info_from_instance(obj) \
                     if class_info else None
-            if info:
+            if info and info.find_uuids is not None:
                 find_uuids = info.find_uuids
             else:
                 find_uuids = default_find_uuids
