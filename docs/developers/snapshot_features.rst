@@ -23,8 +23,11 @@ relatively easy to create engines that use snapshots with arbitrary sets of
 features. The implementation of snapshot features in OPS is designed to
 allow you to mix and match features.
 
-Snapshot Features Overview
---------------------------
+.. contents::
+    :local:
+
+Using Snapshot Features
+-----------------------
 
 The basic idea of snapshot features in OPS is that you attach features to a
 :class:`.BaseSnapshot` subclass. Note that the features are attached to the
@@ -76,9 +79,13 @@ For many molecular dynamics purposes, the built-in snapshot features will be
 sufficient, and you can just attach them to your engine. See the list of
 common snapshot features, along with their implementation details, for more
 information on the built-in snapshot features. The following subsections
-will describe how to 
+will describe how to create custom snapshot feature modules.
 
-A snapshot feature module may include the following information:
+Writing Snapshot Features
+-------------------------
+
+Snapshot features are collected into modules that group related features
+together. A snapshot feature module may include the following information:
 
 * docstring: A partial numpydoc-style docstring to document the features in
   this module
@@ -91,8 +98,12 @@ A snapshot feature module may include the following information:
   properties. See section on creating property snapshot features for more
   information.
 
+The following subsections will describe how to implement various kinds of
+snapshot features within a module. See the list of standard snapshot
+features for links to code showing more example implementations.
+
 Creating Non-Stored (Property) Snapshot Features
-------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You may want to add properties to snapshots that are not explicitly stored.
 For example, the masses of each particle is commonly a constant for a given
@@ -113,15 +124,23 @@ where we assume that ``engine.get_masses()`` returns the masses. By putting
 this in a module called ``masses.py`` and attaching that module as a
 feature, the snapshot will automatically have the ``masses``  property.
 
+One common pattern is for features that are the same for all snapshots
+created by the engine (such as masses, or number of degrees of freedom) to
+use a property of the engine object that is only computed/stored once. The
+actual numbers are resident in memory as part of the engine, but are
+accessible from any snapshot created by that engine.
+
 Creating Stored Snapshot Features
----------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Features that contain information that should be stored are a bit more
 complicated. First, such objects should be registered as "variables" by
 including their names in the list of strings in ``variables``.
 
+TODO: finish this documentation
+
 Creating Proxy (Container) Snapshot Features
---------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In many cases, we don't want to fully load the information in a snapshot,
 such as the coordinates or the velocities. For example, when calculating
@@ -133,14 +152,16 @@ extra layer of abstraction called a "container" feature.
 One example is the ``statics`` container. This includes the positions and
 box vectors for a given snapshot. However, the snapshot can load a pointer
 to the statics container without actually loading the positions, thus saving
-time and memory. ???
+time and memory.
+
+.. TODO: add details on creating such containers
 
 A similar idea is used for external snapshots, where all data is stored in
 an external file. For the implementation of external snapshots, see
 documentation on the indirect engine API (coming in version 1.1).
 
-Recommended Names for Snapshot Features
----------------------------------------
+Standard Snapshot Features
+--------------------------
 
 In order to help simulation and analysis code to be useful for many engines,
 we have some recommended names for snapshot features. By using these names
@@ -155,11 +176,17 @@ OpenMM engine.
 | Name                |  Description and implementation examples           |
 +=====================+====================================================+
 | ``engine``          | :class:`.DynamicsEngine` instance that created     |
-|                     | this snapshot. Stored.                             |
+|                     | this snapshot. As stored feature in                |
+|                     | :mod:`.engines.features.engine`.                   |
 +---------------------+----------------------------------------------------+
-| ``coordinates``     | Particle positions. Unitted. Stored.               |
+| ``coordinates``     | Particle positions. Unitted. As stored feature in  |
+|                     | :mod:`.engines.features.coordinates`. As property  |
+|                     | feature in :mod:`.engines.features.statics`.       |
 +---------------------+----------------------------------------------------+
-| ``velocities``      | Particle velocities. Unitted. Stored.              |
+| ``velocities``      | Particle velocities. Unitted. As stored feature    |
+|                     | in :mod:`.engines.features.velocities`. As         |
+|                     | property feature in                                |
+|                     | :mod:`.engines.features.kinetics`.                 |
 +---------------------+----------------------------------------------------+
 | ``box_vectors``     | Unit cell vectors for the periodic box. Unitted.   |
 |                     | Stored.                                            |
