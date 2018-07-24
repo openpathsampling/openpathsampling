@@ -40,7 +40,7 @@ along with a list of modules within the features package. This allows one to
 create the entire class using just a list of the features. For example, we
 can write
 
-.. code:: python
+.. code-block:: python
 
     from openpathsampling.engines.features.base import attach_features
     from openpathsampling.engines import features
@@ -68,14 +68,28 @@ the relevant code for the snapshot This includes:
   automatically included when the ``coordinates`` feature module is attached
   to the snapshot.
 
-One important point: **all snapshots should include the ``engine``
-feature.** Several parts of OPS storage and analysis assume that the
-``engine`` property is available for any :class:`.Snapshot`.
+One important point: **all snapshots should include the engine feature.**
+Several parts of OPS storage and analysis assume that the ``engine``
+property is available for any :class:`.Snapshot`.
 
 For many molecular dynamics purposes, the built-in snapshot features will be
 sufficient, and you can just attach them to your engine. See the list of
 common snapshot features, along with their implementation details, for more
-information on the built-in snapshot features.
+information on the built-in snapshot features. The following subsections
+will describe how to 
+
+A snapshot feature module may include the following information:
+
+* docstring: A partial numpydoc-style docstring to document the features in
+  this module
+* feature-defining lists (``variables``, ``minus``, ``numpy``, ``lazy``,
+  ``dimensions``): Lists of strings for stored features. See details in the
+  section on stored snapshot features.
+* ``netcdfplus_init`` method: Method used in initialize storage information
+  in the netcdfplus format.
+* ``@property`` features: Snapshot features that can be implemented as
+  properties. See section on creating property snapshot features for more
+  information.
 
 Creating Non-Stored (Property) Snapshot Features
 ------------------------------------------------
@@ -89,7 +103,7 @@ To do this with a snapshot feature, you can use the ``@property`` decorator,
 just as you would with a property of a class instance. For example, this
 might be implemented as
 
-.. code:: python
+.. code-block:: python
 
     @property
     def masses(snapshot):
@@ -102,6 +116,28 @@ feature, the snapshot will automatically have the ``masses``  property.
 Creating Stored Snapshot Features
 ---------------------------------
 
+Features that contain information that should be stored are a bit more
+complicated. First, such objects should be registered as "variables" by
+including their names in the list of strings in ``variables``.
+
+Creating Proxy (Container) Snapshot Features
+--------------------------------------------
+
+In many cases, we don't want to fully load the information in a snapshot,
+such as the coordinates or the velocities. For example, when calculating
+something like a histogram of path lengths for a given ensemble, we don't
+actually need the coordinates. In order to load snapshots containing
+information that is stored, but without loading that information, we use an
+extra layer of abstraction called a "container" feature.
+
+One example is the ``statics`` container. This includes the positions and
+box vectors for a given snapshot. However, the snapshot can load a pointer
+to the statics container without actually loading the positions, thus saving
+time and memory. ???
+
+A similar idea is used for external snapshots, where all data is stored in
+an external file. For the implementation of external snapshots, see
+documentation on the indirect engine API (coming in version 1.1).
 
 Recommended Names for Snapshot Features
 ---------------------------------------
@@ -134,19 +170,20 @@ OpenMM engine.
 +---------------------+----------------------------------------------------+
 | ``xyz``             | Particle positions, without units. Property.       |
 +---------------------+----------------------------------------------------+
-| masses              | Particle masses (in actual mass units, not mass    |
+| ``masses``          | Particle masses (in actual mass units, not mass    |
 |                     | per mole, as used in some engines). Unitted.       |
 |                     | Property.                                          |
 +---------------------+----------------------------------------------------+
-| mass_per_mole       | Particle mass per mole. Used in as mass in some    |
+| ``mass_per_mole``   | Particle mass per mole. Used in as mass in some    |
 |                     | engines to provide energies in per-mole units.     |
 |                     | Unitted.                                           |
 +---------------------+----------------------------------------------------+
-| n_degrees_of_freedom| Number of degrees of freedom. Should account for   |
+| |ndof|              | Number of degrees of freedom. Should account for   |
 |                     | any constraints (including, e.g., total linear     |
 |                     | momentum.)                                         |
 +---------------------+----------------------------------------------------+
-| instantaneous_temperature |                                              |
+| |inst_temp|         |                                                    |
 +---------------------+----------------------------------------------------+
 
-
+.. |ndof| replace:: ``n_degrees_of_freedom``
+.. |inst_temp| replace:: ``instantaneous_temperature``

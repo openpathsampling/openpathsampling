@@ -4,7 +4,7 @@
 Installation
 ************
 
-OpenPathSampling currently only works on Mac and Linux. For now, Python 27
+OpenPathSampling currently only works on Mac and Linux. For now, Python 2.7
 is recommended, although most of the code also supports Python 3. Support
 for Windows will be coming soon.
 
@@ -23,8 +23,7 @@ OpenPathSampling is part of the ``omnia`` channel in ``conda``. To install
 the most recent release of OpenPathSampling with conda, use the following
 commands ::
 
-  $ conda config --add channels omnia
-  $ conda install openpathsampling
+  $ conda install -c omnia openpathsampling
 
 Developer Install with Conda
 ============================
