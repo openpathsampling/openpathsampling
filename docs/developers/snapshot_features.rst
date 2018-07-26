@@ -137,7 +137,7 @@ Features that contain information that should be stored are a bit more
 complicated. First, such objects should be registered as "variables" by
 including their names in the list of strings in ``variables``.
 
-TODO: finish this documentation
+.. TODO: finish this documentation
 
 Creating Proxy (Container) Snapshot Features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -189,13 +189,22 @@ OpenMM engine.
 |                     | :mod:`.engines.features.kinetics`.                 |
 +---------------------+----------------------------------------------------+
 | ``box_vectors``     | Unit cell vectors for the periodic box. Unitted.   |
-|                     | Stored.                                            |
+|                     | As stored feature in                               |
+|                     | :mod:`.engines.features.box_vectors` As property   |
+|                     | feature in :mod:`.engines.features.statics`.       |
 +---------------------+----------------------------------------------------+
-| ``statics``         |                                                    |
+| ``statics``         | Combination of coordinates and box vectors. As     |
+|                     | container feature in                               |
+|                     | :mod:`.engines.features.statics` and               |
+|                     | :mod:`.engines.features.shared`.                   |
 +---------------------+----------------------------------------------------+
-| ``kinetics``        |                                                    |
+| ``kinetics``        | Container for velocities. As container feature in  |
+|                     | :mod:`.engines.features.kinetics` and              |
+|                     | :mod:`.engines.features.shared`.                   |
 +---------------------+----------------------------------------------------+
-| ``xyz``             | Particle positions, without units. Property.       |
+| ``xyz``             | Particle positions, without units. As property     |
+|                     | feature in :mod:`.engines.features.coordinates`,   |
+|                     | :mod:`.engines.features.statics`.                  |
 +---------------------+----------------------------------------------------+
 | ``masses``          | Particle masses (in actual mass units, not mass    |
 |                     | per mole, as used in some engines). Unitted.       |
