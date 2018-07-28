@@ -75,23 +75,26 @@ consist of multiple trajectories, so
 Direct Engine API Step-by-Step
 ------------------------------
 
-*(Or: "So you want to make a direct API engine?")*
+*Or: "So you want to make a direct API engine?"*
 
 Direct API engines are generally straightforward. 
 
 1. Start by determining what ``features`` your subclass of
-   `:class:.Snapshot` will require. Define the snapshot class. See
-   :ref:`Snapshot Features` for details.
+   :class:`.Snapshot` will require. Define the snapshot class. See
+   :ref:`dev-snapshot-features` for details.
 
-2. Create a snapshot descriptor for your snapshot class.
+2. Create the class, and set up its intialization. You will need to:
 
-3. Create the class, add options. Any options that you use should have some
-   default values set in the ``_default_options`` class variable (a
-   dictionary).
-
-4. Write required methods: ``current_snapshot`` stuff and
+   A. Add any options that you use should have some, with appropriate
+      default values, in the ``_default_options`` class variable (a 
+      dictionary).
+   B. Create a :class:`.SnapshotDescriptor` instance for your engine
+      instance (and pass it to the :class:`.DynamicsEngine` initialization
+      through ``super``.)
+3. Write required methods: ``current_snapshot`` (getter and setter) and
    ``generate_next_frame()``.
 
-5. Write ``to_dict`` and ``from_dict``, if needed.
+4. Write ``to_dict()`` and ``from_dict()``, if needed. See documentation on
+   storage for more.
 
-6. If the optional methods are needed for your engine, write them.
+5. If the optional methods are needed for your engine, write them.

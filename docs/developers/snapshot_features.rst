@@ -1,3 +1,5 @@
+.. _dev-snapshot-features:
+
 Snapshot Features
 =================
 
