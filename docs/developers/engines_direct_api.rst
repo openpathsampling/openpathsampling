@@ -64,7 +64,7 @@ consist of multiple trajectories, so
   ``generate_next_frame`` (or possibly ``generate_n_frames``), which will
   typically call the getter for ``engine.current_snapshot`` internally (to
   return the snapshot). The logic within OPS determines whether to ask for
-  most frames from the engine.
+  more frames from the engine.
 * **After dynamics:** When the OPS logic says that no more frames are
   required from the engine, we call ``engine.stop(trajectory)``, where
   ``trajectory`` is the trajectory we have created. This is a good place to
@@ -75,14 +75,13 @@ consist of multiple trajectories, so
 Direct Engine API Step-by-Step
 ------------------------------
 
-*(a.k.a., "So you want to make a direct API engine?")*
+*(Or: "So you want to make a direct API engine?")*
 
 Direct API engines are generally straightforward. 
 
-*TODO: Clarify these steps with more detail*
-
 1. Start by determining what ``features`` your subclass of
-   `:class:.Snapshot` will require. Define the snapshot class.
+   `:class:.Snapshot` will require. Define the snapshot class. See
+   :ref:`Snapshot Features` for details.
 
 2. Create a snapshot descriptor for your snapshot class.
 

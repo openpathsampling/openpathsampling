@@ -208,18 +208,26 @@ OpenMM engine.
 +---------------------+----------------------------------------------------+
 | ``masses``          | Particle masses (in actual mass units, not mass    |
 |                     | per mole, as used in some engines). Unitted.       |
-|                     | Property.                                          |
+|                     | As property feature in                             |
+|                     | :mod:`.engines.openmm.features.masses`.            |
 +---------------------+----------------------------------------------------+
 | ``mass_per_mole``   | Particle mass per mole. Used in as mass in some    |
 |                     | engines to provide energies in per-mole units.     |
-|                     | Unitted.                                           |
+|                     | Unitted. As property feature in                    |
+|                     | :mod:`.engines.openmm.features.masses`.            |
 +---------------------+----------------------------------------------------+
 | |ndof|              | Number of degrees of freedom. Should account for   |
 |                     | any constraints (including, e.g., total linear     |
-|                     | momentum.)                                         |
+|                     | momentum.) As property feature in                  |
+|                     | |openmm_inst_temp|, |toy_inst_temp|.               |
 +---------------------+----------------------------------------------------+
-| |inst_temp|         |                                                    |
+| |inst_temp|         | Instantaneous temperature, i.e., the effective     |
+|                     | temperature at a point in time based on the        |
+|                     | kinetic energy. As property feature in             |
+|                     | |openmm_inst_temp|, |toy_inst_temp|.               |
 +---------------------+----------------------------------------------------+
 
 .. |ndof| replace:: ``n_degrees_of_freedom``
 .. |inst_temp| replace:: ``instantaneous_temperature``
+.. |openmm_inst_temp| replace:: :mod:`.engines.openmm.features.instantaneous_temperature`
+.. |toy_inst_temp| replace:: :mod:`.engines.toy.features.instantaneous_temperature`
