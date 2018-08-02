@@ -8,6 +8,12 @@
 cover
 *pstat
 
+.pytest_cache
+dask-worker-space
+
+# includes personal token
+write_release_notes.yaml
+
 ## Directory-based project format:
 .idea/
 # if you remove the above rule, at least ignore the following:
