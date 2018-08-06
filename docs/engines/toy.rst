@@ -2,11 +2,14 @@
 
 .. module:: openpathsampling.engines.toy
 
-ToyDynamics Functions
-=====================
+Toy Engine
+==========
 
-Main functions
---------------
+The toy engine in OPS is a simple engine written in Python that is primarily
+designed to be used on simple 2D toy models.
+
+Main objects
+------------
 
 .. autosummary::
    :toctree: ../api/generated/
@@ -17,8 +20,16 @@ Main functions
    Engine
    Topology
 
-Integrator functions
---------------------
+Additional snapshot features
+----------------------------
+
+.. autosummary::
+   :toctree: ../api/generated/
+
+   features.instantaneous_temperature
+
+Integrators
+-----------
 
 .. autosummary::
    :toctree: ../api/generated/
@@ -28,8 +39,8 @@ Integrator functions
    LangevinBAOABIntegrator
 
 
-Potential energy surface (PES) functions
-----------------------------------------
+Potential energy surface (PES) tools
+------------------------------------
 
 .. autosummary::
    :toctree: ../api/generated/
