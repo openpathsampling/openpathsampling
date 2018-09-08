@@ -361,6 +361,9 @@ class TestMISTISNetwork(TestMultipleStateTIS):
 
 
 class TestTPSNetwork(object):
+    NetworkType = TPSNetwork
+    std_kwargs = {}
+
     def setup(self):
         from .test_helpers import CallIdentity
         xval = paths.FunctionCV("xval", lambda snap: snap.xyz[0][0])
@@ -377,39 +380,46 @@ class TestTPSNetwork(object):
         self.traj['CC'] = make_1d_traj([0.51, 0.35, 0.36, 0.55])
         self.traj['CA'] = make_1d_traj([0.52, 0.22, -0.22, -0.52])
 
-    # define all the test networks as properties: we can do something
-    # similar then for the fixed path length, and just need to override
-    # these properties to get all the same tests
+    # define all the test networks as properties
     @property
     def network2a(self):
-        return TPSNetwork(initial_states=[self.stateA],
-                          final_states=[self.stateB])
+        return self.NetworkType(initial_states=[self.stateA],
+                                final_states=[self.stateB],
+                                **self.std_kwargs)
 
     @property
     def network2b(self):
-        return TPSNetwork(initial_states=self.stateA,
-                          final_states=self.stateB)
+        return self.NetworkType(initial_states=self.stateA,
+                                final_states=self.stateB,
+                                **self.std_kwargs)
 
     @property
     def network2c(self):
-        return TPSNetwork.from_state_pairs([(self.stateA, self.stateB)])
+        return self.NetworkType.from_state_pairs(
+            [(self.stateA, self.stateB)],
+            **self.std_kwargs
+        )
 
     @property
     def network3a(self):
-        return TPSNetwork(initial_states=self.states,
-                          final_states=self.states)
+        return self.NetworkType(initial_states=self.states,
+                                final_states=self.states,
+                                **self.std_kwargs)
 
     @property
     def network3b(self):
-        return TPSNetwork.from_states_all_to_all(self.states)
+        return self.NetworkType.from_states_all_to_all(self.states,
+                                                       **self.std_kwargs)
 
     @property
     def network3c(self):
-        return TPSNetwork.from_state_pairs([
-            (self.stateA, self.stateB), (self.stateA, self.stateC),
-            (self.stateB, self.stateA), (self.stateB, self.stateC),
-            (self.stateC, self.stateA), (self.stateC, self.stateB)
-        ])
+        return self.NetworkType.from_state_pairs(
+            [(self.stateA, self.stateB), (self.stateA, self.stateC),
+             (self.stateB, self.stateA), (self.stateB, self.stateC),
+             (self.stateC, self.stateA), (self.stateC, self.stateB)
+            ],
+            **self.std_kwargs
+        )
 
     def test_initialization_2state(self):
         network2a = self.network2a
@@ -423,7 +433,7 @@ class TestTPSNetwork(object):
         assert_equal(len(network2c.transitions), 1)
         assert_equal(set(network2a.all_states), set(network2b.all_states))
         assert_equal(set(network2b.all_states), set(network2c.all_states))
-        assert_equal(set(network2a.all_states), 
+        assert_equal(set(network2a.all_states),
                      set([self.stateA, self.stateB]))
 
 
@@ -447,11 +457,13 @@ class TestTPSNetwork(object):
         topol = peng.Topology(n_spatial=1, masses=[1.0], pes=None)
         engine = peng.Engine({}, topol)
         self.template = peng.Snapshot(coordinates=np.array([[0.0]]),
-                                       velocities=np.array([[0.0]]),
-                                       engine=engine)
+                                      velocities=np.array([[0.0]]),
+                                      engine=engine)
 
         states = [self.stateA, self.stateB, self.stateC]
-        network_a = TPSNetwork(initial_states=states, final_states=states)
+        network_a = self.NetworkType(initial_states=states,
+                                     final_states=states,
+                                     **self.std_kwargs)
         assert_equal(len(network_a.sampling_transitions), 1)
         assert_equal(len(network_a.transitions), 6)
         storage_w = paths.storage.Storage(fname, "w")
@@ -468,8 +480,8 @@ class TestTPSNetwork(object):
             os.remove(fname)
 
     def test_allow_self_transitions_false(self):
-        network = TPSNetwork.from_states_all_to_all(
-            self.states, allow_self_transitions=False
+        network = self.NetworkType.from_states_all_to_all(
+            self.states, allow_self_transitions=False, **self.std_kwargs
         )
         assert_equal(len(network.sampling_ensembles), 1)
         ensemble = network.sampling_ensembles[0]
@@ -482,8 +494,8 @@ class TestTPSNetwork(object):
         assert_equal(ensemble(self.traj['CC']), False)
 
     def test_allow_self_transitions_true(self):
-        network = TPSNetwork.from_states_all_to_all(
-            self.states, allow_self_transitions=True
+        network = self.NetworkType.from_states_all_to_all(
+            self.states, allow_self_transitions=True, **self.std_kwargs
         )
         assert_equal(len(network.sampling_ensembles), 1)
         ensemble = network.sampling_ensembles[0]
@@ -496,76 +508,11 @@ class TestTPSNetwork(object):
         assert_equal(ensemble(self.traj['CC']), True)
 
 class TestFixedLengthTPSNetwork(TestTPSNetwork):
-    @property
-    def network2a(self):
-        return FixedLengthTPSNetwork(initial_states=[self.stateA],
-                                     final_states=[self.stateB],
-                                     length=10)
-
-    @property
-    def network2b(self):
-        return FixedLengthTPSNetwork(initial_states=self.stateA,
-                                     final_states=self.stateB,
-                                     length=10)
-
-    @property
-    def network2c(self):
-        return FixedLengthTPSNetwork.from_state_pairs(
-            [(self.stateA, self.stateB)],
-            length=10
-        )
-
-    @property
-    def network3a(self):
-        return FixedLengthTPSNetwork(initial_states=self.states,
-                                     final_states=self.states,
-                                     length=10)
-
-    @property
-    def network3b(self):
-        return FixedLengthTPSNetwork.from_states_all_to_all(self.states,
-                                                            length=10)
-
-    @property
-    def network3c(self):
-        return FixedLengthTPSNetwork.from_state_pairs(
-            [(self.stateA, self.stateB), (self.stateA, self.stateC),
-             (self.stateB, self.stateA), (self.stateB, self.stateC),
-             (self.stateC, self.stateA), (self.stateC, self.stateB)],
-            length=10
-        )
+    NetworkType = FixedLengthTPSNetwork
+    std_kwargs = {'length': 4}
 
     def test_lengths(self):
         for network in [self.network2a, self.network2b, self.network2c,
                         self.network3a, self.network3b, self.network3c]:
-            assert_equal(network.sampling_transitions[0].length, 10)
-            assert_equal(list(network.transitions.values())[0].length, 10)
-
-    def test_allow_self_transitions_false(self):
-        network = FixedLengthTPSNetwork.from_states_all_to_all(
-            self.states, allow_self_transitions=False, length=4
-        )
-        assert_equal(len(network.sampling_ensembles), 1)
-        ensemble = network.sampling_ensembles[0]
-        assert_equal(ensemble(self.traj['AA']), False)
-        assert_equal(ensemble(self.traj['AB']), True)
-        assert_equal(ensemble(self.traj['BA']), True)
-        assert_equal(ensemble(self.traj['BC']), True)
-        assert_equal(ensemble(self.traj['CA']), True)
-        assert_equal(ensemble(self.traj['BB']), False)
-        assert_equal(ensemble(self.traj['CC']), False)
-
-    def test_allow_self_transitions_true(self):
-        network = FixedLengthTPSNetwork.from_states_all_to_all(
-            self.states, allow_self_transitions=True, length=4
-        )
-        assert_equal(len(network.sampling_ensembles), 1)
-        ensemble = network.sampling_ensembles[0]
-        assert_equal(ensemble(self.traj['AA']), True)
-        assert_equal(ensemble(self.traj['AB']), True)
-        assert_equal(ensemble(self.traj['BA']), True)
-        assert_equal(ensemble(self.traj['BC']), True)
-        assert_equal(ensemble(self.traj['CA']), True)
-        assert_equal(ensemble(self.traj['BB']), True)
-        assert_equal(ensemble(self.traj['CC']), True)
-
+            assert_equal(network.sampling_transitions[0].length, 4)
+            assert_equal(list(network.transitions.values())[0].length, 4)
