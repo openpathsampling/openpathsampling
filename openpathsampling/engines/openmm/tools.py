@@ -350,3 +350,19 @@ def trajectory_to_mdtraj(trajectory, md_topology=None):
 
 def ops_load_trajectory(filename, **kwargs):
     return trajectory_from_mdtraj(md.load(filename, **kwargs))
+
+def reduced_box_vectors(snap):
+    """Reduced box vectors for a snapshot (with units)
+    """
+    nm = u.nanometer
+    return np.array(
+        reducePeriodicBoxVectors(snap.box_vectors).value_in_unit(nm)
+    ) * nm
+
+def reduce_trajectory_box_vectors(traj):
+    """Trajectory with reduced box vectors.
+    """
+    return paths.Trajectory([
+        snap.copy_with_replacement(box_vectors=reduced_box_vectors(snap))
+        for snap in traj
+    ])
