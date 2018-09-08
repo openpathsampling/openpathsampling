@@ -494,8 +494,6 @@ class TestTPSNetwork(object):
         assert_equal(ensemble(self.traj['CA']), True)
         assert_equal(ensemble(self.traj['BB']), False)
         assert_equal(ensemble(self.traj['CC']), False)
-        assert_equal(ensemble(self.traj['AB0']), False)
-        assert_equal(ensemble(self.traj['ABA']), False)
 
     def test_allow_self_transitions_true(self):
         network = self.NetworkType.from_states_all_to_all(
@@ -510,15 +508,24 @@ class TestTPSNetwork(object):
         assert_equal(ensemble(self.traj['CA']), True)
         assert_equal(ensemble(self.traj['BB']), True)
         assert_equal(ensemble(self.traj['CC']), True)
-        assert_equal(ensemble(self.traj['AB0']), False)
 
-    def test_allow_self_transitions_true_ABA(self):
+    def test_allow_self_transitions_false_ABX(self):
+        network = self.NetworkType.from_states_all_to_all(
+            self.states, allow_self_transitions=False, **self.std_kwargs
+        )
+        assert_equal(len(network.sampling_ensembles), 1)
+        ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AB0']), False)
+        assert_equal(ensemble(self.traj['ABA']), False)
+
+    def test_allow_self_transitions_true_ABX(self):
         # special case that differs between fixed and flexible
         network = self.NetworkType.from_states_all_to_all(
             self.states, allow_self_transitions=True, **self.std_kwargs
         )
         assert_equal(len(network.sampling_ensembles), 1)
         ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AB0']), False)
         assert_equal(ensemble(self.traj['ABA']), False)
 
 class TestFixedLengthTPSNetwork(TestTPSNetwork):
@@ -531,10 +538,11 @@ class TestFixedLengthTPSNetwork(TestTPSNetwork):
             assert_equal(network.sampling_transitions[0].length, 4)
             assert_equal(list(network.transitions.values())[0].length, 4)
 
-    def test_allow_self_transitions_true_ABA(self):
+    def test_allow_self_transitions_true_ABX(self):
         network = self.NetworkType.from_states_all_to_all(
             self.states, allow_self_transitions=True, **self.std_kwargs
         )
         assert_equal(len(network.sampling_ensembles), 1)
         ensemble = network.sampling_ensembles[0]
+        assert_equal(ensemble(self.traj['AB0']), False)
         assert_equal(ensemble(self.traj['ABA']), True)
