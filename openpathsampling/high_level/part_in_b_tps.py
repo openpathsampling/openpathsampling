@@ -2,18 +2,20 @@ from openpathsampling.high_level.network import FixedLengthTPSNetwork
 from openpathsampling.high_level.transition import FixedLengthTPSTransition
 import openpathsampling as paths
 
-class NewTransition(FixedLengthTPSTransition):
-    """Fixed length TPS transition accepting any frame in the final state
+class PartInBFixedLengthTPSTransition(FixedLengthTPSTransition):
+    """Fixed length TPS transition accepting any frame in the final state.
+
+    Implements the ensemble in [1]_. Details in :class:`.PartInBNetwork`.
 
     See also
     --------
-    NewNetwork
+    PartInBNetwork
 
     References
     ----------
 
-    C. Dellago, P.G. Bolhuis, and D. Chandler. J. Chem. Phys. 110, 6617
-    (1999). http://dx.doi.org/10.1063/1.478569
+    .. [1] C. Dellago, P.G. Bolhuis, and D. Chandler. J. Chem. Phys. 110,
+           6617 (1999). http://dx.doi.org/10.1063/1.478569
     """
     def _tps_ensemble(self, stateA, stateB):
         return paths.SequentialEnsemble([
@@ -22,10 +24,14 @@ class NewTransition(FixedLengthTPSTransition):
                 & paths.PartInXEnsemble(stateB)
         ])
 
-class NewNetwork(FixedLengthTPSNetwork):
+class PartInBFixedLengthTPSNetwork(FixedLengthTPSNetwork):
     """Network for fixed-length TPS accepting any frame in the final state
 
-    ???
+    This network samples a single path ensemble where the paths must begin
+    in an initial state, run for a fixed total number of frames, and must
+    have at least one frame in a final state. This  was used to assist in
+    the flux part of the rate calculation in Ref. [1]_. This version is
+    generalized to multiple states.
 
     Parameters
     ----------
@@ -42,7 +48,7 @@ class NewNetwork(FixedLengthTPSNetwork):
     References
     ----------
 
-    C. Dellago, P.G. Bolhuis, and D. Chandler. J. Chem. Phys. 110, 6617
-    (1999). http://dx.doi.org/10.1063/1.478569
+    .. [1] C. Dellago, P.G. Bolhuis, and D. Chandler. J. Chem. Phys. 110,
+           6617 (1999). http://dx.doi.org/10.1063/1.478569
     """
-    TransitionType = NewTransition
+    TransitionType = PartInBFixedLengthTPSTransition

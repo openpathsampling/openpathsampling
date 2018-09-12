@@ -92,7 +92,9 @@ from .high_level.interface_set import (
 
 from .high_level.ms_outer_interface import MSOuterTISInterface
 
-from .high_level.corr_func_tps import NewNetwork, NewTransition
+from .high_level.part_in_b_tps import (
+    PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
+)
 
 from .step_visualizer_2D import StepVisualizer2D
 
