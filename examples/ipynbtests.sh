@@ -37,37 +37,37 @@ cp `basename $mistis` toy_mistis_1k_OPS1.nc
 ls *nc
 cd toy_model_mstis/
 date
-ipynbtest.py "toy_mstis_1_setup.ipynb" || testfail=1
+#ipynbtest.py "toy_mstis_1_setup.ipynb" || testfail=1
 date
-ipynbtest.py "toy_mstis_2_run.ipynb" || testfail=1
+#ipynbtest.py "toy_mstis_2_run.ipynb" || testfail=1
 date
-ipynbtest.py "toy_mstis_3_analysis.ipynb" || testfail=1
+#ipynbtest.py "toy_mstis_3_analysis.ipynb" || testfail=1
 date
-ipynbtest.py "toy_mstis_4_repex_analysis.ipynb" || testfail=1
+#ipynbtest.py "toy_mstis_4_repex_analysis.ipynb" || testfail=1
 #date
 #ipynbtest.py "toy_mstis_5_srtis.ipynb" || testfail=1
 cd ../toy_model_mistis/
 date
-ipynbtest.py "toy_mistis_1_setup_run.ipynb" || testfail=1
+#ipynbtest.py "toy_mistis_1_setup_run.ipynb" || testfail=1
 date
 # skip toy_mistis_2_flux: not needed
-ipynbtest.py "toy_mistis_3_analysis.ipynb" || testfail=1
+#ipynbtest.py "toy_mistis_3_analysis.ipynb" || testfail=1
 date
 cd ../tests/
 cp ../toy_model_mstis/mstis.nc ./
-ipynbtest.py --strict --show-diff "test_openmm_integration.ipynb" || testfail=1
+#ipynbtest.py --strict --show-diff "test_openmm_integration.ipynb" || testfail=1
 date
-ipynbtest.py --strict "test_snapshot.ipynb" || testfail=1
+#ipynbtest.py --strict "test_snapshot.ipynb" || testfail=1
 date
-ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
+ipynbtest.py -d --strict "test_netcdfplus.ipynb" || testfail=1
 date
-ipynbtest.py --strict "test_cv.ipynb" || testfail=1
+ipynbtest.py -d --strict "test_cv.ipynb" || testfail=1
 date
-ipynbtest.py --strict "test_pyemma.ipynb" || testfail=1
+#ipynbtest.py --strict "test_pyemma.ipynb" || testfail=1
 date
 cd ../misc/
 cp ../toy_model_mstis/mstis.nc ./
-ipynbtest.py "tutorial_storage.ipynb" || testfail=1
+#ipynbtest.py "tutorial_storage.ipynb" || testfail=1
 
 cd ..
 rm toy_mstis_1k_OPS1.nc
