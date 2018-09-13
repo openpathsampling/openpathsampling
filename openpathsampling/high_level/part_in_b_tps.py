@@ -5,11 +5,13 @@ import openpathsampling as paths
 class PartInBFixedLengthTPSTransition(FixedLengthTPSTransition):
     """Fixed length TPS transition accepting any frame in the final state.
 
-    Implements the ensemble in [1]_. Details in :class:`.PartInBNetwork`.
+    Transition that builds an ensemble used to facilitate the rate
+    calculation in fixed-length TPS. [1]_ Details in
+    :class:`.PartInBFixedLengthTPSNetwork`.
 
     See also
     --------
-    PartInBNetwork
+    PartInBFixedLengthTPSNetwork
 
     References
     ----------
@@ -30,7 +32,7 @@ class PartInBFixedLengthTPSNetwork(FixedLengthTPSNetwork):
     This network samples a single path ensemble where the paths must begin
     in an initial state, run for a fixed total number of frames, and must
     have at least one frame in a final state. This  was used to assist in
-    the flux part of the rate calculation in Ref. [1]_. This version is
+    the flux part of the TPS rate calculation. [1]_ This version is
     generalized to multiple states.
 
     Parameters
