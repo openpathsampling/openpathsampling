@@ -79,12 +79,12 @@ class TestFullVolume(object):
         assert_equal((~ full).__str__(), "empty")
 
 class TestCVRangeVolume(object):
-    def test_lower_boundary(self):
+    def test_upper_boundary(self):
         assert_equal(volA(0.49), True)
-        assert_equal(volA(0.50), True)
+        assert_equal(volA(0.50), False)
         assert_equal(volA(0.51), False)
 
-    def test_upper_boundary(self):
+    def test_lower_boundary(self):
         assert_equal(volA(-0.49), True)
         assert_equal(volA(-0.50), True)
         assert_equal(volA(-0.51), False)
@@ -92,7 +92,7 @@ class TestCVRangeVolume(object):
     def test_negation(self):
         assert_equal((~volA)(0.25), False)
         assert_equal((~volA)(0.75), True)
-        assert_equal((~volA)(0.5), False)
+        assert_equal((~volA)(0.5), True)
         assert_equal((~volA)(-0.5), False)
 
     def test_autocombinations(self):
@@ -123,12 +123,11 @@ class TestCVRangeVolume(object):
 
     def test_or_combinations(self):
         assert_equal((volA | volB), volume.CVDefinedVolume(op_id, -0.5, 0.75))
-        assert_equal((volB | volC), 
-                     volume.UnionVolume(volB, volC))
+        assert_equal((volB | volC), volume.UnionVolume(volB, volC))
         assert_equal((volB | volC)(0.0), False)
         assert_equal((volB | volC)(0.5), True)
         assert_equal((volB | volC)(-0.5), True)
-        
+
         # go to VolumeCombination if order parameters isn't the same
         assert_equal((volA2 | volB),
                      volume.UnionVolume(volA2, volB))
@@ -195,8 +194,8 @@ class TestCVRangeVolumePeriodic(object):
                                           lambda_min, lambda_max, -180,180)
         assert_equal(vol._period_len, 360)
         assert_equal(vol._period_shift, -180)
-        assert_equal(vol.__str__(), 
-            "{x|(Id(x) - -180) % 360 + -180 in [-150, 70]}")
+        assert_equal(vol.__str__(),
+                     "{x|(Id(x) - -180) % 360 + -180 in [-150, 70]}")
         for periodic_image in [-1, 0, 1]:
             # out of state
             assert_equal(False, vol(lambda_min-1.0 + 360*periodic_image))
@@ -205,9 +204,8 @@ class TestCVRangeVolumePeriodic(object):
             assert_equal(True, vol(lambda_min+1.0 + 360*periodic_image))
             assert_equal(True, vol(lambda_max-1.0 + 360*periodic_image))
             # border
-            # TODO: consider changing upper border from True to False
             assert_equal(True, vol(lambda_min + 360*periodic_image))
-            assert_equal(True, vol(lambda_max + 360*periodic_image))
+            assert_equal(False, vol(lambda_max + 360*periodic_image))
 
     def test_normal_implicit(self):
         """min<max, no periodic domain defined"""
@@ -225,7 +223,7 @@ class TestCVRangeVolumePeriodic(object):
         assert_equal(True, vol(lambda_max-1.0))
         # border
         assert_equal(True, vol(lambda_min))
-        assert_equal(True, vol(lambda_max))
+        assert_equal(False, vol(lambda_max))
 
     def test_wrapped_volume(self):
         """max<min and both within periodic domain"""
@@ -244,7 +242,7 @@ class TestCVRangeVolumePeriodic(object):
             assert_equal(True, vol(lambda_max-1.0 + 360*periodic_image))
             # border
             assert_equal(True, vol(lambda_min + 360*periodic_image))
-            assert_equal(True, vol(lambda_max + 360*periodic_image))
+            assert_equal(False, vol(lambda_max + 360*periodic_image))
 
     def test_wrapped_volume_implicit(self):
         """max<min, no periodic domain defined"""
@@ -260,7 +258,7 @@ class TestCVRangeVolumePeriodic(object):
         assert_equal(True, vol(lambda_max-1.0))
         # border
         assert_equal(True, vol(lambda_min))
-        assert_equal(True, vol(lambda_max))
+        assert_equal(False, vol(lambda_max))
 
     def test_thru_pbc_to_image(self):
         '''max in next periodic domain'''
@@ -280,7 +278,7 @@ class TestCVRangeVolumePeriodic(object):
         '''max-min == pbc_range allows all points'''
         vol = volume.PeriodicCVDefinedVolume(op_id, 0, 360, -180, 180)
         assert_equal(vol.__str__(),
-            "{x|(Id(x) - -180) % 360 + -180 in [-180, 180]}")
+                     "{x|(Id(x) - -180) % 360 + -180 in [-180, 180]}")
         assert_equal(True, vol(0))
         assert_equal(True, vol(360))
         assert_equal(True, vol(-180))

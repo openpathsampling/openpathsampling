@@ -53,7 +53,7 @@ Ensembles apply to trajectories
 
 We also have a class of objects called :class:`.Ensemble`. More correctly,
 we should call these "path ensembles" (or even more correctly, "path
-ensemble functions.") The most important function this provides is the
+ensemble indicators.") The most important function this provides is the
 indicator function, which tells you whether a given trajectory is in the
 path ensemble or not.  In the same way that a volume takes a snapshot from a
 trajectory and tells you whether it includes it or not, an ensemble takes a
@@ -69,7 +69,7 @@ In configurational Monte Carlo, you need some function of the configuration
 (usually related to the energy) to decide what steps are allowed and with
 what probability. In path sampling Monte Carlo, you need some function of
 the entire trajectory. The simplest function is the ensemble indicator
-functions. In the same way that a :class:`.Volume` object can tell you
+function. In the same way that a :class:`.Volume` object can tell you
 whether a snapshot is in that :class:`.Volume`, an :class:`.Ensemble` object
 can tell you whether or not a trajectory is in that :class:`.Ensemble`.
 
@@ -80,7 +80,7 @@ any way that trajectory could be a subtrajectory of a trajectory in the
 ensemble.  While these existed implicitly in the stopping conditions from
 previous implementations, the new idea in OpenPathSampling is that they, as
 well as the ensembles, can be combined in predictable ways to form new and
-well-behaved ensembles. See the power user information on ensembles for more
+well-behaved ensembles. See the information on ensembles for more
 details.
 
 PathMovers move in path space
@@ -94,7 +94,8 @@ approaches such as cluster moves.
 
 For path sampling, we need a similar way to move through path space. This is
 what path movers do: they create new trial trajectories for our ensembles.
-The most important path mover is probable the shooting move.
+The most important path mover is probably the shooting move, which exists
+(and in implemented in OPS) in many variants. 
 
 .. [#MC] 
    If not, we recommend that you start by reading the first four chapters of
