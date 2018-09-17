@@ -200,6 +200,7 @@ Operating System :: MacOS
         'openpathsampling.analysis',
         'openpathsampling.netcdfplus',
         'openpathsampling.high_level',
+        'openpathsampling.pathsimulators',
         'openpathsampling.engines',
         'openpathsampling.engines.features',
         'openpathsampling.engines.openmm',
@@ -228,7 +229,7 @@ Operating System :: MacOS
         'matplotlib',
         'ujson'],
     'url': 'http://www.openpathsampling.org',
-    'version': '0.9.3'}
+    'version': '0.9.5'}
 
 setup_keywords = build_keyword_dictionary(preferences)
 

@@ -198,4 +198,24 @@ velocities (see the `two-way shooting example
 <https://gitlab.e-cam2020.eu/dwhswenson/ops_additional_examples/blob/master/two_way_shooting.ipynb>`_
 from the ``ops_additional_examples`` repository.)
 
-(COMING SOON: A way to manually set the velocities when loading from a file)
+If your input trajectory file also has velocities, you can assign the
+correct velocities to the OPS trajectory by using the
+:meth:`.trajectory_from_mdtraj` method. For example, with a Gromacs TRR
+file:
+
+.. code-block:: python
+
+    import mdtraj as md
+    from openpathsampling.engines.openmm.tools import trajectory_from_mdtraj
+    mdt = md.load("trajectory_file.trr", top="conf.gro")
+    # next two lines create numpy array for velocities
+    trr = md.formats.TRRTrajectoryFile("trajectory_file.trr")
+    vel = trr._read(n_frames=len(mdt), atom_indices=None, get_velocities=True)[5]
+    # combine `mdt` and `vel` in an OPS trajectory
+    traj = trajectory_from_mdtraj(mdt, velocities=vel)
+
+Note that the tricks to get the velocities from the file will depend on what
+kind of file you're using. In this particular example, we use part of
+MDTraj's private API. The important thing is that the result should be a
+Numpy array with shape ``(n_frames, n_atoms, n_spatial)`` and with values in
+units of nm/ps.
