@@ -1,4 +1,4 @@
-.. data-object-api::
+.. _data-object-api:
 
 Data Objects API
 ================
@@ -14,4 +14,5 @@ described in the :ref:`Engines <engine>` section.
 
     Sample
     SampleSet
+    MoveChange
     MCStep
