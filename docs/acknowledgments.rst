@@ -1,4 +1,4 @@
-.. acknowledgments::
+.. _acknowledgments:
 
 ===============
 Acknowledgments
@@ -27,7 +27,7 @@ Austria in 2016, and one in Leiden, Netherlands, in 2017):
 * Donal MacKernan (University College Dublin)
 * Sarah McCartan (University College Dublin)
 * Clemens Moritz (University of Vienna)
-* Alberto Perez de Alba Ortiz (University of Amsterdam)
+* Alberto Pérez de Alba Ortíz (University of Amsterdam)
 * Stefano Poggio (University College Dublin)
 * Enrico Riccardi (Norwegian University of Science and Technology)
 * Sander Roet (University of Amsterdam)

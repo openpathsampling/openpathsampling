@@ -1,2 +1,5 @@
 .coverage
 cover
+
+# actual version in root directory
+.coveragerc
