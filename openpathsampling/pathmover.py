@@ -818,6 +818,8 @@ class EngineMover(SampleMover):
                                                   running=[run_f])
         trial_trajectory = (trajectory[0:shooting_index] +
                             partial_trajectory)
+        # TODO: this should check for overshoot; only works now if ensemble
+        # doesn't overshoot
         return trial_trajectory
 
     def _make_backward_trajectory(self, trajectory, shooting_index):
@@ -829,6 +831,8 @@ class EngineMover(SampleMover):
                                                   running=[run_f])
         trial_trajectory = (partial_trajectory.reversed +
                             trajectory[shooting_index + 1:])
+        # TODO: this should check for overshoot; only works now if ensemble
+        # doesn't overshoot
         return trial_trajectory
 
     # direction is an abstract property to disallow instantiation

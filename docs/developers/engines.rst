@@ -26,6 +26,7 @@ implement engines that do not only deal with standard molecular dynamics.
     :maxdepth: 1
 
     engines_overview
+    snapshot_features
     engines_direct_api
     engines_indirect_api
     advanced_engines

@@ -118,6 +118,32 @@ class TestMoveStrategy(MoveStrategyTestSetup):
         assert_equal(len(ensembles[0]), 1)
         assert_equal(ensembles[0][0], extra_ens)
 
+
+
+        
+class TestForwardShootingStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = ForwardShootingStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 6)
+        for mover in movers:
+            assert_equal(type(mover), paths.ForwardShootMover)
+            assert_equal(type(mover.selector), paths.UniformSelector)
+
+    def test_make_movers_with_list(self):
+        listofselectors = [paths.shooting.InterfaceConstrainedSelector(ens.interface) for ens in self.network.sampling_ensembles]
+        strategy = ForwardShootingStrategy(selector=listofselectors,
+                                           ensembles=self.network.sampling_ensembles)
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 6)
+        assert_equal(len(listofselectors), 6)
+        for mover,sel in zip(movers,listofselectors):
+            assert_equal(type(mover), paths.ForwardShootMover)
+            assert_equal(type(mover.selector),paths.shooting.InterfaceConstrainedSelector)
+            assert_equal(mover.selector, sel) 
+            
 class TestOneWayShootingStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = OneWayShootingStrategy()

@@ -6,7 +6,7 @@ install:
   # Do not buffer python outputs; flush them directly to the terminal
   - export PYTHONUNBUFFERED=true
   # Sets up a miniconda environment
-  - source devtools/ci/install.sh
+  - source devtools/ci/miniconda_install.sh
   - conda install --yes conda-build
   - conda build --quiet devtools/conda-recipe
   - conda create --quiet --yes --name test --use-local openpathsampling-dev
