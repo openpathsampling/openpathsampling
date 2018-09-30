@@ -20,3 +20,5 @@ providing this here the unorganized form.
    which_network
    transitions_and_networks
    tis_analysis
+..   troubleshooting
+..   error_messages
