@@ -351,6 +351,8 @@ def trajectory_to_mdtraj(trajectory, md_topology=None):
 def ops_load_trajectory(filename, **kwargs):
     return trajectory_from_mdtraj(md.load(filename, **kwargs))
 
+# ops_load_trajectory and the mdtraj stuff is not OpenMM-specific
+
 def reduced_box_vectors(snap):
     """Reduced box vectors for a snapshot (with units)
     """
@@ -366,3 +368,35 @@ def reduce_trajectory_box_vectors(traj):
         snap.copy_with_replacement(box_vectors=reduced_box_vectors(snap))
         for snap in traj
     ])
+
+
+def load_trr(trr_file, top, velocities=True):
+    """Load a TRR file, ready for use as input to an OpenMMEngine.
+
+    This is a single method to handle several peculiarities of both the TRR
+    format (which rounds some values) and OpenMM (which has certain
+    requirements of box vectors), plus the possibility that you'll want
+    velocities.
+
+    Parameters
+    ----------
+    trr_file : string
+        name of TRR file to load
+    top : string
+        name of topology (e.g., .gro) file to use. See MDTraj documentation
+        on md.load.
+    velocities : bool
+        whether to also load velocities from the TRR file; default ``True``
+
+    Return
+    ------
+    :class:`.Trajectory`
+        the OPS trajectory, with OpenMM-reduced box vectors and velocities
+        (if requested)
+    """
+    mdt = md.load(trr_file, top=top)
+    trr = md.formats.TRRTrajectoryFile(trr_file)
+    vel = trr._read(n_frames=len(mdt), atom_indices=None,
+                    get_velocities=True)[5]
+    traj = trajectory_from_mdtraj(mdt, velocities=vel)
+    return reduce_trajectory_box_vectors(traj)

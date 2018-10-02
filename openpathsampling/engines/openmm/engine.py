@@ -4,7 +4,6 @@ import copy
 import simtk.openmm
 import simtk.openmm.app
 import simtk.unit as u
-from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
 from .snapshot import Snapshot
@@ -58,7 +57,6 @@ class OpenMMEngine(DynamicsEngine):
     _default_options = {
         'n_steps_per_frame': 10,
         'n_frames_max': 5000,
-        'force_reduce_box_vectors': False,
     }
 
     base_snapshot_type = Snapshot
@@ -96,8 +94,6 @@ class OpenMMEngine(DynamicsEngine):
                     the openmm specification for the platform to be used,
                     also 'fastest' is allowed   which will pick the currently
                     fastest one available
-                `force_reduce_box_vectors`: bool, default True
-                    forces the box vectors to be in reduced form
 
         Notes
         -----
@@ -417,19 +413,11 @@ class OpenMMEngine(DynamicsEngine):
             self.simulation.context.setPositions(snapshot.coordinates)
 
             # if snapshot.box_vectors is not None:
-            box_vectors = snapshot.box_vectors
-            try:
-                # COMPATABILITY: REMOVE IN 2.0!
-                force_reduce = self.options['force_reduce_box_vectors']
-            except KeyError:  # pragma: no cover
-                force_reduce = False
-
-            if force_reduce:
-                box_vectors = reducePeriodicBoxVectors(box_vectors)
-
-            self.simulation.context.setPeriodicBoxVectors(box_vectors[0],
-                                                          box_vectors[1],
-                                                          box_vectors[2])
+            self.simulation.context.setPeriodicBoxVectors(
+                snapshot.box_vectors[0],
+                snapshot.box_vectors[1],
+                snapshot.box_vectors[2]
+            )
 
             # if snapshot.velocities is not None:
             self.simulation.context.setVelocities(snapshot.velocities)
