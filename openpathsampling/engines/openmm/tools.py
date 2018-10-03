@@ -353,20 +353,49 @@ def ops_load_trajectory(filename, **kwargs):
 
 # ops_load_trajectory and the mdtraj stuff is not OpenMM-specific
 
-def reduced_box_vectors(snap):
+def reduced_box_vectors(snapshot):
     """Reduced box vectors for a snapshot (with units)
+
+    See also
+    --------
+    reduce_trajectory_box_vectors
+
+    Parameters
+    ----------
+    snapshot : :class:`.Snapshot`
+        input snapshot
+
+    Returns
+    -------
+    :class:`.Snapshot`
+        snapshot with correctly reduced box vectors
     """
     nm = u.nanometer
     return np.array(
-        reducePeriodicBoxVectors(snap.box_vectors).value_in_unit(nm)
+        reducePeriodicBoxVectors(snapshot.box_vectors).value_in_unit(nm)
     ) * nm
 
-def reduce_trajectory_box_vectors(traj):
+def reduce_trajectory_box_vectors(trajectory):
     """Trajectory with reduced box vectors.
+
+    OpenMM has strict requirements on the box vectors describing the unit
+    cell. In some cases, such as trajectories loaded from files that have
+    rounded the box vectors, these conditions might not be satisfied. This
+    method forces the box vectors to meet OpenMM's criteria.
+
+    Parameters
+    ----------
+    trajectory : :class:`.Trajectory`
+        input trajectory
+
+    Returns
+    -------
+    :class:`.Trajectory`
+        trajectory with correctly reduced box vectors
     """
     return paths.Trajectory([
         snap.copy_with_replacement(box_vectors=reduced_box_vectors(snap))
-        for snap in traj
+        for snap in trajectory
     ])
 
 
