@@ -1,4 +1,5 @@
 import string
+import sys
 
 import openpathsampling as paths
 
