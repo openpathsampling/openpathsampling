@@ -2,6 +2,11 @@ import string
 
 import openpathsampling as paths
 
+if sys.version_info > (3,):
+    maketrans = str.maketrans
+else:
+    maketrans = string.maketrans
+
 from openpathsampling.engines.openmm.tools import *
 from openpathsampling.engines.openmm import Snapshot
 
@@ -20,7 +25,7 @@ class BoxVectorWarning(RuntimeWarning):
 _reduced_form_pairs = [('a_x', 'b_x'), ('a_x', 'c_x'), ('b_y', 'c_y')]
 
 def get_index_pair(v, s):
-    s = s.translate(string.maketrans("abcxyz", "012012"))
+    s = s.translate(maketrans("abcxyz", "012012"))
     vect, elem = tuple(map(int, s.split('_')))
     return vect, elem
 
