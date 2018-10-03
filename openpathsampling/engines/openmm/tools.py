@@ -6,6 +6,8 @@ from .snapshot import Snapshot
 from .topology import Topology, MDTrajTopology
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
+from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
+
 __author__ = 'Jan-Hendrik Prinz'
 
 
@@ -393,7 +395,7 @@ def reduce_trajectory_box_vectors(trajectory):
     :class:`.Trajectory`
         trajectory with correctly reduced box vectors
     """
-    return paths.Trajectory([
+    return Trajectory([
         snap.copy_with_replacement(box_vectors=reduced_box_vectors(snap))
         for snap in trajectory
     ])
@@ -412,8 +414,8 @@ def load_trr(trr_file, top, velocities=True):
     trr_file : string
         name of TRR file to load
     top : string
-        name of topology (e.g., .gro) file to use. See MDTraj documentation
-        on md.load.
+        name of topology (e.g., ``.gro``) file to use. See MDTraj
+        documentation on md.load.
     velocities : bool
         whether to also load velocities from the TRR file; default ``True``
 
@@ -425,7 +427,11 @@ def load_trr(trr_file, top, velocities=True):
     """
     mdt = md.load(trr_file, top=top)
     trr = md.formats.TRRTrajectoryFile(trr_file)
-    vel = trr._read(n_frames=len(mdt), atom_indices=None,
-                    get_velocities=True)[5]
+    if velocities:
+        vel = trr._read(n_frames=len(mdt), atom_indices=None,
+                        get_velocities=True)[5]
+    else:
+        vel = None
+
     traj = trajectory_from_mdtraj(mdt, velocities=vel)
     return reduce_trajectory_box_vectors(traj)
