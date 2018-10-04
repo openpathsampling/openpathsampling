@@ -8,7 +8,14 @@ if sys.version_info > (3,):
 else:
     maketrans = string.maketrans
 
-from openpathsampling.engines.openmm.tools import *
+# can't import * here bc something is named Test*!
+from openpathsampling.engines.openmm.tools import (
+    reduce_trajectory_box_vectors,
+    reduced_box_vectors,
+    load_trr
+)
+
+
 from openpathsampling.engines.openmm import Snapshot
 
 from simtk.unit import nanometer as nm
