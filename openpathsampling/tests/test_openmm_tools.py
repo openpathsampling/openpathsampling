@@ -15,6 +15,7 @@ from openpathsampling.engines.openmm.tools import (
     load_trr
 )
 
+from .test_helpers import data_filename
 
 from openpathsampling.engines.openmm import Snapshot
 
@@ -105,8 +106,20 @@ def test_reduce_trajectory_box_vectors():
 
 
 def test_load_trr_with_velocities():
-    pass
+    box_vect_dir = "reduce_box_vects"
+    gro = data_filename(box_vect_dir + "/dna.gro")
+    trr = data_filename(box_vect_dir + "/dna.trr")
+    traj = load_trr(trr, top=gro, velocities=True)
+    for snap in traj:
+        check_reduced_box_vectors(snap.box_vectors.value_in_unit(nm))
+        assert np.count_nonzero(snap.velocities.value_in_unit(nm / ps)) > 0
 
 
 def test_load_trr_no_velocities():
-    pass
+    box_vect_dir = "reduce_box_vects"
+    gro = data_filename(box_vect_dir + "/dna.gro")
+    trr = data_filename(box_vect_dir + "/dna.trr")
+    traj = load_trr(trr, top=gro, velocities=False)
+    for snap in traj:
+        check_reduced_box_vectors(snap.box_vectors.value_in_unit(nm))
+        assert np.count_nonzero(snap.velocities.value_in_unit(nm / ps)) == 0
