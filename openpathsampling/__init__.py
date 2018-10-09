@@ -137,8 +137,10 @@ from .pathsimulators import (
 
 from .sample import Sample, SampleSet
 
-from .shooting import ShootingPointSelector, UniformSelector, \
-    GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
+from .shooting import (
+    ShootingPointSelector, UniformSelector, GaussianBiasSelector,
+    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector
+)
 
 from .snapshot_modifier import (
     NoModification, RandomVelocities, VelocityDirectionModifier,
