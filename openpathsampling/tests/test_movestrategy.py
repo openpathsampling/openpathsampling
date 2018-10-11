@@ -26,9 +26,11 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+
 class MockMoveStrategy(MoveStrategy):
     def make_movers(self, scheme):
         return None
+
 
 def find_mover(scheme, group, sig):
     mover = None
@@ -52,13 +54,13 @@ class TestStrategyLevels(object):
 class MoveStrategyTestSetup(object):
     def setup(self):
         paths.InterfaceSet._reset()
-        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s: s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s: -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         self.network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),
@@ -89,7 +91,7 @@ class TestMoveStrategy(MoveStrategyTestSetup):
         assert_equal(strategy.replace_movers, False)
 
     def test_get_ensembles(self):
-        self.strategy = MockMoveStrategy(ensembles=None, group="test", 
+        self.strategy = MockMoveStrategy(ensembles=None, group="test",
                                          replace=True)
         scheme = MoveScheme(self.network)
         # load up the relevant ensembles to test against
@@ -119,8 +121,6 @@ class TestMoveStrategy(MoveStrategyTestSetup):
         assert_equal(ensembles[0][0], extra_ens)
 
 
-
-        
 class TestForwardShootingStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = ForwardShootingStrategy()
@@ -132,18 +132,25 @@ class TestForwardShootingStrategy(MoveStrategyTestSetup):
             assert_equal(type(mover.selector), paths.UniformSelector)
 
     def test_make_movers_with_list(self):
-        listofselectors = [paths.shooting.InterfaceConstrainedSelector(ens.interface) for ens in self.network.sampling_ensembles]
-        strategy = ForwardShootingStrategy(selector=listofselectors,
-                                           ensembles=self.network.sampling_ensembles)
+        list_of_selectors = [
+            paths.shooting.InterfaceConstrainedSelector(ens.interface)
+            for ens in self.network.sampling_ensembles
+        ]
+        strategy = ForwardShootingStrategy(
+            selector=list_of_selectors,
+            ensembles=self.network.sampling_ensembles
+        )
         scheme = MoveScheme(self.network)
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 6)
-        assert_equal(len(listofselectors), 6)
-        for mover,sel in zip(movers,listofselectors):
+        assert_equal(len(list_of_selectors), 6)
+        for mover, sel in zip(movers, list_of_selectors):
             assert_equal(type(mover), paths.ForwardShootMover)
-            assert_equal(type(mover.selector),paths.shooting.InterfaceConstrainedSelector)
-            assert_equal(mover.selector, sel) 
-            
+            assert_equal(type(mover.selector),
+                         paths.shooting.InterfaceConstrainedSelector)
+            assert_equal(mover.selector, sel)
+
+
 class TestOneWayShootingStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
         strategy = OneWayShootingStrategy()
@@ -225,7 +232,7 @@ class TestSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         scheme = MoveScheme(self.network)
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 1)
-        assert_equal(movers[0].ensemble_signature_set, 
+        assert_equal(movers[0].ensemble_signature_set,
                      ({ ens00, ens02 }, ({ ens00, ens02 })))
 
     @raises(RuntimeError)
@@ -331,7 +338,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1]
         )
-        assert_equal(weird_mover.ensemble_signature, 
+        assert_equal(weird_mover.ensemble_signature,
                      ((ens0,ens1,ens2),(ens0,ens1)))
         scheme = MoveScheme(self.network)
         scheme.movers['weird'] = [weird_mover]
@@ -347,7 +354,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1, ens2]
         )
-        assert_equal(weird_mover.ensemble_signature, 
+        assert_equal(weird_mover.ensemble_signature,
                      ((ens0,ens1,ens2),(ens0,ens1,ens2)))
         scheme = MoveScheme(self.network)
         scheme.movers['weird'] = [weird_mover]
