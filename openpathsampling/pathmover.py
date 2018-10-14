@@ -582,7 +582,7 @@ class SampleMover(PathMover):
         # Default is that the list of ensembles is in self.ensembles
         return []
 
-    def _get_samples_from_sample_set(self, sample_set):
+    def get_samples_from_sample_set(self, sample_set):
         """
         Select samples to use as input to the move core.
 
@@ -606,7 +606,7 @@ class SampleMover(PathMover):
         return samples
 
     def move(self, sample_set):
-        samples = self._get_samples_from_sample_set(sample_set)
+        samples = self.get_samples_from_sample_set(sample_set)
         change = self.move_core(samples)
         return change
 
