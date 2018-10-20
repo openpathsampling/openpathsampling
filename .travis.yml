@@ -8,7 +8,7 @@ install:
   # Sets up a miniconda environment
   - source devtools/ci/miniconda_install.sh
   - conda install --yes conda-build
-  - conda build --quiet devtools/conda-recipe
+  - conda build devtools/conda-recipe
   - conda create --quiet --yes --name test --use-local openpathsampling-dev
   - source activate test
   - conda info --envs
