@@ -16,7 +16,7 @@ install:
   #- conda create --quiet --yes --name test --use-local openpathsampling-dev
   #- source activate test
   # install by without conda-build (requirements, then setup.py install)
-  - conda create -q -y --name test pyyaml
+  - conda create -q -y --name test conda pyyaml
   - source activate test
   - export PACKAGES=`python devtools/install_recipe_requirements.py --dry devtools/conda-recipe/meta.yaml`
   - echo $PACKAGES
