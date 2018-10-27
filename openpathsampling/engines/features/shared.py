@@ -21,7 +21,11 @@ def unmask_quantity(quantity):
     simtk.unit.Quantity
         wraps a regular numpy array, not a masked array
     """
-    q_unit = quantity.unit
+    try:
+        q_unit = quantity.unit
+    except AttributeError:
+        # no units
+        return quantity
     return np.array(quantity.value_in_unit(q_unit)) * q_unit
 
 # =============================================================================
