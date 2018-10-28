@@ -2390,6 +2390,9 @@ class WrappedEnsemble(Ensemble):
         return self._new_ensemble.strict_can_prepend(self._alter(trajectory),
                                                      trusted)
 
+    def _str(self):
+        return str(self._new_ensemble)
+
 
 class SlicedTrajectoryEnsemble(WrappedEnsemble):
     """
