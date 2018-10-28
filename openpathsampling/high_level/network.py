@@ -557,7 +557,7 @@ class MSTISNetwork(TISNetwork):
 
             self.from_state[state] = this_trans
 
-            this_minus = self.from_state[state].minus_ensemble & out_others
+            this_minus = self.from_state[state].minus_ensemble #& out_others
             this_inner = self.from_state[state].ensembles[0]
             try:
                 self.special_ensembles['minus'][this_minus] = [this_trans]

@@ -2575,7 +2575,7 @@ class SingleFrameEnsemble(WrappedEnsemble):
         return "{" + str(self.ensemble) + "} (SINGLE FRAME)"
 
 
-class MinusInterfaceEnsemble(SequentialEnsemble):
+class MinusInterfaceEnsemble(WrappedEnsemble):
     """
     This creates an ensemble for the minus interface.
 
@@ -2609,7 +2609,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
 
     _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
 
-    def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
+    def __init__(self, state_vol, innermost_vols, n_l=2, forbidden=None,
+                 greedy=False):
         if n_l < 2:
             raise ValueError("The number of segments n_l must be at least 2")
 
@@ -2618,6 +2619,17 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             innermost_vols = list(innermost_vols)
         except TypeError:
             innermost_vols = [innermost_vols]
+
+        if forbidden is None:
+            forbidden = [paths.EmptyVolume()]
+        else:
+            try:
+                forbidden = list(forbidden)
+            except TypeError:
+                forbidden = [forbidden]
+
+        forbidden_volume = paths.join_volumes(forbidden)
+        forbidden_ensemble = paths.AllOutXEnsemble(forbidden_volume)
 
         self.innermost_vols = innermost_vols
         self.innermost_vol = paths.FullVolume()
@@ -2650,11 +2662,13 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             OptionalEnsemble(in_interstitial),
             SingleFrameEnsemble(in_A)
         ]
-        ensembles = start + loop * (n_l - 1) + end
+        sequence = start + loop * (n_l - 1) + end
+
+        ensemble = paths.SequentialEnsemble(sequence) & forbidden_ensemble
 
         self.n_l = n_l
 
-        super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
+        super(MinusInterfaceEnsemble, self).__init__(ensemble)
 
     @property
     def extendable_sub_ensembles(self):
