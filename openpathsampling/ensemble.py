@@ -2610,8 +2610,6 @@ class MinusInterfaceEnsemble(WrappedEnsemble):
     # TODO: Check with David if it makes sense to store these and allow
     # them being used in __init__ instead of the self-made ones
 
-    _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
-
     def __init__(self, state_vol, innermost_vols, n_l=2, forbidden=None,
                  greedy=False):
         if n_l < 2:
@@ -2672,6 +2670,15 @@ class MinusInterfaceEnsemble(WrappedEnsemble):
         self.n_l = n_l
 
         super(MinusInterfaceEnsemble, self).__init__(ensemble)
+
+    def to_dict(self):
+        dct = super(MinusInterfaceEnsemble, self).to_dict()
+        dct['state_vol'] = self.state_vol
+        dct['innermost_vols'] = self.innermost_vols
+        dct['innermost_vol'] = self.innermost_vol
+        dct['_segment_ensemble'] = self._segment_ensemble
+        dct['n_l'] = self.n_l
+        return dct
 
     @property
     def extendable_sub_ensembles(self):
