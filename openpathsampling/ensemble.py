@@ -2629,6 +2629,7 @@ class MinusInterfaceEnsemble(WrappedEnsemble):
             except TypeError:
                 forbidden = [forbidden]
 
+        self.forbidden = forbidden
         forbidden_volume = paths.join_volumes(forbidden)
         forbidden_ensemble = paths.AllOutXEnsemble(forbidden_volume)
 
@@ -2677,6 +2678,7 @@ class MinusInterfaceEnsemble(WrappedEnsemble):
         dct['innermost_vols'] = self.innermost_vols
         dct['innermost_vol'] = self.innermost_vol
         dct['_segment_ensemble'] = self._segment_ensemble
+        dct['forbidden'] = self.forbidden
         dct['n_l'] = self.n_l
         return dct
 
