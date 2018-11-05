@@ -5,6 +5,28 @@ from simtk import unit as u
 
 from openpathsampling.netcdfplus import StorableObject, ObjectStore, WeakLRUCache
 
+def unmask_quantity(quantity):
+    """Force a maskedarray quantity to be unmasked.
+
+    NetCDF keeps giving us masked arrays, even when we tell it not to.
+    Masked arrays cause all kinds of havoc with other parts of the code.
+
+    Parameters
+    ----------
+    quantity : simtk.unit.Quantity wrapping a numpy (masked) array
+        quantity to unmask
+
+    Returns
+    -------
+    simtk.unit.Quantity
+        wraps a regular numpy array, not a masked array
+    """
+    try:
+        q_unit = quantity.unit
+    except AttributeError:
+        # no units
+        return quantity
+    return np.array(quantity.value_in_unit(q_unit)) * q_unit
 
 # =============================================================================
 # SIMULATION CONFIGURATION

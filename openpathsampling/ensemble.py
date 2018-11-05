@@ -2390,6 +2390,9 @@ class WrappedEnsemble(Ensemble):
         return self._new_ensemble.strict_can_prepend(self._alter(trajectory),
                                                      trusted)
 
+    def _str(self):
+        return str(self._new_ensemble)
+
 
 class SlicedTrajectoryEnsemble(WrappedEnsemble):
     """
@@ -2575,7 +2578,7 @@ class SingleFrameEnsemble(WrappedEnsemble):
         return "{" + str(self.ensemble) + "} (SINGLE FRAME)"
 
 
-class MinusInterfaceEnsemble(SequentialEnsemble):
+class MinusInterfaceEnsemble(WrappedEnsemble):
     """
     This creates an ensemble for the minus interface.
 
@@ -2607,9 +2610,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     # TODO: Check with David if it makes sense to store these and allow
     # them being used in __init__ instead of the self-made ones
 
-    _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
-
-    def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
+    def __init__(self, state_vol, innermost_vols, n_l=2, forbidden=None,
+                 greedy=False):
         if n_l < 2:
             raise ValueError("The number of segments n_l must be at least 2")
 
@@ -2618,6 +2620,18 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             innermost_vols = list(innermost_vols)
         except TypeError:
             innermost_vols = [innermost_vols]
+
+        if forbidden is None:
+            forbidden = [paths.EmptyVolume()]
+        else:
+            try:
+                forbidden = list(forbidden)
+            except TypeError:
+                forbidden = [forbidden]
+
+        self.forbidden = forbidden
+        forbidden_volume = paths.join_volumes(forbidden)
+        forbidden_ensemble = paths.AllOutXEnsemble(forbidden_volume)
 
         self.innermost_vols = innermost_vols
         self.innermost_vol = paths.FullVolume()
@@ -2650,11 +2664,23 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             OptionalEnsemble(in_interstitial),
             SingleFrameEnsemble(in_A)
         ]
-        ensembles = start + loop * (n_l - 1) + end
+        sequence = start + loop * (n_l - 1) + end
+
+        ensemble = paths.SequentialEnsemble(sequence) & forbidden_ensemble
 
         self.n_l = n_l
 
-        super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
+        super(MinusInterfaceEnsemble, self).__init__(ensemble)
+
+    def to_dict(self):
+        dct = super(MinusInterfaceEnsemble, self).to_dict()
+        dct['state_vol'] = self.state_vol
+        dct['innermost_vols'] = self.innermost_vols
+        dct['innermost_vol'] = self.innermost_vol
+        dct['_segment_ensemble'] = self._segment_ensemble
+        dct['forbidden'] = self.forbidden
+        dct['n_l'] = self.n_l
+        return dct
 
     @property
     def extendable_sub_ensembles(self):
