@@ -15,7 +15,7 @@ requirements:
     - python
     - future
     - setuptools
-    - numpy
+    #- numpy
 
   run:
     - python
