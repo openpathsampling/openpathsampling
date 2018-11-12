@@ -130,11 +130,6 @@ from .pathmover import (
     BackwardFirstTwoWayShootingMover
 )
 
-from .pathsimulators import (
-    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
-    CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation
-)
-
 from .sample import Sample, SampleSet
 
 from .shooting import (
@@ -154,6 +149,12 @@ from .volume import (
     EmptyVolume, FullVolume, CVDefinedVolume, PeriodicCVDefinedVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
+)
+
+from .pathsimulators import (
+    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
+    CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation,
+    adaptive_multilevel_splitting
 )
 
 from .high_level import move_strategy as strategies

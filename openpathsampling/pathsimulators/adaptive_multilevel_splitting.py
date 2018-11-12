@@ -1,5 +1,7 @@
 import collections
 import numpy as np
+from openpathsampling.volume import Volume
+from openpathsampling.pathsimulators import PathSimulator
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 
@@ -8,7 +10,7 @@ AMSInfo = collections.namedtuple(
     ['initial_state', 'final_state', 'parametrized_volume']
 )
 
-class ParametrizedVolume(paths.Volume):
+class ParametrizedVolume(Volume):
     """Volume that can change by resetting some parameters.
     """
     def __init__(self, cv=None, cv_max=None):
@@ -202,6 +204,22 @@ class AdaptiveMultilevelSplittingStepper(paths.SubPathMover):
         )
         super(AdaptiveMultilevelSplittingStepper, self).__init__(mover)
 
+    def to_dict(self):
+        dct = super(AdaptiveMultilevelSplittingStepper, self).to_dict()
+        dct.update({
+            'parametrized_volume': self.parametrized_volume,
+            'ensemble': self.ensemble
+        })
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = cls.__new__(cls)
+        obj.mover = dct['mover']
+        obj.parametrized_volume = dct['parametrized_volume']
+        obj.ensemble = dct['ensemble']
+        return obj
+
     @classmethod
     def from_AMS(cls, simulator):
         return cls(initial_state=simulator.initial_state,
@@ -249,7 +267,7 @@ class AdaptiveMultilevelSplittingStepper(paths.SubPathMover):
         return change
 
 
-class AdaptiveMultilevelSplitting(paths.PathSimulator):
+class AdaptiveMultilevelSplitting(PathSimulator):
     """Main simulation class for adaptive multilevel splitting.
     """
     def __init__(self, storage, initial_state, final_state,
