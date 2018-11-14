@@ -184,6 +184,59 @@ class MoveStrategy(StorableNamedObject):
 
         return res_ensembles
 
+    def get_init_ensembles(self, scheme):
+        return self.get_ensembles(scheme)
+
+    def get_parameters(self, scheme, list_parameters=None,
+                       nonlist_parameters=None):
+        """
+        Parameters
+        ----------
+        scheme : :class:`.MoveScheme`
+        list_parameters : list
+            each item in the list can be either (1) a non-iterable item,
+            in which case the same item will be used for all movers; or (2)
+            a list of items, which correspond one-to-one with the movers to
+            be created. Use this for parameters that might vary depending on
+            the mover.
+        nonlist_parameters : list
+            each item in this list will be used for all movers. Use this for
+            parameters that are the same for all movers (e.g., same engine
+            for all shooting movers)
+
+        Returns
+        -------
+        list of list :
+            list containing the list of parameters for each mover; the
+            specific strategy may need to unpack in substructure in its
+            make_movers method
+        """
+        ensemble_list = self.get_init_ensembles(scheme)
+        # make a list-of-list of ensembles; one ensemble per list
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        n_movers = len(ensembles)
+
+        list_params = []
+        for param in list_parameters:
+            try:
+                n_param = len(param)
+            except TypeError:
+                list_params.append([param] * n_movers)
+            else:
+                if n_param != n_movers:
+                    raise RuntimeError(
+                        "Error in move strategy parameters: found %d items "
+                        + "for %d movers: %s", n_param, n_movers, str(param)
+                    )
+                else:
+                    list_params.append(param)
+
+        nonlist_params = [[param] * n_movers
+                          for param in nonlist_parameters]
+
+        all_params = [ensembles] + list_params + nonlist_params
+        return list(zip(*all_params))
+
     @abc.abstractmethod
     def make_movers(self, scheme):
         """
@@ -261,9 +314,10 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
         list of list of :class:`.Ensemble`
             the ensembles to be used to initialize the movers
         """
+        # Consider 3 cases:
         # if self.ensembles is not None, use those
         # elif scheme.movers[from_group], extract from that
-        # elif self.ensembles in None, use all the ensembles (as now)
+        # elif self.ensembles is None, use all the ensembles (as now)
         try:
             movers = scheme.movers[self.from_group]
         except KeyError:
@@ -372,12 +426,13 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
         self.engine = engine
 
     def make_movers(self, scheme):
-        #ensemble_list = self.get_ensembles(scheme, self.ensembles)
-        ensemble_list = self.get_init_ensembles(scheme)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector,
-                                                            ensembles,
-                                                            self.engine)
+        parameters = self.get_parameters(scheme=scheme,
+                                         list_parameters=[self.selector],
+                                         nonlist_parameters=[self.engine])
+        shooters = [paths.OneWayShootingMover(ensemble=ens,
+                                              selector=sel,
+                                              engine=eng)
+                    for (ens, sel, eng) in parameters]
         return shooters
 
 
@@ -506,7 +561,7 @@ class SelectedPairsRepExStrategy(MoveStrategy):
                     pair_len = len(ensembles)
                 if pair_len != 2:
                     self.initialization_error()
-        
+
         super(SelectedPairsRepExStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
         )
