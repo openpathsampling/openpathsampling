@@ -662,12 +662,9 @@ class MinusMoveStrategy(MoveStrategy):
         network = scheme.network
         if ensembles is None:
             minus_ensembles = network.minus_ensembles
-            state_sorted_minus = {}
+            state_sorted_minus = collections.defaultdict(list)
             for minus in minus_ensembles:
-                try:
-                    state_sorted_minus[minus.state_vol].append(minus)
-                except KeyError:
-                    state_sorted_minus[minus.state_vol] = [minus]
+                state_sorted_minus[minus.state_vol].append(minus)
             ensembles = list(state_sorted_minus.values())
 
         # now we use super's ability to turn it into list-of-list
@@ -1085,29 +1082,24 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
             weights. See class definition for the specific formats of the
             keys.
         """
-        choice_probability = {}
+        choice_probability = collections.defaultdict(float)
         ens_prob_norm = sum(ensemble_weights.values())
         ens_prob = {e : ensemble_weights[e] / ens_prob_norm
                     for e in ensemble_weights}
-        
+
         mover_norm = {e : sum([mover_weights[s] for s in mover_weights
                                if s[2] == e])
                       for e in ensemble_weights}
 
         for sig in mover_weights:
-            group = sig[0]
-            ens_sig = sig[1]
-            ens = sig[2]
+            group, ens_sig, ens = sig
             local_prob = ens_prob[ens] * mover_weights[sig] / mover_norm[ens]
             # take first, because as MacLeod says, "there can be only one!"
             mover = [m for m in scheme.movers[group]
                      if m.ensemble_signature == ens_sig][0]
-            try:
-                choice_probability[mover] += local_prob
-            except KeyError:
-                choice_probability[mover] = local_prob
+            choice_probability[mover] += local_prob
 
-        return choice_probability
+        return dict(choice_probability)
 
     def chooser_root_weights(self, scheme, ensemble_weights, mover_weights):
         """
