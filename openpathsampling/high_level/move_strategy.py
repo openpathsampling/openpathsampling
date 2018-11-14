@@ -184,10 +184,10 @@ class MoveStrategy(StorableNamedObject):
 
         return res_ensembles
 
-    def get_init_ensembles(self, scheme):
-        return self.get_ensembles(scheme)
+    def get_per_mover_ensembles(self, scheme, ensembles):
+        raise NotImplementedError
 
-    def get_parameters(self, scheme, list_parameters=None,
+    def get_parameters(self, scheme, ensembles=None, list_parameters=None,
                        nonlist_parameters=None):
         """
         Parameters
@@ -211,10 +211,13 @@ class MoveStrategy(StorableNamedObject):
             specific strategy may need to unpack in substructure in its
             make_movers method
         """
-        ensemble_list = self.get_init_ensembles(scheme)
-        # make a list-of-list of ensembles; one ensemble per list
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        n_movers = len(ensembles)
+        ensemble_list = self.get_per_mover_ensembles(scheme)
+        n_movers = len(ensemble_list)
+
+        if list_parameters is None:
+            list_parameters = []
+        if nonlist_parameters is None:
+            nonlist_parameters = []
 
         list_params = []
         for param in list_parameters:
@@ -234,7 +237,7 @@ class MoveStrategy(StorableNamedObject):
         nonlist_params = [[param] * n_movers
                           for param in nonlist_parameters]
 
-        all_params = [ensembles] + list_params + nonlist_params
+        all_params = list(zip(*ensemble_list)) + list_params + nonlist_params
         return list(zip(*all_params))
 
     @abc.abstractmethod
@@ -339,6 +342,11 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
 
         return init_ensembles
 
+    def get_per_mover_ensembles(self, scheme):
+        ensemble_list = self.get_init_ensembles(scheme)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        return [[ens] for ens in ensembles]
+
 
 class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
     """
@@ -429,6 +437,7 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
         parameters = self.get_parameters(scheme=scheme,
                                          list_parameters=[self.selector],
                                          nonlist_parameters=[self.engine])
+        print parameters
         shooters = [
             paths.OneWayShootingMover(
                 ensemble=ens,
@@ -733,19 +742,26 @@ class MinusMoveStrategy(MoveStrategy):
                                                                      ensembles)
         return res_ensembles
 
-    def make_movers(self, scheme):
-        network = scheme.network
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        movers = []
+    def get_per_mover_ensembles(self, scheme):
+        minus_ensembles = self.get_ensembles(scheme, self.ensembles)
+        ensembles = reduce(list.__add__,
+                           map(lambda x: list(x), minus_ensembles))
+        innermosts = []
+        special_minus = scheme.network.special_ensembles['minus']
         for ens in ensembles:
-            innermosts = [t.ensembles[0] 
-                          for t in network.special_ensembles['minus'][ens]]
-            movers.append(paths.MinusMover(
-                minus_ensemble=ens, 
-                innermost_ensembles=innermosts,
-                engine=self.engine
-            ))
+            innermosts.append([t.ensembles[0] for t in special_minus[ens]])
+        return list(zip(ensembles, innermosts))
+
+
+    def make_movers(self, scheme):
+        parameters = self.get_parameters(scheme,
+                                         nonlist_parameters=[self.engine])
+        movers = [
+            paths.MinusMover(minus_ensemble=ens,
+                             innermost_ensembles=innermosts,
+                             engine=eng)
+            for (ens, innermosts, eng) in parameters
+        ]
         return movers
 
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
@@ -753,18 +769,16 @@ class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     Takes a given scheme and makes a single-replica minus mover.
     """
     def make_movers(self, scheme):
-        network = scheme.network
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        movers = []
-        for ens in ensembles:
-            innermosts = [t.ensembles[0] 
-                          for t in network.special_ensembles['minus'][ens]]
-            movers.append(paths.SingleReplicaMinusMover(
-                minus_ensemble=ens, 
+        parameters = self.get_parameters(scheme,
+                                         nonlist_parameters=[self.engine])
+        movers = [
+            paths.SingleReplicaMinusMover(
+                minus_ensemble=ens,
                 innermost_ensembles=innermosts,
-                engine=self.engine
-            ))
+                engine=eng
+            )
+            for (ens, innermosts, eng) in parameters
+        ]
         return movers
 
 
