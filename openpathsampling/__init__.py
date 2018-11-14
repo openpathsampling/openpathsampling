@@ -30,20 +30,6 @@ except ImportError:  # pragma: no cover
     isrelease = str(ops_setup.preferences['released'])
 
 
-from .high_level.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
-    OneWayShootingMoveScheme
-)
-
-from .high_level.transition import (
-    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
-)
-
-from .high_level.network import (
-    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
-    FixedLengthTPSNetwork
-)
-
 from .analysis.path_histogram import PathDensityHistogram
 
 from .analysis.replica_network import (
@@ -84,16 +70,6 @@ from .ensemble import (
     SequentialEnsemble, IntersectionEnsemble, UnionEnsemble,
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
     OptionalEnsemble, join_ensembles
-)
-
-from .high_level.interface_set import (
-    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
-)
-
-from .high_level.ms_outer_interface import MSOuterTISInterface
-
-from .high_level.part_in_b_tps import (
-    PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
 )
 
 from .step_visualizer_2D import StepVisualizer2D
@@ -157,6 +133,32 @@ from .volume import (
 )
 
 from .high_level import move_strategy as strategies
+
+from .high_level.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
+    OneWayShootingMoveScheme
+)
+
+from .high_level.transition import (
+    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
+)
+
+from .high_level.network import (
+    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
+    FixedLengthTPSNetwork
+)
+
+from .high_level.interface_set import (
+    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
+)
+
+from .high_level.ms_outer_interface import MSOuterTISInterface
+
+from .high_level.part_in_b_tps import (
+    PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
+)
+
+
 
 import openpathsampling.numerics as numerics
 

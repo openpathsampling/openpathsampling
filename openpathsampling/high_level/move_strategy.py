@@ -348,61 +348,6 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
         return [[ens] for ens in ensembles]
 
 
-class ForwardShootingStrategy(SingleEnsembleMoveStrategy):
-    """
-    Strategy for Forwardhooting only.
-
-    Allows choice of shooting point selector. Useful for e.g. Constrained
-    Interface shooting.
-
-    Parameters
-    ----------
-    selector : :class:`.ShootingPointSelector`
-        method used to select shooting point
-    ensembles : list of :class:`.Ensemble`
-        ensembles for which this strategy applies; None gives default
-        behavior
-    engine : :class:`.DynamicsEngine`
-        engine for the dynamics
-    group : str
-        mover group name, default "shooting"
-    replace : bool
-        whether to replace existing movers in the group; default True
-    """
-
-    _level = levels.MOVER
-
-    def __init__(self, selector=None, ensembles=None, engine=None,
-                 group="shooting", replace=True):
-        super(ForwardShootingStrategy, self).__init__(
-            ensembles=ensembles, group=group, replace=replace
-        )
-        if selector is None:
-            selector = paths.UniformSelector()
-        self.selector = selector
-        self.engine = engine
-
-    def make_movers(self, scheme):
-        ensemble_list = self.get_init_ensembles(scheme)
-        ensembles = reduce(list.__add__,
-                           map(lambda x: list(x), ensemble_list))
-
-        selector = self.selector
-        if type(selector) is not list:
-            selector = [selector] * len(ensembles)
-
-        shooters = []
-        for (sel, ens) in zip(selector, ensembles):
-            mover = paths.ForwardShootMover(
-                selector=sel,
-                ensemble=ens,
-                engine=self.engine
-            )
-            mover.named("ForwardShootingMover " + str(ens.name))
-            shooters.append(mover)
-
-        return shooters
-
 
 class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
     """
@@ -423,6 +368,7 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
         whether to replace existing movers in the group; default True
     """
     _level = levels.MOVER
+    MoverClass = paths.OneWayShootingMover
     def __init__(self, selector=None, ensembles=None, engine=None,
                  group="shooting", replace=True):
         super(OneWayShootingStrategy, self).__init__(
@@ -437,16 +383,40 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
         parameters = self.get_parameters(scheme=scheme,
                                          list_parameters=[self.selector],
                                          nonlist_parameters=[self.engine])
-        print parameters
         shooters = [
-            paths.OneWayShootingMover(
+            self.MoverClass(
                 ensemble=ens,
                 selector=sel,
                 engine=eng
-            ).named("OneWayShootingMover " + ens.name)
+            ).named(self.MoverClass.__name__ + " " + ens.name)
             for (ens, sel, eng) in parameters
         ]
         return shooters
+
+
+class ForwardShootingStrategy(OneWayShootingStrategy):
+    """
+    Strategy for ForwardShooting only.
+
+    Allows choice of shooting point selector. Useful for e.g. Constrained
+    Interface shooting.
+
+    Parameters
+    ----------
+    selector : :class:`.ShootingPointSelector`
+        method used to select shooting point
+    ensembles : list of :class:`.Ensemble`
+        ensembles for which this strategy applies; None gives default
+        behavior
+    engine : :class:`.DynamicsEngine`
+        engine for the dynamics
+    group : str
+        mover group name, default "shooting"
+    replace : bool
+        whether to replace existing movers in the group; default True
+    """
+    _level = levels.MOVER
+    MoverClass = paths.ForwardShootMover
 
 
 class TwoWayShootingStrategy(SingleEnsembleMoveStrategy):
@@ -721,6 +691,7 @@ class MinusMoveStrategy(MoveStrategy):
     Takes a given scheme and makes the minus mover.
     """
     _level = levels.MOVER
+    MoverClass = paths.MinusMover
     def __init__(self, engine=None, ensembles=None, group="minus",
                  replace=True):
         super(MinusMoveStrategy, self).__init__(
@@ -757,7 +728,7 @@ class MinusMoveStrategy(MoveStrategy):
         parameters = self.get_parameters(scheme,
                                          nonlist_parameters=[self.engine])
         movers = [
-            paths.MinusMover(minus_ensemble=ens,
+            self.MoverClass(minus_ensemble=ens,
                              innermost_ensembles=innermosts,
                              engine=eng)
             for (ens, innermosts, eng) in parameters
@@ -768,18 +739,7 @@ class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     """
     Takes a given scheme and makes a single-replica minus mover.
     """
-    def make_movers(self, scheme):
-        parameters = self.get_parameters(scheme,
-                                         nonlist_parameters=[self.engine])
-        movers = [
-            paths.SingleReplicaMinusMover(
-                minus_ensemble=ens,
-                innermost_ensembles=innermosts,
-                engine=eng
-            )
-            for (ens, innermosts, eng) in parameters
-        ]
-        return movers
+    MoverClass = paths.SingleReplicaMinusMover
 
 
 class OrganizeByMoveGroupStrategy(MoveStrategy):
