@@ -15,22 +15,9 @@ LevelLabels = collections.namedtuple(
 
 def most_common_value(ll):
     """
-    Calculates the most common value and its count. Should probably be
-    replaced by collections.Counter at some point.
+    Calculates the most common value and its count.
     """
-    counts = {}
-    for v in ll:
-        try:
-            counts[v] += 1
-        except KeyError:
-            counts[v] = 1
-    most_common = None
-    most_common_count = 0
-    for v in counts:
-        if counts[v] > most_common_count:
-            most_common = v
-            most_common_count = counts[v]
-    return (most_common, most_common_count)
+    return collections.Counter(ll).most_common(1)[0]
 
 
 class StrategyLevels(LevelLabels):
