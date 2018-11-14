@@ -429,10 +429,14 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
         parameters = self.get_parameters(scheme=scheme,
                                          list_parameters=[self.selector],
                                          nonlist_parameters=[self.engine])
-        shooters = [paths.OneWayShootingMover(ensemble=ens,
-                                              selector=sel,
-                                              engine=eng)
-                    for (ens, sel, eng) in parameters]
+        shooters = [
+            paths.OneWayShootingMover(
+                ensemble=ens,
+                selector=sel,
+                engine=eng
+            ).named("OneWayShootingMover " + ens.name)
+            for (ens, sel, eng) in parameters
+        ]
         return shooters
 
 
@@ -470,17 +474,19 @@ class TwoWayShootingStrategy(SingleEnsembleMoveStrategy):
         self.engine = engine
 
     def make_movers(self, scheme):
-        # ensemble_list = self.get_ensembles(scheme, self.ensembles)
-        ensemble_list = self.get_init_ensembles(scheme)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        parameters = self.get_parameters(
+            scheme=scheme,
+            list_parameters=[self.selector, self.modifier],
+            nonlist_parameters=[self.engine]
+        )
         shooters = [
             paths.TwoWayShootingMover(
                 ensemble=ens,
-                selector=self.selector,
-                modifier=self.modifier,
-                engine=self.engine
+                selector=sel,
+                modifier=mod,
+                engine=eng
             ).named("TwoWayShooting " + ens.name)
-            for ens in ensembles
+            for (ens, sel, mod, eng) in parameters
         ]
         return shooters
 
