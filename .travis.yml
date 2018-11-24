@@ -26,7 +26,9 @@ install:
   # report info about our conda env and finish installation
   - conda info --envs
   - conda install --quiet --yes msmbuilder
-  - conda install --quiet --yes nose python-coveralls ipynbtest pytest pytest-cov
+  - conda install --quiet --yes nose python-coveralls ipynbtest 
+  - conda install --quiet --yes pytest pytest-cov=2.5.1
+  # pin pytest-cov b/c: https://github.com/z4r/python-coveralls/issues/66
   - conda update --all --yes --use-local --quiet
 
 before_script:
