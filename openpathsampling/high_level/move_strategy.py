@@ -171,15 +171,37 @@ class MoveStrategy(StorableNamedObject):
 
         return res_ensembles
 
-    def get_per_mover_ensembles(self, scheme, ensembles):
-        raise NotImplementedError
+    def get_per_mover_ensembles(self, scheme):
+        """Get ensembles for each mover to be created.
 
-    def get_parameters(self, scheme, ensembles=None, list_parameters=None,
-                       nonlist_parameters=None):
-        """
+        Every mover has specific initialization ensembles. This method
+        figures out which ones to use for each mover to be created, based on
+        the input scheme (and the network in it) and the ``self.ensembles``
+        stored in this strategy.
+
         Parameters
         ----------
         scheme : :class:`.MoveScheme`
+            move scheme with network to be used
+
+        Returns
+        -------
+        list of list of :class:`.Ensemble` :
+            the ensembles for each mover to be created: outer list is over
+            movers; inner list is over ensembles for the given mover
+        """
+        raise NotImplementedError
+
+    def get_parameters(self, scheme, list_parameters=None,
+                       nonlist_parameters=None):
+        """
+        Gather initialization parameters for each mover to be created.
+
+        Parameters
+        ----------
+        scheme : :class:`.MoveScheme`
+            move scheme from which we determine the ensembles required by
+            each mover
         list_parameters : list
             each item in the list can be either (1) a non-iterable item,
             in which case the same item will be used for all movers; or (2)
@@ -196,7 +218,9 @@ class MoveStrategy(StorableNamedObject):
         list of list :
             list containing the list of parameters for each mover; the
             specific strategy may need to unpack in substructure in its
-            make_movers method
+            make_movers method. Order is: ensembles (in order returned by
+            :method:`.get_per_mover_ensembles`), list_parameters (in order
+            given as input), nonlist_parameters (in order given as input)
         """
         ensemble_list = self.get_per_mover_ensembles(scheme)
         n_movers = len(ensemble_list)
