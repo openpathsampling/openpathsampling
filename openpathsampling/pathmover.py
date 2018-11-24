@@ -2173,20 +2173,22 @@ class OneWayShootingMover(SpecializedRandomChoiceMover):
 
     def __init__(self, ensemble, selector, engine=None):
         movers = [
-            ForwardShootMover(
-                ensemble=ensemble,
-                selector=selector,
-                engine=engine
-            ),
-            BackwardShootMover(
-                ensemble=ensemble,
-                selector=selector,
-                engine=engine
-            )
+            ForwardShootMover(ensemble=ensemble,
+                              selector=selector,
+                              engine=engine),
+            BackwardShootMover(ensemble=ensemble,
+                               selector=selector,
+                               engine=engine)
         ]
-        super(OneWayShootingMover, self).__init__(
-            movers=movers
-        )
+        super(OneWayShootingMover, self).__init__(movers=movers)
+
+    @classmethod
+    def from_dict(cls, dct):
+        mover = cls.__new__(cls)
+        # override with stored movers and use the init of the super class
+        # this assumes that the super class has movers as its signature
+        super(cls, mover).__init__(movers=dct['movers'])
+        return mover
 
     @property
     def ensemble(self):
@@ -2195,6 +2197,10 @@ class OneWayShootingMover(SpecializedRandomChoiceMover):
     @property
     def selector(self):
         return self.movers[0].selector
+
+    @property
+    def engine(self):
+        return self.movers[0].engine
 
 
 class OneWayExtendMover(SpecializedRandomChoiceMover):
@@ -2212,20 +2218,18 @@ class OneWayExtendMover(SpecializedRandomChoiceMover):
 
     def __init__(self, ensemble, target_ensemble, engine=None):
         movers = [
-            ForwardExtendMover(
-                ensemble=ensemble,
-                target_ensemble=target_ensemble,
-                engine=engine
-            ),
-            BackwardExtendMover(
-                ensemble=ensemble,
-                target_ensemble=target_ensemble,
-                engine=engine
-            )
+            ForwardExtendMover(ensemble=ensemble,
+                               target_ensemble=target_ensemble,
+                               engine=engine),
+            BackwardExtendMover(ensemble=ensemble,
+                                target_ensemble=target_ensemble,
+                                engine=engine)
         ]
-        super(OneWayExtendMover, self).__init__(
-            movers=movers
-        )
+        super(OneWayExtendMover, self).__init__(movers=movers)
+
+    @property
+    def engine(self):
+        return self.movers[0].engine
 
 
 class AbstractTwoWayShootingMover(EngineMover):
@@ -2650,4 +2654,3 @@ class SampleDetails(Details):
 
     def __init__(self, **kwargs):
         super(SampleDetails, self).__init__(**kwargs)
-
