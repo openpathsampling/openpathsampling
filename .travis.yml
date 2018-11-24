@@ -32,6 +32,7 @@ install:
   # pin pytest-cov b/c: https://github.com/z4r/python-coveralls/issues/66
   # usually this should be before the conda update
   - conda install --quiet --yes pytest-cov=2.5.1
+  - conda update --quiet --yes matplotlib  # no idea why pytest-cov downgraded
 
 before_script:
   - python --version
