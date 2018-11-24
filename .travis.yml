@@ -26,7 +26,7 @@ install:
   # report info about our conda env and finish installation
   - conda info --envs
   - conda install --quiet --yes msmbuilder
-  - conda install --quiet --yes nose python-coveralls ipynbtest
+  - conda install --quiet --yes nose python-coveralls ipynbtest pytest pytest-cov
   - conda update --all --yes --use-local --quiet
 
 before_script:
