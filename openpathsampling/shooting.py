@@ -132,8 +132,8 @@ class UniformSelector(ShootingPointSelector):
         return float(len(trajectory) - self.pad_start - self.pad_end)
 
     def pick(self, trajectory):
-        idx = np.random.random_integers(self.pad_start,
-                                        len(trajectory) - self.pad_end - 1)
+        idx = np.random.randint(self.pad_start,
+                                len(trajectory) - self.pad_end)
         return idx
 
 

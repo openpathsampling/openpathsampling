@@ -1,4 +1,5 @@
 from builtins import object
+import collections
 from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises)
 from nose.plugins.skip import Skip, SkipTest
@@ -27,6 +28,13 @@ class SelectorTest(object):
         self.gs = SampleSet(Sample(
             replica=0, trajectory=self.mytraj, ensemble=self.ens
         ))
+
+
+class TestUniformSelector(SelectorTest):
+    def test_pick(self):
+        sel = UniformSelector()  # pad_start = pad_end = 1
+        pick_idxs = [sel.pick(self.mytraj) for _ in range(100)]
+        assert_equal(set(collections.Counter(pick_idxs).keys()), {1, 2, 3})
 
 
 class TestFirstFrameSelector(SelectorTest):
