@@ -22,20 +22,28 @@ install:
   - echo $PACKAGES
   - conda install -y -q -c conda-forge -c omnia $PACKAGES
   - python setup.py install
+  - python -c "import openpathsampling"
   
   # report info about our conda env and finish installation
   - conda info --envs
   - conda install --quiet --yes msmbuilder
+  - python -c "import openpathsampling"
   - conda install --quiet --yes nose python-coveralls ipynbtest 
+  - python -c "import openpathsampling"
   - conda install --quiet --yes pytest 
+  - python -c "import openpathsampling"
   - conda update --all --yes --use-local --quiet
+  - python -c "import openpathsampling"
   # pin pytest-cov b/c: https://github.com/z4r/python-coveralls/issues/66
   # usually this should be before the conda update
   - conda install --quiet --yes pytest-cov=2.5.1
+  - python -c "import openpathsampling"
   - conda update --quiet --yes matplotlib  # no idea why pytest-cov downgraded
+  - python -c "import openpathsampling"
 
 before_script:
   - python --version
+  - python -c "import openpathsampling"
   - source devtools/ci/git_hash.sh
   - conda list -n test
 
