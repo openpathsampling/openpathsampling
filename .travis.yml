@@ -22,6 +22,7 @@ install:
   - echo $PACKAGES
   - conda install -y -q -c conda-forge -c omnia $PACKAGES
   - python setup.py install
+  - pushd ..
   - python -c "import openpathsampling"
   
   # report info about our conda env and finish installation
@@ -40,6 +41,7 @@ install:
   - python -c "import openpathsampling"
   - conda update --quiet --yes matplotlib  # no idea why pytest-cov downgraded
   - python -c "import openpathsampling"
+  - popd
 
 before_script:
   - python --version
