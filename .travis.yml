@@ -18,6 +18,7 @@ install:
   # install by without conda-build (requirements, then setup.py install)
   - conda create -q -y --name test conda pyyaml python=$CONDA_PY
   - source activate test
+  - conda config --env --add pinned_packages python=$CONDA_PY
   - export PACKAGES=`python devtools/install_recipe_requirements.py --dry devtools/conda-recipe/meta.yaml`
   - echo $PACKAGES
   - conda install -y -q -c conda-forge -c omnia $PACKAGES
