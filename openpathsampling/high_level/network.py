@@ -11,11 +11,27 @@ from functools import reduce  # not built-in for py3
 
 logger = logging.getLogger(__name__)
 
+def _default_state_name(state):
+    return state.name if state.is_named else str(state)
+
+def _or_bar_namer(volumes):
+    return "|".join([v.name for v in volumes])
+
+# TODO: this should be moved into a general tools module
+def listify(obj):
+    try:
+        _ = iter(obj)
+    except TypeError:
+        obj = [obj]
+    return obj
+
+
 def index_to_string(index):
     n_underscore = index // 26
     letter_value = index % 26
     mystr = "_"*n_underscore + chr(65 + letter_value)
     return mystr
+
 
 class TransitionNetwork(StorableNamedObject):
     """
@@ -98,53 +114,62 @@ class GeneralizedTPSNetwork(TransitionNetwork):
                  allow_self_transitions=False, **kwargs):
         # **kwargs gets passed to the transition
         super(GeneralizedTPSNetwork, self).__init__()
-        try:
-            iter(initial_states)
-        except TypeError:
-            initial_states = [initial_states]
-        try:
-            iter(final_states)
-        except TypeError:
-            final_states = [final_states]
-
+        self.initial_states = listify(initial_states)
+        self.final_states = listify(final_states)
         self.special_ensembles = {None: {}}
 
-        self.initial_states = initial_states
-        self.final_states = final_states
+        all_initial = paths.join_volumes(self.initial_states, _or_bar_namer)
 
-        all_initial = paths.join_volumes(initial_states)
-        if len(initial_states) > 1:
-            all_initial.name = "|".join([v.name for v in initial_states])
-
-        if set(initial_states) == set(final_states) or len(final_states) == 1:
-            all_final = all_initial
+        if set(self.initial_states) == set(self.final_states):
+            all_final = all_initial  # so we don't create 2 objs for it
         else:
-            all_final = paths.join_volumes(final_states)
-            all_final.name = "|".join([v.name for v in final_states])
+            all_final = paths.join_volumes(self.final_states, _or_bar_namer)
 
-        self._sampling_transitions = []
+        self._sampling_transitions, self.transitions = \
+            self._build_transitions(self.initial_states, self.final_states,
+                                    allow_self_transitions, **kwargs)
+
+
+    def _build_transitions(self, initial_states, final_states,
+                           allow_self_transitions, **kwargs):
+        sampling_transitions = self._build_sampling_transitions(
+            initial_states, final_states, allow_self_transitions, **kwargs
+        )
+        transitions = self._build_analysis_transitions(
+            initial_states, final_states, allow_self_transitions, **kwargs
+        )
+        return sampling_transitions, transitions
+
+
+    def _build_sampling_transitions(self, initial_states, final_states,
+                                    allow_self_transitions, **kwargs):
+        sampling_transitions = []
         for my_initial in initial_states:
             my_final_states = [final for final in final_states
                                if my_initial != final or allow_self_transitions]
-            my_final = paths.join_volumes(my_final_states)
-            if len(my_final_states) > 1:
-                my_final.name = "|".join([v.name for v in my_final_states])
-            if  len(self._sampling_transitions) == 0:
-                self._sampling_transitions = [
+            my_final = paths.join_volumes(my_final_states, _or_bar_namer)
+
+            if  len(sampling_transitions) == 0:
+                sampling_transitions = [
                     self.TransitionType(my_initial, my_final, **kwargs)
                 ]
-            elif len(self._sampling_transitions) == 1:
-                self._sampling_transitions[0].add_transition(my_initial,
-                                                             my_final)
+            elif len(sampling_transitions) == 1:
+                sampling_transitions[0].add_transition(my_initial, my_final)
             else:
                 raise RuntimeError("More than one sampling transition for TPS?")
 
-        self.transitions = {
+        return sampling_transitions
+
+
+    def _build_analysis_transitions(self, initial_states, final_states,
+                                    allow_self_transitions, **kwargs):
+        transitions = {
             (initial, final) : self.TransitionType(initial, final, **kwargs)
             for (initial, final) in itertools.product(initial_states,
                                                       final_states)
             if initial != final
         }
+        return transitions
 
 
     def to_dict(self):

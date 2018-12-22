@@ -10,7 +10,7 @@ from openpathsampling.netcdfplus import StorableNamedObject
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
-def join_volumes(volume_list):
+def join_volumes(volume_list, name=None):
     """
     Make the union of a list of volumes. (Useful shortcut.)
 
@@ -18,6 +18,9 @@ def join_volumes(volume_list):
     ----------
     volume_list : list of :class:`openpathsampling.Volume`
         the list to be joined together
+    name : str or callable
+        string for name, or callable that creates string for name from
+        ``volume_list``
 
     Returns
     -------
@@ -29,6 +32,12 @@ def join_volumes(volume_list):
     # EmptyVolume is smart and knows its OR just takes the other
     for vol in volume_list:
         volume = volume | vol
+    if name is not None:
+        try:
+            name_str = name(volume_list)
+        except AttributeError:
+            name_str = name
+        volume = volume.named(name_str)
     return volume
 
 
