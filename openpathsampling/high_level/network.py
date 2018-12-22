@@ -141,24 +141,50 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         return sampling_transitions, transitions
 
 
+    def _sampling_transitions_from_pairs(self, state_pairs, **kwargs):
+        initial, final = state_pairs[0]
+        sampling_transition = self.TransitionType(initial, final, **kwargs)
+        for initial, final in state_pairs[1:]:
+            sampling_transition.add_transition(initial, final)
+        return [sampling_transition]
+
+
     def _build_sampling_transitions(self, initial_states, final_states,
                                     allow_self_transitions, **kwargs):
-        sampling_transitions = []
-        for my_initial in initial_states:
-            my_final_states = [final for final in final_states
-                               if my_initial != final or allow_self_transitions]
-            my_final = paths.join_volumes(my_final_states, _or_bar_namer)
-
-            if  len(sampling_transitions) == 0:
-                sampling_transitions = [
-                    self.TransitionType(my_initial, my_final, **kwargs)
-                ]
-            elif len(sampling_transitions) == 1:
-                sampling_transitions[0].add_transition(my_initial, my_final)
-            else:
-                raise RuntimeError("More than one sampling transition for TPS?")
-
+        if allow_self_transitions:
+            initial_to_joined_final = {
+                initial: paths.join_volumes(final_states, _or_bar_namer)
+                for initial in initial_states
+            }
+        else:
+            initial_to_joined_final = {
+                initial: paths.join_volumes([final for final in final_states
+                                             if initial != final],
+                                            _or_bar_namer)
+                for initial in initial_states
+            }
+        sampling_transitions = self._sampling_transitions_from_pairs(
+            state_pairs=list(initial_to_joined_final.items()),
+            **kwargs
+        )
         return sampling_transitions
+
+        # sampling_transitions = []
+        # for my_initial in initial_states:
+            # my_final_states = [final for final in final_states
+                               # if my_initial != final or allow_self_transitions]
+            # my_final = paths.join_volumes(my_final_states, _or_bar_namer)
+
+            # if  len(sampling_transitions) == 0:
+                # sampling_transitions = [
+                    # self.TransitionType(my_initial, my_final, **kwargs)
+                # ]
+            # elif len(sampling_transitions) == 1:
+                # sampling_transitions[0].add_transition(my_initial, my_final)
+            # else:
+                # raise RuntimeError("More than one sampling transition for TPS?")
+
+        # return sampling_transitions
 
 
     def _build_analysis_transitions(self, initial_states, final_states,
