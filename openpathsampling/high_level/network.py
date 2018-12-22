@@ -14,6 +14,14 @@ logger = logging.getLogger(__name__)
 def _default_state_name(state):
     return state.name if state.is_named else str(state)
 
+def _name_unnamed_states(unnamed_states, all_names):
+    name_index = 0
+    for state in unnamed_states:
+        while index_to_string(name_index) in all_names:
+            name_index += 1
+        state = state.named(index_to_string(name_index))
+        name_index += 1
+
 def _or_bar_namer(volumes):
     return "|".join([v.name for v in volumes])
 
@@ -169,23 +177,6 @@ class GeneralizedTPSNetwork(TransitionNetwork):
         )
         return sampling_transitions
 
-        # sampling_transitions = []
-        # for my_initial in initial_states:
-            # my_final_states = [final for final in final_states
-                               # if my_initial != final or allow_self_transitions]
-            # my_final = paths.join_volumes(my_final_states, _or_bar_namer)
-
-            # if  len(sampling_transitions) == 0:
-                # sampling_transitions = [
-                    # self.TransitionType(my_initial, my_final, **kwargs)
-                # ]
-            # elif len(sampling_transitions) == 1:
-                # sampling_transitions[0].add_transition(my_initial, my_final)
-            # else:
-                # raise RuntimeError("More than one sampling transition for TPS?")
-
-        # return sampling_transitions
-
 
     def _build_analysis_transitions(self, initial_states, final_states,
                                     allow_self_transitions, **kwargs):
@@ -239,6 +230,8 @@ class GeneralizedTPSNetwork(TransitionNetwork):
 
     @classmethod
     def from_state_pairs(cls, state_pairs, **kwargs):
+        # TODO: redo this to use the new _sampling_transitions_from_pairs
+        # method
         sampling = []
         transitions = {}
         initial_states = []
@@ -420,6 +413,7 @@ class TISNetwork(TransitionNetwork):
     def add_ms_outer_interface(self, ms_outer, transitions, forbidden=None):
         relevant = ms_outer.relevant_transitions(transitions)
         ensemble = ms_outer.make_ensemble(relevant, forbidden)
+        # TODO: this should use defaultdict, I think
         dct = {ensemble: relevant}
         try:
             self.special_ensembles['ms_outer'].update(dct)
@@ -534,6 +528,12 @@ class MSTISNetwork(TISNetwork):
     def all_states(self):
         return self.states
 
+    def _build_transitions(self, trans_info, ms_outers, special_ensembles):
+        sampling_ensembles = self._build_sampling_ensembles(trans_info)
+
+
+        return sampling_transitions, transitions, special_ensembles
+
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
         for stateA in self.from_state.keys():
@@ -559,6 +559,28 @@ class MSTISNetwork(TISNetwork):
                 self.transitions[(stateA, stateB)] = trans
 
 
+    def _build_single_sampling_transitions(self, initial_state,
+                                           final_states, interface_set):
+        pass
+
+
+    @staticmethod
+    def build_one_state_sampling_transition(state, interfaces, all_states):
+        other_states = list(set(all_states) - set([state]))
+        union_others = paths.join_volumes(
+            volume_list=other_states,
+            name="all states except " + str(state.name)
+        )
+        this_trans = paths.TISTransition(
+            stateA=state,
+            stateB=union_others,
+            interfaces=interfaces,
+            name="Out " + state.name,
+            orderparameter=interfaces.cv
+        )
+        return this_trans
+
+
     def build_fromstate_transitions(self, trans_info):
         """
         Builds the sampling transitions (the self.from_state dictionary).
@@ -577,39 +599,46 @@ class MSTISNetwork(TISNetwork):
         """
         states, interfaces = zip(*trans_info)
         orderparams = [iface_set.cv for iface_set in interfaces]
+
         # NAMING STATES (give default names)
-        all_states = paths.volume.join_volumes(states).named("all states")
+        all_states = paths.join_volumes(states).named("all states")
         all_names = list(set([s.name for s in states]))
         unnamed_states = [s for s in states if not s.is_named]
-        name_index = 0
-        for state in unnamed_states:
-            while index_to_string(name_index) in all_names:
-                name_index += 1
-            state.named(index_to_string(name_index))
-            name_index += 1
+        _name_unnamed_states(unnamed_states, all_names)
 
         # BUILDING ENSEMBLES
         self.states = states
         for (state, ifaces) in trans_info:
-            op = ifaces.cv
-            state_index = states.index(state)
-            other_states = states[:state_index]+states[state_index+1:]
-            union_others = paths.volume.join_volumes(other_states)
-            union_others.named("all states except " + str(state.name))
-            out_others = paths.AllOutXEnsemble(union_others)
-
-            this_trans = paths.TISTransition(
-                stateA=state,
-                stateB=union_others,
+            this_trans = self.build_one_state_sampling_transition(
+                state=state,
                 interfaces=ifaces,
-                name="Out " + state.name,
-                orderparameter=op
+                all_states=states
             )
+            # op = ifaces.cv
+            # state_index = states.index(state)
+            # other_states = states[:state_index]+states[state_index+1:]
+            # other_states = list(set(states) - set([state]))
+            # union_others = paths.join_volumes(
+                # volume_list=other_states,
+                # name="all states except " + str(state.name)
+            # )
+            # union_others = paths.volume.join_volumes(other_states)
+            # union_others.named("all states except " + str(state.name))
+            # out_others = paths.AllOutXEnsemble(union_others)
+
+            # this_trans = paths.TISTransition(
+                # stateA=state,
+                # stateB=union_others,
+                # interfaces=ifaces,
+                # name="Out " + state.name,
+                # orderparameter=op
+            # )
 
             self.from_state[state] = this_trans
 
             this_minus = self.from_state[state].minus_ensemble #& out_others
             this_inner = self.from_state[state].ensembles[0]
+            # TODO: this should use defaultdict, I think
             try:
                 self.special_ensembles['minus'][this_minus] = [this_trans]
             except KeyError:

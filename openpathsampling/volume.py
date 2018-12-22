@@ -35,7 +35,7 @@ def join_volumes(volume_list, name=None):
     if name is not None:
         try:
             name_str = name(volume_list)
-        except AttributeError:
+        except TypeError:
             name_str = name
         volume = volume.named(name_str)
     return volume
