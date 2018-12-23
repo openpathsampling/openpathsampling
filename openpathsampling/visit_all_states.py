@@ -2,11 +2,11 @@ import openpathsampling as paths
 
 def default_state_progress_report(n_steps, found_states, all_states,
                                   timestep=None):
-    report_str = "Ran {n_steps} steps "
+    report_str = "Ran {n_steps} steps"
     if timestep is not None:
-        report_str += "[{traj_time}]".format(str(n_steps * timestep))
+        report_str += " [{}]".format(str(n_steps * timestep))
     report_str += (". Found states [{found_states}]. "
-                   "Looking for [{missing_states}]")
+                   "Looking for [{missing_states}].")
     found_states_str = ",".join([s.name for s in found_states])
     # list comprehension instead of sets (to preseve order)
     missing_states = [s for s in all_states if s not in found_states]
@@ -20,8 +20,8 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
     def __init__(self, states, progress='default', timestep=None):
         self.states = states
         self.all_states = paths.join_volumes(states)
-        all_states_ens = paths.join_ensemble([paths.AllOutXEnsemble(s)
-                                              for s in states])
+        all_states_ens = paths.join_ensembles([paths.AllOutXEnsemble(s)
+                                               for s in states])
         ensemble = paths.SequentialEnsemble([
             all_states_ens,
             paths.AllInXEnsemble(self.all_states) & paths.LengthEnsemble(1)
@@ -75,3 +75,9 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
         return return_value
 
     strict_can_append = can_append
+
+    def can_prepend(self, trajectory, trusted):
+        raise NotImplementedError("prepend methods not implemented for ",
+                                  "VisitAllStateEnsemble")
+
+    strict_can_prepend = can_prepend
