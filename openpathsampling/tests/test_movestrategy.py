@@ -12,6 +12,7 @@ from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, MoverWithSignature,
     setify_ensemble_signature, reorder_ensemble_signature
 )
+import pytest
 
 import openpathsampling as paths
 from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
@@ -30,6 +31,10 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 class MockMoveStrategy(MoveStrategy):
     def make_movers(self, scheme):
         return None
+
+class MockSingleEnsembleMoveStrategy(MockMoveStrategy,
+                                     SingleEnsembleMoveStrategy):
+    pass
 
 
 def find_mover(scheme, group, sig):
@@ -119,6 +124,47 @@ class TestMoveStrategy(MoveStrategyTestSetup):
         assert_equal(len(ensembles), 1)
         assert_equal(len(ensembles[0]), 1)
         assert_equal(ensembles[0][0], extra_ens)
+
+
+class TestSingleEnsembleMoveStrategy(MoveStrategyTestSetup):
+    def setup(self):
+        super(TestSingleEnsembleMoveStrategy, self).setup()
+        self.strategy = MockSingleEnsembleMoveStrategy(
+            ensembles=None,
+            group='test_group',
+            replace=True
+        )
+        self.scheme = paths.DefaultScheme(self.network, engine=None)
+
+    def test_get_per_mover_ensembles(self):
+        per_mover_ensembles = \
+                self.strategy.get_per_mover_ensembles(self.scheme)
+        ensembles = self.scheme.network.sampling_ensembles
+        assert len(per_mover_ensembles) == len(ensembles)
+        for listed_ensemble in per_mover_ensembles:
+            assert len(listed_ensemble) == 1
+            assert listed_ensemble[0] in ensembles
+
+    def test_get_parameters(self):
+        list_params_as_list = [0, 1, 2, 3, 4, 5]
+        list_params_as_single = 100
+        nonlist_params = "alpha"
+        params = self.strategy.get_parameters(
+            scheme=self.scheme,
+            list_parameters=[list_params_as_list, list_params_as_single],
+            nonlist_parameters=[nonlist_params]
+        )
+        ensembles = self.scheme.network.sampling_ensembles
+        expected = [(ens, num, list_params_as_single, nonlist_params)
+                    for (ens, num) in zip(ensembles, list_params_as_list)]
+        assert params == expected
+
+    def test_get_parameters_error(self):
+        with pytest.raises(RuntimeError):
+            params = self.strategy.get_parameters(
+                scheme=self.scheme,
+                list_parameters=[[0, 1, 2, 3]]
+            )
 
 
 class TestForwardShootingStrategy(MoveStrategyTestSetup):

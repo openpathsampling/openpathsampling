@@ -2559,46 +2559,8 @@ class PathSimulatorMover(SubPathMover):
         )
 
 
-def NeighborEnsembleReplicaExchange(ensemble_list):
-    movers = [
-        ReplicaExchangeMover(
-            ensemble1=ensemble_list[i],
-            ensemble2=ensemble_list[i + 1]
-        )
-        for i in range(len(ensemble_list) - 1)
-    ]
-    return movers
-
-
 def PathReversalSet(ensembles):
     return list(map(PathReversalMover, ensembles))
-
-
-class PathMoverFactory(object):
-    @staticmethod
-    def OneWayShootingSet(selector_set, interface_set, engine=None):
-        if type(selector_set) is not list:
-            selector_set = [selector_set] * len(interface_set)
-
-        mover_set = []
-        for (selector, iface) in zip(selector_set, interface_set):
-            mover = OneWayShootingMover(
-                selector=selector,
-                ensemble=iface,
-                engine=engine
-            )
-            mover.named("OneWayShootingMover " + str(iface.name))
-            mover_set.append(mover)
-
-        return mover_set
-
-    @staticmethod
-    def TwoWayShootingSet():
-        pass
-
-    @staticmethod
-    def NearestNeighborRepExSet():
-        pass
 
 
 class Details(StorableObject):
