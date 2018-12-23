@@ -1,26 +1,47 @@
 language: python
 filter_secrets: false   # https://github.com/travis-ci/travis-ci/issues/8934
 
-install:
+
+before_install:
   - deactivate
   # Do not buffer python outputs; flush them directly to the terminal
   - export PYTHONUNBUFFERED=true
   # Sets up a miniconda environment
   - source devtools/ci/miniconda_install.sh
-  - conda install --yes conda-build
-  - conda build --quiet devtools/conda-recipe
-  - conda create --quiet --yes --name test --use-local openpathsampling-dev
+
+install:
+  # this is the conda-build based installation
+  #- conda install --yes conda-build
+  #- conda build devtools/conda-recipe
+  #- conda create --quiet --yes --name test --use-local openpathsampling-dev
+  #- source activate test
+  # install by without conda-build (requirements, then setup.py install)
+  - conda create -q -y --name test conda pyyaml python=$CONDA_PY
   - source activate test
+  - export PACKAGES=`python devtools/install_recipe_requirements.py --dry devtools/conda-recipe/meta.yaml`
+  - echo $PACKAGES
+  - conda install -y -q -c conda-forge -c omnia $PACKAGES
+  
+  # report info about our conda env and finish installation
   - conda info --envs
   - conda install --quiet --yes msmbuilder
-  - conda install --quiet --yes nose python-coveralls ipynbtest
+  - conda install --quiet --yes nose python-coveralls ipynbtest 
+  - conda install --quiet --yes pytest 
   - conda update --all --yes --use-local --quiet
+  # pin pytest-cov b/c: https://github.com/z4r/python-coveralls/issues/66
+  # usually this should be before the conda update
+  - conda install --quiet --yes pytest-cov=2.5.1
+  - conda update --quiet --yes matplotlib  # no idea why pytest-cov downgraded
+  - python setup.py install
 
-script:
+before_script:
   - python --version
+  - python -c "import openpathsampling"
   - source devtools/ci/git_hash.sh
   - conda list -n test
-  - source devtools/ci/nosetests.sh
+
+script:
+  - source devtools/ci/pytests.sh
   - source devtools/ci/ipythontests.sh
 
   # Upload new docs

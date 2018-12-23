@@ -2143,6 +2143,12 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             n_l=3
         )
 
+    def test_dict_round_trip(self):
+        dct = self.minus_nl2.to_dict()
+        rebuilt = MinusInterfaceEnsemble.from_dict(dct)
+        dct2 = rebuilt.to_dict()
+        assert_equal(dct, dct2)
+
     @raises(ValueError)
     def test_minus_nl1_fail(self):
         minus_nl1 = MinusInterfaceEnsemble(state_vol=vol1,

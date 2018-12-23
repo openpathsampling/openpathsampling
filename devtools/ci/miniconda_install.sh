@@ -27,4 +27,5 @@ export PATH=$HOME/miniconda${pyV}/bin:$PATH
 
 # add omnia and update
 conda config --add channels http://conda.anaconda.org/omnia
+conda config --add channels http://conda.anaconda.org/conda-forge
 conda update --yes conda

@@ -32,3 +32,10 @@ class DelayedInterrupt(object):
             signal.signal(sig, self.old_handlers[sig])
             if self.signal_received[sig] and self.old_handlers[sig]:
                 self.old_handlers[sig](*self.signal_received[sig])
+
+class EmptyContext(object):
+    def __enter__(self):
+        pass
+
+    def __exit__(self, type, value, traceback):
+        pass
