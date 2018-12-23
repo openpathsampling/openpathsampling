@@ -507,6 +507,8 @@ class MSTISNetwork(TISNetwork):
         """
         super(MSTISNetwork, self).__init__(trans_info, ms_outers)
         # build sampling transitions
+        states, interfaces = zip(*trans_info)
+        self.states = states
         if not hasattr(self, "from_state"):
             self.special_ensembles = {}
             self.from_state = {}
@@ -521,8 +523,7 @@ class MSTISNetwork(TISNetwork):
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
 
-        self.transitions = {}
-        self.build_analysis_transitions()
+        self.transitions = self.build_analysis_transitions()
 
     @property
     def all_states(self):
@@ -534,34 +535,43 @@ class MSTISNetwork(TISNetwork):
 
         return sampling_transitions, transitions, special_ensembles
 
+    @staticmethod
+    def build_analysis_transition_for_sampling(sampling_transition,
+                                               all_states):
+        local_transitions = {}
+        state_A = sampling_transition.stateA
+        other_states = set(all_states) - set([state_A])
+        str_A = _default_state_name(state_A)
+        for state_B in other_states:
+            str_B = _default_state_name(state_B)
+            trans = paths.TISTransition(
+                stateA=state_A,
+                stateB=state_B,
+                interfaces=sampling_transition.interfaces,
+                name=str_A + "->" + str_B,
+                orderparameter=sampling_transition.orderparameter
+            )
+            # override created stuff
+            trans.ensembles = sampling_transition.ensembles
+            for i in range(len(trans.ensembles)):
+                trans.ensembles[i].named(trans.name + "[" + str(i) + "]")
+
+            trans.minus_ensemble = sampling_transition.minus_ensemble
+            local_transitions[(state_A, state_B)] = trans
+        return local_transitions
+
+
     def build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
-        for stateA in self.from_state.keys():
-            state_index = self.states.index(stateA)
-            fromA = self.from_state[stateA]
-            other_states = self.states[:state_index]+self.states[state_index+1:]
-            for stateB in other_states:
-                strA = stateA.name if stateA.is_named else str(stateA)
-                strB = stateB.name if stateB.is_named else str(stateB)
-                trans = paths.TISTransition(
-                    stateA=stateA,
-                    stateB=stateB,
-                    interfaces=fromA.interfaces,
-                    name=strA + "->" + strB,
-                    orderparameter=fromA.orderparameter
-                )
-                # override created stuff
-                trans.ensembles = fromA.ensembles
-                for i in range(len(trans.ensembles)):
-                    trans.ensembles[i].named(trans.name + "[" + str(i) + "]")
+        transitions = {}
+        for from_A in self.from_state.values():
+            local_transitions = self._build_analysis_transition_for_sampling(
+                sampling_transition=from_A,
+                all_states=self.all_states
+            )
+            transitions.update(local_transitions)
 
-                trans.minus_ensemble = fromA.minus_ensemble
-                self.transitions[(stateA, stateB)] = trans
-
-
-    def _build_single_sampling_transitions(self, initial_state,
-                                           final_states, interface_set):
-        pass
+        return transitions
 
 
     @staticmethod
