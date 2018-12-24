@@ -69,8 +69,11 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
             trajectory=trajectory,
             trusted=trusted
         )
+
         if self.progress:
-            self._update_for_progress(trajectory, frame_number=-1)
+            frames = [-1] if trusted else list(range(len(trajectory)))
+            for frame in frames:
+                self._update_for_progress(trajectory, frame_number=frame)
 
         return return_value
 

@@ -1,6 +1,10 @@
-import pytest
-
 import openpathsampling as paths
+
+import pytest
+from openpathsampling.tests.test_helpers import \
+        make_1d_traj, CalvinistDynamics
+
+
 from openpathsampling.visit_all_states import *
 
 def test_default_state_progress_report():
@@ -24,14 +28,18 @@ def test_default_state_progress_report():
 
 class TestVisitAllStatesEnsemble(object):
     def setup(self):
-        cv = paths.FunctionCV("x", lambda x: x.xyz[0][0])
-        vol_A = paths.CVDefinedVolume(cv, 0.0, 1.0).named("A")
-        vol_B = paths.CVDefinedVolume(cv, 2.0, 3.0).named("B")
-        vol_C = paths.CVDefinedVolume(cv, 4.0, 5.0).named("C")
-        vol_D = paths.CVDefinedVolume(cv, 6.0, 7.0).named("D")
-        states  = [vol_A, vol_B, vol_C, vol_D]
-        self.ensemble = VisitAllStatesEnsemble(states)
-        # TODO: add trajectory
+        self.cv = paths.FunctionCV("x", lambda x: x.xyz[0][0])
+        vol_A = paths.CVDefinedVolume(self.cv, 0.0, 1.0).named("A")
+        vol_B = paths.CVDefinedVolume(self.cv, 2.0, 3.0).named("B")
+        vol_C = paths.CVDefinedVolume(self.cv, 4.0, 5.0).named("C")
+        vol_D = paths.CVDefinedVolume(self.cv, 6.0, 7.0).named("D")
+        self.states  = [vol_A, vol_B, vol_C, vol_D]
+        self.ensemble = VisitAllStatesEnsemble(self.states)
+        sequence = [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
+        self.state_seq = [[], [vol_A], [], [vol_B], [], [vol_C], [],
+                          [vol_D], []]
+        self.traj = make_1d_traj(sequence)
+        self.engine = CalvinistDynamics(self.traj)
 
     def test_initialization(self):
         assert self.ensemble.progress == default_state_progress_report
@@ -44,13 +52,25 @@ class TestVisitAllStatesEnsemble(object):
         assert self.ensemble._progress_indicator(None) is None
 
         def some_callable(n_steps, found_states, all_states, timestep):
-            return 0.0
+            return "some_callable"
 
         assert self.ensemble._progress_indicator(some_callable) == \
                 some_callable
 
     def test_state_for_frame(self):
-        pass
+        for snap, expected in zip(self.traj, self.state_seq):
+            assert self.ensemble._state_for_frame(snap) == set(expected)
+
+    def test_state_for_frame_error(self):
+        vol_A = self.states[0]
+        vol_A_prime = paths.CVDefinedVolume(self.cv, 0.25, 0.75).named("A'")
+        snap = self.traj[1]
+        assert vol_A(snap)
+        assert vol_A_prime(snap)
+
+        ensemble = VisitAllStatesEnsemble(states=[vol_A, vol_A_prime])
+        with pytest.raises(RuntimeError):
+            ensemble._state_for_frame(snap)
 
     def test_can_append(self):
         pass
