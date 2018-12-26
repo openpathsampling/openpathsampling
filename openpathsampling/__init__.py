@@ -30,20 +30,6 @@ except ImportError:  # pragma: no cover
     isrelease = str(ops_setup.preferences['released'])
 
 
-from .high_level.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
-    OneWayShootingMoveScheme
-)
-
-from .high_level.transition import (
-    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
-)
-
-from .high_level.network import (
-    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
-    FixedLengthTPSNetwork
-)
-
 from .analysis.path_histogram import PathDensityHistogram
 
 from .analysis.replica_network import (
@@ -86,16 +72,6 @@ from .ensemble import (
     OptionalEnsemble, join_ensembles
 )
 
-from .high_level.interface_set import (
-    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
-)
-
-from .high_level.ms_outer_interface import MSOuterTISInterface
-
-from .high_level.part_in_b_tps import (
-    PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
-)
-
 from .step_visualizer_2D import StepVisualizer2D
 
 from .movechange import (
@@ -116,12 +92,12 @@ from .pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
     BackwardExtendMover, ForwardExtendMover, MinusMover,
-    SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
+    SingleReplicaMinusMover, PathReversalMover,
     ReplicaExchangeMover, EnsembleHopMover,
     SequentialMover, ConditionalMover,
-    PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
+    PathSimulatorMover, PathReversalSet,
     SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
-    FirstSubtrajectorySelectMover, MultipleSetMinusMover,
+    FirstSubtrajectorySelectMover,
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
     LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover,
@@ -137,8 +113,10 @@ from .pathsimulators import (
 
 from .sample import Sample, SampleSet
 
-from .shooting import ShootingPointSelector, UniformSelector, \
-    GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
+from .shooting import (
+    ShootingPointSelector, UniformSelector, GaussianBiasSelector,
+    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector
+)
 
 from .snapshot_modifier import (
     NoModification, RandomVelocities, VelocityDirectionModifier,
@@ -155,6 +133,32 @@ from .volume import (
 )
 
 from .high_level import move_strategy as strategies
+
+from .high_level.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
+    OneWayShootingMoveScheme
+)
+
+from .high_level.transition import (
+    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
+)
+
+from .high_level.network import (
+    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
+    FixedLengthTPSNetwork
+)
+
+from .high_level.interface_set import (
+    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
+)
+
+from .high_level.ms_outer_interface import MSOuterTISInterface
+
+from .high_level.part_in_b_tps import (
+    PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
+)
+
+
 
 import openpathsampling.numerics as numerics
 

@@ -25,6 +25,11 @@ from openpathsampling.engines import DynamicsEngine
 def make_1d_traj(coordinates, velocities=None, engine=None):
     if velocities is None:
         velocities = [1.0]*len(coordinates)
+    try:
+        _ = len(velocities)
+    except TypeError:
+        velocities = [velocities] * len(coordinates)
+
     if engine is None:
         engine = toys.Engine(
             {},

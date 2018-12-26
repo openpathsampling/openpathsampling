@@ -139,6 +139,13 @@ class HarmonicOscillator(PES):
         self.omega = np.array(omega)
         self.x0 = np.array(x0)
 
+    def to_dict(self):
+        dct = super(HarmonicOscillator, self).to_dict()
+        dct['A'] = dct['A'].tolist()
+        dct['omega'] = dct['omega'].tolist()
+        dct['x0'] = dct['x0'].tolist()
+        return dct
+
     def V(self, sys):
         """Potential energy
 

@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from builtins import zip
 from builtins import object
-import os
 import numpy as np
 
 from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
@@ -15,7 +14,6 @@ import openpathsampling as paths
 
 import openpathsampling.engines.toy as peng
 from openpathsampling.high_level.network import *
-from openpathsampling import VolumeFactory as vf
 
 import logging
 
@@ -24,13 +22,14 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+
 class TestMultipleStateTIS(object):
     # generic class to set up states and ifaces
     def setup(self):
         # need to clear this before each run, otherwise it saves the
         # previous setup
         paths.InterfaceSet._reset()
-        xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV(name="xA", f=lambda s: s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(xval, -0.1, 0.1)
         self.stateC = paths.CVDefinedVolume(xval, 0.5, float("inf"))
@@ -41,8 +40,6 @@ class TestMultipleStateTIS(object):
                                            [0.1, 0.15, 0.2])
         ifacesC = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3],
                                            float("inf"))
-
-
 
         self.xval = xval
         self.ifacesA = ifacesA
@@ -92,6 +89,7 @@ class TestMultipleStateTIS(object):
             velocities=[1.0]*5
         )
 
+
 class TestMSTISNetwork(TestMultipleStateTIS):
     def setup(self):
         super(TestMSTISNetwork, self).setup()
@@ -123,9 +121,9 @@ class TestMSTISNetwork(TestMultipleStateTIS):
                      (self.stateC, self.ifacesC[0]): 5.0}
         self.mstis.set_fluxes(flux_dict)
         for trans in self.mstis.transitions:
-            myflux = {self.stateA : 2.0,
-                      self.stateB : 4.0,
-                      self.stateC : 5.0}[trans[0]]
+            myflux = {self.stateA: 2.0,
+                      self.stateB: 4.0,
+                      self.stateC: 5.0}[trans[0]]
             assert_equal(self.mstis.transitions[trans]._flux, myflux)
 
     def test_all_states(self):
@@ -158,6 +156,36 @@ class TestMSTISNetwork(TestMultipleStateTIS):
         for traj_label in ['AB', 'BA', 'AC', 'CA', 'BC', 'CB']:
             assert_equal(self.mstis.ms_outers[0](self.traj[traj_label]), True)
 
+    def test_minus_ensembles(self):
+        good_traj_seq = [-0.51, -0.49, -0.40, -0.52, -0.48, -0.51]  # AXXAXA
+        bad_traj_seq = [-0.51, -0.49, -0.05, -0.52, -0.48, -0.51]  # AXBAXA
+        minus_dict = self.mstis.special_ensembles['minus']
+        from_A = self.mstis.from_state[self.stateA]
+        trans_to_minus = {trans: minus
+                          for (minus, transitions) in minus_dict.items()
+                          for trans in transitions}
+        minus_A = trans_to_minus[from_A]
+
+        good_minus_traj = make_1d_traj(good_traj_seq)
+        bad_minus_traj = make_1d_traj(bad_traj_seq)
+        # test that the call works
+        assert_equal(minus_A(good_minus_traj), True)
+        assert_equal(minus_A(bad_minus_traj), False)
+        # test that the can_append works for the good traj
+        good_building_traj = paths.Trajectory([])
+        for (i, snap) in enumerate(good_minus_traj):
+            good_building_traj.append(snap)
+            if not minus_A.can_append(good_building_traj, trusted=True):
+                break
+        assert_equal(len(good_building_traj), len(good_minus_traj))
+        # test that the can_append works for the bad traj
+        bad_building_traj = paths.Trajectory([])
+        for (i, snap) in enumerate(bad_minus_traj):
+            bad_building_traj.append(snap)
+            if not minus_A.can_append(bad_building_traj, trusted=True):
+                break
+        assert_equal(len(bad_building_traj), 3)
+
     def test_sampling_ensembles(self):
         assert_equal(len(self.mstis.from_state[self.stateA].ensembles), 2)
         assert_equal(len(self.mstis.from_state[self.stateB].ensembles), 2)
@@ -181,7 +209,6 @@ class TestMSTISNetwork(TestMultipleStateTIS):
         for ens in self.mstis.sampling_ensembles:
             assert_equal(ens.cv_max, cv_max)
 
-
     def test_autonaming(self):
         assert_equal(self.stateA.name, "A")
         assert_equal(self.stateB.name, "B")
@@ -196,7 +223,7 @@ class TestMSTISNetwork(TestMultipleStateTIS):
         self.stateB.name = "A"
         self.stateC._name = ""
         paths.InterfaceSet._reset()
-        xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        xval = paths.FunctionCV(name="xA", f=lambda s: s.xyz[0][0])
         ifacesA = paths.VolumeInterfaceSet(xval, float("-inf"),
                                            [-0.5, -0.4, -0.3])
         ifacesB = paths.VolumeInterfaceSet(xval, [-0.2, -0.15, -0.1],
@@ -211,6 +238,7 @@ class TestMSTISNetwork(TestMultipleStateTIS):
         assert_equal(self.stateA.name, "B")
         assert_equal(self.stateB.name, "A")
         assert_equal(self.stateC.name, "C")
+
 
 class TestMISTISNetwork(TestMultipleStateTIS):
     def setup(self):
@@ -264,14 +292,14 @@ class TestMISTISNetwork(TestMultipleStateTIS):
             assert_equal(ms_outer_ens(self.traj[traj_label]), False)
 
     def test_set_fluxes(self):
-        flux_dict = {(self.stateA, self.ifacesA[0]): 2.0, # same flux 2x
+        flux_dict = {(self.stateA, self.ifacesA[0]): 2.0,  # same flux 2x
                      (self.stateB, self.ifacesB[0]): 4.0}
         self.mistis.set_fluxes(flux_dict)
         for (A, B) in self.mistis.transitions:
             if A == self.stateA:
-                assert_equal(self.mistis.transitions[(A,B)]._flux, 2.0)
+                assert_equal(self.mistis.transitions[(A, B)]._flux, 2.0)
             elif A == self.stateB:
-                assert_equal(self.mistis.transitions[(A,B)]._flux, 4.0)
+                assert_equal(self.mistis.transitions[(A, B)]._flux, 4.0)
 
     def test_trajectories_nonstrict(self):
         fromA = [trans for trans in self.mistis.sampling_transitions
@@ -308,14 +336,14 @@ class TestMISTISNetwork(TestMultipleStateTIS):
             (self.stateA, self.ifacesA, self.stateC)
         ], strict_sampling=True)
         transAB = [trans for trans in strict.sampling_transitions
-                 if (trans.stateA == self.stateA and 
-                     trans.stateB == self.stateB)][0]
+                   if (trans.stateA == self.stateA and 
+                       trans.stateB == self.stateB)][0]
         transAC = [trans for trans in strict.sampling_transitions
-                 if (trans.stateA == self.stateA and 
-                     trans.stateB == self.stateC)][0]
+                   if (trans.stateA == self.stateA and 
+                       trans.stateB == self.stateC)][0]
         transBA = [trans for trans in strict.sampling_transitions
-                 if (trans.stateA == self.stateB and 
-                     trans.stateB == self.stateA)][0]
+                   if (trans.stateA == self.stateB and 
+                       trans.stateB == self.stateA)][0]
         ensAB = transAB.ensembles[0]
         ensAC = transAC.ensembles[0]
         ensBA = transBA.ensembles[0]
@@ -418,8 +446,7 @@ class TestTPSNetwork(object):
         return self.NetworkType.from_state_pairs(
             [(self.stateA, self.stateB), (self.stateA, self.stateC),
              (self.stateB, self.stateA), (self.stateB, self.stateC),
-             (self.stateC, self.stateA), (self.stateC, self.stateB)
-            ],
+             (self.stateC, self.stateA), (self.stateC, self.stateB)],
             **self.std_kwargs
         )
 
@@ -437,7 +464,6 @@ class TestTPSNetwork(object):
         assert_equal(set(network2b.all_states), set(network2c.all_states))
         assert_equal(set(network2a.all_states),
                      set([self.stateA, self.stateB]))
-
 
     def test_initialization_3state(self):
         network3a = self.network3a
@@ -527,6 +553,7 @@ class TestTPSNetwork(object):
         ensemble = network.sampling_ensembles[0]
         assert_equal(ensemble(self.traj['AB0']), False)
         assert_equal(ensemble(self.traj['ABA']), False)
+
 
 class TestFixedLengthTPSNetwork(TestTPSNetwork):
     NetworkType = FixedLengthTPSNetwork

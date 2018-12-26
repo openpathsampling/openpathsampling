@@ -1,5 +1,5 @@
 import numpy as np
-from .shared import StaticContainerStore, StaticContainer
+from .shared import StaticContainerStore, StaticContainer, unmask_quantity
 import mdtraj
 from openpathsampling.netcdfplus import WeakLRUCache
 import openpathsampling as paths
@@ -45,7 +45,7 @@ def coordinates(snapshot):
     """
 
     if snapshot.statics is not None:
-        return snapshot.statics.coordinates
+        return unmask_quantity(snapshot.statics.coordinates)
 
     return None
 
@@ -70,7 +70,7 @@ def box_vectors(snapshot):
         simtk.unit.Unit.
     """
     if snapshot.statics is not None:
-        return snapshot.statics.box_vectors
+        return unmask_quantity(snapshot.statics.box_vectors)
 
     return None
 
