@@ -170,6 +170,8 @@ class GeneralStorage(object):
                         str(list(missing_by_table.keys())))
             by_table.update(missing_by_table)
 
+        # TODO: add simulation objects to the cache
+
         # this is the actual serialization
         logger.debug("Filling %d tables: %s", len(by_table),
                      str(list(by_table.keys())))
@@ -257,7 +259,6 @@ class GeneralStorage(object):
                 new_uuids[uuid] = obj
         return new_uuids
 
-
     def sync(self):
         pass
 
@@ -272,6 +273,7 @@ class GeneralStorage(object):
         return {}
 
     def _update_pseudo_tables(self, simulation_objects):
+        # TODO: replace the pseudo_tables code here with a class
         for uuid, obj in simulation_objects.items():
             for (key, cls) in self.simulation_classes.items():
                 if isinstance(obj, cls):
@@ -279,6 +281,26 @@ class GeneralStorage(object):
                     if obj.is_named:
                         self._pseudo_tables[key][obj.name] = obj
                     continue
+
+    def summary(self, detailed=False):
+        """Return a string summary of this storage file.
+
+        Parameters
+        ----------
+        detailed : bool
+            whether to return the detailed description, where the simulation
+            objects are divided into their various pseudotables
+        """
+        out_str = "File: " + self.backend.filename + "\n"
+        # TODO: add size to the first line
+        out_str += "Includes tables:\n"
+        storage_tables = dict(self._storage_tables)  # make a copy
+        if detailed:
+            pass  # TODO: pop off simulation_objects, use pseudotables
+
+        for (name, table) in storage_tables.items():
+            out_str += "* " + name + ": " + str(len(table)) + " items\n"
+        return out_str
 
     def __getattr__(self, attr):
         # override getattr to create iterators over the tables (stores)
@@ -370,3 +392,53 @@ class StorageTable(collections.Sequence):
     # TODO: subclass for MCSteps with additional method .ordered, returning
     # things in the order of the mccycle number -- also, manage special
     # caching
+
+class PseudoTable(collections.MutableSequence):
+    # TODO: use this in the main code
+    """List of objects that can be retrieved by index or name.
+    """
+    def __init__(self, sequence=None):
+        self._sequence = []
+        self._uuid_to_obj = {}
+        self._name_to_uuid = {}
+        sequence = none_to_default(sequence, [])
+        for item in sequence:
+            self.extend(sequence)
+
+    @staticmethod
+    def _get_uuid_and_name(obj):
+        uuid = get_uuid(item)
+        name = None if not obj.is_named else obj.name
+        return uuid, name
+
+    def get_by_uuid(self, uuid):
+        return self._uuid_to_obj[uuid]
+
+    def __getitem__(self, item):
+        try:
+            ret_val = self._sequence[item]
+        except TypeError:
+            uuid = self._name_to_uuid[item]
+            ret_val = self.get_by_uuid(uuid)
+        return ret_val
+
+    def __setitem__(self, key, value):
+        del self[key]
+        self.insert(key, value)
+
+    def __delitem__(self, key):
+        item = self[key]
+        uuid, name = self._get_uuid_and_name(item)
+        self.sequence.pop(item)
+        del self._uuid_to_obj[uuid]
+        del self._name_to_uuid[name]
+
+    def __len__(self):
+        return len(self.sequence)
+
+    def insert(self, where, item):
+        uuid, name = self._get_uuid_and_name(item)
+        self._sequence.insert(where, item)
+        self._uuid_to_obj[uuid] = obj
+        if name is not None:
+            self._name_to_uuid[name] = uuid

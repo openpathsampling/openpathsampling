@@ -5,6 +5,7 @@ omit =
     */openpathsampling/tests/*
     */mdtraj/*
     */setup.py
+    */openpathsampling/experimental/storage/*
 exclude_lines = 
     pragma: no cover
     def __repr__
