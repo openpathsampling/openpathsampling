@@ -8,6 +8,7 @@ import collections
 from tools import flatten_all, nested_update, group_by_function
 from tools import is_iterable, is_mappable, is_numpy_iterable
 import tools
+from class_lookup import is_storage_iterable, is_storage_mappable
 
 # UUID recognition and encoding #####################################
 # Things in here might be modified for performance optimization. In
@@ -123,10 +124,11 @@ def default_find_uuids(obj, cache_list):
         new_objects.extend(list(obj.to_dict().values()))
 
     # mappables and iterables
-    if is_mappable(obj):
+    if is_storage_mappable(obj):
         new_objects.extend([o for o in obj.keys() if has_uuid(o)])
         new_objects.extend(list(obj.values()))
-    elif is_iterable(obj) and not is_numpy_iterable(obj):
+    # elif is_iterable(obj) and not is_numpy_iterable(obj):
+    elif is_storage_iterable(obj):
         new_objects.extend(list(obj))
     return uuids, new_objects
 
