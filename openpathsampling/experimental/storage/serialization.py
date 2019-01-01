@@ -70,6 +70,8 @@ class GenericLazyLoader(object):
                     + " UUID " + str(self.__uuid__) + ">")
 
 class ProxyObjectFactory(object):
+    # TODO: I think this should replace some of the similar stuff in the
+    # Serialization object below
     def __init__(self, storage, class_info):
         self.storage =  storage
         self.class_info = class_info

@@ -77,6 +77,10 @@ def test_get_uuid(name, obj):
 def test_get_uuid_none():
     assert get_uuid(None) is None
 
+def test_get_uuid_error():
+    with pytest.raises(AttributeError):
+        get_uuid(10)
+
 @pytest.mark.parametrize('obj,included_objs', [
     (all_objects['int'], []),
     (all_objects['str'], []),

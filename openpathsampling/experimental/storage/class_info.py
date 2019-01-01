@@ -1,6 +1,6 @@
 import logging
 
-from . import tools
+import tools
 from .serialization import DefaultSerializer, DefaultDeserializer
 from .serialization_helpers import SchemaFindUUIDs, has_uuid
 from .serialization_helpers import encoded_uuid_re, get_reload_order
@@ -190,123 +190,123 @@ class SerializationSchema(object):
         by_table.update(missing_by_table)
         return by_table
 
-    def serialize(self, obj, storage=None):
-        """
-        Serialize all objects in ``obj`` to table-grouped JSON-ready dict.
+    # def serialize(self, obj, storage=None):
+        # """
+        # Serialize all objects in ``obj`` to table-grouped JSON-ready dict.
 
-        Notes
-        -----
+        # Notes
+        # -----
 
-        This can also take multiple objects, but they must be collected in a
-        hashable container (e.g., tuple, not a list).
+        # This can also take multiple objects, but they must be collected in a
+        # hashable container (e.g., tuple, not a list).
 
-        Parameters
-        ----------
-        obj : object
-            the object to be serialized
-        storage : :class:`.Storage`
-            storage object with connection to backend and cache (if
-            relevant)
+        # Parameters
+        # ----------
+        # obj : object
+            # the object to be serialized
+        # storage : :class:`.Storage`
+            # storage object with connection to backend and cache (if
+            # relevant)
 
-        Returns
-        -------
-        dict :
-            {table: {uuid: {attr: value}}}
-        """
-        # TODO: correct the return type (no dict of uuid to description,
-        # just a list of dicts for each object, including uuid as attr
-        logger.debug("Starting serialization")
-        results = {}
-        cache = {} if not storage else storage.cache
-        if storage and storage.uuids_in_storage([get_uuid(obj)]):
-            return  # return what? is None right?
+        # Returns
+        # -------
+        # dict :
+            # {table: {uuid: {attr: value}}}
+        # """
+        # # TODO: correct the return type (no dict of uuid to description,
+        # # just a list of dicts for each object, including uuid as attr
+        # logger.debug("Starting serialization")
+        # results = {}
+        # cache = {} if not storage else storage.cache
+        # if storage and storage.uuids_in_storage([get_uuid(obj)]):
+            # return  # return what? is None right?
 
-        logger.debug("Listing all included objects to serialize")
-        uuids = get_all_uuids(obj, cache)  # TODO: replace w SchemaFindUUIDs
+        # logger.debug("Listing all included objects to serialize")
+        # uuids = get_all_uuids(obj, cache)  # TODO: replace w SchemaFindUUIDs
 
-        if storage:
-            exists = storage.uuids_in_storage(list(uuids.keys()))
-            for existing in exists:
-                del uuids[existing.uuid]
+        # if storage:
+            # exists = storage.uuids_in_storage(list(uuids.keys()))
+            # for existing in exists:
+                # del uuids[existing.uuid]
 
-        get_table_name = lambda uuid, obj_: self[obj_].table
-        by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
+        # get_table_name = lambda uuid, obj_: self[obj_].table
+        # by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
-        # fix for missing tables
-        if '__missing__' in by_table:
-            by_table = self._missing_table_update(by_table)
-            # NOTE: if using a storage, this will still need to register the
-            # tables with the backend -- that should be handled as part of
-            # the save process TODO
+        # # fix for missing tables
+        # if '__missing__' in by_table:
+            # by_table = self._missing_table_update(by_table)
+            # # NOTE: if using a storage, this will still need to register the
+            # # tables with the backend -- that should be handled as part of
+            # # the save process TODO
 
-        logger.debug("Serializing objects from %d tables: %s",
-                     len(by_table), str(list(by_table.keys())))
-        serialized_by_table = {}
-        for (table, table_uuids) in by_table.items():
-            logger.debug("Serializing %d objects from table %s",
-                         len(by_table[table]), table)
-            serialize = self[table].serializer
-            serialized_table = []
-            for o in table_uuids.values():
-                if table == 'simulation_objects':
-                    logger.debug(str(o))
-                serialized_table.append(serialize(o))
-            serialized_by_table[table] = serialized_table
-            # serialized_by_table[table] = [serialize(o)
-                                          # for o in table_uuids.values()]
+        # logger.debug("Serializing objects from %d tables: %s",
+                     # len(by_table), str(list(by_table.keys())))
+        # serialized_by_table = {}
+        # for (table, table_uuids) in by_table.items():
+            # logger.debug("Serializing %d objects from table %s",
+                         # len(by_table[table]), table)
+            # serialize = self[table].serializer
+            # serialized_table = []
+            # for o in table_uuids.values():
+                # if table == 'simulation_objects':
+                    # logger.debug(str(o))
+                # serialized_table.append(serialize(o))
+            # serialized_by_table[table] = serialized_table
+            # # serialized_by_table[table] = [serialize(o)
+                                          # # for o in table_uuids.values()]
 
-        return serialized_by_table
+        # return serialized_by_table
 
 
-    def deserialize(self, serialized_by_table, known_uuids=None):
-        # 1. generate dependencies lists
-        # 2. get reload order
-        # 3. reconstruct UUIDs
-        known_uuids = tools.none_to_default(known_uuids, {})
-        dependencies = {}
-        to_load = {}
-        uuid_to_table = {}
-        for (table, object_list) in serialized_by_table.items():
-            schema_entries = self.schema[table]
-            logger.debug("Restoring %d objects from table %s",
-                         len(object_list), table)
-            for item_dct in object_list:
-                uuid = item_dct['uuid']
-                uuid_to_table[uuid] = table
-                to_load[uuid] = tools.SimpleNamespace(**item_dct)
-                if table == self.default_info.table:
-                    item_json = json.dumps(item_dct)
-                    dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
-                else:
-                    # TODO: this can be cleaned up with a dict mapping types
-                    # to method for finding dependencies
-                    # find_deps is a defaultdict mapping to appropriate
-                    # functions, default is fcn returning empty set
-                    # for (entry, e_type) in schema_entries:
-                        # deps |= find_deps[e_type](entry)
-                    uuid_entries = [entry
-                                    for (entry, e_type) in schema_entries
-                                    if e_type in uuid_types]
-                    deps = set([item_dct[entry] for entry in uuid_entries])
-                    uuid_list_entries = [entry
-                                         for (entry, e_type) in schema_entries
-                                         if e_type in uuid_list_types]
-                    deps |= set(sum([encoded_uuid_re.findall(item_dct[entry])
-                                     for entry in uuid_list_entries], []))
+    # def deserialize(self, serialized_by_table, known_uuids=None):
+        # # 1. generate dependencies lists
+        # # 2. get reload order
+        # # 3. reconstruct UUIDs
+        # known_uuids = tools.none_to_default(known_uuids, {})
+        # dependencies = {}
+        # to_load = {}
+        # uuid_to_table = {}
+        # for (table, object_list) in serialized_by_table.items():
+            # schema_entries = self.schema[table]
+            # logger.debug("Restoring %d objects from table %s",
+                         # len(object_list), table)
+            # for item_dct in object_list:
+                # uuid = item_dct['uuid']
+                # uuid_to_table[uuid] = table
+                # to_load[uuid] = tools.SimpleNamespace(**item_dct)
+                # if table == self.default_info.table:
+                    # item_json = json.dumps(item_dct)
+                    # dependencies[uuid] = set(encoded_uuid_re.findall(item_json))
+                # else:
+                    # # TODO: this can be cleaned up with a dict mapping types
+                    # # to method for finding dependencies
+                    # # find_deps is a defaultdict mapping to appropriate
+                    # # functions, default is fcn returning empty set
+                    # # for (entry, e_type) in schema_entries:
+                        # # deps |= find_deps[e_type](entry)
+                    # uuid_entries = [entry
+                                    # for (entry, e_type) in schema_entries
+                                    # if e_type in uuid_types]
+                    # deps = set([item_dct[entry] for entry in uuid_entries])
+                    # uuid_list_entries = [entry
+                                         # for (entry, e_type) in schema_entries
+                                         # if e_type in uuid_list_types]
+                    # deps |= set(sum([encoded_uuid_re.findall(item_dct[entry])
+                                     # for entry in uuid_list_entries], []))
 
-                    json_entries = [entry
-                                    for (entry, e_type) in schema_entries
-                                    if e_type in json_obj_types]
-                    for json_entry in json_entries:
-                        json_val = item_dct[json_entry]
-                        deps |= set(encoded_uuid_re.findall(json_val))
+                    # json_entries = [entry
+                                    # for (entry, e_type) in schema_entries
+                                    # if e_type in json_obj_types]
+                    # for json_entry in json_entries:
+                        # json_val = item_dct[json_entry]
+                        # deps |= set(encoded_uuid_re.findall(json_val))
 
-                    dependencies[uuid] = deps
+                    # dependencies[uuid] = deps
 
-        ordered_uuids = get_reload_order(list(to_load.values()), dependencies)
-        logger.debug("Restore order: %s", str(ordered_uuids))
-        return self.reconstruct_uuids(ordered_uuids, uuid_to_table, to_load,
-                                      known_uuids)
+        # ordered_uuids = get_reload_order(list(to_load.values()), dependencies)
+        # logger.debug("Restore order: %s", str(ordered_uuids))
+        # return self.reconstruct_uuids(ordered_uuids, uuid_to_table, to_load,
+                                      # known_uuids)
 
 
     def reconstruct_uuids(self, ordered_uuids, uuid_to_table, to_load,

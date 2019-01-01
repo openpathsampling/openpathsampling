@@ -205,19 +205,19 @@ class SchemaFindUUIDs(object):
 
 
 # TODO: I think this can be removed (only used by get_all_uuid_string)
-def find_dependent_uuids(json_dct):
-    dct = json.loads(json_dct)
-    uuids = [decode_uuid(obj) for obj in flatten_all(dct)
-             if is_uuid_string(obj)]
-    return uuids
+# def find_dependent_uuids(json_dct):
+    # dct = json.loads(json_dct)
+    # uuids = [decode_uuid(obj) for obj in flatten_all(dct)
+             # if is_uuid_string(obj)]
+    # return uuids
 
 # TODO: I think this can be removed (not used?)
-def get_all_uuid_strings(dct):
-    all_uuids = []
-    for uuid in dct:
-        all_uuids.append(uuid)
-        all_uuids += find_dependent_uuids(dct[uuid])
-    return all_uuids
+# def get_all_uuid_strings(dct):
+    # all_uuids = []
+    # for uuid in dct:
+        # all_uuids.append(uuid)
+        # all_uuids += find_dependent_uuids(dct[uuid])
+    # return all_uuids
 
 
 # NOTE: this only need to find until the first UUID: iterables/mapping with
