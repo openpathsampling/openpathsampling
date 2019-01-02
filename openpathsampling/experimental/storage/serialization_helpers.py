@@ -66,6 +66,21 @@ def filter_known_uuids(uuid_dict, cache_list):
     return {uuid: value for (uuid, value) in uuid_dict.items()
             if not caches_contain(uuid, cache_list)}
 
+def unique_objects(object_list):
+    found_uuids = set([])
+    return_objects = []
+    for obj in object_list:
+        if has_uuid(obj):
+            uuid = get_uuid(obj)
+            if uuid not in found_uuids:
+                found_uuids.update({uuid})
+                return_objects.append(obj)
+        else:
+            return_objects.append(obj)
+
+    return return_objects
+
+
 class DefaultFindUUIDs(object):
     def __init__(self):
         self._mappable_classes = set()
@@ -160,6 +175,8 @@ def get_all_uuids(initial_object, known_uuids=None, class_info=None):
     uuids = {}
     while objects:
         new_objects = []
+        objects = unique_objects(objects)
+        # print objects
         for obj in objects:
             # TODO: find a way to ensure that objects doesn't go over
             # duplicates here; see lprofile of default_find_uuids to see how

@@ -60,8 +60,8 @@ class ClassInfo(object):
 
     def __repr__(self):
         return ("ClassInfo(table=" + self.table + ", cls=" + str(self.cls)
-                + ", lookup_result=" + str(self.lookup_result) + ")")
-
+                + ", lookup_result=" + str(self.lookup_result)
+                + ", find_uuids=" + str(self.find_uuids) + ")")
 
 
 class SerializationSchema(object):
@@ -158,7 +158,7 @@ class SerializationSchema(object):
         if not has_uuid(item):
             return None
         if self.is_special(item):
-            self.get_special(item)
+            return self.get_special(item)
         else:
             lookup = self.lookup_key(item)
             if lookup in self.lookup_to_info:
