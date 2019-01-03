@@ -14,6 +14,9 @@ def uuid_encode(name):
 class MockUUIDObject(object):
     attr_list = ['name', 'normal_attr', 'obj_attr', 'list_attr',
                  'dict_attr', 'lazy_attr']
+    schema = [('dict_attr', 'uuid'), ('list_attr', 'list_uuid'),
+              ('obj_attr', 'uuid'), ('lazy_attr', 'lazy'),
+              ('normal_attr', 'str')]
     def __init__(self, name, normal_attr=None, obj_attr=None,
                  list_attr=None, dict_attr=None, lazy_attr=None):
         self.name = name
@@ -61,6 +64,80 @@ def create_test_objects():
 
 all_objects = create_test_objects()
 
+class MockBackend(object):
+    def _table_data_for_object(self, obj, table_name, **kwargs):
+        schema_entries = self.schema[table_name]
+        row_type = self.row_types[table_name]
+        uuid = get_uuid(obj)
+        table_idx = self.table_names.index(table_name)
+        idx = len(self.tables[table_idx])
+        row_kwargs = {'uuid': uuid, 'idx': idx}
+        row_kwargs.update(kwargs)
+        row = row_type(**row_kwargs)
+        uuid_row = self.row_types['uuids'](uuid=uuid, table=table_idx,
+                                           idx=idx)
+        return uuid_row, row
+
+    def __init__(self):
+        self.schema = {
+            'objs': [('obj_attr', 'uuid')],
+            'ints': [('normal_attr', 'int')],
+            'sims': [('json', 'json_obj'), ('class_idx', 'int')]
+        }
+        self.row_types = {
+            'uuids':  namedtuple('UUIDsRow', ['uuid', 'table', 'idx']),
+            'objs': namedtuple('ObjRow', ['uuid', 'idx', 'obj_attr']),
+            'ints': namedtuple('IntRow', ['uuid', 'idx', 'normal_attr']),
+            'sims': namedtuple('SimRow',
+                               ['uuid', 'idx', 'json', 'class_idx']),
+            'clss': namedtuple('ClsRow', ['idx', 'module', 'cls'])
+        }
+        self.obj_to_table = {
+            'int': 'ints',
+            'obj': 'objs',
+            'dct': 'sims',
+            'str': 'sims'
+        }
+        self.table_names = ['uuids', 'clss', 'sims', 'objs', 'ints']
+
+        self.uuid_table = {}
+        self.tables = [[] for table in self.table_names]
+        uuid_row, table_row = self._table_data_for_object(
+            obj=all_objects['int'],
+            table_name='ints',
+            normal_attr=5
+        )
+        self.uuid_table[uuid_row.uuid] = uuid_row
+        self.tables[uuid_row.table].append(table_row)
+
+    def load_uuids_table(self, new_uuids):
+        return [self.uuid_table[uuid] for uuid in new_uuids]
+
+    def load_table_data(self, uuid_rows):
+        return [self.tables[row.table][row.idx] for row in uuid_rows]
+
+    def uuid_row_to_table_name(self, row):
+        return self.table_names[row.table]
+
+
+class TestMockBackend(object):
+    def setup(self):
+        self.backend = MockBackend()
+
+    @pytest.mark.parametrize(('obj_name', 'table_idx', 'idx'),
+                             [('int', 4, 0)])
+    def test_load_uuids_table(self, obj_name, table_idx, idx):
+        # TODO: add more examples to test
+        uuid = get_uuid(all_objects[obj_name])
+        assert self.backend.load_uuids_table([uuid]) == \
+                [(uuid, table_idx, idx)]
+
+    def test_load_table_data(self):
+        pass
+
+    def test_uuid_row_to_table_name(self):
+        pass
+
 
 @pytest.mark.parametrize('obj', list(all_objects.values()))
 def test_has_uuid(obj):
@@ -80,6 +157,18 @@ def test_get_uuid_none():
 def test_get_uuid_error():
     with pytest.raises(AttributeError):
         get_uuid(10)
+
+def test_set_uuid():
+    obj = MockUUIDObject(name="test", normal_attr=10)
+    fake_uuid = 100
+    assert get_uuid(obj) != str(fake_uuid)
+    set_uuid(obj, fake_uuid)
+    assert get_uuid(obj) == str(fake_uuid)
+
+def test_encode_uuid():
+    obj = MockUUIDObject(name="test", normal_attr=10)
+    set_uuid(obj, 100)
+    assert encode_uuid("UUID(100)")
 
 @pytest.mark.parametrize('obj,included_objs', [
     (all_objects['int'], []),
@@ -215,9 +304,7 @@ def test_uuids_from_table_row():
                    normal_attr="bar",
                    uuid=str(toy_uuid_maker('row')),
                    idx=1)
-    entries = [('dict_attr', 'uuid'), ('list_attr', 'list_uuid'),
-               ('obj_attr', 'uuid'), ('lazy_attr', 'lazy'),
-               ('normal_attr', 'str')]
+    entries = MockUUIDObject.schema
     uuids, lazy, deps = _uuids_from_table_row(row, entries)
 
     assert lazy == {str(toy_uuid_maker('nest'))}
@@ -230,5 +317,43 @@ def test_uuids_from_table_row():
             {str(toy_uuid_maker('int')), str(toy_uuid_maker('str')),
              str(toy_uuid_maker('obj')), str(toy_uuid_maker('nest'))}
 
+def test_schema_find_uuids():
+    test_objs = create_test_objects()
+    test_objs['lazy'] = test_objs['obj']
+    schemas = {
+        'int': [('normal_attr', 'int')],
+        'str': [('normal_attr', 'str')],
+        'lst': [('list_attr', 'list_uuid')],
+        'obj': [('obj_attr', 'uuid')],
+        'lazy': [('obj_attr', 'lazy')]
+    }
+    expected_newobjs = {
+        'int': [],
+        'str': [],
+        'lst': [test_objs['int'], test_objs['str']],
+        'obj': [test_objs['int']],
+        'lazy': [test_objs['int']]
+    }
+    for (key, schema_entries) in schemas.items():
+        obj = test_objs[key]
+        schema_find_uuids = SchemaFindUUIDs(schema_entries)
+        uuids, new_objs = schema_find_uuids(test_objs[key], cache_list=[])
+        assert uuids == {get_uuid(obj): obj}
+        assert new_objs == expected_newobjs[key]
+
+def test_get_all_uuids_loading():
+    pytest.skip()
+
+def test_get_all_uuids_loading_with_existing():
+    pytest.skip()
+
+def test_dependency_dag():
+    # check that we have the expected nodes, edges
+    pytest.skip()
+
+def test_dependency_dag_with_initial_dag():
+    pytest.skip()
+
 def test_get_reload_order():
+    # check order, including no-dep orders
     pytest.skip()

@@ -493,13 +493,28 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
 
 
 def dependency_dag(dependent_uuids, dag=None):
+    """Create a DAG from the dependencies
+
+    Parameters
+    ----------
+    dependent_uuids: dict
+        dictionary mapping UUID keys to set of UUID values, where the
+        key-value pairs are edges of the dependency graph
+    dag: networkx.DiGraph
+        partially created DAG (optional)
+
+    Returns
+    -------
+    networkx.DiGraph
+        DAG to recreate the input objects
+    """
     if dag is None:
         dag = nx.DiGraph()
     for from_node, to_nodes in dependent_uuids.items():
         if to_nodes:
             dag.add_edges_from([(from_node, to_node)
                                 for to_node in to_nodes])
-    if not nx_dag.is_directed_acyclic_graph(dag):
+    if not nx_dag.is_directed_acyclic_graph(dag):  # pragma: no cover
         raise RuntimeError("Reconstruction DAG not acyclic?!?!")
     return dag
 

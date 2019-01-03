@@ -293,6 +293,17 @@ class SQLStorageBackend(object):
 
         This can also be used to identify which UUIDs already exist in the
         database (with ignore_missing=True).
+
+        Parameters
+        ----------
+        uuids : list
+            list of UUIDs to look up
+
+        Returns
+        -------
+        list
+            table rows with UUID, table ID, and table row index for each
+            desired UUID
         """
         uuid_table = self.metadata.tables['uuid']
         logger.debug("Looking for {} UUIDs".format(len(uuids)))
