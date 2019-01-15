@@ -24,6 +24,7 @@ requirements:
     - future
     - pandas
     - netcdf4
+    - libnetcdf4==4.6.1
     - openmm
     - openmmtools
     - jupyter
