@@ -25,7 +25,7 @@ install:
   
   # report info about our conda env and finish installation
   - conda info --envs
-  - conda install --quiet --yes msmbuilder
+  - conda install --quiet --yes -c conda-forge msmbuilder
   - conda install --quiet --yes nose python-coveralls ipynbtest 
   - conda install --quiet --yes pytest 
   - conda config --env --add pinned_packages libnetcdf=4.6.1
