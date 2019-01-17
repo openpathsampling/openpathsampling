@@ -72,17 +72,21 @@ class TestVisitAllStatesEnsemble(object):
         with pytest.raises(RuntimeError):
             ensemble._state_for_frame(snap)
 
-    def test_can_append(self):
-        pass
-
-    def test_strict_can_append(self):
-        pass
+    @pytest.mark.parametrize('strict', [True, False],
+                             ids=['strict', 'normal'])
+    def test_can_append(self, strict):
+        can_append = {False: self.ensemble.can_append,
+                      True: self.ensemble.strict_can_append}[strict]
+        # be sure to test both the trusted and non-trusted versions
+        pytest.skip()
 
     def test_call(self):
-        pass
+        pytest.skip()
 
-    def test_can_prepend(self):
-        pass
-
-    def test_strict_can_prepend(self):
-        pass
+    @pytest.mark.parametrize('strict', [True, False],
+                             ids=['strict', 'normal'])
+    def test_can_prepend(self, strict):
+        can_prepend = {False: self.ensemble.can_prepend,
+                       True: self.ensemble.strict_can_prepend}[strict]
+        with pytest.raises(NotImplementedError):
+            can_prepend(self.traj[0])

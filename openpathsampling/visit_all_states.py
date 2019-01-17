@@ -55,16 +55,16 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
 
     def _update_for_progress(self, trajectory, frame_number):
         len_traj = len(trajectory)
+        frame = trajectory[frame_number]
+        self.found_states.update(self._state_for_frame(trajectory[-1]))
         if len_traj - 1 % self.report_frequency == 0:
-            frame = trajectory[frame_number]
-            self.found_states.update(self._state_for_frame(trajectory[-1]))
             report_string = self.progress(n_steps=len_traj - 1,
                                           timestep=self.timestep,
                                           found_states=self.found_states,
                                           all_states=self.states)
             paths.tools.refresh_output(report_string)
 
-    def can_append(self, trajectory, trusted):
+    def can_append(self, trajectory, trusted=False):
         return_value = super(VisitAllStatesEnsemble, self).can_append(
             trajectory=trajectory,
             trusted=trusted
@@ -79,7 +79,7 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
 
     strict_can_append = can_append
 
-    def can_prepend(self, trajectory, trusted):
+    def can_prepend(self, trajectory, trusted=False):
         raise NotImplementedError("prepend methods not implemented for ",
                                   "VisitAllStateEnsemble")
 
