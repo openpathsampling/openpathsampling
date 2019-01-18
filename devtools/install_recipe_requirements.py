@@ -17,6 +17,8 @@ def parse_arguments():
                         help="don't install; print to stdout instead")
     parser.add_argument('--individual', action='store_true', default=False,
                         help="install required packages one at a time")
+    parser.add_argument('--env', default=None, type=str,
+                        help="if given, an environment file will be created")
     return parser.parse_args()
 
 def read_input(filename):
