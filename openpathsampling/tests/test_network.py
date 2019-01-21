@@ -384,6 +384,8 @@ class TestMISTISNetwork(TestMultipleStateTIS):
         assert_equal(reloaded.sampling_transitions[0].ensembles[0],
                      self.mistis.sampling_transitions[0].ensembles[0])
 
+        storage_w.close()
+        storage_r.close()
         if os.path.isfile(fname):
             os.remove(fname)
 

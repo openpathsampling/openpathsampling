@@ -204,6 +204,7 @@ class TestShootFromSnapshotsSimulation(object):
         self.simulation.output_stream = open(os.devnull, "w")
 
     def teardown(self):
+        self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
@@ -269,6 +270,7 @@ class TestCommittorSimulation(object):
         self.simulation.output_stream = open(os.devnull, 'w')
 
     def teardown(self):
+        self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
