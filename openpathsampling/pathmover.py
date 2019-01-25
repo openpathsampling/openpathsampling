@@ -16,6 +16,9 @@ from openpathsampling.pathmover_inout import InOutSet, InOut
 from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
+from openpathsampling.deprecations import deprecate, has_deprecations
+from openpathsampling.deprecations import SAMPLE_DETAILS
+
 from future.utils import with_metaclass
 
 logger = logging.getLogger(__name__)
@@ -2607,6 +2610,8 @@ class MoveDetails(Details):
 
 
 # leave this for potential backwards compatibility
+@has_deprecations
+@deprecate(SAMPLE_DETAILS)
 class SampleDetails(Details):
     """Details of a sample
 
