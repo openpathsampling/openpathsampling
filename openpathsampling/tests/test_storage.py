@@ -337,6 +337,8 @@ class TestStorage(object):
 
         compare_snapshot(storage_w.objects['snapshot0'][4], test_snap)
 
+        storage_w.close()
+
     def test_load_save_uuid(self):
         store = Storage(filename=self.filename, mode='w')
         assert(os.path.isfile(self.filename))
