@@ -536,7 +536,7 @@ class MSTISNetwork(TISNetwork):
         return sampling_transitions, transitions, special_ensembles
 
     @staticmethod
-    def build_analysis_transition_for_sampling(sampling_transition,
+    def _build_analysis_transition_for_sampling(sampling_transition,
                                                all_states):
         local_transitions = {}
         state_A = sampling_transition.stateA
