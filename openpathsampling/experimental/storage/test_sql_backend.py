@@ -1,4 +1,4 @@
-from sql_backend import *
+from .sql_backend import *
 import pytest
 
 

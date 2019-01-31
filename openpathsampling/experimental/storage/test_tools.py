@@ -1,6 +1,6 @@
 import pytest
 
-from tools import *
+from .tools import *
 
 def test_none_to_default():
     assert none_to_default(option=None, default="foo") == "foo"

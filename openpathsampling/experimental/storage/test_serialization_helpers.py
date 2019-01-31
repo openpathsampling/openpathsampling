@@ -1,7 +1,7 @@
 from collections import namedtuple
 import json
-from serialization_helpers import *
-from serialization_helpers import _uuids_from_table_row
+from .serialization_helpers import *
+from .serialization_helpers import _uuids_from_table_row
 import numpy as np
 import pytest
 
