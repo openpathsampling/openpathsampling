@@ -1,25 +1,25 @@
-import storage
-import sql_backend
+from . import storage
+from . import sql_backend
 
-from serialization_helpers import to_json_obj as serialize_sim
-from serialization_helpers import from_json_obj as deserialize_sim
-from serialization_helpers import import_class
-from serialization_helpers import get_uuid, set_uuid
-from serialization_helpers import default_find_uuids
+from .serialization_helpers import to_json_obj as serialize_sim
+from .serialization_helpers import from_json_obj as deserialize_sim
+from .serialization_helpers import import_class
+from .serialization_helpers import get_uuid, set_uuid
+from .serialization_helpers import default_find_uuids
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
-import tools
+from . import tools
 
-from serialization import (
+from .serialization import (
     ToDictSerializer, DefaultSerializer, DefaultDeserializer,
     SimulationObjectSerializer
 )
 
-from class_info import ClassInfo, ClassInfoContainer
+from .class_info import ClassInfo, ClassInfoContainer
 
-import snapshots
+from . import snapshots
 import logging
 logger = logging.getLogger(__name__)
 

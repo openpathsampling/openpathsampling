@@ -1,14 +1,15 @@
 import os
 import collections
 import sqlalchemy as sql
-from storage import universal_schema
-from tools import group_by, compare_sets
-import tools
-import ujson as json
+from .storage import universal_schema
+from .tools import group_by, compare_sets
+from . import tools
+# import ujson as json  # ujson is no longer maintained
+import json
 
-from backend import extract_backend_metadata
-from my_types import backend_registration_type
-from serialization_helpers import import_class
+from .backend import extract_backend_metadata
+from .my_types import backend_registration_type
+from .serialization_helpers import import_class
 
 
 import logging
@@ -360,7 +361,7 @@ class SQLStorageBackend(object):
         sel = schema_table.select()
         with self.engine.connect() as conn:
             schema_rows = list(conn.execute(schema_table.select()))
-        schema = {r.table: map(tuple, json.loads(r.schema))
+        schema = {r.table: list(map(tuple, json.loads(r.schema)))
                   for r in schema_rows}
         return schema
 

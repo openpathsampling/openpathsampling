@@ -1,9 +1,10 @@
 import numpy as np
-from my_types import parse_ndarray_type, ndarray_re
-import serialization_helpers as serialization
-from tools import is_mappable
-import tools
-import ujson as json
+from .my_types import parse_ndarray_type, ndarray_re
+from . import serialization_helpers as serialization
+from .tools import is_mappable
+from . import tools
+# import ujson as json
+import json
 
 import logging
 logger = logging.getLogger(__name__)

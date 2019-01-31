@@ -1,4 +1,4 @@
-import tools
+from . import tools
 
 class ClassIsSomething(object):
     def __init__(self, check_method):

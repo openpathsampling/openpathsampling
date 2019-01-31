@@ -1,6 +1,6 @@
-from class_info import ClassInfo
+from .class_info import ClassInfo
 
-from serialization_helpers import get_uuid
+from .serialization_helpers import get_uuid
 
 def _nested_schema_entries(schema_entries, lazies):
     """Recursive algorithm to create all schema entries

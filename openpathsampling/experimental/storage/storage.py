@@ -20,11 +20,16 @@ import logging
 import collections
 import itertools
 
-import tools
-from serialization_helpers import get_uuid, get_all_uuids
-from serialization_helpers import get_all_uuids_loading
-from serialization_helpers import get_reload_order
-from serialization import Serialization
+from . import tools
+from .serialization_helpers import get_uuid, get_all_uuids
+from .serialization_helpers import get_all_uuids_loading
+from .serialization_helpers import get_reload_order
+from .serialization import Serialization
+
+try:
+    basestring
+except NameError:
+    basestring = str
 
 logger = logging.getLogger(__name__)
 

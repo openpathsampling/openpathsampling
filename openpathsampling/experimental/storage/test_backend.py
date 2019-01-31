@@ -1,4 +1,4 @@
-from backend import *
+from .backend import *
 import pytest
 
 def test_extract_metadata():

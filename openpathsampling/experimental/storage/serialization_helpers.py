@@ -5,16 +5,19 @@ import networkx as nx
 import numpy as np
 import networkx.algorithms.dag as nx_dag
 import collections
-from tools import flatten_all, nested_update, group_by_function
-from tools import is_iterable, is_mappable, is_numpy_iterable
-import tools
-from class_lookup import is_storage_iterable, is_storage_mappable
+from .tools import flatten_all, nested_update, group_by_function
+from .tools import is_iterable, is_mappable, is_numpy_iterable
+from . import tools
+from .class_lookup import is_storage_iterable, is_storage_mappable
 
 # UUID recognition and encoding #####################################
 # Things in here might be modified for performance optimization. In
 # particular, it might be worth using a string representation of the UUID
 # whenever possible (dicts with string keys have a special fast-path)
-
+import sys
+if sys.version_info > (3, ):
+    unicode = str
+    long = int
 
 def has_uuid(obj):
     return hasattr(obj, '__uuid__')
@@ -144,7 +147,7 @@ def default_find_uuids(obj, cache_list):
         new_objects.extend(list(obj.values()))
     # elif is_iterable(obj) and not is_numpy_iterable(obj):
     elif is_storage_iterable(obj):
-        new_objects.extend(list(obj))
+        new_objects.extend(obj)
     return uuids, new_objects
 
 # NOTE: this needs find everything, including if the iterable/mapping has a

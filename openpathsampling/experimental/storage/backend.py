@@ -1,4 +1,4 @@
-from tools import group_by
+from .tools import group_by
 
 def extract_backend_metadata(metadata, table, column):
     col_metadata = {}  # default

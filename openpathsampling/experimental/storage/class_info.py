@@ -1,6 +1,6 @@
 import logging
 
-import tools
+from . import tools
 from .serialization import DefaultSerializer, DefaultDeserializer
 from .serialization_helpers import SchemaFindUUIDs, has_uuid
 from .serialization_helpers import encoded_uuid_re, get_reload_order
