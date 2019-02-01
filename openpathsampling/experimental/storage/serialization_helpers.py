@@ -84,6 +84,8 @@ def unique_objects(object_list):
     return return_objects
 
 
+# TODO: I think this has been made obsolete by the is_storage_iterable, etc
+# classes... keep using function default_find_uuids
 class DefaultFindUUIDs(object):
     def __init__(self):
         self._mappable_classes = set()
@@ -296,11 +298,16 @@ def to_dict_with_uuids(obj):
     return replace_uuid(dct, uuid_encoding=encode_uuid)
 
 
+# this seems to not yet be obsolete, although I'm not sure why not -- it is
+# used a few places, but I think those places will be removed
+# (serialization.py) ... in principle, I think the custom json should be
+# used for this
 def to_bare_json(obj):
     replaced = replace_uuid(obj, uuid_encoding=encode_uuid)
     return json.dumps(replaced)
 
 
+# this should be made obsolete by custom_json stuff
 def to_json_obj(obj):
     dct = to_dict_with_uuids(obj)
     dct.update({'__module__': obj.__class__.__module__,

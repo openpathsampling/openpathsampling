@@ -381,9 +381,9 @@ class StorageTable(abc.Sequence):
         if item < 0:
             item += len(self)
         n_iter = 0
-        row = backend_iterator.next()
+        row = next(backend_iterator)
         while row and n_iter < item:
-            row = backend_iterator.next()
+            row = next(backend_iterator)
             n_iter += 1
         return self.storage.load([row.uuid])[0]
 

@@ -12,9 +12,10 @@ from openpathsampling.netcdfplus import StorableObject
 
 from . import tools
 
-# from .custom_json import (
-    # default_serializer_deserializer, numpy_codec, bytes_codec
-# )
+from .custom_json import (
+    default_serializer_deserializer, numpy_codec, bytes_codec,
+    uuid_object_codec
+)
 
 from .serialization import (
     ToDictSerializer, DefaultSerializer, DefaultDeserializer,
@@ -50,9 +51,9 @@ ops_schema = {
 ops_schema_sql_metadata = {}
 
 # this defines the simulation object serializer for OPS
-# json_serializer, json_deserializer = default_serializer_deserializer(
-    # [numpy_codec, bytes_codec]
-# )
+json_serializer, json_deserializer = default_serializer_deserializer(
+    [numpy_codec, bytes_codec, uuid_object_codec]
+)
 ops_simobj_serializer = SimulationObjectSerializer(
     json_encoder=json_serializer
 )
@@ -182,7 +183,7 @@ for info in ops_class_info.class_info_list:
     info.set_defaults(ops_schema)
 
 
-# TODO: add more to these
+# this will create the pseudo-tables used to find specific objects
 ops_simulation_classes = {
     'volumes': paths.Volume,
     'ensembles': paths.Ensemble,
@@ -190,7 +191,7 @@ ops_simulation_classes = {
     'pathmovers': paths.PathMover,
     'networks': paths.TransitionNetwork,
     'cvs': paths.CollectiveVariable
-}
+}  # TODO: add more to these
 
 
 class OPSStorage(storage.GeneralStorage):
