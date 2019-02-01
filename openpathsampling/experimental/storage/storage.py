@@ -18,6 +18,7 @@ Column names:
 
 import logging
 import collections
+from collections import abc
 import itertools
 
 from . import tools
@@ -318,7 +319,7 @@ class GeneralStorage(object):
                                  .format(self.__class__.__name__, attr))
 
 
-class MixedCache(collections.MutableMapping):
+class MixedCache(abc.MutableMapping):
     """Combine a frozen cache and a mutable cache"""
     # TODO: benchmark with single dict instead; might be just as fast!
     def __init__(self, fixed_cache=None):
@@ -358,7 +359,7 @@ class MixedCache(collections.MutableMapping):
         return itertools.chain(self.fixed_cache, self.cache)
 
 
-class StorageTable(collections.Sequence):
+class StorageTable(abc.Sequence):
     # NOTE: currently you still need to be able to hold the whole table in
     # memory ... at least, with the SQL backend.
     def __init__(self, storage, table, cache=None):
@@ -398,7 +399,7 @@ class StorageTable(collections.Sequence):
     # things in the order of the mccycle number -- also, manage special
     # caching
 
-class PseudoTable(collections.MutableSequence):
+class PseudoTable(abc.MutableSequence):
     # TODO: use this in the main code
     """List of objects that can be retrieved by index or name.
     """

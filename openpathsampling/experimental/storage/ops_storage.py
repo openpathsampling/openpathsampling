@@ -1,7 +1,7 @@
 from . import storage
 from . import sql_backend
 
-from .serialization_helpers import to_json_obj as serialize_sim
+from .serialization_helpers import to_json_obj as json_serializer
 from .serialization_helpers import from_json_obj as deserialize_sim
 from .serialization_helpers import import_class
 from .serialization_helpers import get_uuid, set_uuid
@@ -11,6 +11,10 @@ import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
 from . import tools
+
+# from .custom_json import (
+    # default_serializer_deserializer, numpy_codec, bytes_codec
+# )
 
 from .serialization import (
     ToDictSerializer, DefaultSerializer, DefaultDeserializer,
@@ -23,6 +27,7 @@ from . import snapshots
 import logging
 logger = logging.getLogger(__name__)
 
+# this defines the schema for data objects
 ops_schema = {
     'samples': [('trajectory', 'lazy'), ('ensemble', 'uuid'),
                 ('replica', 'int')],
@@ -41,7 +46,16 @@ ops_schema = {
     'simulation_objects': [('json', 'json_obj'), ('class_idx', 'int')]
 }
 
+# this includes any sql-specific metadata
 ops_schema_sql_metadata = {}
+
+# this defines the simulation object serializer for OPS
+# json_serializer, json_deserializer = default_serializer_deserializer(
+    # [numpy_codec, bytes_codec]
+# )
+ops_simobj_serializer = SimulationObjectSerializer(
+    json_encoder=json_serializer
+)
 
 class MoveChangeDeserializer(DefaultDeserializer):
     # in general, I think it would be better to reorg MoveChange to only be
@@ -144,7 +158,7 @@ class OPSClassInfoContainer(ClassInfoContainer):
 
 ops_class_info = OPSClassInfoContainer(
     default_info=ClassInfo('simulation_objects', cls=StorableObject,
-                           serializer=SimulationObjectSerializer(),
+                           serializer=ops_simobj_serializer,
                            deserializer=deserialize_sim,
                            find_uuids=default_find_uuids),
     schema=ops_schema,
@@ -159,7 +173,7 @@ ops_class_info = OPSClassInfoContainer(
                   )),
         ClassInfo(table='steps', cls=paths.MCStep),
         ClassInfo(table='details', cls=paths.Details,
-                  serializer=SimulationObjectSerializer(),
+                  serializer=ops_simobj_serializer,
                   deserializer=deserialize_sim),
     ]
 )
