@@ -200,19 +200,11 @@ class OPSStorage(storage.GeneralStorage):
         super(OPSStorage, self).__init__(backend, schema, class_info,
                                          fallbacks)
 
-        self._stashed = []
         self.n_snapshot_types = 0
 
-    def stash(self, objects):
-        objects = tools.listify(objects)
-        self._stashed.extend(objects)
-
-    def sync(self):
-        super(OPSStorage, self).save(self._stashed)
+    def sync_all(self):
+        self.save(self._stashed)
         self._stashed = []
-
-    # TODO: we'll need to move the save method to be the stash to match the
-    # netcdfplus API
 
     @classmethod
     def from_backend(cls, backend, schema=None, class_info=None,

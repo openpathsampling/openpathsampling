@@ -1,6 +1,14 @@
 from . import tools
 
 class ClassIsSomething(object):
+    """Method to test whether a class exhibits a given attribute.
+
+    The idea here is that the class is expected to be immutable, so whether
+    or not it exhibits the desired attribute is something we can cache. For
+    example, a class will remain iterable, and looking up whether a given
+    object's class is in the set of classes known to be iterable is much
+    faster than using a function that checks whether it is iterable.
+    """
     def __init__(self, check_method):
         self.check_method = check_method
         self._true_set = set()
@@ -20,8 +28,8 @@ class ClassIsSomething(object):
         return result
 
 
-_is_iterable_method = lambda obj: \
-        tools.is_iterable(obj) and not tools.is_numpy_iterable(obj)
+def _is_iterable_method(obj):
+    return tools.is_iterable(obj) and not tools.is_numpy_iterable(obj)
 
 is_storage_iterable = ClassIsSomething(_is_iterable_method)
 is_storage_mappable = ClassIsSomething(tools.is_mappable)

@@ -64,6 +64,7 @@ class GeneralStorage(object):
         if self.schema is None:
             self.schema = backend.schema
         self.initialize_with_mode(self.mode)
+        self._stashed = []
 
     def initialize_with_mode(self, mode):
         if mode == 'r' or mode == 'a':
@@ -72,6 +73,10 @@ class GeneralStorage(object):
 
         elif mode == 'w':
             self.register_schema(self.schema, class_info_list=[])
+
+    def stash(self, objects):
+        objects = tools.listify(objects)
+        self._stashed.extend(objects)
 
     def _load_missing_info_tables(self, table_to_class):
         missing_info_tables = [tbl for tbl in self.schema
@@ -132,21 +137,29 @@ class GeneralStorage(object):
         return self.backend.load_uuids_table(uuids=uuid_list,
                                              ignore_missing=True)
 
-    def save(self, obj):
+    def save(self, obj_list):
+        if type(obj_list) is not list:
+            obj_list = [obj_list]
         # TODO: convert the whole .save process to something based on the
         # class_info.serialize method (enabling per-class approaches for
         # finding UUIDs, which will be a massive serialization speed-up
         # self.class_info.serialize(obj, storage=self)
         # check if obj is in DB (maybe this can be removed?)
         logger.debug("Starting save")
-        exists = self.backend.load_uuids_table(uuids=[get_uuid(obj)],
+        search_uuids = [get_uuid(obj) for obj in obj_list]
+        exists = self.backend.load_uuids_table(uuids=search_uuids,
                                                ignore_missing=True)
-        if exists:
+
+        obj_list = [obj for obj in obj_list if obj not in exists]
+
+        if not obj_list:
             return
         # find all UUIDs we need to save with this object
         logger.debug("Listing all objects to save")
-        uuids = get_all_uuids(obj, known_uuids=self.cache,
-                              class_info=self.class_info)
+        uuids = {}
+        for obj in obj_list:
+            uuids.update(get_all_uuids(obj, known_uuids=self.cache,
+                                       class_info=self.class_info))
         logger.debug("Checking if objects already exist in database")
         # remove any UUIDs that have already been saved
         exists = self.backend.load_uuids_table(uuids=list(uuids.keys()),

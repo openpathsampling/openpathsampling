@@ -109,7 +109,11 @@ class PathSampling(PathSimulator):
 
         """
         if self.storage is not None and self._current_step is not None:
-            self.storage.steps.save(self._current_step)
+            try:
+                # new storage does a stash here, not a save
+                self.storage.stash(self._current_step)
+            except AttributeError:
+                self.storage.steps.save(self._current_step)
 
     @classmethod
     def from_step(cls, storage, step, initialize=True):
