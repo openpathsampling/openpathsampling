@@ -197,6 +197,7 @@ class GeneralStorage(object):
             # special handling for simulation objects
             if table == 'simulation_objects':
                 self._update_pseudo_tables(by_table[table])
+                self._simulation_objects.update(by_table[table])
             logger.debug("Storing complete")
 
     def load(self, input_uuids, force=False):

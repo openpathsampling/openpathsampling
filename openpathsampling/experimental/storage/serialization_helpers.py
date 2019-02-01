@@ -78,7 +78,8 @@ def unique_objects(object_list):
             if uuid not in found_uuids:
                 found_uuids.update({uuid})
                 return_objects.append(obj)
-        else:
+
+        elif is_storage_mappable(obj) or is_storage_iterable(obj):
             return_objects.append(obj)
 
     return return_objects
@@ -129,6 +130,10 @@ class DefaultFindUUIDs(object):
     # TODO: FIXME: add default_find_uuids as __call__ here; this should
     # really cut the time spent in is_iterable/is_mappable
 
+def may_contain_uuids(obj):
+    return (has_uuid(obj) or is_storage_mappable(obj)
+            or is_storage_iterable(obj))
+
 def default_find_uuids(obj, cache_list):
     uuids = {}
     new_objects = []
@@ -141,12 +146,12 @@ def default_find_uuids(obj, cache_list):
         # print repr(obj)
         # print obj.to_dict().keys()
         uuids.update({obj_uuid: obj})
-        new_objects.extend(list(obj.to_dict().values()))
+        new_objects.extend(obj.to_dict().values())
 
     # mappables and iterables
     if is_storage_mappable(obj):
-        new_objects.extend([o for o in obj.keys() if has_uuid(o)])
-        new_objects.extend(list(obj.values()))
+        new_objects.extend(o for o in obj.keys() if has_uuid(o))
+        new_objects.extend(obj.values())
     # elif is_iterable(obj) and not is_numpy_iterable(obj):
     elif is_storage_iterable(obj):
         new_objects.extend(obj)
@@ -178,10 +183,13 @@ def get_all_uuids(initial_object, known_uuids=None, class_info=None):
     known_uuids = tools.none_to_default(known_uuids, {})
     objects = [initial_object]
     uuids = {}
+    # found_objs = collections.Counter()
     while objects:
         new_objects = []
         objects = unique_objects(objects)
         # print objects
+        # found_objs += collections.Counter(o.__class__.__name__)
+                                          # for o in objects)
         for obj in objects:
             # TODO: find a way to ensure that objects doesn't go over
             # duplicates here; see lprofile of default_find_uuids to see how
@@ -202,6 +210,7 @@ def get_all_uuids(initial_object, known_uuids=None, class_info=None):
             new_objects.extend(new_objs)
 
         objects = new_objects
+    # print(found_objs)
     return uuids
 
 
