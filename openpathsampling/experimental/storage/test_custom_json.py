@@ -26,6 +26,16 @@ class CustomJSONCodingTest(object):
             json_str_2 = json.dumps(obj, cls=encoder)
             assert json_str == json_str_2
 
+    def test_not_mine(self):
+        # test that the default behavior is obeyed
+        obj = {'test': 5}
+        json_str = '{"test": 5}'
+        encoder, decoder = custom_json_factory([self.codec])
+        assert json.dumps(obj, cls=encoder) == json_str
+        assert json.loads(json_str, cls=decoder) == obj
+
+
+
 class TestNumpyCoding(CustomJSONCodingTest):
     def setup(self):
         self.codec = numpy_codec
@@ -60,6 +70,7 @@ class TestNumpyCoding(CustomJSONCodingTest):
             json_str_2 = json.dumps(obj, cls=encoder)
             assert json_str == json_str_2
 
+
 class TestUUIDCoding(object):
     def setup(self):
         self.codec = uuid_object_codec
@@ -84,6 +95,8 @@ class TestUUIDCoding(object):
             dct.update(update)
 
     test_default = CustomJSONCodingTest.test_default
+
+    test_not_mine = CustomJSONCodingTest.test_not_mine
 
     def test_object_hook(self):
         for (obj, dct) in zip(self.objs, self.dcts):
