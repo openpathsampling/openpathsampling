@@ -8,10 +8,6 @@ from .serialization_helpers import get_all_uuids
 from .my_types import uuid_types, uuid_list_types, json_obj_types
 
 import json
-# try:
-    # import ujson as json
-# except ImportError:
-    # import json
 
 
 logger = logging.getLogger(__name__)
@@ -31,6 +27,9 @@ class ClassInfo(object):
         deserializer)
     lookup_result : any
         the result when ClassInfoContainer looks up objects in this table
+    find_uuids : callable
+        a shortcut for finding objects with UUIDs contained within this
+        object
     """
     def __init__(self, table, cls, serializer=None, deserializer=None,
                  lookup_result=None, find_uuids=None):
@@ -58,7 +57,7 @@ class ClassInfo(object):
         )
 
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return ("ClassInfo(table=" + self.table + ", cls=" + str(self.cls)
                 + ", lookup_result=" + str(self.lookup_result)
                 + ", find_uuids=" + str(self.find_uuids) + ")")

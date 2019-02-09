@@ -85,54 +85,10 @@ def unique_objects(object_list):
     return return_objects
 
 
-# TODO: I think this has been made obsolete by the is_storage_iterable, etc
-# classes... keep using function default_find_uuids
-class DefaultFindUUIDs(object):
-    def __init__(self):
-        self._mappable_classes = set()
-        self._non_mappable_classes = set()
-        self._iterable_classes = set()
-        self._non_iterable_classes = set()
-
-    @staticmethod
-    def _get_with_cache(obj, key, true_set, false_set, check_method):
-        # TODO: this is probably best moved to utils; I think we may use it
-        # elsewhere as well
-        if key in false_set:
-            return False
-        elif key in true_set:
-            return True
-        else:
-            result = check_method(obj)
-            set_for_obj = {True: true_set, False: false_set}[result]
-            set_for_obj.add(key)
-            return result
-
-    def is_mappable(self, obj):
-        return self._get_with_cache(
-            obj=obj,
-            key=obj.__class__,
-            true_set=self._mappable_classes,
-            false_set=self._non_mappable_classes,
-            check_method=is_mappable
-        )
-
-    def is_iterable(self, obj):
-        return self._get_with_cache(
-            obj=obj,
-            key=obj.__class__,
-            true_set=self._iterable_classes,
-            false_set=self._non_iterable_classes,
-            check_method=lambda obj: \
-                is_iterable(obj) and not is_numpy_iterable(obj)
-        )
-
-    # TODO: FIXME: add default_find_uuids as __call__ here; this should
-    # really cut the time spent in is_iterable/is_mappable
-
-def may_contain_uuids(obj):
-    return (has_uuid(obj) or is_storage_mappable(obj)
-            or is_storage_iterable(obj))
+# this does not appear to be used
+# def may_contain_uuids(obj):
+    # return (has_uuid(obj) or is_storage_mappable(obj)
+            # or is_storage_iterable(obj))
 
 def default_find_uuids(obj, cache_list):
     uuids = {}

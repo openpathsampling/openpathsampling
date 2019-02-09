@@ -6,7 +6,7 @@ import numpy as np
 from numpy import testing as npt
 from simtk import unit
 
-from . import test_serialization_helpers
+from . import test_utils
 
 class CustomJSONCodingTest(object):
     def test_default(self):
@@ -74,15 +74,15 @@ class TestNumpyCoding(CustomJSONCodingTest):
 class TestUUIDCoding(object):
     def setup(self):
         self.codec = uuid_object_codec
-        all_objs = test_serialization_helpers.all_objects
+        all_objs = test_utils.all_objects
         self.objs = [all_objs['int'], all_objs['str']]
         updates = [{'normal_attr': 5, 'name': 'int'},
                    {'normal_attr': 'foo', 'name': 'str'}]
-        module = str(test_serialization_helpers)
+        module = str(test_utils)
         self.dcts = [
             {
                 '__class__': 'MockUUIDObject',
-                '__module__': test_serialization_helpers.__name__,
+                '__module__': test_utils.__name__,
                 'normal_attr': None,
                 'obj_attr': None,
                 'list_attr': None,
