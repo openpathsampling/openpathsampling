@@ -1,7 +1,7 @@
 import logging
 
 from . import tools
-from .serialization import DefaultSerializer, DefaultDeserializer
+from .serialization import SchemaSerializer, SchemaDeserializer
 from .serialization_helpers import SchemaFindUUIDs, has_uuid
 from .serialization_helpers import encoded_uuid_re, get_reload_order
 from .serialization_helpers import get_all_uuids
@@ -45,11 +45,11 @@ class ClassInfo(object):
     def set_defaults(self, schema):
         self.serializer = tools.none_to_default(
             self.serializer,
-            DefaultSerializer(schema, self.table, self.cls)
+            SchemaSerializer(schema, self.table, self.cls)
         )
         self.deserializer = tools.none_to_default(
             self.deserializer,
-            DefaultDeserializer(schema, self.table, self.cls)
+            SchemaDeserializer(schema, self.table, self.cls)
         )
         self.find_uuids = tools.none_to_default(
             self.find_uuids,

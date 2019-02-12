@@ -170,7 +170,7 @@ class SimulationObjectSerializer(object):
         return {'uuid': serialization.get_uuid(obj),
                 'json': self.json_encoder(obj)}
 
-class DefaultDeserializer(object):
+class SchemaDeserializer(object):
     default_handlers = {
         'lazy': serialization.search_caches,
         'uuid': serialization.search_caches,
@@ -184,6 +184,7 @@ class DefaultDeserializer(object):
         self.cls = cls
         self.attribute_handlers = self.init_attribute_handlers()
 
+    # TODO: move this external
     @staticmethod
     def make_numpy_handler(dtype, shape):
         return lambda data, _: np.fromstring(data, dtype=dtype).reshape(shape)
@@ -218,7 +219,7 @@ class DefaultDeserializer(object):
         return obj
 
 
-class ToDictSerializer(DefaultDeserializer):
+class ToDictSerializer(SchemaDeserializer):
     default_handlers = {
         'uuid': serialization.get_uuid,
         'lazy': serialization.get_uuid,
@@ -227,6 +228,7 @@ class ToDictSerializer(DefaultDeserializer):
         'list_uuid': serialization.to_bare_json
     }
 
+    # TODO: move this external
     @staticmethod
     def make_numpy_handler(dtype, shape):
         return lambda arr: arr.astype(dtype=dtype, copy=False).tostring()
@@ -240,7 +242,7 @@ class ToDictSerializer(DefaultDeserializer):
         dct.update({'uuid': serialization.get_uuid(obj)})
         return dct
 
-class DefaultSerializer(ToDictSerializer):
+class SchemaSerializer(ToDictSerializer):
     def __call__(self, obj):
         dct = {attr: getattr(obj, attr)
                for (attr, type_name) in self.entries}

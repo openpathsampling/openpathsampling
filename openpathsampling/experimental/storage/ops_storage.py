@@ -18,7 +18,7 @@ from .custom_json import (
 )
 
 from .serialization import (
-    ToDictSerializer, DefaultSerializer, DefaultDeserializer,
+    ToDictSerializer, SchemaSerializer, SchemaDeserializer,
     SimulationObjectSerializer
 )
 
@@ -58,7 +58,7 @@ ops_simobj_serializer = SimulationObjectSerializer(
     json_encoder=json_serializer
 )
 
-class MoveChangeDeserializer(DefaultDeserializer):
+class MoveChangeDeserializer(SchemaDeserializer):
     # in general, I think it would be better to reorg MoveChange to only be
     # one class, but this is aimed at fixing problems with reloading
     # MoveChange objects
