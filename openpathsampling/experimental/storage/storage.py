@@ -25,7 +25,8 @@ from . import tools
 from .serialization_helpers import get_uuid, get_all_uuids
 from .serialization_helpers import get_all_uuids_loading
 from .serialization_helpers import get_reload_order
-from .serialization import Serialization
+# from .serialization import Serialization
+from .serialization import ProxyObjectFactory
 
 try:
     basestring
@@ -60,7 +61,8 @@ class GeneralStorage(object):
         self._storage_tables = {}  # stores .steps, .snapshots
         self._simulation_objects = self._cache_simulation_objects()
         self.cache = MixedCache(self._simulation_objects)
-        self.serialization = Serialization(self)
+        # self.serialization = Serialization(self)
+        self.proxy_factory = ProxyObjectFactory(self, self.class_info)
         if self.schema is None:
             self.schema = backend.schema
         self.initialize_with_mode(self.mode)
@@ -118,7 +120,7 @@ class GeneralStorage(object):
         self.schema.update(schema)
         for table in self.schema:
             self._storage_tables[table] = StorageTable(self, table)
-        self.serialization.register_serialization(schema, self.class_info)
+        # self.serialization.register_serialization(schema, self.class_info)
 
 
     def register_from_instance(self, lookup, obj):
@@ -250,7 +252,8 @@ class GeneralStorage(object):
                                          self.backend.uuid_row_to_table_name)
         # TODO: replace this with something not based on Serialization
         # object
-        new_uuids = self.serialization.make_all_lazies(lazies)
+        # new_uuids = self.serialization.make_all_lazies(lazies)
+        new_uuids = self.proxy_factory.make_all_lazies(lazies)
 
         # get order and deserialize
         uuid_to_table_row = {r.uuid: r for r in to_load}
