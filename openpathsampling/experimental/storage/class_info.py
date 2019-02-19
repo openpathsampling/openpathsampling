@@ -138,20 +138,26 @@ class SerializationSchema(object):
             return self.missing_table
 
     def __getitem__(self, item):
-        # TODO: base this off of info_from_instance
         if tools.is_string(item):
             return self.table_to_info[item]
-        elif self.is_special(item):
-            return self.get_special(item)
         else:
-            lookup = self.lookup_key(item)
-            try:
-                return self.lookup_to_info[lookup]
-            except KeyError as e:
-                if isinstance(item, self.default_info.cls):
-                    return self.default_info
-                else:
-                    raise e
+            info = self.info_from_instance(item)
+            if info is None:
+                raise KeyError("'%s'" % repr(item))
+            else:
+                return info
+
+        # elif self.is_special(item):
+            # return self.get_special(item)
+        # else:
+            # lookup = self.lookup_key(item)
+            # try:
+                # return self.lookup_to_info[lookup]
+            # except KeyError as e:
+                # if isinstance(item, self.default_info.cls):
+                    # return self.default_info
+                # else:
+                    # raise e
 
     def info_from_instance(self, item):
         if not has_uuid(item):
@@ -170,6 +176,7 @@ class SerializationSchema(object):
     def add_missing_table_from_instance(self, lookup, obj):
         raise NotImplementedError("No special types implemented")
 
+    # TODO: this is currently done in storage; should it be here?
     def _missing_table_update(self, by_table):
         missing = by_table.pop('__missing__')
         logger.info("Identifying tables for %d objects of unknown "
@@ -308,6 +315,9 @@ class SerializationSchema(object):
                                       # known_uuids)
 
 
+    # NOTE: this doesn't seem to be used yet.... should we move
+    # functionality here or keep in storage.deserialize_uuids?
+    # right now, leaning toward storage....
     def reconstruct_uuids(self, ordered_uuids, uuid_to_table, to_load,
                           known_uuids=None, new_uuids=None):
         """
