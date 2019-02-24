@@ -15,7 +15,6 @@ from .test_helpers import (true_func, assert_equal_array_array,
 import copy
 
 import openpathsampling as paths
-from openpathsampling import VolumeFactory as vf
 from openpathsampling.high_level.move_scheme import *
 from openpathsampling.high_level.move_strategy import (
     levels,

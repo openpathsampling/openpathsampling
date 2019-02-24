@@ -126,7 +126,7 @@ from .snapshot_modifier import (
 from .storage.storage import Storage, AnalysisStorage
 
 from .volume import (
-    Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
+    Volume, VolumeCombination, VoronoiVolume,
     EmptyVolume, FullVolume, CVDefinedVolume, PeriodicCVDefinedVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
