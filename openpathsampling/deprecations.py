@@ -47,39 +47,57 @@ class Deprecation(object):
 
     @property
     def message(self):
-        return self.format_string("{problem} {remedy}")
+        """problem/remedy message for this deprecation"""
+        return self._format_string("{problem} {remedy}")
 
-    def format_string(self, string):
+    def _format_string(self, string):
         result = string
         while any('{' + key + '}' in result for key in self.str_replace):
             result = result.format(**self.str_replace)
         return result
-        # result = string.format(**self.str_replace).format(**self.str_replace)
-        # result = string.format(problem=self.problem,
-                               # remedy=self.remedy,
-                               # deprecated_in=deprecated_in_str)
-        # result = result.format(problem=self.problem,
-                               # remedy=self.remedy,
-                               # deprecated_in=deprecated_in_str,
-                               # version=remove_version_str,
-                               # OPS="OpenPathSampling")
 
     def warn(self):
+        """Emit a warning for this deprecation."""
         if not (self.has_warned and self.warn_once):
             warnings.warn(self.message, DeprecationWarning, stacklevel=2)
             self.has_warned = True
 
     def docstring_message(self, style='numpydoc'):
+        """Create the text to add to the docstring for this deprecation.
+
+        Parameters
+        ----------
+        style : str
+            Docstring style to use. Currently only support 'numpydoc'.
+        Returns
+        -------
+        str :
+            text to add to docstring
+        """
         string = {'numpydoc': numpydoc_deprecation}[style]
-        return self.format_string(string)
+        return self._format_string(string)
 
     def __str__(self):  # pragma: no cover
         return "DEPRECATION: " + self.message
 
 
 def update_docstring(thing_with_docstring, deprecation):
+    """Update an existing docstring based on a deprecation.
+
+    Parameters
+    ----------
+    thing_with_docstring : object
+        The deprecated class/method whose docstring should be modified.
+    deprecation : :class:`.Deprecation`
+        Deprecation instance.
+
+    Returns
+    -------
+    str :
+        updated docstring
+    """
     # TODO: make a better version of this. Should come immediately after the
-    # short description
+    # short description. Requires parsing the existing docstring.
     docs = thing_with_docstring.__doc__
     if thing_with_docstring.__doc__ is None:
         docs = ""
@@ -130,6 +148,7 @@ SAVE_RELOAD_OLD_TPS_NETWORK = Deprecation(
 # has_deprecation and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
 def has_deprecations(cls):
+    """Decorator to ensure that docstrings get updated for wrapped class"""
     for obj in [cls] + list(vars(cls).values()):
         if callable(obj) and hasattr(obj, '__new_docstring'):
             obj.__doc__ = obj.__new_docstring
@@ -164,7 +183,23 @@ def deprecate(deprecation):
     return decorator
 
 def list_deprecations(version=None, deprecations=None):
-    """List deprecations that should have been removed by ``version``"""
+    """List deprecations that should have been removed by ``version``
+
+    Parameters
+    ----------
+    version : str of version tuple
+        List deprecations to remove before this. If not given, lists all
+        deprecations.
+
+    deprecations : list of :class:`.Deprecation`
+        The list of deprecations to consider. If not given, use all known
+        deprecations in the deprecations module.
+
+    Returns
+    -------
+    list :
+        the relevant instances of :class:`.Deprecation`
+    """
     if deprecations is None:
         module = sys.modules[__name__]
         module_objects = [getattr(module, name) for name in dir(module)]
@@ -180,6 +215,12 @@ def list_deprecations(version=None, deprecations=None):
 
 
 def print_deprecations(version=None):  # pragma: no cover
+    """Print a list of deprecations to remove by version ``version``
+
+    Parameters
+    ----------
+    version : string or version tuple
+    """
     # useful when preparing a release
     deprecations = list_deprecations(version)
     for dep in deprecations:
