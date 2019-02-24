@@ -56,10 +56,11 @@ class Deprecation(object):
             result = result.format(**self.str_replace)
         return result
 
-    def warn(self):
+    def warn(self, stacklevel=2):
         """Emit a warning for this deprecation."""
         if not (self.has_warned and self.warn_once):
-            warnings.warn(self.message, DeprecationWarning, stacklevel=2)
+            warnings.warn(self.message, DeprecationWarning,
+                          stacklevel=stacklevel)
             self.has_warned = True
 
     def docstring_message(self, style='numpydoc'):
@@ -151,7 +152,12 @@ def has_deprecations(cls):
     """Decorator to ensure that docstrings get updated for wrapped class"""
     for obj in [cls] + list(vars(cls).values()):
         if callable(obj) and hasattr(obj, '__new_docstring'):
-            obj.__doc__ = obj.__new_docstring
+            try:
+                obj.__doc__ = obj.__new_docstring
+            except AttributeError:
+                # probably Python 2; we can't update docstring in Py2
+                # see https://github.com/Chilipp/docrep/pull/9 and related
+                pass
             del obj.__new_docstring
     return cls
 
