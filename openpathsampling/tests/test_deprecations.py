@@ -75,24 +75,30 @@ class TestDeprecation(object):
             assert issubclass(warn.category, DeprecationWarning)
             assert self.bar.message in str(warn.message)
 
+
+# In Python 2, functools.wraps can't handle classes defined inside other
+# classes; so we have to define this at module-level (needs __module__ attr)
+@deprecate(self.foo)
+class RottedCode(object):
+    @deprecate(self.bar)
+    def bar(self):
+        """Bar docstring"""
+        pass
+
+    # note the order of decorators here! important!
+    @property
+    @deprecate(self.baz)
+    def baz(self):
+        """Baz docstring"""
+        pass
+
+
 class TestDeprecationDecorators(object):
     def setup(self):
         self.foo, self.bar, self.baz = make_foo_bar_baz()
 
-        @deprecate(self.foo)
-        class RottedCode(object):
-            @deprecate(self.bar)
-            def bar(self):
-                """Bar docstring"""
-                pass
-
-            # note the order of decorators here! important!
-            @property
-            @deprecate(self.baz)
-            def baz(self):
-                """Baz docstring"""
-                pass
-
+        # TODO: move rotted code definition inside here when we stop
+        # supporting Python 2
         self.RottedCode = RottedCode
 
     def test_docstrings(self):

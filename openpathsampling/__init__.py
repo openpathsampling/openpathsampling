@@ -163,8 +163,10 @@ from .high_level.part_in_b_tps import (
 import openpathsampling.numerics as numerics
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
-import openpathsampling.engines.openmm as openmm
-import openpathsampling.engines.toy as toy
+
+# until engines are proper subpackages, built-ins need to be findable!
+import openpathsampling.engines.openmm #as openmm
+import openpathsampling.engines.toy #as toy
 
 
 def git_HEAD():  # pragma: no cover
