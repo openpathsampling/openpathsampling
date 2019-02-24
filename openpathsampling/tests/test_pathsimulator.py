@@ -257,8 +257,7 @@ class TestCommittorSimulation(object):
         randomizer = paths.NoModification()
 
         self.filename = data_filename("committor_test.nc")
-        self.storage = paths.Storage(self.filename,
-                                     mode="w")
+        self.storage = paths.Storage(self.filename, mode="w")
         self.storage.save(self.snap0)
 
         self.simulation = CommittorSimulation(storage=self.storage,
@@ -269,6 +268,7 @@ class TestCommittorSimulation(object):
         self.simulation.output_stream = open(os.devnull, 'w')
 
     def teardown(self):
+        self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
@@ -287,8 +287,10 @@ class TestCommittorSimulation(object):
         sim.storage = paths.Storage(new_filename, 'w')
         sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=2)
+        sim.storage.close()
         if os.path.isfile(new_filename):
             os.remove(new_filename)
+        self.storage = read_store  # teardown will get rid of this
 
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=20)

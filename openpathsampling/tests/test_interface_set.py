@@ -217,5 +217,8 @@ class TestPeriodicVolumeInterfaceSet(object):
         for (v, l) in zip(reloaded.volumes, reloaded.lambdas):
             assert_equal(reloaded.get_lambda(v), l)
 
+        storage_r.close()
+        storage_w.close()
+
         if os.path.isfile(fname):
             os.remove(fname)
