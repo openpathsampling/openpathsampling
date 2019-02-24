@@ -1,3 +1,4 @@
+import sys
 import pytest
 import warnings
 
@@ -98,6 +99,8 @@ class TestDeprecationDecorators(object):
 
         self.RottedCode = RottedCode
 
+    @pytest.mark.skipif(sys.version_info < (3,),
+                        reason="Testing procedure requires Python 3")
     def test_docstrings(self):
         assert self.RottedCode.__doc__ is None
         assert self.RottedCode.bar.__doc__ == "Bar docstring"
@@ -110,6 +113,8 @@ class TestDeprecationDecorators(object):
         # TODO: this does NOT work for properties (yet)
         # assert self.baz.message in self.RottedCode.baz.__doc__
 
+    @pytest.mark.skipif(sys.version_info < (3,),
+                        reason="Testing procedure requires Python 3")
     @pytest.mark.parametrize('use_has_deprecations', [True, False])
     def test_warnings(self, use_has_deprecations):
         wrapper = {True: has_deprecations,
