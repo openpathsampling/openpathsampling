@@ -198,15 +198,6 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
     Typical set operations are allowed, here: and, or, xor, -(without), ~
     (inverse = all - x)
 
-    Examples
-    --------
-    >>> EnsembleFactory.TISEnsemble(
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.08),
-    >>>     True
-    >>>     )
-
     Notes
     -----
     Maybe replace - by / to get better notation. So far it has not been used
@@ -2924,76 +2915,76 @@ class TISEnsemble(WrappedEnsemble):
         return str(self.ensemble)
 
 
-class EnsembleFactory(object):
-    """
-    Convenience class to construct Ensembles
-    """
+# class EnsembleFactory(object):
+    # """
+    # Convenience class to construct Ensembles
+    # """
 
-    @staticmethod
-    def StartXEnsemble(volume):
-        """
-        Construct an ensemble that starts (x[0]) in the specified volume
+    # @staticmethod
+    # def StartXEnsemble(volume):
+        # """
+        # Construct an ensemble that starts (x[0]) in the specified volume
 
-        Parameters
-        ----------
-        volume : :class:`openpathsampling.volume.Volume`
-            The volume to start in
+        # Parameters
+        # ----------
+        # volume : :class:`openpathsampling.volume.Volume`
+            # The volume to start in
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.ensemble.Ensemble`
-            The constructed Ensemble
-        """
-        return AllInXEnsemble(volume, 0)
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.ensemble.Ensemble`
+            # The constructed Ensemble
+        # """
+        # return AllInXEnsemble(volume, 0)
 
-    @staticmethod
-    def EndXEnsemble(volume):
-        """
-        Construct an ensemble that ends (x[-1]) in the specified volume
+    # @staticmethod
+    # def EndXEnsemble(volume):
+        # """
+        # Construct an ensemble that ends (x[-1]) in the specified volume
 
-        Parameters
-        ----------
-        volume : :class:`openpathsampling.volume.Volume`
-            The volume to end in
+        # Parameters
+        # ----------
+        # volume : :class:`openpathsampling.volume.Volume`
+            # The volume to end in
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.ensemble.Ensemble`
-            The constructed Ensemble
-        """
-        return AllInXEnsemble(volume, -1)
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.ensemble.Ensemble`
+            # The constructed Ensemble
+        # """
+        # return AllInXEnsemble(volume, -1)
 
-    @staticmethod
-    def A2BEnsemble(volume_a, volume_b, trusted=True):
-        """
-        Construct an ensemble that starts in `volume_a`, ends in
-        `volume_b` and is in either volumes in between
+    # @staticmethod
+    # def A2BEnsemble(volume_a, volume_b, trusted=True):
+        # """
+        # Construct an ensemble that starts in `volume_a`, ends in
+        # `volume_b` and is in either volumes in between
 
-        Parameters
-        ----------
-        volume_a : :class:`openpathsampling.Volume`
-            The volume to start in
-        volume_b : :class:`openpathsampling.Volume`
-            The volume to end in
+        # Parameters
+        # ----------
+        # volume_a : :class:`openpathsampling.Volume`
+            # The volume to start in
+        # volume_b : :class:`openpathsampling.Volume`
+            # The volume to end in
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.Ensemble`
-            The constructed Ensemble
-        """
-        # TODO: this is actually only for flexible path length TPS now
-        return SequentialEnsemble([
-            SingleFrameEnsemble(AllInXEnsemble(volume_a)),
-            AllOutXEnsemble(volume_a | volume_b),
-            SingleFrameEnsemble(AllInXEnsemble(volume_b))
-        ])
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.Ensemble`
+            # The constructed Ensemble
+        # """
+        # # TODO: this is actually only for flexible path length TPS now
+        # return SequentialEnsemble([
+            # SingleFrameEnsemble(AllInXEnsemble(volume_a)),
+            # AllOutXEnsemble(volume_a | volume_b),
+            # SingleFrameEnsemble(AllInXEnsemble(volume_b))
+        # ])
 
-    @staticmethod
-    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter,
-                       lambdas=None):
-        if lambdas is None:
-            lambdas = [None] * len(volumes_x)
-        myset = [paths.TISEnsemble(volume_a, volume_b, vol, orderparameter,
-                                   lambda_i)
-                 for (vol, lambda_i) in zip(volumes_x, lambdas)]
-        return myset
+    # @staticmethod
+    # def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter,
+                       # lambdas=None):
+        # if lambdas is None:
+            # lambdas = [None] * len(volumes_x)
+        # myset = [paths.TISEnsemble(volume_a, volume_b, vol, orderparameter,
+                                   # lambda_i)
+                 # for (vol, lambda_i) in zip(volumes_x, lambdas)]
+        # return myset
