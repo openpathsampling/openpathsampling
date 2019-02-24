@@ -61,8 +61,8 @@ from .collectivevariable import (
     GeneratorCV)
 
 from .ensemble import (
-    Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
-    EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
+    Ensemble, EnsembleCombination, EnsembleFactory,
+    EmptyEnsemble, FullEnsemble, PartInXEnsemble,
     AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
     SuffixTrajectoryEnsemble, PrefixTrajectoryEnsemble,
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,

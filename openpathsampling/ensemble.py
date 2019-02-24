@@ -2295,55 +2295,6 @@ class PartOutXEnsemble(PartInXEnsemble):
         return False
 
 
-class ExitsXEnsemble(VolumeEnsemble):
-    """
-    Represents an ensemble where two successive frames from the selected
-    frames of the trajectory crossing from inside to outside the given volume.
-    """
-
-    def __init__(self, volume, trusted=False):
-        # changing the defaults for frames and trusted; prevent single frame
-        super(ExitsXEnsemble, self).__init__(volume, trusted)
-
-    def _str(self):
-        domain = 'exists x[t], x[t+1] '
-        result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
-            self._volume)
-        return domain + result
-
-    def __call__(self, trajectory, trusted=None, candidate=False):
-        subtraj = trajectory
-        for i in range(len(subtraj) - 1):
-            frame_i = subtraj.get_as_proxy(i)
-            if self._volume(frame_i):
-                frame_iplus = subtraj.get_as_proxy(i + 1)
-                if not self._volume(frame_iplus):
-                    return True
-        return False
-
-
-class EntersXEnsemble(ExitsXEnsemble):
-    """
-    Represents an ensemble where two successive frames from the selected
-    frames of the trajectory crossing from outside to inside the given volume.
-    """
-
-    def _str(self):
-        domain = 'exists x[t], x[t+1] '
-        result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
-            self._volume)
-        return domain + result
-
-    def __call__(self, trajectory, trusted=None, candidate=False):
-        subtraj = trajectory
-        for i in range(len(subtraj) - 1):
-            frame_i = subtraj.get_as_proxy(i)
-            if not self._volume(frame_i):
-                frame_iplus = subtraj.get_as_proxy(i + 1)
-                if self._volume(frame_iplus):
-                    return True
-        return False
-
 
 class WrappedEnsemble(Ensemble):
     """
