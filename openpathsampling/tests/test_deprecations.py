@@ -24,7 +24,7 @@ def make_foo_bar_baz():
 
 FOO_DOCSTRING_MESSAGE = """
 
-.. deprecate:: 1.1.2
+.. deprecated:: 1.1.2
     Foo is here. Get rid of the foo.
 """
 

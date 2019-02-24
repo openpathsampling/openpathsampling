@@ -2614,9 +2614,6 @@ class MoveDetails(Details):
 @deprecate(SAMPLE_DETAILS)
 class SampleDetails(Details):
     """Details of a sample
-
-    .. note:: Deprecated in OpenPathSampling 0.9.3
-          `SampleDetails` will be removed in OPS 2.0.0
     """
 
     def __init__(self, **kwargs):

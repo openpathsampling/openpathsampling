@@ -10,7 +10,7 @@ if sys.version_info > (3,):
 
 numpydoc_deprecation = """
 
-.. deprecate:: {deprecated_in}
+.. deprecated:: {deprecated_in}
     {problem} {remedy}
 """
 
@@ -127,7 +127,7 @@ SAVE_RELOAD_OLD_TPS_NETWORK = Deprecation(
     deprecated_in=(0, 9 ,3)
 )
 
-# has_deprecation and deprecate inspired by:
+# has_deprecation and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
 def has_deprecations(cls):
     for obj in [cls] + list(vars(cls).values()):
