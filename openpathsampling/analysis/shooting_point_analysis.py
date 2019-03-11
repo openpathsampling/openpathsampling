@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 try:
     from collections import abc
 except ImportError:
-    import abc
+    import collections as abc
 
 # based on http://stackoverflow.com/a/3387975
 class TransformedDict(abc.MutableMapping):
