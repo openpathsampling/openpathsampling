@@ -4,7 +4,6 @@ import pytest
 from openpathsampling.tests.test_helpers import \
         make_1d_traj, CalvinistDynamics
 
-
 from openpathsampling.visit_all_states import *
 
 def test_default_state_progress_report():
@@ -74,10 +73,34 @@ class TestVisitAllStatesEnsemble(object):
 
     @pytest.mark.parametrize('strict', [True, False],
                              ids=['strict', 'normal'])
-    def test_can_append(self, strict):
+    @pytest.mark.parametrize('trusted', [True, False],
+                             ids=['trusted', 'untrusted'])
+    def test_can_append(self, strict, trusted):
         can_append = {False: self.ensemble.can_append,
                       True: self.ensemble.strict_can_append}[strict]
-        # be sure to test both the trusted and non-trusted versions
+        n_frames = 1
+        done = False
+        my_traj = None
+        while not done:
+            my_traj = self.traj[:n_frames]
+            done = not can_append(my_traj, trusted=trusted)
+            n_frames += 1
+        assert len(my_traj) == 8
+        assert self.ensemble.found_states == set(self.states)
+
+    @pytest.mark.parametrize('strict', [True, False],
+                             ids=['strict', 'normal'])
+    def test_can_append_trusted_incorrect(self, strict):
+        # things that the trusted version can get wrong
+        pytest.skip()
+
+    @pytest.mark.parametrize('strict', [True, False],
+                             ids=['strict', 'normal'])
+    @pytest.mark.parametrize('trusted', [True, False],
+                             ids=['trusted', 'untrusted'])
+    def test_can_append_new_trajectory(self, strict, trusted):
+        can_append = {False: self.ensemble.can_append,
+                      True: self.ensemble.strict_can_append}[strict]
         pytest.skip()
 
     def test_call(self):

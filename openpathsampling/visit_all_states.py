@@ -1,4 +1,5 @@
 import openpathsampling as paths
+from openpathsampling.ensemble import EnsembleCache
 
 def default_state_progress_report(n_steps, found_states, all_states,
                                   timestep=None):
@@ -30,6 +31,15 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
         self.timestep = timestep
         self.report_frequency = 10
         self.progress = self._progress_indicator(progress)
+        self.cache = EnsembleCache(direction=+1)
+        self._reset_cache_contents()
+
+    def _reset_cache_contents(self):
+        self.cache.contents['found_states'] = set([])
+
+    @property
+    def found_states(self):
+        return self.cache.contents['found_states']
 
     @staticmethod
     def _progress_indicator(progress):
