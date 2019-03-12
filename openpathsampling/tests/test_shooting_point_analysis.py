@@ -39,7 +39,7 @@ class TestTransformedDict(object):
 
     def test_initialization(self):
         assert_equal(self.test_dict.store, self.transformed)
-        assert_equal(self.test_dict.hash_representatives, 
+        assert_equal(self.test_dict.hash_representatives,
                      {0: (0,1), 1: (1,2), 2: (2,3)})
 
     def test_set_get(self):
@@ -132,8 +132,7 @@ class TestShootingPointAnalysis(object):
 
         randomizer = paths.NoModification()
         self.filename = data_filename("shooting_analysis.nc")
-        self.storage = paths.Storage(self.filename, 
-                                     mode="w")
+        self.storage = paths.Storage(self.filename, mode="w")
 
         self.simulation = paths.CommittorSimulation(
             storage=self.storage,
@@ -150,6 +149,7 @@ class TestShootingPointAnalysis(object):
 
     def teardown(self):
         import os
+        self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None # set by Committor

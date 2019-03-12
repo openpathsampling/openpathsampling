@@ -18,24 +18,36 @@ install:
   # install by without conda-build (requirements, then setup.py install)
   - conda create -q -y --name test conda pyyaml python=$CONDA_PY
   - source activate test
+  - conda config --env --add pinned_packages python=$CONDA_PY
   - export PACKAGES=`python devtools/install_recipe_requirements.py --dry devtools/conda-recipe/meta.yaml`
+  - TESTING_PACKAGES=`cat devtools/testing_requirements.txt | tr "\n" " "`
+  - EXTRA_PACKAGES=`cat devtools/optional_packages.txt | tr "\n" " "`
+  - export PACKAGES="$PACKAGES $TESTING_PACKAGES $EXTRA_PACKAGES"
   - echo $PACKAGES
   - conda install -y -q -c conda-forge -c omnia $PACKAGES
-  - python setup.py install
   
   # report info about our conda env and finish installation
   - conda info --envs
-  - conda install --quiet --yes msmbuilder
-  - conda install --quiet --yes nose python-coveralls ipynbtest
+  #- conda install --quiet --yes -c conda-forge msmbuilder
+  #- conda install --quiet --yes nose python-coveralls ipynbtest 
+  #- conda install --quiet --yes pytest 
+  - conda config --env --add pinned_packages libnetcdf=4.6.1
+  - conda config --env --add pinned_packages pytest-cov=2.5.1
   - conda update --all --yes --use-local --quiet
+  # pin pytest-cov b/c: https://github.com/z4r/python-coveralls/issues/66
+  # usually this should be before the conda update
+  #- conda install --quiet --yes pytest-cov=2.5.1
+  - conda update --quiet --yes matplotlib  # no idea why pytest-cov downgraded
+  - python setup.py install
 
 before_script:
   - python --version
+  - python -c "import openpathsampling"
   - source devtools/ci/git_hash.sh
   - conda list -n test
 
 script:
-  - source devtools/ci/nosetests.sh
+  - source devtools/ci/pytests.sh
   - source devtools/ci/ipythontests.sh
 
   # Upload new docs
