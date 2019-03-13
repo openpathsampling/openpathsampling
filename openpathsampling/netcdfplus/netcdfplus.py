@@ -350,6 +350,7 @@ class NetCDFPlus(netCDF4.Dataset):
             self._restore()
 
         self.set_auto_mask(False)
+        # self.set_always_mask(False)  ## didn't fix; errors older versions
 
 
 

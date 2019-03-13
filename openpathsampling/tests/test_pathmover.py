@@ -270,6 +270,12 @@ class TestOneWayShootingMover(TestShootingMover):
         moverclasses = [m.__class__ for m in mover.movers]
         assert_equal(ForwardShootMover in moverclasses, True)
         assert_equal(BackwardShootMover in moverclasses, True)
+        assert_equal(mover.engine, mover.movers[0].engine)
+        assert_equal(mover.engine, mover.movers[1].engine)
+        assert_equal(mover.selector, mover.movers[0].selector)
+        assert_equal(mover.selector, mover.movers[1].selector)
+        assert_equal(mover.ensemble, mover.movers[0].ensemble)
+        assert_equal(mover.ensemble, mover.movers[1].ensemble)
 
 class TestForwardFirstTwoWayShootingMover(TestShootingMover):
     _MoverType = ForwardFirstTwoWayShootingMover
