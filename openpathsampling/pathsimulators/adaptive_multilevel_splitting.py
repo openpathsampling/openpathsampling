@@ -66,7 +66,7 @@ class ParametrizedVolume(Volume):
             raise RuntimeError("Cannot call parametrized volume before "
                                "setting parameters")
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return repr(self)  # str used in equality; default is wrong
 
 
