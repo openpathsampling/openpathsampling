@@ -1633,6 +1633,7 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
         # logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
+        # TODO: the weird while condition is handling the OVERSHOOTING
         while ((ens.can_append(subtraj, trusted=True) or
                 ens(subtraj, trusted=True)
                ) and subtraj_final < traj_final):
@@ -1657,6 +1658,7 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
         # logger.debug("Can-app " + str(ens.can_prepend(subtraj, trusted=True)))
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
+        # TODO: the weird while condition is handling the OVERSHOOTING
         while ((ens.can_prepend(subtraj, trusted=True) or
                 ens.check_reverse(subtraj, trusted=True)
                ) and subtraj_first >= traj_first):
@@ -2388,6 +2390,9 @@ class WrappedEnsemble(Ensemble):
         return self._new_ensemble.strict_can_prepend(self._alter(trajectory),
                                                      trusted)
 
+    def _str(self):
+        return str(self._new_ensemble)
+
 
 class SlicedTrajectoryEnsemble(WrappedEnsemble):
     """
@@ -2573,7 +2578,7 @@ class SingleFrameEnsemble(WrappedEnsemble):
         return "{" + str(self.ensemble) + "} (SINGLE FRAME)"
 
 
-class MinusInterfaceEnsemble(SequentialEnsemble):
+class MinusInterfaceEnsemble(WrappedEnsemble):
     """
     This creates an ensemble for the minus interface.
 
@@ -2605,9 +2610,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     # TODO: Check with David if it makes sense to store these and allow
     # them being used in __init__ instead of the self-made ones
 
-    _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
-
-    def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
+    def __init__(self, state_vol, innermost_vols, n_l=2, forbidden=None,
+                 greedy=False):
         if n_l < 2:
             raise ValueError("The number of segments n_l must be at least 2")
 
@@ -2616,6 +2620,18 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             innermost_vols = list(innermost_vols)
         except TypeError:
             innermost_vols = [innermost_vols]
+
+        if forbidden is None:
+            forbidden = [paths.EmptyVolume()]
+        else:
+            try:
+                forbidden = list(forbidden)
+            except TypeError:
+                forbidden = [forbidden]
+
+        self.forbidden = forbidden
+        forbidden_volume = paths.join_volumes(forbidden)
+        forbidden_ensemble = paths.AllOutXEnsemble(forbidden_volume)
 
         self.innermost_vols = innermost_vols
         self.innermost_vol = paths.FullVolume()
@@ -2626,7 +2642,9 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         out_A = AllOutXEnsemble(state_vol)
         in_X = AllInXEnsemble(self.innermost_vol)
         leave_X = PartOutXEnsemble(self.innermost_vol)
-        interstitial = out_A & in_X
+        # interstitial = out_A & in_X
+        interstitial = self.innermost_vol - state_vol
+        in_interstitial = AllInXEnsemble(interstitial)
         segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
                              for inner in self.innermost_vols]
 
@@ -2635,22 +2653,34 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         # interstitial = AllInXEnsemble(self.innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(in_A),
-            OptionalEnsemble(interstitial),
+            OptionalEnsemble(in_interstitial),
         ]
         loop = [
-            out_A & leave_X,
+            out_A, # & leave_X, # redundant b/c next stop for previous
             in_X  # & hitA # redundant due to stop req for previous outA
         ]
         end = [
-            out_A & leave_X,
-            OptionalEnsemble(interstitial),
+            out_A, #  & leave_X,
+            OptionalEnsemble(in_interstitial),
             SingleFrameEnsemble(in_A)
         ]
-        ensembles = start + loop * (n_l - 1) + end
+        sequence = start + loop * (n_l - 1) + end
+
+        ensemble = paths.SequentialEnsemble(sequence) & forbidden_ensemble
 
         self.n_l = n_l
 
-        super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
+        super(MinusInterfaceEnsemble, self).__init__(ensemble)
+
+    def to_dict(self):
+        dct = super(MinusInterfaceEnsemble, self).to_dict()
+        dct['state_vol'] = self.state_vol
+        dct['innermost_vols'] = self.innermost_vols
+        dct['innermost_vol'] = self.innermost_vol
+        dct['_segment_ensemble'] = self._segment_ensemble
+        dct['forbidden'] = self.forbidden
+        dct['n_l'] = self.n_l
+        return dct
 
     @property
     def extendable_sub_ensembles(self):
@@ -2780,7 +2810,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     #     return samp
 
 
-class TISEnsemble(SequentialEnsemble):
+class TISEnsemble(WrappedEnsemble):
     """An ensemble for TIS (or AMS).
 
     Begin in `initial_states`, end in either `initial_states` or
@@ -2834,11 +2864,12 @@ class TISEnsemble(SequentialEnsemble):
         volume_a = paths.volume.join_volumes(initial_states)
         volume_b = paths.volume.join_volumes(final_states)
 
-        super(TISEnsemble, self).__init__([
+        ensemble = SequentialEnsemble([
             AllInXEnsemble(volume_a) & LengthEnsemble(1),
-            AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(interface),
+            OptionalEnsemble(AllOutXEnsemble(volume_a | volume_b)),
             AllInXEnsemble(volume_a | volume_b) & LengthEnsemble(1)
-        ])
+        ]) & PartOutXEnsemble(interface)
+        super(TISEnsemble, self).__init__(ensemble)
 
         self.initial_states = initial_states
         self.final_states = final_states
@@ -2937,6 +2968,9 @@ class TISEnsemble(SequentialEnsemble):
             "max_lambda=" + max_l + " "
         )
         return mystr
+
+    def _str(self):
+        return str(self.ensemble)
 
 
 class EnsembleFactory(object):

@@ -28,7 +28,7 @@ logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.sample').setLevel(logging.CRITICAL)
 
 
-class testTransformedDict(object):
+class TestTransformedDict(object):
     def setup(self):
         self.untransformed = {(0, 1) : "a", (1, 2) : "b", (2, 3) : "c"}
         self.transformed = {0 : "a", 1 : "b", 2 : "c"}
@@ -39,7 +39,7 @@ class testTransformedDict(object):
 
     def test_initialization(self):
         assert_equal(self.test_dict.store, self.transformed)
-        assert_equal(self.test_dict.hash_representatives, 
+        assert_equal(self.test_dict.hash_representatives,
                      {0: (0,1), 1: (1,2), 2: (2,3)})
 
     def test_set_get(self):
@@ -75,7 +75,7 @@ class testTransformedDict(object):
                      {1: (0,1), 2: (1,2), 3: (2,3)})
 
 
-class testSnapshotByCoordinateDict(object):
+class TestSnapshotByCoordinateDict(object):
     def setup(self):
         self.empty_dict = SnapshotByCoordinateDict()
         coords_A = np.array([[0.0, 0.0]])
@@ -99,9 +99,9 @@ class testSnapshotByCoordinateDict(object):
         assert_equal(self.dict1.store, {self.key_A: "A2", self.key_B: "B1"})
 
 
-class testShootingPointAnalysis(object):
+class TestShootingPointAnalysis(object):
     def setup(self):
-        # taken from the testCommittorSimulation
+        # taken from the TestCommittorSimulation
         import openpathsampling.engines.toy as toys
         pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
@@ -132,8 +132,7 @@ class testShootingPointAnalysis(object):
 
         randomizer = paths.NoModification()
         self.filename = data_filename("shooting_analysis.nc")
-        self.storage = paths.Storage(self.filename, 
-                                     mode="w")
+        self.storage = paths.Storage(self.filename, mode="w")
 
         self.simulation = paths.CommittorSimulation(
             storage=self.storage,
@@ -150,6 +149,7 @@ class testShootingPointAnalysis(object):
 
     def teardown(self):
         import os
+        self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None # set by Committor

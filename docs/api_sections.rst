@@ -9,6 +9,7 @@ OpenPathSampling API
     volume
     ensemble
     shooting
+    snapshot_modifiers
     pathmover
     movestrategy
     pathsimulator
@@ -18,6 +19,7 @@ OpenPathSampling API
     engines/index
     netcdfplus/index
     tis_analysis
+..    snapshot_features
 
 ..    Full API <api>
 

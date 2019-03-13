@@ -1,7 +1,9 @@
 .. _data-objects:
 
+.. currentmodule:: openpathsampling
+
 ============
-Data Objects
+Data objects
 ============
 
 *Or: How do I see the trajectory I generated?*

@@ -1,4 +1,4 @@
-from openpathsampling.pathsimulator import PathSimulator
+from openpathsampling.pathsimulators import PathSimulator
 from openpathsampling.netcdfplus import NamedObjectStore
 
 

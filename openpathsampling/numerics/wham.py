@@ -287,14 +287,14 @@ class WHAM(object):
         hists = weighted_counts.columns
         bins = weighted_counts.index
         # TODO: probably faster if we make wc this a sparse matrix
-        wc = weighted_counts.as_matrix()
-        unw = unweighting.as_matrix()
+        wc = weighted_counts.values
+        unw = unweighting.values
         lnZ_old = pd.Series(data=lnZ, index=hists)
         Z_new = pd.Series(index=hists)
-        sum_k_Hk_byQ = sum_k_Hk_Q.as_matrix()
+        sum_k_Hk_byQ = sum_k_Hk_Q.values
         while diff > tol and iteration < self.max_iter:
             Z_old = np.exp(lnZ_old)
-            reciprocal_Z_old = (1.0 / Z_old).as_matrix()
+            reciprocal_Z_old = (1.0 / Z_old).values
             for i in range(len(hists)):
                 #############################################################
                 # this is equation 7.3.10 in F&S

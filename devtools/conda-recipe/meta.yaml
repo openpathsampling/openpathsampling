@@ -1,6 +1,6 @@
 package:
   name: openpathsampling-dev
-  version: "0.9.3"
+  version: "0.9.6"
 
 source:
 #  git_url: ../../.git
@@ -15,7 +15,7 @@ requirements:
     - python
     - future
     - setuptools
-    - numpy
+    #- numpy
 
   run:
     - python
@@ -24,6 +24,7 @@ requirements:
     - future
     - pandas
     - netcdf4
+    - libnetcdf==4.6.1
     - openmm
     - openmmtools
     - jupyter
