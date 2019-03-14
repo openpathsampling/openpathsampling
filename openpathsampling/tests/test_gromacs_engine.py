@@ -1,4 +1,5 @@
 import pytest
+import numpy.testing as npt
 from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
@@ -199,7 +200,9 @@ class TestGromacsEngine(object):
     def test_open_file_caching(self):
         # read several frames from one file, then switch to another file
         # first read from 0000000, then 0000099
-        pass
+        # TODO: what was I trying to test here? that I can switch between
+        # files?
+        pytest.skip()
 
 class TestGromacsExternalMDSnapshot(object):
     def setup(self):
@@ -217,9 +220,29 @@ class TestGromacsExternalMDSnapshot(object):
             engine=self.engine
         )
         self.snapshot_shape = (1651, 3)
+        self.storage_filename = "gmx_snap.nc"
 
-    def test_storage(self):
-        pytest.skip()
+    def teardown(self):
+        if os.path.isfile(self.storage_filename):
+            os.remove(self.storage_filename)
+
+    @pytest.mark.parametrize('snap_num', [0, 1])
+    def test_storage(self, snap_num):
+        if os.path.isfile(self.storage_filename):
+            os.remove(self.storage_filename)
+
+        storage = paths.Storage(self.storage_filename, mode='w')
+        storage.save(self.snapshot)
+
+        vel_mul = 1 - 2*snap_num  # 0->1; 1->-1
+
+        assert len(storage.snapshots) == 2  # fwd and bkwc
+        snap = storage.snapshots[snap_num]
+        npt.assert_array_equal(snap.xyz, self.snapshot.xyz)
+        npt.assert_array_equal(snap.velocities,
+                               vel_mul * self.snapshot.velocities)
+        npt.assert_array_equal(snap.box_vectors,
+                               self.snapshot.box_vectors)
 
     def _check_all_empty(self):
         # before loading an attribute, all should be empty
@@ -259,4 +282,3 @@ class TestGromacsExternalMDSnapshot(object):
         self._check_none_empty()
         self.snapshot.clear_cache()
         self._check_all_empty()
-        coordinates = self.snapshot.coordinates

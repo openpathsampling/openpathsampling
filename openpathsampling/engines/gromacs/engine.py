@@ -134,12 +134,14 @@ def snapshot_from_gro(gro_file):
                                                 descriptor=descriptor,
                                                 template=None)
 
-        def read_frame_data(self, file_name, file_position):
-            traj = md.load(file_name)
-            xyz = traj.xyz[0]
-            vel = np.zeros(shape=xyz.shape)
-            box = traj.unitcell_vectors[0]
-            return (xyz, vel, box)
+        read_frame_data = GromacsEngine.read_frame_data
+
+        # def read_frame_data(self, file_name, file_position):
+            # traj = md.load(file_name)
+            # xyz = traj.xyz[0]
+            # vel = np.zeros(shape=xyz.shape)
+            # box = traj.unitcell_vectors[0]
+            # return (xyz, vel, box)
 
     template_engine = GroFileEngine(gro_file)
     snapshot = ExternalMDSnapshot(file_name=gro_file,
