@@ -1,9 +1,9 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises, assert_true)
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+                        raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
 import numpy.testing as npt
 
-from test_helpers import data_filename
+from test_helpers import data_filename, assert_items_equal
 
 import openpathsampling as paths
 import mdtraj as md
@@ -120,32 +120,43 @@ class TestGromacsEngine(object):
 
     def test_set_filenames(self):
         test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
-                             options={}, prefix="proj")
+                             base_dir=self.test_dir, options={},
+                             prefix="proj")
         test_engine.set_filenames(0)
-        assert_equal(test_engine.input_file, "initial_frame.trr")
-        assert_equal(test_engine.output_file,
-                     os.path.join("proj_trr", "0000001.trr"))
+        assert test_engine.input_file == \
+                os.path.join(self.test_dir, "initial_frame.trr")
+        assert test_engine.output_file == \
+                os.path.join(self.test_dir, "proj_trr", "0000001.trr")
         assert_equal(test_engine.edr_file,
-                     os.path.join("proj_edr", "0000001.edr"))
+                     os.path.join(self.test_dir, "proj_edr", "0000001.edr"))
         assert_equal(test_engine.log_file,
-                     os.path.join("proj_log", "0000001.log"))
+                     os.path.join(self.test_dir, "proj_log", "0000001.log"))
 
         test_engine.set_filenames(99)
-        assert_equal(test_engine.input_file, "initial_frame.trr")
+        assert_equal(test_engine.input_file,
+                     os.path.join(self.test_dir, "initial_frame.trr"))
         assert_equal(test_engine.output_file,
-                     os.path.join("proj_trr", "0000100.trr"))
+                     os.path.join(self.test_dir, "proj_trr", "0000100.trr"))
         assert_equal(test_engine.edr_file,
-                     os.path.join("proj_edr", "0000100.edr"))
+                     os.path.join(self.test_dir, "proj_edr", "0000100.edr"))
         assert_equal(test_engine.log_file,
-                     os.path.join("proj_log", "0000100.log"))
+                     os.path.join(self.test_dir, "proj_log", "0000100.log"))
 
     def test_engine_command(self):
         test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
-                             options={}, prefix="proj")
+                             base_dir=self.test_dir, options={},
+                             prefix="proj")
         test_engine.set_filenames(0)
-        assert_equal(test_engine.engine_command(), "gmx mdrun -s topol.tpr "
-                     + "-o proj_trr/0000001.trr -e proj_edr/0000001.edr "
-                     + "-g proj_log/0000001.log ")
+        tpr = os.path.join("topol.tpr")
+        trr = os.path.join(self.test_dir, "proj_trr", "0000001.trr")
+        edr = os.path.join(self.test_dir, "proj_edr", "0000001.edr")
+        log = os.path.join(self.test_dir, "proj_log", "0000001.log")
+        beauty = test_engine.engine_command()
+        truth = "gmx mdrun -s {tpr} -o {trr} -e {edr} -g {log} ".format(
+                    tpr=tpr, trr=trr, edr=edr, log=log
+        )  # space at the end before args (args is empty)
+        assert len(beauty) == len(truth)
+        assert beauty == truth
 
     def test_generate(self):
         if not has_gmx:

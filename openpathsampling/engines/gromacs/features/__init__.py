@@ -1,4 +1,4 @@
-import coordinates
-import velocities
-import box_vectors
-import file_info
+from . import coordinates
+from . import velocities
+from . import box_vectors
+from . import file_info
