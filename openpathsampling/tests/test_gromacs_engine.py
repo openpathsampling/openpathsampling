@@ -1,3 +1,4 @@
+import pytest
 from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
@@ -199,3 +200,63 @@ class TestGromacsEngine(object):
         # read several frames from one file, then switch to another file
         # first read from 0000000, then 0000099
         pass
+
+class TestGromacsExternalMDSnapshot(object):
+    def setup(self):
+        self.test_dir = data_filename("gromacs_engine")
+        self.engine = Engine(gro="conf.gro",
+                             mdp="md.mdp",
+                             top="topol.top",
+                             options={},
+                             base_dir=self.test_dir,
+                             prefix="proj")
+        self.snapshot = ExternalMDSnapshot(
+            file_name=os.path.join(self.test_dir, "project_trr",
+                                   "0000000.trr"),
+            file_position=2,
+            engine=self.engine
+        )
+        self.snapshot_shape = (1651, 3)
+
+    def test_storage(self):
+        pytest.skip()
+
+    def _check_all_empty(self):
+        # before loading an attribute, all should be empty
+        assert self.snapshot._velocities is None
+        assert self.snapshot._xyz is None
+        assert self.snapshot._box_vectors is None
+
+    def _check_none_empty(self):
+        # after loading an attribute, all should be present
+        assert self.snapshot._velocities is not None
+        assert self.snapshot._xyz is not None
+        assert self.snapshot._box_vectors is not None
+
+    def test_velocities(self):
+        self._check_all_empty()
+        velocities = self.snapshot.velocities
+        assert velocities.shape == self.snapshot_shape
+        self._check_none_empty()
+
+    def test_coordinates_xyz(self):
+        self._check_all_empty()
+        coordinates = self.snapshot.coordinates
+        assert coordinates.shape == self.snapshot_shape
+        assert all(coordinates.flatten() == self.snapshot.xyz.flatten())
+        self._check_none_empty()
+
+    def test_box_vectors(self):
+        self._check_all_empty()
+        box_vectors = self.snapshot.box_vectors
+        assert box_vectors.shape == (3, 3)
+        self._check_none_empty()
+
+    def test_clear_cache(self):
+        self._check_all_empty()
+        coordinates = self.snapshot.coordinates
+        assert coordinates.shape == self.snapshot_shape
+        self._check_none_empty()
+        self.snapshot.clear_cache()
+        self._check_all_empty()
+        coordinates = self.snapshot.coordinates
