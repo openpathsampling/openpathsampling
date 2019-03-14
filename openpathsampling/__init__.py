@@ -61,8 +61,8 @@ from .collectivevariable import (
     GeneratorCV)
 
 from .ensemble import (
-    Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
-    EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
+    Ensemble, EnsembleCombination,
+    EmptyEnsemble, FullEnsemble, PartInXEnsemble,
     AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
     SuffixTrajectoryEnsemble, PrefixTrajectoryEnsemble,
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
@@ -126,7 +126,7 @@ from .snapshot_modifier import (
 from .storage.storage import Storage, AnalysisStorage
 
 from .volume import (
-    Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
+    Volume, VolumeCombination,
     EmptyVolume, FullVolume, CVDefinedVolume, PeriodicCVDefinedVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
@@ -163,8 +163,10 @@ from .high_level.part_in_b_tps import (
 import openpathsampling.numerics as numerics
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
-import openpathsampling.engines.openmm as openmm
-import openpathsampling.engines.toy as toy
+
+# until engines are proper subpackages, built-ins need to be findable!
+import openpathsampling.engines.openmm #as openmm
+import openpathsampling.engines.toy #as toy
 
 
 def git_HEAD():  # pragma: no cover

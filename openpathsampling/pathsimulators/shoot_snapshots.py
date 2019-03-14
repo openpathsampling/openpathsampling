@@ -110,12 +110,13 @@ class ShootFromSnapshotsSimulation(PathSimulator):
         """
         self.step = 0
         snap_num = 0
+        self.output_stream.write("\n")
         for snapshot in self.initial_snapshots:
             start_snap = snapshot
             # do what we need to get the snapshot set up
             for step in range(n_per_snapshot):
                 paths.tools.refresh_output(
-                    "Working on snapshot %d / %d; shot %d / %d" % (
+                    "Working on snapshot %d / %d; shot %d / %d\n" % (
                         snap_num+1, len(self.initial_snapshots),
                         step+1, n_per_snapshot
                     ),
