@@ -134,14 +134,14 @@ def snapshot_from_gro(gro_file):
                                                 descriptor=descriptor,
                                                 template=None)
 
-        read_frame_data = GromacsEngine.read_frame_data
+        # read_frame_data = GromacsEngine.read_frame_data
 
-        # def read_frame_data(self, file_name, file_position):
-            # traj = md.load(file_name)
-            # xyz = traj.xyz[0]
-            # vel = np.zeros(shape=xyz.shape)
-            # box = traj.unitcell_vectors[0]
-            # return (xyz, vel, box)
+        def read_frame_data(self, file_name, file_position):
+            traj = md.load(file_name)
+            xyz = traj.xyz[0]
+            vel = np.zeros(shape=xyz.shape)
+            box = traj.unitcell_vectors[0]
+            return (xyz, vel, box)
 
     template_engine = GroFileEngine(gro_file)
     snapshot = ExternalMDSnapshot(file_name=gro_file,
@@ -231,15 +231,23 @@ class GromacsEngine(ExternalEngine):
         """
         Returns pos, vel, box or raises error
         """
-        if self._last_filename != filename:
-            try:
-                self._file.close()
-            except AttributeError:
-                pass  # first time thru, self._file is None
-            self._file = TRRTrajectoryFile(filename)
-        self._file.seek(offset=frame_num)
-        data = self._file._read(n_frames=1, atom_indices=None,
-                                get_velocities=True)
+        # if self._last_filename != filename:
+            # try:
+                # self._file.close()
+            # except AttributeError:
+                # pass  # first time thru, self._file is None
+            # self._file = TRRTrajectoryFile(filename)
+        # f = self._file
+        # do we need to reopen the TRR each time to avoid problems with the
+        # fiel length changing?
+        trr = TRRTrajectoryFile(filename)
+        f = trr
+        logging.debug("Reading file %s frame %d",
+                      filename, frame_num)
+        logging.debug("File length: %d", len(filename))
+        f.seek(offset=frame_num)
+        data = f._read(n_frames=1, atom_indices=None, get_velocities=True)
+        trr.close() # needed ?
         return data[0][0], data[5][0], data[3][0]
 
     def read_frame_from_file(self, file_name, frame_num):
