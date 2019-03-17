@@ -259,7 +259,7 @@ class GromacsEngine(ExternalEngine):
         file_number = int(basename.split('.')[0])
         try:
             xyz, vel, box = self.read_frame_data(file_name, frame_num)
-        except (IndexError, OSError):
+        except (IndexError, OSError, IOError):
             # this means that no such frame exists yet, so we return None
             # IndexError in older version, OSError more recently (specific
             # MDTraj error)
