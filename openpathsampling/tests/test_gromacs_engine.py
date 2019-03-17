@@ -5,7 +5,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
 from nose.plugins.skip import Skip, SkipTest
 import numpy.testing as npt
 
-from test_helpers import data_filename, assert_items_equal
+from .test_helpers import data_filename, assert_items_equal
 
 import openpathsampling as paths
 import mdtraj as md
