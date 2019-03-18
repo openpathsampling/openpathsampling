@@ -68,11 +68,19 @@ Testing Your Installation
 =========================
 .. _run-tests:
 
-Running the tests is a great way to verify that everything is working. The test
-suite uses `nose <https://nose.readthedocs.org/en/latest/>`_, which you can pick
-up via ``conda`` if you don't already have it. ::
+Running the tests is a great way to verify that everything is working. The
+test suite uses both `pytest <http://pytest.org>`_ and, for the time being,
+`nose <https://nose.readthedocs.org/en/latest/>`_. You can pick these up via
+``conda`` if you don't already have them. ::
 
-  $ conda install nose
+  $ conda install pytest nose
 
 From the source directory ``openpathsampling/tests``, you can run the tests
-by typing ``nosetests`` on the command line.
+by typing ``py.test`` on the command line.
+
+Beta testing experimental updates
+=================================
+
+In rare cases, you may want to test code that hasn't been merged into the
+core of OPS yet. :ref:`Here are instructions <beta-testing>` for how to
+install OPS to use these sorts of experimental features.
