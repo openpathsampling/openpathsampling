@@ -17,7 +17,7 @@ docs.
 
 However, in rare cases, users might want to run the very raw code that is
 only at stage 1. There are a few potential reasons for this. First, perhaps
-you are developing new code, and want to use your own experimental code.
+you are developing new features, and want to use your own experimental code.
 Second, perhaps there is an experimental feature that isn't ready for
 general use, but you want to try it out very early. Third, perhaps you've
 identified a bug, and we want to confirm with you that our fix does, in
@@ -30,9 +30,10 @@ details, see the `GitHub documentation
 <https://help.github.com/en/articles/fork-a-repo>`_.
 
 If you won't be contributing code (either you're beta-testing or confirming
-a bugfix), you'll first do a developer install, then add a a "remote" so you
-can access code in someone else's fork. You'll need to know which user's
-fork you're using, and what branch the code you'll be testing in on.
+a bugfix), you'll first do a :ref:`developer install
+<developer-install-conda>`, then add a a "remote" so you can access code in
+someone else's fork. You'll need to know which user's fork you're using, and
+what branch the code you'll be testing in on.
 
 As an example, we'll add a remote from the developer |dwhswenson|_, and we
 will call that remote ``dwhs`` (this name is up to you, but it is common to
@@ -50,7 +51,7 @@ using the remote nickname and remote branch name make it easy to recognize.
     git fetch dwhs
     git checkout -b dwhs_cool_new_feature dwhs/cool_new_feature
 
-In the ``git checkout`` comamnd, the first thing after the ``-b`` is the
+In the ``git checkout`` command, the first thing after the ``-b`` is the
 local name of your branch, and the second is ``remote/branch_name``. 
 
 With this type of installation, the code is in the directory where you

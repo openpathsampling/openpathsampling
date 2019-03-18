@@ -8,9 +8,10 @@ OpenPathSampling currently only works on Mac and Linux. For now, Python 2.7
 is recommended, although most of the code also supports Python 3. Support
 for Windows will be coming soon.
 
+.. _install-with-conda:
+
 Standard Install with Conda
 ===========================
-.. _install-with-conda:
 
 We recommend using ``conda`` (with Python version 2.7) to install
 OpenPathSampling.  `conda <http://www.continuum.io/downloads>`_ is a Python
@@ -25,12 +26,13 @@ commands ::
 
   $ conda install -c omnia openpathsampling
 
-Developer Install with Conda
-============================
 .. _developer-install-conda:
 
+Developer Install with Conda
+============================
+
 To install a developer version of OPS (using ``conda``), change to a
-directory where you want to OPS code (i.e., is you want the OPS git
+directory where you want to OPS code (i.e., if you want the OPS git
 repository at ``directory/openpathsampling/``, change to ``directory/``.)
 Then download the ``conda_ops_dev_install.sh`` and run it ::
 
@@ -44,9 +46,10 @@ other forks by `adding the fork as a remote
 branch.  You can combine changes from multiple users by merging them into a
 branch in your local version of the repository.
 
+.. _manual-install:
+
 Manual Installation
 ===================
-.. _manual-install:
 
 If you don't want to use ``conda``, you will have to manually obtain the
 dependencies (advice on that coming soon). Then you can install from our
