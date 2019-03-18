@@ -82,5 +82,5 @@ Beta testing experimental updates
 =================================
 
 In rare cases, you may want to test code that hasn't been merged into the
-core of OPS yet. :ref:`Here are instructions <beta-testing>` for how to
-install OPS to use these sorts of experimental features.
+core of OPS yet. Instructions to install in this case are in the docs for
+:ref:`install-devs`.

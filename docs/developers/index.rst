@@ -51,6 +51,7 @@ describe specific aspects.
 .. toctree::
     :maxdepth: 2
 
+    install_developers
     code_structure
     pathsimulators
     engines
