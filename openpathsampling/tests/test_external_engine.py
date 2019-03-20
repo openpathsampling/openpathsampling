@@ -23,26 +23,26 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 engine_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "external_engine")
 
-def setUp():
+def module_setup():
     proc = psutil.Popen("make", cwd=engine_dir)
     proc.wait()
 
-def teardown():
+def module_teardown():
     # proc = psutil.Popen("make clean", cwd=engine_dir, shell=True)
     # proc.wait()
     for testfile in glob.glob("test*out") + glob.glob("test*inp"):
         os.remove(testfile)
 
-class testExternalEngine(object):
-    def setUp(self):
+class TestExternalEngine(object):
+    def setup(self):
         slow_options = {
-            'n_frames_max' : 10000, 
+            'n_frames_max' : 10000,
             'engine_sleep' : 100,
             'name_prefix' : "test",
             'engine_directory' : engine_dir
         }
         fast_options = {
-            'n_frames_max' : 10000, 
+            'n_frames_max' : 10000,
             'engine_sleep' : 0,
             'name_prefix' : "test",
             'engine_directory' : engine_dir
@@ -65,7 +65,7 @@ class testExternalEngine(object):
         eng.start(self.template)
         assert_equal(eng.proc.is_running(), True)
         # zombies also run
-        assert_not_equal(eng.proc.status(), psutil.STATUS_ZOMBIE) 
+        assert_not_equal(eng.proc.status(), psutil.STATUS_ZOMBIE)
 
         # stop it; check that it isn't running
         eng.stop(None)
@@ -113,14 +113,14 @@ class testExternalEngine(object):
     def test_slow_run(self):
         # generate traj in LengthEnsemble if frames only come every 100ms
         self.slow_engine.initialized = True
-        traj = self.slow_engine.generate(self.template, 
+        traj = self.slow_engine.generate(self.template,
                                          [self.ensemble.can_append])
         assert_equal(len(traj), 5)
 
     def test_fast_run(self):
         # generate traj in LengthEnsemble if frames come as fast as possible
         self.fast_engine.initialized = True
-        traj = self.fast_engine.generate(self.template, 
+        traj = self.fast_engine.generate(self.template,
                                          [self.ensemble.can_append])
         assert_equal(len(traj), 5)
 
