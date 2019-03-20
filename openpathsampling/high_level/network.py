@@ -512,7 +512,7 @@ class MSTISNetwork(TISNetwork):
         if not hasattr(self, "from_state"):
             self.special_ensembles = {}
             self.from_state = {}
-            self.build_fromstate_transitions(trans_info)
+            self._build_fromstate_transitions(trans_info)
             if self.ms_outer_objects is not None:
                 for ms_outer in self.ms_outer_objects:
                     all_transitions = list(self.from_state.values())
@@ -523,7 +523,7 @@ class MSTISNetwork(TISNetwork):
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
 
-        self.transitions = self.build_analysis_transitions()
+        self.transitions = self._build_analysis_transitions()
 
     @property
     def all_states(self):
@@ -561,7 +561,7 @@ class MSTISNetwork(TISNetwork):
         return local_transitions
 
 
-    def build_analysis_transitions(self):
+    def _build_analysis_transitions(self):
         # set up analysis transitions (not to be saved)
         transitions = {}
         for from_A in self.from_state.values():
@@ -591,7 +591,7 @@ class MSTISNetwork(TISNetwork):
         return this_trans
 
 
-    def build_fromstate_transitions(self, trans_info):
+    def _build_fromstate_transitions(self, trans_info):
         """
         Builds the sampling transitions (the self.from_state dictionary).
 
@@ -788,7 +788,7 @@ class MISTISNetwork(TISNetwork):
 
         if not hasattr(self, 'x_sampling_transitions'):
             self.special_ensembles = {}
-            self.build_sampling_transitions(self.input_transitions.values())
+            self._build_sampling_transitions(self.input_transitions.values())
             if self.ms_outer_objects is not None:
                 for ms_outer in self.ms_outer_objects:
                     all_transitions = self.x_sampling_transitions
@@ -809,7 +809,7 @@ class MISTISNetwork(TISNetwork):
         # by default, we set assign these values to all ensembles
         self.hist_args = {}
 
-        self.build_analysis_transitions()
+        self._build_analysis_transitions()
 
 
     def to_dict(self):
@@ -839,7 +839,7 @@ class MISTISNetwork(TISNetwork):
         return network
 
 
-    def build_sampling_transitions(self, transitions):
+    def _build_sampling_transitions(self, transitions):
         # identify transition pairs
         transitions = list(transitions)  # input may be iterator
         transition_pair_set_dict = {}
@@ -921,7 +921,7 @@ class MISTISNetwork(TISNetwork):
             except KeyError:
                 self.special_ensembles['minus'] = {minus : trans_from_initial}
 
-    def build_analysis_transitions(self):
+    def _build_analysis_transitions(self):
         self.transitions = {}
         for trans in self.input_transitions.values():
             sample_trans = self.transition_to_sampling[trans]
