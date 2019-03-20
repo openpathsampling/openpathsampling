@@ -23,11 +23,11 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 engine_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "external_engine")
 
-def module_setup():
+def setup_module():
     proc = psutil.Popen("make", cwd=engine_dir)
     proc.wait()
 
-def module_teardown():
+def teardown_module():
     # proc = psutil.Popen("make clean", cwd=engine_dir, shell=True)
     # proc.wait()
     for testfile in glob.glob("test*out") + glob.glob("test*inp"):
