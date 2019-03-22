@@ -4,6 +4,135 @@ from openpathsampling.numerics import SparseHistogram
 from collections import Counter
 import numpy as np
 
+class Interpolator(object):
+    def __init__(self, histogram):
+        self.histogram = histogram
+
+    def __call__(self, old_pt, new_pt):
+        raise NotImplementedError("Can't use abstract class Interpolator")
+
+
+class NoInterpolation(Interpolator):
+    def __call__(self, old_pt, new_pt):
+        return [self.histogram.map_to_bins(new_pt)]
+
+class SubdivideInterpolation(Interpolator):
+    def _interpolated_bins(self, old_pt, new_pt):
+        """Interpolate between trajectory points.
+
+        Parameters
+        ----------
+        old_pt : array-like of float
+            previous point in CV space
+        new_pt : array-like of float
+            next point in CV space
+
+        Returns
+        -------
+        list of array-like of int
+            bins which interpolate between old_pt and new_pt (not including
+            the bin that old_pt is found in)
+        """
+        # bins for this do not include the bin of the old point
+        # TODO: add a way to have this handle periodic variables as well
+        old_bin = self.histogram.map_to_bins(old_pt)
+        new_bin = self.histogram.map_to_bins(new_pt)
+        abs_dx = abs(np.asarray(new_bin) - np.asarray(old_bin))
+        manhattan_distance = sum(abs_dx)
+        bin_list = [new_bin]
+        # if the manhattan_distance is 1, we're adjacent
+        if manhattan_distance <= 1:
+            return bin_list
+        # otherwise, use one of the interpolation algos to find bins
+        bin_list = self._subdivide_interpolation(start_pt=old_pt,
+                                                 end_pt=new_pt,
+                                                 start_bin=old_bin,
+                                                 end_bin=new_bin)
+        return list(set(bin_list) - set([old_bin]))
+
+    def _subdivide_interpolation(self, start_pt, end_pt, start_bin, end_bin):
+        """Interpolate between bins using recursive division.
+
+        Note that this is probably not the very fastest possible algorithm,
+        but an easy one to prove works in arbitrary dimensions.
+
+        Paramters
+        ---------
+        start_pt : array-like of float
+            initial point to interpolate from
+        end_pt : array-like of float
+            final point to interpolate to
+        start_bin : array-like of int
+            bin associated with initial point
+        end_bin : array-like of int
+            bin associated with final point
+
+        Returns
+        -------
+        list of array-like of int :
+            the bins associated with this path
+        """
+        delta = np.asarray(end_pt) - np.asarray(start_pt)
+        mid_pt = start_pt + 0.5 * delta
+        mid_bin = self.histogram.map_to_bins(mid_pt)
+        # check for diagonal first
+        if np.all(abs(np.asarray(end_bin) - np.asarray(start_bin)) == 1):
+            left_edges = (self.histogram.left_bin_edges
+                          + self.histogram.bin_widths * end_bin)
+            test_array = (left_edges - start_pt) / delta
+
+            if np.allclose(test_array, test_array[0], atol=1e-6):
+                return [start_bin, end_bin]
+            elif np.allclose(delta, [0.0]*len(delta), atol=1e-6):
+                return [start_bin, end_bin]
+
+        manhattan_dist_start = sum(abs(np.asarray(mid_bin) -
+                                       np.asarray(start_bin)))
+        manhattan_dist_end = sum(abs(np.asarray(end_bin) -
+                                     np.asarray(mid_bin)))
+
+        # how much work we have to do depends on what's already adjacent
+        if start_bin == end_bin:
+            return [end_bin]
+        elif manhattan_dist_start == 1 and manhattan_dist_end == 1:
+            return [start_bin, mid_bin, end_bin]
+        # if we're in the same bin, only have one direction to go
+        elif mid_bin == start_bin:
+            return self._subdivide_interpolation(start_pt=mid_pt,
+                                                 end_pt=end_pt,
+                                                 start_bin=mid_bin,
+                                                 end_bin=end_bin)
+        elif mid_bin == end_bin:
+            return self._subdivide_interpolation(start_pt=start_pt,
+                                                 end_pt=mid_pt,
+                                                 start_bin=start_bin,
+                                                 end_bin=mid_bin)
+        elif manhattan_dist_start == 1:
+            return ([start_bin] +
+                    self._subdivide_interpolation(start_pt=mid_pt,
+                                                  end_pt=end_pt,
+                                                  start_bin=mid_bin,
+                                                  end_bin=end_bin))
+        elif manhattan_dist_end == 1:
+            return ([end_bin] +
+                    self._subdivide_interpolation(start_pt=start_pt,
+                                                  end_pt=mid_pt,
+                                                  start_bin=start_bin,
+                                                  end_bin=mid_bin))
+        else:
+            start_side = self._subdivide_interpolation(start_pt=start_pt,
+                                                       end_pt=mid_pt,
+                                                       start_bin=start_bin,
+                                                       end_bin=mid_bin)
+            end_side = self._subdivide_interpolation(start_pt=mid_pt,
+                                                     end_pt=end_pt,
+                                                     start_bin=mid_bin,
+                                                     end_bin=end_bin)
+            return start_side + end_side
+
+    def __call__(self, old_pt, new_pt):
+        return self._interpolated_bins(old_pt, new_pt)
+
 # should path histogram be moved to the generic histogram.py? Seems to be
 # independent of the fact that this is actually OPS
 class PathHistogram(SparseHistogram):
@@ -31,123 +160,13 @@ class PathHistogram(SparseHistogram):
         super(PathHistogram, self).__init__(left_bin_edges=left_bin_edges,
                                             bin_widths=bin_widths)
         if interpolate is True:
-            interpolate = "subdivide"
+            # interpolate = "subdivide"
+            interpolate = SubdivideInterpolation(self)
+        elif interpolate is False:
+            interpolate = NoInterpolation(self)
+
         self.interpolate = interpolate
         self.per_traj = per_traj
-
-    def interpolated_bins(self, old_pt, new_pt):
-        """Interpolate between trajectory points.
-
-        Parameters
-        ----------
-        old_pt : array-like of float
-            previous point in CV space
-        new_pt : array-like of float
-            next point in CV space
-
-        Returns
-        -------
-        list of array-like of int
-            bins which interpolate between old_pt and new_pt (not including
-            the bin that old_pt is found in)
-        """
-        # bins for this do not include the bin of the old point
-        # TODO: add a way to have this handle periodic variables as well
-        old_bin = self.map_to_bins(old_pt)
-        new_bin = self.map_to_bins(new_pt)
-        abs_dx = abs(np.asarray(new_bin) - np.asarray(old_bin))
-        manhattan_distance = sum(abs_dx)
-        bin_list = [new_bin]
-        # if the manhattan_distance is 1, we're adjacent
-        if manhattan_distance <= 1:
-            return bin_list
-        # otherwise, use one of the interpolation algos to find bins
-        if self.interpolate == "subdivide":
-            bin_list = self.subdivide_interpolation(start_pt=old_pt,
-                                                    end_pt=new_pt,
-                                                    start_bin=old_bin,
-                                                    end_bin=new_bin)
-        # TODO add other interpolation schemes. 
-        return list(set(bin_list) - set([old_bin]))
-
-    def subdivide_interpolation(self, start_pt, end_pt, start_bin, end_bin):
-        """Interpolate between bins using recursive division.
-
-        Note that this is probably not the very fastest possible algorithm,
-        but an easy one to prove works in arbitrary dimensions.
-
-        Paramters
-        ---------
-        start_pt : array-like of float
-            initial point to interpolate from
-        end_pt : array-like of float
-            final point to interpolate to
-        start_bin : array-like of int
-            bin associated with initial point
-        end_bin : array-like of int
-            bin associated with final point
-
-        Returns
-        -------
-        list of array-like of int :
-            the bins associated with this path
-        """
-        delta = np.asarray(end_pt) - np.asarray(start_pt)
-        mid_pt = start_pt + 0.5 * delta
-        mid_bin = self.map_to_bins(mid_pt)
-        # check for diagonal first 
-        if np.all(abs(np.asarray(end_bin) - np.asarray(start_bin)) == 1):
-            left_edges = self.left_bin_edges + self.bin_widths * end_bin
-            test_array = (left_edges - start_pt) / delta
-
-            if np.allclose(test_array, test_array[0], atol=1e-6):
-                return [start_bin, end_bin]
-            elif np.allclose(delta, [0.0]*len(delta), atol=1e-6):
-                return [start_bin, end_bin]
-
-        manhattan_dist_start = sum(abs(np.asarray(mid_bin) -
-                                       np.asarray(start_bin)))
-        manhattan_dist_end = sum(abs(np.asarray(end_bin) -
-                                     np.asarray(mid_bin)))
-
-        # how much work we have to do depends on what's already adjacent
-        if start_bin == end_bin:
-            return [end_bin]
-        elif manhattan_dist_start == 1 and manhattan_dist_end == 1:
-            return [start_bin, mid_bin, end_bin]
-        # if we're in the same bin, only have one direction to go
-        elif mid_bin == start_bin:
-            return self.subdivide_interpolation(start_pt=mid_pt,
-                                                end_pt=end_pt,
-                                                start_bin=mid_bin,
-                                                end_bin=end_bin)
-        elif mid_bin == end_bin:
-            return self.subdivide_interpolation(start_pt=start_pt,
-                                                end_pt=mid_pt,
-                                                start_bin=start_bin,
-                                                end_bin=mid_bin)
-        elif manhattan_dist_start == 1:
-            return ([start_bin] + 
-                    self.subdivide_interpolation(start_pt=mid_pt,
-                                                 end_pt=end_pt,
-                                                 start_bin=mid_bin,
-                                                 end_bin=end_bin))
-        elif manhattan_dist_end == 1:
-            return ([end_bin] +
-                    self.subdivide_interpolation(start_pt=start_pt,
-                                                 end_pt=mid_pt,
-                                                 start_bin=start_bin,
-                                                 end_bin=mid_bin))
-        else:
-            start_side = self.subdivide_interpolation(start_pt=start_pt,
-                                                      end_pt=mid_pt,
-                                                      start_bin=start_bin,
-                                                      end_bin=mid_bin)
-            end_side = self.subdivide_interpolation(start_pt=mid_pt,
-                                                    end_pt=end_pt,
-                                                    start_bin=mid_bin,
-                                                    end_bin=end_bin)
-            return start_side + end_side
 
     def single_trajectory_counter(self, trajectory):
         """
@@ -166,11 +185,13 @@ class PathHistogram(SparseHistogram):
         # make a list of every bin visited, possibly interpolating gaps
         bin_list = [self.map_to_bins(trajectory[0])]
         for fnum in range(len(trajectory)-1):
-            if self.interpolate:
-                bin_list += self.interpolated_bins(trajectory[fnum],
-                                                   trajectory[fnum+1])
-            else:
-                bin_list += [self.map_to_bins(trajectory[fnum+1])]
+            bin_list += self.interpolate(trajectory[fnum],
+                                         trajectory[fnum+1])
+            # if self.interpolate:
+                # bin_list += self.interpolated_bins(trajectory[fnum],
+                                                   # trajectory[fnum+1])
+            # else:
+                # bin_list += [self.map_to_bins(trajectory[fnum+1])]
 
         local_hist = Counter(bin_list)
         if self.per_traj:
