@@ -692,7 +692,7 @@ class MSTISNetwork(TISNetwork):
 
             transition.total_crossing_probability(steps=steps,
                                                   force=force)
-            transition.minus_move_flux(steps=steps, force=force)
+            transition._minus_move_flux(steps=steps, force=force)
             for stateB in self.from_state.keys():
                 if stateA != stateB:
                     analysis_trans = self.transitions[(stateA, stateB)]
