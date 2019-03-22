@@ -4,19 +4,31 @@ from openpathsampling.numerics import SparseHistogram
 from collections import Counter
 import numpy as np
 
-class Interpolator(object):
+class VoxelInterpolator(object):
     def __init__(self, histogram):
         self.histogram = histogram
+
+    @property
+    def left_bin_edges(self):
+        return self.histogram.left_bin_edges
+
+    @property
+    def bin_widths(self):
+        return self.histogram.bin_widths
+
+    def map_to_bins(self, point):
+        return self.histogram.map_to_bins(point)
 
     def __call__(self, old_pt, new_pt):
         raise NotImplementedError("Can't use abstract class Interpolator")
 
 
-class NoInterpolation(Interpolator):
+class NoInterpolation(VoxelInterpolator):
     def __call__(self, old_pt, new_pt):
-        return [self.histogram.map_to_bins(new_pt)]
+        return [self.map_to_bins(new_pt)]
 
-class SubdivideInterpolation(Interpolator):
+
+class SubdivideInterpolation(VoxelInterpolator):
     def _interpolated_bins(self, old_pt, new_pt):
         """Interpolate between trajectory points.
 
@@ -35,8 +47,8 @@ class SubdivideInterpolation(Interpolator):
         """
         # bins for this do not include the bin of the old point
         # TODO: add a way to have this handle periodic variables as well
-        old_bin = self.histogram.map_to_bins(old_pt)
-        new_bin = self.histogram.map_to_bins(new_pt)
+        old_bin = self.map_to_bins(old_pt)
+        new_bin = self.map_to_bins(new_pt)
         abs_dx = abs(np.asarray(new_bin) - np.asarray(old_bin))
         manhattan_distance = sum(abs_dx)
         bin_list = [new_bin]
@@ -74,11 +86,10 @@ class SubdivideInterpolation(Interpolator):
         """
         delta = np.asarray(end_pt) - np.asarray(start_pt)
         mid_pt = start_pt + 0.5 * delta
-        mid_bin = self.histogram.map_to_bins(mid_pt)
+        mid_bin = self.map_to_bins(mid_pt)
         # check for diagonal first
         if np.all(abs(np.asarray(end_bin) - np.asarray(start_bin)) == 1):
-            left_edges = (self.histogram.left_bin_edges
-                          + self.histogram.bin_widths * end_bin)
+            left_edges = self.left_bin_edges + self.bin_widths * end_bin
             test_array = (left_edges - start_pt) / delta
 
             if np.allclose(test_array, test_array[0], atol=1e-6):
@@ -148,10 +159,11 @@ class PathHistogram(SparseHistogram):
         lesser side of the bin (for each direction)
     bin_widths : array-like
         bin (voxel) size
-    interpolate : bool or string
-        whether to interpolate missing bin visits. String value determines
-        interpolation type (currently only "subdivide" allowed). Default
-        True gives "subdivide" method, False gives no interpolation.
+    interpolate : bool or callable
+        how to interpolate missing bin visits. Default True gives
+        "subdivide" method, False gives no interpolation. Arbitrary callable
+        should take ``old_pt`` and ``new_pt``, and return the list of bins
+        that were visited, excluding the bin for ``old_pt``.
     per_traj : bool
         whether to normalize per trajectory (instead of per-snapshot)
     """
@@ -160,12 +172,11 @@ class PathHistogram(SparseHistogram):
         super(PathHistogram, self).__init__(left_bin_edges=left_bin_edges,
                                             bin_widths=bin_widths)
         if interpolate is True:
-            # interpolate = "subdivide"
-            interpolate = SubdivideInterpolation(self)
+            interpolate = SubdivideInterpolation
         elif interpolate is False:
-            interpolate = NoInterpolation(self)
+            interpolate = NoInterpolation
 
-        self.interpolate = interpolate
+        self.interpolate = interpolate(self)
         self.per_traj = per_traj
 
     def single_trajectory_counter(self, trajectory):
@@ -260,7 +271,7 @@ class PathDensityHistogram(PathHistogram):
     """
     def __init__(self, cvs, left_bin_edges, bin_widths, interpolate=True):
         super(PathDensityHistogram, self).__init__(
-            left_bin_edges=left_bin_edges, 
+            left_bin_edges=left_bin_edges,
             bin_widths=bin_widths,
             interpolate=interpolate,
             per_traj=True
