@@ -5,6 +5,23 @@ from collections import Counter
 import numpy as np
 
 class VoxelInterpolator(object):
+    """
+    Identify voxels visited during linear interpolation between two points
+
+    This class includes some conveniences to facilate this with
+    n-dimensional histograms.
+
+    This is an abstract class; the __call__ method needs to be implemented
+    by subclasses. The __call__ method should take the arguments ``old_pt``
+    and ``new_pt``, which are the points to interpolate between, and should
+    return the list of voxel identifiers (n-dimensional integer tuples) for
+    the visited voxels, excluding the voxel for ``old_pt``.
+
+    Parameters
+    ----------
+    histogram : :class:`.PathHistogram`
+        the histogram that this will interpolate for
+    """
     def __init__(self, histogram):
         self.histogram = histogram
 
@@ -24,11 +41,33 @@ class VoxelInterpolator(object):
 
 
 class NoInterpolation(VoxelInterpolator):
+    """No interpolation.
+
+    Just returns the bin for the new point. The effect is that no
+    interpolation is done.
+
+    Parameters
+    ----------
+    histogram : :class:`.PathHistogram`
+        the histogram that this will interpolate for
+    """
     def __call__(self, old_pt, new_pt):
         return [self.map_to_bins(new_pt)]
 
 
 class SubdivideInterpolation(VoxelInterpolator):
+    """Interpolate by bisection.
+
+    Identifies all voxels that are visited between two points by
+    successively recursively taking the midpoint, until all voxels found are
+    adjacent (with special case handling for corners, where the line does
+    not go through a face).
+
+    Parameters
+    ----------
+    histogram : :class:`.PathHistogram`
+        the histogram that this will interpolate for
+    """
     def _interpolated_bins(self, old_pt, new_pt):
         """Interpolate between trajectory points.
 
