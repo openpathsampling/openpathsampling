@@ -839,9 +839,8 @@ class MISTISNetwork(TISNetwork):
         return network
 
 
-    def _build_sampling_transitions(self, transitions):
+    def _build_transition_pairs(self, transitions):
         # identify transition pairs
-        transitions = list(transitions)  # input may be iterator
         transition_pair_set_dict = {}
         for initial in self.initial_states:
             for t1 in [t for t in transitions if t.stateA==initial]:
@@ -858,13 +857,26 @@ class MISTISNetwork(TISNetwork):
                     raise RuntimeError("More than one reverse transition")
                 # if len(t_reverse) is 0, we just pass
 
-        self.transition_pairs = list(transition_pair_set_dict.values())
 
-        if len(self.transition_pairs) > 0:
-            all_in_pairs = reduce(list.__add__, map(lambda x: list(x),
-                                                    self.transition_pairs))
-        else:
-            all_in_pairs = []
+        transition_pairs = list(transition_pair_set_dict.values())
+        return transition_pairs
+
+    def _build_sampling_transitions(self, transitions):
+        transitions = list(transitions)  # input may be iterator
+        # TODO: I don't think transition pairs are used (see comment below;
+        # I think that was the previous use case -- as input to all_in_pairs
+        # However, existing files store this, so we won't actually remove it
+        # yet.
+        self.transition_pairs = self._build_transition_pairs(transitions)
+        # this seems to no longer be used; I think it was necessary when the
+        # MSOuter interface was done implicitly, instead of explicitly. Then
+        # we turn the outermost to MS if and only if it was paired with the
+        # reverse transition
+        # if len(self.transition_pairs) > 0:
+            # all_in_pairs = reduce(list.__add__, map(lambda x: list(x),
+                                                    # self.transition_pairs))
+        # else:
+            # all_in_pairs = []
 
         # build sampling transitions
         all_states = paths.join_volumes(self.initial_states + self.final_states)
@@ -902,6 +914,9 @@ class MISTISNetwork(TISNetwork):
         self.x_sampling_transitions = \
                 list(self.transition_to_sampling.values())
 
+        self._build_sampling_minus_ensembles()
+
+    def _build_sampling_minus_ensembles(self):
         # combining the minus interfaces
         for initial in self.initial_states:
             innermosts = []
