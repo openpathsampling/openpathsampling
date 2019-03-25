@@ -17,7 +17,6 @@ import pytest
 import openpathsampling as paths
 from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
 from openpathsampling.high_level.move_strategy import *
-from openpathsampling import VolumeFactory as vf
 
 import collections
 

@@ -18,7 +18,7 @@ case $PYTHON_VERSION in
         ;;
     "3.5")
         mstis=$dropbox_base_url/1ulzssv5p4lr61f/toy_mstis_1k_OPS1_py36.nc
-        mistis=$dropbox_base_url/76981cbgxm639m3/toy_mistis_1k_OPS1_py36.nc
+        mistis=$dropbox_base_url/8wldep8e26qignt/toy_mistis_1k_OPS1_py35.nc
         ;;
     "3.6")
         mstis=$dropbox_base_url/1ulzssv5p4lr61f/toy_mstis_1k_OPS1_py36.nc
