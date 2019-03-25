@@ -609,41 +609,41 @@ class VoronoiVolume(Volume):
         return self.cell(snapshot) == state
 
 
-class VolumeFactory(object):
-    @staticmethod
-    def _check_minmax(minvals, maxvals):
-        # if one is an integer, convert it to a list
-        if type(minvals) == int or type(minvals) == float:
-            if type(maxvals) == list:
-                minvals = [minvals]*len(maxvals)
-            else:
-                raise ValueError("minvals is a scalar; maxvals is not a list")
-        elif type(maxvals) == int or type(maxvals) == float:
-            if type(minvals) == list:
-                maxvals = [maxvals]*len(minvals)
-            else:
-                raise ValueError("maxvals is a scalar; minvals is not a list")
+# class VolumeFactory(object):
+    # @staticmethod
+    # def _check_minmax(minvals, maxvals):
+        # # if one is an integer, convert it to a list
+        # if type(minvals) == int or type(minvals) == float:
+            # if type(maxvals) == list:
+                # minvals = [minvals]*len(maxvals)
+            # else:
+                # raise ValueError("minvals is a scalar; maxvals is not a list")
+        # elif type(maxvals) == int or type(maxvals) == float:
+            # if type(minvals) == list:
+                # maxvals = [maxvals]*len(minvals)
+            # else:
+                # raise ValueError("maxvals is a scalar; minvals is not a list")
 
-        if len(minvals) != len(maxvals):
-            raise ValueError("len(minvals) != len(maxvals)")
-        return (minvals, maxvals)
+        # if len(minvals) != len(maxvals):
+            # raise ValueError("len(minvals) != len(maxvals)")
+        # return (minvals, maxvals)
 
-    @staticmethod
-    def CVRangeVolumeSet(op, minvals, maxvals):
-        # TODO: clean up to only use min_i or max_i in name if necessary
-        minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
-        myset = []
-        for (min_i, max_i) in zip(minvals, maxvals):
-            volume = CVDefinedVolume(op, min_i, max_i)
-            myset.append(volume)
-        return myset
+    # @staticmethod
+    # def CVRangeVolumeSet(op, minvals, maxvals):
+        # # TODO: clean up to only use min_i or max_i in name if necessary
+        # minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
+        # myset = []
+        # for (min_i, max_i) in zip(minvals, maxvals):
+            # volume = CVDefinedVolume(op, min_i, max_i)
+            # myset.append(volume)
+        # return myset
 
-    @staticmethod
-    def CVRangeVolumePeriodicSet(op, minvals, maxvals,
-                                period_min=None, period_max=None):
-        minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
-        myset = []
-        for i in range(len(maxvals)):
-            myset.append(PeriodicCVDefinedVolume(op, minvals[i], maxvals[i],
-                                              period_min, period_max))
-        return myset
+    # @staticmethod
+    # def CVRangeVolumePeriodicSet(op, minvals, maxvals,
+                                # period_min=None, period_max=None):
+        # minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
+        # myset = []
+        # for i in range(len(maxvals)):
+            # myset.append(PeriodicCVDefinedVolume(op, minvals[i], maxvals[i],
+                                              # period_min, period_max))
+        # return myset

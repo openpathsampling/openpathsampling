@@ -208,6 +208,9 @@ class GeneralizedTPSNetwork(TransitionNetwork):
             ret_dict['final_states'] = self.final_states
         except AttributeError:  # pragma: no cover
             # DEPRECATED: remove for 2.0
+            from openpathsampling.deprecations import \
+                    SAVE_RELOAD_OLD_TPS_NETWORK
+            SAVE_RELOAD_OLD_TPS_NETWORK.warn()
             pass  # backward compatibility
         return ret_dict
 
