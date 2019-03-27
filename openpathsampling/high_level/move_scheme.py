@@ -101,11 +101,14 @@ class MoveScheme(StorableNamedObject):
                                    "decision tree has been built. " +
                                    "Override with `force=True`.")
 
+        # TODO: this is listify!
         try:
             strategies = list(strategies)
         except TypeError:
             strategies = [strategies]
 
+        # TODO: this is listify, followed by
+        # levels *= len(strategies) if len(level) == 1 else 1
         if levels is not None:
             try:
                 levels = list(levels)
@@ -183,13 +186,10 @@ class MoveScheme(StorableNamedObject):
                 # other hand, if the list of old movers in the group already
                 # has two movers with the same signature, then both should
                 # be overwritten.
-                existing_sigs = {}
+                existing_sigs = collections.defaultdict(list)
                 for i in range(n_existing):
                     key = self.movers[group][i].ensemble_signature
-                    try:
-                        existing_sigs[key].append(i)
-                    except KeyError:
-                        existing_sigs[key] = [i]
+                    existing_sigs[key].append(i)
 
                 # For each mover, if its signature exists in the existing
                 # movers, replace the existing. Otherwise, append it to the
@@ -227,9 +227,7 @@ class MoveScheme(StorableNamedObject):
             ensembles which appear in this (sub)tree
         """
         if root is None:
-            if self.root_mover is None:
-                self.root_mover = self.move_decision_tree()
-
+            self.root_mover = self.move_decision_tree()
             root = self.root_mover
         movers = root.map_pre_order(lambda x: x)
         mover_ensemble_dict = {}
