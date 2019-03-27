@@ -221,7 +221,7 @@ class TestTwoWayShootingStrategy(MoveStrategyTestSetup):
         strategy = TwoWayShootingStrategy(modifier=paths.NoModification())
         scheme = DefaultScheme(self.network, engine=None)
         scheme.append(strategy)
-        scheme.build_move_decision_tree()
+        scheme.move_decision_tree()
         assert_equal(len(scheme.movers['shooting']), 6)
         for mover in scheme.movers['shooting']:
             assert_equal(type(mover), paths.TwoWayShootingMover)
@@ -1370,7 +1370,7 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             assert_almost_equal(choice_prob_1a[m], choice_prob_1c[m])
 
         # Organize by ensemble, switch to move group, switch back
-        scheme.strategies = {}
+        scheme.strategies.clear()
         scheme.append(self.StrategyClass(), force=True)
         root_2a = scheme.move_decision_tree(rebuild=True)
         choice_prob_2a = scheme.choice_probability

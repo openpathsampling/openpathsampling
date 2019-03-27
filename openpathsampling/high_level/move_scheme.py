@@ -1,3 +1,5 @@
+import collections
+
 import openpathsampling as paths
 from openpathsampling.tools import refresh_output
 
@@ -33,7 +35,7 @@ class MoveScheme(StorableNamedObject):
         super(MoveScheme, self).__init__()
         self.movers = {}
         self.network = network
-        self.strategies = {}
+        self.strategies = collections.defaultdict(list)
         self.balance_partners = {}
         self.choice_probability = {}
         self._real_choice_probability = {}  # used as override, e.g., in SRTIS
@@ -110,21 +112,16 @@ class MoveScheme(StorableNamedObject):
             except TypeError:
                 levels = [levels]*len(strategies)
         else:
-            levels = []
-            for strat in strategies:
-                levels.append(strat.level)
-        
+            levels = [strat.level for strat in strategies]
+
         # now we put everything into appropriate dictionaries
         for strat, lev in zip(strategies, levels):
-            try:
-                self.strategies[lev].append(strat)
-            except KeyError:
-                self.strategies[lev] = [strat]
+            self.strategies[lev].append(strat)
 
     # TODO: it might be nice to have a way to "lock" this once it has been
     # saved. That would prevent a (stupid) user from trying to rebuild a
     # custom-modified tree.
-    def build_move_decision_tree(self):
+    def _build_move_decision_tree(self):
         for lev in sorted(self.strategies.keys()):
             for strat in self.strategies[lev]:
                 self.apply_strategy(strat)
@@ -151,7 +148,7 @@ class MoveScheme(StorableNamedObject):
             rebuild = True
         if rebuild:
             self.choice_probability = {}
-            self.build_move_decision_tree()
+            self._build_move_decision_tree()
         return self.root_mover
 
     def apply_strategy(self, strategy):
@@ -159,7 +156,7 @@ class MoveScheme(StorableNamedObject):
         Applies given strategy to the scheme as it stands.
 
         This is the tool used in the process of building up the move
-        decision tree. 
+        decision tree.
 
         Parameters
         ----------
@@ -584,7 +581,7 @@ class MoveScheme(StorableNamedObject):
         `scheme.n_steps_for_trials(mover, n_attempts)` MC steps. If `mover`
         is a (string) key for a group, then return the total for that group.
         If mover is a list of movers, return the total for that list.
-        
+
         Parameters
         ----------
         mover : PathMover or list of PathMover or string
@@ -598,7 +595,7 @@ class MoveScheme(StorableNamedObject):
             expected number of steps to get `n_attempts` of `mover`
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.real_choice_probability[m] 
+        total_probability = sum([self.real_choice_probability[m]
                                  for m in movers])
         return n_attempts / total_probability
 
@@ -611,7 +608,7 @@ class MoveScheme(StorableNamedObject):
         `mover`.  If `mover` is a (string) key for a group, then return the
         total for that group.  If mover is a list of movers, return the
         total for that list.
-        
+
         Parameters
         ----------
         mover : PathMover or list of PathMover or string
@@ -625,7 +622,7 @@ class MoveScheme(StorableNamedObject):
             expected number of trials of `mover` in `n_steps` MC steps
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.real_choice_probability[m] 
+        total_probability = sum([self.real_choice_probability[m]
                                  for m in movers])
         return total_probability * n_steps
 
@@ -788,9 +785,9 @@ class MoveScheme(StorableNamedObject):
                 pass
             else:
                 line = self._move_summary_line(
-                    move_name=groupname, 
+                    move_name=groupname,
                     n_accepted=stats[groupname][0],
-                    n_trials=stats[groupname][1], 
+                    n_trials=stats[groupname][1],
                     n_total_trials=tot_trials,
                     expected_frequency=expected_frequency[groupname],
                     indentation=0
@@ -848,13 +845,13 @@ class LockedMoveScheme(MoveScheme):
     def append(self, strategies, levels=None, force=False):
         raise TypeError("Locked schemes cannot append strategies")
 
-    def build_move_decision_tree(self):
+    def _build_move_decision_tree(self):
         # override with no-op
         pass
 
     def move_decision_tree(self, rebuild=False):
         return self.root_mover
-    
+
     def apply_strategy(self, strategy):
         raise TypeError("Locked schemes cannot apply strategies")
 
@@ -874,7 +871,7 @@ class LockedMoveScheme(MoveScheme):
     @property
     def choice_probability(self):
         if self._choice_probability == {}:
-            raise AttributeError("'choice_probability' must be manually " + 
+            raise AttributeError("'choice_probability' must be manually " +
                                  "set in 'LockedMoveScheme'")
         else:
             return self._choice_probability
@@ -886,7 +883,7 @@ class LockedMoveScheme(MoveScheme):
     @property
     def movers(self):
         if self._movers == {}:
-            raise AttributeError("'movers' must be manually " + 
+            raise AttributeError("'movers' must be manually " +
                                  "set in 'LockedMoveScheme'")
         else:
             return self._movers
