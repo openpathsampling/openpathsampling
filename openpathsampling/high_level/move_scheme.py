@@ -1,3 +1,4 @@
+import sys
 import collections
 
 import openpathsampling as paths
@@ -14,8 +15,111 @@ except ImportError:
     has_pandas = False
     pd = None
 
+MoveAcceptanceAnalysisLine = collections.namedtuple(
+    'MoveAcceptanceAnalysisLine',
+    'move_name n_accepted n_trials expected_frequency'
+)
 
-import sys
+class MoveAcceptanceAnalysis(object):
+    def __init__(self, scheme):
+        self.scheme = scheme
+        self._trials = collections.defaultdict(int)
+        self._accepted = collections.defaultdict(int)
+        self._n_steps = 0
+
+    def _calculate_step_acceptance(self, step):
+        delta = step.change
+        for m in delta:
+            key = (m.mover, str(delta.key(m)))
+            self._accepted[key] += 1 if m.accepted else 0
+            self._trials[key] += 1
+
+    def add_steps(self, steps):
+        for step in steps:
+            self._calculate_step_acceptance(step)
+        self._n_steps += len(steps)
+
+    @property
+    def no_move_keys(self):
+        return [k for (k, v) in self._trials.keys() if k[0] is None]
+
+    @property
+    def _n_in_scheme_no_move_trials(self):
+        result = sum([self._trials[k] for k in self.no_move_keys
+                      if k[1] != '[None]'])
+
+    @property
+    def n_total_trials(self):
+        if self._n_steps != self._last_step_count:
+            n_no_move_trials = sum([n_try for k, n_try in self._trials
+                                    if k[0] is None])
+            self._n_total_trials = self._n_steps - n_no_move_trials
+        return self._n_total_trials
+
+    def _select_movers(self, movers):
+        if movers is None:
+            movers = list(self.scheme.movers.keys())
+        # TODO: can the rest of this be replaced by
+        # self.scheme._select_movers?
+        if type(movers) is str:
+            movers = self.scheme.movers[movers]
+        for key in movers:
+            try:
+                selected_movers[key] = self.scheme.movers[key]
+            except KeyError:
+                selected_movers[key] = [key]
+        return selected_movers
+
+    def summary_data(self, movers):
+        selected_movers = self._select_movers(movers)
+        lines = []
+        for (group_name, group_movers) in selected_movers.items():
+            key_iter = (k for k in self._trials if k[0] == mover)
+            accepted = sum([self._accepted[k] for k in key_iter])
+            trials = sum([self._trials[k] for k in key_iter])
+            try:
+                expected = sum([self.scheme.choice_probability[m]
+                                for m in group_movers])
+            except KeyError:
+                expected = float('nan')
+            line = MoveAcceptanceAnalysisLine(
+                move_name=group_name,
+                n_accepted=accepted,
+                n_trials=trials,
+                expected_frequency=expected
+            )
+            lines.append(line)
+        return lines
+
+    def _line_as_text(self, line):
+        try:
+            acceptance = float(line.n_accepted) / line.n_trials
+        except ZeroDivisionError:
+            acceptance = float("nan")
+
+        run_freq = float(line.n_trials) / self.n_total_trials
+
+
+        output = (" * {line.move_name} ran {run_freq:.3%} (expected "
+                  + "{line.expected_frequency:.2%} of the cycles with "
+                  + "acceptance {line.n_accepted}/{line.n_trials} "
+                  + "({acceptance:.2%})\n").format(line=line,
+                                                   acceptance=acceptance,
+                                                   run_freq=run_freq)
+        return output
+
+    def format_as_text(self, summary_data):
+        output = ""
+        if self._n_in_scheme_no_move_trials > 0:
+            output += ("Null moves for " + str(n_in_scheme_no_move_trials)
+                       + " cycles. Excluding null moves:\n")
+        for line in summary_data:
+            output += self._line_as_text(line)
+        return output
+
+    # TODO
+    # def format_as_pandas(self, summary_data):
+        # pass
 
 
 class MoveScheme(StorableNamedObject):
@@ -672,7 +776,7 @@ class MoveScheme(StorableNamedObject):
 
         line = ("* "*indentation + str(move_name) +
                 " ran " + "{:.3%}".format(float(n_trials)/n_total_trials) +
-                " (expected {:.2%})".format(expected_frequency) + 
+                " (expected {:.2%})".format(expected_frequency) +
                 " of the cycles with acceptance " + str(n_accepted) + "/" +
                 str(n_trials) + " ({:.2%})\n".format(acceptance))
         return line
@@ -693,8 +797,7 @@ class MoveScheme(StorableNamedObject):
                 except KeyError:
                     self._mover_acceptance[key] = [acc, is_trial]
 
-    def move_summary(
-            self, steps, movers=None, output=sys.stdout, depth=0):
+    def move_summary(self, steps, movers=None, output=sys.stdout):
         """
         Provides a summary of the movers in `steps`.
 
@@ -713,9 +816,6 @@ class MoveScheme(StorableNamedObject):
             summary for each of those movers.
         output : file
             file to direct output
-        depth : integer or None
-            depth of submovers to show: if integer, shows that many
-            submovers for each move; if None, shows all submovers
         """
         my_movers = {}
         expected_frequency = {}
@@ -728,12 +828,6 @@ class MoveScheme(StorableNamedObject):
                 my_movers[key] = self.movers[key]
             except KeyError:
                 my_movers[key] = [key]
-
-        # if scheme_copies is not None:
-        #     for sc in scheme_copies:
-        #         movers = sc.movers.keys()
-        #         for key in movers:
-        #             my_movers[key].extend(self.movers[key])
 
         stats = {}
         for groupname in my_movers.keys():
