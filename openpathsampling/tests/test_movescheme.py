@@ -30,6 +30,39 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+class TestMoveAcceptanceAnalysis(object):
+    def setup(self):
+        pass
+
+    def test_initialization(self):
+        pass
+
+    def test_add_steps(self):
+        pass
+
+    def test_no_move_keys(self):
+        pass
+
+    def test_n_total_trials(self):
+        pass
+
+    def test_select_movers_groupname(self):
+        pass
+
+    def test_select_movers_mover(self):
+        pass
+
+    def test_summary_data_groupname(self):
+        pass
+
+    def test_summary_data_mover(self):
+        pass
+
+    def test_format_as_text(self):
+        pass
+
+
+
 class TestMoveScheme(object):
     def setup(self):
         paths.InterfaceSet._reset()
