@@ -17,7 +17,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testChannelAnalysis(object):
+class TestChannelAnalysis(object):
     def setup(self):
         cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
         self.state_A = paths.CVDefinedVolume(cv, -0.1, 0.1)
@@ -78,6 +78,7 @@ class testChannelAnalysis(object):
         analyzer._results = self.toy_results
         analyzer.treat_multiples = 'newest'
         storage = paths.Storage(data_filename('test.nc'), 'w')
+        storage.save(self.incr_1[0])  # template snapshot
         storage.tag['analyzer'] = analyzer
         storage.sync()
         storage.close()
@@ -259,12 +260,12 @@ class testChannelAnalysis(object):
         analysis.treat_multiples = 'newest'
         df = analysis.switching_matrix
         expected = np.array([[nan, 1, 0], [0, nan, 1], [1, 0, nan]])
-        assert_array_almost_equal(df.as_matrix(), expected)
+        assert_array_almost_equal(df.values, expected)
 
         analysis.treat_multiples = 'oldest'
         df = analysis.switching_matrix
         expected = np.array([[nan, 1], [1, nan]]) # no column for c!
-        assert_array_almost_equal(df.as_matrix(), expected)
+        assert_array_almost_equal(df.values, expected)
 
         analysis.treat_multiples = 'multiple'
         df = analysis.switching_matrix
@@ -274,7 +275,7 @@ class testChannelAnalysis(object):
                              [0, 1, nan, 0, 0],
                              [0, 0, 0, nan, 1],
                              [1, 0, 0, 0, nan]])
-        assert_array_almost_equal(df.as_matrix(), expected)
+        assert_array_almost_equal(df.values, expected)
 
         # TODO: define switching when using 'all'
 
@@ -290,7 +291,7 @@ class testChannelAnalysis(object):
         expected = np.array([[nan, 0, 1],
                              [1, nan, 1],
                              [0, 1, nan]])
-        assert_array_almost_equal(df.as_matrix(), expected)
+        assert_array_almost_equal(df.values, expected)
 
     def test_residence_times(self):
         analysis = paths.ChannelAnalysis(steps=None, channels=self.channels)

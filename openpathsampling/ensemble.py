@@ -200,15 +200,6 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
     Typical set operations are allowed, here: and, or, xor, -(without), ~
     (inverse = all - x)
 
-    Examples
-    --------
-    >>> EnsembleFactory.TISEnsemble(
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.08),
-    >>>     True
-    >>>     )
-
     Notes
     -----
     Maybe replace - by / to get better notation. So far it has not been used
@@ -1644,6 +1635,7 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
         # logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
+        # TODO: the weird while condition is handling the OVERSHOOTING
         while ((ens.can_append(subtraj, trusted=True) or
                 ens(subtraj, trusted=True)
                ) and subtraj_final < traj_final):
@@ -1668,6 +1660,7 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
         # logger.debug("Can-app " + str(ens.can_prepend(subtraj, trusted=True)))
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
+        # TODO: the weird while condition is handling the OVERSHOOTING
         while ((ens.can_prepend(subtraj, trusted=True) or
                 ens.check_reverse(subtraj, trusted=True)
                ) and subtraj_first >= traj_first):
@@ -2307,55 +2300,6 @@ class PartOutXEnsemble(PartInXEnsemble):
         return False
 
 
-class ExitsXEnsemble(VolumeEnsemble):
-    """
-    Represents an ensemble where two successive frames from the selected
-    frames of the trajectory crossing from inside to outside the given volume.
-    """
-
-    def __init__(self, volume, trusted=False):
-        # changing the defaults for frames and trusted; prevent single frame
-        super(ExitsXEnsemble, self).__init__(volume, trusted)
-
-    def _str(self):
-        domain = 'exists x[t], x[t+1] '
-        result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
-            self._volume)
-        return domain + result
-
-    def __call__(self, trajectory, trusted=None, candidate=False):
-        subtraj = trajectory
-        for i in range(len(subtraj) - 1):
-            frame_i = subtraj.get_as_proxy(i)
-            if self._volume(frame_i):
-                frame_iplus = subtraj.get_as_proxy(i + 1)
-                if not self._volume(frame_iplus):
-                    return True
-        return False
-
-
-class EntersXEnsemble(ExitsXEnsemble):
-    """
-    Represents an ensemble where two successive frames from the selected
-    frames of the trajectory crossing from outside to inside the given volume.
-    """
-
-    def _str(self):
-        domain = 'exists x[t], x[t+1] '
-        result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
-            self._volume)
-        return domain + result
-
-    def __call__(self, trajectory, trusted=None, candidate=False):
-        subtraj = trajectory
-        for i in range(len(subtraj) - 1):
-            frame_i = subtraj.get_as_proxy(i)
-            if not self._volume(frame_i):
-                frame_iplus = subtraj.get_as_proxy(i + 1)
-                if self._volume(frame_iplus):
-                    return True
-        return False
-
 
 class WrappedEnsemble(Ensemble):
     """
@@ -2401,6 +2345,9 @@ class WrappedEnsemble(Ensemble):
     def strict_can_prepend(self, trajectory, trusted=None):
         return self._new_ensemble.strict_can_prepend(self._alter(trajectory),
                                                      trusted)
+
+    def _str(self):
+        return str(self._new_ensemble)
 
 
 class SlicedTrajectoryEnsemble(WrappedEnsemble):
@@ -2587,7 +2534,7 @@ class SingleFrameEnsemble(WrappedEnsemble):
         return "{" + str(self.ensemble) + "} (SINGLE FRAME)"
 
 
-class MinusInterfaceEnsemble(SequentialEnsemble):
+class MinusInterfaceEnsemble(WrappedEnsemble):
     """
     This creates an ensemble for the minus interface.
 
@@ -2619,9 +2566,8 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     # TODO: Check with David if it makes sense to store these and allow
     # them being used in __init__ instead of the self-made ones
 
-    _excluded_attr = ['ensembles', 'min_overlap', 'max_overlap']
-
-    def __init__(self, state_vol, innermost_vols, n_l=2, greedy=False):
+    def __init__(self, state_vol, innermost_vols, n_l=2, forbidden=None,
+                 greedy=False):
         if n_l < 2:
             raise ValueError("The number of segments n_l must be at least 2")
 
@@ -2630,6 +2576,18 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
             innermost_vols = list(innermost_vols)
         except TypeError:
             innermost_vols = [innermost_vols]
+
+        if forbidden is None:
+            forbidden = [paths.EmptyVolume()]
+        else:
+            try:
+                forbidden = list(forbidden)
+            except TypeError:
+                forbidden = [forbidden]
+
+        self.forbidden = forbidden
+        forbidden_volume = paths.join_volumes(forbidden)
+        forbidden_ensemble = paths.AllOutXEnsemble(forbidden_volume)
 
         self.innermost_vols = innermost_vols
         self.innermost_vol = paths.FullVolume()
@@ -2640,7 +2598,9 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         out_A = AllOutXEnsemble(state_vol)
         in_X = AllInXEnsemble(self.innermost_vol)
         leave_X = PartOutXEnsemble(self.innermost_vol)
-        interstitial = out_A & in_X
+        # interstitial = out_A & in_X
+        interstitial = self.innermost_vol - state_vol
+        in_interstitial = AllInXEnsemble(interstitial)
         segment_ensembles = [paths.TISEnsemble(state_vol, state_vol, inner)
                              for inner in self.innermost_vols]
 
@@ -2649,22 +2609,34 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
         # interstitial = AllInXEnsemble(self.innermost_vol - state_vol)
         start = [
             SingleFrameEnsemble(in_A),
-            OptionalEnsemble(interstitial),
+            OptionalEnsemble(in_interstitial),
         ]
         loop = [
-            out_A & leave_X,
+            out_A, # & leave_X, # redundant b/c next stop for previous
             in_X  # & hitA # redundant due to stop req for previous outA
         ]
         end = [
-            out_A & leave_X,
-            OptionalEnsemble(interstitial),
+            out_A, #  & leave_X,
+            OptionalEnsemble(in_interstitial),
             SingleFrameEnsemble(in_A)
         ]
-        ensembles = start + loop * (n_l - 1) + end
+        sequence = start + loop * (n_l - 1) + end
+
+        ensemble = paths.SequentialEnsemble(sequence) & forbidden_ensemble
 
         self.n_l = n_l
 
-        super(MinusInterfaceEnsemble, self).__init__(ensembles, greedy=greedy)
+        super(MinusInterfaceEnsemble, self).__init__(ensemble)
+
+    def to_dict(self):
+        dct = super(MinusInterfaceEnsemble, self).to_dict()
+        dct['state_vol'] = self.state_vol
+        dct['innermost_vols'] = self.innermost_vols
+        dct['innermost_vol'] = self.innermost_vol
+        dct['_segment_ensemble'] = self._segment_ensemble
+        dct['forbidden'] = self.forbidden
+        dct['n_l'] = self.n_l
+        return dct
 
     @property
     def extendable_sub_ensembles(self):
@@ -2794,7 +2766,7 @@ class MinusInterfaceEnsemble(SequentialEnsemble):
     #     return samp
 
 
-class TISEnsemble(SequentialEnsemble):
+class TISEnsemble(WrappedEnsemble):
     """An ensemble for TIS (or AMS).
 
     Begin in `initial_states`, end in either `initial_states` or
@@ -2848,11 +2820,12 @@ class TISEnsemble(SequentialEnsemble):
         volume_a = paths.volume.join_volumes(initial_states)
         volume_b = paths.volume.join_volumes(final_states)
 
-        super(TISEnsemble, self).__init__([
+        ensemble = SequentialEnsemble([
             AllInXEnsemble(volume_a) & LengthEnsemble(1),
-            AllOutXEnsemble(volume_a | volume_b) & PartOutXEnsemble(interface),
+            OptionalEnsemble(AllOutXEnsemble(volume_a | volume_b)),
             AllInXEnsemble(volume_a | volume_b) & LengthEnsemble(1)
-        ])
+        ]) & PartOutXEnsemble(interface)
+        super(TISEnsemble, self).__init__(ensemble)
 
         self.initial_states = initial_states
         self.final_states = final_states
@@ -2952,77 +2925,80 @@ class TISEnsemble(SequentialEnsemble):
         )
         return mystr
 
+    def _str(self):
+        return str(self.ensemble)
 
-class EnsembleFactory(object):
-    """
-    Convenience class to construct Ensembles
-    """
 
-    @staticmethod
-    def StartXEnsemble(volume):
-        """
-        Construct an ensemble that starts (x[0]) in the specified volume
+# class EnsembleFactory(object):
+    # """
+    # Convenience class to construct Ensembles
+    # """
 
-        Parameters
-        ----------
-        volume : :class:`openpathsampling.volume.Volume`
-            The volume to start in
+    # @staticmethod
+    # def StartXEnsemble(volume):
+        # """
+        # Construct an ensemble that starts (x[0]) in the specified volume
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.ensemble.Ensemble`
-            The constructed Ensemble
-        """
-        return AllInXEnsemble(volume, 0)
+        # Parameters
+        # ----------
+        # volume : :class:`openpathsampling.volume.Volume`
+            # The volume to start in
 
-    @staticmethod
-    def EndXEnsemble(volume):
-        """
-        Construct an ensemble that ends (x[-1]) in the specified volume
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.ensemble.Ensemble`
+            # The constructed Ensemble
+        # """
+        # return AllInXEnsemble(volume, 0)
 
-        Parameters
-        ----------
-        volume : :class:`openpathsampling.volume.Volume`
-            The volume to end in
+    # @staticmethod
+    # def EndXEnsemble(volume):
+        # """
+        # Construct an ensemble that ends (x[-1]) in the specified volume
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.ensemble.Ensemble`
-            The constructed Ensemble
-        """
-        return AllInXEnsemble(volume, -1)
+        # Parameters
+        # ----------
+        # volume : :class:`openpathsampling.volume.Volume`
+            # The volume to end in
 
-    @staticmethod
-    def A2BEnsemble(volume_a, volume_b, trusted=True):
-        """
-        Construct an ensemble that starts in `volume_a`, ends in
-        `volume_b` and is in either volumes in between
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.ensemble.Ensemble`
+            # The constructed Ensemble
+        # """
+        # return AllInXEnsemble(volume, -1)
 
-        Parameters
-        ----------
-        volume_a : :class:`openpathsampling.Volume`
-            The volume to start in
-        volume_b : :class:`openpathsampling.Volume`
-            The volume to end in
+    # @staticmethod
+    # def A2BEnsemble(volume_a, volume_b, trusted=True):
+        # """
+        # Construct an ensemble that starts in `volume_a`, ends in
+        # `volume_b` and is in either volumes in between
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.Ensemble`
-            The constructed Ensemble
-        """
-        # TODO: this is actually only for flexible path length TPS now
-        return SequentialEnsemble([
-            SingleFrameEnsemble(AllInXEnsemble(volume_a)),
-            AllOutXEnsemble(volume_a | volume_b),
-            SingleFrameEnsemble(AllInXEnsemble(volume_b))
-        ])
+        # Parameters
+        # ----------
+        # volume_a : :class:`openpathsampling.Volume`
+            # The volume to start in
+        # volume_b : :class:`openpathsampling.Volume`
+            # The volume to end in
 
-    @staticmethod
-    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter,
-                       lambdas=None):
-        if lambdas is None:
-            lambdas = [None] * len(volumes_x)
-        myset = [paths.TISEnsemble(volume_a, volume_b, vol, orderparameter,
-                                   lambda_i)
-                 for (vol, lambda_i) in zip(volumes_x, lambdas)]
-        return myset
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.Ensemble`
+            # The constructed Ensemble
+        # """
+        # # TODO: this is actually only for flexible path length TPS now
+        # return SequentialEnsemble([
+            # SingleFrameEnsemble(AllInXEnsemble(volume_a)),
+            # AllOutXEnsemble(volume_a | volume_b),
+            # SingleFrameEnsemble(AllInXEnsemble(volume_b))
+        # ])
+
+    # @staticmethod
+    # def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter,
+                       # lambdas=None):
+        # if lambdas is None:
+            # lambdas = [None] * len(volumes_x)
+        # myset = [paths.TISEnsemble(volume_a, volume_b, vol, orderparameter,
+                                   # lambda_i)
+                 # for (vol, lambda_i) in zip(volumes_x, lambdas)]
+        # return myset

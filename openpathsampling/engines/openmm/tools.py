@@ -6,6 +6,8 @@ from .snapshot import Snapshot
 from .topology import Topology, MDTrajTopology
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
+from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
+
 __author__ = 'Jan-Hendrik Prinz'
 
 
@@ -187,7 +189,8 @@ def snapshot_from_testsystem(testsystem, simple_topology=False,
     return snapshot
 
 
-def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
+def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
+                           velocities=None):
     """
     Construct a Trajectory object from an mdtraj.Trajectory object
 
@@ -198,28 +201,37 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
     simple_topology : bool
         if `True` only a simple topology with n_atoms will be created.
         This cannot be used with complex CVs but loads and stores very fast
+    velocities : np.array
+        velocities in units of nm/ps
 
     Returns
     -------
     openpathsampling.engines.Trajectory
         the constructed Trajectory instance
     """
-
     trajectory = Trajectory()
-    empty_kinetics = Snapshot.KineticContainer(
-        velocities=u.Quantity(
-            np.zeros(mdtrajectory.xyz[0].shape), u.nanometer / u.picosecond)
-    )
+    vel_unit = u.nanometer / u.picosecond
+
     if simple_topology:
         topology = Topology(*mdtrajectory.xyz[0].shape)
     else:
         topology = MDTrajTopology(mdtrajectory.topology)
+
+    if velocities is None:
+        empty_vel = u.Quantity(np.zeros(mdtrajectory.xyz[0].shape),
+                               vel_unit)
+
 
     engine = TopologyEngine(topology)
 
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
         coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
+        if velocities is not None:
+            vel = u.Quantity(velocities[frame_num], vel_unit)
+        else:
+            vel = empty_vel
+
         if mdtrajectory.unitcell_vectors is not None:
             box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
                                u.nanometers)
@@ -230,10 +242,11 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False):
             coordinates=coord,
             box_vectors=box_v
         )
+        kinetics = Snapshot.KineticContainer(velocities=vel)
 
         snap = Snapshot(
             statics=statics,
-            kinetics=empty_kinetics,
+            kinetics=kinetics,
             engine=engine
         )
         trajectory.append(snap)
@@ -339,3 +352,86 @@ def trajectory_to_mdtraj(trajectory, md_topology=None):
 
 def ops_load_trajectory(filename, **kwargs):
     return trajectory_from_mdtraj(md.load(filename, **kwargs))
+
+# ops_load_trajectory and the mdtraj stuff is not OpenMM-specific
+
+def reduced_box_vectors(snapshot):
+    """Reduced box vectors for a snapshot (with units)
+
+    See also
+    --------
+    reduce_trajectory_box_vectors
+
+    Parameters
+    ----------
+    snapshot : :class:`.Snapshot`
+        input snapshot
+
+    Returns
+    -------
+    :class:`.Snapshot`
+        snapshot with correctly reduced box vectors
+    """
+    nm = u.nanometer
+    return np.array(
+        reducePeriodicBoxVectors(snapshot.box_vectors).value_in_unit(nm)
+    ) * nm
+
+def reduce_trajectory_box_vectors(trajectory):
+    """Trajectory with reduced box vectors.
+
+    OpenMM has strict requirements on the box vectors describing the unit
+    cell. In some cases, such as trajectories loaded from files that have
+    rounded the box vectors, these conditions might not be satisfied. This
+    method forces the box vectors to meet OpenMM's criteria.
+
+    Parameters
+    ----------
+    trajectory : :class:`.Trajectory`
+        input trajectory
+
+    Returns
+    -------
+    :class:`.Trajectory`
+        trajectory with correctly reduced box vectors
+    """
+    return Trajectory([
+        snap.copy_with_replacement(box_vectors=reduced_box_vectors(snap))
+        for snap in trajectory
+    ])
+
+
+def load_trr(trr_file, top, velocities=True):
+    """Load a TRR file, ready for use as input to an OpenMMEngine.
+
+    This is a single method to handle several peculiarities of both the TRR
+    format (which rounds some values) and OpenMM (which has certain
+    requirements of box vectors), plus the possibility that you'll want
+    velocities.
+
+    Parameters
+    ----------
+    trr_file : string
+        name of TRR file to load
+    top : string
+        name of topology (e.g., ``.gro``) file to use. See MDTraj
+        documentation on md.load.
+    velocities : bool
+        whether to also load velocities from the TRR file; default ``True``
+
+    Return
+    ------
+    :class:`.Trajectory`
+        the OPS trajectory, with OpenMM-reduced box vectors and velocities
+        (if requested)
+    """
+    mdt = md.load(trr_file, top=top)
+    trr = md.formats.TRRTrajectoryFile(trr_file)
+    if velocities:
+        vel = trr._read(n_frames=len(mdt), atom_indices=None,
+                        get_velocities=True)[5]
+    else:
+        vel = None
+
+    traj = trajectory_from_mdtraj(mdt, velocities=vel)
+    return reduce_trajectory_box_vectors(traj)

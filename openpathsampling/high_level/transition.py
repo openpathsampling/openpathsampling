@@ -179,7 +179,8 @@ class TISTransition(Transition):
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA,
-            innermost_vols=interfaces[0]
+            innermost_vols=interfaces[0],
+            forbidden=stateB
         ).named("Out " + stateA.name + " minus")
 
     def copy(self, with_results=True):

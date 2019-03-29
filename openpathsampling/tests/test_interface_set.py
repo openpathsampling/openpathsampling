@@ -19,14 +19,14 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testInterfaceSet(object):
+class TestInterfaceSet(object):
     def setup(self):
         paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0])
         self.lambdas = [0.0, 0.1, 0.2, 0.3]
-        self.volumes = paths.VolumeFactory.CVRangeVolumeSet(self.cv,
-                                                            float("-inf"),
-                                                            self.lambdas)
+        min_vals= [float("-inf")] * len(self.lambdas)
+        self.volumes = [paths.CVDefinedVolume(self.cv, min_v, max_v)
+                        for min_v, max_v in zip(min_vals, self.lambdas)]
         self.interface_set = paths.InterfaceSet(self.volumes, self.cv,
                                                 self.lambdas)
         self.decreasing = paths.InterfaceSet(list(reversed(self.volumes)),
@@ -69,18 +69,17 @@ class testInterfaceSet(object):
             i += 1
 
     def test_no_direction_possible(self):
-        volumes = paths.VolumeFactory.CVRangeVolumeSet(
-            op=self.cv,
-            minvals=[-0.1, -0.2, -0.3],
-            maxvals=[0.1, 0.2, 0.3]
-        )
+        min_vals=[-0.1, -0.2, -0.3]
+        max_vals=[0.1, 0.2, 0.3]
+        volumes = [paths.CVDefinedVolume(self.cv, min_v, max_v)
+                   for min_v, max_v in zip(min_vals, max_vals)]
         ifaces = paths.InterfaceSet(volumes)
         assert_equal(ifaces.cv, None)
         assert_equal(ifaces.cv_max, None)
         assert_equal(ifaces.direction, 0)
 
 
-class testGenericVolumeInterfaceSet(object):
+class TestGenericVolumeInterfaceSet(object):
     def test_sanitize_input(self):
         # this is just to make the rest a little more readable
         sanitize = GenericVolumeInterfaceSet._sanitize_input
@@ -104,7 +103,7 @@ class testGenericVolumeInterfaceSet(object):
                                                   [0.1, 0.2, 0.3])
 
 
-class testVolumeInterfaceSet(object):
+class TestVolumeInterfaceSet(object):
     def setup(self):
         paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0])
@@ -171,7 +170,7 @@ class testVolumeInterfaceSet(object):
             os.remove(fname)
 
 
-class testPeriodicVolumeInterfaceSet(object):
+class TestPeriodicVolumeInterfaceSet(object):
     def setup(self):
         paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0])
@@ -192,7 +191,7 @@ class testPeriodicVolumeInterfaceSet(object):
         new_iface = self.increasing_set.new_interface(-140)
         expected = paths.PeriodicCVDefinedVolume(self.cv, 0.0, -140, -180, 180)
         assert_equal(new_iface, expected)
-    
+
     def test_storage(self):
         import os
         fname = data_filename("interface_set_storage_test.nc")
@@ -216,6 +215,9 @@ class testPeriodicVolumeInterfaceSet(object):
 
         for (v, l) in zip(reloaded.volumes, reloaded.lambdas):
             assert_equal(reloaded.get_lambda(v), l)
+
+        storage_r.close()
+        storage_w.close()
 
         if os.path.isfile(fname):
             os.remove(fname)

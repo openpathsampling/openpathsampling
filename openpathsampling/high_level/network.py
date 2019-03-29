@@ -158,6 +158,9 @@ class GeneralizedTPSNetwork(TransitionNetwork):
             ret_dict['final_states'] = self.final_states
         except AttributeError:  # pragma: no cover
             # DEPRECATED: remove for 2.0
+            from openpathsampling.deprecations import \
+                    SAVE_RELOAD_OLD_TPS_NETWORK
+            SAVE_RELOAD_OLD_TPS_NETWORK.warn()
             pass  # backward compatibility
         return ret_dict
 
@@ -545,6 +548,7 @@ class MSTISNetwork(TISNetwork):
             other_states = states[:state_index]+states[state_index+1:]
             union_others = paths.volume.join_volumes(other_states)
             union_others.named("all states except " + str(state.name))
+            out_others = paths.AllOutXEnsemble(union_others)
 
             this_trans = paths.TISTransition(
                 stateA=state,
@@ -556,7 +560,7 @@ class MSTISNetwork(TISNetwork):
 
             self.from_state[state] = this_trans
 
-            this_minus = self.from_state[state].minus_ensemble
+            this_minus = self.from_state[state].minus_ensemble #& out_others
             this_inner = self.from_state[state].ensembles[0]
             try:
                 self.special_ensembles['minus'][this_minus] = [this_trans]

@@ -19,6 +19,9 @@ from .delayedinterrupt import DelayedInterrupt
 
 logger = logging.getLogger(__name__)
 
+if sys.version_info > (3, ):
+    basestring = str
+
 # =============================================================================
 # SOURCE CONTROL
 # =============================================================================
@@ -144,6 +147,7 @@ class DynamicsEngine(StorableNamedObject):
 
         self.descriptor = descriptor
         self._check_options(options)
+        self.interrupter = DelayedInterrupt
 
     @property
     def current_snapshot(self):
@@ -240,6 +244,9 @@ class DynamicsEngine(StorableNamedObject):
                         else:
                             okay_options[variable] = my_options[variable]
                     elif isinstance(my_options[variable], type(default_value)):
+                        okay_options[variable] = my_options[variable]
+                    elif isinstance(my_options[variable], basestring) \
+                            and isinstance(default_value, basestring):
                         okay_options[variable] = my_options[variable]
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
@@ -533,7 +540,7 @@ class DynamicsEngine(StorableNamedObject):
                 snapshot = None
 
                 try:
-                    with DelayedInterrupt():
+                    with self.interrupter():
                         snapshot = self.generate_next_frame()
 
                         # if self.on_nan != 'ignore' and \

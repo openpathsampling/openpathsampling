@@ -23,7 +23,7 @@ if it isn't interoperable enough to go into the main repository.
 
 Our coding style is mostly `PEP8`_, with allowances for better readability
 and matching standard scientific naming conventions (e.g., capitalization of
-variable nams). Docstrings are formatted according to the `numpydoc`_
+variable names). Docstrings are formatted according to the `numpydoc`_
 standard.
 
 .. _PEP8: https://www.python.org/dev/peps/pep-0008/
@@ -31,14 +31,15 @@ standard.
 
 .. rubric:: Tests and Examples
 
-Additions to OPS should include thorough unit tests. We use `nose`_ to run
-our tests. Unit tests are located in the ``openpathsampling/tests/``
-directory. Examples and integration tests should be written as Jupyter
+Additions to OPS should include thorough tests. We use `pytest`_ to run our
+tests, although we require `nose`_ for some legacy portions of the tests.
+Unit/integration tests are located in the ``openpathsampling/tests/``
+directory.  Examples and integration tests should be written as Jupyter
 notebooks and placed in the ``examples/`` directory.  Pull requests to the
 OPS GitHub repository will automatically run all unit tests with each push.
-We also run a subset of the integration tests on each push, using
-`ipynbtest`_.
+We also run a subset of the system tests on each push, using `ipynbtest`_.
 
+.. _pytest: http://pytest.org
 .. _nose: http://nose.readthedocs.io/
 .. _ipynbtest: https://github.com/jhprinz/ipynb-test
 
@@ -51,6 +52,7 @@ describe specific aspects.
 .. toctree::
     :maxdepth: 2
 
+    install_developers
     code_structure
     pathsimulators
     engines

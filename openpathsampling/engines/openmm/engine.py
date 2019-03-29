@@ -19,19 +19,30 @@ def restore_custom_integrator_interface(integrator):
     as `CustomIntegrator`, and therefore lose any additional interface
     provided by the subclass.
 
-    So far, only subclasses of `openmmtools.RestorableIntegrator` are
+    So far, only subclasses of `openmmtools.RestorableOpenMMObject` are
     supported. Hopefully, we can establish some sort of more widely-used
     approach based on the tricks established in there.
     """
     # for openmmtools integrators
     try:
         import openmmtools
+        import openmmtools.integrators  # hash table, see #767
     except ImportError:  # pragma: no cover
         pass  # if openmmtools doesn't exist, can't restore interface
     else:
-        RestorableIntegrator = openmmtools.integrators.RestorableIntegrator
-        if RestorableIntegrator.is_restorable(integrator):
-            success = RestorableIntegrator.restore_interface(integrator)
+        try:
+            # openmmtools 0.15 or later
+            from openmmtools.utils import RestorableOpenMMObject \
+                    as RestorableObject
+        except ImportError: # pragma: no cover
+            # DEPRECATED: remove in 2.0 (support for openmmtools < 0.15)
+            from openpathsampling.deprecations import OPENMMTOOLS_VERSION
+            OPENMMTOOLS_VERSION.warn()
+            from openmmtools.integrators import RestorableIntegrator \
+                    as RestorableObject
+
+        if RestorableObject.is_restorable(integrator):
+            success = RestorableObject.restore_interface(integrator)
             logger.debug("Restored interface to integrator: " + str(success))
             # this return a bool based on success; we could error on fail,
             # but I think it is better to just log it and use the integrator

@@ -12,6 +12,7 @@ providing this here the unorganized form.
 
 .. toctree::
    absolute_beginners
+   simulation_setup
    ops_output
    data_objects
    ensembles_apply_to_trajectories_not_frames

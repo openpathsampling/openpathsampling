@@ -341,12 +341,17 @@ class NetCDFPlus(netCDF4.Dataset):
                         self.attributes,
                         self.attributes.vars['cache']
                 ):
-                    key_store = self.attributes.key_store(attribute)
-                    key_store.attribute_list[attribute] = store
+                    if store is not None:
+                        key_store = self.attributes.key_store(attribute)
+                        key_store.attribute_list[attribute] = store
 
             # call the subclass specific restore in case there is more stuff
             # to prepare
             self._restore()
+
+        self.set_auto_mask(False)
+        # self.set_always_mask(False)  ## didn't fix; errors older versions
+
 
 
     def _create_simplifier(self):
