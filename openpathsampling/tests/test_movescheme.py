@@ -30,20 +30,112 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+def _make_acceptance_mock_step(mccycle, accepted, path_sim_mover, move_type,
+                               mover_num, submover_num=None):
+    root_mover = path_sim_mover.mover
+    chooser_names = {m.name[:-7].lower(): m for m in root_mover.movers}
+    chooser = chooser_names[move_type]
+    group_mover = chooser.movers[mover_num]
+    Change = {True: paths.AcceptedSampleMoveChange,
+              False: paths.RejectedSampleMoveChange}[accepted]
+    if submover_num is not None:
+        submover = group_mover.movers[submover_num]
+        submover_change = Change(samples=[], mover=submover)
+        group_mover_change = paths.RandomChoiceMoveChange(
+            subchange=submover_change,
+            mover=group_mover
+        )
+    else:
+        submover_change = None
+        group_mover_change = Change(samples=[], mover=group_mover)
+
+    chooser_change = paths.RandomChoiceMoveChange(
+        subchange=group_mover_change,
+        mover=chooser
+    )
+    root_mover_change = paths.RandomChoiceMoveChange(
+        subchange=chooser_change,
+        mover=root_mover
+    )
+    path_sim_change = paths.PathSimulatorMoveChange(
+        subchange=root_mover_change,
+        mover=path_sim_mover
+    )
+    step = paths.MCStep(
+        mccycle=mccycle,
+        active=paths.SampleSet([]),
+        change=path_sim_change
+    )
+    return step
+
+def _make_null_mover_step(mccycle, path_sim_mover, null_mover):
+    empty_sample_set = paths.SampleSet([])
+    change = paths.PathSimulatorMoveChange(
+        mover=path_sim_mover,
+        subchange=null_mover.move(empty_sample_set)
+    )
+    step = paths.MCStep(
+        mccycle=mccycle,
+        active=empty_sample_set,
+        change=change
+    )
+    return step
+
+
 class TestMoveAcceptanceAnalysis(object):
     def setup(self):
-        pass
+        paths.InterfaceSet._reset()
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        self.state_A = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
+        self.state_B = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
+        interfaces_A = paths.VolumeInterfaceSet(cvA, float("-inf"),
+                                               [-0.5, -0.3])
+        network = paths.MISTISNetwork([
+            (self.state_A, interfaces_A, self.state_B)
+        ])
+        self.scheme = MoveScheme(network)
+        self.scheme.append(OneWayShootingStrategy())
+        self.scheme.append(NearestNeighborRepExStrategy())
+        self.scheme.append(OrganizeByMoveGroupStrategy())
 
-    def test_initialization(self):
-        pass
+        root_mover = self.scheme.move_decision_tree()
+        path_sim_mover = paths.PathSimulatorMover(root_mover, None)
+        null_mover = paths.IdentityPathMover(counts_as_trial=False)
+
+        # acc repex ens1-2
+        # acc   fwd ens1
+        # acc  bkwd ens2
+        # rej  bkwd ens1
+        # rej repex ens1-2
+        step_info = [
+            (1, True, path_sim_mover, 'repex', 0, None),
+            (2, True, path_sim_mover, 'shooting', 0, 0),
+            (3, True, path_sim_mover, 'shooting', 1, 1),
+            (4, False, path_sim_mover, 'shooting', 0, 1),
+            (5, False, path_sim_mover, 'repex', 0, None)
+        ]
+        self.steps = [_make_acceptance_mock_step(*info)
+                      for info in step_info]
+
+        self.null_mover_6 = _make_null_mover_step(6, path_sim_mover,
+                                                  null_mover)
+
+        self.acceptance = MoveAcceptanceAnalysis(self.scheme)
+
 
     def test_add_steps(self):
-        pass
+        # also tests n_total_trials
+        assert self.acceptance._n_steps == 0
+        assert self.acceptance.n_total_trials == 0
+        self.acceptance.add_steps(self.steps)
+        assert self.acceptance._n_steps == 5
+        assert self.acceptance.n_total_trials == 5
+        self.acceptance.add_steps([self.null_mover_6])
+        assert self.acceptance._n_steps == 6
+        assert self.acceptance.n_total_trials == 5
 
     def test_no_move_keys(self):
-        pass
-
-    def test_n_total_trials(self):
         pass
 
     def test_select_movers_groupname(self):
@@ -58,6 +150,9 @@ class TestMoveAcceptanceAnalysis(object):
     def test_summary_data_mover(self):
         pass
 
+    def test_summary_data_submover(self):
+        pass
+
     def test_format_as_text(self):
         pass
 
@@ -70,9 +165,9 @@ class TestMoveScheme(object):
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),

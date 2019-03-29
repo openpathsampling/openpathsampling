@@ -26,10 +26,15 @@ class MoveAcceptanceAnalysis(object):
         self._trials = collections.defaultdict(int)
         self._accepted = collections.defaultdict(int)
         self._n_steps = 0
+        self._last_step_count = None
 
     def _calculate_step_acceptance(self, step):
         delta = step.change
         for m in delta:
+            # the key here is the mover and the string rep of the path to
+            # get to that mover in the move decision tree graph. This is
+            # because, in principle, one mover can appear in more than one
+            # place on the graph. That should change in 2.0
             key = (m.mover, str(delta.key(m)))
             self._accepted[key] += 1 if m.accepted else 0
             self._trials[key] += 1
@@ -51,9 +56,11 @@ class MoveAcceptanceAnalysis(object):
     @property
     def n_total_trials(self):
         if self._n_steps != self._last_step_count:
-            n_no_move_trials = sum([n_try for k, n_try in self._trials
+            n_no_move_trials = sum([n_try
+                                    for k, n_try in self._trials.items()
                                     if k[0] is None])
             self._n_total_trials = self._n_steps - n_no_move_trials
+            self._last_step_count = self._n_steps
         return self._n_total_trials
 
     def _select_movers(self, movers):
