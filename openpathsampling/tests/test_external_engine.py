@@ -5,6 +5,7 @@ from .test_helpers import assert_items_equal
 
 import openpathsampling as paths
 import openpathsampling.engines as peng
+from openpathsampling.engines.toy import ToySnapshot
 
 import numpy as np
 
@@ -16,6 +17,8 @@ import os
 import glob
 
 import logging
+
+from openpathsampling.engines.snapshot import SnapshotDescriptor
 
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
@@ -35,6 +38,11 @@ def teardown_module():
 
 class TestExternalEngine(object):
     def setup(self):
+        self.descriptor = SnapshotDescriptor.construct(
+            snapshot_class=ToySnapshot,
+            snapshot_dimensions={'n_spatial': 1,
+                                 'n_atoms': 1}
+        )
         slow_options = {
             'n_frames_max' : 10000,
             'engine_sleep' : 100,
@@ -49,8 +57,12 @@ class TestExternalEngine(object):
         }
         self.template = peng.toy.Snapshot(coordinates=np.array([[0.0]]),
                                           velocities=np.array([[1.0]]))
-        self.slow_engine = peng.ExternalEngine(slow_options, self.template)
-        self.fast_engine = peng.ExternalEngine(fast_options, self.template)
+        self.slow_engine = peng.ExternalEngine(slow_options,
+                                               self.descriptor,
+                                               self.template)
+        self.fast_engine = peng.ExternalEngine(fast_options,
+                                               self.descriptor,
+                                               self.template)
         self.ensemble = paths.LengthEnsemble(5)
 
     def test_start_stop(self):
