@@ -36,6 +36,8 @@ def restore_custom_integrator_interface(integrator):
                     as RestorableObject
         except ImportError: # pragma: no cover
             # DEPRECATED: remove in 2.0 (support for openmmtools < 0.15)
+            from openpathsampling.deprecations import OPENMMTOOLS_VERSION
+            OPENMMTOOLS_VERSION.warn()
             from openmmtools.integrators import RestorableIntegrator \
                     as RestorableObject
 

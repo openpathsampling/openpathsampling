@@ -18,13 +18,12 @@ import openpathsampling.engines as dyn
 
 import openpathsampling as paths
 
-from openpathsampling.ensemble import EnsembleFactory as ef
-
 from .test_helpers import (
     true_func, data_filename,
     assert_equal_array_array,
     assert_not_equal_array_array,
-    raises_with_message_like)
+    raises_with_message_like,
+    A2BEnsemble)
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -199,7 +198,7 @@ class TestOpenMMEngine(object):
     def test_nan_rejected(self):
         stateA = paths.EmptyVolume()  # will run indefinitely
         stateB = paths.EmptyVolume()
-        tps = ef.A2BEnsemble(stateA, stateB)
+        tps = A2BEnsemble(stateA, stateB)
         self.engine.n_frames_max = 10
 
         init_traj = paths.Trajectory([nan_causing_template] * 5)
@@ -230,7 +229,7 @@ class TestOpenMMEngine(object):
     def test_max_length_rejected(self):
         stateA = paths.EmptyVolume()  # will run indefinitely
         stateB = paths.EmptyVolume()
-        tps = ef.A2BEnsemble(stateA, stateB)
+        tps = A2BEnsemble(stateA, stateB)
         self.engine.options['n_frames_max'] = 10
         self.engine.on_max_length = 'fail'
 
