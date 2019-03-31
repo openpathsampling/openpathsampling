@@ -21,6 +21,22 @@ MoveAcceptanceAnalysisLine = collections.namedtuple(
 )
 
 class MoveAcceptanceAnalysis(object):
+    """Class to manage analysis of move acceptance.
+
+    One of the powerful things about OPS is the :class:`.MoveChange` object,
+    which stores detailed information about how the simulation occurred.
+    One example is that we can extract information about acceptance for each
+    submove within a move. This is the object that facilitates that.
+
+    After calculating the acceptance for a number of steps, this object can
+    be queried to determine the overall acceptance, or the acceptance of a
+    specific set of movers, or of submovers within a given mover.
+
+    Parameters
+    ----------
+    scheme: :class:`.MoveScheme`
+        the move scheme for this analysis
+    """
     def __init__(self, scheme):
         self.scheme = scheme
         self._trials = collections.defaultdict(int)
@@ -40,6 +56,18 @@ class MoveAcceptanceAnalysis(object):
             self._trials[key] += 1
 
     def add_steps(self, steps):
+        """Add steps to the internal counters.
+
+        Parameters
+        ----------
+        steps : list of :class:`.MCStep`
+            the input steps
+
+        Returns
+        -------
+        self : :class:`.MoveAcceptanceAnalysis`
+            returns self for possible chaining
+        """
         for step in steps:
             self._calculate_step_acceptance(step)
         self._n_steps += len(steps)
@@ -47,6 +75,7 @@ class MoveAcceptanceAnalysis(object):
 
     @property
     def no_move_keys(self):
+        """list: internal keys with no move associated"""
         return [k for k in self._trials.keys() if k[0] is None]
 
     @property
@@ -56,6 +85,7 @@ class MoveAcceptanceAnalysis(object):
 
     @property
     def n_total_trials(self):
+        """int : total number of trials (excluding dummy moves)"""
         if self._n_steps != self._last_step_count:
             n_no_move_trials = sum([n_try
                                     for k, n_try in self._trials.items()
@@ -65,6 +95,15 @@ class MoveAcceptanceAnalysis(object):
         return self._n_total_trials
 
     def _select_movers(self, movers):
+        """Select the movers to use.
+
+        Parameters
+        ----------
+        movers : None, string, list, or :class:`.PathMover`
+            if None, this acts as though the input were the list of group
+            names for the scheme. If a string, that is assumed to be a group
+            name in the scheme.
+        """
         if movers is None:
             movers = list(self.scheme.movers.keys())
         # TODO: can the rest of this be replaced by
@@ -88,6 +127,8 @@ class MoveAcceptanceAnalysis(object):
         lines = []
         for (group_name, group_movers) in selected_movers.items():
             key_iter = [k for k in self._trials if k[0] in group_movers]
+            # print key_iter
+            # print {k[0]: count for (k, count) in self._trials.items()}
             accepted = sum([self._accepted[k] for k in key_iter])
             trials = sum([self._trials[k] for k in key_iter])
 

@@ -35,11 +35,14 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 def _make_acceptance_mock_step(mccycle, accepted, path_sim_mover, move_type,
-                               mover_num, submover_num=None):
+                               mover_sig, submover_num=None):
     root_mover = path_sim_mover.mover
     chooser_names = {m.name[:-7].lower(): m for m in root_mover.movers}
     chooser = chooser_names[move_type]
-    group_mover = chooser.movers[mover_num]
+    sig_to_mover = {frozenset(m.ensemble_signature[0]): m
+                    for m in chooser.movers}
+    # group_mover = chooser.movers[mover_num]
+    group_mover = sig_to_mover[frozenset(mover_sig)]
     Change = {True: paths.AcceptedSampleMoveChange,
               False: paths.RejectedSampleMoveChange}[accepted]
     # foo here is because we need non-empty samples to show that we're
@@ -93,13 +96,11 @@ class TestMoveAcceptanceAnalysis(object):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
-        self.state_A = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
-        self.state_B = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
+        state_A = paths.CVDefinedVolume(cvA, float("-inf"), -0.5).named("A")
+        state_B = paths.CVDefinedVolume(cvB, float("-inf"), -0.5).named("B")
         interfaces_A = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3])
-        network = paths.MISTISNetwork([
-            (self.state_A, interfaces_A, self.state_B)
-        ])
+        network = paths.MISTISNetwork([(state_A, interfaces_A, state_B)])
         self.scheme = MoveScheme(network)
         self.scheme.append(OneWayShootingStrategy())
         self.scheme.append(NearestNeighborRepExStrategy())
@@ -109,17 +110,20 @@ class TestMoveAcceptanceAnalysis(object):
         path_sim_mover = paths.PathSimulatorMover(root_mover, None)
         null_mover = paths.IdentityPathMover(counts_as_trial=False)
 
+        ens_0 = network.sampling_ensembles[0]
+        ens_1 = network.sampling_ensembles[1]
+
         # acc repex ens1-2
         # acc   fwd ens1
         # acc  bkwd ens2
         # rej  bkwd ens1
         # rej repex ens1-2
         step_info = [
-            (1, True, path_sim_mover, 'repex', 0, None),
-            (2, True, path_sim_mover, 'shooting', 0, 0),
-            (3, True, path_sim_mover, 'shooting', 1, 1),
-            (4, False, path_sim_mover, 'shooting', 0, 1),
-            (5, False, path_sim_mover, 'repex', 0, None)
+            (1, True, path_sim_mover, 'repex', [ens_0, ens_1], None),
+            (2, True, path_sim_mover, 'shooting', [ens_0], 0),
+            (3, True, path_sim_mover, 'shooting', [ens_1], 1),
+            (4, False, path_sim_mover, 'shooting', [ens_0], 1),
+            (5, False, path_sim_mover, 'repex', [ens_0, ens_1], None)
         ]
         self.steps = [_make_acceptance_mock_step(*info)
                       for info in step_info]
@@ -235,6 +239,11 @@ class TestMoveAcceptanceAnalysis(object):
     def test_summary_data_groupname(self, group_name, simulation):
         results = self.analysis[simulation].summary_data(group_name)
         scheme = self.scheme
+
+        analysis = self.analysis[simulation]
+        for i, mover in enumerate(scheme.movers['shooting']):
+            print(i, mover, [v for k, v in  analysis._trials.items()
+                             if k[0] == mover])
         expected_results_empty = {
             'shooting': [{'move_name': scheme.movers['shooting'][0],
                           'expected_frequency': 0.4,
