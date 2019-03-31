@@ -320,7 +320,7 @@ class TestMinusMoveFlux(TISAnalysisTester):
         engine = RandomMDEngine()  # to get snapshot_timestep
 
         self.mistis_scheme = paths.DefaultScheme(self.mistis, engine)
-        self.mistis_scheme.move_decision_tree()
+        self.mistis_scheme.build_move_decision_tree()
         self.mistis_minus_steps = self._make_fake_minus_steps(
             scheme=self.mistis_scheme,
             descriptions=minus_move_descriptions
@@ -328,7 +328,7 @@ class TestMinusMoveFlux(TISAnalysisTester):
         self.mistis_minus_flux = MinusMoveFlux(self.mistis_scheme)
 
         self.mstis_scheme = paths.DefaultScheme(self.mstis, engine)
-        self.mstis_scheme.move_decision_tree()
+        self.mstis_scheme.build_move_decision_tree()
         self.mstis_minus_steps = self._make_fake_minus_steps(
             scheme=self.mstis_scheme,
             descriptions=minus_move_descriptions
@@ -415,7 +415,7 @@ class TestMinusMoveFlux(TISAnalysisTester):
             (self.state_A, interfaces_AC, state_C)
         ])
         scheme = paths.DefaultScheme(bad_mistis)
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         minus_flux = MinusMoveFlux(scheme)
 
 
@@ -1029,7 +1029,7 @@ class TestStandardTISAnalysis(TestTISAnalysis):
     def test_with_minus_move_flux(self):
         network = self.mstis
         scheme = paths.DefaultScheme(network, engine=RandomMDEngine())
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
 
         # create the minus move steps
         # `center` is the edge of the state/innermost interface
