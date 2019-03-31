@@ -335,7 +335,7 @@ class TestMoveAcceptanceAnalysis(object):
             n_trials=3,
             expected_frequency=0.8
         )
-        expected = (" * shooting ran 60.000% (expected 80.00%) of the "
+        expected = ("shooting ran 60.000% (expected 80.00%) of the "
                     + "cycles with acceptance 2/3 (66.67%)\n")
         result = self.analysis[simulation]._line_as_text(line)
         assert result == expected
@@ -347,7 +347,7 @@ class TestMoveAcceptanceAnalysis(object):
             n_trials=0,
             expected_frequency=float('nan')
         )
-        expected = (" * path_reversal ran 0.000% (expected nan%) of the "
+        expected = ("path_reversal ran 0.000% (expected nan%) of the "
                     + "cycles with acceptance 0/0 (nan%)\n")
         result = self.analysis['normal']._line_as_text(line)
         assert result == expected
@@ -360,7 +360,7 @@ class TestMoveAcceptanceAnalysis(object):
             n_trials=2,
             expected_frequency=0.4
         )
-        expected = (" * " + str(mover) + " ran 40.000% (expected 40.00%) "
+        expected = (str(mover) + " ran 40.000% (expected 40.00%) "
                     + "of the cycles with acceptance 1/2 (50.00%)\n")
         result = self.analysis['normal']._line_as_text(line)
         assert result == expected
@@ -370,9 +370,9 @@ class TestMoveAcceptanceAnalysis(object):
         analysis = self.analysis[simulation]
         summary_data = analysis.summary_data(None)
         text_lines = {
-            'shooting': (" * shooting ran 60.000% (expected 80.00%) of the "
+            'shooting': ("shooting ran 60.000% (expected 80.00%) of the "
                        + "cycles with acceptance 2/3 (66.67%)\n"),
-            'repex': (" * repex ran 40.000% (expected 20.00%) of the "
+            'repex': ("repex ran 40.000% (expected 20.00%) of the "
                       + "cycles with acceptance 1/2 (50.00%)\n")
         }
         expected = "".join([text_lines[line.move_name]

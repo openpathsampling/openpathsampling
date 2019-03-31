@@ -103,7 +103,7 @@ class MoveAcceptanceAnalysis(object):
         movers : None, string, list, or :class:`.PathMover`
             if None, this acts as though the input were the list of group
             names for the scheme. If a string, that is assumed to be a group
-            name in the scheme.
+            name in the scheme. TODO
         """
         if movers is None:
             movers = list(self.scheme.movers.keys())
@@ -124,6 +124,19 @@ class MoveAcceptanceAnalysis(object):
         return selected_movers
 
     def summary_data(self, movers):
+        """Generate a summary of acceptance for the movers of interest.
+
+        Parameters
+        ----------
+        movers : TODO
+
+        Returns
+        -------
+        list of :class:`.MoveAcceptanceAnalysisLine`
+            results for each mover or group of movers; each includes
+            ``move_name``, ``n_accepted``, ``n_trials``, and
+            ``expected_frequency`` (drawn from the move scheme)
+        """
         selected_movers = self._select_movers(movers)
         lines = []
         for (group_name, group_movers) in selected_movers.items():
@@ -148,6 +161,18 @@ class MoveAcceptanceAnalysis(object):
         return lines
 
     def _line_as_text(self, line):
+        """Format a MoveAcceptanceAnalysisLine a line of text
+
+        Parameters
+        ----------
+        line : :class:`.MoveAcceptanceAnalysisLine`
+            input line
+
+        Returns
+        -------
+        str :
+            formatted string with acceptance information
+        """
         try:
             acceptance = float(line.n_accepted) / line.n_trials
         except ZeroDivisionError:
@@ -156,7 +181,7 @@ class MoveAcceptanceAnalysis(object):
         run_freq = float(line.n_trials) / self.n_total_trials
 
 
-        output = (" * {line.move_name} ran {run_freq:.3%} (expected "
+        output = ("{line.move_name} ran {run_freq:.3%} (expected "
                   + "{line.expected_frequency:.2%}) of the cycles with "
                   + "acceptance {line.n_accepted}/{line.n_trials} "
                   + "({acceptance:.2%})\n").format(line=line,
@@ -165,10 +190,22 @@ class MoveAcceptanceAnalysis(object):
         return output
 
     def format_as_text(self, summary_data):
+        """Format the summary data as text.
+
+        Parameters
+        ----------
+        summary_data : list of :class:`.MoveAcceptanceSummaryLine`
+            output of :meth:`.summary_data`
+
+        Returns
+        -------
+        str :
+            string version of the summary data
+        """
         output = ""
         if self._n_in_scheme_no_move_trials > 0:
             output += ("Null moves for "
-                       +str(self._n_in_scheme_no_move_trials)
+                       + str(self._n_in_scheme_no_move_trials)
                        + " cycles. Excluding null moves:\n")
         for line in summary_data:
             output += self._line_as_text(line)
