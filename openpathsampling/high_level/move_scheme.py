@@ -82,6 +82,7 @@ class MoveAcceptanceAnalysis(object):
     def _n_in_scheme_no_move_trials(self):
         result = sum([self._trials[k] for k in self.no_move_keys
                       if k[1] != '[None]'])
+        return result
 
     @property
     def n_total_trials(self):
@@ -156,7 +157,7 @@ class MoveAcceptanceAnalysis(object):
 
 
         output = (" * {line.move_name} ran {run_freq:.3%} (expected "
-                  + "{line.expected_frequency:.2%} of the cycles with "
+                  + "{line.expected_frequency:.2%}) of the cycles with "
                   + "acceptance {line.n_accepted}/{line.n_trials} "
                   + "({acceptance:.2%})\n").format(line=line,
                                                    acceptance=acceptance,
@@ -166,7 +167,8 @@ class MoveAcceptanceAnalysis(object):
     def format_as_text(self, summary_data):
         output = ""
         if self._n_in_scheme_no_move_trials > 0:
-            output += ("Null moves for " + str(n_in_scheme_no_move_trials)
+            output += ("Null moves for "
+                       +str(self._n_in_scheme_no_move_trials)
                        + " cycles. Excluding null moves:\n")
         for line in summary_data:
             output += self._line_as_text(line)
