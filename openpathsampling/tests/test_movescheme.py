@@ -24,6 +24,8 @@ from openpathsampling.high_level.move_strategy import (
 
 import openpathsampling.high_level.move_strategy as strategies
 
+import pytest
+
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
@@ -38,16 +40,18 @@ def _make_acceptance_mock_step(mccycle, accepted, path_sim_mover, move_type,
     group_mover = chooser.movers[mover_num]
     Change = {True: paths.AcceptedSampleMoveChange,
               False: paths.RejectedSampleMoveChange}[accepted]
+    # foo here is because we need non-empty samples to show that we're
+    # actually accepted or not (WHY?!?!?)
     if submover_num is not None:
         submover = group_mover.movers[submover_num]
-        submover_change = Change(samples=[], mover=submover)
+        submover_change = Change(samples=['foo'], mover=submover)
         group_mover_change = paths.RandomChoiceMoveChange(
             subchange=submover_change,
             mover=group_mover
         )
     else:
         submover_change = None
-        group_mover_change = Change(samples=[], mover=group_mover)
+        group_mover_change = Change(samples=['foo'], mover=group_mover)
 
     chooser_change = paths.RandomChoiceMoveChange(
         subchange=group_mover_change,
@@ -120,42 +124,125 @@ class TestMoveAcceptanceAnalysis(object):
 
         self.null_mover_6 = _make_null_mover_step(6, path_sim_mover,
                                                   null_mover)
+        self.null_mover_change_key = [(None, str([path_sim_mover, [None]]))]
 
-        self.acceptance = MoveAcceptanceAnalysis(self.scheme)
+        acceptance_empty = MoveAcceptanceAnalysis(self.scheme)
 
+        acceptance = MoveAcceptanceAnalysis(self.scheme)
+        acceptance.add_steps(self.steps)
+
+        acceptance_null = MoveAcceptanceAnalysis(self.scheme)
+        acceptance_null.add_steps(self.steps + [self.null_mover_6])
+
+        self.analysis = {'empty': acceptance_empty,
+                         'normal': acceptance,
+                         'with_null': acceptance_null}
+
+    @pytest.mark.parametrize('step_num', [0, 1, 2, 3, 4])
+    def test_calculate_step_acceptance(self, step_num):
+        accepted = [1] if step_num in [0, 1, 2] else [0]
+        analysis = MoveAcceptanceAnalysis(self.scheme)
+        analysis._calculate_step_acceptance(self.steps[step_num])
+        assert len(analysis._trials) == len(analysis._accepted)
+        len_trials = len(analysis._trials)
+        assert list(analysis._trials.values()) == [1] * len_trials
+        assert list(analysis._accepted.values()) == accepted * len_trials
 
     def test_add_steps(self):
         # also tests n_total_trials
-        assert self.acceptance._n_steps == 0
-        assert self.acceptance.n_total_trials == 0
-        self.acceptance.add_steps(self.steps)
-        assert self.acceptance._n_steps == 5
-        assert self.acceptance.n_total_trials == 5
-        self.acceptance.add_steps([self.null_mover_6])
-        assert self.acceptance._n_steps == 6
-        assert self.acceptance.n_total_trials == 5
+        acceptance = MoveAcceptanceAnalysis(self.scheme)
+        assert acceptance._n_steps == 0
+        assert acceptance.n_total_trials == 0
+        acceptance.add_steps(self.steps)
+        assert acceptance._n_steps == 5
+        assert acceptance.n_total_trials == 5
+        acceptance.add_steps([self.null_mover_6])
+        assert acceptance._n_steps == 6
+        assert acceptance.n_total_trials == 5
 
-    def test_no_move_keys(self):
-        pass
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    def test_no_move_keys(self, simulation):
+        analysis = self.analysis[simulation]
+        expected = {'empty': [],
+                    'normal': [],
+                    'with_null': self.null_mover_change_key}[simulation]
+        assert analysis.no_move_keys == expected
 
-    def test_select_movers_groupname(self):
-        pass
+    def test_select_movers_none(self):
+        analysis = self.analysis['normal']  # doesn't matter which
+        select_movers = analysis._select_movers
+        scheme_movers = {k: self.scheme.movers[k]
+                         for k in ['shooting', 'repex']}
+        assert select_movers(None) == scheme_movers
 
-    def test_select_movers_mover(self):
-        pass
+    @pytest.mark.parametrize('group_name', ['shooting', 'repex'])
+    def test_select_movers_groupname(self, group_name):
+        analysis = self.analysis['normal']  # doesn't matter which
+        select_movers = analysis._select_movers
+        expected = {mover: [mover]
+                    for mover in self.scheme.movers[group_name]}
 
-    def test_summary_data_groupname(self):
-        pass
+        assert select_movers(group_name) == expected
 
-    def test_summary_data_mover(self):
-        pass
+    @pytest.mark.parametrize('group_name', ['shooting', 'repex'])
+    def test_select_movers_mover(self, group_name):
+        analysis = self.analysis['normal']  # doesn't matter which
+        select_movers = analysis._select_movers
+        input_movers = self.scheme.movers[group_name]
+        for mover in input_movers:
+            try:
+                extra_movers = mover.movers
+            except AttributeError:
+                extra_movers = []
+
+            expected = {m: [m] for m in [mover] + extra_movers}
+            assert select_movers(mover) == expected
+
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    def test_summary_data_none(self, simulation):
+        results = self.analysis[simulation].summary_data(None)
+        expected_results_empty = {
+            'shooting': {'move_name': 'shooting',
+                         'n_accepted': 0,
+                         'n_trials': 0,
+                         'expected_frequency': 0.8},
+            'repex': {'move_name': 'repex',
+                      'n_accepted': 0,
+                      'n_trials': 0,
+                      'expected_frequency': 0.2}
+        }
+        expected_results_non_empty = {
+            'shooting': {'move_name': 'shooting',
+                         'n_accepted': 2,
+                         'n_trials': 3,
+                         'expected_frequency': 0.8},
+            'repex': {'move_name': 'repex',
+                      'n_accepted': 1,
+                      'n_trials': 2,
+                      'expected_frequency': 0.2}
+        }
+        expected = {'empty': expected_results_empty,
+                    'normal': expected_results_non_empty,
+                    'with_null': expected_results_non_empty}[simulation]
+
+        for result in results:
+            assert result._asdict() == expected[result.move_name]
+
+    @pytest.mark.parametrize('group_name', ['shooting', 'repex'])
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    def test_summary_data_groupname(self, group_name, simulation):
+        pytest.skip()
+
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    def test_summary_data_mover(self, simulation):
+        pytest.skip()
 
     def test_summary_data_submover(self):
-        pass
+        pytest.skip()
 
-    def test_format_as_text(self):
-        pass
-
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    def test_format_as_text(self, simulation):
+        pytest.skip()
 
 
 class TestMoveScheme(object):

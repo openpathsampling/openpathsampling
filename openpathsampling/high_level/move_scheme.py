@@ -43,10 +43,11 @@ class MoveAcceptanceAnalysis(object):
         for step in steps:
             self._calculate_step_acceptance(step)
         self._n_steps += len(steps)
+        return self
 
     @property
     def no_move_keys(self):
-        return [k for (k, v) in self._trials.keys() if k[0] is None]
+        return [k for k in self._trials.keys() if k[0] is None]
 
     @property
     def _n_in_scheme_no_move_trials(self):
@@ -70,20 +71,26 @@ class MoveAcceptanceAnalysis(object):
         # self.scheme._select_movers?
         if type(movers) is str:
             movers = self.scheme.movers[movers]
+
+        selected_movers = {}
+        # this for loop will loop over submovers if `movers` is a path mover
         for key in movers:
             try:
                 selected_movers[key] = self.scheme.movers[key]
             except KeyError:
                 selected_movers[key] = [key]
+        # this returns a dict of label to a list of movers to add up results
+        # for
         return selected_movers
 
     def summary_data(self, movers):
         selected_movers = self._select_movers(movers)
         lines = []
         for (group_name, group_movers) in selected_movers.items():
-            key_iter = (k for k in self._trials if k[0] == mover)
+            key_iter = [k for k in self._trials if k[0] in group_movers]
             accepted = sum([self._accepted[k] for k in key_iter])
             trials = sum([self._trials[k] for k in key_iter])
+
             try:
                 expected = sum([self.scheme.choice_probability[m]
                                 for m in group_movers])
