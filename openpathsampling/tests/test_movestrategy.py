@@ -221,7 +221,7 @@ class TestTwoWayShootingStrategy(MoveStrategyTestSetup):
         strategy = TwoWayShootingStrategy(modifier=paths.NoModification())
         scheme = DefaultScheme(self.network, engine=None)
         scheme.append(strategy)
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['shooting']), 6)
         for mover in scheme.movers['shooting']:
             assert_equal(type(mover), paths.TwoWayShootingMover)
@@ -427,7 +427,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme = DefaultScheme(self.network)
         scheme.movers ={}
         scheme.append(EnsembleHopStrategy(replace=True, from_group=None))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         # 4 normal repex + 2 ms-outer repex = 6 repex * 2 hop/repex = 12
         assert_equal(len(scheme.movers['repex']), 12)
 
@@ -439,7 +439,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme.append(EnsembleHopStrategy(replace=False, 
                                           group='hop',
                                           from_group='repex'))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 6)
         assert_equal(len(scheme.movers['hop']), 12)
 
@@ -451,7 +451,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme.append(EnsembleHopStrategy(replace=True, 
                                           group='hop',
                                           from_group='repex'))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['hop']), 12)
         assert_not_in("repex", list(scheme.movers.keys()))
 
@@ -461,7 +461,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme = DefaultScheme(self.network)
         scheme.movers ={}
         scheme.append(EnsembleHopStrategy(replace=False, from_group=None))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 18)
 
 

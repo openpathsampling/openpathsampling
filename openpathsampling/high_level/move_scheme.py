@@ -242,7 +242,7 @@ class MoveScheme(StorableNamedObject):
     # TODO: it might be nice to have a way to "lock" this once it has been
     # saved. That would prevent a (stupid) user from trying to rebuild a
     # custom-modified tree.
-    def _build_move_decision_tree(self):
+    def build_move_decision_tree(self):
         for lev in sorted(self.strategies.keys()):
             for strat in self.strategies[lev]:
                 self.apply_strategy(strat)
@@ -269,7 +269,7 @@ class MoveScheme(StorableNamedObject):
             rebuild = True
         if rebuild:
             self.choice_probability = {}
-            self._build_move_decision_tree()
+            self.build_move_decision_tree()
         return self.root_mover
 
     def apply_strategy(self, strategy):
@@ -951,7 +951,7 @@ class LockedMoveScheme(MoveScheme):
     def append(self, strategies, levels=None, force=False):
         raise TypeError("Locked schemes cannot append strategies")
 
-    def _build_move_decision_tree(self):
+    def build_move_decision_tree(self):
         # override with no-op
         pass
 
