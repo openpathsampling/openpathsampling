@@ -14,6 +14,8 @@ from .test_helpers import (true_func, assert_equal_array_array,
 
 import copy
 
+import math
+
 import openpathsampling as paths
 from openpathsampling.high_level.move_scheme import *
 from openpathsampling.high_level.move_strategy import (
@@ -231,14 +233,90 @@ class TestMoveAcceptanceAnalysis(object):
     @pytest.mark.parametrize('group_name', ['shooting', 'repex'])
     @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
     def test_summary_data_groupname(self, group_name, simulation):
-        pytest.skip()
+        results = self.analysis[simulation].summary_data(group_name)
+        scheme = self.scheme
+        expected_results_empty = {
+            'shooting': [{'move_name': scheme.movers['shooting'][0],
+                          'expected_frequency': 0.4,
+                          'n_accepted': 0,
+                          'n_trials': 0},
+                         {'move_name': scheme.movers['shooting'][1],
+                          'expected_frequency': 0.4,
+                          'n_accepted': 0,
+                          'n_trials': 0}],
+            'repex': [{'move_name': scheme.movers['repex'][0],
+                       'expected_frequency': 0.2,
+                       'n_accepted': 0,
+                       'n_trials': 0}]
+        }
+        expected_results_non_empty = {
+            'shooting': [{'move_name': scheme.movers['shooting'][0],
+                          'expected_frequency': 0.4,
+                          'n_accepted': 1,
+                          'n_trials': 2},
+                         {'move_name': scheme.movers['shooting'][1],
+                          'expected_frequency': 0.4,
+                          'n_accepted': 1,
+                          'n_trials': 1}],
+            'repex': [{'move_name': scheme.movers['repex'][0],
+                       'expected_frequency': 0.2,
+                       'n_accepted': 1,
+                       'n_trials': 2}]
+        }
+        expected_list = {'empty': expected_results_empty,
+                         'normal': expected_results_non_empty,
+                         'with_null': expected_results_non_empty
+                        }[simulation][group_name]
+        expected = {res['move_name']: res for res in expected_list}
+
+        for result in results:
+            assert result._asdict() == expected[result.move_name]
 
     @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
-    def test_summary_data_mover(self, simulation):
-        pytest.skip()
+    @pytest.mark.parametrize('mover_ensemble', [0, 1])
+    def test_summary_data_mover(self, simulation, mover_ensemble):
+        mover = self.scheme.movers['shooting'][mover_ensemble]
+        results = self.analysis[simulation].summary_data(mover)
 
-    def test_summary_data_submover(self):
-        pytest.skip()
+        expected_list = [
+            {'move_name': mover,
+             # 'expected_frequency': 0.4,
+             'n_accepted': 0,
+             'n_trials': 0},
+            {'move_name': mover.movers[0],
+             # 'expected_frequency': float('nan'),
+             'n_accepted': 0,
+             'n_trials': 0},
+            {'move_name': mover.movers[1],
+             # 'expected_frequency': float('nan'),
+             'n_accepted': 0,
+             'n_trials': 0}
+        ]
+        updates = {
+            0: {mover: {'n_accepted': 1, 'n_trials': 2},
+                mover.movers[0]: {'n_accepted': 1, 'n_trials': 1},
+                mover.movers[1]: {'n_accepted': 0, 'n_trials': 1}},
+            1: {mover: {'n_accepted': 1, 'n_trials': 1},
+                mover.movers[0]: {'n_accepted': 0, 'n_trials': 0},
+                mover.movers[1]: {'n_accepted': 1, 'n_trials': 1}}
+        }
+
+        expected = {elem['move_name']: elem for elem in expected_list}
+        if simulation in ['normal', 'with_null']:
+            update = updates[mover_ensemble]
+            for m, dct in expected.items():
+                dct.update(update[m])
+
+        for result in results:
+            # trickiness here because 'nan' != 'nan'
+            result_dict = result._asdict()
+            result_freq = result_dict.pop('expected_frequency')
+            if result.move_name == mover:
+                assert result_freq == 0.4
+            else:
+                assert math.isnan(result_freq)
+
+            assert result_dict == expected[result.move_name]
 
     @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
     def test_format_as_text(self, simulation):
