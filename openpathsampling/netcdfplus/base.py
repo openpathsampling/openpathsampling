@@ -445,7 +445,7 @@ class StorableNamedObject(StorableObject):
         >>> full = p.FullVolume().named('myFullVolume')
 
         """
-        if self.name == self.default_name:
+        if not self.is_named and not self._name_fixed:
             self.name = name
         return self
 

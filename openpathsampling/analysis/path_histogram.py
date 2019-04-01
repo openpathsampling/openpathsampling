@@ -4,38 +4,71 @@ from openpathsampling.numerics import SparseHistogram
 from collections import Counter
 import numpy as np
 
-# should path histogram be moved to the generic histogram.py? Seems to be
-# independent of the fact that this is actually OPS
-class PathHistogram(SparseHistogram):
+class VoxelInterpolator(object):
     """
-    N-dim sparse histogram for trajectories.
+    Identify voxels visited during linear interpolation between two points
 
-    This allows features like interpolating between bins and normalizing the
-    histogram to the number of trajectories.
+    This class includes some conveniences to facilate this with
+    n-dimensional histograms.
+
+    This is an abstract class; the __call__ method needs to be implemented
+    by subclasses. The __call__ method should take the arguments ``old_pt``
+    and ``new_pt``, which are the points to interpolate between, and should
+    return the list of voxel identifiers (n-dimensional integer tuples) for
+    the visited voxels, excluding the voxel for ``old_pt``.
 
     Parameters
     ----------
-    left_bin_edges : array-like
-        lesser side of the bin (for each direction)
-    bin_widths : array-like
-        bin (voxel) size
-    interpolate : bool or string
-        whether to interpolate missing bin visits. String value determines
-        interpolation type (currently only "subdivide" allowed). Default
-        True gives "subdivide" method, False gives no interpolation.
-    per_traj : bool
-        whether to normalize per trajectory (instead of per-snapshot)
+    histogram : :class:`.PathHistogram`
+        the histogram that this will interpolate for
     """
-    def __init__(self, left_bin_edges, bin_widths, interpolate=True,
-                 per_traj=True):
-        super(PathHistogram, self).__init__(left_bin_edges=left_bin_edges,
-                                            bin_widths=bin_widths)
-        if interpolate is True:
-            interpolate = "subdivide"
-        self.interpolate = interpolate
-        self.per_traj = per_traj
+    def __init__(self, histogram):
+        self.histogram = histogram
 
-    def interpolated_bins(self, old_pt, new_pt):
+    @property
+    def left_bin_edges(self):
+        return self.histogram.left_bin_edges
+
+    @property
+    def bin_widths(self):
+        return self.histogram.bin_widths
+
+    def map_to_bins(self, point):
+        return self.histogram.map_to_bins(point)
+
+    def __call__(self, old_pt, new_pt):
+        raise NotImplementedError("Can't use abstract class Interpolator")
+
+
+class NoInterpolation(VoxelInterpolator):
+    """No interpolation.
+
+    Just returns the bin for the new point. The effect is that no
+    interpolation is done.
+
+    Parameters
+    ----------
+    histogram : :class:`.PathHistogram`
+        the histogram that this will interpolate for
+    """
+    def __call__(self, old_pt, new_pt):
+        return [self.map_to_bins(new_pt)]
+
+
+class SubdivideInterpolation(VoxelInterpolator):
+    """Interpolate by bisection.
+
+    Identifies all voxels that are visited between two points by
+    successively recursively taking the midpoint, until all voxels found are
+    adjacent (with special case handling for corners, where the line does
+    not go through a face).
+
+    Parameters
+    ----------
+    histogram : :class:`.PathHistogram`
+        the histogram that this will interpolate for
+    """
+    def _interpolated_bins(self, old_pt, new_pt):
         """Interpolate between trajectory points.
 
         Parameters
@@ -62,15 +95,13 @@ class PathHistogram(SparseHistogram):
         if manhattan_distance <= 1:
             return bin_list
         # otherwise, use one of the interpolation algos to find bins
-        if self.interpolate == "subdivide":
-            bin_list = self.subdivide_interpolation(start_pt=old_pt,
-                                                    end_pt=new_pt,
-                                                    start_bin=old_bin,
-                                                    end_bin=new_bin)
-        # TODO add other interpolation schemes. 
+        bin_list = self._subdivide_interpolation(start_pt=old_pt,
+                                                 end_pt=new_pt,
+                                                 start_bin=old_bin,
+                                                 end_bin=new_bin)
         return list(set(bin_list) - set([old_bin]))
 
-    def subdivide_interpolation(self, start_pt, end_pt, start_bin, end_bin):
+    def _subdivide_interpolation(self, start_pt, end_pt, start_bin, end_bin):
         """Interpolate between bins using recursive division.
 
         Note that this is probably not the very fastest possible algorithm,
@@ -95,7 +126,7 @@ class PathHistogram(SparseHistogram):
         delta = np.asarray(end_pt) - np.asarray(start_pt)
         mid_pt = start_pt + 0.5 * delta
         mid_bin = self.map_to_bins(mid_pt)
-        # check for diagonal first 
+        # check for diagonal first
         if np.all(abs(np.asarray(end_bin) - np.asarray(start_bin)) == 1):
             left_edges = self.left_bin_edges + self.bin_widths * end_bin
             test_array = (left_edges - start_pt) / delta
@@ -117,37 +148,75 @@ class PathHistogram(SparseHistogram):
             return [start_bin, mid_bin, end_bin]
         # if we're in the same bin, only have one direction to go
         elif mid_bin == start_bin:
-            return self.subdivide_interpolation(start_pt=mid_pt,
-                                                end_pt=end_pt,
-                                                start_bin=mid_bin,
-                                                end_bin=end_bin)
-        elif mid_bin == end_bin:
-            return self.subdivide_interpolation(start_pt=start_pt,
-                                                end_pt=mid_pt,
-                                                start_bin=start_bin,
-                                                end_bin=mid_bin)
-        elif manhattan_dist_start == 1:
-            return ([start_bin] + 
-                    self.subdivide_interpolation(start_pt=mid_pt,
+            return self._subdivide_interpolation(start_pt=mid_pt,
                                                  end_pt=end_pt,
                                                  start_bin=mid_bin,
-                                                 end_bin=end_bin))
-        elif manhattan_dist_end == 1:
-            return ([end_bin] +
-                    self.subdivide_interpolation(start_pt=start_pt,
+                                                 end_bin=end_bin)
+        elif mid_bin == end_bin:
+            return self._subdivide_interpolation(start_pt=start_pt,
                                                  end_pt=mid_pt,
                                                  start_bin=start_bin,
-                                                 end_bin=mid_bin))
+                                                 end_bin=mid_bin)
+        elif manhattan_dist_start == 1:
+            return ([start_bin] +
+                    self._subdivide_interpolation(start_pt=mid_pt,
+                                                  end_pt=end_pt,
+                                                  start_bin=mid_bin,
+                                                  end_bin=end_bin))
+        elif manhattan_dist_end == 1:
+            return ([end_bin] +
+                    self._subdivide_interpolation(start_pt=start_pt,
+                                                  end_pt=mid_pt,
+                                                  start_bin=start_bin,
+                                                  end_bin=mid_bin))
         else:
-            start_side = self.subdivide_interpolation(start_pt=start_pt,
-                                                      end_pt=mid_pt,
-                                                      start_bin=start_bin,
-                                                      end_bin=mid_bin)
-            end_side = self.subdivide_interpolation(start_pt=mid_pt,
-                                                    end_pt=end_pt,
-                                                    start_bin=mid_bin,
-                                                    end_bin=end_bin)
+            start_side = self._subdivide_interpolation(start_pt=start_pt,
+                                                       end_pt=mid_pt,
+                                                       start_bin=start_bin,
+                                                       end_bin=mid_bin)
+            end_side = self._subdivide_interpolation(start_pt=mid_pt,
+                                                     end_pt=end_pt,
+                                                     start_bin=mid_bin,
+                                                     end_bin=end_bin)
             return start_side + end_side
+
+    def __call__(self, old_pt, new_pt):
+        return self._interpolated_bins(old_pt, new_pt)
+
+# should path histogram be moved to the generic histogram.py? Seems to be
+# independent of the fact that this is actually OPS
+class PathHistogram(SparseHistogram):
+    """
+    N-dim sparse histogram for trajectories.
+
+    This allows features like interpolating between bins and normalizing the
+    histogram to the number of trajectories.
+
+    Parameters
+    ----------
+    left_bin_edges : array-like
+        lesser side of the bin (for each direction)
+    bin_widths : array-like
+        bin (voxel) size
+    interpolate : bool or callable
+        how to interpolate missing bin visits. Default True gives
+        "subdivide" method, False gives no interpolation. Arbitrary callable
+        should take ``old_pt`` and ``new_pt``, and return the list of bins
+        that were visited, excluding the bin for ``old_pt``.
+    per_traj : bool
+        whether to normalize per trajectory (instead of per-snapshot)
+    """
+    def __init__(self, left_bin_edges, bin_widths, interpolate=True,
+                 per_traj=True):
+        super(PathHistogram, self).__init__(left_bin_edges=left_bin_edges,
+                                            bin_widths=bin_widths)
+        if interpolate is True:
+            interpolate = SubdivideInterpolation
+        elif interpolate is False:
+            interpolate = NoInterpolation
+
+        self.interpolate = interpolate(self)
+        self.per_traj = per_traj
 
     def single_trajectory_counter(self, trajectory):
         """
@@ -166,11 +235,13 @@ class PathHistogram(SparseHistogram):
         # make a list of every bin visited, possibly interpolating gaps
         bin_list = [self.map_to_bins(trajectory[0])]
         for fnum in range(len(trajectory)-1):
-            if self.interpolate:
-                bin_list += self.interpolated_bins(trajectory[fnum],
-                                                   trajectory[fnum+1])
-            else:
-                bin_list += [self.map_to_bins(trajectory[fnum+1])]
+            bin_list += self.interpolate(trajectory[fnum],
+                                         trajectory[fnum+1])
+            # if self.interpolate:
+                # bin_list += self.interpolated_bins(trajectory[fnum],
+                                                   # trajectory[fnum+1])
+            # else:
+                # bin_list += [self.map_to_bins(trajectory[fnum+1])]
 
         local_hist = Counter(bin_list)
         if self.per_traj:
@@ -239,7 +310,7 @@ class PathDensityHistogram(PathHistogram):
     """
     def __init__(self, cvs, left_bin_edges, bin_widths, interpolate=True):
         super(PathDensityHistogram, self).__init__(
-            left_bin_edges=left_bin_edges, 
+            left_bin_edges=left_bin_edges,
             bin_widths=bin_widths,
             interpolate=interpolate,
             per_traj=True

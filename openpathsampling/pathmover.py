@@ -16,6 +16,9 @@ from openpathsampling.pathmover_inout import InOutSet, InOut
 from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
+from openpathsampling.deprecations import deprecate, has_deprecations
+from openpathsampling.deprecations import SAMPLE_DETAILS, MOVE_DETAILS
+
 from future.utils import with_metaclass
 
 logger = logging.getLogger(__name__)
@@ -514,8 +517,8 @@ class SampleMover(PathMover):
         -------
         bool
             True if the trial is accepted, False otherwise
-        details : openpathsampling.MoveDetails
-            Returns a MoveDetails object that contains information about the
+        details : openpathsampling.Details
+            Returns a Details object that contains information about the
             decision, i.e. total acceptance and random number
 
         """
@@ -642,7 +645,7 @@ class SampleMover(PathMover):
                 samples=e.trial_sample,
                 mover=self,
                 input_samples=samples,
-                details=paths.MoveDetails(**e.details)
+                details=paths.Details(**e.details)
             )
         except SampleMaxLengthError as e:
             e.details.update({'rejection_reason': 'max_length'})
@@ -660,7 +663,7 @@ class SampleMover(PathMover):
         kwargs.update(call_details)
         kwargs.update(acceptance_details)
 
-        details = MoveDetails(**kwargs)
+        details = Details(**kwargs)
 
         # return change
         if accepted:
@@ -1570,7 +1573,7 @@ class SelectionMover(PathMover):
             'weights': weights
         }
 
-        details = MoveDetails(**kwargs)
+        details = Details(**kwargs)
         return mover, details
 
     def move(self, sample_set):
@@ -2022,7 +2025,7 @@ class ConditionalSequentialMover(SequentialMover):
 #             'rep_to': rep_to
 #         }
 #
-#         details = MoveDetails(**kwargs)
+#         details = Details(**kwargs)
 #
 #         return paths.AcceptedSampleMoveChange(
 #             samples=[new_sample],
@@ -2548,7 +2551,7 @@ class PathSimulatorMover(SubPathMover):
         self.pathsimulator = pathsimulator
 
     def move(self, sample_set, step=-1):
-        details = MoveDetails(
+        details = Details(
             step=step
         )
 
@@ -2589,11 +2592,8 @@ class Details(StorableObject):
         return mystr
 
 
-# these subclasses make no actual difference; just alias them
-# MoveDetails = Details
-# SampleDetails = Details
-# SampleDetails deprecated in OPS 0.9.3; will be removed in 2.0
-
+@has_deprecations
+@deprecate(MOVE_DETAILS)
 class MoveDetails(Details):
     """Details of the move as applied to a given replica
 
@@ -2612,11 +2612,10 @@ class MoveDetails(Details):
 
 
 # leave this for potential backwards compatibility
+@has_deprecations
+@deprecate(SAMPLE_DETAILS)
 class SampleDetails(Details):
     """Details of a sample
-
-    .. note:: Deprecated in OpenPathSampling 0.9.3
-          `SampleDetails` will be removed in OPS 2.0.0
     """
 
     def __init__(self, **kwargs):

@@ -219,7 +219,7 @@ class MoveStrategy(StorableNamedObject):
             list containing the list of parameters for each mover; the
             specific strategy may need to unpack in substructure in its
             make_movers method. Order is: ensembles (in order returned by
-            :method:`.get_per_mover_ensembles`), list_parameters (in order
+            :meth:`.get_per_mover_ensembles`), list_parameters (in order
             given as input), nonlist_parameters (in order given as input)
         """
         ensemble_list = self.get_per_mover_ensembles(scheme)
