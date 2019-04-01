@@ -22,6 +22,8 @@ install:
   - export PACKAGES=`python devtools/install_recipe_requirements.py --dry devtools/conda-recipe/meta.yaml`
   - TESTING_PACKAGES=`cat devtools/testing_requirements.txt | tr "\n" " "`
   - EXTRA_PACKAGES=`cat devtools/optional_packages.txt | tr "\n" " "`
+  # msmbuilder doesn't work on 3.7 yet
+  - if [ "$CONDA_PY" = "3.7" ]; then EXTRA_PACKAGES=""; fi
   - export PACKAGES="$PACKAGES $TESTING_PACKAGES $EXTRA_PACKAGES"
   - echo $PACKAGES
   - conda install -y -q -c conda-forge -c omnia $PACKAGES
