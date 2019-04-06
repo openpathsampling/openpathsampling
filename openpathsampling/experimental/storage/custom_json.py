@@ -42,6 +42,24 @@ class JSONCodec(object):
 
     Parameters
     ----------
+    cls : class
+        Class for this codec. Assumes that all subclasses should be treated
+        the same way. Can be `None` if `is_my_obj` and `is_my_class` are
+        given.
+    to_dict : callable
+        method that converts the object to a dictionary
+    from_dict : callable
+        method that restores the object based on the dictionary made by
+        to_dict
+    is_my_obj : callable
+        (Optional) Method to determine whether the input object should be
+        treated by this encoder. Default behavior is to use
+        ``isinstance(cls)``, and to create a dict that also includes the
+        class name and the module of the object.
+    is_my_dict : callable
+        (Optional) Method to determine whether the input dictionary should
+        be treated by this decoder. Default behavior assumes usage of the
+        default ``is_my_obj``.
     """
     def __init__(self, cls, to_dict, from_dict, is_my_obj=None,
                  is_my_dict=None):
@@ -114,4 +132,4 @@ uuid_object_codec = JSONCodec(cls=None,
                               is_my_obj=has_uuid,
                               is_my_dict=lambda x: False)
 
-# TODO: simtk.unit.Quantity
+# TODO: simtk.unit.Quantity  (in the OPS storage, though)

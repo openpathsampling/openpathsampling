@@ -51,12 +51,14 @@ ops_schema = {
 ops_schema_sql_metadata = {}
 
 # this defines the simulation object serializer for OPS
-json_serializer, json_deserializer = default_serializer_deserializer(
-    [numpy_codec, bytes_codec, uuid_object_codec]
-)
-ops_simobj_serializer = SimulationObjectSerializer(
-    json_encoder=json_serializer
-)
+CODECS = [numpy_codec, bytes_codec, uuid_object_codec]
+
+# json_serializer, json_deserializer = default_serializer_deserializer(
+    # [numpy_codec, bytes_codec, uuid_object_codec]
+# )
+# ops_simobj_serializer = SimulationObjectSerializer(
+    # json_encoder=json_serializer
+# )
 
 class MoveChangeDeserializer(SchemaDeserializer):
     # in general, I think it would be better to reorg MoveChange to only be
@@ -156,32 +158,39 @@ class OPSClassInfoContainer(ClassInfoContainer):
             self.register_info(class_info_list, schema)
             self.n_snapshot_types += 1
 
+def _build_ops_serializer(codecs=None):
+    if codecs is None:
+        codecs = CODECS
+    json_ser, json_deser = default_serializer_deserializer(codecs)
+    ops_simobj_serializer = SimulationObjectSerializer(json_encoder=json_ser)
+    ops_class_info = OPSClassInfoContainer(
+        default_info=ClassInfo('simulation_objects', cls=StorableObject,
+                               serializer=ops_simobj_serializer,
+                               deserializer=deserialize_sim,
+                               find_uuids=default_find_uuids),
+        schema=ops_schema,
+        class_info_list=[
+            ClassInfo(table='samples', cls=paths.Sample),
+            ClassInfo(table='sample_sets', cls=paths.SampleSet),
+            ClassInfo(table='trajectories', cls=paths.Trajectory),
+            ClassInfo(table='move_changes', cls=paths.MoveChange,
+                      deserializer=MoveChangeDeserializer(
+                          schema=ops_schema,
+                          table='move_changes'
+                      )),
+            ClassInfo(table='steps', cls=paths.MCStep),
+            ClassInfo(table='details', cls=paths.Details,
+                      serializer=ops_simobj_serializer,
+                      deserializer=deserialize_sim),
+        ]
+    )
 
-ops_class_info = OPSClassInfoContainer(
-    default_info=ClassInfo('simulation_objects', cls=StorableObject,
-                           serializer=ops_simobj_serializer,
-                           deserializer=deserialize_sim,
-                           find_uuids=default_find_uuids),
-    schema=ops_schema,
-    class_info_list=[
-        ClassInfo(table='samples', cls=paths.Sample),
-        ClassInfo(table='sample_sets', cls=paths.SampleSet),
-        ClassInfo(table='trajectories', cls=paths.Trajectory),
-        ClassInfo(table='move_changes', cls=paths.MoveChange,
-                  deserializer=MoveChangeDeserializer(
-                      schema=ops_schema,
-                      table='move_changes'
-                  )),
-        ClassInfo(table='steps', cls=paths.MCStep),
-        ClassInfo(table='details', cls=paths.Details,
-                  serializer=ops_simobj_serializer,
-                  deserializer=deserialize_sim),
-    ]
-)
+    for info in ops_class_info.class_info_list:
+        info.set_defaults(ops_schema)
 
-for info in ops_class_info.class_info_list:
-    info.set_defaults(ops_schema)
+    return ops_class_info
 
+ops_class_info = _build_ops_serializer(codecs=CODECS)
 
 # this will create the pseudo-tables used to find specific objects
 ops_simulation_classes = {

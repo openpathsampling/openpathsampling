@@ -12,13 +12,15 @@ def parse_ndarray_type(type_name):
         return dtype, shape
     return None
 
-
+# TODO: this needs to be set up in a way to make it extensible (without
+# editing core code)
 def backend_registration_type(type_name):
     backend_type = type_name
     ndarray_info = parse_ndarray_type(type_name)
     if parse_ndarray_type(type_name):
         backend_type = 'ndarray'
     return backend_type
+
 
 
 uuid_types = ['uuid', 'lazy']
