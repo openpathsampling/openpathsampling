@@ -227,6 +227,10 @@ class GromacsEngine(ExternalEngine):
             'prefix': self.prefix
         }
 
+    @property
+    def mdtraj_trajectory(self):
+        return self.topology.mdtraj
+
     def read_frame_data(self, filename, frame_num):
         """
         Returns pos, vel, box or raises error
