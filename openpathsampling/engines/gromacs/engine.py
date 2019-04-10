@@ -228,7 +228,7 @@ class GromacsEngine(ExternalEngine):
         }
 
     @property
-    def mdtraj_trajectory(self):
+    def mdtraj_topology(self):
         return self.topology.mdtraj
 
     def read_frame_data(self, filename, frame_num):
