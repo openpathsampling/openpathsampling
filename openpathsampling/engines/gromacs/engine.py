@@ -157,6 +157,11 @@ class GromacsEngine(ExternalEngine):
     This provides Gromacs support, using our indirect engine API (TODO
     link).
 
+    OPS runs Gromacs based on the mdp file that you provide. This mdp file
+    MUST output in the TRR format, and the velocity and position save
+    frequency in the TRR must be the same (that is, you need to have
+    ``nstxout`` = ``nstvout``, and they must not be 0).
+
     Parameters
     ----------
     gro : string
@@ -212,6 +217,14 @@ class GromacsEngine(ExternalEngine):
         self.topology = template.topology
         descriptor = template.engine.descriptor  # descriptor from gro file
 
+        # initial placeholders
+        self.input_file = "INITIAL.trr"
+        self.output_file = "OUTPUT_NAME.trr"
+        self.edr_file = "EDR_DIR/OUTPUT_NAME.edr"
+        self.log_file = "LOG_DIR/OUTPUT_NAME.log"
+
+        self._mdtraj_topology = None
+
         super(GromacsEngine, self).__init__(options, descriptor, template,
                                              first_frame_in_file=True)
 
@@ -229,7 +242,13 @@ class GromacsEngine(ExternalEngine):
 
     @property
     def mdtraj_topology(self):
+        if self._mdtraj_topology:
+            return self._mdtraj_topology
         return self.topology.mdtraj
+
+    @mdtraj_topology.setter
+    def mdtraj_topology(self, value):
+        self._mdtraj_topology = value
 
     def read_frame_data(self, filename, frame_num):
         """
