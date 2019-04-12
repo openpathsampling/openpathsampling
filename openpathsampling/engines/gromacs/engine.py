@@ -165,7 +165,9 @@ class GromacsEngine(ExternalEngine):
     Parameters
     ----------
     gro : string
-        .gro file
+        File for the grompp ``-c`` flag. This is often a .gro, but note that
+        you may get better support with other integrations (e.g., MDTraj) if
+        you use a PDB.
     mdp : string
         .mdp file
     top : string
