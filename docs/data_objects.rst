@@ -16,3 +16,6 @@ described in the :ref:`Engines <engine>` section.
     SampleSet
     MoveChange
     MCStep
+    Details
+    SampleDetails
+    MoveDetails

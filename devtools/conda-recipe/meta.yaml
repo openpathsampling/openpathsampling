@@ -28,6 +28,7 @@ requirements:
     - openmm
     - openmmtools
     - jupyter
+    - ipython!=7.4.0
     - mdtraj
     - svgwrite
     - networkx

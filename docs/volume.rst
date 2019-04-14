@@ -37,17 +37,3 @@ collective variable-based volumes
 
     CVDefinedVolume
     PeriodicCVDefinedVolume
-
-voronoi cell volumes
---------------------
-.. autosummary::
-    :toctree: api/generated/
-
-    VoronoiVolume
-
-volume factory
---------------
-.. autosummary::
-    :toctree: api/generated/
-
-    VolumeFactory
