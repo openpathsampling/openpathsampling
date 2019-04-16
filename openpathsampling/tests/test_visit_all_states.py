@@ -1,5 +1,6 @@
 import openpathsampling as paths
 
+import re
 import pytest
 from openpathsampling.tests.test_helpers import \
         make_1d_traj, CalvinistDynamics
@@ -24,6 +25,35 @@ def test_default_state_progress_report():
     assert f(n_steps, found_vol, all_vol, tstep) == \
             "Ran 100 steps [50.0]. Found states [A,B]. Looking for [C,D]."
 
+def extract_info_from_default_report(report):
+    pattern = (r"Ran ([0-9]*) steps. Found states \[(.*)\]\. "
+               + r"Looking for \[(.*)\]\.")
+    result = re.match(pattern, report)
+    match_groups = [result.group(i) for i in [1,2,3]]
+    ret_val = [int(match_groups[0])]
+    # extra complexity to handle the fact that "".split(',') gives [""]
+    # (instead of [], as it does for "".split())
+    # see https://stackoverflow.com/questions/16645083
+    for state_list in match_groups[1:]:
+        as_list = state_list.split(',')
+        state_set = set(as_list) if as_list != [''] else {}
+        ret_val.append(state_set)
+    return ret_val
+
+def test_extract_info_from_default_report():
+    reports = {
+        0: "Ran 0 steps. Found states []. Looking for [A,B,C,D].",
+        3: "Ran 3 steps. Found states [A,B]. Looking for [C,D].",
+        7: "Ran 7 steps. Found states [A,B,C,D]. Looking for []."
+    }
+    results = {
+        0: [0, {}, {'A', 'B', 'C', 'D'}],
+        3: [3, {'A', 'B'}, {'C', 'D'}],
+        7: [7, {'A', 'B', 'C', 'D'}, {}]
+    }
+    for i in [0, 3, 7]:
+        assert extract_info_from_default_report(reports[i]) == results[i]
+
 
 class TestVisitAllStatesEnsemble(object):
     def setup(self):
@@ -37,8 +67,28 @@ class TestVisitAllStatesEnsemble(object):
         sequence = [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
         self.state_seq = [[], [vol_A], [], [vol_B], [], [vol_C], [],
                           [vol_D], []]
+
+        self.reports = [
+            "Ran 0 steps. Found states []. Looking for [A,B,C,D].",
+            "Ran 1 steps. Found states [A]. Looking for [B,C,D].",
+            "Ran 2 steps. Found states [A]. Looking for [B,C,D].",
+            "Ran 4 steps. Found states [A,B]. Looking for [C,D].",
+            "Ran 5 steps. Found states [A,B,C]. Looking for [D].",
+            "Ran 6 steps. Found states [A,B,C]. Looking for [D].",
+            "Ran 7 steps. Found states [A,B,C,D]. Looking for [].",
+        ]
         self.traj = make_1d_traj(sequence)
-        self.engine = CalvinistDynamics(self.traj)
+        # self.engine = CalvinistDynamics(self.traj)
+
+    def _run_trajectory(self, can_append, trusted):
+        n_frames = 1
+        done = False
+        my_traj = None
+        while not done:
+            my_traj = self.traj[:n_frames]
+            done = not can_append(my_traj, trusted=trusted)
+            n_frames += 1
+        return my_traj
 
     def test_initialization(self):
         assert self.ensemble.progress == default_state_progress_report
@@ -78,13 +128,7 @@ class TestVisitAllStatesEnsemble(object):
     def test_can_append(self, strict, trusted):
         can_append = {False: self.ensemble.can_append,
                       True: self.ensemble.strict_can_append}[strict]
-        n_frames = 1
-        done = False
-        my_traj = None
-        while not done:
-            my_traj = self.traj[:n_frames]
-            done = not can_append(my_traj, trusted=trusted)
-            n_frames += 1
+        my_traj = self._run_trajectory(can_append, trusted)
         assert len(my_traj) == 8
         assert self.ensemble.found_states == set(self.states)
 
@@ -101,7 +145,20 @@ class TestVisitAllStatesEnsemble(object):
     def test_can_append_new_trajectory(self, strict, trusted):
         can_append = {False: self.ensemble.can_append,
                       True: self.ensemble.strict_can_append}[strict]
-        pytest.skip()
+        my_traj = self._run_trajectory(can_append, trusted)
+        report = self.ensemble.progress_report(my_traj)
+        steps, found, looking = extract_info_from_default_report(report)
+        assert steps == 7
+        assert found == {'A','B','C','D'}
+        assert looking == {}
+        new_traj = make_1d_traj([-0.6])
+        assert can_append(new_traj, trusted=trusted)
+        report = self.ensemble.progress_report(new_traj)
+        steps, found, looking = extract_info_from_default_report(report)
+        assert steps == 0
+        assert found == {}
+        assert looking == {'A','B','C','D'}
+
 
     def test_call(self):
         pytest.skip()

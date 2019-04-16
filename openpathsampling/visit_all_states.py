@@ -63,15 +63,18 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
             state = set([])
         return state
 
+    def progress_report(self, trajectory):
+        return self.progress(n_steps=len(trajectory) - 1,
+                             timestep=self.timestep,
+                             found_states=self.found_states,
+                             all_states=self.states)
+
     def _update_for_progress(self, trajectory, frame_number):
         len_traj = len(trajectory)
         frame = trajectory[frame_number]
         self.found_states.update(self._state_for_frame(trajectory[-1]))
         if len_traj - 1 % self.report_frequency == 0:
-            report_string = self.progress(n_steps=len_traj - 1,
-                                          timestep=self.timestep,
-                                          found_states=self.found_states,
-                                          all_states=self.states)
+            report_string = self.progress_report(trajectory)
             paths.tools.refresh_output(report_string)
 
     def can_append(self, trajectory, trusted=False):
