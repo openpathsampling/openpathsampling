@@ -67,20 +67,10 @@ class TestVisitAllStatesEnsemble(object):
         sequence = [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
         self.state_seq = [[], [vol_A], [], [vol_B], [], [vol_C], [],
                           [vol_D], []]
-
-        self.reports = [
-            "Ran 0 steps. Found states []. Looking for [A,B,C,D].",
-            "Ran 1 steps. Found states [A]. Looking for [B,C,D].",
-            "Ran 2 steps. Found states [A]. Looking for [B,C,D].",
-            "Ran 4 steps. Found states [A,B]. Looking for [C,D].",
-            "Ran 5 steps. Found states [A,B,C]. Looking for [D].",
-            "Ran 6 steps. Found states [A,B,C]. Looking for [D].",
-            "Ran 7 steps. Found states [A,B,C,D]. Looking for [].",
-        ]
         self.traj = make_1d_traj(sequence)
         # self.engine = CalvinistDynamics(self.traj)
 
-    def _run_trajectory(self, can_append, trusted):
+    def _run_trajectory(self, can_append, trusted, frame_test=None):
         n_frames = 1
         done = False
         my_traj = None
@@ -134,12 +124,6 @@ class TestVisitAllStatesEnsemble(object):
 
     @pytest.mark.parametrize('strict', [True, False],
                              ids=['strict', 'normal'])
-    def test_can_append_trusted_incorrect(self, strict):
-        # things that the trusted version can get wrong
-        pytest.skip()
-
-    @pytest.mark.parametrize('strict', [True, False],
-                             ids=['strict', 'normal'])
     @pytest.mark.parametrize('trusted', [True, False],
                              ids=['trusted', 'untrusted'])
     def test_can_append_new_trajectory(self, strict, trusted):
@@ -159,9 +143,22 @@ class TestVisitAllStatesEnsemble(object):
         assert found == {}
         assert looking == {'A','B','C','D'}
 
+    @pytest.mark.parametrize('candidate', [True, False],
+                             ids=['candidate', 'non-candidate'])
+    def test_call(self, candidate):
+        my_traj = self._run_trajectory(self.ensemble.strict_can_append,
+                                       trusted=False)
+        self.ensemble._reset_cache_contents()
+        assert not self.ensemble(my_traj[:1], candidate)
 
-    def test_call(self):
-        pytest.skip()
+        self.ensemble.found_states.update(set(self.states))
+        assert self.ensemble(my_traj, candidate=candidate)
+
+    def test_candidate_call_incorrect(self):
+        # NOTE: this tests that a candidate path that should not be a
+        # candidate gives the WRONG result.
+        assert not self.ensemble(self.traj, candidate=True)
+        assert self.ensemble(self.traj, candidate=False)
 
     @pytest.mark.parametrize('strict', [True, False],
                              ids=['strict', 'normal'])

@@ -83,6 +83,12 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
             trusted=trusted
         )
 
+        # TODO: can this be simplified and moved entirely into the cache?
+        reset = self.cache.check(trajectory)
+        if reset:
+            self._reset_cache_contents()
+
+
         if self.progress:
             frames = [-1] if trusted else list(range(len(trajectory)))
             for frame in frames:
@@ -97,3 +103,11 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
                                   "VisitAllStateEnsemble")
 
     strict_can_prepend = can_prepend
+
+    def __call__(self, trajectory, candidate=False):
+        if not candidate:
+            self._reset_cache_contents()
+            for frame in trajectory:
+                self.found_states.update(self._state_for_frame(frame))
+
+        return self.found_states == set(self.states)
