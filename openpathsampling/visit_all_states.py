@@ -3,7 +3,29 @@ from openpathsampling.ensemble import EnsembleCache
 
 def default_state_progress_report(n_steps, found_states, all_states,
                                   timestep=None):
-    report_str = "Ran {n_steps} steps"
+    """
+    Default progress reporter for VisitAllStatesEnsemble.
+
+    Note that it is assumed that all states have been named.
+
+    Parameters
+    ----------
+    n_steps : int
+        number of MD frames generated so far
+    found_states : iterable
+        the set of states that have been found
+    all_states : iterable
+        the set of all states of interest
+    timestep : float or quantity
+        the timestep (optional). If given, the amount of time simulated will
+        be reported along with the number of MD frames.
+
+    Returns
+    -------
+    str :
+        formatted string with information about progress so far
+    """
+    report_str = "Ran {n_steps} frames"
     if timestep is not None:
         report_str += " [{}]".format(str(n_steps * timestep))
     report_str += (". Found states [{found_states}]. "
@@ -18,6 +40,37 @@ def default_state_progress_report(n_steps, found_states, all_states,
 
 
 class VisitAllStatesEnsemble(paths.WrappedEnsemble):
+    """
+    Ensemble to create trajectories connected all states, giving progress.
+
+    Parameters
+    ----------
+    states : list of :class:`.Volume`
+        States this should visit
+    progress : string or 2-tuple of callable
+        How to report progress. This is used to define a method to create
+        the report string and a method to emit the progress report.  Allowed
+        string values are 'default', which uses
+        :method:`.default_state_progress_report` to create the string and
+        :method:`.refresh_output` to emit it, and 'silent', which will
+        create the report as with the default, but not emit it.
+        Using ``None`` will prevent the report from being created. You can
+        also return a 2-tuple of callables, where the first formats the
+        string (and must match the signature of
+        :method:`.default_state_progress_report`) and the second tells how
+        out emit the report.
+    timestep : float or quantity
+        Simulation timestep. See :method:`.default_state_progress_report`.
+
+    Attributes
+    ----------
+    report_frequency : int
+        how many frames between reports (default 10)
+    progress_formatter : callable
+        the method that creates the report string
+    progress_emitter : callable
+        the method that emits the report
+    """
     def __init__(self, states, progress='default', timestep=None):
         self.states = states
         self.all_states = paths.join_volumes(states)
@@ -44,6 +97,7 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
 
     @staticmethod
     def _progress_indicator(progress):
+        """parse the input ``progress`` to get the actual objects"""
         indicator_dict = {
             None: (None, lambda x: None),
             'default': (default_state_progress_report,
@@ -58,6 +112,7 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
         return indicator
 
     def _state_for_frame(self, snapshot):
+        """get the state associated with a given frame"""
         in_states = [state for state in self.states if state(snapshot)]
         if len(in_states) > 1:
             raise RuntimeError("Frame is in more than one state.")
@@ -68,16 +123,30 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
         return state
 
     def progress_report(self, trajectory):
+        """Convenience to get the progress report string for a trajectory.
+
+        Parameters
+        ----------
+        trajectory : :class:`.Trajectory`
+            input trajectory
+
+        Returns
+        -------
+        str :
+            progress report string
+        """
         return self.progress_formatter(n_steps=len(trajectory) - 1,
                                        timestep=self.timestep,
                                        found_states=self.found_states,
                                        all_states=self.states)
 
     def _update_for_progress(self, trajectory, frame_number):
+        """update cache of visited states; report if suitable"""
         len_traj = len(trajectory)
         frame = trajectory[frame_number]
         self.found_states.update(self._state_for_frame(trajectory[-1]))
-        if len_traj - 1 % self.report_frequency == 0:
+        # minus 1 to account for the fact that the first step doesn't count
+        if (len_traj - 1) % self.report_frequency == 0:
             report_string = self.progress_report(trajectory)
             self.progress_emitter(report_string)
 
@@ -96,6 +165,10 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
             frames = [-1] if trusted else list(range(len(trajectory)))
             for frame in frames:
                 self._update_for_progress(trajectory, frame_number=frame)
+
+        if not return_value and self.progress_formatter:
+            report_string = self.progress_report(trajectory)
+            self.progress_emitter(report_string)
 
         return return_value
 
