@@ -30,7 +30,8 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
         super(VisitAllStatesEnsemble, self).__init__(ensemble)
         self.timestep = timestep
         self.report_frequency = 10
-        self.progress = self._progress_indicator(progress)
+        self.progress_formatter, self.progress_emitter = \
+                self._progress_indicator(progress)
         self.cache = EnsembleCache(direction=+1)
         self._reset_cache_contents()
 
@@ -44,8 +45,11 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
     @staticmethod
     def _progress_indicator(progress):
         indicator_dict = {
-            None: None,
-            'default': default_state_progress_report,
+            None: (None, lambda x: None),
+            'default': (default_state_progress_report,
+                        paths.tools.refresh_output),
+            'silent': (default_state_progress_report,
+                       lambda x: None),
         }
         try:
             indicator = indicator_dict[progress]
@@ -64,10 +68,10 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
         return state
 
     def progress_report(self, trajectory):
-        return self.progress(n_steps=len(trajectory) - 1,
-                             timestep=self.timestep,
-                             found_states=self.found_states,
-                             all_states=self.states)
+        return self.progress_formatter(n_steps=len(trajectory) - 1,
+                                       timestep=self.timestep,
+                                       found_states=self.found_states,
+                                       all_states=self.states)
 
     def _update_for_progress(self, trajectory, frame_number):
         len_traj = len(trajectory)
@@ -75,7 +79,7 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
         self.found_states.update(self._state_for_frame(trajectory[-1]))
         if len_traj - 1 % self.report_frequency == 0:
             report_string = self.progress_report(trajectory)
-            paths.tools.refresh_output(report_string)
+            self.progress_emitter(report_string)
 
     def can_append(self, trajectory, trusted=False):
         return_value = super(VisitAllStatesEnsemble, self).can_append(
@@ -88,8 +92,7 @@ class VisitAllStatesEnsemble(paths.WrappedEnsemble):
         if reset:
             self._reset_cache_contents()
 
-
-        if self.progress:
+        if self.progress_formatter:
             frames = [-1] if trusted else list(range(len(trajectory)))
             for frame in frames:
                 self._update_for_progress(trajectory, frame_number=frame)

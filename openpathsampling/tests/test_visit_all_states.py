@@ -63,7 +63,8 @@ class TestVisitAllStatesEnsemble(object):
         vol_C = paths.CVDefinedVolume(self.cv, 4.0, 5.0).named("C")
         vol_D = paths.CVDefinedVolume(self.cv, 6.0, 7.0).named("D")
         self.states  = [vol_A, vol_B, vol_C, vol_D]
-        self.ensemble = VisitAllStatesEnsemble(self.states)
+        self.ensemble = VisitAllStatesEnsemble(self.states,
+                                               progress='silent')
         sequence = [-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5]
         self.state_seq = [[], [vol_A], [], [vol_B], [], [vol_C], [],
                           [vol_D], []]
@@ -81,20 +82,25 @@ class TestVisitAllStatesEnsemble(object):
         return my_traj
 
     def test_initialization(self):
-        assert self.ensemble.progress == default_state_progress_report
+        assert self.ensemble.progress_formatter == \
+                default_state_progress_report
         assert self.ensemble.report_frequency == 10
         assert self.ensemble.timestep == None
 
     def test_progress_indicator(self):
-        assert self.ensemble._progress_indicator('default') == \
+        ens = self.ensemble
+        assert ens._progress_indicator('default')[0] == \
                 default_state_progress_report
-        assert self.ensemble._progress_indicator(None) is None
+        assert ens._progress_indicator(None)[0] is None
 
         def some_callable(n_steps, found_states, all_states, timestep):
             return "some_callable"
 
-        assert self.ensemble._progress_indicator(some_callable) == \
-                some_callable
+        def some_emitter(reportstring):
+            return "some emitter"
+
+        assert ens._progress_indicator((some_callable, some_emitter)) == \
+                (some_callable, some_emitter)
 
     def test_state_for_frame(self):
         for snap, expected in zip(self.traj, self.state_seq):
