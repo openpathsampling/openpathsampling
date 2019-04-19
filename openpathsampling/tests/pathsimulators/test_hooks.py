@@ -10,7 +10,7 @@ from ..test_helpers import (
 
 import openpathsampling as paths
 
-from openpathsampling.pathsimulators.hooks import *
+from openpathsampling.beta.hooks import *
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)

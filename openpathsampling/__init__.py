@@ -161,6 +161,7 @@ from .high_level.part_in_b_tps import (
 
 
 import openpathsampling.numerics as numerics
+import openpathsampling.beta
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
 

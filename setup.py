@@ -194,6 +194,7 @@ Operating System :: MacOS
     'include_package_data': True,
     'packages': [
         'openpathsampling',
+        'openpathsampling.beta',
         'openpathsampling.storage',
         'openpathsampling.storage.stores',
         'openpathsampling.tests',

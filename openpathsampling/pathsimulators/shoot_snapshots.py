@@ -3,7 +3,7 @@ import openpathsampling as paths
 
 logger = logging.getLogger(__name__)
 from .path_simulator import PathSimulator, MCStep
-from . import hooks
+from openpathsampling.beta import hooks
 
 class ShootFromSnapshotsSimulation(PathSimulator):
     """

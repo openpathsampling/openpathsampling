@@ -1,5 +1,5 @@
 import openpathsampling as paths
-from .path_simulator import PathSimulator
+from openpathsampling.pathsimulators.path_simulator import PathSimulator
 from openpathsampling.netcdfplus import StorableNamedObject
 
 """
