@@ -113,11 +113,12 @@ class EnsembleCache(object):
         bool :
             the value of reset
         """
-        logger.debug("Checking cache....")
-        # logger.debug("traj " + str([id(s) for s in trajectory]))
-        logger.debug("start_frame " + str(id(self.start_frame)))
-        logger.debug("prev_last " + str(id(self.prev_last_frame)))
-        logger.debug("prev_last_idx " + str(self.prev_last_index))
+        if self.debug_enabled:
+            logger.debug("Checking cache....")
+            # logger.debug("traj " + str([id(s) for s in trajectory]))
+            logger.debug("start_frame " + str(id(self.start_frame)))
+            logger.debug("prev_last " + str(id(self.prev_last_frame)))
+            logger.debug("prev_last_idx " + str(self.prev_last_index))
 
         if trajectory is not None:
             # if the first frame has changed, we should reset
@@ -161,7 +162,8 @@ class EnsembleCache(object):
         self.last_length = len(trajectory)
         if reset:
             self.debug_enabled = logger.isEnabledFor(logging.DEBUG)
-            logger.debug("Resetting cache " + str(self))
+            if self.debug_enabled:
+                logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
                 self.start_frame = trajectory.get_as_proxy(0)
                 self.prev_last_frame = trajectory.get_as_proxy(-1)
@@ -197,15 +199,6 @@ class Ensemble(with_metaclass(abc.ABCMeta, StorableNamedObject)):
     An Ensemble represents a path ensemble, effectively a set of trajectories.
     Typical set operations are allowed, here: and, or, xor, -(without), ~
     (inverse = all - x)
-
-    Examples
-    --------
-    >>> EnsembleFactory.TISEnsemble(
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.02),
-    >>>     CVDefinedVolume(collectivevariable_A, 0.0, 0.08),
-    >>>     True
-    >>>     )
 
     Notes
     -----
@@ -1275,6 +1268,7 @@ class EnsembleCombination(Ensemble):
         self.ensemble2 = ensemble2
         self.fnc = fnc
         self.sfnc = str_fnc
+        self.debug = logger.isEnabledFor(logging.DEBUG)
 
     def to_dict(self):
         return {'ensemble1': self.ensemble1, 'ensemble2': self.ensemble2}
@@ -1286,6 +1280,13 @@ class EnsembleCombination(Ensemble):
 
         Short-circuit logic skips the second part of the combination if the
         result doesn't depend on it.
+
+        Note
+        ----
+            If you want to enable debug logging for this, it either needs to
+            be enabled when the class is instantiated or set with the .debug
+            instance variable. This is to improve performance since this
+            method is called very frequently.
 
         Parameters
         ----------
@@ -1303,9 +1304,10 @@ class EnsembleCombination(Ensemble):
         fname : string
             name of the functions f1 and f2. Only used in debug output.
         """
-        logger.debug("Combination is " + self.__class__.__name__)
+        if self.debug:  # pragma: no cover
+            logger.debug("Combination is " + self.__class__.__name__)
         a = f1(trajectory, trusted)
-        if logger.isEnabledFor(logging.DEBUG):  # pragma: no cover
+        if self.debug:  # pragma: no cover
             logger.debug("Combination." + fname + ": " +
                          self.ensemble1.__class__.__name__ + " is " + str(a))
             ens2 = f2(trajectory, trusted)
@@ -1744,15 +1746,17 @@ class SequentialEnsemble(Ensemble):
             else:
                 last_checked_index = None
                 last_checked = None
-            logger.debug("last_checked = " + str(last_checked))
+            if cache.debug_enabled:
+                logger.debug("last_checked = " + str(last_checked))
             subtraj_final = self._find_subtraj_final(
                 trajectory, subtraj_first, ens_num, last_checked
             )
             cache.last_length = subtraj_final
-            logger.debug(
-                "Subtraj for ens " + str(ens_num) + " : " +
-                "(" + str(subtraj_first) + "," + str(subtraj_final) + ")"
-            )
+            if cache.debug_enabled:
+                logger.debug(
+                    "Subtraj for ens " + str(ens_num) + " : " +
+                    "(" + str(subtraj_first) + "," + str(subtraj_final) + ")"
+                )
             if subtraj_final - subtraj_first > 0:
                 subtraj = trajectory[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
@@ -1760,8 +1764,9 @@ class SequentialEnsemble(Ensemble):
                         # we're in the last ensemble and the whole
                         # trajectory is assigned: can we append?
                         ens = self.ensembles[ens_num]
-                        logger.debug("Returning can_append for " +
-                                     str(ens.__class__.__name__))
+                        if cache.debug_enabled:
+                            logger.debug("Returning can_append for " +
+                                         str(ens.__class__.__name__))
                         self.update_cache(cache, ens_num,
                                           ens_first, subtraj_first)
                         return ens.can_append(subtraj, trusted=True)
@@ -2294,55 +2299,6 @@ class PartOutXEnsemble(PartInXEnsemble):
                 return True
         return False
 
-
-class ExitsXEnsemble(VolumeEnsemble):
-    """
-    Represents an ensemble where two successive frames from the selected
-    frames of the trajectory crossing from inside to outside the given volume.
-    """
-
-    def __init__(self, volume, trusted=False):
-        # changing the defaults for frames and trusted; prevent single frame
-        super(ExitsXEnsemble, self).__init__(volume, trusted)
-
-    def _str(self):
-        domain = 'exists x[t], x[t+1] '
-        result = 'such that x[t] in {0} and x[t+1] not in {0}'.format(
-            self._volume)
-        return domain + result
-
-    def __call__(self, trajectory, trusted=None, candidate=False):
-        subtraj = trajectory
-        for i in range(len(subtraj) - 1):
-            frame_i = subtraj.get_as_proxy(i)
-            if self._volume(frame_i):
-                frame_iplus = subtraj.get_as_proxy(i + 1)
-                if not self._volume(frame_iplus):
-                    return True
-        return False
-
-
-class EntersXEnsemble(ExitsXEnsemble):
-    """
-    Represents an ensemble where two successive frames from the selected
-    frames of the trajectory crossing from outside to inside the given volume.
-    """
-
-    def _str(self):
-        domain = 'exists x[t], x[t+1] '
-        result = 'such that x[t] not in {0} and x[t+1] in {0}'.format(
-            self._volume)
-        return domain + result
-
-    def __call__(self, trajectory, trusted=None, candidate=False):
-        subtraj = trajectory
-        for i in range(len(subtraj) - 1):
-            frame_i = subtraj.get_as_proxy(i)
-            if not self._volume(frame_i):
-                frame_iplus = subtraj.get_as_proxy(i + 1)
-                if self._volume(frame_iplus):
-                    return True
-        return False
 
 
 class WrappedEnsemble(Ensemble):
@@ -2973,76 +2929,76 @@ class TISEnsemble(WrappedEnsemble):
         return str(self.ensemble)
 
 
-class EnsembleFactory(object):
-    """
-    Convenience class to construct Ensembles
-    """
+# class EnsembleFactory(object):
+    # """
+    # Convenience class to construct Ensembles
+    # """
 
-    @staticmethod
-    def StartXEnsemble(volume):
-        """
-        Construct an ensemble that starts (x[0]) in the specified volume
+    # @staticmethod
+    # def StartXEnsemble(volume):
+        # """
+        # Construct an ensemble that starts (x[0]) in the specified volume
 
-        Parameters
-        ----------
-        volume : :class:`openpathsampling.volume.Volume`
-            The volume to start in
+        # Parameters
+        # ----------
+        # volume : :class:`openpathsampling.volume.Volume`
+            # The volume to start in
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.ensemble.Ensemble`
-            The constructed Ensemble
-        """
-        return AllInXEnsemble(volume, 0)
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.ensemble.Ensemble`
+            # The constructed Ensemble
+        # """
+        # return AllInXEnsemble(volume, 0)
 
-    @staticmethod
-    def EndXEnsemble(volume):
-        """
-        Construct an ensemble that ends (x[-1]) in the specified volume
+    # @staticmethod
+    # def EndXEnsemble(volume):
+        # """
+        # Construct an ensemble that ends (x[-1]) in the specified volume
 
-        Parameters
-        ----------
-        volume : :class:`openpathsampling.volume.Volume`
-            The volume to end in
+        # Parameters
+        # ----------
+        # volume : :class:`openpathsampling.volume.Volume`
+            # The volume to end in
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.ensemble.Ensemble`
-            The constructed Ensemble
-        """
-        return AllInXEnsemble(volume, -1)
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.ensemble.Ensemble`
+            # The constructed Ensemble
+        # """
+        # return AllInXEnsemble(volume, -1)
 
-    @staticmethod
-    def A2BEnsemble(volume_a, volume_b, trusted=True):
-        """
-        Construct an ensemble that starts in `volume_a`, ends in
-        `volume_b` and is in either volumes in between
+    # @staticmethod
+    # def A2BEnsemble(volume_a, volume_b, trusted=True):
+        # """
+        # Construct an ensemble that starts in `volume_a`, ends in
+        # `volume_b` and is in either volumes in between
 
-        Parameters
-        ----------
-        volume_a : :class:`openpathsampling.Volume`
-            The volume to start in
-        volume_b : :class:`openpathsampling.Volume`
-            The volume to end in
+        # Parameters
+        # ----------
+        # volume_a : :class:`openpathsampling.Volume`
+            # The volume to start in
+        # volume_b : :class:`openpathsampling.Volume`
+            # The volume to end in
 
-        Returns
-        -------
-        ensemble : :class:`openpathsampling.Ensemble`
-            The constructed Ensemble
-        """
-        # TODO: this is actually only for flexible path length TPS now
-        return SequentialEnsemble([
-            SingleFrameEnsemble(AllInXEnsemble(volume_a)),
-            AllOutXEnsemble(volume_a | volume_b),
-            SingleFrameEnsemble(AllInXEnsemble(volume_b))
-        ])
+        # Returns
+        # -------
+        # ensemble : :class:`openpathsampling.Ensemble`
+            # The constructed Ensemble
+        # """
+        # # TODO: this is actually only for flexible path length TPS now
+        # return SequentialEnsemble([
+            # SingleFrameEnsemble(AllInXEnsemble(volume_a)),
+            # AllOutXEnsemble(volume_a | volume_b),
+            # SingleFrameEnsemble(AllInXEnsemble(volume_b))
+        # ])
 
-    @staticmethod
-    def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter,
-                       lambdas=None):
-        if lambdas is None:
-            lambdas = [None] * len(volumes_x)
-        myset = [paths.TISEnsemble(volume_a, volume_b, vol, orderparameter,
-                                   lambda_i)
-                 for (vol, lambda_i) in zip(volumes_x, lambdas)]
-        return myset
+    # @staticmethod
+    # def TISEnsembleSet(volume_a, volume_b, volumes_x, orderparameter,
+                       # lambdas=None):
+        # if lambdas is None:
+            # lambdas = [None] * len(volumes_x)
+        # myset = [paths.TISEnsemble(volume_a, volume_b, vol, orderparameter,
+                                   # lambda_i)
+                 # for (vol, lambda_i) in zip(volumes_x, lambdas)]
+        # return myset

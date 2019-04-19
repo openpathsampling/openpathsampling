@@ -4,8 +4,13 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+try:
+    from collections import abc
+except ImportError:
+    import collections as abc
+
 # based on http://stackoverflow.com/a/3387975
-class TransformedDict(collections.MutableMapping):
+class TransformedDict(abc.MutableMapping):
     """A dictionary that applies an arbitrary key-altering function before
     accessing the keys
 

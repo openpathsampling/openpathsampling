@@ -17,7 +17,6 @@ import pytest
 import openpathsampling as paths
 from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
 from openpathsampling.high_level.move_strategy import *
-from openpathsampling import VolumeFactory as vf
 
 import collections
 
@@ -428,7 +427,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme = DefaultScheme(self.network)
         scheme.movers ={}
         scheme.append(EnsembleHopStrategy(replace=True, from_group=None))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         # 4 normal repex + 2 ms-outer repex = 6 repex * 2 hop/repex = 12
         assert_equal(len(scheme.movers['repex']), 12)
 
@@ -440,7 +439,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme.append(EnsembleHopStrategy(replace=False, 
                                           group='hop',
                                           from_group='repex'))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 6)
         assert_equal(len(scheme.movers['hop']), 12)
 
@@ -452,7 +451,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme.append(EnsembleHopStrategy(replace=True, 
                                           group='hop',
                                           from_group='repex'))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['hop']), 12)
         assert_not_in("repex", list(scheme.movers.keys()))
 
@@ -462,7 +461,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme = DefaultScheme(self.network)
         scheme.movers ={}
         scheme.append(EnsembleHopStrategy(replace=False, from_group=None))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 18)
 
 
@@ -1371,7 +1370,7 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             assert_almost_equal(choice_prob_1a[m], choice_prob_1c[m])
 
         # Organize by ensemble, switch to move group, switch back
-        scheme.strategies = {}
+        scheme.strategies.clear()
         scheme.append(self.StrategyClass(), force=True)
         root_2a = scheme.move_decision_tree(rebuild=True)
         choice_prob_2a = scheme.choice_probability
