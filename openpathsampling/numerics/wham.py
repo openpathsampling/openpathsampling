@@ -54,6 +54,7 @@ class WHAM(object):
 
         self.sample_every = max_iter + 1
         self._float_format = "10.8"
+        self.lnZ = None
 
     @property
     def float_format(self):
@@ -112,7 +113,7 @@ class WHAM(object):
             windowing cutoff, as fraction of maximum value
         tol : float
             tolerance for two values being "equal"
-        
+
 
         Returns
         -------
@@ -139,12 +140,12 @@ class WHAM(object):
             if type(self.interfaces) is not pd.Series:
                 self.interfaces = pd.Series(data=self.interfaces,
                                             index=df.columns)
-            greater_almost_equal = lambda a, b : (a >= b or 
+            greater_almost_equal = lambda a, b : (a >= b or
                                                   abs(a - b) < 10e-10)
             cleaned_df = cleaned_df.apply(
                 lambda s : [
                     (
-                        s.iloc[i] 
+                        s.iloc[i]
                         if greater_almost_equal(s.index[i],
                                                 self.interfaces[s.name])
                         else 0.0
@@ -180,8 +181,8 @@ class WHAM(object):
         Parameters
         ----------
         cleaned_df : pandas.DataFrame
-            cleaned input dataframe 
-        
+            cleaned input dataframe
+
         Returns
         -------
         pandas.DataFrame
@@ -196,7 +197,7 @@ class WHAM(object):
     def sum_k_Hk_Q(self, cleaned_df):
         """Sum over histograms for each histogram bin. Length is n_bins
 
-        Called `sum_hist` in other codes, or :math:`\sum_k H_k(Q)` in F&S.
+        Called ``sum_hist`` in other codes, or :math:`\sum_k H_k(Q)` in F&S.
         This is the sum over histograms of values for a given histogram bin.
 
         Parameters
@@ -298,7 +299,7 @@ class WHAM(object):
             for i in range(len(hists)):
                 #############################################################
                 # this is equation 7.3.10 in F&S
-                # Z_i^{(new)} = 
+                # Z_i^{(new)} =
                 #    \int \dd{Q} w_{i,Q}
                 #    \times \frac{\sum_{j=1}^n H_j(Q)}
                 #                {\sum_{k=1}^n w_{k,Q} M_k / Z_k^{(old)}}
@@ -519,6 +520,7 @@ class WHAM(object):
 
         hist = self.output_histogram(lnZ, sum_k_Hk_Q, weighted_counts)
         result = self.normalize_cumulative(hist)
+        self.lnZ = lnZ
         if sum(pd.isnull(result)) == len(result):  # pragma: no cover
             # last safety check
             raise RuntimeError("WHAM result is all NaN. Reason unknown.")
@@ -526,7 +528,7 @@ class WHAM(object):
 
 
 def parsing(parseargs):  # pragma: no cover
-    # TODO: switch to argparse. 
+    # TODO: switch to argparse.
     import optparse
     parser = optparse.OptionParser()
     parser.add_option("--tol", type="float", default=1e-12)
@@ -558,6 +560,3 @@ if __name__ == "__main__":  # pragma: no cover
             header=False,
             float_format=lambda x : "{:10.8f}".format(x)
         ))
-
-
-

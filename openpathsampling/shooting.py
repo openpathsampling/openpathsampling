@@ -132,10 +132,9 @@ class UniformSelector(ShootingPointSelector):
         return float(len(trajectory) - self.pad_start - self.pad_end)
 
     def pick(self, trajectory):
-        idx = np.random.random_integers(self.pad_start,
-                                        len(trajectory) - self.pad_end - 1)
+        idx = np.random.randint(self.pad_start,
+                                len(trajectory) - self.pad_end)
         return idx
-
 
 
 class InterfaceConstrainedSelector(ShootingPointSelector):
@@ -144,8 +143,9 @@ class InterfaceConstrainedSelector(ShootingPointSelector):
 
     Parameters
     ----------
-    volume : :class:`.Volume`  
-        defines Volume for which the first frame outside of this interface volume is found
+    volume : :class:`.Volume`
+        defines Volume for which the first frame outside of this interface
+        volume is found
     """
 
     def __init__(self, volume):
@@ -154,7 +154,7 @@ class InterfaceConstrainedSelector(ShootingPointSelector):
 
     def f(self, frame, trajectory=None):
         idx = trajectory.index(frame)
-        if idx==self.pick(trajectory): 
+        if idx == self.pick(trajectory):
             return 1.0
         else:
             return 0.0
@@ -163,15 +163,16 @@ class InterfaceConstrainedSelector(ShootingPointSelector):
         return 1.0
 
     def pick(self, trajectory):
-        for idx,frame in enumerate(trajectory):
-            if not self.volume(frame): 
-                break;
+        for idx, frame in enumerate(trajectory):
+            if not self.volume(frame):
+                break
         if idx == len(trajectory)-1 and self.volume(frame):
-            raise RuntimeError("Interface constrained shooting move did not find valid crossing point" )
-              
+            raise RuntimeError("Interface constrained shooting move did "
+                               " not find valid crossing point")
+
         return idx
 
-    
+
 class FinalFrameSelector(ShootingPointSelector):
     '''
     Pick final trajectory frame as shooting point.
@@ -188,7 +189,7 @@ class FinalFrameSelector(ShootingPointSelector):
         return len(trajectory)-1
 
     def probability(self, snapshot, trajectory):
-        return 1.0 # there's only one choice
+        return 1.0  # there's only one choice
 
     def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
         # must be matched by a final-frame selector somewhere
