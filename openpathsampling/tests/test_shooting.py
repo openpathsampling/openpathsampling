@@ -35,6 +35,16 @@ class TestUniformSelector(SelectorTest):
         assert_equal(set(collections.Counter(pick_idxs).keys()), {1, 2, 3})
 
 
+class TestShootingPointSelector(SelectorTest):
+    def test_probability(self):
+        # tests this does, in fact, represent the same this as a uniform
+        # shooter
+        uniform = UniformSelector(pad_start=0, pad_end=0)
+        sel = ShootingPointSelector()
+        for frame in self.mytraj:
+            assert sel.probability(frame, self.mytraj) == \
+                    uniform.probability(frame, self.mytraj)
+
 class TestGaussianBiasSelector(SelectorTest):
     def setup(self):
         super(TestGaussianBiasSelector, self).setup()
