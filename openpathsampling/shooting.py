@@ -188,7 +188,7 @@ class FinalFrameSelector(ShootingPointSelector):
     def pick(self, trajectory):
         return len(trajectory)-1
 
-    def probability(self, snapshot, trajectory):
+    def probability(self, snapshot, trajectory):  # pragma: no cover
         return 1.0  # there's only one choice
 
     def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
@@ -212,8 +212,8 @@ class FirstFrameSelector(ShootingPointSelector):
     def pick(self, trajectory):
         return 0
 
-    def probability(self, snapshot, trajectory):
-        return 1.0 # there's only one choice
+    def probability(self, snapshot, trajectory):  # pragma: no cover
+        return 1.0  # there's only one choice
 
     def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
         # must be matched by a first-frame selector somewhere
