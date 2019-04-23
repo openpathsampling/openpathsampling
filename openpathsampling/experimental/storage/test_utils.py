@@ -13,36 +13,48 @@ def toy_uuid_maker(name):
 def uuid_encode(name):
     return "UUID(" + str(toy_uuid_maker(name)) + ")"
 
-class MockUUIDObject(object):
-    attr_list = ['name', 'normal_attr', 'obj_attr', 'list_attr',
-                 'dict_attr', 'lazy_attr']
-    schema = [('dict_attr', 'uuid'), ('list_attr', 'list_uuid'),
-              ('obj_attr', 'uuid'), ('lazy_attr', 'lazy'),
-              ('normal_attr', 'str')]
-    def __init__(self, name, normal_attr=None, obj_attr=None,
-                 list_attr=None, dict_attr=None, lazy_attr=None):
-        self.name = name
-        self.__uuid__ = toy_uuid_maker(name)
-        self.dict_attr = dict_attr
-        self.list_attr = list_attr
-        self.obj_attr = obj_attr
-        self.normal_attr = normal_attr
-        self.lazy_attr = lazy_attr
+
+class AbstractMockUUIDObject(object):
+    def __init__(self, *args, **kwargs):
+        keywords = dict(zip(self.attr_list, args))
+        check = [attr in self.attr_list and attr not in keywords
+                 for attr in kwargs]
+        if all(check):
+            keywords.update(kwargs)
+        else:
+            raise Exception("Something bad happened in setup")
+
+        # all defaults are None
+        keywords.update({attr: None for attr in self.attr_list
+                         if attr not in keywords})
+
+        self.__uuid__ = toy_uuid_maker(keywords['name'])
+
+        for attr, value in keywords.items():
+            setattr(self, attr, value)
 
     def to_dict(self):
-        return {
-            'name': self.name,
-            'obj_attr': self.obj_attr,
-            'list_attr': self.list_attr,
-            'dict_attr': self.dict_attr,
-            'normal_attr': self.normal_attr,
-            'lazy_attr': self.lazy_attr
-        }
+        return {attr: getattr(self, attr) for attr in self.attr_list}
 
     @classmethod
     def from_dict(cls, dct):
         # set UUID after
         return cls(name=None, **dct)
+
+class MockUUIDObject(AbstractMockUUIDObject):
+    attr_list = ['name', 'normal_attr', 'obj_attr', 'list_attr',
+                 'dict_attr', 'lazy_attr']
+    schema = [('dict_attr', 'uuid'), ('list_attr', 'list_uuid'),
+              ('obj_attr', 'uuid'), ('lazy_attr', 'lazy'),
+              ('normal_attr', 'str')]
+
+class MockSimulationObject(AbstractMockUUIDObject):
+    attr_list = ['name', 'normal_attr']
+    # no schema; use this for simulation objects
+
+class ExtraMockDataObject(AbstractMockUUIDObject):
+    attr_list = ['name', 'str_attr']
+    schema = [('str_attr', 'str')]
 
 
 class MockBackend(object):
@@ -66,7 +78,7 @@ class MockBackend(object):
             'sims': [('json', 'json_obj'), ('class_idx', 'int')]
         }
         self.row_types = {
-            'uuids':  namedtuple('UUIDsRow', ['uuid', 'table', 'idx']),
+            'uuids': namedtuple('UUIDsRow', ['uuid', 'table', 'idx']),
             'objs': namedtuple('ObjRow', ['uuid', 'idx', 'obj_attr']),
             'ints': namedtuple('IntRow', ['uuid', 'idx', 'normal_attr']),
             'sims': namedtuple('SimRow',
