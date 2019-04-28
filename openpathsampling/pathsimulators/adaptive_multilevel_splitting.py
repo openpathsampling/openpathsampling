@@ -243,7 +243,11 @@ class AdaptiveMultilevelSplittingStepper(paths.SubPathMover):
         # select random other traj
         all_replicas = set(sample_set.replica_list())
         replicas = list(all_replicas - {selected_sample.replica})
-        choice = int(np.random.choice(replicas))
+        if len(replicas) > 0:
+            choice = int(np.random.choice(replicas))
+        else:
+            # special case for only 1 replica in sample set
+            choice = int(selected_sample.replica)
         template_traj = sample_set[choice]
         # make sample set with other traj and selected repid
         new_starting_set = paths.SampleSet([paths.Sample(
@@ -251,6 +255,15 @@ class AdaptiveMultilevelSplittingStepper(paths.SubPathMover):
             ensemble=selected_sample.ensemble,
             trajectory=template_traj.trajectory
         )])
+
+        print("Replica " + str(selected_sample.replica) + " at "
+              + str(min_lambda) + " replaced by shot from trajectory "
+              + "in replica " + str(choice))
+        sorted_lambda_sample = sorted([
+            (self.parametrized_volume.cv_max(samp.trajectory), samp.replica)
+            for samp in sample_set
+        ], key=lambda x: x[0])
+        print("Next 4: " + str(sorted_lambda_sample[1:5]))
 
         # run shooting move
         subchange = self.mover.move(new_starting_set)
