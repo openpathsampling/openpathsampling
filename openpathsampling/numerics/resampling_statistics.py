@@ -38,7 +38,7 @@ def mean_df(objects):
         have to be DataFrames. They must be closed on the `sum` operation
         and over division by a float.
 
-Returns
+    Returns
     -------
     pandas.DataFrame :
         the mean of each element in the DataFrame

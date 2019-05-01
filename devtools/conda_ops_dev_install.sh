@@ -3,7 +3,7 @@
 # This assumes you've already installed conda. Then it installs OPS as a
 # developer install.
 
-conda install -y -c omnia openpathsampling
+conda install -y -c conda-forge -c omnia openpathsampling
 conda update -y --all
 conda uninstall -y openpathsampling
 git clone https://github.com/openpathsampling/openpathsampling.git

@@ -20,11 +20,12 @@ dependencies seamlessly.  If you don't want the full ``conda`` installation,
 the ``miniconda`` package provides much of the convenience of ``conda`` with
 a smaller footprint.
 
-OpenPathSampling is part of the ``omnia`` channel in ``conda``. To install
+OpenPathSampling is part of the ``omnia`` channel in ``conda``, although
+some requirements are best found in the ``conda-forge`` channel. To install
 the most recent release of OpenPathSampling with conda, use the following
-commands ::
+command ::
 
-  $ conda install -c omnia openpathsampling
+  $ conda install -c conda-forge -c omnia openpathsampling
 
 .. _developer-install-conda:
 
