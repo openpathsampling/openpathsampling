@@ -388,13 +388,13 @@ class ObjectJSON(object):
                 err += '\n4. be passed as an external parameter ' \
                        '(not for imports!)'
                 err += '\n\n        my_cv = FunctionCV("cv_name", ' + \
-                       c.func_name + ', \n' + \
+                       c.__name__ + ', \n' + \
                        ',\n'.join(
                            map(lambda x: ' ' * 20 + x + '=' + x, global_vars)
                        ) + ')' + '\n'
                 err += '\n    and change your function definition like this'
                 err += '\n\n        def ' + \
-                       c.func_name + '(snapshot, ...,  ' + \
+                       c.__name__ + '(snapshot, ...,  ' + \
                        '\n' + ',\n'.join(
                            map(lambda x: ' ' * 16 + x, global_vars)
                        ) + '):'
