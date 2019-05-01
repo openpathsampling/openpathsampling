@@ -132,6 +132,8 @@ from .volume import (
     RelativeComplementVolume, join_volumes
 )
 
+from .visit_all_states import VisitAllStatesEnsemble
+
 from .high_level import move_strategy as strategies
 
 from .high_level.move_scheme import (
