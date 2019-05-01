@@ -10,25 +10,25 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 
 class ShootingPointSelector(StorableNamedObject):
-    def __init__(self):
-        super(ShootingPointSelector, self).__init__()
+    # def __init__(self):
+        # super(ShootingPointSelector, self).__init__()
 
-    @property
-    def identifier(self):
-        if hasattr(self, 'json'):
-            return self.json
-        else:
-            return None
+    # @property
+    # def identifier(self):
+        # if hasattr(self, 'json'):
+            # return self.json
+        # else:
+            # return None
 
     def f(self, snapshot, trajectory):
-        '''
+        """
         Returns the unnormalized proposal probability of a snapshot
 
         Notes
         -----
         In principle this is an collectivevariable so we could easily add
         caching if useful
-        '''
+        """
         return 1.0
 
     def probability(self, snapshot, trajectory):
@@ -44,14 +44,14 @@ class ShootingPointSelector(StorableNamedObject):
         return p_new / p_old
 
     def _biases(self, trajectory):
-        '''
+        """
         Returns a list of unnormalized proposal probabilities for all
         snapshots in trajectory
-        '''
+        """
         return [self.f(s, trajectory) for s in trajectory]
 
     def sum_bias(self, trajectory):
-        '''
+        """
         Returns the unnormalized probability probability of a trajectory.
         This is just the sum of all proposal probabilities in a trajectory.
 
@@ -64,19 +64,19 @@ class ShootingPointSelector(StorableNamedObject):
         After we have generated a new trajectory the acceptance probability
         only for the non-symmetric proposal of different snapshots is given
         by `probability(old_trajectory) / probability(new_trajectory)`
-        '''
+        """
 
         return sum(self._biases(trajectory))
 
     def pick(self, trajectory):
-        '''
+        """
         Returns the index of the chosen snapshot within `trajectory`
 
         Notes
         -----
         The native implementation is very slow. Simple picking algorithm
         should override this function.
-        '''
+        """
 
         prob_list = self._biases(trajectory)
         sum_bias = sum(prob_list)
@@ -93,10 +93,10 @@ class ShootingPointSelector(StorableNamedObject):
 
 class GaussianBiasSelector(ShootingPointSelector):
     def __init__(self, collectivevariable, alpha=1.0, l_0=0.5):
-        '''
+        """
         A Selector that biases according to a specified CollectiveVariable
         using a mean l_0 and a variance alpha
-        '''
+        """
         super(GaussianBiasSelector, self).__init__()
         self.collectivevariable = collectivevariable
         self.alpha = alpha
@@ -174,11 +174,11 @@ class InterfaceConstrainedSelector(ShootingPointSelector):
 
 
 class FinalFrameSelector(ShootingPointSelector):
-    '''
+    """
     Pick final trajectory frame as shooting point.
 
     This is used for "forward" extension in, e.g., the minus move.
-    '''
+    """
     def f(self, frame, trajectory):
         if trajectory.index(frame) == len(trajectory) - 1:
             return 1.0
@@ -188,7 +188,7 @@ class FinalFrameSelector(ShootingPointSelector):
     def pick(self, trajectory):
         return len(trajectory)-1
 
-    def probability(self, snapshot, trajectory):
+    def probability(self, snapshot, trajectory):  # pragma: no cover
         return 1.0  # there's only one choice
 
     def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
@@ -197,11 +197,11 @@ class FinalFrameSelector(ShootingPointSelector):
 
 
 class FirstFrameSelector(ShootingPointSelector):
-    '''
+    """
     Pick first trajectory frame as shooting point.
 
     This is used for "backward" extension in, e.g., the minus move.
-    '''
+    """
 
     def f(self, frame, trajectory):
         if trajectory.index(frame) == 0:
@@ -212,8 +212,8 @@ class FirstFrameSelector(ShootingPointSelector):
     def pick(self, trajectory):
         return 0
 
-    def probability(self, snapshot, trajectory):
-        return 1.0 # there's only one choice
+    def probability(self, snapshot, trajectory):  # pragma: no cover
+        return 1.0  # there's only one choice
 
     def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
         # must be matched by a first-frame selector somewhere
