@@ -3,12 +3,52 @@ import functools
 from collections import namedtuple
 from .tools import none_to_default
 from .serialization_helpers import has_uuid, replace_uuid, encode_uuid
+from .serialization import SimulationObjectSerializer
 
-def default_serializer_deserializer(codecs):
-    encoder, decoder = custom_json_factory(codecs)
-    serializer = functools.partial(json.dumps, cls=encoder)
-    deserializer = functools.partial(json.loads, cls=decoder)
-    return serializer, deserializer
+class JSONSerializerDeserializer(object):
+    """
+    Tools to serialize and deserialize objects as JSON.
+
+    This wrapper object is necessary so that we can register new codecs
+    after the original initialization.
+
+    Parameters
+    ----------
+    codecs : list of :class:`.JSONCodec`s
+        codecs supported
+    """
+    def __init__(self, codecs):
+        self._serializer = None
+        self._deserializer = None
+        self._sim_serializer = None
+        self.codecs = []
+        for codec in codecs:
+            self.add_codec(codec)
+
+    def add_codec(self, codec):
+        """Add a new codec to the supported codecs
+
+        Parameters
+        ----------
+        codec : :class:`.JSONCodec`
+            codec to add
+        """
+        if codec is not None:
+            self.codecs.append(codec)
+        encoder, decoder = custom_json_factory(self.codecs)
+        self._serializer = functools.partial(json.dumps, cls=encoder)
+        self._deserializer = functools.partial(json.loads, cls=decoder)
+        self._sim_serializer = SimulationObjectSerializer(self._serializer)
+
+    def serializer(self, obj):
+        return self.serializer(obj)
+
+    def deserializer(self, string):
+        return self._deserializer(string)
+
+    def simobj_serializer(self, obj):
+        return self._sim_serializer(obj)
+
 
 def custom_json_factory(coding_methods):
     """Create JSONEncoder/JSONDecoder for special types
