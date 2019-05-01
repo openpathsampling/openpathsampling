@@ -1,3 +1,7 @@
+import sys
+import collections
+import warnings
+
 import openpathsampling as paths
 from openpathsampling.tools import refresh_output
 
@@ -12,8 +16,205 @@ except ImportError:
     has_pandas = False
     pd = None
 
+MoveAcceptanceAnalysisLine = collections.namedtuple(
+    'MoveAcceptanceAnalysisLine',
+    'move_name n_accepted n_trials expected_frequency'
+)
 
-import sys
+class MoveAcceptanceAnalysis(object):
+    """Class to manage analysis of move acceptance.
+
+    One of the powerful things about OPS is the :class:`.MoveChange` object,
+    which stores detailed information about how the simulation occurred.
+    One example is that we can extract information about acceptance for each
+    submove within a move. This is the object that facilitates that.
+
+    After calculating the acceptance for a number of steps, this object can
+    be queried to determine the overall acceptance, or the acceptance of a
+    specific set of movers, or of submovers within a given mover.
+
+    Parameters
+    ----------
+    scheme: :class:`.MoveScheme`
+        the move scheme for this analysis
+    """
+    def __init__(self, scheme):
+        self.scheme = scheme
+        self._trials = collections.defaultdict(int)
+        self._accepted = collections.defaultdict(int)
+        self._n_steps = 0
+        self._last_step_count = None
+
+    def _calculate_step_acceptance(self, step):
+        delta = step.change
+        for m in delta:
+            # the key here is the mover and the string rep of the path to
+            # get to that mover in the move decision tree graph. This is
+            # because, in principle, one mover can appear in more than one
+            # place on the graph. That should change in 2.0
+            key = (m.mover, str(delta.key(m)))
+            self._accepted[key] += 1 if m.accepted else 0
+            self._trials[key] += 1
+
+    def add_steps(self, steps):
+        """Add steps to the internal counters.
+
+        Parameters
+        ----------
+        steps : list of :class:`.MCStep`
+            the input steps
+
+        Returns
+        -------
+        self : :class:`.MoveAcceptanceAnalysis`
+            returns self for possible chaining
+        """
+        for step in steps:
+            self._calculate_step_acceptance(step)
+        self._n_steps += len(steps)
+        return self
+
+    @property
+    def no_move_keys(self):
+        """list: internal keys with no move associated"""
+        return [k for k in self._trials.keys() if k[0] is None]
+
+    @property
+    def _n_in_scheme_no_move_trials(self):
+        result = sum([self._trials[k] for k in self.no_move_keys
+                      if k[1] != '[None]'])
+        return result
+
+    @property
+    def n_total_trials(self):
+        """int : total number of trials (excluding dummy moves)"""
+        if self._n_steps != self._last_step_count:
+            n_no_move_trials = sum([n_try
+                                    for k, n_try in self._trials.items()
+                                    if k[0] is None])
+            self._n_total_trials = self._n_steps - n_no_move_trials
+            self._last_step_count = self._n_steps
+        return self._n_total_trials
+
+    def _select_movers(self, movers):
+        """Select the movers to use.
+
+        Parameters
+        ----------
+        movers : None, string, list, or :class:`.PathMover`
+            if None, this acts as though the input were the list of group
+            names for the scheme. If a string, that is assumed to be a group
+            name in the scheme. TODO
+        """
+        if movers is None:
+            movers = list(self.scheme.movers.keys())
+        # TODO: can the rest of this be replaced by
+        # self.scheme._select_movers?
+        if type(movers) is str:
+            movers = self.scheme.movers[movers]
+
+        selected_movers = {}
+        # this for loop will loop over submovers if `movers` is a path mover
+        for key in movers:
+            try:
+                selected_movers[key] = self.scheme.movers[key]
+            except KeyError:
+                selected_movers[key] = [key]
+        # this returns a dict of label to a list of movers to add up results
+        # for
+        return selected_movers
+
+    def summary_data(self, movers):
+        """Generate a summary of acceptance for the movers of interest.
+
+        Parameters
+        ----------
+        movers : TODO
+
+        Returns
+        -------
+        list of :class:`.MoveAcceptanceAnalysisLine`
+            results for each mover or group of movers; each includes
+            ``move_name``, ``n_accepted``, ``n_trials``, and
+            ``expected_frequency`` (drawn from the move scheme)
+        """
+        selected_movers = self._select_movers(movers)
+        lines = []
+        for (group_name, group_movers) in selected_movers.items():
+            key_iter = [k for k in self._trials if k[0] in group_movers]
+            # print key_iter
+            # print {k[0]: count for (k, count) in self._trials.items()}
+            accepted = sum([self._accepted[k] for k in key_iter])
+            trials = sum([self._trials[k] for k in key_iter])
+
+            try:
+                expected = sum([self.scheme.choice_probability[m]
+                                for m in group_movers])
+            except KeyError:
+                expected = float('nan')
+            line = MoveAcceptanceAnalysisLine(
+                move_name=group_name,
+                n_accepted=accepted,
+                n_trials=trials,
+                expected_frequency=expected
+            )
+            lines.append(line)
+        return lines
+
+    def _line_as_text(self, line):
+        """Format a MoveAcceptanceAnalysisLine a line of text
+
+        Parameters
+        ----------
+        line : :class:`.MoveAcceptanceAnalysisLine`
+            input line
+
+        Returns
+        -------
+        str :
+            formatted string with acceptance information
+        """
+        try:
+            acceptance = float(line.n_accepted) / line.n_trials
+        except ZeroDivisionError:
+            acceptance = float("nan")
+
+        run_freq = float(line.n_trials) / self.n_total_trials
+
+
+        output = ("{line.move_name} ran {run_freq:.3%} (expected "
+                  + "{line.expected_frequency:.2%}) of the cycles with "
+                  + "acceptance {line.n_accepted}/{line.n_trials} "
+                  + "({acceptance:.2%})\n").format(line=line,
+                                                   acceptance=acceptance,
+                                                   run_freq=run_freq)
+        return output
+
+    def format_as_text(self, summary_data):
+        """Format the summary data as text.
+
+        Parameters
+        ----------
+        summary_data : list of :class:`.MoveAcceptanceSummaryLine`
+            output of :meth:`.summary_data`
+
+        Returns
+        -------
+        str :
+            string version of the summary data
+        """
+        output = ""
+        if self._n_in_scheme_no_move_trials > 0:
+            output += ("Null moves for "
+                       + str(self._n_in_scheme_no_move_trials)
+                       + " cycles. Excluding null moves:\n")
+        for line in summary_data:
+            output += self._line_as_text(line)
+        return output
+
+    # TODO
+    # def format_as_pandas(self, summary_data):
+        # pass
 
 
 class MoveScheme(StorableNamedObject):
@@ -33,13 +234,13 @@ class MoveScheme(StorableNamedObject):
         super(MoveScheme, self).__init__()
         self.movers = {}
         self.network = network
-        self.strategies = {}
+        self.strategies = collections.defaultdict(list)
         self.balance_partners = {}
         self.choice_probability = {}
         self._real_choice_probability = {}  # used as override, e.g., in SRTIS
         self.root_mover = None
 
-        self._mover_acceptance = {}  # used in analysis
+        self._mover_acceptance = None  # used in analysis
 
     def to_dict(self):
         ret_dict = {
@@ -99,27 +300,25 @@ class MoveScheme(StorableNamedObject):
                                    "decision tree has been built. " +
                                    "Override with `force=True`.")
 
+        # TODO: this is listify!
         try:
             strategies = list(strategies)
         except TypeError:
             strategies = [strategies]
 
+        # TODO: this is listify, followed by
+        # levels *= len(strategies) if len(level) == 1 else 1
         if levels is not None:
             try:
                 levels = list(levels)
             except TypeError:
                 levels = [levels]*len(strategies)
         else:
-            levels = []
-            for strat in strategies:
-                levels.append(strat.level)
-        
+            levels = [strat.level for strat in strategies]
+
         # now we put everything into appropriate dictionaries
         for strat, lev in zip(strategies, levels):
-            try:
-                self.strategies[lev].append(strat)
-            except KeyError:
-                self.strategies[lev] = [strat]
+            self.strategies[lev].append(strat)
 
     # TODO: it might be nice to have a way to "lock" this once it has been
     # saved. That would prevent a (stupid) user from trying to rebuild a
@@ -159,7 +358,7 @@ class MoveScheme(StorableNamedObject):
         Applies given strategy to the scheme as it stands.
 
         This is the tool used in the process of building up the move
-        decision tree. 
+        decision tree.
 
         Parameters
         ----------
@@ -186,13 +385,10 @@ class MoveScheme(StorableNamedObject):
                 # other hand, if the list of old movers in the group already
                 # has two movers with the same signature, then both should
                 # be overwritten.
-                existing_sigs = {}
+                existing_sigs = collections.defaultdict(list)
                 for i in range(n_existing):
                     key = self.movers[group][i].ensemble_signature
-                    try:
-                        existing_sigs[key].append(i)
-                    except KeyError:
-                        existing_sigs[key] = [i]
+                    existing_sigs[key].append(i)
 
                 # For each mover, if its signature exists in the existing
                 # movers, replace the existing. Otherwise, append it to the
@@ -230,9 +426,7 @@ class MoveScheme(StorableNamedObject):
             ensembles which appear in this (sub)tree
         """
         if root is None:
-            if self.root_mover is None:
-                self.root_mover = self.move_decision_tree()
-
+            self.root_mover = self.move_decision_tree()
             root = self.root_mover
         movers = root.map_pre_order(lambda x: x)
         mover_ensemble_dict = {}
@@ -569,7 +763,7 @@ class MoveScheme(StorableNamedObject):
             try:
                 assert(isinstance(m, paths.PathMover))
             except AssertionError:
-                msg = ("Bad output from _select_movers: " + str(movers) 
+                msg = ("Bad output from _select_movers: " + str(movers)
                        + "; " + repr(m) + " is not a PathMover\n")
                 msg += ("Are you using a group name before building the "
                         + "move decision tree?")
@@ -584,7 +778,7 @@ class MoveScheme(StorableNamedObject):
         `scheme.n_steps_for_trials(mover, n_attempts)` MC steps. If `mover`
         is a (string) key for a group, then return the total for that group.
         If mover is a list of movers, return the total for that list.
-        
+
         Parameters
         ----------
         mover : PathMover or list of PathMover or string
@@ -598,7 +792,7 @@ class MoveScheme(StorableNamedObject):
             expected number of steps to get `n_attempts` of `mover`
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.real_choice_probability[m] 
+        total_probability = sum([self.real_choice_probability[m]
                                  for m in movers])
         return n_attempts / total_probability
 
@@ -611,7 +805,7 @@ class MoveScheme(StorableNamedObject):
         `mover`.  If `mover` is a (string) key for a group, then return the
         total for that group.  If mover is a list of movers, return the
         total for that list.
-        
+
         Parameters
         ----------
         mover : PathMover or list of PathMover or string
@@ -625,7 +819,7 @@ class MoveScheme(StorableNamedObject):
             expected number of trials of `mover` in `n_steps` MC steps
         """
         movers = self._select_movers(mover)
-        total_probability = sum([self.real_choice_probability[m] 
+        total_probability = sum([self.real_choice_probability[m]
                                  for m in movers])
         return total_probability * n_steps
 
@@ -668,38 +862,7 @@ class MoveScheme(StorableNamedObject):
         # calc
         return True  # if we get here, then we must have passed tests
 
-    def _move_summary_line(self, move_name, n_accepted, n_trials,
-                           n_total_trials, expected_frequency, indentation):
-        try:
-            acceptance = float(n_accepted) / n_trials
-        except ZeroDivisionError:
-            acceptance = float("nan")
-
-        line = ("* "*indentation + str(move_name) +
-                " ran " + "{:.3%}".format(float(n_trials)/n_total_trials) +
-                " (expected {:.2%})".format(expected_frequency) + 
-                " of the cycles with acceptance " + str(n_accepted) + "/" +
-                str(n_trials) + " ({:.2%})\n".format(acceptance))
-        return line
-
-    def move_acceptance(self, steps):
-        for step in steps:
-            delta = step.change
-            for m in delta:
-                acc = 1 if m.accepted else 0
-                key = (m.mover, str(delta.key(m)))
-                is_trial = 1
-                # if hasattr(key[0], 'counts_as_trial'):
-                    # is_trial = 1 if key[0].counts_as_trial else 0
-
-                try:
-                    self._mover_acceptance[key][0] += acc
-                    self._mover_acceptance[key][1] += is_trial
-                except KeyError:
-                    self._mover_acceptance[key] = [acc, is_trial]
-
-    def move_summary(
-            self, steps, movers=None, output=sys.stdout, depth=0):
+    def move_summary(self, steps=None, movers=None, output=sys.stdout):
         """
         Provides a summary of the movers in `steps`.
 
@@ -718,85 +881,17 @@ class MoveScheme(StorableNamedObject):
             summary for each of those movers.
         output : file
             file to direct output
-        depth : integer or None
-            depth of submovers to show: if integer, shows that many
-            submovers for each move; if None, shows all submovers
         """
-        my_movers = {}
-        expected_frequency = {}
-        if movers is None:
-            movers = list(self.movers.keys())
-        if type(movers) is str:
-            movers = self.movers[movers]
-        for key in movers:
-            try:
-                my_movers[key] = self.movers[key]
-            except KeyError:
-                my_movers[key] = [key]
+        if self._mover_acceptance is None:
+            self._mover_acceptance = MoveAcceptanceAnalysis(self)
+            self._mover_acceptance.add_steps(steps)
+        elif steps is not None:
+            warnings.warn("Move acceptance already calculated. "
+                          + "The steps parameter will be ignored.")
 
-        # if scheme_copies is not None:
-        #     for sc in scheme_copies:
-        #         movers = sc.movers.keys()
-        #         for key in movers:
-        #             my_movers[key].extend(self.movers[key])
-
-        stats = {}
-        for groupname in my_movers.keys():
-            stats[groupname] = [0, 0]
-
-        if self._mover_acceptance == {}:
-            self.move_acceptance(steps)
-
-        no_move_keys = [k for k in self._mover_acceptance.keys()
-                        if k[0] is None]
-        n_in_scheme_no_move_trials = sum([self._mover_acceptance[k][1]
-                                          for k in no_move_keys
-                                          if k[1] != '[None]'])
-        n_no_move_trials = sum([self._mover_acceptance[k][1]
-                                for k in self._mover_acceptance.keys()
-                                if k[0] is None])
-        tot_trials = len(steps) - n_no_move_trials
-        if n_in_scheme_no_move_trials > 0:
-            output.write(
-                "Null moves for " + str(n_in_scheme_no_move_trials)
-                + " cycles. Excluding null moves:\n"
-            )
-        for groupname in my_movers.keys():
-            group = my_movers[groupname]
-            for mover in group:
-                key_iter = (k for k in self._mover_acceptance.keys()
-                            if k[0] == mover)
-
-                for k in key_iter:
-                    stats[groupname][0] += self._mover_acceptance[k][0]
-                    stats[groupname][1] += self._mover_acceptance[k][1]
-            try:
-                # if null moves don't count
-                expected_frequency[groupname] = sum(
-                    [self.choice_probability[m] for m in group]
-                )
-                ## if null moves count
-                # expected_frequency[groupname] = sum(
-                    # [self.real_choice_probability[m] for m in group]
-                # )
-            except KeyError:
-                expected_frequency[groupname] = float('nan')
-
-        for groupname in my_movers.keys():
-            if has_pandas and isinstance(output, pd.DataFrame):
-                # TODO Pandas DataFrame Output
-                pass
-            else:
-                line = self._move_summary_line(
-                    move_name=groupname, 
-                    n_accepted=stats[groupname][0],
-                    n_trials=stats[groupname][1], 
-                    n_total_trials=tot_trials,
-                    expected_frequency=expected_frequency[groupname],
-                    indentation=0
-                )
-                output.write(line)
-                # raises AttributeError if no write function
+        summary_data = self._mover_acceptance.summary_data(movers)
+        out_str = self._mover_acceptance.format_as_text(summary_data)
+        output.write(out_str)
 
 
 class DefaultScheme(MoveScheme):
@@ -854,7 +949,7 @@ class LockedMoveScheme(MoveScheme):
 
     def move_decision_tree(self, rebuild=False):
         return self.root_mover
-    
+
     def apply_strategy(self, strategy):
         raise TypeError("Locked schemes cannot apply strategies")
 
@@ -874,7 +969,7 @@ class LockedMoveScheme(MoveScheme):
     @property
     def choice_probability(self):
         if self._choice_probability == {}:
-            raise AttributeError("'choice_probability' must be manually " + 
+            raise AttributeError("'choice_probability' must be manually " +
                                  "set in 'LockedMoveScheme'")
         else:
             return self._choice_probability
@@ -886,7 +981,7 @@ class LockedMoveScheme(MoveScheme):
     @property
     def movers(self):
         if self._movers == {}:
-            raise AttributeError("'movers' must be manually " + 
+            raise AttributeError("'movers' must be manually " +
                                  "set in 'LockedMoveScheme'")
         else:
             return self._movers
