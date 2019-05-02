@@ -41,7 +41,7 @@ class JSONSerializerDeserializer(object):
         self._sim_serializer = SimulationObjectSerializer(self._serializer)
 
     def serializer(self, obj):
-        return self.serializer(obj)
+        return self._serializer(obj)
 
     def deserializer(self, string):
         return self._deserializer(string)

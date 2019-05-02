@@ -8,6 +8,21 @@ from simtk import unit
 
 from . import test_utils
 
+class TestJSONSerializerDeserializer(object):
+    def test_add_codec(self):
+        # without bytes codec, can't serialize numpy
+        serialization = JSONSerializerDeserializer([numpy_codec])
+        obj = np.array([[1.0, 0.0], [2.0, 3.2]])
+        with pytest.raises(TypeError):
+            serialization.serializer(obj)
+        # add the codec and it will work
+        serialization.add_codec(bytes_codec)
+        serialized = serialization.serializer(obj)
+        assert len(serialization.codecs) == 2
+        reconstructed = serialization.deserializer(serialized)
+        npt.assert_equal(obj, reconstructed)
+
+
 class CustomJSONCodingTest(object):
     def test_default(self):
         for (obj, dct) in zip(self.objs, self.dcts):
