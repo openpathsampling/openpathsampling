@@ -7,6 +7,8 @@ from .serialization_helpers import import_class
 from .serialization_helpers import get_uuid, set_uuid
 from .serialization_helpers import default_find_uuids
 
+from .class_lookup import ClassIsSomething
+
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
@@ -96,21 +98,11 @@ class OPSSpecialLookup(object):
 
     def __init__(self):
         self.secondary_lookups = {}
-        self.special_classes = set()
-        self.non_special_classes = set()
-
-    def is_special(self, item):
-        if item.__class__ in self.special_classes:
-            return True
-        elif item.__class__ in self.non_special_classes:
-            return False
-        else:
-            is_special = isinstance(item, self.special_superclasses)
-            my_set = {True: self.special_classes,
-                      False: self.non_special_classes}[is_special]
-            my_set.update([item.__class__])
-            return is_special
-
+        # self.special_classes = set()
+        # self.non_special_classes = set()
+        is_special_func = lambda obj: \
+                isinstance(obj, self.special_superclasses)
+        self.is_special = ClassIsSomething(is_special_func)
 
     def __call__(self, item):
         cls = item.__class__

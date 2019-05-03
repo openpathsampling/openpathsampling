@@ -76,10 +76,6 @@ class GeneralStorage(object):
         elif mode == 'w':
             self.register_schema(self.schema, class_info_list=[])
 
-    def stash(self, objects):
-        objects = tools.listify(objects)
-        self._stashed.extend(objects)
-
     def _load_missing_info_tables(self, table_to_class):
         missing_info_tables = [tbl for tbl in self.schema
                                if tbl not in self.class_info.tables]
@@ -96,6 +92,10 @@ class GeneralStorage(object):
         if missing_info_tables:
             raise RuntimeError("Unable to register existing database "
                                + "tables: " + str(missing_info_tables))
+
+    def stash(self, objects):
+        objects = tools.listify(objects)
+        self._stashed.extend(objects)
 
     def close(self):
         # TODO: should sync on close
