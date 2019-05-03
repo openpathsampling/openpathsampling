@@ -81,7 +81,7 @@ class SerializationSchema(object):
     than one table, and therefore is not a unique key. For example, a single
     class might be used to represent data with different dimensions, and
     therefore require different tables (e.g, coordinates for different
-    systems). In such cases, the ClassInfoContainer needs to be subclassed
+    systems). In such cases, the SerializationSchema needs to be subclassed
     with specialized information.
     """
     def __init__(self, default_info, schema=None, class_info_list=None):
@@ -95,6 +95,8 @@ class SerializationSchema(object):
         self.add_class_info(default_info)
         self.register_info(class_info_list, schema)
 
+    # TODO: I think that this can be made private; used by __init__ and
+    # within register_info
     def add_class_info(self, info_node):
         # check that we're not in any existing
         self.class_info_list.append(info_node)
@@ -113,6 +115,7 @@ class SerializationSchema(object):
 
     @property
     def tables(self):
+        """list of tables from the included class info objects"""
         tables = [info.table for info in self.class_info_list]
         tables.append(self.default_info.table)
         return tables
@@ -351,4 +354,5 @@ class SerializationSchema(object):
                 + ", class_info_list=" + repr(self.class_info_list) + ")")
 
 
+# TODO: remove this alias
 ClassInfoContainer = SerializationSchema

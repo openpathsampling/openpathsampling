@@ -33,37 +33,104 @@ class TestSerializationSchema(object):
         self.sim_obj = MockSimulationObject(name='sim_obj',
                                             normal_attr='foo')
         self.extra_obj = ExtraMockDataObject(name='data', str_attr='foo')
-        class_info_list = [ClassInfo(table='mock', cls=MockUUIDObject)]
+        self.info_default = ClassInfo(
+            'simulation_objects', cls=MockSimulationObject,
+            # TODO: serializer=ser,
+            # TODO: deserializer=deser,
+            find_uuids=default_find_uuids
+        )
+        self.info_mock = ClassInfo(table='mock', cls=MockUUIDObject)
         schema = {'mock': MockUUIDObject.schema}
         self.serialization_schema = SerializationSchema(
-            default_info=ClassInfo(
-                'simulation_objects', cls=MockSimulationObject,
-                # TODO: serializer=ser,
-                # TODO: deserializer=deser,
-                find_uuids=default_find_uuids
-            ),
+            default_info=self.info_default,
             schema=schema,
-            class_info_list = class_info_list
+            class_info_list=[self.info_mock]
         )
 
-
     def test_init(self):
-        pytest.skip()
+        serialization = self.serialization_schema
+
+        schema = {'mock': MockUUIDObject.schema}
+        assert serialization.schema == schema
+
+        class_info_set = set([self.info_mock, self.info_default])
+        assert set(serialization.class_info_list) == class_info_set
+
+        table_to_info = {'mock': self.info_mock,
+                         'simulation_objects': self.info_default}
+        assert serialization.table_to_info == table_to_info
+
+        lookup_to_info = {MockUUIDObject: self.info_mock,
+                          MockSimulationObject: self.info_default}
+        assert serialization.lookup_to_info == lookup_to_info
 
     def test_tables(self):
-        pytest.skip()
-
-    def test_add_class_info(self):
-        pytest.skip()
+        expected = set(['simulation_objects', 'mock'])
+        assert set(self.serialization_schema.tables) == expected
 
     def test_register_info(self):
-        pytest.skip()
+        serialization = self.serialization_schema
+        new_class_info = ClassInfo(table='extra', cls=ExtraMockDataObject)
+
+        assert new_class_info.serializer is None
+        assert new_class_info.deserializer is None
+        assert new_class_info.find_uuids is None
+        new_schema = {'extra': ExtraMockDataObject.schema}
+        serialization.register_info([new_class_info], schema=new_schema)
+
+        # check that default behavior was set on the class_info
+        assert new_class_info.serializer is not None
+        assert new_class_info.deserializer is not None
+        assert new_class_info.find_uuids is not None
+
+        # check that the serialization schema was correctly updated
+        schema = {'mock': MockUUIDObject.schema,
+                  'extra': ExtraMockDataObject.schema}
+        assert serialization.schema == schema
+
+        class_info_set = set([self.info_mock, self.info_default,
+                              new_class_info])
+        assert set(serialization.class_info_list) == class_info_set
+
+        table_to_info = {'mock': self.info_mock,
+                         'simulation_objects': self.info_default,
+                         'extra': new_class_info}
+        assert serialization.table_to_info == table_to_info
+
+        lookup_to_info = {MockUUIDObject: self.info_mock,
+                          MockSimulationObject: self.info_default,
+                          ExtraMockDataObject: new_class_info}
+        assert serialization.lookup_to_info == lookup_to_info
 
     def test_lookup_key(self):
-        pytest.skip()
+        serialization = self.serialization_schema
+        assert serialization.lookup_key(self.data_obj) == MockUUIDObject
+        assert serialization.lookup_key(self.sim_obj) == MockSimulationObject
+        assert serialization.lookup_key(5) == int
 
-    def test_info_from_instance(self):
-        pytest.skip()
+    @pytest.mark.parametrize('instance', ['int', 'data', 'sim', 'unknown'])
+    def test_info_from_instance(self, instance):
+        serialization = self.serialization_schema
+        input_val, expected = {
+            'int': (5, None),
+            'data': (self.data_obj, self.info_mock),
+            'sim': (self.sim_obj, self.info_default),
+            'unknown': (self.extra_obj, None)
+        }[instance]
+        assert serialization.info_from_instance(input_val) == expected
+
+    @pytest.mark.parametrize('in_type', ['string', 'data_obj', 'sim_obj'])
+    def test_get_item(self, in_type):
+        inp_val, expected = {
+            'string': ('mock', self.info_mock),
+            'data_obj': (self.data_obj, self.info_mock),
+            'sim_obj': (self.sim_obj, self.info_default)
+        }[in_type]
+        assert self.serialization_schema[inp_val] == expected
+
+    def test_get_item_key_error(self):
+        with pytest.raises(KeyError):
+            self.serialization_schema[self.extra_obj]
 
 
 class TestSerializationSchemaSpecial(object):
