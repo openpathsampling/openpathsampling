@@ -7,6 +7,22 @@ from .test_utils import (
 
 from .serialization_helpers import default_find_uuids
 
+class MockSpecialSerializationSchema(SerializationSchema):
+    def is_special(self, item):
+        return isinstance(item, ExtraMockDataObject)
+
+    def special_lookup_key(self, item):
+        return (item.__class__, "foo")
+
+    def add_missing_table_from_instance(self, item):
+        schema = {'extra': item.schema}
+        cls = item.__class__
+        self.register_info([ClassInfo(table="extra",
+                                      cls=cls,
+                                      lookup_result=(cls, "foo"))],
+                           schema)
+
+
 class TestClassInfo(object):
     def test_init_default_setup(self):
         class_info = ClassInfo(
@@ -22,8 +38,7 @@ class TestClassInfo(object):
         assert isinstance(class_info.find_uuids, SchemaFindUUIDs)
         assert class_info.lookup_result == MockUUIDObject
 
-
-class TestSerializationSchema(object):
+class SerializationSchemeTester(object):
     def setup(self):
         self.data_obj = all_objects['int']  # doesn't really matter which
         # technically, the next two should behave identically, except
@@ -41,7 +56,7 @@ class TestSerializationSchema(object):
         )
         self.info_mock = ClassInfo(table='mock', cls=MockUUIDObject)
         schema = {'mock': MockUUIDObject.schema}
-        self.serialization_schema = SerializationSchema(
+        self.serialization_schema = self.SerializationSchemaClass(
             default_info=self.info_default,
             schema=schema,
             class_info_list=[self.info_mock]
@@ -67,6 +82,19 @@ class TestSerializationSchema(object):
     def test_tables(self):
         expected = set(['simulation_objects', 'mock'])
         assert set(self.serialization_schema.tables) == expected
+
+    @pytest.mark.parametrize('input_type', ['data_obj', 'sim_obj', 'int'])
+    def test_lookup_key(self, input_type):
+        inp_val, expected = {
+            'data_obj': (self.data_obj, MockUUIDObject),
+            'sim_obj': (self.sim_obj, MockSimulationObject),
+            'int': (5, int)
+        }[input_type]
+        assert self.serialization_schema.lookup_key(inp_val) == expected
+
+
+class TestSerializationSchema(SerializationSchemeTester):
+    SerializationSchemaClass = SerializationSchema
 
     def test_register_info(self):
         serialization = self.serialization_schema
@@ -102,12 +130,6 @@ class TestSerializationSchema(object):
                           ExtraMockDataObject: new_class_info}
         assert serialization.lookup_to_info == lookup_to_info
 
-    def test_lookup_key(self):
-        serialization = self.serialization_schema
-        assert serialization.lookup_key(self.data_obj) == MockUUIDObject
-        assert serialization.lookup_key(self.sim_obj) == MockSimulationObject
-        assert serialization.lookup_key(5) == int
-
     @pytest.mark.parametrize('instance', ['int', 'data', 'sim', 'unknown'])
     def test_info_from_instance(self, instance):
         serialization = self.serialization_schema
@@ -133,22 +155,49 @@ class TestSerializationSchema(object):
             self.serialization_schema[self.extra_obj]
 
 
-class TestSerializationSchemaSpecial(object):
-    def test_special_lookup_key(self):
-        pytest.skip()
+class TestSerializationSchemaSpecial(SerializationSchemeTester):
+    SerializationSchemaClass = MockSpecialSerializationSchema
 
-    def test_is_special(self):
-        pytest.skip()
+    @pytest.mark.parametrize('input_type', ['data_obj', 'sim_obj', 'int',
+                                            'special'])
+    def test_lookup_key(self, input_type):
+        inp_val, expected = {
+            'data_obj': (self.data_obj, MockUUIDObject),
+            'sim_obj': (self.sim_obj, MockSimulationObject),
+            'int': (5, int),
+            'special': (self.extra_obj, (ExtraMockDataObject, "foo"))
+        }[input_type]
+        assert self.serialization_schema.lookup_key(inp_val) == expected
 
-    def test_get_special(self):
-        pytest.skip()
+    @pytest.mark.parametrize('input_type', ['data_obj', 'sim_obj', 'int',
+                                            'special'])
+    def test_is_special(self, input_type):
+        inp_val, expected = {'data_obj': (self.data_obj, False),
+                             'sim_obj': (self.sim_obj, False),
+                             'int': (5, False),
+                             'special': (self.extra_obj, True)}[input_type]
+        assert self.serialization_schema.is_special(inp_val) == expected
 
-    def test_lookup_key_for_special(self):
-        pytest.skip()
+    def test_get_special_missing(self):
+        serialization = self.serialization_schema
+        missing = serialization.missing_table
+        assert serialization.get_special(self.extra_obj) == missing
 
-    def test_info_from_instance_for_special(self):
-        pytest.skip()
+    def test_get_special_exists(self):
+        serialization = self.serialization_schema
+        serialization.add_missing_table_from_instance(self.extra_obj)
+        expected = serialization['extra']
+        assert serialization.get_special(self.extra_obj) == expected
 
-    def test_add_missing_table_from_instance(self):
-        pytest.skip()
-
+    @pytest.mark.parametrize('input_type', ['data_obj', 'sim_obj', 'int',
+                                            'special'])
+    def test_info_from_instance(self, input_type):
+        serialization = self.serialization_schema
+        serialization.add_missing_table_from_instance(self.extra_obj)
+        input_val, expected = {
+            'data_obj': (self.data_obj, self.info_mock),
+            'sim_obj': (self.sim_obj, self.info_default),
+            'int': (5, None),
+            'special': (self.extra_obj, serialization['extra'])
+        }[input_type]
+        assert serialization.info_from_instance(input_val) == expected

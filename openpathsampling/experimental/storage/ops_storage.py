@@ -78,6 +78,8 @@ class MoveChangeDeserializer(SchemaDeserializer):
         set_uuid(obj, uuid)
         return obj
 
+# can't the is_special here just wrap a class_lookup.ClassIsSomething?
+# should save a few lines of code
 class OPSSpecialLookup(object):
     """Separate object to handle special lookups
 
