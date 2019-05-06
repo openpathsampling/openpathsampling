@@ -183,6 +183,27 @@ class SubdivideInterpolation(VoxelInterpolator):
     def __call__(self, old_pt, new_pt):
         return self._interpolated_bins(old_pt, new_pt)
 
+
+class BresenhamInterpolation(VoxelInterpolator):
+    """Interpolation based on the Bresenham line-drawing algorithm.
+
+    Basic idea from https://www.crisluengo.net/archives/400.
+
+    Parameters
+    ----------
+    histogram : :class:`.PathHistogram`
+        the histogram that this will interpolate for
+    """
+    def __call__(self, old_pt, new_pt):
+        old_bin = self.map_to_bins(old_pt)
+        new_bin = self.map_to_bins(new_pt)
+        delta = np.asarray(new_bin) - np.asarray(old_bin)
+        n_steps = int(max(delta))
+        step_size = delta / n_steps
+        bins = [np.rint(old_bin + (i+1) * delta) for i in range(n_steps)]
+        return bins
+
+
 # should path histogram be moved to the generic histogram.py? Seems to be
 # independent of the fact that this is actually OPS
 class PathHistogram(SparseHistogram):
