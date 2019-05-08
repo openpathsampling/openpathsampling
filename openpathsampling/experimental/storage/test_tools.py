@@ -13,6 +13,17 @@ class TestGroupBy(object):
     def setup(self):
         pass
 
+class TestListify(object):
+    # TODO: what should be the correct behavior with a dict?
+    @pytest.mark.parametrize("obj", [3, "foo"])
+    def test_should_wrap(self, obj):
+        assert listify(obj) == [obj]
+
+    @pytest.mark.parametrize("obj", [(1, 2), ['a'], {5}])
+    def test_should_not_wrap(self, obj):
+        assert listify(obj) is obj
+
+
 class TestFlatten(object):
     def setup(self):
         self.result = ['a', 'b', 'c', 'd', 'e', 'f']
