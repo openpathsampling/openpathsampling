@@ -27,12 +27,14 @@ if sys.version_info > (3, ):
     unicode = str
     builtin_module = 'builtins'
     get_code = lambda func: func.__code__
+    get_name = lambda func: func.__name__
     intify_byte = lambda b: b
     decodebytes = lambda s: base64.decodebytes(s.encode())
     import builtins
 else:
     builtin_module = '__builtin__'
     get_code = lambda func: func.func_code
+    get_name = lambda func: func.func_name
     intify_byte = lambda b: ord(b)
     decodebytes = base64.decodestring
     import builtins
@@ -388,13 +390,13 @@ class ObjectJSON(object):
                 err += '\n4. be passed as an external parameter ' \
                        '(not for imports!)'
                 err += '\n\n        my_cv = FunctionCV("cv_name", ' + \
-                       c.func_name + ', \n' + \
+                       get_name(c) + ', \n' + \
                        ',\n'.join(
                            map(lambda x: ' ' * 20 + x + '=' + x, global_vars)
                        ) + ')' + '\n'
                 err += '\n    and change your function definition like this'
                 err += '\n\n        def ' + \
-                       c.func_name + '(snapshot, ...,  ' + \
+                       get_name(c) + '(snapshot, ...,  ' + \
                        '\n' + ',\n'.join(
                            map(lambda x: ' ' * 16 + x, global_vars)
                        ) + '):'
