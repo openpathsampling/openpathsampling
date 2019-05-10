@@ -71,8 +71,6 @@ class GenericLazyLoader(object):
                     + " UUID " + str(self.__uuid__) + ">")
 
 class ProxyObjectFactory(object):
-    # TODO: I think this should replace some of the similar stuff in the
-    # Serialization object below
     def __init__(self, storage, serialization_schema):
         self.storage =  storage
         self.serialization_schema = serialization_schema
@@ -95,71 +93,6 @@ class ProxyObjectFactory(object):
             for row in lazy_uuid_rows:
                 all_lazies[row.uuid] = self.make_lazy(cls, row.uuid)
         return all_lazies
-
-
-# class Serialization(object):
-    # builtin_types = ['int', 'float', 'str']
-    # uuid_types = ['uuid', 'list_uuid', 'lazy']
-    # # TODO: this whole object is deprecated; need better way to handle lazy
-    # # proxies; serialization registration may move to the ClassInfoContainer
-
-    # def __init__(self, storage):
-        # self.storage = storage
-        # self.cache = self.storage.cache
-        # self.attribute_serializers = {
-            # 'uuid': serialization.get_uuid,
-            # 'lazy': serialization.get_uuid,
-            # 'json': serialization.to_bare_json,
-            # 'list_uuid': serialization.to_bare_json
-        # }
-
-        # self.attribute_deserializers = {
-            # 'uuid': serialization.from_json_obj,
-            # 'lazy': self.make_lazy,
-            # 'json': None,
-            # 'list_uuid': None
-        # }
-        # self.schema = {}
-        # self.table_to_class = {}
-        # self._ser_dict = {}
-        # self._deser_dict = {}
-        # self._lazy_classes = {}
-
-    # def make_lazy(self, cls, uuid):
-        # if cls not in self._lazy_classes:
-            # self._lazy_classes[cls] = make_lazy_class(cls)
-        # return self._lazy_classes[cls](uuid=uuid,
-                                       # class_=cls,
-                                       # storage=self.storage)
-
-    # def make_all_lazies(self, lazies):
-        # # lazies is dict of {table_name: list_of_lazy_uuid_rows}
-        # all_lazies = {}
-        # for (table, lazy_uuid_rows) in lazies.items():
-            # logger.debug("Making {} lazy proxies for objects in table '{}'"\
-                         # .format(len(lazy_uuid_rows), table))
-            # cls = self.table_to_class[table]
-            # for row in lazy_uuid_rows:
-                # all_lazies[row.uuid] = self.make_lazy(cls, row.uuid)
-        # return all_lazies
-
-
-    # def register_serialization(self, schema, class_info):
-        # for table in schema:
-            # if class_info[table].serializer:
-                # self._ser_dict[table] = class_info[table].serializer
-            # else:
-                # self._ser_dict[table] = \
-                        # self.default_serializer_dict(schema[table])
-
-            # if class_info[table].deserializer:
-                # self._deser_dict[table] = class_info[table].deserializer
-            # else:
-                # self._deser_dict[table] = \
-                        # self.default_deserializer_dict(schema[table])
-
-            # self.table_to_class.update({table: class_info[table].cls})
-            # self.schema.update(schema)
 
 
 class SimulationObjectSerializer(object):

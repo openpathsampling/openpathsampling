@@ -95,6 +95,8 @@ class MockBackend(object):
 
         self.uuid_table = {}
         self.tables = [[] for table in self.table_names]
+
+        # this is where we add objects to the table
         uuid_row, table_row = self._table_data_for_object(
             obj=all_objects['int'],
             table_name='ints',
@@ -148,8 +150,19 @@ class TestMockBackend(object):
         assert self.backend.load_uuids_table([uuid]) == \
                 [(uuid, table_idx, idx)]
 
-    def test_load_table_data(self):
-        pass
+    @pytest.mark.parametrize('table,uuid,table_idx,idx,content', [
+        ('ints', 'int', 4, 0, [5])
+    ])
+    def test_load_table_data(self, table, uuid, table_idx, idx, content):
+        row_types = self.backend.row_types
+        uuid = str(toy_uuid_maker(uuid))
+        uuid_row = row_types['uuids'](uuid=uuid, table=table_idx, idx=idx)
+        expected = row_types[table](uuid, idx, *content)
+        assert self.backend.load_table_data([uuid_row]) == [expected]
 
-    def test_uuid_row_to_table_name(self):
-        pass
+    @pytest.mark.parametrize('name,idx', [
+        ('sims', 2), ('objs', 3), ('ints', 4)
+    ])
+    def test_uuid_row_to_table_name(self, name, idx):
+        uuid_row = self.backend.row_types['uuids']('foo', idx, 0)
+        assert self.backend.uuid_row_to_table_name(uuid_row) == name
