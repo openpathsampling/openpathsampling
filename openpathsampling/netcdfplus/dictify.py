@@ -29,12 +29,14 @@ if sys.version_info > (3, ):
     get_code = lambda func: func.__code__
     intify_byte = lambda b: b
     decodebytes = lambda s: base64.decodebytes(s.encode())
+    get_callable_name = lambda c: c.__name__
     import builtins
 else:
     builtin_module = '__builtin__'
     get_code = lambda func: func.func_code
     intify_byte = lambda b: ord(b)
     decodebytes = base64.decodestring
+    get_callable_name = lambda c: c.func_name
     import builtins
 
 # in Python 3.6 the opcodes have changed width
@@ -388,13 +390,13 @@ class ObjectJSON(object):
                 err += '\n4. be passed as an external parameter ' \
                        '(not for imports!)'
                 err += '\n\n        my_cv = FunctionCV("cv_name", ' + \
-                       c.__name__ + ', \n' + \
+                       get_callable_name(c) + ', \n' + \
                        ',\n'.join(
                            map(lambda x: ' ' * 20 + x + '=' + x, global_vars)
                        ) + ')' + '\n'
                 err += '\n    and change your function definition like this'
                 err += '\n\n        def ' + \
-                       c.__name__ + '(snapshot, ...,  ' + \
+                       get_callable_name(c) + '(snapshot, ...,  ' + \
                        '\n' + ',\n'.join(
                            map(lambda x: ' ' * 16 + x, global_vars)
                        ) + '):'
