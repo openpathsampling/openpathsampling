@@ -21,3 +21,5 @@ class TestStaticContainerStore(object):
         reloaded = load.snapshots[0]
         npt.assert_array_equal(snap.coordinates, reloaded.coordinates)
         npt.assert_array_equal(snap.box_vectors, reloaded.box_vectors)
+        assert snap.box_vectors is None
+        assert reloaded.box_vectors is None
