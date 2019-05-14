@@ -1,13 +1,11 @@
 import numpy as np
-from .my_types import parse_ndarray_type, ndarray_re
+from .my_types import parse_ndarray_type
 from . import serialization_helpers as serialization
-from .tools import is_mappable
-from . import tools
-# import ujson as json
 import json
 
 import logging
 logger = logging.getLogger(__name__)
+
 
 def load_list_uuid(json_str, cache_list):
     uuid_list = json.loads(json_str)
@@ -70,9 +68,10 @@ class GenericLazyLoader(object):
             return ("<LazyLoader for " + str(self.class_.__name__)
                     + " UUID " + str(self.__uuid__) + ">")
 
+
 class ProxyObjectFactory(object):
     def __init__(self, storage, serialization_schema):
-        self.storage =  storage
+        self.storage = storage
         self.serialization_schema = serialization_schema
         self.lazy_classes = {}
 
@@ -102,6 +101,7 @@ class SimulationObjectSerializer(object):
     def __call__(self, obj):
         return {'uuid': serialization.get_uuid(obj),
                 'json': self.json_encoder(obj)}
+
 
 class SchemaDeserializer(object):
     default_handlers = {
@@ -176,6 +176,7 @@ class ToDictSerializer(SchemaDeserializer):
         dct.update({'uuid': serialization.get_uuid(obj)})
         return dct
 
+
 class SchemaSerializer(ToDictSerializer):
     def __call__(self, obj):
         dct = {attr: getattr(obj, attr)
@@ -187,5 +188,3 @@ class SchemaSerializer(ToDictSerializer):
         dct.update(replace)
         dct.update({'uuid': serialization.get_uuid(obj)})
         return dct
-
-

@@ -114,6 +114,14 @@ class MockBackend(object):
     def uuid_row_to_table_name(self, row):
         return self.table_names[row.table]
 
+
+class LoadingStorageMock(object):
+    def __init__(self, uuid_dict):
+        self.uuid_dict = uuid_dict
+
+    def load(self, uuid_list, force=False):
+        return [self.uuid_dict[uuid] for uuid in uuid_list]
+
 def create_test_objects():
     obj_int = MockUUIDObject(name='int', normal_attr=5)
     obj_str = MockUUIDObject(name='str', normal_attr='foo')
