@@ -59,8 +59,34 @@ class TestGenericLazyLoader(object):
                                       good_proxy.class_,
                                       storage)
         assert bad_proxy._loaded_object is None
+        pytest.skip()
         # TODO: current mock storage raises KeyError instead of returning
         # None; check the behavior of the actual storage -- maybe this isn't
         # possible and the relevant lines need to be removed?
         # with pytest.raises(RuntimeError):
             # bad_proxy.load()
+
+    def test_getattr(self):
+        proxy = self.proxies['normal']
+        original = self.originals['normal']
+        assert proxy._loaded_object is None
+        assert proxy.normal_attr == original.normal_attr
+        assert proxy._loaded_object == original
+
+    def test_save_proxy(self):
+        # TODO: storing a lazy proxy to storage should actually store it as
+        # if it the original object (i.e., store to DB correctly ) -- note
+        # that only schema-based storage can invoke the lazy proxies, so we
+        # this shouldn't risk saving a simulation object
+        pytest.skip()
+
+
+class TestProxyObjectFactory(object):
+    def setup(self):
+        pass
+
+    def test_make_lazy(self):
+        pytest.skip()
+
+    def test_make_all_lazies(self):
+        pytest.skip()
