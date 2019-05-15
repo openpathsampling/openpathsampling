@@ -1,9 +1,12 @@
 from .serialization import *
 import pytest
 
-from .serialization_helpers import get_uuid
+from .serialization_helpers import get_uuid, default_find_uuids
 from .test_utils import (LoadingStorageMock, all_objects, toy_uuid_maker,
-                         MockUUIDObject)
+                         MockUUIDObject, MockSimulationObject, MockBackend)
+
+from . import class_info
+
 
 class TestGenericLazyLoader(object):
     def setup(self):
@@ -83,10 +86,45 @@ class TestGenericLazyLoader(object):
 
 class TestProxyObjectFactory(object):
     def setup(self):
-        pass
+        self.storage = LoadingStorageMock({get_uuid(obj): obj
+                                           for obj in all_objects.values()})
 
     def test_make_lazy(self):
-        pytest.skip()
+        factory = ProxyObjectFactory(self.storage, None)
+        assert len(factory.lazy_classes) == 0
+        original = all_objects['int']
+        uuid = get_uuid(original)
+        proxy = factory.make_lazy(MockUUIDObject, uuid)
+        assert len(factory.lazy_classes) == 1
+        assert list(factory.lazy_classes.keys()) == [MockUUIDObject]
+        assert isinstance(proxy, MockUUIDObject)
+        assert proxy._loaded_object is None
+        assert proxy.normal_attr == original.normal_attr
 
     def test_make_all_lazies(self):
-        pytest.skip()
+        backend = MockBackend()
+        obj = all_objects['obj']
+        uuid = get_uuid(obj)
+        lazy_rows = backend.load_uuids_table([uuid])
+        lazies = {'mock': lazy_rows}
+
+        # this includes integration with serialization schema
+        schema = {'mock': [('obj_attr', 'lazy')]}
+        sim_info = class_info.ClassInfo('simulation_objects',
+                                        cls=MockSimulationObject,
+                                        find_uuids=default_find_uuids)
+        mock_info = class_info.ClassInfo(table='mock', cls=MockUUIDObject)
+        mock_info.set_defaults(schema)
+        serialization_schema = class_info.SerializationSchema(
+            default_info=sim_info,
+            schema=schema,
+            class_info_list=[mock_info]
+        )
+        factory = ProxyObjectFactory(self.storage, serialization_schema)
+        lazy_objs = factory.make_all_lazies(lazies)
+        assert len(lazy_objs) == 1
+        proxy = lazy_objs[uuid]
+        assert isinstance(proxy, MockUUIDObject)
+        assert proxy._loaded_object is None
+        assert proxy.obj_attr.normal_attr == 5
+        assert proxy._loaded_object is not None

@@ -97,13 +97,16 @@ class MockBackend(object):
         self.tables = [[] for table in self.table_names]
 
         # this is where we add objects to the table
-        uuid_row, table_row = self._table_data_for_object(
-            obj=all_objects['int'],
-            table_name='ints',
-            normal_attr=5
-        )
-        self.uuid_table[uuid_row.uuid] = uuid_row
-        self.tables[uuid_row.table].append(table_row)
+        table_data = [
+            {'obj': all_objects['int'], 'table_name': 'ints',
+             'normal_attr': 5},
+            {'obj': all_objects['obj'], 'table_name': 'objs',
+             'obj_attr': get_uuid(all_objects['int'])}
+        ]
+        for datum in table_data:
+            uuid_row, table_row = self._table_data_for_object(**datum)
+            self.uuid_table[uuid_row.uuid] = uuid_row
+            self.tables[uuid_row.table].append(table_row)
 
     def load_uuids_table(self, new_uuids):
         return [self.uuid_table[uuid] for uuid in new_uuids]
