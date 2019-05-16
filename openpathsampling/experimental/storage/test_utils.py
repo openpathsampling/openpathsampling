@@ -4,6 +4,7 @@ from collections import namedtuple
 import pytest
 import numpy as np
 import json
+import random
 
 from .serialization_helpers import get_uuid, encode_uuid
 
@@ -29,10 +30,16 @@ class AbstractMockUUIDObject(object):
         keywords.update({attr: None for attr in self.attr_list
                          if attr not in keywords})
 
-        self.__uuid__ = toy_uuid_maker(keywords['name'])
+        if 'name' in keywords:
+            self.__uuid__ = toy_uuid_maker(keywords['name'])
+            self.is_named = True
+        else:
+            self.__uuid__ = random.randint(0, 2**32)
+            self.is_named = False
 
         for attr, value in keywords.items():
             setattr(self, attr, value)
+
 
     def to_dict(self):
         return {attr: getattr(self, attr) for attr in self.attr_list}
@@ -56,6 +63,11 @@ class MockSimulationObject(AbstractMockUUIDObject):
 class ExtraMockDataObject(AbstractMockUUIDObject):
     attr_list = ['name', 'str_attr']
     schema = [('str_attr', 'str')]
+
+
+class UnnamedUUID(AbstractMockUUIDObject):
+    attr_list = ['normal_attr']
+    schema = [('normal_attr', 'int')]
 
 
 class MockBackend(object):

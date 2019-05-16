@@ -27,6 +27,7 @@ from .serialization_helpers import get_all_uuids_loading
 from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
 from .serialization import ProxyObjectFactory
+from .tools import none_to_default
 
 try:
     basestring
@@ -430,7 +431,7 @@ class PseudoTable(abc.MutableSequence):
 
     @staticmethod
     def _get_uuid_and_name(obj):
-        uuid = get_uuid(item)
+        uuid = get_uuid(obj)
         name = None if not obj.is_named else obj.name
         return uuid, name
 
@@ -457,11 +458,11 @@ class PseudoTable(abc.MutableSequence):
         del self._name_to_uuid[name]
 
     def __len__(self):
-        return len(self.sequence)
+        return len(self._sequence)
 
     def insert(self, where, item):
         uuid, name = self._get_uuid_and_name(item)
         self._sequence.insert(where, item)
-        self._uuid_to_obj[uuid] = obj
+        self._uuid_to_obj[uuid] = item
         if name is not None:
             self._name_to_uuid[name] = uuid
