@@ -47,7 +47,7 @@ def decode_uuid(uuid_str):
 
 # use the regular expression when looking through an entire JSON string; use
 # the is_uuid_string method for individual objects
-encoded_uuid_re = re.compile("UUID\((?P<uuid>[0-9]+)\)")
+encoded_uuid_re = re.compile("UUID\((?P<uuid>[\-]?[0-9]+)\)")
 
 
 def is_uuid_string(obj):
@@ -419,7 +419,8 @@ def _uuids_from_table_row(table_row, schema_entries):
                 uuid.update(uuid_list)
         elif attr_type == 'json_obj':
             json_dct = getattr(table_row, attr)
-            uuid.update(set(encoded_uuid_re.findall(json_dct)))
+            new_uuids = set(encoded_uuid_re.findall(json_dct))
+            uuid.update(new_uuids)
         elif attr_type == 'lazy':
             lazy.add(getattr(table_row, attr))
         # other cases aren't UUIDs and are ignored

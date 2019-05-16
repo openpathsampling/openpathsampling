@@ -10,6 +10,10 @@ from .test_utils import (toy_uuid_maker, uuid_encode, MockUUIDObject,
 
 all_objects = create_test_objects()
 
+def get_obj_uuid(name):
+    return get_uuid(all_objects[name])
+
+
 @pytest.mark.parametrize('obj', list(all_objects.values()))
 def test_has_uuid(obj):
     assert has_uuid(obj)
@@ -213,7 +217,49 @@ def test_schema_find_uuids():
         assert new_objs == expected_newobjs[key]
 
 def test_get_all_uuids_loading():
-    pytest.skip()
+    backend = MockBackend()
+    schema = {
+        'sims': [('json', 'json_obj'), ('class_idx', 'int')],
+        'ints': [('normal_attr', 'int')],
+        'objs': [('obj_attr', 'uuid')],
+    }
+    uuid_list = [get_obj_uuid('dct2'), get_obj_uuid('obj')]
+    all_table_rows, lazy, dependencies, uuid_to_table = \
+            get_all_uuids_loading(uuid_list, backend, schema)
+
+    expected_dependencies = {
+        get_obj_uuid('dct2'): {get_obj_uuid('str'), get_obj_uuid('int')},
+        get_obj_uuid('obj'): {get_obj_uuid('int')},
+        get_obj_uuid('str'): set([]),
+        get_obj_uuid('int'): set([])
+    }
+    expected_uuid_to_table = {
+        get_obj_uuid('dct2'): 'sims',
+        get_obj_uuid('str'): 'sims',
+        get_obj_uuid('int'): 'ints',
+        get_obj_uuid('obj'): 'objs'
+    }
+    assert len(all_table_rows) == 4
+    uuid_to_table_row = {row.uuid: row for row in all_table_rows}
+    # we force the same index as the one with the same UUID, since we can't
+    # know the index in advance
+    expected_table_rows = []
+    for obj in ['dct2', 'str', 'int', 'obj']:
+        uuid = get_obj_uuid(obj)
+        row_type = backend.row_types[expected_uuid_to_table[uuid]]
+        # if this raises a KeyError, then the UUID we expected wasn't found
+        idx = uuid_to_table_row[uuid].idx
+        table_data = backend.table_data[obj]
+        row_dict = {k: v for k, v in table_data.items()
+                    if k not in ['obj', 'table_name']}
+        row_dict.update({'idx': idx, 'uuid': uuid})
+        row = row_type(**row_dict)
+        expected_table_rows.append(row)
+
+    assert set(all_table_rows) == set(expected_table_rows)
+    assert lazy == set([])
+    assert dependencies == expected_dependencies
+    assert uuid_to_table == expected_uuid_to_table
 
 def test_get_all_uuids_loading_with_existing():
     pytest.skip()

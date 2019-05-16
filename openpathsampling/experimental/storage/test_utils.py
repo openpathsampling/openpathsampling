@@ -3,8 +3,9 @@
 from collections import namedtuple
 import pytest
 import numpy as np
+import json
 
-from .serialization_helpers import get_uuid
+from .serialization_helpers import get_uuid, encode_uuid
 
 
 def toy_uuid_maker(name):
@@ -97,13 +98,21 @@ class MockBackend(object):
         self.tables = [[] for table in self.table_names]
 
         # this is where we add objects to the table
-        table_data = [
-            {'obj': all_objects['int'], 'table_name': 'ints',
-             'normal_attr': 5},
-            {'obj': all_objects['obj'], 'table_name': 'objs',
-             'obj_attr': get_uuid(all_objects['int'])}
-        ]
-        for datum in table_data:
+        self.table_data = {
+            'int': {'obj': all_objects['int'], 'table_name': 'ints',
+                    'normal_attr': 5},
+            'obj': {'obj': all_objects['obj'], 'table_name': 'objs',
+                    'obj_attr': get_uuid(all_objects['int'])},
+            'str': {'obj': all_objects['str'], 'table_name': 'sims',
+                    'json': json.dumps('foo'), 'class_idx': 1},
+            'dct2': {'obj': all_objects['dct2'], 'table_name': 'sims',
+                     'json': json.dumps({'dct_attr': {
+                         'foo': encode_uuid(toy_uuid_maker('str')),
+                         encode_uuid(toy_uuid_maker('int')): 5
+                     }}),
+                     'class_idx': 0}
+        }
+        for datum in self.table_data.values():
             uuid_row, table_row = self._table_data_for_object(**datum)
             self.uuid_table[uuid_row.uuid] = uuid_row
             self.tables[uuid_row.table].append(table_row)
@@ -133,6 +142,8 @@ def create_test_objects():
     obj_lst = MockUUIDObject(name='lst', list_attr=[obj_int, obj_str])
     obj_dct = MockUUIDObject(name='dct', dict_attr={'foo': obj_str,
                                                     obj_int: obj_np})
+    obj_dct2 = MockUUIDObject(name='dct2', dict_attr={'foo': obj_str,
+                                                      obj_int: 5})
     obj_nest = MockUUIDObject(
         name='nest',
         dict_attr={'bar': [obj_str, {obj_int: [obj_np, obj_obj]}]}
@@ -141,7 +152,7 @@ def create_test_objects():
     all_objects = {
         obj.name : obj
         for obj in [obj_int, obj_str, obj_np, obj_obj, obj_lst, obj_dct,
-                    obj_nest, obj_repeat]
+                    obj_dct2, obj_nest, obj_repeat]
     }
     return all_objects
 
