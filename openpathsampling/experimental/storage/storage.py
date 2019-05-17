@@ -427,7 +427,7 @@ class PseudoTable(abc.MutableSequence):
         self._name_to_uuid = {}
         sequence = none_to_default(sequence, [])
         for item in sequence:
-            self.extend(sequence)
+            self.append(item)
 
     @staticmethod
     def _get_uuid_and_name(obj):
