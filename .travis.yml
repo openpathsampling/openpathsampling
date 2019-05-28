@@ -32,8 +32,8 @@ install:
   #- conda install --quiet --yes nose python-coveralls ipynbtest 
   #- conda install --quiet --yes pytest 
   - conda config --env --add pinned_packages libnetcdf=4.6.1
-  - conda config --env --add pinned_packages pytest-cov=2.5.1
-  - conda config --env --add pinned_packages ipython!=7.4.0
+  #- conda config --env --add pinned_packages pytest-cov=2.5.1
+  #- conda config --env --add pinned_packages ipython!=7.4.0
   - conda update --all --yes --use-local --quiet
   # pin pytest-cov b/c: https://github.com/z4r/python-coveralls/issues/66
   # usually this should be before the conda update
