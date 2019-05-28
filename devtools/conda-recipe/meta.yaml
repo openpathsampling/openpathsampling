@@ -24,11 +24,11 @@ requirements:
     - future
     - pandas
     - netcdf4
-    #- libnetcdf==4.6.1
+    - libnetcdf==4.6.1
     - openmm
     - openmmtools
     - jupyter
-    #- ipython!=7.4.0
+    - ipython!=7.4.0
     - mdtraj
     - svgwrite
     - networkx
