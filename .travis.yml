@@ -31,7 +31,7 @@ install:
   #- conda install --quiet --yes -c conda-forge msmbuilder
   #- conda install --quiet --yes nose python-coveralls ipynbtest 
   #- conda install --quiet --yes pytest 
-  - conda config --env --add pinned_packages libnetcdf=4.6.1
+  #- conda config --env --add pinned_packages libnetcdf=4.6.1
   #- conda config --env --add pinned_packages pytest-cov=2.5.1
   #- conda config --env --add pinned_packages ipython!=7.4.0
   - conda update --all --yes --use-local --quiet
