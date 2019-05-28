@@ -9,7 +9,7 @@ before_install:
   # Sets up a miniconda environment
   - source devtools/ci/miniconda_install.sh
 
-  - conda create -q -y --name test_pyemma_py35 python=3.5 pyemma matplotlib
+  - conda create -q -y -c conda-forge --name test_pyemma_py35 python=3.5 pyemma matplotlib
 
 install:
   # this is the conda-build based installation
