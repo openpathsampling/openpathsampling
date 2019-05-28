@@ -30,6 +30,6 @@ conda config --add channels http://conda.anaconda.org/omnia
 conda config --add channels http://conda.anaconda.org/conda-forge
 
 # this may speed up conda's package resolution
-conda config --set channel_priority strict
+#conda config --set channel_priority strict
 
 conda update --yes conda
