@@ -220,6 +220,11 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
         empty_vel = u.Quantity(np.zeros(mdtrajectory.xyz[0].shape),
                                vel_unit)
 
+    if mdtrajectory.unitcell_vectors is not None:
+        box_vects = u.Quantity(mdtrajectory.unitcell_vectors, u.nanometers)
+    else:
+        box_vects = [None] * len(mdtrajectory)
+
 
     engine = TopologyEngine(topology)
 
@@ -231,11 +236,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
         else:
             vel = empty_vel
 
-        if mdtrajectory.unitcell_vectors is not None:
-            box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
-                               u.nanometers)
-        else:
-            box_v = None
+        box_v = box_vects[frame_num]
 
         statics = Snapshot.StaticContainer(
             coordinates=coord,
