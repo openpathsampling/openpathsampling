@@ -29,8 +29,8 @@ install:
   
   # report info about our conda env and finish installation
   - conda info --envs
-  - conda config --env --add pinned_packages libnetcdf=4.6.1
-  - conda config --env --add pinned_packages ipython!=7.4.0
+  #- conda config --env --add pinned_packages libnetcdf=4.6.1
+  #- conda config --env --add pinned_packages ipython!=7.4.0
   - conda update --all --yes --use-local --quiet
   # pin pytest-cov b/c: https://github.com/z4r/python-coveralls/issues/66
   # usually this should be before the conda update
