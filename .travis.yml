@@ -19,6 +19,7 @@ install:
   # install by without conda-build (requirements, then setup.py install)
   - conda create -q -y --name test conda pyyaml python=$CONDA_PY
   - source activate test
+  - cp pinned $CONDA_PREFIX/
   - conda config --env --add pinned_packages python=$CONDA_PY
   - export PACKAGES=`python devtools/install_recipe_requirements.py --dry devtools/conda-recipe/meta.yaml`
   - TESTING_PACKAGES=`cat devtools/testing_requirements.txt | tr "\n" " "`
@@ -31,7 +32,7 @@ install:
   - conda info --envs
   #- conda config --env --add pinned_packages libnetcdf=4.6.1
   #- conda config --env --add pinned_packages ipython!=7.4.0
-  - conda update --all --yes --use-local --quiet
+  #- conda update --all --yes --use-local --quiet
   # pin pytest-cov b/c: https://github.com/z4r/python-coveralls/issues/66
   # usually this should be before the conda update
   #- conda install --quiet --yes pytest-cov=2.5.1
