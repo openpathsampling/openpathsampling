@@ -3,7 +3,6 @@ package:
   version: "0.9.6"
 
 source:
-#  git_url: ../../.git
   path: ../../
 
 build:
@@ -15,7 +14,6 @@ requirements:
     - python
     - future
     - setuptools
-    #- numpy
 
   run:
     - python
@@ -24,7 +22,6 @@ requirements:
     - future
     - pandas
     - netcdf4
-    #- libnetcdf==4.6.1
     - openmm
     - openmmtools
     - jupyter
@@ -33,7 +30,6 @@ requirements:
     - networkx
     - matplotlib
     - ujson
-    #- msmbuilder
     - pyemma
 
 test:

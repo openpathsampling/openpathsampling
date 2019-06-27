@@ -29,11 +29,4 @@ export PATH=$HOME/miniconda${pyV}/bin:$PATH
 conda config --add channels http://conda.anaconda.org/omnia
 conda config --add channels http://conda.anaconda.org/conda-forge
 
-# this may speed up conda's package resolution
-# breaks pyemma install on 3.5, for some reason
-#if [[ "$CONDA_PY" != "3.5" ]]; then
-    #echo "Setting strict channel priority"
-    #conda config --set channel_priority strict
-#fi
-
 conda update --yes conda
