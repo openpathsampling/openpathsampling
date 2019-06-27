@@ -1,8 +1,12 @@
 #!/usr/bin/bash
 
-# REQUIRES ENV VARS: in particular, must define $CONDA_PY
+# USAGE
+# ./conda_install_reqs.sh
+#   Install the requirements. If the environment variable OPS_ENV is set,
+#   then create a new environment called $OPS_ENV. Note that you MUST set
+#   the environment variable CONDA_PY (the version of Python to use, e.g.,
+#   CONDA_PY="3.7").
 
-# TODO: these should become cmd line arguments
 DEVTOOLS_DIR=`dirname "${BASH_SOURCE[0]}"`
 
 if [ ! -z "$OPS_ENV" ]
