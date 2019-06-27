@@ -19,7 +19,7 @@ PACKAGES=`python ${DEVTOOLS_DIR}/install_recipe_requirements.py --dry ${DEVTOOLS
 TESTING=`cat ${DEVTOOLS_DIR}/testing_requirements.txt | tr "\n" " "`
 EXTRA=`cat ${DEVTOOLS_DIR}/optional_packages.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
-PINS=`cat ${DEVTOOLS_DIR}/../pinned | tr " " "" | tr "\n" " "`
+PINS=`cat ${DEVTOOLS_DIR}/../pinned | tr -d " " | tr "\n" " "`
 ALL_PACKAGES="$PACKAGES $TESTING $EXTRA"
 echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES $PINS"
 conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES $PINS
