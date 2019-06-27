@@ -9,6 +9,8 @@ if [ ! -z "$OPS_ENV" ]
 then
     conda create -q -y --name $OPS_ENV conda future pyyaml python=$CONDA_PY
     source activate $OPS_ENV
+else
+    conda install -y -q future pyyaml  # ensure that these are available
 fi
 
 # for some reason, these approaches to pinning don't always work (but conda
