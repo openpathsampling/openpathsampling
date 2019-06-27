@@ -12,7 +12,7 @@ conda create -q -y --name $ENV_NAME conda future pyyaml python=$CONDA_PY
 source activate $ENV_NAME
 
 conda config --env --add pinned_packages python=$CONDA_PY
-PACKAGES=`python ${DEVTO1OLS_DIR}/install_recipe_requirements.py --dry ${DEVTOOLS_DIR}/conda-recipe/meta.yaml | tr "\n" " "`
+PACKAGES=`python ${DEVTOOLS_DIR}/install_recipe_requirements.py --dry ${DEVTOOLS_DIR}/conda-recipe/meta.yaml | tr "\n" " "`
 TESTING=`cat ${DEVTOOLS_DIR}/testing_requirements.txt | tr "\n" " "`
 EXTRA=`cat ${DEVTOOLS_DIR}/optional_packages.txt | tr "\n" " "`
 ALL_PACKAGES="$PACKAGES $TESTING $EXTRA"
