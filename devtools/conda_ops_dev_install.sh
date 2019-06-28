@@ -25,7 +25,20 @@ elif [ $# -gt 2 ]; then
     exit 1
 fi
 
+if [ -z "$CONDA_PY" ]; then
+    # if undefined, use major/minor of current Python
+    CONDA_PY=`python -V 2>&1 | \
+        awk 'BEGIN {RS=" "; FS="."} {if (NR > 1) {print $1"."$2}}'`
+fi
+
+if [ -z "$OPS_ENV" ]; then
+    ENV_NAME="environment $CONDA_DEFAULT_ENV"
+else
+    ENV_NAME="new environment $OPS_ENV"
+fi
+
 echo "Installing from ${REMOTE}/openpathsampling.git@$BRANCH"
+echo "Installing with Python $CONDA_PY in $ENV_NAME"
 
 git clone https://github.com/${REMOTE}/openpathsampling.git
 pushd openpathsampling
