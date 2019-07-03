@@ -7,6 +7,7 @@ before_install:
   - source devtools/ci/miniconda_install.sh
 
 install:
+  - conda install -c conda-forge -c omnia future matplotlib scipy ujson pandas numpy setuptools python mdtraj networkx svgwrite netcdf4 pyemma jupyter openmmtools openmm
   - export OPS_ENV="openpathsampling-py${CONDA_PY}"
   - source devtools/conda_install_reqs.sh
   - python setup.py install
