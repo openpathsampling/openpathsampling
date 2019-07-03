@@ -30,6 +30,12 @@ EXTRA=`cat ${DEVTOOLS_DIR}/optional_packages.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 PINS=`cat ${DEVTOOLS_DIR}/../pinned | tr -d " " | tr "\n" " "`
 
+echo "WORKAROUNDS=$WORKAROUNDS"
+echo "PY_INSTALL=$PY_INSTALL"
+echo "PACKAGES=$PACKAGES"
+echo "TESTING=$TESTING"
+echo "PINS=$PINS"
+
 if [ "$CONDA_PY" != "3.7" ]; then
     ALL_PACKAGES="$WORKAROUNDS $PACKAGES $TESTING $EXTRA"
 else
