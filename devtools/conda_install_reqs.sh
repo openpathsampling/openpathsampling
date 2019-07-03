@@ -26,6 +26,12 @@ TESTING=`cat ${DEVTOOLS_DIR}/testing_requirements.txt | tr "\n" " "`
 EXTRA=`cat ${DEVTOOLS_DIR}/optional_packages.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 PINS=`cat ${DEVTOOLS_DIR}/../pinned | tr -d " " | tr "\n" " "`
-ALL_PACKAGES="$PACKAGES $TESTING $EXTRA"
+
+if [ "$CONDA_PY" != "3.7" ]; then
+    ALL_PACKAGES="$PACKAGES $TESTING $EXTRA"
+else
+    ALL_PACKAGES="$PACKAGES $TESTING"  # no msmbuilder for py3.7?
+fi
+
 echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES $PINS"
 conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES $PINS
