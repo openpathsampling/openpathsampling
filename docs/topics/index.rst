@@ -15,6 +15,7 @@ providing this here the unorganized form.
    simulation_setup
    ops_output
    data_objects
+   creating_collective_variables
    ensembles_apply_to_trajectories_not_frames
    common_setups
    which_network
