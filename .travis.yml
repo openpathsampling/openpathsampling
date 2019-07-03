@@ -9,7 +9,8 @@ before_install:
 install:
   - export OPS_ENV="openpathsampling-py${CONDA_PY}"
   - source devtools/conda_install_reqs.sh
-  - python setup.py install
+  - pip install --no-dependencies -e .
+  #- python setup.py install
 
 before_script:
   - python --version
