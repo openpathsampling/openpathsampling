@@ -22,15 +22,18 @@ fi
 #conda config --env --add pinned_packages python=$CONDA_PY
 #cp $DEVTOOLS_DIR/../pinned $CONDA_PREFIX/
 PACKAGES=`python ${DEVTOOLS_DIR}/install_recipe_requirements.py --dry ${DEVTOOLS_DIR}/conda-recipe/meta.yaml | tr "\n" " "`
+
+# WORKAROUNDS is normally empty; needed if other pkgs don't list all deps
+WORKAROUNDS="pymbar"
 TESTING=`cat ${DEVTOOLS_DIR}/testing_requirements.txt | tr "\n" " "`
 EXTRA=`cat ${DEVTOOLS_DIR}/optional_packages.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 PINS=`cat ${DEVTOOLS_DIR}/../pinned | tr -d " " | tr "\n" " "`
 
 if [ "$CONDA_PY" != "3.7" ]; then
-    ALL_PACKAGES="$PACKAGES $TESTING $EXTRA"
+    ALL_PACKAGES="$WORKAROUNDS $PACKAGES $TESTING $EXTRA"
 else
-    ALL_PACKAGES="$PACKAGES $TESTING"  # no msmbuilder for py3.7?
+    ALL_PACKAGES="$WORKAROUNDS $PACKAGES $TESTING"  # no msmbuilder for py3.7?
 fi
 
 echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES $PINS"

@@ -31,7 +31,7 @@ def read_input(filename):
     return file_data
 
 def recipe_to_requirements(recipe_yaml):
-    reqs = yaml.load(recipe_yaml)['requirements']
+    reqs = yaml.load(recipe_yaml, loader=yaml.FullLoader)['requirements']
     required_packages = set(reqs['build'] + reqs['run'])
     return required_packages
 

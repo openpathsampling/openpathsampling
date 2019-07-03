@@ -46,5 +46,5 @@ git fetch
 git checkout $BRANCH
 git pull
 source devtools/conda_install_reqs.sh
-pip install -e .
+pip install --no-deps -e .
 popd
