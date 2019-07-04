@@ -447,13 +447,17 @@ class PseudoTable(abc.MutableSequence):
         return ret_val
 
     def __setitem__(self, key, value):
+        # TODO: should this be allowed? or make it not really mutable, only
+        # appendable?
         del self[key]
         self.insert(key, value)
 
     def __delitem__(self, key):
+        # TODO: should this be allowed? or make it not really mutable, only
+        # appendable?
         item = self[key]
         uuid, name = self._get_uuid_and_name(item)
-        self.sequence.pop(item)
+        del self._sequence[self._sequence.index(item)]
         del self._uuid_to_obj[uuid]
         del self._name_to_uuid[name]
 
@@ -461,6 +465,8 @@ class PseudoTable(abc.MutableSequence):
         return len(self._sequence)
 
     def insert(self, where, item):
+        # TODO: should this be allowed? or make it not really mutable, only
+        # appendable?
         uuid, name = self._get_uuid_and_name(item)
         self._sequence.insert(where, item)
         self._uuid_to_obj[uuid] = item
