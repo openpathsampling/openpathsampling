@@ -47,7 +47,11 @@ class AbstractMockUUIDObject(object):
     @classmethod
     def from_dict(cls, dct):
         # set UUID after
-        return cls(name=None, **dct)
+        try:
+            name = dct.pop('name')
+        except KeyError:
+            name = None
+        return cls(name=name, **dct)
 
 class MockUUIDObject(AbstractMockUUIDObject):
     attr_list = ['name', 'normal_attr', 'obj_attr', 'list_attr',

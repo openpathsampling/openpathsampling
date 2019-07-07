@@ -76,6 +76,15 @@ class TestGenericLazyLoader(object):
         assert proxy.normal_attr == original.normal_attr
         assert proxy._loaded_object == original
 
+    def test_serialize_proxy(self):
+        proxy = self.proxies['normal']
+        original = self.originals['normal']
+        dct = proxy.to_dict()
+        obj = proxy.class_.from_dict(dct)
+        assert obj.__uuid__ == proxy.__uuid__ == original.__uuid__
+        assert type(obj) == type(original)
+        assert obj.normal_attr == proxy.normal_attr == original.normal_attr
+
     def test_save_proxy(self):
         # TODO: storing a lazy proxy to storage should actually store it as
         # if it the original object (i.e., store to DB correctly ) -- note
