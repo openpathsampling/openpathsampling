@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DEPLOY_PY="2.7"
+DEPLOY_PY="3.7"
 
 if [[ "$TRAVIS_PULL_REQUEST" != "false" ]]; then
     echo "This is a pull request. No deployment will be done."; exit 0
