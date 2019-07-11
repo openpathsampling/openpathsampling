@@ -27,8 +27,10 @@ fi
 
 if [ -z "$CONDA_PY" ]; then
     # if undefined, use major/minor of current Python
-    CONDA_PY=`python -V 2>&1 | \
-        awk 'BEGIN {RS=" "; FS="."} {if (NR > 1) {print $1"."$2}}'`
+    CONDA_PY=`python -V 2>&1 |    # redirect stderr to stdout
+              head -n 1 |         # ensure we only take first line
+              cut -d " " -f2 |    # get the version number
+              cut -d "." -f1,2`   # only keep major/minor
 fi
 
 if [ -z "$OPS_ENV" ]; then
@@ -46,5 +48,5 @@ git fetch
 git checkout $BRANCH
 git pull
 source devtools/conda_install_reqs.sh
-pip install -e .
+pip install --no-deps -e .
 popd
