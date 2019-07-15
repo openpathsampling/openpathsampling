@@ -2600,11 +2600,6 @@ class MoveDetails(Details):
     Specific move types may have add several other attributes for each
     MoveDetails object. For example, shooting moves will also include
     information about the shooting point selection, etc.
-
-    TODO (or at least to put somewhere):
-    rejection_reason : String
-        explanation of reasons the path was rejected
-
     """
 
     def __init__(self, **kwargs):

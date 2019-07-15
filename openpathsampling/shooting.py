@@ -10,16 +10,6 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 
 class ShootingPointSelector(StorableNamedObject):
-    # def __init__(self):
-        # super(ShootingPointSelector, self).__init__()
-
-    # @property
-    # def identifier(self):
-        # if hasattr(self, 'json'):
-            # return self.json
-        # else:
-            # return None
-
     def f(self, snapshot, trajectory):
         """
         Returns the unnormalized proposal probability of a snapshot
