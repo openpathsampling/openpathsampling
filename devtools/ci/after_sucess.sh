@@ -10,12 +10,11 @@ fi
     #echo "No deployment on BRANCH='$TRAVIS_BRANCH'"; exit 0
 #fi
 
-PACKAGE_NAME=openpathsampling-dev
-GROUP_NAME=omnia
-BUILD_PATH=~/miniconda2/conda-bld
-
 # this is for installing openpathsampling-dev, which we don't do anymore
 #echo travis_fold:start:binstar.upload
+#PACKAGE_NAME=openpathsampling-dev
+#GROUP_NAME=omnia
+#BUILD_PATH=~/miniconda2/conda-bld
 #if [[ "$CONDA_PY" == "$DEPLOY_PY" ]]; then
     #conda install --yes anaconda-client jinja2
     #conda convert -p all ${BUILD_PATH}/linux-64/${PACKAGE_NAME}*.tar.bz2 -o ${BUILD_PATH}/
@@ -38,7 +37,7 @@ conda install --yes pip
 #conda config --add channels http://conda.binstar.org/omnia
 #conda install --yes `conda build devtools/conda-recipe --output`
 pip install numpydoc s3cmd
-conda install --yes -c conda-forge -c omnia `cat docs/requirements.txt | xargs`
+conda install --yes -c conda-forge -c omnia --file docs/requirements.txt
 
 conda list -e
 
