@@ -1,0 +1,43 @@
+@article{ops1,
+author = {Swenson, David W. H. and Prinz, Jan-Hendrik and Noe, Frank and Chodera, John D. and Bolhuis, Peter G.},
+title = {OpenPathSampling: A Python Framework for Path Sampling Simulations. 1. Basics},
+journal = {Journal of Chemical Theory and Computation},
+volume = {15},
+number = {2},
+pages = {813-836},
+year = {2019},
+doi = {10.1021/acs.jctc.8b00626},
+    note ={PMID: 30336030},
+
+URL = {
+        https://doi.org/10.1021/acs.jctc.8b00626
+
+},
+eprint = {
+        https://doi.org/10.1021/acs.jctc.8b00626
+
+}
+,
+    abstract = { Transition path sampling techniques allow molecular dynamics simulations of complex systems to focus on rare dynamical events, providing insight into mechanisms and the ability to calculate rates inaccessible by ordinary dynamics simulations. While path sampling algorithms are conceptually as simple as importance sampling Monte Carlo, the technical complexity of their implementation has kept these techniques out of reach of the broad community. Here, we introduce an easy-to-use Python framework called OpenPathSampling (OPS) that facilitates path sampling for (bio)molecular systems with minimal effort and yet is still extensible. Interfaces to OpenMM and an internal dynamics engine for simple models are provided in the initial release, but new molecular simulation packages can easily be added. Multiple ready-to-use transition path sampling methodologies are implemented, including standard transition path sampling (TPS) between reactant and product states and transition interface sampling (TIS) and its replica exchange variant (RETIS), as well as recent multistate and multiset extensions of transition interface sampling (MSTIS, MISTIS). In addition, tools are provided to facilitate the implementation of new path sampling schemes built on basic path sampling components. In this paper, we give an overview of the design of this framework and illustrate the simplicity of applying the available path sampling algorithms to a variety of benchmark problems. }
+}
+
+@article{ops2,
+    author = {Swenson, David W. H. and Prinz, Jan-Hendrik and Noe, Frank and Chodera, John D. and Bolhuis, Peter G.},
+title = {OpenPathSampling: A Python Framework for Path Sampling Simulations. 2. Building and Customizing Path Ensembles and Sample Schemes},
+journal = {Journal of Chemical Theory and Computation},
+volume = {15},
+number = {2},
+pages = {837-856},
+year = {2019},
+doi = {10.1021/acs.jctc.8b00627},
+URL = {
+        https://doi.org/10.1021/acs.jctc.8b00627
+
+},
+eprint = {
+        https://doi.org/10.1021/acs.jctc.8b00627
+
+}
+,
+    abstract = { The OpenPathSampling (OPS) package provides an easy-to-use framework to apply transition path sampling methodologies to complex molecular systems with a minimum of effort. Yet, the extensibility of OPS allows for the exploration of new path sampling algorithms by building on a variety of basic operations. In a companion paper [Swenson et al. J. Chem. Theory Comput. 2018, 10.1021/acs.jctc.8b00626] we introduced the basic concepts and the structure of the OPS package, and how it can be employed to perform standard transition path sampling and (replica exchange) transition interface sampling. In this paper, we elaborate on two theoretical developments that went into the design of OPS. The first development relates to the construction of path ensembles, the what is being sampled. We introduce a novel set-based notation for the path ensemble, which provides an alternative paradigm for constructing path ensembles and allows building arbitrarily complex path ensembles from fundamental ones. The second fundamental development is the structure for the customization of Monte Carlo procedures; how path ensembles are being sampled. We describe in detail the OPS objects that implement this approach to customization, the MoveScheme and the PathMover, and provide tools to create and manipulate these objects. We illustrate both the path ensemble building and sampling scheme customization with several examples. OPS thus facilitates both standard path sampling application in complex systems as well as the development of new path sampling methodology, beyond the default. }
+}
