@@ -186,7 +186,7 @@ Operating System :: MacOS
         'jan.prinz@choderalab.org,',
         'choderaj@mskcc.org',
         'p.g.bolhuis@uva.nl'],
-    'license': 'MIT'
+    'license': 'MIT',
     'license_file': 'LICENSE',
     'long_description': 'OpenPathSampling (http://github.com/choderalab/openpathsampling) is a \n'
                         'python library to do transition interface sampling.',
