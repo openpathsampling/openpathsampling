@@ -51,6 +51,17 @@ class TestTrajectorySegmentContainer(object):
         assert_equal(self.container[1], self.trajectory[6:8])
         assert_equal(self.container[2], self.trajectory[9:12])
 
+    def test_from_trajectory_and_indices(self):
+        container = \
+            paths.TrajectorySegmentContainer.from_trajectory_and_indices(
+                trajectory=self.trajectory,
+                indices=[(0, 2), (6, 8), (9, 12)],
+                dt=0.5
+            )
+        assert_equal(container[0], self.trajectory[0:2])
+        assert_equal(container[1], self.trajectory[6:8])
+        assert_equal(container[2], self.trajectory[9:12])
+
     def test_n_frames(self):
         assert_equal(self.container.n_frames.tolist(), [2, 2, 3])
 

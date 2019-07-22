@@ -152,7 +152,7 @@ class TISTransition(Transition):
         # build ensembles if we don't already have them
         self.orderparameter = orderparameter
         if not hasattr(self, "ensembles"):
-            self.build_ensembles(self.stateA, self.stateB,
+            self._build_ensembles(self.stateA, self.stateB,
                                  self.interfaces, self.orderparameter)
 
         self.default_orderparameter = self.orderparameter
@@ -179,7 +179,8 @@ class TISTransition(Transition):
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA,
-            innermost_vols=interfaces[0]
+            innermost_vols=interfaces[0],
+            forbidden=stateB
         ).named("Out " + stateA.name + " minus")
 
     def copy(self, with_results=True):
@@ -214,7 +215,7 @@ class TISTransition(Transition):
         return mystr
 
 
-    def build_ensembles(self, stateA, stateB, interfaces, orderparameter):
+    def _build_ensembles(self, stateA, stateB, interfaces, orderparameter):
         try:
             cv = interfaces.cv
         except AttributeError:
@@ -255,7 +256,7 @@ class TISTransition(Transition):
 
 
     # parameters for different types of output
-    def ensemble_statistics(self, ensemble, samples, weights=None, force=False):
+    def _ensemble_statistics(self, ensemble, samples, weights=None, force=False):
         """Calculate stats for a given ensemble: path length, crossing prob
 
         In general we do all of these at once because the extra cost of
@@ -312,7 +313,7 @@ class TISTransition(Transition):
                                                     + " " + ensemble.name)
 
 
-    def all_statistics(self, steps, weights=None, force=False):
+    def _all_statistics(self, steps, weights=None, force=False):
         """
         Run all statistics for all ensembles.
         """
@@ -320,7 +321,7 @@ class TISTransition(Transition):
         # dealing them out to the appropriate histograms
         for ens in self.ensembles:
             samples = sampleset_sample_generator(steps)
-            self.ensemble_statistics(ens, samples, weights, force)
+            self._ensemble_statistics(ens, samples, weights, force)
 
     def pathlength_histogram(self, ensemble):
         """
@@ -363,7 +364,7 @@ class TISTransition(Transition):
             if run_ensembles or force:
                 if steps is None:
                     raise RuntimeError("Unable to build histograms without steps source")
-                self.all_statistics(steps, force=True)
+                self._all_statistics(steps, force=True)
 
             df = histograms_to_pandas_dataframe(
                 self.histograms['max_lambda'].values(),
@@ -437,7 +438,7 @@ class TISTransition(Transition):
         logger.info("Rate for " + self.stateA.name + " -> " + self.stateB.name)
         # get the flux
         if flux is None: # TODO: find a way to raise error if bad flux
-            flux = self.minus_move_flux(steps)
+            flux = self._minus_move_flux(steps)
 
         if flux is not None:
             self._flux = flux
@@ -513,7 +514,7 @@ class TISTransition(Transition):
     def all_ensembles(self):
         return self.ensembles + [self.minus_ensemble]
 
-    def minus_move_flux(self, steps, force=False):
+    def _minus_move_flux(self, steps, force=False):
         """
         Calculate the flux based on the minus ensemble trajectories.
         """

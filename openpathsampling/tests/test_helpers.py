@@ -25,6 +25,11 @@ from openpathsampling.engines import DynamicsEngine
 def make_1d_traj(coordinates, velocities=None, engine=None):
     if velocities is None:
         velocities = [1.0]*len(coordinates)
+    try:
+        _ = len(velocities)
+    except TypeError:
+        velocities = [velocities] * len(coordinates)
+
     if engine is None:
         engine = toys.Engine(
             {},
@@ -301,3 +306,12 @@ def assert_frame_equal(truth, beauty):
                 assert_true(np.isnan(beauty_val))
             else:
                 assert_equal(truth_val, beauty_val)
+
+def A2BEnsemble(volume_a, volume_b, trusted=True):
+    # this is a little replacement for the same name that used to be in
+    # EnsembleFactory. It was only used in tests.
+    return paths.SequentialEnsemble([
+        paths.AllInXEnsemble(volume_a) & paths.LengthEnsemble(1),
+        paths.AllOutXEnsemble(volume_a | volume_b),
+        paths.AllInXEnsemble(volume_b) & paths.LengthEnsemble(1)
+    ])

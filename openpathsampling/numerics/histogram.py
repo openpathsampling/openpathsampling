@@ -595,7 +595,7 @@ class HistogramPlotter2D(object):
     def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
         """Set up both x-axis and y-axis for plotting.
 
-        Also sets self.xrange_ and self.yrange_, which are the (bin-space)
+        Also sets self.xrange\_ and self.yrange\_, which are the (bin-space)
         bounds for the pandas.DataFrame.
 
         Parameters
