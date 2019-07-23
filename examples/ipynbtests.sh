@@ -67,7 +67,7 @@ ipynbtest.py --strict "test_netcdfplus.ipynb" || testfail=1
 date
 ipynbtest.py --strict "test_cv.ipynb" || testfail=1
 date
-ipynbtest.py --strict --verbose "test_pyemma.ipynb" || testfail=1
+ipynbtest.py --strict "test_pyemma.ipynb" || testfail=1
 date
 cd ../misc/
 cp ../toy_model_mstis/mstis.nc ./
