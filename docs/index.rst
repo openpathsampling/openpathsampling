@@ -17,7 +17,7 @@ To learn more about what OPS can do, look at our :ref:`examples <examples>`.
 If you want to jump right in, take a look at how easy it is to
 :ref:`install <install>`!
 
-OPS is an open-source project, distributed under the LGPL. Join us in
+OPS is an open-source project, distributed under the MIT license. Join us in
 the development process on GitHub_, and follow `@pathsampling
 <http://twitter.com/pathsampling>`_ on Twitter for updates!
 
@@ -72,9 +72,15 @@ For Developers
     developers/index
     api_sections
 
+.. toctree::
+    :hidden:
+
+    acknowledgments
+
 --------------------------------------------------------------------------------
 
 
 License
 -------
-OpenPathSampling is licensed under the LGPL, v. 2.1 or later.
+OpenPathSampling is licensed under the `MIT license
+<https://github.com/openpathsampling/openpathsampling/blob/master/LICENSE>`_.
