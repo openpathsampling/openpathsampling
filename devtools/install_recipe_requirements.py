@@ -6,7 +6,7 @@ import tempfile
 import argparse
 
 # This requires that you have already installed conda and pyyaml
-import conda.cli
+# import conda.cli
 import yaml
 
 def parse_arguments():
@@ -45,6 +45,7 @@ if __name__ == "__main__":
     if args.dry:
         print(req_file_str)
     else:
+        raise RuntimeError("Only dry run works")
         for install in required_packages:
             channels = ['conda-forge', 'omnia']
             channel_str = sum([['-c', channel] for channel in channels], [])
