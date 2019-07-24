@@ -132,7 +132,8 @@ from .volume import (
     RelativeComplementVolume, join_volumes
 )
 
-from .high_level import move_strategy as strategies
+# from .high_level import move_strategy as strategies
+from . import strategies
 
 from .high_level.move_scheme import (
     MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
@@ -162,7 +163,6 @@ from .ensembles import *
 from .pathmovers import *
 from .cv_wrappers import *
 from .pathmovers.move_schemes import *
-from .pathmovers.move_strategies import *
 
 import openpathsampling.numerics as numerics
 
