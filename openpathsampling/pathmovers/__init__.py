@@ -1,2 +1,2 @@
-from . import move_strategies
-from . import move_schemes
+import .move_strategies
+import .move_schemes
