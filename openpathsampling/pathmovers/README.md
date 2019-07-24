@@ -1,0 +1,19 @@
+# Adding new path movers
+
+Path movers are among the more complicated things to add to OpenPathSampling.
+This is because path movers may involve multiple classes. All path movers
+include a `PathMover` subclass. But most also include a `MoveStrategy`
+subclass, and some include a specialized `MoveScheme` subclass.
+
+We recommend putting all these class definitions in the same file. The easiest
+way to learn how to implement something is to have a complete example of
+something similar, and we think your contributions can be good examples for
+future contributors.
+
+Then you can import the relevant classes into the correct submodule handlers.
+Your subclass of `PathMover` should be imported into `pathmovers/__init__.py`.
+If you have a `MoveStrategy` subclass that should be publicly exposed, you
+should import it into `pathmoves/move_strategies.py`. If you have a
+`MoveScheme` subclass to expose, import it into `pathmovers/move_schemes.py`.
+The classes that you expose in this way will be automatically exposed in the
+root `openpathsampling` namespace.

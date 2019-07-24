@@ -132,8 +132,6 @@ from .volume import (
     RelativeComplementVolume, join_volumes
 )
 
-from .visit_all_states import VisitAllStatesEnsemble
-
 from .high_level import move_strategy as strategies
 
 from .high_level.move_scheme import (
@@ -163,8 +161,8 @@ from .high_level.part_in_b_tps import (
 from .ensembles import *
 from .pathmovers import *
 from .cv_wrappers import *
-
-
+from .pathmovers.move_schemes import *
+from .pathmovers.move_strategies import *
 
 import openpathsampling.numerics as numerics
 
