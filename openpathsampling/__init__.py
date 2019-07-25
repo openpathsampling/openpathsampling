@@ -161,7 +161,7 @@ from .high_level.part_in_b_tps import (
 
 from .ensembles import *
 from .pathmovers import *
-from .cv_wrappers import *
+from .collectivevariables import *
 from .pathmovers.move_schemes import *
 
 import openpathsampling.numerics as numerics

@@ -199,7 +199,7 @@ Operating System :: MacOS
         'openpathsampling.tests',
         'openpathsampling.pathmovers',
         'openpathsampling.ensembles',
-        'openpathsampling.cv_wrappers',
+        'openpathsampling.collectivevariables',
         'openpathsampling.analysis',
         'openpathsampling.netcdfplus',
         'openpathsampling.high_level',
