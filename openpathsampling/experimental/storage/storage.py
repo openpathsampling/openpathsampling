@@ -152,8 +152,9 @@ class GeneralStorage(object):
         search_uuids = [get_uuid(obj) for obj in obj_list]
         exists = self.backend.load_uuids_table(uuids=search_uuids,
                                                ignore_missing=True)
+        exists = [row.uuid for row in exists]
 
-        obj_list = [obj for obj in obj_list if obj not in exists]
+        obj_list = [obj for obj in obj_list if get_uuid(obj) not in exists]
 
         if not obj_list:
             return
