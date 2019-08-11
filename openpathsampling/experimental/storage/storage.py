@@ -56,7 +56,9 @@ class GeneralStorage(object):
         self.simulation_classes = tools.none_to_default(simulation_classes,
                                                         {})
 
-        self._pseudo_tables = {table_name: dict()
+        # self._pseudo_tables = {table_name: dict()
+                               # for table_name in self.simulation_classes}
+        self._pseudo_tables = {table_name: PseudoTable()
                                for table_name in self.simulation_classes}
 
         self._storage_tables = {}  # stores .steps, .snapshots
@@ -302,9 +304,10 @@ class GeneralStorage(object):
         for uuid, obj in simulation_objects.items():
             for (key, cls) in self.simulation_classes.items():
                 if isinstance(obj, cls):
-                    self._pseudo_tables[key][uuid] = obj
-                    if obj.is_named:
-                        self._pseudo_tables[key][obj.name] = obj
+                    self._pseudo_tables[key].append(obj)
+                    # self._pseudo_tables[key][uuid] = obj
+                    # if obj.is_named:
+                        # self._pseudo_tables[key][obj.name] = obj
                     continue
 
     def summary(self, detailed=False):
@@ -396,22 +399,11 @@ class StorageTable(abc.Sequence):
             yield self.storage.load([row.uuid])[0]
 
     def __getitem__(self, item):
-        # TODO
         row = self.storage.backend.table_get_item(self.table, item)
-        # backend_iterator = self.storage.backend.table_iterator(self.table)
-        # if item < 0:
-            # item += len(self)
-        # n_iter = 0
-        # row = next(backend_iterator)
-        # while row and n_iter < item:
-            # row = next(backend_iterator)
-            # n_iter += 1
         return self.storage.load([row.uuid])[0]
 
     def __len__(self):
         return self.storage.backend.table_len(self.table)
-        # backend_iterator = self.storage.backend.table_iterator(self.table)
-        # return len(list(backend_iterator))
 
     def save(self, obj):
         # this is to match with the netcdfplus API
@@ -441,6 +433,9 @@ class PseudoTable(abc.MutableSequence):
 
     def get_by_uuid(self, uuid):
         return self._uuid_to_obj[uuid]
+
+    # NOTE: index can get confusing because you can have two equal volumes
+    # (same CV, same range) with one named and the other not named.
 
     def __getitem__(self, item):
         try:
