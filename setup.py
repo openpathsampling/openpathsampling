@@ -166,12 +166,12 @@ preferences = {
 Development Status :: 3 - Alpha
 Intended Audience :: Science/Research
 Intended Audience :: Developers
-License :: OSI Approved :: GNU Lesser General
-Public License v2.1 or later (LGPLv2.1+)
+License :: OSI Approved :: MIT License
 Programming Language :: C
 Programming Language :: Python
 Programming Language :: Python :: 2.7
 Programming Language :: Python :: 3.6
+Programming Language :: Python :: 3.7
 Topic :: Scientific/Engineering :: Bio-Informatics
 Topic :: Scientific/Engineering :: Chemistry
 Operating System :: Microsoft :: Windows
@@ -186,7 +186,7 @@ Operating System :: MacOS
         'jan.prinz@choderalab.org,',
         'choderaj@mskcc.org',
         'p.g.bolhuis@uva.nl'],
-    'license': 'LGPL 2.1 or later',
+    'license': 'MIT',
     'license_file': 'LICENSE',
     'long_description': 'OpenPathSampling (http://github.com/choderalab/openpathsampling) is a \n'
                         'python library to do transition interface sampling.',
@@ -197,10 +197,14 @@ Operating System :: MacOS
         'openpathsampling.storage',
         'openpathsampling.storage.stores',
         'openpathsampling.tests',
+        'openpathsampling.pathmovers',
+        'openpathsampling.ensembles',
+        'openpathsampling.collectivevariables',
         'openpathsampling.analysis',
         'openpathsampling.netcdfplus',
         'openpathsampling.high_level',
         'openpathsampling.pathsimulators',
+        'openpathsampling.strategies',
         'openpathsampling.engines',
         'openpathsampling.engines.features',
         'openpathsampling.engines.openmm',
@@ -232,7 +236,7 @@ Operating System :: MacOS
         'matplotlib',
         'ujson'],
     'url': 'http://www.openpathsampling.org',
-    'version': '0.9.6'}
+    'version': '1.0.0'}
 
 setup_keywords = build_keyword_dictionary(preferences)
 

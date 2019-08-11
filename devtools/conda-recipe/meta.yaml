@@ -1,6 +1,6 @@
 package:
   name: openpathsampling-dev
-  version: "0.9.6"
+  version: "1.0.0"
 
 source:
   path: ../../
