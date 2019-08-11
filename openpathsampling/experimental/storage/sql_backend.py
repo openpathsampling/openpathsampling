@@ -1,5 +1,6 @@
 import os
 import collections
+from collections import abc
 import sqlalchemy as sql
 from .storage import universal_schema
 from .tools import group_by, compare_sets
@@ -414,3 +415,30 @@ class SQLStorageBackend(object):
             results = list(conn.execute(table.select()))
         for row in results:
             yield row
+
+    def table_len(self, table_name):
+        table = self.metadata.tables[table_name]
+        count_query = sql.select([sql.func.count()]).select_from(table)
+        with self.engine.connect() as conn:
+            results = conn.execute(count_query)
+            count_list = [r for r in results]
+
+        if self.debug:
+            assert len(count_list) == 1
+            subcount = count_list[0]
+            assert len(subcount) == 1
+
+        count = count_list[0][0]
+        return count
+
+    def table_get_item(self, table_name, item):
+        table = self.metadata.tables[table_name]
+        # SQL counts from 1; Python counts from 0
+        item_sel = table.select().where(table.c.idx == item + 1)
+        with self.engine.connect() as conn:
+            results = list(conn.execute(item_sel))
+
+        if self.debug:
+            assert len(results) == 1
+
+        return results[0]

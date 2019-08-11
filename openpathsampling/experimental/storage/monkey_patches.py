@@ -30,3 +30,25 @@ def function_pseudo_attribute_from_dict(cls, dct):
     dct['key_clss'] = key_class
     return cls.from_dict(dct)
 
+
+def monkey_patch_saving(paths):
+    paths.netcdfplus.FunctionPseudoAttribute.to_dict = \
+            monkey_patches.function_pseudo_attribute_to_dict
+    paths.TPSNetwork.to_dict = \
+            tuple_keys_to_dict(paths.TPSNetwork.to_dict, 'transitions')
+    return paths
+
+def monkey_patch_loading(paths):
+    paths.CallableCV.from_dict = \
+            classmethod(monkey_patches.callable_cv_from_dict)
+    paths.netcdfplus.FunctionPseudoAttribute.from_dict = \
+            classmethod(monkey_patches.function_pseudo_attribute_from_dict)
+    paths.TPSNetwork.from_dict = \
+            classmethod(tuple_keys_from_dict(paths.TPSNetwork.from_dict,
+                                             'transitions'))
+    return paths
+
+def monkey_patch_all(paths):
+    paths = monkey_patch_saving(paths)
+    paths = monkey_patch_loading(paths)
+    return paths

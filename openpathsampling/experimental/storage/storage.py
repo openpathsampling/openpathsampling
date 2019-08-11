@@ -396,19 +396,22 @@ class StorageTable(abc.Sequence):
             yield self.storage.load([row.uuid])[0]
 
     def __getitem__(self, item):
-        backend_iterator = self.storage.backend.table_iterator(self.table)
-        if item < 0:
-            item += len(self)
-        n_iter = 0
-        row = next(backend_iterator)
-        while row and n_iter < item:
-            row = next(backend_iterator)
-            n_iter += 1
+        # TODO
+        row = self.storage.backend.table_get_item(self.table, item)
+        # backend_iterator = self.storage.backend.table_iterator(self.table)
+        # if item < 0:
+            # item += len(self)
+        # n_iter = 0
+        # row = next(backend_iterator)
+        # while row and n_iter < item:
+            # row = next(backend_iterator)
+            # n_iter += 1
         return self.storage.load([row.uuid])[0]
 
     def __len__(self):
-        backend_iterator = self.storage.backend.table_iterator(self.table)
-        return len(list(backend_iterator))
+        return self.storage.backend.table_len(self.table)
+        # backend_iterator = self.storage.backend.table_iterator(self.table)
+        # return len(list(backend_iterator))
 
     def save(self, obj):
         # this is to match with the netcdfplus API
@@ -463,7 +466,10 @@ class PseudoTable(abc.MutableSequence):
         del self._name_to_uuid[name]
 
     def __len__(self):
-        return len(self._sequence)
+        return len(self._uuid_to_obj)
+
+    def __iter__(self):
+        return self._uuid_to_obj.values()
 
     def insert(self, where, item):
         # TODO: should this be allowed? or make it not really mutable, only
