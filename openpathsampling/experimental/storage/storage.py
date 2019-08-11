@@ -76,6 +76,11 @@ class GeneralStorage(object):
         if mode == 'r' or mode == 'a':
             self.register_schema(self.schema, class_info_list=[],
                                  read_mode=True)
+            self._update_pseudo_tables({get_uuid(obj): obj
+                                        for obj in self.simulation_objects})
+            missing = {k: v for k, v in self.backend.schema.items()
+                       if k not in self.schema}
+            self.schema.update(missing)
             table_to_class = self.backend.table_to_class
             self._load_missing_info_tables(table_to_class)
 
@@ -363,6 +368,12 @@ class MixedCache(abc.MutableMapping):
                 del self[item]
             elif error_if_missing:
                 raise KeyError()  # TODO: message and check error type
+
+    def reproxy(self, schema):
+        # TODO: idea: turn loaded objects back into None for any proxy
+        # objects in cache. This frees those things up for garbage
+        # collection.
+        pass
 
     def __getitem__(self, key):
         if key in self.fixed_cache:

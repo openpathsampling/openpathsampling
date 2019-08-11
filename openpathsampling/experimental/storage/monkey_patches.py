@@ -1,4 +1,7 @@
 import openpathsampling as paths
+from .dict_serialization_helpers import (
+    tuple_keys_to_dict, tuple_keys_from_dict
+)
 
 import importlib
 def import_class(full_classname_string):
@@ -14,7 +17,13 @@ def callable_cv_from_dict(cls, dct):
     kwargs = dct.pop('kwargs')
     dct.update(kwargs)
     obj = cls(**dct)
-    cv_callable = paths.netcdfplus.ObjectJSON.callable_from_dict(obj.cv_callable)
+    cv_callable= obj.cv_callable
+    try:
+        cv_callable['_marshal'] = cv_callable['_marshal']['bytes']
+    except:
+        pass
+
+    cv_callable = paths.netcdfplus.ObjectJSON.callable_from_dict(cv_callable)
     obj.cv_callable = cv_callable
     return obj
 
@@ -33,16 +42,15 @@ def function_pseudo_attribute_from_dict(cls, dct):
 
 def monkey_patch_saving(paths):
     paths.netcdfplus.FunctionPseudoAttribute.to_dict = \
-            monkey_patches.function_pseudo_attribute_to_dict
+            function_pseudo_attribute_to_dict
     paths.TPSNetwork.to_dict = \
             tuple_keys_to_dict(paths.TPSNetwork.to_dict, 'transitions')
     return paths
 
 def monkey_patch_loading(paths):
-    paths.CallableCV.from_dict = \
-            classmethod(monkey_patches.callable_cv_from_dict)
+    paths.CallableCV.from_dict = classmethod(callable_cv_from_dict)
     paths.netcdfplus.FunctionPseudoAttribute.from_dict = \
-            classmethod(monkey_patches.function_pseudo_attribute_from_dict)
+            classmethod(function_pseudo_attribute_from_dict)
     paths.TPSNetwork.from_dict = \
             classmethod(tuple_keys_from_dict(paths.TPSNetwork.from_dict,
                                              'transitions'))

@@ -306,6 +306,8 @@ def search_caches(key, cache_list, raise_error=True):
         the object with the given UUID, or ``None`` if the object is not
         found and ``raise_error`` is ``False``.
     """
+    if key is None:
+        return None  # some objects allow UUID to be None
     if not isinstance(cache_list, list):
         cache_list = [cache_list]
     obj = None

@@ -184,7 +184,8 @@ ops_simulation_classes = {
     'pathsimulators': paths.PathSimulator,
     'pathmovers': paths.PathMover,
     'networks': paths.TransitionNetwork,
-    'cvs': paths.CollectiveVariable
+    'cvs': paths.CollectiveVariable,
+    'engines': paths.engines.DynamicsEngine
 }  # TODO: add more to these
 
 
