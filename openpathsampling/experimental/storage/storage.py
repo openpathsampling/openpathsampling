@@ -60,6 +60,7 @@ class GeneralStorage(object):
                                # for table_name in self.simulation_classes}
         self._pseudo_tables = {table_name: PseudoTable()
                                for table_name in self.simulation_classes}
+        self._pseudo_tables['misc_simulation'] = PseudoTable()
 
         self._storage_tables = {}  # stores .steps, .snapshots
         self._simulation_objects = self._cache_simulation_objects()
@@ -73,6 +74,8 @@ class GeneralStorage(object):
 
     def initialize_with_mode(self, mode):
         if mode == 'r' or mode == 'a':
+            self.register_schema(self.schema, class_info_list=[],
+                                 read_mode=True)
             table_to_class = self.backend.table_to_class
             self._load_missing_info_tables(table_to_class)
 
@@ -114,12 +117,14 @@ class GeneralStorage(object):
             # info.set_defaults(schema)
             # self.class_info.add_class_info(info)
 
-        table_to_class = {table: self.class_info[table].cls
-                          for table in schema
-                          if table not in ['uuid', 'tables']}
-        # here's where we add the class_info to the backend
-        self.backend.register_schema(schema, table_to_class,
-                                     backend_metadata)
+        if not read_mode:
+            # here's where we add the class_info to the backend
+            table_to_class = {table: self.class_info[table].cls
+                              for table in schema
+                              if table not in ['uuid', 'tables']}
+            self.backend.register_schema(schema, table_to_class,
+                                         backend_metadata)
+
         self.schema.update(schema)
         for table in self.schema:
             self._storage_tables[table] = StorageTable(self, table)
@@ -130,7 +135,7 @@ class GeneralStorage(object):
         raise NotImplementedError("No way to register from an instance")
 
     def register_missing_tables_for_objects(self, uuid_obj_dict):
-        # mistting items are handled by the special_lookup
+        # missing items are handled by the special_lookup
         lookup_examples = set([])
         for obj in uuid_obj_dict.values():
             lookup = self.class_info.lookup_key(obj)
@@ -302,13 +307,16 @@ class GeneralStorage(object):
     def _update_pseudo_tables(self, simulation_objects):
         # TODO: replace the pseudo_tables code here with a class
         for uuid, obj in simulation_objects.items():
+            my_cls = None
             for (key, cls) in self.simulation_classes.items():
                 if isinstance(obj, cls):
                     self._pseudo_tables[key].append(obj)
+                    my_cls = cls
                     # self._pseudo_tables[key][uuid] = obj
                     # if obj.is_named:
                         # self._pseudo_tables[key][obj.name] = obj
-                    continue
+            if my_cls is None:
+                self._pseudo_tables['misc_simulation'].append(obj)
 
     def summary(self, detailed=False):
         """Return a string summary of this storage file.
@@ -324,7 +332,8 @@ class GeneralStorage(object):
         out_str += "Includes tables:\n"
         storage_tables = dict(self._storage_tables)  # make a copy
         if detailed:
-            pass  # TODO: pop off simulation_objects, use pseudotables
+            storage_tables.pop('simulation_objects')
+            storage_tables.update(self._pseudo_tables)
 
         for (name, table) in storage_tables.items():
             out_str += "* " + name + ": " + str(len(table)) + " items\n"
@@ -428,7 +437,12 @@ class PseudoTable(abc.MutableSequence):
     @staticmethod
     def _get_uuid_and_name(obj):
         uuid = get_uuid(obj)
-        name = None if not obj.is_named else obj.name
+        try:
+            name = None if not obj.is_named else obj.name
+        except AttributeError:
+            # occurs if simulation object is not a StorableNamedObject
+            # (relevant for a few very old classes; should be fixed in 2.0)
+            name = None
         return uuid, name
 
     def get_by_uuid(self, uuid):
@@ -464,7 +478,7 @@ class PseudoTable(abc.MutableSequence):
         return len(self._uuid_to_obj)
 
     def __iter__(self):
-        return self._uuid_to_obj.values()
+        return iter(self._uuid_to_obj.values())
 
     def insert(self, where, item):
         # TODO: should this be allowed? or make it not really mutable, only
