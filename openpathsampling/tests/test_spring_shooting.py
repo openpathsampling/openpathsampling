@@ -1,7 +1,6 @@
-from nose.tools import (assert_equal, assert_false, raises, assert_is,
-                        assert_is_instance)
+import pytest
 import openpathsampling as paths
-from openpathsampling import MoveChange, MoveDetails
+from openpathsampling import MoveChange, Details
 from openpathsampling.high_level.move_scheme import MoveScheme
 from openpathsampling.engines import NoEngine
 from openpathsampling.tests.test_movestrategy import MoveStrategyTestSetup
@@ -10,10 +9,11 @@ from openpathsampling.tests.test_helpers import (make_1d_traj,
                                                  assert_items_equal,
                                                  CalvinistDynamics)
 
-from openpathsampling.pathmovers.spring_shooting import (SpringShootingSelector, SpringMover,
-                             ForwardSpringMover, BackwardSpringMover,
-                             SpringShootingMover, SpringShootingStrategy,
-                             SpringShootingMoveScheme)
+from openpathsampling.pathmovers.spring_shooting import (
+    SpringShootingSelector, SpringMover,
+    ForwardSpringMover, BackwardSpringMover,
+    SpringShootingMover, SpringShootingStrategy,
+    SpringShootingMoveScheme)
 
 
 class FakeStep(object):
@@ -46,70 +46,71 @@ class SelectorTest(object):
 class TestSpringShootingSelector(SelectorTest):
 
     @staticmethod
-    @raises(ValueError)
     def test_neg_delta():
-        SpringShootingSelector(delta_max=-1,
-                               k_spring=0.1)
+        with pytest.raises(ValueError):
+            SpringShootingSelector(delta_max=-1,
+                                   k_spring=0.1)
 
     @staticmethod
-    @raises(ValueError)
     def test_0_delta():
-        SpringShootingSelector(delta_max=0,
-                               k_spring=0.1)
+        with pytest.raises(ValueError):
+            SpringShootingSelector(delta_max=0,
+                                   k_spring=0.1)
 
     @staticmethod
     def test_pos_delta():
         delta_max = 1
         sel = SpringShootingSelector(delta_max=delta_max,
                                      k_spring=0.1)
-        assert_equal(sel.delta_max, delta_max)
-        assert_equal(len(sel._fw_prob_list), 2*delta_max+1)
-        assert_equal(len(sel._bw_prob_list), 2*delta_max+1)
+        assert sel.delta_max == delta_max
+        assert len(sel._fw_prob_list) == 2*delta_max+1
+        assert len(sel._bw_prob_list) == 2*delta_max+1
 
     @staticmethod
-    @raises(ValueError)
     def test_neg_k():
-        SpringShootingSelector(delta_max=1,
-                               k_spring=-1)
+        with pytest.raises(ValueError):
+            SpringShootingSelector(delta_max=1,
+                                   k_spring=-1)
 
     @staticmethod
     def test_0_k():
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=0)
         ref_list = [1.0, 1.0, 1.0]
-        assert_equal(sel.k_spring, 0)
-        assert_equal(sel._fw_prob_list, ref_list)
-        assert_equal(sel._bw_prob_list, ref_list)
+        assert sel.k_spring == 0
+        assert sel._fw_prob_list == ref_list
+        assert sel._bw_prob_list == ref_list
 
     @staticmethod
     def test_pos_k():
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
-        assert_equal(sel.k_spring, 1)
+        assert sel.k_spring == 1
 
     @staticmethod
-    @raises(RuntimeError)
     def test_sanity_breaking_fw():
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._fw_prob_list = [0, 0, 0]
-        sel.check_sanity()
+        with pytest.raises(RuntimeError):
+            sel.check_sanity()
 
     @staticmethod
-    @raises(RuntimeError)
     def test_sanity_breaking_bw():
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._bw_prob_list = [0, 0, 0]
-        sel.check_sanity()
+
+        with pytest.raises(RuntimeError):
+            sel.check_sanity()
 
     @staticmethod
-    @raises(RuntimeError)
     def test_sanity_breaking_total():
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._total_bias = sum([0, 0, 0])
-        sel.check_sanity()
+        with pytest.raises(RuntimeError):
+            sel.check_sanity()
 
     @staticmethod
     def test_probability_ratio():
@@ -117,47 +118,47 @@ class TestSpringShootingSelector(SelectorTest):
                                      k_spring=1)
         sel.acceptable_snapshot = True
         ratio = sel.probability_ratio(None, None, None)
-        assert_equal(ratio, 1.0)
+        assert ratio == 1.0
         sel.acceptable_snapshot = False
         ratio = sel.probability_ratio(None, None, None)
-        assert_equal(ratio, 0.0)
+        assert ratio == 0.0
 
-    @raises(RuntimeError)
     def test_sanity_breaking_fw_pick(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._fw_prob_list = [0, 0, 0]
-        sel.pick(trajectory=self.mytraj, direction='forward')
+        with pytest.raises(RuntimeError):
+            sel.pick(trajectory=self.mytraj, direction='forward')
 
-    @raises(RuntimeError)
     def test_sanity_breaking_bw_pick(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._bw_prob_list = [0, 0, 0]
-        sel.pick(trajectory=self.mytraj, direction='forward')
+        with pytest.raises(RuntimeError):
+            sel.pick(trajectory=self.mytraj, direction='forward')
 
-    @raises(RuntimeError)
     def test_sanity_breaking_total_pick(self):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._total_bias = sum([0, 0, 0])
-        sel.pick(trajectory=self.mytraj, direction='forward')
+        with pytest.raises(RuntimeError):
+            sel.pick(trajectory=self.mytraj, direction='forward')
 
     @staticmethod
     def test_initial_guess():
         sel = SpringShootingSelector(delta_max=1, k_spring=1, initial_guess=12)
-        assert_equal(sel.trial_snapshot, 12)
-        assert_equal(sel.previous_snapshot, 12)
+        assert sel.trial_snapshot == 12
+        assert sel.previous_snapshot == 12
 
-    @raises(RuntimeError)
     def test_pick_direction(self):
         sel = SpringShootingSelector(delta_max=1, k_spring=1)
-        sel.pick(trajectory=self.mytraj)
+        with pytest.raises(RuntimeError):
+            sel.pick(trajectory=self.mytraj)
 
     def test_impossible_pick(self):
         sel = SpringShootingSelector(delta_max=1, k_spring=1, initial_guess=12)
         sel.pick(trajectory=self.mytraj, direction='forward')
-        assert_false(sel.acceptable_snapshot)
+        assert sel.acceptable_snapshot is False
 
     @property
     def default_selector(self):
@@ -170,41 +171,41 @@ class TestSpringShootingSelector(SelectorTest):
     def test_forward_pick(self):
         sel = self.default_selector
         pick = sel.pick(trajectory=self.mytraj, direction='forward')
-        assert_equal(pick, 2)
-        assert_equal(sel.trial_snapshot, 2)
-        assert_equal(sel.previous_snapshot, 3)
+        assert pick == 2
+        assert sel.trial_snapshot == 2
+        assert sel.previous_snapshot == 3
 
     def test_backward_pick(self):
         sel = self.default_selector
         pick = sel.pick(trajectory=self.mytraj, direction='backward')
-        assert_equal(pick, 4)
-        assert_equal(sel.trial_snapshot, -1)
-        assert_equal(sel.previous_snapshot, 3)
+        assert pick == 4
+        assert sel.trial_snapshot == -1
+        assert sel.previous_snapshot == 3
 
     @staticmethod
-    @raises(RuntimeError)
     def test_failed_loading():
         sel = SpringShootingSelector(delta_max=1, k_spring=0, initial_guess=3)
-        details = MoveDetails(foo='bar')
+        details = Details(foo='bar')
         step = FakeStep(details)
-        sel.restart_from_step(step)
+        with pytest.raises(RuntimeError):
+            sel.restart_from_step(step)
 
     @staticmethod
     def test_correct_loading():
         sel = SpringShootingSelector(delta_max=1, k_spring=0, initial_guess=3)
-        details = MoveDetails(initial_trajectory='foo',
-                              last_accepted_shooting_index='bar',
-                              shooting_index=13,
-                              direction='forward')
+        details = Details(initial_trajectory='foo',
+                          last_accepted_shooting_index='bar',
+                          shooting_index=13,
+                          direction='forward')
         step = FakeStep(details)
         sel.restart_from_step(step)
-        assert_equal(sel.previous_trajectory, 'foo')
-        assert_equal(sel.previous_snapshot, 'bar')
-        assert_equal(sel.trial_snapshot, 13)
+        assert sel.previous_trajectory == 'foo'
+        assert sel.previous_snapshot == 'bar'
+        assert sel.trial_snapshot == 13
         details.direction = 'backward'
         step = FakeStep(details)
         sel.restart_from_step(step)
-        assert_equal(sel.trial_snapshot, 10)
+        assert sel.trial_snapshot == 10
 
 
 class MoverTest(SelectorTest):
@@ -220,11 +221,12 @@ class MoverTest(SelectorTest):
 
 class TestSpringMover(MoverTest):
 
-    @raises(NotImplementedError)
     def test_directionless_call(self):
         mover = SpringMover(ensemble=self.ens, selector=self.sel,
                             engine=self.dyn)
-        mover(self.samp)
+
+        with pytest.raises(NotImplementedError):
+            mover(self.samp)
 
     def test_stop_before_dynamics(self):
         sel = self.sel
@@ -232,22 +234,22 @@ class TestSpringMover(MoverTest):
         mover = ForwardSpringMover(ensemble=self.ens, selector=self.sel,
                                    engine=None)
         _, details = mover(self.samp)
-        assert_equal(details['rejection_reason'], 'invalid_index')
-        assert_equal(details['last_accepted_shooting_index'], -8)
+        assert details['rejection_reason'] == 'invalid_index'
+        assert details['last_accepted_shooting_index'] == -8
 
-    @raises(SampleNaNError)
     def test_engine_nan_error(self):
         dyn = NaNEngine(None)
         mover = ForwardSpringMover(ensemble=self.ens, selector=self.sel,
                                    engine=dyn)
-        _ = mover(self.samp)
+        with pytest.raises(SampleNaNError):
+            _ = mover(self.samp)
 
-    @raises(SampleMaxLengthError)
     def test_engine_max_length_error(self):
         self.dyn.options['n_frames_max'] = 1
         mover = ForwardSpringMover(ensemble=self.ens, selector=self.sel,
                                    engine=self.dyn)
-        _ = mover(self.samp)
+        with pytest.raises(SampleMaxLengthError):
+            _ = mover(self.samp)
 
     def test_forward_mover(self):
         mover = ForwardSpringMover(ensemble=self.ens, selector=self.sel,
@@ -256,9 +258,9 @@ class TestSpringMover(MoverTest):
         traj = trials[0].trajectory
         assert_items_equal([-0.5, 0.1, 0.2, 0.3, 0.4],
                            [s.coordinates[0][0] for s in traj])
-        assert_equal(details['shooting_index'], 1)
-        assert_equal(details['last_accepted_shooting_index'], None)
-        assert_equal(details['direction'], 'forward')
+        assert details['shooting_index'] == 1
+        assert details['last_accepted_shooting_index'] is None
+        assert details['direction'] == 'forward'
 
     def test_backward_mover(self):
         mover = BackwardSpringMover(ensemble=self.ens, selector=self.sel,
@@ -267,9 +269,9 @@ class TestSpringMover(MoverTest):
         traj = trials[0].trajectory
         assert_items_equal([-0.1, 0.1, 0.2, 0.3, 0.5],
                            [s.coordinates[0][0] for s in traj])
-        assert_equal(details['shooting_index'], 3)
-        assert_equal(details['last_accepted_shooting_index'], None)
-        assert_equal(details['direction'], 'backward')
+        assert details['shooting_index'] == 3
+        assert details['last_accepted_shooting_index'] is None
+        assert details['direction'] == 'backward'
 
 
 class TestSpringShootingMover(MoverTest):
@@ -277,13 +279,13 @@ class TestSpringShootingMover(MoverTest):
         mover = SpringShootingMover(ensemble=self.ens, delta_max=1,
                                     k_spring=0.0, engine=self.dyn,
                                     initial_guess=3)
-        assert_equal(len(mover.movers), 2)
+        assert len(mover.movers) == 2
 
-        assert_is(mover.movers[0].selector, mover.movers[1].selector)
-        assert_equal(mover.selector.delta_max, 1)
-        assert_equal(mover.selector.k_spring, 0.0)
-        assert_equal(mover.selector.trial_snapshot, 3)
-        assert_is(mover.ensemble, self.ens)
+        assert mover.movers[0].selector is mover.movers[1].selector
+        assert mover.selector.delta_max == 1
+        assert mover.selector.k_spring == 0.0
+        assert mover.selector.trial_snapshot == 3
+        assert mover.ensemble is self.ens
 
     def test_from_dict(self):
         dct = {}
@@ -293,10 +295,10 @@ class TestSpringShootingMover(MoverTest):
                                      engine=self.dyn)
         dct['movers'] = [fwmover, bwmover]
         mover = SpringShootingMover.from_dict(dct)
-        assert_is_instance(mover, SpringShootingMover)
-        assert_equal(len(mover.movers), 2)
-        assert_is_instance(mover.movers[0], SpringMover)
-        assert_is_instance(mover.movers[1], SpringMover)
+        assert isinstance(mover, SpringShootingMover)
+        assert len(mover.movers) == 2
+        assert isinstance(mover.movers[0], SpringMover)
+        assert isinstance(mover.movers[1], SpringMover)
 
 
 class TestSpringShootingStrategy(MoveStrategyTestSetup):
@@ -304,9 +306,9 @@ class TestSpringShootingStrategy(MoveStrategyTestSetup):
     def test_init():
         strategy = SpringShootingStrategy(delta_max=1, k_spring=0.0,
                                           initial_guess=3)
-        assert_equal(strategy.delta_max, 1)
-        assert_equal(strategy.k_spring, 0.0)
-        assert_equal(strategy.initial_guess, 3)
+        assert strategy.delta_max == 1
+        assert strategy.k_spring == 0.0
+        assert strategy.initial_guess == 3
 
     def test_make_movers(self):
         strategy = SpringShootingStrategy(delta_max=1, k_spring=0.0,
@@ -314,11 +316,11 @@ class TestSpringShootingStrategy(MoveStrategyTestSetup):
         scheme = MoveScheme(self.network)
         shooters = strategy.make_movers(scheme)
         for shooter in shooters:
-            assert_is_instance(shooter, SpringShootingMover)
+            assert isinstance(shooter, SpringShootingMover)
             sel = shooter.selector
-            assert_equal(sel.delta_max, 1)
-            assert_equal(sel.k_spring, 0.0)
-            assert_equal(sel.trial_snapshot, 3)
+            assert sel.delta_max == 1
+            assert sel.k_spring == 0.0
+            assert sel.trial_snapshot == 3
 
 
 class TestSpringShootingMoveScheme(MoveStrategyTestSetup):
@@ -327,11 +329,11 @@ class TestSpringShootingMoveScheme(MoveStrategyTestSetup):
                                           delta_max=1,
                                           k_spring=0.0,
                                           initial_guess=3)
-        assert_equal(scheme.delta_max, 1)
-        assert_equal(scheme.k_spring, 0.0)
-        assert_equal(scheme.initial_guess, 3)
+        assert scheme.delta_max == 1
+        assert scheme.k_spring == 0.0
+        assert scheme.initial_guess == 3
         for mover in scheme.movers:
-            assert_is_instance(mover, SpringShootingMover)
+            assert isinstance(mover, SpringShootingMover)
 
     def test_dict_cycle(self):
         scheme = SpringShootingMoveScheme(network=self.network,
@@ -341,6 +343,6 @@ class TestSpringShootingMoveScheme(MoveStrategyTestSetup):
         dct = scheme.to_dict()
         scheme2 = SpringShootingMoveScheme.from_dict(dct)
         assert_items_equal(scheme2.movers, scheme.movers)
-        assert_equal(scheme2.delta_max, 1)
-        assert_equal(scheme2.k_spring, 0.0)
-        assert_equal(scheme2.initial_guess, 3)
+        assert scheme2.delta_max == 1
+        assert scheme2.k_spring == 0.0
+        assert scheme2.initial_guess == 3
