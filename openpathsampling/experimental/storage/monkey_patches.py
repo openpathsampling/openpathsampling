@@ -17,7 +17,7 @@ def callable_cv_from_dict(cls, dct):
     kwargs = dct.pop('kwargs')
     dct.update(kwargs)
     obj = cls(**dct)
-    cv_callable= obj.cv_callable
+    cv_callable = obj.cv_callable
     try:
         cv_callable['_marshal'] = cv_callable['_marshal']['bytes']
     except:
@@ -36,8 +36,15 @@ def function_pseudo_attribute_to_dict(obj):
 
 def function_pseudo_attribute_from_dict(cls, dct):
     key_class = import_class(dct['key_class'])
-    dct['key_clss'] = key_class
+    dct['key_class'] = key_class
     return cls.from_dict(dct)
+
+def from_dict_attr_to_class(from_dict, attr_name):
+    def inner(cls, dct):
+        class_ = import_class(dct[attr_name])
+        dct[attr_name] = class_
+        return from_dict(dct)
+    return inner
 
 
 def monkey_patch_saving(paths):
@@ -50,7 +57,11 @@ def monkey_patch_saving(paths):
 def monkey_patch_loading(paths):
     paths.CallableCV.from_dict = classmethod(callable_cv_from_dict)
     paths.netcdfplus.FunctionPseudoAttribute.from_dict = \
-            classmethod(function_pseudo_attribute_from_dict)
+            classmethod(from_dict_attr_to_class(
+                paths.netcdfplus.FunctionPseudoAttribute.from_dict,
+                attr_name='key_class'
+            ))
+            # classmethod(function_pseudo_attribute_from_dict)
     paths.TPSNetwork.from_dict = \
             classmethod(tuple_keys_from_dict(paths.TPSNetwork.from_dict,
                                              'transitions'))

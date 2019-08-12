@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 
 # this defines the schema for data objects
 ops_schema = {
-    'samples': [('trajectory', 'lazy'), ('ensemble', 'uuid'),
+    'samples': [('trajectory', 'uuid'), #'lazy'),  # TODO: JHP's CVs fail
+                ('ensemble', 'uuid'),
                 ('replica', 'int')],
                 # in my opinion, the next 3 should be removed
                 # ('parent', 'lazy'), ('bias', 'float'),

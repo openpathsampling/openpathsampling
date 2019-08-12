@@ -76,13 +76,13 @@ class GeneralStorage(object):
         if mode == 'r' or mode == 'a':
             self.register_schema(self.schema, class_info_list=[],
                                  read_mode=True)
-            self._update_pseudo_tables({get_uuid(obj): obj
-                                        for obj in self.simulation_objects})
             missing = {k: v for k, v in self.backend.schema.items()
                        if k not in self.schema}
             self.schema.update(missing)
             table_to_class = self.backend.table_to_class
             self._load_missing_info_tables(table_to_class)
+            self._update_pseudo_tables({get_uuid(obj): obj
+                                        for obj in self.simulation_objects})
 
         elif mode == 'w':
             self.register_schema(self.schema, class_info_list=[])
