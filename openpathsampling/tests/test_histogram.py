@@ -137,7 +137,11 @@ class TestHistogram(object):
         histo = Histogram(bin_width=0.5, bin_range=(1.0, 3.5))
         histo._histogram = collections.Counter({(0,): 0, (1,): 0})
         with pytest.warns(UserWarning, match=r"No non-zero"):
-            histo.cumulative()
+            cumul = histo.cumulative()
+
+        assert cumul(2.13) == 0
+        for val in cumul.values():
+            assert val == 0
 
     def test_reverse_cumulative(self):
         histo = Histogram(n_bins=5)
@@ -153,7 +157,10 @@ class TestHistogram(object):
         histo = Histogram(bin_width=0.5, bin_range=(1.0, 3.5))
         histo._histogram = collections.Counter({(0,): 0, (1,): 0})
         with pytest.warns(UserWarning, match=r"No non-zero"):
-            histo.reverse_cumulative()
+            rcumul = histo.reverse_cumulative()
+        assert rcumul(3.12) == 0
+        for val in rcumul.values():
+            assert val == 0
 
     def test_left_bin_error(self):
         histo = Histogram(bin_width=0.5, bin_range=(-1.0, 3.5))
