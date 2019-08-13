@@ -6,7 +6,7 @@ from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from .test_helpers import assert_items_almost_equal, assert_items_equal
-
+import pytest
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
@@ -133,15 +133,27 @@ class TestHistogram(object):
         assert_items_almost_equal(histo.cumulative(maximum=1.0),
                                   [0.5, 0.5, 0.7, 0.8, 0.9, 1.0])
 
+    def test_cumulative_all_zero_warn(self):
+        histo = Histogram(bin_width=0.5, bin_range=(1.0, 3.5))
+        histo._histogram = collections.Counter({(0,): 0, (1,): 0})
+        with pytest.warns(UserWarning, match=r"No non-zero"):
+            histo.cumulative()
+
     def test_reverse_cumulative(self):
         histo = Histogram(n_bins=5)
-        hist = histo.histogram(self.data)
+        histo.histogram(self.data)
         rev_cumulative = histo.reverse_cumulative(maximum=None)
         assert_items_almost_equal(list(rev_cumulative.values()),
                                   [10, 5, 5, 3, 2, 1])
         rev_cumulative = histo.reverse_cumulative(maximum=1.0)
         assert_items_almost_equal(list(rev_cumulative.values()),
                                   [1.0, 0.5, 0.5, 0.3, 0.2, 0.1])
+
+    def test_reverse_cumulative_all_zero_warn(self):
+        histo = Histogram(bin_width=0.5, bin_range=(1.0, 3.5))
+        histo._histogram = collections.Counter({(0,): 0, (1,): 0})
+        with pytest.warns(UserWarning, match=r"No non-zero"):
+            histo.reverse_cumulative()
 
     def test_left_bin_error(self):
         histo = Histogram(bin_width=0.5, bin_range=(-1.0, 3.5))

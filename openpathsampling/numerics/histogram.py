@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import math
 from .lookup_function import LookupFunction, VoxelLookupFunction
 import collections
-
+import warnings
 from functools import reduce
 
 class SparseHistogram(object):
@@ -373,8 +373,8 @@ class Histogram(SparseHistogram):
 
         cumul_hist = np.array(cumul_hist)
         if total == 0:
-            return 0
-        if maximum is not None:
+            warnings.warn("No non-zero data in the histogram")
+        elif maximum is not None:
             cumul_hist *= maximum / total
 
         xvals = self.xvals(bin_edge)
@@ -394,8 +394,8 @@ class Histogram(SparseHistogram):
 
         cumul_hist = np.array(cumul_hist)
         if total == 0:
-            return 0
-        if maximum is not None:
+            warnings.warn("No non-zero data in the histogram")
+        elif maximum is not None:
             cumul_hist *= maximum / total
 
         xvals = self.xvals(bin_edge)
