@@ -304,7 +304,7 @@ class Histogram(SparseHistogram):
         vals = self.xvals(bin_edge)
         hist = self.histogram()
         bins = sorted(hist.keys())
-        min_bin = min(bins[0][0], self.left_bin_edges[0])
+        min_bin = min(bins[0][0], 0)
         max_bin = bins[-1][0]
         bin_range = range(int(min_bin), int(max_bin)+1)
         hist_list = [hist[(b,)] for b in bin_range]
@@ -691,7 +691,7 @@ class HistogramPlotter2D(object):
         ylim : 2-tuple of (float, float)
             vertical (y-value) range of (minimum, maximum) bounds for
             displaying the plot
-        kwargs : 
+        kwargs :
             additional arguments to pass to plt.pcolormesh
 
         Returns
