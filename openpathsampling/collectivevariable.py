@@ -4,6 +4,8 @@ from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 from openpathsampling.netcdfplus import WeakKeyCache, \
     ObjectJSON, create_to_dict, ObjectStore, PseudoAttribute
 
+from deprecations import has_deprecations, deprecate, MSMBUILDER
+
 import sys
 if sys.version_info > (3, ):
     get_code = lambda func: func.__code__
@@ -579,6 +581,8 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
         }
 
 
+@has_deprecations
+@deprecate(MSMBUILDER)
 class MSMBFeaturizerCV(CoordinateGeneratorCV):
     """
     A CollectiveVariable that uses an MSMBuilder3 featurizer

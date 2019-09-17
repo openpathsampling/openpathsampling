@@ -146,7 +146,15 @@ SAVE_RELOAD_OLD_TPS_NETWORK = Deprecation(
     deprecated_in=(0, 9 ,3)
 )
 
-# has_deprecation and deprecate hacks to change docstrings inspired by:
+MSMBUILDER = Deprecation(
+    problem=("MSMBuilder is no longer maintained. ",
+             + "MSMBFeaturizer is no longer officially supported."),
+    remedy="Create a CoordinateFunctionCV based on MSMBuilderFeaturizers.",
+    remove_version=(2, 0),
+    deprecated_in(1, 1, 0)
+)
+
+# has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
 def has_deprecations(cls):
     """Decorator to ensure that docstrings get updated for wrapped class"""
