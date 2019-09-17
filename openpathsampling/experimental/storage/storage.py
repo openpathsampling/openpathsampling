@@ -400,7 +400,6 @@ class MixedCache(abc.MutableMapping):
     def __iter__(self):
         return itertools.chain(self.fixed_cache, self.cache)
 
-
 class StorageTable(abc.Sequence):
     # NOTE: currently you still need to be able to hold the whole table in
     # memory ... at least, with the SQL backend.
@@ -435,6 +434,7 @@ class StorageTable(abc.Sequence):
 
 class PseudoTable(abc.MutableSequence):
     # TODO: use this in the main code
+    # NOTE: This will require that the storage class append to it
     """List of objects that can be retrieved by index or name.
     """
     def __init__(self, sequence=None):

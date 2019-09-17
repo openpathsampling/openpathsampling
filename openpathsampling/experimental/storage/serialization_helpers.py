@@ -280,11 +280,13 @@ def to_json_obj(obj):
     return json.dumps(dct)
 
 
-def import_class(mod, cls):
+def do_import (module, thing):
     # TODO: this needs some error-checking
-    mod = importlib.import_module(mod)
-    cls = getattr(mod, cls)
-    return cls
+    mod = importlib.import_module(module)
+    result = getattr(mod, thing)
+    return result
+
+import_class  = do_import  # old name that was used
 
 def search_caches(key, cache_list, raise_error=True):
     """Find UUID if it is in the cache_list dicts

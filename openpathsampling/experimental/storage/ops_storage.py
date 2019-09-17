@@ -191,7 +191,8 @@ ops_simulation_classes = {
 
 
 class OPSStorage(storage.GeneralStorage):
-    def __init__(self, backend, schema, class_info, fallbacks=None):
+    def __init__(self, backend, schema, class_info, fallbacks=None,
+                 safemode=False):
         # TODO: this will change to match the current notation
         super(OPSStorage, self).__init__(backend, schema, class_info,
                                          fallbacks)
@@ -204,7 +205,8 @@ class OPSStorage(storage.GeneralStorage):
 
     @classmethod
     def from_backend(cls, backend, schema=None, class_info=None,
-                     simulation_classes=None, fallbacks=None):
+                     simulation_classes=None, fallbacks=None,
+                     safemode=False):
         obj = cls.__new__(cls)
         schema = tools.none_to_default(schema, ops_schema)
         class_info = tools.none_to_default(class_info, ops_class_info)

@@ -1,6 +1,6 @@
 import json
 import functools
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from .tools import none_to_default
 from .serialization_helpers import has_uuid, replace_uuid, encode_uuid
 from .serialization import SimulationObjectSerializer
