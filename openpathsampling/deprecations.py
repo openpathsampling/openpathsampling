@@ -147,7 +147,7 @@ SAVE_RELOAD_OLD_TPS_NETWORK = Deprecation(
 )
 
 MSMBUILDER = Deprecation(
-    problem=("MSMBuilder is no longer maintained. ",
+    problem=("MSMBuilder is no longer maintained. "
              + "MSMBFeaturizer is no longer officially supported."),
     remedy="Create a CoordinateFunctionCV based on MSMBuilderFeaturizers.",
     remove_version=(2, 0),

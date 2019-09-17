@@ -4,7 +4,8 @@ from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 from openpathsampling.netcdfplus import WeakKeyCache, \
     ObjectJSON, create_to_dict, ObjectStore, PseudoAttribute
 
-from deprecations import has_deprecations, deprecate, MSMBUILDER
+from openpathsampling.deprecations import (has_deprecations, deprecate,
+                                           MSMBUILDER)
 
 import sys
 if sys.version_info > (3, ):
