@@ -151,7 +151,7 @@ MSMBUILDER = Deprecation(
              + "MSMBFeaturizer is no longer officially supported."),
     remedy="Create a CoordinateFunctionCV based on MSMBuilderFeaturizers.",
     remove_version=(2, 0),
-    deprecated_in(1, 1, 0)
+    deprecated_in=(1, 1, 0)
 )
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
