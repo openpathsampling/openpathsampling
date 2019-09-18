@@ -148,9 +148,15 @@ class GeneralStorage(object):
                 self.register_from_instance(lookup, obj)
                 lookup_examples |= {lookup}
 
-    def uuids_in_storage(self, uuid_list):
-        return self.backend.load_uuids_table(uuids=uuid_list,
-                                             ignore_missing=True)
+    def filter_existing_uuids(self, uuid_dict):
+        existing = self.backend.load_uuids_table(
+            uuids=list(uuid_dict.keys()),
+            ignore_missing=True
+        )
+        for uuid_row in existing:
+            del uuid_dict[uuid_row.uuid]
+
+        return uuid_dict
 
     def save(self, obj_list):
         if type(obj_list) is not list:
@@ -161,31 +167,24 @@ class GeneralStorage(object):
         # self.class_info.serialize(obj, storage=self)
         # check if obj is in DB (maybe this can be removed?)
         logger.debug("Starting save")
-        search_uuids = [get_uuid(obj) for obj in obj_list]
-        exists = self.backend.load_uuids_table(uuids=search_uuids,
-                                               ignore_missing=True)
-        exists = [row.uuid for row in exists]
+        input_uuids = {get_uuid(obj): obj for obj in obj_list}
+        input_uuids = self.filter_existing_uuids(input_uuids)
+        if not input_uuids:
+            return  # exist early if everything is already in storage
 
-        obj_list = [obj for obj in obj_list if get_uuid(obj) not in exists]
-
-        if not obj_list:
-            return
         # find all UUIDs we need to save with this object
         logger.debug("Listing all objects to save")
         uuids = {}
-        for obj in obj_list:
+        for uuid, obj in input_uuids.items():
             uuids.update(get_all_uuids(obj, known_uuids=self.cache,
                                        class_info=self.class_info))
+
         logger.debug("Checking if objects already exist in database")
-        # remove any UUIDs that have already been saved
-        exists = self.backend.load_uuids_table(uuids=list(uuids.keys()),
-                                               ignore_missing=True)
-        for existing in exists:
-            del uuids[existing.uuid]
+        uuids = self.filter_existing_uuids(uuids)
+
         # group by table, then save appropriately
         # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
         get_table_name = lambda uuid, obj_: self.class_info[obj_].table
-
         by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         # check default table for things to register; register them
