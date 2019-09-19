@@ -135,7 +135,6 @@ class GeneralStorage(object):
             self._storage_tables[table] = StorageTable(self, table)
         # self.serialization.register_serialization(schema, self.class_info)
 
-
     def register_from_instance(self, lookup, obj):
         raise NotImplementedError("No way to register from an instance")
 
