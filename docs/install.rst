@@ -4,9 +4,9 @@
 Installation
 ************
 
-OpenPathSampling currently only works on Mac and Linux. It should work with
-either Python 2.7 or Python 3.5+, although there may be some corners of the
-code that aren't Python 3-compatible yet.
+OpenPathSampling currently only works on Mac and Linux. It is tested against
+Python 2.7, 3.6, and 3.7, although there may be some corners of the code
+that aren't Python 3-compatible yet.
 
 .. _install-with-conda:
 
@@ -75,9 +75,8 @@ Testing Your Installation
 .. _run-tests:
 
 Running the tests is a great way to verify that everything is working. The
-test suite uses both `pytest <http://pytest.org>`_ and, for the time being,
-`nose <https://nose.readthedocs.org/en/latest/>`_. You can pick these up via
-``conda`` if you don't already have them. ::
+test suite uses `pytest <http://pytest.org>`_ and, for legacy reasons, also
+requires the `nose <https://nose.readthedocs.org/en/latest/>`_ package. You can pick these up via ``conda`` if you don't already have them. ::
 
   $ conda install pytest nose
 
