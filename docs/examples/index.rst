@@ -10,9 +10,9 @@ Each subsection of the pages linked below is a notebook.  To open these
 notebooks in a "live" session and execute the documentation interactively,
 open them using ``jupyter notebook NOTEBOOK_NAME.ipynb``. 
 
-If you installed `openpathsampling` from source, you can find these in the
+If you installed OpenPathSampling from source, you can find these in the
 ``examples`` directory within the root ``openpathsampling`` directory. You
-cn also find them in our `GitHub repository
+can also find them in our `GitHub repository
 <https://github.com/openpathsampling/openpathsampling/tree/master/examples>`_.
 
 .. note:: It's a *lot* more fun to run these examples live than to just read
