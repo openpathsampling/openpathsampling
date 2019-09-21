@@ -91,14 +91,11 @@ class ExternalEngine(DynamicsEngine):
     def generate_next_frame(self):
         # should be completely general
         next_frame_found = False
-        _debug_open_files("looking")
         logger.debug("Looking for frame %d", self.n_frames_since_start+1)
         while not next_frame_found:
             try:
-                _debug_open_files('before read_frame_from_file')
                 next_frame = self.read_frame_from_file(self.output_file,
                                                        self.frame_num)
-                _debug_open_files('after read_frame_from_file')
             except IOError:
                 # maybe the file doesn't exist
                 if self.proc.is_running():
@@ -118,7 +115,6 @@ class ExternalEngine(DynamicsEngine):
             elif isinstance(next_frame, BaseSnapshot): # success
                 self.n_frames_since_start += 1
                 logger.debug("Found frame %d", self.n_frames_since_start)
-                _debug_open_files("found")
                 self.current_snapshot = next_frame
                 next_frame_found = True
                 self.frame_num += 1
@@ -137,12 +133,9 @@ class ExternalEngine(DynamicsEngine):
         self.frame_num = 0
         self.n_frames_since_start = 0
         self.set_filenames(self._traj_num)
-        _debug_open_files("before write_frame_to_file")
         self.write_frame_to_file(self.input_file, self.current_snapshot, "w")
-        _debug_open_files("before prepare")
         self.prepare()
 
-        _debug_open_files("before cmd")
         cmd = shlex.split(self.engine_command())
         self.start_time = time.time()
         try:
@@ -160,7 +153,6 @@ class ExternalEngine(DynamicsEngine):
 
     def stop(self, trajectory):
         super(ExternalEngine, self).stop(trajectory)
-        _debug_open_files("stop")
         logger.info("total_time {:.4f}".format(time.time() - self.start_time))
         proc = self.who_to_kill()
         logger.info("About to send signal %s to %s", str(self.killsig),
@@ -170,7 +162,6 @@ class ExternalEngine(DynamicsEngine):
         proc.wait()  # wait for the zombie to die
         logger.debug("Zombie should be dead")
         self.cleanup()
-        _debug_open_files("cleaned up")
 
     # FROM HERE ARE THE FUNCTIONS TO OVERRIDE IN SUBCLASSES:
     def read_frame_from_file(self, filename, frame_num):

@@ -269,7 +269,6 @@ class GromacsEngine(ExternalEngine):
         # f = self._file
         # do we need to reopen the TRR each time to avoid problems with the
         # fiel length changing?
-        _debug_open_files('read_frame_data (start)')
         trr = TRRTrajectoryFile(filename)
         f = trr
         # logger.debug("Reading file %s frame %d (of %d)",
@@ -280,7 +279,6 @@ class GromacsEngine(ExternalEngine):
             data = f._read(n_frames=1, atom_indices=None, get_velocities=True)
         finally:
             trr.close()
-            _debug_open_files('read_frame_data (finish)')
 
         return data[0][0], data[5][0], data[3][0]
 
@@ -291,7 +289,6 @@ class GromacsEngine(ExternalEngine):
         # basename should be in the format [0-9]+\.trr (as set by the
         # trajectory_filename method)
         file_number = int(basename.split('.')[0])
-        _debug_open_files('before reading')
         try:
             xyz, vel, box = self.read_frame_data(file_name, frame_num)
         except (IndexError, OSError, IOError) as e:
@@ -300,21 +297,17 @@ class GromacsEngine(ExternalEngine):
             # MDTraj error)
             logger.debug("Expected error caught: " + str(e))
             close_file_descriptors(basename)
-            _debug_open_files('read_frame_data gave error')
             return None
         except RuntimeError as e:
             # TODO: matches "TRR read error"
             logger.debug("Received partial frame for %s %d", file_name,
                          frame_num+1)
-            _debug_open_files('read_frame data partial')
             return 'partial'
         else:
-            _debug_open_files('creating snapshot')
             logger.debug("Creating snapshot")
             snapshot =  ExternalMDSnapshot(file_name=file_name,
                                            file_position=frame_num,
                                            engine=self)
-            _debug_open_files('created snapshot')
             return snapshot
 
     def write_frame_to_file(self, filename, snapshot, mode='w'):
@@ -337,7 +330,6 @@ class GromacsEngine(ExternalEngine):
         finally:
             trr.close()
             close_file_descriptors(filename)
-            _debug_open_files("end of write_frame_to_file")
 
     def trajectory_filename(self, number):
         trr_dir = self.prefix + "_trr/"
@@ -363,7 +355,6 @@ class GromacsEngine(ExternalEngine):
         # coverage ignored b/c Travis won't have gmx. However, we do have a
         # test that covers this if gmx is present (otherwise it is skipped)
         cmd = self.grompp_command
-        _debug_open_files("prepare")
         logger.info(cmd)
         run_cmd = shlex.split(cmd)
         return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
