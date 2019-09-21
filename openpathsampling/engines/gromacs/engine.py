@@ -26,6 +26,10 @@ import numpy as np
 # TODO: all gmx_features should be moved to external_md; along with the
 # snapshot
 
+from openpathsampling.engines.external_engine import (
+    _debug_open_files, close_file_descriptors
+)
+
 @features.base.attach_features([
     features.engine,
     gmx_features.coordinates,
@@ -265,14 +269,19 @@ class GromacsEngine(ExternalEngine):
         # f = self._file
         # do we need to reopen the TRR each time to avoid problems with the
         # fiel length changing?
+        _debug_open_files('read_frame_data (start)')
         trr = TRRTrajectoryFile(filename)
         f = trr
-        logging.debug("Reading file %s frame %d",
-                      filename, frame_num)
-        logging.debug("File length: %d", len(filename))
-        f.seek(offset=frame_num)
-        data = f._read(n_frames=1, atom_indices=None, get_velocities=True)
-        trr.close() # needed ?
+        # logger.debug("Reading file %s frame %d (of %d)",
+                     # filename, frame_num, len(f))
+        # logger.debug("File length: %d", len(f))
+        try:
+            f.seek(offset=frame_num)
+            data = f._read(n_frames=1, atom_indices=None, get_velocities=True)
+        finally:
+            trr.close()
+            _debug_open_files('read_frame_data (finish)')
+
         return data[0][0], data[5][0], data[3][0]
 
     def read_frame_from_file(self, file_name, frame_num):
@@ -282,20 +291,31 @@ class GromacsEngine(ExternalEngine):
         # basename should be in the format [0-9]+\.trr (as set by the
         # trajectory_filename method)
         file_number = int(basename.split('.')[0])
+        _debug_open_files('before reading')
         try:
             xyz, vel, box = self.read_frame_data(file_name, frame_num)
-        except (IndexError, OSError, IOError):
+        except (IndexError, OSError, IOError) as e:
             # this means that no such frame exists yet, so we return None
             # IndexError in older version, OSError more recently (specific
             # MDTraj error)
+            logger.debug("Expected error caught: " + str(e))
+            close_file_descriptors(basename)
+            _debug_open_files('read_frame_data gave error')
             return None
         except RuntimeError as e:
             # TODO: matches "TRR read error"
+            logger.debug("Received partial frame for %s %d", file_name,
+                         frame_num+1)
+            _debug_open_files('read_frame data partial')
             return 'partial'
         else:
-            return ExternalMDSnapshot(file_name=file_name,
-                                      file_position=frame_num,
-                                      engine=self)
+            _debug_open_files('creating snapshot')
+            logger.debug("Creating snapshot")
+            snapshot =  ExternalMDSnapshot(file_name=file_name,
+                                           file_position=frame_num,
+                                           engine=self)
+            _debug_open_files('created snapshot')
+            return snapshot
 
     def write_frame_to_file(self, filename, snapshot, mode='w'):
         if os.path.isfile(filename):
@@ -304,16 +324,20 @@ class GromacsEngine(ExternalEngine):
             # you don't want them.
             raise RuntimeError("File " + str(filename) + " exists. "
                                + "Preventing overwrite.")
-        trr = TRRTrajectoryFile(filename, mode)
-        # type control before passing things to Cython code
-        xyz = np.asarray([snapshot.xyz], dtype=np.float32)
-        time = np.asarray([0.0], dtype=np.float32)
-        step = np.asarray([0], dtype=np.int32)
-        box = np.asarray([snapshot.box_vectors], dtype=np.float32)
-        lambd = np.asarray([0.0], dtype=np.float32)
-        vel = np.asarray([snapshot.velocities], dtype=np.float32)
-        trr._write(xyz, time, step, box, lambd, vel)
-        trr.close()
+        try:
+            # type control before passing things to Cython code
+            xyz = np.asarray([snapshot.xyz], dtype=np.float32)
+            time = np.asarray([0.0], dtype=np.float32)
+            step = np.asarray([0], dtype=np.int32)
+            box = np.asarray([snapshot.box_vectors], dtype=np.float32)
+            lambd = np.asarray([0.0], dtype=np.float32)
+            vel = np.asarray([snapshot.velocities], dtype=np.float32)
+            trr = TRRTrajectoryFile(filename, mode)
+            trr._write(xyz, time, step, box, lambd, vel)
+        finally:
+            trr.close()
+            close_file_descriptors(filename)
+            _debug_open_files("end of write_frame_to_file")
 
     def trajectory_filename(self, number):
         trr_dir = self.prefix + "_trr/"
@@ -339,6 +363,7 @@ class GromacsEngine(ExternalEngine):
         # coverage ignored b/c Travis won't have gmx. However, we do have a
         # test that covers this if gmx is present (otherwise it is skipped)
         cmd = self.grompp_command
+        _debug_open_files("prepare")
         logger.info(cmd)
         run_cmd = shlex.split(cmd)
         return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
