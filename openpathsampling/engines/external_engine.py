@@ -46,6 +46,10 @@ def _debug_open_files(where=None, ext=".trr"):
 
             raise Exception("\n".join(message))
 
+def _debug_snapshot_loading(snapshot):
+    snapshot.load_details()
+    snapshot.clear_cache()
+
 class ExternalEngine(DynamicsEngine):
     """
     Generic object to handle arbitrary external engines.
@@ -125,6 +129,7 @@ class ExternalEngine(DynamicsEngine):
                 elapsed = now - self.start_time
                 time_per_step = elapsed / self.n_frames_since_start
                 self.sleep_ms = time_per_step / n_poll_per_step * 1000.0
+
         return self.current_snapshot
 
     def start(self, snapshot=None):

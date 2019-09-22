@@ -21,6 +21,7 @@ from . import features as gmx_features
 import os
 import psutil
 import shlex
+import time
 import numpy as np
 
 # TODO: all gmx_features should be moved to external_md; along with the
@@ -72,11 +73,23 @@ class ExternalMDSnapshot(BaseSnapshot):
 
     def load_details(self):
         """Cache coords, velocities, box vectors from the external file"""
-        (xyz, vel, box) = self.engine.read_frame_data(self.file_name,
-                                                      self.file_position)
-        self._xyz = xyz
-        self._velocities = vel
-        self._box_vectors = box
+        try:
+            (xyz, vel, box) = self.engine.read_frame_data(
+                self.file_name,
+                self.file_position
+            )
+        except IndexError:
+            # Out of bounds on buffer access (axis 0)
+            logger.debug("Exception reading from %s[%d]", self.file_name,
+                         self.file_position)
+            time.sleep(self.engine.sleep_ms/10000.0)  # 1/10 the normal
+            self.load_details()
+        except RecursionError:
+            raise RuntimeError("Unrecoverable error in load_details")
+        else:
+            self._xyz = xyz
+            self._velocities = vel
+            self._box_vectors = box
 
     def set_details(self, xyz, velocities, box_vectors):
         """Set coords, velocities, and box vectors.
@@ -271,8 +284,8 @@ class GromacsEngine(ExternalEngine):
         # fiel length changing?
         trr = TRRTrajectoryFile(filename)
         f = trr
-        # logger.debug("Reading file %s frame %d (of %d)",
-                     # filename, frame_num, len(f))
+        logger.debug("Reading file %s frame %d (of %d)",
+                     filename, frame_num, len(f))
         # logger.debug("File length: %d", len(f))
         try:
             f.seek(offset=frame_num)
@@ -295,7 +308,7 @@ class GromacsEngine(ExternalEngine):
             # this means that no such frame exists yet, so we return None
             # IndexError in older version, OSError more recently (specific
             # MDTraj error)
-            logger.debug("Expected error caught: " + str(e))
+            logger.debug("Expected exception caught: " + str(e))
             close_file_descriptors(basename)
             return None
         except RuntimeError as e:
