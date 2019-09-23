@@ -392,7 +392,7 @@ class GeneratorCV(CallableCV):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
-    will be created using the given **kwargs.
+    will be created using the given `**kwargs`.
     """
 
     def __init__(
@@ -418,7 +418,7 @@ class GeneratorCV(CallableCV):
         kwargs
             additional arguments which should be given to `c` (for example, the
             atoms which define a specific distance/angle). Finally an instance
-            `instance = cls(**kwargs)` is create when the CV is created and
+            `instance = cls(**kwargs)` is created when the CV is created and
             using the CV will call `instance(snapshots)`
 
         Notes
@@ -457,7 +457,7 @@ class CoordinateGeneratorCV(GeneratorCV):
     """Turn a callable class or function generating a callable object into a CV
 
     The class instance will be called with snapshots. The instance itself
-    will be created using the given **kwargs.
+    will be created using the given `**kwargs`.
     """
 
     def __init__(
@@ -615,7 +615,7 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
         kwargs
             a dictionary of named arguments which should be given to `c`
             (for example, the atoms which define a specific distance/angle).
-            Finally an instance `instance = cls(**kwargs)` is create when the
+            Finally an instance `instance = cls(**kwargs)` is created when the
             CV is created and using the CV will call `instance(snapshots)`
         cv_wrap_numpy_array
         cv_scalarize_numpy_singletons
@@ -704,7 +704,7 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
             a dictionary of named arguments which should be given to the
             `featurizer` (for example, the atoms which define a specific
             distance/angle).
-            Finally an instance ``instance = cls(**kwargs)`` is create when
+            Finally an instance ``instance = cls(**kwargs)`` is created when
             the CV is created and using the CV will call
             ``instance(snapshots)``
 
