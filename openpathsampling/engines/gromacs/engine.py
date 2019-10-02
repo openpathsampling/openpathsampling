@@ -330,14 +330,15 @@ class GromacsEngine(ExternalEngine):
             # you don't want them.
             raise RuntimeError("File " + str(filename) + " exists. "
                                + "Preventing overwrite.")
+        # type control before passing things to Cython code
+        xyz = np.asarray([snapshot.xyz], dtype=np.float32)
+        time = np.asarray([0.0], dtype=np.float32)
+        step = np.asarray([0], dtype=np.int32)
+        box = np.asarray([snapshot.box_vectors], dtype=np.float32)
+        lambd = np.asarray([0.0], dtype=np.float32)
+        vel = np.asarray([snapshot.velocities], dtype=np.float32)
+
         try:
-            # type control before passing things to Cython code
-            xyz = np.asarray([snapshot.xyz], dtype=np.float32)
-            time = np.asarray([0.0], dtype=np.float32)
-            step = np.asarray([0], dtype=np.int32)
-            box = np.asarray([snapshot.box_vectors], dtype=np.float32)
-            lambd = np.asarray([0.0], dtype=np.float32)
-            vel = np.asarray([snapshot.velocities], dtype=np.float32)
             trr = TRRTrajectoryFile(filename, mode)
             trr._write(xyz, time, step, box, lambd, vel)
         finally:
