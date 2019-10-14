@@ -110,6 +110,8 @@ class ExternalEngine(DynamicsEngine):
             #print self.frame_num, next_frame # DEBUG LOGGER
             now = time.time()
             if next_frame == "partial":
+                if not self.proc.is_running():
+                    raise RuntimeError("External engine died unexpectedly")
                 time.sleep(0.001) # wait a millisec and rerun
             elif next_frame is None:
                 if not self.proc.is_running():
