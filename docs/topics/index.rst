@@ -13,6 +13,7 @@ providing this here the unorganized form.
 .. toctree::
    absolute_beginners
    simulation_setup
+   setting_up_sample_sets
    ops_output
    data_objects
    creating_collective_variables

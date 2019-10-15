@@ -118,6 +118,8 @@ and will be added to the core code in the future.
 
 -----
 
+.. _get_init_traj:
+
 Getting an initial trajectory
 =============================
 
