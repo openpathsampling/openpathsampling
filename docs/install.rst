@@ -26,6 +26,8 @@ command ::
 
   $ conda install -c conda-forge -c omnia openpathsampling
 
+With that, you should be ready to use OPS!
+
 .. _developer-install-conda:
 
 Developer Install with Conda
@@ -58,9 +60,9 @@ If you don't want to use ``conda``, you will have to manually obtain the
 dependencies (advice on that coming soon). Then you can install from our
 GitHub repository.
 
-Clone the source code repository from github::
+Clone the source code repository from GitHub::
 
-  $ git clone git://github.com/openpathsampling/openpathsampling.git
+  $ git clone https://github.com/openpathsampling/openpathsampling.git
 
 Then, in the directory containing the source code, you can install it with ::
 
@@ -81,7 +83,8 @@ requires the `nose <https://nose.readthedocs.org/en/latest/>`_ package. You can 
   $ conda install pytest nose
 
 From the source directory ``openpathsampling/tests``, you can run the tests
-by typing ``py.test`` on the command line.
+by typing ``py.test`` on the command line. The test suite includes over 870
+individual tests, and runs in around 2-3 minutes.
 
 Beta testing experimental updates
 =================================

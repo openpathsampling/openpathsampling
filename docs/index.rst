@@ -24,6 +24,8 @@ the development process on GitHub_, and follow `@pathsampling
 .. _GitHub: http://github.com/openpathsampling/openpathsampling
 
 .. note:: Documentation is still in progress; if you have questions, please
+          `open an issue 
+          <https://github.com/openpathsampling/openpathsampling/issues>`_ or
           contact the development team.
 
 To see the most recent updates to the code, see the `release notes

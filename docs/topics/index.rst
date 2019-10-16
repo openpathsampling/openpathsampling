@@ -11,6 +11,8 @@ users to have access to as much documentation as possible, so we're
 providing this here the unorganized form.
 
 .. toctree::
+   :maxdepth: 2
+
    absolute_beginners
    simulation_setup
    setting_up_sample_sets
@@ -22,3 +24,4 @@ providing this here the unorganized form.
    which_network
    transitions_and_networks
    tis_analysis
+   how_use
