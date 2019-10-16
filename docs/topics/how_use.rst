@@ -5,12 +5,12 @@ How I use OpenPathSampling
 
 *David W.H. Swenson*
 
-Usually these docs are written in the plural, and usually there isn't a
-specific byline for it. That's because most things in the docs are just
-facts, and are obviously agreed by all authors. However, this is about the
-specific workflow that *I* like to use, and others may have different
-opinions. That said, when I develop OPS, it is with my workflow in mind. So
-this workflow is particularly well-supported.
+Usually these docs don't have a byline, and they're usually written in the
+plural "we." That's because most things in the docs are just facts, and are
+obviously agreed by all authors. However, this is about the specific
+workflow that *I* like to use, and others may have different opinions. That
+said, when I develop OPS, it is with my workflow in mind. So this workflow
+is particularly well-supported.
 
 The essence of my workflow is based on the idea of splitting the simulation
 intro three stages: (1) setup; (2) sampling; and (3) analysis. In my
@@ -61,7 +61,9 @@ output file of the TPS simulation.
 
 ****
 
-Our examples tend to partially reflect this approach. In practice, I usually
-put equilibration with the sampling, while it is often with the setup in the
-examples. Also, the examples use a notebook for the sampling (to fit more
-easily with the other stages, and to mix in text descriptions).
+Our examples tend to partially reflect this approach. In particular, the
+alanine dipeptide TPS is an example where the actual sampling script is
+quite short and simple. In practice, I usually put equilibration with the
+sampling, while it is often with the setup in the examples. Also, the
+examples use a notebook for the sampling (to fit more easily with the other
+stages, and to mix in text descriptions).

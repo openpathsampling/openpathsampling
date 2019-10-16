@@ -33,7 +33,7 @@ possible.
 .. code:: python
 
     storage = paths.Storage("myfile.nc", mode='r')
-    # often you'll want to load the state of the last accepted MC step:
+    # often you'll want to load the state of the last-saved MC step:
     final_step = storage.steps[-1]
     sample_set = final_step.active
 
