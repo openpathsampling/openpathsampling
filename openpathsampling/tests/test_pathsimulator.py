@@ -11,7 +11,7 @@ from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal, assert_true)
 # from nose.plugins.skip import SkipTest
 
-from openpathsampling.pathsimulator import *
+from openpathsampling.pathsimulators import *
 import openpathsampling as paths
 import openpathsampling.engines.toy as toys
 import numpy as np
@@ -257,8 +257,7 @@ class TestCommittorSimulation(object):
         randomizer = paths.NoModification()
 
         self.filename = data_filename("committor_test.nc")
-        self.storage = paths.Storage(self.filename,
-                                     mode="w")
+        self.storage = paths.Storage(self.filename, mode="w")
         self.storage.save(self.snap0)
 
         self.simulation = CommittorSimulation(storage=self.storage,
@@ -269,6 +268,7 @@ class TestCommittorSimulation(object):
         self.simulation.output_stream = open(os.devnull, 'w')
 
     def teardown(self):
+        self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
@@ -287,8 +287,10 @@ class TestCommittorSimulation(object):
         sim.storage = paths.Storage(new_filename, 'w')
         sim.output_stream = open(os.devnull, 'w')
         sim.run(n_per_snapshot=2)
+        sim.storage.close()
         if os.path.isfile(new_filename):
             os.remove(new_filename)
+        self.storage = read_store  # teardown will get rid of this
 
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=20)
@@ -505,7 +507,7 @@ class TestDirectSimulation(object):
         # As of pandas 0.18.1, callables can be used in `df.loc`, etc. Since
         # we're using (callable) volumes for labels of columns/indices in
         # our dataframes, this sucks for us. Raise an issue with pandas?
-        rate_matrix = self.sim.rate_matrix.as_matrix()
+        rate_matrix = self.sim.rate_matrix.values
         # order is center, outside, extra
         nan = float("nan")
         t_center = 3.0 + 3.0 + 2.0

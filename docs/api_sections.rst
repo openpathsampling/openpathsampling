@@ -1,3 +1,5 @@
+.. _api_main:
+
 OpenPathSampling API
 ====================
 
@@ -18,7 +20,9 @@ OpenPathSampling API
     network
     engines/index
     netcdfplus/index
+    numerics
     tis_analysis
+..    snapshot_features
 
 ..    Full API <api>
 

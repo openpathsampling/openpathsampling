@@ -19,19 +19,30 @@ def restore_custom_integrator_interface(integrator):
     as `CustomIntegrator`, and therefore lose any additional interface
     provided by the subclass.
 
-    So far, only subclasses of `openmmtools.RestorableIntegrator` are
+    So far, only subclasses of `openmmtools.RestorableOpenMMObject` are
     supported. Hopefully, we can establish some sort of more widely-used
     approach based on the tricks established in there.
     """
     # for openmmtools integrators
     try:
         import openmmtools
+        import openmmtools.integrators  # hash table, see #767
     except ImportError:  # pragma: no cover
         pass  # if openmmtools doesn't exist, can't restore interface
     else:
-        RestorableIntegrator = openmmtools.integrators.RestorableIntegrator
-        if RestorableIntegrator.is_restorable(integrator):
-            success = RestorableIntegrator.restore_interface(integrator)
+        try:
+            # openmmtools 0.15 or later
+            from openmmtools.utils import RestorableOpenMMObject \
+                    as RestorableObject
+        except ImportError: # pragma: no cover
+            # DEPRECATED: remove in 2.0 (support for openmmtools < 0.15)
+            from openpathsampling.deprecations import OPENMMTOOLS_VERSION
+            OPENMMTOOLS_VERSION.warn()
+            from openmmtools.integrators import RestorableIntegrator \
+                    as RestorableObject
+
+        if RestorableObject.is_restorable(integrator):
+            success = RestorableObject.restore_interface(integrator)
             logger.debug("Restored interface to integrator: " + str(success))
             # this return a bool based on success; we could error on fail,
             # but I think it is better to just log it and use the integrator
@@ -80,7 +91,11 @@ class OpenMMEngine(DynamicsEngine):
             the openmm integrator object
         openmm_properties : dict
             optional setting for creating the openmm simuation object. Typical
-            keys include GPU floating point precision
+            keys include GPU floating point precision.
+            Note that by default the engine selects the fastest currently
+            available OpenMM platform.
+            If you want to specify the platform you will have to call
+            `engine.initialize(platform)` after creating the engine.
         options : dict
             a dictionary that provides additional settings for the OPS engine.
             Allowed are
@@ -90,16 +105,13 @@ class OpenMMEngine(DynamicsEngine):
                 'n_frames_max' : int or None, default: 5000,
                     the maximal number of frames allowed for a returned
                     trajectory object
-                `platform` : str, default: `fastest`,
-                    the openmm specification for the platform to be used,
-                    also 'fastest' is allowed   which will pick the currently
-                    fastest one available
 
         Notes
         -----
-        the `n_frames_max` does not limit Trajectory objects in length. It only
+        The `n_frames_max` does not limit Trajectory objects in length. It only
         limits the maximal length of returned trajectory objects when this
         engine is used.
+
         """
 
         self.system = system
@@ -140,7 +152,7 @@ class OpenMMEngine(DynamicsEngine):
             openmm_properties=None,
             options=None):
         """
-        Create a new engine from existing, but different optionsor integrator
+        Create a new engine from existing, but different options or integrator
 
         Parameters
         ----------
@@ -148,7 +160,11 @@ class OpenMMEngine(DynamicsEngine):
             the openmm integrator object
         openmm_properties : dict
             optional setting for creating the openmm simuation object. Typical
-            keys include GPU floating point precision
+            keys include GPU floating point precision.
+            Note that by default the engine selects the fastest currently
+            available OpenMM platform.
+            If you want to specify the platform you will have to call
+            `engine.initialize(platform)` after creating the engine.
         options : dict
             a dictionary that provides additional settings for the OPS engine.
             Allowed are
@@ -158,10 +174,6 @@ class OpenMMEngine(DynamicsEngine):
                 'n_frames_max' : int or None, default: 5000,
                     the maximal number of frames allowed for a returned
                     trajectory object
-                `platforms` : list of str,
-                    the openmm specification for the platform to be used,
-                    also 'fastest' is allowed which will pick the currently
-                    fastest one available
 
         Notes
         -----
@@ -250,8 +262,9 @@ class OpenMMEngine(DynamicsEngine):
 
         Parameters
         ----------
-        platform : str or `simtk.openmm.Platform`
-            either a string with a name of the platform a platform object
+        platform : str or `simtk.openmm.Platform` or None
+            either a string with a name of the platform or a platform object
+            if None it will default to the fastest currently available platform
 
         Notes
         -----
@@ -412,12 +425,12 @@ class OpenMMEngine(DynamicsEngine):
             # if snapshot.coordinates is not None:
             self.simulation.context.setPositions(snapshot.coordinates)
 
-            # if snapshot.box_vectors is not None:
-            self.simulation.context.setPeriodicBoxVectors(
-                snapshot.box_vectors[0],
-                snapshot.box_vectors[1],
-                snapshot.box_vectors[2]
-            )
+            if snapshot.box_vectors is not None:
+                self.simulation.context.setPeriodicBoxVectors(
+                    snapshot.box_vectors[0],
+                    snapshot.box_vectors[1],
+                    snapshot.box_vectors[2]
+                )
 
             # if snapshot.velocities is not None:
             self.simulation.context.setVelocities(snapshot.velocities)
@@ -472,7 +485,7 @@ class OpenMMEngine(DynamicsEngine):
         if position_tol is None:
             position_tol = context.getIntegrator().getConstraintTolerance()
         # default 1e-5 for velocity_tol comes from OpenMM's setVelToTemp
-        context.applyConstraints(position_tol)  
+        context.applyConstraints(position_tol)
         context.applyVelocityConstraints(velocity_tol)
         result_snap = self.current_snapshot
         if old_snap is not None:

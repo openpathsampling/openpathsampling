@@ -15,7 +15,6 @@ from numpy.testing import assert_allclose
 
 from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
-from openpathsampling.ensemble import EnsembleFactory as ef
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
 from openpathsampling.pathmover import IdentityPathMover
@@ -26,7 +25,7 @@ import openpathsampling.engines.toy as toys
 from .test_helpers import CallIdentity, raises_with_message_like
 from .test_helpers import (assert_equal_array_array, items_equal,
                           make_1d_traj, assert_items_equal,
-                          CalvinistDynamics, assert_same_items)
+                          CalvinistDynamics, assert_same_items, A2BEnsemble)
 
 #logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -127,7 +126,7 @@ class TestShootingMover(object):
         op = FunctionCV("myid", f=lambda snap : snap.coordinates[0][0])
         self.stateA = CVDefinedVolume(op, -100, 0.0)
         self.stateB = CVDefinedVolume(op, 0.65, 100)
-        self.tps = ef.A2BEnsemble(self.stateA, self.stateB)
+        self.tps = A2BEnsemble(self.stateA, self.stateB)
         init_traj = make_1d_traj(
             coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
             velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
@@ -270,6 +269,12 @@ class TestOneWayShootingMover(TestShootingMover):
         moverclasses = [m.__class__ for m in mover.movers]
         assert_equal(ForwardShootMover in moverclasses, True)
         assert_equal(BackwardShootMover in moverclasses, True)
+        assert_equal(mover.engine, mover.movers[0].engine)
+        assert_equal(mover.engine, mover.movers[1].engine)
+        assert_equal(mover.selector, mover.movers[0].selector)
+        assert_equal(mover.selector, mover.movers[1].selector)
+        assert_equal(mover.ensemble, mover.movers[0].ensemble)
+        assert_equal(mover.ensemble, mover.movers[1].ensemble)
 
 class TestForwardFirstTwoWayShootingMover(TestShootingMover):
     _MoverType = ForwardFirstTwoWayShootingMover
@@ -614,7 +619,7 @@ class TestRandomChoiceMover(object):
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
         self.tis = paths.TISEnsemble(volA, volB, volX)
-        self.tps = ef.A2BEnsemble(volA, volB)
+        self.tps = A2BEnsemble(volA, volB)
         self.len3 = LengthEnsemble(3)
         self.init_samp = SampleSet([Sample(trajectory=traj,
                                            ensemble=self.len3, 
@@ -782,7 +787,7 @@ class TestSequentialMover(object):
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
         tis = paths.TISEnsemble(volA, volB, volX)
-        tps = ef.A2BEnsemble(volA, volB)
+        tps = A2BEnsemble(volA, volB)
         len3 = LengthEnsemble(3)
         len2 = LengthEnsemble(2)
         self.hop_to_tis = RandomAllowedChoiceMover(

@@ -30,20 +30,6 @@ except ImportError:  # pragma: no cover
     isrelease = str(ops_setup.preferences['released'])
 
 
-from .high_level.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
-    OneWayShootingMoveScheme
-)
-
-from .high_level.transition import (
-    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
-)
-
-from .high_level.network import (
-    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
-    FixedLengthTPSNetwork
-)
-
 from .analysis.path_histogram import PathDensityHistogram
 
 from .analysis.replica_network import (
@@ -75,8 +61,8 @@ from .collectivevariable import (
     GeneratorCV)
 
 from .ensemble import (
-    Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
-    EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
+    Ensemble, EnsembleCombination,
+    EmptyEnsemble, FullEnsemble, PartInXEnsemble,
     AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
     SuffixTrajectoryEnsemble, PrefixTrajectoryEnsemble,
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
@@ -85,12 +71,6 @@ from .ensemble import (
     SingleFrameEnsemble, MinusInterfaceEnsemble, TISEnsemble,
     OptionalEnsemble, join_ensembles
 )
-
-from .high_level.interface_set import (
-    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
-)
-
-from .high_level.ms_outer_interface import MSOuterTISInterface
 
 from .step_visualizer_2D import StepVisualizer2D
 
@@ -112,12 +92,12 @@ from .pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
     BackwardExtendMover, ForwardExtendMover, MinusMover,
-    SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
+    SingleReplicaMinusMover, PathReversalMover,
     ReplicaExchangeMover, EnsembleHopMover,
     SequentialMover, ConditionalMover,
-    PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
+    PathSimulatorMover, PathReversalSet,
     SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
-    FirstSubtrajectorySelectMover, MultipleSetMinusMover,
+    FirstSubtrajectorySelectMover,
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
     LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover,
@@ -126,15 +106,17 @@ from .pathmover import (
     BackwardFirstTwoWayShootingMover
 )
 
-from .pathsimulator import (
+from .pathsimulators import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
     CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation
 )
 
 from .sample import Sample, SampleSet
 
-from .shooting import ShootingPointSelector, UniformSelector, \
-    GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
+from .shooting import (
+    ShootingPointSelector, UniformSelector, GaussianBiasSelector,
+    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector
+)
 
 from .snapshot_modifier import (
     NoModification, RandomVelocities, VelocityDirectionModifier,
@@ -144,19 +126,51 @@ from .snapshot_modifier import (
 from .storage.storage import Storage, AnalysisStorage
 
 from .volume import (
-    Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
+    Volume, VolumeCombination,
     EmptyVolume, FullVolume, CVDefinedVolume, PeriodicCVDefinedVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )
 
-from .high_level import move_strategy as strategies
+# from .high_level import move_strategy as strategies
+from . import strategies
+
+from .high_level.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
+    OneWayShootingMoveScheme
+)
+
+from .high_level.transition import (
+    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
+)
+
+from .high_level.network import (
+    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
+    FixedLengthTPSNetwork
+)
+
+from .high_level.interface_set import (
+    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
+)
+
+from .high_level.ms_outer_interface import MSOuterTISInterface
+
+from .high_level.part_in_b_tps import (
+    PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
+)
+
+from .ensembles import *
+from .pathmovers import *
+from .collectivevariables import *
+from .pathmovers.move_schemes import *
 
 import openpathsampling.numerics as numerics
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
-import openpathsampling.engines.openmm as openmm
-import openpathsampling.engines.toy as toy
+
+# until engines are proper subpackages, built-ins need to be findable!
+import openpathsampling.engines.openmm #as openmm
+import openpathsampling.engines.toy #as toy
 
 
 def git_HEAD():  # pragma: no cover

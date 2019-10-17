@@ -14,8 +14,9 @@ from .test_helpers import (true_func, assert_equal_array_array,
 
 import copy
 
+import math
+
 import openpathsampling as paths
-from openpathsampling import VolumeFactory as vf
 from openpathsampling.high_level.move_scheme import *
 from openpathsampling.high_level.move_strategy import (
     levels,
@@ -25,11 +26,364 @@ from openpathsampling.high_level.move_strategy import (
 
 import openpathsampling.high_level.move_strategy as strategies
 
+import pytest
+
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+
+def _make_acceptance_mock_step(mccycle, accepted, path_sim_mover, move_type,
+                               mover_sig, submover_num=None):
+    root_mover = path_sim_mover.mover
+    chooser_names = {m.name[:-7].lower(): m for m in root_mover.movers}
+    chooser = chooser_names[move_type]
+    sig_to_mover = {frozenset(m.ensemble_signature[0]): m
+                    for m in chooser.movers}
+    # group_mover = chooser.movers[mover_num]
+    group_mover = sig_to_mover[frozenset(mover_sig)]
+    Change = {True: paths.AcceptedSampleMoveChange,
+              False: paths.RejectedSampleMoveChange}[accepted]
+    # foo here is because we need non-empty samples to show that we're
+    # actually accepted or not (WHY?!?!?)
+    if submover_num is not None:
+        submover = group_mover.movers[submover_num]
+        submover_change = Change(samples=['foo'], mover=submover)
+        group_mover_change = paths.RandomChoiceMoveChange(
+            subchange=submover_change,
+            mover=group_mover
+        )
+    else:
+        submover_change = None
+        group_mover_change = Change(samples=['foo'], mover=group_mover)
+
+    chooser_change = paths.RandomChoiceMoveChange(
+        subchange=group_mover_change,
+        mover=chooser
+    )
+    root_mover_change = paths.RandomChoiceMoveChange(
+        subchange=chooser_change,
+        mover=root_mover
+    )
+    path_sim_change = paths.PathSimulatorMoveChange(
+        subchange=root_mover_change,
+        mover=path_sim_mover
+    )
+    step = paths.MCStep(
+        mccycle=mccycle,
+        active=paths.SampleSet([]),
+        change=path_sim_change
+    )
+    return step
+
+def _make_null_mover_step(mccycle, path_sim_mover, null_mover):
+    empty_sample_set = paths.SampleSet([])
+    change = paths.PathSimulatorMoveChange(
+        mover=path_sim_mover,
+        subchange=null_mover.move(empty_sample_set)
+    )
+    step = paths.MCStep(
+        mccycle=mccycle,
+        active=empty_sample_set,
+        change=change
+    )
+    return step
+
+
+class TestMoveAcceptanceAnalysis(object):
+    def setup(self):
+        paths.InterfaceSet._reset()
+        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        state_A = paths.CVDefinedVolume(cvA, float("-inf"), -0.5).named("A")
+        state_B = paths.CVDefinedVolume(cvB, float("-inf"), -0.5).named("B")
+        interfaces_A = paths.VolumeInterfaceSet(cvA, float("-inf"),
+                                               [-0.5, -0.3])
+        network = paths.MISTISNetwork([(state_A, interfaces_A, state_B)])
+        self.scheme = MoveScheme(network)
+        self.scheme.append(OneWayShootingStrategy())
+        self.scheme.append(NearestNeighborRepExStrategy())
+        self.scheme.append(OrganizeByMoveGroupStrategy())
+
+        root_mover = self.scheme.move_decision_tree()
+        path_sim_mover = paths.PathSimulatorMover(root_mover, None)
+        null_mover = paths.IdentityPathMover(counts_as_trial=False)
+
+        ens_0 = network.sampling_ensembles[0]
+        ens_1 = network.sampling_ensembles[1]
+
+        # acc repex ens1-2
+        # acc   fwd ens1
+        # acc  bkwd ens2
+        # rej  bkwd ens1
+        # rej repex ens1-2
+        step_info = [
+            (1, True, path_sim_mover, 'repex', [ens_0, ens_1], None),
+            (2, True, path_sim_mover, 'shooting', [ens_0], 0),
+            (3, True, path_sim_mover, 'shooting', [ens_1], 1),
+            (4, False, path_sim_mover, 'shooting', [ens_0], 1),
+            (5, False, path_sim_mover, 'repex', [ens_0, ens_1], None)
+        ]
+        self.steps = [_make_acceptance_mock_step(*info)
+                      for info in step_info]
+
+        self.null_mover_6 = _make_null_mover_step(6, path_sim_mover,
+                                                  null_mover)
+        self.null_mover_change_key = [(None, str([path_sim_mover, [None]]))]
+
+        acceptance_empty = MoveAcceptanceAnalysis(self.scheme)
+
+        acceptance = MoveAcceptanceAnalysis(self.scheme)
+        acceptance.add_steps(self.steps)
+
+        acceptance_null = MoveAcceptanceAnalysis(self.scheme)
+        acceptance_null.add_steps(self.steps + [self.null_mover_6])
+
+        self.analysis = {'empty': acceptance_empty,
+                         'normal': acceptance,
+                         'with_null': acceptance_null}
+
+    @pytest.mark.parametrize('step_num', [0, 1, 2, 3, 4])
+    def test_calculate_step_acceptance(self, step_num):
+        accepted = [1] if step_num in [0, 1, 2] else [0]
+        analysis = MoveAcceptanceAnalysis(self.scheme)
+        analysis._calculate_step_acceptance(self.steps[step_num])
+        assert len(analysis._trials) == len(analysis._accepted)
+        len_trials = len(analysis._trials)
+        assert list(analysis._trials.values()) == [1] * len_trials
+        assert list(analysis._accepted.values()) == accepted * len_trials
+
+    def test_add_steps(self):
+        # also tests n_total_trials
+        acceptance = MoveAcceptanceAnalysis(self.scheme)
+        assert acceptance._n_steps == 0
+        assert acceptance.n_total_trials == 0
+        acceptance.add_steps(self.steps)
+        assert acceptance._n_steps == 5
+        assert acceptance.n_total_trials == 5
+        acceptance.add_steps([self.null_mover_6])
+        assert acceptance._n_steps == 6
+        assert acceptance.n_total_trials == 5
+
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    def test_no_move_keys(self, simulation):
+        analysis = self.analysis[simulation]
+        expected = {'empty': [],
+                    'normal': [],
+                    'with_null': self.null_mover_change_key}[simulation]
+        assert analysis.no_move_keys == expected
+
+    def test_select_movers_none(self):
+        analysis = self.analysis['normal']  # doesn't matter which
+        select_movers = analysis._select_movers
+        scheme_movers = {k: self.scheme.movers[k]
+                         for k in ['shooting', 'repex']}
+        assert select_movers(None) == scheme_movers
+
+    @pytest.mark.parametrize('group_name', ['shooting', 'repex'])
+    def test_select_movers_groupname(self, group_name):
+        analysis = self.analysis['normal']  # doesn't matter which
+        select_movers = analysis._select_movers
+        expected = {mover: [mover]
+                    for mover in self.scheme.movers[group_name]}
+
+        assert select_movers(group_name) == expected
+
+    @pytest.mark.parametrize('group_name', ['shooting', 'repex'])
+    def test_select_movers_mover(self, group_name):
+        analysis = self.analysis['normal']  # doesn't matter which
+        select_movers = analysis._select_movers
+        input_movers = self.scheme.movers[group_name]
+        for mover in input_movers:
+            try:
+                extra_movers = mover.movers
+            except AttributeError:
+                extra_movers = []
+
+            expected = {m: [m] for m in [mover] + extra_movers}
+            assert select_movers(mover) == expected
+
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    def test_summary_data_none(self, simulation):
+        results = self.analysis[simulation].summary_data(None)
+        expected_results_empty = {
+            'shooting': {'move_name': 'shooting',
+                         'n_accepted': 0,
+                         'n_trials': 0,
+                         'expected_frequency': 0.8},
+            'repex': {'move_name': 'repex',
+                      'n_accepted': 0,
+                      'n_trials': 0,
+                      'expected_frequency': 0.2}
+        }
+        expected_results_non_empty = {
+            'shooting': {'move_name': 'shooting',
+                         'n_accepted': 2,
+                         'n_trials': 3,
+                         'expected_frequency': 0.8},
+            'repex': {'move_name': 'repex',
+                      'n_accepted': 1,
+                      'n_trials': 2,
+                      'expected_frequency': 0.2}
+        }
+        expected = {'empty': expected_results_empty,
+                    'normal': expected_results_non_empty,
+                    'with_null': expected_results_non_empty}[simulation]
+
+        for result in results:
+            assert result._asdict() == expected[result.move_name]
+
+    @pytest.mark.parametrize('group_name', ['shooting', 'repex'])
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    def test_summary_data_groupname(self, group_name, simulation):
+        results = self.analysis[simulation].summary_data(group_name)
+        scheme = self.scheme
+
+        analysis = self.analysis[simulation]
+        for i, mover in enumerate(scheme.movers['shooting']):
+            print(i, mover, [v for k, v in  analysis._trials.items()
+                             if k[0] == mover])
+        expected_results_empty = {
+            'shooting': [{'move_name': scheme.movers['shooting'][0],
+                          'expected_frequency': 0.4,
+                          'n_accepted': 0,
+                          'n_trials': 0},
+                         {'move_name': scheme.movers['shooting'][1],
+                          'expected_frequency': 0.4,
+                          'n_accepted': 0,
+                          'n_trials': 0}],
+            'repex': [{'move_name': scheme.movers['repex'][0],
+                       'expected_frequency': 0.2,
+                       'n_accepted': 0,
+                       'n_trials': 0}]
+        }
+        expected_results_non_empty = {
+            'shooting': [{'move_name': scheme.movers['shooting'][0],
+                          'expected_frequency': 0.4,
+                          'n_accepted': 1,
+                          'n_trials': 2},
+                         {'move_name': scheme.movers['shooting'][1],
+                          'expected_frequency': 0.4,
+                          'n_accepted': 1,
+                          'n_trials': 1}],
+            'repex': [{'move_name': scheme.movers['repex'][0],
+                       'expected_frequency': 0.2,
+                       'n_accepted': 1,
+                       'n_trials': 2}]
+        }
+        expected_list = {'empty': expected_results_empty,
+                         'normal': expected_results_non_empty,
+                         'with_null': expected_results_non_empty
+                        }[simulation][group_name]
+        expected = {res['move_name']: res for res in expected_list}
+
+        for result in results:
+            assert result._asdict() == expected[result.move_name]
+
+    @pytest.mark.parametrize('simulation', ['empty', 'normal', 'with_null'])
+    @pytest.mark.parametrize('mover_ensemble', [0, 1])
+    def test_summary_data_mover(self, simulation, mover_ensemble):
+        mover = self.scheme.movers['shooting'][mover_ensemble]
+        results = self.analysis[simulation].summary_data(mover)
+
+        expected_list = [
+            {'move_name': mover,
+             # 'expected_frequency': 0.4,
+             'n_accepted': 0,
+             'n_trials': 0},
+            {'move_name': mover.movers[0],
+             # 'expected_frequency': float('nan'),
+             'n_accepted': 0,
+             'n_trials': 0},
+            {'move_name': mover.movers[1],
+             # 'expected_frequency': float('nan'),
+             'n_accepted': 0,
+             'n_trials': 0}
+        ]
+        updates = {
+            0: {mover: {'n_accepted': 1, 'n_trials': 2},
+                mover.movers[0]: {'n_accepted': 1, 'n_trials': 1},
+                mover.movers[1]: {'n_accepted': 0, 'n_trials': 1}},
+            1: {mover: {'n_accepted': 1, 'n_trials': 1},
+                mover.movers[0]: {'n_accepted': 0, 'n_trials': 0},
+                mover.movers[1]: {'n_accepted': 1, 'n_trials': 1}}
+        }
+
+        expected = {elem['move_name']: elem for elem in expected_list}
+        if simulation in ['normal', 'with_null']:
+            update = updates[mover_ensemble]
+            for m, dct in expected.items():
+                dct.update(update[m])
+
+        for result in results:
+            # trickiness here because 'nan' != 'nan'
+            result_dict = result._asdict()
+            result_freq = result_dict.pop('expected_frequency')
+            if result.move_name == mover:
+                assert result_freq == 0.4
+            else:
+                assert math.isnan(result_freq)
+
+            assert result_dict == expected[result.move_name]
+
+    @pytest.mark.parametrize('simulation', ['normal', 'with_null'])
+    def test_line_as_text(self, simulation):
+        line = MoveAcceptanceAnalysisLine(
+            move_name='shooting',
+            n_accepted=2,
+            n_trials=3,
+            expected_frequency=0.8
+        )
+        expected = ("shooting ran 60.000% (expected 80.00%) of the "
+                    + "cycles with acceptance 2/3 (66.67%)\n")
+        result = self.analysis[simulation]._line_as_text(line)
+        assert result == expected
+
+    def test_line_as_text_nan_acceptance(self):
+        line = MoveAcceptanceAnalysisLine(
+            move_name='path_reversal',
+            n_accepted=0,
+            n_trials=0,
+            expected_frequency=float('nan')
+        )
+        expected = ("path_reversal ran 0.000% (expected nan%) of the "
+                    + "cycles with acceptance 0/0 (nan%)\n")
+        result = self.analysis['normal']._line_as_text(line)
+        assert result == expected
+
+    def test_line_as_text_mover_as_name(self):
+        mover = self.scheme.movers['shooting'][0]
+        line = MoveAcceptanceAnalysisLine(
+            move_name=mover,
+            n_accepted=1,
+            n_trials=2,
+            expected_frequency=0.4
+        )
+        expected = (str(mover) + " ran 40.000% (expected 40.00%) "
+                    + "of the cycles with acceptance 1/2 (50.00%)\n")
+        result = self.analysis['normal']._line_as_text(line)
+        assert result == expected
+
+    @pytest.mark.parametrize('simulation', ['normal', 'with_null'])
+    def test_format_as_text(self, simulation):
+        analysis = self.analysis[simulation]
+        summary_data = analysis.summary_data(None)
+        text_lines = {
+            'shooting': ("shooting ran 60.000% (expected 80.00%) of the "
+                       + "cycles with acceptance 2/3 (66.67%)\n"),
+            'repex': ("repex ran 40.000% (expected 20.00%) of the "
+                      + "cycles with acceptance 1/2 (50.00%)\n")
+        }
+        expected = "".join([text_lines[line.move_name]
+                            for line in summary_data])
+
+        if simulation == 'with_null':
+            expected = ("Null moves for 1 cycles. Excluding null moves:\n"
+                        + expected)
+
+        assert analysis.format_as_text(summary_data) == expected
+
 
 class TestMoveScheme(object):
     def setup(self):
@@ -38,9 +392,9 @@ class TestMoveScheme(object):
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),

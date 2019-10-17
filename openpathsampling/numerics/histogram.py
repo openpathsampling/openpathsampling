@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import math
 from .lookup_function import LookupFunction, VoxelLookupFunction
 import collections
-
+import warnings
 from functools import reduce
 
 class SparseHistogram(object):
@@ -304,7 +304,7 @@ class Histogram(SparseHistogram):
         vals = self.xvals(bin_edge)
         hist = self.histogram()
         bins = sorted(hist.keys())
-        min_bin = min(bins[0][0], self.left_bin_edges[0])
+        min_bin = min(bins[0][0], 0)
         max_bin = bins[-1][0]
         bin_range = range(int(min_bin), int(max_bin)+1)
         hist_list = [hist[(b,)] for b in bin_range]
@@ -373,8 +373,8 @@ class Histogram(SparseHistogram):
 
         cumul_hist = np.array(cumul_hist)
         if total == 0:
-            return 0
-        if maximum is not None:
+            warnings.warn("No non-zero data in the histogram")
+        elif maximum is not None:
             cumul_hist *= maximum / total
 
         xvals = self.xvals(bin_edge)
@@ -394,8 +394,8 @@ class Histogram(SparseHistogram):
 
         cumul_hist = np.array(cumul_hist)
         if total == 0:
-            return 0
-        if maximum is not None:
+            warnings.warn("No non-zero data in the histogram")
+        elif maximum is not None:
             cumul_hist *= maximum / total
 
         xvals = self.xvals(bin_edge)
@@ -595,7 +595,7 @@ class HistogramPlotter2D(object):
     def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
         """Set up both x-axis and y-axis for plotting.
 
-        Also sets self.xrange_ and self.yrange_, which are the (bin-space)
+        Also sets self.xrange\_ and self.yrange\_, which are the (bin-space)
         bounds for the pandas.DataFrame.
 
         Parameters
@@ -691,7 +691,7 @@ class HistogramPlotter2D(object):
         ylim : 2-tuple of (float, float)
             vertical (y-value) range of (minimum, maximum) bounds for
             displaying the plot
-        kwargs : 
+        kwargs :
             additional arguments to pass to plt.pcolormesh
 
         Returns

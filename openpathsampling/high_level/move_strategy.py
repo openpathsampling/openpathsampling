@@ -8,28 +8,17 @@ from openpathsampling.netcdfplus import StorableNamedObject
 from functools import reduce  # not built in for py3
 
 LevelLabels = collections.namedtuple(
-    "LevelLabels", 
+    "LevelLabels",
     ["SIGNATURE", "MOVER", "GROUP", "SUPERGROUP", "GLOBAL"]
 )
 
+
 def most_common_value(ll):
     """
-    Calculates the most common value and its count. Should probably be
-    replaced by collections.Counter at some point.
+    Calculates the most common value and its count.
     """
-    counts = {}
-    for v in ll:
-        try:
-            counts[v] += 1
-        except KeyError:
-            counts[v] = 1
-    most_common = None
-    most_common_count = 0
-    for v in counts:
-        if counts[v] > most_common_count:
-            most_common = v
-            most_common_count = counts[v]
-    return (most_common, most_common_count)
+    return collections.Counter(ll).most_common(1)[0]
+
 
 class StrategyLevels(LevelLabels):
     """
@@ -43,15 +32,17 @@ class StrategyLevels(LevelLabels):
         """
         if lev < 0 or lev > 100:
             return None
-        levels = [self.SIGNATURE, self.MOVER, self.GROUP, self.SUPERGROUP, 
+        levels = [self.SIGNATURE, self.MOVER, self.GROUP, self.SUPERGROUP,
                   self.GLOBAL]
         distances = [abs(lev - v) for v in levels]
         mindist = min(distances)
-        indices = [i for i in range(len(distances)) if distances[i]==mindist]
+        indices = [i for i in range(len(distances))
+                   if distances[i] == mindist]
         if len(indices) > 1:
             return None
         else:
             return levels[indices[0]]
+
 
 # possible rename to make available as paths.strategy_levels?
 levels = StrategyLevels(
@@ -61,6 +52,7 @@ levels = StrategyLevels(
     SUPERGROUP=70,
     GLOBAL=90
 )
+
 
 class MoveStrategy(StorableNamedObject):
     """
@@ -114,7 +106,7 @@ class MoveStrategy(StorableNamedObject):
     @level.setter
     def level(self, value):
         self._level = value
-        self.set_replace(self.replace) # behavior of replace depends on level
+        self.set_replace(self.replace)  # behavior depends on level
 
     def set_replace(self, replace):
         """Sets values for replace_signatures and replace_movers."""
@@ -134,7 +126,7 @@ class MoveStrategy(StorableNamedObject):
         Regularizes ensemble input to list of list.
 
         Input None returns a list of lists for ensembles in each sampling
-        transition in the network. A list of ensembles is wrapped in a list. 
+        transition in the network. A list of ensembles is wrapped in a list.
 
         Parameters
         ----------
@@ -179,6 +171,86 @@ class MoveStrategy(StorableNamedObject):
 
         return res_ensembles
 
+    def get_per_mover_ensembles(self, scheme):
+        """Get ensembles for each mover to be created.
+
+        Every mover has specific initialization ensembles. This method
+        figures out which ones to use for each mover to be created, based on
+        the input scheme (and the network in it) and the ``self.ensembles``
+        stored in this strategy.
+
+        Parameters
+        ----------
+        scheme : :class:`.MoveScheme`
+            move scheme with network to be used
+
+        Returns
+        -------
+        list of list of :class:`.Ensemble` :
+            the ensembles for each mover to be created: outer list is over
+            movers; inner list is over ensembles for the given mover
+        """
+        raise NotImplementedError
+
+    def get_parameters(self, scheme, list_parameters=None,
+                       nonlist_parameters=None):
+        """
+        Gather initialization parameters for each mover to be created.
+
+        Parameters
+        ----------
+        scheme : :class:`.MoveScheme`
+            move scheme from which we determine the ensembles required by
+            each mover
+        list_parameters : list
+            each item in the list can be either (1) a non-iterable item,
+            in which case the same item will be used for all movers; or (2)
+            a list of items, which correspond one-to-one with the movers to
+            be created. Use this for parameters that might vary depending on
+            the mover.
+        nonlist_parameters : list
+            each item in this list will be used for all movers. Use this for
+            parameters that are the same for all movers (e.g., same engine
+            for all shooting movers)
+
+        Returns
+        -------
+        list of list :
+            list containing the list of parameters for each mover; the
+            specific strategy may need to unpack in substructure in its
+            make_movers method. Order is: ensembles (in order returned by
+            :meth:`.get_per_mover_ensembles`), list_parameters (in order
+            given as input), nonlist_parameters (in order given as input)
+        """
+        ensemble_list = self.get_per_mover_ensembles(scheme)
+        n_movers = len(ensemble_list)
+
+        if list_parameters is None:
+            list_parameters = []
+        if nonlist_parameters is None:
+            nonlist_parameters = []
+
+        list_params = []
+        for param in list_parameters:
+            try:
+                n_param = len(param)
+            except TypeError:
+                list_params.append([param] * n_movers)
+            else:
+                if n_param != n_movers:
+                    raise RuntimeError(
+                        "Error in move strategy parameters: found %d items "
+                        + "for %d movers: %s", n_param, n_movers, str(param)
+                    )
+                else:
+                    list_params.append(param)
+
+        nonlist_params = [[param] * n_movers
+                          for param in nonlist_parameters]
+
+        all_params = list(zip(*ensemble_list)) + list_params + nonlist_params
+        return list(zip(*all_params))
+
     @abc.abstractmethod
     def make_movers(self, scheme):
         """
@@ -201,7 +273,7 @@ class MoveStrategy(StorableNamedObject):
         paths.PathMover or list of paths.PathMover
             the movers created by this part of the strategy
         """
-        raise NotImplementedError #TODO: use JHP's ABCError when 302 is merged
+        raise NotImplementedError # TODO: use ABCError when 302 is merged
 
 
 class SingleEnsembleMoveStrategy(MoveStrategy):
@@ -256,15 +328,16 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
         list of list of :class:`.Ensemble`
             the ensembles to be used to initialize the movers
         """
+        # Consider 3 cases:
         # if self.ensembles is not None, use those
         # elif scheme.movers[from_group], extract from that
-        # elif self.ensembles in None, use all the ensembles (as now)
+        # elif self.ensembles is None, use all the ensembles (as now)
         try:
             movers = scheme.movers[self.from_group]
         except KeyError:
             movers = []
 
-        # these are the conditions 
+        # these are the conditions
         conditions = (self.ensembles is not None
                       or len(movers) == 0
                       or self.replace_signatures or self.replace_movers)
@@ -279,6 +352,12 @@ class SingleEnsembleMoveStrategy(MoveStrategy):
             init_ensembles = self.get_ensembles(scheme, sig_ensembles)
 
         return init_ensembles
+
+    def get_per_mover_ensembles(self, scheme):
+        ensemble_list = self.get_init_ensembles(scheme)
+        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        return [[ens] for ens in ensembles]
+
 
 
 class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
@@ -300,6 +379,7 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
         whether to replace existing movers in the group; default True
     """
     _level = levels.MOVER
+    MoverClass = paths.OneWayShootingMover
     def __init__(self, selector=None, ensembles=None, engine=None,
                  group="shooting", replace=True):
         super(OneWayShootingStrategy, self).__init__(
@@ -311,13 +391,43 @@ class OneWayShootingStrategy(SingleEnsembleMoveStrategy):
         self.engine = engine
 
     def make_movers(self, scheme):
-        #ensemble_list = self.get_ensembles(scheme, self.ensembles)
-        ensemble_list = self.get_init_ensembles(scheme)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        shooters = paths.PathMoverFactory.OneWayShootingSet(self.selector,
-                                                            ensembles,
-                                                            self.engine)
+        parameters = self.get_parameters(scheme=scheme,
+                                         list_parameters=[self.selector],
+                                         nonlist_parameters=[self.engine])
+        shooters = [
+            self.MoverClass(
+                ensemble=ens,
+                selector=sel,
+                engine=eng
+            ).named(self.MoverClass.__name__ + " " + ens.name)
+            for (ens, sel, eng) in parameters
+        ]
         return shooters
+
+
+class ForwardShootingStrategy(OneWayShootingStrategy):
+    """
+    Strategy for ForwardShooting only.
+
+    Allows choice of shooting point selector. Useful for e.g. Constrained
+    Interface shooting.
+
+    Parameters
+    ----------
+    selector : :class:`.ShootingPointSelector`
+        method used to select shooting point
+    ensembles : list of :class:`.Ensemble`
+        ensembles for which this strategy applies; None gives default
+        behavior
+    engine : :class:`.DynamicsEngine`
+        engine for the dynamics
+    group : str
+        mover group name, default "shooting"
+    replace : bool
+        whether to replace existing movers in the group; default True
+    """
+    _level = levels.MOVER
+    MoverClass = paths.ForwardShootMover
 
 
 class TwoWayShootingStrategy(SingleEnsembleMoveStrategy):
@@ -354,17 +464,19 @@ class TwoWayShootingStrategy(SingleEnsembleMoveStrategy):
         self.engine = engine
 
     def make_movers(self, scheme):
-        # ensemble_list = self.get_ensembles(scheme, self.ensembles)
-        ensemble_list = self.get_init_ensembles(scheme)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
+        parameters = self.get_parameters(
+            scheme=scheme,
+            list_parameters=[self.selector, self.modifier],
+            nonlist_parameters=[self.engine]
+        )
         shooters = [
             paths.TwoWayShootingMover(
                 ensemble=ens,
-                selector=self.selector,
-                modifier=self.modifier,
-                engine=self.engine
+                selector=sel,
+                modifier=mod,
+                engine=eng
             ).named("TwoWayShooting " + ens.name)
-            for ens in ensembles
+            for (ens, sel, mod, eng) in parameters
         ]
         return shooters
 
@@ -445,7 +557,7 @@ class SelectedPairsRepExStrategy(MoveStrategy):
                     pair_len = len(ensembles)
                 if pair_len != 2:
                     self.initialization_error()
-        
+
         super(SelectedPairsRepExStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
         )
@@ -490,11 +602,11 @@ class ReplicaExchangeStrategy(MoveStrategy):
             # the exception if the test fails, and the assertion acts as a
             # backup. This is faster than a try: except: version.  see
             # http://stackoverflow.com/questions/1569049/#1569618
-            assert(len(sig[0])==len(sig[1]) or sig_error(sig))
+            assert(len(sig[0]) == len(sig[1]) or sig_error(sig))
             n_ens = len(sig[0])
-            if n_ens == 2: # replica exchange
+            if n_ens == 2:  # replica exchange
                 assert(
-                    set(sig[0])==set(sig[1]) or
+                    set(sig[0]) == set(sig[1]) or
                     sig_error(sig, errstr="Not replica exchange signature. ")
                 )
             elif n_ens == 1: # already ensemble hop (ish)
@@ -508,7 +620,7 @@ class ReplicaExchangeStrategy(MoveStrategy):
                           " ensembles.")
 
     def make_movers(self, scheme):
-        signatures = [m.ensemble_signature 
+        signatures = [m.ensemble_signature
                       for m in scheme.movers[self.from_group]]
         # a KeyError here indicates that there is no existing group of that
         # name: build scheme.movers[self.from_group] before trying to use it!
@@ -590,6 +702,7 @@ class MinusMoveStrategy(MoveStrategy):
     Takes a given scheme and makes the minus mover.
     """
     _level = levels.MOVER
+    MoverClass = paths.MinusMover
     def __init__(self, engine=None, ensembles=None, group="minus",
                  replace=True):
         super(MinusMoveStrategy, self).__init__(
@@ -601,12 +714,9 @@ class MinusMoveStrategy(MoveStrategy):
         network = scheme.network
         if ensembles is None:
             minus_ensembles = network.minus_ensembles
-            state_sorted_minus = {}
+            state_sorted_minus = collections.defaultdict(list)
             for minus in minus_ensembles:
-                try:
-                    state_sorted_minus[minus.state_vol].append(minus)
-                except KeyError:
-                    state_sorted_minus[minus.state_vol] = [minus]
+                state_sorted_minus[minus.state_vol].append(minus)
             ensembles = list(state_sorted_minus.values())
 
         # now we use super's ability to turn it into list-of-list
@@ -614,39 +724,33 @@ class MinusMoveStrategy(MoveStrategy):
                                                                      ensembles)
         return res_ensembles
 
-    def make_movers(self, scheme):
-        network = scheme.network
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        movers = []
+    def get_per_mover_ensembles(self, scheme):
+        minus_ensembles = self.get_ensembles(scheme, self.ensembles)
+        ensembles = reduce(list.__add__,
+                           map(lambda x: list(x), minus_ensembles))
+        innermosts = []
+        special_minus = scheme.network.special_ensembles['minus']
         for ens in ensembles:
-            innermosts = [t.ensembles[0] 
-                          for t in network.special_ensembles['minus'][ens]]
-            movers.append(paths.MinusMover(
-                minus_ensemble=ens, 
-                innermost_ensembles=innermosts,
-                engine=self.engine
-            ))
+            innermosts.append([t.ensembles[0] for t in special_minus[ens]])
+        return list(zip(ensembles, innermosts))
+
+
+    def make_movers(self, scheme):
+        parameters = self.get_parameters(scheme,
+                                         nonlist_parameters=[self.engine])
+        movers = [
+            self.MoverClass(minus_ensemble=ens,
+                             innermost_ensembles=innermosts,
+                             engine=eng)
+            for (ens, innermosts, eng) in parameters
+        ]
         return movers
 
 class SingleReplicaMinusMoveStrategy(MinusMoveStrategy):
     """
     Takes a given scheme and makes a single-replica minus mover.
     """
-    def make_movers(self, scheme):
-        network = scheme.network
-        ensemble_list = self.get_ensembles(scheme, self.ensembles)
-        ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        movers = []
-        for ens in ensembles:
-            innermosts = [t.ensembles[0] 
-                          for t in network.special_ensembles['minus'][ens]]
-            movers.append(paths.SingleReplicaMinusMover(
-                minus_ensemble=ens, 
-                innermost_ensembles=innermosts,
-                engine=self.engine
-            ))
-        return movers
+    MoverClass = paths.SingleReplicaMinusMover
 
 
 class OrganizeByMoveGroupStrategy(MoveStrategy):
@@ -1024,29 +1128,24 @@ class OrganizeByEnsembleStrategy(OrganizeByMoveGroupStrategy):
             weights. See class definition for the specific formats of the
             keys.
         """
-        choice_probability = {}
+        choice_probability = collections.defaultdict(float)
         ens_prob_norm = sum(ensemble_weights.values())
         ens_prob = {e : ensemble_weights[e] / ens_prob_norm
                     for e in ensemble_weights}
-        
+
         mover_norm = {e : sum([mover_weights[s] for s in mover_weights
                                if s[2] == e])
                       for e in ensemble_weights}
 
         for sig in mover_weights:
-            group = sig[0]
-            ens_sig = sig[1]
-            ens = sig[2]
+            group, ens_sig, ens = sig
             local_prob = ens_prob[ens] * mover_weights[sig] / mover_norm[ens]
             # take first, because as MacLeod says, "there can be only one!"
             mover = [m for m in scheme.movers[group]
                      if m.ensemble_signature == ens_sig][0]
-            try:
-                choice_probability[mover] += local_prob
-            except KeyError:
-                choice_probability[mover] = local_prob
+            choice_probability[mover] += local_prob
 
-        return choice_probability
+        return dict(choice_probability)
 
     def chooser_root_weights(self, scheme, ensemble_weights, mover_weights):
         """

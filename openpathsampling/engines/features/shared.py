@@ -4,6 +4,29 @@ import numpy as np
 from openpathsampling.netcdfplus import StorableObject, ObjectStore, WeakLRUCache
 from openpathsampling.integration_tools import error_if_no_simtk_unit, unit
 
+def unmask_quantity(quantity):
+    """Force a maskedarray quantity to be unmasked.
+
+    NetCDF keeps giving us masked arrays, even when we tell it not to.
+    Masked arrays cause all kinds of havoc with other parts of the code.
+
+    Parameters
+    ----------
+    quantity : simtk.unit.Quantity wrapping a numpy (masked) array
+        quantity to unmask
+
+    Returns
+    -------
+    simtk.unit.Quantity
+        wraps a regular numpy array, not a masked array
+    """
+    try:
+        q_unit = quantity.unit
+    except AttributeError:
+        # no units
+        return quantity
+    return np.array(quantity.value_in_unit(q_unit)) * q_unit
+
 # =============================================================================
 # SIMULATION CONFIGURATION
 # =============================================================================
@@ -108,7 +131,13 @@ class StaticContainerStore(ObjectStore):
     def _save(self, configuration, idx):
         # Store configuration.
         self.vars['coordinates'][idx] = configuration.coordinates
-        self.vars['box_vectors'][idx] = configuration.box_vectors
+        box_vectors = configuration.box_vectors
+
+        if box_vectors is None:
+            n_spatial = configuration.coordinates.shape[1]
+            box_vectors = np.zeros((n_spatial, n_spatial))
+
+        self.vars['box_vectors'][idx] = box_vectors
 
     def get(self, indices):
         return [self.load(idx) for idx in indices]
@@ -116,6 +145,9 @@ class StaticContainerStore(ObjectStore):
     def _load(self, idx):
         coordinates = self.vars["coordinates"][idx]
         box_vectors = self.vars["box_vectors"][idx]
+
+        if not np.count_nonzero(box_vectors):
+            box_vectors = None
 
         configuration = StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
 

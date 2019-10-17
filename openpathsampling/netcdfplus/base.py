@@ -10,6 +10,11 @@ if sys.version_info > (3, ):
 
 logger = logging.getLogger(__name__)
 
+try:
+    getfullargspec = inspect.getfullargspec
+except AttributeError:
+    getfullargspec = inspect.getargspec
+
 
 class StorableObject(object):
     """Mixin that allows objects of the class to to be stored using netCDF+
@@ -253,7 +258,7 @@ class StorableObject(object):
 
         """
         try:
-            args = inspect.getargspec(cls.__init__)
+            args = getfullargspec(cls.__init__)
         except TypeError:
             return []
         return args[0]
@@ -440,7 +445,7 @@ class StorableNamedObject(StorableObject):
         >>> full = p.FullVolume().named('myFullVolume')
 
         """
-        if self.name == self.default_name:
+        if not self.is_named and not self._name_fixed:
             self.name = name
         return self
 

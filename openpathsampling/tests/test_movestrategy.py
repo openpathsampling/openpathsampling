@@ -12,11 +12,11 @@ from .test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, MoverWithSignature,
     setify_ensemble_signature, reorder_ensemble_signature
 )
+import pytest
 
 import openpathsampling as paths
 from openpathsampling.high_level.move_scheme import MoveScheme, DefaultScheme
 from openpathsampling.high_level.move_strategy import *
-from openpathsampling import VolumeFactory as vf
 
 import collections
 
@@ -26,9 +26,15 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+
 class MockMoveStrategy(MoveStrategy):
     def make_movers(self, scheme):
         return None
+
+class MockSingleEnsembleMoveStrategy(MockMoveStrategy,
+                                     SingleEnsembleMoveStrategy):
+    pass
+
 
 def find_mover(scheme, group, sig):
     mover = None
@@ -52,13 +58,13 @@ class TestStrategyLevels(object):
 class MoveStrategyTestSetup(object):
     def setup(self):
         paths.InterfaceSet._reset()
-        cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
-        cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
+        cvA = paths.FunctionCV(name="xA", f=lambda s: s.xyz[0][0])
+        cvB = paths.FunctionCV(name="xB", f=lambda s: -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         self.network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),
@@ -89,7 +95,7 @@ class TestMoveStrategy(MoveStrategyTestSetup):
         assert_equal(strategy.replace_movers, False)
 
     def test_get_ensembles(self):
-        self.strategy = MockMoveStrategy(ensembles=None, group="test", 
+        self.strategy = MockMoveStrategy(ensembles=None, group="test",
                                          replace=True)
         scheme = MoveScheme(self.network)
         # load up the relevant ensembles to test against
@@ -117,6 +123,78 @@ class TestMoveStrategy(MoveStrategyTestSetup):
         assert_equal(len(ensembles), 1)
         assert_equal(len(ensembles[0]), 1)
         assert_equal(ensembles[0][0], extra_ens)
+
+
+class TestSingleEnsembleMoveStrategy(MoveStrategyTestSetup):
+    def setup(self):
+        super(TestSingleEnsembleMoveStrategy, self).setup()
+        self.strategy = MockSingleEnsembleMoveStrategy(
+            ensembles=None,
+            group='test_group',
+            replace=True
+        )
+        self.scheme = paths.DefaultScheme(self.network, engine=None)
+
+    def test_get_per_mover_ensembles(self):
+        per_mover_ensembles = \
+                self.strategy.get_per_mover_ensembles(self.scheme)
+        ensembles = self.scheme.network.sampling_ensembles
+        assert len(per_mover_ensembles) == len(ensembles)
+        for listed_ensemble in per_mover_ensembles:
+            assert len(listed_ensemble) == 1
+            assert listed_ensemble[0] in ensembles
+
+    def test_get_parameters(self):
+        list_params_as_list = [0, 1, 2, 3, 4, 5]
+        list_params_as_single = 100
+        nonlist_params = "alpha"
+        params = self.strategy.get_parameters(
+            scheme=self.scheme,
+            list_parameters=[list_params_as_list, list_params_as_single],
+            nonlist_parameters=[nonlist_params]
+        )
+        ensembles = self.scheme.network.sampling_ensembles
+        expected = [(ens, num, list_params_as_single, nonlist_params)
+                    for (ens, num) in zip(ensembles, list_params_as_list)]
+        assert params == expected
+
+    def test_get_parameters_error(self):
+        with pytest.raises(RuntimeError):
+            params = self.strategy.get_parameters(
+                scheme=self.scheme,
+                list_parameters=[[0, 1, 2, 3]]
+            )
+
+
+class TestForwardShootingStrategy(MoveStrategyTestSetup):
+    def test_make_movers(self):
+        strategy = ForwardShootingStrategy()
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 6)
+        for mover in movers:
+            assert_equal(type(mover), paths.ForwardShootMover)
+            assert_equal(type(mover.selector), paths.UniformSelector)
+
+    def test_make_movers_with_list(self):
+        list_of_selectors = [
+            paths.shooting.InterfaceConstrainedSelector(ens.interface)
+            for ens in self.network.sampling_ensembles
+        ]
+        strategy = ForwardShootingStrategy(
+            selector=list_of_selectors,
+            ensembles=self.network.sampling_ensembles
+        )
+        scheme = MoveScheme(self.network)
+        movers = strategy.make_movers(scheme)
+        assert_equal(len(movers), 6)
+        assert_equal(len(list_of_selectors), 6)
+        for mover, sel in zip(movers, list_of_selectors):
+            assert_equal(type(mover), paths.ForwardShootMover)
+            assert_equal(type(mover.selector),
+                         paths.shooting.InterfaceConstrainedSelector)
+            assert_equal(mover.selector, sel)
+
 
 class TestOneWayShootingStrategy(MoveStrategyTestSetup):
     def test_make_movers(self):
@@ -199,7 +277,7 @@ class TestSelectedPairsRepExStrategy(MoveStrategyTestSetup):
         scheme = MoveScheme(self.network)
         movers = strategy.make_movers(scheme)
         assert_equal(len(movers), 1)
-        assert_equal(movers[0].ensemble_signature_set, 
+        assert_equal(movers[0].ensemble_signature_set,
                      ({ ens00, ens02 }, ({ ens00, ens02 })))
 
     @raises(RuntimeError)
@@ -305,7 +383,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1]
         )
-        assert_equal(weird_mover.ensemble_signature, 
+        assert_equal(weird_mover.ensemble_signature,
                      ((ens0,ens1,ens2),(ens0,ens1)))
         scheme = MoveScheme(self.network)
         scheme.movers['weird'] = [weird_mover]
@@ -321,7 +399,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
             input_ensembles=[ens0, ens1, ens2],
             output_ensembles=[ens0, ens1, ens2]
         )
-        assert_equal(weird_mover.ensemble_signature, 
+        assert_equal(weird_mover.ensemble_signature,
                      ((ens0,ens1,ens2),(ens0,ens1,ens2)))
         scheme = MoveScheme(self.network)
         scheme.movers['weird'] = [weird_mover]
@@ -349,7 +427,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme = DefaultScheme(self.network)
         scheme.movers ={}
         scheme.append(EnsembleHopStrategy(replace=True, from_group=None))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         # 4 normal repex + 2 ms-outer repex = 6 repex * 2 hop/repex = 12
         assert_equal(len(scheme.movers['repex']), 12)
 
@@ -361,7 +439,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme.append(EnsembleHopStrategy(replace=False, 
                                           group='hop',
                                           from_group='repex'))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 6)
         assert_equal(len(scheme.movers['hop']), 12)
 
@@ -373,7 +451,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme.append(EnsembleHopStrategy(replace=True, 
                                           group='hop',
                                           from_group='repex'))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['hop']), 12)
         assert_not_in("repex", list(scheme.movers.keys()))
 
@@ -383,7 +461,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         scheme = DefaultScheme(self.network)
         scheme.movers ={}
         scheme.append(EnsembleHopStrategy(replace=False, from_group=None))
-        scheme.move_decision_tree()
+        scheme.build_move_decision_tree()
         assert_equal(len(scheme.movers['repex']), 18)
 
 
@@ -1292,7 +1370,7 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             assert_almost_equal(choice_prob_1a[m], choice_prob_1c[m])
 
         # Organize by ensemble, switch to move group, switch back
-        scheme.strategies = {}
+        scheme.strategies.clear()
         scheme.append(self.StrategyClass(), force=True)
         root_2a = scheme.move_decision_tree(rebuild=True)
         choice_prob_2a = scheme.choice_probability

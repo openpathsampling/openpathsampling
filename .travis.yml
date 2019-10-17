@@ -1,26 +1,25 @@
 language: python
 filter_secrets: false   # https://github.com/travis-ci/travis-ci/issues/8934
 
+before_install:
+  - deactivate  # virtual envs don't play nice with conda
+  - export PYTHONUNBUFFERED=true  # immediately flush stdout to terminal
+  - source devtools/ci/miniconda_install.sh
+
 install:
-  - deactivate
-  # Do not buffer python outputs; flush them directly to the terminal
-  - export PYTHONUNBUFFERED=true
-  # Sets up a miniconda environment
-  - source devtools/ci/install.sh
-  - conda install --yes conda-build
-  - conda build --quiet devtools/conda-recipe
-  - conda create --quiet --yes --name test --use-local openpathsampling-dev
-  - source activate test
+  - export OPS_ENV="openpathsampling-py${CONDA_PY}"
+  - source devtools/conda_install_reqs.sh
+  - pip install --no-deps -e .
+
+before_script:
+  - python --version
+  - python -c "import openpathsampling"
+  - source devtools/ci/git_hash.sh
   - conda info --envs
-  - conda install --quiet --yes msmbuilder
-  - conda install --quiet --yes nose python-coveralls ipynbtest
-  - conda update --all --yes --use-local --quiet
+  - conda list
 
 script:
-  - python --version
-  - source devtools/ci/git_hash.sh
-  - conda list -n test
-  - source devtools/ci/nosetests.sh
+  - source devtools/ci/pytests.sh
   - source devtools/ci/ipythontests.sh
 
   # Upload new docs
@@ -38,5 +37,5 @@ env:
     - secure: "kb37xmsSV3pEnESnINzwlW2Cju/UFzA/G+m+NsihAwO8RMPZwKCrZK/rptgkUDACXJxom5M690WEukQkHnOt+OTrWhu7WKZgYeVuWUs2++RohYv/m5npaOHMMn+uYmF328v4PvPmXxbD02zzg5Tgdn82x8oa6J8BKX8ohOQ6Xpg="
   matrix:
     - CONDA_PY=2.7
-    - CONDA_PY=3.5
     - CONDA_PY=3.6
+    - CONDA_PY=3.7

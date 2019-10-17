@@ -1,4 +1,4 @@
-from .shared import KineticContainerStore, KineticContainer
+from .shared import KineticContainerStore, KineticContainer, unmask_quantity
 from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['kinetics', 'is_reversed']
@@ -38,10 +38,11 @@ def velocities(self):
     returned
     """
     if self.kinetics is not None:
+        vel = unmask_quantity(self.kinetics.velocities)
         if self.is_reversed:
-            return -1.0 * self.kinetics.velocities
+            return -1.0 * vel
         else:
-            return self.kinetics.velocities
+            return vel
 
     return None
 

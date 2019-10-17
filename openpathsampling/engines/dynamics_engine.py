@@ -151,6 +151,7 @@ class DynamicsEngine(StorableNamedObject):
 
         self.descriptor = descriptor
         self._check_options(options)
+        self.interrupter = DelayedInterrupt
 
     @property
     def current_snapshot(self):
@@ -544,7 +545,7 @@ class DynamicsEngine(StorableNamedObject):
                 snapshot = None
 
                 try:
-                    with DelayedInterrupt():
+                    with self.interrupter():
                         snapshot = self.generate_next_frame()
 
                         # if self.on_nan != 'ignore' and \

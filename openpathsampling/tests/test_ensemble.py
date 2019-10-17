@@ -68,7 +68,7 @@ def build_trajdict(trajtypes, lower, upper):
             loweraddkey += "_"+loweradddict[char]
             uppersubkey += "_"+uppersubdict[char]
             lowersubkey += "_"+lowersubdict[char]
-            delta.append(adjustdict[char](random.randint(1, 4)))
+            delta.append(adjustdict[char](random.randint(1, 3)))
 
         mydict[upperaddkey] = list(map(upper.__add__, delta))
         mydict[loweraddkey] = list(map(lower.__add__, delta))
@@ -128,7 +128,7 @@ def in_out_parser(testname):
             to_append = part
         elif part == 'hit':
             if 'upper' in parts:
-                to_append = 'in'
+                to_append = 'out'
             elif 'lower' in parts:
                 to_append = 'in'
         elif part == 'cross':
@@ -405,117 +405,6 @@ class TestPartInXEnsemble(EnsembleTest):
         assert_equal(self.hitX.__str__(),
                      "exists t such that x[t] in "+volstr)
 
-class TestExitsXEnsemble(EnsembleTest):
-    def setup(self):
-        self.ensemble = ExitsXEnsemble(vol1)
-        # longest ttraj is 6 = 9-3 frames long
-        self.slice_ens = ExitsXEnsemble(vol1, slice(3,9))
-        self.wrapstart = 3
-        self.wrapend = 12
-
-    def test_noncrossing(self):
-        '''ExitsXEnsemble for noncrossing trajectories'''
-        results = { 'upper_in' : False,
-                    'upper_out' : False,
-                    'lower_in' : False,
-                    'lower_out' : False
-                  }
-        self._run(results)
-
-    def test_hitsborder(self):
-        '''ExitsXEnsemble for border-hitting trajectories'''
-        results = { 'lower_in_hit_in' : False,
-                    'upper_in_hit_in' : False,
-                    'lower_out_hit_out' : True,
-                    'upper_out_hit_out' : True
-                  }
-        self._run(results)
-
-    def test_exit(self):
-        '''ExitsXEnsemble for exiting trajecories'''
-        results = { 'lower_in_out' : True,
-                    'upper_in_out' : True,
-                    'lower_in_hit_out' : True,
-                    'upper_in_hit_out' : True,
-                    'lower_out_in_out_in' : True,
-                    'upper_out_in_out_in' : True,
-                    'lower_in_out_in_out' : True,
-                    'upper_in_out_in_out' : True
-                  }
-        self._run(results)
-
-    def test_entrance(self):
-        '''ExitsXEnsemble for entering trajectories'''
-        results = { 'lower_out_in' : False,
-                    'upper_out_in' : False,
-                    'lower_out_hit_in' : False,
-                    'upper_out_hit_in' : False,
-                    'lower_out_in_out_in' : True,
-                    'upper_out_in_out_in' : True,
-                    'lower_in_out_in_out' : True,
-                    'upper_in_out_in_out' : True
-                  }
-        self._run(results)
-
-    def test_str(self):
-        assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
-
-class TestEntersXEnsemble(TestExitsXEnsemble):
-    def setup(self):
-        self.ensemble = EntersXEnsemble(vol1)
-        # longest ttraj is 6 = 9-3 frames long
-        self.slice_ens = EntersXEnsemble(vol1, slice(3,9))
-        self.wrapstart = 3
-        self.wrapend = 12
-
-    def test_noncrossing(self):
-        '''EntersXEnsemble for noncrossing trajectories'''
-        results = { 'upper_in_in_in' : False,
-                    'upper_out_out_out' : False,
-                    'lower_in_in_in' : False,
-                    'lower_out_out_out' : False
-                  }
-        self._run(results)
-
-    def test_hitsborder(self):
-        '''EntersXEnsemble for border-hitting trajectories'''
-        results = { 'lower_in_hit_in' : False,
-                    'upper_in_hit_in' : False,
-                    'lower_out_hit_out' : True,
-                    'upper_out_hit_out' : True
-                  }
-        self._run(results)
-
-    def test_exit(self):
-        '''EntersXEnsemble for exiting trajecories'''
-        results = { 'lower_in_out' : False,
-                    'upper_in_out' : False,
-                    'lower_in_hit_out' : False,
-                    'upper_in_hit_out' : False,
-                    'lower_out_in_out_in' : True,
-                    'upper_out_in_out_in' : True,
-                    'lower_in_out_in_out' : True,
-                    'upper_in_out_in_out' : True
-                  }
-        self._run(results)
-
-    def test_entrance(self):
-        '''EntersXEnsemble for entering trajectories'''
-        results = { 'lower_out_in' : True,
-                    'upper_out_in' : True,
-                    'lower_out_hit_in' : True,
-                    'upper_out_hit_in' : True,
-                    'lower_out_in_out_in' : True,
-                    'upper_out_in_out_in' : True,
-                    'lower_in_out_in_out' : True,
-                    'upper_in_out_in_out' : True
-                  }
-        self._run(results)
-
-    def test_str(self):
-        assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
 
 class TestSequentialEnsemble(EnsembleTest):
     def setup(self):
@@ -523,8 +412,6 @@ class TestSequentialEnsemble(EnsembleTest):
         self.outX = AllOutXEnsemble(vol1)
         self.hitX = PartInXEnsemble(vol1)
         self.leaveX = PartOutXEnsemble(vol1)
-        self.enterX = EntersXEnsemble(vol1)
-        self.exitX = ExitsXEnsemble(vol1)
         self.inInterface = AllInXEnsemble(vol2)
         self.leaveX0 = PartOutXEnsemble(vol2)
         self.inX0 = AllInXEnsemble(vol2)
@@ -954,6 +841,7 @@ class TestSequentialEnsemble(EnsembleTest):
         results['upper_in_out_cross_out_in'] = True
         results['upper_in_cross_in'] = True
         results['lower_in_cross_in'] = True
+        results['upper_in_hit_in'] = True
         for test in list(results.keys()):
             failmsg = "Failure in "+test+"("+str(ttraj[test])+"): "
             self._single_test(self.pseudo_tis, ttraj[test], results[test],
@@ -1090,7 +978,7 @@ class TestSequentialEnsembleCombination(EnsembleTest):
             'in_cross_in_cross_in'
         ]
         self._test_everything(self.ens2, ens2_passes, False)
-        
+
         or_passes = list(set(ens1_passes + ens2_passes))
         self._test_everything(self.combo_or, or_passes, False)
 
@@ -1108,7 +996,9 @@ class TestSequentialEnsembleCombination(EnsembleTest):
             'out',
             'out_cross',
             'out_out',
-            'out_out_out'
+            'out_out_out',
+            'upper_in_hit_out',
+            'upper_out_hit_out'
         ]
         self._test_everything(self.ens1.can_append, ens1_true, False)
         ens2_true = [
@@ -1118,7 +1008,6 @@ class TestSequentialEnsembleCombination(EnsembleTest):
             'in_cross_in',
             'in_cross_in_cross',
             'in_hit_in',
-            'in_hit_out',
             'in_in',
             'in_in_cross_in',
             'in_in_in',
@@ -1135,16 +1024,19 @@ class TestSequentialEnsembleCombination(EnsembleTest):
             'out',
             'out_cross',
             'out_hit_in',
-            'out_hit_out',
             'out_in',
             'out_in_in',
             'out_in_out',
             'out_out',
             'out_out_in',
-            'out_out_out'
+            'out_out_out',
+            'upper_in_hit_out',
+            'lower_in_hit_out',
+            'upper_out_hit_out',
+            'lower_out_hit_out'
         ]
         self._test_everything(self.ens2.can_append, ens2_true, False)
-        
+
         or_true = list(set(ens1_true + ens2_true))
         self._test_everything(self.combo_or.can_append, or_true, False)
 
@@ -1161,7 +1053,9 @@ class TestSequentialEnsembleCombination(EnsembleTest):
             'out_out',
             'out_out_in',
             'out_out_out',
-            'out_out_out_in'
+            'out_out_out_in',
+            'upper_out_hit_in',
+            'upper_out_hit_out'
         ]
         self._test_everything(self.ens1.can_prepend, ens1_true, False)
         ens2_true = [
@@ -1184,8 +1078,10 @@ class TestSequentialEnsembleCombination(EnsembleTest):
             'in_out_out_in',
             'out',
             'out_cross',
-            'out_hit_in',
-            'out_hit_out',
+            'upper_out_hit_in',
+            'lower_out_hit_in',
+            'upper_out_hit_out',
+            'lower_out_hit_out',
             'out_in',
             'out_in_cross_in',
             'out_in_in',
@@ -1198,7 +1094,7 @@ class TestSequentialEnsembleCombination(EnsembleTest):
             'out_out_out_in'
         ]
         self._test_everything(self.ens2.can_prepend, ens2_true, False)
-        
+
         or_true = list(set(ens1_true + ens2_true))
         self._test_everything(self.combo_or.can_prepend, or_true, False)
 
@@ -1207,22 +1103,24 @@ class TestSequentialEnsembleCombination(EnsembleTest):
 
     def test_strict_can_append(self):
         ens1_true = [
-            'hit',
+            'lower_hit',
             'in',
             'in_cross',
             'in_out',
             'in_out_cross',
             'in_out_out_out',
+            'upper_in_hit_out',
         ]
         self._test_everything(self.ens1.strict_can_append, ens1_true, False)
         ens2_true = [
-            'hit',
+            'lower_hit',
             'in',
             'in_cross',
             'in_cross_in',
             'in_cross_in_cross',
             'in_hit_in',
-            'in_hit_out',
+            'upper_in_hit_out',
+            'lower_in_hit_out',
             'in_in',
             'in_in_cross_in',
             'in_in_in',
@@ -1247,16 +1145,17 @@ class TestSequentialEnsembleCombination(EnsembleTest):
 
     def test_strict_can_prepend(self):
         ens1_true = [
-            'hit',
+            'lower_hit',
             'in',
             'out_in',
             'out_out_in',
-            'out_out_out_in'
+            'out_out_out_in',
+            'upper_out_hit_in',
         ]
         self._test_everything(self.ens1.strict_can_prepend, ens1_true, False)
         ens2_true = [
             'cross_in_cross_in',
-            'hit',
+            'lower_hit',
             'in',
             'in_cross_in',
             'in_hit_in',
@@ -1267,7 +1166,8 @@ class TestSequentialEnsembleCombination(EnsembleTest):
             'in_out_in',
             'in_out_in_in',
             'in_out_out_in',
-            'out_hit_in',
+            'upper_out_hit_in',
+            'lower_out_hit_in',
             'out_in',
             'out_in_cross_in',
             'out_in_in',
@@ -1303,6 +1203,12 @@ class TestTISEnsemble(EnsembleTest):
         teststr = ("initial_state=stateA final_state=stateA min_lambda=" +
                    str(self.minl) + " max_lambda=" + str(self.maxl) + " ")
         assert_equal(mystr, teststr)
+
+    def test_no_frame_after_interface(self):
+        traj_3 = make_1d_traj([0.2, 0.6,  2.1])
+        assert_equal(self.tis(traj_3), True)
+        traj_2 = make_1d_traj([0.2, 2.1])
+        assert_equal(self.tis(traj_2), True)
 
     def test_tis_ensemble_candidate(self):
         tis = TISEnsemble(vol1, vol3, vol2, op, lambda_i=0.7)
@@ -2124,6 +2030,12 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             n_l=3
         )
 
+    def test_dict_round_trip(self):
+        dct = self.minus_nl2.to_dict()
+        rebuilt = MinusInterfaceEnsemble.from_dict(dct)
+        dct2 = rebuilt.to_dict()
+        assert_equal(dct, dct2)
+
     @raises(ValueError)
     def test_minus_nl1_fail(self):
         minus_nl1 = MinusInterfaceEnsemble(state_vol=vol1,
@@ -2157,7 +2069,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             'out_in_out_in_out',
             'out_in_out_out_in',
             'out_in_out_out_in_out',
-            'in_hit_out_in_out',
+            'lower_in_hit_out_in_out',
             'out_hit_in_out_in'
         ]
         self._test_everything(self.minus_nl2.can_append, non_default, True)
@@ -2165,7 +2077,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
     def test_minus_nl2_strict_can_append(self):
         non_default = [
             'in',
-            'hit',
+            'lower_hit',
             'in_out',
             'in_out_in',
             'in_out_out_out',
@@ -2180,8 +2092,11 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             'in_out_cross_in',
             'in_out_cross_out_in',
             'in_cross_in_cross',
+            'upper_in_hit_out_in_out',
+            'upper_in_hit_in',
+            'upper_in_hit_out'
         ]
-        self._test_everything(self.minus_nl2.strict_can_append, non_default, 
+        self._test_everything(self.minus_nl2.strict_can_append, non_default,
                               False)
 
     def test_minus_nl2_can_prepend(self):
@@ -2207,7 +2122,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
     def test_minus_nl2_strict_can_prepend(self):
         non_default = [
             'in',
-            'hit',
+            'lower_hit',
             'out_in',
             'cross_in',
             'in_cross_in',
@@ -2225,7 +2140,9 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             'out_in_in_out_in',
             'out_out_in_out_in',
             'cross_in_cross_in',
-            'out_hit_in_out_in'
+            'out_hit_in_out_in',
+            'upper_in_hit_in',
+            'upper_out_hit_in',
         ]
         self._test_everything(self.minus_nl2.strict_can_prepend,
                               non_default, False)
@@ -2251,7 +2168,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
     def test_minus_interstitial_nl2_strict_can_append(self):
         non_default = [
             'in',
-            'hit',
+            'lower_hit',
             'in_out',
             'in_out_out_out',
             'in_cross',
@@ -2260,6 +2177,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             'in_out_cross_in',
             'in_out_cross_out_in',
             'in_cross_in_cross',
+            'upper_in_hit_out'
         ]
         self._test_everything(self.minus_interstitial_nl2.strict_can_append,
                               non_default, False)
@@ -2276,7 +2194,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
     def test_minus_interstitial_nl2_strict_can_prepend(self):
         non_default = [
             'in',
-            'hit',
+            'lower_hit',
             'out_in',
             'cross_in',
             'in_cross_in',
@@ -2287,6 +2205,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             'in_in_cross_in',
             'out_in_cross_in',
             'cross_in_cross_in',
+            'upper_out_hit_in',
         ]
         self._test_everything(self.minus_interstitial_nl2.strict_can_prepend,
                               non_default, False)
@@ -2307,7 +2226,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
     def test_minus_nl3_strict_can_append(self):
         non_default = [
             'in',
-            'hit',
+            'lower_hit',
             'in_out',
             'in_out_in',
             'in_out_out_out',
@@ -2324,7 +2243,10 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             'in_cross_in_cross',
             'in_cross_in_cross_in',
             'in_out_in_in_out_in',
-            'in_out_in_out_in'
+            'in_out_in_out_in',
+            'upper_in_hit_out_in_out',
+            'upper_in_hit_in',
+            'upper_in_hit_out',
         ]
         self._test_everything(self.minus_nl3.strict_can_append, non_default,
                               False)
@@ -2339,7 +2261,7 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
     def test_minus_nl3_strict_can_prepend(self):
         non_default = [
             'in',
-            'hit',
+            'lower_hit',
             'out_in',
             'cross_in',
             'in_cross_in',
@@ -2360,11 +2282,13 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             'out_hit_in_out_in',
             'in_cross_in_cross_in',
             'in_out_in_in_out_in',
-            'in_out_in_out_in'
+            'in_out_in_out_in',
+            'upper_in_hit_in',
+            'upper_out_hit_in'
         ]
         self._test_everything(self.minus_nl3.strict_can_prepend,
                               non_default, False)
-        
+
     def test_extend_sample_from_trajectories(self):
         # set up ensA and ensB
         ensA = paths.TISEnsemble(vol1, vol3, vol1, op)
@@ -2590,10 +2514,11 @@ class TestVolumeCombinations(EnsembleTest):
                                  cache_results[cache][i])
 
     def test_call_outA_or_outB(self):
+        # print self.local_ttraj['upper_out_in_out_out_cross'].xyz[:,0,0]
         self._test_trusted(
             trajectory=self.local_ttraj['upper_out_in_out_out_cross'],
-            function=self.outA_or_outB, 
-            results=[True, True, True, True, False], 
+            function=self.outA_or_outB,
+            results=[True, True, True, True, False],
             cache_results={
                 self.outA._cache_call : [True, False, False, False, False],
                 self.outB._cache_call : [None, True, True, True, False]
