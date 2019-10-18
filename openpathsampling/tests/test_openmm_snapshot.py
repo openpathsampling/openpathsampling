@@ -12,6 +12,8 @@ try:
     import openmmtools as omt
 except ImportError:
     omt = None
+
+from openpathsampling.integration_tools import openmm
 import numpy as np
 
 import logging
@@ -23,6 +25,8 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestOpenMMSnapshot(object):
     def setup(self):
+        if not openmm:
+            raise SkipTest("OpenMM not installed")
         if not omt:
             raise SkipTest("OpenMMTools not installed; required for OpenMM "
                            "tests.")

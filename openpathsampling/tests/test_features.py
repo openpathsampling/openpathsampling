@@ -17,6 +17,8 @@ try:
 except ImportError:
     omt = None
 
+import openpathsampling as paths
+
 
 import openpathsampling.engines.toy as toy_engine
 import openpathsampling.engines.openmm as omm_engine
@@ -41,7 +43,8 @@ class TestFeatures(object):
         assert(toy_copy.velocities[1] == 1.0)
 
     def test_copy_with_replacement_openmm(self):
-
+        if not paths.integration_tools.HAS_OPENMM:
+            raise SkipTest
         # test an openmm snapshot
         sys = omt.testsystems.AlanineDipeptideVacuum()
         omm_snap = omm_engine.snapshot_from_testsystem(sys)

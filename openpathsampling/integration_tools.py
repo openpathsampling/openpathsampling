@@ -36,3 +36,15 @@ else:
 
 def error_if_no_mdtraj(name):
     return error_if_no(name, "mdtraj", HAS_MDTRAJ)
+
+# openmm ############################################################
+try:
+    from simtk import openmm
+except ImportError:
+    openmm = None
+    HAS_OPENMM = False
+else:
+    HAS_OPENMM = True
+
+def error_if_to_openmm(name):
+    return error_if_no(name, "openmm", HAS_OPENMM)

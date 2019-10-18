@@ -1,8 +1,12 @@
+import pytest
 from numpy import testing as npt
 import openpathsampling as paths
 import os
 
-import openmmtools
+try:
+    import openmmtools
+except ImportError:
+    openmmtools = None
 
 
 class TestStaticContainerStore(object):
@@ -11,6 +15,8 @@ class TestStaticContainerStore(object):
             os.remove("test.nc")
 
     def test_store_nonperiodic(self):
+        if not openmmtools:
+            pytest.skip("Requires OpenMMTools for testing")
         testsystem = openmmtools.testsystems.AlanineDipeptideVacuum()
         snap = paths.engines.openmm.snapshot_from_testsystem(testsystem,
                                                              periodic=False)

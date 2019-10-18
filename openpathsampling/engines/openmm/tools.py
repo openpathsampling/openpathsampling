@@ -6,6 +6,7 @@ from openpathsampling.integration_tools import (
 try:
     import simtk.openmm
     import simtk.openmm.app
+    from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
 except ImportError:
     # this happens when we directly import tools (e.g., for
     # trajectory_to/from_mdtraj) when we don't have OpenMM installed. In
@@ -18,7 +19,6 @@ else:
 
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
-from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
 
 __author__ = 'Jan-Hendrik Prinz'
 

@@ -16,6 +16,8 @@ try:
 except ImportError:
     u = None
 
+from openpathsampling.integration_tools import is_simtk_quantity_type
+
 try:
     import mdtraj as md
 except ImportError:
@@ -105,13 +107,13 @@ class MoverWithSignature(paths.PathMover):
 
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
-        topology = Topology(n_atoms=1, n_spatial=1)
-        engine = peng.tools.TopologyEngine(topology)
+        self.topology = Topology(n_atoms=1, n_spatial=1)
+        # engine = peng.tools.TopologyEngine(topology)
 
         super(CalvinistDynamics, self).__init__(options={'n_frames_max': 12})
         self.predestination = make_1d_traj(coordinates=predestination,
                                            velocities=[1.0]*len(predestination),
-                                           engine=engine
+                                           engine=self
                                           )
         self.frame_index = None
 
@@ -207,7 +209,7 @@ def reorder_ensemble_signature(sig, match_with):
         return found_sigs[0]
 
 def assert_close_unit(v1, v2, *args, **kwargs):
-    if type(v1) is u.Quantity:
+    if is_simtk_quantity_type(v1):
         assert(v1.unit == v2.unit)
         npt.assert_allclose(v1._value, v2._value, *args, **kwargs)
     else:
