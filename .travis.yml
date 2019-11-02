@@ -5,6 +5,7 @@ before_install:
   - deactivate  # virtual envs don't play nice with conda
   - export PYTHONUNBUFFERED=true  # immediately flush stdout to terminal
   - source devtools/ci/miniconda_install.sh
+  - conda install pyyaml
 
 install:
   - export OPS_ENV="openpathsampling-py${CONDA_PY}"
