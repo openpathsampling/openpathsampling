@@ -21,10 +21,10 @@ before_script:
 
 script:
   - source devtools/ci/pytests.sh
-  - source devtools/ci/ipythontests.sh
+  - if [ -z "$MINIMAL" ] ; then source devtools/ci/ipythontests.sh; fi
 
   # Upload new docs
-  - bash -x devtools/ci/after_sucess.sh
+  - if [ -z "$MINIMAL" ] ; then  $bash -x devtools/ci/after_sucess.sh; fi
 
 addons:
   apt:
