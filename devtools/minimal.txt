@@ -1,0 +1,8 @@
+future
+numpy
+scipy
+pandas
+netcdf4
+networkx
+svgwrite
+ujson

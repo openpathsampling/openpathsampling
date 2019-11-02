@@ -8,7 +8,7 @@ before_install:
 
 install:
   - export OPS_ENV="openpathsampling-py${CONDA_PY}"
-  - source devtools/conda_install_reqs.sh
+  - if [ -z $MINIMAL ]; then; source devtools/conda_install_reqs.sh; else; pip install -r devtools/minimal.txt; fi
   - pip install --no-deps -e .
 
 before_script:
@@ -36,6 +36,7 @@ env:
     - secure: "l9NJkZDD0ALhkErUvhRrreLsrcWErd+CXpWv8dxHGtkjemNx6CwVtyL+a30jz/QwMANSZbKll/cPK5yJQvuwDaWxja6UPLLKVNGtma+CmwKcIC/wwTwbMoxcS62fyLJ3kS0qR8oCQz2nCPKiYyRGADtPLWVMZckY1SJfNYcKuCM="
     - secure: "kb37xmsSV3pEnESnINzwlW2Cju/UFzA/G+m+NsihAwO8RMPZwKCrZK/rptgkUDACXJxom5M690WEukQkHnOt+OTrWhu7WKZgYeVuWUs2++RohYv/m5npaOHMMn+uYmF328v4PvPmXxbD02zzg5Tgdn82x8oa6J8BKX8ohOQ6Xpg="
   matrix:
+    - CONDA_PY=3.7 MINIMAL=true
     - CONDA_PY=2.7
     - CONDA_PY=3.6
     - CONDA_PY=3.7
