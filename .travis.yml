@@ -24,7 +24,7 @@ script:
   - if [ -z "$MINIMAL" ] ; then source devtools/ci/ipythontests.sh; fi
 
   # Upload new docs
-  - if [ -z "$MINIMAL" ] ; then  $bash -x devtools/ci/after_sucess.sh; fi
+  - if [ -z "$MINIMAL" ] ; then bash -x devtools/ci/after_sucess.sh; fi
 
 addons:
   apt:
