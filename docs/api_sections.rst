@@ -21,6 +21,7 @@ OpenPathSampling API
     engines/index
     netcdfplus/index
     numerics
+    analysis
     tis_analysis
 ..    snapshot_features
 
