@@ -8,6 +8,15 @@ OpenPathSampling currently only works on Mac and Linux. It is tested against
 Python 2.7, 3.6, and 3.7, although there may be some corners of the code
 that aren't Python 3-compatible yet.
 
+.. note:: As of OpenPathSampling 1.1, OpenMM will no longer be automatically
+          installed when you install OPS. However, the OpenMM engine will be
+          immediately available if you install OpenMM youself. See the
+          `OpenMM installation instructions
+          <http://docs.openmm.org/latest/userguide/application.html#installing-openmm>`_
+          for a detailed guide, but ``conda install -c conda-forge -c omnia
+          openmm`` will work for most people. (COMING SOON: details on OPS
+          integrations with other tools.)
+
 .. _install-with-conda:
 
 Standard Install with Conda
@@ -55,8 +64,8 @@ Manual Installation
 ===================
 
 If you don't want to use ``conda``, you will have to manually obtain the
-dependencies (advice on that coming soon). Then you can install from our
-GitHub repository.
+dependencies, which you can see listed under ``install_requires`` in
+``setup.py``. Then you can install from our GitHub repository.
 
 Clone the source code repository from github::
 
