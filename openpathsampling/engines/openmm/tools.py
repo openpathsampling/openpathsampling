@@ -95,18 +95,17 @@ def snapshot_from_pdb(pdb_file, simple_topology=False):
         the constructed Snapshot
 
     """
-    pdb = md.load(pdb_file)
-    velocities = np.zeros(pdb.xyz[0].shape)
+    snap = ops_load_trajectory(pdb_file)[0]
 
     if simple_topology:
         topology = Topology(*pdb.xyz[0].shape)
     else:
-        topology = MDTrajTopology(pdb.topology)
+        topology = snap.topology
 
     snapshot = Snapshot.construct(
-        coordinates=u.Quantity(pdb.xyz[0], u.nanometers),
-        box_vectors=u.Quantity(pdb.unitcell_vectors[0], u.nanometers),
-        velocities=u.Quantity(velocities, u.nanometers / u.picoseconds),
+        coordinates=snap.coordinates,
+        box_vectors=snap.box_vectors,
+        velocities=snap.velocities,
         engine=FileEngine(topology, pdb_file)
     )
 
@@ -221,6 +220,11 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
         empty_vel = u.Quantity(np.zeros(mdtrajectory.xyz[0].shape),
                                vel_unit)
 
+    if mdtrajectory.unitcell_vectors is not None:
+        box_vects = u.Quantity(mdtrajectory.unitcell_vectors, u.nanometers)
+    else:
+        box_vects = [None] * len(mdtrajectory)
+
 
     engine = TopologyEngine(topology)
 
@@ -232,11 +236,7 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
         else:
             vel = empty_vel
 
-        if mdtrajectory.unitcell_vectors is not None:
-            box_v = u.Quantity(mdtrajectory.unitcell_vectors[frame_num],
-                               u.nanometers)
-        else:
-            box_v = None
+        box_v = box_vects[frame_num]
 
         statics = Snapshot.StaticContainer(
             coordinates=coord,

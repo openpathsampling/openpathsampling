@@ -10,16 +10,6 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 
 class ShootingPointSelector(StorableNamedObject):
-    # def __init__(self):
-        # super(ShootingPointSelector, self).__init__()
-
-    # @property
-    # def identifier(self):
-        # if hasattr(self, 'json'):
-            # return self.json
-        # else:
-            # return None
-
     def f(self, snapshot, trajectory):
         """
         Returns the unnormalized proposal probability of a snapshot
@@ -92,11 +82,34 @@ class ShootingPointSelector(StorableNamedObject):
 
 
 class GaussianBiasSelector(ShootingPointSelector):
+    r"""
+    A selector that biases according to a Gaussian along specified
+    :class:`.CollectiveVariable`, with mean ``l_0`` and width parameter
+    ``alpha``.  That is, for snapshot :math:`x` and CV :math:`\lambda`, the
+    selection probability for each frame is weighted according to the
+    function
+
+    .. math::
+
+        P_\text{sel}(x) \propto \exp(-\alpha (\lambda(x) - l_0)^2)
+
+    Note that normalization here depends on the trajectory that the
+    snapshot is a part of: the sum of the probabilities for all frames
+    is 1, which gives a different normalization constant than the standard
+    Gaussian distribution normalization, and exact probabilities for
+    selecting a given snapshot will change depending on the trajectory it is
+    a part of.
+
+    Parameters
+    ----------
+    collectivevariable : :class:`.CollectiveVariable`
+        the axis to use for the Gaussian
+    alpha : float
+        the width of the Gaussian
+    l_0 : float
+        the center of the Gaussian
+    """
     def __init__(self, collectivevariable, alpha=1.0, l_0=0.5):
-        """
-        A Selector that biases according to a specified CollectiveVariable
-        using a mean l_0 and a variance alpha
-        """
         super(GaussianBiasSelector, self).__init__()
         self.collectivevariable = collectivevariable
         self.alpha = alpha

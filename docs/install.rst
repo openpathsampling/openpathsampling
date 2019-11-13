@@ -4,21 +4,20 @@
 Installation
 ************
 
-OpenPathSampling currently only works on Mac and Linux. For now, Python 2.7
-is recommended, although most of the code also supports Python 3. Support
-for Windows will be coming soon.
+OpenPathSampling currently only works on Mac and Linux. It is tested against
+Python 2.7, 3.6, and 3.7, although there may be some corners of the code
+that aren't Python 3-compatible yet.
 
 .. _install-with-conda:
 
 Standard Install with Conda
 ===========================
 
-We recommend using ``conda`` (with Python version 2.7) to install
-OpenPathSampling.  `conda <http://www.continuum.io/downloads>`_ is a Python
-package manager built for scientific Python, and which handles binary
-dependencies seamlessly.  If you don't want the full ``conda`` installation,
-the ``miniconda`` package provides much of the convenience of ``conda`` with
-a smaller footprint.
+We recommend using ``conda`` to install OpenPathSampling.  `conda
+<http://www.continuum.io/downloads>`_ is a Python package manager built for
+scientific Python, and which handles binary dependencies seamlessly.  If you
+don't want the full ``conda`` installation, the ``miniconda`` package
+provides much of the convenience of ``conda`` with a smaller footprint.
 
 OpenPathSampling is part of the ``omnia`` channel in ``conda``, although
 some requirements are best found in the ``conda-forge`` channel. To install
@@ -47,6 +46,9 @@ other forks by `adding the fork as a remote
 branch.  You can combine changes from multiple users by merging them into a
 branch in your local version of the repository.
 
+Additional functionality of the ``conda_ops_dev_install.sh`` script is
+described in :ref:`quick-dev-install`.
+
 .. _manual-install:
 
 Manual Installation
@@ -73,9 +75,8 @@ Testing Your Installation
 .. _run-tests:
 
 Running the tests is a great way to verify that everything is working. The
-test suite uses both `pytest <http://pytest.org>`_ and, for the time being,
-`nose <https://nose.readthedocs.org/en/latest/>`_. You can pick these up via
-``conda`` if you don't already have them. ::
+test suite uses `pytest <http://pytest.org>`_ and, for legacy reasons, also
+requires the `nose <https://nose.readthedocs.org/en/latest/>`_ package. You can pick these up via ``conda`` if you don't already have them. ::
 
   $ conda install pytest nose
 

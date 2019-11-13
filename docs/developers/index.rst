@@ -57,7 +57,7 @@ describe specific aspects.
     pathsimulators
     engines
     pathmovers_and_movestrategies
-    networks
     collective_variables
     storage_need_to_know
     
+.. TODO add networks to toctree above

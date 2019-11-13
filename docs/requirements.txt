@@ -1,7 +1,6 @@
 matplotlib
 sphinx
-ipython
-ipython-notebook
+jupyter
 jinja2
 netcdf4
 runipy

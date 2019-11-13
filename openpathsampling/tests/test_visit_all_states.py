@@ -5,7 +5,7 @@ import pytest
 from openpathsampling.tests.test_helpers import \
         make_1d_traj, CalvinistDynamics
 
-from openpathsampling.visit_all_states import *
+from openpathsampling.ensembles.visit_all_states import *
 
 def test_default_state_progress_report():
     cv = paths.FunctionCV("x", lambda x: x.xyz[0][0])
