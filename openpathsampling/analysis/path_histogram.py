@@ -200,7 +200,7 @@ class BresenhamInterpolation(VoxelInterpolator):
         delta = np.asarray(new_bin) - np.asarray(old_bin)
         n_steps = int(max(delta))
         step_size = delta / n_steps
-        bins = [np.rint(old_bin + (i+1) * delta) for i in range(n_steps)]
+        bins = [np.rint(old_bin + (i+1) * step_size) for i in range(n_steps)]
         return [tuple(b) for b in bins]
 
 

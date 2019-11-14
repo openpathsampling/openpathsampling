@@ -31,7 +31,6 @@ class PathHistogramTester(object):
         self.diag = [(0.25, 0.25), (2.25, 2.25)]
 
 
-
 class TestPathHistogramNoInterpolate(PathHistogramTester):
     def test_nopertraj(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0),
@@ -104,9 +103,23 @@ class TestPathHistogramSubdivideInterpolate(PathHistogramTester):
         assert_equal(hist._histogram[(0,0)], 3)
         assert_equal(hist._histogram[(0,1)], 1)
 
-# SubdivideTester = TestPathHistogramSubdivideInterpolate  # 80 columns
-# class TestPathHistogramBesenhamInterpolate(SubdivideTester):
-    # Interpolator = BresenhamInterpolation
+SubdivideTester = TestPathHistogramSubdivideInterpolate  # 80 columns
+class TestPathHistogramBesenhamInterpolate(SubdivideTester):
+    Interpolator = BresenhamInterpolation
+    def test_diag(self):
+        super().test_diag()
+
+    def test_interp_same_cell(self):
+        pytest.skip()
+        # super().test_interp_same_cell()
+
+    def test_pertraj(self):
+        pytest.skip()
+        # super().test_pertraj()
+
+    def test_nopertraj(self):
+        pytest.skip()
+        # super().test_nopertraj()
 
 class TestPathHistogram(PathHistogramTester):
     # tests of fundamental things in PathHistogram, not interpolators
