@@ -201,7 +201,7 @@ class BresenhamInterpolation(VoxelInterpolator):
         n_steps = int(max(delta))
         step_size = delta / n_steps
         bins = [np.rint(old_bin + (i+1) * delta) for i in range(n_steps)]
-        return bins
+        return [tuple(b) for b in bins]
 
 
 # should path histogram be moved to the generic histogram.py? Seems to be
