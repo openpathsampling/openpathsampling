@@ -137,7 +137,8 @@ class TestPathHistogram(object):
     def test_add_with_weight(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0),
                              bin_widths=(0.5, 0.5),
-                             interpolate=True, per_traj=True)
+                             interpolate=SubdivideInterpolation,
+                             per_traj=True)
         hist.add_trajectory(self.trajectory)
         hist.add_trajectory(self.diag, weight=2)
         for val in [(0,1), (0,2), (0,3), (1,2), (1,3), (1,4), (2,1), (2,3),
@@ -154,7 +155,8 @@ class TestPathHistogram(object):
     def test_add_data_to_histograms(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0),
                              bin_widths=(0.5, 0.5),
-                             interpolate=True, per_traj=True)
+                             interpolate=SubdivideInterpolation,
+                             per_traj=True)
         counter = hist.add_data_to_histogram([self.trajectory, self.diag],
                                              weights=[1.0, 2.0])
         for val in [(0,1), (0,2), (0,3), (1,2), (1,3), (1,4), (2,1), (2,3),
@@ -171,7 +173,8 @@ class TestPathHistogram(object):
     def test_add_data_to_histograms_no_weight(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0),
                              bin_widths=(0.5, 0.5),
-                             interpolate=True, per_traj=True)
+                             interpolate=SubdivideInterpolation,
+                             per_traj=True)
         counter = hist.add_data_to_histogram([self.trajectory, self.diag])
         for val in [(0,1), (0,2), (0,3), (1,2), (1,3), (1,4), (2,1), (2,3),
                     (2,4), (2,5), (3,1), (3,2), (3,4), (3,5), (3,6), (4,5),
