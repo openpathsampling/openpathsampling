@@ -256,7 +256,7 @@ class PathHistogram(SparseHistogram):
         super(PathHistogram, self).__init__(left_bin_edges=left_bin_edges,
                                             bin_widths=bin_widths)
         if interpolate is True:
-            interpolate = SubdivideInterpolation
+            interpolate = BresenhamLikeInterpolation
         elif interpolate is False:
             interpolate = NoInterpolation
 
