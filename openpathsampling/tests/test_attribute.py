@@ -2,9 +2,10 @@
 @author David W.H. Swenson
 """
 
-from .test_helpers import data_filename, assert_close_unit, make_1d_traj
+from .test_helpers import data_filename, assert_close_unit, make_1d_traj, md
 
-import mdtraj as md
+from nose.plugins.skip import SkipTest
+
 import openpathsampling.engines.openmm as peng
 from openpathsampling.netcdfplus import FunctionPseudoAttribute
 
@@ -14,6 +15,8 @@ import os
 
 class TestFunctionPseudoAttribute(object):
     def setup(self):
+        if not md:
+            raise SkipTest("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
         self.traj_simple = peng.trajectory_from_mdtraj(

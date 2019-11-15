@@ -489,8 +489,8 @@ class TestSequentialEnsemble(EnsembleTest):
                                     lambda_min=-100.0, lambda_max=100.0)
 
         traj = paths.Trajectory([
-            peng.MDSnapshot(
-                coordinates=np.array([[-0.5, 0.0]]), 
+            paths.engines.toy.Snapshot(
+                coordinates=np.array([[-0.5, 0.0]]),
                 velocities=np.array([[0.0,0.0]])
             )
         ])

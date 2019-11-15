@@ -5,10 +5,11 @@ before_install:
   - deactivate  # virtual envs don't play nice with conda
   - export PYTHONUNBUFFERED=true  # immediately flush stdout to terminal
   - source devtools/ci/miniconda_install.sh
+  - conda install -y pyyaml
 
 install:
   - export OPS_ENV="openpathsampling-py${CONDA_PY}"
-  - source devtools/conda_install_reqs.sh
+  - if [ -z "$MINIMAL" ] ; then source devtools/conda_install_reqs.sh; else pip install -r devtools/minimal.txt -r devtools/minimal_testing.txt; fi
   - pip install --no-deps -e .
 
 before_script:
@@ -20,10 +21,10 @@ before_script:
 
 script:
   - source devtools/ci/pytests.sh
-  - source devtools/ci/ipythontests.sh
+  - if [ -z "$MINIMAL" ] ; then source devtools/ci/ipythontests.sh; fi
 
   # Upload new docs
-  - bash -x devtools/ci/after_sucess.sh
+  - if [ -z "$MINIMAL" ] ; then bash -x devtools/ci/after_sucess.sh; fi
 
 addons:
   apt:
@@ -36,6 +37,7 @@ env:
     - secure: "l9NJkZDD0ALhkErUvhRrreLsrcWErd+CXpWv8dxHGtkjemNx6CwVtyL+a30jz/QwMANSZbKll/cPK5yJQvuwDaWxja6UPLLKVNGtma+CmwKcIC/wwTwbMoxcS62fyLJ3kS0qR8oCQz2nCPKiYyRGADtPLWVMZckY1SJfNYcKuCM="
     - secure: "kb37xmsSV3pEnESnINzwlW2Cju/UFzA/G+m+NsihAwO8RMPZwKCrZK/rptgkUDACXJxom5M690WEukQkHnOt+OTrWhu7WKZgYeVuWUs2++RohYv/m5npaOHMMn+uYmF328v4PvPmXxbD02zzg5Tgdn82x8oa6J8BKX8ohOQ6Xpg="
   matrix:
+    - CONDA_PY=3.7 MINIMAL=true
     - CONDA_PY=2.7
     - CONDA_PY=3.6
     - CONDA_PY=3.7

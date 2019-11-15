@@ -2,6 +2,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 import openpathsampling as paths
+import logging
+logger = logging.getLogger(__name__)
 
 class StepVisualizer2D(object):
     def __init__(self, network, cv_x, cv_y, xlim, ylim, output_directory=None):
@@ -103,7 +105,7 @@ class StepVisualizer2D(object):
         try:
             import IPython.display
         except ImportError:
-            pass
+            logger.info("Not in IPython")
         else:
             IPython.display.clear_output(wait=True)
             fig = self.draw(mcstep)

@@ -7,12 +7,10 @@ from nose.tools import (
 )
 from nose.plugins.skip import SkipTest
 import numpy.testing as nptest
-from .test_helpers import data_filename, assert_items_equal
+from .test_helpers import data_filename, assert_items_equal, md, u
 
 import openpathsampling as paths
-import mdtraj as md
 import numpy as np
-from simtk import unit as u
 
 from openpathsampling.engines.openmm.tools import (
     trajectory_from_mdtraj, trajectory_to_mdtraj, ops_load_trajectory
@@ -28,6 +26,8 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestMDTrajSupport(object):
     def setup(self):
+        if not md:
+            raise SkipTest("mdtraj not installed")
         self.md_trajectory = md.load(data_filename("ala_small_traj.pdb"))
         self.ops_trajectory = trajectory_from_mdtraj(self.md_trajectory)
         self.md_topology = self.ops_trajectory.topology.mdtraj
