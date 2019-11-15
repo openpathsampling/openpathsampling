@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from builtins import object
 import os
 import numpy as np
+import collections
 
 import pytest
 
@@ -99,27 +100,52 @@ class TestPathHistogramSubdivideInterpolate(PathHistogramTester):
                              bin_widths=(0.5, 0.5),
                              interpolate=self.Interpolator, per_traj=False)
         hist.add_trajectory(traj)
+        print(hist._histogram)
         assert_equal(len(list(hist._histogram.keys())), 2)
         assert_equal(hist._histogram[(0,0)], 3)
         assert_equal(hist._histogram[(0,1)], 1)
 
 SubdivideTester = TestPathHistogramSubdivideInterpolate  # 80 columns
-class TestPathHistogramBesenhamInterpolate(SubdivideTester):
-    Interpolator = BresenhamInterpolation
+class TestPathHistogramBesenhamLikeInterpolate(SubdivideTester):
+    Interpolator = BresenhamLikeInterpolation
+    def setup(self):
+        super(TestPathHistogramBesenhamLikeInterpolate, self).setup()
+        self.expected_bins = [
+            (0, 0),  # initial
+            (0, 1), (1, 2), (2, 3), (2, 4), (3, 5), (4, 6),  # 0->1
+            (4, 5), (3, 4), (3, 3), (3, 2),  # 1->2
+            (3, 1),  # 2->3
+            (2, 1), (1, 2), (0, 2),  # 3->4
+            (1, 3), (2, 4), (3, 5), (4, 6)  # 4->5
+        ]
+        # NOTE: the (4, 5) in the 1->2 transition is exactly on bin edge;
+        # left bin edge is inclusive
+
     def test_diag(self):
-        super().test_diag()
+        # including explicitly to show that we expect it to be the same
+        cls = TestPathHistogramBesenhamLikeInterpolate
+        super(cls, self).test_diag()
 
     def test_interp_same_cell(self):
-        pytest.skip()
-        # super().test_interp_same_cell()
+        # including explicitly to show that we expect it to be the same
+        cls = TestPathHistogramBesenhamLikeInterpolate
+        super(cls, self).test_interp_same_cell()
 
     def test_pertraj(self):
-        pytest.skip()
-        # super().test_pertraj()
+        counter = collections.Counter(set(self.expected_bins))
+        hist = PathHistogram(left_bin_edges=(0.0, 0.0),
+                             bin_widths=(0.5, 0.5),
+                             interpolate=self.Interpolator, per_traj=True)
+        hist.add_trajectory(self.trajectory)
+        assert hist._histogram == counter
 
     def test_nopertraj(self):
-        pytest.skip()
-        # super().test_nopertraj()
+        counter = collections.Counter(self.expected_bins)
+        hist = PathHistogram(left_bin_edges=(0.0, 0.0),
+                             bin_widths=(0.5, 0.5),
+                             interpolate=self.Interpolator, per_traj=False)
+        hist.add_trajectory(self.trajectory)
+        assert hist._histogram == counter
 
 class TestPathHistogram(PathHistogramTester):
     # tests of fundamental things in PathHistogram, not interpolators

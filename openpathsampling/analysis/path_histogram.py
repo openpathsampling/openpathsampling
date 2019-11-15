@@ -194,15 +194,39 @@ class BresenhamInterpolation(VoxelInterpolator):
     histogram : :class:`.PathHistogram`
         the histogram that this will interpolate for
     """
+    def _interpolated_bins(self, new_pt, old_pt, new_bin, old_bin, delta,
+                           n_steps):
+        step_size = delta / n_steps if n_steps > 0 else 0
+        # TODO: do I want rint or floor here?
+        bins = [np.rint(old_bin + (i+1) * step_size)
+                for i in range(n_steps)]
+        return bins
+
     def __call__(self, old_pt, new_pt):
         old_bin = self.map_to_bins(old_pt)
         new_bin = self.map_to_bins(new_pt)
         delta = np.asarray(new_bin) - np.asarray(old_bin)
-        n_steps = int(max(delta))
-        step_size = delta / n_steps
-        bins = [np.rint(old_bin + (i+1) * step_size) for i in range(n_steps)]
+        n_steps = int(max(np.abs(delta)))
+        if n_steps == 0:
+            n_steps = 1
+        bins = self._interpolated_bins(new_pt, old_pt, new_bin, old_bin,
+                                       delta, n_steps)
         return [tuple(b) for b in bins]
 
+class BresenhamLikeInterpolation(BresenhamInterpolation):
+    """Interpolation based on floating point analog to Bresenham algorithm.
+
+    Parameters
+    ----------
+    histogram : :class:`.PathHistogram`
+        the histogram that this will interpolate for
+    """
+    def _interpolated_bins(self, new_pt, old_pt, new_bin, old_bin, delta,
+                           n_steps):
+        step_size = (np.asarray(new_pt) - np.asarray(old_pt)) / n_steps
+        interp_points = [old_pt + (i+1) * step_size for i in range(n_steps)]
+        bins = [self.map_to_bins(pt) for pt in interp_points]
+        return bins
 
 # should path histogram be moved to the generic histogram.py? Seems to be
 # independent of the fact that this is actually OPS
