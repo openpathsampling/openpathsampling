@@ -26,8 +26,8 @@ class WHAM(object):
         a matrix of n_bins rows and n_hists columns.
 
 
-    Reference
-    ---------
+    References
+    ----------
     .. [1] Daan Frenkel and Berend Smit. Understanding Molecular Simulation:
        From Algorithms to Applications. 2nd Edition. 2002.
 

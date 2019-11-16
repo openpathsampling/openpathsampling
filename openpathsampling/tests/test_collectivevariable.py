@@ -5,11 +5,10 @@ from __future__ import absolute_import
 
 from builtins import zip
 from builtins import object
-from .test_helpers import data_filename, assert_close_unit
+from .test_helpers import data_filename, assert_close_unit, md
 
 from nose.plugins.skip import SkipTest
 
-import mdtraj as md
 import numpy as np
 
 import openpathsampling.collectivevariable as op
@@ -30,6 +29,8 @@ import os
 
 class TestFunctionCV(object):
     def setup(self):
+        if not md:
+            raise SkipTest("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
         self.traj_simple = peng.trajectory_from_mdtraj(
