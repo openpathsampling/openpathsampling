@@ -1,6 +1,9 @@
 language: python
 filter_secrets: false   # https://github.com/travis-ci/travis-ci/issues/8934
 
+notifications:
+  webhooks: https://coveralls.io/webhook
+
 before_install:
   - deactivate  # virtual envs don't play nice with conda
   - export PYTHONUNBUFFERED=true  # immediately flush stdout to terminal
