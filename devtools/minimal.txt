@@ -7,3 +7,4 @@ networkx
 matplotlib
 svgwrite
 ujson
+psutil
