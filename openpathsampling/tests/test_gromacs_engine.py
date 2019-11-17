@@ -8,7 +8,13 @@ import numpy.testing as npt
 from .test_helpers import data_filename, assert_items_equal
 
 import openpathsampling as paths
-import mdtraj as md
+try:
+    import mdtraj as md
+except ImportError:
+    HAS_MDTRAJ = False
+else:
+    HAS_MDTRAJ = True
+
 
 from openpathsampling.engines.gromacs import *
 
@@ -42,6 +48,8 @@ class TestGromacsEngine(object):
     # project_trr/0000000.trr : working file, 4 frames
     # project_trr/0000099.trr : 49 working frames, final frame partial
     def setup(self):
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not installed.")
         self.test_dir = data_filename("gromacs_engine")
         self.engine = Engine(gro="conf.gro",
                              mdp="md.mdp",
@@ -163,6 +171,9 @@ class TestGromacsEngine(object):
         if not has_gmx:
             raise SkipTest("Gromacs 5 (gmx) not found. Skipping test.")
 
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not found. Skipping test.")
+
         traj_0 = self.engine.trajectory_filename(0)
         snap = self.engine.read_frame_from_file(traj_0, 0)
         self.engine.set_filenames(0)
@@ -205,6 +216,9 @@ class TestGromacsEngine(object):
 
 class TestGromacsExternalMDSnapshot(object):
     def setup(self):
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not installed.")
+
         self.test_dir = data_filename("gromacs_engine")
         self.engine = Engine(gro="conf.gro",
                              mdp="md.mdp",
