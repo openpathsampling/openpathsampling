@@ -55,8 +55,12 @@ def test_progress_string():
 
 def test_ensure_file_dne():
     # when the file doesn't exist and you provide contents, ensure_file
-    # shoudl create the missing file
-    tmp_dir = tempfile.TemporaryDirectory()
+    # should create the missing file
+    try:
+        tmp_dir = tempfile.TemporaryDirectory()
+    except AttributeError:
+        # Py2: we'll just skip this test (and not worry when Py2 goes away)
+        pytest.skip("Test approach only valid in Python 3")
     filename = os.path.join(tmp_dir.name, "foo.data")
     assert not os.path.exists(filename)
     old_contents = "foo bar baz qux"
