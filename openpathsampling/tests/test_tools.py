@@ -1,5 +1,11 @@
+import pytest
 from nose.tools import assert_equal
 from openpathsampling.tools import *
+
+import tempfile
+import hashlib
+import os
+from .test_helpers import data_filename
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
@@ -45,3 +51,49 @@ def test_progress_string():
                  "Running for 2 hours 36 minutes 18 seconds - "
                  + "9378.40 seconds per step\n"
                  + "Estimated time remaining: 1 day 2.05 hours\n")
+
+
+def test_ensure_file_dne():
+    # when the file doesn't exist and you provide contents, ensure_file
+    # shoudl create the missing file
+    tmp_dir = tempfile.TemporaryDirectory()
+    filename = os.path.join(tmp_dir.name, "foo.data")
+    assert not os.path.exists(filename)
+    old_contents = "foo bar baz qux"
+    old_hash = hashlib.sha1(old_contents.encode('utf-8')).digest()
+    contents, hashed = ensure_file(filename, old_contents, old_hash)
+    assert os.path.exists(filename)
+    assert contents == old_contents
+    assert hashed == old_hash
+
+
+def test_ensure_file_exists():
+    # this is the case where everything works: file exists; hash is correct
+    filename = data_filename("ala_small_traj.pdb")
+    assert os.path.exists(filename)
+    with open(filename, mode='r') as f:
+        old_contents = f.read()
+    old_hash = hashlib.sha1(old_contents.encode('utf-8')).digest()
+
+    contents, hashed = ensure_file(filename, old_contents, old_hash)
+    assert contents == old_contents
+    assert hashed == old_hash
+
+
+def test_ensure_file_hash_mismatch():
+    # this is the case where the file exists, but the hash is wrong
+    filename = data_filename("ala_small_traj.pdb")
+    assert os.path.exists(filename)
+    with open(filename, mode='r') as f:
+        old_contents = f.read()
+
+    old_hash = "foo"
+
+    with pytest.raises(RuntimeError):
+        ensure_file(filename, old_contents, old_hash)
+
+
+def test_ensure_file_no_file_no_contents():
+    # if the file doesn't exist and the content doesn't exist, raise error
+    with pytest.raises(RuntimeError):
+        ensure_file("foo_bad_file.badfile", None, None)
