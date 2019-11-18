@@ -214,6 +214,13 @@ class TestGromacsEngine(object):
         # files?
         pytest.skip()
 
+    def test_serialization_cycle(self):
+        serialized = self.engine.to_dict()
+        deserialized = Engine.from_dict(serialized)
+        reserialized = deserialized.to_dict()
+        assert serialized == reserialized
+
+
 class TestGromacsExternalMDSnapshot(object):
     def setup(self):
         if not HAS_MDTRAJ:

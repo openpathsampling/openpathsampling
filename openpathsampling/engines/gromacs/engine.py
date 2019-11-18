@@ -17,6 +17,7 @@ from openpathsampling.engines import features
 from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
 from openpathsampling.engines.openmm.topology import MDTrajTopology
 from . import features as gmx_features
+from openpathsampling.tools import ensure_file
 
 import os
 import psutil
@@ -222,6 +223,10 @@ class GromacsEngine(ExternalEngine):
         self.top = os.path.join(base_dir, top)
         self.prefix = os.path.join(base_dir, prefix)
 
+        self.gro_contents, self._gro_hash = ensure_file(self.gro)
+        self.mdp_contents, self._mdp_hash = ensure_file(self.mdp)
+        self.top_contents, self._top_hash = ensure_file(self.top)
+
         dirs = [self.prefix + s for s in ['_trr', '_log', '_edr']]
         for d in dirs:
             try:
@@ -248,16 +253,25 @@ class GromacsEngine(ExternalEngine):
                                              first_frame_in_file=True)
 
     def to_dict(self):
-        # TODO: eventually, read files in and store the text
         return {
-            'base_dir': self.base_dir,
             'gro': self.gro,
             'mdp': self.mdp,
             'top': self.top,
             'options': self.options,
             'base_dir': self.base_dir,
-            'prefix': self.prefix
+            'prefix': self.prefix,
+            'gro_contents': self.gro_contents,
+            'mdp_contents': self.mdp_contents,
+            'top_contents': self.top_contents,
         }
+
+    @classmethod
+    def from_dict(cls, dct):
+        dct = dict(dct)  # make a copy
+        for ftype in ['gro', 'top', 'mdp']:
+            contents = dct.pop(ftype + "_contents")
+            _ = ensure_file(filename=dct[ftype], old_contents=contents)
+        return super(GromacsEngine, cls).from_dict(dct)
 
     @property
     def mdtraj_topology(self):
@@ -368,6 +382,13 @@ class GromacsEngine(ExternalEngine):
     def prepare(self):  # pragma: no cover
         # coverage ignored b/c Travis won't have gmx. However, we do have a
         # test that covers this if gmx is present (otherwise it is skipped)
+
+        # ensure that the files haven't changed before we run trajectory
+        _ = ensure_file(self.gro, self.gro_contents, self._gro_hash)
+        _ = ensure_file(self.mdp, self.mdp_contents, self._mdp_hash)
+        _ = ensure_file(self.top, self.top_contents, self._top_hash)
+
+        # grompp and mdrun
         cmd = self.grompp_command
         logger.info(cmd)
         run_cmd = shlex.split(cmd)
