@@ -87,7 +87,6 @@ class TestOpenMMSnapshot(object):
         assert_is(traj_1.unitcell_vectors, None)
 
         snap_2 = self.engine.current_snapshot
-        print(snap_2.box_vectors)
         traj_2 = snap_2.md
         assert_equal(len(traj_2), 1)
         assert_is_not(traj_2.xyz, None)
