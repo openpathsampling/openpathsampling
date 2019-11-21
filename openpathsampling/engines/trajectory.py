@@ -545,7 +545,6 @@ class Trajectory(list, StorableObject):
 
         traj = md.Trajectory(output, topology)
         box_vectors = self.box_vectors
-        print(box_vectors)
         # box_vectors is a list with an entry for each frame of the traj
         # if they're all None, we return None, not [None, None, ..., None]
         if not np.any(box_vectors):
