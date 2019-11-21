@@ -136,12 +136,10 @@ class Trajectory(list, StorableObject):
                                          item in cls.__features__.variables)
 
         if is_snapshot_attr(snapshot_class, item):
-            print("looking for " + item)
             # if there's a trajectory_item in features, that should be a
             # function to return a trajectory
             traj_item = "trajectory_" + item
             if traj_item in snapshot_class.__features__.functions:
-                print("found " + traj_item)
                 traj_func = getattr(snapshot_class, traj_item)
                 return traj_func(self)
 
