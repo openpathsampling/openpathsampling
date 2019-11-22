@@ -23,7 +23,7 @@ class PES(StorableObject):
 
     def kinetic_energy(self, sys):
         """Default kinetic energy implementation.
-        
+
         Parameters
         ----------
         sys : :class:`.ToyEngine`
@@ -124,7 +124,7 @@ class PES_Add(PES_Combination):
 
 class HarmonicOscillator(PES):
     """Simple harmonic oscillator. Independent in each degree of freedom.
-    
+
     V(x) = \sum_i A_i * mass_i * omega_i**2 * (x_i - x0_i)**2
 
     Parameters
@@ -138,6 +138,10 @@ class HarmonicOscillator(PES):
         self.A = np.array(A)
         self.omega = np.array(omega)
         self.x0 = np.array(x0)
+
+    def __repr__(self):  # pragma: no cover
+        repr_str = "HarmonicOscillator({obj.A}, {obj.omega}, {obj.x0})"
+        return repr_str.format(obj=self)
 
     def to_dict(self):
         dct = super(HarmonicOscillator, self).to_dict()
@@ -199,6 +203,9 @@ class Gaussian(PES):
         self.x0 = np.array(x0)
         self._local_dVdx = np.zeros(self.x0.size)
 
+    def __repr__(self):  # pragma: no cover
+        return "Gaussian({o.A}, {o.alpha}, {o.x0})".format(o=self)
+
     def V(self, sys):
         """Potential energy
 
@@ -251,6 +258,9 @@ class OuterWalls(PES):
         self.sigma = np.array(sigma)
         self.x0 = np.array(x0)
         self._local_dVdx = np.zeros(self.x0.size)
+
+    def __repr__(self):  # pragma: no cover
+        return "OuterWalls({o.sigma}, {o.x0})".format(o=self)
 
     def V(self, sys):
         """Potential energy
@@ -305,6 +315,9 @@ class LinearSlope(PES):
         self.c = c
         self._local_dVdx = self.m
         self.dim = len(self.m)
+
+    def __repr__(self):  # pragma: no cover
+        return "LinearSlope({o.m}, {o.c])".format(o=self)
 
     def V(self, sys):
         """Potential energy
