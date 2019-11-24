@@ -317,7 +317,7 @@ class LinearSlope(PES):
         self.dim = len(self.m)
 
     def __repr__(self):  # pragma: no cover
-        return "LinearSlope({o.m}, {o.c])".format(o=self)
+        return "LinearSlope({o.m}, {o.c})".format(o=self)
 
     def V(self, sys):
         """Potential energy
