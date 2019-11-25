@@ -31,7 +31,8 @@ class PES(StorableObject):
         """
         v = sys.velocities
         m = sys.mass
-        return 0.5*np.dot(m, np.multiply(v,v))
+        return 0.5*np.dot(m, np.multiply(v, v))
+
 
 class PES_Combination(PES):
     """Mathematical combination of two potential energy surfaces.
@@ -86,6 +87,7 @@ class PES_Combination(PES):
         """
         return self._dfdx_fcn(self.pes1.dVdx(sys), self.pes2.dVdx(sys))
 
+
 class PES_Sub(PES_Combination):
     """Difference of two potential energy surfaces; pes1 - pes2
 
@@ -103,6 +105,7 @@ class PES_Sub(PES_Combination):
             lambda a, b: a - b,
             lambda a, b: a - b
             )
+
 
 class PES_Add(PES_Combination):
     """Sum of two potential energy surfaces; pes1 + pes 2
@@ -122,10 +125,11 @@ class PES_Add(PES_Combination):
             lambda a, b: a + b
         )
 
-class HarmonicOscillator(PES):
-    """Simple harmonic oscillator. Independent in each degree of freedom.
 
-    V(x) = \sum_i A_i * mass_i * omega_i**2 * (x_i - x0_i)**2
+class HarmonicOscillator(PES):
+    r"""Simple harmonic oscillator. Independent in each degree of freedom.
+
+    :math:`V(x) = \sum_i A_i * mass_i * omega_i^2 * (x_i - x0_i)^2`
 
     Parameters
     ----------
@@ -184,8 +188,9 @@ class HarmonicOscillator(PES):
         k = self.omega*self.omega*sys.mass
         return self.A*k*dx
 
+
 class Gaussian(PES):
-    """Gaussian given by A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)
+    r"""Gaussian given by: :math:`A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)`
 
     Parameters
     ----------
@@ -241,10 +246,11 @@ class Gaussian(PES):
             self._local_dVdx[i] = -2*self.alpha[i]*dx[i]*exp_part
         return self._local_dVdx
 
-class OuterWalls(PES):
-    """Creates an x**6 barrier around the system.
 
-    V(x) = \sum_i sigma_i * (x_i - x0_i)**6
+class OuterWalls(PES):
+    r"""Creates an x**6 barrier around the system.
+
+    :math:`V(x) = \sum_i sigma_i * (x_i - x0_i)^6`
 
     Parameters
     ----------
@@ -299,8 +305,9 @@ class OuterWalls(PES):
             self._local_dVdx[i] = 6.0*self.sigma[i]*dx[i]**5
         return self._local_dVdx
 
+
 class LinearSlope(PES):
-    """Linear potential energy surface.  V(x) = \sum_i m_i * x_i + c
+    r"""Linear potential energy surface.  :math:`V(x) = \sum_i m_i * x_i + c`
 
     Parameters
     ----------
