@@ -11,7 +11,7 @@ def netcdfplus_init(store):
     store.create_variable(
         'file_name',
         'str',
-        description="the file number that this snapshot is stored in"
+        description="the file name that this snapshot is stored in"
     )
     store.create_variable(
         'file_position',
