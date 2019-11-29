@@ -16,7 +16,7 @@ from openpathsampling.engines import ExternalEngine
 from openpathsampling.engines import features
 from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
 from openpathsampling.engines.openmm.topology import MDTrajTopology
-from openpathsampling.engines.external_storage import ExternalMDSnapshot
+from openpathsampling.engines.external_snapshots import ExternalMDSnapshot
 # fro . import features as gmx_features
 from openpathsampling.tools import ensure_file
 

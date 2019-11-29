@@ -13,8 +13,6 @@ import time
 
 import linecache
 
-import sys # DEBUG
-
 logger = logging.getLogger(__name__)
 
 def close_file_descriptors(basename):
@@ -52,10 +50,7 @@ def _debug_snapshot_loading(snapshot):
 
 class ExternalEngine(DynamicsEngine):
     """
-    Generic object to handle arbitrary external engines.
-
-    Typically, this will be subclassed for any given engine. As written, it
-    will work with the trivial `engine.c` developed for testing purposes.
+    Generic object to handle arbitrary external engines. Subclass to use.
     """
 
     _default_options = {
@@ -177,38 +172,11 @@ class ExternalEngine(DynamicsEngine):
         If no frame is available, returns None. If the frame appears to be
         partially written, returns string "partial".
         """
-        # under most circumstances, start with linecache.checkcache and
-        # setting the value of the first line
-        linecache.checkcache(filename)
-        first_line = frame_num + 1
-
-        # create a snapshot out of lines starting with first_line... if
-        # nothing exists, linecache returns '', so we return None.
-        # Otherwise, try to make a snapshot and return "partial" if we fail
-        line = linecache.getline(filename, first_line)
-        if line is '':
-            snap = None
-        else:
-            try:
-                splitted = line.split()
-                if len(splitted) == 2:
-                    coords = float(splitted[0])
-                    vels = float(splitted[1])
-                else:
-                    raise ValueError()  # force the raise we then ignore
-                snap = ToySnapshot(coordinates=np.array([[coords]]),
-                                   velocities=np.array([[vels]]))
-            except ValueError:
-                snap = "partial"
-        return snap
+        raise NotImplementedError()
 
     def write_frame_to_file(self, filename, snapshot, mode="a"):
         """Writes given snapshot to file."""
-        f = open(filename, mode)
-        snapshot_text = "{pos} {vel}\n".format(pos=snapshot.xyz[0][0],
-                                               vel=snapshot.velocities[0][0])
-        f.write(snapshot_text)
-        f.close()
+        raise NotImplementedError()
 
     def who_to_kill(self):
         """Returns psutil.Process object to send kill signal to.
@@ -233,14 +201,12 @@ class ExternalEngine(DynamicsEngine):
 
     def set_filenames(self, number):
         """Sets names for files associated with trajectory `number`"""
-        self.input_file = self.name_prefix + str(number) + ".inp"
-        self.output_file = self.name_prefix + str(number) + ".out"
+        # pass instead of not implemented because maybe you don't need it
+        # for some engine? usually you do, though
+        pass
 
     def engine_command(self):
         """Generates a string for the command to run the engine."""
-        if self.engine_directory != "":
-            engine_path = os.path.join(self.engine_directory, "engine")
-        else:  # pragma: no cover
-            engine_path = "engine"
-        return (engine_path + " " + str(self.engine_sleep)
-                + " " + str(self.output_file) + " " + str(self.input_file))
+        raise NotImplementedError()
+
+

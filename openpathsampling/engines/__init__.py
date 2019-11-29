@@ -11,6 +11,6 @@ from .dynamics_engine import (
 
 from .external_engine import ExternalEngine
 
-from . import external_storage
+from . import external_snapshots
 
 from . import gromacs

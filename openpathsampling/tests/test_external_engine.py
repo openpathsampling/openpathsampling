@@ -15,6 +15,7 @@ import shlex
 import time
 import os
 import glob
+import linecache
 
 import logging
 
@@ -25,6 +26,55 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 engine_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                           "external_engine")
+
+
+class ExampleExternalEngine(peng.ExternalEngine):
+    """Trivial external engine for engine.c in the tests.
+    """
+    def read_frame_from_file(self, filename, frame_num):
+        # under most circumstances, start with linecache.checkcache and
+        # setting the value of the first line
+        linecache.checkcache(filename)
+        first_line = frame_num + 1
+
+        # create a snapshot out of lines starting with first_line... if
+        # nothing exists, linecache returns '', so we return None.
+        # Otherwise, try to make a snapshot and return "partial" if we fail
+        line = linecache.getline(filename, first_line)
+        if line is '':
+            snap = None
+        else:
+            try:
+                splitted = line.split()
+                if len(splitted) == 2:
+                    coords = float(splitted[0])
+                    vels = float(splitted[1])
+                else:
+                    raise ValueError()  # force the raise we then ignore
+                snap = ToySnapshot(coordinates=np.array([[coords]]),
+                                   velocities=np.array([[vels]]))
+            except ValueError:
+                snap = "partial"
+        return snap
+
+    def write_frame_to_file(self, filename, snapshot, mode='a'):
+        f = open(filename, mode)
+        snapshot_text = "{pos} {vel}\n".format(pos=snapshot.xyz[0][0],
+                                               vel=snapshot.velocities[0][0])
+        f.write(snapshot_text)
+        f.close()
+
+    def set_filenames(self, number):
+        self.input_file = self.name_prefix + str(number) + ".inp"
+        self.output_file = self.name_prefix + str(number) + ".out"
+
+    def engine_command(self):
+        if self.engine_directory != "":
+            engine_path = os.path.join(self.engine_directory, "engine")
+        else:  # pragma: no cover
+            engine_path = "engine"
+        return (engine_path + " " + str(self.engine_sleep)
+                + " " + str(self.output_file) + " " + str(self.input_file))
 
 def setup_module():
     proc = psutil.Popen("make", cwd=engine_dir)
@@ -57,12 +107,12 @@ class TestExternalEngine(object):
         }
         self.template = peng.toy.Snapshot(coordinates=np.array([[0.0]]),
                                           velocities=np.array([[1.0]]))
-        self.slow_engine = peng.ExternalEngine(slow_options,
-                                               self.descriptor,
-                                               self.template)
-        self.fast_engine = peng.ExternalEngine(fast_options,
-                                               self.descriptor,
-                                               self.template)
+        self.slow_engine = ExampleExternalEngine(slow_options,
+                                                 self.descriptor,
+                                                 self.template)
+        self.fast_engine = ExampleExternalEngine(fast_options,
+                                                 self.descriptor,
+                                                 self.template)
         self.ensemble = paths.LengthEnsemble(5)
 
     def test_start_stop(self):
