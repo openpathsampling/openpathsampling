@@ -1,7 +1,6 @@
 import sys
-
-__author__ = 'Jan-Hendrik Prinz'
-
+import os
+import hashlib
 
 try:
     import IPython
@@ -220,3 +219,56 @@ def progress_string(n_steps_completed, n_steps_total, time_elapsed):
         )
     )
     return output_str
+
+
+def ensure_file(filename, old_contents=None, old_hash=None):
+    """Ensure that the existing file matches the old contents.
+
+    If the file exists and we don't know the old contents/hash, trust the
+    file (probably first initialization).
+    If the file does not exist, this write the file. If the file exists,
+    check that its contents (based on hash digest). If these match the
+    original contents, we're fine. If not, raise an error.
+
+    Parameters
+    ----------
+    filename : str
+        filename
+    old_contents : Union[str, None]
+        expected file contents; if not given, assume we trust whatever
+        content is in the file
+    old_hash : Union[str, None]
+        expected hash; if not given, we generate a hash from the old
+        contents
+
+    Returns
+    -------
+    contents : str
+        file contents
+    hashed : str
+        hash of the file contents
+    """
+    hash_function = lambda text: hashlib.sha1(text.encode('utf-8')).digest()
+
+    if old_hash is None and old_contents is not None:
+        old_hash = hash_function(old_contents)
+
+    if not os.path.exists(filename):
+        # write the file if it doesn't exist
+        if old_contents is not None:
+            with open(filename, 'w') as f:
+                f.write(old_contents)
+        else:
+            raise RuntimeError("No contents to write missing file " +
+                               str(filename))
+
+    with open(filename, mode='r') as f:
+        contents = f.read()
+
+    hashed = hash_function(contents)
+
+    if old_hash and hashed != old_hash:
+        raise RuntimeError("Existing file " + str(filename) + " does not"
+                           + " match stored file.")
+
+    return contents, hashed

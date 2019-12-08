@@ -663,7 +663,7 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_n_frames(self, n_frames=1):
         """Generates n_frames, from but not including the current snapshot.
-        
+
         This generates a fixed number of frames at once. If you desire the
         reversed trajectory, you can reverse the returned trajectory.
 

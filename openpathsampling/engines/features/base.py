@@ -141,7 +141,7 @@ class CodeContext(object):
 FeatureTuple = namedtuple(
         'FeatureTuple', 'classes variables properties functions required lazy ' +
                         'numpy reversal minus flip exclude_copy imports debug storables ' +
-                        'dimensions'
+                        'dimensions default_none'
     )
 
 
@@ -227,7 +227,7 @@ def attach_features(features, use_lazy_reversed=False):
         for name in ['variables', 'minus', 'reversal', 'properties',
                      'flip', 'numpy', 'lazy', 'required', 'classes',
                      'exclude_copy', 'imports', 'functions', 'storables',
-                     'dimensions']:
+                     'dimensions', 'default_none']:
             if name not in __features__:
                 __features__[name] = []
 
@@ -278,7 +278,7 @@ def attach_features(features, use_lazy_reversed=False):
 
             # copy specific attribute types
             for name in ['variables', 'minus', 'lazy', 'flip', 'numpy', 'required', 'imports',
-                         'functions', 'storables', 'dimensions']:
+                         'functions', 'storables', 'dimensions', 'default_none']:
                 if hasattr(feature, name):
                     content = getattr(feature, name)
                     if type(content) is str:
@@ -372,6 +372,13 @@ def attach_features(features, use_lazy_reversed=False):
                             translate={'returns': 'variables'}
                         )
 
+        # code for setting default_none (reused in several
+        # (for some reason join wasn't working for me?)
+        default_none_lines = [
+            '    {obj}.' + name + ' = None'
+            for name in __features__['default_none']
+        ]
+
         # set new docstring. This is only possible since our class is created
         # using a Metaclass for abstract classes `abc`. Normal classes cannot
         # have their docstring changed.
@@ -393,6 +400,9 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             code.add_uuid('this')
+            default_none_code = [line.format(obj='this')
+                                 for line in default_none_lines]
+            code += default_none_code
 
             if has_lazy:
                 code += [
@@ -439,6 +449,11 @@ def attach_features(features, use_lazy_reversed=False):
 
             # Copying is effectively creating a new unique object, hence a new UUID
             code.add_uuid('target')
+
+            default_none_code = [line.format(obj='target')
+                                 for line in default_none_lines]
+            code += default_none_code
+
 
             if has_lazy:
                 code += [
@@ -501,6 +516,10 @@ def attach_features(features, use_lazy_reversed=False):
                 "    this._reversed = self"
             ]
 
+            default_none_code = [line.format(obj='this')
+                                 for line in default_none_lines]
+            code += default_none_code
+
             code.format("    this.{0} = self.{0}", 'reversal', [], ['lazy'])
             code.format("    this.{0} = - self.{0}", 'minus', [], ['lazy'])
             code.format("    this.{0} = not self.{0}", 'flip', [], ['lazy'])
@@ -524,6 +543,10 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             code.add_uuid('this')
+
+            default_none_code = [line.format(obj='this')
+                                 for line in default_none_lines]
+            code += default_none_code
 
             if has_lazy:
                 code += [
@@ -563,6 +586,9 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             code.add_uuid('self')
+            default_none_code = [line.format(obj='self')
+                                 for line in default_none_lines]
+            code += default_none_code
 
             # dict for lazy attributes using DelayedLoader descriptor
             if has_lazy:
@@ -596,6 +622,10 @@ def attach_features(features, use_lazy_reversed=False):
 
             code.add_uuid('self')
 
+            default_none_code = [line.format(obj='self')
+                                 for line in default_none_lines]
+            code += default_none_code
+
             # dict for lazy attributes using DelayedLoader descriptor
             if has_lazy:
                 code += [
@@ -614,6 +644,9 @@ def attach_features(features, use_lazy_reversed=False):
             ]
 
             code.add_uuid('self')
+            default_none_code = [line.format(obj='self')
+                                 for line in default_none_lines]
+            code += default_none_code
 
             if has_lazy:
                 code += [

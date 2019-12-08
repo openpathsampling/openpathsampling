@@ -5,15 +5,15 @@
 """
 
 from openpathsampling.engines import BaseSnapshot, SnapshotFactory
-import openpathsampling.engines.features as feats
+from openpathsampling.engines import features as feats
 from . import features as toy_feats
 
 
 @feats.attach_features([
-    feats.velocities,
-    feats.coordinates,
+    toy_feats.velocities,
+    toy_feats.coordinates,
     toy_feats.instantaneous_temperature,
-    feats.engine
+    toy_feats.engine
 ])
 class ToySnapshot(BaseSnapshot):
     """

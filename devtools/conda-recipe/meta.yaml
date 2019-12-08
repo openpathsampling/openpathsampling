@@ -30,6 +30,7 @@ requirements:
     - networkx
     - matplotlib
     - ujson
+    - psutil
     - pyemma
 
 test:
