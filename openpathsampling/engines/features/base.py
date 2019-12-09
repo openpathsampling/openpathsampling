@@ -284,11 +284,14 @@ def attach_features(features, use_lazy_reversed=False):
                     if type(content) is str:
                         content = [content]
 
+                    def func_or_static(fnc):
+                        return callable(fnc) or (hasattr(fnc, "__func__")
+                                                 and callable(fnc.__func__))
                     if name == 'functions':
                         for c in content:
                             if hasattr(feature, c):
                                 fnc = getattr(feature, c)
-                                if callable(fnc):
+                                if func_or_static(fnc):
                                     if hasattr(cls, c):
                                         raise RuntimeWarning(
                                             'Collision: Function "%s" from feature %s already exists.' % (c, feature))
