@@ -13,6 +13,7 @@ before_install:
 install:
   - export OPS_ENV="openpathsampling-py${CONDA_PY}"
   - if [ -z "$MINIMAL" ] ; then source devtools/conda_install_reqs.sh; else pip install -r devtools/minimal.txt -r devtools/minimal_testing.txt; fi
+  - pip install autorelease
   - pip install --no-deps -e .
 
 before_script:
