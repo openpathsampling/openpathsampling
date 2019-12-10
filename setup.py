@@ -76,11 +76,7 @@ class VersionPyFinder(object):
 
             def visit_ImportFrom(self, node):
                 if node.module == self.import_name:
-                    replacement = ast.Raise(exc=ast.Call(
-                        func=ast.Name(id='ImportError', ctx=ast.Load()),
-                        args=[],
-                        keywords=[],
-                    ), cause=None)
+                    replacement = ast.parse("raise ImportError()").body[0]
                     return ast.copy_location(replacement, node)
                 else:
                     return node
@@ -115,6 +111,8 @@ def write_installed_version_py(filename="_installed_version.py",
     version = conf.get('metadata', 'version')
     git_rev = get_git_version()
 
+    # TODO: shouldn't vwe just use the directory found by the
+    # VersionPyFinder?
     if src_dir is None:
         src_dir = conf.get('metadata', 'name')
 
