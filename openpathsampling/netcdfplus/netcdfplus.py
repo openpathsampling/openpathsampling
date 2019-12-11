@@ -385,8 +385,12 @@ class NetCDFPlus(netCDF4.Dataset):
     @staticmethod
     def _cmp_version(v1, v2):
         # we only look at x.y.z parts
-        q1 = v1.split('.')[:3]
-        q2 = v2.split('.')[:3]
+        def version_parts(v):
+            return v.split('-')[0].split('+')[0].split('.')[:3]
+        q1 = version_parts(v1)
+        q2 = version_parts(v2)
+        # q1 = v1.split('.')[:3]
+        # q2 = v2.split('.')[:3]
         # q1 = v1.split('-')[0].split('.')
         # q2 = v2.split('-')[0].split('.')
         for v1, v2 in zip(q1, q2):
