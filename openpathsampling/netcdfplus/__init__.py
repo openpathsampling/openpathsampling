@@ -16,3 +16,5 @@ from .proxy import DelayedLoader, lazy_loading_attributes, LoaderProxy
 from .util import with_timing_logging
 from .attribute import PseudoAttribute, CallablePseudoAttribute, FunctionPseudoAttribute, \
     GeneratorPseudoAttribute
+
+from . import version
