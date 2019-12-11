@@ -1,3 +1,5 @@
+version: ~> 1.0
+
 language: python
 filter_secrets: false   # https://github.com/travis-ci/travis-ci/issues/8934
 
