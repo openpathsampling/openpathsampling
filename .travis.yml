@@ -15,7 +15,9 @@ before_install:
 install:
   - export OPS_ENV="openpathsampling-py${CONDA_PY}"
   - if [ -z "$MINIMAL" ] ; then source devtools/conda_install_reqs.sh; else pip install -r devtools/minimal.txt -r devtools/minimal_testing.txt; fi
-  - pip install autorelease
+  # for the first OPS install, we will run the ops_fixes autorelease branch
+  - pip install git+https://github.com/dwhswenson/autorelease.git@ops_fixes
+  #- pip install autorelease
   - pip install --no-deps -e .
 
 before_script: 
