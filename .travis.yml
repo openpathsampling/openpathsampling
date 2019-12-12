@@ -3,6 +3,14 @@ version: ~> 1.0
 language: python
 filter_secrets: false   # https://github.com/travis-ci/travis-ci/issues/8934
 
+branches:
+  only:
+    - master
+    - stable
+    - docs_deploy  # used for experimenting with docs builds
+    - /^v\d+(\.\d+)+/
+
+
 notifications:
   webhooks: https://coveralls.io/webhook
 
