@@ -89,6 +89,8 @@ def test_reduced_box_vectors():
     else:
         raise AssertionError("Box already reduced")
 
+    if not HAS_OPENMM:
+        pytest.skip()
     snap = mock_snapshot_with_box_vector(box * nm)
     reduced_box = reduced_box_vectors(snap).value_in_unit(nm)
     check_reduced_box_vectors(reduced_box)
@@ -122,7 +124,7 @@ def test_reduce_trajectory_box_vectors():
 
 
 def test_load_trr_with_velocities():
-    if not HAS_MDTRAJ:
+    if not (HAS_MDTRAJ and HAS_OPENMM):
         pytest.skip()
     box_vect_dir = "reduce_box_vects"
     gro = data_filename(box_vect_dir + "/dna.gro")
@@ -134,7 +136,7 @@ def test_load_trr_with_velocities():
 
 
 def test_load_trr_no_velocities():
-    if not HAS_MDTRAJ:
+    if not (HAS_MDTRAJ and HAS_OPENMM):
         pytest.skip()
     box_vect_dir = "reduce_box_vects"
     gro = data_filename(box_vect_dir + "/dna.gro")

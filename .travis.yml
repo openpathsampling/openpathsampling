@@ -1,5 +1,15 @@
+version: ~> 1.0
+
 language: python
 filter_secrets: false   # https://github.com/travis-ci/travis-ci/issues/8934
+
+branches:
+  only:
+    - master
+    - stable
+    - docs_deploy  # used for experimenting with docs builds
+    - /^v\d+(\.\d+)+/
+
 
 notifications:
   webhooks: https://coveralls.io/webhook
@@ -8,15 +18,17 @@ before_install:
   - deactivate  # virtual envs don't play nice with conda
   - export PYTHONUNBUFFERED=true  # immediately flush stdout to terminal
   - source devtools/ci/miniconda_install.sh
-  - conda install -y pyyaml
+  #- conda install -y pyyaml  # I don't think this is needed now...
 
 install:
   - export OPS_ENV="openpathsampling-py${CONDA_PY}"
   - if [ -z "$MINIMAL" ] ; then source devtools/conda_install_reqs.sh; else pip install -r devtools/minimal.txt -r devtools/minimal_testing.txt; fi
-  - pip install autorelease
+  # for the first OPS install, we will run the ops_fixes autorelease branch
+  - pip install git+https://github.com/dwhswenson/autorelease.git@ops_fixes
+  #- pip install autorelease
   - pip install --no-deps -e .
 
-before_script:
+before_script: 
   - python --version
   - python -c "import openpathsampling"
   - source devtools/ci/git_hash.sh
@@ -39,10 +51,10 @@ addons:
 env:
   global:
     - TWINE_USERNAME="dwhswenson"
-    # TWINE_PASSWORD
-    - secure: "zs/3PN46wXFzTDli8LE9jJmNov27xAy7REaTK4s3DV9Ocmf5grqIUbUfFfa7XyOvamr6C7TSHib1SqQvEbHv416AcOD9FWZm9iNj0MO2dBimyXrvR50TFKG/dcp0Qzlp54hYFM4bEzWJZUVN120xynIKgfy74YBOA8DQ6B7FlyY="
-    # AUTORELEASE_TOKEN
-    - secure: "r9u8xvXo3avaloOogrqIVF/oFDeMLSYvZbBYv3y3nBN17p3I9C2FhUbu/VpiRBA0kX6U2BsAHh5DF8ymRD254/f3s8L1BapanLfmoRjp9cXAJ95RZhZ8Cxw9W36VEGcIa+JG1G31oqabEBW4ozQmXsGPSYI3+wfFmhchJPpaDRE="
+    # TWINE_PASSWORD (set via web)
+    #- secure: "zs/3PN46wXFzTDli8LE9jJmNov27xAy7REaTK4s3DV9Ocmf5grqIUbUfFfa7XyOvamr6C7TSHib1SqQvEbHv416AcOD9FWZm9iNj0MO2dBimyXrvR50TFKG/dcp0Qzlp54hYFM4bEzWJZUVN120xynIKgfy74YBOA8DQ6B7FlyY="
+    # AUTORELEASE_TOKEN (set via web)
+    #- secure: "r9u8xvXo3avaloOogrqIVF/oFDeMLSYvZbBYv3y3nBN17p3I9C2FhUbu/VpiRBA0kX6U2BsAHh5DF8ymRD254/f3s8L1BapanLfmoRjp9cXAJ95RZhZ8Cxw9W36VEGcIa+JG1G31oqabEBW4ozQmXsGPSYI3+wfFmhchJPpaDRE="
     - secure: "NJvoSrLNd2ZR3HluJjEqI36gD5lsucwIvgnYjNmM4cwnnA77aLV9FRYTwlLRZn3XY9FL8KOzL5l0amNzMD7sQrf7bWwWv7iCUBddH549q9RSgiuOugtodYJ6VaXi76hk1rOgcJpDoCj9wTCIlMtWibPUzr1QHmdihfdM2iA2kkE="
     - secure: "l9NJkZDD0ALhkErUvhRrreLsrcWErd+CXpWv8dxHGtkjemNx6CwVtyL+a30jz/QwMANSZbKll/cPK5yJQvuwDaWxja6UPLLKVNGtma+CmwKcIC/wwTwbMoxcS62fyLJ3kS0qR8oCQz2nCPKiYyRGADtPLWVMZckY1SJfNYcKuCM="
     - secure: "kb37xmsSV3pEnESnINzwlW2Cju/UFzA/G+m+NsihAwO8RMPZwKCrZK/rptgkUDACXJxom5M690WEukQkHnOt+OTrWhu7WKZgYeVuWUs2++RohYv/m5npaOHMMn+uYmF328v4PvPmXxbD02zzg5Tgdn82x8oa6J8BKX8ohOQ6Xpg="
@@ -53,4 +65,4 @@ env:
     - CONDA_PY=3.7
 
 import:
-  - dwhswenson/autorelease:autorelease-travis.yml@v0.1.0
+  - dwhswenson/autorelease:autorelease-travis.yml@ops_fixes

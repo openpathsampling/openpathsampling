@@ -2,6 +2,8 @@ from __future__ import absolute_import
 from builtins import object
 import logging
 
+import pytest
+
 from nose.tools import (
     assert_equal, assert_not_equal, raises
 )
@@ -29,6 +31,7 @@ class TestMDTrajSupport(object):
         if not md:
             raise SkipTest("mdtraj not installed")
         self.md_trajectory = md.load(data_filename("ala_small_traj.pdb"))
+        _ = pytest.importorskip("simtk.unit")
         self.ops_trajectory = trajectory_from_mdtraj(self.md_trajectory)
         self.md_topology = self.ops_trajectory.topology.mdtraj
 

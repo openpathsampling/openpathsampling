@@ -8,6 +8,8 @@ from builtins import range
 from builtins import object
 import os
 
+import pytest
+
 from nose.tools import (assert_equal)
 
 import openpathsampling as paths
@@ -28,6 +30,7 @@ class TestStorage(object):
         if not md:
             raise SkipTest("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
+        _ = pytest.importorskip('simtk.unit')
         self.traj = peng.trajectory_from_mdtraj(
             self.mdtraj, simple_topology=True)
 
