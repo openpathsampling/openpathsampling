@@ -130,7 +130,17 @@ class RandomVelocities(SnapshotModifier):
         self.beta = beta
         self.engine = engine
 
+    def _default_random_velocities(self, snapshot, beta):
+        pass
+
     def __call__(self, snapshot):
+        # if self.engine:
+            # try:
+                # make_snapshot = self.engine.randomize_velocities
+            # except AttributeError:
+                # make_snapshot = self._default(make_snapshot)
+        # new_snap = self.make_snapshot(snapshot)
+
         # raises AttributeError is snapshot doesn't support velocities
         velocities = copy.copy(snapshot.velocities)  # copy.copy for units
         vel_subset = self.extract_subset(velocities)
