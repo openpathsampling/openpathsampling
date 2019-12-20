@@ -2,6 +2,7 @@ import random
 import logging
 import copy
 import abc
+import functools
 
 import numpy as np
 
@@ -125,22 +126,14 @@ class RandomVelocities(SnapshotModifier):
         select along the first axis of the input array. For example, in a
         typical shape=(n_atoms, 3) array, this will pick the atoms.
     """
-    def __init__(self, beta, engine=None, subset_mask=None):
+    def __init__(self, beta=None, engine=None, subset_mask=None):
         super(RandomVelocities, self).__init__(subset_mask)
         self.beta = beta
         self.engine = engine
 
     def _default_random_velocities(self, snapshot, beta):
-        pass
-
-    def __call__(self, snapshot):
-        # if self.engine:
-            # try:
-                # make_snapshot = self.engine.randomize_velocities
-            # except AttributeError:
-                # make_snapshot = self._default(make_snapshot)
-        # new_snap = self.make_snapshot(snapshot)
-
+        if beta is None:
+            raise RuntimeError("Engine can't use RandomVelocities")
         # raises AttributeError is snapshot doesn't support velocities
         velocities = copy.copy(snapshot.velocities)  # copy.copy for units
         vel_subset = self.extract_subset(velocities)
@@ -176,6 +169,30 @@ class RandomVelocities(SnapshotModifier):
             new_snap = apply_constraints(new_snap)
 
         return new_snap
+
+    def __call__(self, snapshot):
+        # default value; we'll override if needed
+        try:
+            beta = self.beta if self.beta is not None else self.engine.beta
+        except AttributeError:
+            beta = None
+
+        make_snapshot = functools.partial(
+            self._default_random_velocities,
+            beta=beta
+        )
+        if self.engine:
+            try:
+                make_snapshot = functools.partial(
+                    self.engine.randomize_velocities,
+                    beta=beta
+                )
+            except AttributeError:
+                pass  # use default
+
+        new_snap = make_snapshot(snapshot)
+        return new_snap
+
 
 class GeneralizedDirectionModifier(SnapshotModifier):
     """
