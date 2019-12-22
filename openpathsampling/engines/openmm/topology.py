@@ -1,7 +1,6 @@
 import mdtraj as md
 import numpy as np
 import pandas as pd
-from simtk.openmm import XmlSerializer
 
 from openpathsampling.engines import Topology
 

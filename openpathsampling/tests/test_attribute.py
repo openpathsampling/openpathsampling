@@ -3,6 +3,7 @@
 """
 
 from .test_helpers import data_filename, assert_close_unit, make_1d_traj, md
+import pytest
 
 from nose.plugins.skip import SkipTest
 
@@ -18,6 +19,7 @@ class TestFunctionPseudoAttribute(object):
         if not md:
             raise SkipTest("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
+        pytest.importorskip("simtk.unit")
         self.traj_topology = peng.trajectory_from_mdtraj(self.mdtraj)
         self.traj_simple = peng.trajectory_from_mdtraj(
             self.mdtraj,

@@ -1,3 +1,4 @@
 # include visualization .css files
+LICENSE
 graft openpathsampling
 include openpathsampling/resources/*.css
