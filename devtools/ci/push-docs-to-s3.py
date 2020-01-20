@@ -16,10 +16,11 @@ opts = parser.parse_args()
 CLOBBER = opts.clobber
 
 BUCKET_NAME = 'openpathsampling.org'
-if not openpathsampling.version.release:
-    PREFIX = 'latest'
-else:
-    PREFIX = openpathsampling.version.short_version
+PREFIX = 'latest'
+# if not openpathsampling.version.release:
+    # PREFIX = 'latest'
+# else:
+    # PREFIX = openpathsampling.version.short_version
 
 def is_s3cmd_installed():
     dists = pkg_resources.working_set
