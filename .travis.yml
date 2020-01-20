@@ -50,6 +50,7 @@ addons:
 
 env:
   global:
+    - COVERALLS_PARALLEL=true
     - TWINE_USERNAME="dwhswenson"
     # TWINE_PASSWORD (set via web)
     #- secure: "zs/3PN46wXFzTDli8LE9jJmNov27xAy7REaTK4s3DV9Ocmf5grqIUbUfFfa7XyOvamr6C7TSHib1SqQvEbHv416AcOD9FWZm9iNj0MO2dBimyXrvR50TFKG/dcp0Qzlp54hYFM4bEzWJZUVN120xynIKgfy74YBOA8DQ6B7FlyY="
