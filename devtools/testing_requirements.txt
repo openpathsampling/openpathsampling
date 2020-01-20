@@ -1,5 +1,5 @@
 nose
 pytest
 pytest-cov
-python-coveralls
+coveralls
 ipynbtest
