@@ -42,24 +42,31 @@ class SnapshotModifier(StorableNamedObject):
         super(SnapshotModifier, self).__init__()
         self.subset_mask = subset_mask
 
-    def extract_subset(self, full_array):
+    def extract_subset(self, full_array, subset=None):
         """Extracts elements from full_array according to self.subset_mask
 
         Parameters
         ----------
         full_array : list-like
             the input array
+        subset : list of int or None
+            the subset to use; see ``SnapshotModifier.subset_mask``. Default
+            (None) uses the value of ``self.subset_mask``.
 
         Returns
         -------
         list
             the elements of full_array which are selected by
-            self.subset_mask, or full_array if self.subset_mask is None
+            self.subset_mask, or full_array if subset and self.subset_mask
+            are None
         """
-        if self.subset_mask is None:
+        if subset is None:
+            subset = self.subset_mast
+
+        if subset is None:
             return full_array
         else:
-            return [full_array[i] for i in self.subset_mask]
+            return [full_array[i] for i in subset]
 
     def apply_to_subset(self, full_array, modified):
         """Replaces elements of full_array according to self.subset_mask
@@ -131,9 +138,10 @@ class RandomVelocities(SnapshotModifier):
         self.beta = beta
         self.engine = engine
 
-    def _default_random_velocities(self, snapshot, beta):
+    def _default_random_velocities(self, snapshot, beta, subset=None):
         if beta is None:
             raise RuntimeError("Engine can't use RandomVelocities")
+
         # raises AttributeError is snapshot doesn't support velocities
         velocities = copy.copy(snapshot.velocities)  # copy.copy for units
         vel_subset = self.extract_subset(velocities)
