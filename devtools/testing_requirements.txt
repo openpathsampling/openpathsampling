@@ -1,5 +1,5 @@
 nose
-pytest==5.3.3
+pytest!=5.3.4
 pytest-cov
 coveralls
 ipynbtest
