@@ -24,13 +24,13 @@ Integrations with other packages
 
 There's no need to reinvent the wheel: many other packages already implement
 the kinds of functions that you're likely to use as CVs. And the process of
-communicated with one of those packages to get the CV out (e.g., converting
+communicating with one of those packages to get the CV out (e.g., converting
 to their trajectory format) tends to be standard within that package. As a
 result, we've created special wrappers that make it very easy to communicate
 with those packages. There are special CV wrappers for:
 
 * `MDTraj <http://mdtraj.org>`_: :class:`.MDTrajFunctionCV`
-* `PyEMMA <http://pyemma.org>`_: :class:`.PyEMMAFeatureizerCV`
+* `PyEMMA <http://pyemma.org>`_: :class:`.PyEMMAFeaturizerCV`
 * `MSMBuilder <http://msmbuilder.org>`_: :class:`.MSMBFeaturizerCV`
 * `PLUMED <http://plumed.org>`_: `OPS PLUMED Wrapper
   <https://gitlab.e-cam2020.eu/apdealbao/plumed_wrapper/>`_
@@ -87,8 +87,8 @@ return a single numeric value.
 
 For a case like this, it may be better to wrap in the function using a
 :class:`.CoordinateFunctionCV`, since the it only depends on the
-coordinates. This can offer some improvements when using methods that
-involve path reversal (changing the direction of time).
+coordinates. This can offer some small perfomance/storage improvements when
+using methods that involve path reversal (changing the direction of time).
 
 To test that your CV gives the result you expect, create a snapshot called
 ``snap`` and try:
@@ -156,13 +156,13 @@ input. In the example below, I'll first create CVs to get the :math:`x` and
                                              center=[-0.5, -0.5])
 
 In addition to being convenient, this can approach can also be useful if
-you're finding that your CV calculations are expensive. If a part of your CV
-is recalculated, you can make it into its own CV. Once it has been
-calculated once, it will be cached (and disk-cached, if requested), meaning
-that it can be re-used without regenerating it.
+your CV calculations are expensive. If a part of your CV is recalculated,
+you can make it into its own CV. Once it has been calculated once, it will
+be cached (and disk-cached, if requested), meaning that it can be re-used
+without regenerating it.
 
 Another way this can improve performance is that sometimes, it's easier to
-calculate multiple CVs at once, rather than calculating the individually.
+calculate multiple CVs at once, rather than calculating them individually.
 For example, the overhead for converting to another trajectory format (such
 as MDTraj) may become large. Here's a way to avoid that:
 
