@@ -1,3 +1,4 @@
+# NOTE: this is part of the OPS-specific stuff
 from .class_info import ClassInfo
 
 from .serialization_helpers import get_uuid
