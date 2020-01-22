@@ -204,7 +204,7 @@ class TestSQLStorageBackend(object):
         samps = self._add_sample_data()
         snaps = self._add_snapshot_data()
         input_dict = {'samples': samps, 'snapshot0': snaps}[table]
-        uuid_rows = sum([self.database.load_uuids_table([s['uuid']]) 
+        uuid_rows = sum([self.database.load_uuids_table([s['uuid']])
                          for s in input_dict], [])
         for row in uuid_rows:
             assert self.database.uuid_row_to_table_name(row) == table
@@ -225,3 +225,25 @@ class TestSQLStorageBackend(object):
             dct = [d for d in input_dicts if d['uuid'] == row.uuid][0]
             for attr in dct:
                 assert getattr(row, attr) == dct[attr]
+
+    def test_table_len(self):
+        schema = {'samples': [('replica', 'int'),
+                             ('ensemble', 'uuid'),
+                             ('trajectory', 'uuid')]}
+        self.database.register_schema(schema, self.table_to_class)
+        assert self.database.table_len('samples') == 0
+        sample_dict = self._sample_data_dict()
+        self.database.add_to_table('samples', sample_dict)
+        assert self.database.table_len('samples') == 3
+
+
+    def test_table_getitem(self):
+        sample_dict = self._add_sample_data()
+        for num, samp_dct in enumerate(sample_dict):
+            row = self.database.table_get_item('samples', num)
+            assert row[0] == num + 1
+            # not testing row[1], which should be the UUID
+            expected = tuple(samp_dct[k]
+                             for k in ['replica', 'ensemble', 'trajectory'])
+            assert row[2:] == expected
+
