@@ -21,6 +21,13 @@ if sys.version_info > (3, ):
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+try:
+    from simtk import unit as u
+except ImportError:
+    HAS_SIMTK_UNIT = False
+else:
+    HAS_SIMTK_UNIT = True
+
 
 # ==============================================================================
 # Extended NetCDF Storage for multiple forked trajectories
@@ -30,7 +37,7 @@ class NetCDFPlus(netCDF4.Dataset):
     """
     Extension of the python netCDF wrapper for easier storage of python objects
     """
-    support_simtk_unit = True
+    support_simtk_unit = HAS_SIMTK_UNIT
 
     @property
     def _netcdfplus_version_(self):
@@ -103,6 +110,11 @@ class NetCDFPlus(netCDF4.Dataset):
 
             self.getter = getter
             self.setter = setter
+
+            try:
+                from simtk import unit as u
+            except ImportError:
+                self.support_simtk_unit = False
 
         def __setitem__(self, key, value):
             self.variable[key] = self.setter(value)
@@ -313,7 +325,6 @@ class NetCDFPlus(netCDF4.Dataset):
                 variable = self.variables[variable_name]
 
                 if self.support_simtk_unit:
-                    import simtk.unit as u
                     if hasattr(variable, 'unit_simtk'):
                         unit_dict = self.simplifier.from_json(
                             getattr(variable, 'unit_simtk'))
@@ -373,8 +384,15 @@ class NetCDFPlus(netCDF4.Dataset):
 
     @staticmethod
     def _cmp_version(v1, v2):
-        q1 = v1.split('-')[0].split('.')
-        q2 = v2.split('-')[0].split('.')
+        # we only look at x.y.z parts
+        def version_parts(v):
+            return v.split('-')[0].split('+')[0].split('.')[:3]
+        q1 = version_parts(v1)
+        q2 = version_parts(v2)
+        # q1 = v1.split('.')[:3]
+        # q2 = v2.split('.')[:3]
+        # q1 = v1.split('-')[0].split('.')
+        # q2 = v2.split('-')[0].split('.')
         for v1, v2 in zip(q1, q2):
             if int(v1) > int(v2):
                 return +1

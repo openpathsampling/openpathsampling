@@ -1,6 +1,5 @@
 import numpy as np
 from .shared import StaticContainerStore, StaticContainer, unmask_quantity
-import mdtraj
 from openpathsampling.netcdfplus import WeakLRUCache
 import openpathsampling as paths
 

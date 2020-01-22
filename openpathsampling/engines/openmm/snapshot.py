@@ -39,7 +39,8 @@ class MDSnapshot(BaseSnapshot):
     features.kinetics,
     features.masses,
     features.instantaneous_temperature,
-    features.engine
+    features.engine,
+    features.traj_quantities,
 ])
 class Snapshot(BaseSnapshot):
     """

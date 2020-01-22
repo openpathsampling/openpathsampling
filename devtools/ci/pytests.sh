@@ -6,7 +6,7 @@ echo Run pytest tests ...
 testfail=0
 pytest -vv -s --cov --cov-report xml:cov.xml || testfail=1
 #nosetests -v -s --with-coverage || testfail=1
-coveralls
+COVERALLS_PARALLEL=true coveralls
 echo travis_fold:end:pytests
 
 if [ $testfail -eq 1 ]
