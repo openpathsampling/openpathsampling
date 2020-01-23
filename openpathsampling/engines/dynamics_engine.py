@@ -8,9 +8,8 @@ Created on 01.07.2014
 import logging
 import sys
 
-import simtk.unit as u
-
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.integration_tools import is_simtk_unit_type
 
 from .snapshot import BaseSnapshot
 from .trajectory import Trajectory
@@ -121,10 +120,15 @@ class DynamicsEngine(StorableNamedObject):
         'on_error': 'fail'
     }
 
+    #units = {
+        #'length': u.Unit({}),
+        #'velocity': u.Unit({}),
+        #'energy': u.Unit({})
+    #}
     units = {
-        'length': u.Unit({}),
-        'velocity': u.Unit({}),
-        'energy': u.Unit({})
+        'length': None,
+        'velocity': None,
+        'energy': None
     }
 
     base_snapshot_type = BaseSnapshot
@@ -218,7 +222,8 @@ class DynamicsEngine(StorableNamedObject):
 
                 if variable in my_options:
                     if type(my_options[variable]) is type(default_value):
-                        if type(my_options[variable]) is u.Unit:
+                        #if type(my_options[variable]) is u.Unit:
+                        if is_simtk_unit_type(my_options[variable]):
                             if my_options[variable].unit.is_compatible(
                                     default_value):
                                 okay_options[variable] = my_options[variable]
@@ -658,7 +663,7 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_n_frames(self, n_frames=1):
         """Generates n_frames, from but not including the current snapshot.
-        
+
         This generates a fixed number of frames at once. If you desire the
         reversed trajectory, you can reverse the returned trajectory.
 

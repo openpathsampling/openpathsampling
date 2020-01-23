@@ -17,6 +17,7 @@ OpenPathSampling API
     shooting
     snapshot_modifiers
     movestrategy
+    interface_set
     network
     netcdfplus/index
     numerics

@@ -13,6 +13,8 @@ import unittest
 
 import openpathsampling.volume as volume
 
+import openpathsampling as paths
+
 class Identity2(CallIdentity):
     def __str__(self):
         return "Id2"
@@ -160,6 +162,8 @@ class TestCVRangeVolume(object):
         assert_equal((~volA).__str__(), "(not {x|Id(x) in [-0.5, 0.5]})")
 
     def test_unit_support(self):
+        if not paths.integration_tools.HAS_SIMTK_UNIT:
+            raise SkipTest
         import simtk.unit as u
 
         vol = volume.CVDefinedVolume(

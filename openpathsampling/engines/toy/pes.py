@@ -23,7 +23,7 @@ class PES(StorableObject):
 
     def kinetic_energy(self, sys):
         """Default kinetic energy implementation.
-        
+
         Parameters
         ----------
         sys : :class:`.ToyEngine`
@@ -31,7 +31,8 @@ class PES(StorableObject):
         """
         v = sys.velocities
         m = sys.mass
-        return 0.5*np.dot(m, np.multiply(v,v))
+        return 0.5*np.dot(m, np.multiply(v, v))
+
 
 class PES_Combination(PES):
     """Mathematical combination of two potential energy surfaces.
@@ -86,6 +87,7 @@ class PES_Combination(PES):
         """
         return self._dfdx_fcn(self.pes1.dVdx(sys), self.pes2.dVdx(sys))
 
+
 class PES_Sub(PES_Combination):
     """Difference of two potential energy surfaces; pes1 - pes2
 
@@ -103,6 +105,7 @@ class PES_Sub(PES_Combination):
             lambda a, b: a - b,
             lambda a, b: a - b
             )
+
 
 class PES_Add(PES_Combination):
     """Sum of two potential energy surfaces; pes1 + pes 2
@@ -122,10 +125,11 @@ class PES_Add(PES_Combination):
             lambda a, b: a + b
         )
 
+
 class HarmonicOscillator(PES):
-    """Simple harmonic oscillator. Independent in each degree of freedom.
-    
-    V(x) = \sum_i A_i * mass_i * omega_i**2 * (x_i - x0_i)**2
+    r"""Simple harmonic oscillator. Independent in each degree of freedom.
+
+    :math:`V(x) = \sum_i A_i * mass_i * omega_i^2 * (x_i - x0_i)^2`
 
     Parameters
     ----------
@@ -138,6 +142,10 @@ class HarmonicOscillator(PES):
         self.A = np.array(A)
         self.omega = np.array(omega)
         self.x0 = np.array(x0)
+
+    def __repr__(self):  # pragma: no cover
+        repr_str = "HarmonicOscillator({obj.A}, {obj.omega}, {obj.x0})"
+        return repr_str.format(obj=self)
 
     def to_dict(self):
         dct = super(HarmonicOscillator, self).to_dict()
@@ -180,8 +188,9 @@ class HarmonicOscillator(PES):
         k = self.omega*self.omega*sys.mass
         return self.A*k*dx
 
+
 class Gaussian(PES):
-    """Gaussian given by A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)
+    r"""Gaussian given by: :math:`A*exp(-\sum_i alpha[i]*(x[i]-x0[i])^2)`
 
     Parameters
     ----------
@@ -198,6 +207,9 @@ class Gaussian(PES):
         self.alpha = np.array(alpha)
         self.x0 = np.array(x0)
         self._local_dVdx = np.zeros(self.x0.size)
+
+    def __repr__(self):  # pragma: no cover
+        return "Gaussian({o.A}, {o.alpha}, {o.x0})".format(o=self)
 
     def V(self, sys):
         """Potential energy
@@ -234,10 +246,11 @@ class Gaussian(PES):
             self._local_dVdx[i] = -2*self.alpha[i]*dx[i]*exp_part
         return self._local_dVdx
 
-class OuterWalls(PES):
-    """Creates an x**6 barrier around the system.
 
-    V(x) = \sum_i sigma_i * (x_i - x0_i)**6
+class OuterWalls(PES):
+    r"""Creates an x**6 barrier around the system.
+
+    :math:`V(x) = \sum_i sigma_i * (x_i - x0_i)^6`
 
     Parameters
     ----------
@@ -251,6 +264,9 @@ class OuterWalls(PES):
         self.sigma = np.array(sigma)
         self.x0 = np.array(x0)
         self._local_dVdx = np.zeros(self.x0.size)
+
+    def __repr__(self):  # pragma: no cover
+        return "OuterWalls({o.sigma}, {o.x0})".format(o=self)
 
     def V(self, sys):
         """Potential energy
@@ -289,8 +305,9 @@ class OuterWalls(PES):
             self._local_dVdx[i] = 6.0*self.sigma[i]*dx[i]**5
         return self._local_dVdx
 
+
 class LinearSlope(PES):
-    """Linear potential energy surface.  V(x) = \sum_i m_i * x_i + c
+    r"""Linear potential energy surface.  :math:`V(x) = \sum_i m_i * x_i + c`
 
     Parameters
     ----------
@@ -305,6 +322,9 @@ class LinearSlope(PES):
         self.c = c
         self._local_dVdx = self.m
         self.dim = len(self.m)
+
+    def __repr__(self):  # pragma: no cover
+        return "LinearSlope({o.m}, {o.c})".format(o=self)
 
     def V(self, sys):
         """Potential energy
