@@ -1,7 +1,7 @@
 .. _data-object-api:
 
-Data Objects API
-================
+Data Objects
+============
 
 This describes some of the objects used to describe data. Note that
 :class:`Trajectories <.Trajectory>` and :class:`Snapshots <.Snapshot>` are

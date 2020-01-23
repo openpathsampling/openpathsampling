@@ -25,3 +25,5 @@ providing this here the unorganized form.
    transitions_and_networks
    tis_analysis
    how_use
+..   troubleshooting
+..   error_messages
