@@ -17,6 +17,7 @@ OpenPathSampling API
     pathsimulator
     storage
     treemixin
+    interface_set
     network
     engines/index
     netcdfplus/index

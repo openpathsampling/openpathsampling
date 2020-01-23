@@ -8,10 +8,14 @@ from builtins import range
 from builtins import object
 from past.utils import old_div
 import numpy as np
-import simtk.openmm as mm
 from nose.tools import (assert_equal)
-from simtk import unit as u
-from simtk.openmm import app
+from nose.plugins.skip import SkipTest
+try:
+    import simtk.openmm as mm
+    from simtk.openmm import app
+except ImportError:
+    mm = None
+    app = None
 
 import openpathsampling.engines.openmm as peng
 import openpathsampling.engines as dyn
@@ -22,7 +26,7 @@ from .test_helpers import (
     true_func, data_filename,
     assert_equal_array_array,
     assert_not_equal_array_array,
-    raises_with_message_like,
+    raises_with_message_like, u, md,
     A2BEnsemble)
 
 import logging
@@ -33,6 +37,8 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 def setup_module():
     global topology, template, system, nan_causing_template
+    if not (u and mm and app and md):
+        raise SkipTest
     template = peng.snapshot_from_pdb(data_filename("ala_small_traj.pdb"))
     topology = peng.to_openmm_topology(template)
 
