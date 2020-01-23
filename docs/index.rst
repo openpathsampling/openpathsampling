@@ -10,8 +10,8 @@ flux calculations. In addition, it is a powerful library to build new path
 sampling methods.
 
 OPS is independent of the underlying molecular dynamics engine, and
-currently has support for OpenMM, as well as an internal engine suitable for
-2D toy models.
+currently has support for OpenMM and Gromacs, as well as an internal engine
+suitable for 2D toy models.
 
 To learn more about what OPS can do, look at our :ref:`examples <examples>`.
 If you want to jump right in, take a look at how easy it is to
@@ -62,6 +62,7 @@ For Users
     install
     examples/index
     topics/index
+    videos
     faq
 
 
