@@ -2,8 +2,8 @@
 
 .. currentmodule:: openpathsampling
 
-PathSimulator API
-=======================
+PathSimulators
+==============
 
 Abstract Base Class
 -------------------

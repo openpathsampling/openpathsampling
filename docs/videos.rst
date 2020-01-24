@@ -56,5 +56,5 @@ parts of OPS that would be of interest to new contributors to the code.
 * `More about that workshop
   <https://www.lorentzcenter.nl/lc/web/2017/905/info.php3?wsid=905>`_
 * `Other presentations from that workshop
-  <https://training.e-cam2020.eu/datasets/5a61f77ae4b0ea57d617a6d9>`_
+  <https://training.e-cam2020.eu/collection/5a609bd0e4b070ac6b9789ca>`_
 
