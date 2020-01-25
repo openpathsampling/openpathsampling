@@ -10,7 +10,7 @@ that aren't Python 3-compatible yet.
 
 .. note:: As of OpenPathSampling 1.1, OpenMM will no longer be automatically
           installed when you install OPS. However, the OpenMM engine will be
-          immediately available if you install OpenMM youself. See the
+          immediately available if you install OpenMM yourself. See the
           `OpenMM installation instructions
           <http://docs.openmm.org/latest/userguide/application.html#installing-openmm>`_
           for a detailed guide, but ``conda install -c conda-forge -c omnia
