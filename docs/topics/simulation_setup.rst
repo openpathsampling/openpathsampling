@@ -1,8 +1,8 @@
 .. _simulation_setup:
 
-########################
-Setting up path sampling
-########################
+###########################
+Preparing for path sampling
+###########################
 
 *Or: What OpenPathSampling does not do for you*
 
