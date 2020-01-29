@@ -184,7 +184,8 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
 
         # do the analysis
         results = {}
-        for flux_pair in self.flux_pairs:
+        flux_pairs = self.progress(self.flux_pairs, desc="Flux")
+        for flux_pair in flux_pairs:
             (state, innermost) = flux_pair
             mover = flux_pair_to_minus_mover[flux_pair]
             calculator = transition_flux_calculators[flux_pair]
@@ -193,8 +194,9 @@ class MinusMoveFlux(MultiEnsembleSamplingAnalyzer):
             # (but neither would our old version)
             trajectories = [s.active[minus_ens].trajectory
                             for s in mover_to_steps[mover]]
+            mover_trajs = self.progress(trajectories, leave=False)
             results[flux_pair] = calculator.analyze_flux(
-                trajectories=trajectories,
+                trajectories=mover_trajs,
                 state=state,
                 interface=innermost
             )

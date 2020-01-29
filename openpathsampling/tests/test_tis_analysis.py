@@ -24,6 +24,8 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+paths.progress.HAS_TQDM = False  # turn off progress bars
+
 def make_tis_traj_fixed_steps(n_steps, step_size=0.1, reverse=False):
     if reverse:
         sign = -1
