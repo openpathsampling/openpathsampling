@@ -4,6 +4,7 @@ from builtins import zip
 from builtins import range
 from past.utils import old_div
 from builtins import object
+import pytest
 from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
@@ -190,6 +191,12 @@ class TestRandomizeVelocities(object):
                                   self.snap_2x3D.velocities[1])
         for val in new_2x3D.velocities[0]:
             assert_not_equal(val, 0.0)
+
+    def test_no_beta_bad_engine(self):
+        engine = self.snap_2x3D.engine
+        randomizer = RandomVelocities(engine=engine)
+        with pytest.raises(RuntimeError):
+            randomizer(self.snap_2x3D)
 
     def test_with_openmm_snapshot(self):
         # note: this is only a smoke test; correctness depends on OpenMM's

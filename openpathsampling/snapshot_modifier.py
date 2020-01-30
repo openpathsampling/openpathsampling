@@ -61,15 +61,15 @@ class SnapshotModifier(StorableNamedObject):
             are None
         """
         if subset is None:
-            subset = self.subset_mast
+            subset = self.subset_mask
 
         if subset is None:
             return full_array
         else:
             return [full_array[i] for i in subset]
 
-    def apply_to_subset(self, full_array, modified):
-        """Replaces elements of full_array according to self.subset_mask
+    def apply_to_subset(self, full_array, modified, subset_mask=None):
+        """Replaces elements of full_array according to the subset mask
 
         This returns the full_array, but the modification is done in-place.
 
@@ -87,8 +87,10 @@ class SnapshotModifier(StorableNamedObject):
             modified version of the input array, where the elements
             specified by self.subset_mask have been replaced
         """
-        subset_mask = self.subset_mask
-        if self.subset_mask is None:
+        if subset_mask is None:
+            subset_mask = self.subset_mask
+
+        if subset_mask is None:
             subset_mask = range(len(full_array))
         for (i, val) in zip(subset_mask, modified):
             full_array[i] = val
@@ -138,17 +140,17 @@ class RandomVelocities(SnapshotModifier):
         self.beta = beta
         self.engine = engine
 
-    def _default_random_velocities(self, snapshot, beta, subset=None):
+    def _default_random_velocities(self, snapshot, beta, subset):
         if beta is None:
             raise RuntimeError("Engine can't use RandomVelocities")
 
         # raises AttributeError is snapshot doesn't support velocities
         velocities = copy.copy(snapshot.velocities)  # copy.copy for units
-        vel_subset = self.extract_subset(velocities)
+        vel_subset = self.extract_subset(velocities, subset)
 
         # raises AttributeError if snapshot doesn't support masses feature
         all_masses = snapshot.masses
-        masses = self.extract_subset(all_masses)
+        masses = self.extract_subset(all_masses, subset)
 
         n_spatial = len(vel_subset[0])
         n_atoms = len(vel_subset)
@@ -160,7 +162,7 @@ class RandomVelocities(SnapshotModifier):
                 sigma = np.sqrt(radicand)
             vel_subset[atom_i] = sigma * np.random.normal(size=n_spatial)
 
-        self.apply_to_subset(velocities, vel_subset)
+        self.apply_to_subset(velocities, vel_subset, subset)
         new_snap = snapshot.copy_with_replacement(velocities=velocities)
 
         # applying constraints, if they exist
@@ -187,13 +189,15 @@ class RandomVelocities(SnapshotModifier):
 
         make_snapshot = functools.partial(
             self._default_random_velocities,
-            beta=beta
+            beta=beta,
+            subset=self.subset_mask
         )
         if self.engine:
             try:
                 make_snapshot = functools.partial(
                     self.engine.randomize_velocities,
-                    beta=beta
+                    beta=beta,
+                    subset=self.subset_mask
                 )
             except AttributeError:
                 pass  # use default
