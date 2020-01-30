@@ -10,18 +10,19 @@ OpenPathSampling API
     collectivevariable
     volume
     ensemble
+    pathmover
+    engines/index
+    storage
+    pathsimulator
     shooting
     snapshot_modifiers
-    pathmover
     movestrategy
-    pathsimulator
-    storage
-    treemixin
     interface_set
     network
-    engines/index
     netcdfplus/index
     numerics
+    treemixin
+    analysis
     tis_analysis
 ..    snapshot_features
 
