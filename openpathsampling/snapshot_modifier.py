@@ -45,6 +45,11 @@ class SnapshotModifier(StorableNamedObject):
     def extract_subset(self, full_array, subset=None):
         """Extracts elements from full_array according to self.subset_mask
 
+        Note that, if ``subset`` and ``self.subset`` are None, this returns
+        ``full_array``. If you intend to modify the object returned by this
+        functions, you should ensure that your input ``full_array`` is a
+        copy of any orginal immutable data.
+
         Parameters
         ----------
         full_array : list-like
@@ -55,7 +60,7 @@ class SnapshotModifier(StorableNamedObject):
 
         Returns
         -------
-        list
+        list-like
             the elements of full_array which are selected by
             self.subset_mask, or full_array if subset and self.subset_mask
             are None
@@ -80,6 +85,9 @@ class SnapshotModifier(StorableNamedObject):
         modified : list-like
             array containing len(self.subset_mask) elements which will
             replace those in `full_array`
+        subset_mask : list of int or None
+            the subset to use; see ``SnapshotModifier.subset_mask``. Default
+            (None) uses the value of ``self.subset_mask``.
 
         Returns
         -------
