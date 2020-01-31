@@ -648,3 +648,48 @@ class TestDirectSimulation(object):
         assert_equal(len(traj), 201)
         read_store.close()
         os.remove(tmpfile)
+
+
+class TestPathSampling(object):
+    def setup(self):
+        paths.InterfaceSet._reset()
+        self.cv = paths.FunctionCV("x", lambda x: x.xyz[0][0])
+        self.state_A = paths.CVDefinedVolume(self.cv, float("-inf"), 0.0)
+        self.state_B = paths.CVDefinedVolume(self.cv, 1.0, float("inf"))
+        pes = paths.engines.toy.LinearSlope([0, 0, 0], 0)
+        integ = paths.engines.toy.LangevinBAOABIntegrator(0.01, 0.1, 2.5)
+        topology = paths.engines.toy.Topology(n_spatial=3, masses=[1.0],
+                                              pes=pes)
+        self.engine = paths.engines.toy.Engine(options={'integ': integ},
+                                               topology=topology)
+
+        interfaces = paths.VolumeInterfaceSet(self.cv, float("-inf"),
+                                              [0.0, 0.1, 0.2])
+        network = paths.MISTISNetwork([
+            (self.state_A, interfaces, self.state_B)
+        ])
+        init_traj = make_1d_traj([-0.1, 0.2, 0.5, 0.8, 1.1])
+        scheme = paths.MoveScheme(network)
+        scheme.append([
+            paths.strategies.OneWayShootingStrategy(
+                selector=paths.UniformSelector(),
+                engine=self.engine
+            ),
+            paths.strategies.PathReversalStrategy(),
+            paths.strategies.OrganizeByMoveGroupStrategy()
+        ])
+        init_cond = scheme.initial_conditions_from_trajectories(init_traj)
+        self.sim = PathSampling(storage=None, move_scheme=scheme,
+                                sample_set=init_cond)
+
+    def test_run_until_decorrelated(self):
+        def all_snaps(sample_set):
+            return set(sum([s.trajectory for s in sample_set], []))
+        initial_snaps = all_snaps(self.sim.sample_set)
+        self.sim.run_until_decorrelated()
+        final_snaps = all_snaps(self.sim.sample_set)
+        assert initial_snaps & final_snaps == set([])
+        # test time reversal
+        init_xyz = set(s.xyz.tostring() for s in initial_snaps)
+        final_xyz = set(s.xyz.tostring() for s in final_snaps)
+        assert init_xyz & final_xyz == set([])
