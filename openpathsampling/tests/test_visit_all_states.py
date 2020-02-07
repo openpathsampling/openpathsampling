@@ -21,9 +21,9 @@ def test_default_state_progress_report():
 
     f = default_state_progress_report  # keep on one line
     assert f(n_steps, found_vol, all_vol) == \
-            "Ran 100 frames. Found states [A,B]. Looking for [C,D]."
+            "Ran 100 frames. Found states [A,B]. Looking for [C,D].\n"
     assert f(n_steps, found_vol, all_vol, tstep) == \
-            "Ran 100 frames [50.0]. Found states [A,B]. Looking for [C,D]."
+            "Ran 100 frames [50.0]. Found states [A,B]. Looking for [C,D].\n"
 
 def extract_info_from_default_report(report):
     pattern = (r"Ran ([0-9]*) frames. Found states \[(.*)\]\. "
@@ -42,9 +42,9 @@ def extract_info_from_default_report(report):
 
 def test_extract_info_from_default_report():
     reports = {
-        0: "Ran 0 frames. Found states []. Looking for [A,B,C,D].",
-        3: "Ran 3 frames. Found states [A,B]. Looking for [C,D].",
-        7: "Ran 7 frames. Found states [A,B,C,D]. Looking for []."
+        0: "Ran 0 frames. Found states []. Looking for [A,B,C,D].\n",
+        3: "Ran 3 frames. Found states [A,B]. Looking for [C,D].\n",
+        7: "Ran 7 frames. Found states [A,B,C,D]. Looking for [].\n"
     }
     results = {
         0: [0, {}, {'A', 'B', 'C', 'D'}],
