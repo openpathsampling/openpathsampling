@@ -160,8 +160,8 @@ class WHAM(object):
             )
             cleaned_df = cleaned_df.apply(
                 lambda s: [
-                    s.iloc[i] if test_f(s.iloc[i], s.iloc[i+1], s.max())
-                    else 0.0
+                    s.iloc[i]
+                    if test_f(s.iloc[i], s.iloc[i+1], s.max()) else 0.0
                     for i in range(len(s)-1)
                 ] + [s.iloc[-1]]
             )

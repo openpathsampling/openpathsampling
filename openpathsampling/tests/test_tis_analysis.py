@@ -505,10 +505,10 @@ class TestFullHistogramMaxLambda(TISAnalysisTester):
             interfaces=mistis_AB.interfaces.volumes,
             orderparameter=mistis_AB.orderparameter
         )
-        FullHistogramMaxLambdas(transition=modified_transition,
-                                hist_parameters={'bin_width': 0.1,
-                                                 'bin_range': (-0.1, 1.1)
-                                                 })
+        FullHistogramMaxLambdas(
+            transition=modified_transition,
+            hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
+        )
 
 
 class TestConditionalTransitionProbability(TISAnalysisTester):
@@ -981,21 +981,21 @@ class TestStandardTISAnalysis(TestTISAnalysis):
     @raises(TypeError)
     def test_bad_no_flux(self):
         network = self.mistis
-        StandardTISAnalysis(network=network,
-                            max_lambda_calcs={
-                                t: {'bin_width': 0.1,
-                                    'bin_range': (-0.1, 1.1)}
-                                for t in network.sampling_transitions}
-                            )
+        StandardTISAnalysis(
+            network=network,
+            max_lambda_calcs={t: {'bin_width': 0.1,
+                                  'bin_range': (-0.1, 1.1)}
+                              for t in network.sampling_transitions}
+        )
 
     @raises(RuntimeError)
     def test_bad_max_lambda_calcs(self):
         network = self.mistis
-        StandardTISAnalysis(network=network,
-                            flux_method=DictFlux(
-                                {(t.stateA, t.interfaces[0]): 0.1
+        StandardTISAnalysis(
+            network=network,
+            flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
                                  for t in network.sampling_transitions})
-                            )
+        )
 
     def test_init_ensemble_histogrammer_max_lambda(self):
         network = self.mistis
