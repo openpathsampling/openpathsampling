@@ -2,8 +2,8 @@
 
 .. currentmodule:: openpathsampling.ensemble
 
-Ensembles API
-=============
+Ensembles
+=========
 
 The concept of the path ensemble, the (appropriately weighted) set of
 trajectories satisfying particular conditions, is at the heart of path

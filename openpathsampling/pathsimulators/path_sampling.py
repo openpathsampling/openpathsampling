@@ -187,7 +187,7 @@ class PathSampling(PathSimulator):
         n_steps_to_run = n_steps - self.step
         self.run(n_steps_to_run)
 
-    def run_until_decorrelated(self):
+    def run_until_decorrelated(self, time_reversal=True):
         """Run until all trajectories are decorrelated.
 
         This runs until all the replicas in ``self.sample_set`` have
@@ -204,7 +204,8 @@ class PathSampling(PathSimulator):
         self.output_stream = open(os.devnull, 'w')
 
         def n_correlated(sample_set, originals):
-            return sum([originals[r].is_correlated(sample_set[r])
+            return sum([originals[r].is_correlated(sample_set[r],
+                                                   time_reversal)
                         for r in originals])
 
         original_output_stream.write("Decorrelating trajectories....\n")
@@ -219,6 +220,12 @@ class PathSampling(PathSimulator):
             )
             self.run(1)
             to_decorrelate = n_correlated(self.sample_set, originals)
+
+        paths.tools.refresh_output(
+            "Step {}: All trajectories decorrelated!\n".format(self.step+1),
+            refresh=False,
+            output_stream=original_output_stream
+        )
 
         self.output_stream = original_output_stream
 
