@@ -20,6 +20,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 paths.progress.HAS_TQDM = False  # turn off progress bars
 
+
 def make_tis_traj_fixed_steps(n_steps, step_size=0.1, reverse=False):
     if reverse:
         sign = -1
@@ -854,6 +855,93 @@ class TestTISAnalysis(TISAnalysisTester):
         mstis_tp = self.mstis_analysis.transition_probability_matrix
         for trans_pair in pairs:
             assert_almost_equal(mistis_tp[trans_pair], 0.125)
+            assert_almost_equal(mstis_tp[trans_pair], 0.125)
+
+    def test_transition_probability(self):
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(
+                self.mistis_analysis.transition_probability(vol_1, vol_2),
+                0.125
+            )
+            assert_almost_equal(
+                self.mstis_analysis.transition_probability(vol_1, vol_2),
+                0.125
+            )
+
+    def test_rate_matrix(self):
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        mistis_rate = self.mistis_analysis.rate_matrix()
+        mstis_rate = self.mstis_analysis.rate_matrix()
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(mistis_rate[(vol_1, vol_2)], 0.0125)
+            assert_almost_equal(mstis_rate[(vol_1, vol_2)], 0.0125)
+
+    def test_rate_matrix_calculation(self):
+        mistis_analysis = self._make_tis_analysis(self.mistis)
+        mistis_rate = mistis_analysis.rate_matrix(steps=self.mistis_steps)
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(mistis_rate[(vol_1, vol_2)], 0.0125)
+
+    def test_rate(self):
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(self.mistis_analysis.rate(vol_1, vol_2),
+                                0.0125)
+            assert_almost_equal(self.mstis_analysis.rate(vol_1, vol_2),
+                                0.0125)
+
+
+class TestStandardTISAnalysis(TestTISAnalysis):
+    # inherit from TestTISAnalysis to retest all the same results
+    def _make_tis_analysis(self, network, steps=None):
+        tis_analysis = StandardTISAnalysis(
+            network=network,
+            flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
+                                  for t in network.sampling_transitions}),
+            max_lambda_calcs={t: {'bin_width': 0.1,
+                                  'bin_range': (-0.1, 1.1)}
+                              for t in network.sampling_transitions},
+            steps=steps
+        )
+        return tis_analysis
+
+    def test_init_with_steps(self):
+        mistis_analysis = self._make_tis_analysis(self.mistis,
+                                                  self.mistis_steps)
+        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
+        for (vol_1, vol_2) in pairs:
+            assert_almost_equal(
+                mistis_analysis.rate_matrix()[(vol_1, vol_2)],
+                0.0125
+            )
+
+    def test_crossing_probability(self):
+        results = {
+            0: {0.0: 1.0, 0.1: 0.5, 0.2: 0.25},
+            1: {0.0: 1.0, 0.1: 1.0, 0.2: 0.5, 0.3: 0.25, 1.0: 0.25},
+            2: {0.0: 1.0, 0.1: 1.0, 0.2: 1.0, 0.3: 0.5, 1.0: 0.5}
+        }
+
+        def check_cp(transition, analysis, results):
+            # a little nested function to that does the actual check
+            for (i, ens) in enumerate(transition.ensembles):
+                cp_ens = analysis.crossing_probability(ens)
+                for x in results[i]:
+                    assert_almost_equal(results[i][x], cp_ens(x))
+
+        for (network, analysis) in [(self.mistis, self.mistis_analysis),
+                                    (self.mstis, self.mstis_analysis)]:
+            for transition in network.transitions.values():
+                check_cp(transition, analysis, results)
+
+    def test_conditional_transition_probability(self):
+        expected_data = [[0.5, 0.5], [0.5, 0.5]]
+        states = ['A', 'B']
+        mistis_interfaces = ['A->B 2', 'B->A 2']
+        mstis_interfaces = ['Out A 2', 'Out B 2']
+
         expected_mistis = pd.DataFrame(data=expected_data,
                                        index=mistis_interfaces,
                                        columns=states)
@@ -920,95 +1008,6 @@ class TestTISAnalysis(TISAnalysisTester):
             )
             for t in network.sampling_transitions
         }
-        tis_analysis = StandardTISAnalysis(
-            network=network,
-            flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
-                                  for t in network.sampling_transitions}),
-            max_lambda_calcs=max_lambda_calcs,
-            steps=self.mistis_steps
-        )
-        rate = tis_analysis.rate_matrix()
-        pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
-        for (vol_1, vol_2) in pairs:
-            assert_almost_equal(rate[(vol_1, vol_2)], 0.0125)
-
-    def test_with_minus_move_flux(self):
-        network = self.mstis
-        scheme = paths.DefaultScheme(network, engine=RandomMDEngine())
-        scheme.build_move_decision_tree()
-
-        # create the minus move steps
-        # `center` is the edge of the state/innermost interface
-        center = {self.state_A: 0.0, self.state_B: 1.0}
-        replica = {self.state_A: -1, self.state_B: -2}
-        minus_ensemble_to_mover = {m.minus_ensemble: m
-                                   for m in scheme.movers['minus']}
-        state_to_minus_ensemble = {ens.state_vol: ens
-                                   for ens in network.minus_ensembles}
-        minus_changes = []
-        # `delta` is the change on either side for in vs. out
-        for (state, delta) in [(self.state_A, 0.1), (self.state_B, -0.1)]:
-            minus_ens = state_to_minus_ensemble[state]
-            minus_mover = minus_ensemble_to_mover[minus_ens]
-            a_in = center[state] - delta
-            a_out = center[state] + delta
-            # note that these trajs are equivalent to minus move
-            # descriptions in TestMinusMoveFlux
-            seq_1 = [a_in] + [a_out]*2 + [a_in]*5 + [a_out]*5 + [a_in]
-            seq_2 = [a_in] + [a_out]*3 + [a_in]*3 + [a_out]*3 + [a_in]
-
-            for seq in [seq_1, seq_2]:
-                traj = make_1d_traj(seq)
-                assert_equal(minus_ens(traj), True)
-                samp = paths.Sample(trajectory=traj,
-                                    ensemble=minus_ens,
-                                    replica=replica[state])
-                _ = paths.SampleSet([samp])
-                change = paths.AcceptedSampleMoveChange(
-                    samples=[samp],
-                    mover=minus_mover,
-                    details=paths.Details()
-                )
-                minus_changes.append(change)
-
-        active = self.mstis_steps[0].active
-        steps = []
-        cycle = -1
-        for m_change in minus_changes:
-            cycle += 1
-            active = active.apply_samples(m_change.samples)
-            step = paths.MCStep(mccycle=cycle,
-                                active=active,
-                                change=m_change)
-            steps.append(step)
-            for old_step in self.mstis_steps[1:]:
-                cycle += 1
-                active = active.apply_samples(old_step.change.samples)
-                step = paths.MCStep(mccycle=cycle,
-                                    active=active,
-                                    change=old_step.change)
-                steps.append(step)
-
-        analysis = StandardTISAnalysis(
-            network=self.mstis,
-            scheme=scheme,
-            max_lambda_calcs={t: {'bin_width': 0.1,
-                                  'bin_range': (-0.1, 1.1)}
-                              for t in network.sampling_transitions},
-            steps=steps
-        )
-
-        # now we actually verify correctness
-        avg_t_in = (5.0 + 3.0) / 2
-        avg_t_out = (2.0 + 5.0 + 3.0 + 3.0) / 4
-        expected_flux = 1.0 / (avg_t_in + avg_t_out)
-
-        # NOTE: Apparently this approach screws up the TCP calculation. I
-        # think this is a problem in the fake data, not the simulation.
-        for flux in analysis.flux_matrix.values():
-ions
-        }
-        tis_analysis = StandardTISAna
         tis_analysis = StandardTISAnalysis(
             network=network,
             flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
