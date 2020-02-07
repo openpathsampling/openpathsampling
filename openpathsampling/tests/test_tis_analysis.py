@@ -994,7 +994,7 @@ class TestStandardTISAnalysis(TestTISAnalysis):
         StandardTISAnalysis(
             network=network,
             flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
-                                 for t in network.sampling_transitions})
+                                  for t in network.sampling_transitions})
         )
 
     def test_init_ensemble_histogrammer_max_lambda(self):
