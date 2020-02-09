@@ -1,5 +1,6 @@
 import itertools
 import random
+import pytest
 from nose.tools import assert_equal, assert_almost_equal, raises
 from .test_helpers import (make_1d_traj, MoverWithSignature, RandomMDEngine,
                            assert_frame_equal, assert_items_equal)
@@ -101,6 +102,8 @@ class TISAnalysisTester(object):
 
     def setup(self):
         # set up the trajectories, ensembles, etc. for this test
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False  # turn of progress bars
         paths.InterfaceSet._reset()
         cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
         cv_B = paths.FunctionCV('1-Id', lambda s: 1.0-s.xyz[0][0])
@@ -156,6 +159,10 @@ class TISAnalysisTester(object):
             self.mstis_steps,
             self.mstis.sampling_ensembles
         )
+
+
+    def teardown(self):
+        paths.progress.HAS_TQDM = self.HAS_TQDM
 
 
 class TestWeightedTrajectories(TISAnalysisTester):
@@ -1093,3 +1100,29 @@ class TestStandardTISAnalysis(TestTISAnalysis):
         # think this is a problem in the fake data, not the simulation.
         for flux in analysis.flux_matrix.values():
             assert_almost_equal(flux, expected_flux)
+
+    @pytest.mark.parametrize('progress', ['all', 'default', 'none',
+                                          'tqdm', 'silent'])
+    def test_progress_setter(self, progress):
+        analysis = self.mstis_analysis
+        analysis.progress = progress
+        expected_flux, expected_ctp, expected_max_lambda = {
+            'all': (True, True, True),
+            'default': (True, True, False),
+            'none': (False, False, False),
+            'tqdm': (True, True, False),
+            'silent': (True, True, False),
+        }[progress]
+        flux_method = analysis.flux_method
+        assert flux_method.progress.keywords['leave'] is expected_flux
+        ctp_method = analysis.ctp_method
+        assert ctp_method.progress.keywords['leave'] is expected_ctp
+        max_lambda_methods = [tcp.max_lambda_calc
+                              for tcp in analysis.tcp_methods.values()]
+        for max_lambda in max_lambda_methods:
+            prog = max_lambda.progress
+            assert prog.keywords['leave'] is expected_max_lambda
+
+
+
+
