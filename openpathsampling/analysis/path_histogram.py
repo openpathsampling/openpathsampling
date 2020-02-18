@@ -1,5 +1,6 @@
 import openpathsampling as paths
 from openpathsampling.numerics import SparseHistogram
+from openpathsampling.progress import SimpleProgress
 
 from collections import Counter
 import numpy as np
@@ -230,7 +231,7 @@ class BresenhamLikeInterpolation(BresenhamInterpolation):
 
 # should path histogram be moved to the generic histogram.py? Seems to be
 # independent of the fact that this is actually OPS
-class PathHistogram(SparseHistogram):
+class PathHistogram(SimpleProgress, SparseHistogram):
     """
     N-dim sparse histogram for trajectories.
 
@@ -312,7 +313,8 @@ class PathHistogram(SparseHistogram):
         """
         if weights is None:
             weights = [1.0] * len(trajectories)
-        for (traj, w) in zip(trajectories, weights):
+        for (traj, w) in self.progress(list(zip(trajectories, weights))):
+            # list so that progress can know the length
             self.add_trajectory(traj, w)
         return self._histogram.copy()
 
@@ -384,7 +386,7 @@ class PathDensityHistogram(PathHistogram):
             weights = [1.0] * len(trajectories)
 
         # TODO: add something so that we don't recalc the same traj twice
-        for (traj, w) in zip(trajectories, weights):
+        for (traj, w) in self.progress(list(zip(trajectories, weights))):
             cv_traj = [cv(traj) for cv in self.cvs]
             self.add_trajectory(list(zip(*cv_traj)), w)
 
