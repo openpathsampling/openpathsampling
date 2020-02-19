@@ -30,9 +30,9 @@ trajectory based rare events.  That workshop included a "hackathon" software
 development period, and the video includes suggestions for several such
 projects (many of which have since been added to OPS).
 
-* `More about that workshop <https://www.cecam.org/workshop1802/>`_
+* `More about that workshop <https://www.cecam.org/workshop1802/>`__
 * `Other presentations from that workshop
-  <https://training.e-cam2020.eu/spaces/5ca35151e4b0fed490540623>`_
+  <https://training.e-cam2020.eu/spaces/5ca35151e4b0fed490540623>`__
 
 .. Using OpenPathSampling
 .. ----------------------
@@ -54,7 +54,7 @@ This video comes from a "hackathon"-style workshop, and discusses various
 parts of OPS that would be of interest to new contributors to the code.
 
 * `More about that workshop
-  <https://www.lorentzcenter.nl/lc/web/2017/905/info.php3?wsid=905>`_
+  <https://www.lorentzcenter.nl/lc/web/2017/905/info.php3?wsid=905>`__
 * `Other presentations from that workshop
-  <https://training.e-cam2020.eu/collection/5a609bd0e4b070ac6b9789ca>`_
+  <https://training.e-cam2020.eu/collection/5a609bd0e4b070ac6b9789ca>`__
 
