@@ -4,6 +4,7 @@ import warnings
 
 import openpathsampling as paths
 from openpathsampling.tools import refresh_output
+from openpathsampling.progress import SimpleProgress
 
 from . import move_strategy
 from .move_strategy import levels as strategy_levels
@@ -21,7 +22,7 @@ MoveAcceptanceAnalysisLine = collections.namedtuple(
     'move_name n_accepted n_trials expected_frequency'
 )
 
-class MoveAcceptanceAnalysis(object):
+class MoveAcceptanceAnalysis(SimpleProgress):
     """Class to manage analysis of move acceptance.
 
     One of the powerful things about OPS is the :class:`.MoveChange` object,
@@ -69,7 +70,7 @@ class MoveAcceptanceAnalysis(object):
         self : :class:`.MoveAcceptanceAnalysis`
             returns self for possible chaining
         """
-        for step in steps:
+        for step in self.progress(steps):
             self._calculate_step_acceptance(step)
         self._n_steps += len(steps)
         return self

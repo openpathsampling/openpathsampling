@@ -27,9 +27,14 @@ from collections import Counter
 
 class PathHistogramTester(object):
     def setup(self):
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False
         self.trajectory = [(0.1, 0.3), (2.1, 3.1), (1.7, 1.4),
                            (1.6, 0.6), (0.1, 1.4), (2.2, 3.3)]
         self.diag = [(0.25, 0.25), (2.25, 2.25)]
+
+    def teardown(self):
+        paths.progress.HAS_TQDM = self.HAS_TQDM
 
     def test_nopertraj(self):
         counter = collections.Counter(self.expected_bins)
@@ -130,9 +135,14 @@ class TestPathHistogramBesenhamInterpolate(PathHistogramTester):
 class TestPathHistogram(object):
     # tests of fundamental things in PathHistogram, not interpolators
     def setup(self):
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False
         self.trajectory = [(0.1, 0.3), (2.1, 3.1), (1.7, 1.4),
                            (1.6, 0.6), (0.1, 1.4), (2.2, 3.3)]
         self.diag = [(0.25, 0.25), (2.25, 2.25)]
+
+    def teardown(self):
+        paths.progress.HAS_TQDM = self.HAS_TQDM
 
     def test_add_with_weight(self):
         hist = PathHistogram(left_bin_edges=(0.0, 0.0),
@@ -190,6 +200,8 @@ class TestPathHistogram(object):
 
 class TestPathDensityHistogram(object):
     def setup(self):
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False
         id_cv = paths.FunctionCV("Id",
                                  lambda snap : snap.xyz[0][0])
         sin_cv = paths.FunctionCV("sin",
@@ -205,6 +217,9 @@ class TestPathDensityHistogram(object):
         # interpolate: (1, 0, 0)
         self.traj2 = make_1d_traj([0.6, 0.7])
         # [(2, 1, 0), (2, 1, 1)]
+
+    def teardown(self):
+        paths.progress.HAS_TQDM = self.HAS_TQDM
 
     def test_histogram_no_weights(self):
         hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
