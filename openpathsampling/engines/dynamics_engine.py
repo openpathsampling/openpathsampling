@@ -93,6 +93,7 @@ class DynamicsEngine(StorableNamedObject):
     on_retry : str or callable
         the behaviour when a try is started. Since you have already generated
         some trajectory you might not restart completely. Possibilities are
+
         1.  `full` will restart completely and use the initial frames (default)
         2.  `50%` will cut the existing in half but keeping at least the initial
         3.  `remove_interval` will remove as many frames as the `interval`
