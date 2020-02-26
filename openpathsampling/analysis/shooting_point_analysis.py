@@ -40,7 +40,7 @@ class TransformedDict(abc.MutableMapping):
         del self.hash_representatives[hashed]
 
     def __iter__(self):
-        return iter(self.store)
+        return iter(self.hash_representatives.values())
 
     def __len__(self):
         return len(self.store)
@@ -58,8 +58,8 @@ class TransformedDict(abc.MutableMapping):
         velocities, the resulting mapping would be invalid. It is up to the
         user to avoid such invalid remappings.
         """
-        return TransformedDict(new_hash, 
-                               {self.hash_representatives[k]: self.store[k] 
+        return TransformedDict(new_hash,
+                               {self.hash_representatives[k]: self.store[k]
                                 for k in self.store})
 
 
@@ -71,7 +71,7 @@ class SnapshotByCoordinateDict(TransformedDict):
     """
     def __init__(self, *args, **kwargs):
         hash_fcn = lambda x : x.coordinates.tostring()
-        super(SnapshotByCoordinateDict, self).__init__(hash_fcn, 
+        super(SnapshotByCoordinateDict, self).__init__(hash_fcn,
                                                        *args, **kwargs)
 
 
@@ -227,9 +227,9 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
             label_function = lambda s : s
         results = {}
         for k in self:
-            out_key = label_function(self.hash_representatives[k])
-            counter_k = self.store[k]
-            committor = float(counter_k[state]) / sum(counter_k.values())
+            out_key = label_function(k)
+            counter_k = self[k]
+            committor = float(counter_k[state]) / sum([counter_k[s] for s in self.states])
             results[out_key] = committor
         return results
 
@@ -240,7 +240,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         except TypeError:
             ndim = 1
         if ndim > 2 or ndim < 1:
-            raise RuntimeError("Histogram key dimension {0} > 2 or {0} < 1 " 
+            raise RuntimeError("Histogram key dimension {0} > 2 or {0} < 1 "
                                + "(key: {1})".format(ndim, key))
         return ndim
 
