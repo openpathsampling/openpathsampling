@@ -132,7 +132,7 @@ class DirectSimulation(PathSimulator):
             if self.storage is not None:
                 local_traj += [frame]
 
-        self.engine.stop()
+        self.engine.stop(local_traj)
 
         if self.storage is not None:
             self.storage.save(local_traj)
