@@ -101,6 +101,8 @@ class TestSnapshotByCoordinateDict(object):
 
 class TestShootingPointAnalysis(object):
     def setup(self):
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False
         # taken from the TestCommittorSimulation
         import openpathsampling.engines.toy as toys
         pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
@@ -149,6 +151,7 @@ class TestShootingPointAnalysis(object):
 
     def teardown(self):
         import os
+        paths.progress.HAS_TQDM = self.HAS_TQDM
         self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
