@@ -1,6 +1,11 @@
+import time
+
 from openpathsampling.engines import features
 from openpathsampling.engines.snapshot import BaseSnapshot
 from . import features as ext_features
+
+import logging
+logger = logging.getLogger(__name__)
 
 @features.base.attach_features([
     features.engine,
