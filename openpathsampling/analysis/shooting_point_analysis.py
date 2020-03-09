@@ -107,7 +107,7 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
         steps : iterable of :class:`.MCStep` or None
             MC steps to analyze
         """
-        for step in self.progress(steps[:]):
+        for step in self.progress(steps):
             total = self.analyze_single_step(step)
 
     def analyze_single_step(self, step):
