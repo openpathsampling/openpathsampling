@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from openpathsampling.progress import SimpleProgress
+
 try:
     from collections import abc
 except ImportError:
@@ -75,7 +77,7 @@ class SnapshotByCoordinateDict(TransformedDict):
                                                        *args, **kwargs)
 
 
-class ShootingPointAnalysis(SnapshotByCoordinateDict):
+class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
     """
     Container and methods for shooting point analysis.
 
@@ -105,7 +107,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         steps : iterable of :class:`.MCStep` or None
             MC steps to analyze
         """
-        for step in steps:
+        for step in self.progress(steps):
             total = self.analyze_single_step(step)
 
     def analyze_single_step(self, step):
