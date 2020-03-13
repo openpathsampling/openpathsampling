@@ -24,6 +24,23 @@ The following modules are not registered:
 """
 
 class CallableCodec(object):
+    """JSON codec for callables.
+
+    Parameters
+    ----------
+    settings : Dict
+        Dictionary with settings for how the codec should behave. Entries
+        are:
+
+        * ``'safemode'`` (bool): If True, this codec will not deserialize
+          functions. Use this when working with untrusted data.
+        * ``'required_modules'`` (List[str]): names of modules that can be
+          expected to be present in the user's environment.
+        * ``'only_allow_required_modules'`` (bool): If True, forbid
+          serialization of any callable that requires importing a module
+          that isn't in the ``'required_modules'`` list.
+
+    """
     def __init__(self, settings=None):
         defaults = {
             'only_allow_required_modules': False,

@@ -247,6 +247,71 @@ class SQLStorageBackend(object):
         self.metadata.create_all(self.engine)
         self.schema.update(schema)
 
+    def register_storable_function(self, table_name, result_type):
+        """
+        Parameters
+        ----------
+        table_name : Str
+            the name for this table; typically the UUID of the storable
+            function
+        result_type : Str
+            string name of the result type; must match one of the keys of
+            ``sql_type``
+        """
+        columns = [sql.Column('uuid', sql.String),
+                   sql.Column('value', sql_type[result_type])]
+        try:
+            table = sql.Table(table_name, self.metadata, *columns)
+        except sql.exc.InvalidRequestError:
+            raise TypeError("Schema registration problem. Your schema "
+                            "may already have tables of the same names.")
+
+        self.metadata.create_all(self.engine)
+        # TODO : do we need to do anything else for this?
+
+    def add_storable_function_results(self, table_name, result_dict):
+        """
+        Parameters
+        ----------
+        table_name : Str
+            name of table for this storable function (typically the UUID)
+        result_dict : Mapping[Str, Any]
+            mapping from UUID to result
+        """
+        results = [{'uuid': uuid, 'value': value}
+                   for uuid, value in result_dict.items()]
+        table = self.metadata.tables[table_name]
+        with self.engine.connect() as conn:
+            conn.execute(table.insert(), results)
+
+    def load_storable_function_results(self, table_name, uuids):
+        """
+        Parameters
+        ----------
+        table_name : Str
+            name of table for this storable function (typically the UUID)
+        uuids : List[Str]
+            list of UUIDs to load the results for
+
+        Returns
+        -------
+        Dict[Str, Any] :
+            mapping of UUID to associated value
+        """
+        table = self.metadata.tables[table_name]
+        results = []
+        for uuid_block in tools.block(uuids, self.max_query_size):
+            # logger
+            uuid_sel = table.select().where(table.c.uuid.in_(uuid_block))
+            with self.engine.connect() as conn:
+                res = list(conn.execute(uuid_sel))
+            results += res
+
+        logger.debug("Found {} UUIDs".format(len(results)))
+        result_dict = {uuid: value for uuid, value in results}
+        return result_dict
+
+
     def add_to_table(self, table_name, objects):
         """Add a list of objects of a given class
 

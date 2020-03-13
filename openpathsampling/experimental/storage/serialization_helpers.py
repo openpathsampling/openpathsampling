@@ -91,6 +91,24 @@ def unique_objects(object_list):
             # or is_storage_iterable(obj))
 
 def default_find_uuids(obj, cache_list):
+    """Default method for finding new UUIDs in an object. Recursive.
+
+    Parameters
+    ----------
+    obj : Any
+        the object to query for UUIDs
+    cache_list : List[Mapping]
+        caches that may contain existing UUIDs
+
+    Returns
+    -------
+    uuids : Dict[UUID, Any]
+        mapping of UUID to object for any UUID-containing objects found
+    new_objects : List[Any]
+        Non-UUID container objects (iterables, mappings) that may contain
+        futher UUIDs. Includes the dict from ``obj.to_dict()`` if ``obj``
+        has a UUID.
+    """
     uuids = {}
     new_objects = []
     obj_uuid = get_uuid(obj) if has_uuid(obj) else None
