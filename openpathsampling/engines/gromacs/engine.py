@@ -115,10 +115,10 @@ class GromacsEngine(ExternalEngine):
             'mdrun_args': ""
         }
     )
-    GROMPP_CMD = ("{gmx_executable}grompp -c {e.gro} "
+    GROMPP_CMD = ("{e.options[gmx_executable]}grompp -c {e.gro} "
                   + "-f {e.mdp} -p {e.top} -t {e.input_file} "
-                  + "{grompp_args}")
-    MDRUN_CMD = ("{gmx_executable}mdrun -s topol.tpr "
+                  + "{e.options[grompp_args]}")
+    MDRUN_CMD = ("{e.options[gmx_executable]}mdrun -s topol.tpr "
                  + "-o {e.output_file} -e {e.edr_file} -g {e.log_file} "
                  + "{mdrun_args}")
     # use these as CMD.format(e=engine, **engine.options)
@@ -278,11 +278,7 @@ class GromacsEngine(ExternalEngine):
 
     @property
     def grompp_command(self):
-        cmd = "{gmx}grompp -c {gro} -f {mdp} -p {top} -t {inp} {xtra}".format(
-            gmx=self.options['gmx_executable'], gro=self.gro, mdp=self.mdp,
-            top=self.top, inp=self.input_file,
-            xtra=self.options['grompp_args']
-        )
+        cmd = self.GROMPP_CMD.format(e=self)
         return cmd
 
     def prepare(self):  # pragma: no cover
@@ -309,10 +305,5 @@ class GromacsEngine(ExternalEngine):
         # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log
         args = self.options['mdrun_args'].format(prev_traj=self._traj_num-1,
                                                  next_traj=self._traj_num)
-        cmd = "{gmx}mdrun -s topol.tpr -o {out} -e {edr} -g {log} {args}"
-        cmd = cmd.format(gmx=self.options['gmx_executable'],
-                         out=self.output_file,
-                         edr=self.edr_file,
-                         log=self.log_file,
-                         args=args)
+        cmd = self.MDRUN_CMD.format(e=self, mdrun_args=args)
         return cmd
