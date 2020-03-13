@@ -25,8 +25,22 @@ init_log = logging.getLogger('openpathsampling.initialization')
 
 class Storage(NetCDFPlus):
     """
+    Create a netCDF+ storage for OPS Objects
+
     A netCDF4 wrapper to store trajectories based on snapshots of an OpenMM
     simulation. This allows effective storage of shooting trajectories
+
+
+    Parameters
+    ----------
+    filename : string
+        filename of the netcdf file to be used or created
+    mode : string, default: None
+        the mode of file creation, one of `'w'` (write), `'a'` (append) or
+        None, which will append any existing files.
+    template : :class:`openpathsampling.Snapshot`
+        a Snapshot instance that contains a reference to a Topology, the
+        number of atoms and used units
     """
 
     @property
@@ -42,20 +56,6 @@ class Storage(NetCDFPlus):
             mode=None,
             template=None,
             fallback=None):
-        """
-        Create a netCDF+ storage for OPS Objects
-
-        Parameters
-        ----------
-        filename : string
-            filename of the netcdf file to be used or created
-        mode : string, default: None
-            the mode of file creation, one of `'w'` (write), `'a'` (append) or
-            None, which will append any existing files.
-        template : :class:`openpathsampling.Snapshot`
-            a Snapshot instance that contains a reference to a Topology, the
-            number of atoms and used units
-        """
 
         self._template = template
         super(Storage, self).__init__(
