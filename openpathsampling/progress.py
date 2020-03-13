@@ -88,7 +88,7 @@ class SimpleProgress(object):
     @progress.setter
     def progress(self, value):
         if value == 'tqdm':
-            value = TqdmPartial()
+            value = TqdmPartial() if HAS_TQDM else silent_progress
         elif value in ['silent', None]:
             value = silent_progress
         # else we assume it's already an AnalysisProgress

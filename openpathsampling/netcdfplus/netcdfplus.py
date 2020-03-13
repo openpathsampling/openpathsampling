@@ -246,7 +246,7 @@ class NetCDFPlus(netCDF4.Dataset):
                 "Open existing netCDF file '%s' for reading - "
                 "reading from existing file", filename)
 
-        self.filename = filename
+        self._filename = os.path.abspath(filename)
         self.fallback = fallback
 
         # this can be set to false to re-store objects present in the fallback
@@ -367,6 +367,10 @@ class NetCDFPlus(netCDF4.Dataset):
 
     def _create_simplifier(self):
         self.simplifier = UUIDObjectJSON(self)
+
+    @property
+    def filename(self):
+        return self._filename
 
     @property
     def file_size(self):

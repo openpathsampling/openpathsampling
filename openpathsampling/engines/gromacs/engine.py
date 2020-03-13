@@ -90,10 +90,11 @@ class GromacsEngine(ExternalEngine):
     options : dict
         Dictionary of option name to value. Gromacs-specific option names
         are
-            * ``gmx_prefix``: Prefix to gromacs commands, which are run as
-              ``{gmx_prefix}command``. Default is 'gmx ' (note the space).
-              This allows you to use either Gromacs 4 or Gromacs 5, as well
-              as specifying the path to your version of Gromacs.
+
+            * ``gmx_executable``: Prefix to gromacs commands, which are run
+              as ``{gmx_prefix}command``. Default is 'gmx ' (note the
+              space).  This allows you to use either Gromacs 4 or Gromacs 5,
+              as well as specifying the path to your version of Gromacs.
             * ``grompp_args``: Additional arguments to ``grompp``. The
               defaults take ``-c {self.gro} -f {self.mdp} -p {self.top}
               -t {self.input_file}``, where the input filename is set by

@@ -93,6 +93,8 @@ def _make_null_mover_step(mccycle, path_sim_mover, null_mover):
 
 class TestMoveAcceptanceAnalysis(object):
     def setup(self):
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
@@ -143,6 +145,9 @@ class TestMoveAcceptanceAnalysis(object):
         self.analysis = {'empty': acceptance_empty,
                          'normal': acceptance,
                          'with_null': acceptance_null}
+
+    def teardown(self):
+        paths.progress.HAS_TQDM = self.HAS_TQDM
 
     @pytest.mark.parametrize('step_num', [0, 1, 2, 3, 4])
     def test_calculate_step_acceptance(self, step_num):

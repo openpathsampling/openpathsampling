@@ -2,8 +2,8 @@
 
 .. currentmodule:: openpathsampling.shooting
 
-ShootingPointSelector API
-=========================
+ShootingPointSelectors
+======================
 
 .. autosummary::
     :toctree: api/generated/

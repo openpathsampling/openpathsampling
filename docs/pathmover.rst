@@ -2,13 +2,8 @@
 
 .. currentmodule:: openpathsampling.pathmover
 
-PathMover API
-=============
-
-:class:`openpathsampling.PathMover`
-
-    >>> import openpathsampling as paths
-    >>> mover = paths.PathMover()
+PathMovers
+==========
 
 Abstract class
 --------------
