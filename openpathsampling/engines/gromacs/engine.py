@@ -133,6 +133,7 @@ class GromacsEngine(ExternalEngine):
         self.mdp_contents, self._mdp_hash = ensure_file(self.mdp)
         self.top_contents, self._top_hash = ensure_file(self.top)
 
+        # TODO: move to a later stage, before first traj
         dirs = [self.prefix + s for s in ['_trr', '_log', '_edr']]
         for d in dirs:
             try:
@@ -149,9 +150,9 @@ class GromacsEngine(ExternalEngine):
 
         # initial placeholders
         self.input_file = "INITIAL.trr"
-        self.output_file = "OUTPUT_NAME.trr"
-        self.edr_file = "EDR_DIR/OUTPUT_NAME.edr"
-        self.log_file = "LOG_DIR/OUTPUT_NAME.log"
+        self.output_file = self.prefix + "_trr/OUTPUT_NAME.trr"
+        self.edr_file = self.prefix + "_edr/OUTPUT_NAME.edr"
+        self.log_file = self.prefix + "_log/OUTPUT_NAME.log"
 
         self._mdtraj_topology = None
 
