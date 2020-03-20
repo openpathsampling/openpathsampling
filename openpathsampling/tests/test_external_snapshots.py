@@ -73,7 +73,6 @@ class TestExternalMDSnapshot(object):
 
     def test_load_details_indexerror(self):
         engine = ErrorMockEngine(self.engine.sequences)
-        engine.accessed
         snap = ExternalMDSnapshot(file_name='foo',
                                   file_position=0,
                                   engine=engine)
