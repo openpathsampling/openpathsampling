@@ -1211,6 +1211,8 @@ class TestMinusMover(object):
         seg_dir = {}
         for i in range(100):
             change = self.mover.move(gs)
+            assert change.details.segment_swap_samples is not None
+            assert change.details.extension_trajectory is not None
             samples = change.results
             sub_samples = change.subchange.subchange.results
             assert_equal(len(samples), 2)
@@ -1261,9 +1263,11 @@ class TestMinusMover(object):
             ensemble=self.innermost
         )
         gs = SampleSet([samp_other_ensemble, self.minus_sample])
-        
+
         change = self.mover.move(gs)
         assert_equal(len(change.trials), 1)
+        assert change.details.segment_swap_samples is not None
+        assert change.details.extension_trajectory is None
 
         sub = change.subchange.subchange
         assert_equal(self.innermost(innermost_other_ensemble), False)
@@ -1280,9 +1284,11 @@ class TestMinusMover(object):
             ensemble=self.innermost
         )
         gs = SampleSet([samp_crosses_to_state, self.minus_sample])
-        
+
         change = self.mover.move(gs)
         assert_equal(len(change.trials), 1) # stop after failed repex
+        assert change.details.segment_swap_samples is not None
+        assert change.details.extension_trajectory is None
 
         sub = change.subchange.subchange
         assert_equal(self.innermost(innermost_crosses_to_state), True)
@@ -1308,6 +1314,8 @@ class TestMinusMover(object):
         assert_equal(self.minus(minus_crosses_to_state), True)
 
         change = self.mover.move(gs)
+        assert change.details.segment_swap_samples is not None
+        assert change.details.extension_trajectory is None
         sub = change.subchange.subchange
         assert_equal(len(sub.trials), 3)  # stop after failed repex
         assert_equal(len(change.trials), 1)
@@ -1325,7 +1333,7 @@ class TestMinusMover(object):
             trajectory=traj_bad_extension,
             ensemble=self.innermost
         )
-        
+
         assert_equal(self.innermost(traj_bad_extension), True)
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
@@ -1334,6 +1342,8 @@ class TestMinusMover(object):
 
         sub = change.subchange.subchange
         assert_equal(len(sub.trials), 4)
+        assert change.details.segment_swap_samples is not None
+        assert change.details.extension_trajectory is not None
 
         # after filtering there are only 2 trials
         assert_equal(len(change.trials), 2)

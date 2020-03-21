@@ -2,6 +2,7 @@
 @author David W.H. Swenson
 """
 from __future__ import absolute_import
+import pytest
 
 from builtins import object
 from nose.tools import (assert_equal, assert_not_equal, assert_is, raises,
@@ -14,6 +15,7 @@ import numpy as np
 import openpathsampling.engines.features as features
 
 from openpathsampling.engines.snapshot import SnapshotFactory
+import openpathsampling as paths
 
 def compate_attribute(snapshot_class, attr_name, attr_value, attr_reversal_fnc):
     a = snapshot_class(**{attr_name: attr_value})
@@ -47,6 +49,8 @@ class TestFeatures(object):
 
 class TestSnapshotCopy(object):
     def test_copy_none(self):
+        if not paths.integration_tools.HAS_OPENMM:
+            pytest.skip()
         import openpathsampling.engines.openmm as paths_omm
         # let box_vectors and topology to default to None
         snap = paths_omm.MDSnapshot(coordinates=np.array([[0.0, 0.0, 0.0],

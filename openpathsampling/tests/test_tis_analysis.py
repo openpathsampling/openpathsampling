@@ -1,28 +1,24 @@
 import itertools
 import random
-from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
-                        raises)
-from nose.plugins.skip import Skip, SkipTest
-from .test_helpers import (
-    true_func, assert_equal_array_array, make_1d_traj, data_filename,
-    MoverWithSignature, RandomMDEngine, assert_frame_equal,
-    assert_items_equal
-)
+import pytest
+from nose.tools import assert_equal, assert_almost_equal, raises
+from .test_helpers import (make_1d_traj, MoverWithSignature, RandomMDEngine,
+                           assert_frame_equal, assert_items_equal)
 
 from openpathsampling.analysis.tis import *
-from openpathsampling.analysis.tis.core import \
-    steps_to_weighted_trajectories
+from openpathsampling.analysis.tis.core import steps_to_weighted_trajectories
 from openpathsampling.analysis.tis.flux import default_flux_sort
 import openpathsampling as paths
 
 import pandas as pd
-import pandas.util.testing as pdt
+import pandas.testing as pdt
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+
 
 def make_tis_traj_fixed_steps(n_steps, step_size=0.1, reverse=False):
     if reverse:
@@ -35,6 +31,7 @@ def make_tis_traj_fixed_steps(n_steps, step_size=0.1, reverse=False):
               for i in range(n_steps + 2)]
     falling = list(reversed(rising))[1:]
     return make_1d_traj(rising + falling)
+
 
 class TestMultiEnsembleSamplingAnalyzer(object):
     # this only has to check the error generation; everything else gets
@@ -72,7 +69,6 @@ class TISAnalysisTester(object):
         )
 
         all_ensembles = ensembles_AB + ensembles_BA
-        replicas = range(len(all_ensembles))
 
         # This encodes how the SampleSets are at each time step. This is the
         # trajectory number (from trajs_AB/trajs_BA) for each ensemble
@@ -89,7 +85,6 @@ class TISAnalysisTester(object):
         for descr in descriptions:
             set_trajectories = ([self.trajs_AB[d] for d in descr[:3]]
                                 + [self.trajs_BA[d] for d in descr[3:]])
-            zipped = zip(set_trajectories, all_ensembles, replicas)
             sample_set = paths.SampleSet([
                 paths.Sample(trajectory=traj,
                              ensemble=ens,
@@ -107,6 +102,8 @@ class TISAnalysisTester(object):
 
     def setup(self):
         # set up the trajectories, ensembles, etc. for this test
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False  # turn of progress bars
         paths.InterfaceSet._reset()
         cv_A = paths.FunctionCV('Id', lambda s: s.xyz[0][0])
         cv_B = paths.FunctionCV('1-Id', lambda s: 1.0-s.xyz[0][0])
@@ -162,6 +159,10 @@ class TISAnalysisTester(object):
             self.mstis_steps,
             self.mstis.sampling_ensembles
         )
+
+
+    def teardown(self):
+        paths.progress.HAS_TQDM = self.HAS_TQDM
 
 
 class TestWeightedTrajectories(TISAnalysisTester):
@@ -233,7 +234,6 @@ class TestFluxToPandas(TISAnalysisTester):
                                           names=["State", "Interface"])
         self.expected_series = pd.Series(values, name="Flux", index=index)
 
-
     def test_default_flux_sort(self):
         shuffled = self.all_pairs[:]
         random.shuffle(shuffled)
@@ -251,20 +251,20 @@ class TestFluxToPandas(TISAnalysisTester):
 
     @raises(KeyError)
     def test_flux_matrix_pd_unknown_str(self):
-        series = flux_matrix_pd(self.fluxes, sort_method="foo")
+        flux_matrix_pd(self.fluxes, sort_method="foo")
 
 
 class TestDictFlux(TISAnalysisTester):
     def setup(self):
         super(TestDictFlux, self).setup()
         self.innermost_interface_A = \
-                self.sampling_ensembles_for_transition(self.mistis,
-                                                       self.state_A,
-                                                       self.state_B)[0]
+            self.sampling_ensembles_for_transition(self.mistis,
+                                                   self.state_A,
+                                                   self.state_B)[0]
         self.innermost_interface_B = \
-                self.sampling_ensembles_for_transition(self.mistis,
-                                                       self.state_B,
-                                                       self.state_A)[0]
+            self.sampling_ensembles_for_transition(self.mistis,
+                                                   self.state_B,
+                                                   self.state_A)[0]
 
         self.flux_dict = {(self.state_A, self.innermost_interface_A): 1.0,
                           (self.state_B, self.innermost_interface_B): 1.0}
@@ -379,7 +379,7 @@ class TestMinusMoveFlux(TISAnalysisTester):
     def test_get_minus_steps(self):
         all_mistis_steps = self.mistis_steps + self.mistis_minus_steps
         mistis_minus_steps = \
-                self.mistis_minus_flux._get_minus_steps(all_mistis_steps)
+            self.mistis_minus_flux._get_minus_steps(all_mistis_steps)
         assert_equal(len(mistis_minus_steps), len(self.mistis_minus_steps))
         assert_items_equal(mistis_minus_steps, self.mistis_minus_steps)
         # this could be repeated for MSTIS, but why?
@@ -390,12 +390,12 @@ class TestMinusMoveFlux(TISAnalysisTester):
         expected_flux = 1.0 / (avg_t_in + avg_t_out)
 
         mistis_flux = \
-                self.mistis_minus_flux.calculate(self.mistis_minus_steps)
+            self.mistis_minus_flux.calculate(self.mistis_minus_steps)
         for flux in mistis_flux.values():  # all values are the same
             assert_almost_equal(flux, expected_flux)
 
         mstis_flux = \
-                self.mstis_minus_flux.calculate(self.mstis_minus_steps)
+            self.mstis_minus_flux.calculate(self.mstis_minus_steps)
         for flux in mstis_flux.values():  # all values are the same
             assert_almost_equal(flux, expected_flux)
 
@@ -416,7 +416,7 @@ class TestMinusMoveFlux(TISAnalysisTester):
         ])
         scheme = paths.DefaultScheme(bad_mistis)
         scheme.build_move_decision_tree()
-        minus_flux = MinusMoveFlux(scheme)
+        MinusMoveFlux(scheme)
 
 
 class TestPathLengthHistogrammer(TISAnalysisTester):
@@ -512,11 +512,10 @@ class TestFullHistogramMaxLambda(TISAnalysisTester):
             interfaces=mistis_AB.interfaces.volumes,
             orderparameter=mistis_AB.orderparameter
         )
-        mistis_AB_histogrammer = FullHistogramMaxLambdas(
+        FullHistogramMaxLambdas(
             transition=modified_transition,
             hist_parameters={'bin_width': 0.1, 'bin_range': (-0.1, 1.1)}
         )
-
 
 
 class TestConditionalTransitionProbability(TISAnalysisTester):
@@ -605,7 +604,7 @@ class TestTotalCrossingProbability(TISAnalysisTester):
         mstis_BA_tcp = TotalCrossingProbability(mstis_BA_max_lambda)
         tcp_BA = mstis_BA_tcp.calculate(self.mstis_steps)
         for (x, result) in results.items():
-            assert_almost_equal(tcp_AB(x), result)
+            assert_almost_equal(tcp_BA(x), result)
 
 
 class TestStandardTransitionProbability(TISAnalysisTester):
@@ -743,6 +742,7 @@ class TestTransitionDictResults(TISAnalysisTester):
         assert_frame_equal(pd_mistis, pd_mstis)
         assert_frame_equal(pd_mistis, pd_result)
 
+
 class TestTISAnalysis(TISAnalysisTester):
     def _make_tis_analysis(self, network):
         # NOTE: this might be useful as a description of the overall nested
@@ -784,7 +784,7 @@ class TestTISAnalysis(TISAnalysisTester):
 
     def test_bad_access_cached_results(self):
         no_results = self._make_tis_analysis(self.mistis)
-        rate = self.mistis_analysis._access_cached_result('rate')
+        _ = self.mistis_analysis._access_cached_result('rate')
         # use a try/except here instead of @raises so that we also test that
         # the calculated version (previous line) works as expected
         try:
@@ -813,7 +813,7 @@ class TestTISAnalysis(TISAnalysisTester):
 
     def test_flux_through_state(self):
         flux_dict = {(t.stateA, t.interfaces[0]): 0.1
-                      for t in self.mistis.sampling_transitions}
+                     for t in self.mistis.sampling_transitions}
         flux_dict.update({(self.state_A, self.state_A): 0.5})
         tis = TISAnalysis(
             network=self.mistis,
@@ -861,7 +861,6 @@ class TestTISAnalysis(TISAnalysisTester):
         for trans_pair in pairs:
             assert_almost_equal(mistis_tp[trans_pair], 0.125)
             assert_almost_equal(mstis_tp[trans_pair], 0.125)
-
 
     def test_transition_probability(self):
         pairs = [(self.state_A, self.state_B), (self.state_B, self.state_A)]
@@ -989,20 +988,20 @@ class TestStandardTISAnalysis(TestTISAnalysis):
     @raises(TypeError)
     def test_bad_no_flux(self):
         network = self.mistis
-        tis_analysis = StandardTISAnalysis(
+        StandardTISAnalysis(
             network=network,
             max_lambda_calcs={t: {'bin_width': 0.1,
                                   'bin_range': (-0.1, 1.1)}
-                              for t in network.sampling_transitions},
+                              for t in network.sampling_transitions}
         )
 
     @raises(RuntimeError)
     def test_bad_max_lambda_calcs(self):
         network = self.mistis
-        tis_analysis = StandardTISAnalysis(
+        StandardTISAnalysis(
             network=network,
             flux_method=DictFlux({(t.stateA, t.interfaces[0]): 0.1
-                                  for t in network.sampling_transitions}),
+                                  for t in network.sampling_transitions})
         )
 
     def test_init_ensemble_histogrammer_max_lambda(self):
@@ -1057,7 +1056,7 @@ class TestStandardTISAnalysis(TestTISAnalysis):
                 samp = paths.Sample(trajectory=traj,
                                     ensemble=minus_ens,
                                     replica=replica[state])
-                sample_set = paths.SampleSet([samp])
+                _ = paths.SampleSet([samp])
                 change = paths.AcceptedSampleMoveChange(
                     samples=[samp],
                     mover=minus_mover,
@@ -1101,5 +1100,29 @@ class TestStandardTISAnalysis(TestTISAnalysis):
         # think this is a problem in the fake data, not the simulation.
         for flux in analysis.flux_matrix.values():
             assert_almost_equal(flux, expected_flux)
+
+    @pytest.mark.parametrize('progress', ['all', 'default', 'none',
+                                          'tqdm', 'silent'])
+    def test_progress_setter(self, progress):
+        analysis = self.mstis_analysis
+        analysis.progress = progress
+        expected_flux, expected_ctp, expected_max_lambda = {
+            'all': (True, True, True),
+            'default': (True, True, False),
+            'none': (False, False, False),
+            'tqdm': (True, True, False),
+            'silent': (True, True, False),
+        }[progress]
+        flux_method = analysis.flux_method
+        assert flux_method.progress.keywords['leave'] is expected_flux
+        ctp_method = analysis.ctp_method
+        assert ctp_method.progress.keywords['leave'] is expected_ctp
+        max_lambda_methods = [tcp.max_lambda_calc
+                              for tcp in analysis.tcp_methods.values()]
+        for max_lambda in max_lambda_methods:
+            prog = max_lambda.progress
+            assert prog.keywords['leave'] is expected_max_lambda
+
+
 
 

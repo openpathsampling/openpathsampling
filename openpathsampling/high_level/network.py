@@ -705,9 +705,12 @@ class MSTISNetwork(TISNetwork):
 
         for trans in self.transitions.values():
             rate = trans.rate(steps)
-            self._rate_matrix.set_value(trans.stateA.name,
-                                        trans.stateB.name,
-                                        rate)
+            # self._rate_matrix.set_value(trans.stateA.name,
+                                        # trans.stateB.name,
+                                        # rate)
+            name_A = trans.stateA.name
+            name_B = trans.stateB.name
+            self._rate_matrix.at[name_A, name_B] = rate
             #print trans.stateA.name, trans.stateB.name,
             #print rate
 
@@ -972,8 +975,11 @@ class MISTISNetwork(TISNetwork):
                 # probability automatically
 
             rate = trans.rate(steps)
-            self._rate_matrix.set_value(trans.stateA.name,
-                                        trans.stateB.name,
-                                        rate)
+            # self._rate_matrix.set_value(trans.stateA.name,
+                                        # trans.stateB.name,
+                                        # rate)
+            name_A = trans.stateA.name
+            name_B = trans.stateB.name
+            self._rate_matrix.at[name_A, name_B] = rate
 
         return self._rate_matrix

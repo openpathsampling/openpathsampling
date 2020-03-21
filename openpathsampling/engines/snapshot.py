@@ -17,19 +17,17 @@ from . import features as feats
 class BaseSnapshot(StorableObject):
     """
     Simulation snapshot. Contains references to a configuration and momentum
+
+    Parameters
+    ----------
+    topology : openpathsamping.Topology, default: None
+        The corresponding topology used with this Snapshot. Can also be None
+        and means no topology is specified.
     """
 
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, topology=None):
-        """
-        Attributes
-        ----------
-        topology : openpathsamping.Topology, default: None
-            The corresponding topology used with this Snapshot. Can also be None
-            and means no topology is specified.
-        """
-
         super(BaseSnapshot, self).__init__()
 
         self._reversed = None

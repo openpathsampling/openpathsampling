@@ -1,7 +1,7 @@
 .. _topics:
 
-Topics
-======
+User Guide Topics
+=================
 
 So far, the OPS documentation is partial, and not fully organized. However,
 we've been writing up detailed descriptions on various topics as the need
@@ -11,12 +11,19 @@ users to have access to as much documentation as possible, so we're
 providing this here the unorganized form.
 
 .. toctree::
+   :maxdepth: 2
+
    absolute_beginners
    simulation_setup
+   setting_up_sample_sets
    ops_output
    data_objects
+   creating_collective_variables
    ensembles_apply_to_trajectories_not_frames
    common_setups
    which_network
    transitions_and_networks
    tis_analysis
+   how_use
+..   troubleshooting
+..   error_messages

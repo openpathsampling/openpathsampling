@@ -265,20 +265,19 @@ class CVDefinedVolume(Volume):
     """
     Volume defined by a range of a collective variable `collectivevariable`.
 
-    Contains all snapshots `snap` for which `lamba_min <
+    Contains all snapshots `snap` for which `lamba_min <=
     collectivevariable(snap)` and `lambda_max > collectivevariable(snap)`.
+
+    Parameters
+    ----------
+    collectivevariable : :class:`.CollectiveVariable`
+        the CV to base the volume on
+    lambda_min : float
+        minimum value of the CV
+    lambda_max : float
+        maximum value of the CV
     """
     def __init__(self, collectivevariable, lambda_min=0.0, lambda_max=1.0):
-        '''
-        Attributes
-        ----------
-        collectivevariable : CollectiveVariable
-            the collectivevariable object
-        lambda_min : float
-            the minimal allowed collectivevariable
-        lambda_max: float
-            the maximal allowed collectivevariable
-        '''
         super(CVDefinedVolume, self).__init__()
         self.collectivevariable = collectivevariable
         try:

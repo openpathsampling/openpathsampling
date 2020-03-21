@@ -1,7 +1,7 @@
 # ignore python bytecode files
 *pyc
 
-/version.py
+_installed_version.py
 
 # ignore tag files
 tags

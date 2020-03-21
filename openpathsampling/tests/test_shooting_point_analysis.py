@@ -50,9 +50,9 @@ class TestTransformedDict(object):
 
     def test_update(self):
         self.test_dict.update({(5,6): "d"})
-        assert_equal(self.test_dict.store, 
+        assert_equal(self.test_dict.store,
                      {0 : "a", 1 : "b", 2 : "c", 5 : "d"})
-        assert_equal(self.test_dict.hash_representatives, 
+        assert_equal(self.test_dict.hash_representatives,
                      {0: (0,1), 1: (1,2), 2: (2,3), 5: (5,6)})
 
     def test_del(self):
@@ -61,7 +61,7 @@ class TestTransformedDict(object):
 
     def test_iter(self):
         iterated = [k for k in self.test_dict]
-        for (truth, beauty) in zip(list(self.transformed.keys()), iterated):
+        for (truth, beauty) in zip(list(self.untransformed.keys()), iterated):
             assert_equal(truth, beauty)
 
     def test_len(self):
@@ -101,6 +101,8 @@ class TestSnapshotByCoordinateDict(object):
 
 class TestShootingPointAnalysis(object):
     def setup(self):
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False
         # taken from the TestCommittorSimulation
         import openpathsampling.engines.toy as toys
         pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
@@ -149,6 +151,7 @@ class TestShootingPointAnalysis(object):
 
     def teardown(self):
         import os
+        paths.progress.HAS_TQDM = self.HAS_TQDM
         self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)

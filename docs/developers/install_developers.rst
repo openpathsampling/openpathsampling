@@ -65,3 +65,35 @@ branch or tag.
 We strongly recommend that users working in this fashion become familiar
 with git. Details like which branch you are in can make all the difference
 when it comes to identifying problems.
+
+.. _quick-dev-install:
+
+Quick bugfix/developer installation
+-----------------------------------
+
+In some cases, especially for one-time bugfix tests or for developers using
+continuous integration, it is useful to be able to quickly set up a
+developer installation in a separate ``conda`` environment. By creating a
+separate environment to test a specific branch, you don't risk messing up
+your production environment. There are a few ways to customize the behavior
+of the ``conda_ops_dev_install.sh`` script to facilitate this.
+
+If the environment variables ``OPS_ENV`` and ``CONDA_PY`` are set, that
+script will create a new ``conda`` environment with the name ``$OPS_ENV``
+and using Python version ``CONDA_PY``. For example ``OPS_ENV="ops-py37"
+CONDA_PY="3.7" bash conda_ops_dev_install.sh`` will install a developer
+version of OPS in the environment called "ops-py37" using Python 3.7. Note
+that if you ``source`` the script (instead of running it in a separate
+process), the new environment will be active. By default it will use the
+current environment, and keep the Python version at the same minor release.
+
+You can also select a specific fork and branch to check out. For example,
+``bash conda_ops_dev_install.sh dwhswenson experimental_feature`` would
+check out the fork at ``dwhswenson/openpathsampling``, and install from the
+``experimental_feature`` branch. By default it checks out the ``master``
+branch of the ``openpathsampling`` fork.
+
+Note that the ``conda_ops_dev_install.sh`` script currently requires that
+``conda`` be importable. This means that ``conda`` needs to be installed in
+the environment that you start from. We recommend running this script from
+your ``base`` environment, where ``conda`` will be importable.

@@ -1,8 +1,8 @@
 .. _simulation_setup:
 
-########################
-Setting up path sampling
-########################
+###########################
+Preparing for path sampling
+###########################
 
 *Or: What OpenPathSampling does not do for you*
 
@@ -117,6 +117,8 @@ There are approaches to `iteratively optimize the location of interfaces
 and will be added to the core code in the future.
 
 -----
+
+.. _get_init_traj:
 
 Getting an initial trajectory
 =============================

@@ -3,8 +3,8 @@
 .. currentmodule:: openpathsampling.analysis.tis
 
 
-TIS Analysis API
-================
+TIS Analysis Tools
+==================
 
 Abstract classes
 ----------------
