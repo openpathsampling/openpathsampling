@@ -4,6 +4,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
 from nose.plugins.skip import Skip, SkipTest
 
 import io
+import sys
 
 import pytest
 try:
@@ -182,7 +183,10 @@ class TestStorageHook(object):
 
 class TestShootFromSnapshotsOutputHook(object):
     def setup(self):
-        self.stream = io.StringIO()
+        if sys.version_info < (3,):
+            self.stream = io.BytesIO()
+        else:
+            self.stream = io.StringIO()
         self.simulation = MagicMock(output_stream=self.stream,
                                     allow_refresh=False)
         self.empty_hook = ShootFromSnapshotsOutputHook()
