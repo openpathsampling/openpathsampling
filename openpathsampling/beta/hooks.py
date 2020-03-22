@@ -20,17 +20,17 @@ class PathSimulatorHook(StorableNamedObject):
                        'after_simulation']
 
     def before_simulation(self, sim):
-        pass
+        pass  # pragma: no-cover
 
     def before_step(self, sim, step_number, step_info, state):
-        pass
+        pass  # pragma: no-cover
 
     def after_step(self, sim, step_number, step_info, state, results,
                    hook_state):
-        pass
+        pass  # pragma: no-cover
 
     def after_simulation(self, sim):
-        pass
+        pass  # pragma: no-cover
 
 
 class StorageHook(PathSimulatorHook):
@@ -96,9 +96,10 @@ class ShootFromSnapshotsOutputHook(PathSimulatorHook):
         )
 
 
-class LiveVisualizerHook(PathSimulatorHook):
-    pass
+# TODO: here are some other hooks to implement in the future
+# class LiveVisualizerHook(PathSimulatorHook):
+    # pass
 
 
-class PathSamplingOutputHook(PathSimulatorHook):
-    pass
+# class PathSamplingOutputHook(PathSimulatorHook):
+    # pass

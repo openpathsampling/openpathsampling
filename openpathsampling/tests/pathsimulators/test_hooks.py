@@ -3,6 +3,12 @@ from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises)
 from nose.plugins.skip import Skip, SkipTest
 
+import pytest
+try:
+    from unittest.mock import MagicMock
+except ImportError:
+    from mock import MagicMock
+
 from ..test_helpers import (
     true_func, assert_equal_array_array, make_1d_traj, data_filename,
     assert_items_equal
@@ -141,21 +147,36 @@ class TestPathSimulatorHook(object):
         assert_equal(stupid.began_simulation, True)
         assert_equal(stupider.foo, "foo")
 
+
 class TestStorageHook(object):
-    def _delete_files(self):
-        pass
-
     def setup(self):
-        pass
+        self.storage = MagicMock()
+        self.empty_hook = StorageHook()
+        self.hook = StorageHook(storage=self.storage,
+                                frequency=10)
+        self.simulation = MagicMock(storage=self.storage,
+                                    save_frequency=10)
 
-    def test_before_simulation(self):
-        raise SkipTest
+    @pytest.mark.parametrize('hook', ['empty', 'std'])
+    def test_before_simulation(self, hook):
+        hook = {'empty': self.empty_hook,
+                'std': self.hook}[hook]
+        hook.before_simulation(self.simulation)
+        assert hook.storage == self.storage
+        assert hook.frequency == 10
 
-    def test_after_step(self):
-        raise SkipTest
+    @pytest.mark.parametrize('step_num', [0, 5, 10])
+    def test_after_step(self, step_num):
+        self.hook.after_step(self.simulation, step_num, ('step', 'info'),
+                             ('state'), "results", "hook_state")
+        self.storage.save.assert_called_once()
+        if step_num in [0, 10]:
+            self.storage.sync_all.assert_called_once()
 
     def test_after_simulation(self):
-        raise SkipTest
+        self.hook.after_simulation(self.simulation)
+        self.storage.sync_all.assert_called_once()
+
 
 class TestShootFromSnapshotsOutputHook(object):
     def setup(self):
