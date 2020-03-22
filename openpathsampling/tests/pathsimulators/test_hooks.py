@@ -3,6 +3,8 @@ from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises)
 from nose.plugins.skip import Skip, SkipTest
 
+import io
+
 import pytest
 try:
     from unittest.mock import MagicMock
@@ -180,10 +182,24 @@ class TestStorageHook(object):
 
 class TestShootFromSnapshotsOutputHook(object):
     def setup(self):
-        pass
+        self.stream = io.StringIO()
+        self.simulation = MagicMock(output_stream=self.stream,
+                                    allow_refresh=False)
+        self.empty_hook = ShootFromSnapshotsOutputHook()
+        self.hook = ShootFromSnapshotsOutputHook(output_stream=self.stream,
+                                                 allow_refresh=False)
 
-    def test_before_simulation(self):
-        raise SkipTest
+    @pytest.mark.parametrize('hook_name', ['empty', 'std'])
+    def test_before_simulation(self, hook_name):
+        hook = {'empty': self.empty_hook,
+                'std': self.hook}[hook_name]
+        hook.before_simulation(self.simulation)
+        assert hook.output_stream == self.stream
+        assert hook.allow_refresh is False
 
     def test_before_step(self):
-        raise SkipTest
+        step_info = (0, 100, 1, 10)  # snap_num, n_snap, shot_num, n_shots
+        self.hook.before_step(self.simulation, step_number=2,
+                              step_info=step_info, state=None)
+        contents = self.stream.getvalue()
+        assert contents == "Working on snapshot 1 / 100; shot 2 / 10"
