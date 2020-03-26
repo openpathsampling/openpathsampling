@@ -153,8 +153,9 @@ class PLUMEDCV(paths.CoordinateFunctionCV):
         bias = np.zeros((1), dtype=np.float64)  # non-essential
         for step, snapshot in enumerate(trajectory):
             self.plmd.cmd("setStep", step)
-            mdtrajtraj = peng.openmm.trajectory_to_mdtraj(snapshot)
-            box = np.array(mdtrajtraj.unitcell_vectors, dtype=np.float64)
+            if snapshot.box_vectors != None:
+                box = np.array(snapshot.box_vectors, dtype=np.float64)
+                self.plmd.cmd("setBox", box)
             positions = snapshot.xyz.astype(np.float64)
             self.plmd.cmd("setBox", box)
             self.plmd.cmd("setPositions", positions)
