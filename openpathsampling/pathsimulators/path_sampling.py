@@ -5,6 +5,7 @@ import os
 import openpathsampling as paths
 from .path_simulator import PathSimulator, MCStep
 from ..ops_logging import initialization_logging
+from openpathsampling.beta import hooks
 
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,14 @@ class PathSampling(PathSimulator):
 
         initialization_logging(init_log, self,
                                ['move_scheme', 'sample_set'])
+        # TODO: move this to PathSamplingOutputHook defaults?
+        # i.e. do not attach a hook on default and use status_update_freq=1
+        # as default for PathSamplingOutputHook,
+        # let the user add/modify hook if needed?
+        # this would also 'fix' the fact that you can only set these two
+        # once and before starting any simulation
+        # because the hooks read them only before_simulation and
+        # if their values for them are None
         self.live_visualizer = None
         self.status_update_frequency = 1
 
@@ -102,6 +111,13 @@ class PathSampling(PathSimulator):
         obj._mover = paths.PathSimulatorMover(obj.root_mover, obj)
 
         return obj
+
+    def attach_default_hooks(self):
+        self.attach_hook(hooks.StorageHook())
+        self.attach_hook(hooks.PathSamplingOutputHook())
+        # TODO: or should we make self.live_visualizer a property?
+        # and only attach the visualizerhook on 'request', i.e. by setting it?
+        self.attach_hook(hooks.LiveVisualizerHook())
 
     @property
     def current_step(self):
@@ -238,51 +254,30 @@ class PathSampling(PathSimulator):
 
     def run(self, n_steps):
         mcstep = None
-
-        # cvs = list()
-        # n_samples = 0
-
-        # if self.storage is not None:
-        #     n_samples = len(self.storage.snapshots)
-        #     cvs = list(self.storage.cvs)
-
         initial_time = time.time()
-
+        hook_state = None
+        self.run_hooks('before_simulation', sim=self)
         for nn in range(n_steps):
+            # bookkeeping and before_step hooks
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
-            refresh = self.allow_refresh
-            if self.step % self.status_update_frequency == 0:
-                # do we visualize this step?
-                if self.live_visualizer is not None and mcstep is not None:
-                    # do we visualize at all?
-                    self.live_visualizer.draw_ipynb(mcstep)
-                    refresh = False
-
-                elapsed = time.time() - initial_time
-
-                if nn > 0:
-                    time_per_step = elapsed / nn
-                else:
-                    time_per_step = 1.0
-
-                paths.tools.refresh_output(
-                    "Working on Monte Carlo cycle number " + str(self.step)
-                    + "\n" + paths.tools.progress_string(nn, n_steps,
-                                                         elapsed),
-                    refresh=refresh,
-                    output_stream=self.output_stream
-                )
-
+            step_number = self.step
             time_start = time.time()
+            elapsed_total = time.time() - initial_time
+            # TODO: anything else we could want in the step info?
+            step_info = (nn, n_steps, elapsed_total)
+            self.run_hooks('before_step', sim=self, step_number=step_number,
+                           step_info=step_info, state=self.sample_set)
+
+            # MCStep, i.e. actual sample move
             movepath = self._mover.move(self.sample_set, step=self.step)
             samples = movepath.results
             new_sampleset = self.sample_set.apply_samples(samples)
-            time_elapsed = time.time() - time_start
+            elapsed_step = time.time() - time_start
 
             # TODO: we can save this with the MC steps for timing? The bit
             # below works, but is only a temporary hack
-            setattr(movepath.details, "timing", time_elapsed)
+            setattr(movepath.details, "timing", elapsed_step)
 
             mcstep = MCStep(
                 simulation=self,
@@ -291,31 +286,22 @@ class PathSampling(PathSimulator):
                 active=new_sampleset,
                 change=movepath
             )
-
             self._current_step = mcstep
             self.save_current_step()
-
-            # if self.storage is not None:
-            #     # I think this is done automatically when saving snapshots
-            #     # for cv in cvs:
-            #     #     n_len = len(self.storage.snapshots)
-            #     #     cv(self.storage.snapshots[n_samples:n_len])
-            #     #     n_samples = n_len
-            #
-            #     self.storage.steps.save(mcstep)
-
-            if self.step % self.save_frequency == 0:
-                self.sample_set.sanity_check()
-                self.sync_storage()
-
             self.sample_set = new_sampleset
 
-        self.sync_storage()
-
-        if self.live_visualizer is not None and mcstep is not None:
-            self.live_visualizer.draw_ipynb(mcstep)
-        paths.tools.refresh_output(
-            "DONE! Completed " + str(self.step) + " Monte Carlo cycles.\n",
-            refresh=False,
-            output_stream=self.output_stream
-        )
+            # run after_step hooks
+            hook_state = self.run_hooks('after_step', sim=self,
+                                        step_number=step_number,
+                                        step_info=step_info,
+                                        # TODO: do we want the new state here
+                                        # i.e. state after step as is right now
+                                        # or do we want something similar to
+                                        # shoot_snapshots where
+                                        # old state == shooting snapshot
+                                        state=self.sample_set,
+                                        results=mcstep,
+                                        hook_state=hook_state
+                                        )
+        # after simulation hooks
+        self.run_hooks('after_simulation', sim=self)
