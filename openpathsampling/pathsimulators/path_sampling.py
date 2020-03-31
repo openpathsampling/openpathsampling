@@ -265,6 +265,7 @@ class PathSampling(PathSimulator):
             time_start = time.time()
             elapsed_total = time.time() - initial_time
             # TODO: anything else we could want in the step info?
+            #       atm this is tailored for PathSamplingOutputHook
             step_info = (nn, n_steps, elapsed_total)
             self.run_hooks('before_step', sim=self, step_number=step_number,
                            step_info=step_info, state=self.sample_set)

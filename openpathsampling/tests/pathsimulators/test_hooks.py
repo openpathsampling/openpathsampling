@@ -179,6 +179,8 @@ class TestStorageHook(object):
         self.storage.save.assert_called_once()
         if step_num in [0, 10]:
             self.storage.sync_all.assert_called_once()
+            # also check that we performed the sample sanity-ckeck
+            self.simulation.sample_set.sanity_check.assert_called_once()
 
     def test_after_simulation(self):
         self.hook.after_simulation(self.simulation, {})
@@ -211,3 +213,59 @@ class TestShootFromSnapshotsOutputHook(object):
                               step_info=step_info, state=None)
         contents = self.stream.getvalue()
         assert contents == "Working on snapshot 1 / 100; shot 2 / 10"
+
+
+class TestPathSamplingOutputHook(object):
+    def setup(self):
+        if sys.version_info < (3,):
+            self.stream = io.BytesIO()
+        else:
+            self.stream = io.StringIO()
+        self.simulation = MagicMock(output_stream=self.stream,
+                                    allow_refresh=False)
+        self.empty_hook = PathSamplingOutputHook()
+        self.hook = PathSamplingOutputHook(output_stream=self.stream,
+                                           allow_refresh=False)
+
+    @pytest.mark.parametrize('hook_name', ['empty', 'std'])
+    def test_before_simulation(self, hook_name):
+        hook = {'empty': self.empty_hook,
+                'std': self.hook}[hook_name]
+        hook.before_simulation(self.simulation)
+        assert hook.output_stream == self.stream
+        assert hook.allow_refresh is False
+
+    @pytest.mark.parametrize('nn', [0, 1])
+    @pytest.mark.parametrize('elapsed', [1., 10.])
+    def test_before_step(self, nn, elapsed):
+        nn = nn  # MCstep counter during this simulation (reset to 0 every run)
+        n_steps = 10  # Total number of MCSteps to do this simulation run
+        elapsed = elapsed  # total time elapsed since starting this simulation run
+        step_info = nn, n_steps, elapsed
+        self.hook.before_step(self.simulation, step_number=2,
+                              step_info=step_info, state=None)
+        contents = self.stream.getvalue()
+        if nn == 0:
+            # we should get the start simulation string
+            assert contents == ("Working on Monte Carlo cycle number 2\n"
+                                + "Starting simulation...\n"
+                                + "Working on first step\n")
+        elif nn == 1 and elapsed == 10.:
+            # should get progress string,
+            # 10 s per step, 1:30 min (= 90 seconds (=9 steps)) remaining
+            assert contents == ("Working on Monte Carlo cycle number 2\n"
+                                + "Running for 10 seconds - 10.00 seconds per step\n"
+                                + "Estimated time remaining: 1 minute 30 seconds\n")
+        elif nn == 1 and elapsed == 1.:
+            # should get progress string,
+            # 10 s per step, 9 seconds (=9 steps) remaining
+            assert contents == ("Working on Monte Carlo cycle number 2\n"
+                                + "Running for 1 second -  1.00 seconds per step\n"
+                                + "Estimated time remaining: 9 seconds\n")
+
+    def test_after_simulation(self):
+        # set step_number in PathSampling Mock
+        self.simulation.configure_mock(step=2)
+        self.hook.after_simulation(self.simulation)
+        contents = self.stream.getvalue()
+        assert contents == "DONE! Completed 2 Monte Carlo cycles.\n"
