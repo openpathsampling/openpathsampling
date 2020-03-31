@@ -7,9 +7,10 @@ from __future__ import print_function
 # from several files.
 import pandas as pd
 import numpy as np
-
+import sys
 import logging
 logger = logging.getLogger(__name__)
+
 
 class WHAM(object):
     """
@@ -26,8 +27,8 @@ class WHAM(object):
         a matrix of n_bins rows and n_hists columns.
 
 
-    Reference
-    ---------
+    References
+    ----------
     .. [1] Daan Frenkel and Berend Smit. Understanding Molecular Simulation:
        From Algorithms to Applications. 2nd Edition. 2002.
 
@@ -59,13 +60,13 @@ class WHAM(object):
     @property
     def float_format(self):
         """Float output format. Example: 10.8 (default)"""
-        return lambda x : "{:" + self._float_format + "f}".format(x)
+        return lambda x: "{:" + self._float_format + "f}".format(x)
 
     @float_format.setter
     def float_format(self, value):
         self._float_format = value
 
-    def load_files(self,fnames):  # pragma: no cover
+    def load_files(self, fnames):  # pragma: no cover
         """Load a file or files into the internal structures.
 
         Requires either pandas or something else with pandas-like read_table
@@ -87,15 +88,14 @@ class WHAM(object):
         try:
             for fname in fnames:
                 frames.append(pd.read_table(fname, index_col=0, sep=" ",
-                                            usecols=[0,1], header=None))
+                                            usecols=[0, 1], header=None))
         except TypeError:
             frames.append(pd.read_table(fnames, index_col=0, sep=" ",
-                                        usecols=[0,1], header=None))
+                                        usecols=[0, 1], header=None))
             fnames = [fnames]
         df = pd.concat(frames, axis=1)
-        df.columns=fnames
+        df.columns = fnames
         return df
-
 
     def prep_reverse_cumulative(self, df, cutoff=None, tol=None):
         """
@@ -103,7 +103,7 @@ class WHAM(object):
 
         This version assumes that the input is the result of a reversed
         cumulative histogram. That means that it cleans leading input where
-        the initial 
+        the initial
 
         Parameters
         ----------
@@ -131,7 +131,7 @@ class WHAM(object):
         hist_max = df.max(axis=0)
         raw_cutoff = cutoff*hist_max
         cleaned_df = df.apply(
-            lambda s : [x if x > raw_cutoff[s.name] else 0.0 for x in s]
+            lambda s: [x if x > raw_cutoff[s.name] else 0.0 for x in s]
         )
 
         if self.interfaces is not None:
@@ -140,10 +140,10 @@ class WHAM(object):
             if type(self.interfaces) is not pd.Series:
                 self.interfaces = pd.Series(data=self.interfaces,
                                             index=df.columns)
-            greater_almost_equal = lambda a, b : (a >= b or
-                                                  abs(a - b) < 10e-10)
+            greater_almost_equal = lambda a, b: (a >= b or
+                                                 abs(a - b) < 10e-10)
             cleaned_df = cleaned_df.apply(
-                lambda s : [
+                lambda s: [
                     (
                         s.iloc[i]
                         if greater_almost_equal(s.index[i],
@@ -155,17 +155,17 @@ class WHAM(object):
             )
         else:
             # clear duplicates of leading values
-            test_f = lambda val1, val2, val_max : (
+            test_f = lambda val1, val2, val_max: (
                 abs(val1 - val2) > tol or abs(val1 - val_max) > tol
             )
             cleaned_df = cleaned_df.apply(
-                lambda s : [
-                    s.iloc[i] if test_f(s.iloc[i], s.iloc[i+1], s.max()) else 0.0
+                lambda s: [
+                    s.iloc[i]
+                    if test_f(s.iloc[i], s.iloc[i+1], s.max()) else 0.0
                     for i in range(len(s)-1)
                 ] + [s.iloc[-1]]
             )
         return cleaned_df
-
 
     def unweighting_tis(self, cleaned_df):
         """
@@ -189,13 +189,12 @@ class WHAM(object):
             unweighting values for the input dataframe
         """
         unweighting = cleaned_df.copy().applymap(
-            lambda x : 1.0 if x > 0.0 else 0.0
+            lambda x: 1.0 if x > 0.0 else 0.0
         )
         return unweighting
 
-
     def sum_k_Hk_Q(self, cleaned_df):
-        """Sum over histograms for each histogram bin. Length is n_bins
+        r"""Sum over histograms for each histogram bin. Length is n_bins
 
         Called ``sum_hist`` in other codes, or :math:`\sum_k H_k(Q)` in F&S.
         This is the sum over histograms of values for a given histogram bin.
@@ -211,7 +210,6 @@ class WHAM(object):
             sum over histograms for each bin (length is n_bins)
         """
         return cleaned_df.sum(axis=1)
-
 
     def n_entries(self, cleaned_df):
         """List of counts of entries per histogram. Length is n_hists
@@ -231,7 +229,6 @@ class WHAM(object):
         """
         return cleaned_df.sum(axis=0)
 
-
     def weighted_counts_tis(self, unweighting, n_entries):
         """
         Product of unweighting and n_entries.
@@ -249,14 +246,13 @@ class WHAM(object):
         pandas.DataFrame
             weighted counts matrix, size n_hists by n_dims
         """
-        weighted_counts = unweighting.apply(lambda s : [x * n_entries[s.name]
-                                                        for x in s])
+        weighted_counts = unweighting.apply(lambda s: [x * n_entries[s.name]
+                                                       for x in s])
         return weighted_counts
 
-
-    def generate_lnZ(self, lnZ, unweighting, weighted_counts,
-                            sum_k_Hk_Q, tol=None):
-        """
+    def generate_lnZ(self, lnZ, unweighting, weighted_counts, sum_k_Hk_Q,
+                     tol=None):
+        r"""
         Perform the WHAM iteration to estimate ln(Z_i) for each histogram.
 
         Parameters
@@ -286,12 +282,11 @@ class WHAM(object):
         diff = self.tol + 1  # always start above the tolerance
         iteration = 0
         hists = weighted_counts.columns
-        bins = weighted_counts.index
         # TODO: probably faster if we make wc this a sparse matrix
         wc = weighted_counts.values
         unw = unweighting.values
         lnZ_old = pd.Series(data=lnZ, index=hists)
-        Z_new = pd.Series(index=hists)
+        Z_new = pd.Series(index=hists, dtype='float64')
         sum_k_Hk_byQ = sum_k_Hk_Q.values
         while diff > tol and iteration < self.max_iter:
             Z_old = np.exp(lnZ_old)
@@ -325,7 +320,7 @@ class WHAM(object):
                 # multiplication, which numpy can do very quickly.
                 #############################################################
 
-                w_i = unw[:,i]
+                w_i = unw[:, i]
 
                 # numerator: w_{i,Q} * sum_k_Hk_byQ
                 numerator_byQ = np.multiply(w_i, sum_k_Hk_byQ)
@@ -351,7 +346,6 @@ class WHAM(object):
         self.convergence = (iteration, diff)
         return lnZ_old
 
-
     def get_diff(self, lnZ_old, lnZ_new, iteration):
         """Calculate the difference for this iteration.
 
@@ -372,7 +366,7 @@ class WHAM(object):
             difference between old and new to use for convergence testing
         """
         # get error
-        diff=0
+        diff = 0
         diff = sum(abs(lnZ_old - lnZ_new))
         # check status (mainly for debugging)
         if (iteration % self.sample_every == 0):  # pragma: no cover
@@ -381,7 +375,6 @@ class WHAM(object):
             logger.debug("   lnZ = " + str(lnZ_old))
             logger.debug("lnZnew = " + str(lnZ_new))
         return diff
-
 
     def output_histogram(self, lnZ, sum_k_Hk_Q, weighted_counts):
         """Recombine the data into a joined histogram
@@ -404,7 +397,8 @@ class WHAM(object):
         """
         Z = np.exp(lnZ)
         Z0_over_Zi = Z.iloc[0] / Z
-        output = pd.Series(index=sum_k_Hk_Q.index, name="WHAM")
+        output = pd.Series(index=sum_k_Hk_Q.index, name="WHAM",
+                           dtype='float64')
         for val in sum_k_Hk_Q.index:
             sum_w_over_Z = sum([
                 weighted_counts.loc[val, hist_i] * Z0_over_Zi[hist_i]
@@ -438,7 +432,7 @@ class WHAM(object):
         pandas.Series
             initial guess for values of ln(Z_i) for each histogram
         """
-        df = cleaned_df.apply(lambda s : s/s.max())
+        df = cleaned_df.apply(lambda s: s/s.max())
         # pandas magic, see http://stackoverflow.com/questions/18327624
         first_nonzero = df.apply(lambda s: s[s == 1.0].index[0])
         df = df.loc[first_nonzero]
@@ -464,7 +458,7 @@ class WHAM(object):
         RuntimeError
             if the input doesn't have enough of an overlap
         """
-        for col_idx in range(1,len(cleaned_df.columns)):
+        for col_idx in range(1, len(cleaned_df.columns)):
             col = cleaned_df.columns[col_idx]
             prev_col = cleaned_df.columns[col_idx - 1]
 
@@ -503,7 +497,7 @@ class WHAM(object):
         n_entries = self.n_entries(cleaned)
         unweighting = self.unweighting_tis(cleaned)
         weighted_counts = self.weighted_counts_tis(unweighting,
-                                                          n_entries)
+                                                   n_entries)
         try:
             lnZ = self.generate_lnZ(guess, unweighting, weighted_counts,
                                     sum_k_Hk_Q)
@@ -540,7 +534,6 @@ def parsing(parseargs):  # pragma: no cover
     return opts, args
 
 
-import sys, os
 if __name__ == "__main__":  # pragma: no cover
     opts, args = parsing(sys.argv[1:])
     wham = WHAM(tol=opts.tol, max_iter=opts.max_iter, cutoff=opts.cutoff)
@@ -558,5 +551,5 @@ if __name__ == "__main__":  # pragma: no cover
         wham_hist = wham.wham_bam_histogram(df)
         print(wham_hist.to_string(
             header=False,
-            float_format=lambda x : "{:10.8f}".format(x)
+            float_format=lambda x: "{:10.8f}".format(x)
         ))

@@ -1,4 +1,6 @@
 import collections
+import functools
+
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.numerics import LookupFunction
@@ -218,8 +220,49 @@ class StandardTISAnalysis(TISAnalysis):
             transition_probability_methods=trans_prob_methods
         )
 
+        self._progresser = paths.progress.SimpleProgress()
+
         if steps is not None:
             self.calculate(steps)
+
+    def _set_progress(self, progress, leave):
+        self._progresser.progress = progress  # set if string
+        progress = self._progresser.progress  # get function
+        prog_leave = functools.partial(progress, leave=True)
+        prog_no_leave = functools.partial(progress, leave=False)
+        if leave == 'all':
+            self.flux_method.progress = prog_leave
+            self.ctp_method.progress = prog_leave
+            max_lambda_prog = prog_leave
+        elif leave == 'default':
+            self.flux_method.progress = prog_leave
+            self.ctp_method.progress = prog_leave
+            max_lambda_prog = prog_no_leave
+        elif leave == 'none':
+            self.flux_method.progress = prog_no_leave
+            self.ctp_method.progress = prog_no_leave
+            max_lambda_prog = prog_no_leave
+
+        max_lambda_methods = [tcp.max_lambda_calc
+                              for tcp in self.tcp_methods.values()]
+        for max_lambda_m in max_lambda_methods:
+            max_lambda_m.progress = max_lambda_prog
+
+    @property
+    def progress(self):
+        if not hasattr(self._progresser, '_progress'):
+            self.progress = 'default'
+        return self._progresser.progress
+
+    @progress.setter
+    def progress(self, value):
+        if value in ['all', 'default', 'none']:
+            progress = 'tqdm'
+            leave = value
+        else:
+            progress = value
+            leave = 'default'
+        self._set_progress(progress, leave)
 
     def from_weighted_trajectories(self, input_dict):
         """Calculate results from weighted trajectories dictionary.
@@ -240,7 +283,8 @@ class StandardTISAnalysis(TISAnalysis):
         max_lambda_calcs = [tcp_m.max_lambda_calc
                             for tcp_m in self.tcp_methods.values()]
         max_lambda_hists = {}
-        for calc in max_lambda_calcs:
+        label = "Crossing probability"
+        for calc in self.progress(max_lambda_calcs, desc=label):
             calc_results = calc.from_weighted_trajectories(input_dict)
             # TODO: change this to a 2D mapping, CV and ensemble
             max_lambda_hists.update(calc_results)

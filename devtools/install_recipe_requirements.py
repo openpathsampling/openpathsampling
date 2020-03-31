@@ -6,7 +6,7 @@ import tempfile
 import argparse
 
 # This requires that you have already installed conda and pyyaml
-import conda.cli
+# import conda.cli
 import yaml
 
 def parse_arguments():
@@ -31,7 +31,7 @@ def read_input(filename):
     return file_data
 
 def recipe_to_requirements(recipe_yaml):
-    reqs = yaml.load(recipe_yaml)['requirements']
+    reqs = yaml.load(recipe_yaml, Loader=yaml.FullLoader)['requirements']
     required_packages = set(reqs['build'] + reqs['run'])
     return required_packages
 
@@ -45,6 +45,7 @@ if __name__ == "__main__":
     if args.dry:
         print(req_file_str)
     else:
+        raise RuntimeError("Only dry run works")
         for install in required_packages:
             channels = ['conda-forge', 'omnia']
             channel_str = sum([['-c', channel] for channel in channels], [])

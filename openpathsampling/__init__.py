@@ -106,6 +106,12 @@ from .pathmover import (
     BackwardFirstTwoWayShootingMover
 )
 
+from .pathsimulators import (
+    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
+    CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation,
+    adaptive_multilevel_splitting
+)
+
 from .sample import Sample, SampleSet
 
 from .shooting import (
@@ -127,15 +133,8 @@ from .volume import (
     RelativeComplementVolume, join_volumes
 )
 
-from .pathsimulators import (
-    PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
-    CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation,
-    adaptive_multilevel_splitting
-)
-
-from .visit_all_states import VisitAllStatesEnsemble
-
-from .high_level import move_strategy as strategies
+# from .high_level import move_strategy as strategies
+from . import strategies
 
 from .high_level.move_scheme import (
     MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
@@ -161,7 +160,10 @@ from .high_level.part_in_b_tps import (
     PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
 )
 
-
+from .ensembles import *
+from .pathmovers import *
+from .collectivevariables import *
+from .pathmovers.move_schemes import *
 
 import openpathsampling.numerics as numerics
 

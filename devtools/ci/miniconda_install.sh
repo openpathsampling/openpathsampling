@@ -29,7 +29,8 @@ export PATH=$HOME/miniconda${pyV}/bin:$PATH
 conda config --add channels http://conda.anaconda.org/omnia
 conda config --add channels http://conda.anaconda.org/conda-forge
 
-# this may speed up conda's package resolution
-conda config --set channel_priority strict
+# next two lines are workaround for conda/conda#9337
+pip uninstall -y setuptools
+conda install --yes setuptools
 
 conda update --yes conda

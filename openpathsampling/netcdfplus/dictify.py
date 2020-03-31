@@ -2,7 +2,8 @@ import base64
 import importlib
 
 import numpy as np
-from simtk import unit as units
+
+from openpathsampling.integration_tools import is_simtk_quantity, unit
 import math
 import abc
 from uuid import UUID
@@ -29,12 +30,14 @@ if sys.version_info > (3, ):
     get_code = lambda func: func.__code__
     intify_byte = lambda b: b
     decodebytes = lambda s: base64.decodebytes(s.encode())
+    get_callable_name = lambda c: c.__name__
     import builtins
 else:
     builtin_module = '__builtin__'
     get_code = lambda func: func.func_code
     intify_byte = lambda b: ord(b)
     decodebytes = base64.decodestring
+    get_callable_name = lambda c: c.func_name
     import builtins
 
 # in Python 3.6 the opcodes have changed width
@@ -132,7 +135,8 @@ class ObjectJSON(object):
                 '_integer': str(obj)}
 
         elif obj.__class__.__module__ != builtin_module:
-            if obj.__class__ is units.Quantity:
+            #if obj.__class__ is units.Quantity:
+            if is_simtk_quantity(obj):
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
                     return {
@@ -318,11 +322,12 @@ class ObjectJSON(object):
 
     @staticmethod
     def unit_from_dict(unit_dict):
-        unit = units.Unit({})
+        # this will *only* work if simtk.unit is installed
+        this_unit = unit.Unit({})
         for unit_name, unit_multiplication in unit_dict.items():
-            unit *= getattr(units, unit_name) ** unit_multiplication
+            this_unit *= getattr(unit, unit_name) ** unit_multiplication
 
-        return unit
+        return this_unit
 
     @staticmethod
     def callable_to_dict(c):
@@ -388,13 +393,13 @@ class ObjectJSON(object):
                 err += '\n4. be passed as an external parameter ' \
                        '(not for imports!)'
                 err += '\n\n        my_cv = FunctionCV("cv_name", ' + \
-                       c.func_name + ', \n' + \
+                       get_callable_name(c) + ', \n' + \
                        ',\n'.join(
                            map(lambda x: ' ' * 20 + x + '=' + x, global_vars)
                        ) + ')' + '\n'
                 err += '\n    and change your function definition like this'
                 err += '\n\n        def ' + \
-                       c.func_name + '(snapshot, ...,  ' + \
+                       get_callable_name(c) + '(snapshot, ...,  ' + \
                        '\n' + ',\n'.join(
                            map(lambda x: ' ' * 16 + x, global_vars)
                        ) + '):'

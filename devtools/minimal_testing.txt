@@ -1,0 +1,4 @@
+nose
+pytest!=5.3.4
+pytest-cov
+coveralls

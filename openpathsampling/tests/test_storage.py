@@ -8,7 +8,8 @@ from builtins import range
 from builtins import object
 import os
 
-import mdtraj as md
+import pytest
+
 from nose.tools import (assert_equal)
 
 import openpathsampling as paths
@@ -18,9 +19,7 @@ import openpathsampling.engines.toy as toys
 
 from openpathsampling.netcdfplus import ObjectJSON
 from openpathsampling.storage import Storage
-from .test_helpers import (data_filename,
-                          compare_snapshot
-                          )
+from .test_helpers import (data_filename, md, compare_snapshot)
 
 import numpy as np
 from nose.plugins.skip import SkipTest
@@ -28,7 +27,10 @@ from nose.plugins.skip import SkipTest
 
 class TestStorage(object):
     def setup(self):
+        if not md:
+            raise SkipTest("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
+        _ = pytest.importorskip('simtk.unit')
         self.traj = peng.trajectory_from_mdtraj(
             self.mdtraj, simple_topology=True)
 
