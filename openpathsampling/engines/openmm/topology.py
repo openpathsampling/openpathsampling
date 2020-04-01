@@ -1,7 +1,6 @@
 import mdtraj as md
 import numpy as np
 import pandas as pd
-from simtk.openmm import XmlSerializer
 
 from openpathsampling.engines import Topology
 
@@ -53,7 +52,7 @@ class MDTrajTopology(Topology):
         try:
             md_topology = md.Topology.from_dataframe(atoms, bonds)
             return cls(md_topology)
-        except StandardError:
+        except Exception:
             # we try a fix and add multiples of 10000 to the resSeq
 
             logger.info('Normal reconstruction of topology failed. '

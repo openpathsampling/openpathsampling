@@ -29,7 +29,7 @@ def default_state_progress_report(n_steps, found_states, all_states,
     if timestep is not None:
         report_str += " [{}]".format(str(n_steps * timestep))
     report_str += (". Found states [{found_states}]. "
-                   "Looking for [{missing_states}].")
+                   "Looking for [{missing_states}].\n")
     found_states_str = ",".join([s.name for s in found_states])
     # list comprehension instead of sets (to preseve order)
     missing_states = [s for s in all_states if s not in found_states]

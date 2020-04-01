@@ -1,5 +1,6 @@
 import time
 import logging
+import os
 
 import openpathsampling as paths
 from .path_simulator import PathSimulator, MCStep
@@ -189,6 +190,48 @@ class PathSampling(PathSimulator):
         #         self.step = len(self.storage.steps)
         n_steps_to_run = n_steps - self.step
         self.run(n_steps_to_run)
+
+    def run_until_decorrelated(self, time_reversal=True):
+        """Run until all trajectories are decorrelated.
+
+        This runs until all the replicas in ``self.sample_set`` have
+        decorrelated from their initial conditions. "Decorrelated" here is
+        meant in the sense commonly used in one-way shooting: this runs
+        until no configurations from the original trajectories remain.
+        """
+        originals = {s.replica: s.trajectory for s in self.sample_set}
+        current = self.sample_set
+
+        # cache the output stream; force the primary `run` method to not
+        # output anything
+        original_output_stream = self.output_stream
+        self.output_stream = open(os.devnull, 'w')
+
+        def n_correlated(sample_set, originals):
+            return sum([originals[r].is_correlated(sample_set[r],
+                                                   time_reversal)
+                        for r in originals])
+
+        original_output_stream.write("Decorrelating trajectories....\n")
+        to_decorrelate = n_correlated(self.sample_set, originals)
+        # walrus in py38!
+        while to_decorrelate:
+            out_str = "Step {}: {} of {} trajectories still correlated\n"
+            paths.tools.refresh_output(
+                out_str.format(self.step + 1, to_decorrelate, len(originals)),
+                refresh=False,
+                output_stream=original_output_stream
+            )
+            self.run(1)
+            to_decorrelate = n_correlated(self.sample_set, originals)
+
+        paths.tools.refresh_output(
+            "Step {}: All trajectories decorrelated!\n".format(self.step+1),
+            refresh=False,
+            output_stream=original_output_stream
+        )
+
+        self.output_stream = original_output_stream
 
     def run(self, n_steps):
         mcstep = None

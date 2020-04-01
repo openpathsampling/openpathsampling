@@ -64,7 +64,9 @@ Objects describing what is sampled
   sampled, and an integer replica ID. The :class:`.Sample` is needed because
   methods such as TIS, and especially RETIS, sample multiple ensembles
   simultaneously.  Correct analysis requires knowing the ensemble from which
-  the :class:`.Trajectory` was sampled.
+  the :class:`.Trajectory` was sampled. The replica ID ensures that we can
+  track changes to a given trajectory over time (even if it changes which
+  ensemble it is associated with, e.g., due to replica exchange).
 * Since methods like TIS have several active :class:`Samples <.Sample>`
   during a path simulation step, OPS collects them into one
   :class:`.SampleSet`. The :class:`.SampleSet` contains a list of

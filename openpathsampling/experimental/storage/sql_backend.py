@@ -138,6 +138,8 @@ class SQLStorageBackend(object):
         The default constructor doesn't allow all the options to the engine
         that SQLAlchemy can provide. Use this if you want more customization
         of the database engine.
+
+        More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
         """
         obj = cls.__new__(cls)
         self._metadata = sql.MetaData()
@@ -159,6 +161,9 @@ class SQLStorageBackend(object):
 
     @staticmethod
     def filename_from_dialect(filename, dialect):
+        # TODO: I think this might be removed in the future; instead, custom
+        # setups can use the from_engine constructor
+
         # take dialects like "sqlite", etc and return proper file connection
         # URI; would be essentially no-op for regular file opening as with
         # .nc

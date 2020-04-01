@@ -1,6 +1,8 @@
 import string
 import sys
 
+import pytest
+
 import openpathsampling as paths
 
 if sys.version_info > (3,):
@@ -18,14 +20,25 @@ from openpathsampling.engines.openmm.tools import (
 from .test_helpers import data_filename
 
 from openpathsampling.engines.openmm import Snapshot
+from openpathsampling.integration_tools import HAS_OPENMM, HAS_MDTRAJ
 
-from simtk.unit import nanometer as nm
-from simtk.unit import picosecond as ps
+try:
+    from simtk.unit import nanometer as nm
+    from simtk.unit import picosecond as ps
+except ImportError:
+    HAS_SIMTK_UNIT = False
+else:
+    HAS_SIMTK_UNIT = True
 
 import numpy.testing as npt
 import numpy as np
 
-from mdtraj.utils import box_vectors_to_lengths_and_angles
+try:
+    from mdtraj.utils import box_vectors_to_lengths_and_angles
+except ImportError:
+    HAS_MDTRAJ = False
+else:
+    HAS_MDTRAJ = True
 
 class BoxVectorWarning(RuntimeWarning):
     pass
@@ -56,12 +69,15 @@ def check_reduced_box_vectors(v):
 
 
 def mock_snapshot_with_box_vector(box):
+    if not HAS_OPENMM:
+        pytest.skip()
     return Snapshot.construct(coordinates=np.array([[]]) * nm,
                               velocities=np.array([[]]) * nm/ps,
                               box_vectors=box)
 
 
 def test_reduced_box_vectors():
+    pytest.importorskip("mdtraj")
     box = np.array([[ 6.70596027,  0.,          0.        ],
                     [ 0.,          6.70596027,  0.        ],
                     [ 3.35299015,  3.35299015,  4.74183893]])
@@ -73,6 +89,8 @@ def test_reduced_box_vectors():
     else:
         raise AssertionError("Box already reduced")
 
+    if not HAS_OPENMM:
+        pytest.skip()
     snap = mock_snapshot_with_box_vector(box * nm)
     reduced_box = reduced_box_vectors(snap).value_in_unit(nm)
     check_reduced_box_vectors(reduced_box)
@@ -106,6 +124,8 @@ def test_reduce_trajectory_box_vectors():
 
 
 def test_load_trr_with_velocities():
+    if not (HAS_MDTRAJ and HAS_OPENMM):
+        pytest.skip()
     box_vect_dir = "reduce_box_vects"
     gro = data_filename(box_vect_dir + "/dna.gro")
     trr = data_filename(box_vect_dir + "/dna.trr")
@@ -116,6 +136,8 @@ def test_load_trr_with_velocities():
 
 
 def test_load_trr_no_velocities():
+    if not (HAS_MDTRAJ and HAS_OPENMM):
+        pytest.skip()
     box_vect_dir = "reduce_box_vects"
     gro = data_filename(box_vect_dir + "/dna.gro")
     trr = data_filename(box_vect_dir + "/dna.trr")

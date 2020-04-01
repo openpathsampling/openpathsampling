@@ -1,6 +1,6 @@
 package:
-  name: openpathsampling-dev
-  version: "1.0.0"
+  name: openpathsampling
+  version: "1.3.0.dev0"
 
 source:
   path: ../../
@@ -30,6 +30,7 @@ requirements:
     - networkx
     - matplotlib
     - ujson
+    - psutil
     - pyemma
 
 test:
