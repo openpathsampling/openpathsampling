@@ -59,7 +59,8 @@ class TestGromacsEngine(object):
                              prefix="project")
 
     def teardown(self):
-        files = ['topol.tpr', 'mdout.mdp', 'initial_frame.trr',
+        files = ['topol.tpr', 'mdout.mdp', 'initial_frame.trr', 'state.cpt',
+                 'state_prev.cpt', 'traj_comp.xtc',
                  self.engine.trajectory_filename(1)]
         for f in files:
             if os.path.isfile(f):
