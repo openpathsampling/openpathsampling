@@ -1,9 +1,13 @@
 import collections
+import random
 import numpy as np
 from openpathsampling.volume import Volume
 from openpathsampling.pathsimulators import PathSimulator
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
+
+import logging
+logger = logging.getLogger(__name__)
 
 AMSInfo = collections.namedtuple(
     'AMSInfo',
@@ -228,11 +232,15 @@ class AdaptiveMultilevelSplittingStepper(paths.SubPathMover):
                    engine=simulator.engine)
 
     def _select_min_lambda_trajectory(self, sample_set):
-        lambda_sample = [
-            (self.parametrized_volume.cv_max(samp.trajectory), samp)
-            for samp in sample_set
-        ]
-        return min(lambda_sample)
+        # TODO: check with AMS guys to be sure that this is the correct way
+        lambda_sample = collections.defaultdict(list)
+        for samp in sample_set:
+            lambda_val = self.parametrized_volume.cv_max(samp.trajectory)
+            lambda_sample[lambda_val].append(samp)
+
+        min_lambda = min(lambda_sample.keys())
+        choice = random.choice(lambda_sample[min_lambda])
+        return min_lambda, choice
 
     def move(self, sample_set):
         # select the trajectory to be changed
@@ -256,14 +264,9 @@ class AdaptiveMultilevelSplittingStepper(paths.SubPathMover):
             trajectory=template_traj.trajectory
         )])
 
-        print("Replica " + str(selected_sample.replica) + " at "
-              + str(min_lambda) + " replaced by shot from trajectory "
-              + "in replica " + str(choice))
-        sorted_lambda_sample = sorted([
-            (self.parametrized_volume.cv_max(samp.trajectory), samp.replica)
-            for samp in sample_set
-        ], key=lambda x: x[0])
-        print("Next 4: " + str(sorted_lambda_sample[1:5]))
+        logger.info("Replica " + str(selected_sample.replica) + " at "
+                    + str(min_lambda) + " replaced by shot from trajectory "
+                    + "in replica " + str(choice))
 
         # run shooting move
         subchange = self.mover.move(new_starting_set)
@@ -292,6 +295,8 @@ class AdaptiveMultilevelSplitting(PathSimulator):
         self.engine = engine
         self.stepper = AdaptiveMultilevelSplittingStepper.from_AMS(self)
         self.initialization = initialization
+
+        self.status_update_frequency = 1
 
     def _complete_count(self, sample_set):
         in_final_state = [self.final_state(sample.trajectory[-1])
@@ -324,6 +329,9 @@ class AdaptiveMultilevelSplitting(PathSimulator):
             and self._complete_count(sample_set) < n_trans_stop
         )
         while continue_condition(step, self.sample_set):
+            if step == 0 or (step + 1)  % self.status_update_frequency == 0:
+                self.output(step, n_steps_max, complete_fraction,
+                            self.sample_set, done=False)
             change = self.stepper.move(self.sample_set)
             self.sample_set = self.sample_set.apply_samples(change)
             mcstep = paths.MCStep(
@@ -335,7 +343,30 @@ class AdaptiveMultilevelSplitting(PathSimulator):
             if self.storage:
                 self.storage.steps.save(mcstep)
             step += 1
-            # TODO: add saving
+
+        self.output(step, n_steps_max, complete_fraction, self.sample_set,
+                    done=True)
+
+    def output(self, step, n_steps_max, complete_fraction, active, done):
+        if done:
+            out_str = "DONE: Ran {step} steps (maximum {n_steps_max})\n"
+        else:
+            out_str = "Running step {step} (maximum {n_steps_max})\n"
+        out_str += "Max-max-lambda: {max_max}\n"
+        out_str += "Min-max-lambda: {min_max}\n"
+        lambda_vals = sorted([
+            self.parametrized_volume.cv_max(samp.trajectory)
+            for samp in active
+        ])
+        min_max = lambda_vals[0]
+        max_max = lambda_vals[-1]
+        string = out_str.format(step=step+1, n_steps_max=n_steps_max,
+                                max_max=max_max, min_max=min_max)
+
+        refresh = self.allow_refresh
+        paths.tools.refresh_output(string,
+                                   refresh=refresh,
+                                   output_stream=self.output_stream)
 
     def analysis(self, steps=None):
         return AdaptiveMultilevelSplittingAnalysis.from_AMS(self, steps)
