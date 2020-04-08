@@ -43,3 +43,17 @@ class TestInterfaceSetParametrizedVolume(object):
             self.param_vol(traj[0])
 
 
+class TestAMSInitialization(object):
+    def setup(self):
+        trajectories = [
+            make_1d_traj([-0.1, 0.1, -0.11]),
+            make_1d_traj([-0.2, 0.2, 0.1, -0.1])
+        ]
+        self.intialization = AMSInitialization(trajectories)
+
+    def test_serialization_cycle(self):
+        dct = self.intialization.to_dict()
+        obj = AMSInitialization.from_dict(dct)
+        dct2 = obj.to_dict()
+        assert dct == dct2
+        pass

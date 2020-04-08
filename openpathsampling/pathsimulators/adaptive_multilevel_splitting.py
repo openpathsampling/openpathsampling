@@ -110,6 +110,10 @@ class AMSInitialization(StorableNamedObject):
     def __init__(self, initial_trajectories):
         self._initial_trajectories = initial_trajectories
 
+    def to_dict(self):
+        # default from_dict should work fine
+        return {'initial_trajectories': self._initial_trajectories}
+
     @property
     def _default_initial_trajectories(self):
         return self._initial_trajectories
