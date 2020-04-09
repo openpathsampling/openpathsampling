@@ -275,7 +275,7 @@ class AdaptiveMultilevelSplittingStepper(paths.SubPathMover):
         # run shooting move
         subchange = self.mover.move(new_starting_set)
         details = paths.Details(
-            min_lambda=min_lambda,
+            min_lambda=float(min_lambda),
             min_max_cv_sample=selected_sample,
             new_starting_set=new_starting_set
         )
