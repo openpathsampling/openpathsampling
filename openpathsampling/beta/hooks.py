@@ -1,7 +1,3 @@
-import openpathsampling as paths
-from openpathsampling.pathsimulators.path_simulator import PathSimulator
-from openpathsampling.netcdfplus import StorableNamedObject
-
 """
 Hooks to change class:`.PathSimulator` behavior.
 
@@ -9,6 +5,17 @@ These hooks group several methods together for use as part of a
 :class:`.PathSimulator` ``run`` method. They allow for additional
 calculations or output at several points in the simulation.
 """
+import time
+import openpathsampling as paths
+from openpathsampling.netcdfplus import StorableNamedObject
+
+
+class SimulationNotFoundError(RuntimeError):
+    """
+    Raised when a hook tries to access its parent simulation before knowing it.
+    """
+    pass
+
 
 class PathSimulatorHook(StorableNamedObject):
     """Superclass for PathSimulator hooks.
@@ -108,8 +115,12 @@ class LiveVisualizerHook(PathSimulatorHook):
     simulation is the `PathSimulator` this hook is attached to.
 
     NOTE: You will have to set PathSimulator.allow_refresh = False
-          **before** the first simulation run. Otherwise the LiveVisualization
-          will get refreshed away (i.e. deleted) right after creation.
+          Otherwise the LiveVisualization will get refreshed away
+          (i.e. deleted) right after creation.
+
+    NOTE: Arguments passed to init take precedence over the corresponding
+          parameters of the PathSimulator this hook is attached to. They can
+          only be accessed through this hook, e.g. as hook.live_visualizer.
 
     Parameters
     ----------
@@ -124,26 +135,46 @@ class LiveVisualizerHook(PathSimulatorHook):
     #       this deviates from the previous implementation but avoids
     #       having to pass the previous MCstep to before_step hooks
     implemented_for = ['before_simulation', 'after_step']
+
     def __init__(self, live_visualizer=None, status_update_frequency=None):
         self.live_visualizer = live_visualizer
         self.status_update_frequency = status_update_frequency
+        self._simulation = None
+
+    @property
+    def live_visualizer(self):
+        if self._live_visualizer is not None:
+            return self._live_visualizer
+        elif self._simulation is not None:
+            return self._simulation.live_visualizer
+        else:
+            # hejung: I think here we should return None, because that is the
+            # default and leaving the default value unchanged should not lead
+            # to an error :)
+            return None
+
+    @live_visualizer.setter
+    def live_visualizer(self, val):
+        self._live_visualizer = val
+
+    @property
+    def status_update_frequency(self):
+        if self._status_update_frequency is not None:
+            return self._status_update_frequency
+        elif self._simulation is not None:
+            return self._simulation.status_update_frequency
+        else:
+            raise SimulationNotFoundError("'status_update_frequency' has not "
+                                          + "been set and no hosting "
+                                          + "simulation known to get a value."
+                                          )
+
+    @status_update_frequency.setter
+    def status_update_frequency(self, val):
+        self._status_update_frequency = val
 
     def before_simulation(self, sim):
-        if self.live_visualizer is None:
-            self.live_visualizer = sim.live_visualizer
-        if self.status_update_frequency is None:
-            self.status_update_frequency = sim.status_update_frequency
-        # TODO/FIXME: when a user modifies sim.status_update_frequency
-        #    the hook does not update (as I think most people would expect)
-        #    instead you would have to modify the hook or attach a new one
-        #    the way below reproduces the current/previous behaviour, but makes
-        #    it pointless to pass them to init if we overwrite anyway...
-        #    we could modify them to properties in pathsampling and set them
-        #    here too if modified? Or recreate the corresponding hook?
-        #if self.live_visualizer is not sim.live_visualizer:
-        #    self.live_visualizer = sim.live_visualizer
-        #if self.status_update_frequency is not sim.status_update_frequency:
-        #    self.status_update_frequency = sim.status_update_frequency
+        self._simulation = sim
 
     def after_step(self, sim, step_number, step_info, state, results,
                    hook_state):
@@ -159,6 +190,10 @@ class PathSamplingOutputHook(PathSimulatorHook):
     Default (serial) output for PathSamplingSimulation objects.
 
     Updates every `PathSampling.status_update_frequency` MCSteps.
+
+    NOTE: Arguments passed to init take precedence over the corresponding
+          parameters of the PathSimulator this hook is attached to. They can
+          only be accessed through this hook, e.g. as hook.output_stream.
 
     Parameters
     ----------
@@ -179,24 +214,63 @@ class PathSamplingOutputHook(PathSimulatorHook):
         self.output_stream = output_stream
         self.allow_refresh = allow_refresh
         self.status_update_frequency = status_update_frequency
+        self._simulation = None
+
+    @property
+    def output_stream(self):
+        if self._output_stream is not None:
+            return self._output_stream
+        elif self._simulation is not None:
+            return self._simulation.output_stream
+        else:
+            raise SimulationNotFoundError("'output_stream' has not "
+                                          + "been set and no hosting "
+                                          + "simulation known to get a value."
+                                          )
+
+    @output_stream.setter
+    def output_stream(self, val):
+        self._output_stream = val
+
+    @property
+    def allow_refresh(self):
+        if self._allow_refresh is not None:
+            return self._allow_refresh
+        elif self._simulation is not None:
+            return self._simulation.allow_refresh
+        else:
+            raise SimulationNotFoundError("'allow_refresh' has not "
+                                          + "been set and no hosting "
+                                          + "simulation known to get a value."
+                                          )
+
+    @allow_refresh.setter
+    def allow_refresh(self, val):
+        self._allow_refresh = val
+
+    @property
+    def status_update_frequency(self):
+        if self._status_update_frequency is not None:
+            return self._status_update_frequency
+        elif self._simulation is not None:
+            return self._simulation.status_update_frequency
+        else:
+            raise SimulationNotFoundError("'status_update_frequency' has not "
+                                          + "been set and no hosting "
+                                          + "simulation known to get a value."
+                                          )
+
+    @status_update_frequency.setter
+    def status_update_frequency(self, val):
+        self._status_update_frequency = val
 
     def before_simulation(self, sim):
-        if self.output_stream is None:
-            self.output_stream = sim.output_stream
-        if self.allow_refresh is None:
-            self.allow_refresh = sim.allow_refresh
-        if self.status_update_frequency is None:
-            self.status_update_frequency = sim.status_update_frequency
-        # TODO/FIXME: same considerations as for LiveVisualizerHook!
-        #if self.output_stream is not sim.output_stream:
-        #    self.output_stream = sim.output_stream
-        #if self.allow_refresh is not sim.allow_refresh:
-        #    self.allow_refresh = sim.allow_refresh
-        #if self.status_update_frequency is not sim.status_update_frequency:
-        #    self.status_update_frequency = sim.status_update_frequency
+        self._simulation = sim
+        self._initial_time = time.time()
 
     def before_step(self, sim, step_number, step_info, state):
-        nn, n_steps, elapsed = step_info
+        nn, n_steps = step_info
+        elapsed = time.time() - self._initial_time
         paths.tools.refresh_output(
             "Working on Monte Carlo cycle number " + str(step_number)
             + "\n" + paths.tools.progress_string(nn, n_steps, elapsed),

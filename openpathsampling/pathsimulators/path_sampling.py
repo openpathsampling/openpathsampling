@@ -254,7 +254,6 @@ class PathSampling(PathSimulator):
 
     def run(self, n_steps):
         mcstep = None
-        initial_time = time.time()
         hook_state = None
         self.run_hooks('before_simulation', sim=self)
         for nn in range(n_steps):
@@ -262,20 +261,17 @@ class PathSampling(PathSimulator):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
             step_number = self.step
-            time_start = time.time()
-            elapsed_total = time.time() - initial_time
             # TODO: anything else we could want in the step info?
-            #       atm this is tailored for PathSamplingOutputHook
-            step_info = (nn, n_steps, elapsed_total)
+            step_info = (nn, n_steps)
             self.run_hooks('before_step', sim=self, step_number=step_number,
                            step_info=step_info, state=self.sample_set)
 
             # MCStep, i.e. actual sample move
+            time_start = time.time()  # we time **only** the MCStep (no hooks!)
             movepath = self._mover.move(self.sample_set, step=self.step)
             samples = movepath.results
             new_sampleset = self.sample_set.apply_samples(samples)
             elapsed_step = time.time() - time_start
-
             # TODO: we can save this with the MC steps for timing? The bit
             # below works, but is only a temporary hack
             setattr(movepath.details, "timing", elapsed_step)
@@ -288,7 +284,7 @@ class PathSampling(PathSimulator):
                 change=movepath
             )
             self._current_step = mcstep
-            self.save_current_step()
+            #self.save_current_step()  # storage hook does this anyway
             self.sample_set = new_sampleset
 
             # run after_step hooks

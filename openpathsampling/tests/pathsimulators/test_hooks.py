@@ -5,6 +5,8 @@ from nose.plugins.skip import Skip, SkipTest
 
 import io
 import sys
+import time
+import re
 
 import pytest
 try:
@@ -235,13 +237,19 @@ class TestPathSamplingOutputHook(object):
         assert hook.output_stream == self.stream
         assert hook.allow_refresh is False
 
-    @pytest.mark.parametrize('nn', [0, 1])
-    @pytest.mark.parametrize('elapsed', [1., 10.])
+    @pytest.mark.parametrize('nn, elapsed',
+                             [(0, 0.1), (1, 0.1), (1, 1.), (1, 7.)]
+                             )
+    # NOTE: we use regex to match slightly varying runtimes also
+    # NOTE 2: waiting for 7 seconds is quite long, but the only way to get the
+    # progress string for T > 1 min?
     def test_before_step(self, nn, elapsed):
         nn = nn  # MCstep counter during this simulation (reset to 0 every run)
         n_steps = 10  # Total number of MCSteps to do this simulation run
-        elapsed = elapsed  # total time elapsed since starting this simulation run
-        step_info = nn, n_steps, elapsed
+        # elapsed is total time elapsed since starting this simulation run
+        step_info = nn, n_steps
+        self.hook.before_simulation(self.simulation)  # start the hooks timer
+        time.sleep(elapsed)
         self.hook.before_step(self.simulation, step_number=2,
                               step_info=step_info, state=None)
         contents = self.stream.getvalue()
@@ -250,18 +258,30 @@ class TestPathSamplingOutputHook(object):
             assert contents == ("Working on Monte Carlo cycle number 2\n"
                                 + "Starting simulation...\n"
                                 + "Working on first step\n")
-        elif nn == 1 and elapsed == 10.:
+        elif nn == 1 and elapsed == 0.1:
             # should get progress string,
-            # 10 s per step, 1:30 min (= 90 seconds (=9 steps)) remaining
-            assert contents == ("Working on Monte Carlo cycle number 2\n"
-                                + "Running for 10 seconds - 10.00 seconds per step\n"
-                                + "Estimated time remaining: 1 minute 30 seconds\n")
+            # 0.10 s per step, 0.9 seconds (=9 steps)) remaining
+            assert re.fullmatch(
+                    pattern=("Working on Monte Carlo cycle number 2\n"
+                             + "Running for 0 seconds -  0.1[0-1] seconds per step\n"
+                             + "Estimated time remaining: 0 seconds\n"),
+                    string=contents)
         elif nn == 1 and elapsed == 1.:
             # should get progress string,
             # 10 s per step, 9 seconds (=9 steps) remaining
-            assert contents == ("Working on Monte Carlo cycle number 2\n"
-                                + "Running for 1 second -  1.00 seconds per step\n"
-                                + "Estimated time remaining: 9 seconds\n")
+            assert re.fullmatch(
+                    pattern=("Working on Monte Carlo cycle number 2\n"
+                             + "Running for 1 second -  1.0[0-1] seconds per step\n"
+                             + "Estimated time remaining: 9 seconds\n"),
+                    string=contents)
+        elif nn == 1 and elapsed == 7.:
+            # should get progress string,
+            # 7 s per step, 1:03 min (= 63 seconds (=9 steps)) remaining
+            assert re.fullmatch(
+                    pattern=("Working on Monte Carlo cycle number 2\n"
+                             + "Running for 7 seconds -  7.0[0-1] seconds per step\n"
+                             + "Estimated time remaining: 1 minute 3 seconds\n"),
+                    string=contents)
 
     def test_after_simulation(self):
         # set step_number in PathSampling Mock
