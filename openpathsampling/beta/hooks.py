@@ -41,19 +41,64 @@ class PathSimulatorHook(StorableNamedObject):
 
 
 class StorageHook(PathSimulatorHook):
-    """Standard hook for storage.
+    """
+    Standard hook for storage.
+
+    NOTE: Arguments passed to init take precedence over the corresponding
+          parameters of the PathSimulator this hook is attached to. They can
+          only be accessed through this hook, e.g. as hook.live_visualizer.
+
+    Parameters
+    ----------
+    storage : :class:`.Storage
+              where to save to; default ``None`` uses the simulation's
+              ``storage``
+    frequency : int
+                save frequency measured in steps; default ``None`` uses the
+                simulation's value for ``save_frequency``
+
     """
     implemented_for = ['before_simulation', 'after_step',
                        'after_simulation']
     def __init__(self, storage=None, frequency=None):
         self.storage = storage
         self.frequency = frequency
+        self._simulation = None
+
+    @property
+    def frequency(self):
+        if self._frequency is not None:
+            return self._frequency
+        elif self._simulation is not None:
+            return self._simulation.save_frequency
+        else:
+            raise SimulationNotFoundError("'frequency' has not "
+                                          + "been set and no hosting "
+                                          + "simulation known to get a value."
+                                          )
+
+    @frequency.setter
+    def frequency(self, val):
+        self._frequency = val
+
+    @property
+    def storage(self):
+        if self._storage is not None:
+            return self._storage
+        elif self._simulation is not None:
+            return self._simulation.storage
+        else:
+            raise SimulationNotFoundError("'storage' has not "
+                                          + "been set and no hosting "
+                                          + "simulation known to get a value."
+                                          )
+
+    @storage.setter
+    def storage(self, val):
+        self._storage = val
 
     def before_simulation(self, sim, **kwargs):
-        if self.storage is None:
-            self.storage = sim.storage
-        if self.frequency is None:
-            self.frequency = sim.save_frequency
+        self._simulation = sim
 
     def after_step(self, sim, step_number, step_info, state, results,
                    hook_state):
@@ -76,6 +121,10 @@ class ShootFromSnapshotsOutputHook(PathSimulatorHook):
 
     Updates every time a new snapshot is shot from.
 
+    NOTE: Arguments passed to init take precedence over the corresponding
+          parameters of the PathSimulator this hook is attached to. They can
+          only be accessed through this hook, e.g. as hook.live_visualizer.
+
     Parameters
     ----------
     output_stream : stream
@@ -89,12 +138,42 @@ class ShootFromSnapshotsOutputHook(PathSimulatorHook):
     def __init__(self, output_stream=None, allow_refresh=None):
         self.output_stream = output_stream
         self.allow_refresh = allow_refresh
+        self._simulation = None
+
+    @property
+    def output_stream(self):
+        if self._output_stream is not None:
+            return self._output_stream
+        elif self._simulation is not None:
+            return self._simulation.output_stream
+        else:
+            raise SimulationNotFoundError("'output_stream' has not "
+                                          + "been set and no hosting "
+                                          + "simulation known to get a value."
+                                          )
+
+    @output_stream.setter
+    def output_stream(self, val):
+        self._output_stream = val
+
+    @property
+    def allow_refresh(self):
+        if self._allow_refresh is not None:
+            return self._allow_refresh
+        elif self._simulation is not None:
+            return self._simulation.allow_refresh
+        else:
+            raise SimulationNotFoundError("'allow_refresh' has not "
+                                          + "been set and no hosting "
+                                          + "simulation known to get a value."
+                                          )
+
+    @allow_refresh.setter
+    def allow_refresh(self, val):
+        self._allow_refresh = val
 
     def before_simulation(self, sim, **kwargs):
-        if self.output_stream is None:
-            self.output_stream = sim.output_stream
-        if self.allow_refresh is None:
-            self.allow_refresh  = sim.allow_refresh
+        self._simulation = sim
 
     def before_step(self, sim, step_number, step_info, state):
         snap_num, n_snapshots, step, n_per_snapshot = step_info

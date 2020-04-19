@@ -7,6 +7,11 @@ import io
 import sys
 import time
 import re
+if ((sys.version_info.major < 3)
+        or (sys.version_info.major == 3 and sys.version_info.minor < 4)):
+    # re.fullmatch was introduced in py v3.4
+    # but match should also do the trick
+    re.fullmatch = re.match
 
 import pytest
 try:
