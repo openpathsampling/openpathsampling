@@ -106,11 +106,11 @@ class ExternalEngine(DynamicsEngine):
             #print self.frame_num, next_frame # DEBUG LOGGER
             now = time.time()
             if next_frame == "partial":
-                if not self.proc.is_running():
+                if self.proc.poll() is not None:
                     raise RuntimeError("External engine died unexpectedly")
                 time.sleep(0.001) # wait a millisec and rerun
             elif next_frame is None:
-                if not self.proc.is_running():
+                if self.proc.poll() is not None:
                     raise RuntimeError("External engine died unexpectedly")
                 logger.debug("Sleeping for {:.2f}ms".format(self.sleep_ms))
                 time.sleep(self.sleep_ms/1000.0)
@@ -160,10 +160,13 @@ class ExternalEngine(DynamicsEngine):
         proc = self.who_to_kill()
         logger.info("About to send signal %s to %s", str(self.killsig),
                     str(proc))
-        proc.send_signal(self.killsig)
-        logger.debug("Signal has been sent")
-        proc.wait()  # wait for the zombie to die
-        logger.debug("Zombie should be dead")
+        try:
+            proc.send_signal(self.killsig)
+            logger.debug("Signal has been sent")
+            proc.wait()  # wait for the zombie to die
+            logger.debug("Zombie should be dead")
+        except psutil.NoSuchProcess:
+            logger.debug("Tried to kill process, but it was already dead")
         self.cleanup()
 
     # FROM HERE ARE THE FUNCTIONS TO OVERRIDE IN SUBCLASSES:
