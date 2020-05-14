@@ -32,6 +32,7 @@ requirements:
     - ujson
     - psutil
     - pyemma
+    - py-plumed
 
 test:
   imports:
