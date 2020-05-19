@@ -45,12 +45,14 @@ universal_schema = {
 
 class GeneralStorage(object):
     def __init__(self, backend, class_info, schema=None,
-                 simulation_classes=None, fallbacks=None):
+                 simulation_classes=None, fallbacks=None, safemode=False):
         self.backend = backend
         self.schema = schema
         self.class_info = class_info
         self.mode = self.backend.mode
-        # TODO: implement fallbacks
+        self._safemode = None
+        self.safemode = safemode
+        # TODO: implement fallback
         self.fallbacks = tools.none_to_default(fallbacks, [])
 
         self.simulation_classes = tools.none_to_default(simulation_classes,
@@ -71,6 +73,16 @@ class GeneralStorage(object):
             self.schema = backend.schema
         self.initialize_with_mode(self.mode)
         self._stashed = []
+
+    @property
+    def safemode(self):
+        return self._safemode
+
+    @safemode.setter
+    def safemode(self, value):
+        if value is self._safemode:
+            return
+        self.class_info.set_safemode(value)
 
     def initialize_with_mode(self, mode):
         if mode == 'r' or mode == 'a':

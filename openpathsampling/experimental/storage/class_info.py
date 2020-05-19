@@ -32,11 +32,14 @@ class ClassInfo(object):
         object
     """
     def __init__(self, table, cls, serializer=None, deserializer=None,
-                 lookup_result=None, find_uuids=None):
+                 lookup_result=None, find_uuids=None,
+                 safe_deserializer=None):
         self.table = table
         self.cls = cls
         self.serializer = serializer
-        self.deserializer = deserializer
+        self.deserializer = None
+        self.unsafe_deserializer = deserializer
+        self.safe_deserializer = safe_deserializer
         if lookup_result is None:
             lookup_result = cls
         self.lookup_result = lookup_result
@@ -47,15 +50,23 @@ class ClassInfo(object):
             self.serializer,
             SchemaSerializer(schema, self.table, self.cls)
         )
-        self.deserializer = tools.none_to_default(
-            self.deserializer,
+        self.unsafe_deserializer = tools.none_to_default(
+            self.unsafe_deserializer,
             SchemaDeserializer(schema, self.table, self.cls)
+        )
+        self.safe_deserializer = tools.none_to_default(
+            self.safe_deserializer,
+            self.unsafe_deserializer
         )
         self.find_uuids = tools.none_to_default(
             self.find_uuids,
             SchemaFindUUIDs(schema[self.table])
         )
+        self.set_safemode(True)
 
+    def set_safemode(self, mode):
+        self.deserializer = {True: self.safe_deserializer,
+                             False: self.unsafe_deserializer}[mode]
 
     def __repr__(self):  # pragma: no cover
         return ("ClassInfo(table=" + self.table + ", cls=" + str(self.cls)
@@ -104,7 +115,13 @@ class SerializationSchema(object):
         # of the expected return to identify the function to call -- won't
         # be completely general, but may simplify some)
         self.lookup_to_info.update({info_node.lookup_result: info_node})
-        self.table_to_info.update({info_node.table: info_node})
+        immutable_tables = [self.default_info.table,
+                            self.missing_table.table]
+        reserved = info_node.table in [self.default_info.table,
+                                       self.missing_table.table]
+        exists = info_node.table in self.table_to_info
+        if not (reserved and exists):
+            self.table_to_info.update({info_node.table: info_node})
 
     def register_info(self, class_info_list, schema=None):
         schema = tools.none_to_default(schema, {})
@@ -112,6 +129,10 @@ class SerializationSchema(object):
         for info in class_info_list:
             info.set_defaults(schema)
             self.add_class_info(info)
+
+    def set_safemode(self, mode):
+        for class_info in self.class_info_list:
+            class_info.set_safemode(mode)
 
     @property
     def tables(self):

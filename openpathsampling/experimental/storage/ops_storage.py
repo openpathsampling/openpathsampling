@@ -9,6 +9,10 @@ from .serialization_helpers import default_find_uuids
 
 from .class_lookup import ClassIsSomething
 
+from .storable_functions import (
+    StorableFunction, storable_function_find_uuids
+)
+
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
@@ -18,6 +22,8 @@ from .custom_json import (
     JSONSerializerDeserializer,
     numpy_codec, bytes_codec, uuid_object_codec,
 )
+
+from .callable_codec import CallableCodec
 
 from .serialization import (
     ToDictSerializer, SchemaSerializer, SchemaDeserializer,
@@ -56,6 +62,9 @@ ops_schema_sql_metadata = {}
 # this defines the simulation object serializer for OPS
 CODECS = [numpy_codec, bytes_codec, uuid_object_codec]
 
+UNSAFE_CODECS = CODECS + [CallableCodec()]
+SAFE_CODECS = CODECS + [CallableCodec({'safemode': True})]
+
 class MoveChangeDeserializer(SchemaDeserializer):
     # in general, I think it would be better to reorg MoveChange to only be
     # one class, but this is aimed at fixing problems with reloading
@@ -81,8 +90,6 @@ class MoveChangeDeserializer(SchemaDeserializer):
         set_uuid(obj, uuid)
         return obj
 
-# can't the is_special here just wrap a class_lookup.ClassIsSomething?
-# should save a few lines of code
 class OPSSpecialLookup(object):
     """Separate object to handle special lookups
 
@@ -146,37 +153,50 @@ class OPSClassInfoContainer(ClassInfoContainer):
             self.register_info(class_info_list, schema)
             self.n_snapshot_types += 1
 
-ops_codecs = JSONSerializerDeserializer(CODECS)
+unsafe_ops_codecs = JSONSerializerDeserializer(UNSAFE_CODECS)
+safe_ops_codecs = JSONSerializerDeserializer(SAFE_CODECS)
 
-def _build_ops_serializer(codecs):
+def _build_ops_serializer(schema, safe_codecs, unsafe_codecs):
+    # TODO: why is this using deserialize_sim instead of the codec
+    # deserializer?
     ops_class_info = OPSClassInfoContainer(
-        default_info=ClassInfo('simulation_objects', cls=StorableObject,
-                               serializer=codecs.simobj_serializer,
-                               deserializer=deserialize_sim,
-                               find_uuids=default_find_uuids),
-        schema=ops_schema,
+        default_info=ClassInfo(
+            table='simulation_objects',
+            cls=StorableObject,
+            serializer=unsafe_codecs.simobj_serializer,
+            deserializer=deserialize_sim,
+            safe_deserializer=safe_codecs.simobj_serializer,
+            find_uuids=default_find_uuids
+        ),
+        schema=schema,
         class_info_list=[
             ClassInfo(table='samples', cls=paths.Sample),
             ClassInfo(table='sample_sets', cls=paths.SampleSet),
             ClassInfo(table='trajectories', cls=paths.Trajectory),
             ClassInfo(table='move_changes', cls=paths.MoveChange,
                       deserializer=MoveChangeDeserializer(
-                          schema=ops_schema,
+                          schema=schema,
                           table='move_changes'
                       )),
             ClassInfo(table='steps', cls=paths.MCStep),
             ClassInfo(table='details', cls=paths.Details,
-                      serializer=codecs.simobj_serializer,
+                      serializer=safe_codecs.simobj_serializer,
+                      deserializer=deserialize_sim),
+            ClassInfo(table='simulation_objects',
+                      cls=StorableFunction,
+                      find_uuids=storable_function_find_uuids,
+                      serializer=unsafe_codecs.simobj_serializer,
                       deserializer=deserialize_sim),
         ]
     )
 
     for info in ops_class_info.class_info_list:
-        info.set_defaults(ops_schema)
+        info.set_defaults(schema)
 
     return ops_class_info
 
-ops_class_info = _build_ops_serializer(codecs=ops_codecs)
+ops_class_info = _build_ops_serializer(ops_schema, safe_ops_codecs,
+                                       unsafe_ops_codecs)
 
 # this will create the pseudo-tables used to find specific objects
 ops_simulation_classes = {
@@ -195,7 +215,7 @@ class OPSStorage(storage.GeneralStorage):
                  safemode=False):
         # TODO: this will change to match the current notation
         super(OPSStorage, self).__init__(backend, schema, class_info,
-                                         fallbacks)
+                                         fallbacks, safemode)
 
         self.n_snapshot_types = 0
 

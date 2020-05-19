@@ -17,10 +17,11 @@ class JSONSerializerDeserializer(object):
     codecs : list of :class:`.JSONCodec`s
         codecs supported
     """
-    def __init__(self, codecs):
+    def __init__(self, codecs, named_codecs=None):
         self._serializer = None
         self._deserializer = None
         self._sim_serializer = None
+        self.named_codecs = none_to_default(named_codecs, {})
         self.codecs = []
         for codec in codecs:
             self.add_codec(codec)
@@ -33,12 +34,19 @@ class JSONSerializerDeserializer(object):
         codec : :class:`.JSONCodec`
             codec to add
         """
+        if codec in self.codecs:
+            return
+
         if codec is not None:
             self.codecs.append(codec)
         encoder, decoder = custom_json_factory(self.codecs)
         self._serializer = functools.partial(json.dumps, cls=encoder)
         self._deserializer = functools.partial(json.loads, cls=decoder)
         self._sim_serializer = SimulationObjectSerializer(self._serializer)
+
+    def replace_named_codec(self, codec_name, codec):
+        self.named_codecs[codec_name] = codec
+        self.add_codec(None)
 
     def serializer(self, obj):
         return self._serializer(obj)

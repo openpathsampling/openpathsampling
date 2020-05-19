@@ -252,6 +252,16 @@ class SQLStorageBackend(object):
         self.metadata.create_all(self.engine)
         self.schema.update(schema)
 
+    def has_table(self, table_name):
+        """Returns whether this table is known to the database.
+
+        Parameters
+        ----------
+        table_name : str
+            the name of the table to search for
+        """
+        return table_name in self.metadata.tables
+
     def register_storable_function(self, table_name, result_type):
         """
         Parameters
@@ -263,7 +273,9 @@ class SQLStorageBackend(object):
             string name of the result type; must match one of the keys of
             ``sql_type``
         """
-        columns = [sql.Column('uuid', sql.String),
+        logger.info("Registering storable function: UUID: %s (%s)" %
+                    (table_name, result_type))
+        columns = [sql.Column('uuid', sql.String, primary_key=True),
                    sql.Column('value', sql_type[result_type])]
         try:
             table = sql.Table(table_name, self.metadata, *columns)

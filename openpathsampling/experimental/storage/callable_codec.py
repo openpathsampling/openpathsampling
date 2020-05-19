@@ -115,7 +115,7 @@ class CallableCodec(object):
                                               forbidden_imports)
 
             if errors:
-                raise RuntimeError("Cannot store function! \n\n", errors)
+                raise RuntimeError("Cannot store function! \n\n" + errors)
 
             return {
                 '__callable_name__': obj.__name__,
