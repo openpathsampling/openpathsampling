@@ -356,3 +356,54 @@ class LinearSlope(PES):
         """
         # this is independent of the position
         return self._local_dVdx
+
+class BolhuisExample(PES):
+    r"""Creates an x**4 - 2 x**2 1 dimensional PES
+
+    Parameters
+    ----------
+    None
+    """
+    def __init__(self):
+        super(BolhuisExample, self).__init__()
+        self._local_dVdx = np.zeros(1)
+
+    def __repr__(self):  # pragma: no cover
+        return "The x**4 - 2 x**2 example in Bolhuis papers potential"
+
+    def V(self, sys):
+        """Potential energy
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        float
+            the potential energy
+        """
+        dx = sys.positions
+        myV = 0.0
+        for i in range(len(dx)):
+            myV += dx[i]**4 - 2 * dx[i]**2
+        return myV
+
+    def dVdx(self, sys):
+        """Derivative of potential energy (-force)
+
+        Parameters
+        ----------
+        sys : :class:`.ToyEngine`
+            engine contains its state, including velocities and masses
+
+        Returns
+        -------
+        np.array
+            the derivatives of the potential at this point
+        """
+        dx = sys.positions
+        for i in range(len(dx)):
+            self._local_dVdx[i] =4*dx[i]**3 - 4*dx[i]
+        return self._local_dVdx
