@@ -48,6 +48,10 @@ else:
     opcode_arg_width = 2
     opcode_no_arg_width = 0
 
+if int(ujson.__version__.split(".")[0]) <= 2:
+    ujson_kwargs = dict()
+else:
+    ujson_kwargs = {"reject_bytes": False}
 
 class ObjectJSON(object):
     """
@@ -565,7 +569,7 @@ class ObjectJSON(object):
         else:
             simplified = self.simplify(obj)
         try:
-            json_str = ujson.dumps(simplified)
+            json_str = ujson.dumps(simplified, **ujson_kwargs)
         except TypeError as e:
             err = (
                 'Cannot convert object of type `%s` to json. '
