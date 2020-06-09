@@ -9,6 +9,9 @@ from .class_info import ClassInfo
 from .serialization_helpers import from_json_obj as deserialize_sim
 from openpathsampling.netcdfplus import StorableNamedObject
 
+import logging
+logger = logging.getLogger(__name__)
+
 class StorableFunctionResults(StorableNamedObject):
     """Cache of results from a function.
 
@@ -16,8 +19,9 @@ class StorableFunctionResults(StorableNamedObject):
     first place it will look for results (in order to avoid recalculating).
     """
     _sanity_checks = True
-    def __init__(self, parent_uuid):
+    def __init__(self, parent, parent_uuid):
         super(StorableFunctionResults, self).__init__()
+        self.parent = parent
         self.parent_uuid = parent_uuid
         # TODO: someday, result_dict may need to be a cache that gets
         # emptied (thinking about memory concerns)
@@ -90,15 +94,13 @@ class StorableFunction(StorableNamedObject):
     Parameters
     ----------
     func : Callable
-    input_type
-    output_type
+    result_type
     store_store : Union[bool, None]
         Whether to store the source for this function. Default behavior
         (None) stores source for anything created in ``__main__`` that is
         not a lambda expression.
     """
-    def __init__(self, func, output_type=None,
-                 store_source=None):
+    def __init__(self, func, result_type=None, store_source=None):
         super(StorableFunction, self).__init__()
         self.func = func
         self.source = None
@@ -114,7 +116,7 @@ class StorableFunction(StorableNamedObject):
                 warnings.warn("Unable to get source for " + str(func))
 
         # self.input_type = input_type
-        self.output_type = output_type
+        self.result_type = result_type
         self.local_cache = None  # set correctly by self.mode setter
         self._disk_cache = True
         self._handler = None
@@ -148,7 +150,7 @@ class StorableFunction(StorableNamedObject):
         if value == 'no-caching':
             self.local_cache = None
         else:
-            self.local_cache = StorableFunctionResults(get_uuid(self))
+            self.local_cache = StorableFunctionResults(self, get_uuid(self))
 
         self._mode = value
 
@@ -158,14 +160,14 @@ class StorableFunction(StorableNamedObject):
             'func': self.func,  # made into JSON by CallableCodec
             'source': self.source,
             # 'input_type': self.input_type,
-            'output_type': self.output_type,
+            'result_type': self.result_type,
         }
 
     @classmethod
     def from_dict(cls, dct):
         obj = cls(func=dct['func'],
                   input_type=dct['input_type'],
-                  output_type=dct['output_type'])
+                  result_type=dct['result_type'])
         if obj.source is None:
             obj.source = dct['source']  # may still be none
 
@@ -261,14 +263,27 @@ def storable_function_find_uuids(obj, cache_list):
     return uuids, new_objects
 
 
+class SFRClassInfo(ClassInfo):
+    def __init__(self, table='function_results',
+                 cls=StorableFunctionResults,
+                 serializer=StorableFunctionResults.to_dict,
+                 deserializer=None, find_uuids=default_find_uuids):
+        deserializer = none_to_default(deserializer, lambda x: x)
+        super(self, SFRClassInfo).__init__(table=table, cls=cls,
+                                           serializer=serializer,
+                                           deserializer=deserlializer,
+                                           find_uuids=find_uuids)
+
+
 class StorageFunctionHandler(object):
     def __init__(self, storage, functions=None, other_codecs=None,
                  codec_settings=None):
         self.storage = storage
-        self.codecs = none_to_default(codecs, [])
+        self.codecs = none_to_default(other_codecs, [])
         functions = none_to_default(functions, [])
         codec_settings = none_to_default(codec_settings, {})
         self.callable_codec = None
+        self._codec_settings = None
         self.codec_settings = codec_settings  # sets callable_codec
         self.canonical_functions = {}
         for func in functions:
@@ -282,7 +297,7 @@ class StorageFunctionHandler(object):
     def codec_settings(self, settings):
         if self._codec_settings != settings:
             self._codec_settings = settings
-            self.callable_codec = CallableCodec(code_settings)
+            self.callable_codec = CallableCodec(settings)
 
     def _make_classinfo(self, func):
         pass
@@ -290,7 +305,12 @@ class StorageFunctionHandler(object):
     def register_function(self, func):
         func_uuid = get_uuid(func)
         if func_uuid not in self.canonical_functions:
+            logger.debug("Registering new function: %s" % func_uuid)
             self.canonical_functions[func_uuid] = func
+            self.storage.backend.register_storable_function(
+                table_name=func_uuid,
+                result_type=func.result_type
+            )
         func.set_handler(self)
 
     @property
@@ -298,8 +318,13 @@ class StorageFunctionHandler(object):
         return list(self.canonical_functions.values())
 
     def update_cache(self, function_results):
+        self.register_function(function_results.parent)
         func = self.canonical_functions[function_results.parent_uuid]
         func.local_cache.update(function_results)
+        self.storage.backend.add_storable_function_results(
+            table_name=function_results.parent_uuid,
+            result_dict=function_results.result_dict
+        )
 
     def get_function_results(self, func_uuid, uuid_items):
         pass

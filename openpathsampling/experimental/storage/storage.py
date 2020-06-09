@@ -27,6 +27,7 @@ from .serialization_helpers import get_all_uuids_loading
 from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
 from .serialization import ProxyObjectFactory
+from .storable_functions import StorageFunctionHandler
 from .tools import none_to_default
 
 try:
@@ -52,6 +53,7 @@ class GeneralStorage(object):
         self.mode = self.backend.mode
         self._safemode = None
         self.safemode = safemode
+        self._sf_handler = StorageFunctionHandler(storage=self)
         # TODO: implement fallback
         self.fallbacks = tools.none_to_default(fallbacks, [])
 
@@ -214,6 +216,16 @@ class GeneralStorage(object):
                         len(missing_by_table),
                         str(list(missing_by_table.keys())))
             by_table.update(missing_by_table)
+
+        has_sfr = (self.class_info.sfr_info is not None
+                   and self.class_info.sfr_info.table in by_table)
+        if has_sfr:
+            func_results = by_table.pop(self.class_info.sfr_info.table)
+            logger.info("Saving results from %d storable functions",
+                        len(func_results))
+            for result in func_results.values():
+                self._sf_handler.update_cache(result)
+                # TODO: store to backend
 
         # TODO: add simulation objects to the cache
 

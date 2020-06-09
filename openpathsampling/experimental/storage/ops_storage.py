@@ -10,7 +10,7 @@ from .serialization_helpers import default_find_uuids
 from .class_lookup import ClassIsSomething
 
 from .storable_functions import (
-    StorableFunction, storable_function_find_uuids
+    StorableFunction, StorableFunctionResults, storable_function_find_uuids
 )
 
 import openpathsampling as paths
@@ -130,8 +130,10 @@ class OPSSpecialLookup(object):
         return self.secondary_lookups[cls](item)
 
 class OPSClassInfoContainer(ClassInfoContainer):
-    def __init__(self, default_info, schema=None, class_info_list=None):
+    def __init__(self, default_info, sfr_info=None, schema=None,
+                 class_info_list=None):
         super(OPSClassInfoContainer, self).__init__(default_info,
+                                                    sfr_info,
                                                     schema,
                                                     class_info_list)
         self.n_snapshot_types = 0
@@ -158,7 +160,7 @@ safe_ops_codecs = JSONSerializerDeserializer(SAFE_CODECS)
 
 def _build_ops_serializer(schema, safe_codecs, unsafe_codecs):
     # TODO: why is this using deserialize_sim instead of the codec
-    # deserializer?
+    # deserializer?  probably need to change that for safemode
     ops_class_info = OPSClassInfoContainer(
         default_info=ClassInfo(
             table='simulation_objects',
@@ -166,6 +168,13 @@ def _build_ops_serializer(schema, safe_codecs, unsafe_codecs):
             serializer=unsafe_codecs.simobj_serializer,
             deserializer=deserialize_sim,
             safe_deserializer=safe_codecs.simobj_serializer,
+            find_uuids=default_find_uuids
+        ),
+        sfr_info= ClassInfo(
+            table="function_results",
+            cls=StorableFunctionResults,
+            serializer=StorableFunctionResults.to_dict,
+            deserializer=lambda x: x,  # deserializer not used
             find_uuids=default_find_uuids
         ),
         schema=schema,

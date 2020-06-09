@@ -9,9 +9,11 @@ _MODULE = "openpathsampling.experimental.storage.storable_functions"
 
 class TestStorableFunctionResults(object):
     def setup(self):
+        self.cv = StorableFunction(lambda x: x)
+        self.cv.__uuid__ = "funcUUID"
         self.mapping = {'UUID1': "foo",
                         'UUID2': "bar"}
-        self.sfr = StorableFunctionResults("funcUUID")
+        self.sfr = StorableFunctionResults(self.cv, "funcUUID")
         self.sfr.result_dict = self.mapping
         self.sfr.local_uuids = set(self.mapping.keys())
 
@@ -30,7 +32,7 @@ class TestStorableFunctionResults(object):
         pass
 
     def test_update(self):
-        new_sfr = StorableFunctionResults("funcUUID")
+        new_sfr = StorableFunctionResults(self.cv, "funcUUID")
         new_sfr.result_dict = {'UUID3': "baz"}
         new_sfr.local_uuids = set(['UUID3'])
         self.sfr.update(new_sfr)

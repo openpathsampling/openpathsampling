@@ -113,7 +113,10 @@ class SchemaDeserializer(object):
     def __init__(self, schema, table, cls):
         self.schema = schema
         self.table = table
-        self.entries = schema[table]
+        if table is not None:
+            self.entries = schema[table]
+        else:
+            self.entries = []
         self.cls = cls
         self.attribute_handlers = self.init_attribute_handlers()
 

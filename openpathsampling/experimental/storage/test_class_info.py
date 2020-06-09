@@ -35,6 +35,7 @@ class TestClassInfo(object):
         assert class_info.cls == MockUUIDObject
         assert isinstance(class_info.serializer, SchemaSerializer)
         assert isinstance(class_info.deserializer, SchemaDeserializer)
+        assert isinstance(class_info.safe_deserializer, SchemaDeserializer)
         assert isinstance(class_info.find_uuids, SchemaFindUUIDs)
         assert class_info.lookup_result == MockUUIDObject
 
