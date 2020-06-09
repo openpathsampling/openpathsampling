@@ -94,14 +94,6 @@ class ProxyObjectFactory(object):
         return all_lazies
 
 
-class SimulationObjectSerializer(object):
-    def __init__(self, json_encoder):
-        self.json_encoder = json_encoder
-
-    def __call__(self, obj):
-        return {'uuid': serialization.get_uuid(obj),
-                'json': self.json_encoder(obj)}
-
 
 class SchemaDeserializer(object):
     default_handlers = {

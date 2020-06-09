@@ -179,6 +179,9 @@ class TestStorableFunction(object):
         pytest.skip()
         pass
 
+    def test_full_serialization_cycle(self):
+        pass
+
     @pytest.mark.parametrize('found_in', ['cache', 'storage', 'eval'])
     def test_analysis_mode_integration(self, found_in):
         pytest.skip()

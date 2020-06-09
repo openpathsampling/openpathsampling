@@ -25,10 +25,7 @@ from .custom_json import (
 
 from .callable_codec import CallableCodec
 
-from .serialization import (
-    ToDictSerializer, SchemaSerializer, SchemaDeserializer,
-    SimulationObjectSerializer
-)
+from .serialization import SchemaDeserializer
 
 from .class_info import ClassInfo, ClassInfoContainer
 
@@ -166,11 +163,11 @@ def _build_ops_serializer(schema, safe_codecs, unsafe_codecs):
             table='simulation_objects',
             cls=StorableObject,
             serializer=unsafe_codecs.simobj_serializer,
-            deserializer=deserialize_sim,
+            deserializer=unsafe_codecs.simobj_deserializer,
             safe_deserializer=safe_codecs.simobj_serializer,
             find_uuids=default_find_uuids
         ),
-        sfr_info= ClassInfo(
+        sfr_info=ClassInfo(
             table="function_results",
             cls=StorableFunctionResults,
             serializer=StorableFunctionResults.to_dict,

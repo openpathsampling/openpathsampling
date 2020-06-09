@@ -166,7 +166,7 @@ class StorableFunction(StorableNamedObject):
     @classmethod
     def from_dict(cls, dct):
         obj = cls(func=dct['func'],
-                  input_type=dct['input_type'],
+                  # input_type=dct['input_type'],
                   result_type=dct['result_type'])
         if obj.source is None:
             obj.source = dct['source']  # may still be none
