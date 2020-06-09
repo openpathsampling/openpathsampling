@@ -285,7 +285,8 @@ class TISTransition(Transition):
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
 
-        in_ens_samples = (s for s in samples if s.ensemble is ensemble)
+        in_ens_samples = (s for s in samples if s.ensemble.__uuid__ ==
+                          ensemble.__uuid__)
         hist_data = {}
         buflen = -1
         sample_buf = []
