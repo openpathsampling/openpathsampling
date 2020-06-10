@@ -386,7 +386,7 @@ def from_dict_with_uuids(obj, cache_list):
 
 
 def from_json_obj(uuid, table_row, cache_list):
-    # TODO: OBSOLETE?! I think this has been replaced 
+    # TODO: OBSOLETE?! I think this has been replaced by custom_json
     # NOTE: from_json only works with existing_uuids (DAG-ordering)
     dct = json.loads(table_row['json'])
     cls = import_class(dct.pop('__module__'), dct.pop('__class__'))

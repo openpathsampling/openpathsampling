@@ -27,7 +27,7 @@ from .serialization_helpers import get_all_uuids_loading
 from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
 from .serialization import ProxyObjectFactory
-from .storable_functions import StorageFunctionHandler
+from .storable_functions import StorageFunctionHandler, StorableFunction
 from .tools import none_to_default
 
 try:
@@ -166,8 +166,18 @@ class GeneralStorage(object):
             uuids=list(uuid_dict.keys()),
             ignore_missing=True
         )
+
+        # "special" here indicates that we always try to re-save these, even
+        # if they've already been saved once. This is (currently) necessary
+        # for objects that contain mutable components (such as the way
+        # storable functions contain their results)
+        # TODO: make `special` customizable
+        special = set(self._sf_handler.canonical_functions.keys())
+
         for uuid_row in existing:
-            del uuid_dict[uuid_row.uuid]
+            uuid = uuid_row.uuid
+            if uuid not in special:
+                del uuid_dict[uuid_row.uuid]
 
         return uuid_dict
 
@@ -299,7 +309,15 @@ class GeneralStorage(object):
 
         self.cache.update(new_uuids)
         results.update(new_uuids)
-        return [results[uuid] for uuid in input_uuids]
+        new_results = [results[uuid] for uuid in input_uuids]
+
+        # handle special case of storable functions
+        for result in new_results:
+            if isinstance(result, StorableFunction):
+                self._sf_handler.register_function(result, add_table=False)
+
+        return new_results
+
 
     def deserialize_uuids(self, ordered_uuids, uuid_to_table,
                           uuid_to_table_row, new_uuids=None):

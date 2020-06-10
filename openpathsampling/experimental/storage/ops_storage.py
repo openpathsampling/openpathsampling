@@ -50,6 +50,7 @@ ops_schema = {
     'steps': [('change', 'uuid'), ('active', 'uuid'), #('previous', 'lazy'),
               ('simulation', 'uuid'), ('mccycle', 'int')],
     'details': [('json', 'json_obj')],
+    'storable_functions': [('json', 'json_obj'), ('class_idx', 'int')],
     'simulation_objects': [('json', 'json_obj'), ('class_idx', 'int')]
 }
 
@@ -187,12 +188,12 @@ def _build_ops_serializer(schema, safe_codecs, unsafe_codecs):
             ClassInfo(table='steps', cls=paths.MCStep),
             ClassInfo(table='details', cls=paths.Details,
                       serializer=safe_codecs.simobj_serializer,
-                      deserializer=deserialize_sim),
-            ClassInfo(table='simulation_objects',
+                      deserializer=safe_codecs.simobj_deserializer),
+            ClassInfo(table='storable_functions',
                       cls=StorableFunction,
                       find_uuids=storable_function_find_uuids,
                       serializer=unsafe_codecs.simobj_serializer,
-                      deserializer=deserialize_sim),
+                      deserializer=unsafe_codecs.simobj_deserializer),
         ]
     )
 

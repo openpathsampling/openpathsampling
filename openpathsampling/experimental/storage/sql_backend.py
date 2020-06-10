@@ -328,6 +328,9 @@ class SQLStorageBackend(object):
         result_dict = {uuid: value for uuid, value in results}
         return result_dict
 
+    def load_storable_function_table(self, table_name):
+        return {row['uuid']: row['value']
+                for row in self.table_iterator(table_name)}
 
     def add_to_table(self, table_name, objects):
         """Add a list of objects of a given class
@@ -490,8 +493,10 @@ class SQLStorageBackend(object):
         return self.number_to_table[uuid_row.table]
 
     def table_iterator(self, table_name):
-        """Iterate over all rows in the table
+        """Iterate over l rows in the table
         """
+        # TODO: this can probably be done in a more low-level way that
+        # doesn't require memory caching everything
         table = self.metadata.tables[table_name]
         with self.engine.connect() as conn:
             results = list(conn.execute(table.select()))

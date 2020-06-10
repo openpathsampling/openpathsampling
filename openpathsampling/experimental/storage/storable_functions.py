@@ -22,11 +22,17 @@ class StorableFunctionResults(StorableNamedObject):
     def __init__(self, parent, parent_uuid):
         super(StorableFunctionResults, self).__init__()
         self.parent = parent
-        self.parent_uuid = parent_uuid
+        self._parent_uuid = parent_uuid
         # TODO: someday, result_dict may need to be a cache that gets
         # emptied (thinking about memory concerns)
         self.result_dict = {}
         self.local_uuids = set([])
+
+    @property
+    def parent_uuid(self):
+        if self.parent is not None:
+            self._parent_uuid = get_uuid(self.parent)
+        return self._parent_uuid
 
     def get_results_as_dict(self, uuid_items):
         """
@@ -129,6 +135,10 @@ class StorableFunction(StorableNamedObject):
         self._handler = storage
 
     @property
+    def has_handler(self):
+        return self._handler is not None
+
+    @property
     def disk_cache(self):
         return self._disk_cache
 
@@ -154,7 +164,6 @@ class StorableFunction(StorableNamedObject):
 
         self._mode = value
 
-
     def to_dict(self):
         return {
             'func': self.func,  # made into JSON by CallableCodec
@@ -172,6 +181,15 @@ class StorableFunction(StorableNamedObject):
             obj.source = dct['source']  # may still be none
 
         return obj
+
+    def preload_cache(self, storage=None):
+        # TODO: add support for this to take a storage as argument
+        if storage is None:
+            storage = self._handler.storage
+
+        uuid = get_uuid(self)
+        cache_values = storage.backend.load_storable_function_table(uuid)
+        self.local_cache.cache_results(cache_values)
 
     def is_singular(self, item):
         """Determine whether the input needs to be wrapped in a list.
@@ -238,6 +256,7 @@ class StorableFunction(StorableNamedObject):
         missing = uuid_items
         result_dict = {}
         for stage, do_caching in cache_mode_order:
+            logger.debug(stage, missing)
             stage_results, missing = stage(missing)
             result_dict.update(stage_results)
             if do_caching:
@@ -302,16 +321,19 @@ class StorageFunctionHandler(object):
     def _make_classinfo(self, func):
         pass
 
-    def register_function(self, func):
+    def register_function(self, func, add_table=True):
         func_uuid = get_uuid(func)
         if func_uuid not in self.canonical_functions:
             logger.debug("Registering new function: %s" % func_uuid)
             self.canonical_functions[func_uuid] = func
-            self.storage.backend.register_storable_function(
-                table_name=func_uuid,
-                result_type=func.result_type
-            )
-        func.set_handler(self)
+            if add_table:
+                self.storage.backend.register_storable_function(
+                    table_name=func_uuid,
+                    result_type=func.result_type
+                )
+
+        if not func.has_handler:
+            func.set_handler(self)
 
     @property
     def functions(self):
@@ -327,5 +349,9 @@ class StorageFunctionHandler(object):
         )
 
     def get_function_results(self, func_uuid, uuid_items):
-        pass
+        backend = self.storage.backend
+        uuids = set(uuid_items.keys())
+        uuid_map = backend.load_storable_function_results(func_uuid, uuids)
+        missing = uuids - set(uuid_map.keys())
+        return uuid_map, missing
 
