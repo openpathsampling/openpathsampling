@@ -1,4 +1,4 @@
-from collections import abc
+import collections
 import warnings
 import inspect
 import types
@@ -305,6 +305,7 @@ class StorageFunctionHandler(object):
         self._codec_settings = None
         self.codec_settings = codec_settings  # sets callable_codec
         self.canonical_functions = {}
+        self.all_functions = collections.defaultdict(list)
         for func in functions:
             self.register_function(func)
 
@@ -323,6 +324,7 @@ class StorageFunctionHandler(object):
 
     def register_function(self, func, add_table=True):
         func_uuid = get_uuid(func)
+        # register as a canonical function
         if func_uuid not in self.canonical_functions:
             logger.debug("Registering new function: %s" % func_uuid)
             self.canonical_functions[func_uuid] = func
@@ -332,8 +334,22 @@ class StorageFunctionHandler(object):
                     result_type=func.result_type
                 )
 
+        # register will all_functions
+        is_registered = any([func is registered
+                             for family in self.all_functions.values()
+                             for registered in family])
+        if not is_registered:
+            self.all_functions[func_uuid].append(func)
+
+        # set handler
         if not func.has_handler:
             func.set_handler(self)
+
+    def clear_non_canonical(self):
+        self.all_functions = collections.defaultdict(list)
+        for func in self.functions:
+            # re-registering the canonical func will put it in all_functions
+            self.register_function(func)
 
     @property
     def functions(self):
@@ -343,15 +359,12 @@ class StorageFunctionHandler(object):
         self.register_function(function_results.parent)
         func = self.canonical_functions[function_results.parent_uuid]
         func.local_cache.update(function_results)
-        self.storage.backend.add_storable_function_results(
-            table_name=function_results.parent_uuid,
-            result_dict=function_results.result_dict
-        )
 
     def get_function_results(self, func_uuid, uuid_items):
         backend = self.storage.backend
         uuids = set(uuid_items.keys())
         uuid_map = backend.load_storable_function_results(func_uuid, uuids)
         missing = uuids - set(uuid_map.keys())
-        return uuid_map, missing
+        missing_map = {uuid: uuid_items[uuid] for uuid in missing}
+        return uuid_map, missing_map
 

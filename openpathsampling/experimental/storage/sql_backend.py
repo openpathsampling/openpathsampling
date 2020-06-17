@@ -68,6 +68,7 @@ def sql_db_execute(engine, statements, execmany_dict=None):
         results = results[0]
     return results
 
+
 class SQLStorageBackend(object):
     """Generic storage backend for SQL.
 
@@ -99,6 +100,9 @@ class SQLStorageBackend(object):
         self.schema = {}
         self.table_to_number = {}
         self.number_to_table = {}
+
+        # TODO: change this to an LRU cache
+        self.known_uuids = collections.defaultdict(set)
 
         if self.mode == "w" and os.path.exists(filename):
             # delete existing file; write after
@@ -295,14 +299,33 @@ class SQLStorageBackend(object):
         result_dict : Mapping[Str, Any]
             mapping from UUID to result
         """
-        results = [{'uuid': uuid, 'value': value}
-                   for uuid, value in result_dict.items()]
+        # anything in the cache doesn't need to be saved
+        known_uuids = self.known_uuids[table_name]
+        set_uuids = set(result_dict.keys())
+        unknown_uuids = set_uuids - known_uuids
+
+        # now we search the for existing
+        found_results = self.load_storable_function_results(
+            table_name,
+            list(unknown_uuids)
+        )
+
+        unknown_uuids -= set(found_results.keys())
+
+        # only store the results that haven't been stored
+        results = [{'uuid': uuid, 'value': result_dict[uuid]}
+                   for uuid in unknown_uuids]
         table = self.metadata.tables[table_name]
-        with self.engine.connect() as conn:
-            conn.execute(table.insert(), results)
+        if results:
+            with self.engine.connect() as conn:
+                conn.execute(table.insert(), results)
+
+        # update the cache
+        self.known_uuids[table_name].update(set_uuids)
 
     def load_storable_function_results(self, table_name, uuids):
-        """
+        """Load results for given stored function and input UUIDs.
+
         Parameters
         ----------
         table_name : Str
@@ -319,9 +342,12 @@ class SQLStorageBackend(object):
         results = []
         for uuid_block in tools.block(uuids, self.max_query_size):
             # logger
-            uuid_sel = table.select().where(table.c.uuid.in_(uuid_block))
+            uuid_sel = table.select(
+                sql.exists().where(table.c.uuid.in_(uuid_block))
+            )
             with self.engine.connect() as conn:
-                res = list(conn.execute(uuid_sel))
+                res = conn.execute(uuid_sel)
+                res = res.fetchall()
             results += res
 
         logger.debug("Found {} UUIDs".format(len(results)))

@@ -28,7 +28,6 @@ from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
 from .serialization import ProxyObjectFactory
 from .storable_functions import StorageFunctionHandler, StorableFunction
-from .tools import none_to_default
 
 try:
     basestring
@@ -181,9 +180,11 @@ class GeneralStorage(object):
 
         return uuid_dict
 
-    def save(self, obj_list):
+    def save(self, obj_list, use_cache=True):
         if type(obj_list) is not list:
             obj_list = [obj_list]
+
+        cache = self.cache if use_cache else {}
         # TODO: convert the whole .save process to something based on the
         # class_info.serialize method (enabling per-class approaches for
         # finding UUIDs, which will be a massive serialization speed-up
@@ -199,7 +200,7 @@ class GeneralStorage(object):
         logger.debug("Listing all objects to save")
         uuids = {}
         for uuid, obj in input_uuids.items():
-            uuids.update(get_all_uuids(obj, known_uuids=self.cache,
+            uuids.update(get_all_uuids(obj, known_uuids=cache,
                                        class_info=self.class_info))
 
         logger.debug("Checking if objects already exist in database")
@@ -234,8 +235,8 @@ class GeneralStorage(object):
             logger.info("Saving results from %d storable functions",
                         len(func_results))
             for result in func_results.values():
-                self._sf_handler.update_cache(result)
-                # TODO: store to backend
+                func = result.parent
+                self.save_function_results(func)
 
         # TODO: add simulation objects to the cache
 
@@ -260,6 +261,19 @@ class GeneralStorage(object):
                 self._update_pseudo_tables(by_table[table])
                 self._simulation_objects.update(by_table[table])
             logger.debug("Storing complete")
+
+    def save_function_results(self, funcs=None):
+        if funcs is None:
+            funcs = list(self._sf_handler.canonical_functions.values())
+
+        funcs = tools.listify(funcs)
+        for func in funcs:
+            self._sf_handler.update_cache(func.local_cache)
+            result_dict = func.local_cache.result_dict
+            self.backend.add_storable_function_results(
+                table_name=get_uuid(func),
+                result_dict=result_dict
+            )
 
     def load(self, input_uuids, force=False):
         # loading happens in 4 parts:
@@ -481,7 +495,7 @@ class PseudoTable(abc.MutableSequence):
         self._sequence = []
         self._uuid_to_obj = {}
         self._name_to_uuid = {}
-        sequence = none_to_default(sequence, [])
+        sequence = tools.none_to_default(sequence, [])
         for item in sequence:
             self.append(item)
 
