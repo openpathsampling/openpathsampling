@@ -263,6 +263,8 @@ class GeneralStorage(object):
             logger.debug("Storing complete")
 
     def save_function_results(self, funcs=None):
+        # no equivalent load because user has no need -- any loading can be
+        # done by func, either as func(obj) or func.preload_cache()
         if funcs is None:
             funcs = list(self._sf_handler.canonical_functions.values())
 

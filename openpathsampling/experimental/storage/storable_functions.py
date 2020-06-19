@@ -2,6 +2,9 @@ import collections
 import warnings
 import inspect
 import types
+
+import numpy as np
+
 from .tools import none_to_default
 from .callable_codec import CallableCodec
 from .serialization_helpers import get_uuid, has_uuid, default_find_uuids
@@ -11,6 +14,92 @@ from openpathsampling.netcdfplus import StorableNamedObject
 
 import logging
 logger = logging.getLogger(__name__)
+
+
+class Processor(StorableNamedObject):
+    name = None
+    pre_order = None
+    post_order = None
+    def pre_process(self, values):
+        return values
+
+    def post_process(self, values):
+        return values
+
+
+class RequiresLists(Processor):
+    name = "requires_lists"
+    pre_order = 100
+    @staticmethod
+    def pre_process(values):
+        # We use the trick that we return a list with one item. That means
+        # that the for loop over items in _eval will give us what we want.
+        # This may be a little bit fragile, but I don't foresee problems.
+        return [list(values)]
+
+
+class ScalarizeSingletons(Processor):
+    name = "scalarize_singletons"
+    post_order = 90
+    @staticmethod
+    def post_process(values):
+        if isinstance(values, np.ndarray):
+            shape = values.shape
+            if len(shape) > 1 and shape[1] == 1:
+                values.reshape(tuple([shape[0]] + list(shape)[2:]))
+        return values
+
+
+class WrapNumpy(Processor):
+    name = "wrap_numpy"
+    post_order = 80
+    @staticmethod
+    def post_process(values):
+        return np.array(values)
+
+
+class StorableFunctionConfig(StorableNamedObject):
+    pre_sort_key = lambda x: x.pre_order
+    post_sort_key = lambda x: x.post_order
+    def __init__(self, processors=None):
+        if processors is None:
+            processors = []
+        self.processors = processors
+        self.processor_dict = {}
+        self.pre_processors = []
+        self.post_processors = []
+        for proc in processors:
+            self.register(proc)
+
+    def register(self, processor):
+        if processor.name in self.processor_dict:
+            self.deregister(processor.name)
+        self.processor_dict[processor.name] = processor
+        self.processors.append(processor)
+        self.pre_processors = list(
+            p for p in self.processors if p.pre_order is not None
+        ).sort(key=self.pre_sort_key)
+        self.post_processors = list(
+            p for p in self.processors if p.post_order is not None
+        ).sort(key=self.post_sort_key)
+
+    def deregister(self, processor, error_if_missing=True):
+        name = processor if isinstance(processor, str) else processor.name
+        to_remove = self.processor_dict.pop(name, None)
+        if to_remove is None and not error_if_missing:
+            return
+        self.processors.remove(to_remove)
+
+    def pre_process(self, values):
+        for proc in self.pre_processors:
+            values = proc.pre_process(values)
+        return values
+
+    def post_process(self, results):
+        for proc in self.post_processors:
+            results = proc.post_process(results)
+        return results
+
 
 class StorableFunctionResults(StorableNamedObject):
     """Cache of results from a function.
@@ -24,7 +113,7 @@ class StorableFunctionResults(StorableNamedObject):
         self.parent = parent
         self._parent_uuid = parent_uuid
         # TODO: someday, result_dict may need to be a cache that gets
-        # emptied (thinking about memory concerns)
+        # emptied or an LRU cache (thinking about memory concerns)
         self.result_dict = {}
         self.local_uuids = set([])
 
@@ -106,10 +195,14 @@ class StorableFunction(StorableNamedObject):
         (None) stores source for anything created in ``__main__`` that is
         not a lambda expression.
     """
-    def __init__(self, func, result_type=None, store_source=None):
+    def __init__(self, func, result_type=None, func_config=None, store_source=None, **kwargs):
         super(StorableFunction, self).__init__()
         self.func = func
         self.source = None
+        self.kwargs = kwargs
+        if func_config is None:
+            func_config = StorableFunctionConfig()
+        self.func_config = func_config
         if store_source is None:
             is_lambda = (isinstance(func, types.FunctionType)
                          and func.__name__ == "<lambda>")
@@ -121,7 +214,6 @@ class StorableFunction(StorableNamedObject):
             except IOError:
                 warnings.warn("Unable to get source for " + str(func))
 
-        # self.input_type = input_type
         self.result_type = result_type
         self.local_cache = None  # set correctly by self.mode setter
         self._disk_cache = True
@@ -159,6 +251,7 @@ class StorableFunction(StorableNamedObject):
 
         if value == 'no-caching':
             self.local_cache = None
+            self.disk_cache = False
         else:
             self.local_cache = StorableFunctionResults(self, get_uuid(self))
 
@@ -168,15 +261,15 @@ class StorableFunction(StorableNamedObject):
         return {
             'func': self.func,  # made into JSON by CallableCodec
             'source': self.source,
-            # 'input_type': self.input_type,
+            'kwargs': self.kwargs,
             'result_type': self.result_type,
         }
 
     @classmethod
     def from_dict(cls, dct):
         obj = cls(func=dct['func'],
-                  # input_type=dct['input_type'],
-                  result_type=dct['result_type'])
+                  result_type=dct['result_type'],
+                  **dct['kwargs'])
         if obj.source is None:
             obj.source = dct['source']  # may still be none
 
@@ -218,9 +311,10 @@ class StorableFunction(StorableNamedObject):
         if self.func is None and uuid_items:
             raise RuntimeError("No function attached to %s. Can not "
                                + "evaluate for %s." % (self, uuid_items))
-
-        results = {uuid: self.func(item)
-                   for uuid, item in uuid_items.items()}
+        preprocessed = self.func_config.pre_process(uuid_items.values())
+        values = [self.func(item, **self.kwargs) for item in preprocessed]
+        postprocessed = self.func_config.post_process(values)
+        results = dict(zip(uuid_items.keys(), postprocessed))
         return results, {}
 
     def _get_cached(self, uuid_items):
@@ -276,22 +370,11 @@ class StorableFunction(StorableNamedObject):
 
 
 def storable_function_find_uuids(obj, cache_list):
+    # TODO: it should be possible to remove this at some point
     uuids, new_objects = default_find_uuids(obj, cache_list)
     func_results = obj.local_cache
     uuids.update({get_uuid(func_results): func_results})
     return uuids, new_objects
-
-
-class SFRClassInfo(ClassInfo):
-    def __init__(self, table='function_results',
-                 cls=StorableFunctionResults,
-                 serializer=StorableFunctionResults.to_dict,
-                 deserializer=None, find_uuids=default_find_uuids):
-        deserializer = none_to_default(deserializer, lambda x: x)
-        super(self, SFRClassInfo).__init__(table=table, cls=cls,
-                                           serializer=serializer,
-                                           deserializer=deserlializer,
-                                           find_uuids=find_uuids)
 
 
 class StorageFunctionHandler(object):
@@ -319,9 +402,6 @@ class StorageFunctionHandler(object):
             self._codec_settings = settings
             self.callable_codec = CallableCodec(settings)
 
-    def _make_classinfo(self, func):
-        pass
-
     def register_function(self, func, add_table=True):
         func_uuid = get_uuid(func)
         # register as a canonical function
@@ -334,7 +414,7 @@ class StorageFunctionHandler(object):
                     result_type=func.result_type
                 )
 
-        # register will all_functions
+        # register with all_functions
         is_registered = any([func is registered
                              for family in self.all_functions.values()
                              for registered in family])

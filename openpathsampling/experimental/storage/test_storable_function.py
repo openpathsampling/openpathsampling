@@ -4,6 +4,7 @@ try:
 except ImportError:
     import mock
 
+from .serialization_helpers import get_uuid
 from .storable_functions import *
 _MODULE = "openpathsampling.experimental.storage.storable_functions"
 
