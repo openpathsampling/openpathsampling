@@ -4,9 +4,123 @@ try:
 except ImportError:
     import mock
 
+import numpy as np
+
+from openpathsampling.tests.test_helpers import make_1d_traj
+
 from .serialization_helpers import get_uuid
 from .storable_functions import *
 _MODULE = "openpathsampling.experimental.storage.storable_functions"
+
+def test_requires_lists_pre():
+    assert requires_lists_pre([1]) == [[1]]
+    assert requires_lists_pre([1,2]) == [[1,2]]
+
+@pytest.mark.parametrize('array_input,expected', [
+    ([[1], [2], [3]], [1, 2, 3]),
+    ([1, 2, 3], [1, 2, 3]),
+    ([[1, 2], [3, 4]], [[1, 2], [3, 4]]),
+    ([[[1, 2]], [[3, 4]]], [[1, 2], [3, 4]]),
+])
+def test_scalarize_singletons(array_input, expected):
+    np.testing.assert_array_equal(
+        scalarize_singletons(np.array(array_input)),
+        np.array(expected)
+    )
+
+def test_wrap_numpy():
+    for inp in [1, [1, 2]]:
+        assert isinstance(wrap_numpy(inp), np.ndarray)
+
+class TestStorableFunctionConfig(object):
+    def setup(self):
+        self.config = StorableFunctionConfig(processors=[
+            scalarize_singletons,
+            wrap_numpy,
+            requires_lists_pre,
+            requires_lists_post
+        ])
+
+    @staticmethod
+    def func(values):
+        return np.array([s.xyz[:,0] for s in values])
+
+    def test_register(self):
+        assert len(self.config.processors) == 4
+        names = ['scalarize_singletons', 'requires_lists_pre',
+                 'requires_lists_post', 'wrap_numpy']
+        for key in names:
+            assert key in self.config.processor_dict
+        assert self.config.item_preprocessors == []
+        assert self.config.list_preprocessors == [requires_lists_pre]
+        assert self.config.item_postprocessors == [scalarize_singletons]
+        assert self.config.list_postprocessors == [wrap_numpy,
+                                                   requires_lists_post]
+
+        mock_wrap_numpy = Processor(name='wrap_numpy',
+                                    stage='item-pre',
+                                    func=lambda x: x)
+        self.config.register(mock_wrap_numpy)
+        proc_dict_wrap_numpy = self.config.processor_dict['wrap_numpy']
+        assert len(self.config.processors) == 4
+        assert proc_dict_wrap_numpy is mock_wrap_numpy
+        assert proc_dict_wrap_numpy is not wrap_numpy
+        assert mock_wrap_numpy in self.config.processors
+        assert wrap_numpy not in self.config.processors
+        assert self.config.item_preprocessors == [mock_wrap_numpy]
+        assert self.config.list_preprocessors == [requires_lists_pre]
+        assert self.config.item_postprocessors == [scalarize_singletons]
+        assert self.config.list_postprocessors == [requires_lists_post]
+
+    @pytest.mark.parametrize('style', ['obj', 'name'])
+    def test_deregister(self, style):
+        dereg = {'obj': wrap_numpy, 'name': 'wrap_numpy'}[style]
+        assert len(self.config.processors) == 4
+        self.config.deregister(dereg)
+        assert len(self.config.processors) == 3
+        assert 'wrap_numpy' not in self.config.processor_dict
+        assert wrap_numpy not in self.config.processors
+
+    def test_deregister_error(self):
+        with pytest.raises(KeyError):
+            self.config.deregister('foo')
+
+    def test_deregister_no_error(self):
+        # just run it to ensure it doesn't error out
+        self.config.deregister('foo', error_if_missing=False)
+
+    def test_func(self):
+        # test of the internally used test func
+        snap = make_1d_traj([5.0])[0]
+        assert self.func([snap]) == [[5]]
+
+    def test_list_preprocess(self):
+        snap = make_1d_traj([5.0])[0]
+        assert self.config.list_preprocess([snap]) == [[snap]]
+
+    def test_item_preprocess(self):
+        snap = make_1d_traj([5.0])[0]
+        assert self.config.item_preprocess(snap) == snap
+
+    def test_item_postprocess(self):
+        np.testing.assert_array_equal(
+            self.config.item_postprocess(np.array([[5.0]])),
+            np.array([5.0])
+        )
+
+    def test_list_postprocess(self):
+        snap = make_1d_traj([5.0])[0]
+        values = self.func([snap])
+        np.testing.assert_array_equal(self.config.list_postprocess(values),
+                                      np.array([5.0]))
+
+    def test_storable_function_integration(self):
+        snap = make_1d_traj([5.0])[0]
+        sf = StorableFunction(self.func, result_type='float',
+                              func_config=self.config)
+        assert sf(snap) == 5.0
+        np.testing.assert_array_equal(sf([snap]), np.array([5.0]))
+
 
 class TestStorableFunctionResults(object):
     def setup(self):

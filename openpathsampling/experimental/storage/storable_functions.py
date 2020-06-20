@@ -17,88 +17,120 @@ logger = logging.getLogger(__name__)
 
 
 class Processor(StorableNamedObject):
-    name = None
-    pre_order = None
-    post_order = None
-    def pre_process(self, values):
-        return values
+    """Storable function pre/post processors"""
+    def __init__(self, name, func, stage):
+        super(Processor, self).__init__()
+        self.name = name
+        self.func = func
+        stages = ['item-pre', 'list-pre', 'item-post', 'list-post']
+        if stage in stages:
+            self.stage = stage
+        else:
+            raise ValueError("Unknown state: '%s'. Allowed stages are: %s"
+                             % (stage, stages))
 
-    def post_process(self, values):
-        return values
+    def __call__(self, inputs):
+        return self.func(inputs)
 
+requires_lists_pre = Processor(name='requires_lists_pre',
+                               func=lambda values: [list(values)],
+                               stage='list-pre')
 
-class RequiresLists(Processor):
-    name = "requires_lists"
-    pre_order = 100
-    @staticmethod
-    def pre_process(values):
-        # We use the trick that we return a list with one item. That means
-        # that the for loop over items in _eval will give us what we want.
-        # This may be a little bit fragile, but I don't foresee problems.
-        return [list(values)]
+requires_lists_post = Processor(name='requires_lists_post',
+                                func=lambda results: results[0],
+                                stage='list-post')
 
+def _scalarize_singletons(values):
+    """Post-processing to scalarize singletons within a list of results.
 
-class ScalarizeSingletons(Processor):
-    name = "scalarize_singletons"
-    post_order = 90
-    @staticmethod
-    def post_process(values):
-        if isinstance(values, np.ndarray):
-            shape = values.shape
-            if len(shape) > 1 and shape[1] == 1:
-                values.reshape(tuple([shape[0]] + list(shape)[2:]))
-        return values
+    If each snapshot returns a list, this converts length-1 lists into
+    scalars.
 
+    .. note::
+    The current implementation only works on NumPy arrays, and will ignore
+    all other data.
+    """
+    if isinstance(values, np.ndarray):
+        shape = values.shape
+        if len(shape) > 1 and shape[1] == 1:
+            new_shape = tuple([shape[0]] + list(shape)[2:])
+            values.shape = new_shape
+    return values
 
-class WrapNumpy(Processor):
-    name = "wrap_numpy"
-    post_order = 80
-    @staticmethod
-    def post_process(values):
-        return np.array(values)
+scalarize_singletons = Processor(name='scalarize_singletons',
+                                 func=_scalarize_singletons,
+                                 stage='item-post')
+
+wrap_numpy = Processor(name="wrap_numpy",
+                       func=lambda values: np.array(values),
+                       stage='list-post')
 
 
 class StorableFunctionConfig(StorableNamedObject):
-    pre_sort_key = lambda x: x.pre_order
-    post_sort_key = lambda x: x.post_order
+    """Manages pre/post processing options for CVs.
+
+    This allows simple :class:`.Processor` instances to be combined in order
+    to facilitate more complicated pre- and post-processing of inputs to the
+    evaluation stage.
+    """
     def __init__(self, processors=None):
         if processors is None:
             processors = []
-        self.processors = processors
+        self.processors = []
         self.processor_dict = {}
-        self.pre_processors = []
-        self.post_processors = []
+        self.list_preprocessors = []
+        self.item_preprocessors = []
+        self.list_postprocessors = []
+        self.item_postprocessors = []
         for proc in processors:
             self.register(proc)
+
+    def _build_processor_lists(self):
+        stage_to_list = {'item-pre': self.item_preprocessors,
+                         'item-post': self.item_postprocessors,
+                         'list-pre': self.list_preprocessors,
+                         'list-post': self.list_postprocessors}
+        for proc_list in stage_to_list.values():
+            del proc_list[:]  # https://stackoverflow.com/a/1400622
+
+        for proc in self.processors:
+            stage_to_list[proc.stage].append(proc)
 
     def register(self, processor):
         if processor.name in self.processor_dict:
             self.deregister(processor.name)
         self.processor_dict[processor.name] = processor
         self.processors.append(processor)
-        self.pre_processors = list(
-            p for p in self.processors if p.pre_order is not None
-        ).sort(key=self.pre_sort_key)
-        self.post_processors = list(
-            p for p in self.processors if p.post_order is not None
-        ).sort(key=self.post_sort_key)
+        self._build_processor_lists()
 
     def deregister(self, processor, error_if_missing=True):
         name = processor if isinstance(processor, str) else processor.name
         to_remove = self.processor_dict.pop(name, None)
-        if to_remove is None and not error_if_missing:
-            return
+        if to_remove is None:
+            if error_if_missing:
+                raise KeyError(processor)
+            else:
+                return
         self.processors.remove(to_remove)
+        self._build_processor_lists()
 
-    def pre_process(self, values):
-        for proc in self.pre_processors:
-            values = proc.pre_process(values)
-        return values
+    @staticmethod
+    def _process(processors, inputs):
+        for proc in processors:
+            inputs = proc(inputs)
+        return inputs
 
-    def post_process(self, results):
-        for proc in self.post_processors:
-            results = proc.post_process(results)
-        return results
+    def item_preprocess(self, values):
+        return self._process(self.item_preprocessors, values)
+
+    def list_preprocess(self, values):
+        return self._process(self.list_preprocessors, values)
+
+    def item_postprocess(self, values):
+        return self._process(self.item_postprocessors, values)
+
+    def list_postprocess(self, values):
+        return self._process(self.list_postprocessors, values)
 
 
 class StorableFunctionResults(StorableNamedObject):
@@ -284,7 +316,7 @@ class StorableFunction(StorableNamedObject):
         cache_values = storage.backend.load_storable_function_table(uuid)
         self.local_cache.cache_results(cache_values)
 
-    def is_singular(self, item):
+    def is_scalar(self, item):
         """Determine whether the input needs to be wrapped in a list.
 
         For performance (especially on analysis), all internal calculations
@@ -311,9 +343,11 @@ class StorableFunction(StorableNamedObject):
         if self.func is None and uuid_items:
             raise RuntimeError("No function attached to %s. Can not "
                                + "evaluate for %s." % (self, uuid_items))
-        preprocessed = self.func_config.pre_process(uuid_items.values())
+        preprocessed = self.func_config.item_preprocess(uuid_items.values())
+        preprocessed = self.func_config.list_preprocess(preprocessed)
         values = [self.func(item, **self.kwargs) for item in preprocessed]
-        postprocessed = self.func_config.post_process(values)
+        postprocessed = [self.func_config.item_postprocess(val)
+                         for val in values]
         results = dict(zip(uuid_items.keys(), postprocessed))
         return results, {}
 
@@ -330,10 +364,10 @@ class StorableFunction(StorableNamedObject):
         # important: implementation is that we always try to take an
         # iterable of items ... this makes, e.g., applying a CV to a
         # trajectory (especially in analysis) MUCH faster
-        singular = False
-        if self.is_singular(items):
+        scalar = False
+        if self.is_scalar(items):
             items = [items]
-            singular = True
+            scalar = True
 
         uuid_items = {get_uuid(item): item for item in items}
         # TODO: add preprocessing here? if needed?
@@ -360,10 +394,9 @@ class StorableFunction(StorableNamedObject):
                 break
 
         return_list = [result_dict[get_uuid(item)] for item in items]
-        # result = self.postprocess(return_list)  # TODO if needed?
-        result = return_list
+        result = self.func_config.list_postprocess(return_list)
 
-        if singular:
+        if scalar:
             result = result[0]
 
         return result
