@@ -560,7 +560,7 @@ class ObjectJSON(object):
 
     def to_json(self, obj, base_type=''):
         simplified = self.simplify(obj, base_type)
-        return ujson.dumps(simplified)
+        return ujson.dumps(simplified, **ujson_kwargs)
 
     def to_json_object(self, obj):
         if hasattr(obj, 'base_cls') \
