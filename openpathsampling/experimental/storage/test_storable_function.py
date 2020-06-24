@@ -4,13 +4,34 @@ try:
 except ImportError:
     import mock
 
+import collections
+
 import numpy as np
 
 from openpathsampling.tests.test_helpers import make_1d_traj
 
-from .serialization_helpers import get_uuid
+from .serialization_helpers import get_uuid, set_uuid
 from .storable_functions import *
 _MODULE = "openpathsampling.experimental.storage.storable_functions"
+
+
+class MockBackend(object):
+    def __init__(self):
+        self.storable_function_tables = {}
+        self.called_register = collections.defaultdict(int)
+
+    def register_storable_function(self, table_name, result_type):
+        self.storable_function_tables[table_name] = {}
+        self.called_register[table_name] += 1
+
+    def load_storable_function_results(self, func_uuid, uuids):
+        table = self.storable_function_tables[func_uuid]
+        found_uuids = [uuid for uuid in uuids if uuid in table]
+        return {uuid: table[uuid] for uuid in found_uuids}
+
+    def add_storable_function_results(self, table_name, result_dict):
+        self.storable_function_tables[table_name].update(result_dict)
+
 
 def test_requires_lists_pre():
     assert requires_lists_pre([1]) == [[1]]
@@ -305,19 +326,102 @@ class TestStorableFunction(object):
 
 class TestStorageFunctionHandler(object):
     def setup(self):
-        pass
+        self.backend = MockBackend()
+        self.storage = mock.NonCallableMock(backend=self.backend)
+        self.sf_handler = StorageFunctionHandler(self.storage)
+        self.func = StorableFunction(lambda x: x.xyz[0][0])
+        self.f2 = StorableFunction.from_dict(self.func.to_dict())
+        set_uuid(self.f2, get_uuid(self.func))
+        self.result_dict = {'snap1': 5.0, 'snap2': 3.0}
 
-    def test_register(self):
+    @staticmethod
+    def _make_sfr(func, result_dict):
+        sfr = StorableFunctionResults(func, get_uuid(func))
+        sfr.cache_results(result_dict)
+        return sfr
+
+    def test_codec_settings(self):
+        # TODO: is this actually used?
         pytest.skip()
-        pass
 
-    def test_update(self):
-        pytest.skip()
-        pass
+    @pytest.mark.parametrize("add_table", [True, False])
+    def test_register_function(self, add_table):
+        assert not self.func.has_handler
+        assert len(self.sf_handler.all_functions) == 0
+        assert self.sf_handler.functions == []
+        self.sf_handler.register_function(self.func, add_table=add_table)
+        uuid = get_uuid(self.func)
 
-    def test_update_mock_parallel(self):
-        pytest.skip()
-        # a test to show how this should work if multiple results with same
-        # CV come in
-        pass
+        sf_tables = self.backend.storable_function_tables
+        if add_table:
+            assert uuid in sf_tables
+        else:
+            assert uuid not in sf_tables
 
+        assert self.func is self.sf_handler.canonical_functions[uuid]
+        assert self.sf_handler.all_functions[uuid] == [self.func]
+        assert self.func.has_handler
+        assert self.func._handler == self.sf_handler
+        assert self.sf_handler.functions == [self.func]
+
+        # make a copy of the func
+        assert get_uuid(self.f2) == get_uuid(self.func)
+        assert self.f2 is not self.func
+
+        # internal checks should ensure that you call add_table False here
+        expected_calls = {True: 1, False: 0}[add_table]
+        assert self.backend.called_register[uuid] == expected_calls
+        self.sf_handler.register_function(self.f2, add_table)
+        assert self.sf_handler.canonical_functions[uuid] is not self.f2
+        assert self.sf_handler.canonical_functions[uuid] is self.func
+        assert self.sf_handler.all_functions[uuid] == [self.func, self.f2]
+        assert self.backend.called_register[uuid] == expected_calls
+        assert self.sf_handler.functions == [self.func]
+
+    def test_update_cache(self):
+        self.sf_handler.register_function(self.func)
+        item1, item2 = self.result_dict.items()
+        sfr1 = self._make_sfr(self.func, dict([item1]))
+        sfr2 = self._make_sfr(self.f2, dict([item2]))
+        assert self.func.local_cache.result_dict == {}
+        self.sf_handler.update_cache(sfr1)
+        assert self.func.local_cache.result_dict == {'snap1': 5.0}
+
+        # register a new function; models the parallel update
+        self.sf_handler.update_cache(sfr2)
+        assert self.func.local_cache.result_dict == self.result_dict
+
+    def test_clear_non_canonical(self):
+        sf_handler = self.sf_handler
+        uuid = get_uuid(self.func)
+        sf_handler.register_function(self.func)
+        sf_handler.register_function(self.f2)
+        assert sf_handler.canonical_functions[uuid] == self.func
+        assert sf_handler.all_functions[uuid] == [self.func, self.f2]
+        sf_handler.clear_non_canonical()
+        assert sf_handler.canonical_functions[uuid] == self.func
+        assert sf_handler.all_functions[uuid] == [self.func]
+
+    @pytest.mark.parametrize('inputs', [['snap1'], ['snap1', 'snap2']])
+    def test_get_function_results(self, inputs):
+        sf_handler = self.sf_handler
+        sf_handler.register_function(self.func)
+        uuid = get_uuid(self.func)
+        registered_values = {uuid: value
+                             for uuid, value in self.result_dict.items()
+                             if uuid in inputs}
+        self.backend.add_storable_function_results(
+            table_name=get_uuid(self.func),
+            result_dict=registered_values
+        )
+        uuid_items = {'snap1': "This is snap1",
+                      'snap2': "This is snap2"}
+        expected_found = {uuid: self.result_dict[uuid] for uuid in inputs}
+        missing_uuids = [uuid for uuid in uuid_items.keys()
+                         if uuid not in registered_values]
+        expected_missing = {uuid: uuid_items[uuid]
+                            for uuid in missing_uuids}
+
+        found, missing = sf_handler.get_function_results(uuid, uuid_items)
+        assert found == expected_found
+        assert missing == expected_missing

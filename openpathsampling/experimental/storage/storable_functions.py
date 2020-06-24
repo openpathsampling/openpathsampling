@@ -141,6 +141,7 @@ class StorableFunctionResults(StorableNamedObject):
     """
     _sanity_checks = True
     def __init__(self, parent, parent_uuid):
+        # TODO: why does this require parent_uuid still?
         super(StorableFunctionResults, self).__init__()
         self.parent = parent
         self._parent_uuid = parent_uuid
