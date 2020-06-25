@@ -51,10 +51,11 @@ def _scalarize_singletons(values):
     all other data.
     """
     if isinstance(values, np.ndarray):
-        shape = values.shape
-        if len(shape) > 1 and shape[1] == 1:
-            new_shape = tuple([shape[0]] + list(shape)[2:])
-            values.shape = new_shape
+        values.shape = tuple(n for n in values.shape if n != 1)
+        # shape = values.shape
+        # if len(shape) > 1 and shape[1] == 1:
+            # new_shape = tuple([shape[0]] + list(shape)[2:])
+            # values.shape = new_shape
     return values
 
 scalarize_singletons = Processor(name='scalarize_singletons',
@@ -344,7 +345,8 @@ class StorableFunction(StorableNamedObject):
         if self.func is None and uuid_items:
             raise RuntimeError("No function attached to %s. Can not "
                                + "evaluate for %s." % (self, uuid_items))
-        preprocessed = self.func_config.item_preprocess(uuid_items.values())
+        values = list(uuid_items.values())
+        preprocessed = self.func_config.item_preprocess(values)
         preprocessed = self.func_config.list_preprocess(preprocessed)
         values = [self.func(item, **self.kwargs) for item in preprocessed]
         postprocessed = [self.func_config.item_postprocess(val)
@@ -394,11 +396,17 @@ class StorableFunction(StorableNamedObject):
             if not missing:
                 break
 
-        return_list = [result_dict[get_uuid(item)] for item in items]
-        result = self.func_config.list_postprocess(return_list)
+        result = [result_dict[get_uuid(item)] for item in items]
+
+        result = self.func_config.list_postprocess(result)
 
         if scalar:
-            result = result[0]
+            # TODO: watch to see if this try-catch causes performance issues
+            try:
+                result = result[0]
+            except IndexError:
+                # this means that the result is already a scalar
+                pass
 
         return result
 

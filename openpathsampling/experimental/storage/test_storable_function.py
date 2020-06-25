@@ -19,6 +19,7 @@ class MockBackend(object):
     def __init__(self):
         self.storable_function_tables = {}
         self.called_register = collections.defaultdict(int)
+        self.called_load = collections.defaultdict(int)
 
     def register_storable_function(self, table_name, result_type):
         self.storable_function_tables[table_name] = {}
@@ -27,6 +28,8 @@ class MockBackend(object):
     def load_storable_function_results(self, func_uuid, uuids):
         table = self.storable_function_tables[func_uuid]
         found_uuids = [uuid for uuid in uuids if uuid in table]
+        for uuid in uuids:
+            self.called_load[uuid] += 1
         return {uuid: table[uuid] for uuid in found_uuids}
 
     def add_storable_function_results(self, table_name, result_dict):
