@@ -180,6 +180,8 @@ class GeneralStorage(object):
 
         return uuid_dict
 
+
+
     def save(self, obj_list, use_cache=True):
         if type(obj_list) is not list:
             obj_list = [obj_list]

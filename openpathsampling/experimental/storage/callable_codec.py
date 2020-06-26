@@ -101,7 +101,10 @@ class CallableCodec(object):
                 }
 
             # Case 2: arbitrary function
-            all_globals = dill.detect.globalvars(obj)
+            if obj.__module__ == "__main__":
+                all_globals = dill.detect.globalvars(obj)
+            else:
+                all_globals = {}
             errors += self._error_message(GLOBALS_ERROR_MESSAGE,
                                           set(all_globals.keys()))
 

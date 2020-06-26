@@ -106,6 +106,11 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
         self.topology = topology
         self.mdtraj_topology = topology.mdtraj
 
+    def to_dict(self):
+        dct = super().to_dict()
+        dct.update({'topology': self.topology})
+        return dct
+
 
 class PyEMMAFeaturizerCV(FunctionFactoryCV, CoordinateFunctionCV):
     # TODO

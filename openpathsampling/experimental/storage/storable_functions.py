@@ -301,11 +301,11 @@ class StorableFunction(StorableNamedObject):
 
     @classmethod
     def from_dict(cls, dct):
-        obj = cls(func=dct['func'],
-                  result_type=dct['result_type'],
-                  **dct['kwargs'])
+        source = dct.pop('source')
+        kwargs = dct.pop('kwargs')
+        obj = cls(**dct, **kwargs)
         if obj.source is None:
-            obj.source = dct['source']  # may still be none
+            obj.source = source  # may still be none
 
         return obj
 
