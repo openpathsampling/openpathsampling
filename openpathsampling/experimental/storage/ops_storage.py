@@ -50,8 +50,8 @@ ops_schema = {
     'steps': [('change', 'uuid'), ('active', 'uuid'), #('previous', 'lazy'),
               ('simulation', 'uuid'), ('mccycle', 'int')],
     'details': [('json', 'json_obj')],
-    'storable_functions': [('json', 'json_obj'), ('class_idx', 'int')],
-    'simulation_objects': [('json', 'json_obj'), ('class_idx', 'int')]
+    'storable_functions': [('json', 'json_obj')],#, ('class_idx', 'int')],
+    'simulation_objects': [('json', 'json_obj')],#, ('class_idx', 'int')]
 }
 
 # this includes any sql-specific metadata
