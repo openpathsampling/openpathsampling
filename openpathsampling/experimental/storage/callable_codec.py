@@ -89,6 +89,7 @@ class CallableCodec(object):
         self.settings['safemode'] = value
 
     def default(self, obj):
+        only_req = self.only_allow_required_modules  # convenience
         if not has_uuid(obj) and callable(obj):
             errors = ""
             dct = {}
@@ -99,6 +100,10 @@ class CallableCodec(object):
                     '__module__': obj.__module__,
                     '__callable_name__': obj.__name__
                 }
+            elif obj.__module__ != "__main__" and only_req:
+                # else implies root_mod not in required
+                errors += self._error_message("bar" + UNKNOWN_MODULES_ERROR_MESSAGE,
+                                              [obj.__module__])
 
             # Case 2: arbitrary function
             if obj.__module__ == "__main__":
@@ -108,7 +113,7 @@ class CallableCodec(object):
             errors += self._error_message(GLOBALS_ERROR_MESSAGE,
                                           set(all_globals.keys()))
 
-            if self.only_allow_required_modules:
+            if obj.__module__ == "__main__" and only_req:
                 imported = [instr.argval
                             for instr in dis.get_instructions(obj)
                             if "IMPORT" in instr.opname]

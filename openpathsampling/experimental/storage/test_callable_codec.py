@@ -23,6 +23,9 @@ class TestCallableCodec(object):
             'use_known_module': _known_module_func,
             'use_globals': _globals_using_function,
         }
+        for func in ['generic', 'use_known_module', 'use_globals']:
+            self.functions[func].__module__ = "__main__"
+
         dilled = {key: dill.dumps(func)
                   for key, func in self.functions.items()}
         self.dcts = {
@@ -94,14 +97,16 @@ class TestCallableCodec(object):
                                       'use_known_module'])
     def test_object_hook(self, func, safe):
         safemode = {'safemode': True, 'normal': False}[safe]
-        self.codec.known_modules = ['numpy']
+        self.codec.known_modules = ['openpathsampling', 'numpy']
         self.codec.safemode = safemode
         result = self.codec.object_hook(self.dcts[func])
         # up to here is smoke test; now we validate
         expected = None if safemode else self.functions[func]
 
-        if not safemode and func != 'generic':
-            # can't test the recreation of the lambda
+        untestable = ['generic', 'use_known_module']
+        # generic can't be tested for recreastion; use_known_module changes
+        # the module and therefore can't be tested my memory location
+        if not safemode and func not in untestable:
             assert result == expected
 
     def test_object_hook_not_mine(self):
