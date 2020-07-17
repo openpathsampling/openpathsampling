@@ -12,6 +12,7 @@ import json
 
 logger = logging.getLogger(__name__)
 
+
 class ClassInfo(object):
     """
     Parameters
@@ -129,6 +130,16 @@ class SerializationSchema(object):
         exists = info_node.table in self.table_to_info
         if not (reserved and exists):
             self.table_to_info.update({info_node.table: info_node})
+
+    def copy(self):
+        # NOTE: subclasses must override if __init__ sig changes
+        dup = self.__class__(
+            default_info=self.default_info,
+            sfr_info=self.sfr_info,
+            schema=self.schema,
+            class_info_list=self.class_info_list
+        )
+        return dup
 
     def register_info(self, class_info_list, schema=None):
         schema = tools.none_to_default(schema, {})

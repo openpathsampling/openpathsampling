@@ -95,12 +95,16 @@ class OPSSpecialLookup(object):
     it also acts as a cache to reduce the number of isinstance calls (and
     hopfully speed up the identification of types)
     """
+    # TODO: overall lookup should be like this: all lookups map a class to a
+    # lookup function -- often that lookup function just returns the class
+    # TODO: especially annoying to have StorableFunction as a special
     special_superclasses = (paths.BaseSnapshot, paths.MoveChange,
-                            paths.Details)
+                            paths.Details, StorableFunction)
     snapshot_lookup_function = \
             lambda self, snap: (get_uuid(snap.engine), snap.__class__)
     details_lookup_function = lambda self, details: paths.Details
     movechange_lookup_function = lambda self, change: paths.MoveChange
+    sf_lookup_function = lambda self, func: StorableFunction
 
     def __init__(self):
         self.secondary_lookups = {}
@@ -117,6 +121,8 @@ class OPSSpecialLookup(object):
 
         if isinstance(item, paths.BaseSnapshot):
             self.secondary_lookups[cls] = self.snapshot_lookup_function
+        elif isinstance(item, StorableFunction):
+            self.secondary_lookups[cls] = self.sf_lookup_function
         elif isinstance(item, paths.MoveChange):
             self.secondary_lookups[cls] = self.movechange_lookup_function
         elif isinstance(item, paths.Details):
@@ -212,7 +218,7 @@ ops_simulation_classes = {
     'pathsimulators': paths.PathSimulator,
     'pathmovers': paths.PathMover,
     'networks': paths.TransitionNetwork,
-    'cvs': paths.CollectiveVariable,
+    'cvs': (paths.CollectiveVariable, StorableFunction),
     'engines': paths.engines.DynamicsEngine
 }  # TODO: add more to these
 

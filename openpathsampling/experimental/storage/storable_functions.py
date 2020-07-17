@@ -310,7 +310,6 @@ class StorableFunction(StorableNamedObject):
         return obj
 
     def preload_cache(self, storage=None):
-        # TODO: add support for this to take a storage as argument
         if storage is None:
             storage = self._handler.storage
 

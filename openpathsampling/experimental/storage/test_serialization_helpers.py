@@ -261,6 +261,11 @@ def test_get_all_uuids_loading():
     assert dependencies == expected_dependencies
     assert uuid_to_table == expected_uuid_to_table
 
+@pytest.mark.parametrize('lazy_allowed', [True, False])
+def test_get_all_uuids_loading_lazy_allowed(lazy_allowed):
+    ...
+    pytest.skip()
+
 def test_get_all_uuids_loading_with_existing():
     pytest.skip()
 
