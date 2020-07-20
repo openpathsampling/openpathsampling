@@ -24,9 +24,9 @@ class TestInterfaceSet(object):
         paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV(name="x", f=lambda s: s.xyz[0][0])
         self.lambdas = [0.0, 0.1, 0.2, 0.3]
-        self.volumes = paths.VolumeFactory.CVRangeVolumeSet(self.cv,
-                                                            float("-inf"),
-                                                            self.lambdas)
+        min_vals= [float("-inf")] * len(self.lambdas)
+        self.volumes = [paths.CVDefinedVolume(self.cv, min_v, max_v)
+                        for min_v, max_v in zip(min_vals, self.lambdas)]
         self.interface_set = paths.InterfaceSet(self.volumes, self.cv,
                                                 self.lambdas)
         self.decreasing = paths.InterfaceSet(list(reversed(self.volumes)),
@@ -69,11 +69,10 @@ class TestInterfaceSet(object):
             i += 1
 
     def test_no_direction_possible(self):
-        volumes = paths.VolumeFactory.CVRangeVolumeSet(
-            op=self.cv,
-            minvals=[-0.1, -0.2, -0.3],
-            maxvals=[0.1, 0.2, 0.3]
-        )
+        min_vals=[-0.1, -0.2, -0.3]
+        max_vals=[0.1, 0.2, 0.3]
+        volumes = [paths.CVDefinedVolume(self.cv, min_v, max_v)
+                   for min_v, max_v in zip(min_vals, max_vals)]
         ifaces = paths.InterfaceSet(volumes)
         assert_equal(ifaces.cv, None)
         assert_equal(ifaces.cv_max, None)
@@ -216,6 +215,9 @@ class TestPeriodicVolumeInterfaceSet(object):
 
         for (v, l) in zip(reloaded.volumes, reloaded.lambdas):
             assert_equal(reloaded.get_lambda(v), l)
+
+        storage_r.close()
+        storage_w.close()
 
         if os.path.isfile(fname):
             os.remove(fname)

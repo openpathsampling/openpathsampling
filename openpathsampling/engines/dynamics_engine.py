@@ -8,9 +8,8 @@ Created on 01.07.2014
 import logging
 import sys
 
-import simtk.unit as u
-
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.integration_tools import is_simtk_unit_type
 
 from .snapshot import BaseSnapshot
 from .trajectory import Trajectory
@@ -94,6 +93,7 @@ class DynamicsEngine(StorableNamedObject):
     on_retry : str or callable
         the behaviour when a try is started. Since you have already generated
         some trajectory you might not restart completely. Possibilities are
+
         1.  `full` will restart completely and use the initial frames (default)
         2.  `50%` will cut the existing in half but keeping at least the initial
         3.  `remove_interval` will remove as many frames as the `interval`
@@ -121,10 +121,15 @@ class DynamicsEngine(StorableNamedObject):
         'on_error': 'fail'
     }
 
+    #units = {
+        #'length': u.Unit({}),
+        #'velocity': u.Unit({}),
+        #'energy': u.Unit({})
+    #}
     units = {
-        'length': u.Unit({}),
-        'velocity': u.Unit({}),
-        'energy': u.Unit({})
+        'length': None,
+        'velocity': None,
+        'energy': None
     }
 
     base_snapshot_type = BaseSnapshot
@@ -147,6 +152,7 @@ class DynamicsEngine(StorableNamedObject):
 
         self.descriptor = descriptor
         self._check_options(options)
+        self.interrupter = DelayedInterrupt
 
     @property
     def current_snapshot(self):
@@ -217,7 +223,8 @@ class DynamicsEngine(StorableNamedObject):
 
                 if variable in my_options:
                     if type(my_options[variable]) is type(default_value):
-                        if type(my_options[variable]) is u.Unit:
+                        #if type(my_options[variable]) is u.Unit:
+                        if is_simtk_unit_type(my_options[variable]):
                             if my_options[variable].unit.is_compatible(
                                     default_value):
                                 okay_options[variable] = my_options[variable]
@@ -539,7 +546,7 @@ class DynamicsEngine(StorableNamedObject):
                 snapshot = None
 
                 try:
-                    with DelayedInterrupt():
+                    with self.interrupter():
                         snapshot = self.generate_next_frame()
 
                         # if self.on_nan != 'ignore' and \
@@ -657,7 +664,7 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_n_frames(self, n_frames=1):
         """Generates n_frames, from but not including the current snapshot.
-        
+
         This generates a fixed number of frames at once. If you desire the
         reversed trajectory, you can reverse the returned trajectory.
 

@@ -1,8 +1,10 @@
 import collections
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.progress import SimpleProgress
 import pandas as pd
 import numpy as np
+
 
 def steps_to_weighted_trajectories(steps, ensembles):
     """Bare function to convert to the weighted trajs dictionary.
@@ -126,7 +128,7 @@ class TransitionDictResults(StorableNamedObject):
     def __repr__(self):
         return self.to_pandas().__repr__()
 
-class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
+class MultiEnsembleSamplingAnalyzer(SimpleProgress, StorableNamedObject):
     """
     Abstract class for statistics from MC steps sampling multiple ensembles.
 
@@ -167,6 +169,7 @@ class MultiEnsembleSamplingAnalyzer(StorableNamedObject):
             raise RuntimeError("If self.ensembles is not set, then "
                                + "ensembles must be given as argument to "
                                + "calculate")
+        steps = self.progress(steps, desc="Weighted trajectories")
         weighted_trajs = steps_to_weighted_trajectories(steps, ensembles)
         return self.from_weighted_trajectories(weighted_trajs)
 
@@ -205,6 +208,7 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
         is a float; for 'bin_range' is a tuple with `(left_edge,
         right_edge)` (only left edge is used)
     """
+    _label = "Ensembles"
     def __init__(self, ensembles, f, hist_parameters):
         super(EnsembleHistogrammer, self).__init__(ensembles)
         self.f = f
@@ -227,10 +231,12 @@ class EnsembleHistogrammer(MultiEnsembleSamplingAnalyzer):
         dict of {:class:`.Ensemble`: :class:`.numerics.Histogram`}
             calculated histogram for each ensemble
         """
-        for ens in self.hists:
-            trajs = list(input_dict[ens].keys())
+        hists = self.progress(self.hists, desc=self._label)
+        for ens in hists:
+            trajs = input_dict[ens].keys()
             weights = list(input_dict[ens].values())
-            data = [self.f(traj) for traj in trajs]
+            data = [self.f(traj)
+                    for traj in self.progress(trajs, leave=False)]
             self.hists[ens].histogram(data, weights)
         return self.hists
 

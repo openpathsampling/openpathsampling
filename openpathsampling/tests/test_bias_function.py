@@ -16,7 +16,6 @@ import openpathsampling as paths
 from openpathsampling.bias_function import *
 
 import logging
-from openpathsampling import VolumeFactory as vf
 
 quiet_loggers = ["initialization", "ensemble", "netcdfplus.objects",
                  "netcdfplus.netcdfplus", "pathmover", "netcdfplus.base"]

@@ -405,117 +405,6 @@ class TestPartInXEnsemble(EnsembleTest):
         assert_equal(self.hitX.__str__(),
                      "exists t such that x[t] in "+volstr)
 
-class TestExitsXEnsemble(EnsembleTest):
-    def setup(self):
-        self.ensemble = ExitsXEnsemble(vol1)
-        # longest ttraj is 6 = 9-3 frames long
-        self.slice_ens = ExitsXEnsemble(vol1, slice(3,9))
-        self.wrapstart = 3
-        self.wrapend = 12
-
-    def test_noncrossing(self):
-        '''ExitsXEnsemble for noncrossing trajectories'''
-        results = { 'upper_in' : False,
-                    'upper_out' : False,
-                    'lower_in' : False,
-                    'lower_out' : False
-                  }
-        self._run(results)
-
-    def test_hitsborder(self):
-        '''ExitsXEnsemble for border-hitting trajectories'''
-        results = { 'lower_in_hit_in' : False,
-                    'upper_in_hit_in' : True,
-                    'lower_out_hit_out' : True,
-                    'upper_out_hit_out' : False
-                  }
-        self._run(results)
-
-    def test_exit(self):
-        '''ExitsXEnsemble for exiting trajecories'''
-        results = { 'lower_in_out' : True,
-                    'upper_in_out' : True,
-                    'lower_in_hit_out' : True,
-                    'upper_in_hit_out' : True,
-                    'lower_out_in_out_in' : True,
-                    'upper_out_in_out_in' : True,
-                    'lower_in_out_in_out' : True,
-                    'upper_in_out_in_out' : True
-                  }
-        self._run(results)
-
-    def test_entrance(self):
-        '''ExitsXEnsemble for entering trajectories'''
-        results = { 'lower_out_in' : False,
-                    'upper_out_in' : False,
-                    'lower_out_hit_in' : False,
-                    'upper_out_hit_in' : False,
-                    'lower_out_in_out_in' : True,
-                    'upper_out_in_out_in' : True,
-                    'lower_in_out_in_out' : True,
-                    'upper_in_out_in_out' : True
-                  }
-        self._run(results)
-
-    def test_str(self):
-        assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] such that x[t] in {0} and x[t+1] not in {0}'.format(vol1))
-
-class TestEntersXEnsemble(TestExitsXEnsemble):
-    def setup(self):
-        self.ensemble = EntersXEnsemble(vol1)
-        # longest ttraj is 6 = 9-3 frames long
-        self.slice_ens = EntersXEnsemble(vol1, slice(3,9))
-        self.wrapstart = 3
-        self.wrapend = 12
-
-    def test_noncrossing(self):
-        '''EntersXEnsemble for noncrossing trajectories'''
-        results = { 'upper_in_in_in' : False,
-                    'upper_out_out_out' : False,
-                    'lower_in_in_in' : False,
-                    'lower_out_out_out' : False
-                  }
-        self._run(results)
-
-    def test_hitsborder(self):
-        '''EntersXEnsemble for border-hitting trajectories'''
-        results = { 'lower_in_hit_in' : False,
-                    'upper_in_hit_in' : True,
-                    'lower_out_hit_out' : True,
-                    'upper_out_hit_out' : False
-                  }
-        self._run(results)
-
-    def test_exit(self):
-        '''EntersXEnsemble for exiting trajecories'''
-        results = { 'lower_in_out' : False,
-                    'upper_in_out' : False,
-                    'lower_in_hit_out' : False,
-                    'upper_in_hit_out' : False,
-                    'lower_out_in_out_in' : True,
-                    'upper_out_in_out_in' : True,
-                    'lower_in_out_in_out' : True,
-                    'upper_in_out_in_out' : True
-                  }
-        self._run(results)
-
-    def test_entrance(self):
-        '''EntersXEnsemble for entering trajectories'''
-        results = { 'lower_out_in' : True,
-                    'upper_out_in' : True,
-                    'lower_out_hit_in' : True,
-                    'upper_out_hit_in' : True,
-                    'lower_out_in_out_in' : True,
-                    'upper_out_in_out_in' : True,
-                    'lower_in_out_in_out' : True,
-                    'upper_in_out_in_out' : True
-                  }
-        self._run(results)
-
-    def test_str(self):
-        assert_equal(self.ensemble.__str__(),
-            'exists x[t], x[t+1] such that x[t] not in {0} and x[t+1] in {0}'.format(vol1))
 
 class TestSequentialEnsemble(EnsembleTest):
     def setup(self):
@@ -523,8 +412,6 @@ class TestSequentialEnsemble(EnsembleTest):
         self.outX = AllOutXEnsemble(vol1)
         self.hitX = PartInXEnsemble(vol1)
         self.leaveX = PartOutXEnsemble(vol1)
-        self.enterX = EntersXEnsemble(vol1)
-        self.exitX = ExitsXEnsemble(vol1)
         self.inInterface = AllInXEnsemble(vol2)
         self.leaveX0 = PartOutXEnsemble(vol2)
         self.inX0 = AllInXEnsemble(vol2)
@@ -602,8 +489,8 @@ class TestSequentialEnsemble(EnsembleTest):
                                     lambda_min=-100.0, lambda_max=100.0)
 
         traj = paths.Trajectory([
-            peng.MDSnapshot(
-                coordinates=np.array([[-0.5, 0.0]]), 
+            paths.engines.toy.Snapshot(
+                coordinates=np.array([[-0.5, 0.0]]),
                 velocities=np.array([[0.0,0.0]])
             )
         ])
@@ -2142,6 +2029,12 @@ class TestMinusInterfaceEnsemble(EnsembleTest):
             innermost_vols=vol1,
             n_l=3
         )
+
+    def test_dict_round_trip(self):
+        dct = self.minus_nl2.to_dict()
+        rebuilt = MinusInterfaceEnsemble.from_dict(dct)
+        dct2 = rebuilt.to_dict()
+        assert_equal(dct, dct2)
 
     @raises(ValueError)
     def test_minus_nl1_fail(self):

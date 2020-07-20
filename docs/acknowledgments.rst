@@ -1,4 +1,4 @@
-.. acknowledgments::
+.. _acknowledgments:
 
 ===============
 Acknowledgments
@@ -16,18 +16,18 @@ those who developed new tools that build on OPS during their participation
 in E-CAM Extended Software Development Workshops (one held in Traunkirchen,
 Austria in 2016, and one in Leiden, Netherlands, in 2017):
 
-* Jony Castagna (STFC, Sci-Tech Daresbury Laboratory)
 * Raffaella Cabriolu (Norwegian University of Science and Technology)
+* Jony Castagna (STFC, Sci-Tech Daresbury Laboratory)
 * Nicole de Groot (University of Amsterdam)
 * Sonya Hanson (Memorial Sloan Kettering Cancer Center)
 * Colm Herbert (University College Dublin)
 * Hendrik Jung (Max Planck Institute for Biophysics)
 * Anders Lervik (Norwegian University of Science and Technology)
-* Anastasiia Maslechko (Norwegian University of Science and Technology)
 * Donal MacKernan (University College Dublin)
+* Anastasiia Maslechko (Norwegian University of Science and Technology)
 * Sarah McCartan (University College Dublin)
 * Clemens Moritz (University of Vienna)
-* Alberto Perez de Alba Ortiz (University of Amsterdam)
+* Alberto Pérez de Alba Ortíz (University of Amsterdam)
 * Stefano Poggio (University College Dublin)
 * Enrico Riccardi (Norwegian University of Science and Technology)
 * Sander Roet (University of Amsterdam)

@@ -10,7 +10,7 @@ from openpathsampling.netcdfplus import StorableNamedObject
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
-def join_volumes(volume_list):
+def join_volumes(volume_list, name=None):
     """
     Make the union of a list of volumes. (Useful shortcut.)
 
@@ -18,6 +18,9 @@ def join_volumes(volume_list):
     ----------
     volume_list : list of :class:`openpathsampling.Volume`
         the list to be joined together
+    name : str or callable
+        string for name, or callable that creates string for name from
+        ``volume_list``
 
     Returns
     -------
@@ -29,6 +32,12 @@ def join_volumes(volume_list):
     # EmptyVolume is smart and knows its OR just takes the other
     for vol in volume_list:
         volume = volume | vol
+    if name is not None:
+        try:
+            name_str = name(volume_list)
+        except TypeError:
+            name_str = name
+        volume = volume.named(name_str)
     return volume
 
 
@@ -256,20 +265,19 @@ class CVDefinedVolume(Volume):
     """
     Volume defined by a range of a collective variable `collectivevariable`.
 
-    Contains all snapshots `snap` for which `lamba_min <
+    Contains all snapshots `snap` for which `lamba_min <=
     collectivevariable(snap)` and `lambda_max > collectivevariable(snap)`.
+
+    Parameters
+    ----------
+    collectivevariable : :class:`.CollectiveVariable`
+        the CV to base the volume on
+    lambda_min : float
+        minimum value of the CV
+    lambda_max : float
+        maximum value of the CV
     """
     def __init__(self, collectivevariable, lambda_min=0.0, lambda_max=1.0):
-        '''
-        Attributes
-        ----------
-        collectivevariable : CollectiveVariable
-            the collectivevariable object
-        lambda_min : float
-            the minimal allowed collectivevariable
-        lambda_max: float
-            the maximal allowed collectivevariable
-        '''
         super(CVDefinedVolume, self).__init__()
         self.collectivevariable = collectivevariable
         try:
@@ -600,41 +608,41 @@ class VoronoiVolume(Volume):
         return self.cell(snapshot) == state
 
 
-class VolumeFactory(object):
-    @staticmethod
-    def _check_minmax(minvals, maxvals):
-        # if one is an integer, convert it to a list
-        if type(minvals) == int or type(minvals) == float:
-            if type(maxvals) == list:
-                minvals = [minvals]*len(maxvals)
-            else:
-                raise ValueError("minvals is a scalar; maxvals is not a list")
-        elif type(maxvals) == int or type(maxvals) == float:
-            if type(minvals) == list:
-                maxvals = [maxvals]*len(minvals)
-            else:
-                raise ValueError("maxvals is a scalar; minvals is not a list")
+# class VolumeFactory(object):
+    # @staticmethod
+    # def _check_minmax(minvals, maxvals):
+        # # if one is an integer, convert it to a list
+        # if type(minvals) == int or type(minvals) == float:
+            # if type(maxvals) == list:
+                # minvals = [minvals]*len(maxvals)
+            # else:
+                # raise ValueError("minvals is a scalar; maxvals is not a list")
+        # elif type(maxvals) == int or type(maxvals) == float:
+            # if type(minvals) == list:
+                # maxvals = [maxvals]*len(minvals)
+            # else:
+                # raise ValueError("maxvals is a scalar; minvals is not a list")
 
-        if len(minvals) != len(maxvals):
-            raise ValueError("len(minvals) != len(maxvals)")
-        return (minvals, maxvals)
+        # if len(minvals) != len(maxvals):
+            # raise ValueError("len(minvals) != len(maxvals)")
+        # return (minvals, maxvals)
 
-    @staticmethod
-    def CVRangeVolumeSet(op, minvals, maxvals):
-        # TODO: clean up to only use min_i or max_i in name if necessary
-        minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
-        myset = []
-        for (min_i, max_i) in zip(minvals, maxvals):
-            volume = CVDefinedVolume(op, min_i, max_i)
-            myset.append(volume)
-        return myset
+    # @staticmethod
+    # def CVRangeVolumeSet(op, minvals, maxvals):
+        # # TODO: clean up to only use min_i or max_i in name if necessary
+        # minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
+        # myset = []
+        # for (min_i, max_i) in zip(minvals, maxvals):
+            # volume = CVDefinedVolume(op, min_i, max_i)
+            # myset.append(volume)
+        # return myset
 
-    @staticmethod
-    def CVRangeVolumePeriodicSet(op, minvals, maxvals,
-                                period_min=None, period_max=None):
-        minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
-        myset = []
-        for i in range(len(maxvals)):
-            myset.append(PeriodicCVDefinedVolume(op, minvals[i], maxvals[i],
-                                              period_min, period_max))
-        return myset
+    # @staticmethod
+    # def CVRangeVolumePeriodicSet(op, minvals, maxvals,
+                                # period_min=None, period_max=None):
+        # minvals, maxvals = VolumeFactory._check_minmax(minvals, maxvals)
+        # myset = []
+        # for i in range(len(maxvals)):
+            # myset.append(PeriodicCVDefinedVolume(op, minvals[i], maxvals[i],
+                                              # period_min, period_max))
+        # return myset

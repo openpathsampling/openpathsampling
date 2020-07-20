@@ -1,9 +1,9 @@
 .. _pathsimulator:
 
-.. currentmodule:: openpathsampling.pathsimulator
+.. currentmodule:: openpathsampling
 
-PathSimulator API
-=======================
+PathSimulators
+==============
 
 Abstract Base Class
 -------------------

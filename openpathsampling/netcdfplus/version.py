@@ -1,5 +1,5 @@
-short_version = '0.9.5'
-version = '0.9.5'
-full_version = '0.9.5-alpha'
+short_version = '1.3.0.dev0'
+version = short_version
+full_version = short_version
 git_revision = 'alpha'
 release = False

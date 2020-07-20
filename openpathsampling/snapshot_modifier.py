@@ -2,6 +2,7 @@ import random
 import logging
 import copy
 import abc
+import functools
 
 import numpy as np
 
@@ -41,27 +42,39 @@ class SnapshotModifier(StorableNamedObject):
         super(SnapshotModifier, self).__init__()
         self.subset_mask = subset_mask
 
-    def extract_subset(self, full_array):
+    def extract_subset(self, full_array, subset=None):
         """Extracts elements from full_array according to self.subset_mask
+
+        Note that, if ``subset`` and ``self.subset`` are None, this returns
+        ``full_array``. If you intend to modify the object returned by this
+        functions, you should ensure that your input ``full_array`` is a
+        copy of any orginal immutable data.
 
         Parameters
         ----------
         full_array : list-like
             the input array
+        subset : list of int or None
+            the subset to use; see ``SnapshotModifier.subset_mask``. Default
+            (None) uses the value of ``self.subset_mask``.
 
         Returns
         -------
-        list
+        list-like
             the elements of full_array which are selected by
-            self.subset_mask, or full_array if self.subset_mask is None
+            self.subset_mask, or full_array if subset and self.subset_mask
+            are None
         """
-        if self.subset_mask is None:
+        if subset is None:
+            subset = self.subset_mask
+
+        if subset is None:
             return full_array
         else:
-            return [full_array[i] for i in self.subset_mask]
+            return [full_array[i] for i in subset]
 
-    def apply_to_subset(self, full_array, modified):
-        """Replaces elements of full_array according to self.subset_mask
+    def apply_to_subset(self, full_array, modified, subset_mask=None):
+        """Replaces elements of full_array according to the subset mask
 
         This returns the full_array, but the modification is done in-place.
 
@@ -72,6 +85,9 @@ class SnapshotModifier(StorableNamedObject):
         modified : list-like
             array containing len(self.subset_mask) elements which will
             replace those in `full_array`
+        subset_mask : list of int or None
+            the subset to use; see ``SnapshotModifier.subset_mask``. Default
+            (None) uses the value of ``self.subset_mask``.
 
         Returns
         -------
@@ -79,8 +95,10 @@ class SnapshotModifier(StorableNamedObject):
             modified version of the input array, where the elements
             specified by self.subset_mask have been replaced
         """
-        subset_mask = self.subset_mask
-        if self.subset_mask is None:
+        if subset_mask is None:
+            subset_mask = self.subset_mask
+
+        if subset_mask is None:
             subset_mask = range(len(full_array))
         for (i, val) in zip(subset_mask, modified):
             full_array[i] = val
@@ -125,19 +143,22 @@ class RandomVelocities(SnapshotModifier):
         select along the first axis of the input array. For example, in a
         typical shape=(n_atoms, 3) array, this will pick the atoms.
     """
-    def __init__(self, beta, engine=None, subset_mask=None):
+    def __init__(self, beta=None, engine=None, subset_mask=None):
         super(RandomVelocities, self).__init__(subset_mask)
         self.beta = beta
         self.engine = engine
 
-    def __call__(self, snapshot):
+    def _default_random_velocities(self, snapshot, beta, subset):
+        if beta is None:
+            raise RuntimeError("Engine can't use RandomVelocities")
+
         # raises AttributeError is snapshot doesn't support velocities
         velocities = copy.copy(snapshot.velocities)  # copy.copy for units
-        vel_subset = self.extract_subset(velocities)
+        vel_subset = self.extract_subset(velocities, subset)
 
         # raises AttributeError if snapshot doesn't support masses feature
         all_masses = snapshot.masses
-        masses = self.extract_subset(all_masses)
+        masses = self.extract_subset(all_masses, subset)
 
         n_spatial = len(vel_subset[0])
         n_atoms = len(vel_subset)
@@ -149,7 +170,7 @@ class RandomVelocities(SnapshotModifier):
                 sigma = np.sqrt(radicand)
             vel_subset[atom_i] = sigma * np.random.normal(size=n_spatial)
 
-        self.apply_to_subset(velocities, vel_subset)
+        self.apply_to_subset(velocities, vel_subset, subset)
         new_snap = snapshot.copy_with_replacement(velocities=velocities)
 
         # applying constraints, if they exist
@@ -166,6 +187,32 @@ class RandomVelocities(SnapshotModifier):
             new_snap = apply_constraints(new_snap)
 
         return new_snap
+
+    def __call__(self, snapshot):
+        # default value; we'll override if needed
+        try:
+            beta = self.beta if self.beta is not None else self.engine.beta
+        except AttributeError:
+            beta = None
+
+        make_snapshot = functools.partial(
+            self._default_random_velocities,
+            beta=beta,
+            subset=self.subset_mask
+        )
+        if self.engine:
+            try:
+                make_snapshot = functools.partial(
+                    self.engine.randomize_velocities,
+                    beta=beta,
+                    subset=self.subset_mask
+                )
+            except AttributeError:
+                pass  # use default
+
+        new_snap = make_snapshot(snapshot)
+        return new_snap
+
 
 class GeneralizedDirectionModifier(SnapshotModifier):
     """
@@ -352,7 +399,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         """
         Primary call function to be used by subclasses.
 
-        Uses the :method:`._select_atoms_to_modify` method to determine
+        Uses the :meth:`._select_atoms_to_modify` method to determine
         exactly which atoms from the subset should be modified. This method
         must be written in subclasses.
 

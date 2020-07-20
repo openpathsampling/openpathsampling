@@ -4,18 +4,23 @@ from builtins import zip
 from builtins import range
 from past.utils import old_div
 from builtins import object
+import pytest
 from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
-from .test_helpers import make_1d_traj
+from .test_helpers import make_1d_traj, u
 
 import openpathsampling as paths
 import openpathsampling.engines as peng
 import numpy as np
 
-import openmmtools as omt
-import simtk.unit as u
+
+try:
+    import openmmtools as omt
+except ImportError:
+    omt = None
+
 import openpathsampling.engines.openmm as omm_engine
 
 from openpathsampling.snapshot_modifier import *
@@ -34,7 +39,11 @@ class TestNoModification(object):
             coordinates=np.array([0.0, 1.0, 2.0, 3.0]),
             velocities=np.array([0.5, 1.5, 2.5, 3.5])
         )
-        self.snapshot_3D = peng.openmm.MDSnapshot(
+        if paths.integration_tools.HAS_OPENMM:
+            Class3D = peng.openmm.MDSnapshot
+        else:
+            Class3D = peng.toy.ToySnapshot
+        self.snapshot_3D = Class3D(
             coordinates=np.array([[0.0, 0.1, 0.2],
                                   [1.0, 1.1, 1.2],
                                   [2.0, 2.1, 2.2],
@@ -183,9 +192,17 @@ class TestRandomizeVelocities(object):
         for val in new_2x3D.velocities[0]:
             assert_not_equal(val, 0.0)
 
+    def test_no_beta_bad_engine(self):
+        engine = self.snap_2x3D.engine
+        randomizer = RandomVelocities(engine=engine)
+        with pytest.raises(RuntimeError):
+            randomizer(self.snap_2x3D)
+
     def test_with_openmm_snapshot(self):
         # note: this is only a smoke test; correctness depends on OpenMM's
         # tests of its constraint approaches.
+        if not omt:
+            raise SkipTest("Requires OpenMMTools (not installed)")
         test_system = omt.testsystems.AlanineDipeptideVacuum()
         template = omm_engine.snapshot_from_testsystem(test_system)
         engine = omm_engine.Engine(
@@ -256,6 +273,10 @@ class TestGeneralizedDirectionModifier(object):
         )
 
         # create the OpenMM versions
+        if not omt:
+            raise SkipTest("Requires OpenMMTools (not installed)")
+        if not u:
+            raise SkipTest("Requires simtk.unit (not installed)")
         u_vel = old_div(u.nanometer, u.picosecond)
         self.openmm_modifier = GeneralizedDirectionModifier(1.2 * u_vel)
         ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
@@ -409,29 +430,32 @@ class TestVelocityDirectionModifier(object):
             engine=self.toy_engine
         )
 
-        u_vel = old_div(u.nanometer, u.picosecond)
-        self.openmm_modifier = VelocityDirectionModifier(
-            delta_v=1.2*u_vel,
-            remove_linear_momentum=False
-        )
-        ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
-        self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
-        self.openmm_engine = omm_engine.Engine(
-            topology=self.test_snap.topology,
-            system=ad_vacuum.system,
-            integrator=omt.integrators.VVVRIntegrator()
-        )
-        
-        self.openmm_snap = self.test_snap.copy_with_replacement(
-            engine=self.openmm_engine,
-            velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
-        )
+        if paths.integration_tools.HAS_SIMTK_UNIT:
+            u_vel = old_div(u.nanometer, u.picosecond)
+            self.openmm_modifier = VelocityDirectionModifier(
+                delta_v=1.2*u_vel,
+                remove_linear_momentum=False
+            )
+            if omt:  # TODO: separate out tests
+                ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+                self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
+                self.openmm_engine = omm_engine.Engine(
+                    topology=self.test_snap.topology,
+                    system=ad_vacuum.system,
+                    integrator=omt.integrators.VVVRIntegrator()
+                )
+
+                self.openmm_snap = self.test_snap.copy_with_replacement(
+                    engine=self.openmm_engine,
+                    velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
+                )
 
     def test_select_atoms_to_modify(self):
         assert_equal(self.toy_modifier._select_atoms_to_modify(2), [0, 1])
-        n_atoms = len(self.openmm_snap.coordinates)
-        assert_equal(self.openmm_modifier._select_atoms_to_modify(n_atoms),
-                     list(range(n_atoms)))
+        if omt:  # TODO: separate out tests
+            n_atoms = len(self.openmm_snap.coordinates)
+            assert_equal(self.openmm_modifier._select_atoms_to_modify(n_atoms),
+                         list(range(n_atoms)))
 
     def test_call(self):
         new_toy_snap = self.toy_modifier(self.toy_snapshot)
@@ -446,23 +470,24 @@ class TestVelocityDirectionModifier(object):
             assert_almost_equal(sum([v**2 for v in new_v]),
                                 sum([v**2 for v in old_v]))
 
-        new_omm_snap = self.openmm_modifier(self.openmm_snap)
-        n_atoms = len(self.openmm_snap.coordinates)
-        assert_array_almost_equal(new_omm_snap.coordinates,
-                                  self.openmm_snap.coordinates)
-        new_vel = new_omm_snap.velocities
-        old_vel = self.openmm_snap.velocities
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
-                    for i in range(len(new_vel))]
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
-                    for i in range(len(new_vel))]
-        assert_equal(Counter(same_vel), Counter({False: n_atoms}))
-        u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
-        for new_v, old_v in zip(new_vel, old_vel):
-            assert_almost_equal(
-                sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
-                sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
-            )
+        if omt:  # TODO: separate out tests
+            new_omm_snap = self.openmm_modifier(self.openmm_snap)
+            n_atoms = len(self.openmm_snap.coordinates)
+            assert_array_almost_equal(new_omm_snap.coordinates,
+                                      self.openmm_snap.coordinates)
+            new_vel = new_omm_snap.velocities
+            old_vel = self.openmm_snap.velocities
+            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                        for i in range(len(new_vel))]
+            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                        for i in range(len(new_vel))]
+            assert_equal(Counter(same_vel), Counter({False: n_atoms}))
+            u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
+            for new_v, old_v in zip(new_vel, old_vel):
+                assert_almost_equal(
+                    sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
+                    sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
+                )
 
     def test_call_with_linear_momentum_fix(self):
         toy_modifier = VelocityDirectionModifier(
@@ -477,20 +502,21 @@ class TestVelocityDirectionModifier(object):
         double_ke = sum(sum(momenta * velocities))
         assert_almost_equal(double_ke, 86.0)
 
-        u_vel = old_div(u.nanometer, u.picosecond)
-        u_mass = old_div(u.dalton, u.AVOGADRO_CONSTANT_NA)
+        if omt:  # TODO: separate out tests
+            u_vel = old_div(u.nanometer, u.picosecond)
+            u_mass = old_div(u.dalton, u.AVOGADRO_CONSTANT_NA)
 
-        openmm_modifier = VelocityDirectionModifier(
-            delta_v=1.2*u_vel,
-            remove_linear_momentum=False
-        )
-        new_openmm_snap = openmm_modifier(self.openmm_snap)
-        velocities = new_openmm_snap.velocities
-        momenta = velocities * new_openmm_snap.masses[:, np.newaxis]
-        zero_momentum = 0 * u_vel * u_mass
-        total_momenta = sum(momenta, zero_momentum)
-        assert_array_almost_equal(total_momenta,
-                                  np.array([0.0]*3) * u_vel * u_mass)
+            openmm_modifier = VelocityDirectionModifier(
+                delta_v=1.2*u_vel,
+                remove_linear_momentum=False
+            )
+            new_openmm_snap = openmm_modifier(self.openmm_snap)
+            velocities = new_openmm_snap.velocities
+            momenta = velocities * new_openmm_snap.masses[:, np.newaxis]
+            zero_momentum = 0 * u_vel * u_mass
+            total_momenta = sum(momenta, zero_momentum)
+            assert_array_almost_equal(total_momenta,
+                                      np.array([0.0]*3) * u_vel * u_mass)
 
 class TestSingleAtomVelocityDirectionModifier(object):
     def setup(self):
@@ -511,23 +537,24 @@ class TestSingleAtomVelocityDirectionModifier(object):
             engine=self.toy_engine
         )
 
-        u_vel = old_div(u.nanometer, u.picosecond)
-        self.openmm_modifier = SingleAtomVelocityDirectionModifier(
-            delta_v=1.2*u_vel,
-            remove_linear_momentum=False
-        )
-        ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
-        self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
-        self.openmm_engine = omm_engine.Engine(
-            topology=self.test_snap.topology,
-            system=ad_vacuum.system,
-            integrator=omt.integrators.VVVRIntegrator()
-        )
+        if omt:  # TODO: separate out tests/
+            u_vel = old_div(u.nanometer, u.picosecond)
+            self.openmm_modifier = SingleAtomVelocityDirectionModifier(
+                delta_v=1.2*u_vel,
+                remove_linear_momentum=False
+            )
+            ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+            self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
+            self.openmm_engine = omm_engine.Engine(
+                topology=self.test_snap.topology,
+                system=ad_vacuum.system,
+                integrator=omt.integrators.VVVRIntegrator()
+            )
         
-        self.openmm_snap = self.test_snap.copy_with_replacement(
-            engine=self.openmm_engine,
-            velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
-        )
+            self.openmm_snap = self.test_snap.copy_with_replacement(
+                engine=self.openmm_engine,
+                velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
+            )
 
     def test_select_atoms_to_modify(self):
         selected = self.toy_modifier._select_atoms_to_modify(2)
@@ -552,23 +579,24 @@ class TestSingleAtomVelocityDirectionModifier(object):
             assert_almost_equal(sum([v**2 for v in new_v]),
                                 sum([v**2 for v in old_v]))
 
-        new_omm_snap = self.openmm_modifier(self.openmm_snap)
-        n_atoms = len(self.openmm_snap.coordinates)
-        assert_array_almost_equal(new_omm_snap.coordinates,
-                                  self.openmm_snap.coordinates)
-        new_vel = new_omm_snap.velocities
-        old_vel = self.openmm_snap.velocities
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
-                    for i in range(len(new_vel))]
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
-                    for i in range(len(new_vel))]
-        assert_equal(Counter(same_vel), Counter({True: n_atoms-1, False: 1}))
-        u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
-        for new_v, old_v in zip(new_vel, old_vel):
-            assert_almost_equal(
-                sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
-                sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
-            )
+        if omt:  # TODO: separate out tests
+            new_omm_snap = self.openmm_modifier(self.openmm_snap)
+            n_atoms = len(self.openmm_snap.coordinates)
+            assert_array_almost_equal(new_omm_snap.coordinates,
+                                      self.openmm_snap.coordinates)
+            new_vel = new_omm_snap.velocities
+            old_vel = self.openmm_snap.velocities
+            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                        for i in range(len(new_vel))]
+            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+                        for i in range(len(new_vel))]
+            assert_equal(Counter(same_vel), Counter({True: n_atoms-1, False: 1}))
+            u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
+            for new_v, old_v in zip(new_vel, old_vel):
+                assert_almost_equal(
+                    sum([(v**2).value_in_unit(u_vel_sq) for v in new_v]),
+                    sum([(v**2).value_in_unit(u_vel_sq) for v in old_v])
+                )
 
     def test_call_with_linear_momentum_fix(self):
         toy_modifier = SingleAtomVelocityDirectionModifier(
@@ -583,17 +611,18 @@ class TestSingleAtomVelocityDirectionModifier(object):
         double_ke = sum(sum(momenta * velocities))
         assert_almost_equal(double_ke, 86.0)
 
-        u_vel = old_div(u.nanometer, u.picosecond)
-        u_mass = old_div(u.dalton, u.AVOGADRO_CONSTANT_NA)
+        if omt:  # TODO: separate out tests
+            u_vel = old_div(u.nanometer, u.picosecond)
+            u_mass = old_div(u.dalton, u.AVOGADRO_CONSTANT_NA)
 
-        openmm_modifier = SingleAtomVelocityDirectionModifier(
-            delta_v=1.2*u_vel,
-            remove_linear_momentum=False
-        )
-        new_openmm_snap = openmm_modifier(self.openmm_snap)
-        velocities = new_openmm_snap.velocities
-        momenta = velocities * new_openmm_snap.masses[:, np.newaxis]
-        zero_momentum = 0 * u_vel * u_mass
-        total_momenta = sum(momenta, zero_momentum)
-        assert_array_almost_equal(total_momenta,
-                                  np.array([0.0]*3) * u_vel * u_mass)
+            openmm_modifier = SingleAtomVelocityDirectionModifier(
+                delta_v=1.2*u_vel,
+                remove_linear_momentum=False
+            )
+            new_openmm_snap = openmm_modifier(self.openmm_snap)
+            velocities = new_openmm_snap.velocities
+            momenta = velocities * new_openmm_snap.masses[:, np.newaxis]
+            zero_momentum = 0 * u_vel * u_mass
+            total_momenta = sum(momenta, zero_momentum)
+            assert_array_almost_equal(total_momenta,
+                                      np.array([0.0]*3) * u_vel * u_mass)

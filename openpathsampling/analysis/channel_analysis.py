@@ -21,12 +21,6 @@ class ChannelAnalysis(StorableNamedObject):
     replica: int
         replica ID to analyze from the steps, default is 0.
 
-    Attributes
-    ----------
-    treat_multiples
-    switching_matrix
-    residence_times
-    total_time
     """
     def __init__(self, steps, channels, replica=0):
         super(ChannelAnalysis, self).__init__()
@@ -138,16 +132,18 @@ class ChannelAnalysis(StorableNamedObject):
     @property
     def treat_multiples(self):
         """
-        string :
-            method for handling paths that match multiple channels. Allowed
-            values are
-            * 'newest': use the most recent channel entered
-            * 'oldest': use the least recent channel entered
-            * 'multiple': treat multiple channels as a new type of channel,
-               e.g., 'a' and 'b' because 'a,b'
-            * 'all': treat each channel individually, despite overlaps. For
-              switching, this is the same as ???. For status, this is the
-              same as 'multiple'
+        string : method for handling paths that match multiple channels
+
+        Allowed values are:
+
+        * 'newest': use the most recent channel entered
+        * 'oldest': use the least recent channel entered
+        * 'multiple': treat multiple channels as a new type of channel, e.g.,
+          'a' and 'b' becomes 'a,b'
+        * 'all': treat each channel individually, despite overlaps. For
+          switching, this is the same as ???. For status, this is the
+          same as 'multiple'
+
         """
         return self._treat_multiples
 
@@ -430,7 +426,7 @@ class ChannelAnalysis(StorableNamedObject):
     @property
     def residence_times(self):
         """
-        dict {string: list of int} :
+        Dict[string, List[int]] :
             number of steps spent in each channel for each "stay" in that
             channel; allows calculations of distribution properties. Depends
             on ``treat_multiples``, see details there.
@@ -446,7 +442,7 @@ class ChannelAnalysis(StorableNamedObject):
     @property
     def total_time(self):
         """
-        dict {string: int} :
+        Dict[string, int] :
             total number of steps spent in each channel for each "stay" in
             that channel. Depends on ``treat_multiples``, see details there.
         """

@@ -8,6 +8,7 @@ Snapshots
    :toctree: ../api/generated/
 
    BaseSnapshot
+   SnapshotDescriptor
 
 
 Trajectories

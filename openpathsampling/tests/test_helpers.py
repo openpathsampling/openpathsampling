@@ -10,7 +10,19 @@ from functools import wraps
 
 import numpy as np
 import numpy.testing as npt
-import simtk.unit as u
+
+try:
+    import simtk.unit as u
+except ImportError:
+    u = None
+
+from openpathsampling.integration_tools import is_simtk_quantity_type
+
+try:
+    import mdtraj as md
+except ImportError:
+    md = None
+
 from nose.tools import assert_equal, assert_in, assert_true
 #from nose.tools import assert_items_equal
 from pkg_resources import resource_filename
@@ -25,6 +37,11 @@ from openpathsampling.engines import DynamicsEngine
 def make_1d_traj(coordinates, velocities=None, engine=None):
     if velocities is None:
         velocities = [1.0]*len(coordinates)
+    try:
+        _ = len(velocities)
+    except TypeError:
+        velocities = [velocities] * len(coordinates)
+
     if engine is None:
         engine = toys.Engine(
             {},
@@ -90,13 +107,13 @@ class MoverWithSignature(paths.PathMover):
 
 class CalvinistDynamics(DynamicsEngine):
     def __init__(self, predestination):
-        topology = Topology(n_atoms=1, n_spatial=1)
-        engine = peng.tools.TopologyEngine(topology)
+        self.topology = Topology(n_atoms=1, n_spatial=1)
+        # engine = peng.tools.TopologyEngine(topology)
 
         super(CalvinistDynamics, self).__init__(options={'n_frames_max': 12})
         self.predestination = make_1d_traj(coordinates=predestination,
                                            velocities=[1.0]*len(predestination),
-                                           engine=engine
+                                           engine=self
                                           )
         self.frame_index = None
 
@@ -192,7 +209,7 @@ def reorder_ensemble_signature(sig, match_with):
         return found_sigs[0]
 
 def assert_close_unit(v1, v2, *args, **kwargs):
-    if type(v1) is u.Quantity:
+    if is_simtk_quantity_type(v1):
         assert(v1.unit == v2.unit)
         npt.assert_allclose(v1._value, v2._value, *args, **kwargs)
     else:
@@ -301,3 +318,12 @@ def assert_frame_equal(truth, beauty):
                 assert_true(np.isnan(beauty_val))
             else:
                 assert_equal(truth_val, beauty_val)
+
+def A2BEnsemble(volume_a, volume_b, trusted=True):
+    # this is a little replacement for the same name that used to be in
+    # EnsembleFactory. It was only used in tests.
+    return paths.SequentialEnsemble([
+        paths.AllInXEnsemble(volume_a) & paths.LengthEnsemble(1),
+        paths.AllOutXEnsemble(volume_a | volume_b),
+        paths.AllInXEnsemble(volume_b) & paths.LengthEnsemble(1)
+    ])

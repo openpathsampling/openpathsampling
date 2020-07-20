@@ -6,7 +6,7 @@ from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal)
 from nose.plugins.skip import SkipTest
 from .test_helpers import assert_items_almost_equal, assert_items_equal
-
+import pytest
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
@@ -108,7 +108,7 @@ class TestHistogram(object):
         assert_equal(histo.bin_widths, self.bin_widths)
         assert_items_equal(histo.xvals("l"), [1.0, 1.5, 2.0, 2.5, 3.0, 3.5])
         assert_items_equal(histo.xvals("r"), [1.5, 2.0, 2.5, 3.0, 3.5, 4.0])
-        assert_items_equal(histo.xvals("m"), 
+        assert_items_equal(histo.xvals("m"),
                            [1.25, 1.75, 2.25, 2.75, 3.25, 3.75])
 
 
@@ -130,12 +130,22 @@ class TestHistogram(object):
         hist = histo.histogram(self.data)
         cumulative = list(histo.cumulative(None).values())
         assert_items_almost_equal(cumulative, [5.0, 5.0, 7.0, 8.0, 9.0, 10.0])
-        assert_items_almost_equal(histo.cumulative(maximum=1.0), 
+        assert_items_almost_equal(histo.cumulative(maximum=1.0),
                                   [0.5, 0.5, 0.7, 0.8, 0.9, 1.0])
+
+    def test_cumulative_all_zero_warn(self):
+        histo = Histogram(bin_width=0.5, bin_range=(1.0, 3.5))
+        histo._histogram = collections.Counter({(0,): 0, (1,): 0})
+        with pytest.warns(UserWarning, match=r"No non-zero"):
+            cumul = histo.cumulative()
+
+        assert cumul(2.13) == 0
+        for val in cumul.values():
+            assert val == 0
 
     def test_reverse_cumulative(self):
         histo = Histogram(n_bins=5)
-        hist = histo.histogram(self.data)
+        histo.histogram(self.data)
         rev_cumulative = histo.reverse_cumulative(maximum=None)
         assert_items_almost_equal(list(rev_cumulative.values()),
                                   [10, 5, 5, 3, 2, 1])
@@ -143,6 +153,19 @@ class TestHistogram(object):
         assert_items_almost_equal(list(rev_cumulative.values()),
                                   [1.0, 0.5, 0.5, 0.3, 0.2, 0.1])
 
+    def test_reverse_cumulative_all_zero_warn(self):
+        histo = Histogram(bin_width=0.5, bin_range=(1.0, 3.5))
+        histo._histogram = collections.Counter({(0,): 0, (1,): 0})
+        with pytest.warns(UserWarning, match=r"No non-zero"):
+            rcumul = histo.reverse_cumulative()
+        assert rcumul(3.12) == 0
+        for val in rcumul.values():
+            assert val == 0
+
+    def test_left_bin_error(self):
+        histo = Histogram(bin_width=0.5, bin_range=(-1.0, 3.5))
+        histo.histogram([3.5])
+        assert histo.reverse_cumulative() != 0
 
 class TestSparseHistogram(object):
     def setup(self):

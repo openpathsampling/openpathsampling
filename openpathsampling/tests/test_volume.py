@@ -13,6 +13,8 @@ import unittest
 
 import openpathsampling.volume as volume
 
+import openpathsampling as paths
+
 class Identity2(CallIdentity):
     def __str__(self):
         return "Id2"
@@ -160,6 +162,8 @@ class TestCVRangeVolume(object):
         assert_equal((~volA).__str__(), "(not {x|Id(x) in [-0.5, 0.5]})")
 
     def test_unit_support(self):
+        if not paths.integration_tools.HAS_SIMTK_UNIT:
+            raise SkipTest
         import simtk.unit as u
 
         vol = volume.CVDefinedVolume(
@@ -357,47 +361,6 @@ class TestCVRangeVolumePeriodic(object):
         assert_equal(self.pvolE - self.pvolA_,
                      volume.PeriodicCVDefinedVolume(op_id, -100, 75))
 
-
-class TestVolumeFactory(object):
-    def test_check_minmax(self):
-        minmax1 = volume.VolumeFactory._check_minmax(0, [2, 2])
-        minmax2 = volume.VolumeFactory._check_minmax([0, 0], 2)
-        minmax3 = volume.VolumeFactory._check_minmax([0, 0], [2, 2])
-        assert_equal(minmax1, minmax2)
-        assert_equal(minmax2, minmax3)
-        # for the eventual case that minvals or maxvals is an integer
-
-    @raises(ValueError)
-    def test_minmax_length_mismatch_error(self):
-        volume.VolumeFactory._check_minmax([0], [1, 2])
-
-    @raises(ValueError)
-    def test_minmax_min_not_list(self):
-        volume.VolumeFactory._check_minmax('a', 2)
-
-    @raises(ValueError)
-    def test_minmax_max_not_list(self):
-        volume.VolumeFactory._check_minmax(0, 'a')
-
-    def test_CVRangeVolumeSet(self):
-        mins = [-1.5, -3.5]
-        maxs = [2.0, 4.0]
-        lv0 = volume.CVDefinedVolume(op_id, mins[0], maxs[0])
-        lv1 = volume.CVDefinedVolume(op_id, mins[1], maxs[1])
-        assert_equal(
-            [lv0, lv1],
-            volume.VolumeFactory.CVRangeVolumeSet(op_id, mins, maxs)
-        )
-
-    def test_CVRangeVolumePeriodicSet(self):
-        mins = [-1.5, -3.5]
-        maxs = [2.0, 4.0]
-        lv0 = volume.PeriodicCVDefinedVolume(op_id, mins[0], maxs[0])
-        lv1 = volume.PeriodicCVDefinedVolume(op_id, mins[1], maxs[1])
-        assert_equal(
-            [lv0, lv1],
-            volume.VolumeFactory.CVRangeVolumePeriodicSet(op_id, mins, maxs)
-        )
 
 class TestAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")

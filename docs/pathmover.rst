@@ -2,13 +2,8 @@
 
 .. currentmodule:: openpathsampling.pathmover
 
-PathMover API
-=============
-
-:class:`openpathsampling.PathMover`
-
-    >>> import openpathsampling as paths
-    >>> mover = paths.PathMover()
+PathMovers
+==========
 
 Abstract class
 --------------
@@ -64,7 +59,6 @@ Swapping movers
     :toctree: api/generated/
 
     ReplicaExchangeMover
-    NeighborEnsembleReplicaExchange
     StateSwapMover
 
 Logical movers
@@ -90,13 +84,3 @@ Pre-made combined movers
 
     MinusMover
     OneWayShootingMover
-    MultipleSetMinusMover
-
-mover factory
--------------
-.. autosummary::
-    :toctree: api/generated/
-
-    PathMoverFactory.NearestNeighborRepExSet
-    PathMoverFactory.OneWayShootingSet
-    PathMoverFactory.TwoWayShootingSet

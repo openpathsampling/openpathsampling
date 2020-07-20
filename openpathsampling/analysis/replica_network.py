@@ -1,9 +1,9 @@
+import collections
 import openpathsampling as paths
 import pandas as pd
 import scipy.sparse
 from scipy.sparse.csgraph import reverse_cuthill_mckee
 import networkx as nx
-
 import logging
 logger = logging.getLogger(__name__)
 
@@ -23,85 +23,101 @@ class ReplicaNetwork(object):
         self.scheme = scheme
         self.ensembles = scheme.network.all_ensembles
 
-        self.ensemble_to_number = {}
-        self.ensemble_to_string = {}
-        self.analysis = { } 
-        self.traces = { } 
-        self.transitions = { }
+        # set defaults
+        self._ensemble_to_string = {}
+        self.ensemble_order = scheme.network.all_ensembles
 
-        self.initial_order()
-        self.analyze_traces(steps)
-        self.analyze_exchanges(steps)
+        self.traces = self._traces_from_steps(steps)
+        self.transitions = self._transitions_from_traces(self.traces)
+        self.analysis = self._analysis_from_steps(steps)
 
 
-    def set_labels(self, ens2str=None):
-        """
-        Sets label dictionaries. Requires that you run self.initial_order
-        for something first.
-
-        Parameters
-        ----------
-        ens2str : dict of { Ensemble : string } pairs
-            conversion of Ensemble to string label
-        """
-        # ensemble_to_string : returns a string value for the ensemble
-        # ensemble_to_number : returns a non-neg int value (column order)
-        if ens2str == None: 
-            if self.ensemble_to_string == {}:
-                ens2str = {k : str(self.ensemble_to_number[k]) 
-                           for k in self.ensemble_to_number.keys()}
-            else:
-                ens2str = self.ensemble_to_string
-        self.ensemble_to_string = ens2str
-        self.string_to_ensemble = {self.ensemble_to_string[k] : k 
-                                   for k in self.ensemble_to_string.keys()}
-        self.number_to_string = {
-            self.ensemble_to_number[k] : self.ensemble_to_string[k]
-            for k in self.ensemble_to_number.keys()
+    def to_dict(self):
+        dct = {
+            'scheme': self.scheme,
+            'replicas': self.replicas,
+            'ensembles': self.ensembles,
+            'ensemble_order': self.ensemble_order,
+            'ensemble_to_string': self._ensemble_to_string,
+            'traces': self.traces,
+            'transitions': self.transitions,
+            'analysis': self.analysis
         }
-        self.string_to_number = {self.number_to_string[k] : k 
-                                   for k in self.number_to_string.keys()}
-        self.n_ensembles = len(self.ensemble_to_number.keys())
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        obj = cls.__new__()
+        obj.scheme = dct['scheme']
+        obj.replicas = dct['replicas']
+        obj.n_replcias = len(obj.replicas)
+        obj.ensembles = dct['ensembles']
+        obj.ensemble_order = dct['ensemble_order']
+        obj._ensemble_to_string = dct['ensemble_to_string']
+        obj.traces = dct['traces']
+        obj.transitions = dct['transitions']
+        obj.analysis = dct['analysis']
+        return obj
 
 
-    def initial_order(self, index_order=None):
-        """
-        Sets order-based dictionaries.
+    @property
+    def number_to_ensemble(self):
+        return {i: ens for (i, ens) in enumerate(self.ensemble_order)}
 
-        Parameters
-        ----------
-        index_order : list of Ensembles
-            the ensembles in the desired order. Defaults order in
-            self.ensembles
-        """
-        # dictionaries to be used to translate between orderings (these are
-        # the defaults)
-        if index_order == None:
-            ensemble_to_number = {ens : self.ensembles.index(ens) 
-                                  for ens in self.ensembles}
-        else:
-            ensemble_to_number = {ens : index_order.index(ens) 
-                                  for ens in index_order}
-        self.ensemble_to_number = ensemble_to_number
-        self.number_to_ensemble = {ensemble_to_number[k] : k 
-                                   for k in ensemble_to_number.keys()}
-        self.set_labels()
-        self.n_ensembles = len(self.ensemble_to_number)
-        return ensemble_to_number
+    @property
+    def ensemble_to_number(self):
+        return {ens: i for (i, ens) in enumerate(self.ensemble_order)}
 
-    def analyze_exchanges(self, steps=None, force=False):
-        if force == False and self.analysis != { }:
-            return (self.analysis['n_trials'], self.analysis['n_accepted'])
+    @property
+    def string_to_ensemble(self):
+        return {v: k for (k, v) in self.ensemble_to_string.items()}
+
+    @property
+    def n_ensembles(self):
+        return len(self.ensemble_order)
+
+    @property
+    def number_to_string(self):
+        ens2str = self.ensemble_to_string
+        num2ens = self.number_to_ensemble
+        return {i: ens2str[ens] for (i, ens) in num2ens.items()}
+
+    @property
+    def string_to_number(self):
+        str2ens = self.string_to_ensemble
+        ens2num = self.ensemble_to_number
+        return {s: ens2num[ens] for (s, ens) in str2ens.items()}
+
+    @property
+    def ensemble_order(self):
+        return self._ensemble_order
+
+    @ensemble_order.setter
+    def ensemble_order(self, value):
+        self._ensemble_order = value
+        default_names = {ens: ens.name for ens in value}
+        default_names.update(self.ensemble_to_string)
+        self.ensemble_to_string = default_names
+
+    @property
+    def ensemble_to_string(self):
+        return self._ensemble_to_string
+
+    @ensemble_to_string.setter
+    def ensemble_to_string(self, value):
+        self._ensemble_to_string.update(value)
+
+    def _analysis_from_steps(self, steps=None):
         if steps is None:
             raise RuntimeError("No steps given to analyze!")
         n_trials = 0
-        self.analysis['n_trials'] = {}
-        self.analysis['n_accepted'] = {}
+        analysis = {}
+        analysis['n_trials'] = {}
+        analysis['n_accepted'] = {}
         prev = None
         for step in steps:
-            pmc = step.change
-
-            if pmc.canonical.mover is not None and pmc.canonical.mover.is_ensemble_change_mover:
+            canonical_mover = step.change.canonical.mover
+            if canonical_mover and canonical_mover.is_ensemble_change_mover:
                 n_trials += 1
                 hops = []
                 for old in prev.active:
@@ -111,42 +127,61 @@ class ReplicaNetwork(object):
                         hops.append((old.ensemble, new[old.replica].ensemble))
                 for hop in hops:
                     try:
-                        self.analysis['n_accepted'][hop] += 1
+                        analysis['n_accepted'][hop] += 1
                     except KeyError:
-                        self.analysis['n_accepted'][hop] = 1
+                        analysis['n_accepted'][hop] = 1
 
             prev = step
 
         # TODO: n_trials no longer needs to be a dict, but other functions
         # expect that in output, so we return it
-        for key in self.analysis['n_accepted'].keys():
-            self.analysis['n_trials'][key] = n_trials
-        return (self.analysis['n_trials'], self.analysis['n_accepted'])
+        for key in analysis['n_accepted'].keys():
+            analysis['n_trials'][key] = n_trials
+        return analysis['n_trials'], analysis['n_accepted']
 
 
-    def analyze_traces(self, steps, force=False):
+    def _traces_from_steps(self, steps):
         """
         Calculates all the traces (fixed replica or fixed ensemble).
-
-        Populates the dictionary at self.traces.
         """
-        if force == False and self.traces != { }:
-            return self.traces
-        for ensemble in [s.ensemble for s in steps[0].active]:
-            self.traces[ensemble] = condense_repeats(
-                trace_replicas_for_ensemble(ensemble, steps)
-            )
-        for replica in [s.replica for s in steps[0].active]:
-            self.traces[replica] = condense_repeats(
-                trace_ensembles_for_replica(replica, steps)
-            )
-        return self.traces
+        full_traces = collections.defaultdict(list)
+        for step in steps:
+            for sample in step.active:
+                ens = sample.ensemble
+                rep = sample.replica
+                full_traces[ens].append(rep)
+                full_traces[rep].append(ens)
 
+        traces = {k: condense_repeats(full_traces[k]) for k in full_traces}
+        return traces
+
+
+    def _transitions_from_traces(self, traces):
+        """
+        Calculate the transitions based on the trace of a given replica.
+
+        This gives results normalized to *all* move types.
+
+        Parameters
+        ----------
+        traces: dict
+        """
+        transitions = {}
+        for replica in traces:
+            trace = traces[replica]
+            hops = [(trace[i][0], trace[i+1][0]) for i in range(len(trace)-1)]
+
+            for hop in hops:
+                try:
+                    transitions[hop] += 1
+                except KeyError:
+                    transitions[hop] = 1
+        return transitions
 
 
     def reorder_matrix(self, matrix, index_order):
         """Return dataframe with matrix row/columns in index_order.
-        
+
         Parameters
         ----------
         matrix : a SciPy COO sparse matrix
@@ -162,7 +197,7 @@ class ReplicaNetwork(object):
         """
         #""" matrix must be a coo_matrix (I think): do other have same `data`
         #attrib?"""
-        if index_order == None:
+        if index_order is None:
             # reorder based on RCM from scipy.sparse.csgraph
             rcm_perm = reverse_cuthill_mckee(matrix.tocsr())
             rev_perm_dict = {k : rcm_perm.tolist().index(k) for k in rcm_perm}
@@ -170,12 +205,12 @@ class ReplicaNetwork(object):
             perm_j = [rev_perm_dict[jj] for jj in matrix.col]
 
             new_matrix = scipy.sparse.coo_matrix(
-                (matrix.data, (perm_i, perm_j)), 
+                (matrix.data, (perm_i, perm_j)),
                 shape=(self.n_ensembles, self.n_ensembles)
             )
             reordered_labels = [self.number_to_string[k] for k in rcm_perm]
         else:
-            reordered_labels = [self.number_to_string[k] 
+            reordered_labels = [self.number_to_string[k]
                                 for k in self.number_to_string.keys()]
             new_matrix = matrix
 
@@ -195,23 +230,22 @@ class ReplicaNetwork(object):
         ens_j : list of ensembles
             the "to" ensemble
         data : list of floats
-            the data for the transition ensA->ensB, such that 
+            the data for the transition ensA->ensB, such that
             matrix[ensA, ensB] = data[k] with ens_i[k]=ensA, ens_j[k]=ensB
         index_order : order of ensembles for output
             see `reorder_matrix`
         """
-        self.initial_order(index_order)
         i = [self.ensemble_to_number[e] for e in ens_i]
         j = [self.ensemble_to_number[e] for e in ens_j]
         matrix = scipy.sparse.coo_matrix(
-            (data, (i, j)), 
+            (data, (i, j)),
             shape=(self.n_ensembles, self.n_ensembles)
         )
         df = self.reorder_matrix(matrix, index_order)
         return (matrix, df)
 
 
-    def transition_matrix(self, steps=None, index_order=None, force=False):
+    def transition_matrix(self, index_order=None, force=False):
         """
         Create the transition matrix.
 
@@ -229,7 +263,7 @@ class ReplicaNetwork(object):
         pandas.DataFrame
             transition matrix
         """
-        (n_try, n_acc) = self.analyze_exchanges(steps, force)
+        (n_try, n_acc) = self.analysis
         data = []
         for k in n_try.keys():
             try:
@@ -264,7 +298,7 @@ class ReplicaNetwork(object):
         pandas.DataFrame
             mixing matrix
         """
-        (n_try, n_acc) = self.analyze_exchanges(steps, force)
+        (n_try, n_acc) = self.analysis
         data = []
         for k in n_try.keys():
             try:
@@ -283,36 +317,7 @@ class ReplicaNetwork(object):
         )
         return df
 
-
-    def transitions_from_traces(self, steps=None, force=False):
-        """
-        Calculate the transitions based on the trace of a given replica.
-
-        This gives results normalized to *all* move types.
-
-        Parameters
-        ----------
-        steps : iterable of :class:`.MCStep`
-            input data
-        force : bool (False)
-            if True, recalculate cached values
-        """
-        traces = self.analyze_traces(steps, force)
-        transitions = {}
-        for replica in [s.replica for s in steps[0].active]:
-            trace = traces[replica]
-            hops = [(trace[i][0], trace[i+1][0]) for i in range(len(trace)-1)]
-
-            for hop in hops:
-                try:
-                    transitions[hop] += 1
-                except KeyError:
-                    transitions[hop] = 1
-        self.transitions = transitions
-        return transitions
-
-
-    def flow(self, bottom, top, steps=None, force=False):
+    def flow(self, bottom, top, included_ensembles=None):
         """
         Replica "flow" between ensembles `bottom` and `top`.
 
@@ -338,9 +343,11 @@ class ReplicaNetwork(object):
             Katzgraber, Trebst, Huse, and Troyer. J. Stat. Mech. 2006,
             P03018 (2006). doi:10.1088/1742-5468/2006/03/P03018
         """
-        traces = self.analyze_traces(steps, force)
+        if included_ensembles is None:
+            included_ensembles = self.ensembles
+        traces = self.traces
         n_up = { ens : 0 for ens in self.ensembles }
-        n_visit = { ens : 0 for ens in self.ensembles } 
+        n_visit = { ens : 0 for ens in self.ensembles }
         for replica in self.replicas:
             trace = self.traces[replica]
             direction = 0
@@ -356,19 +363,19 @@ class ReplicaNetwork(object):
         self._flow_up = n_up
         self._flow_count = n_visit
         as_dict =  {e : float(n_up[e])/n_visit[e] if n_visit[e] > 0 else 0.0
-                    for e in self.ensembles}
+                    for e in included_ensembles}
         return as_dict
 
-    def flow_pd(self, bottom, top, steps=None, force=False):
+    def flow_pd(self, bottom, top):
         flow_dict = self.flow(bottom, top, steps, force)
         inverted = {flow_dict[k]: k for k in flow_dict.keys()}
         sorted_inverted = list(reversed(sorted(inverted.keys())))
-        re_keyed = {k: sorted_inverted[k] 
+        re_keyed = {k: sorted_inverted[k]
                     for k in range(len(sorted_inverted))}
         return pd.Series(re_keyed)
 
 
-    def trips(self, bottom, top, steps=None, force=False):
+    def trips(self, bottom, top):
         """
         Calculate round trips, up trips, and down trips.
 
@@ -393,7 +400,7 @@ class ReplicaNetwork(object):
             keys "up", "down", "round", pointing to values which are a list
             of the lengths of each trip of that type
         """
-        traces = self.analyze_traces(steps, force)
+        traces = self.traces
         down_trips = []
         up_trips = []
         round_trips = []
@@ -446,7 +453,7 @@ class ReplicaNetworkGraph(object):
         replica exchange network object
     """
     def __init__(self, repx_network):
-        (n_try, n_acc) = repx_network.analyze_exchanges()
+        (n_try, n_acc) = repx_network.analysis
         self.graph = nx.Graph()
         n_accs_adj = {}
         for k in n_try.keys():
@@ -456,16 +463,15 @@ class ReplicaNetworkGraph(object):
                 n_accs_adj[k] = 0
 
         largest_weight = max(n_accs_adj.values())
-        
+
         for entry in n_try.keys():
             self.graph.add_edge(
-                entry[0], entry[1], 
+                entry[0], entry[1],
                 weight=float(n_accs_adj[entry])/largest_weight
             )
-        
-        self.weights = [10*self.graph[u][v]['weight'] 
+
+        self.weights = [10*self.graph[u][v]['weight']
                         for u,v in self.graph.edges()]
-        
 
     def draw(self, layout="graphviz"):
         """
@@ -475,7 +481,7 @@ class ReplicaNetworkGraph(object):
         ----------
         layout : string ("graphviz")
             layout method. Default is "graphviz", which also requires
-            installation of pygraphviz. 
+            installation of pygraphviz.
         """
         if layout == "graphviz":
             pos = nx.graphviz_layout(self.graph)
@@ -496,12 +502,12 @@ class ReplicaNetworkGraph(object):
                 minus.append(node)
             else:
                 msouter.append(node)
-        
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal, 
+
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=normal,
                                node_color='r', node_size=500)
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=minus, 
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=minus,
                                node_color='b', node_size=500)
-        nx.draw_networkx_nodes(self.graph, pos, nodelist=msouter, 
+        nx.draw_networkx_nodes(self.graph, pos, nodelist=msouter,
                                node_color='g', node_size=500)
 
         nx.draw_networkx_edges(self.graph, pos, width=self.weights)
@@ -515,7 +521,7 @@ def trace_ensembles_for_replica(replica, steps):
 
     Parameters
     ----------
-    replica : 
+    replica :
         replica ID
     steps : iterable of :class:`.MCStep`
         input data
@@ -525,11 +531,6 @@ def trace_ensembles_for_replica(replica, steps):
     list
         list of ensembles
     """
-    # trace = []
-    # for step in steps:
-        # sset = step.active
-        # trace.append(sset[replica].ensemble)
-    # return trace
     return [s.active[replica].ensemble for s in steps]
 
 
@@ -556,7 +557,7 @@ def trace_replicas_for_ensemble(ensemble, steps):
     return trace
 
 
-def condense_repeats(ll):
+def condense_repeats(ll, use_is=True):
     """
     Count the number of consecutive repeats in a list.
 
@@ -574,14 +575,14 @@ def condense_repeats(ll):
         the element from the list, and repeats is the number of consecutive
         times it appeared
     """
-    count = 0 
+    count = 0
     old = None
     vals = []
     for e in ll:
-        if e == old:
+        if (use_is and e is old) or (not use_is and e == old):
             count += 1
         else:
-            if old != None:
+            if old is not None:
                 vals.append((old, count))
             count = 1
             old = e

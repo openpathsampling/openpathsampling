@@ -1,9 +1,8 @@
 package:
-  name: openpathsampling-dev
-  version: "0.9.5"
+  name: openpathsampling
+  version: "1.3.0.dev0"
 
 source:
-#  git_url: ../../.git
   path: ../../
 
 build:
@@ -15,7 +14,6 @@ requirements:
     - python
     - future
     - setuptools
-    - numpy
 
   run:
     - python
@@ -32,8 +30,9 @@ requirements:
     - networkx
     - matplotlib
     - ujson
-    #- msmbuilder
+    - psutil
     - pyemma
+    - py-plumed
 
 test:
   imports:
