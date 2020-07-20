@@ -477,6 +477,18 @@ class ConditionalSequentialMoveChange(SequentialMoveChange):
                MoveChange._indent('\n'.join(map(str, self.subchanges)))
 
 
+class NonCanonicalConditionalSequentialMoveChange(
+                                            ConditionalSequentialMoveChange):
+    """ Special move change for reactive flux simulation.
+
+    This move change inherits from :class:`.ConditionalSequentialMoveChange`
+    and returns the outcome of the last subchange.
+    """
+    @property
+    def canonical(self):
+        return self.subchanges[-1]
+
+
 class SubMoveChange(MoveChange):
     """
     A helper MoveChange that represents the application of a submover.
