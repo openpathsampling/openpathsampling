@@ -7,7 +7,7 @@ from builtins import object
 from .test_helpers import (raises_with_message_like, data_filename,
                            CalvinistDynamics, make_1d_traj,
                            assert_items_equal)
-from nose.tools import (assert_equal, assert_not_equal, raises,
+from nose.tools import (assert_equal, raises,
                         assert_almost_equal, assert_true)
 # from nose.plugins.skip import SkipTest
 
@@ -24,10 +24,11 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.engines').setLevel(logging.CRITICAL)
 
+
 class TestAbstract(object):
     @raises_with_message_like(TypeError, "Can't instantiate abstract class")
     def test_abstract_volume(self):
-        mover = PathSimulator()
+        PathSimulator()
 
 
 class TestFullBootstrapping(object):
@@ -70,11 +71,11 @@ class TestFullBootstrapping(object):
         bootstrap_AB_maxlength = paths.FullBootstrapping(
             transition=self.tisAB,
             snapshot=self.snapA,
-            initial_max_length = 3,
+            initial_max_length=3,
             engine=engine
         )
         bootstrap_AB_maxlength.output_stream = open(os.devnull, "w")
-        gs = bootstrap_AB_maxlength.run(build_attempts=1)
+        bootstrap_AB_maxlength.run(build_attempts=1)
 
     def test_first_traj_ensemble(self):
         traj_starts_in = make_1d_traj([-0.2, -0.1, 0.1, -0.1])
@@ -147,7 +148,7 @@ class TestFullBootstrapping(object):
         bootstrap2.output_stream = open(os.devnull, "w")
         # make sure this is where we get the error
         try:
-            gs2 = bootstrap2.run()
+            bootstrap2.run()
         except RuntimeError:
             pass
 
@@ -160,7 +161,7 @@ class TestFullBootstrapping(object):
             engine=engine,
         )
         bootstrap.output_stream = open(os.devnull, "w")
-        gs = bootstrap.run(max_ensemble_rounds=1)
+        bootstrap.run(max_ensemble_rounds=1)
 
 
 class TestShootFromSnapshotsSimulation(object):
@@ -172,7 +173,7 @@ class TestShootFromSnapshotsSimulation(object):
         # As a test system, let's use 1D motion on a flat potential. If the
         # velocity is positive, you right the state on the right. If it is
         # negative, you hit the state on the left.
-        pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
+        pes = toys.LinearSlope(m=[0.0], c=[0.0])  # flat line
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
         integrator = toys.LeapfrogVerletIntegrator(0.1)
         options = {
@@ -184,7 +185,7 @@ class TestShootFromSnapshotsSimulation(object):
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
-        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV("Id", lambda snap: snap.coordinates[0][0])
         starting_volume = paths.CVDefinedVolume(cv, -0.01, 0.01)
         forward_ensemble = paths.LengthEnsemble(5)
         backward_ensemble = paths.LengthEnsemble(3)
@@ -235,7 +236,7 @@ class TestCommittorSimulation(object):
         # As a test system, let's use 1D motion on a flat potential. If the
         # velocity is positive, you right the state on the right. If it is
         # negative, you hit the state on the left.
-        pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
+        pes = toys.LinearSlope(m=[0.0], c=[0.0])  # flat line
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
         integrator = toys.LeapfrogVerletIntegrator(0.1)
         options = {
@@ -247,12 +248,12 @@ class TestCommittorSimulation(object):
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
-        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV("Id", lambda snap: snap.coordinates[0][0])
         self.left = paths.CVDefinedVolume(cv, float("-inf"), -1.0)
         self.right = paths.CVDefinedVolume(cv, 1.0, float("inf"))
-        self.state_labels = {"Left" : self.left,
-                             "Right" : self.right,
-                             "None" : ~(self.left | self.right)}
+        self.state_labels = {"Left": self.left,
+                             "Right": self.right,
+                             "None": ~(self.left | self.right)}
 
         randomizer = paths.NoModification()
 
@@ -295,7 +296,7 @@ class TestCommittorSimulation(object):
     def test_committor_run(self):
         self.simulation.run(n_per_snapshot=20)
         assert_equal(len(self.simulation.storage.steps), 20)
-        counts = {'fwd' : 0, 'bkwd' : 0}
+        counts = {'fwd': 0, 'bkwd': 0}
         for step in self.simulation.storage.steps:
             step.active.sanity_check()  # traj is in ensemble
             traj = step.active[0].trajectory
@@ -402,10 +403,10 @@ class TestCommittorSimulation(object):
         sim.output_stream = open(os.devnull, 'w')
         sim.run(50)
         assert_equal(len(sim.storage.steps), 50)
-        counts = {'None-Right' : 0,
-                  'Left-None' : 0,
-                  'None-Left' : 0,
-                  'Right-None' : 0}
+        counts = {'None-Right': 0,
+                  'Left-None': 0,
+                  'None-Left': 0,
+                  'Right-None': 0}
         for step in sim.storage.steps:
             step.active.sanity_check()  # traj is in ensemble
             traj = step.active[0].trajectory
@@ -422,6 +423,7 @@ class TestCommittorSimulation(object):
         assert_true(counts['None-Right'] > 0)
         assert_equal(sum(counts.values()), 50)
 
+
 class TestDirectSimulation(object):
     def setup(self):
         pes = toys.HarmonicOscillator(A=[1.0], omega=[1.0], x0=[0.0])
@@ -436,7 +438,7 @@ class TestDirectSimulation(object):
         self.snap0 = toys.Snapshot(coordinates=np.array([[0.0]]),
                                    velocities=np.array([[1.0]]),
                                    engine=self.engine)
-        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV("Id", lambda snap: snap.coordinates[0][0])
         self.cv = cv
         self.center = paths.CVDefinedVolume(cv, -0.2, 0.2)
         self.interface = paths.CVDefinedVolume(cv, -0.3, 0.3)
@@ -492,8 +494,8 @@ class TestDirectSimulation(object):
                       (self.center, self.extra): 1,
                       (self.extra, self.center): 1})
         assert_equal(self.sim.transitions,
-                     {(self.center, self.outside) : [3, 2],
-                      (self.outside, self.center) : [3],
+                     {(self.center, self.outside): [3, 2],
+                      (self.outside, self.center): [3],
                       (self.center, self.extra): [3],
                       (self.extra, self.center): [2]})
 
@@ -562,18 +564,24 @@ class TestDirectSimulation(object):
         # interface alpha); and `X_ab` (outside interface alpha and beta).
         cv1 = self.cv
         cv2 = paths.FunctionCV("abs_sin",
-                               lambda snap : np.abs(np.sin(snap.xyz[0][0])))
-        state = paths.CVDefinedVolume(cv1, old_div(-np.pi,8.0), old_div(np.pi,8.0))
-        other_state = paths.CVDefinedVolume(cv1, -5.0/8.0*np.pi, -3.0/8.0*np.pi)
+                               lambda snap: np.abs(np.sin(snap.xyz[0][0])))
+        state = paths.CVDefinedVolume(cv1,
+                                      old_div(-np.pi, 8.0),
+                                      old_div(np.pi, 8.0))
+        other_state = paths.CVDefinedVolume(cv1,
+                                            -5.0/8.0 * np.pi,
+                                            -3.0/8.0 * np.pi)
         alpha = paths.CVDefinedVolume(cv1, float("-inf"), 3.0/8.0*np.pi)
-        beta = paths.CVDefinedVolume(cv2, float("-inf"), old_div(np.sqrt(2),2.0))
+        beta = paths.CVDefinedVolume(cv2,
+                                     float("-inf"),
+                                     old_div(np.sqrt(2), 2.0))
         # approx     alpha: x < 1.17   beta: abs(sin(x)) < 0.70
         S = 0              # cv1 =  0.00; cv2 = 0.00
-        I = old_div(np.pi,5.0)      # cv1 =  0.63; cv2 = 0.59
+        I = old_div(np.pi, 5.0)      # cv1 =  0.63; cv2 = 0.59
         X_a = np.pi        # cv1 =  3.14; cv2 = 0.00
-        X_b = old_div(-np.pi,3.0)   # cv1 = -1.05; cv2 = 0.87
-        X_ab = old_div(np.pi,2.0)   # cv1 =  1.57; cv2 = 1.00
-        other = old_div(-np.pi,2.0) # cv1 = -1.57; cv2 = 1.00
+        X_b = old_div(-np.pi, 3.0)    # cv1 = -1.05; cv2 = 0.87
+        X_ab = old_div(np.pi, 2.0)    # cv1 =  1.57; cv2 = 1.00
+        other = old_div(-np.pi, 2.0)  # cv1 = -1.57; cv2 = 1.00
         # That hack is utterly crazy, but I'm kinda proud of it!
         predetermined = [S, S, I, X_a,   # (2) first exit
                          S, X_a,         # (4) cross A
@@ -690,6 +698,6 @@ class TestPathSampling(object):
         final_snaps = all_snaps(self.sim.sample_set)
         assert initial_snaps & final_snaps == set([])
         # test time reversal
-        init_xyz = set(s.xyz.tostring() for s in initial_snaps)
-        final_xyz = set(s.xyz.tostring() for s in final_snaps)
+        init_xyz = set(s.xyz.tobytes() for s in initial_snaps)
+        final_xyz = set(s.xyz.tobytes() for s in final_snaps)
         assert init_xyz & final_xyz == set([])
