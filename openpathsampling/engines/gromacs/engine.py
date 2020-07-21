@@ -30,33 +30,40 @@ from openpathsampling.engines.external_engine import (
     _debug_open_files, close_file_descriptors
 )
 
+class _GroFileEngine(ExternalEngine):
+    def __init__(self, gro):
+        self.gro = gro
+        traj = md.load(gro)
+        self.topology = MDTrajTopology(traj.topology)
+        n_atoms = self.topology.n_atoms
+        n_spatial = self.topology.n_spatial
+        descriptor = SnapshotDescriptor.construct(
+            snapshot_class=ExternalMDSnapshot,
+            snapshot_dimensions={'n_spatial': n_spatial,
+                                 'n_atoms': n_atoms}
+        )
+        super(_GroFileEngine, self).__init__(options={},
+                                            descriptor=descriptor,
+                                            template=None)
+
+    def to_dict(self):
+        return {'gro': self.gro}
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls(dct['gro'])
+
+    def read_frame_data(self, file_name, file_position):
+        traj = md.load(file_name)
+        xyz = traj.xyz[0]
+        vel = np.zeros(shape=xyz.shape)
+        box = traj.unitcell_vectors[0]
+        return (xyz, vel, box)
+
+
 
 def snapshot_from_gro(gro_file):
-    class GroFileEngine(ExternalEngine):
-        def __init__(self, gro):
-            traj = md.load(gro)
-            self.topology = MDTrajTopology(traj.topology)
-            n_atoms = self.topology.n_atoms
-            n_spatial = self.topology.n_spatial
-            descriptor = SnapshotDescriptor.construct(
-                snapshot_class=ExternalMDSnapshot,
-                snapshot_dimensions={'n_spatial': n_spatial,
-                                     'n_atoms': n_atoms}
-            )
-            super(GroFileEngine, self).__init__(options={},
-                                                descriptor=descriptor,
-                                                template=None)
-
-        # read_frame_data = GromacsEngine.read_frame_data
-
-        def read_frame_data(self, file_name, file_position):
-            traj = md.load(file_name)
-            xyz = traj.xyz[0]
-            vel = np.zeros(shape=xyz.shape)
-            box = traj.unitcell_vectors[0]
-            return (xyz, vel, box)
-
-    template_engine = GroFileEngine(gro_file)
+    template_engine = _GroFileEngine(gro_file)
     snapshot = ExternalMDSnapshot(file_name=gro_file,
                                   file_position=0,
                                   engine=template_engine)
