@@ -1,5 +1,6 @@
 import signal
 import logging
+import threading
 
 
 # class based on: http://stackoverflow.com/a/21919644/487556
@@ -39,3 +40,12 @@ class EmptyContext(object):
 
     def __exit__(self, type, value, traceback):
         pass
+
+
+def get_interrupter():
+    if isinstance(threading.currentThread(), threading._MainThread):
+        interrupter = DelayedInterrupt
+    else:
+        interrupter = EmptyContext
+    return interrupter
+
