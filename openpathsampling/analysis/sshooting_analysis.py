@@ -210,10 +210,10 @@ class SShootingAnalysis(ShootingPointAnalysis):
         # represented by coordinate hashes!).
         for k in self:
             # Set the output key (if label_function=None it is the snapshot).
-            out_key = label_function(self.hash_representatives[k])
+            out_key = label_function(k)
 
             # Look up the dictionary with data collected for this snapshot.
-            data_k = self.store[k]
+            data_k = self[k]
 
             # Increment global results.
             M += data_k["M"]

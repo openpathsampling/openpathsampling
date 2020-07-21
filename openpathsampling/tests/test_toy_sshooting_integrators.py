@@ -1,11 +1,11 @@
 import numpy as np
 from nose.tools import (assert_almost_equal)
 from openpathsampling.engines.toy.sshooting_integrators import OverdampedLangevinIntegrator
-from openpathsampling import toy
+import openpathsampling.engines.toy as toys
 
 def setUp():
     global linear
-    linear = toy.LinearSlope([1.5, 0.75], 0.5)
+    linear = toys.LinearSlope([1.5, 0.75], 0.5)
     global init_pos, init_vel, sys_mass
     init_pos = np.array([0.7, 0.65])
     init_vel = np.array([0.6, 0.5])
@@ -17,7 +17,7 @@ class testOverdampedLangevinIntegrator(object):
     def setUp(self):
         pes = linear
         integ = OverdampedLangevinIntegrator(dt=0.001, temperature=4.0, D=1.0)
-        topology=toy.Topology(
+        topology=toys.Topology(
             n_spatial = 2,
             masses = sys_mass,
             pes = pes
@@ -25,11 +25,9 @@ class testOverdampedLangevinIntegrator(object):
         options={
             'integ' : integ,
             'n_frames_max' : 5}
-        sim = toy.Engine(options=options,
-                        topology=topology
-                       )
+        sim = toys.Engine(options=options, topology=topology)
 
-        template = toy.Snapshot(
+        template = toys.Snapshot(
             coordinates=init_pos.copy(),
             velocities=init_vel.copy(),
             engine=sim
