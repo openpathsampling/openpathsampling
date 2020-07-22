@@ -68,8 +68,8 @@ def sql_db_execute(engine, statements, execmany_dict=None):
         results = results[0]
     return results
 
-
-class SQLStorageBackend(object):
+from openpathsampling.netcdfplus import StorableNamedObject
+class SQLStorageBackend(StorableNamedObject):
     """Generic storage backend for SQL.
 
     Uses SQLAlchemy; could easily duck-type an object that implements the
@@ -85,14 +85,19 @@ class SQLStorageBackend(object):
         databases, but keeps the interface consistent
     sql_dialect : str
         name of the SQL dialect to use; default is sqlite
-    echo : bool
-        whether the engine to echo SQL commands to stdout (useful for
-        debugging)
+
+    Additional keyword arguments are passed to sqlalchemy.create_engine. Of
+    particular use is ``echo`` (bool) which echos SQL commands to stdout
+    (useful for debugging).
+
+    More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
     """
-    def __init__(self, filename, mode='r', sql_dialect=None, echo=False):
+    def __init__(self, filename, mode='r', sql_dialect='sqlite', **kwargs):
+        super().__init__()
         self.filename = filename
-        sql_dialect = tools.none_to_default(sql_dialect, 'sqlite')
+        self.sql_dialect = sql_dialect
         self.mode = mode
+        self.kwargs = kwargs
         self.debug = False
         self.max_query_size = 900
 
@@ -104,17 +109,57 @@ class SQLStorageBackend(object):
         # TODO: change this to an LRU cache
         self.known_uuids = collections.defaultdict(set)
 
-        if self.mode == "w" and os.path.exists(filename):
-            # delete existing file; write after
-            os.remove(filename)
-
         # we prevent writes by disallowing write method in read mode;
         # for everything else; just connect to the database
-        connection_uri = self.filename_from_dialect(filename, sql_dialect)
-        self.engine = sql.create_engine(connection_uri,
-                                        echo=echo)
+        self.engine = None
+        self.connection_uri = None
+        self._metadata = None
+        if filename is not None:
+            if self.mode == "w" and os.path.exists(filename):
+                # delete existing file; write after
+                os.remove(filename)
+
+            self.connection_uri = self.filename_from_dialect(
+                filename,
+                self.sql_dialect
+            )
+            engine = sql.create_engine(self.connection_uri, **self.kwargs)
+            self._initialize_from_engine(engine)
+
+    def _initialize_from_engine(self, engine):
+        self.engine = engine
         self._metadata = sql.MetaData(bind=self.engine)
         self._initialize_with_mode(self.mode)
+
+    @property
+    def identifier(self):
+        return self.connection_uri, self.mode
+
+    def to_dict(self):
+        return {
+            'filename': self.filename,
+            'sql_dialect': self.sql_dialect,
+            'mode': 'a' if self.mode == 'w' else self.mode,
+            'connection_uri': self.connection_uri,
+            'kwargs': self.kwargs,
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        init_dct = dct.copy()
+        filename = init_dct.pop('filename')
+        connection_uri = init_dct.pop('connection_uri')
+        kwargs = init_dct.pop('kwargs')
+        init_dct.update(kwargs)
+        obj = cls(filename=None, **init_dct)
+        obj.connection_uri = connection_uri
+        obj.filename = filename
+        engine = sql.create_engine(connection_uri, **obj.kwargs)
+        obj._initialize_from_engine(engine)
+        return obj
+
+    def __reduce__(self):
+        return (self.from_dict, (self.to_dict(),))
 
     def _initialize_with_mode(self, mode):
         """setup of tables; etc, as varies between w and r/a modes"""
@@ -136,7 +181,7 @@ class SQLStorageBackend(object):
                     self.internal_tables_from_db()
 
     @classmethod
-    def from_engine(cls, engine, mode='r'):
+    def from_engine(cls, engine, connection_uri=None, **kwargs):
         """Constructor allowing user to specify the SQLAlchemy Engine.
 
         The default constructor doesn't allow all the options to the engine
@@ -145,14 +190,13 @@ class SQLStorageBackend(object):
 
         More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
         """
-        obj = cls.__new__(cls)
-        self._metadata = sql.MetaData()
-        self.schema = {}
-        self.table_to_number = {}
-        self.number_to_table = {}
-        self.engine = engine
-        self.mode = mode
-        self._initialize_with_mode(self.mode)
+        filename = kwargs.pop('filename', None)
+        obj = cls(**kwargs)
+        obj.filename = filename
+        obj.connection_uri = connection_uri
+        obj._metadata = sql.MetaData(bind=engine)
+        obj._initialize_with_mode(self.mode)
+        return obj
 
 
     def close(self):
