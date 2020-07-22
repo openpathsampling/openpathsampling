@@ -3,11 +3,16 @@ from distributed.protocol.serialize import register_serialization_family
 
 import cloudpickle as cp
 
-from openpathsampling.experimental.storage.memory_backend import MemoryStorageBackend
+from openpathsampling.experimental.storage.memory_backend import \
+        MemoryStorageBackend
+from openpathsampling.experimental.storage.sql_backend import \
+        SQLStorageBackend
 from openpathsampling.experimental.storage.ops_storage import OPSStorage
 from openpathsampling.experimental.storage.serialization_helpers import (
     has_uuid, get_uuid
 )
+
+import os
 
 def ops_dumps(obj):
     header = {'serializer': 'openpathsampling'}
@@ -64,14 +69,22 @@ register_serialization_family('openpathsampling', ops_dumps, ops_loads)
 
 
 def _save_results(storage, results):
-    # trick to move storage.save storage process to OPS serialization, not
-    # cloudpickle
+    # print(f"Using storage {storage} to save {results}")
     storage.save(results)
 
 def _remote_task(serialized_task, *args, **kwargs):
     task = deserialize_task(serialized_task)
     result = task(*args, **kwargs)
     return result
+
+
+class SerialScheduler(object):
+    def store_results(self, filename, results):
+        _save_results(storage, results)
+
+    def wrap_task(task):
+        return task
+
 
 class DaskDistributedScheduler(object):
     def __init__(self, client=None):
@@ -83,7 +96,9 @@ class DaskDistributedScheduler(object):
         self.client = client
 
     def store_results(self, storage, results):
-        self.client.fire_and_forget(_save_results, storage, results)
+        # print(f"About to save {results} to {storage}")
+        fut = self.client.submit(_save_results, storage, results)
+        distributed.fire_and_forget(fut)
 
     def wrap_task(self, task):
         def inner(*args, **kwargs):

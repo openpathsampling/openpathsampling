@@ -1,9 +1,15 @@
 import openpathsampling as paths
 
+from openpathsampling.experimental.storage.dask_integration import \
+        SerialScheduler
+
+from openpathsampling.experimental.storage.tools import none_to_default
+
 
 class NewCommittor(paths.PathSimulator):
-    def __init__(self, vol, engine, storage):
+    def __init__(self, vol, engine, storage, scheduler=None):
         super().__init__(storage)
+        self.scheduler = none_to_default(scheduler, SerialScheduler())
         self.vol = vol
         self.init_ens = paths.LengthEnsemble(1) & paths.AllInXEnsemble(vol)
         self.final_ens = paths.LengthEnsemble(5) & paths.AllInXEnsemble(vol)
@@ -46,6 +52,11 @@ class NewCommittor(paths.PathSimulator):
         return step
 
     def run(self, snaps, n_steps):
-        for snap in snaps:
-            for step_num in range(n_steps):
-                step = self.committor_task(snap, step_num)
+        task = self.scheduler.wrap_task(self.committor_task)
+        for snap_num, snap in enumerate(snaps):
+            for shot_num in range(n_steps):
+                step_num = snap_num * len(snaps) + shot_num
+                result = task(snap, step_num)
+                if self.storage is not None:
+                    self.scheduler.store_results(self.storage, result)
+
