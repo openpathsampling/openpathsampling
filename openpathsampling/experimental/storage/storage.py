@@ -43,13 +43,16 @@ universal_schema = {
                ('class_name', 'str')]
 }
 
-class GeneralStorage(object):
+from openpathsampling.netcdfplus import StorableNamedObject
+class GeneralStorage(StorableNamedObject):
+    _known_storages = {}
     def __init__(self, backend, class_info, schema=None,
                  simulation_classes=None, fallbacks=None, safemode=False):
+        super().__init__()
+        GeneralStorage._known_storages = {backend.identifier: self}
         self.backend = backend
         self.schema = schema.copy()
         self.class_info = class_info.copy()
-        self.mode = self.backend.mode
         self._safemode = None
         self.safemode = safemode
         self._sf_handler = StorageFunctionHandler(storage=self)
@@ -75,6 +78,10 @@ class GeneralStorage(object):
         self.initialize_with_mode(self.mode)
         self._stashed = []
         self._reset_fixed_cache()
+
+    @property
+    def mode(self):
+        return self.backend.mode
 
     @property
     def safemode(self):

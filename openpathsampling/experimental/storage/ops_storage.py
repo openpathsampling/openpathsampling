@@ -29,6 +29,8 @@ from .serialization import SchemaDeserializer
 
 from .class_info import ClassInfo, ClassInfoContainer
 
+from .sql_backend import SQLStorageBackend  # TODO: generalize
+
 from . import snapshots
 import logging
 logger = logging.getLogger(__name__)
@@ -52,6 +54,7 @@ ops_schema = {
     'details': [('json', 'json_obj')],
     'storable_functions': [('json', 'json_obj')],#, ('class_idx', 'int')],
     'simulation_objects': [('json', 'json_obj')],#, ('class_idx', 'int')]
+    'storage_objects': [('json', 'json_obj')]
 }
 
 # this includes any sql-specific metadata
@@ -99,12 +102,14 @@ class OPSSpecialLookup(object):
     # lookup function -- often that lookup function just returns the class
     # TODO: especially annoying to have StorableFunction as a special
     special_superclasses = (paths.BaseSnapshot, paths.MoveChange,
-                            paths.Details, StorableFunction)
+                            paths.Details, StorableFunction,
+                            storage.GeneralStorage, SQLStorageBackend)
     snapshot_lookup_function = \
             lambda self, snap: (get_uuid(snap.engine), snap.__class__)
     details_lookup_function = lambda self, details: paths.Details
     movechange_lookup_function = lambda self, change: paths.MoveChange
     sf_lookup_function = lambda self, func: StorableFunction
+    storage_obj_lookup_function = lambda self, func: storage.GeneralStorage
 
     def __init__(self):
         self.secondary_lookups = {}
@@ -123,6 +128,8 @@ class OPSSpecialLookup(object):
             self.secondary_lookups[cls] = self.snapshot_lookup_function
         elif isinstance(item, StorableFunction):
             self.secondary_lookups[cls] = self.sf_lookup_function
+        elif isinstance(item, (storage.GeneralStorage, SQLStorageBackend)):
+            self.secondary_lookups[cls] = self.storage_obj_lookup_function
         elif isinstance(item, paths.MoveChange):
             self.secondary_lookups[cls] = self.movechange_lookup_function
         elif isinstance(item, paths.Details):
@@ -200,6 +207,11 @@ def _build_ops_serializer(schema, safe_codecs, unsafe_codecs):
                       find_uuids=storable_function_find_uuids,
                       serializer=unsafe_codecs.simobj_serializer,
                       deserializer=unsafe_codecs.simobj_deserializer),
+            ClassInfo(table="storage_objects",
+                      cls=storage.GeneralStorage,
+                      serializer=safe_codecs.simobj_serializer,
+                      deserializer=safe_codecs.simobj_deserializer,
+                      find_uuids=default_find_uuids),
         ]
     )
 
@@ -240,6 +252,11 @@ class OPSStorage(storage.GeneralStorage):
     def from_backend(cls, backend, schema=None, class_info=None,
                      simulation_classes=None, fallbacks=None,
                      safemode=False):
+        # quick exit if this storage is known
+        exists = cls._known_storages.get(backend.identifier, None)
+        if exists is not None:
+            return exists
+
         obj = cls.__new__(cls)
         schema = tools.none_to_default(schema, ops_schema)
         class_info = tools.none_to_default(class_info, ops_class_info)
@@ -254,6 +271,18 @@ class OPSStorage(storage.GeneralStorage):
         )
         obj.n_snapshot_types = 0
         return obj
+
+    def to_dict(self):
+        return {'backend': self.backend,
+                'fallbacks': self.fallbacks,
+                'safemode': self.safemode}
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls.from_backend(**dct)
+
+    def __reduce__(self):
+        return (self.from_dict, (self.to_dict(),))
 
     def register_from_tables(self, table_names, classes):
         lookups = {}
