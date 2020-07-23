@@ -1,3 +1,4 @@
+from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.engines.dynamics_engine import DynamicsEngine
 from openpathsampling.engines.snapshot import BaseSnapshot
 from openpathsampling.engines.toy import ToySnapshot
@@ -48,6 +49,28 @@ def _debug_snapshot_loading(snapshot):
     snapshot.load_details()
     snapshot.clear_cache()
 
+
+class FilenameSetter(StorableNamedObject):
+    def __init__(self, count=0):
+        super().__init__()
+        self.count = count
+
+    def __call__(self):
+        retval = '{:07d}'.format(self.count)
+        self.count += 1
+        return retval
+
+
+class RandomString(FilenameSetter):
+    allowed = np.array([a for a in 'abcdefghijklmnopqrstuvwxyz0123456789'])
+    def __init__(self, length=8):
+        super().__init__()
+        self.length = length
+
+    def __call__(self):
+        return "".join(np.random.choice(self.allowed, self.length))
+
+
 class ExternalEngine(DynamicsEngine):
     """
     Generic object to handle arbitrary external engines. Subclass to use.
@@ -62,7 +85,8 @@ class ExternalEngine(DynamicsEngine):
         'engine_directory' : "",
         'n_spatial' : 1,
         'n_atoms' : 1,
-        'n_poll_per_step': 1
+        'n_poll_per_step': 1,
+        'filename_setter': FilenameSetter(),
     }
 
     killsig = signal.SIGTERM
@@ -135,7 +159,8 @@ class ExternalEngine(DynamicsEngine):
         self._traj_num += 1
         self.frame_num = 0
         self.n_frames_since_start = 0
-        self.set_filenames(self._traj_num)
+        file_prefix = self.filename_setter()
+        self.set_filenames(file_prefix)
         self.write_frame_to_file(self.input_file, self.current_snapshot, "w")
         self.prepare()
 
