@@ -60,3 +60,5 @@ class NewCommittor(paths.PathSimulator):
                 if self.storage is not None:
                     self.scheduler.store_results(self.storage, result)
 
+        self.scheduler.finalize()
+

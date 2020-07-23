@@ -69,7 +69,7 @@ register_serialization_family('openpathsampling', ops_dumps, ops_loads)
 
 
 def _save_results(storage, results):
-    # print(f"Using storage {storage} to save {results}")
+    print(f"Using storage {storage} to save {results}")
     storage.save(results)
 
 def _remote_task(serialized_task, *args, **kwargs):
@@ -94,11 +94,13 @@ class DaskDistributedScheduler(object):
                 deserializers=['openpathsampling', 'dask', 'pickle', ],
             )
         self.client = client
+        self._final_future = None
 
     def store_results(self, storage, results):
-        # print(f"About to save {results} to {storage}")
+        print(f"About to save {results} to {storage}")
         fut = self.client.submit(_save_results, storage, results)
         distributed.fire_and_forget(fut)
+        self._final_future = fut
 
     def wrap_task(self, task):
         def inner(*args, **kwargs):
@@ -111,3 +113,8 @@ class DaskDistributedScheduler(object):
             return result
 
         return inner
+
+    def finalize(self):
+        # ensure that we run the last future
+        if self._final_future is not None:
+            _ = self._final_future.result()
