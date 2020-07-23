@@ -30,6 +30,10 @@ from openpathsampling.engines.external_engine import (
     _debug_open_files, close_file_descriptors
 )
 
+def _remove_file_if_exists(filename):
+    if os.path.isfile(filename):
+        os.remove(filename)
+
 class _GroFileEngine(ExternalEngine):
     def __init__(self, gro):
         self.gro = gro
@@ -124,8 +128,9 @@ class GromacsEngine(ExternalEngine):
     )
     GROMPP_CMD = ("{e.options[gmx_executable]}grompp -c {e.gro} "
                   + "-f {e.mdp} -p {e.top} -t {e.input_file} "
+                  + "-po {e.mdout_file} -o {e.tpr_file} "
                   + "{e.options[grompp_args]}")
-    MDRUN_CMD = ("{e.options[gmx_executable]}mdrun -s topol.tpr "
+    MDRUN_CMD = ("{e.options[gmx_executable]}mdrun -s {e.tpr_file} "
                  + "-o {e.output_file} -e {e.edr_file} -g {e.log_file} "
                  + "{mdrun_args}")
     # use these as CMD.format(e=engine, **engine.options)
@@ -160,6 +165,8 @@ class GromacsEngine(ExternalEngine):
         self.output_file = self.prefix + "_trr/OUTPUT_NAME.trr"
         self.edr_file = self.prefix + "_edr/OUTPUT_NAME.edr"
         self.log_file = self.prefix + "_log/OUTPUT_NAME.log"
+        self.tpr_file = "topol.top"
+        self.mdout_file = "mdout.mdp"
 
         self._mdtraj_topology = None
 
@@ -229,7 +236,7 @@ class GromacsEngine(ExternalEngine):
         basename = os.path.basename(file_name)
         # basename should be in the format [0-9]+\.trr (as set by the
         # trajectory_filename method)
-        file_number = int(basename.split('.')[0])
+        # file_number = int(basename.split('.')[0])
         try:
             xyz, vel, box = self.read_frame_data(file_name, frame_num)
         except (IndexError, OSError, IOError) as e:
@@ -274,13 +281,27 @@ class GromacsEngine(ExternalEngine):
             close_file_descriptors(filename)
 
     def trajectory_filename(self, number):
+        # TODO: remove code path allowing ints (API break for 2.0)
         trr_dir = self.prefix + "_trr/"
-        return trr_dir + '{:07d}'.format(number) + '.trr'
+        if isinstance(number, int):
+            num_str = num_str = '{:07d}'.format(number)
+        else:
+            num_str = number
+        return trr_dir + num_str + '.trr'
 
     def set_filenames(self, number):
-        self.input_file = os.path.join(self.base_dir, "initial_frame.trr")
-        self.output_file = self.trajectory_filename(number + 1)
-        num_str = '{:07d}'.format(number + 1)
+        if isinstance(number, int):
+            num_str = '{:07d}'.format(number + 1)
+            self.output_file = self.trajectory_filename(number + 1)
+            init_filename = "initial_frame.trr"
+        else:
+            num_str = number
+            self.output_file = self.trajectory_filename(num_str)
+            init_filename = num_str + "_initial_frame.trr"
+            self.mdout = num_str + "_mdout.mdp"
+            self.tpr_file = num_str + "_" + "topol.tpr"
+
+        self.input_file = os.path.join(self.base_dir, init_filename)
         self.edr_file = os.path.join(self.prefix + "_edr", num_str + '.edr')
         self.log_file = os.path.join(self.prefix + "_log", num_str + '.log')
 
@@ -306,8 +327,9 @@ class GromacsEngine(ExternalEngine):
         return return_code
 
     def cleanup(self):
-        if os.path.isfile(self.input_file):
-            os.remove(self.input_file)
+        _remove_file_if_exists(self.input_file)
+        _remove_file_if_exists(self.tpr_file)
+        _remove_file_if_exists(self.mdout_file)
 
     def engine_command(self):
         # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log
