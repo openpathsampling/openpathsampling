@@ -78,6 +78,10 @@ class MemoryStorageBackend(object):
         self.uuid_table = {}  # maps UUID to table name
         self._table_to_class = {}
 
+    @property
+    def identifier(self):
+        return id(self)
+
     def close(self):
         pass  # no such thing as closing here, but may be needed for API
 
