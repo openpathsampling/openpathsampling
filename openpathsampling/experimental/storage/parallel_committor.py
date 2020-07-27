@@ -7,12 +7,19 @@ from openpathsampling.experimental.storage.tools import none_to_default
 
 
 class NewCommittor(paths.PathSimulator):
-    def __init__(self, vol, engine, storage, scheduler=None):
+    def __init__(self, states, engine, storage, scheduler=None):
         super().__init__(storage)
+        # NOTE: velocity randomization is performed with the Gromacs
+        # gen_vel parameter
         self.scheduler = none_to_default(scheduler, SerialScheduler())
-        self.vol = vol
-        self.init_ens = paths.LengthEnsemble(1) & paths.AllInXEnsemble(vol)
-        self.final_ens = paths.LengthEnsemble(5) & paths.AllInXEnsemble(vol)
+        self.states = states
+        all_states = paths.join_volumes(stats)
+        self.init_ens = (paths.LengthEnsemble(1)
+                         & paths.AllOutXEnsemble(all_states))
+        self.final_ens = paths.SequentialEnsemble([
+            paths.AllOutXEnsemble(all_states),
+            paths.AllInXEnsemble(all_states) & paths.LengthEnsemble(1)
+        ])
         self.engine = engine
         self.mover = paths.ForwardExtendMover(
             ensemble=self.init_ens,
@@ -20,9 +27,8 @@ class NewCommittor(paths.PathSimulator):
             engine=engine
         )
 
-
     def to_dict(self):
-        return {'vol': self.vol,
+        return {'states': self.states,
                 'init_ens': self.init_ens,
                 'final_ens': self.final_ens,
                 'engine': self.engine,
@@ -31,7 +37,7 @@ class NewCommittor(paths.PathSimulator):
 
     @classmethod
     def from_dict(cls, dct):
-        obj = cls(dct['vol'], dct['engine'], dct['storage'])
+        obj = cls(dct['states'], dct['engine'], dct['storage'])
         obj.init_ens = dct['init_ens']
         obj.final_ens = dct['final_ens']
         obj.mover = dct['mover']
