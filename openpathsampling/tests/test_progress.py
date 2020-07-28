@@ -2,11 +2,12 @@ import pytest
 
 from openpathsampling.progress import *
 
+
 def test_silent_progress(capsys):
     out, err = capsys.readouterr()
     x = [1, 2, 3]
-    prog = silent_progress(x, desc='foo', leave=True)
-    y = [xx**2 for xx in x]
+    silent_progress(x, desc='foo', leave=True)
+    _ = [xx**2 for xx in x]
     out, err = capsys.readouterr()
     assert out == ""
     assert err == ""
@@ -32,10 +33,11 @@ class TestTqdmPartial(object):
 
     def test_call(self, capsys):
         out, err = capsys.readouterr()
-        xx = [x for x in self.tqdm_partial([1, 2, 3])]
+        _ = [x for x in self.tqdm_partial([1, 2, 3])]
         out, err = capsys.readouterr()
         assert out == ""
         assert err != ""
+
 
 class TestSimpleProgress(object):
     def setup(self):
@@ -52,11 +54,12 @@ class TestSimpleProgress(object):
         assert prog is not None
         self.progress.progress = 'silent'
         assert self.progress.progress is silent_progress
-        self.progress.progress = 'tqdm'
-        assert isinstance(self.progress.progress, TqdmPartial)
+        if HAS_TQDM:  # starimport from paths.progress
+            self.progress.progress = 'tqdm'
+            assert isinstance(self.progress.progress, TqdmPartial)
+            my_tqdm = TqdmPartial()
+            self.progress.progress = my_tqdm
+            assert self.progress.progress is my_tqdm
+
         self.progress.progress = None
         assert self.progress.progress is silent_progress
-        my_tqdm = TqdmPartial()
-        self.progress.progress = my_tqdm
-        assert self.progress.progress is my_tqdm
-        pass
