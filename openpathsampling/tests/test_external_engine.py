@@ -7,6 +7,8 @@ import openpathsampling as paths
 import openpathsampling.engines as peng
 from openpathsampling.engines.toy import ToySnapshot
 
+from openpathsampling.engines.external_engine import *
+
 import numpy as np
 
 import psutil
@@ -218,3 +220,26 @@ class TestExternalEngine(object):
         for testfile in glob.glob("test*out") + glob.glob("test*inp"):
             os.remove(testfile)
 
+class TestFilenameSetter(object):
+    def test_default_setter(self):
+        setter = FilenameSetter()
+        assert setter() == 0
+        assert setter() == 1
+
+    def test_specific_number_setter(self):
+        setter = FilenameSetter(100)
+        assert setter() == 100
+        assert setter() == 101
+
+
+class TestRandomStringFilenames(object):
+    def test_default_setter(self):
+        setter = RandomStringFilenames()
+        prefix = setter()
+        assert len(prefix) == 8
+        for char in prefix:
+            assert char in RandomStringFilenames._allowed
+
+    def test_trivial_setter(self):
+        setter = RandomStringFilenames(2, 'a')
+        assert setter() == 'aa'

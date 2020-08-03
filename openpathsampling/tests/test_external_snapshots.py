@@ -131,3 +131,15 @@ class TestExternalMDSnapshot(object):
 
             assert snap._reversed == snap_rev
             assert snap_rev._reversed == snap
+
+    def test_internalize(self):
+        snap = self.snapshots[0]
+        internal = snap.internalize()
+        np.testing.assert_array_equal(snap.xyz, internal.xyz)
+        np.testing.assert_array_equal(snap.velocities, internal.velocities)
+        np.testing.assert_array_equal(snap.box_vectors, internal.box_vectors)
+
+        # the way to do it for a trajectory
+        traj_i = paths.Trajectory([s.internalize() for s in self.snapshots])
+        traj_e = paths.Trajectory(self.snapshots)
+        np.testing.assert_array_equal(traj_i.xyz, traj_e.xyz)

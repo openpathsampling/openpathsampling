@@ -51,21 +51,46 @@ def _debug_snapshot_loading(snapshot):
 
 
 class FilenameSetter(StorableNamedObject):
+    """Just use numbers, as we did previously.
+
+    This is the default for compatibility reasons, but it not recommended.
+    Generally, we recommend using :class:`.RandomString`.
+    """
+    # the weird use of this as the base class is because engine options has
+    # some weird type testing that requires replace object to be instances
+    # of the default
     def __init__(self, count=0):
         super().__init__()
         self.count = count
 
     def __call__(self):
-        retval = '{:07d}'.format(self.count)
+        retval = self.count
         self.count += 1
         return retval
 
+    def reset(self, count=0):
+        self.count = count
 
-class RandomString(FilenameSetter):
-    allowed = np.array([a for a in 'abcdefghijklmnopqrstuvwxyz0123456789'])
-    def __init__(self, length=8):
+
+class RandomStringFilenames(FilenameSetter):
+    """Use a random string for filename prefixes.
+
+    This is recommended, and will become the default in future versions of
+    OpenPathSampling.
+
+    Parameters
+    ----------
+    length : int
+        number of character in the resulting string
+    allowed : str
+        string containing the allowed characters to return
+    """
+    _allowed = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    def __init__(self, length=8, allowed=None):
         super().__init__()
         self.length = length
+        allowed = allowed if allowed is not None else self._allowed
+        self.allowed = np.array([a for a in allowed])
 
     def __call__(self):
         return "".join(np.random.choice(self.allowed, self.length))

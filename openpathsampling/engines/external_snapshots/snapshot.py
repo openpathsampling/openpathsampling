@@ -47,6 +47,8 @@ class ExternalMDSnapshot(BaseSnapshot):
         self._velocities = None
         self._box_vectors = None
 
+        self._internalized = None
+
     def load_details(self):
         """Cache coords, velocities, box vectors from the external file"""
         try:
@@ -110,3 +112,30 @@ class ExternalMDSnapshot(BaseSnapshot):
         args = ", ".join([num_str, pos_str, eng_str])
         return "{cls_str}(".format(cls_str=self.cls) + args + ")"
 
+    def internalize(self):
+        if self._internalized is None:
+            self._internalized = InternalMDSnapshot(
+                coordinates=self.coordinates,
+                velocities=self.velocities,
+                box_vectors=self.box_vectors,
+                file_name=self.file_name,
+                file_position=self.file_position
+            )
+        return self._internalized
+
+
+@features.base.attach_features([
+    features.engine,
+    features.coordinates,
+    features.velocities,
+    features.box_vectors,
+    ext_features.file_info
+])
+class InternalMDSnapshot(BaseSnapshot):
+    """
+    Internal version of standard external MD snapshot.
+
+    This can be used, for example, to store intial conditions in an OPS
+    storage file.
+    """
+    pass

@@ -165,7 +165,7 @@ class GromacsEngine(ExternalEngine):
         self.output_file = self.prefix + "_trr/OUTPUT_NAME.trr"
         self.edr_file = self.prefix + "_edr/OUTPUT_NAME.edr"
         self.log_file = self.prefix + "_log/OUTPUT_NAME.log"
-        self.tpr_file = "topol.top"
+        self.tpr_file = "topol.tpr"
         self.mdout_file = "mdout.mdp"
 
         self._mdtraj_topology = None
@@ -294,6 +294,7 @@ class GromacsEngine(ExternalEngine):
             num_str = '{:07d}'.format(number + 1)
             self.output_file = self.trajectory_filename(number + 1)
             init_filename = "initial_frame.trr"
+            self.filename_setter.reset(number)
         else:
             num_str = number
             self.output_file = self.trajectory_filename(num_str)
@@ -332,7 +333,6 @@ class GromacsEngine(ExternalEngine):
         _remove_file_if_exists(self.mdout_file)
 
     def engine_command(self):
-        # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log
         args = self.options['mdrun_args'].format(prev_traj=self._traj_num-1,
                                                  next_traj=self._traj_num)
         cmd = self.MDRUN_CMD.format(e=self, mdrun_args=args)

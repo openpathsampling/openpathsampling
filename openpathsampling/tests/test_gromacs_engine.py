@@ -179,10 +179,10 @@ class TestGromacsEngine(object):
         snap = self.engine.read_frame_from_file(traj_0, 0)
         self.engine.set_filenames(0)
 
-        ens = paths.LengthEnsemble(3)
+        ens = paths.LengthEnsemble(5)
         traj = self.engine.generate(snap, running=[ens.can_append])
         assert_equal(self.engine.proc.is_running(), False)
-        assert_equal(len(traj), 3)
+        assert_equal(len(traj), 5)
         ttraj = md.load(self.engine.trajectory_filename(1),
                         top=self.engine.gro)
         # the mdp suggests a max length of 100 frames
