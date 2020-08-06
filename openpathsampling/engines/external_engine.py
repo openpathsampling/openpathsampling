@@ -1,6 +1,6 @@
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.engines.dynamics_engine import DynamicsEngine
-from openpathsampling.engines.snapshot import BaseSnapshot
+from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
 from openpathsampling.engines.toy import ToySnapshot
 import numpy as np
 import os
@@ -11,6 +11,10 @@ import psutil
 import signal
 import shlex
 import time
+
+import sys
+if sys.version_info > (3, ):
+    long = int
 
 import linecache
 
@@ -95,6 +99,38 @@ class RandomStringFilenames(FilenameSetter):
     def __call__(self):
         return "".join(np.random.choice(self.allowed, self.length))
 
+class _InternalizedEngineProxy(DynamicsEngine):
+    """Wrapper that allows snapshots to be "internalized."
+
+    This is needed because the dynamically-registered snapshot tables are
+    associated to an engine: each engine creates exactly one snapshot table.
+    We use the internalized engine to create those snapshots.
+    """
+    def __init__(self, engine):
+        descriptor = SnapshotDescriptor.construct(
+            snapshot_class=engine.InternalizedSnapshotClass,
+            snapshot_dimensions=engine.descriptor._dimensions
+        )
+        self.engine = engine
+        super(_InternalizedEngineProxy, self).__init__(options={},
+                                                       descriptor=descriptor)
+
+    def to_dict(self):
+        dct = super(_InternalizedEngineProxy, self).to_dict()
+        dct['engine'] = self.engine
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        # ignore everything except the engine here
+        dct = {'engine': dct['engine']}
+        return super(_InternalizedEngineProxy, cls).from_dict(dct)
+
+    def __getattr__(self, attr):
+        if attr == 'name' and self.engine.name:
+            return self.engine.name + " (internalized)"
+        return getattr(self.engine, attr)
+
 
 class ExternalEngine(DynamicsEngine):
     """
@@ -128,6 +164,29 @@ class ExternalEngine(DynamicsEngine):
         self._traj_num = -1
         self._current_snapshot = template
         self.n_frames_since_start = None
+        self.internalized_engine = _InternalizedEngineProxy(self)
+
+    def to_dict(self):
+        dct = super(ExternalEngine, self).to_dict()
+        # this is a trick to avoid circular references: the idea is that we
+        # create an identical internalized engine in our __init__ (i.e., the
+        # engine's from_dict) -- therefore we create it from scratch each
+        # time and just save/set the UUID
+        dct.update({
+            'internalized_engine_uuid': str(self.internalized_engine.__uuid__)
+        })
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        dct = dct.copy()
+        internalized_engine_uuid = dct.pop('internalized_engine_uuid', None)
+        obj = super(ExternalEngine, cls).from_dict(dct)
+        if internalized_engine_uuid:
+            # TODO: in future versions of OPS, get_/set_uuid should always
+            # return strings
+            obj.internalized_engine.__uuid__ = long(internalized_engine_uuid)
+        return obj
 
     @property
     def current_snapshot(self):

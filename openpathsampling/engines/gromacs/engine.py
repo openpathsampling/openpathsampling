@@ -16,8 +16,8 @@ from openpathsampling.engines import ExternalEngine
 from openpathsampling.engines import features
 from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
 from openpathsampling.engines.openmm.topology import MDTrajTopology
-from openpathsampling.engines.external_snapshots import ExternalMDSnapshot
-# fro . import features as gmx_features
+from openpathsampling.engines.external_snapshots import \
+        ExternalMDSnapshot, InternalizedMDSnapshot
 from openpathsampling.tools import ensure_file
 
 import os
@@ -35,6 +35,8 @@ def _remove_file_if_exists(filename):
         os.remove(filename)
 
 class _GroFileEngine(ExternalEngine):
+    SnapshotClass = ExternalMDSnapshot
+    InternalizedSnapshotClass = InternalizedMDSnapshot
     def __init__(self, gro):
         self.gro = gro
         traj = md.load(gro)
@@ -42,7 +44,7 @@ class _GroFileEngine(ExternalEngine):
         n_atoms = self.topology.n_atoms
         n_spatial = self.topology.n_spatial
         descriptor = SnapshotDescriptor.construct(
-            snapshot_class=ExternalMDSnapshot,
+            snapshot_class=self.SnapshotClass,
             snapshot_dimensions={'n_spatial': n_spatial,
                                  'n_atoms': n_atoms}
         )
@@ -134,6 +136,8 @@ class GromacsEngine(ExternalEngine):
                  + "-o {e.output_file} -e {e.edr_file} -g {e.log_file} "
                  + "{mdrun_args}")
     # use these as CMD.format(e=engine, **engine.options)
+    SnapshotClass = ExternalMDSnapshot
+    InternalizedSnapshotClass = InternalizedMDSnapshot
     def __init__(self, gro, mdp, top, options, base_dir="", prefix="gmx"):
         self.base_dir = base_dir
         self.gro = os.path.join(base_dir, gro)
@@ -174,7 +178,8 @@ class GromacsEngine(ExternalEngine):
                                              first_frame_in_file=True)
 
     def to_dict(self):
-        return {
+        dct = super(GromacsEngine, self).to_dict()
+        local_dct = {
             'gro': self.gro,
             'mdp': self.mdp,
             'top': self.top,
@@ -185,6 +190,8 @@ class GromacsEngine(ExternalEngine):
             'mdp_contents': self.mdp_contents,
             'top_contents': self.top_contents,
         }
+        dct.update(local_dct)
+        return dct
 
     @classmethod
     def from_dict(cls, dct):

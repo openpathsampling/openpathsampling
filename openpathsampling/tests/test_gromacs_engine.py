@@ -4,6 +4,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
 import numpy.testing as npt
+import tempfile
 
 from .test_helpers import data_filename, assert_items_equal
 
@@ -303,3 +304,27 @@ class TestGromacsExternalMDSnapshot(object):
         self._check_none_empty()
         self.snapshot.clear_cache()
         self._check_all_empty()
+
+    def test_internalized_storage(self):
+        internalized = self.snapshot.internalize()
+        npt.assert_array_almost_equal(internalized.xyz, self.snapshot.xyz)
+        try:
+            tmp_dir = tempfile.TemporaryDirectory()
+        except AttributeError:
+            # Py2: we'll just skip this test (and not worry when Py2 goes away)
+            pytest.skip("Test approach only valid in Python 3")
+
+        filename = os.path.join(tmp_dir.name, "test.nc")
+        filename = "foo.nc"  # DEBUG
+        storage_w = paths.Storage(filename, template=internalized, mode='w')
+        storage_w.save(internalized)
+        rl = storage_w.snapshots[0]
+        storage_w.sync()
+        storage_w.close()
+        storage_r = paths.Storage(filename, mode='r')
+        assert len(storage_r.snapshots) == 2
+        reloaded = storage_r.snapshots[0]
+        npt.assert_almost_equal(internalized.xyz, reloaded.xyz)
+        assert internalized.__class__ != self.snapshot.__class__
+        assert internalized.__class__ == reloaded.__class__
+

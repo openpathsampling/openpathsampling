@@ -33,6 +33,8 @@ engine_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
 class ExampleExternalEngine(peng.ExternalEngine):
     """Trivial external engine for engine.c in the tests.
     """
+    SnaphotClass = ToySnapshot
+    InternalizedSnapshotClass = ToySnapshot
     def read_frame_from_file(self, filename, frame_num):
         # under most circumstances, start with linecache.checkcache and
         # setting the value of the first line

@@ -4,13 +4,24 @@ import openpathsampling as paths
 import numpy as np
 
 from openpathsampling.engines.external_snapshots.snapshot import (
-    ExternalMDSnapshot
+    ExternalMDSnapshot, InternalizedMDSnapshot
 )
+from openpathsampling.engines.snapshot import SnapshotDescriptor
+
+from openpathsampling.engines.external_engine import \
+        _InternalizedEngineProxy
 
 class MockEngine(object):
+    SnapshotClass = ExternalMDSnapshot
+    InternalizedSnapshotClass = InternalizedMDSnapshot
     def __init__(self, sequences, sleep_ms=0):
         self.sequences = sequences
         self.sleep_ms = sleep_ms
+        self.descriptor = SnapshotDescriptor.construct(
+            snapshot_class=ExternalMDSnapshot,
+            snapshot_dimensions={'n_spatial': 2, 'n_atoms': 1}
+        )
+        self.internalized_engine = _InternalizedEngineProxy(self)
 
     def read_frame_data(self, filename, position):
         return self.sequences[filename][position]

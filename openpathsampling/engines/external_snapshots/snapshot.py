@@ -7,6 +7,23 @@ from . import features as ext_features
 import logging
 logger = logging.getLogger(__name__)
 
+
+@features.base.attach_features([
+    features.engine,
+    features.coordinates,
+    features.velocities,
+    features.box_vectors,
+    ext_features.file_info
+])
+class InternalizedMDSnapshot(BaseSnapshot):
+    """
+    Internalized version of standard external MD snapshot.
+
+    This can be used, for example, to store intial conditions in an OPS
+    storage file.
+    """
+    pass
+
 @features.base.attach_features([
     features.engine,
     ext_features.coordinates,
@@ -113,29 +130,19 @@ class ExternalMDSnapshot(BaseSnapshot):
         return "{cls_str}(".format(cls_str=self.cls) + args + ")"
 
     def internalize(self):
+        """Return a version of this snapshot with storable details.
+
+        This allows these snapshots to be stored internally in OPS storage
+        files, instead of only in external files. This is convenient to
+        avoid the need to transfer files to remote computers.
+        """
         if self._internalized is None:
-            self._internalized = InternalMDSnapshot(
+            self._internalized = self.engine.InternalizedSnapshotClass(
                 coordinates=self.coordinates,
                 velocities=self.velocities,
                 box_vectors=self.box_vectors,
                 file_name=self.file_name,
-                file_position=self.file_position
+                file_position=self.file_position,
+                engine=self.engine.internalized_engine
             )
         return self._internalized
-
-
-@features.base.attach_features([
-    features.engine,
-    features.coordinates,
-    features.velocities,
-    features.box_vectors,
-    ext_features.file_info
-])
-class InternalMDSnapshot(BaseSnapshot):
-    """
-    Internal version of standard external MD snapshot.
-
-    This can be used, for example, to store intial conditions in an OPS
-    storage file.
-    """
-    pass
