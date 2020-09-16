@@ -43,4 +43,4 @@ else
 fi
 
 echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES"
-#conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
+conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
