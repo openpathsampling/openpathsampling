@@ -9,13 +9,13 @@
 
 DEVTOOLS_DIR=`dirname "${BASH_SOURCE[0]}"`
 
-if [ ! -z "$OPS_ENV" ]
-then
-    conda create -q -y --name $OPS_ENV conda future pyyaml python=$CONDA_PY
-    source activate $OPS_ENV
-else
-    conda install -y -q future pyyaml  # ensure that these are available
-fi
+#if [ ! -z "$OPS_ENV" ]
+#then
+    #conda create -q -y --name $OPS_ENV conda future pyyaml python=$CONDA_PY
+    #source activate $OPS_ENV
+#else
+    #conda install -y -q future pyyaml  # ensure that these are available
+#fi
 
 # for some reason, these approaches to pinning don't always work (but conda
 # always obeys if you explicitly request a pinned version)
@@ -26,7 +26,7 @@ fi
 WORKAROUNDS=""
 REQUIREMENTS=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py`
 TESTING=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py --extra testing`
-INTEGRATIONS=`cat {DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
+INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
 EXTRA=`cat ${DEVTOOLS_DIR}/optional_packages.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
@@ -39,8 +39,8 @@ echo "TESTING=$TESTING"
 if [ "$CONDA_PY" != "3.7" ]; then
     ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $TESTING $EXTRA"
 else
-    ALL_PACKAGES="$WORKAROUNDS $PACKAGES $TESTING"  # no msmbuilder for py3.7?
+    ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $TESTING"  # no msmbuilder for py3.7?
 fi
 
-echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES $PINS"
-conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES $PINS
+echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES"
+#conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
