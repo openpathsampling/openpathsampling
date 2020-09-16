@@ -21,23 +21,23 @@ fi
 # always obeys if you explicitly request a pinned version)
 #conda config --env --add pinned_packages python=$CONDA_PY
 #cp $DEVTOOLS_DIR/../pinned $CONDA_PREFIX/
-PACKAGES=`python ${DEVTOOLS_DIR}/install_recipe_requirements.py --dry ${DEVTOOLS_DIR}/conda-recipe/meta.yaml | tr "\n" " "`
 
 # WORKAROUNDS is normally empty; needed if other pkgs don't list all deps
-WORKAROUNDS="pymbar"
-TESTING=`cat ${DEVTOOLS_DIR}/testing_requirements.txt | tr "\n" " "`
+WORKAROUNDS=""
+REQUIREMENTS=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py`
+TESTING=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py --extra testing`
+INTEGRATIONS=`cat {DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
 EXTRA=`cat ${DEVTOOLS_DIR}/optional_packages.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
-PINS=`cat ${DEVTOOLS_DIR}/../pinned | tr -d " " | tr "\n" " "`
 
+echo "REQUIREMENTS=$REQUIREMENTS"
 echo "WORKAROUNDS=$WORKAROUNDS"
 echo "PY_INSTALL=$PY_INSTALL"
-echo "PACKAGES=$PACKAGES"
 echo "TESTING=$TESTING"
-echo "PINS=$PINS"
 
+# TODO: adjust this to be per python version
 if [ "$CONDA_PY" != "3.7" ]; then
-    ALL_PACKAGES="$WORKAROUNDS $PACKAGES $TESTING $EXTRA"
+    ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $TESTING $EXTRA"
 else
     ALL_PACKAGES="$WORKAROUNDS $PACKAGES $TESTING"  # no msmbuilder for py3.7?
 fi
