@@ -14,7 +14,7 @@ then
     exit 1
 fi
 
-if [ $CONDA_PY != "2.7" ]; then
+if [ $CONDA_PY != "2.7" && -z "$MINIMAL" ]; then
     # experimental does not need to support Python 2
     echo travis_fold:start:experimental
     echo Running tests on experimental features
