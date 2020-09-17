@@ -26,7 +26,7 @@ def main(setup_cfg, extra):
         reqs = config.get('options', 'install_requires')
     else:
         # reqs = config['options.extras_require'][extra]
-        reqs = config.get('options', 'extras_require', extra)
+        reqs = config.get('options.extras_require', extra)
     return clean(reqs)
 
 if __name__ == "__main__":
