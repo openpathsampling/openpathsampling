@@ -406,15 +406,17 @@ class StorageTable(abc.Sequence):
         self.storage = storage
         self.table = table
         self.clear_cache_frequency = 1
-        self.iter_block_size = 1
+        self.iter_block_size = 100  # TODO: base it on the size of an object
 
     def __iter__(self):
         # TODO: ensure that this gives us things in idx order
-        backend_iterator = self.storage.backend.table_iterator(self.table)
-        # TODO: implement use of self.iter_block_size
+        backend_iter = self.storage.backend.table_iterator(self.table)
         # TODO: implement use of self.clear_cache_frequency
-        for row in backend_iterator:
-            yield self.storage.load([row.uuid])[0]
+        for block in tools.grouper(backend_iter, self.iter_block_size):
+            row_uuids = [row.uuid for row in block]
+            loaded = self.storage.load(row_uuids)
+            for obj in loaded:
+                yield obj
 
     def __getitem__(self, item):
         row = self.storage.backend.table_get_item(self.table, item)
@@ -435,6 +437,8 @@ class PseudoTable(abc.MutableSequence):
     # TODO: use this in the main code
     # NOTE: This will require that the storage class append to it
     """List of objects that can be retrieved by index or name.
+
+    PseudoTables are used to group simulation objects together.
     """
     def __init__(self, sequence=None):
         self._sequence = []
