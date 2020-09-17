@@ -20,10 +20,13 @@ def clean(string):
 def main(setup_cfg, extra):
     config = configparser.ConfigParser()
     config.read(setup_cfg)
+    # replace get with the __getitem__ syntax when we drop py27
     if extra is None:
-        reqs = config['options']['install_requires']
+        # reqs = config['options']['install_requires']
+        reqs = config.get('options', 'install_requires')
     else:
-        reqs = config['options.extras_require'][extra]
+        # reqs = config['options.extras_require'][extra]
+        reqs = config.get('options', 'extras_require', extra)
     return clean(reqs)
 
 if __name__ == "__main__":
