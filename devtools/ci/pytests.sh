@@ -13,3 +13,17 @@ if [ $testfail -eq 1 ]
 then
     exit 1
 fi
+
+if [ $CONDA_PY != "2.7" ]; then
+    # experimental does not need to support Python 2
+    echo travis_fold:start:experimental
+    echo Running tests on experimental features
+    pytest openpathsampling/experimental/ -vv -s || testfail=1
+    echo travis_fold:end:experimental
+fi
+
+
+if [ $testfail -eq 1 ]
+then
+    exit 1
+fi
