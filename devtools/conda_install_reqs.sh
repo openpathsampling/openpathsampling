@@ -25,7 +25,7 @@ fi
 # WORKAROUNDS is normally empty; needed if other pkgs don't list all deps
 WORKAROUNDS=""
 REQUIREMENTS=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py`
-TESTING=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py --extra testing`
+TESTING=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py --extra test`
 INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
