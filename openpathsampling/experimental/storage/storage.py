@@ -419,6 +419,13 @@ class StorageTable(abc.Sequence):
                 yield obj
 
     def __getitem__(self, item):
+        len_self = len(self)
+        if not (-len_self <= item < len_self):
+            raise IndexError("table index out of range")
+
+        if item < 0:
+            item += len(self)
+
         row = self.storage.backend.table_get_item(self.table, item)
         return self.storage.load([row.uuid])[0]
 
