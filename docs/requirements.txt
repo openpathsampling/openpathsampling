@@ -1,6 +1,7 @@
 matplotlib
 sphinx
 jupyter
+nbconvert<6
 jinja2
 netcdf4
 runipy
