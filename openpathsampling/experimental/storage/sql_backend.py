@@ -3,7 +3,7 @@ import collections
 from collections import abc
 import sqlalchemy as sql
 from .storage import universal_schema
-from .tools import group_by, compare_sets
+from .tools import group_by, compare_sets, grouper
 from . import tools
 # import ujson as json  # ujson is no longer maintained
 import json
@@ -124,7 +124,7 @@ class SQLStorageBackend(object):
                                        sql.Column('value', sql.String))
 
             self.metadata.create_all(self.engine)
-            self.register_schema(universal_schema, {})
+            self.register_schema(universal_schema, universal_sql_meta)
         elif mode == "r" or mode == "a":
             self.metadata.reflect(self.engine)
             self.schema = self.database_schema()
@@ -216,10 +216,13 @@ class SQLStorageBackend(object):
         # this is not public API (assumes idx_list, which is reserved by not
         # guaranteed)
         table = self.metadata.tables[table_name]
-        or_stmt = sql.or_(*(table.c.idx == idx for idx in idx_list))
-        sel = table.select(or_stmt)
+        results = []
         with self.engine.connect() as conn:
-            results = list(conn.execute(sel))
+            for block in grouper(idx_list, 1000):
+                or_stmt = sql.or_(*(table.c.idx == idx for idx in block))
+                sel = table.select(or_stmt)
+                results.extend(list(conn.execute(sel)))
+
         return results
 
 
