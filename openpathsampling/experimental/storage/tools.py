@@ -1,3 +1,4 @@
+import itertools
 import collections
 from numpy import ndarray
 
@@ -103,6 +104,15 @@ def block(sliceable, length):
         max_val += length
         max_val = min(max_val, max_len)
 
+_no_fill = object()
+def grouper(iterable, length, fillvalue=_no_fill):
+    # based on https://stackoverflow.com/a/10791887
+    args = [iter(iterable)] * length
+    for block in itertools.zip_longest(*args, fillvalue=fillvalue):
+        if tuple(block)[-1] is _no_fill:
+            yield tuple(elem for elem in block if elem is not _no_fill)
+        else:
+            yield tuple(block)
 
 def compare_sets(set1, set2):
     only_in_1 = set1 - set2

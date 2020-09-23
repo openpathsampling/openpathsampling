@@ -12,7 +12,6 @@ versions = {
     'package': openpathsampling.version.version,
     'netcdfplus': openpathsampling.netcdfplus.version.version,
     'setup.py': SETUP_VERSION,
-    'conda-recipe': conda_recipe_version('devtools/conda-recipe/meta.yaml'),
 }
 
 RELEASE_BRANCHES = ['stable']

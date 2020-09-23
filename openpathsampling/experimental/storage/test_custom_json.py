@@ -32,14 +32,17 @@ class CustomJSONCodingTest(object):
         for (obj, dct) in zip(self.objs, self.dcts):
             assert self.codec.object_hook(dct) == obj
 
-    def test_round_trip(self):
-        encoder, decoder = custom_json_factory([self.codec])
+    def _test_round_trip(self, encoder, decoder):
         for (obj, dct) in zip(self.objs, self.dcts):
             json_str = json.dumps(obj, cls=encoder)
             reconstructed = json.loads(json_str, cls=decoder)
             assert reconstructed == obj
             json_str_2 = json.dumps(obj, cls=encoder)
             assert json_str == json_str_2
+
+    def test_round_trip(self):
+        encoder, decoder = custom_json_factory([self.codec])
+        self._test_round_trip(encoder, decoder)
 
     def test_not_mine(self):
         # test that the default behavior is obeyed
