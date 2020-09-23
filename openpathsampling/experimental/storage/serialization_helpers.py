@@ -445,7 +445,7 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
     """
     if existing_uuids is None:
         existing_uuids = {}
-    known_uuids = set(existing_uuids.keys())
+    known_uuids = set(existing_uuids)
     uuid_to_table = {}
     all_table_rows = []
     lazy = set([])
