@@ -75,7 +75,10 @@ class GeneralStorage(StorableNamedObject):
         self.cache = MixedCache()
         if self.schema is None:
             self.schema = backend.schema
+        self.cache = MixedCache({})  # initial empty cache so it exists
         self.initialize_with_mode(self.mode)
+        self._simulation_objects = self._cache_simulation_objects()
+        self.cache = MixedCache(self._simulation_objects)
         self._stashed = []
         self._reset_fixed_cache()
 
@@ -384,12 +387,19 @@ class GeneralStorage(StorableNamedObject):
         pass
 
     def _cache_simulation_objects(self):
-
-        # backend_iterator = self.backend.table_iterator('simulation_objects')
-        # sim_obj_uuids = [row.uuid for row in backend_iterator]
-        # objs = self.load(sim_obj_uuids)
         # load up all the simulation objects
-        return {}
+        try:
+            backend_iter = self.backend.table_iterator('simulation_objects')
+            sim_obj_uuids = [row.uuid for row in backend_iter]
+        except KeyError:
+            # TODO: this should probably be a custom error; don't rely on
+            # the error type this backend raises
+            # this happens if no simulation objects are given in the
+            # schema... there's not technically required
+            objs = []
+        else:
+            objs = self.load(sim_obj_uuids)
+        return {get_uuid(obj): obj for obj in objs}
 
     def _reset_fixed_cache(self):
         self.cache.fixed_cache = {}
@@ -449,6 +459,9 @@ class MixedCache(abc.MutableMapping):
         self.fixed_cache = tools.none_to_default(fixed_cache, default={})
         self.cache = {}
 
+    def clear(self):
+        self.cache = {}
+
     def delete_items(self, list_of_items, error_if_missing=False):
         for item in list_of_items:
             if item in self:
@@ -493,16 +506,20 @@ class StorageTable(abc.Sequence):
     def __init__(self, storage, table, cache=None):
         self.storage = storage
         self.table = table
-        self.clear_cache_frequency = 1
+        self.clear_cache_block_freq = 100
         self.iter_block_size = 100  # TODO: base it on the size of an object
 
     def __iter__(self):
         # TODO: ensure that this gives us things in idx order
         backend_iter = self.storage.backend.table_iterator(self.table)
         # TODO: implement use of self.clear_cache_frequency
-        for block in tools.grouper(backend_iter, self.iter_block_size):
+        enum_iter = enumerate(tools.grouper(backend_iter,
+                                            self.iter_block_size))
+        for block_num, block in enum_iter:
             row_uuids = [row.uuid for row in block]
             loaded = self.storage.load(row_uuids)
+            if block_num % self.iter_block_size == 0:
+                self.storage.cache.clear()
             for obj in loaded:
                 yield obj
 
@@ -519,6 +536,11 @@ class StorageTable(abc.Sequence):
 
     def __len__(self):
         return self.storage.backend.table_len(self.table)
+
+    def cache_all(self):
+        old_blocksize = self.iter_block_size
+        self.iter_block_size = len(self)
+        _ = list(iter(self))
 
     def save(self, obj):
         # this is to match with the netcdfplus API
