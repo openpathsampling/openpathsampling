@@ -414,10 +414,7 @@ class MixedCache(abc.MutableMapping):
 class StorageTable(abc.Sequence):
     # NOTE: currently you still need to be able to hold the whole table in
     # memory ... at least, with the SQL backend.
-    def __init__(self, storage, table, cache=None):
-        if cache is None:
-            cache = MixedCache({})
-        self.cache = cache
+    def __init__(self, storage, table):
         self.storage = storage
         self.table = table
         self.clear_cache_block_freq = 100
@@ -426,7 +423,6 @@ class StorageTable(abc.Sequence):
     def __iter__(self):
         # TODO: ensure that this gives us things in idx order
         backend_iter = self.storage.backend.table_iterator(self.table)
-        # TODO: implement use of self.clear_cache_frequency
         enum_iter = enumerate(tools.grouper(backend_iter,
                                             self.iter_block_size))
         for block_num, block in enum_iter:
