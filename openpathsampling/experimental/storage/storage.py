@@ -49,7 +49,7 @@ class GeneralStorage(StorableNamedObject):
     def __init__(self, backend, class_info, schema=None,
                  simulation_classes=None, fallbacks=None, safemode=False):
         super().__init__()
-        GeneralStorage._known_storages = {backend.identifier: self}
+        GeneralStorage._known_storages[backend.identifier] = self
         self.backend = backend
         self.schema = schema.copy()
         self.class_info = class_info.copy()
