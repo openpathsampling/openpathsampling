@@ -63,13 +63,14 @@ class GeneralStorage(object):
         self._pseudo_tables['misc_simulation'] = PseudoTable()
 
         self._storage_tables = {}  # stores .steps, .snapshots
-        self._simulation_objects = self._cache_simulation_objects()
-        self.cache = MixedCache(self._simulation_objects)
         # self.serialization = Serialization(self)
         self.proxy_factory = ProxyObjectFactory(self, self.class_info)
         if self.schema is None:
             self.schema = backend.schema
+        self.cache = MixedCache({})  # initial empty cache so it exists
         self.initialize_with_mode(self.mode)
+        self._simulation_objects = self._cache_simulation_objects()
+        self.cache = MixedCache(self._simulation_objects)
         self._stashed = []
 
     def initialize_with_mode(self, mode):
@@ -302,11 +303,19 @@ class GeneralStorage(object):
         pass
 
     def _cache_simulation_objects(self):
-        # backend_iterator = self.backend.table_iterator('simulation_objects')
-        # sim_obj_uuids = [row.uuid for row in backend_iterator]
-        # objs = self.load(sim_obj_uuids)
         # load up all the simulation objects
-        return {}
+        try:
+            backend_iter = self.backend.table_iterator('simulation_objects')
+            sim_obj_uuids = [row.uuid for row in backend_iter]
+        except KeyError:
+            # TODO: this should probably be a custom error; don't rely on
+            # the error type this backend raises
+            # this happens if no simulation objects are given in the
+            # schema... there's not technically required
+            objs = []
+        else:
+            objs = self.load(sim_obj_uuids)
+        return {get_uuid(obj): obj for obj in objs}
 
     def _update_pseudo_tables(self, simulation_objects):
         # TODO: replace the pseudo_tables code here with a class
