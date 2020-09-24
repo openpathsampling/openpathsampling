@@ -415,6 +415,9 @@ class StorageTable(abc.Sequence):
     # NOTE: currently you still need to be able to hold the whole table in
     # memory ... at least, with the SQL backend.
     def __init__(self, storage, table, cache=None):
+        if cache is None:
+            cache = MixedCache({})
+        self.cache = cache
         self.storage = storage
         self.table = table
         self.clear_cache_block_freq = 100
@@ -429,7 +432,7 @@ class StorageTable(abc.Sequence):
         for block_num, block in enum_iter:
             row_uuids = [row.uuid for row in block]
             loaded = self.storage.load(row_uuids)
-            if block_num % self.iter_block_size == 0:
+            if block_num % self.clear_cache_block_freq == 0:
                 self.storage.cache.clear()
             for obj in loaded:
                 yield obj
