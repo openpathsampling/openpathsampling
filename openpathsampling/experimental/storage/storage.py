@@ -370,6 +370,9 @@ class MixedCache(abc.MutableMapping):
         self.fixed_cache = tools.none_to_default(fixed_cache, default={})
         self.cache = {}
 
+    def clear(self):
+        self.cache = {}
+
     def delete_items(self, list_of_items, error_if_missing=False):
         for item in list_of_items:
             if item in self:
@@ -414,16 +417,20 @@ class StorageTable(abc.Sequence):
     def __init__(self, storage, table, cache=None):
         self.storage = storage
         self.table = table
-        self.clear_cache_frequency = 1
+        self.clear_cache_block_freq = 100
         self.iter_block_size = 100  # TODO: base it on the size of an object
 
     def __iter__(self):
         # TODO: ensure that this gives us things in idx order
         backend_iter = self.storage.backend.table_iterator(self.table)
         # TODO: implement use of self.clear_cache_frequency
-        for block in tools.grouper(backend_iter, self.iter_block_size):
+        enum_iter = enumerate(tools.grouper(backend_iter,
+                                            self.iter_block_size))
+        for block_num, block in enum_iter:
             row_uuids = [row.uuid for row in block]
             loaded = self.storage.load(row_uuids)
+            if block_num % self.iter_block_size == 0:
+                self.storage.cache.clear()
             for obj in loaded:
                 yield obj
 
