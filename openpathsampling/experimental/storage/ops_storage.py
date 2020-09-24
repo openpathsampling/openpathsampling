@@ -91,6 +91,8 @@ class MoveChangeDeserializer(SchemaDeserializer):
         set_uuid(obj, uuid)
         return obj
 
+
+
 class OPSSpecialLookup(object):
     """Separate object to handle special lookups
 
@@ -256,7 +258,6 @@ class OPSStorage(storage.GeneralStorage):
         exists = cls._known_storages.get(backend.identifier, None)
         if exists is not None:
             return exists
-
         obj = cls.__new__(cls)
         schema = tools.none_to_default(schema, ops_schema)
         class_info = tools.none_to_default(class_info, ops_class_info)

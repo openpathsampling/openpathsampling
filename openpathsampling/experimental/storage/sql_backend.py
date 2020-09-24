@@ -133,7 +133,10 @@ class SQLStorageBackend(StorableNamedObject):
 
     @property
     def identifier(self):
-        return self.connection_uri, self.mode
+        if self.connection_uri == "sqlite:///:memory:":
+            return "sqlite:///{}".format(id(self)), self.mode
+        else:
+            return self.connection_uri, self.mode
 
     def to_dict(self):
         return {
