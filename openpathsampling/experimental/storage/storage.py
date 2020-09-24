@@ -448,6 +448,11 @@ class StorageTable(abc.Sequence):
     def __len__(self):
         return self.storage.backend.table_len(self.table)
 
+    def cache_all(self):
+        old_blocksize = self.iter_block_size
+        self.iter_block_size = len(self)
+        _ = list(iter(self))
+
     def save(self, obj):
         # this is to match with the netcdfplus API
         self.storage.save(obj)
