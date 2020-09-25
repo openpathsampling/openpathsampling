@@ -158,8 +158,7 @@ class GeneralStorage(StorableNamedObject):
 
         self.schema.update(schema)
         for table in self.schema:
-            self._storage_tables[table] = StorageTable(self, table,
-                                                       cache=self.cache)
+            self._storage_tables[table] = StorageTable(self, table)
         # self.serialization.register_serialization(schema, self.class_info)
 
     def register_from_instance(self, lookup, obj):
