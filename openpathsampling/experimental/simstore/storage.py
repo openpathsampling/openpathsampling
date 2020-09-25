@@ -428,7 +428,7 @@ class StorageTable(abc.Sequence):
         for block_num, block in enum_iter:
             row_uuids = [row.uuid for row in block]
             loaded = self.storage.load(row_uuids)
-            if block_num % self.clear_cache_block_freq == 0:
+            if block_num % self.clear_cache_block_freq == 0 and block_num != 0:
                 self.storage.cache.clear()
             for obj in loaded:
                 yield obj
