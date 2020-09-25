@@ -12,7 +12,7 @@ from openpathsampling.tests.test_helpers import make_1d_traj
 
 from .serialization_helpers import get_uuid, set_uuid
 from .storable_functions import *
-_MODULE = "openpathsampling.experimental.storage.storable_functions"
+_MODULE = "openpathsampling.experimental.simstore.storable_functions"
 
 
 class MockBackend(object):

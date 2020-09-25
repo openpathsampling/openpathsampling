@@ -1,11 +1,11 @@
 import openpathsampling as paths
 
-from .storable_functions import (
+from ..simstore.storable_functions import (
     StorableFunction, StorableFunctionConfig, wrap_numpy,
     scalarize_singletons, requires_lists_pre, requires_lists_post, Processor
 )
 from openpathsampling.netcdfplus import StorableNamedObject
-from .serialization_helpers import get_uuid
+from ..simstore.serialization_helpers import get_uuid
 
 class CollectiveVariable(StorableFunction):
     """Wrapper around functions that map snapshots to values.

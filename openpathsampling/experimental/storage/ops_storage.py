@@ -9,7 +9,7 @@ from ..simstore.serialization_helpers import default_find_uuids
 
 from ..simstore.class_lookup import ClassIsSomething
 
-from .storable_functions import (
+from ..simstore import (
     StorableFunction, StorableFunctionResults, storable_function_find_uuids
 )
 
@@ -23,16 +23,15 @@ from ..simstore.custom_json import (
     numpy_codec, bytes_codec, uuid_object_codec,
 )
 
-from .callable_codec import CallableCodec
+from ..simstore import CallableCodec
 
 from ..simstore.serialization import (
-    ToDictSerializer, SchemaSerializer, SchemaDeserializer,
-    SimulationObjectSerializer
+    ToDictSerializer, SchemaSerializer, SchemaDeserializer
 )
 
 from ..simstore.class_info import ClassInfo, ClassInfoContainer
 
-from .sql_backend import SQLStorageBackend  # TODO: generalize
+from ..simstore import SQLStorageBackend  # TODO: generalize
 
 from . import snapshots
 import logging
