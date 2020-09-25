@@ -1,13 +1,13 @@
-from . import storage
-from . import sql_backend
+from ..simstore import storage
+from ..simstore import sql_backend
 
-from .serialization_helpers import to_json_obj as json_serializer
-from .serialization_helpers import from_json_obj as deserialize_sim
-from .serialization_helpers import import_class
-from .serialization_helpers import get_uuid, set_uuid
-from .serialization_helpers import default_find_uuids
+from ..simstore.serialization_helpers import to_json_obj as json_serializer
+from ..simstore.serialization_helpers import from_json_obj as deserialize_sim
+from ..simstore.serialization_helpers import import_class
+from ..simstore.serialization_helpers import get_uuid, set_uuid
+from ..simstore.serialization_helpers import default_find_uuids
 
-from .class_lookup import ClassIsSomething
+from ..simstore.class_lookup import ClassIsSomething
 
 from .storable_functions import (
     StorableFunction, StorableFunctionResults, storable_function_find_uuids
@@ -16,18 +16,21 @@ from .storable_functions import (
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
-from . import tools
+from ..simstore import tools
 
-from .custom_json import (
+from ..simstore.custom_json import (
     JSONSerializerDeserializer,
     numpy_codec, bytes_codec, uuid_object_codec,
 )
 
 from .callable_codec import CallableCodec
 
-from .serialization import SchemaDeserializer
+from ..simstore.serialization import (
+    ToDictSerializer, SchemaSerializer, SchemaDeserializer,
+    SimulationObjectSerializer
+)
 
-from .class_info import ClassInfo, ClassInfoContainer
+from ..simstore.class_info import ClassInfo, ClassInfoContainer
 
 from .sql_backend import SQLStorageBackend  # TODO: generalize
 
@@ -237,12 +240,12 @@ ops_simulation_classes = {
 }  # TODO: add more to these
 
 
-class OPSStorage(storage.GeneralStorage):
+class Storage(storage.GeneralStorage):
     def __init__(self, backend, schema, class_info, fallbacks=None,
                  safemode=False):
         # TODO: this will change to match the current notation
-        super(OPSStorage, self).__init__(backend, schema, class_info,
-                                         fallbacks, safemode)
+        super(Storage, self).__init__(backend, schema, class_info,
+                                      fallbacks, safemode)
 
         self.n_snapshot_types = 0
 
@@ -263,7 +266,7 @@ class OPSStorage(storage.GeneralStorage):
         class_info = tools.none_to_default(class_info, ops_class_info)
         simulation_classes = tools.none_to_default(simulation_classes,
                                                    ops_simulation_classes)
-        super(OPSStorage, obj).__init__(
+        super(Storage, obj).__init__(
             backend=backend,
             schema=schema,
             class_info=class_info,

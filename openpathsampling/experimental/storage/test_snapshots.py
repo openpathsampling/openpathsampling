@@ -3,7 +3,7 @@ import pytest
 import openpathsampling as paths
 
 from openpathsampling.tests.test_helpers import make_1d_traj
-from .serialization_helpers import get_uuid
+from ..simstore.serialization_helpers import get_uuid
 
 from .snapshots import *
 

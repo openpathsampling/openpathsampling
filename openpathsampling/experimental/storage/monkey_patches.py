@@ -1,5 +1,5 @@
 import openpathsampling as paths
-from .dict_serialization_helpers import (
+from ..simstore.dict_serialization_helpers import (
     tuple_keys_to_dict, tuple_keys_from_dict
 )
 
