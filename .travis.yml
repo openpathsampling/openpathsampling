@@ -36,7 +36,7 @@ before_script:
   - conda list
 
 script:
-  - python autorelease_check.py --branch ${TRAVIS_BRANCH} --event ${TRAVIS_EVENT_TYPE}
+  - python devtools/autorelease_check.py --branch ${TRAVIS_BRANCH} --event ${TRAVIS_EVENT_TYPE}
   - source devtools/ci/pytests.sh
   - if [ -z "$MINIMAL" ] ; then source devtools/ci/ipythontests.sh; fi
 
@@ -49,6 +49,11 @@ addons:
     - pandoc
 
 env:
+  matrix:
+    - CONDA_PY=3.7 MINIMAL=true
+    - CONDA_PY=2.7
+    - CONDA_PY=3.6
+    - CONDA_PY=3.7
   global:
     - COVERALLS_PARALLEL=true
     - TWINE_USERNAME="dwhswenson"
@@ -59,11 +64,6 @@ env:
     - secure: "NJvoSrLNd2ZR3HluJjEqI36gD5lsucwIvgnYjNmM4cwnnA77aLV9FRYTwlLRZn3XY9FL8KOzL5l0amNzMD7sQrf7bWwWv7iCUBddH549q9RSgiuOugtodYJ6VaXi76hk1rOgcJpDoCj9wTCIlMtWibPUzr1QHmdihfdM2iA2kkE="
     - secure: "l9NJkZDD0ALhkErUvhRrreLsrcWErd+CXpWv8dxHGtkjemNx6CwVtyL+a30jz/QwMANSZbKll/cPK5yJQvuwDaWxja6UPLLKVNGtma+CmwKcIC/wwTwbMoxcS62fyLJ3kS0qR8oCQz2nCPKiYyRGADtPLWVMZckY1SJfNYcKuCM="
     - secure: "kb37xmsSV3pEnESnINzwlW2Cju/UFzA/G+m+NsihAwO8RMPZwKCrZK/rptgkUDACXJxom5M690WEukQkHnOt+OTrWhu7WKZgYeVuWUs2++RohYv/m5npaOHMMn+uYmF328v4PvPmXxbD02zzg5Tgdn82x8oa6J8BKX8ohOQ6Xpg="
-  matrix:
-    - CONDA_PY=3.7 MINIMAL=true
-    - CONDA_PY=2.7
-    - CONDA_PY=3.6
-    - CONDA_PY=3.7
 
 import:
-  - dwhswenson/autorelease:autorelease-travis.yml@v0.1.2
+  - dwhswenson/autorelease:autorelease-travis.yml@v0.2.1

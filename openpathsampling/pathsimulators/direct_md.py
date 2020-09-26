@@ -84,6 +84,7 @@ class DirectSimulation(PathSimulator):
         was_in_interface = {p: None for p in self.flux_pairs}
         local_traj = paths.Trajectory([self.initial_snapshot])
         self.engine.current_snapshot = self.initial_snapshot
+        self.engine.start()
         for step in xrange(n_steps):
             frame = self.engine.generate_next_frame()
 
@@ -130,6 +131,8 @@ class DirectSimulation(PathSimulator):
 
             if self.storage is not None:
                 local_traj += [frame]
+
+        self.engine.stop(local_traj)
 
         if self.storage is not None:
             self.storage.save(local_traj)

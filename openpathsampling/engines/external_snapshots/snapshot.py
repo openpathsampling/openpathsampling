@@ -1,6 +1,11 @@
+import time
+
 from openpathsampling.engines import features
 from openpathsampling.engines.snapshot import BaseSnapshot
 from . import features as ext_features
+
+import logging
+logger = logging.getLogger(__name__)
 
 @features.base.attach_features([
     features.engine,
@@ -91,7 +96,7 @@ class ExternalMDSnapshot(BaseSnapshot):
         """Remove internal details from snapshot.
 
         These details should always be accessible later using
-        :method:`.load_details`. Removing them allows them memory to be
+        :meth:`.load_details`. Removing them allows them memory to be
         freed.
         """
         self._xyz = None

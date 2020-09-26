@@ -78,6 +78,7 @@ class ExternalEngine(DynamicsEngine):
         self.first_frame_in_file = first_frame_in_file
         self._traj_num = -1
         self._current_snapshot = template
+        self.n_frames_since_start = None
 
     @property
     def current_snapshot(self):
