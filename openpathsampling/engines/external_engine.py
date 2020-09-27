@@ -91,7 +91,7 @@ class RandomStringFilenames(FilenameSetter):
     """
     _allowed = 'abcdefghijklmnopqrstuvwxyz0123456789'
     def __init__(self, length=8, allowed=None):
-        super().__init__()
+        super(RandomStringFilenames, self).__init__()
         self.length = length
         allowed = allowed if allowed is not None else self._allowed
         self.allowed = np.array([a for a in allowed])
