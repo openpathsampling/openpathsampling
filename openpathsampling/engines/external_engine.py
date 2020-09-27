@@ -64,7 +64,7 @@ class FilenameSetter(StorableNamedObject):
     # some weird type testing that requires replace object to be instances
     # of the default
     def __init__(self, count=0):
-        super().__init__()
+        super(FilenameSetter, self).__init__()
         self.count = count
 
     def __call__(self):
