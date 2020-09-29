@@ -30,7 +30,9 @@ from openpathsampling.engines.external_engine import (
     _debug_open_files, close_file_descriptors
 )
 
-def _remove_file_if_exists(filename):
+def _remove_file_if_exists(filename):  # pragma: no cover
+    #  not requiring coverage here because it's part of Gromacs integration;
+    #  gets covered if gmx is installed though
     if os.path.isfile(filename):
         os.remove(filename)
 

@@ -129,7 +129,7 @@ class TestGromacsEngine(object):
         if os.path.isfile(traj_50):
             os.remove(traj_50)
 
-    def test_set_filenames(self):
+    def test_set_filenames_int(self):
         test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
                              base_dir=self.test_dir, options={},
                              prefix="proj")
@@ -152,6 +152,20 @@ class TestGromacsEngine(object):
                      os.path.join(self.test_dir, "proj_edr", "0000100.edr"))
         assert_equal(test_engine.log_file,
                      os.path.join(self.test_dir, "proj_log", "0000100.log"))
+
+    def test_set_filenames_fixed(self):
+        test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
+                             base_dir=self.test_dir, options={},
+                             prefix="proj")
+        test_engine.set_filenames('foo')
+        assert test_engine.input_file == \
+                os.path.join(self.test_dir, "foo_initial_frame.trr")
+        assert test_engine.output_file == \
+                os.path.join(self.test_dir, "proj_trr/foo.trr")
+        assert test_engine.edr_file == \
+                os.path.join(self.test_dir, "proj_edr/foo.edr")
+        assert test_engine.log_file == \
+                os.path.join(self.test_dir, "proj_log/foo.log")
 
     def test_engine_command(self):
         test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
