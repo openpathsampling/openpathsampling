@@ -45,10 +45,10 @@ finally:
 
 class TestGroFileEngine(object):
     def setup(self):
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not installed.")
         self.gro = os.path.join(data_filename("gromacs_engine"), "conf.gro")
-        self.engine = paths.engines.gromacs.engine._GroFileEngine(
-            self.gro
-        ).named("gro")
+        self.engine = snapshot_from_gro(self.gro).engine.named("gro")
 
     def test_storage(self):
         tmpdir = tempfile.mkdtemp()
@@ -64,8 +64,6 @@ class TestGroFileEngine(object):
             os.rmdir(tmpdir)
 
     def test_read_frame_data(self):
-        if not HAS_MDTRAJ:
-            pytest.skip("MDTraj not installed.")
         mdt = md.load(self.gro)
         # frame number unused here
         xyz, vel, box = self.engine.read_frame_data(self.gro, 9)
