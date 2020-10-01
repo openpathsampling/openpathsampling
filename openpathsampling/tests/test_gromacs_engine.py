@@ -43,6 +43,36 @@ finally:
     devnull.close()
 
 
+class TestGroFileEngine(object):
+    def setup(self):
+        self.gro = os.path.join(data_filename("gromacs_engine"), "conf.gro")
+        self.engine = paths.engines.gromacs.engine._GroFileEngine(
+            self.gro
+        ).named("gro")
+
+    def test_storage(self):
+        tmpdir = tempfile.mkdtemp()
+        storage_file = os.path.join(tmpdir, "test.nc")
+        storage = paths.Storage(storage_file, mode='w')
+        try:
+            storage.save(self.engine)
+            reloaded = storage.engines['gro']
+            assert self.engine == reloaded
+        finally:
+            storage.close()
+            os.remove(storage_file)
+            os.rmdir(tmpdir)
+
+    def test_read_frame_data(self):
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not installed.")
+        mdt = md.load(self.gro)
+        # frame number unused here
+        xyz, vel, box = self.engine.read_frame_data(self.gro, 9)
+        npt.assert_array_equal(xyz, mdt.xyz[0])
+        npt.assert_array_equal(box, mdt.unitcell_vectors[0])
+
+
 class TestGromacsEngine(object):
     # Files used (in test_data/gromacs_engine/)
     # conf.gro, md.mdp, topol.top : standard Gromacs input files
@@ -248,7 +278,7 @@ class TestGromacsExternalMDSnapshot(object):
                              top="topol.top",
                              options={},
                              base_dir=self.test_dir,
-                             prefix="proj")
+                             prefix="proj").named('gmx')
         self.snapshot = ExternalMDSnapshot(
             file_name=os.path.join(self.test_dir, "project_trr",
                                    "0000000.trr"),
@@ -322,6 +352,8 @@ class TestGromacsExternalMDSnapshot(object):
     def test_internalized_storage(self):
         internalized = self.snapshot.internalize()
         npt.assert_array_almost_equal(internalized.xyz, self.snapshot.xyz)
+        assert internalized.engine.name == \
+                self.snapshot.engine.name + " (internalized)"
         try:
             tmp_dir = tempfile.TemporaryDirectory()
         except AttributeError:

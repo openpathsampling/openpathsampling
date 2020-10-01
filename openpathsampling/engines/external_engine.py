@@ -126,9 +126,11 @@ class _InternalizedEngineProxy(DynamicsEngine):
         dct = {'engine': dct['engine']}
         return super(_InternalizedEngineProxy, cls).from_dict(dct)
 
+    @property
+    def name(self):
+        return self.engine.name + " (internalized)"
+
     def __getattr__(self, attr):
-        if attr == 'name' and self.engine.name:
-            return self.engine.name + " (internalized)"
         return getattr(self.engine, attr)
 
 

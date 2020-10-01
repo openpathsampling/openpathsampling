@@ -336,7 +336,8 @@ class GromacsEngine(ExternalEngine):
         return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
         return return_code
 
-    def cleanup(self):
+    def cleanup(self):  # pragma: no cover
+        # tested when traj is run, which we don't on CI
         _remove_file_if_exists(self.input_file)
         _remove_file_if_exists(self.tpr_file)
         _remove_file_if_exists(self.mdout_file)
