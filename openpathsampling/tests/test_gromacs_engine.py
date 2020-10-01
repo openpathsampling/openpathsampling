@@ -50,6 +50,13 @@ class TestGroFileEngine(object):
         self.gro = os.path.join(data_filename("gromacs_engine"), "conf.gro")
         self.engine = snapshot_from_gro(self.gro).engine.named("gro")
 
+    def test_dict_cycle(self):
+        cls = self.engine.__class__
+        dct = self.engine.to_dict()
+        deser = cls.from_dict(dct)
+        dct2 = deser.to_dict()
+        assert dct == dct2
+
     def test_storage(self):
         tmpdir = tempfile.mkdtemp()
         storage_file = os.path.join(tmpdir, "test.nc")
