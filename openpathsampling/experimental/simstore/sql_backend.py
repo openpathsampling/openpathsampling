@@ -125,6 +125,10 @@ class SQLStorageBackend(object):
 
             self.metadata.create_all(self.engine)
             self.register_schema(universal_schema, universal_sql_meta)
+            uuid_table = self.metadata.tables['uuid']
+            index = sql.Index('uuids_index', *uuid_table.c, unique=True)
+            index.create(self.engine)
+
         elif mode == "r" or mode == "a":
             self.metadata.reflect(self.engine)
             self.schema = self.database_schema()
