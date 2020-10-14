@@ -4,6 +4,7 @@ from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
                         raises, assert_true)
 from nose.plugins.skip import Skip, SkipTest
 import numpy.testing as npt
+import tempfile
 
 from .test_helpers import data_filename, assert_items_equal
 
@@ -40,6 +41,41 @@ except OSError:
     has_gmx = False
 finally:
     devnull.close()
+
+
+class TestGroFileEngine(object):
+    def setup(self):
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not installed.")
+        self.gro = os.path.join(data_filename("gromacs_engine"), "conf.gro")
+        self.engine = snapshot_from_gro(self.gro).engine.named("gro")
+
+    def test_dict_cycle(self):
+        cls = self.engine.__class__
+        dct = self.engine.to_dict()
+        deser = cls.from_dict(dct)
+        dct2 = deser.to_dict()
+        assert dct == dct2
+
+    def test_storage(self):
+        tmpdir = tempfile.mkdtemp()
+        storage_file = os.path.join(tmpdir, "test.nc")
+        storage = paths.Storage(storage_file, mode='w')
+        try:
+            storage.save(self.engine)
+            reloaded = storage.engines['gro']
+            assert self.engine == reloaded
+        finally:
+            storage.close()
+            os.remove(storage_file)
+            os.rmdir(tmpdir)
+
+    def test_read_frame_data(self):
+        mdt = md.load(self.gro)
+        # frame number unused here
+        xyz, vel, box = self.engine.read_frame_data(self.gro, 9)
+        npt.assert_array_equal(xyz, mdt.xyz[0])
+        npt.assert_array_equal(box, mdt.unitcell_vectors[0])
 
 
 class TestGromacsEngine(object):
@@ -128,7 +164,7 @@ class TestGromacsEngine(object):
         if os.path.isfile(traj_50):
             os.remove(traj_50)
 
-    def test_set_filenames(self):
+    def test_set_filenames_int(self):
         test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
                              base_dir=self.test_dir, options={},
                              prefix="proj")
@@ -151,6 +187,20 @@ class TestGromacsEngine(object):
                      os.path.join(self.test_dir, "proj_edr", "0000100.edr"))
         assert_equal(test_engine.log_file,
                      os.path.join(self.test_dir, "proj_log", "0000100.log"))
+
+    def test_set_filenames_fixed(self):
+        test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
+                             base_dir=self.test_dir, options={},
+                             prefix="proj")
+        test_engine.set_filenames('foo')
+        assert test_engine.input_file == \
+                os.path.join(self.test_dir, "foo_initial_frame.trr")
+        assert test_engine.output_file == \
+                os.path.join(self.test_dir, "proj_trr/foo.trr")
+        assert test_engine.edr_file == \
+                os.path.join(self.test_dir, "proj_edr/foo.edr")
+        assert test_engine.log_file == \
+                os.path.join(self.test_dir, "proj_log/foo.log")
 
     def test_engine_command(self):
         test_engine = Engine(gro="conf.gro", mdp="md.mdp", top="topol.top",
@@ -179,10 +229,10 @@ class TestGromacsEngine(object):
         snap = self.engine.read_frame_from_file(traj_0, 0)
         self.engine.set_filenames(0)
 
-        ens = paths.LengthEnsemble(3)
+        ens = paths.LengthEnsemble(5)
         traj = self.engine.generate(snap, running=[ens.can_append])
         assert_equal(self.engine.proc.is_running(), False)
-        assert_equal(len(traj), 3)
+        assert_equal(len(traj), 5)
         ttraj = md.load(self.engine.trajectory_filename(1),
                         top=self.engine.gro)
         # the mdp suggests a max length of 100 frames
@@ -233,7 +283,7 @@ class TestGromacsExternalMDSnapshot(object):
                              top="topol.top",
                              options={},
                              base_dir=self.test_dir,
-                             prefix="proj")
+                             prefix="proj").named('gmx')
         self.snapshot = ExternalMDSnapshot(
             file_name=os.path.join(self.test_dir, "project_trr",
                                    "0000000.trr"),
@@ -303,3 +353,29 @@ class TestGromacsExternalMDSnapshot(object):
         self._check_none_empty()
         self.snapshot.clear_cache()
         self._check_all_empty()
+
+    def test_internalized_storage(self):
+        internalized = self.snapshot.internalize()
+        npt.assert_array_almost_equal(internalized.xyz, self.snapshot.xyz)
+        assert internalized.engine.name == \
+                self.snapshot.engine.name + " (internalized)"
+        try:
+            tmp_dir = tempfile.TemporaryDirectory()
+        except AttributeError:
+            # Py2: we'll just skip this test (and not worry when Py2 goes away)
+            pytest.skip("Test approach only valid in Python 3")
+
+        filename = os.path.join(tmp_dir.name, "test.nc")
+        filename = "foo.nc"  # DEBUG
+        storage_w = paths.Storage(filename, template=internalized, mode='w')
+        storage_w.save(internalized)
+        rl = storage_w.snapshots[0]
+        storage_w.sync()
+        storage_w.close()
+        storage_r = paths.Storage(filename, mode='r')
+        assert len(storage_r.snapshots) == 2
+        reloaded = storage_r.snapshots[0]
+        npt.assert_almost_equal(internalized.xyz, reloaded.xyz)
+        assert internalized.__class__ != self.snapshot.__class__
+        assert internalized.__class__ == reloaded.__class__
+
