@@ -116,15 +116,9 @@ class _InternalizedEngineProxy(DynamicsEngine):
                                                        descriptor=descriptor)
 
     def to_dict(self):
-        dct = super(_InternalizedEngineProxy, self).to_dict()
-        dct['engine'] = self.engine
+        # We only need the engine to load again
+        dct = {'engine': self.engine}
         return dct
-
-    @classmethod
-    def from_dict(cls, dct):
-        # ignore everything except the engine here
-        dct = {'engine': dct['engine']}
-        return super(_InternalizedEngineProxy, cls).from_dict(dct)
 
     @property
     def name(self):
@@ -320,5 +314,4 @@ class ExternalEngine(DynamicsEngine):
     def engine_command(self):
         """Generates a string for the command to run the engine."""
         raise NotImplementedError()
-
 
