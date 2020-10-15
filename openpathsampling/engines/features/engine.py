@@ -7,6 +7,8 @@ engine : :class:`openpathsampling.DynamicsEngine`
 
 variables = ['engine']
 
+schema_entries = [('engine', 'uuid')]
+
 
 def netcdfplus_init(store):
     store.create_variable(

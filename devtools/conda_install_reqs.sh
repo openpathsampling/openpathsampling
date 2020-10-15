@@ -27,18 +27,20 @@ WORKAROUNDS=""
 REQUIREMENTS=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py`
 TESTING=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py --extra test`
 INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
+EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
-echo "REQUIREMENTS=$REQUIREMENTS"
-echo "WORKAROUNDS=$WORKAROUNDS"
-echo "INTEGRATIONS=$INTEGRATIONS"
 echo "PY_INSTALL=$PY_INSTALL"
+echo "REQUIREMENTS=$REQUIREMENTS"
+echo "INTEGRATIONS=$INTEGRATIONS"
+echo "EXPERIMENTAL=$EXPERIMENTAL"
+echo "WORKAROUNDS=$WORKAROUNDS"
 echo "TESTING=$TESTING"
 
 # TODO: allow different installs for different versions
 # (needed this when msmbuilder was only available on older pythons; similar
 # situations may come up in the future)
-ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $TESTING"
+ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL $TESTING"
 
 echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES"
 conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
