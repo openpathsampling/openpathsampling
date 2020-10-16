@@ -13,7 +13,7 @@ class StepVisualizer2D(object):
         self.xlim = xlim
         self.ylim = ylim
         self.output_directory = output_directory
-        self.background = None
+        self.background = plt.subplots()[0]
         self._save_bg_axes = None
 
         self.fig = None

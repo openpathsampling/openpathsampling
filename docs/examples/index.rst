@@ -18,26 +18,40 @@ them in our `GitHub repository
 .. note:: It's a *lot* more fun to run these examples live than to just read
           them here!
 
+Tutorial
+--------
+
+One of the best ways to get familiar with OPS is our tutorial, which has
+been used in several workshops and classrooms over the years. The main part
+of the tutorial (notebooks numbered 1-3) is essentially the same as the
+alanine dipeptide TPS example, and usually takes no more than 90 minutes to
+complete. It can be downloaded at the link below; see the readme file for
+details:
+
+* http://gitlab.e-cam2020.eu/dwhswenson/ops_tutorial
+
+There's also a `YouTube video of the tutorial 
+<https://www.youtube.com/watch?v=a46tOWnqjNY>`_ as it was presented at a
+workshop in 2017.
+
+
 Introductory Examples
 ---------------------
 
-These examples give the entire process of a path sampling simulation: going
+The next examples give the entire process of a path sampling simulation: going
 from an initial frame to a set of initial trajectories, performing the path
 sampling, and the analyzing the results.
 
 .. toctree::
    :maxdepth: 1
 
-   mstis
    AD_tps
+   mstis
 
 We recommend beginning with those two examples: they cover most of the
-essential points of using OPS. Additionally, there's a `tutorial version of
-the alanine dipeptide TPS example
-<http://gitlab.e-cam2020.eu/dwhswenson/ops_tutorial>`_, if you prefer a
-version where *you* have to add the missing pieces to make it run.
-We also have several other examples which show how to use these approaches
-for specific cases. Here are several of those:
+essential points of using OPS. We also have several other examples which
+show how to use these approaches for specific cases. Here are several of
+those:
 
 .. toctree::
     :maxdepth: 1
