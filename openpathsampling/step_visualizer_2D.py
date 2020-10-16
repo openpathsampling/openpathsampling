@@ -13,7 +13,8 @@ class StepVisualizer2D(object):
         self.xlim = xlim
         self.ylim = ylim
         self.output_directory = output_directory
-        self.background = plt.subplots()[0]
+        is_interactive = matplotlib.is_interactive()
+        self.background = None
         self._save_bg_axes = None
 
         self.fig = None
@@ -77,18 +78,23 @@ class StepVisualizer2D(object):
 
     def draw_background(self):
         # draw the background
-        if self.background is not None:
-            if self._save_bg_axes is None:
-                self._save_bg_axes = self.background.axes
-            self.fig = self.background
-            for ax in self.fig.axes:
-                self.fig.delaxes(ax)
-            for ax in self._save_bg_axes:
-                self.fig.add_axes(ax)
-            self.ax = self.fig.axes[0].twinx()
-            self.ax.cla()
-        else:
-            self.fig, self.ax = plt.subplots()
+        ax = None
+        if self.background is None:
+            self.fig, ax = plt.subplots()
+            self.background = self.fig
+            ax.set_xlim(self.xlim)
+            ax.set_ylim(self.ylim)
+
+        if self._save_bg_axes is None:
+            self._save_bg_axes = self.background.axes
+        self.fig = self.background
+        for ax in self.fig.axes:
+            self.fig.delaxes(ax)
+        for ax in self._save_bg_axes:
+            self.fig.add_axes(ax)
+
+        self.ax = self.fig.axes[0].twinx()
+        self.ax.cla()
 
         self.ax.set_xlim(self.xlim)
         self.ax.set_ylim(self.ylim)
