@@ -24,6 +24,7 @@ providing this here the unorganized form.
    which_network
    transitions_and_networks
    tis_analysis
+   ensemble_tricks
    how_use
 ..   troubleshooting
 ..   error_messages
