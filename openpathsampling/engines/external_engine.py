@@ -1,5 +1,6 @@
+from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.engines.dynamics_engine import DynamicsEngine
-from openpathsampling.engines.snapshot import BaseSnapshot
+from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
 from openpathsampling.engines.toy import ToySnapshot
 import numpy as np
 import os
@@ -10,6 +11,10 @@ import psutil
 import signal
 import shlex
 import time
+
+import sys
+if sys.version_info > (3, ):
+    long = int
 
 import linecache
 
@@ -48,6 +53,81 @@ def _debug_snapshot_loading(snapshot):
     snapshot.load_details()
     snapshot.clear_cache()
 
+
+class FilenameSetter(StorableNamedObject):
+    """Just use numbers, as we did previously.
+
+    This is the default for compatibility reasons, but it not recommended.
+    Generally, we recommend using :class:`.RandomString`.
+    """
+    # the weird use of this as the base class is because engine options has
+    # some weird type testing that requires replace object to be instances
+    # of the default
+    def __init__(self, count=0):
+        super(FilenameSetter, self).__init__()
+        self.count = count
+
+    def __call__(self):
+        retval = self.count
+        self.count += 1
+        return retval
+
+    def reset(self, count=0):
+        self.count = count
+
+
+class RandomStringFilenames(FilenameSetter):
+    """Use a random string for filename prefixes.
+
+    This is recommended, and will become the default in future versions of
+    OpenPathSampling.
+
+    Parameters
+    ----------
+    length : int
+        number of character in the resulting string
+    allowed : str
+        string containing the allowed characters to return
+    """
+    _allowed = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    def __init__(self, length=8, allowed=None):
+        super(RandomStringFilenames, self).__init__()
+        self.length = length
+        allowed = allowed if allowed is not None else self._allowed
+        self.allowed = np.array([a for a in allowed])
+
+    def __call__(self):
+        return "".join(np.random.choice(self.allowed, self.length))
+
+class _InternalizedEngineProxy(DynamicsEngine):
+    """Wrapper that allows snapshots to be "internalized."
+
+    This is needed because the dynamically-registered snapshot tables are
+    associated to an engine: each engine creates exactly one snapshot table.
+    We use the internalized engine to create those snapshots.
+    """
+    def __init__(self, engine):
+        descriptor = SnapshotDescriptor.construct(
+            snapshot_class=engine.InternalizedSnapshotClass,
+            snapshot_dimensions=engine.descriptor._dimensions
+        )
+        self.engine = engine
+        super(_InternalizedEngineProxy, self).__init__(options={},
+                                                       descriptor=descriptor)
+
+    def to_dict(self):
+        # We only need the engine to load again
+        dct = {'engine': self.engine}
+        return dct
+
+    @property
+    def name(self):
+        return self.engine.name + " (internalized)"
+
+    def __getattr__(self, attr):
+        return getattr(self.engine, attr)
+
+
 class ExternalEngine(DynamicsEngine):
     """
     Generic object to handle arbitrary external engines. Subclass to use.
@@ -62,7 +142,8 @@ class ExternalEngine(DynamicsEngine):
         'engine_directory' : "",
         'n_spatial' : 1,
         'n_atoms' : 1,
-        'n_poll_per_step': 1
+        'n_poll_per_step': 1,
+        'filename_setter': FilenameSetter(),
     }
 
     killsig = signal.SIGTERM
@@ -79,6 +160,29 @@ class ExternalEngine(DynamicsEngine):
         self._traj_num = -1
         self._current_snapshot = template
         self.n_frames_since_start = None
+        self.internalized_engine = _InternalizedEngineProxy(self)
+
+    def to_dict(self):
+        dct = super(ExternalEngine, self).to_dict()
+        # this is a trick to avoid circular references: the idea is that we
+        # create an identical internalized engine in our __init__ (i.e., the
+        # engine's from_dict) -- therefore we create it from scratch each
+        # time and just save/set the UUID
+        dct.update({
+            'internalized_engine_uuid': str(self.internalized_engine.__uuid__)
+        })
+        return dct
+
+    @classmethod
+    def from_dict(cls, dct):
+        dct = dct.copy()
+        internalized_engine_uuid = dct.pop('internalized_engine_uuid', None)
+        obj = super(ExternalEngine, cls).from_dict(dct)
+        if internalized_engine_uuid:
+            # TODO: in future versions of OPS, get_/set_uuid should always
+            # return strings
+            obj.internalized_engine.__uuid__ = long(internalized_engine_uuid)
+        return obj
 
     @property
     def current_snapshot(self):
@@ -135,7 +239,8 @@ class ExternalEngine(DynamicsEngine):
         self._traj_num += 1
         self.frame_num = 0
         self.n_frames_since_start = 0
-        self.set_filenames(self._traj_num)
+        file_prefix = self.filename_setter()
+        self.set_filenames(file_prefix)
         self.write_frame_to_file(self.input_file, self.current_snapshot, "w")
         self.prepare()
 
@@ -209,5 +314,4 @@ class ExternalEngine(DynamicsEngine):
     def engine_command(self):
         """Generates a string for the command to run the engine."""
         raise NotImplementedError()
-
 
