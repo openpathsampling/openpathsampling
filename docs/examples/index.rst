@@ -28,7 +28,7 @@ alanine dipeptide TPS example, and usually takes no more than 90 minutes to
 complete. It can be downloaded at the link below; see the readme file for
 details:
 
-* http://gitlab.e-cam2020.eu/dwhswenson/ops_tutorial
+* https://gitlab.e-cam2020.eu/dwhswenson/ops_tutorial
 
 There's also a `YouTube video of the tutorial 
 <https://www.youtube.com/watch?v=a46tOWnqjNY>`_ as it was presented at a
