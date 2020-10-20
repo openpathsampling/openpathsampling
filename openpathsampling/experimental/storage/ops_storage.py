@@ -257,7 +257,9 @@ class Storage(storage.GeneralStorage):
                      simulation_classes=None, fallbacks=None,
                      safemode=False):
         # quick exit if this storage is known
-        exists = cls._known_storages.get(backend.identifier, None)
+        exists = None
+        if backend.identifier[1] != 'w':
+            exists = cls._known_storages.get(backend.identifier, None)
         if exists is not None:
             return exists
         obj = cls.__new__(cls)
