@@ -10,6 +10,12 @@ storables = ['statics']
 
 dimensions = ['n_atoms', 'n_spatial']
 
+schema_entries = [(
+    'statics', [('coordinates', 'ndarray.float32({n_atoms},{n_spatial})'),
+                ('box_vectors', 'ndarray.float32({n_spatial},{n_spatial})')]
+)]
+
+
 def netcdfplus_init(store):
     static_store = StaticContainerStore()
     static_store.set_caching(WeakLRUCache(10000))

@@ -9,6 +9,13 @@ from openpathsampling.tools import refresh_output
 
 from collections import Counter
 
+import sys
+if sys.version_info > (3, ):
+    from collections.abc import Mapping
+else:
+    from collections import Mapping
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +29,7 @@ class SampleKeyError(Exception):
 
 
 # @lazy_loading_attributes('movepath')
-class SampleSet(StorableObject):
+class SampleSet(StorableObject, Mapping):
     """
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -78,6 +85,9 @@ class SampleSet(StorableObject):
     @property
     def ensembles(self):
         return self.ensemble_dict.keys()
+
+    def values(self):
+        return self.samples
 
     @property
     def replicas(self):
@@ -848,8 +858,8 @@ class Sample(StorableObject):
         # mystr  = "Replica: "+str(self.replica)+"\n"
         # mystr += "Trajectory: "+str(self.trajectory)+"\n"
         # mystr += "Ensemble: "+repr(self.ensemble)+"\n"
-        mystr = 'Sample(RepID: %d, Ens: %s, %d steps)' % (
-            self.replica, repr(self.ensemble), len(self.trajectory))
+        mystr = 'Sample(RepID: %d, Ens: %s, %s)' % (
+            self.replica, repr(self.ensemble), repr(self.trajectory))
         return mystr
 
     @property
