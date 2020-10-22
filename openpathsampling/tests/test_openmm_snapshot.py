@@ -46,7 +46,6 @@ class TestOpenMMSnapshot(object):
             velocities=self.template.velocities,
             engine=self.engine
         )
-        # self.engine.current_snapshot = self.template
 
     def test_masses_from_file(self):
         masses = self.template.masses
