@@ -61,7 +61,7 @@ class TestSnapshotIntegration(object):
 
         storage = self._make_storage(mode='r')
         assert storage.backend.has_table('snapshot0')
-        snap2 = storage.snapshot0[0]
+        snap2 = storage.snapshots.tables['snapshot0'][0]
 
         np.testing.assert_array_equal(snap.xyz, snap2.xyz)
 

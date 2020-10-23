@@ -34,6 +34,8 @@ from ..simstore.class_info import ClassInfo, ClassInfoContainer
 from ..simstore import SQLStorageBackend  # TODO: generalize
 
 from . import snapshots
+from .snapshots_table import SnapshotsTable
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -248,6 +250,8 @@ class Storage(storage.GeneralStorage):
                                       fallbacks, safemode)
 
         self.n_snapshot_types = 0
+        self.snapshots = SnapshotsTable(self)
+        self.snapshots.update_tables()
 
     def sync_all(self):
         self.save(self._stashed)
@@ -264,10 +268,12 @@ class Storage(storage.GeneralStorage):
         if exists is not None:
             return exists
         obj = cls.__new__(cls)
+        obj.n_snapshot_types = 0
         schema = tools.none_to_default(schema, ops_schema)
         class_info = tools.none_to_default(class_info, ops_class_info)
         simulation_classes = tools.none_to_default(simulation_classes,
                                                    ops_simulation_classes)
+        obj.snapshots = None
         super(Storage, obj).__init__(
             backend=backend,
             schema=schema,
@@ -275,7 +281,8 @@ class Storage(storage.GeneralStorage):
             simulation_classes=simulation_classes,
             fallbacks=fallbacks
         )
-        obj.n_snapshot_types = 0
+        obj.snapshots = SnapshotsTable(obj)
+        obj.snapshots.update_tables()
         return obj
 
     def to_dict(self):
@@ -303,6 +310,8 @@ class Storage(storage.GeneralStorage):
                     class_info=self.class_info,
                     table_name=table
                 ))
+                if self.snapshots is not None:
+                    self.snapshots.update_tables()
         logger.info("Found {} possible lookups".format(len(lookups)))
         logger.info("Lookups for tables: " + str(lookups.keys()))
         class_info_list = [ClassInfo(table=table,
@@ -326,4 +335,5 @@ class Storage(storage.GeneralStorage):
 
             self.register_schema(schema, class_info_list)
             self.n_snapshot_types += 1
+            self.snapshots.update_tables()
 
