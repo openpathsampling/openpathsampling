@@ -78,7 +78,6 @@ class StepVisualizer2D(object):
 
     def draw_background(self):
         # draw the background
-        ax = None
         if self.background is None:
             self.fig, ax = plt.subplots()
             self.background = self.fig
