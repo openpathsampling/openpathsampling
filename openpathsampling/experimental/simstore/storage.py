@@ -577,8 +577,8 @@ class PseudoTable(abc.MutableSequence):
     def get_by_uuid(self, uuid):
         return self._uuid_to_obj[uuid]
 
-    # NOTE: index can get confusing because you can have two equal volumes
-    # (same CV, same range) with one named and the other not named.
+    # NOTE: .index() can get confusing because you can have two equal
+    # volumes (same CV, same range) with one named and the other not named.
 
     def __getitem__(self, item):
         try:
