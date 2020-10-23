@@ -18,7 +18,7 @@ def n_degrees_of_freedom(snapshot):
                                if system.getParticleMass(i) > 0*u.dalton])
     dofs_constaints = system.getNumConstraints()
     dofs_motion_removers = 0
-    if any(type(system.getForce(i)) == mm.CMMotionRemover 
+    if any(type(system.getForce(i)) == mm.CMMotionRemover
            for i in range(system.getNumForces())):
         dofs_motion_removers += 3
     dofs = dofs_particles - dofs_constaints - dofs_motion_removers
@@ -34,9 +34,16 @@ def instantaneous_temperature(snapshot):
     """
     # TODO: this can be generalized as a feature that works with any
     # snapshot that has features for KE (in units of kB) and n_dofs
-    old_snap = snapshot.engine.current_snapshot
-    snapshot.engine.current_snapshot = snapshot
-    state = snapshot.engine.simulation.context.getState(getEnergy=True)
+
+    # if no engine, error here; don't get caught in try/except below
+    engine = snapshot.engine
+    try:
+        old_snap = engine.current_snapshot
+    except Exception:  # openmm doesn't use a custom exception class yet
+        # Exception: Particle positions have not been set
+        old_snap = None
+    engine.current_snapshot = snapshot
+    state = engine.simulation.context.getState(getEnergy=True)
     # divide by Avogadro b/c OpenMM reports energy/mole
     ke_in_energy = state.getKineticEnergy() / u.AVOGADRO_CONSTANT_NA
     ke_per_kB = ke_in_energy / u.BOLTZMANN_CONSTANT_kB
@@ -44,6 +51,7 @@ def instantaneous_temperature(snapshot):
     dofs = snapshot.n_degrees_of_freedom
 
     temperature = 2 * ke_per_kB / dofs
-    snapshot.engine.current_snapshot = old_snap
+    if old_snap is not None:
+        engine.current_snapshot = old_snap
     return temperature
 
