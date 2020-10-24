@@ -247,6 +247,7 @@ class TestStorableFunction(object):
             pass
         else:
             func.local_cache.clear()
+        pytest.skip()
         pass
 
     @staticmethod
@@ -319,6 +320,7 @@ class TestStorableFunction(object):
         pass
 
     def test_full_serialization_cycle(self):
+        pytest.skip()
         pass
 
     @pytest.mark.parametrize('found_in', ['cache', 'storage', 'eval'])

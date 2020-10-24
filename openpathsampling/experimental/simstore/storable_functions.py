@@ -413,8 +413,9 @@ class StorableFunction(StorableNamedObject):
 def storable_function_find_uuids(obj, cache_list):
     # TODO: it should be possible to remove this at some point
     uuids, new_objects = default_find_uuids(obj, cache_list)
-    func_results = obj.local_cache
-    uuids.update({get_uuid(func_results): func_results})
+    if obj.local_cache is not None:
+        uuids[get_uuid(obj.local_cache)] = obj.local_cache
+
     return uuids, new_objects
 
 
