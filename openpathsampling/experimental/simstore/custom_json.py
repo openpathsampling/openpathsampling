@@ -1,5 +1,6 @@
 import json
 import functools
+import inspect
 from collections import namedtuple, defaultdict
 from .tools import none_to_default
 from .serialization_helpers import (
@@ -20,7 +21,12 @@ class SimulationObjectSerialization(object):
         # TODO: is uuid input necessary here?
         dct = self.json_decoder(table_row['json'])
         cls = do_import(dct.pop('__module__'), dct.pop('__class__'))
-        name = dct.pop('name', None)
+
+        # TODO: this is a hack around some objects having name params
+        has_name_param = 'name' in inspect.signature(cls).parameters
+        name = None if has_name_param else dct.pop('name', None) 
+        # should just be dct.pop('name', None)
+
         dct = from_dict_with_uuids(dct, cache_list)
         obj = cls.from_dict(dct)
         set_uuid(obj, uuid)
