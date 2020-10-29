@@ -24,7 +24,7 @@ class SimulationObjectSerialization(object):
 
         # TODO: this is a hack around some objects having name params
         has_name_param = 'name' in inspect.signature(cls).parameters
-        name = None if has_name_param else dct.pop('name', None) 
+        name = None if has_name_param else dct.pop('name', None)
         # should just be dct.pop('name', None)
 
         dct = from_dict_with_uuids(dct, cache_list)
@@ -48,13 +48,19 @@ class JSONSerializerDeserializer(object):
         codecs supported
     """
     def __init__(self, codecs, named_codecs=None):
-        self._serializer = None
-        self._deserializer = None
-        self._sim_serialization = None
         self.named_codecs = none_to_default(named_codecs, {})
         self.codecs = []
         for codec in codecs:
             self.add_codec(codec)
+        self._set_serialization()
+
+    def _set_serialization(self):
+        encoder, decoder = custom_json_factory(self.codecs)
+        self._serializer = functools.partial(json.dumps, cls=encoder)
+        self._deserializer = functools.partial(json.loads, cls=decoder)
+        self._sim_serialization = SimulationObjectSerialization(
+            self._serializer, self._deserializer
+        )
 
     def add_codec(self, codec):
         """Add a new codec to the supported codecs
@@ -69,12 +75,8 @@ class JSONSerializerDeserializer(object):
 
         if codec is not None:
             self.codecs.append(codec)
-        encoder, decoder = custom_json_factory(self.codecs)
-        self._serializer = functools.partial(json.dumps, cls=encoder)
-        self._deserializer = functools.partial(json.loads, cls=decoder)
-        self._sim_serialization = SimulationObjectSerialization(
-            self._serializer, self._deserializer
-        )
+
+        self._set_serialization()
 
     def replace_named_codec(self, codec_name, codec):
         self.named_codecs[codec_name] = codec

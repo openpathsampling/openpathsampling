@@ -40,7 +40,8 @@ logger = logging.getLogger(__name__)
 universal_schema = {
     'uuid': [('uuid', 'uuid'), ('table', 'int'), ('row', 'int')],
     'tables': [('name', 'str'), ('idx', 'int'), ('module', 'str'),
-               ('class_name', 'str')]
+               ('class_name', 'str')],
+    'tags': [('name', 'str'), ('content', 'uuid')]
 }
 
 from openpathsampling.netcdfplus import StorableNamedObject
