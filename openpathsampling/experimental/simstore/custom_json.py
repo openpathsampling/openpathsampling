@@ -208,7 +208,7 @@ def uuid_object_to_dict(obj):
     dct = replace_uuid(dct, uuid_encoding=encode_uuid)
     dct.update({'__class__': obj.__class__.__name__,
                 '__module__': obj.__class__.__module__})
-    name = getattr(obj, 'name', None)
+    name = getattr(obj, '_name', None)
     if name and 'name' not in dct:
         dct['name'] = name
     return dct

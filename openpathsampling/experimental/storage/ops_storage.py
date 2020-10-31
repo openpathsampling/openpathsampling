@@ -297,6 +297,14 @@ class Storage(storage.GeneralStorage):
     def __reduce__(self):
         return (self.from_dict, (self.to_dict(),))
 
+    @property
+    def movechanges(self):
+        return self.move_changes
+
+    @property
+    def samplesets(self):
+        return self.sample_sets
+
     def register_from_tables(self, table_names, classes):
         lookups = {}
         table_to_class = {tbl: cls for tbl, cls in zip(table_names, classes)}
