@@ -91,6 +91,24 @@ def unique_objects(object_list):
             # or is_storage_iterable(obj))
 
 def default_find_uuids(obj, cache_list):
+    """Default method for finding new UUIDs in an object. Recursive.
+
+    Parameters
+    ----------
+    obj : Any
+        the object to query for UUIDs
+    cache_list : List[Mapping]
+        caches that may contain existing UUIDs
+
+    Returns
+    -------
+    uuids : Dict[UUID, Any]
+        mapping of UUID to object for any UUID-containing objects found
+    new_objects : List[Any]
+        Non-UUID container objects (iterables, mappings) that may contain
+        futher UUIDs. Includes the dict from ``obj.to_dict()`` if ``obj``
+        has a UUID.
+    """
     uuids = {}
     new_objects = []
     obj_uuid = get_uuid(obj) if has_uuid(obj) else None
@@ -189,22 +207,6 @@ class SchemaFindUUIDs(object):
                 new_objects.extend(attr_obj)
 
         return uuids, new_objects
-
-
-# TODO: I think this can be removed (only used by get_all_uuid_string)
-# def find_dependent_uuids(json_dct):
-    # dct = json.loads(json_dct)
-    # uuids = [decode_uuid(obj) for obj in flatten_all(dct)
-             # if is_uuid_string(obj)]
-    # return uuids
-
-# TODO: I think this can be removed (not used?)
-# def get_all_uuid_strings(dct):
-    # all_uuids = []
-    # for uuid in dct:
-        # all_uuids.append(uuid)
-        # all_uuids += find_dependent_uuids(dct[uuid])
-    # return all_uuids
 
 
 # NOTE: this only need to find until the first UUID: iterables/mapping with
@@ -368,6 +370,7 @@ def from_dict_with_uuids(obj, cache_list):
 
 
 def from_json_obj(uuid, table_row, cache_list):
+    # TODO: OBSOLETE?! I think this has been replaced by custom_json
     # NOTE: from_json only works with existing_uuids (DAG-ordering)
     dct = json.loads(table_row['json'])
     cls = import_class(dct.pop('__module__'), dct.pop('__class__'))
@@ -377,7 +380,7 @@ def from_json_obj(uuid, table_row, cache_list):
     return obj
 
 
-def _uuids_from_table_row(table_row, schema_entries):
+def _uuids_from_table_row(table_row, schema_entries, allow_lazy=True):
     """Gather UUIDs from a table row (as provided by storage).
 
     This organizes the UUIDS that are included in the table row based on
@@ -409,8 +412,8 @@ def _uuids_from_table_row(table_row, schema_entries):
         directly depends on (i.e., everything from ``uuid`` and ``lazy``).
     """
     # take the schema entries here, not the whole schema
-    lazy = set([])
     uuid = set([])
+    lazy = set([]) if allow_lazy else uuid
     for (attr, attr_type) in schema_entries:
         if attr_type == 'uuid':
             uuid.add(getattr(table_row, attr))
@@ -428,6 +431,9 @@ def _uuids_from_table_row(table_row, schema_entries):
         elif attr_type == 'lazy':
             lazy.add(getattr(table_row, attr))
         # other cases aren't UUIDs and are ignored
+
+    if lazy is uuid:
+        lazy = set([])
     # remove all cases of None as a UUID to depend on
     # TODO: should None be in the UUID list even?
     # TODO: can we return the set here?
@@ -435,13 +441,35 @@ def _uuids_from_table_row(table_row, schema_entries):
     return (list(uuid), lazy, dependencies)
 
 
-def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
+def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None,
+                          allow_lazy=True):
     """Get all information to reload from UUIDs.
 
     This is the main function for identifying objects to reload from
     storage. It returns the table rows to load (sorted by table), the UUIDs
     of objects to lazy-load (sorted by table), and the dictionary of
     dependencies, which can be used to create the reconstruction DAG.
+
+    Parameters
+    ----------
+    uuid_list : Iterable[str]
+        iterable of UUIDs
+    backend : :class:`.Backend`
+    schema : Dict
+    existing_uuids : Mapping[str, Any]
+        maps UUID to the relevant object
+
+    Returns
+    -------
+    to_load : List
+        list of table rows
+    lazy : Set[str]
+        set of lazy object UUIDs
+    dependencies : Dict[str, List[str]]
+        dependency mapping; maps UUID of an object to a list of the UUIDs it
+        depends on
+    uuid_to_table : Dict[str, str]
+        mapping of UUID to the name of the table that it is stored in
     """
     if existing_uuids is None:
         existing_uuids = {}
@@ -460,7 +488,11 @@ def get_all_uuids_loading(uuid_list, backend, schema, existing_uuids=None):
         uuid_list = []
         for row in new_table_rows:
             entries = schema[uuid_to_table[row.uuid]]
-            loc_uuid, loc_lazy, deps = _uuids_from_table_row(row, entries)
+            loc_uuid, loc_lazy, deps = _uuids_from_table_row(
+                table_row=row,
+                schema_entries=entries,
+                allow_lazy=allow_lazy
+            )
             uuid_list += loc_uuid
             lazy.update(loc_lazy)
             dependencies.update(deps)

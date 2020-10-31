@@ -68,7 +68,8 @@ def sql_db_execute(engine, statements, execmany_dict=None):
         results = results[0]
     return results
 
-class SQLStorageBackend(object):
+from openpathsampling.netcdfplus import StorableNamedObject
+class SQLStorageBackend(StorableNamedObject):
     """Generic storage backend for SQL.
 
     Uses SQLAlchemy; could easily duck-type an object that implements the
@@ -84,14 +85,19 @@ class SQLStorageBackend(object):
         databases, but keeps the interface consistent
     sql_dialect : str
         name of the SQL dialect to use; default is sqlite
-    echo : bool
-        whether the engine to echo SQL commands to stdout (useful for
-        debugging)
+
+    Additional keyword arguments are passed to sqlalchemy.create_engine. Of
+    particular use is ``echo`` (bool) which echos SQL commands to stdout
+    (useful for debugging).
+
+    More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
     """
-    def __init__(self, filename, mode='r', sql_dialect=None, echo=False):
+    def __init__(self, filename, mode='r', sql_dialect='sqlite', **kwargs):
+        super().__init__()
         self.filename = filename
-        sql_dialect = tools.none_to_default(sql_dialect, 'sqlite')
+        self.sql_dialect = sql_dialect
         self.mode = mode
+        self.kwargs = kwargs
         self.debug = False
         self.max_query_size = 900
 
@@ -100,17 +106,63 @@ class SQLStorageBackend(object):
         self.table_to_number = {}
         self.number_to_table = {}
 
-        if self.mode == "w" and os.path.exists(filename):
-            # delete existing file; write after
-            os.remove(filename)
+        # TODO: change this to an LRU cache
+        self.known_uuids = collections.defaultdict(set)
 
         # we prevent writes by disallowing write method in read mode;
         # for everything else; just connect to the database
-        connection_uri = self.filename_from_dialect(filename, sql_dialect)
-        self.engine = sql.create_engine(connection_uri,
-                                        echo=echo)
+        self.engine = None
+        self.connection_uri = None
+        self._metadata = None
+        if filename is not None:
+            if self.mode == "w" and os.path.exists(filename):
+                # delete existing file; write after
+                os.remove(filename)
+
+            self.connection_uri = self.filename_from_dialect(
+                filename,
+                self.sql_dialect
+            )
+            engine = sql.create_engine(self.connection_uri, **self.kwargs)
+            self._initialize_from_engine(engine)
+
+    def _initialize_from_engine(self, engine):
+        self.engine = engine
         self._metadata = sql.MetaData(bind=self.engine)
         self._initialize_with_mode(self.mode)
+
+    @property
+    def identifier(self):
+        if self.connection_uri == "sqlite:///:memory:":
+            return "sqlite:///{}".format(id(self)), self.mode
+        else:
+            return self.connection_uri, self.mode
+
+    def to_dict(self):
+        return {
+            'filename': self.filename,
+            'sql_dialect': self.sql_dialect,
+            'mode': 'a' if self.mode == 'w' else self.mode,
+            'connection_uri': self.connection_uri,
+            'kwargs': self.kwargs,
+        }
+
+    @classmethod
+    def from_dict(cls, dct):
+        init_dct = dct.copy()
+        filename = init_dct.pop('filename')
+        connection_uri = init_dct.pop('connection_uri')
+        kwargs = init_dct.pop('kwargs')
+        init_dct.update(kwargs)
+        obj = cls(filename=None, **init_dct)
+        obj.connection_uri = connection_uri
+        obj.filename = filename
+        engine = sql.create_engine(connection_uri, **obj.kwargs)
+        obj._initialize_from_engine(engine)
+        return obj
+
+    def __reduce__(self):
+        return (self.from_dict, (self.to_dict(),))
 
     def _initialize_with_mode(self, mode):
         """setup of tables; etc, as varies between w and r/a modes"""
@@ -136,7 +188,7 @@ class SQLStorageBackend(object):
                     self.internal_tables_from_db()
 
     @classmethod
-    def from_engine(cls, engine, mode='r'):
+    def from_engine(cls, engine, connection_uri=None, **kwargs):
         """Constructor allowing user to specify the SQLAlchemy Engine.
 
         The default constructor doesn't allow all the options to the engine
@@ -145,14 +197,13 @@ class SQLStorageBackend(object):
 
         More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
         """
-        obj = cls.__new__(cls)
-        self._metadata = sql.MetaData()
-        self.schema = {}
-        self.table_to_number = {}
-        self.number_to_table = {}
-        self.engine = engine
-        self.mode = mode
-        self._initialize_with_mode(self.mode)
+        filename = kwargs.pop('filename', None)
+        obj = cls(**kwargs)
+        obj.filename = filename
+        obj.connection_uri = connection_uri
+        obj._metadata = sql.MetaData(bind=engine)
+        obj._initialize_with_mode(self.mode)
+        return obj
 
 
     def close(self):
@@ -258,6 +309,108 @@ class SQLStorageBackend(object):
 
         self.metadata.create_all(self.engine)
         self.schema.update(schema)
+
+    def has_table(self, table_name):
+        """Returns whether this table is known to the database.
+
+        Parameters
+        ----------
+        table_name : str
+            the name of the table to search for
+        """
+        return table_name in self.metadata.tables
+
+    def register_storable_function(self, table_name, result_type):
+        """
+        Parameters
+        ----------
+        table_name : Str
+            the name for this table; typically the UUID of the storable
+            function
+        result_type : Str
+            string name of the result type; must match one of the keys of
+            ``sql_type``
+        """
+        logger.info("Registering storable function: UUID: %s (%s)" %
+                    (table_name, result_type))
+        columns = [sql.Column('uuid', sql.String, primary_key=True),
+                   sql.Column('value', sql_type[result_type])]
+        try:
+            table = sql.Table(table_name, self.metadata, *columns)
+        except sql.exc.InvalidRequestError:
+            raise TypeError("Schema registration problem. Your schema "
+                            "may already have tables of the same names.")
+
+        self.metadata.create_all(self.engine)
+        # TODO : do we need to do anything else for this?
+
+    def add_storable_function_results(self, table_name, result_dict):
+        """
+        Parameters
+        ----------
+        table_name : Str
+            name of table for this storable function (typically the UUID)
+        result_dict : Mapping[Str, Any]
+            mapping from UUID to result
+        """
+        # anything in the cache doesn't need to be saved
+        known_uuids = self.known_uuids[table_name]
+        set_uuids = set(result_dict.keys())
+        unknown_uuids = set_uuids - known_uuids
+
+        # now we search the for existing
+        found_results = self.load_storable_function_results(
+            table_name,
+            list(unknown_uuids)
+        )
+
+        unknown_uuids -= set(found_results.keys())
+
+        # only store the results that haven't been stored
+        results = [{'uuid': uuid, 'value': result_dict[uuid]}
+                   for uuid in unknown_uuids]
+        table = self.metadata.tables[table_name]
+        if results:
+            with self.engine.connect() as conn:
+                conn.execute(table.insert(), results)
+
+        # update the cache
+        self.known_uuids[table_name].update(set_uuids)
+
+    def load_storable_function_results(self, table_name, uuids):
+        """Load results for given stored function and input UUIDs.
+
+        Parameters
+        ----------
+        table_name : Str
+            name of table for this storable function (typically the UUID)
+        uuids : List[Str]
+            list of UUIDs to load the results for
+
+        Returns
+        -------
+        Dict[Str, Any] :
+            mapping of UUID to associated value
+        """
+        table = self.metadata.tables[table_name]
+        results = []
+        for uuid_block in tools.block(uuids, self.max_query_size):
+            # logger
+            uuid_sel = table.select(
+                sql.exists().where(table.c.uuid.in_(uuid_block))
+            )
+            with self.engine.connect() as conn:
+                res = conn.execute(uuid_sel)
+                res = res.fetchall()
+            results += res
+
+        logger.debug("Found {} UUIDs".format(len(results)))
+        result_dict = {uuid: value for uuid, value in results}
+        return result_dict
+
+    def load_storable_function_table(self, table_name):
+        return {row['uuid']: row['value']
+                for row in self.table_iterator(table_name)}
 
     def add_to_table(self, table_name, objects):
         """Add a list of objects of a given class
@@ -420,8 +573,10 @@ class SQLStorageBackend(object):
         return self.number_to_table[uuid_row.table]
 
     def table_iterator(self, table_name):
-        """Iterate over all rows in the table
+        """Iterate over l rows in the table
         """
+        # TODO: this can probably be done in a more low-level way that
+        # doesn't require memory caching everything
         table = self.metadata.tables[table_name]
         with self.engine.connect() as conn:
             results = list(conn.execute(table.select()))

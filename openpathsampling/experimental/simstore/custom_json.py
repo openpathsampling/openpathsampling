@@ -1,9 +1,39 @@
 import json
 import functools
+import inspect
 from collections import namedtuple, defaultdict
 from .tools import none_to_default
-from .serialization_helpers import has_uuid, replace_uuid, encode_uuid
-from .serialization import SimulationObjectSerializer
+from .serialization_helpers import (
+    has_uuid, replace_uuid, encode_uuid, get_uuid, set_uuid
+)
+from .serialization_helpers import do_import, from_dict_with_uuids
+
+class SimulationObjectSerialization(object):
+    def __init__(self, json_encoder, json_decoder):
+        self.json_encoder = json_encoder
+        self.json_decoder = json_decoder
+
+    def serializer(self, obj):
+        return {'uuid': get_uuid(obj),
+                'json': self.json_encoder(obj)}
+
+    def deserialize(self, uuid, table_row, cache_list):
+        # TODO: is uuid input necessary here?
+        dct = self.json_decoder(table_row['json'])
+        cls = do_import(dct.pop('__module__'), dct.pop('__class__'))
+
+        # TODO: this is a hack around some objects having name params
+        has_name_param = 'name' in inspect.signature(cls).parameters
+        name = None if has_name_param else dct.pop('name', None) 
+        # should just be dct.pop('name', None)
+
+        dct = from_dict_with_uuids(dct, cache_list)
+        obj = cls.from_dict(dct)
+        set_uuid(obj, uuid)
+        if name:
+            obj.name = name
+        return obj
+
 
 class JSONSerializerDeserializer(object):
     """
@@ -17,10 +47,11 @@ class JSONSerializerDeserializer(object):
     codecs : list of :class:`.JSONCodec`s
         codecs supported
     """
-    def __init__(self, codecs):
+    def __init__(self, codecs, named_codecs=None):
         self._serializer = None
         self._deserializer = None
-        self._sim_serializer = None
+        self._sim_serialization = None
+        self.named_codecs = none_to_default(named_codecs, {})
         self.codecs = []
         for codec in codecs:
             self.add_codec(codec)
@@ -33,12 +64,21 @@ class JSONSerializerDeserializer(object):
         codec : :class:`.JSONCodec`
             codec to add
         """
+        if codec in self.codecs:
+            return
+
         if codec is not None:
             self.codecs.append(codec)
         encoder, decoder = custom_json_factory(self.codecs)
         self._serializer = functools.partial(json.dumps, cls=encoder)
         self._deserializer = functools.partial(json.loads, cls=decoder)
-        self._sim_serializer = SimulationObjectSerializer(self._serializer)
+        self._sim_serialization = SimulationObjectSerialization(
+            self._serializer, self._deserializer
+        )
+
+    def replace_named_codec(self, codec_name, codec):
+        self.named_codecs[codec_name] = codec
+        self.add_codec(None)
 
     def serializer(self, obj):
         return self._serializer(obj)
@@ -47,7 +87,11 @@ class JSONSerializerDeserializer(object):
         return self._deserializer(string)
 
     def simobj_serializer(self, obj):
-        return self._sim_serializer(obj)
+        return self._sim_serialization.serializer(obj)
+
+    def simobj_deserializer(self, uuid, table_row, cache_list):
+        return self._sim_serialization.deserialize(uuid, table_row,
+                                                   cache_list)
 
 
 def custom_json_factory(coding_methods):
@@ -162,6 +206,9 @@ def uuid_object_to_dict(obj):
     dct = replace_uuid(dct, uuid_encoding=encode_uuid)
     dct.update({'__class__': obj.__class__.__name__,
                 '__module__': obj.__class__.__module__})
+    name = getattr(obj, 'name', None)
+    if name and 'name' not in dct:
+        dct['name'] = name
     return dct
 
 # we ignore all dicts on reserialization because we need to use the custom

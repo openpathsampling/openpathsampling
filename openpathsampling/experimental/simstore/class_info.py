@@ -12,6 +12,7 @@ import json
 
 logger = logging.getLogger(__name__)
 
+
 class ClassInfo(object):
     """
     Parameters
@@ -32,30 +33,42 @@ class ClassInfo(object):
         object
     """
     def __init__(self, table, cls, serializer=None, deserializer=None,
-                 lookup_result=None, find_uuids=None):
+                 lookup_result=None, find_uuids=None,
+                 safe_deserializer=None):
         self.table = table
         self.cls = cls
         self.serializer = serializer
-        self.deserializer = deserializer
+        self.deserializer = None
+        self.unsafe_deserializer = deserializer
+        self.safe_deserializer = safe_deserializer
         if lookup_result is None:
             lookup_result = cls
         self.lookup_result = lookup_result
         self.find_uuids = find_uuids
 
     def set_defaults(self, schema):
+        table = self.table if self.table in schema else None
         self.serializer = tools.none_to_default(
             self.serializer,
-            SchemaSerializer(schema, self.table, self.cls)
+            SchemaSerializer(schema, table, self.cls)
         )
-        self.deserializer = tools.none_to_default(
-            self.deserializer,
-            SchemaDeserializer(schema, self.table, self.cls)
+        self.unsafe_deserializer = tools.none_to_default(
+            self.unsafe_deserializer,
+            SchemaDeserializer(schema, table, self.cls)
         )
+        self.safe_deserializer = tools.none_to_default(
+            self.safe_deserializer,
+            self.unsafe_deserializer
+        )
+        default_entries = schema.get(self.table, [])
         self.find_uuids = tools.none_to_default(
-            self.find_uuids,
-            SchemaFindUUIDs(schema[self.table])
+            self.find_uuids, SchemaFindUUIDs(default_entries)
         )
+        self.set_safemode(True)
 
+    def set_safemode(self, mode):
+        self.deserializer = {True: self.safe_deserializer,
+                             False: self.unsafe_deserializer}[mode]
 
     def __repr__(self):  # pragma: no cover
         return ("ClassInfo(table=" + self.table + ", cls=" + str(self.cls)
@@ -84,15 +97,19 @@ class SerializationSchema(object):
     systems). In such cases, the SerializationSchema needs to be subclassed
     with specialized information.
     """
-    def __init__(self, default_info, schema=None, class_info_list=None):
+    def __init__(self, default_info, sfr_info=None, schema=None,
+                 class_info_list=None):
         class_info_list = tools.none_to_default(class_info_list, [])
         self.schema = {}
         self.lookup_to_info = {}
         self.table_to_info = {}
         self.class_info_list = []
         self.default_info = default_info
+        self.sfr_info = sfr_info
         self.missing_table = ClassInfo(table="__missing__", cls=None)
         self.add_class_info(default_info)
+        if sfr_info is not None:
+            self.add_class_info(sfr_info)
         self.register_info(class_info_list, schema)
 
     # TODO: I think that this can be made private; used by __init__ and
@@ -104,7 +121,25 @@ class SerializationSchema(object):
         # of the expected return to identify the function to call -- won't
         # be completely general, but may simplify some)
         self.lookup_to_info.update({info_node.lookup_result: info_node})
-        self.table_to_info.update({info_node.table: info_node})
+        immutable_tables = [self.default_info.table,
+                            self.missing_table.table]
+        sfr_table_as_list = (
+            [self.sfr_info.table] if self.sfr_info is not None else []
+        )
+        reserved = info_node.table in immutable_tables + sfr_table_as_list
+        exists = info_node.table in self.table_to_info
+        if not (reserved and exists):
+            self.table_to_info.update({info_node.table: info_node})
+
+    def copy(self):
+        # NOTE: subclasses must override if __init__ sig changes
+        dup = self.__class__(
+            default_info=self.default_info,
+            sfr_info=self.sfr_info,
+            schema=self.schema,
+            class_info_list=self.class_info_list
+        )
+        return dup
 
     def register_info(self, class_info_list, schema=None):
         schema = tools.none_to_default(schema, {})
@@ -112,6 +147,10 @@ class SerializationSchema(object):
         for info in class_info_list:
             info.set_defaults(schema)
             self.add_class_info(info)
+
+    def set_safemode(self, mode):
+        for class_info in self.class_info_list:
+            class_info.set_safemode(mode)
 
     @property
     def tables(self):
