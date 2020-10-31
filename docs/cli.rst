@@ -4,8 +4,13 @@ Command Line Interface
 ======================
 
 A separate command line tool for OpenPathSamplng can be installed. It is
-available via either ``conda`` (channel ``conda-forge``) or ``pip``, with
-the package name ``openpathsampling-cli``.
+available via either ``conda`` or ``pip``:
+
+.. code:: bash
+
+    conda install -c conda-forge openpathsampling-cli
+    # or
+    pip install openpathsampling-cli
 
 Once you install this, you'll have access to the command
 ``openpathsampling`` in your shell (although we recommend aliasing that to
@@ -58,7 +63,7 @@ notebook, just as before.
 
 Note that this can be especially useful when computing remotely. You can set
 up on your local machine, and then you just need to transfer the
-``setup.py`` to the remote machine (assuming you use internally-stored
+``setup.nc`` to the remote machine (assuming you use internally-stored
 snapshots).
 
 Finding your way around the CLI
