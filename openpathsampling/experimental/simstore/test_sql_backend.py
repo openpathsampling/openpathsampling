@@ -16,7 +16,8 @@ class TestSQLStorageBackend(object):
         self.table_to_class = {'samples': tuple,
                                'snapshot0': tuple,
                                'snapshot1': tuple}
-        self.default_table_names = {'uuid', 'tables', 'schema', 'metadata'}
+        self.default_table_names = {'uuid', 'tables', 'schema', 'metadata',
+                                    'tags'}
 
     def _sample_data_dict(self):
         sample_list = [(0, 'ens1', 'traj1'),

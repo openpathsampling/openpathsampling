@@ -38,7 +38,7 @@ universal_sql_meta = {
 
 def make_columns(table_name, schema, sql_schema_metadata):
     columns = []
-    if table_name not in ['uuid', 'tables']:
+    if table_name not in universal_schema:
         columns.append(sql.Column('idx', sql.Integer,
                                   primary_key=True))
         columns.append(sql.Column('uuid', sql.String))
@@ -302,7 +302,7 @@ class SQLStorageBackend(StorableNamedObject):
                 raise TypeError("Schema registration problem. Your schema "
                                 "may already have tables of the same names.")
 
-            if table_name not in ['uuid', 'tables']:
+            if table_name not in universal_schema:
                 self._add_table_to_tables_list(table_name,
                                                schema[table_name],
                                                table_to_class[table_name])
@@ -411,6 +411,14 @@ class SQLStorageBackend(StorableNamedObject):
     def load_storable_function_table(self, table_name):
         return {row['uuid']: row['value']
                 for row in self.table_iterator(table_name)}
+
+    def add_tag(self, table_name, name, content):
+        table = self.metadata.tables[table_name]
+
+        with self.engine.connect() as conn:
+            conn.execute(table.insert(), [{'name': name,
+                                           'content': content}])
+
 
     def add_to_table(self, table_name, objects):
         """Add a list of objects of a given class

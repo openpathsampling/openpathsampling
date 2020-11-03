@@ -28,6 +28,7 @@ from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
 from .serialization import ProxyObjectFactory
 from .storable_functions import StorageFunctionHandler, StorableFunction
+from .tags_table import TagsTable
 
 try:
     basestring
@@ -40,7 +41,8 @@ logger = logging.getLogger(__name__)
 universal_schema = {
     'uuid': [('uuid', 'uuid'), ('table', 'int'), ('row', 'int')],
     'tables': [('name', 'str'), ('idx', 'int'), ('module', 'str'),
-               ('class_name', 'str')]
+               ('class_name', 'str')],
+    'tags': [('name', 'str'), ('content', 'uuid')]
 }
 
 from openpathsampling.netcdfplus import StorableNamedObject
@@ -77,6 +79,7 @@ class GeneralStorage(StorableNamedObject):
             self.schema = backend.schema
         self.cache = MixedCache({})  # initial empty cache so it exists
         self.initialize_with_mode(self.mode)
+        self.tags = TagsTable(self)
         self._simulation_objects = self._cache_simulation_objects()
         self.cache = MixedCache(self._simulation_objects)
         self._stashed = []
