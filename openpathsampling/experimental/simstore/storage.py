@@ -104,7 +104,7 @@ class GeneralStorage(StorableNamedObject):
             self.register_schema(self.schema, class_info_list=[],
                                  read_mode=True)
             missing = {k: v for k, v in self.backend.schema.items()
-                       if k not in self.schema}
+                       if k not in self.schema and k not in universal_schema}
             self.schema.update(missing)
             table_to_class = self.backend.table_to_class
             self._load_missing_info_tables(table_to_class)
@@ -151,11 +151,11 @@ class GeneralStorage(StorableNamedObject):
             # info.set_defaults(schema)
             # self.class_info.add_class_info(info)
 
-        if not read_mode:
-            # here's where we add the class_info to the backend
+        if not read_mode or self.backend.table_to_class == {}:
             table_to_class = {table: self.class_info[table].cls
                               for table in schema
                               if table not in ['uuid', 'tables']}
+            # here's where we add the class_info to the backend
             self.backend.register_schema(schema, table_to_class,
                                          backend_metadata)
 
