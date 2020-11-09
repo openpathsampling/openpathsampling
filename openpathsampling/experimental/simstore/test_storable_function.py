@@ -21,6 +21,9 @@ class MockBackend(object):
         self.called_register = collections.defaultdict(int)
         self.called_load = collections.defaultdict(int)
 
+    def has_table(self, table_name):
+        return table_name in self.storable_function_tables
+
     def register_storable_function(self, table_name, result_type):
         self.storable_function_tables[table_name] = {}
         self.called_register[table_name] += 1

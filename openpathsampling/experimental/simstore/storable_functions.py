@@ -140,7 +140,7 @@ class StorableFunctionResults(StorableNamedObject):
     The function will be associated with a cache like this, and this is the
     first place it will look for results (in order to avoid recalculating).
     """
-    _sanity_checks = True
+    _sanity_checks = False  # off by default; can't work with ndarray
     def __init__(self, parent, parent_uuid):
         # TODO: why does this require parent_uuid still?
         super(StorableFunctionResults, self).__init__()
@@ -223,13 +223,12 @@ class StorableFunction(StorableNamedObject):
     Parameters
     ----------
     func : Callable
-    result_type
     store_store : Union[bool, None]
         Whether to store the source for this function. Default behavior
         (None) stores source for anything created in ``__main__`` that is
         not a lambda expression.
     """
-    def __init__(self, func, result_type=None, func_config=None, store_source=None, **kwargs):
+    def __init__(self, func, func_config=None, store_source=None, **kwargs):
         super(StorableFunction, self).__init__()
         self.func = func
         self.source = None
@@ -248,7 +247,6 @@ class StorableFunction(StorableNamedObject):
             except IOError:
                 warnings.warn("Unable to get source for " + str(func))
 
-        self.result_type = result_type
         self.local_cache = None  # set correctly by self.mode setter
         self._disk_cache = True
         self._handler = None
@@ -296,7 +294,6 @@ class StorableFunction(StorableNamedObject):
             'func': self.func,  # made into JSON by CallableCodec
             'source': self.source,
             'kwargs': self.kwargs,
-            'result_type': self.result_type,
         }
 
     @classmethod
@@ -444,17 +441,26 @@ class StorageFunctionHandler(object):
             self._codec_settings = settings
             self.callable_codec = CallableCodec(settings)
 
-    def register_function(self, func, add_table=True):
+    def register_function(self, func, add_table=True, example_result=None):
         func_uuid = get_uuid(func)
+
+        # add table to backend if needed
+        needs_table = not self.storage.backend.has_table(func_uuid)
+        add_table = needs_table and (example_result is not None)
+        if needs_table and not add_table:
+            logger.info("Result type unknown; unable to create table")
+        elif add_table:
+            identify = self.storage.type_identification.identify
+            result_type = identify(example_result)
+            self.storage.backend.register_storable_function(
+                table_name=func_uuid,
+                result_type=result_type
+            )
+
         # register as a canonical function
         if func_uuid not in self.canonical_functions:
             logger.debug("Registering new function: %s" % func_uuid)
             self.canonical_functions[func_uuid] = func
-            if add_table:
-                self.storage.backend.register_storable_function(
-                    table_name=func_uuid,
-                    result_type=func.result_type
-                )
 
         # register with all_functions
         is_registered = any([func is registered
@@ -463,8 +469,8 @@ class StorageFunctionHandler(object):
         if not is_registered:
             self.all_functions[func_uuid].append(func)
 
-        # set handler
-        if not func.has_handler:
+        # set handler; only if the table exists
+        if not func.has_handler and (add_table or not needs_table):
             func.set_handler(self)
 
     def clear_non_canonical(self):
