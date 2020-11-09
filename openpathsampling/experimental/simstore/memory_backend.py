@@ -1,11 +1,6 @@
 import os
 import collections
-
-try:
-    from collections import abc
-except ImportError:
-    # Py27
-    abc = collections
+from collections import abc
 
 from .storage import universal_schema
 
