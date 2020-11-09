@@ -94,9 +94,6 @@ class TestSQLStorageBackend(object):
         assert self._col_names_set('tables') == {'name', 'idx', 'module',
                                                  'class_name'}
         assert self._col_names_set('schema') == {'table', 'schema'}
-        for f in ['test1.sql', 'test2.sql']:
-            if os.path.isfile(f):
-                os.remove(f)
 
     def test_register_schema(self):
         new_schema = {
@@ -258,4 +255,3 @@ class TestSQLStorageBackend(object):
             expected = tuple(samp_dct[k]
                              for k in ['replica', 'ensemble', 'trajectory'])
             assert row[2:] == expected
-
