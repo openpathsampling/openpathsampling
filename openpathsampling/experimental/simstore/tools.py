@@ -1,11 +1,12 @@
 import itertools
 import collections
+from collections import abc
 from numpy import ndarray
 
 import logging
 logger = logging.getLogger(__name__)
 
-class SimpleNamespace(collections.MutableMapping):
+class SimpleNamespace(abc.MutableMapping):
     # types.SimpleNameSpace in 3.3+
     # this variants acts as either a dict or a namespace for getting
     def __init__(self, **kwargs):
@@ -46,10 +47,10 @@ def is_string(obj):
     return isinstance(obj, basestring)
 
 def is_mappable(obj):
-    return isinstance(obj, collections.Mapping)
+    return isinstance(obj, abc.Mapping)
 
 def is_iterable(obj):
-    return isinstance(obj, collections.Iterable) and not is_string(obj)
+    return isinstance(obj, abc.Iterable) and not is_string(obj)
 
 def is_numpy_iterable(obj):
     return isinstance(obj, ndarray)
@@ -138,15 +139,15 @@ def flatten_iterable(ll):
     return flatten(ll, lambda x: x, (list, tuple, set))
 
 def flatten_all(obj):
-    is_mappable = lambda x: isinstance(x, collections.Mapping)
+    is_mappable = lambda x: isinstance(x, abc.Mapping)
     return flatten(obj,
                    lambda x: x.values() if is_mappable(x) else x.__iter__(),
-                   (collections.Mapping, collections.Iterable),
+                   (abc.Mapping, abc.Iterable),
                    (basestring, ndarray))
 
 def nested_update(original, update):
     for (k, v) in update.items():
-        if isinstance(v, collections.Mapping):
+        if isinstance(v, abc.Mapping):
             original[k] = nested_update(original.get(k, {}), v)
         else:
             original[k] = v

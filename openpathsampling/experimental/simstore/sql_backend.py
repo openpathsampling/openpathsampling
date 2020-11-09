@@ -115,9 +115,14 @@ class SQLStorageBackend(StorableNamedObject):
         self.connection_uri = None
         self._metadata = None
         if filename is not None:
-            if self.mode == "w" and os.path.exists(filename):
+            file_exists = os.path.exists(filename)
+            if self.mode == "w" and file_exists:
                 # delete existing file; write after
                 os.remove(filename)
+
+            if self.mode == 'a' and not file_exists:
+                # act as if the mode is 'w'; note we change this back later
+                self.mode = 'w'
 
             self.connection_uri = self.filename_from_dialect(
                 filename,
@@ -125,6 +130,7 @@ class SQLStorageBackend(StorableNamedObject):
             )
             engine = sql.create_engine(self.connection_uri, **self.kwargs)
             self._initialize_from_engine(engine)
+            self.mode = mode  # in case we changed when checking existence
 
     def _initialize_from_engine(self, engine):
         self.engine = engine
