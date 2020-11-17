@@ -204,7 +204,7 @@ class NumpyDocTools(object):
             while doc and doc[0] == '':
                 doc.pop(0)
 
-            if section is not 'HEAD':
+            if section != 'HEAD':
                 cap = ' '.join([s[0].upper() + s[1:].lower() for s in section.split(' ')])
                 doc = [
                     cap,
