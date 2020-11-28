@@ -372,7 +372,7 @@ class GeneralStorage(StorableNamedObject):
         # handle special case of storable functions
         for result in new_results:
             if isinstance(result, StorableFunction):
-                self._sf_handler.register_function(result, add_table=False)
+                self._sf_handler.register_function(result)
 
         return new_results
 

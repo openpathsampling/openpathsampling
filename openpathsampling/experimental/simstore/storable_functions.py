@@ -441,7 +441,7 @@ class StorageFunctionHandler(object):
             self._codec_settings = settings
             self.callable_codec = CallableCodec(settings)
 
-    def register_function(self, func, add_table=True, example_result=None):
+    def register_function(self, func, example_result=None):
         func_uuid = get_uuid(func)
 
         # add table to backend if needed
