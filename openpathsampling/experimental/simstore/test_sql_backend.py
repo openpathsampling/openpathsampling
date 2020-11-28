@@ -16,7 +16,8 @@ class TestSQLStorageBackend(object):
         self.table_to_class = {'samples': tuple,
                                'snapshot0': tuple,
                                'snapshot1': tuple}
-        self.default_table_names = {'uuid', 'tables', 'schema', 'metadata'}
+        self.default_table_names = {'uuid', 'tables', 'schema', 'metadata',
+                                    'tags'}
 
     def _sample_data_dict(self):
         sample_list = [(0, 'ens1', 'traj1'),
@@ -59,8 +60,10 @@ class TestSQLStorageBackend(object):
 
     @staticmethod
     def _delete_tmp_files():
-        if os.path.isfile("test.sql"):
-            os.remove("test.sql")
+        tmp_files = ['test.sql', 'test1.sql', 'test2.sql']
+        for f in tmp_files:
+            if os.path.isfile(f):
+                os.remove(f)
 
     @pytest.mark.parametrize('test_input,expected', [
         (("file.sql", "sqlite"), "sqlite:///file.sql"),
@@ -78,8 +81,14 @@ class TestSQLStorageBackend(object):
         meta = self.database.metadata
         return set([col.name for col in meta.tables[table].columns])
 
-    def test_setup(self):
-        table_names = self.database.engine.table_names()
+    @pytest.mark.parametrize('db', ['memory', 'write', 'append'])
+    def test_setup(self, db):
+        database = {
+            'memory': self.database,
+            'write': SQLStorageBackend('test1.sql', mode='w'),
+            'append': SQLStorageBackend('test2.sql', mode='a'),
+        }[db]
+        table_names = database.engine.table_names()
         assert set(table_names) == self.default_table_names
         assert self._col_names_set('uuid') == {'uuid', 'table', 'row'}
         assert self._col_names_set('tables') == {'name', 'idx', 'module',
@@ -246,4 +255,3 @@ class TestSQLStorageBackend(object):
             expected = tuple(samp_dct[k]
                              for k in ['replica', 'ensemble', 'trajectory'])
             assert row[2:] == expected
-

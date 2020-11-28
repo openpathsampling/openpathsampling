@@ -28,6 +28,7 @@ from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
 from .serialization import ProxyObjectFactory
 from .storable_functions import StorageFunctionHandler, StorableFunction
+from .tags_table import TagsTable
 from .type_ident import STANDARD_TYPING
 
 try:
@@ -41,7 +42,8 @@ logger = logging.getLogger(__name__)
 universal_schema = {
     'uuid': [('uuid', 'uuid'), ('table', 'int'), ('row', 'int')],
     'tables': [('name', 'str'), ('idx', 'int'), ('module', 'str'),
-               ('class_name', 'str')]
+               ('class_name', 'str')],
+    'tags': [('name', 'str'), ('content', 'uuid')]
 }
 
 from openpathsampling.netcdfplus import StorableNamedObject
@@ -79,6 +81,7 @@ class GeneralStorage(StorableNamedObject):
             self.schema = backend.schema
         self.cache = MixedCache({})  # initial empty cache so it exists
         self.initialize_with_mode(self.mode)
+        self.tags = TagsTable(self)
         self._simulation_objects = self._cache_simulation_objects()
         self.cache = MixedCache(self._simulation_objects)
         self._stashed = []
@@ -103,7 +106,7 @@ class GeneralStorage(StorableNamedObject):
             self.register_schema(self.schema, class_info_list=[],
                                  read_mode=True)
             missing = {k: v for k, v in self.backend.schema.items()
-                       if k not in self.schema}
+                       if k not in self.schema and k not in universal_schema}
             self.schema.update(missing)
             table_to_class = self.backend.table_to_class
             self._load_missing_info_tables(table_to_class)
@@ -150,11 +153,11 @@ class GeneralStorage(StorableNamedObject):
             # info.set_defaults(schema)
             # self.class_info.add_class_info(info)
 
-        if not read_mode:
-            # here's where we add the class_info to the backend
+        if not read_mode or self.backend.table_to_class == {}:
             table_to_class = {table: self.class_info[table].cls
                               for table in schema
                               if table not in ['uuid', 'tables']}
+            # here's where we add the class_info to the backend
             self.backend.register_schema(schema, table_to_class,
                                          backend_metadata)
 

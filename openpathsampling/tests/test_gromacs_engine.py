@@ -90,7 +90,7 @@ class TestGromacsEngine(object):
         self.engine = Engine(gro="conf.gro",
                              mdp="md.mdp",
                              top="topol.top",
-                             options={},
+                             options={'mdrun_args': '-nt 1'},
                              base_dir=self.test_dir,
                              prefix="project")
 
@@ -227,7 +227,7 @@ class TestGromacsEngine(object):
 
         traj_0 = self.engine.trajectory_filename(0)
         snap = self.engine.read_frame_from_file(traj_0, 0)
-        self.engine.set_filenames(0)
+        self.engine.filename_setter.reset(0)
 
         ens = paths.LengthEnsemble(5)
         traj = self.engine.generate(snap, running=[ens.can_append])

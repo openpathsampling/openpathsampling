@@ -300,6 +300,7 @@ class StorableFunction(StorableNamedObject):
     def from_dict(cls, dct):
         source = dct.pop('source')
         kwargs = dct.pop('kwargs')
+        dct['store_source'] = False
         obj = cls(**dct, **kwargs)
         if obj.source is None:
             obj.source = source  # may still be none
