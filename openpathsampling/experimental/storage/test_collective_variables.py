@@ -83,6 +83,7 @@ class TestCoordinateFunctionCV(object):
         mock_func.reset_mock()
 
         backend = MockBackend()
+        backend.register_storable_function(get_uuid(self.func), 'float')
         self.storage = mock.NonCallableMock(backend=backend)
         self.storage._sf_handler = StorageFunctionHandler(self.storage)
         self.storage._sf_handler.register_function(self.func)

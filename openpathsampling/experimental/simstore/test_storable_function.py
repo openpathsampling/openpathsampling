@@ -4,7 +4,8 @@ try:
 except ImportError:
     import mock
 
-import collections
+from collections import defaultdict
+import itertools
 
 import numpy as np
 
@@ -17,9 +18,12 @@ _MODULE = "openpathsampling.experimental.simstore.storable_functions"
 
 class MockBackend(object):
     def __init__(self):
-        self.storable_function_tables = {}
-        self.called_register = collections.defaultdict(int)
-        self.called_load = collections.defaultdict(int)
+        self.storable_function_tables = defaultdict(dict)
+        self.called_register = defaultdict(int)
+        self.called_load = defaultdict(int)
+
+    def has_table(self, table_name):
+        return table_name in self.storable_function_tables
 
     def register_storable_function(self, table_name, result_type):
         self.storable_function_tables[table_name] = {}
@@ -140,8 +144,7 @@ class TestStorableFunctionConfig(object):
 
     def test_storable_function_integration(self):
         snap = make_1d_traj([5.0])[0]
-        sf = StorableFunction(self.func, result_type='float',
-                              func_config=self.config)
+        sf = StorableFunction(self.func, func_config=self.config)
         assert sf(snap) == 5.0
         np.testing.assert_array_equal(sf([snap]), np.array([5.0]))
 
@@ -349,25 +352,35 @@ class TestStorageFunctionHandler(object):
         # TODO: is this actually used?
         pytest.skip()
 
-    @pytest.mark.parametrize("add_table", [True, False])
-    def test_register_function(self, add_table):
+    @pytest.mark.parametrize('has_table, with_result',
+                             itertools.product([True, False],
+                                               [True, False]))
+    def test_register_function(self, has_table, with_result):
+        uuid = get_uuid(self.func)
+        if has_table:
+            self.storage.backend.storable_function_tables[uuid] = {}
+
+        example = 1.0 if with_result else None
+        unable_to_register = example is None and not has_table
+        add_table = not has_table and not unable_to_register
+
         assert not self.func.has_handler
         assert len(self.sf_handler.all_functions) == 0
         assert self.sf_handler.functions == []
-        self.sf_handler.register_function(self.func, add_table=add_table)
-        uuid = get_uuid(self.func)
+        self.sf_handler.register_function(self.func, example)
 
         sf_tables = self.backend.storable_function_tables
-        if add_table:
+        if not unable_to_register:
             assert uuid in sf_tables
         else:
             assert uuid not in sf_tables
 
         assert self.func is self.sf_handler.canonical_functions[uuid]
         assert self.sf_handler.all_functions[uuid] == [self.func]
-        assert self.func.has_handler
-        assert self.func._handler == self.sf_handler
-        assert self.sf_handler.functions == [self.func]
+        if not unable_to_register:
+            assert self.func.has_handler
+            assert self.func._handler == self.sf_handler
+            assert self.sf_handler.functions == [self.func]
 
         # make a copy of the func
         assert get_uuid(self.f2) == get_uuid(self.func)
@@ -376,7 +389,7 @@ class TestStorageFunctionHandler(object):
         # internal checks should ensure that you call add_table False here
         expected_calls = {True: 1, False: 0}[add_table]
         assert self.backend.called_register[uuid] == expected_calls
-        self.sf_handler.register_function(self.f2, add_table)
+        self.sf_handler.register_function(self.f2, example)
         assert self.sf_handler.canonical_functions[uuid] is not self.f2
         assert self.sf_handler.canonical_functions[uuid] is self.func
         assert self.sf_handler.all_functions[uuid] == [self.func, self.f2]

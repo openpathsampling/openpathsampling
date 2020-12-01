@@ -21,7 +21,6 @@ def _simstore_cv_max(cv):
     from openpathsampling.experimental.simstore import StorableFunction
     return StorableFunction(
         func=_cv_max_func,
-        result_type='float',
         cv=cv
     ).named("max " + cv.name)
 

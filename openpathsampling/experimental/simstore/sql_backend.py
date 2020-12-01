@@ -334,13 +334,13 @@ class SQLStorageBackend(StorableNamedObject):
             the name for this table; typically the UUID of the storable
             function
         result_type : Str
-            string name of the result type; must match one of the keys of
-            ``sql_type``
+            string name of the result type
         """
         logger.info("Registering storable function: UUID: %s (%s)" %
                     (table_name, result_type))
+        col_type = sql_type[backend_registration_type(result_type)]
         columns = [sql.Column('uuid', sql.String, primary_key=True),
-                   sql.Column('value', sql_type[result_type])]
+                   sql.Column('value', col_type)]
         try:
             table = sql.Table(table_name, self.metadata, *columns)
         except sql.exc.InvalidRequestError:

@@ -29,6 +29,7 @@ from .serialization_helpers import get_reload_order
 from .serialization import ProxyObjectFactory
 from .storable_functions import StorageFunctionHandler, StorableFunction
 from .tags_table import TagsTable
+from .type_ident import STANDARD_TYPING
 
 try:
     basestring
@@ -58,6 +59,7 @@ class GeneralStorage(StorableNamedObject):
         self._safemode = None
         self.safemode = safemode
         self._sf_handler = StorageFunctionHandler(storage=self)
+        self.type_identification = STANDARD_TYPING  # TODO: copy
         # TODO: implement fallback
         self.fallbacks = tools.none_to_default(fallbacks, [])
 
@@ -286,12 +288,25 @@ class GeneralStorage(StorableNamedObject):
 
         funcs = tools.listify(funcs)
         for func in funcs:
+            # TODO: XXX This is where we need to use type identification
+            # 1. check if the associated function is registered already
+            # 2. if not, extract type from the first function value
             self._sf_handler.update_cache(func.local_cache)
             result_dict = func.local_cache.result_dict
-            self.backend.add_storable_function_results(
-                table_name=get_uuid(func),
-                result_dict=result_dict
-            )
+            table_name = get_uuid(func)
+            if not self.backend.has_table(table_name):
+                if result_dict:
+                    example = next(iter(result_dict.values()))
+                else:
+                    example = None
+                self._sf_handler.register_function(func,
+                                                   example_result=example)
+
+            if result_dict:
+                self.backend.add_storable_function_results(
+                    table_name=table_name,
+                    result_dict=result_dict
+                )
             self._reset_fixed_cache()
 
     def load(self, input_uuids, allow_lazy=True, force=False):
@@ -360,7 +375,7 @@ class GeneralStorage(StorableNamedObject):
         # handle special case of storable functions
         for result in new_results:
             if isinstance(result, StorableFunction):
-                self._sf_handler.register_function(result, add_table=False)
+                self._sf_handler.register_function(result)
 
         return new_results
 
