@@ -1,6 +1,7 @@
 import numpy as np
 from .my_types import parse_ndarray_type
 from . import serialization_helpers as serialization
+from .attribute_handlers import NDArrayHandlerFactory
 import json
 
 import logging
@@ -96,6 +97,9 @@ class ProxyObjectFactory(object):
 
 
 class SchemaDeserializer(object):
+    handler_factories = [
+        NDArrayHandlerFactory(),
+    ]
     default_handlers = {
         'lazy': serialization.search_caches,
         'uuid': serialization.search_caches,
@@ -113,9 +117,15 @@ class SchemaDeserializer(object):
         self.attribute_handlers = self.init_attribute_handlers()
 
     # TODO: move this external
-    @staticmethod
-    def make_numpy_handler(dtype, shape):
-        return lambda data, _: np.fromstring(data, dtype=dtype).reshape(shape)
+    # @staticmethod
+    # def make_numpy_handler(dtype, shape):
+        # return lambda data, _: np.fromstring(data, dtype=dtype).reshape(shape)
+
+    def get_handler_from_factories(self, type_name):
+        for factory in self.handler_factories:
+            handler = factory.serializer(type_name)
+            if handler is not None:
+                return handler
 
     def init_attribute_handlers(self):
         attribute_handlers = {}
@@ -124,10 +134,11 @@ class SchemaDeserializer(object):
             if type_name in self.default_handlers:
                 handler = self.default_handlers[type_name]
             else:
-                as_ndarray = parse_ndarray_type(type_name)
-                if as_ndarray:
-                    (dtype, shape) = as_ndarray
-                    handler = self.make_numpy_handler(dtype, shape)
+                handler = self.get_handler_from_factories(type_name)
+                # as_ndarray = parse_ndarray_type(type_name)
+                # if as_ndarray:
+                    # (dtype, shape) = as_ndarray
+                    # handler = self.make_numpy_handler(dtype, shape)
             if handler:
                 attribute_handlers[attr] = handler
         return attribute_handlers
@@ -158,9 +169,15 @@ class ToDictSerializer(SchemaDeserializer):
 
     # TODO: move this external; that will allow us to remove this class
     # (use it as input to SchemaSerializer or a class factory for that)
-    @staticmethod
-    def make_numpy_handler(dtype, shape):
-        return lambda arr: arr.astype(dtype=dtype, copy=False).tostring()
+    # @staticmethod
+    # def make_numpy_handler(dtype, shape):
+        # return lambda arr: arr.astype(dtype=dtype, copy=False).tostring()
+
+    def get_handler_from_factories(self, type_name):
+        for factory in self.handler_factories:
+            handler = factory.serializer(type_name)
+            if handler is not None:
+                return handler
 
     def __call__(self, obj):
         dct = obj.to_dict()
