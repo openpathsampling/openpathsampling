@@ -7,6 +7,8 @@ from .test_utils import (
 
 from .serialization_helpers import default_find_uuids
 
+from .attribute_handlers import DEFAULT_HANDLERS
+
 class MockSpecialSerializationSchema(SerializationSchema):
     def is_special(self, item):
         return isinstance(item, ExtraMockDataObject)
@@ -30,7 +32,7 @@ class TestClassInfo(object):
             cls=MockUUIDObject
         )
         schema = {'mock': MockUUIDObject.schema}
-        class_info.set_defaults(schema)
+        class_info.set_defaults(schema, DEFAULT_HANDLERS)
         assert class_info.table == "mock"
         assert class_info.cls == MockUUIDObject
         assert isinstance(class_info.serializer, SchemaSerializer)

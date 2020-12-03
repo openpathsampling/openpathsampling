@@ -7,6 +7,8 @@ from .test_utils import (LoadingStorageMock, all_objects, toy_uuid_maker,
 
 from . import class_info
 
+from .attribute_handlers import DEFAULT_HANDLERS
+
 
 class TestGenericLazyLoader(object):
     def setup(self):
@@ -123,7 +125,7 @@ class TestProxyObjectFactory(object):
                                         cls=MockSimulationObject,
                                         find_uuids=default_find_uuids)
         mock_info = class_info.ClassInfo(table='mock', cls=MockUUIDObject)
-        mock_info.set_defaults(schema)
+        mock_info.set_defaults(schema, DEFAULT_HANDLERS)
         serialization_schema = class_info.SerializationSchema(
             default_info=sim_info,
             schema=schema,

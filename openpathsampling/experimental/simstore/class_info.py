@@ -7,6 +7,8 @@ from .serialization_helpers import encoded_uuid_re, get_reload_order
 from .serialization_helpers import get_all_uuids
 from .my_types import uuid_types, uuid_list_types, json_obj_types
 
+from . import attribute_handlers
+
 import json
 
 
@@ -46,15 +48,15 @@ class ClassInfo(object):
         self.lookup_result = lookup_result
         self.find_uuids = find_uuids
 
-    def set_defaults(self, schema):
+    def set_defaults(self, schema, handlers):
         table = self.table if self.table in schema else None
         self.serializer = tools.none_to_default(
             self.serializer,
-            SchemaSerializer(schema, table, self.cls)
+            SchemaSerializer(schema, table, self.cls, handlers)
         )
         self.unsafe_deserializer = tools.none_to_default(
             self.unsafe_deserializer,
-            SchemaDeserializer(schema, table, self.cls)
+            SchemaDeserializer(schema, table, self.cls, handlers)
         )
         self.safe_deserializer = tools.none_to_default(
             self.safe_deserializer,
@@ -98,8 +100,11 @@ class SerializationSchema(object):
     with specialized information.
     """
     def __init__(self, default_info, sfr_info=None, schema=None,
-                 class_info_list=None):
+                 class_info_list=None, handlers=None):
         class_info_list = tools.none_to_default(class_info_list, [])
+        handlers = tools.none_to_default(handlers,
+                                         attribute_handlers.DEFAULT_HANDLERS)
+        self.attribute_handlers = handlers
         self.schema = {}
         self.lookup_to_info = {}
         self.table_to_info = {}
@@ -145,7 +150,7 @@ class SerializationSchema(object):
         schema = tools.none_to_default(schema, {})
         self.schema.update(schema)
         for info in class_info_list:
-            info.set_defaults(schema)
+            info.set_defaults(schema, self.attribute_handlers)
             self.add_class_info(info)
 
     def set_safemode(self, mode):

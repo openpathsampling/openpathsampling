@@ -101,6 +101,11 @@ class SQLStorageBackend(StorableNamedObject):
         self.debug = False
         self.max_query_size = 900
 
+        # maps a specific type name, to generic type info, e.g.
+        # 'ndarray.float32(1651,3)': 'ndarray'
+        # keys here are in the schema, values are (sql_type, size)
+        self.known_types = {k: (k, None) for k in sql_type}
+
         # override later if mode == 'r' or 'a'
         self.schema = {}
         self.table_to_number = {}
@@ -286,8 +291,10 @@ class SQLStorageBackend(StorableNamedObject):
 
         return results
 
-
     ### FROM HERE IS THE GENERIC PUBLIC API
+    def register_type(self, type_str, backend_type):
+        self.known_types[type_str] = backend_type
+
     def register_schema(self, schema, table_to_class,
                         sql_schema_metadata=None):
         """Register (part of) a schema (create necessary tables in DB)
