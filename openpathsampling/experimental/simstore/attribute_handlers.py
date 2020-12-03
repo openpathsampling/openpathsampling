@@ -29,6 +29,7 @@ class StandardHandler(AttributeHandler):
     def __init__(self, type_info):
         super().__init__(type_info)
         self.backend_type = type_info
+        self.type_size = None
 
     @classmethod
     def is_my_type(cls, type_str):
@@ -71,6 +72,7 @@ class NDArrayHandler(AttributeHandler):
         super().__init__(type_info)
         self.dtype, self.shape = type_info
         self.backend_type = 'ndarray'
+        self.type_size = None  # TODO: change this based on dtype/shape
 
     @classmethod
     def is_my_type(cls, type_str):

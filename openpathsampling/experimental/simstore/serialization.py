@@ -1,7 +1,7 @@
 import numpy as np
 from .my_types import parse_ndarray_type
 from . import serialization_helpers as serialization
-from .attribute_handlers import NDArrayHandlerFactory
+from . import attribute_handlers
 import json
 
 import logging
@@ -97,16 +97,13 @@ class ProxyObjectFactory(object):
 
 
 class SchemaDeserializer(object):
-    handler_factories = [
-        NDArrayHandlerFactory(),
-    ]
     default_handlers = {
         'lazy': serialization.search_caches,
         'uuid': serialization.search_caches,
         'list_uuid': load_list_uuid,
     }
 
-    def __init__(self, schema, table, cls):
+    def __init__(self, schema, table, cls, handlers):
         self.schema = schema
         self.table = table
         if table is not None:
@@ -114,6 +111,7 @@ class SchemaDeserializer(object):
         else:
             self.entries = []
         self.cls = cls
+        self.handler_factories = handlers
         self.attribute_handlers = self.init_attribute_handlers()
 
     # TODO: move this external
@@ -123,9 +121,9 @@ class SchemaDeserializer(object):
 
     def get_handler_from_factories(self, type_name):
         for factory in self.handler_factories:
-            handler = factory.serializer(type_name)
+            handler = factory.from_type_string(type_name)
             if handler is not None:
-                return handler
+                return handler.deserialize
 
     def init_attribute_handlers(self):
         attribute_handlers = {}
@@ -175,9 +173,9 @@ class ToDictSerializer(SchemaDeserializer):
 
     def get_handler_from_factories(self, type_name):
         for factory in self.handler_factories:
-            handler = factory.serializer(type_name)
+            handler = factory.from_type_string(type_name)
             if handler is not None:
-                return handler
+                return handler.serialize
 
     def __call__(self, obj):
         dct = obj.to_dict()

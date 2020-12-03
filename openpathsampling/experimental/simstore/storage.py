@@ -153,6 +153,12 @@ class GeneralStorage(StorableNamedObject):
             # info.set_defaults(schema)
             # self.class_info.add_class_info(info)
 
+        schema_types = [type_str for attr_list in schema.values()
+                        for _, type_str in attr_list]
+        for type_str in schema_types:
+            backend_type = self.class_info.backend_type(type_str)
+            self.backend.register_type(type_str, backend_type)
+
         if not read_mode or self.backend.table_to_class == {}:
             table_to_class = {table: self.class_info[table].cls
                               for table in schema

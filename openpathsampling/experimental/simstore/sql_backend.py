@@ -36,14 +36,17 @@ universal_sql_meta = {
     'tables': {'name': {'primary_key': True}}
 }
 
-def make_columns(table_name, schema, sql_schema_metadata):
+def make_columns(table_name, schema, sql_schema_metadata, backend_types):
     columns = []
+    type_mapping = {k: v[0] for k, v in backend_types.items()}
+    # TODO: use size_info for fixed-width columns
+    size_info = {k: v[1] for k, v in backend_types.items()}
     if table_name not in universal_schema:
         columns.append(sql.Column('idx', sql.Integer,
                                   primary_key=True))
         columns.append(sql.Column('uuid', sql.String))
     for col, type_name in schema[table_name]:
-        col_type = sql_type[backend_registration_type(type_name)]
+        col_type = sql_type[type_mapping[type_name]]
         metadata = extract_backend_metadata(sql_schema_metadata,
                                             table_name, col)
         columns.append(sql.Column(col, col_type, **metadata))
@@ -308,7 +311,8 @@ class SQLStorageBackend(StorableNamedObject):
         """
         for table_name in schema:
             logger.info("Add schema table " + str(table_name))
-            columns = make_columns(table_name, schema, sql_schema_metadata)
+            columns = make_columns(table_name, schema, sql_schema_metadata,
+                                   self.known_types)
             try:
                 table = sql.Table(table_name, self.metadata, *columns)
             except sql.exc.InvalidRequestError:

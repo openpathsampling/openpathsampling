@@ -146,6 +146,14 @@ class SerializationSchema(object):
         )
         return dup
 
+    def backend_type(self, type_name):
+        for handler in self.attribute_handlers:
+            if handler.is_my_type(type_name):
+                handler_obj = handler.from_type_string(type_name)
+                return handler_obj.backend_type, handler_obj.type_size
+        # current default is to return the input; may change
+        return type_name, None
+
     def register_info(self, class_info_list, schema=None):
         schema = tools.none_to_default(schema, {})
         self.schema.update(schema)
