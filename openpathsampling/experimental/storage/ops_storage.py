@@ -1,6 +1,8 @@
 from ..simstore import storage
 from ..simstore import sql_backend
 
+from ..simstore.attribute_handlers import DEFAULT_HANDLERS
+
 from ..simstore.serialization_helpers import to_json_obj as json_serializer
 from ..simstore.serialization_helpers import from_json_obj as deserialize_sim
 from ..simstore.serialization_helpers import import_class
@@ -36,6 +38,8 @@ from ..simstore import SQLStorageBackend  # TODO: generalize
 from . import snapshots
 from .snapshots_table import SnapshotsTable
 
+from .simtk_unit import simtk_quantity_codec, SimtkQuantityHandler
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -65,7 +69,9 @@ ops_schema = {
 ops_schema_sql_metadata = {}
 
 # this defines the simulation object serializer for OPS
-CODECS = [numpy_codec, bytes_codec, uuid_object_codec]
+CODECS = [numpy_codec, bytes_codec, uuid_object_codec, simtk_quantity_codec]
+
+HANDLERS = DEFAULT_HANDLERS + [SimtkQuantityHandler]
 
 UNSAFE_CODECS = CODECS + [CallableCodec()]
 SAFE_CODECS = CODECS + [CallableCodec({'safemode': True})]
@@ -74,11 +80,12 @@ class MoveChangeDeserializer(SchemaDeserializer):
     # in general, I think it would be better to reorg MoveChange to only be
     # one class, but this is aimed at fixing problems with reloading
     # MoveChange objects
-    def __init__(self, schema, table):
+    def __init__(self, schema, table, handlers):
         super(MoveChangeDeserializer, self).__init__(
             schema=schema,
             table=table,
-            cls=None
+            cls=None,
+            handlers=[]
         )
 
     def __call__(self, uuid, table_dct, cache_list):
@@ -202,7 +209,8 @@ def _build_ops_serializer(schema, safe_codecs, unsafe_codecs):
             ClassInfo(table='move_changes', cls=paths.MoveChange,
                       deserializer=MoveChangeDeserializer(
                           schema=schema,
-                          table='move_changes'
+                          table='move_changes',
+                          handlers=HANDLERS
                       )),
             ClassInfo(table='steps', cls=paths.MCStep),
             ClassInfo(table='details', cls=paths.Details,
@@ -222,7 +230,7 @@ def _build_ops_serializer(schema, safe_codecs, unsafe_codecs):
     )
 
     for info in ops_class_info.class_info_list:
-        info.set_defaults(schema)
+        info.set_defaults(schema, HANDLERS)
 
     return ops_class_info
 

@@ -96,7 +96,7 @@ def snapshot_registration_info(snapshot_instance, snapshot_number):
     attr_infos = []
     for table in [tbl for tbl in schema.keys() if tbl != 'snapshot']:
         obj = getattr(snapshot_instance, table)
-        attr_infos.append(ClassInfo(table=real_table,
+        attr_infos.append(ClassInfo(table=real_table[table],
                                     cls=obj.__class__,
                                     lookup_result=(engine_uuid,
                                                    obj.__class__)))
