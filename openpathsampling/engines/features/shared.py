@@ -27,6 +27,7 @@ def unmask_quantity(quantity):
         return quantity
     return np.array(quantity.value_in_unit(q_unit)) * q_unit
 
+
 # =============================================================================
 # SIMULATION CONFIGURATION
 # =============================================================================
@@ -36,53 +37,24 @@ class StaticContainer(StorableObject):
     Simulation configuration. Only Coordinates, the associated boxvectors
     and the potential_energy
 
-    Attributes
+    Parameters
     ----------
     coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
         atomic coordinates
     box_vectors : periodic box vectors
         the periodic box vectors
-
+    engine : :class:`.DynamicsEngine`
+        the engine that creating this data
     """
 
     # Class variables to store the global storage and the system context
     # describing the system to be saved as configuration_indices
 
-    def __init__(self, coordinates, box_vectors):
-        """
-        Create a simulation configuration from either an OpenMM context or
-        individually-specified components.
-
-        Parameters
-        ----------
-        coordinates
-        box_vectors
-        """
-
+    def __init__(self, coordinates, box_vectors, engine=None):
         super(StaticContainer, self).__init__()
-
         self.coordinates = copy.deepcopy(coordinates)
         self.box_vectors = copy.deepcopy(box_vectors)
-
-        # if self.coordinates is not None:
-        #     # Check for nans in coordinates, and raise an exception if
-        #     # something is wrong.
-        #     if type(self.coordinates) is unit.Quantity:
-        #         coords = self.coordinates._value
-        #     else:
-        #         coords = self.coordinates
-        #
-        #     if np.any(np.isnan(coords)):
-        #         bad_atoms = [i for i in range(len(coords))
-        #                      if np.any(np.isnan(coords[i]))]
-        #         raise ValueError("Coordinates went 'nan' for atoms: " +
-        #                          str(bad_atoms))
-
-        return
-
-    # =========================================================================
-    # Comparison functions
-    # =========================================================================
+        self.engine = engine
 
     @property
     def n_atoms(self):
@@ -90,10 +62,6 @@ class StaticContainer(StorableObject):
         Returns the number of atoms in the configuration
         """
         return self.coordinates.shape[0]
-
-    # =========================================================================
-    # Utility functions
-    # =========================================================================
 
     def copy(self):
         """
@@ -112,6 +80,7 @@ class StaticContainer(StorableObject):
                                )
 
     def to_dict(self):
+        # note: to_dict not used here in SimStore, so no need to change
         return {
             'coordinates': self.coordinates,
             'box_vectors': self.box_vectors
@@ -214,26 +183,14 @@ class KineticContainer(StorableObject):
     ----------
     velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
         atomic velocities
-
+    engine : :class:`.DynamicsEngine`
+        the engine that creating this data
     """
 
-    def __init__(self, velocities):
-        """
-        Create a simulation momentum from either an OpenMM context or
-        individually-specified components.
-
-        Parameters
-        ----------
-        velocities
-        """
-
+    def __init__(self, velocities, engine=None):
         super(KineticContainer, self).__init__()
-
         self.velocities = copy.deepcopy(velocities)
-
-    # =========================================================================
-    # Utility functions
-    # =========================================================================
+        self.engine = engine
 
     def copy(self):
         """
@@ -245,9 +202,7 @@ class KineticContainer(StorableObject):
         Momentum()
             the shallow copy
         """
-
         this = KineticContainer(velocities=self.velocities)
-
         return this
 
     def to_dict(self):
