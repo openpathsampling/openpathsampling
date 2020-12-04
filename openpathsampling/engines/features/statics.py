@@ -10,9 +10,19 @@ storables = ['statics']
 
 dimensions = ['n_atoms', 'n_spatial']
 
+_length_unit = "simtk(unit.nanometer)"
+_array32 = "ndarray.float32"
 schema_entries = [(
-    'statics', [('coordinates', 'ndarray.float32({n_atoms},{n_spatial})'),
-                ('box_vectors', 'ndarray.float32({n_spatial},{n_spatial})')]
+    'statics', [
+        ('coordinates',
+         '{length_unit}*{array32}({{n_atoms}},{{n_spatial}})'.format(
+             length_unit=_length_unit, array32=_array32
+        )),
+        ('box_vectors',
+         '{length_unit}*{array32}({{n_spatial}},{{n_spatial}})'.format(
+             length_unit=_length_unit, array32=_array32
+        ))
+    ]
 )]
 
 

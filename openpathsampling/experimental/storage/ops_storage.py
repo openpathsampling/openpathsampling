@@ -76,6 +76,11 @@ HANDLERS = DEFAULT_HANDLERS + [SimtkQuantityHandler]
 UNSAFE_CODECS = CODECS + [CallableCodec()]
 SAFE_CODECS = CODECS + [CallableCodec({'safemode': True})]
 
+DATA_CONTAINER_CLASSES = (
+    paths.engines.features.shared.KineticContainer,
+    paths.engines.features.shared.StaticContainer,
+)
+
 class MoveChangeDeserializer(SchemaDeserializer):
     # in general, I think it would be better to reorg MoveChange to only be
     # one class, but this is aimed at fixing problems with reloading
@@ -101,7 +106,6 @@ class MoveChangeDeserializer(SchemaDeserializer):
         obj.input_samples = dct['input_samples']
         set_uuid(obj, uuid)
         return obj
-
 
 
 class OPSSpecialLookup(object):
@@ -319,6 +323,8 @@ class Storage(storage.GeneralStorage):
         for table in table_names:
             logger.info("Attempting to register missing table {} ({})"\
                         .format(table, str(table_to_class[table])))
+            if issubclass(table_to_class[table], DATA_CONTAINER_CLASSES):
+                raise RuntimeError("TODO")
             if issubclass(table_to_class[table], paths.BaseSnapshot):
                 lookups.update(snapshots.snapshot_registration_from_db(
                     storage=self,
