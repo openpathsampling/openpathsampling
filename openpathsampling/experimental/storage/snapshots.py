@@ -73,12 +73,12 @@ def snapshot_registration_from_db(storage, schema, class_info, table_name):
     lookup_result = (engine_uuid, cls)
     proposed_lookups = {table_name: lookup_result}
     attributes = schema[table_name]
-    for (attr, type_name) in attributes:
-        is_object = type_name in ['lazy', 'uuid', 'uuid_list']
-        is_table = attr in schema
-        if is_object and is_table:
-            cls = storage.backend.table_to_class[attr]
-            proposed_lookups[attr] = (engine_uuid, cls)
+    # for (attr, type_name) in attributes:
+        # is_object = type_name in ['lazy', 'uuid', 'uuid_list']
+        # is_table = attr in schema
+        # if is_object and is_table:
+            # cls = storage.backend.table_to_class[attr]
+            # proposed_lookups[attr] = (engine_uuid, cls)
     return proposed_lookups
 
 

@@ -8,13 +8,14 @@ flip = ['is_reversed']
 dimensions = ['n_atoms', 'n_spatial']
 
 _vel_unit = "simtk(unit.nanometer/unit.picosecond)"
-_vel_str = "ndarray.float32({{n_atom}},{{n_spatial}})"
-schema_entries = [(
-    'kinetics', [
+_vel_str = "ndarray.float32({n_atoms},{n_spatial})"
+schema_entries = [
+    ('kinetics', [
         ('velocities', _vel_unit + "*" + _vel_str),
-        ('is_reversed', 'bool'),  # I think is_reversed can be removed...
-    ]
-)]
+        ('engine', 'uuid'),
+    ]),
+    ('is_reversed', 'bool'),
+]
 
 
 def netcdfplus_init(store):
@@ -59,7 +60,7 @@ def velocities(self):
 @velocities.setter
 def velocities(self, value):
     if value is not None:
-        kc = KineticContainer(velocities=value)
+        kc = KineticContainer(velocities=value, engine=self.engine)
     else:
         kc = None
 

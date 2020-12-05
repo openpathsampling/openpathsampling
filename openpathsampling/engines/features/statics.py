@@ -12,8 +12,8 @@ dimensions = ['n_atoms', 'n_spatial']
 
 _length_unit = "simtk(unit.nanometer)"
 _array32 = "ndarray.float32"
-schema_entries = [(
-    'statics', [
+schema_entries = [
+    ('statics', [
         ('coordinates',
          '{length_unit}*{array32}({{n_atoms}},{{n_spatial}})'.format(
              length_unit=_length_unit, array32=_array32
@@ -21,9 +21,10 @@ schema_entries = [(
         ('box_vectors',
          '{length_unit}*{array32}({{n_spatial}},{{n_spatial}})'.format(
              length_unit=_length_unit, array32=_array32
-        ))
-    ]
-)]
+        )),
+        ('engine', 'uuid'),
+    ]),
+]
 
 
 def netcdfplus_init(store):
@@ -62,7 +63,9 @@ def coordinates(snapshot):
 @coordinates.setter
 def coordinates(self, value):
     if value is not None:
-        sc = StaticContainer(coordinates=value, box_vectors=self.box_vectors)
+        sc = StaticContainer(coordinates=value,
+                             box_vectors=self.box_vectors,
+                             engine=self.engine)
     else:
         sc = None
 
@@ -87,7 +90,9 @@ def box_vectors(snapshot):
 @box_vectors.setter
 def box_vectors(self, value):
     if value is not None:
-        sc = StaticContainer(box_vectors=value, coordinates=self.coordinates)
+        sc = StaticContainer(box_vectors=value,
+                             coordinates=self.coordinates,
+                             engine=self.engine)
     else:
         sc = None
 

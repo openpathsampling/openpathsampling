@@ -76,8 +76,8 @@ class StaticContainer(StorableObject):
         """
 
         return StaticContainer(coordinates=self.coordinates,
-                               box_vectors=self.box_vectors
-                               )
+                               box_vectors=self.box_vectors,
+                               engine=self.engine)
 
     def to_dict(self):
         # note: to_dict not used here in SimStore, so no need to change
@@ -118,7 +118,8 @@ class StaticContainerStore(ObjectStore):
         if not np.count_nonzero(box_vectors):
             box_vectors = None
 
-        configuration = StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
+        configuration = StaticContainer(coordinates=coordinates,
+                                        box_vectors=box_vectors)
 
         return configuration
 
@@ -202,7 +203,8 @@ class KineticContainer(StorableObject):
         Momentum()
             the shallow copy
         """
-        this = KineticContainer(velocities=self.velocities)
+        this = KineticContainer(velocities=self.velocities,
+                                engine=self.engine)
         return this
 
     def to_dict(self):

@@ -46,6 +46,7 @@ universal_schema = {
     'tags': [('name', 'str'), ('content', 'uuid')]
 }
 
+
 from openpathsampling.netcdfplus import StorableNamedObject
 class GeneralStorage(StorableNamedObject):
     _known_storages = {}
@@ -205,6 +206,24 @@ class GeneralStorage(StorableNamedObject):
         return uuid_dict
 
 
+    def _uuids_by_table(self, input_uuids, cache, get_table_name):
+        # find all UUIDs we need to save with this object
+        logger.debug("Listing all objects to save")
+        uuids = {}
+        for uuid, obj in input_uuids.items():
+            uuids.update(get_all_uuids(obj, known_uuids=cache,
+                                       class_info=self.class_info))
+
+        logger.debug("Checking if objects already exist in database")
+        uuids = self.filter_existing_uuids(uuids)
+
+        # group by table, then save appropriately
+        # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
+        by_table = collections.defaultdict(dict)
+        by_table.update(tools.dict_group_by(uuids,
+                                            key_extract=get_table_name))
+        return by_table
+
 
     def save(self, obj_list, use_cache=True):
         if type(obj_list) is not list:
@@ -222,30 +241,21 @@ class GeneralStorage(StorableNamedObject):
         if not input_uuids:
             return  # exit early if everything is already in storage
 
-        # find all UUIDs we need to save with this object
-        logger.debug("Listing all objects to save")
-        uuids = {}
-        for uuid, obj in input_uuids.items():
-            uuids.update(get_all_uuids(obj, known_uuids=cache,
-                                       class_info=self.class_info))
-
-        logger.debug("Checking if objects already exist in database")
-        uuids = self.filter_existing_uuids(uuids)
-
-        # group by table, then save appropriately
-        # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
-        get_table_name = lambda uuid, obj_: self.class_info[obj_].table
-        by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         # check default table for things to register; register them
         # TODO: move to function: self.register_missing(by_table)
         # TODO: convert to while?
-        if '__missing__' in by_table:
+        get_table_name = lambda uuid, obj_: self.class_info[obj_].table
+        by_table = self._uuids_by_table(input_uuids, cache, get_table_name)
+        old_missing = {}
+        while '__missing__' in by_table:
             # __missing__ is a special result returned by the
             # ClassInfoContainer if this is object is expected to have a
             # table, but the table doesn't exist (e.g., for dynamically
             # added tables)
             missing = by_table.pop('__missing__')
+            if missing == old_missing:
+                raise RuntimeError("Unable to register: " + str(missing))
             logger.info("Registering tables for %d missing objects",
                         len(missing))
             self.register_missing_tables_for_objects(missing)
@@ -254,6 +264,12 @@ class GeneralStorage(StorableNamedObject):
                         len(missing_by_table),
                         str(list(missing_by_table.keys())))
             by_table.update(missing_by_table)
+            # search for objects inside the objects we just registered
+            next_by_table = self._uuids_by_table(missing, cache,
+                                                 get_table_name)
+            for table, uuid_dict in next_by_table.items():
+                by_table[table].update(uuid_dict)
+            old_missing = missing
 
         # TODO: move to function self.store_sfr_results(by_table)
         has_sfr = (self.class_info.sfr_info is not None

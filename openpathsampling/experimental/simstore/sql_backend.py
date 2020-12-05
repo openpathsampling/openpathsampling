@@ -28,6 +28,7 @@ sql_type = {
     'float': sql.Float,
     'function': sql.String,
     'ndarray': sql.LargeBinary,
+    'bool': sql.Boolean,
     #TODO add more
 }
 

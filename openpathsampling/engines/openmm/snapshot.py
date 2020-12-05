@@ -93,10 +93,15 @@ class Snapshot(BaseSnapshot):
         if statics is None:
             statics = Snapshot.StaticContainer(
                 coordinates=coordinates,
-                box_vectors=box_vectors)
+                box_vectors=box_vectors,
+                engine=engine
+            )
 
         if kinetics is None:
-            kinetics = Snapshot.KineticContainer(velocities=velocities)
+            kinetics = Snapshot.KineticContainer(
+                velocities=velocities,
+                engine=engine
+            )
 
         return Snapshot(
             engine=engine,

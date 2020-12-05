@@ -1,3 +1,5 @@
+import collections
+
 from ..simstore import storage
 from ..simstore import sql_backend
 
@@ -14,6 +16,7 @@ from ..simstore.class_lookup import ClassIsSomething
 from ..simstore import (
     StorableFunction, StorableFunctionResults, storable_function_find_uuids
 )
+
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
@@ -76,7 +79,8 @@ HANDLERS = DEFAULT_HANDLERS + [SimtkQuantityHandler]
 UNSAFE_CODECS = CODECS + [CallableCodec()]
 SAFE_CODECS = CODECS + [CallableCodec({'safemode': True})]
 
-DATA_CONTAINER_CLASSES = (
+ENGINE_LOOKUP_CLASSES = (
+    paths.BaseSnapshot,
     paths.engines.features.shared.KineticContainer,
     paths.engines.features.shared.StaticContainer,
 )
@@ -108,54 +112,61 @@ class MoveChangeDeserializer(SchemaDeserializer):
         return obj
 
 
-class OPSSpecialLookup(object):
-    """Separate object to handle special lookups
+SpecialLookup = collections.namedtuple("SpecialLookup",
+                                       ['cls', 'secondary_lookup'])
 
-    This is separate because, in addition to the functionality it encodes,
-    it also acts as a cache to reduce the number of isinstance calls (and
-    hopfully speed up the identification of types)
-    """
-    # TODO: overall lookup should be like this: all lookups map a class to a
-    # lookup function -- often that lookup function just returns the class
-    # TODO: especially annoying to have StorableFunction as a special
-    special_superclasses = (paths.BaseSnapshot, paths.MoveChange,
-                            paths.Details, StorableFunction,
-                            storage.GeneralStorage, SQLStorageBackend)
-    snapshot_lookup_function = \
-            lambda self, snap: (get_uuid(snap.engine), snap.__class__)
-    details_lookup_function = lambda self, details: paths.Details
-    movechange_lookup_function = lambda self, change: paths.MoveChange
-    sf_lookup_function = lambda self, func: StorableFunction
-    storage_obj_lookup_function = lambda self, func: storage.GeneralStorage
+def engine_secondary_lookup(obj):
+    return (get_uuid(obj.engine), obj.__class__)
 
-    def __init__(self):
+SPECIAL_LOOKUPS = [
+    SpecialLookup(paths.BaseSnapshot, engine_secondary_lookup),
+    SpecialLookup(paths.engines.features.shared.KineticContainer,
+                  engine_secondary_lookup),
+    SpecialLookup(paths.engines.features.shared.StaticContainer,
+                  engine_secondary_lookup),
+    # most of the rest of these are just to map weird subclasses
+    SpecialLookup(paths.MoveChange, lambda change: paths.MoveChange),
+    SpecialLookup(paths.Details, lambda details: paths.Details),
+    SpecialLookup(storage.GeneralStorage,
+                  lambda st: storage.GeneralStorage),
+    SpecialLookup(StorableFunction, lambda sf: StorableFunction),
+]
+
+class SpecialLookups(object):
+    # TODO: looks like we can move Specials over to SimStore
+    def __init__(self, lookups=None):
+        lookups = tools.none_to_default(lookups, [])
+        self.lookups = []
+        self.superclass_secondary_lookups = {}
+        self.special_superclasses = []
         self.secondary_lookups = {}
-        # self.special_classes = set()
-        # self.non_special_classes = set()
-        is_special_func = lambda obj: \
-                isinstance(obj, self.special_superclasses)
-        self.is_special = ClassIsSomething(is_special_func)
+        self._is_special = None
+        for lookup in lookups:
+            self.register(lookup)
 
-    def __call__(self, item):
-        cls = item.__class__
+    def register(self, lookup):
+        self.lookups.append(lookup)
+        self.special_superclasses.append(lookup.cls)
+        self.superclass_secondary_lookups[lookup.cls] = lookup.secondary_lookup
+        self._is_special = ClassIsSomething(
+            lambda obj: isinstance(obj, tuple(self.special_superclasses))
+        )
+
+    def is_special(self, obj):
+        return self._is_special(obj)
+
+    def __call__(self, obj):
+        cls = obj.__class__
         if cls in self.secondary_lookups:
-            return self.secondary_lookups[cls](item)
+            return self.secondary_lookups[cls](obj)
 
-        if isinstance(item, paths.BaseSnapshot):
-            self.secondary_lookups[cls] = self.snapshot_lookup_function
-        elif isinstance(item, StorableFunction):
-            self.secondary_lookups[cls] = self.sf_lookup_function
-        elif isinstance(item, (storage.GeneralStorage, SQLStorageBackend)):
-            self.secondary_lookups[cls] = self.storage_obj_lookup_function
-        elif isinstance(item, paths.MoveChange):
-            self.secondary_lookups[cls] = self.movechange_lookup_function
-        elif isinstance(item, paths.Details):
-            # TODO: this should be removed, since all Details classes are
-            # equivalent -- unfortunately, JHP's LoaderProxy breaks in that
-            # case
-            self.secondary_lookups[cls] = self.details_lookup_function
+        for lookup in self.lookups:
+            if isinstance(obj, lookup.cls):
+                self.secondary_lookups[cls] = lookup.secondary_lookup
+                break
 
-        return self.secondary_lookups[cls](item)
+        return self.secondary_lookups[cls](obj)
+
 
 class OPSClassInfoContainer(ClassInfoContainer):
     def __init__(self, default_info, sfr_info=None, schema=None,
@@ -163,9 +174,11 @@ class OPSClassInfoContainer(ClassInfoContainer):
         super(OPSClassInfoContainer, self).__init__(default_info,
                                                     sfr_info,
                                                     schema,
-                                                    class_info_list)
+                                                    class_info_list,
+                                                    HANDLERS)
         self.n_snapshot_types = 0
-        self.special_lookup_object = OPSSpecialLookup()
+        # self.special_lookup_object = OPSSpecialLookup()
+        self.special_lookup_object = SpecialLookups(SPECIAL_LOOKUPS)
 
     def is_special(self, item):
         return self.special_lookup_object.is_special(item)
@@ -323,9 +336,7 @@ class Storage(storage.GeneralStorage):
         for table in table_names:
             logger.info("Attempting to register missing table {} ({})"\
                         .format(table, str(table_to_class[table])))
-            if issubclass(table_to_class[table], DATA_CONTAINER_CLASSES):
-                raise RuntimeError("TODO")
-            if issubclass(table_to_class[table], paths.BaseSnapshot):
+            if issubclass(table_to_class[table], ENGINE_LOOKUP_CLASSES):
                 lookups.update(snapshots.snapshot_registration_from_db(
                     storage=self,
                     schema=self.schema,
@@ -336,11 +347,13 @@ class Storage(storage.GeneralStorage):
                     self.snapshots.update_tables()
         logger.info("Found {} possible lookups".format(len(lookups)))
         logger.info("Lookups for tables: " + str(lookups.keys()))
+        # TODO: no, this is wrong; we need custom lookup
         class_info_list = [ClassInfo(table=table,
                                      cls=table_to_class[table],
                                      lookup_result=lookups[table])
                            for table in lookups]
-        self.class_info.register_info(class_info_list, self.schema)
+        # self.class_info.register_info(class_info_list, self.schema)
+        self.register_schema(self.schema, class_info_list, read_mode=True)
         # for info in class_info_list:
             # info.set_defaults(self.schema)
             # self.class_info.add_class_info(info)
