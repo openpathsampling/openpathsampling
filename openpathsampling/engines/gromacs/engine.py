@@ -30,15 +30,18 @@ from openpathsampling.engines.external_engine import (
     _debug_open_files, close_file_descriptors
 )
 
+
 def _remove_file_if_exists(filename):  # pragma: no cover
     #  not requiring coverage here because it's part of Gromacs integration;
     #  gets covered if gmx is installed though
     if os.path.isfile(filename):
         os.remove(filename)
 
+
 class _GroFileEngine(ExternalEngine):
     SnapshotClass = ExternalMDSnapshot
     InternalizedSnapshotClass = InternalizedMDSnapshot
+
     def __init__(self, gro):
         self.gro = gro
         traj = md.load(gro)
@@ -51,8 +54,8 @@ class _GroFileEngine(ExternalEngine):
                                  'n_atoms': n_atoms}
         )
         super(_GroFileEngine, self).__init__(options={},
-                                            descriptor=descriptor,
-                                            template=None)
+                                             descriptor=descriptor,
+                                             template=None)
 
     def to_dict(self):
         return {'gro': self.gro}
@@ -69,13 +72,52 @@ class _GroFileEngine(ExternalEngine):
         return (xyz, vel, box)
 
 
-
 def snapshot_from_gro(gro_file):
     template_engine = _GroFileEngine(gro_file)
     snapshot = ExternalMDSnapshot(file_name=gro_file,
                                   file_position=0,
                                   engine=template_engine)
     return snapshot
+
+
+# .mdp parsing
+def _parse_mdp_line(line):
+    parser = shlex.shlex(line, posix=True)
+    parser.commenters = ";"
+    parser.wordchars += "-"
+    tokens = list(parser)
+    # gromacs mdp can have more than one token/value to the RHS of the '='
+    # so the bit below wont work
+    #assert len(tokens) in [0, 3], line
+    if len(tokens) == 0:
+        # (probably) a comment line
+        return {}
+    elif len(tokens) >= 3 and tokens[1] == "=":
+        # for lines with content: make sure we parsed the '=' at the right spot
+        return {tokens[0]: tokens[2:]}  # always return a list for the values
+    else:
+        raise ValueError("Could not parse the following mdp line: {:s}".format(line))
+
+
+_MDP_FLOAT_PARAMS = ["tinit", "dt", ]
+_MDP_INT_PARAMS = ["nsteps", "init-step", ]
+
+
+def _map_types(parsed_dict):
+    dispatch = {param: lambda l: [str(v) for v in l]
+                for param in parsed_dict}
+    dispatch.update({param: lambda l: [float(v) for v in l]
+                     for param in _MDP_FLOAT_PARAMS})
+    dispatch.update({param: lambda l: [int(v) for v in l]
+                     for param in _MDP_INT_PARAMS})
+    return {key: dispatch[key](value) for key, value in parsed_dict.items()}
+
+
+def parse_mdp(input_text):
+    parsed = {}
+    for line in input_text.split("\n"):
+        parsed.update(_parse_mdp_line(line))
+    return _map_types(parsed)
 
 
 class GromacsEngine(ExternalEngine):
