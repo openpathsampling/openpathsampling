@@ -1,4 +1,5 @@
 from .serialization import *
+from .proxy import *  # TODO: move this elsewhere
 import pytest
 
 from .serialization_helpers import get_uuid, default_find_uuids
