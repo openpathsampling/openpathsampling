@@ -147,6 +147,25 @@ class SerializationSchema(object):
         return dup
 
     def backend_type(self, type_name):
+        """Obtain the general type name from a specific type string
+
+        Example: this tells that no matter what the specific shape of a
+        numpy array is, the backend should register it as a NumPy array. In
+        addition, this can (in the future will) provide a length value to
+        tell the backend how many bytes to allocate for an array.
+
+        Parameters
+        ----------
+        type_name: str
+            specfic type string for an attribute
+
+        Returns
+        -------
+        Tuple[str, Any]
+            the type name as known to the backend, and the length
+            information for fixed length columns (length aspect not yet
+            implemented)
+        """
         for handler in self.attribute_handlers:
             if handler.is_my_type(type_name):
                 handler_obj = handler.from_type_string(type_name)
