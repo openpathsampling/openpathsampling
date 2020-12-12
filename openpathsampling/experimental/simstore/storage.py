@@ -26,7 +26,7 @@ from .serialization_helpers import get_uuid, get_all_uuids
 from .serialization_helpers import get_all_uuids_loading
 from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
-from .serialization import ProxyObjectFactory
+from .proxy import ProxyObjectFactory, GenericLazyLoader
 from .storable_functions import StorageFunctionHandler, StorableFunction
 from .tags_table import TagsTable
 from .type_ident import STANDARD_TYPING
@@ -214,6 +214,10 @@ class GeneralStorage(StorableNamedObject):
             uuids.update(get_all_uuids(obj, known_uuids=cache,
                                        class_info=self.class_info))
 
+        logger.debug("Found %d objects" % len(uuids))
+        logger.debug("Deproxying proxy objects")
+        uuids = self._unproxy_lazies(uuids)
+
         logger.debug("Checking if objects already exist in database")
         uuids = self.filter_existing_uuids(uuids)
 
@@ -223,6 +227,14 @@ class GeneralStorage(StorableNamedObject):
         by_table.update(tools.dict_group_by(uuids,
                                             key_extract=get_table_name))
         return by_table
+
+    def _unproxy_lazies(self, uuid_mapping):
+        lazies = [uuid for uuid, obj in uuid_mapping.items()
+                  if isinstance(obj, GenericLazyLoader)]
+        logger.debug("Found " + str(len(lazies)) + " objects to deproxy")
+        loaded = self.load(lazies, allow_lazy=False)
+        uuid_mapping.update({get_uuid(obj): obj for obj in loaded})
+        return uuid_mapping
 
 
     def save(self, obj_list, use_cache=True):
@@ -256,6 +268,7 @@ class GeneralStorage(StorableNamedObject):
             missing = by_table.pop('__missing__')
             if missing == old_missing:
                 raise RuntimeError("Unable to register: " + str(missing))
+            missing = self._unproxy_lazies(missing)
             logger.info("Registering tables for %d missing objects",
                         len(missing))
             self.register_missing_tables_for_objects(missing)

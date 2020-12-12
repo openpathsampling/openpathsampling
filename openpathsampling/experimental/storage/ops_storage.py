@@ -24,8 +24,7 @@ from openpathsampling.netcdfplus import StorableObject
 from ..simstore import tools
 
 from ..simstore.custom_json import (
-    JSONSerializerDeserializer,
-    numpy_codec, bytes_codec, uuid_object_codec,
+    JSONSerializerDeserializer, DEFAULT_CODECS
 )
 
 from ..simstore import CallableCodec
@@ -72,8 +71,7 @@ ops_schema = {
 ops_schema_sql_metadata = {}
 
 # this defines the simulation object serializer for OPS
-CODECS = [numpy_codec, bytes_codec, uuid_object_codec, simtk_quantity_codec]
-
+CODECS = DEFAULT_CODECS + [simtk_quantity_codec]
 HANDLERS = DEFAULT_HANDLERS + [SimtkQuantityHandler]
 
 UNSAFE_CODECS = CODECS + [CallableCodec()]
@@ -274,9 +272,12 @@ class Storage(storage.GeneralStorage):
         super(Storage, self).__init__(backend, schema, class_info,
                                       fallbacks, safemode)
 
-        self.n_snapshot_types = 0
         self.snapshots = SnapshotsTable(self)
         self.snapshots.update_tables()
+
+    @property
+    def n_snapshot_types(self):
+        return len(self.snapshots.tables)
 
     def sync_all(self):
         self.save(self._stashed)
@@ -293,7 +294,6 @@ class Storage(storage.GeneralStorage):
         if exists is not None:
             return exists
         obj = cls.__new__(cls)
-        obj.n_snapshot_types = 0
         schema = tools.none_to_default(schema, ops_schema)
         class_info = tools.none_to_default(class_info, ops_class_info)
         simulation_classes = tools.none_to_default(simulation_classes,
@@ -369,6 +369,5 @@ class Storage(storage.GeneralStorage):
             )
 
             self.register_schema(schema, class_info_list)
-            self.n_snapshot_types += 1
-            self.snapshots.update_tables()
+            self.snapshots.update_tables()  # increments snapshot types, too
 

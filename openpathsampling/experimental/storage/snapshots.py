@@ -1,7 +1,7 @@
 # NOTE: this is part of the OPS-specific stuff
 from ..simstore.class_info import ClassInfo
-
-from ..simstore.serialization_helpers import get_uuid
+from ..simstore.uuids import get_uuid
+from ..simstore.proxy import GenericLazyLoader
 
 def _nested_schema_entries(schema_entries, lazies):
     """Recursive algorithm to create all schema entries
@@ -96,6 +96,8 @@ def snapshot_registration_info(snapshot_instance, snapshot_number):
     attr_infos = []
     for table in [tbl for tbl in schema.keys() if tbl != 'snapshot']:
         obj = getattr(snapshot_instance, table)
+        if isinstance(obj, GenericLazyLoader):
+            obj = obj.load()
         attr_infos.append(ClassInfo(table=real_table[table],
                                     cls=obj.__class__,
                                     lookup_result=(engine_uuid,

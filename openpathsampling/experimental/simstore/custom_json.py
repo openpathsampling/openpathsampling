@@ -181,6 +181,19 @@ class JSONCodec(object):
             return obj
         return dct
 
+def iterable_to_dict(obj):
+    return {'as_list': list(obj)}
+
+def iterable_from_dict(dct, iterable_type):
+    return iterable_type(dct['as_list'])
+
+tuple_codec = JSONCodec(tuple, iterable_to_dict,
+                        functools.partial(iterable_from_dict,
+                                          iterable_type=tuple))
+set_codec = JSONCodec(set, iterable_to_dict,
+                        functools.partial(iterable_from_dict,
+                                          iterable_type=set))
+
 def bytes_to_dict(obj):
     return {'bytes': obj.decode('latin-1')}
 
@@ -221,4 +234,10 @@ uuid_object_codec = JSONCodec(cls=None,
                               is_my_obj=has_uuid,
                               is_my_dict=lambda x: False)
 
-# TODO: simtk.unit.Quantity  (in the OPS storage, though)
+DEFAULT_CODECS = [
+    uuid_object_codec,
+    bytes_codec,
+    tuple_codec,
+    set_codec,
+    numpy_codec,
+]
