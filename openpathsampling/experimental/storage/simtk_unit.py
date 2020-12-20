@@ -28,8 +28,7 @@ def unit_from_dict(dct):
     return unit
 
 def quantity_to_dict(obj):
-    return {
-            'value': obj.value,
+    return {'value': obj.value_in_unit(obj.unit),
             '__simtk_unit__': unit_to_dict(obj.unit)}
 
 def quantity_from_dict(dct):
@@ -41,7 +40,7 @@ if HAS_SIMTK:
     simtk_quantity_codec = JSONCodec(
         cls=simtk.unit.Quantity,
         to_dict=quantity_to_dict,
-        from_dict=quantity_to_dict,
+        from_dict=quantity_from_dict,
         is_my_dict=lambda x: '__simtk_unit__' in x
     )
 
