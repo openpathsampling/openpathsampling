@@ -88,7 +88,3 @@ class SimtkQuantityHandler(AttributeHandler):
     def deserialize(self, data, caches=None):
         unwrapped = self.inner_deserialize(data, caches)
         return self.unit * unwrapped
-
-
-
-

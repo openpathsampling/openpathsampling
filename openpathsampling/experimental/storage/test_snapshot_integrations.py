@@ -18,8 +18,8 @@ from openpathsampling.experimental.simstore import SQLStorageBackend
 class TestSnapshotIntegration(object):
     # TODO: no use of self anywhere in here; this might become bare test
     # functions
-
     def _make_storage(self, mode):
+        Storage._known_storages = {}
         backend = SQLStorageBackend("test.sql", mode=mode)
         storage = Storage.from_backend(
             backend=backend,
@@ -48,9 +48,19 @@ class TestSnapshotIntegration(object):
         )
         return snap
 
-    @pytest.mark.parametrize('integration', ['gromacs'])
+    def _make_openmm_snap(self):
+        mm = pytest.importorskip('simtk.openmm')
+        traj_file = data_filename('ala_small_traj.pdb')
+        traj = paths.engines.openmm.tools.ops_load_trajectory(traj_file)
+        snap = traj[0]
+        return snap
+
+    @pytest.mark.parametrize('integration', ['gromacs', 'openmm'])
     def test_integration(self, integration):
-        make_snap = {'gromacs': self._make_gromacs_snap}[integration]
+        make_snap = {
+            'gromacs': self._make_gromacs_snap,
+            'openmm': self._make_openmm_snap,
+        }[integration]
         snap = make_snap()
 
         storage = self._make_storage(mode='w')
