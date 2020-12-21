@@ -263,7 +263,13 @@ class Storage(storage.GeneralStorage):
                      safemode=False):
         # quick exit if this storage is known
         exists = None
-        if backend.identifier[1] != 'w':
+        try:
+            mode = backend.identifier[1]
+        except TypeError:
+            # memory backend
+            mode = 'a'
+
+        if mode != 'w':
             exists = cls._known_storages.get(backend.identifier, None)
         if exists is not None:
             return exists
