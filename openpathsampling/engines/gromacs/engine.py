@@ -16,8 +16,8 @@ from openpathsampling.engines import ExternalEngine
 from openpathsampling.engines import features
 from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
 from openpathsampling.engines.openmm.topology import MDTrajTopology
-from openpathsampling.engines.external_snapshots import ExternalMDSnapshot
-# fro . import features as gmx_features
+from openpathsampling.engines.external_snapshots import \
+        ExternalMDSnapshot, InternalizedMDSnapshot
 from openpathsampling.tools import ensure_file
 
 import os
@@ -30,11 +30,15 @@ from openpathsampling.engines.external_engine import (
     _debug_open_files, close_file_descriptors
 )
 
-def _remove_file_if_exists(filename):
+def _remove_file_if_exists(filename):  # pragma: no cover
+    #  not requiring coverage here because it's part of Gromacs integration;
+    #  gets covered if gmx is installed though
     if os.path.isfile(filename):
         os.remove(filename)
 
 class _GroFileEngine(ExternalEngine):
+    SnapshotClass = ExternalMDSnapshot
+    InternalizedSnapshotClass = InternalizedMDSnapshot
     def __init__(self, gro):
         self.gro = gro
         traj = md.load(gro)
@@ -42,7 +46,7 @@ class _GroFileEngine(ExternalEngine):
         n_atoms = self.topology.n_atoms
         n_spatial = self.topology.n_spatial
         descriptor = SnapshotDescriptor.construct(
-            snapshot_class=ExternalMDSnapshot,
+            snapshot_class=self.SnapshotClass,
             snapshot_dimensions={'n_spatial': n_spatial,
                                  'n_atoms': n_atoms}
         )
@@ -134,6 +138,8 @@ class GromacsEngine(ExternalEngine):
                  + "-o {e.output_file} -e {e.edr_file} -g {e.log_file} "
                  + "{mdrun_args}")
     # use these as CMD.format(e=engine, **engine.options)
+    SnapshotClass = ExternalMDSnapshot
+    InternalizedSnapshotClass = InternalizedMDSnapshot
     def __init__(self, gro, mdp, top, options, base_dir="", prefix="gmx"):
         self.base_dir = base_dir
         self.gro = os.path.join(base_dir, gro)
@@ -165,7 +171,7 @@ class GromacsEngine(ExternalEngine):
         self.output_file = self.prefix + "_trr/OUTPUT_NAME.trr"
         self.edr_file = self.prefix + "_edr/OUTPUT_NAME.edr"
         self.log_file = self.prefix + "_log/OUTPUT_NAME.log"
-        self.tpr_file = "topol.top"
+        self.tpr_file = "topol.tpr"
         self.mdout_file = "mdout.mdp"
 
         self._mdtraj_topology = None
@@ -174,7 +180,8 @@ class GromacsEngine(ExternalEngine):
                                              first_frame_in_file=True)
 
     def to_dict(self):
-        return {
+        dct = super(GromacsEngine, self).to_dict()
+        local_dct = {
             'gro': self.gro,
             'mdp': self.mdp,
             'top': self.top,
@@ -185,6 +192,8 @@ class GromacsEngine(ExternalEngine):
             'mdp_contents': self.mdp_contents,
             'top_contents': self.top_contents,
         }
+        dct.update(local_dct)
+        return dct
 
     @classmethod
     def from_dict(cls, dct):
@@ -294,6 +303,7 @@ class GromacsEngine(ExternalEngine):
             num_str = '{:07d}'.format(number + 1)
             self.output_file = self.trajectory_filename(number + 1)
             init_filename = "initial_frame.trr"
+            self.filename_setter.reset(number + 1)
         else:
             num_str = number
             self.output_file = self.trajectory_filename(num_str)
@@ -326,13 +336,13 @@ class GromacsEngine(ExternalEngine):
         return_code = psutil.Popen(run_cmd, preexec_fn=os.setsid).wait()
         return return_code
 
-    def cleanup(self):
+    def cleanup(self):  # pragma: no cover
+        # tested when traj is run, which we don't on CI
         _remove_file_if_exists(self.input_file)
         _remove_file_if_exists(self.tpr_file)
         _remove_file_if_exists(self.mdout_file)
 
     def engine_command(self):
-        # gmx mdrun -s topol.tpr -o trr/0000001.trr -g 0000001.log
         args = self.options['mdrun_args'].format(prev_traj=self._traj_num-1,
                                                  next_traj=self._traj_num)
         cmd = self.MDRUN_CMD.format(e=self, mdrun_args=args)

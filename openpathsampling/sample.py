@@ -7,7 +7,14 @@ from openpathsampling.netcdfplus import DelayedLoader
 
 from openpathsampling.tools import refresh_output
 
-from collections import Counter, Mapping
+from collections import Counter
+
+import sys
+if sys.version_info > (3, ):
+    from collections.abc import Mapping
+else:
+    from collections import Mapping
+
 
 logger = logging.getLogger(__name__)
 

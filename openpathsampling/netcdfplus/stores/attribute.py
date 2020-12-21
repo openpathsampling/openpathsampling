@@ -128,8 +128,9 @@ class PseudoAttributeStore(UniqueNamedObjectStore):
 
             else:
                 raise RuntimeError(
-                    'Need either at least one stored snapshot or a '
-                    'template snapshot to determine type and shape of the CV.')
+                    'Need either at least one stored object to use as a '
+                    'template to determine type and shape of the CV. '
+                    'No items in store: ' + str(self.key_store(cv)))
 
         self.key_store(cv).add_attribute(
             ValueStore,

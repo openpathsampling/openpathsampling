@@ -4,8 +4,8 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-from .custom_json import bytes_codec, numpy_codec, custom_json_factory
-from .test_custom_json import CustomJSONCodingTest
+from ..simstore.custom_json import bytes_codec, numpy_codec, custom_json_factory
+from ..simstore.test_custom_json import CustomJSONCodingTest
 
 from openpathsampling.tests.test_helpers import data_filename
 

@@ -38,7 +38,7 @@ universal_sql_meta = {
 
 def make_columns(table_name, schema, sql_schema_metadata):
     columns = []
-    if table_name not in ['uuid', 'tables']:
+    if table_name not in universal_schema:
         columns.append(sql.Column('idx', sql.Integer,
                                   primary_key=True))
         columns.append(sql.Column('uuid', sql.String))
@@ -115,9 +115,14 @@ class SQLStorageBackend(StorableNamedObject):
         self.connection_uri = None
         self._metadata = None
         if filename is not None:
-            if self.mode == "w" and os.path.exists(filename):
+            file_exists = os.path.exists(filename)
+            if self.mode == "w" and file_exists:
                 # delete existing file; write after
                 os.remove(filename)
+
+            if self.mode == 'a' and not file_exists:
+                # act as if the mode is 'w'; note we change this back later
+                self.mode = 'w'
 
             self.connection_uri = self.filename_from_dialect(
                 filename,
@@ -125,6 +130,7 @@ class SQLStorageBackend(StorableNamedObject):
             )
             engine = sql.create_engine(self.connection_uri, **self.kwargs)
             self._initialize_from_engine(engine)
+            self.mode = mode  # in case we changed when checking existence
 
     def _initialize_from_engine(self, engine):
         self.engine = engine
@@ -133,7 +139,10 @@ class SQLStorageBackend(StorableNamedObject):
 
     @property
     def identifier(self):
-        return self.connection_uri, self.mode
+        if self.connection_uri == "sqlite:///:memory:":
+            return "sqlite:///{}".format(id(self)), self.mode
+        else:
+            return self.connection_uri, self.mode
 
     def to_dict(self):
         return {
@@ -174,6 +183,10 @@ class SQLStorageBackend(StorableNamedObject):
 
             self.metadata.create_all(self.engine)
             self.register_schema(universal_schema, universal_sql_meta)
+            uuid_table = self.metadata.tables['uuid']
+            index = sql.Index('uuids_index', *uuid_table.c, unique=True)
+            index.create(self.engine)
+
         elif mode == "r" or mode == "a":
             self.metadata.reflect(self.engine)
             self.schema = self.database_schema()
@@ -295,7 +308,7 @@ class SQLStorageBackend(StorableNamedObject):
                 raise TypeError("Schema registration problem. Your schema "
                                 "may already have tables of the same names.")
 
-            if table_name not in ['uuid', 'tables']:
+            if table_name not in universal_schema:
                 self._add_table_to_tables_list(table_name,
                                                schema[table_name],
                                                table_to_class[table_name])
@@ -321,13 +334,13 @@ class SQLStorageBackend(StorableNamedObject):
             the name for this table; typically the UUID of the storable
             function
         result_type : Str
-            string name of the result type; must match one of the keys of
-            ``sql_type``
+            string name of the result type
         """
         logger.info("Registering storable function: UUID: %s (%s)" %
                     (table_name, result_type))
+        col_type = sql_type[backend_registration_type(result_type)]
         columns = [sql.Column('uuid', sql.String, primary_key=True),
-                   sql.Column('value', sql_type[result_type])]
+                   sql.Column('value', col_type)]
         try:
             table = sql.Table(table_name, self.metadata, *columns)
         except sql.exc.InvalidRequestError:
@@ -404,6 +417,14 @@ class SQLStorageBackend(StorableNamedObject):
     def load_storable_function_table(self, table_name):
         return {row['uuid']: row['value']
                 for row in self.table_iterator(table_name)}
+
+    def add_tag(self, table_name, name, content):
+        table = self.metadata.tables[table_name]
+
+        with self.engine.connect() as conn:
+            conn.execute(table.insert(), [{'name': name,
+                                           'content': content}])
+
 
     def add_to_table(self, table_name, objects):
         """Add a list of objects of a given class

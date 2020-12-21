@@ -1,5 +1,6 @@
 import os
 import collections
+from collections import abc
 
 from .storage import universal_schema
 
@@ -8,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 UUIDTableRow = collections.namedtuple("UUIDTableRow", ['uuid', 'table_name'])
 
-class MemoryStorageTable(collections.abc.MutableMapping):
+class MemoryStorageTable(abc.MutableMapping):
     """Simple wrapper for a Dict; transforms Dict values to namedtuple
     """
     def __init__(self, table_name, schema_entries):

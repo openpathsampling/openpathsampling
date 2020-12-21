@@ -11,9 +11,9 @@ import openpathsampling as paths
 from openpathsampling.tests.test_helpers import data_filename
 
 from openpathsampling.experimental.storage.ops_storage import (
-    OPSStorage, ops_class_info, ops_schema
+    Storage, ops_class_info, ops_schema
 )
-from openpathsampling.experimental.storage.sql_backend import SQLStorageBackend
+from openpathsampling.experimental.simstore import SQLStorageBackend
 
 class TestSnapshotIntegration(object):
     # TODO: no use of self anywhere in here; this might become bare test
@@ -21,7 +21,7 @@ class TestSnapshotIntegration(object):
 
     def _make_storage(self, mode):
         backend = SQLStorageBackend("test.sql", mode=mode)
-        storage = OPSStorage.from_backend(
+        storage = Storage.from_backend(
             backend=backend,
             schema=ops_schema,
             class_info=ops_class_info
@@ -61,7 +61,7 @@ class TestSnapshotIntegration(object):
 
         storage = self._make_storage(mode='r')
         assert storage.backend.has_table('snapshot0')
-        snap2 = storage.snapshot0[0]
+        snap2 = storage.snapshots.tables['snapshot0'][0]
 
         np.testing.assert_array_equal(snap.xyz, snap2.xyz)
 

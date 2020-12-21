@@ -11,9 +11,9 @@ from openpathsampling.tests.test_helpers import make_1d_traj, data_filename
 from openpathsampling.engines import openmm as ops_omm
 
 from .collective_variables import *
-from .test_storable_function import MockBackend
-from .storable_functions import StorageFunctionHandler
-from .serialization_helpers import get_uuid
+from ..simstore.test_storable_function import MockBackend
+from ..simstore import StorageFunctionHandler
+from ..simstore.serialization_helpers import get_uuid
 
 
 try:
@@ -83,6 +83,7 @@ class TestCoordinateFunctionCV(object):
         mock_func.reset_mock()
 
         backend = MockBackend()
+        backend.register_storable_function(get_uuid(self.func), 'float')
         self.storage = mock.NonCallableMock(backend=backend)
         self.storage._sf_handler = StorageFunctionHandler(self.storage)
         self.storage._sf_handler.register_function(self.func)

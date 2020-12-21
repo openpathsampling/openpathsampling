@@ -28,6 +28,8 @@ from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
 from .serialization import ProxyObjectFactory
 from .storable_functions import StorageFunctionHandler, StorableFunction
+from .tags_table import TagsTable
+from .type_ident import STANDARD_TYPING
 
 try:
     basestring
@@ -40,7 +42,8 @@ logger = logging.getLogger(__name__)
 universal_schema = {
     'uuid': [('uuid', 'uuid'), ('table', 'int'), ('row', 'int')],
     'tables': [('name', 'str'), ('idx', 'int'), ('module', 'str'),
-               ('class_name', 'str')]
+               ('class_name', 'str')],
+    'tags': [('name', 'str'), ('content', 'uuid')]
 }
 
 from openpathsampling.netcdfplus import StorableNamedObject
@@ -49,13 +52,14 @@ class GeneralStorage(StorableNamedObject):
     def __init__(self, backend, class_info, schema=None,
                  simulation_classes=None, fallbacks=None, safemode=False):
         super().__init__()
-        GeneralStorage._known_storages = {backend.identifier: self}
+        GeneralStorage._known_storages[backend.identifier] = self
         self.backend = backend
         self.schema = schema.copy()
         self.class_info = class_info.copy()
         self._safemode = None
         self.safemode = safemode
         self._sf_handler = StorageFunctionHandler(storage=self)
+        self.type_identification = STANDARD_TYPING  # TODO: copy
         # TODO: implement fallback
         self.fallbacks = tools.none_to_default(fallbacks, [])
 
@@ -75,7 +79,11 @@ class GeneralStorage(StorableNamedObject):
         self.cache = MixedCache()
         if self.schema is None:
             self.schema = backend.schema
+        self.cache = MixedCache({})  # initial empty cache so it exists
         self.initialize_with_mode(self.mode)
+        self.tags = TagsTable(self)
+        self._simulation_objects = self._cache_simulation_objects()
+        self.cache = MixedCache(self._simulation_objects)
         self._stashed = []
         self._reset_fixed_cache()
 
@@ -98,7 +106,7 @@ class GeneralStorage(StorableNamedObject):
             self.register_schema(self.schema, class_info_list=[],
                                  read_mode=True)
             missing = {k: v for k, v in self.backend.schema.items()
-                       if k not in self.schema}
+                       if k not in self.schema and k not in universal_schema}
             self.schema.update(missing)
             table_to_class = self.backend.table_to_class
             self._load_missing_info_tables(table_to_class)
@@ -145,18 +153,17 @@ class GeneralStorage(StorableNamedObject):
             # info.set_defaults(schema)
             # self.class_info.add_class_info(info)
 
-        if not read_mode:
-            # here's where we add the class_info to the backend
+        if not read_mode or self.backend.table_to_class == {}:
             table_to_class = {table: self.class_info[table].cls
                               for table in schema
                               if table not in ['uuid', 'tables']}
+            # here's where we add the class_info to the backend
             self.backend.register_schema(schema, table_to_class,
                                          backend_metadata)
 
         self.schema.update(schema)
         for table in self.schema:
-            self._storage_tables[table] = StorageTable(self, table,
-                                                       cache=self.cache)
+            self._storage_tables[table] = StorageTable(self, table)
         # self.serialization.register_serialization(schema, self.class_info)
 
     def register_from_instance(self, lookup, obj):
@@ -281,12 +288,25 @@ class GeneralStorage(StorableNamedObject):
 
         funcs = tools.listify(funcs)
         for func in funcs:
+            # TODO: XXX This is where we need to use type identification
+            # 1. check if the associated function is registered already
+            # 2. if not, extract type from the first function value
             self._sf_handler.update_cache(func.local_cache)
             result_dict = func.local_cache.result_dict
-            self.backend.add_storable_function_results(
-                table_name=get_uuid(func),
-                result_dict=result_dict
-            )
+            table_name = get_uuid(func)
+            if not self.backend.has_table(table_name):
+                if result_dict:
+                    example = next(iter(result_dict.values()))
+                else:
+                    example = None
+                self._sf_handler.register_function(func,
+                                                   example_result=example)
+
+            if result_dict:
+                self.backend.add_storable_function_results(
+                    table_name=table_name,
+                    result_dict=result_dict
+                )
             self._reset_fixed_cache()
 
     def load(self, input_uuids, allow_lazy=True, force=False):
@@ -355,7 +375,7 @@ class GeneralStorage(StorableNamedObject):
         # handle special case of storable functions
         for result in new_results:
             if isinstance(result, StorableFunction):
-                self._sf_handler.register_function(result, add_table=False)
+                self._sf_handler.register_function(result)
 
         return new_results
 
@@ -384,12 +404,19 @@ class GeneralStorage(StorableNamedObject):
         pass
 
     def _cache_simulation_objects(self):
-
-        # backend_iterator = self.backend.table_iterator('simulation_objects')
-        # sim_obj_uuids = [row.uuid for row in backend_iterator]
-        # objs = self.load(sim_obj_uuids)
         # load up all the simulation objects
-        return {}
+        try:
+            backend_iter = self.backend.table_iterator('simulation_objects')
+            sim_obj_uuids = [row.uuid for row in backend_iter]
+        except KeyError:
+            # TODO: this should probably be a custom error; don't rely on
+            # the error type this backend raises
+            # this happens if no simulation objects are given in the
+            # schema... there's not technically required
+            objs = []
+        else:
+            objs = self.load(sim_obj_uuids)
+        return {get_uuid(obj): obj for obj in objs}
 
     def _reset_fixed_cache(self):
         self.cache.fixed_cache = {}
@@ -449,6 +476,9 @@ class MixedCache(abc.MutableMapping):
         self.fixed_cache = tools.none_to_default(fixed_cache, default={})
         self.cache = {}
 
+    def clear(self):
+        self.cache = {}
+
     def delete_items(self, list_of_items, error_if_missing=False):
         for item in list_of_items:
             if item in self:
@@ -490,19 +520,22 @@ class MixedCache(abc.MutableMapping):
 class StorageTable(abc.Sequence):
     # NOTE: currently you still need to be able to hold the whole table in
     # memory ... at least, with the SQL backend.
-    def __init__(self, storage, table, cache=None):
+    def __init__(self, storage, table):
         self.storage = storage
         self.table = table
-        self.clear_cache_frequency = 1
+        self.clear_cache_block_freq = 100
         self.iter_block_size = 100  # TODO: base it on the size of an object
 
     def __iter__(self):
         # TODO: ensure that this gives us things in idx order
         backend_iter = self.storage.backend.table_iterator(self.table)
-        # TODO: implement use of self.clear_cache_frequency
-        for block in tools.grouper(backend_iter, self.iter_block_size):
+        enum_iter = enumerate(tools.grouper(backend_iter,
+                                            self.iter_block_size))
+        for block_num, block in enum_iter:
             row_uuids = [row.uuid for row in block]
             loaded = self.storage.load(row_uuids)
+            if block_num % self.clear_cache_block_freq == 0 and block_num != 0:
+                self.storage.cache.clear()
             for obj in loaded:
                 yield obj
 
@@ -519,6 +552,11 @@ class StorageTable(abc.Sequence):
 
     def __len__(self):
         return self.storage.backend.table_len(self.table)
+
+    def cache_all(self):
+        old_blocksize = self.iter_block_size
+        self.iter_block_size = len(self)
+        _ = list(iter(self))
 
     def save(self, obj):
         # this is to match with the netcdfplus API
@@ -557,8 +595,8 @@ class PseudoTable(abc.MutableSequence):
     def get_by_uuid(self, uuid):
         return self._uuid_to_obj[uuid]
 
-    # NOTE: index can get confusing because you can have two equal volumes
-    # (same CV, same range) with one named and the other not named.
+    # NOTE: .index() can get confusing because you can have two equal
+    # volumes (same CV, same range) with one named and the other not named.
 
     def __getitem__(self, item):
         try:

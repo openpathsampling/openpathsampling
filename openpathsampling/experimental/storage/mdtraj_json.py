@@ -1,4 +1,4 @@
-from .custom_json import JSONCodec
+from ..simstore.custom_json import JSONCodec
 
 try:
     import mdtraj as md

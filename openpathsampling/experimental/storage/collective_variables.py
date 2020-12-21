@@ -1,11 +1,11 @@
 import openpathsampling as paths
 
-from .storable_functions import (
+from ..simstore.storable_functions import (
     StorableFunction, StorableFunctionConfig, wrap_numpy,
     scalarize_singletons, requires_lists_pre, requires_lists_post, Processor
 )
 from openpathsampling.netcdfplus import StorableNamedObject
-from .serialization_helpers import get_uuid
+from ..simstore.serialization_helpers import get_uuid
 
 class CollectiveVariable(StorableFunction):
     """Wrapper around functions that map snapshots to values.
@@ -95,14 +95,13 @@ class MDTrajProcessor(Processor):
         return paths.Trajectory(values).to_mdtraj(topology=top)
 
 class MDTrajFunctionCV(CoordinateFunctionCV):
-    def __init__(self, func, topology, result_type=None, func_config=None,
+    def __init__(self, func, topology, func_config=None,
                  **kwargs):
         if func_config is None:
             func_config = StorableFunctionConfig([
                 MDTrajProcessor(topology), wrap_numpy, scalarize_singletons,
             ])
-        super(MDTrajFunctionCV, self).__init__(func, result_type,
-                                               func_config, **kwargs)
+        super(MDTrajFunctionCV, self).__init__(func, func_config, **kwargs)
         self.topology = topology
         self.mdtraj_topology = topology.mdtraj
 

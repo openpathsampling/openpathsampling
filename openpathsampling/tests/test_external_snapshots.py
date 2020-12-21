@@ -4,13 +4,24 @@ import openpathsampling as paths
 import numpy as np
 
 from openpathsampling.engines.external_snapshots.snapshot import (
-    ExternalMDSnapshot
+    ExternalMDSnapshot, InternalizedMDSnapshot
 )
+from openpathsampling.engines.snapshot import SnapshotDescriptor
+
+from openpathsampling.engines.external_engine import \
+        _InternalizedEngineProxy
 
 class MockEngine(object):
+    SnapshotClass = ExternalMDSnapshot
+    InternalizedSnapshotClass = InternalizedMDSnapshot
     def __init__(self, sequences, sleep_ms=0):
         self.sequences = sequences
         self.sleep_ms = sleep_ms
+        self.descriptor = SnapshotDescriptor.construct(
+            snapshot_class=ExternalMDSnapshot,
+            snapshot_dimensions={'n_spatial': 2, 'n_atoms': 1}
+        )
+        self.internalized_engine = _InternalizedEngineProxy(self)
 
     def read_frame_data(self, filename, position):
         return self.sequences[filename][position]
@@ -131,3 +142,15 @@ class TestExternalMDSnapshot(object):
 
             assert snap._reversed == snap_rev
             assert snap_rev._reversed == snap
+
+    def test_internalize(self):
+        snap = self.snapshots[0]
+        internal = snap.internalize()
+        np.testing.assert_array_equal(snap.xyz, internal.xyz)
+        np.testing.assert_array_equal(snap.velocities, internal.velocities)
+        np.testing.assert_array_equal(snap.box_vectors, internal.box_vectors)
+
+        # the way to do it for a trajectory
+        traj_i = paths.Trajectory([s.internalize() for s in self.snapshots])
+        traj_e = paths.Trajectory(self.snapshots)
+        np.testing.assert_array_equal(traj_i.xyz, traj_e.xyz)

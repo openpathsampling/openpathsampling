@@ -1,37 +1,41 @@
-from . import storage
-from . import sql_backend
+from ..simstore import storage
+from ..simstore import sql_backend
 
-from .serialization_helpers import to_json_obj as json_serializer
-from .serialization_helpers import from_json_obj as deserialize_sim
-from .serialization_helpers import import_class
-from .serialization_helpers import get_uuid, set_uuid
-from .serialization_helpers import default_find_uuids
+from ..simstore.serialization_helpers import to_json_obj as json_serializer
+from ..simstore.serialization_helpers import from_json_obj as deserialize_sim
+from ..simstore.serialization_helpers import import_class
+from ..simstore.serialization_helpers import get_uuid, set_uuid
+from ..simstore.serialization_helpers import default_find_uuids
 
-from .class_lookup import ClassIsSomething
+from ..simstore.class_lookup import ClassIsSomething
 
-from .storable_functions import (
+from ..simstore import (
     StorableFunction, StorableFunctionResults, storable_function_find_uuids
 )
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject
 
-from . import tools
+from ..simstore import tools
 
-from .custom_json import (
+from ..simstore.custom_json import (
     JSONSerializerDeserializer,
     numpy_codec, bytes_codec, uuid_object_codec,
 )
 
-from .callable_codec import CallableCodec
+from ..simstore import CallableCodec
 
-from .serialization import SchemaDeserializer
+from ..simstore.serialization import (
+    ToDictSerializer, SchemaSerializer, SchemaDeserializer
+)
 
-from .class_info import ClassInfo, ClassInfoContainer
+from ..simstore.class_info import ClassInfo, ClassInfoContainer
 
-from .sql_backend import SQLStorageBackend  # TODO: generalize
+from ..simstore import SQLStorageBackend  # TODO: generalize
 
 from . import snapshots
+from .snapshots_table import SnapshotsTable
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -90,6 +94,8 @@ class MoveChangeDeserializer(SchemaDeserializer):
         obj.input_samples = dct['input_samples']
         set_uuid(obj, uuid)
         return obj
+
+
 
 class OPSSpecialLookup(object):
     """Separate object to handle special lookups
@@ -230,19 +236,22 @@ ops_simulation_classes = {
     'pathsimulators': paths.PathSimulator,
     'pathmovers': paths.PathMover,
     'networks': paths.TransitionNetwork,
+    'schemes': paths.MoveScheme,
     'cvs': (paths.CollectiveVariable, StorableFunction),
     'engines': paths.engines.DynamicsEngine
 }  # TODO: add more to these
 
 
-class OPSStorage(storage.GeneralStorage):
+class Storage(storage.GeneralStorage):
     def __init__(self, backend, schema, class_info, fallbacks=None,
                  safemode=False):
         # TODO: this will change to match the current notation
-        super(OPSStorage, self).__init__(backend, schema, class_info,
-                                         fallbacks, safemode)
+        super(Storage, self).__init__(backend, schema, class_info,
+                                      fallbacks, safemode)
 
         self.n_snapshot_types = 0
+        self.snapshots = SnapshotsTable(self)
+        self.snapshots.update_tables()
 
     def sync_all(self):
         self.save(self._stashed)
@@ -253,23 +262,27 @@ class OPSStorage(storage.GeneralStorage):
                      simulation_classes=None, fallbacks=None,
                      safemode=False):
         # quick exit if this storage is known
-        exists = cls._known_storages.get(backend.identifier, None)
+        exists = None
+        if backend.identifier[1] != 'w':
+            exists = cls._known_storages.get(backend.identifier, None)
         if exists is not None:
             return exists
-
         obj = cls.__new__(cls)
+        obj.n_snapshot_types = 0
         schema = tools.none_to_default(schema, ops_schema)
         class_info = tools.none_to_default(class_info, ops_class_info)
         simulation_classes = tools.none_to_default(simulation_classes,
                                                    ops_simulation_classes)
-        super(OPSStorage, obj).__init__(
+        obj.snapshots = None
+        super(Storage, obj).__init__(
             backend=backend,
             schema=schema,
             class_info=class_info,
             simulation_classes=simulation_classes,
             fallbacks=fallbacks
         )
-        obj.n_snapshot_types = 0
+        obj.snapshots = SnapshotsTable(obj)
+        obj.snapshots.update_tables()
         return obj
 
     def to_dict(self):
@@ -284,6 +297,14 @@ class OPSStorage(storage.GeneralStorage):
     def __reduce__(self):
         return (self.from_dict, (self.to_dict(),))
 
+    @property
+    def movechanges(self):
+        return self.move_changes
+
+    @property
+    def samplesets(self):
+        return self.sample_sets
+
     def register_from_tables(self, table_names, classes):
         lookups = {}
         table_to_class = {tbl: cls for tbl, cls in zip(table_names, classes)}
@@ -297,6 +318,8 @@ class OPSStorage(storage.GeneralStorage):
                     class_info=self.class_info,
                     table_name=table
                 ))
+                if self.snapshots is not None:
+                    self.snapshots.update_tables()
         logger.info("Found {} possible lookups".format(len(lookups)))
         logger.info("Lookups for tables: " + str(lookups.keys()))
         class_info_list = [ClassInfo(table=table,
@@ -320,4 +343,5 @@ class OPSStorage(storage.GeneralStorage):
 
             self.register_schema(schema, class_info_list)
             self.n_snapshot_types += 1
+            self.snapshots.update_tables()
 

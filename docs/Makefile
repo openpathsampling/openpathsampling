@@ -6,6 +6,8 @@ SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = _build
 
+COPYFILES = copyfiles/copyfiles.py 
+
 # User-friendly check for sphinx-build
 ifeq ($(shell which $(SPHINXBUILD) >/dev/null 2>&1; echo $$?), 1)
 $(error The '$(SPHINXBUILD)' command was not found. Make sure you have Sphinx installed, then set the SPHINXBUILD environment variable to point to the full path of the '$(SPHINXBUILD)' executable. Alternatively you can add the directory with the executable to your PATH. If you don't have Sphinx installed, grab it from http://sphinx-doc.org/)
@@ -52,7 +54,9 @@ clean:
 	rm -rf $(BUILDDIR)/*
 
 html:
+	python $(COPYFILES) --copy copyfiles/notebooks.yml
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
+	python $(COPYFILES) --delete copyfiles/notebooks.yml
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
 
