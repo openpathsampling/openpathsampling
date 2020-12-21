@@ -1,7 +1,7 @@
 # NOTE: this is part of the OPS-specific stuff
 from ..simstore.class_info import ClassInfo
-
-from ..simstore.serialization_helpers import get_uuid
+from ..simstore.uuids import get_uuid
+from ..simstore.proxy import GenericLazyLoader
 
 def _nested_schema_entries(schema_entries, lazies):
     """Recursive algorithm to create all schema entries
@@ -73,12 +73,12 @@ def snapshot_registration_from_db(storage, schema, class_info, table_name):
     lookup_result = (engine_uuid, cls)
     proposed_lookups = {table_name: lookup_result}
     attributes = schema[table_name]
-    for (attr, type_name) in attributes:
-        is_object = type_name in ['lazy', 'uuid', 'uuid_list']
-        is_table = attr in schema
-        if is_object and is_table:
-            cls = storage.backend.table_to_class[attr]
-            proposed_lookups[attr] = (engine_uuid, cls)
+    # for (attr, type_name) in attributes:
+        # is_object = type_name in ['lazy', 'uuid', 'uuid_list']
+        # is_table = attr in schema
+        # if is_object and is_table:
+            # cls = storage.backend.table_to_class[attr]
+            # proposed_lookups[attr] = (engine_uuid, cls)
     return proposed_lookups
 
 
@@ -96,7 +96,9 @@ def snapshot_registration_info(snapshot_instance, snapshot_number):
     attr_infos = []
     for table in [tbl for tbl in schema.keys() if tbl != 'snapshot']:
         obj = getattr(snapshot_instance, table)
-        attr_infos.append(ClassInfo(table=real_table,
+        if isinstance(obj, GenericLazyLoader):
+            obj = obj.load()
+        attr_infos.append(ClassInfo(table=real_table[table],
                                     cls=obj.__class__,
                                     lookup_result=(engine_uuid,
                                                    obj.__class__)))

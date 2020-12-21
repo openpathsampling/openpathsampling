@@ -14,6 +14,14 @@ class ClassIsSomething(object):
         self._true_set = set()
         self._false_set = set()
 
+    def force_true(self, cls):
+        self._false_set.discard(cls)
+        self._true_set.add(cls)
+
+    def force_false(self, cls):
+        self._true_set.discard(cls)
+        self._false_set.add(cls)
+
     def __call__(self, obj):
         key = obj.__class__
         if key in self._false_set:
