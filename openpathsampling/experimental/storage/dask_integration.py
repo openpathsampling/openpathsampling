@@ -5,16 +5,16 @@ from distributed.protocol.serialize import register_serialization_family
 
 import cloudpickle as cp
 
-from openpathsampling.experimental.storage.memory_backend import \
+from openpathsampling.experimental.simstore.memory_backend import \
         MemoryStorageBackend
-from openpathsampling.experimental.storage.sql_backend import \
+from openpathsampling.experimental.simstore.sql_backend import \
         SQLStorageBackend
-from openpathsampling.experimental.storage.ops_storage import OPSStorage
-from openpathsampling.experimental.storage.serialization_helpers import (
+from openpathsampling.experimental.storage.ops_storage import Storage
+from openpathsampling.experimental.simstore.serialization_helpers import (
     has_uuid, get_uuid
 )
 
-from openpathsampling.experimental.storage.tools import none_to_default
+from openpathsampling.experimental.simstore.tools import none_to_default
 
 from openpathsampling.netcdfplus import StorableNamedObject
 
@@ -26,7 +26,7 @@ def ops_dumps(obj):
         # quick exit
         raise NotImplementedError()
 
-    storage = OPSStorage.from_backend(MemoryStorageBackend())
+    storage = Storage.from_backend(MemoryStorageBackend())
     storage.save(obj)
     uuid = get_uuid(obj)
     frames = [cp.dumps({'uuid': uuid, 'backend': storage.backend})]
@@ -40,7 +40,7 @@ def ops_loads(header, frames):
     dct = cp.loads(frame)
     backend = dct['backend']
     backend.mode = 'r'
-    storage = OPSStorage.from_backend(backend)
+    storage = Storage.from_backend(backend)
     for func in storage.storable_functions:
         func.preload_cache(storage)
     obj = storage.load([dct['uuid']])[0]
@@ -79,7 +79,7 @@ class PicklableOPSTask(object):
         kwargs = none_to_default(kwargs, {})
         ops_task = OPSTask(task, args, kwargs)
         self.backend = MemoryStorageBackend()
-        storage = OPSStorage.from_backend(self.backend)
+        storage = Storage.from_backend(self.backend)
         self.task_uuid = get_uuid(ops_task)
         storage.save(ops_task)
 
@@ -95,7 +95,7 @@ class PicklableOPSTask(object):
         return (PicklableOPSTask.reconstruct, (self.task_uuid, self.backend))
 
     def _reconstruct_task(self):
-        storage = OPSStorage.from_backend(self.backend)
+        storage = Storage.from_backend(self.backend)
         ops_task = storage.load([self.task_uuid])[0]
         return ops_task
 
@@ -162,7 +162,7 @@ class DaskDistributedScheduler(object):
 
         Parameters
         ----------
-        storage : :class:`.OPSStorage`
+        storage : :class:`.Storage`
             OPS SimStore storage to save results in
         result_future : dask.Future
             Result to store. Note that this MUST be a dask Future! Regular

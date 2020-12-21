@@ -3,7 +3,7 @@ import openpathsampling as paths
 from openpathsampling.experimental.storage.dask_integration import \
         SerialScheduler
 
-from openpathsampling.experimental.storage.tools import none_to_default
+from openpathsampling.experimental.simstore.tools import none_to_default
 
 
 class NewCommittor(paths.PathSimulator):
@@ -13,7 +13,7 @@ class NewCommittor(paths.PathSimulator):
         # gen_vel parameter
         self.scheduler = none_to_default(scheduler, SerialScheduler())
         self.states = states
-        all_states = paths.join_volumes(stats)
+        all_states = paths.join_volumes(states)
         self.init_ens = (paths.LengthEnsemble(1)
                          & paths.AllOutXEnsemble(all_states))
         self.final_ens = paths.SequentialEnsemble([
