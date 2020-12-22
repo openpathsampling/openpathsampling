@@ -86,6 +86,9 @@ class MemoryStorageBackend(object):
     def close(self):
         pass  # no such thing as closing here, but may be needed for API
 
+    def register_type(self, type_str, backend_type):
+        pass  # do we need to do anything here? don't think so
+
     def register_schema(self, schema, table_to_class, metadata=None):
         for table_name, schema_entries in schema.items():
             logger.debug("Registering table: %s" % table_name)
