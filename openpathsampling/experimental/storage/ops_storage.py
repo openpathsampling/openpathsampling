@@ -266,11 +266,18 @@ ops_simulation_classes = {
 
 
 class Storage(storage.GeneralStorage):
-    def __init__(self, backend, schema, class_info, fallbacks=None,
-                 safemode=False):
+    def __init__(self, filename, mode='r', fallbacks=None, safemode=False):
         # TODO: this will change to match the current notation
-        super(Storage, self).__init__(backend, schema, class_info,
-                                      fallbacks, safemode)
+        backend = sql_backend.SQLStorageBackend(filename, mode=mode)
+        self.snapshots = None
+        super(Storage, self).__init__(
+            backend=backend,
+            schema=ops_schema,
+            class_info=ops_class_info,
+            simulation_classes=ops_simulation_classes,
+            fallbacks=fallbacks,
+            safemode=safemode
+        )
 
         self.snapshots = SnapshotsTable(self)
         self.snapshots.update_tables()
