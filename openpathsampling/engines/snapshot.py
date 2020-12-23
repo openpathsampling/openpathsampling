@@ -130,7 +130,7 @@ def SnapshotFactory(
         base_class=None):
     """
     Helper to create a new Snapshot class
-    
+
     Parameters
     ----------
     name : str

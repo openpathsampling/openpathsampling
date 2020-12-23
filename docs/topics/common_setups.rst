@@ -99,10 +99,9 @@ Move schemes for TPS
 ====================
 
 Often, when using TPS (and especially when using flexible-length TPS), the
-entire move scheme consists of a single shooting mover. Currently, OPS only
-supports one-way shooting. A move scheme consisting of a single one-way
-shooting move can be created with the :class:`.OneWayShootingMoveScheme`.
-The common way to set this up is:
+entire move scheme consists of a single shooting mover.  A move scheme
+consisting of a single one-way shooting move can be created with the
+:class:`.OneWayShootingMoveScheme`.  The common way to set this up is:
 
 .. code-block:: python
 
@@ -136,11 +135,10 @@ transition listed:
 
 .. code-block:: python
 
-   network = paths.MISTISNetwork([(A, interfacesAB, orderparameterAB, B)])
+   network = paths.MISTISNetwork([(A, interfacesAB, B)])
 
-This will sample the transition from ``A`` to ``B`` using the list of
-``interfaces``, and the resulting analysis will be based on the collective
-variable ``orderparameter``.
+This will sample the transition from ``A`` to ``B`` using the
+:class:`.InterfaceSet` ``interfaces``.
 
 .. _bidirectional-TIS:
 
@@ -155,8 +153,8 @@ simpler, and gives completely equivalent results:
 
 .. code-block:: python
 
-   network = paths.MSTISNetwork([(A, interfacesA, orderparameterA),
-                                 (B, interfacesB, orderparameterB)])
+   network = paths.MSTISNetwork([(A, interfacesA),
+                                 (B, interfacesB)])
 
 
 Multiple-state TIS
@@ -204,7 +202,4 @@ This move scheme is generated with
 
    scheme = paths.DefaultScheme(network, engine)
 
-Single replica TIS
-------------------
-
-Any move scheme can be converted to a single replica move scheme with ???
+.. TODO: SRTIS

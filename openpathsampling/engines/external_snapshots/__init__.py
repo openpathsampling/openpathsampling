@@ -1,2 +1,2 @@
 from . import features
-from .snapshot import ExternalMDSnapshot 
+from .snapshot import ExternalMDSnapshot, InternalizedMDSnapshot

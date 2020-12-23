@@ -36,7 +36,7 @@ before_script:
   - conda list
 
 script:
-  - python autorelease_check.py --branch ${TRAVIS_BRANCH} --event ${TRAVIS_EVENT_TYPE}
+  - python devtools/autorelease_check.py --branch ${TRAVIS_BRANCH} --event ${TRAVIS_EVENT_TYPE}
   - source devtools/ci/pytests.sh
   - if [ -z "$MINIMAL" ] ; then source devtools/ci/ipythontests.sh; fi
 
@@ -66,4 +66,4 @@ env:
     - secure: "kb37xmsSV3pEnESnINzwlW2Cju/UFzA/G+m+NsihAwO8RMPZwKCrZK/rptgkUDACXJxom5M690WEukQkHnOt+OTrWhu7WKZgYeVuWUs2++RohYv/m5npaOHMMn+uYmF328v4PvPmXxbD02zzg5Tgdn82x8oa6J8BKX8ohOQ6Xpg="
 
 import:
-  - dwhswenson/autorelease:autorelease-travis.yml@v0.1.2
+  - dwhswenson/autorelease:autorelease-travis.yml@v0.2.1

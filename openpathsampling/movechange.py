@@ -72,6 +72,16 @@ class MoveChange(TreeMixin, StorableObject):
                 e.args = tuple([e.args[0] + "; " + msg] + list(e.args[1:]))
             raise
 
+    def to_dict(self):
+        return {
+            'mover': self.mover,
+            'details': self.details,
+            'samples': self.samples,
+            'input_samples': self.input_samples,
+            'subchanges': self.subchanges,
+            'cls': self.__class__.__name__
+        }
+
     # hook for TreeMixin
     @property
     def _subnodes(self):

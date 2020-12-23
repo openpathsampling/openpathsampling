@@ -6,7 +6,9 @@ try:
 except ImportError:
     Engine = requires_mdtraj
     ExternalMDSnapshot = requires_mdtraj
+    snapshot_from_gro = requires_mdtraj
 else:
     from .engine import GromacsEngine as Engine
     from .engine import ExternalMDSnapshot
+    from .engine import snapshot_from_gro
 

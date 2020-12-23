@@ -12,6 +12,8 @@ numpy = ['coordinates']
 
 dimensions = ['n_atoms', 'n_spatial']
 
+schema_entries = [('coordinates', 'ndarray.float32({n_atoms},{n_spatial})')]
+
 
 def netcdfplus_init(store):
     store.create_variable(
