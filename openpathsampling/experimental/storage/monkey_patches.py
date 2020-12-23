@@ -50,8 +50,12 @@ def from_dict_attr_to_class(from_dict, attr_name):
 def monkey_patch_saving(paths):
     paths.netcdfplus.FunctionPseudoAttribute.to_dict = \
             function_pseudo_attribute_to_dict
-    paths.TPSNetwork.to_dict = \
-            tuple_keys_to_dict(paths.TPSNetwork.to_dict, 'transitions')
+    paths.TPSNetwork.to_dict = tuple_keys_to_dict(
+        paths.TPSNetwork.to_dict, 'transitions'
+    )
+    paths.MISTISNetwork.to_dict = tuple_keys_to_dict(
+        paths.MISTISNetwork.to_dict, 'input_transitions'
+    )
     return paths
 
 def monkey_patch_loading(paths):
@@ -62,9 +66,12 @@ def monkey_patch_loading(paths):
                 attr_name='key_class'
             ))
             # classmethod(function_pseudo_attribute_from_dict)
-    paths.TPSNetwork.from_dict = \
-            classmethod(tuple_keys_from_dict(paths.TPSNetwork.from_dict,
-                                             'transitions'))
+    paths.TPSNetwork.from_dict = classmethod(tuple_keys_from_dict(
+        paths.TPSNetwork.from_dict, 'transitions'
+    ))
+    paths.MISTISNetwork.from_dict = classmethod(tuple_keys_from_dict(
+        paths.MISTISNetwork.from_dict, 'input_transitions'
+    ))
     return paths
 
 def monkey_patch_all(paths):

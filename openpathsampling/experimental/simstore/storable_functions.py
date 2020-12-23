@@ -51,7 +51,12 @@ def _scalarize_singletons(values):
     all other data.
     """
     if isinstance(values, np.ndarray):
-        values.shape = tuple(n for n in values.shape if n != 1)
+        shape = tuple(n for n in values.shape if n != 1)
+        if shape == tuple():
+            values = values.__float__()
+        else:
+            values.shape = shape
+
         # shape = values.shape
         # if len(shape) > 1 and shape[1] == 1:
             # new_shape = tuple([shape[0]] + list(shape)[2:])

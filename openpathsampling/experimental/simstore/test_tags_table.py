@@ -5,6 +5,8 @@ from .class_info import ClassInfo, SerializationSchema
 from .custom_json import JSONSerializerDeserializer, uuid_object_codec
 from .serialization_helpers import default_find_uuids
 
+from .attribute_handlers import DEFAULT_HANDLERS
+
 from openpathsampling.netcdfplus import StorableObject
 
 from .tags_table import *
@@ -39,7 +41,7 @@ class TestTagsTable(object):
             ]
         )
         for info in serialization_schema.class_info_list:
-            info.set_defaults(serialization_schema.schema)
+            info.set_defaults(serialization_schema.schema, DEFAULT_HANDLERS)
         backend = SQLStorageBackend(":memory:", mode='w')
         self.storage = GeneralStorage(backend, serialization_schema,
                                       serialization_schema.schema)

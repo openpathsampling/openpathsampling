@@ -7,6 +7,8 @@ from .serialization_helpers import encoded_uuid_re, get_reload_order
 from .serialization_helpers import get_all_uuids
 from .my_types import uuid_types, uuid_list_types, json_obj_types
 
+from . import attribute_handlers
+
 import json
 
 
@@ -46,15 +48,15 @@ class ClassInfo(object):
         self.lookup_result = lookup_result
         self.find_uuids = find_uuids
 
-    def set_defaults(self, schema):
+    def set_defaults(self, schema, handlers):
         table = self.table if self.table in schema else None
         self.serializer = tools.none_to_default(
             self.serializer,
-            SchemaSerializer(schema, table, self.cls)
+            SchemaSerializer(schema, table, self.cls, handlers)
         )
         self.unsafe_deserializer = tools.none_to_default(
             self.unsafe_deserializer,
-            SchemaDeserializer(schema, table, self.cls)
+            SchemaDeserializer(schema, table, self.cls, handlers)
         )
         self.safe_deserializer = tools.none_to_default(
             self.safe_deserializer,
@@ -98,8 +100,11 @@ class SerializationSchema(object):
     with specialized information.
     """
     def __init__(self, default_info, sfr_info=None, schema=None,
-                 class_info_list=None):
+                 class_info_list=None, handlers=None):
         class_info_list = tools.none_to_default(class_info_list, [])
+        handlers = tools.none_to_default(handlers,
+                                         attribute_handlers.DEFAULT_HANDLERS)
+        self.attribute_handlers = handlers
         self.schema = {}
         self.lookup_to_info = {}
         self.table_to_info = {}
@@ -141,11 +146,38 @@ class SerializationSchema(object):
         )
         return dup
 
+    def backend_type(self, type_name):
+        """Obtain the general type name from a specific type string
+
+        Example: this tells that no matter what the specific shape of a
+        numpy array is, the backend should register it as a NumPy array. In
+        addition, this can (in the future will) provide a length value to
+        tell the backend how many bytes to allocate for an array.
+
+        Parameters
+        ----------
+        type_name: str
+            specfic type string for an attribute
+
+        Returns
+        -------
+        Tuple[str, Any]
+            the type name as known to the backend, and the length
+            information for fixed length columns (length aspect not yet
+            implemented)
+        """
+        for handler in self.attribute_handlers:
+            if handler.is_my_type(type_name):
+                handler_obj = handler.from_type_string(type_name)
+                return handler_obj.backend_type, handler_obj.type_size
+        # current default is to return the input; may change
+        return type_name, None
+
     def register_info(self, class_info_list, schema=None):
         schema = tools.none_to_default(schema, {})
         self.schema.update(schema)
         for info in class_info_list:
-            info.set_defaults(schema)
+            info.set_defaults(schema, self.attribute_handlers)
             self.add_class_info(info)
 
     def set_safemode(self, mode):
