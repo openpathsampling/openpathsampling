@@ -291,7 +291,7 @@ class DynamicsEngine(StorableNamedObject):
             # raise AttributeError("Something went wrong with " + str(item))
 
         # see, if the attribute is actually a dimension
-        if self.descriptor is not None:
+        if 'descriptor' in self.__dict__ and self.descriptor is not None:
             if item in self.descriptor.dimensions:
                 return self.descriptor.dimensions[item]
 

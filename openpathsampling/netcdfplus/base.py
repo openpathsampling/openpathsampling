@@ -294,9 +294,6 @@ class StorableObject(object):
             key: self.__dict__[key] for key in keys_to_store
         }
 
-    def __reduce__(self):
-        return (self.from_dict, (self.to_dict(),))
-
     @classmethod
     def from_dict(cls, dct):
         """

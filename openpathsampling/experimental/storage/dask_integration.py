@@ -1,5 +1,6 @@
 import functools
 
+import dask
 import distributed
 from distributed.protocol.serialize import register_serialization_family
 
@@ -140,6 +141,9 @@ class SerialScheduler(object):
     def store_results(self, filename, results):
         storage.save(results)
 
+    def wrap_task_only(self, task):
+        return task
+
     def wrap_task(self, task):
         return task
 
@@ -174,6 +178,19 @@ class DaskDistributedScheduler(object):
         fut = self.client.submit(ops_task.call_with_args, result_future)
         distributed.fire_and_forget(fut)
         self._final_future = fut
+
+    def wrap_task_only(self, task):
+        @functools.wraps(task)
+        def inner(*args, **kwargs):
+            ops_task = PicklableOPSTask(task)
+            d_args= [dask.delayed(arg) for arg in args]
+            d_kwargs = {key: dask.delayed(kwarg)
+                        for key, kwarg in kwargs.items()}
+            result = self.client.submit(ops_task.call_with_args, *args,
+                                        **kwargs, pure=False)
+            self._final_future = result
+            return result
+        return inner
 
     def wrap_task(self, task):
         @functools.wraps(task)

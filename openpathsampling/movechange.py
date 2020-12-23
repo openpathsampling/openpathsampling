@@ -9,7 +9,6 @@ from .treelogic import TreeMixin
 
 logger = logging.getLogger(__name__)
 
-
 # @lazy_loading_attributes('details')
 class MoveChange(TreeMixin, StorableObject):
     '''
@@ -59,6 +58,22 @@ class MoveChange(TreeMixin, StorableObject):
             self.input_samples = input_samples
 
         self.details = details
+
+    @classmethod
+    def _depickle_move_change(cls, dct, uuid):
+        # TODO: this should be simplified for OPS 2.0; remove multiple
+        # movechange subclasses
+        obj = cls.__new__(cls)
+        obj = cls(obj, mover=dct['mover'])
+        obj.samples = dct['samples']
+        obj.details = dct['details']
+        obj.subchanges = dct['subchanges']
+        obj.input_samples = dct['input_samples']
+        obj.__uuid__ = uuid
+        return obj
+
+    def __reduce__(self):
+        return (self._depickle_move_change, (self.to_dict(), self.__uuid__))
 
     def __getattr__(self, item):
         # try to get attributes from details dict
