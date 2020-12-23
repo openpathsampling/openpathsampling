@@ -336,13 +336,13 @@ class TestMISTISNetwork(TestMultipleStateTIS):
             (self.stateA, self.ifacesA, self.stateC)
         ], strict_sampling=True)
         transAB = [trans for trans in strict.sampling_transitions
-                   if (trans.stateA == self.stateA and 
+                   if (trans.stateA == self.stateA and
                        trans.stateB == self.stateB)][0]
         transAC = [trans for trans in strict.sampling_transitions
-                   if (trans.stateA == self.stateA and 
+                   if (trans.stateA == self.stateA and
                        trans.stateB == self.stateC)][0]
         transBA = [trans for trans in strict.sampling_transitions
-                   if (trans.stateA == self.stateB and 
+                   if (trans.stateA == self.stateB and
                        trans.stateB == self.stateA)][0]
         ensAB = transAB.ensembles[0]
         ensAC = transAC.ensembles[0]
