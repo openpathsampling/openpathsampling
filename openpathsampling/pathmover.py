@@ -1979,6 +1979,25 @@ class ConditionalSequentialMover(SequentialMover):
             movechanges, mover=self)
 
 
+class NonCanonicalConditionalSequentialMover(ConditionalSequentialMover):
+    """ Special mover for reactive flux simulation.
+
+    This mover inherits from :class:`.ConditionalSequentialMover` and
+    alters only the `move` method to return the output of the corresponding
+    :class:`.NonCanonicalConditionalSequentialMoveChange`.
+    """
+    _is_canonical = False
+
+    def move(self, sample_set):
+        change = super(NonCanonicalConditionalSequentialMover,
+                       self).move(sample_set)
+        return paths.NonCanonicalConditionalSequentialMoveChange(
+            subchanges=change.subchanges,
+            mover=change.mover,
+            details=change.details
+        )
+
+
 # class ReplicaIDChangeMover(PathMover):
 #     """
 #     Changes the replica ID for a path.
