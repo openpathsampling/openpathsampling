@@ -1,6 +1,6 @@
 from .integrators import (LangevinBAOABIntegrator, LeapfrogVerletIntegrator)
 from .pes import Gaussian, HarmonicOscillator, LinearSlope, OuterWalls, \
-    PES_Add, PES_Combination, PES_Sub, PES
+    PES_Add, PES_Combination, PES_Sub, PES, BolhuisExample
 
 from .engine import ToyEngine as Engine
 from .engine import ToyEngine
