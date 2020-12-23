@@ -26,7 +26,7 @@ from .serialization_helpers import get_uuid, get_all_uuids
 from .serialization_helpers import get_all_uuids_loading
 from .serialization_helpers import get_reload_order
 # from .serialization import Serialization
-from .serialization import ProxyObjectFactory
+from .proxy import ProxyObjectFactory, GenericLazyLoader
 from .storable_functions import StorageFunctionHandler, StorableFunction
 from .tags_table import TagsTable
 from .type_ident import STANDARD_TYPING
@@ -45,6 +45,7 @@ universal_schema = {
                ('class_name', 'str')],
     'tags': [('name', 'str'), ('content', 'uuid')]
 }
+
 
 from openpathsampling.netcdfplus import StorableNamedObject
 class GeneralStorage(StorableNamedObject):
@@ -153,6 +154,12 @@ class GeneralStorage(StorableNamedObject):
             # info.set_defaults(schema)
             # self.class_info.add_class_info(info)
 
+        schema_types = [type_str for attr_list in schema.values()
+                        for _, type_str in attr_list]
+        for type_str in schema_types:
+            backend_type = self.class_info.backend_type(type_str)
+            self.backend.register_type(type_str, backend_type)
+
         if not read_mode or self.backend.table_to_class == {}:
             table_to_class = {table: self.class_info[table].cls
                               for table in schema
@@ -199,6 +206,36 @@ class GeneralStorage(StorableNamedObject):
         return uuid_dict
 
 
+    def _uuids_by_table(self, input_uuids, cache, get_table_name):
+        # find all UUIDs we need to save with this object
+        logger.debug("Listing all objects to save")
+        uuids = {}
+        for uuid, obj in input_uuids.items():
+            uuids.update(get_all_uuids(obj, known_uuids=cache,
+                                       class_info=self.class_info))
+
+        logger.debug("Found %d objects" % len(uuids))
+        logger.debug("Deproxying proxy objects")
+        uuids = self._unproxy_lazies(uuids)
+
+        logger.debug("Checking if objects already exist in database")
+        uuids = self.filter_existing_uuids(uuids)
+
+        # group by table, then save appropriately
+        # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
+        by_table = collections.defaultdict(dict)
+        by_table.update(tools.dict_group_by(uuids,
+                                            key_extract=get_table_name))
+        return by_table
+
+    def _unproxy_lazies(self, uuid_mapping):
+        lazies = [uuid for uuid, obj in uuid_mapping.items()
+                  if isinstance(obj, GenericLazyLoader)]
+        logger.debug("Found " + str(len(lazies)) + " objects to deproxy")
+        loaded = self.load(lazies, allow_lazy=False)
+        uuid_mapping.update({get_uuid(obj): obj for obj in loaded})
+        return uuid_mapping
+
 
     def save(self, obj_list, use_cache=True):
         if type(obj_list) is not list:
@@ -216,30 +253,22 @@ class GeneralStorage(StorableNamedObject):
         if not input_uuids:
             return  # exit early if everything is already in storage
 
-        # find all UUIDs we need to save with this object
-        logger.debug("Listing all objects to save")
-        uuids = {}
-        for uuid, obj in input_uuids.items():
-            uuids.update(get_all_uuids(obj, known_uuids=cache,
-                                       class_info=self.class_info))
-
-        logger.debug("Checking if objects already exist in database")
-        uuids = self.filter_existing_uuids(uuids)
-
-        # group by table, then save appropriately
-        # by_table; convert a dict of {uuid: obj} to {table: {uuid: obj}}
-        get_table_name = lambda uuid, obj_: self.class_info[obj_].table
-        by_table = tools.dict_group_by(uuids, key_extract=get_table_name)
 
         # check default table for things to register; register them
         # TODO: move to function: self.register_missing(by_table)
         # TODO: convert to while?
-        if '__missing__' in by_table:
+        get_table_name = lambda uuid, obj_: self.class_info[obj_].table
+        by_table = self._uuids_by_table(input_uuids, cache, get_table_name)
+        old_missing = {}
+        while '__missing__' in by_table:
             # __missing__ is a special result returned by the
             # ClassInfoContainer if this is object is expected to have a
             # table, but the table doesn't exist (e.g., for dynamically
             # added tables)
             missing = by_table.pop('__missing__')
+            if missing == old_missing:
+                raise RuntimeError("Unable to register: " + str(missing))
+            missing = self._unproxy_lazies(missing)
             logger.info("Registering tables for %d missing objects",
                         len(missing))
             self.register_missing_tables_for_objects(missing)
@@ -248,6 +277,12 @@ class GeneralStorage(StorableNamedObject):
                         len(missing_by_table),
                         str(list(missing_by_table.keys())))
             by_table.update(missing_by_table)
+            # search for objects inside the objects we just registered
+            next_by_table = self._uuids_by_table(missing, cache,
+                                                 get_table_name)
+            for table, uuid_dict in next_by_table.items():
+                by_table[table].update(uuid_dict)
+            old_missing = missing
 
         # TODO: move to function self.store_sfr_results(by_table)
         has_sfr = (self.class_info.sfr_info is not None

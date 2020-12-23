@@ -1,4 +1,5 @@
 from .serialization import *
+from .proxy import *  # TODO: move this elsewhere
 import pytest
 
 from .serialization_helpers import get_uuid, default_find_uuids
@@ -6,6 +7,8 @@ from .test_utils import (LoadingStorageMock, all_objects, toy_uuid_maker,
                          MockUUIDObject, MockSimulationObject, MockBackend)
 
 from . import class_info
+
+from .attribute_handlers import DEFAULT_HANDLERS
 
 
 class TestGenericLazyLoader(object):
@@ -123,7 +126,7 @@ class TestProxyObjectFactory(object):
                                         cls=MockSimulationObject,
                                         find_uuids=default_find_uuids)
         mock_info = class_info.ClassInfo(table='mock', cls=MockUUIDObject)
-        mock_info.set_defaults(schema)
+        mock_info.set_defaults(schema, DEFAULT_HANDLERS)
         serialization_schema = class_info.SerializationSchema(
             default_info=sim_info,
             schema=schema,
