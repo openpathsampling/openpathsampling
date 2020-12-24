@@ -56,7 +56,7 @@ jobs:
           python -c "import openpathsampling"
           py.test -vv -s --cov=openpathsampling --cov-report xml
       - name: "Test experimental features"
-        if: ${{ matrix.MINIMAL == "" }}
+        if: matrix.MINIMAL == ""
         run: py.test -vv -s openpathsampling/experimental
       #- name: "Upload coverage"
         #run: bash <(curl -s https://codecov.io/bash)
