@@ -72,6 +72,16 @@ class MoveChange(TreeMixin, StorableObject):
                 e.args = tuple([e.args[0] + "; " + msg] + list(e.args[1:]))
             raise
 
+    def to_dict(self):
+        return {
+            'mover': self.mover,
+            'details': self.details,
+            'samples': self.samples,
+            'input_samples': self.input_samples,
+            'subchanges': self.subchanges,
+            'cls': self.__class__.__name__
+        }
+
     # hook for TreeMixin
     @property
     def _subnodes(self):
@@ -475,6 +485,18 @@ class ConditionalSequentialMoveChange(SequentialMoveChange):
         return 'ConditionalSequentialMove : %s : %d samples\n' % \
                (self.accepted, len(self.results)) + \
                MoveChange._indent('\n'.join(map(str, self.subchanges)))
+
+
+class NonCanonicalConditionalSequentialMoveChange(
+                                            ConditionalSequentialMoveChange):
+    """ Special move change for reactive flux simulation.
+
+    This move change inherits from :class:`.ConditionalSequentialMoveChange`
+    and returns the outcome of the last subchange.
+    """
+    @property
+    def canonical(self):
+        return self.subchanges[-1]
 
 
 class SubMoveChange(MoveChange):

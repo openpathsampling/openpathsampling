@@ -42,6 +42,10 @@ from .analysis.shooting_point_analysis import (
     ShootingPointAnalysis, SnapshotByCoordinateDict
 )
 
+from .analysis.reactive_flux_analysis import (
+    ReactiveFluxAnalysis
+)
+
 from .analysis.trajectory_transition_analysis import (
     TrajectoryTransitionAnalysis,
     TrajectorySegmentContainer
@@ -76,6 +80,7 @@ from .step_visualizer_2D import StepVisualizer2D
 
 from .movechange import (
     EmptyMoveChange, ConditionalSequentialMoveChange,
+    NonCanonicalConditionalSequentialMoveChange,
     MoveChange, PartialAcceptanceSequentialMoveChange,
     RandomChoiceMoveChange, SampleMoveChange,
     SequentialMoveChange, KeepLastSampleMoveChange,
@@ -90,6 +95,7 @@ from .pathmover import Details, MoveDetails, SampleDetails
 
 from .pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,
+    NonCanonicalConditionalSequentialMover,
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
     BackwardExtendMover, ForwardExtendMover, MinusMover,
     SingleReplicaMinusMover, PathReversalMover,
@@ -108,7 +114,8 @@ from .pathmover import (
 
 from .pathsimulators import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
-    CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation
+    CommittorSimulation, ReactiveFluxSimulation, DirectSimulation,
+    ShootFromSnapshotsSimulation
 )
 
 from .sample import Sample, SampleSet

@@ -63,6 +63,7 @@ For Users
     examples/index
     topics/index
     videos
+    cli
     faq
 
 

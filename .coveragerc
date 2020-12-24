@@ -4,6 +4,7 @@ omit =
     */site-packages/nose/*
     */openpathsampling/tests/*
     */mdtraj/*
+    */openpathsampling/experimental/*
     */setup.py
     openpathsampling/version.py
 exclude_lines = 

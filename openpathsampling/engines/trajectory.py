@@ -66,6 +66,10 @@ class Trajectory(list, StorableObject):
     def __repr__(self):
         return 'Trajectory[' + str(len(self)) + ']'
 
+    @property
+    def snapshots(self):
+        return list(self)
+
     def map(self, fnc, allow_fast=True):
         """
         This runs a function and tries to be fast.
