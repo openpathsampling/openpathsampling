@@ -14,6 +14,7 @@
 
 import sys
 import os
+import shutil
 
 # we use these to get the version
 import pkg_resources
@@ -30,6 +31,13 @@ import sphinx_rtd_theme
 #sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0,os.path.abspath('../openpathsampling/'))
 #sys.path.append(os.path.abspath('_themes'))
+
+# -- Copying examples over into the docs/examples -------------------------
+try:
+    shutil.copytree(os.path.abspath("../examples/alanine_dipeptide_tps"),
+                    os.path.abspath("examples/alanine_dipeptide_tps"))
+except OSError:
+    pass   # there should be a backup here....
 
 # -- General configuration ------------------------------------------------
 
@@ -53,8 +61,12 @@ extensions = [
 #    'matplotlib.sphinxext.plot_directive',
 #    'numpydoc'
 #     'sphinxcontrib.napoleon'
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'nbsphinx'
 ]
+
+#
+nbsphinx_execute = "never"
 
 # Napoleon settings
 napoleon_google_docstring = False

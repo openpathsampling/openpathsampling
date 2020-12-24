@@ -66,4 +66,4 @@ env:
     - secure: "kb37xmsSV3pEnESnINzwlW2Cju/UFzA/G+m+NsihAwO8RMPZwKCrZK/rptgkUDACXJxom5M690WEukQkHnOt+OTrWhu7WKZgYeVuWUs2++RohYv/m5npaOHMMn+uYmF328v4PvPmXxbD02zzg5Tgdn82x8oa6J8BKX8ohOQ6Xpg="
 
 import:
-  - dwhswenson/autorelease:autorelease-travis.yml@v0.2.1
+  - dwhswenson/autorelease:autorelease-travis.yml@travis-deploy

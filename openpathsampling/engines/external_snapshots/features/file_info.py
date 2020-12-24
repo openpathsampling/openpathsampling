@@ -7,6 +7,8 @@ file_position : int
 
 variables = ['file_name', 'file_position']
 
+schema_entries = [('file_name', 'str'), ('file_position', 'int')]
+
 def netcdfplus_init(store):
     store.create_variable(
         'file_name',

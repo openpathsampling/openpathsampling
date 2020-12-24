@@ -256,9 +256,11 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
 
         statics = Snapshot.StaticContainer(
             coordinates=coord,
-            box_vectors=box_v
+            box_vectors=box_v,
+            engine=engine
         )
-        kinetics = Snapshot.KineticContainer(velocities=vel)
+        kinetics = Snapshot.KineticContainer(velocities=vel,
+                                             engine=engine)
 
         snap = Snapshot(
             statics=statics,

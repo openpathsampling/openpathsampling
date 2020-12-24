@@ -671,6 +671,7 @@ def attach_features(features, use_lazy_reversed=False):
         # register (new) __features__ with the class as a namedtuple
         cls.__features__ = FeatureTuple(**__features__)
 
+
         return cls
 
     return _decorator
