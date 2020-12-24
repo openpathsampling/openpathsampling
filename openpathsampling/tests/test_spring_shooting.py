@@ -168,6 +168,79 @@ class TestSpringShootingSelector(SelectorTest):
         sel._total_bias = 1.0
         return sel
 
+    def test_f_no_direction(self):
+        sel = self.default_selector
+        with pytest.raises(NotImplementedError,
+                           match="direction"):
+            sel.f(self.mytraj[0], self.mytraj)
+
+    def test_f_broken_direction(self):
+        sel = self.default_selector
+        with pytest.raises(NotImplementedError,
+                           match="direction"):
+            sel.f(self.mytraj[0], self.mytraj, direction='broken')
+
+    def test_f_no_previous_index(self):
+        sel = self.default_selector
+        sel.previous_trajectory = self.mytraj
+        # Break this to have no initial guess
+        sel.previous_snapshot = None
+        with pytest.raises(NotImplementedError,
+                           match="index"):
+            sel.f(self.mytraj[0], self.mytraj, direction='forward')
+
+    def test_f_no_prev_traj(self):
+        sel = self.default_selector
+        with pytest.raises(NotImplementedError,
+                           match="self.previous_trajectory"):
+            sel.f(self.mytraj[0], self.mytraj, direction="forward")
+
+    def test_f_wrong_traj(self):
+        sel = self.default_selector
+        sel.previous_trajectory = self.mytraj
+        with pytest.raises(NotImplementedError,
+                           match="self.previous_trajectory"):
+            # Slice trajectory down to trigger exception
+            sel.f(self.mytraj[0], self.mytraj[:4], direction="forward")
+
+    def test_probability_no_direction(self):
+        sel = self.default_selector
+        with pytest.raises(NotImplementedError,
+                           match="direction"):
+            sel.probability(self.mytraj[0], self.mytraj)
+
+    def test_probability_broken_direction(self):
+        sel = self.default_selector
+        with pytest.raises(NotImplementedError,
+                           match="direction"):
+            sel.probability(self.mytraj[0], self.mytraj, direction='broken')
+
+    def test_probability_forward(self):
+        sel = self.default_selector
+        sel.previous_trajectory = self.mytraj
+        sel._fw_prob_list = [1.0, 1.0, 0.0]
+        sel._bw_prob_list = [0.0, 1.0, 1.0]
+        sel._fw_total_bias = 2.0
+        sel._total_bias = 2.0
+        correct = [0.0, 0.0, 0.5, 0.5, 0.0]
+        for frame, c in zip(self.mytraj, correct):
+            prob = sel.probability(frame, self.mytraj, 'forward')
+            assert prob == c
+
+    def test_probability_backward(self):
+        sel = self.default_selector
+        sel.previous_trajectory = self.mytraj
+        sel._fw_prob_list = [1.0, 1.0, 0.0]
+        sel._bw_prob_list = [0.0, 1.0, 1.0]
+        sel._total_bias = 2.0
+        sel._bw_total_bias = 2.0
+        # Set index from 3 to min2 as would normally happen
+        sel.previous_snapshot = -2
+        correct = [0.0, 0.0, 0.0, 0.5, 0.5]
+        for frame, c in zip(self.mytraj, correct):
+            prob = sel.probability(frame, self.mytraj, 'backward')
+            assert prob == c
+
     def test_forward_pick(self):
         sel = self.default_selector
         pick = sel.pick(trajectory=self.mytraj, direction='forward')
@@ -294,6 +367,17 @@ class TestSpringShootingMover(MoverTest):
         fwmover = ForwardSpringMover(ensemble=self.ens, selector=self.sel,
                                      engine=self.dyn)
         dct['movers'] = [fwmover, bwmover]
+        mover = SpringShootingMover.from_dict(dct)
+        assert isinstance(mover, SpringShootingMover)
+        assert len(mover.movers) == 2
+        assert isinstance(mover.movers[0], SpringMover)
+        assert isinstance(mover.movers[1], SpringMover)
+
+    def test_dict_cycle(self):
+        old_mover = SpringShootingMover(ensemble=self.ens, delta_max=1,
+                                        k_spring=0.0, engine=self.dyn,
+                                        initial_guess=3)
+        dct = old_mover.to_dict()
         mover = SpringShootingMover.from_dict(dct)
         assert isinstance(mover, SpringShootingMover)
         assert len(mover.movers) == 2

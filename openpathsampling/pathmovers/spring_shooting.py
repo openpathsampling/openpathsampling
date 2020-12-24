@@ -12,7 +12,8 @@ class SpringShootingSelector(paths.ShootingPointSelector):
     spring shooting simulation. It uses a biased potential in the shape of
     min(1, e^(-k*i)) for a forward shooting move and min(1, e^(k*i)) for a
     backwards shooting move, where i is a frame number in the range
-    [-delta_max, delta_max] where 0 is the last accepted shooting frame index.
+    [-delta_max, delta_max] and represents a shift (in frames) relative to
+    the last accepted shooting frame index.
 
     Parameters
     ----------
@@ -40,21 +41,71 @@ class SpringShootingSelector(paths.ShootingPointSelector):
         else:
             self.k_spring = k_spring
 
-        # Initiate the class variable
+        # Initiate the instance variable
         self.previous_snapshot = initial_guess
         self.trial_snapshot = initial_guess
         self.previous_trajectory = None
 
         # Make the bias lists
-        self._fw_prob_list = self._biases(self.delta_max, -self.k_spring)
-        self._bw_prob_list = self._biases(self.delta_max, self.k_spring)
-        self._fw_total_bias = self.sum_bias(self.delta_max, -self.k_spring)
-        self._bw_total_bias = self.sum_bias(self.delta_max, self.k_spring)
+        self._fw_prob_list = self._spring_biases(self.delta_max,
+                                                 -self.k_spring)
+        self._bw_prob_list = self._spring_biases(self.delta_max,
+                                                 self.k_spring)
+        self._fw_total_bias = self.sum_spring_bias(self.delta_max,
+                                                   -self.k_spring)
+        self._bw_total_bias = self.sum_spring_bias(self.delta_max,
+                                                   self.k_spring)
 
         # Check if the bias potentials are equal
 
         self._total_bias = self._fw_total_bias
         self.check_sanity()
+
+    def f(self, snapshot, trajectory, direction=None):
+
+        if direction is None:
+            raise NotImplementedError("f is not defined without a direction.")
+
+        if str(direction).lower() not in {'forward', 'backward'}:
+            raise NotImplementedError("direction must be either 'forward' or "
+                                      "'backward'.")
+        elif direction == 'forward':
+            prob_list = self._fw_prob_list
+        else:
+            # Should be backward
+            prob_list = self._bw_prob_list
+        if trajectory is not self.previous_trajectory:
+            raise NotImplementedError("f is not defined for any other "
+                                      "trajectory than "
+                                      "self.previous_trajectory.")
+        if self.previous_snapshot is None:
+            raise NotImplementedError("f is only defined if a previous index "
+                                      "is known.")
+        previous_shooting_index = self.previous_snapshot
+        if previous_shooting_index < 0:
+            previous_shooting_index += len(trajectory)
+
+        idx = trajectory.index(snapshot)
+        diff = (idx-previous_shooting_index)
+        prob_idx = diff+self.delta_max
+        if prob_idx < 0 or prob_idx >= len(prob_list):
+            return 0
+        else:
+            return prob_list[prob_idx]
+
+    def probability(self, snapshot, trajectory, direction=None):
+        if direction is None:
+            raise NotImplementedError("probability is not defined without a "
+                                      "direction.")
+        if str(direction).lower() not in {'forward', 'backward'}:
+            raise NotImplementedError("direction must be either 'forward' or "
+                                      "'backward'.")
+        elif direction == 'forward':
+            prob_total = self._fw_total_bias
+        else:
+            # Should be backwards
+            prob_total = self._bw_total_bias
+        return self.f(snapshot, trajectory, direction=direction)/prob_total
 
     def check_sanity(self):
         """
@@ -69,10 +120,10 @@ class SpringShootingSelector(paths.ShootingPointSelector):
             raise RuntimeError("Sum of the biases changed")
 
     @staticmethod
-    def _biases(delta_max, k_spring):
+    def _spring_biases(delta_max, k_spring):
         """
-        Calculates the list of biases depending on delta_max and k_spring
-        using the formula min(1, e^(k*i)) where i is in range
+        Calculates the list of spring biases depending on delta_max and
+        k_spring using the formula min(1, e^(k*i)) where i is in range
         [-delta_max,delta_max]
 
         Parameters
@@ -90,7 +141,7 @@ class SpringShootingSelector(paths.ShootingPointSelector):
         return([min([1, np.exp(k_spring*float(i-delta_max))])
                 for i in range(2*delta_max+1)])
 
-    def sum_bias(self, delta_max, k_spring):
+    def sum_spring_bias(self, delta_max, k_spring):
         """
         Calculates the sum of the biases, given a delta_max and a k_spring.
 
@@ -108,9 +159,9 @@ class SpringShootingSelector(paths.ShootingPointSelector):
         """
         # Sum small to big to prevent float summing errors
         if k_spring < 0:
-            return sum(self._biases(delta_max, k_spring)[::-1])
+            return sum(self._spring_biases(delta_max, k_spring)[::-1])
         else:
-            return sum(self._biases(delta_max, k_spring))
+            return sum(self._spring_biases(delta_max, k_spring))
 
     def probability_ratio(self, snapshot, initial_trajectory,
                           trial_trajectory):
