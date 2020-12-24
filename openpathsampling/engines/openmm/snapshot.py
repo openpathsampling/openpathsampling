@@ -5,7 +5,7 @@
 """
 
 from openpathsampling.engines import BaseSnapshot, SnapshotFactory
-import features
+from . import features
 
 
 @features.base.attach_features([
@@ -39,7 +39,8 @@ class MDSnapshot(BaseSnapshot):
     features.kinetics,
     features.masses,
     features.instantaneous_temperature,
-    features.engine
+    features.engine,
+    features.traj_quantities,
 ])
 class Snapshot(BaseSnapshot):
     """
@@ -69,11 +70,11 @@ class Snapshot(BaseSnapshot):
 
         Parameters
         ----------
-        coordinates : numpy.array, shape = (n_atoms, n_spatial)
+        coordinates : numpy.array, shape ``(n_atoms, n_spatial)``
             the atomic coordinates
-        box_vectors : numpy.array, shape = (n_spatial, n_spatial)
+        box_vectors : numpy.array, shape ``(n_spatial, n_spatial)``
             the box vectors
-        velocities : numpy.array, shape = (n_atoms, n_spatial)
+        velocities : numpy.array, shape ``(n_atoms, n_spatial)``
             the atomic velocities
         statics : `openpathsampling.engines.openmm.StaticContainer`
             the statics container if it already exists
@@ -92,10 +93,15 @@ class Snapshot(BaseSnapshot):
         if statics is None:
             statics = Snapshot.StaticContainer(
                 coordinates=coordinates,
-                box_vectors=box_vectors)
+                box_vectors=box_vectors,
+                engine=engine
+            )
 
         if kinetics is None:
-            kinetics = Snapshot.KineticContainer(velocities=velocities)
+            kinetics = Snapshot.KineticContainer(
+                velocities=velocities,
+                engine=engine
+            )
 
         return Snapshot(
             engine=engine,

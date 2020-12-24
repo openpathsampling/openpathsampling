@@ -1,4 +1,6 @@
-from named import NamedObjectStore
+from .named import NamedObjectStore
+
+from future.utils import iterkeys
 
 import logging
 
@@ -133,7 +135,7 @@ class DictStore(NamedObjectStore):
 
         n_idx = int(self.free())
         # make sure in nested saving that an IDX is not used twice!
-        self.reserve_idx(n_idx)
+        # self.reserve_idx(n_idx)
 
         logger.debug(
             'Saving `%s` with name `%s` @ IDX #%d' %
@@ -148,11 +150,11 @@ class DictStore(NamedObjectStore):
     def keys(self):
         return self.name_idx.keys()
 
-    def iterkeys(self):
-        return self.name_idx.iterkeys()
+    # def iterkeys(self):
+    #     return self.name_idx.keys()
 
     def __iter__(self):
-        return self.iterkeys()
+        return iter(iterkeys(self.name_idx))
 
     def iteritems(self):
         for name in self:

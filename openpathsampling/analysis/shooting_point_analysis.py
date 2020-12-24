@@ -1,11 +1,17 @@
-import openpathsampling as paths
 import collections
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+
+from openpathsampling.progress import SimpleProgress
+
+try:
+    from collections import abc
+except ImportError:
+    import collections as abc
+
 
 # based on http://stackoverflow.com/a/3387975
-class TransformedDict(collections.MutableMapping):
+class TransformedDict(abc.MutableMapping):
     """A dictionary that applies an arbitrary key-altering function before
     accessing the keys
 
@@ -35,7 +41,7 @@ class TransformedDict(collections.MutableMapping):
         del self.hash_representatives[hashed]
 
     def __iter__(self):
-        return iter(self.store)
+        return iter(self.hash_representatives.values())
 
     def __len__(self):
         return len(self.store)
@@ -53,8 +59,8 @@ class TransformedDict(collections.MutableMapping):
         velocities, the resulting mapping would be invalid. It is up to the
         user to avoid such invalid remappings.
         """
-        return TransformedDict(new_hash, 
-                               {self.hash_representatives[k]: self.store[k] 
+        return TransformedDict(new_hash,
+                               {self.hash_representatives[k]: self.store[k]
                                 for k in self.store})
 
 
@@ -65,12 +71,12 @@ class SnapshotByCoordinateDict(TransformedDict):
     (e.g., committor analysis).
     """
     def __init__(self, *args, **kwargs):
-        hash_fcn = lambda x : x.coordinates.tostring()
-        super(SnapshotByCoordinateDict, self).__init__(hash_fcn, 
+        hash_fcn = lambda x: x.coordinates.tobytes()
+        super(SnapshotByCoordinateDict, self).__init__(hash_fcn,
                                                        *args, **kwargs)
 
 
-class ShootingPointAnalysis(SnapshotByCoordinateDict):
+class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
     """
     Container and methods for shooting point analysis.
 
@@ -100,8 +106,8 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         steps : iterable of :class:`.MCStep` or None
             MC steps to analyze
         """
-        for step in steps:
-            total = self.analyze_single_step(step)
+        for step in self.progress(steps):
+            self.analyze_single_step(step)
 
     def analyze_single_step(self, step):
         """
@@ -129,7 +135,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
 
             total = collections.Counter(
                 {state: sum([int(state(pt)) for pt in test_points])
-                            for state in self.states}
+                 for state in self.states}
             )
             total_count = sum(total.values())
             # TODO: clarify assertion (at least one endpoint in state)
@@ -190,7 +196,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         analyzer = ShootingPointAnalysis(None, states)
         for step in run_results:
             key = step[0]
-            total = collections.Counter({step[1] : 1})
+            total = collections.Counter({step[1]: 1})
             try:
                 analyzer[key] += total
             except KeyError:
@@ -219,12 +225,13 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
             mapping labels given by label_function to the committor value
         """
         if label_function is None:
-            label_function = lambda s : s
+            label_function = lambda s: s
         results = {}
         for k in self:
-            out_key = label_function(self.hash_representatives[k])
-            counter_k = self.store[k]
-            committor = float(counter_k[state]) / sum(counter_k.values())
+            out_key = label_function(k)
+            counter_k = self[k]
+            committor = float(counter_k[state]) / sum([counter_k[s]
+                                                       for s in self.states])
             results[out_key] = committor
         return results
 
@@ -235,7 +242,7 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         except TypeError:
             ndim = 1
         if ndim > 2 or ndim < 1:
-            raise RuntimeError("Histogram key dimension {0} > 2 or {0} < 1 " 
+            raise RuntimeError("Histogram key dimension {0} > 2 or {0} < 1 "
                                + "(key: {1})".format(ndim, key))
         return ndim
 
@@ -260,28 +267,28 @@ class ShootingPointAnalysis(SnapshotByCoordinateDict):
         """
         rehashed = self.rehash(new_hash)
         r_store = rehashed.store
-        count_all = {k : sum(r_store[k].values()) for k in r_store}
-        count_state = {k : r_store[k][state] for k in r_store}
-        ndim = self._get_key_dim(r_store.keys()[0])
+        count_all = {k: sum(r_store[k].values()) for k in r_store}
+        count_state = {k: r_store[k][state] for k in r_store}
+        ndim = self._get_key_dim(list(r_store.keys())[0])
         if ndim == 1:
-            (all_hist, b) = np.histogram(count_all.keys(),
-                                         weights=count_all.values(), 
+            (all_hist, b) = np.histogram(list(count_all.keys()),
+                                         weights=list(count_all.values()),
                                          bins=bins)
-            (state_hist, b) = np.histogram(count_state.keys(),
-                                           weights=count_state.values(),
+            (state_hist, b) = np.histogram(list(count_state.keys()),
+                                           weights=list(count_state.values()),
                                            bins=bins)
             b_list = [b]
         elif ndim == 2:
             (all_hist, b_x, b_y) = np.histogram2d(
                 x=[k[0] for k in count_all],
                 y=[k[1] for k in count_all],
-                weights=count_all.values(),
+                weights=list(count_all.values()),
                 bins=bins
             )
             (state_hist, b_x, b_y) = np.histogram2d(
                 x=[k[0] for k in count_state],
                 y=[k[1] for k in count_state],
-                weights=count_state.values(),
+                weights=list(count_state.values()),
                 bins=bins
             )
             b_list = [b_x, b_y]

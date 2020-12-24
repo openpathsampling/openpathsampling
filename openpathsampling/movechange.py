@@ -5,7 +5,7 @@ import logging
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableObject, lazy_loading_attributes
 from openpathsampling.netcdfplus import DelayedLoader
-from treelogic import TreeMixin
+from .treelogic import TreeMixin
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +66,21 @@ class MoveChange(TreeMixin, StorableObject):
             return getattr(self.details, item)
         except AttributeError as e:
             msg = "{0} not found in change's details".format(str(item))
-            if not e.args: 
+            if not e.args:
                 e.args = [msg]
             else:
                 e.args = tuple([e.args[0] + "; " + msg] + list(e.args[1:]))
             raise
+
+    def to_dict(self):
+        return {
+            'mover': self.mover,
+            'details': self.details,
+            'samples': self.samples,
+            'input_samples': self.input_samples,
+            'subchanges': self.subchanges,
+            'cls': self.__class__.__name__
+        }
 
     # hook for TreeMixin
     @property
@@ -116,7 +126,7 @@ class MoveChange(TreeMixin, StorableObject):
         This is equivalent to
         `tree.map_tree(lambda x : x.mover)`
         """
-        return self.map_tree(lambda x : x.mover)
+        return self.map_tree(lambda x: x.mover)
 
     @property
     def identifier(self):
@@ -474,7 +484,19 @@ class ConditionalSequentialMoveChange(SequentialMoveChange):
     def __str__(self):
         return 'ConditionalSequentialMove : %s : %d samples\n' % \
                (self.accepted, len(self.results)) + \
-               MoveChange._indent( '\n'.join(map(str, self.subchanges)))
+               MoveChange._indent('\n'.join(map(str, self.subchanges)))
+
+
+class NonCanonicalConditionalSequentialMoveChange(
+                                            ConditionalSequentialMoveChange):
+    """ Special move change for reactive flux simulation.
+
+    This move change inherits from :class:`.ConditionalSequentialMoveChange`
+    and returns the outcome of the last subchange.
+    """
+    @property
+    def canonical(self):
+        return self.subchanges[-1]
 
 
 class SubMoveChange(MoveChange):
@@ -531,20 +553,20 @@ class FilterByEnsembleMoveChange(SubMoveChange):
     def _get_results(self):
         all_samples = self.subchange.results
 
-        filtered_samples = filter(
-            lambda s : s.ensemble in self.mover.ensembles,
+        filtered_samples = list(filter(
+            lambda s: s.ensemble in self.mover.ensembles,
             all_samples
-        )
+        ))
 
         return filtered_samples
 
     def _get_trials(self):
         all_samples = self.subchange.trials
 
-        filtered_samples = filter(
-            lambda s : s.ensemble in self.mover.ensembles,
+        filtered_samples = list(filter(
+            lambda s: s.ensemble in self.mover.ensembles,
             all_samples
-        )
+        ))
 
         return filtered_samples
 
@@ -552,7 +574,7 @@ class FilterByEnsembleMoveChange(SubMoveChange):
     def __str__(self):
         return 'FilterMove : allow only ensembles [%s] from sub moves : %s : %d samples\n' % \
                (str(self.mover.ensembles), self.accepted, len(self.results)) + \
-               MoveChange._indent( str(self.subchange) )
+               MoveChange._indent(str(self.subchange))
 
 
 
@@ -565,14 +587,14 @@ class FilterSamplesMoveChange(SubMoveChange):
         sample_set = self.subchange.results
 
         # allow for negative indices to be picked, e.g. -1 is the last sample
-        samples = [ idx % len(sample_set) for idx in self.mover.selected_samples]
+        samples = [idx % len(sample_set) for idx in self.mover.selected_samples]
 
         return samples
 
     def __str__(self):
         return 'FilterMove : pick samples [%s] from sub moves : %s : %d samples\n' % \
                (str(self.mover.selected_samples), self.accepted, len(self.results)) + \
-               MoveChange._indent( str(self.subchange) )
+               MoveChange._indent(str(self.subchange))
 
 
 class KeepLastSampleMoveChange(SubMoveChange):
@@ -604,7 +626,7 @@ class KeepLastSampleMoveChange(SubMoveChange):
     def __str__(self):
         return 'Restrict to last sample : %s : %d samples\n' % \
                (self.accepted, len(self.results)) + \
-               MoveChange._indent( str(self.subchange) )
+               MoveChange._indent(str(self.subchange))
 
 
 class PathSimulatorMoveChange(SubMoveChange):
@@ -615,4 +637,4 @@ class PathSimulatorMoveChange(SubMoveChange):
     def __str__(self):
         return 'PathSimulatorStep : %s : Step # %d with %d samples\n' % \
                (str(self.mover.pathsimulator.cls), self.details.step, len(self.results)) + \
-               MoveChange._indent( str(self.subchange) )
+               MoveChange._indent(str(self.subchange))

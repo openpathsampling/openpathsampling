@@ -3,7 +3,7 @@
 try:
     # should work if installed through normal means: setup.py-based with
     # pip, conda, easy_install, etc.
-    import version
+    from . import version
 except ImportError:  # pragma: no cover
     import os
     # should work if someone just set the $PYTHONPATH to include OPS
@@ -13,8 +13,8 @@ except ImportError:  # pragma: no cover
 
     if not os.path.exists(setupfile):
         # now we're screwed
-        raise ImportError("Unable to identify OPS version. " + 
-			  "OPS probably not installed correctly.")
+        raise ImportError("Unable to identify OPS version. "
+                          + "OPS probably not installed correctly.")
 
     # continue force-setting version based on `setup.py`
     import imp  # may be Py2 only!
@@ -23,60 +23,50 @@ except ImportError:  # pragma: no cover
 
     version.version = ops_setup.preferences['version']
     version.short_version = ops_setup.preferences['version']
-    version.git_version  = ops_setup.get_git_version()
+    version.git_version = ops_setup.get_git_version()
     version.full_version = ops_setup.preferences['version']
     if not ops_setup.preferences['released']:
         version.full_version += ".dev-" + version.git_version[:7]
     isrelease = str(ops_setup.preferences['released'])
 
 
-from high_level.move_scheme import (
-    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
-    OneWayShootingMoveScheme
-)
+from .analysis.path_histogram import PathDensityHistogram
 
-from high_level.transition import (
-    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
-)
-
-from high_level.network import (
-    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
-    FixedLengthTPSNetwork
-)
-
-from analysis.path_histogram import PathDensityHistogram
-
-from analysis.replica_network import (
+from .analysis.replica_network import (
     ReplicaNetwork, trace_ensembles_for_replica,
     trace_replicas_for_ensemble, condense_repeats,
     ReplicaNetworkGraph
 )
 
-from analysis.shooting_point_analysis import (
+from .analysis.shooting_point_analysis import (
     ShootingPointAnalysis, SnapshotByCoordinateDict
 )
 
-from analysis.trajectory_transition_analysis import (
+from .analysis.reactive_flux_analysis import (
+    ReactiveFluxAnalysis
+)
+
+from .analysis.trajectory_transition_analysis import (
     TrajectoryTransitionAnalysis,
     TrajectorySegmentContainer
 )
 
-from analysis.channel_analysis import ChannelAnalysis
+from .analysis.channel_analysis import ChannelAnalysis
 
-from bias_function import (
+from .bias_function import (
     BiasFunction, BiasLookupFunction, BiasEnsembleTable,
     SRTISBiasFromNetwork
 )
 
-from collectivevariable import (
+from .collectivevariable import (
     FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
     InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
     CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
     GeneratorCV)
 
-from ensemble import (
-    Ensemble, EnsembleCombination, EnsembleFactory, EntersXEnsemble,
-    EmptyEnsemble, ExitsXEnsemble, FullEnsemble, PartInXEnsemble,
+from .ensemble import (
+    Ensemble, EnsembleCombination,
+    EmptyEnsemble, FullEnsemble, PartInXEnsemble,
     AllInXEnsemble, AllOutXEnsemble, WrappedEnsemble,
     SuffixTrajectoryEnsemble, PrefixTrajectoryEnsemble,
     PartOutXEnsemble, LengthEnsemble, NegatedEnsemble,
@@ -86,16 +76,11 @@ from ensemble import (
     OptionalEnsemble, join_ensembles
 )
 
-from high_level.interface_set import (
-    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
-)
+from .step_visualizer_2D import StepVisualizer2D
 
-from high_level.ms_outer_interface import MSOuterTISInterface
-
-from step_visualizer_2D import StepVisualizer2D
-
-from movechange import (
+from .movechange import (
     EmptyMoveChange, ConditionalSequentialMoveChange,
+    NonCanonicalConditionalSequentialMoveChange,
     MoveChange, PartialAcceptanceSequentialMoveChange,
     RandomChoiceMoveChange, SampleMoveChange,
     SequentialMoveChange, KeepLastSampleMoveChange,
@@ -106,18 +91,19 @@ from movechange import (
     RejectedMaxLengthSampleMoveChange
 )
 
-from pathmover import Details, MoveDetails, SampleDetails
+from .pathmover import Details, MoveDetails, SampleDetails
 
-from pathmover import (
+from .pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,
+    NonCanonicalConditionalSequentialMover,
     PartialAcceptanceSequentialMover, BackwardShootMover, ForwardShootMover,
     BackwardExtendMover, ForwardExtendMover, MinusMover,
-    SingleReplicaMinusMover, PathMoverFactory, PathReversalMover,
+    SingleReplicaMinusMover, PathReversalMover,
     ReplicaExchangeMover, EnsembleHopMover,
     SequentialMover, ConditionalMover,
-    PathSimulatorMover, PathReversalSet, NeighborEnsembleReplicaExchange,
+    PathSimulatorMover, PathReversalSet,
     SampleMover, StateSwapMover, FinalSubtrajectorySelectMover, EngineMover,
-    FirstSubtrajectorySelectMover, MultipleSetMinusMover,
+    FirstSubtrajectorySelectMover,
     OneWayShootingMover, RandomSubtrajectorySelectMover, SubPathMover,
     EnsembleFilterMover, SelectionMover, FirstAllowedMover,
     LastAllowedMover, OneWayExtendMover, SubtrajectorySelectMover,
@@ -126,37 +112,72 @@ from pathmover import (
     BackwardFirstTwoWayShootingMover
 )
 
-from pathsimulator import (
+from .pathsimulators import (
     PathSimulator, FullBootstrapping, Bootstrapping, PathSampling, MCStep,
-    CommittorSimulation, DirectSimulation, ShootFromSnapshotsSimulation
+    CommittorSimulation, ReactiveFluxSimulation, DirectSimulation,
+    ShootFromSnapshotsSimulation
 )
 
-from sample import Sample, SampleSet
+from .sample import Sample, SampleSet
 
-from shooting import ShootingPointSelector, UniformSelector, \
-    GaussianBiasSelector, FirstFrameSelector, FinalFrameSelector
+from .shooting import (
+    ShootingPointSelector, UniformSelector, GaussianBiasSelector,
+    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector
+)
 
-from snapshot_modifier import (
+from .snapshot_modifier import (
     NoModification, RandomVelocities, VelocityDirectionModifier,
     SingleAtomVelocityDirectionModifier
 )
 
-from storage.storage import Storage, AnalysisStorage
+from .storage.storage import Storage, AnalysisStorage
 
-from volume import (
-    Volume, VolumeCombination, VolumeFactory, VoronoiVolume,
+from .volume import (
+    Volume, VolumeCombination,
     EmptyVolume, FullVolume, CVDefinedVolume, PeriodicCVDefinedVolume,
     IntersectionVolume, UnionVolume, SymmetricDifferenceVolume,
     RelativeComplementVolume, join_volumes
 )
 
-from high_level import move_strategy as strategies
+# from .high_level import move_strategy as strategies
+from . import strategies
+
+from .high_level.move_scheme import (
+    MoveScheme, DefaultScheme, LockedMoveScheme, SRTISScheme,
+    OneWayShootingMoveScheme
+)
+
+from .high_level.transition import (
+    TISTransition, Transition, TPSTransition, FixedLengthTPSTransition
+)
+
+from .high_level.network import (
+    MSTISNetwork, TransitionNetwork, MISTISNetwork, TPSNetwork,
+    FixedLengthTPSNetwork
+)
+
+from .high_level.interface_set import (
+    InterfaceSet, VolumeInterfaceSet, PeriodicVolumeInterfaceSet
+)
+
+from .high_level.ms_outer_interface import MSOuterTISInterface
+
+from .high_level.part_in_b_tps import (
+    PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
+)
+
+from .ensembles import *
+from .pathmovers import *
+from .collectivevariables import *
+from .pathmovers.move_schemes import *
 
 import openpathsampling.numerics as numerics
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
-import openpathsampling.engines.openmm as openmm
-import openpathsampling.engines.toy as toy
+
+# until engines are proper subpackages, built-ins need to be findable!
+import openpathsampling.engines.openmm #as openmm
+import openpathsampling.engines.toy #as toy
 
 
 def git_HEAD():  # pragma: no cover

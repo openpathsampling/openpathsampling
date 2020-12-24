@@ -554,7 +554,7 @@ class MoveTreeBuilder(Builder):
         ensembles = scheme.network.all_ensembles
         if hidden_ensembles:
             ensembles += list(scheme.find_hidden_ensembles())
-        
+
         return MoveTreeBuilder(
             pathmover=scheme.root_mover,
             ensembles=ensembles,
@@ -603,7 +603,7 @@ class MoveTreeBuilder(Builder):
             elif self.options.analysis['label_with'] == "class":
                 sub_name = sub_type.__name__[:-5]
             else:  # pragma: no cover (should never occur)
-                raise ValueError("Bad option for 'label_with': " 
+                raise ValueError("Bad option for 'label_with': "
                                  + str(self.options.analysis['label_width']))
 
 
@@ -747,7 +747,7 @@ class MoveTreeBuilder(Builder):
                             css_class=['output'])
                     )
                     show = True
-    
+
                 if show:
                     group.add(
                         doc.connector(
@@ -1027,7 +1027,7 @@ class PathTreeBuilder(Builder):
     op : :obj:`openpathsampling.CollectiveVariable`-like
         a function that returns a value when passed a snapshot. The value will
         be put on single snapshots.
-    
+
     """
     def __init__(self):
         super(PathTreeBuilder, self).__init__(['movers'])
@@ -1550,7 +1550,7 @@ class PathTreeBuilder(Builder):
         # STATE COLORING
 
         if self.states is not None:
-            for color, op in self.states.iteritems():
+            for color, op in self.states.items():
                 xp = None
                 for pos_y, data in enumerate(self._plot_sample_list):
                     num = data['sample_idx']
@@ -1648,7 +1648,9 @@ class PathTreeBuilder(Builder):
         for pos_y, data in enumerate(self._plot_sample_list):
             sample = data['sample']
 
-            if pos_y > 0:
+            css_class = data['css_class']
+
+            if pos_y > 0 and 'rejected' not in css_class:
                 if not paths.Trajectory.is_correlated(
                         sample.trajectory,
                         prev,
@@ -2146,7 +2148,7 @@ class SampleList(OrderedDict):
         try:
             # see, if the filter function accepts two parameters
             self.set_samples([
-                samp for samp, data in self.iteritems() if filter_func(samp, data)
+                samp for samp, data in self.items() if filter_func(samp, data)
             ])
         except:
             self.set_samples([
@@ -2301,7 +2303,7 @@ class SampleList(OrderedDict):
 
         """
         l = SampleList([
-            samp for samp, data in self.iteritems()
+            samp for samp, data in self.items()
             if data['length_shared'] < data['length']])
         l.flip_time_direction = self.flip_time_direction
         l.time_symmetric = self.time_symmetric
@@ -2317,7 +2319,7 @@ class SampleList(OrderedDict):
 
         """
         l = [
-            samp for samp, data in self.iteritems()
+            samp for samp, data in self.items()
             if data['length_shared'] < data['length']]
         self.set_samples(l)
 
@@ -2330,7 +2332,7 @@ class SampleList(OrderedDict):
         like `time_symmetric` and `flip_time_direction`
 
         """
-        l = [samp for samp, data in self.iteritems() if data['level'] == 0]
+        l = [samp for samp, data in self.items() if data['level'] == 0]
         self.set_samples(l)
 
     @property
@@ -2362,11 +2364,11 @@ class SampleList(OrderedDict):
 
     def __getitem__(self, item):
         if type(item) is slice:
-            return SampleList(self.keys()[item])
+            return SampleList(list(self.keys())[item])
         elif isinstance(item, list):
             return [self[s] for s in item]
         elif type(item) is int:
-            return self.keys()[item]
+            return list(self.keys())[item]
         else:
             return OrderedDict.__getitem__(self, item)
 
@@ -2383,7 +2385,7 @@ class SampleList(OrderedDict):
         int
             the index if present in the list. Throw an exception otherwise
         """
-        return self.keys().index(value)
+        return list(self.keys()).index(value)
 
     def parent(self, idx):
         """
@@ -2415,7 +2417,7 @@ class SampleList(OrderedDict):
             while parent not in self and parent is not None:
                 parent = parent.parent
 
-            return self.keys().index(parent)
+            return list(self.keys()).index(parent)
 
         except ValueError:
             return None
@@ -2819,7 +2821,7 @@ class StepList(list):
 
     @property
     def samples(self):
-        return self._sample_created_step_list.keys()
+        return list(self._sample_created_step_list.keys())
 
 
 class SampleListGenerator(SampleList):

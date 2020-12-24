@@ -1,0 +1,23 @@
+copyfiles:
+  - local: ../examples
+    target: examples
+    mkdirs:
+      - examples/alanine_dipeptide_tps
+      - examples/toy_model_mstis
+    files:
+      - alanine_dipeptide_tps/AD_tps_1_trajectory.ipynb
+      - alanine_dipeptide_tps/AD_tps_2a_run_flex.ipynb
+      - alanine_dipeptide_tps/AD_tps_3a_analysis_flex.ipynb
+      - toy_model_mstis/toy_mstis_1_setup.ipynb
+      - toy_model_mstis/toy_mstis_2_run.ipynb
+      - toy_model_mstis/toy_mstis_3_analysis.ipynb
+  - gitlab: http://gitlab.e-cam2020.eu/dwhswenson/ops_tutorial
+    target: examples/ops_tutorial
+    mkdirs:
+      - examples/ops_tutorial
+    files:
+      - 1_tps_sampling_tutorial.ipynb
+      - 2_tps_analysis_tutorial.ipynb
+      - 3_committor_analysis_tutorial.ipynb
+      - 4_mstis_sampling_tutorial.ipynb
+      - 5_advanced_customize_shooting.ipynb

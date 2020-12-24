@@ -35,16 +35,16 @@
     opacity: 0.5;
 }
 .opstree .repex {
-    fill: blue;
-    stroke: blue;
+    fill: green;
+    stroke: green;
 }
 .opstree .extend {
-    fill: blue;
-    stroke: blue;
+    fill: green;
+    stroke: green;
 }
 .opstree .truncate {
-    fill: blue;
-    stroke: blue;
+    fill: green;
+    stroke: green;
 }
 .opstree .new {
     fill: black;
@@ -55,16 +55,16 @@
     stroke: gray;
 }
 .opstree .hop {
-    fill: blue;
-    stroke: blue;
+    fill: green;
+    stroke: green;
 }
 .opstree .correlation {
     fill: black;
     stroke: black;
 }
 .opstree .shooting.bw {
-    fill: green;
-    stroke: green;
+    fill: blue;
+    stroke: blue;
 }
 .opstree .shooting.fw {
     fill: red;
@@ -145,11 +145,12 @@
     text-anchor: start;
 }
 .movetree .connector.input {
-    fill: green;
+    fill: blue;
 }
 .movetree .connector.output {
     fill: red;
 }
 .movetree .unknown {
-    fill: gray;
+    fill: #aaa;
+    /*stroke: white;*/
 }

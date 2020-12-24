@@ -1,8 +1,11 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        assert_almost_equal, raises)
+from __future__ import absolute_import
+from builtins import object
+from nose.tools import (assert_equal, assert_not_equal, assert_almost_equal,
+                        raises)
 from nose.plugins.skip import Skip, SkipTest
-from test_helpers import (
-    true_func, assert_equal_array_array, make_1d_traj, data_filename
+from .test_helpers import (
+    true_func, assert_equal_array_array, make_1d_traj, data_filename,
+    assert_items_equal
 )
 
 import openpathsampling as paths
@@ -14,8 +17,9 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testMSOuterTISInterface(object):
+class TestMSOuterTISInterface(object):
     def setup(self):
+        paths.InterfaceSet._reset()
         self.cv_inc = paths.FunctionCV(name="inc", f=lambda s: s.xyz[0][0])
         self.cv_dec = paths.FunctionCV(name="dec", 
                                         f=lambda s: 1.0-s.xyz[0][0])

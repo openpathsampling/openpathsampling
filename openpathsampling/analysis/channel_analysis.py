@@ -21,12 +21,6 @@ class ChannelAnalysis(StorableNamedObject):
     replica: int
         replica ID to analyze from the steps, default is 0.
 
-    Attributes
-    ----------
-    treat_multiples
-    switching_matrix
-    residence_times
-    total_time
     """
     def __init__(self, steps, channels, replica=0):
         super(ChannelAnalysis, self).__init__()
@@ -36,7 +30,7 @@ class ChannelAnalysis(StorableNamedObject):
         self.replica = replica
 
         self._treat_multiples = 'all'
-        self._results = {c: [] for c in self.channels.keys() + [None]}
+        self._results = {c: [] for c in list(self.channels.keys()) + [None]}
         if len(steps) > 0:
             self._analyze(steps)
 
@@ -138,16 +132,18 @@ class ChannelAnalysis(StorableNamedObject):
     @property
     def treat_multiples(self):
         """
-        string :
-            method for handling paths that match multiple channels. Allowed
-            values are
-            * 'newest': use the most recent channel entered
-            * 'oldest': use the least recent channel entered
-            * 'multiple': treat multiple channels as a new type of channel,
-               e.g., 'a' and 'b' because 'a,b'
-            * 'all': treat each channel individually, despite overlaps. For
-              switching, this is the same as ???. For status, this is the
-              same as 'multiple'
+        string : method for handling paths that match multiple channels
+
+        Allowed values are:
+
+        * 'newest': use the most recent channel entered
+        * 'oldest': use the least recent channel entered
+        * 'multiple': treat multiple channels as a new type of channel, e.g.,
+          'a' and 'b' becomes 'a,b'
+        * 'all': treat each channel individually, despite overlaps. For
+          switching, this is the same as ???. For status, this is the
+          same as 'multiple'
+
         """
         return self._treat_multiples
 
@@ -375,8 +371,14 @@ class ChannelAnalysis(StorableNamedObject):
             first element is the length of the input set, followed by
             the input as a sorted list
         """
-        ll = sorted(list(label))
-        return [len(ll)] + ll
+        label_list = list(label)
+        if None in label_list:
+            has_None = [None]
+            label_list.remove(None)
+        else:
+            has_None = []
+        ll = sorted(label_list)
+        return [len(ll)] + has_None + ll
 
     @staticmethod
     def label_to_string(label):
@@ -416,8 +418,7 @@ class ChannelAnalysis(StorableNamedObject):
         switch_count = collections.Counter(switches)
         df = pd.DataFrame(index=sorted_labels, columns=sorted_labels)
         for switch in switch_count:
-            df.set_value(index=switch[0], col=switch[1],
-                         value=switch_count[switch])
+            df.at[switch[0], switch[1]] = switch_count[switch]
 
         df = df.fillna(0)
         return df
@@ -425,7 +426,7 @@ class ChannelAnalysis(StorableNamedObject):
     @property
     def residence_times(self):
         """
-        dict {string: list of int} :
+        Dict[string, List[int]] :
             number of steps spent in each channel for each "stay" in that
             channel; allows calculations of distribution properties. Depends
             on ``treat_multiples``, see details there.
@@ -441,7 +442,7 @@ class ChannelAnalysis(StorableNamedObject):
     @property
     def total_time(self):
         """
-        dict {string: int} :
+        Dict[string, int] :
             total number of steps spent in each channel for each "stay" in
             that channel. Depends on ``treat_multiples``, see details there.
         """

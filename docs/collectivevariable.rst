@@ -6,11 +6,11 @@ CollectiveVariable Functions
 ============================
 :class:`openpathsampling.CollectiveVariable`
 
-    >>> import openpathsampling as paths
-    >>> mover = paths.CollectiveVariable()
+For an introduction on collective variables, read the user guide topic on
+:ref:`creating-cvs`.
 
-basic orderparamters
---------------------
+Basic CVs
+---------
 .. autosummary::
    :toctree: api/generated/
 
@@ -19,31 +19,13 @@ basic orderparamters
    CoordinateFunctionCV
    GeneratorCV
    CoordinateGeneratorCV
-
-simple collectivevariables
---------------------------
-.. autosummary::
-   :toctree: api/generated/
-
    InVolumeCV
 
-mdtraj orderparamters
----------------------
-.. autosummary::
-   :toctree: api/generated/
-
-   MDTrajFunctionCV
-
-msmbuilder3 collectivevariables
+Integrating with other packages
 -------------------------------
 .. autosummary::
    :toctree: api/generated/
 
-   MSMBFeaturizerCV
-
-PyEMMA collectivevariables
---------------------------
-.. autosummary::
-   :toctree: api/generated/
-
+   MDTrajFunctionCV
    PyEMMAFeaturizerCV
+   MSMBFeaturizerCV

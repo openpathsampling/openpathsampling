@@ -2,11 +2,11 @@
 
 .. module:: openpathsampling.engines.openmm
 
-OpenMM Functions
-================
+OpenMM OPS Engine
+=================
 
-Main functions
---------------
+Primary Classes
+---------------
 
 .. autosummary::
    :toctree: ../api/generated/
@@ -16,7 +16,7 @@ Main functions
    Engine
    engine.OpenMMEngine
    topology.MDTrajTopology
-   topology.OpenMMSystemTopology
+..   topology.OpenMMSystemTopology
 
 
 Utility functions

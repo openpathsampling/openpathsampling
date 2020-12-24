@@ -10,12 +10,23 @@ from uuid import UUID
 
 import netCDF4
 import numpy as np
-from dictify import UUIDObjectJSON
-from stores import NamedObjectStore, ObjectStore
-from proxy import LoaderProxy
+from .dictify import UUIDObjectJSON
+from .stores import NamedObjectStore, ObjectStore, PseudoAttributeStore
+from .proxy import LoaderProxy
+
+import sys
+if sys.version_info > (3, ):
+    unicode = str
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
+
+try:
+    from simtk import unit as u
+except ImportError:
+    HAS_SIMTK_UNIT = False
+else:
+    HAS_SIMTK_UNIT = True
 
 
 # ==============================================================================
@@ -26,7 +37,7 @@ class NetCDFPlus(netCDF4.Dataset):
     """
     Extension of the python netCDF wrapper for easier storage of python objects
     """
-    support_simtk_unit = True
+    support_simtk_unit = HAS_SIMTK_UNIT
 
     @property
     def _netcdfplus_version_(self):
@@ -100,10 +111,17 @@ class NetCDFPlus(netCDF4.Dataset):
             self.getter = getter
             self.setter = setter
 
+            try:
+                from simtk import unit as u
+            except ImportError:
+                self.support_simtk_unit = False
+
         def __setitem__(self, key, value):
             self.variable[key] = self.setter(value)
 
         def __getitem__(self, key):
+            # print(self.variable[key])
+            # print(type(self.variable[key]))
             return self.getter(self.variable[key])
 
         def __getattr__(self, item):
@@ -168,6 +186,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         This will usually only be called in subclassed storages.
         """
+        # todo: add CVStore, rename to attribute
         pass
 
     def __init__(self, filename, mode=None, fallback=None):
@@ -198,6 +217,8 @@ class NetCDFPlus(netCDF4.Dataset):
         if mode is None:
             mode = 'a'
 
+        self.mode = mode
+
         exists = os.path.isfile(filename)
         if exists and mode == 'a':
             logger.info(
@@ -225,7 +246,7 @@ class NetCDFPlus(netCDF4.Dataset):
                 "Open existing netCDF file '%s' for reading - "
                 "reading from existing file", filename)
 
-        self.filename = filename
+        self._filename = os.path.abspath(filename)
         self.fallback = fallback
 
         # this can be set to false to re-store objects present in the fallback
@@ -266,6 +287,8 @@ class NetCDFPlus(netCDF4.Dataset):
             # now create all storages in subclasses
             self._create_storages()
 
+            self.create_store('attributes', PseudoAttributeStore())
+
             # call the subclass specific initialization
             self._initialize()
 
@@ -275,6 +298,8 @@ class NetCDFPlus(netCDF4.Dataset):
             self.finalize_stores()
 
             logger.info("Finished setting up netCDF file")
+
+            self.sync()
 
         elif mode == 'a' or mode == 'r+' or mode == 'r':
             logger.debug("Restore the dict of units from the storage")
@@ -300,7 +325,6 @@ class NetCDFPlus(netCDF4.Dataset):
                 variable = self.variables[variable_name]
 
                 if self.support_simtk_unit:
-                    import simtk.unit as u
                     if hasattr(variable, 'unit_simtk'):
                         unit_dict = self.simplifier.from_json(
                             getattr(variable, 'unit_simtk'))
@@ -322,14 +346,31 @@ class NetCDFPlus(netCDF4.Dataset):
             self.update_delegates()
             self._restore_storages()
 
+            # only if we have a new style file
+            if hasattr(self, 'attributes'):
+                for attribute, store in zip(
+                        self.attributes,
+                        self.attributes.vars['cache']
+                ):
+                    if store is not None:
+                        key_store = self.attributes.key_store(attribute)
+                        key_store.attribute_list[attribute] = store
+
             # call the subclass specific restore in case there is more stuff
             # to prepare
             self._restore()
 
-        self.sync()
+        self.set_auto_mask(False)
+        # self.set_always_mask(False)  ## didn't fix; errors older versions
+
+
 
     def _create_simplifier(self):
         self.simplifier = UUIDObjectJSON(self)
+
+    @property
+    def filename(self):
+        return self._filename
 
     @property
     def file_size(self):
@@ -347,8 +388,15 @@ class NetCDFPlus(netCDF4.Dataset):
 
     @staticmethod
     def _cmp_version(v1, v2):
-        q1 = v1.split('-')[0].split('.')
-        q2 = v2.split('-')[0].split('.')
+        # we only look at x.y.z parts
+        def version_parts(v):
+            return v.split('-')[0].split('+')[0].split('.')[:3]
+        q1 = version_parts(v1)
+        q2 = version_parts(v2)
+        # q1 = v1.split('.')[:3]
+        # q2 = v2.split('.')[:3]
+        # q1 = v1.split('-')[0].split('.')
+        # q2 = v2.split('-')[0].split('.')
         for v1, v2 in zip(q1, q2):
             if int(v1) > int(v2):
                 return +1
@@ -461,7 +509,7 @@ class NetCDFPlus(netCDF4.Dataset):
 
         if register_attr:
             if hasattr(self, name):
-                raise ValueError('Attribute name %s is already in use!' % name)
+                raise ValueError('Store name %s is already in use!' % name)
 
             setattr(self, store.prefix, store)
 
@@ -497,7 +545,14 @@ class NetCDFPlus(netCDF4.Dataset):
         try:
             return self.__dict__[item]
         except KeyError:
-            return self.__class__.__dict__[item]
+            try:
+                return self.__class__.__dict__[item]
+            except KeyError:
+                raise AttributeError(
+                    "'{cls}' object has no attribute '{itm}'".format(
+                        cls=self.__class__, itm=item
+                    )
+                )
 
     def __setattr__(self, key, value):
         self.__dict__[key] = value
@@ -708,7 +763,7 @@ class NetCDFPlus(netCDF4.Dataset):
         total_file = 0
         total_index = 0
 
-        for name, store in self.objects.iteritems():
+        for name, store in self.objects.items():
             size = store.cache.size
             count = store.cache.count
             profile = {
@@ -750,7 +805,7 @@ class NetCDFPlus(netCDF4.Dataset):
         list of str
             the list of variable types
         """
-        types = NetCDFPlus._type_conversion.keys()
+        types = list(NetCDFPlus._type_conversion.keys())
         types += ['obj.' + x for x in self.objects.keys()]
         types += ['lazyobj.' + x for x in self.objects.keys()]
         types += ['uuid.' + x for x in self.objects.keys()]
@@ -807,9 +862,9 @@ class NetCDFPlus(netCDF4.Dataset):
 
             base_type = store.content_class
 
-            get_is_iterable = lambda v: \
-                v.base_cls is not base_type if hasattr(v, 'base_cls') else \
-                hasattr(v, '__iter__')
+            # get_is_iterable = lambda v: \
+            #     v.base_cls is not base_type if hasattr(v, 'base_cls') else \
+            #     hasattr(v, '__iter__')
 
             get_numpy_iterable = lambda v: isinstance(v, np.ndarray)
 
@@ -861,38 +916,13 @@ class NetCDFPlus(netCDF4.Dataset):
                 if set_is_iterable(v) else \
                 '-' * 36 if v is None else str(UUID(int=store.save(v)))
 
-        elif var_type.startswith('uuid.'):
-            getter = lambda v: [
-                None if w[0] == '-' else store.load(long(w, 16))
-                for w in v
-            ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else store.load(long(v, 16))
-
-            setter = lambda v: ''.join(
-                ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
-                    for w in list.__iter__(v)]) \
-                if set_is_iterable(v) else \
-                '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
-
-        elif var_type.startswith('lazyuuid.'):
-            getter = lambda v: [
-                None if w[0] == '-' else LoaderProxy(store, long(w, 16))
-                for w in v
-            ] if get_numpy_iterable(v) else \
-                None if v[0] == '-' else LoaderProxy(store, long(v, 16))
-
-            setter = lambda v: ''.join(
-                ['-' * 34 if w is None else "{0:#032x}".format(store.save(w))
-                     for w in list.__iter__(v)]) \
-                if set_is_iterable(v) else \
-                '-' * 34 if v is None else "{0:#032x}".format(store.save(v))
-
         elif var_type.startswith('lazyobj.'):
             getter = lambda v: [
-                None if w[0] == '-' else LoaderProxy(store, int(UUID(w)))
+                None if w[0] == '-' else LoaderProxy.new(store, int(UUID(w)))
                 for w in v
-            ] if get_is_iterable(v) else \
-                None if v[0] == '-' else LoaderProxy(store, int(UUID(v)))
+            ] if isinstance(v, np.ndarray) else \
+                None if v[0] == '-' else LoaderProxy.new(store, int(UUID(v)))
+
             setter = lambda v: \
                 ''.join([
                     '-' * 36 if w is None else str(UUID(int=store.save(w)))
@@ -921,9 +951,6 @@ class NetCDFPlus(netCDF4.Dataset):
     to_uuid_chunks = staticmethod(
         lambda x: [x[i:i + 36] for i in range(0, len(x), 36)])
 
-    to_uuid_chunks34 = staticmethod(
-        lambda x: [x[i:i + 34] for i in range(0, len(x), 34)])
-
     def create_variable_delegate(self, var_name):
         """
         Create a delegate property that wraps the netcdf.Variable and takes care
@@ -945,7 +972,7 @@ class NetCDFPlus(netCDF4.Dataset):
             getter, setter, store = self.create_type_delegate(var.var_type)
 
             to_uuid_chunks = NetCDFPlus.to_uuid_chunks
-            to_uuid_chunks34 = NetCDFPlus.to_uuid_chunks34
+            # to_uuid_chunks34 = NetCDFPlus.to_uuid_chunks34
 
             if hasattr(var, 'var_vlen'):
                 if var.var_type.startswith('obj.'):
@@ -960,33 +987,14 @@ class NetCDFPlus(netCDF4.Dataset):
                 elif var.var_type.startswith('lazyobj.'):
                     getter = lambda v: [[
                         None if u[0] == '-' else
-                        LoaderProxy(store, int(UUID(u)))
+                        LoaderProxy.new(store, int(UUID(u)))
                         for u in to_uuid_chunks(w)] for w in v
                     ] if isinstance(v, np.ndarray) else [
                         None if u[0] == '-' else
-                        LoaderProxy(store, int(UUID(u)))
+                        LoaderProxy.new(store, int(UUID(u)))
                         for u in to_uuid_chunks(v)
                     ]
-                if var.var_type.startswith('uuid.'):
-                    getter = lambda v: [[
-                        None if u[0] == '-' else store.load(
-                            long(u, 16))
-                        for u in to_uuid_chunks34(w)
-                        ] for w in v
-                    ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else store.load(long(u, 16))
-                        for u in to_uuid_chunks34(v)
-                    ]
-                elif var.var_type.startswith('lazyuuid.'):
-                    getter = lambda v: [[
-                        None if u[0] == '-' else LoaderProxy(
-                            store, long(u, 16))
-                        for u in to_uuid_chunks34(w)
-                        ] for w in v
-                    ] if isinstance(v, np.ndarray) else [
-                        None if u[0] == '-' else LoaderProxy(store, long(u, 16))
-                        for u in to_uuid_chunks34(v)
-                    ]
+
             if True or self.support_simtk_unit:
                 if hasattr(var, 'unit_simtk'):
                     if var_name not in self.units:
@@ -1182,9 +1190,8 @@ class NetCDFPlus(netCDF4.Dataset):
             if type(dimensions) is str:
                 dim_names = [dimensions]
             else:
-                dim_names = map(
-                    lambda p: '#ix{0}:{1}'.format(*p),
-                    enumerate(dimensions))
+                dim_names = ['#ix{0}:{1}'.format(*p) for p in
+                             enumerate(dimensions)]
 
             idx_desc = '[' + ']['.join(dim_names) + ']'
             description = var_name + idx_desc + ' is ' + \

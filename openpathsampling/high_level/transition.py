@@ -68,6 +68,8 @@ class TPSTransition(Transition):
 
     @classmethod
     def from_dict(cls, dct):
+        if 'name' not in dct:
+            dct['name'] = None
         mytrans = TPSTransition(dct['stateA'], dct['stateB'], dct['name'])
         mytrans.ensembles = dct['ensembles']
         return mytrans
@@ -152,7 +154,7 @@ class TISTransition(Transition):
         # build ensembles if we don't already have them
         self.orderparameter = orderparameter
         if not hasattr(self, "ensembles"):
-            self.build_ensembles(self.stateA, self.stateB,
+            self._build_ensembles(self.stateA, self.stateB,
                                  self.interfaces, self.orderparameter)
 
         self.default_orderparameter = self.orderparameter
@@ -179,7 +181,8 @@ class TISTransition(Transition):
 
         self.minus_ensemble = paths.MinusInterfaceEnsemble(
             state_vol=stateA,
-            innermost_vols=interfaces[0]
+            innermost_vols=interfaces[0],
+            forbidden=stateB
         ).named("Out " + stateA.name + " minus")
 
     def copy(self, with_results=True):
@@ -214,17 +217,48 @@ class TISTransition(Transition):
         return mystr
 
 
-    def build_ensembles(self, stateA, stateB, interfaces, orderparameter):
-        self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
-            stateA, stateB, self.interfaces, orderparameter
-        )
+    def _build_ensembles(self, stateA, stateB, interfaces, orderparameter):
+        try:
+            cv = interfaces.cv
+        except AttributeError:
+            cv = orderparameter
+        if cv is None:
+            # in case interface.cv is None and orderparameter is not None
+            cv = orderparameter
+
+        try:
+            cv_max = interfaces.cv_max
+        except AttributeError:
+            cv_max = None
+
+        try:
+            lambdas = [interfaces.get_lambda(iface_vol)
+                       for iface_vol in interfaces]
+        except AttributeError:
+            lambdas = [None] * len(interfaces)
+
+        self.ensembles = [
+            paths.TISEnsemble(
+                initial_states=stateA,
+                final_states=stateB,
+                interface=iface_vol,
+                orderparameter=cv,
+                cv_max=cv_max,
+                lambda_i=lambda_i
+            )
+            for (iface_vol, lambda_i) in zip(interfaces, lambdas)
+        ]
+
+        #self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
+            #stateA, stateB, self.interfaces, orderparameter
+        #)
         for ensemble in self.ensembles:
             ensemble.named(self.name + " " +
                            str(self.ensembles.index(ensemble)))
 
 
     # parameters for different types of output
-    def ensemble_statistics(self, ensemble, samples, weights=None, force=False):
+    def _ensemble_statistics(self, ensemble, samples, weights=None, force=False):
         """Calculate stats for a given ensemble: path length, crossing prob
 
         In general we do all of these at once because the extra cost of
@@ -242,7 +276,7 @@ class TISTransition(Transition):
             # TODO figure out which need to be rerun
             pass
         else:
-            run_it = self.ensemble_histogram_info.keys()
+            run_it = list(self.ensemble_histogram_info.keys())
 
         for hist in run_it:
             hist_info = self.ensemble_histogram_info[hist]
@@ -253,7 +287,8 @@ class TISTransition(Transition):
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
 
-        in_ens_samples = (s for s in samples if s.ensemble is ensemble)
+        in_ens_samples = (s for s in samples if s.ensemble.__uuid__ ==
+                          ensemble.__uuid__)
         hist_data = {}
         buflen = -1
         sample_buf = []
@@ -281,7 +316,7 @@ class TISTransition(Transition):
                                                     + " " + ensemble.name)
 
 
-    def all_statistics(self, steps, weights=None, force=False):
+    def _all_statistics(self, steps, weights=None, force=False):
         """
         Run all statistics for all ensembles.
         """
@@ -289,7 +324,7 @@ class TISTransition(Transition):
         # dealing them out to the appropriate histograms
         for ens in self.ensembles:
             samples = sampleset_sample_generator(steps)
-            self.ensemble_statistics(ens, samples, weights, force)
+            self._ensemble_statistics(ens, samples, weights, force)
 
     def pathlength_histogram(self, ensemble):
         """
@@ -332,7 +367,7 @@ class TISTransition(Transition):
             if run_ensembles or force:
                 if steps is None:
                     raise RuntimeError("Unable to build histograms without steps source")
-                self.all_statistics(steps, force=True)
+                self._all_statistics(steps, force=True)
 
             df = histograms_to_pandas_dataframe(
                 self.histograms['max_lambda'].values(),
@@ -406,7 +441,7 @@ class TISTransition(Transition):
         logger.info("Rate for " + self.stateA.name + " -> " + self.stateB.name)
         # get the flux
         if flux is None: # TODO: find a way to raise error if bad flux
-            flux = self.minus_move_flux(steps)
+            flux = self._minus_move_flux(steps)
 
         if flux is not None:
             self._flux = flux
@@ -467,6 +502,8 @@ class TISTransition(Transition):
 
     @classmethod
     def from_dict(cls, dct):
+        if 'name' not in dct:
+            dct['name'] = None
         mytrans = TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],
@@ -482,7 +519,7 @@ class TISTransition(Transition):
     def all_ensembles(self):
         return self.ensembles + [self.minus_ensemble]
 
-    def minus_move_flux(self, steps, force=False):
+    def _minus_move_flux(self, steps, force=False):
         """
         Calculate the flux based on the minus ensemble trajectories.
         """
@@ -531,7 +568,7 @@ class TISTransition(Transition):
             raise RuntimeError(str(len(minus_movers_used)) +
                                " minus movers for the same ensemble?")
 
-        engine_dt = minus_movers_used.keys()[0].engine.snapshot_timestep
+        engine_dt = list(minus_movers_used.keys())[0].engine.snapshot_timestep
         flux = 1.0 / (t_in_avg + t_out_avg) / engine_dt
         self._flux = flux
         return self._flux

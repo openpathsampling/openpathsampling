@@ -1,5 +1,4 @@
-from openpathsampling.engines import Topology, SnapshotDescriptor
-from snapshot import ToySnapshot
+from openpathsampling.engines import Topology
 
 
 class ToyTopology(Topology):
@@ -20,20 +19,3 @@ class ToyTopology(Topology):
         super(ToyTopology, self).__init__(n_atoms=n_atoms, n_spatial=n_spatial)
         self.masses = masses
         self.pes = pes
-
-    def to_descriptor(self):
-        """
-        Helper function to fast create a descriptor
-
-        Returns
-        -------
-        :obj:`SnapshotDescriptor`
-
-        """
-        return SnapshotDescriptor.construct(
-            ToySnapshot,
-            {
-                'n_atoms': self.n_atoms,
-                'n_spatial': self.n_spatial
-            }
-        )

@@ -9,6 +9,13 @@ from openpathsampling.tools import refresh_output
 
 from collections import Counter
 
+import sys
+if sys.version_info > (3, ):
+    from collections.abc import Mapping
+else:
+    from collections import Mapping
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,7 +29,7 @@ class SampleKeyError(Exception):
 
 
 # @lazy_loading_attributes('movepath')
-class SampleSet(StorableObject):
+class SampleSet(StorableObject, Mapping):
     """
     SampleSet is essentially a list of samples, with a few conveniences.  It
     can be treated as a list of samples (using, e.g., .append), or as a
@@ -79,6 +86,9 @@ class SampleSet(StorableObject):
     def ensembles(self):
         return self.ensemble_dict.keys()
 
+    def values(self):
+        return self.samples
+
     @property
     def replicas(self):
         return self.replica_dict.keys()
@@ -127,6 +137,9 @@ class SampleSet(StorableObject):
 
     def __eq__(self, other):
         return Counter(self.samples) == Counter(other.samples)
+
+    def __ne__(self, other):
+        return not self == other
 
     def __delitem__(self, sample):
         self.ensemble_dict[sample.ensemble].remove(sample)
@@ -741,8 +754,8 @@ class Sample(StorableObject):
     """
     A Sample represents a given "draw" from its ensemble, and is the return
     object from a PathMover. It and contains all information about the move,
-    initial trajectories, new trajectories (both as references). 
-    
+    initial trajectories, new trajectories (both as references).
+
     Since each Sample is a single representative of a single ensemble, each
     Sample consists of one replica ID, one trajectory, and one ensemble.
     This means that movers which generate more than one "draw" (often from
@@ -845,8 +858,8 @@ class Sample(StorableObject):
         # mystr  = "Replica: "+str(self.replica)+"\n"
         # mystr += "Trajectory: "+str(self.trajectory)+"\n"
         # mystr += "Ensemble: "+repr(self.ensemble)+"\n"
-        mystr = 'Sample(RepID: %d, Ens: %s, %d steps)' % (
-            self.replica, repr(self.ensemble), len(self.trajectory))
+        mystr = 'Sample(RepID: %d, Ens: %s, %s)' % (
+            self.replica, repr(self.ensemble), repr(self.trajectory))
         return mystr
 
     @property

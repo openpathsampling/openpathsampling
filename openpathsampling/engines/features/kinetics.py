@@ -1,4 +1,4 @@
-from shared import KineticContainerStore, KineticContainer
+from .shared import KineticContainerStore, KineticContainer, unmask_quantity
 from openpathsampling.netcdfplus import WeakLRUCache
 
 variables = ['kinetics', 'is_reversed']
@@ -6,6 +6,16 @@ lazy = ['kinetics']
 flip = ['is_reversed']
 
 dimensions = ['n_atoms', 'n_spatial']
+
+_vel_unit = "simtk(unit.nanometer/unit.picosecond)"
+_vel_str = "ndarray.float32({n_atoms},{n_spatial})"
+schema_entries = [
+    ('kinetics', [
+        ('velocities', _vel_unit + "*" + _vel_str),
+        ('engine', 'uuid'),
+    ]),
+    ('is_reversed', 'bool'),
+]
 
 
 def netcdfplus_init(store):
@@ -38,10 +48,11 @@ def velocities(self):
     returned
     """
     if self.kinetics is not None:
+        vel = unmask_quantity(self.kinetics.velocities)
         if self.is_reversed:
-            return -1.0 * self.kinetics.velocities
+            return -1.0 * vel
         else:
-            return self.kinetics.velocities
+            return vel
 
     return None
 
@@ -49,7 +60,7 @@ def velocities(self):
 @velocities.setter
 def velocities(self, value):
     if value is not None:
-        kc = KineticContainer(velocities=value)
+        kc = KineticContainer(velocities=value, engine=self.engine)
     else:
         kc = None
 

@@ -1,10 +1,13 @@
 matplotlib
 sphinx
-ipython
-ipython-notebook
+jupyter
+nbconvert<6  # TODO: remove
+nbsphinx
 jinja2
 netcdf4
-runipy
+runipy  # TODO: remove
 openmm
 pytables
 scikit-learn
+packaging
+sphinx_rtd_theme

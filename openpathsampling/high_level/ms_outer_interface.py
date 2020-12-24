@@ -103,8 +103,8 @@ class MSOuterTISInterface(netcdfplus.StorableNamedObject):
         MSOuterTISInterface :
             the desired object with correct volumes and lambdas
         """
-        interface_sets = interface_sets_lambdas.keys()
-        lambdas = interface_sets_lambdas.values()
+        interface_sets = list(interface_sets_lambdas.keys())
+        lambdas = list(interface_sets_lambdas.values())
         volumes = [iface_set.new_interface(interface_sets_lambdas[iface_set])
                    for iface_set in interface_sets]
         return MSOuterTISInterface(interface_sets, volumes, lambdas)
@@ -151,7 +151,12 @@ class MSOuterTISInterface(netcdfplus.StorableNamedObject):
         if forbidden is None:
             ensemble_to_intersect = paths.FullEnsemble()
         else:
-            ensemble_to_intersect = paths.AllOutXEnsemble(forbidden)
+            try:
+                _ = len(forbidden)
+            except TypeError:
+                forbidden = [forbidden]
+            forbidden_vol = paths.join_volumes(forbidden)
+            ensemble_to_intersect = paths.AllOutXEnsemble(forbidden_vol)
 
         # TODO: maybe we should crash if given transitions aren't relevant?
         relevant_transitions = self.relevant_transitions(transitions)

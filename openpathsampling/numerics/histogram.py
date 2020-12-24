@@ -3,8 +3,10 @@ import pandas as pd
 import scipy
 import matplotlib.pyplot as plt
 import math
-from lookup_function import LookupFunction, VoxelLookupFunction
+from .lookup_function import LookupFunction, VoxelLookupFunction
 import collections
+import warnings
+from functools import reduce
 
 class SparseHistogram(object):
     """
@@ -287,7 +289,7 @@ class Histogram(SparseHistogram):
         return super(Histogram, self).histogram(data, weights)
 
     def xvals(self, bin_edge_type="l"):
-        int_bins = np.array(self._histogram.keys())[:,0]
+        int_bins = np.array(list(self._histogram.keys()))[:,0]
         # always include left_edge_bin as 0 point; always include 0 and
         # greater bin values (but allow negative)
         min_bin = min(min(int_bins), 0)
@@ -302,7 +304,7 @@ class Histogram(SparseHistogram):
         vals = self.xvals(bin_edge)
         hist = self.histogram()
         bins = sorted(hist.keys())
-        min_bin = min(bins[0][0], self.left_bin_edges[0])
+        min_bin = min(bins[0][0], 0)
         max_bin = bins[-1][0]
         bin_range = range(int(min_bin), int(max_bin)+1)
         hist_list = [hist[(b,)] for b in bin_range]
@@ -371,8 +373,8 @@ class Histogram(SparseHistogram):
 
         cumul_hist = np.array(cumul_hist)
         if total == 0:
-            return 0
-        if maximum is not None:
+            warnings.warn("No non-zero data in the histogram")
+        elif maximum is not None:
             cumul_hist *= maximum / total
 
         xvals = self.xvals(bin_edge)
@@ -392,8 +394,8 @@ class Histogram(SparseHistogram):
 
         cumul_hist = np.array(cumul_hist)
         if total == 0:
-            return 0
-        if maximum is not None:
+            warnings.warn("No non-zero data in the histogram")
+        elif maximum is not None:
             cumul_hist *= maximum / total
 
         xvals = self.xvals(bin_edge)
@@ -586,12 +588,14 @@ class HistogramPlotter2D(object):
                   int(max(list(hist) + ticks + lims)))
         if lims_ is None:
             lims_ = (0, range_[1] - range_[0])
+        else:
+            lims_ = (lims_[0] - range_[0], lims_[1] - range_[0])
         return (ticks_, range_, lims_)
 
     def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
         """Set up both x-axis and y-axis for plotting.
 
-        Also sets self.xrange_ and self.yrange_, which are the (bin-space)
+        Also sets self.xrange\_ and self.yrange\_, which are the (bin-space)
         bounds for the pandas.DataFrame.
 
         Parameters
@@ -611,10 +615,10 @@ class HistogramPlotter2D(object):
         -------
         xticks_ : list of float or None
             user-set xticks in bin-space
-        yticks_ : list of float or None
-            user-set yticks in bin-space
         xlim_ : 2-tuple (float, float)
             range in x for plot visualization (bin-space)
+        yticks_ : list of float or None
+            user-set yticks in bin-space
         ylim_ : 2-tuple (float, float)
             range in y for plot visualization (bin-space)
         """
@@ -626,7 +630,7 @@ class HistogramPlotter2D(object):
             xlim = self.xlim
         if ylim is None:
             ylim = self.ylim
-        x, y = zip(*self.histogram._histogram.keys())
+        x, y = list(zip(*self.histogram._histogram.keys()))
         xticks_, xrange_, xlim_ = self.axis_input(x, xticklabels, xlim, dof=0)
         yticks_, yrange_, ylim_ = self.axis_input(y, yticklabels, ylim, dof=1)
         self.xrange_ = xrange_
@@ -687,7 +691,7 @@ class HistogramPlotter2D(object):
         ylim : 2-tuple of (float, float)
             vertical (y-value) range of (minimum, maximum) bounds for
             displaying the plot
-        kwargs : 
+        kwargs :
             additional arguments to pass to plt.pcolormesh
 
         Returns
@@ -709,18 +713,18 @@ class HistogramPlotter2D(object):
         df = hist_fcn.df_2d(x_range=self.xrange_, y_range=self.yrange_)
         self.df = df
 
-	mesh = plt.pcolormesh(df.fillna(0.0).transpose(), **kwargs)
+        mesh = plt.pcolormesh(df.fillna(0.0).transpose(), **kwargs)
 
         (xticks, xlabels) = self.ticks_and_labels(xticks_, mesh.axes, dof=0)
         (yticks, ylabels) = self.ticks_and_labels(yticks_, mesh.axes, dof=1)
 
         mesh.axes.set_xticks(xticks)
         mesh.axes.set_yticks(yticks)
-	mesh.axes.set_xticklabels(xlabels)
-	mesh.axes.set_yticklabels(ylabels)
-	plt.xlim(xlim_[0], xlim_[1])
-	plt.ylim(ylim_[0], ylim_[1])
-	plt.colorbar()
+        mesh.axes.set_xticklabels(xlabels)
+        mesh.axes.set_yticklabels(ylabels)
+        plt.xlim(xlim_[0], xlim_[1])
+        plt.ylim(ylim_[0], ylim_[1])
+        plt.colorbar()
         return mesh
 
     def plot_trajectory(self, trajectory, *args, **kwargs):
@@ -734,7 +738,7 @@ class HistogramPlotter2D(object):
             list to plot; paths.Trajectory allowed if the histogram can
             convert it to CVs.
         """
-        x, y = zip(*self.histogram.map_to_float_bins(trajectory))
+        x, y = list(zip(*self.histogram.map_to_float_bins(trajectory)))
         px = np.asarray(x) - self.xrange_[0]
         py = np.asarray(y) - self.yrange_[0]
         plt.plot(px, py, *args, **kwargs)

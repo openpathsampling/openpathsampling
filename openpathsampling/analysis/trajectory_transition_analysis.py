@@ -6,7 +6,7 @@ class TrajectorySegmentContainer(object):
 
     For the most part, this imitates a list. It supports most list behaviors
     (addition, iteration, etc). However, as a list of lists, it contains a
-    few useful helpers. 
+    few useful helpers.
 
     Parameters
     ----------
@@ -23,6 +23,11 @@ class TrajectorySegmentContainer(object):
     def __init__(self, segments, dt=None):
         self._segments = segments
         self.dt = dt
+
+    @classmethod
+    def from_trajectory_and_indices(cls, trajectory, indices, dt=None):
+        segments = [trajectory[idx[0]:idx[1]] for idx in indices]
+        return cls(segments, dt)
 
     @property
     def n_frames(self):
@@ -98,7 +103,7 @@ class TrajectoryTransitionAnalysis(object):
         self.transition = transition
         self.dt = dt
         self.stateA = transition.stateA
-        self.stateB = transition.stateB
+        self.stateB = transition.stateB - transition.stateA
         self.reset_analysis()
 
     def reset_analysis(self):
@@ -218,13 +223,13 @@ class TrajectoryTransitionAnalysis(object):
             forbidden = paths.EmptyVolume()
         ensemble_BAB = paths.SequentialEnsemble([
             paths.LengthEnsemble(1) & paths.AllInXEnsemble(to_vol),
-            paths.PartInXEnsemble(from_vol) & paths.AllOutXEnsemble(to_vol),
+            paths.AllOutXEnsemble(to_vol) & paths.PartInXEnsemble(from_vol),
             paths.LengthEnsemble(1) & paths.AllInXEnsemble(to_vol)
         ]) & paths.AllOutXEnsemble(forbidden)
         ensemble_AB = paths.SequentialEnsemble([
             paths.LengthEnsemble(1) & paths.AllInXEnsemble(from_vol),
             paths.OptionalEnsemble(paths.AllOutXEnsemble(to_vol)),
-            paths.LengthEnsemble(1) & paths.AllInXEnsemble(to_vol) 
+            paths.LengthEnsemble(1) & paths.AllInXEnsemble(to_vol)
         ])
         BAB_split = ensemble_BAB.split(trajectory)
         AB_split = [ensemble_AB.split(part)[0] for part in BAB_split]
@@ -348,6 +353,10 @@ class TrajectoryTransitionAnalysis(object):
             raise RuntimeError("Can't calculate the flux without `dt`")
 
         flux_dict = self.analyze_flux(trajectories, state, interface)
+        return self.flux_from_flux_dict(flux_dict)
+
+    @staticmethod
+    def flux_from_flux_dict(flux_dict):
         in_segs = flux_dict['in']
         out_segs = flux_dict['out']
         flux = 1.0 / (np.mean(in_segs.times) + np.mean(out_segs.times))

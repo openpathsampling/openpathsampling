@@ -2,6 +2,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 import openpathsampling as paths
+import logging
+logger = logging.getLogger(__name__)
 
 class StepVisualizer2D(object):
     def __init__(self, network, cv_x, cv_y, xlim, ylim, output_directory=None):
@@ -11,6 +13,7 @@ class StepVisualizer2D(object):
         self.xlim = xlim
         self.ylim = ylim
         self.output_directory = output_directory
+        is_interactive = matplotlib.is_interactive()
         self.background = None
         self._save_bg_axes = None
 
@@ -75,18 +78,22 @@ class StepVisualizer2D(object):
 
     def draw_background(self):
         # draw the background
-        if self.background is not None:
-            if self._save_bg_axes is None:
-                self._save_bg_axes = self.background.axes
-            self.fig = self.background
-            for ax in self.fig.axes:
-                self.fig.delaxes(ax)
-            for ax in self._save_bg_axes:
-                self.fig.add_axes(ax)
-            self.ax = self.fig.axes[0].twinx()
-            self.ax.cla()
-        else:
-            self.fig, self.ax = plt.subplots()
+        if self.background is None:
+            self.fig, ax = plt.subplots()
+            self.background = self.fig
+            ax.set_xlim(self.xlim)
+            ax.set_ylim(self.ylim)
+
+        if self._save_bg_axes is None:
+            self._save_bg_axes = self.background.axes
+        self.fig = self.background
+        for ax in self.fig.axes:
+            self.fig.delaxes(ax)
+        for ax in self._save_bg_axes:
+            self.fig.add_axes(ax)
+
+        self.ax = self.fig.axes[0].twinx()
+        self.ax.cla()
 
         self.ax.set_xlim(self.xlim)
         self.ax.set_ylim(self.ylim)
@@ -103,7 +110,7 @@ class StepVisualizer2D(object):
         try:
             import IPython.display
         except ImportError:
-            pass
+            logger.info("Not in IPython")
         else:
             IPython.display.clear_output(wait=True)
             fig = self.draw(mcstep)

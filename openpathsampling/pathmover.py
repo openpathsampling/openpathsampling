@@ -13,8 +13,13 @@ import numpy as np
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 from openpathsampling.pathmover_inout import InOutSet, InOut
-from ops_logging import initialization_logging
-from treelogic import TreeMixin
+from .ops_logging import initialization_logging
+from .treelogic import TreeMixin
+
+from openpathsampling.deprecations import deprecate, has_deprecations
+from openpathsampling.deprecations import SAMPLE_DETAILS, MOVE_DETAILS
+
+from future.utils import with_metaclass
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -88,7 +93,7 @@ class MoveChangeNaNError(Exception):
     pass
 
 
-class PathMover(TreeMixin, StorableNamedObject):
+class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
     """
     A PathMover is the description of a move in replica space.
 
@@ -123,7 +128,7 @@ class PathMover(TreeMixin, StorableNamedObject):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
-    __metaclass__ = abc.ABCMeta
+    #__metaclass__ = abc.ABCMeta
 
     def __init__(self):
         StorableNamedObject.__init__(self)
@@ -480,7 +485,7 @@ class IdentityPathMover(PathMover):
     """
     def __init__(self, counts_as_trial=False):
         super(IdentityPathMover, self).__init__()
-        self.counts_as_trial=counts_as_trial
+        self.counts_as_trial = counts_as_trial
 
     def move(self, sample_set):
         mover = self if self.counts_as_trial else None
@@ -512,8 +517,8 @@ class SampleMover(PathMover):
         -------
         bool
             True if the trial is accepted, False otherwise
-        details : openpathsampling.MoveDetails
-            Returns a MoveDetails object that contains information about the
+        details : openpathsampling.Details
+            Returns a Details object that contains information about the
             decision, i.e. total acceptance and random number
 
         """
@@ -531,7 +536,7 @@ class SampleMover(PathMover):
 
         # TODO: This isn't right. `bias` should be associated with the
         # change; not with each individual sample. ~~~DWHS
-        for ens, sample in trial_dict.iteritems():
+        for ens, sample in trial_dict.items():
             valid = ens(sample.trajectory, candidate=self._trust_candidate)
             if not valid:
                 # one sample not valid reject
@@ -580,16 +585,56 @@ class SampleMover(PathMover):
         # Default is that the list of ensembles is in self.ensembles
         return []
 
-    def move(self, sample_set):
-        # 1. pick a set of ensembles (in case we allow to pick several ones)
+    def get_samples_from_sample_set(self, sample_set):
+        """
+        Select samples to use as input to the move core.
+
+        See Also
+        --------
+        move_core
+        move
+
+        Parameters
+        ----------
+        sample_set : :class:`.SampleSet`
+            current samples to use as potential input
+
+        Returns
+        -------
+        list of :class:`.Sample`
+            samples to use as input to the move core
+        """
         ensembles = self._called_ensembles()
-
-        # 2. pick samples from these ensembles
         samples = [self.select_sample(sample_set, ens) for ens in ensembles]
+        return samples
 
+    def move(self, sample_set):
+        samples = self.get_samples_from_sample_set(sample_set)
+        change = self.move_core(samples)
+        return change
+
+    def move_core(self, samples):
+        """Core of the Monte Carlo move. Includes acceptance.
+
+        See Also
+        --------
+        move
+
+        Parameters
+        ----------
+        samples : list of :class:`.Sample`
+            input samples from the correct ensembles of this object
+
+        Returns
+        -------
+        :class:`.MoveChange`
+            result MoveChange for this move
+        """
+        # this is separated out for reuse and remove dependence core MC move
+        # dependence on the entire sample set (for parallelization)
         try:
-            # 3. pass these samples to the generator which might throw
-            # engine specific exceptions if something goes wrong.
+            # pass these samples to the trial move which might throw
+            # engine-specific exceptions if something goes wrong.
             # Most common should be `EngineNaNError` if nan is detected and
             # `EngineMaxLengthError`
             trials, call_details = self(*samples)
@@ -600,7 +645,7 @@ class SampleMover(PathMover):
                 samples=e.trial_sample,
                 mover=self,
                 input_samples=samples,
-                details=paths.MoveDetails(**e.details)
+                details=paths.Details(**e.details)
             )
         except SampleMaxLengthError as e:
             e.details.update({'rejection_reason': 'max_length'})
@@ -611,7 +656,6 @@ class SampleMover(PathMover):
                 details=paths.Details(**e.details)
             )
 
-        # 4. accept/reject
         accepted, acceptance_details = self._accept(trials)
 
         # update details
@@ -619,9 +663,9 @@ class SampleMover(PathMover):
         kwargs.update(call_details)
         kwargs.update(acceptance_details)
 
-        details = MoveDetails(**kwargs)
+        details = Details(**kwargs)
 
-        # 5. and return a PMC
+        # return change
         if accepted:
             return paths.AcceptedSampleMoveChange(
                 samples=trials,
@@ -701,6 +745,12 @@ class EngineMover(SampleMover):
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
         self._engine = engine
+        self._trust_candidate = True  # can I safely do that?
+        # I think that is safe. Note for future: if we come across a bug
+        # based on this, an alternative would be to have the move strategy
+        # set _trust_candidate when it builds the movers; that is likely to
+        # be a little safer (although I think we can trust all candidates
+        # from engine movers to actually be candidates)
 
     def to_dict(self):
         dct = super(EngineMover, self).to_dict()
@@ -810,6 +860,8 @@ class EngineMover(SampleMover):
                                                   running=[run_f])
         trial_trajectory = (trajectory[0:shooting_index] +
                             partial_trajectory)
+        # TODO: this should check for overshoot; only works now if ensemble
+        # doesn't overshoot
         return trial_trajectory
 
     def _make_backward_trajectory(self, trajectory, shooting_index):
@@ -821,6 +873,8 @@ class EngineMover(SampleMover):
                                                   running=[run_f])
         trial_trajectory = (partial_trajectory.reversed +
                             trajectory[shooting_index + 1:])
+        # TODO: this should check for overshoot; only works now if ensemble
+        # doesn't overshoot
         return trial_trajectory
 
     # direction is an abstract property to disallow instantiation
@@ -1486,9 +1540,7 @@ class SelectionMover(PathMover):
     def _selector(self, sample_set):
         pass
 
-    def move(self, sample_set):
-        weights = self._selector(sample_set)
-
+    def select_mover(self, weights):
         rand = np.random.random() * sum(weights)
 
         idx = 0
@@ -1521,10 +1573,16 @@ class SelectionMover(PathMover):
             'weights': weights
         }
 
-        details = MoveDetails(**kwargs)
+        details = Details(**kwargs)
+        return mover, details
+
+    def move(self, sample_set):
+        weights = self._selector(sample_set)
+        mover, details = self.select_mover(weights)
+        subchange = mover.move(sample_set)
 
         path = paths.RandomChoiceMoveChange(
-            mover.move(sample_set),
+            subchange=subchange,
             mover=self,
             details=details
         )
@@ -1921,6 +1979,25 @@ class ConditionalSequentialMover(SequentialMover):
             movechanges, mover=self)
 
 
+class NonCanonicalConditionalSequentialMover(ConditionalSequentialMover):
+    """ Special mover for reactive flux simulation.
+
+    This mover inherits from :class:`.ConditionalSequentialMover` and
+    alters only the `move` method to return the output of the corresponding
+    :class:`.NonCanonicalConditionalSequentialMoveChange`.
+    """
+    _is_canonical = False
+
+    def move(self, sample_set):
+        change = super(NonCanonicalConditionalSequentialMover,
+                       self).move(sample_set)
+        return paths.NonCanonicalConditionalSequentialMoveChange(
+            subchanges=change.subchanges,
+            mover=change.mover,
+            details=change.details
+        )
+
+
 # class ReplicaIDChangeMover(PathMover):
 #     """
 #     Changes the replica ID for a path.
@@ -1967,7 +2044,7 @@ class ConditionalSequentialMover(SequentialMover):
 #             'rep_to': rep_to
 #         }
 #
-#         details = MoveDetails(**kwargs)
+#         details = Details(**kwargs)
 #
 #         return paths.AcceptedSampleMoveChange(
 #             samples=[new_sample],
@@ -2073,7 +2150,35 @@ class EnsembleFilterMover(SubPathMover):
         return [{rs.filter(self.ensembles) for rs in replica_states}]
 
 
-class OneWayShootingMover(RandomChoiceMover):
+class SpecializedRandomChoiceMover(RandomChoiceMover):
+    """
+    Superclass for movers that are random choice between two SampleMovers
+
+    This requires that all submovers accept the same list of samples.
+    """
+    @classmethod
+    def from_dict(cls, dct):
+        mover = cls.__new__(cls)
+        super(cls, mover).__init__(movers=dct['movers'])
+        return mover
+
+    def to_dict(self):
+        dct = super(SpecializedRandomChoiceMover, self).to_dict()
+        dct['movers'] = self.movers
+        return dct
+
+    def move_core(self, samples):
+        weights = self.weights
+        mover, details = self.select_mover(weights)
+        subchange = mover.move_core(samples)
+        change = paths.RandomChoiceMoveChange(
+            subchange=subchange,
+            mover=self,
+            details=details
+        )
+        return change
+
+class OneWayShootingMover(SpecializedRandomChoiceMover):
     """
     OneWayShootingMover is a special case of a RandomChoiceMover which
     combines gives a 50/50 chance of selecting either a ForwardShootMover or
@@ -2090,31 +2195,21 @@ class OneWayShootingMover(RandomChoiceMover):
 
     def __init__(self, ensemble, selector, engine=None):
         movers = [
-            ForwardShootMover(
-                ensemble=ensemble,
-                selector=selector,
-                engine=engine
-            ),
-            BackwardShootMover(
-                ensemble=ensemble,
-                selector=selector,
-                engine=engine
-            )
+            ForwardShootMover(ensemble=ensemble,
+                              selector=selector,
+                              engine=engine),
+            BackwardShootMover(ensemble=ensemble,
+                               selector=selector,
+                               engine=engine)
         ]
-        super(OneWayShootingMover, self).__init__(
-            movers=movers
-        )
+        super(OneWayShootingMover, self).__init__(movers=movers)
 
     @classmethod
     def from_dict(cls, dct):
         mover = cls.__new__(cls)
-
         # override with stored movers and use the init of the super class
         # this assumes that the super class has movers as its signature
-        super(cls, mover).__init__(
-            movers=dct['movers']
-        )
-
+        super(cls, mover).__init__(movers=dct['movers'])
         return mover
 
     @property
@@ -2125,8 +2220,12 @@ class OneWayShootingMover(RandomChoiceMover):
     def selector(self):
         return self.movers[0].selector
 
+    @property
+    def engine(self):
+        return self.movers[0].engine
 
-class OneWayExtendMover(RandomChoiceMover):
+
+class OneWayExtendMover(SpecializedRandomChoiceMover):
     """
     OneWayShootingMover is a special case of a RandomChoiceMover which
     gives a 50/50 chance of selecting either a ForwardExtendMover or
@@ -2141,32 +2240,18 @@ class OneWayExtendMover(RandomChoiceMover):
 
     def __init__(self, ensemble, target_ensemble, engine=None):
         movers = [
-            ForwardExtendMover(
-                ensemble=ensemble,
-                target_ensemble=target_ensemble,
-                engine=engine
-            ),
-            BackwardExtendMover(
-                ensemble=ensemble,
-                target_ensemble=target_ensemble,
-                engine=engine
-            )
+            ForwardExtendMover(ensemble=ensemble,
+                               target_ensemble=target_ensemble,
+                               engine=engine),
+            BackwardExtendMover(ensemble=ensemble,
+                                target_ensemble=target_ensemble,
+                                engine=engine)
         ]
-        super(OneWayExtendMover, self).__init__(
-            movers=movers
-        )
+        super(OneWayExtendMover, self).__init__(movers=movers)
 
-    @classmethod
-    def from_dict(cls, dct):
-        mover = cls.__new__(cls)
-
-        # override with stored movers and use the init of the super class
-        # this assumes that the super class has movers as its signature
-        super(cls, mover).__init__(
-            movers=dct['movers']
-        )
-
-        return mover
+    @property
+    def engine(self):
+        return self.movers[0].engine
 
 
 class AbstractTwoWayShootingMover(EngineMover):
@@ -2284,11 +2369,16 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
 
         bkwd_partial = self._make_backward_trajectory(trajectory, modified,
                                                       shooting_index)
+        #logger.info("Complete backward shot (length " +
+                    #str(len(bkwd_partial)) + ")")
         # TODO: come up with a test that shows why you need mid_traj here;
         # should be a SeqEns with OptionalEnsembles. Exact example is hard!
         mid_traj = bkwd_partial.reversed + trajectory[shooting_index + 1:]
+        mid_traj_shoot_idx = len(bkwd_partial) - 1
         fwd_partial = self._make_forward_trajectory(mid_traj, modified,
-                                                    shooting_index)
+                                                    mid_traj_shoot_idx)
+        #logger.info("Complete forward shot (length " +
+                    #str(len(fwd_partial)) + ")")
 
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
@@ -2297,7 +2387,7 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         return trial_trajectory, details
 
 
-class TwoWayShootingMover(RandomChoiceMover):
+class TwoWayShootingMover(SpecializedRandomChoiceMover):
     def __init__(self, ensemble, selector, modifier, engine=None):
         movers = [
             ForwardFirstTwoWayShootingMover(
@@ -2314,13 +2404,6 @@ class TwoWayShootingMover(RandomChoiceMover):
             )
         ]
         super(TwoWayShootingMover, self).__init__(movers=movers)
-
-    @classmethod
-    def from_dict(cls, dct):
-        # see also OneWayShootingMover for this
-        mover = cls.__new__(cls)
-        super(cls, mover).__init__(movers=dct['movers'])
-        return mover
 
     @property
     def ensemble(self):
@@ -2410,6 +2493,23 @@ class MinusMover(SubPathMover):
 
         super(MinusMover, self).__init__(mover)
 
+    def move(self, sample_set):
+        change = super(MinusMover, self).move(sample_set)
+        cond_seq_changes = change.subchanges[0].subchanges[0].subchanges
+        seg_swap = None
+        if len(cond_seq_changes) >= 2:
+            seg_swap = cond_seq_changes[1].subchanges[0].trials
+
+        ext_traj = None
+        if len(cond_seq_changes) >= 3:
+            ext_traj = cond_seq_changes[2].subchanges[0].trials[0].trajectory
+
+        details = Details(segment_swap_samples=seg_swap,
+                          extension_trajectory=ext_traj)
+        if change.details is None:
+            change.details = details
+
+        return change
 
 class SingleReplicaMinusMover(MinusMover):
     """
@@ -2476,6 +2576,10 @@ class SingleReplicaMinusMover(MinusMover):
         # we skip MinusMover's init and go to the grandparent
         super(MinusMover, self).__init__(mover)
 
+    def move(self, sample_set):
+        # skip the MinusMover's implementation
+        return super(MinusMover, self).move(sample_set)
+
 
 class PathSimulatorMover(SubPathMover):
     """
@@ -2487,7 +2591,7 @@ class PathSimulatorMover(SubPathMover):
         self.pathsimulator = pathsimulator
 
     def move(self, sample_set, step=-1):
-        details = MoveDetails(
+        details = Details(
             step=step
         )
 
@@ -2498,50 +2602,8 @@ class PathSimulatorMover(SubPathMover):
         )
 
 
-class MultipleSetMinusMover(RandomChoiceMover):
-    pass
-
-
-def NeighborEnsembleReplicaExchange(ensemble_list):
-    movers = [
-        ReplicaExchangeMover(
-            ensemble1=ensemble_list[i],
-            ensemble2=ensemble_list[i + 1]
-        )
-        for i in range(len(ensemble_list) - 1)
-    ]
-    return movers
-
-
 def PathReversalSet(ensembles):
-    return map(PathReversalMover, ensembles)
-
-
-class PathMoverFactory(object):
-    @staticmethod
-    def OneWayShootingSet(selector_set, interface_set, engine=None):
-        if type(selector_set) is not list:
-            selector_set = [selector_set] * len(interface_set)
-
-        mover_set = []
-        for (selector, iface) in zip(selector_set, interface_set):
-            mover = OneWayShootingMover(
-                selector=selector,
-                ensemble=iface,
-                engine=engine
-            )
-            mover.named("OneWayShootingMover " + str(iface.name))
-            mover_set.append(mover)
-
-        return mover_set
-
-    @staticmethod
-    def TwoWayShootingSet():
-        pass
-
-    @staticmethod
-    def NearestNeighborRepExSet():
-        pass
+    return list(map(PathReversalMover, ensembles))
 
 
 class Details(StorableObject):
@@ -2550,7 +2612,7 @@ class Details(StorableObject):
 
     def __init__(self, **kwargs):
         super(Details, self).__init__()
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             setattr(self, key, value)
 
     _print_repr_types = [paths.Ensemble]
@@ -2570,17 +2632,14 @@ class Details(StorableObject):
         return mystr
 
 
+@has_deprecations
+@deprecate(MOVE_DETAILS)
 class MoveDetails(Details):
     """Details of the move as applied to a given replica
 
     Specific move types may have add several other attributes for each
     MoveDetails object. For example, shooting moves will also include
     information about the shooting point selection, etc.
-
-    TODO (or at least to put somewhere):
-    rejection_reason : String
-        explanation of reasons the path was rejected
-
     """
 
     def __init__(self, **kwargs):
@@ -2588,11 +2647,10 @@ class MoveDetails(Details):
 
 
 # leave this for potential backwards compatibility
+@has_deprecations
+@deprecate(SAMPLE_DETAILS)
 class SampleDetails(Details):
     """Details of a sample
-
-    .. note:: Deprecated in OpenPathSampling 0.9.3
-          `SampleDetails` will be removed in OPS 2.0.0
     """
 
     def __init__(self, **kwargs):

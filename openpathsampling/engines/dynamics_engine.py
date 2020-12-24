@@ -8,16 +8,18 @@ Created on 01.07.2014
 import logging
 import sys
 
-import simtk.unit as u
-
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.integration_tools import is_simtk_unit_type
 
-from snapshot import BaseSnapshot
-from trajectory import Trajectory
+from .snapshot import BaseSnapshot
+from .trajectory import Trajectory
 
-from delayedinterrupt import DelayedInterrupt
+from .delayedinterrupt import DelayedInterrupt
 
 logger = logging.getLogger(__name__)
+
+if sys.version_info > (3, ):
+    basestring = str
 
 # =============================================================================
 # SOURCE CONTROL
@@ -60,6 +62,7 @@ class DynamicsEngine(StorableNamedObject):
         1.  `fail` will raise an exception `EngineNaNError`
         2.  `retry` will rerun the trajectory in engine.generate, these moves
             do not satisfy detailed balance
+
     on_error : str
         set the behaviour of the engine when an exception happens.
         Possible is
@@ -67,6 +70,7 @@ class DynamicsEngine(StorableNamedObject):
         1.  `fail` will raise an exception `EngineError`
         2.  `retry` will rerun the trajectory in engine.generate, these moves
             do not satisfy detailed balance
+
     on_max_length : str
         set the behaviour if the trajectory length is `n_frames_max`.
         If `n_frames_max == 0` this will be ignored and nothing happens.
@@ -76,17 +80,22 @@ class DynamicsEngine(StorableNamedObject):
         2.  `stop` will stop and return the max length trajectory (default)
         3.  `retry` will rerun the trajectory in engine.generate, these moves
             do not satisfy detailed balance
+
     retries_when_nan : int, default: 2
         the number of retries (if chosen) before an exception is raised
+
     retries_when_error : int, default: 2
         the number of retries (if chosen) before an exception is raised
+
     retries_when_max_length : int, default: 0
         the number of retries (if chosen) before an exception is raised
+
     on_retry : str or callable
         the behaviour when a try is started. Since you have already generated
         some trajectory you might not restart completely. Possibilities are
+
         1.  `full` will restart completely and use the initial frames (default)
-        2.  `50%` will cut the existing in half but keeping at least the initial
+        2.  `keep_half` will cut the existing in half but keeping at least the initial
         3.  `remove_interval` will remove as many frames as the `interval`
         4.  a callable will be used as a function to generate the new from the
             old trajectories, e.g. `lambda t: t[:10]` would restart with the
@@ -112,10 +121,15 @@ class DynamicsEngine(StorableNamedObject):
         'on_error': 'fail'
     }
 
+    #units = {
+        #'length': u.Unit({}),
+        #'velocity': u.Unit({}),
+        #'energy': u.Unit({})
+    #}
     units = {
-        'length': u.Unit({}),
-        'velocity': u.Unit({}),
-        'energy': u.Unit({})
+        'length': None,
+        'velocity': None,
+        'energy': None
     }
 
     base_snapshot_type = BaseSnapshot
@@ -138,6 +152,7 @@ class DynamicsEngine(StorableNamedObject):
 
         self.descriptor = descriptor
         self._check_options(options)
+        self.interrupter = DelayedInterrupt
 
     @property
     def current_snapshot(self):
@@ -187,28 +202,29 @@ class DynamicsEngine(StorableNamedObject):
         okay_options = {}
 
         # self.default_options overrides default ones from DynamicsEngine
-        for variable, value in self.default_options.iteritems():
+        for variable, value in self.default_options.items():
             my_options[variable] = value
 
         if hasattr(self, 'options') and self.options is not None:
             # self.options overrides default ones
-            for variable, value in self.options.iteritems():
+            for variable, value in self.options.items():
                 my_options[variable] = value
 
         if options is not None:
             # given options override even default and already stored ones
-            for variable, value in options.iteritems():
+            for variable, value in options.items():
                 my_options[variable] = value
 
         if my_options is not None:
-            for variable, default_value in self.default_options.iteritems():
+            for variable, default_value in self.default_options.items():
                 # create an empty member variable if not yet present
                 if not hasattr(self, variable):
                     okay_options[variable] = None
 
                 if variable in my_options:
                     if type(my_options[variable]) is type(default_value):
-                        if type(my_options[variable]) is u.Unit:
+                        #if type(my_options[variable]) is u.Unit:
+                        if is_simtk_unit_type(my_options[variable]):
                             if my_options[variable].unit.is_compatible(
                                     default_value):
                                 okay_options[variable] = my_options[variable]
@@ -234,6 +250,9 @@ class DynamicsEngine(StorableNamedObject):
                         else:
                             okay_options[variable] = my_options[variable]
                     elif isinstance(my_options[variable], type(default_value)):
+                        okay_options[variable] = my_options[variable]
+                    elif isinstance(my_options[variable], basestring) \
+                            and isinstance(default_value, basestring):
                         okay_options[variable] = my_options[variable]
                     elif default_value is None:
                         okay_options[variable] = my_options[variable]
@@ -262,8 +281,8 @@ class DynamicsEngine(StorableNamedObject):
                     # alternately, trust the fixed result with
                     # return result  # miraculously fixed
                     raise AttributeError(
-                        "Unknown problem occurred in property" + 
-                        str(p.fget.func_name) + ": Second attempt returned"
+                        "Unknown problem occurred in property"
+                        + str(p.fget.__name__) + ": Second attempt returned"
                         + str(result)
                     )
             # for now, items in dict that fail with AttributeError will just
@@ -277,7 +296,9 @@ class DynamicsEngine(StorableNamedObject):
 
         # fallback is to look for an option and return it's value
         try:
-            return self.options[item]
+            # extra step here seems to avoid recursion problem in Py3
+            option_dict = object.__getattribute__(self, 'options')
+            return option_dict[item]
         except KeyError:
             # convert KeyError to AttributeError
             default_msg = "'{0}' has no attribute '{1}'"
@@ -373,10 +394,9 @@ class DynamicsEngine(StorableNamedObject):
 
         Parameters
         ----------
-        snapshot : :class:`openpathsampling.snapshot.Snapshot`
+        snapshot : :class:`.Snapshot`
             initial coordinates and velocities in form of a Snapshot object
-        running : (list of)
-        function(:class:`openpathsampling.trajectory.Trajectory`)
+        running : (list of) function(:class:`.Trajectory`)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
         direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
@@ -386,8 +406,8 @@ class DynamicsEngine(StorableNamedObject):
             trajectory that effectively ends in the initial snapshot
 
         Returns
-        -------    
-        trajectory : :class:`openpathsampling.trajectory.Trajectory`
+        -------
+        trajectory : :class:`.Trajectory`
             generated trajectory of initial conditions, including initial
             coordinate set
 
@@ -419,12 +439,10 @@ class DynamicsEngine(StorableNamedObject):
 
         Parameters
         ----------
-        initial : :class:`openpathsampling.Snapshot` or
-        :class:`openpathsampling.Trajectory`
+        initial : :class:`.Snapshot` or :class:`.Trajectory`
             initial coordinates and velocities in form of a Snapshot object
             or a trajectory
-        running : (list of)
-        function(:class:`openpathsampling.trajectory.Trajectory`)
+        running : (list of) function(:class:`.Trajectory`)
             callable function of a 'Trajectory' that returns True or False.
             If one of these returns False the simulation is stopped.
         direction : -1 or +1 (DynamicsEngine.FORWARD or DynamicsEngine.BACKWARD)
@@ -491,15 +509,17 @@ class DynamicsEngine(StorableNamedObject):
                             int(len(trajectory) * 0.9),
                             max(
                                 len(initial),
-                                len(trajectory) / 2))]
+                                int(len(trajectory) / 2)))]
                 elif hasattr(self.on_retry, '__call__'):
                     trajectory = self.on_retry(trajectory)
-
-            if direction > 0:
-                self.current_snapshot = trajectory[-1]
-            elif direction < 0:
-                # backward simulation needs reversed snapshots
-                self.current_snapshot = trajectory[0].reversed
+            
+            """ Case of run dying before first output"""
+            if len(trajectory) >= 1:
+                if direction > 0:
+                    self.current_snapshot = trajectory[-1]
+                elif direction < 0:
+                    # backward simulation needs reversed snapshots
+                    self.current_snapshot = trajectory[0].reversed
 
             logger.info("Starting trajectory")
             self.start()
@@ -528,7 +548,7 @@ class DynamicsEngine(StorableNamedObject):
                 snapshot = None
 
                 try:
-                    with DelayedInterrupt():
+                    with self.interrupter():
                         snapshot = self.generate_next_frame()
 
                         # if self.on_nan != 'ignore' and \
@@ -646,7 +666,7 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_n_frames(self, n_frames=1):
         """Generates n_frames, from but not including the current snapshot.
-        
+
         This generates a fixed number of frames at once. If you desire the
         reversed trajectory, you can reverse the returned trajectory.
 

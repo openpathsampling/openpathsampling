@@ -325,7 +325,9 @@ class WeakLRUCache(Cache):
         return len(self._cache) + len(self._weak_cache)
 
     def __iter__(self):
-        for key in self.keys():
+        for key in self._cache.keys():
+            yield key
+        for key in self._weak_cache.keys():
             yield key
 
     def __reversed__(self):
@@ -388,11 +390,11 @@ class LRUChunkLoadingCache(Cache):
         else:
             self._size = 0
 
-        self._lastchunk_idx = self._size / self.chunksize
+        self._lastchunk_idx = self._size // self.chunksize
 
     @property
     def count(self):
-        return sum(map(len, self._chunkdict.itervalues())), 0
+        return sum(map(len, self._chunkdict.values())), 0
 
     @property
     def size(self):
@@ -422,7 +424,7 @@ class LRUChunkLoadingCache(Cache):
         else:
             self._size = size
 
-        self._lastchunk_idx = (self._size - 1) / self.chunksize
+        self._lastchunk_idx = (self._size - 1) // self.chunksize
 
     def load_chunk(self, chunk_idx):
         """
@@ -457,19 +459,19 @@ class LRUChunkLoadingCache(Cache):
                     chunk.extend(self.variable[left:right])
 
     def _update_chunk_order(self, chunk_idx):
-        if chunk_idx != self._firstchunk:
-            chunk = self._chunkdict[chunk_idx]
-            del self._chunkdict[chunk_idx]
-            self._chunkdict[chunk_idx] = chunk
-            self._firstchunk = chunk_idx
+        chunk = self._chunkdict[chunk_idx]
+        del self._chunkdict[chunk_idx]
+        self._chunkdict[chunk_idx] = chunk
+        self._firstchunk = chunk_idx
 
     def __getitem__(self, item):
         chunksize = self.chunksize
-        chunk_idx = item / chunksize
+        chunk_idx = item // chunksize
         if chunk_idx in self._chunkdict:
             try:
                 obj = self._chunkdict[chunk_idx][item % chunksize]
-                self._update_chunk_order(chunk_idx)
+                if chunk_idx != self._firstchunk:
+                    self._update_chunk_order(chunk_idx)
                 return obj
             except IndexError:
                 pass
@@ -489,12 +491,12 @@ class LRUChunkLoadingCache(Cache):
         self.update_size()
         map(self.load_chunk,
             range(0, min(
-                1 + (self._size - 1) / self.chunksize,
+                1 + (self._size - 1) // self.chunksize,
                 self.max_chunks
             )))
 
     def __setitem__(self, key, value, **kwargs):
-        chunk_idx = key / self.chunksize
+        chunk_idx = key // self.chunksize
         if chunk_idx in self._chunkdict:
             chunk = self._chunkdict[chunk_idx]
         else:
@@ -509,7 +511,9 @@ class LRUChunkLoadingCache(Cache):
 
         chunk.append(value)
 
-        self._update_chunk_order(chunk_idx)
+        if chunk_idx != self._firstchunk:
+            self._update_chunk_order(chunk_idx)
+
         self._check_size_limit()
 
         if key >= self._size:
@@ -532,7 +536,7 @@ class LRUChunkLoadingCache(Cache):
         return sum(map(len, self._chunkdict))
 
     def __iter__(self):
-        for chunk in self._chunkdict.itervalues():
+        for chunk in self._chunkdict.values():
             for key in chunk.keys():
                 yield key
 

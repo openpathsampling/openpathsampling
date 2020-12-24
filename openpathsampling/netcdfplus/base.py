@@ -4,7 +4,16 @@ import weakref
 import uuid
 from types import MethodType
 
+import sys
+if sys.version_info > (3, ):
+    long = int
+
 logger = logging.getLogger(__name__)
+
+try:
+    getfullargspec = inspect.getfullargspec
+except AttributeError:
+    getfullargspec = inspect.getargspec
 
 
 class StorableObject(object):
@@ -13,7 +22,7 @@ class StorableObject(object):
     """
 
     _weak_cache = weakref.WeakKeyDictionary()
-    _weak_index = 0L
+    _weak_index = 0
 
     _base = None
     _args = None
@@ -21,7 +30,7 @@ class StorableObject(object):
     observe_objects = False
 
     INSTANCE_UUID = list(uuid.uuid1().fields[:-1])
-    CREATION_COUNT = 0L
+    CREATION_COUNT = 0
     ACTIVE_LONG = int(uuid.UUID(
             fields=tuple(
                 INSTANCE_UUID +
@@ -167,7 +176,16 @@ class StorableObject(object):
         return cls._base
 
     def __hash__(self):
-        return hash(self.__uuid__)
+        return self.__uuid__ & 1152921504606846975
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+
+        if hasattr(other, '__uuid__'):
+            return self.__uuid__ == other.__uuid__
+
+        return NotImplemented
 
     @property
     def base_cls_name(self):
@@ -240,7 +258,7 @@ class StorableObject(object):
 
         """
         try:
-            args = inspect.getargspec(cls.__init__)
+            args = getfullargspec(cls.__init__)
         except TypeError:
             return []
         return args[0]
@@ -305,7 +323,7 @@ class StorableObject(object):
                         key: dct[key] for key in dct if key not in args}
 
                     if len(non_init_dct) > 0:
-                        for key, value in non_init_dct.iteritems():
+                        for key, value in non_init_dct.items():
                             setattr(obj, key, value)
 
                 return obj
@@ -427,7 +445,7 @@ class StorableNamedObject(StorableObject):
         >>> full = p.FullVolume().named('myFullVolume')
 
         """
-        if self.name == self.default_name:
+        if not self.is_named and not self._name_fixed:
             self.name = name
         return self
 

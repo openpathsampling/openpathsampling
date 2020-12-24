@@ -1,5 +1,5 @@
 from openpathsampling.netcdfplus import VariableStore
-from openpathsampling.pathsimulator import MCStep
+from openpathsampling.pathsimulators import MCStep
 
 
 class MCStepStore(VariableStore):

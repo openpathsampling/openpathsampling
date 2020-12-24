@@ -1,0 +1,6 @@
+jupyter
+openmm
+openmmtools
+py-plumed
+pyemma
+

@@ -5,10 +5,14 @@ coordinates : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
     atomic coordinates
 """
 
+from openpathsampling.integration_tools import is_simtk_quantity
+
 variables = ['coordinates']
 numpy = ['coordinates']
 
 dimensions = ['n_atoms', 'n_spatial']
+
+schema_entries = [('coordinates', 'ndarray.float32({n_atoms},{n_spatial})')]
 
 
 def netcdfplus_init(store):
@@ -29,10 +33,8 @@ def xyz(snapshot):
         atomic coordinates without dimensions. Be careful.
 
     """
-    import simtk.unit as u
-
     coord = snapshot.coordinates
-    if type(coord) is u.Quantity:
+    if is_simtk_quantity(coord):
         return coord._value
     else:
         return coord

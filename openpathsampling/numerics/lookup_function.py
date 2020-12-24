@@ -149,7 +149,10 @@ class LookupFunctionGroup(LookupFunction):
         for fcn in self.functions:
             self.shared_x = self.shared_x & set(fcn.x)
             self.all_x = self.all_x | set(fcn.x)
-        
+
+        self.shared_x = sorted(self.shared_x)
+        self.all_x = sorted(self.all_x)
+
         self.use_x = use_x
 
 
@@ -261,7 +264,7 @@ class VoxelLookupFunction(object):
             columns = range(y_range[0], y_range[1]+1)
         df = pd.DataFrame(index=index, columns=columns)
         for (k,v) in counter.items():
-            df.set_value(k[0], k[1], v)
+            df.at[k[0], k[1]] = v
         df = df.sort_index(0).sort_index(1)
         return df
 

@@ -2,8 +2,8 @@
 
 .. currentmodule:: openpathsampling.ensemble
 
-Ensembles API
-=============
+Ensembles
+=========
 
 The concept of the path ensemble, the (appropriately weighted) set of
 trajectories satisfying particular conditions, is at the heart of path
@@ -17,7 +17,7 @@ Making one is usually as simple as ::
 
 where you choose the right kind of ensemble and give it the right
 initialization parameters. What's more, ensembles can be combined using the
-logical infix operators `&` (and) and `|` (or).
+logical infix operators ``&`` (and) and ``|`` (or).
 
 Abstract class
 --------------
@@ -45,8 +45,6 @@ Volume Ensembles
    AllOutXEnsemble
    PartInXEnsemble
    PartOutXEnsemble
-   EntersXEnsemble
-   ExitsXEnsemble
 
 Set-based Ensemble combinations
 -------------------------------
@@ -85,8 +83,8 @@ Sequential Ensembles
 
    SequentialEnsemble
 
-TIS-specific Ensembles
-----------------------
+Specialized Ensembles
+---------------------
 .. autosummary::
    :toctree: api/generated/
 

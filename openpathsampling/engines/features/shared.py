@@ -1,9 +1,31 @@
 import copy
 
 import numpy as np
-from simtk import unit as u
-
 from openpathsampling.netcdfplus import StorableObject, ObjectStore, WeakLRUCache
+from openpathsampling.integration_tools import error_if_no_simtk_unit, unit
+
+def unmask_quantity(quantity):
+    """Force a maskedarray quantity to be unmasked.
+
+    NetCDF keeps giving us masked arrays, even when we tell it not to.
+    Masked arrays cause all kinds of havoc with other parts of the code.
+
+    Parameters
+    ----------
+    quantity : simtk.unit.Quantity wrapping a numpy (masked) array
+        quantity to unmask
+
+    Returns
+    -------
+    simtk.unit.Quantity
+        wraps a regular numpy array, not a masked array
+    """
+    try:
+        q_unit = quantity.unit
+    except AttributeError:
+        # no units
+        return quantity
+    return np.array(quantity.value_in_unit(q_unit)) * q_unit
 
 
 # =============================================================================
@@ -15,53 +37,24 @@ class StaticContainer(StorableObject):
     Simulation configuration. Only Coordinates, the associated boxvectors
     and the potential_energy
 
-    Attributes
+    Parameters
     ----------
     coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
         atomic coordinates
     box_vectors : periodic box vectors
         the periodic box vectors
-
+    engine : :class:`.DynamicsEngine`
+        the engine that creating this data
     """
 
     # Class variables to store the global storage and the system context
     # describing the system to be saved as configuration_indices
 
-    def __init__(self, coordinates, box_vectors):
-        """
-        Create a simulation configuration from either an OpenMM context or
-        individually-specified components.
-
-        Parameters
-        ----------
-        coordinates
-        box_vectors
-        """
-
+    def __init__(self, coordinates, box_vectors, engine=None):
         super(StaticContainer, self).__init__()
-
         self.coordinates = copy.deepcopy(coordinates)
         self.box_vectors = copy.deepcopy(box_vectors)
-
-        # if self.coordinates is not None:
-        #     # Check for nans in coordinates, and raise an exception if
-        #     # something is wrong.
-        #     if type(self.coordinates) is u.Quantity:
-        #         coords = self.coordinates._value
-        #     else:
-        #         coords = self.coordinates
-        #
-        #     if np.any(np.isnan(coords)):
-        #         bad_atoms = [i for i in range(len(coords))
-        #                      if np.any(np.isnan(coords[i]))]
-        #         raise ValueError("Coordinates went 'nan' for atoms: " +
-        #                          str(bad_atoms))
-
-        return
-
-    # =========================================================================
-    # Comparison functions
-    # =========================================================================
+        self.engine = engine
 
     @property
     def n_atoms(self):
@@ -69,10 +62,6 @@ class StaticContainer(StorableObject):
         Returns the number of atoms in the configuration
         """
         return self.coordinates.shape[0]
-
-    # =========================================================================
-    # Utility functions
-    # =========================================================================
 
     def copy(self):
         """
@@ -87,10 +76,11 @@ class StaticContainer(StorableObject):
         """
 
         return StaticContainer(coordinates=self.coordinates,
-                               box_vectors=self.box_vectors
-                               )
+                               box_vectors=self.box_vectors,
+                               engine=self.engine)
 
     def to_dict(self):
+        # note: to_dict not used here in SimStore, so no need to change
         return {
             'coordinates': self.coordinates,
             'box_vectors': self.box_vectors
@@ -110,7 +100,13 @@ class StaticContainerStore(ObjectStore):
     def _save(self, configuration, idx):
         # Store configuration.
         self.vars['coordinates'][idx] = configuration.coordinates
-        self.vars['box_vectors'][idx] = configuration.box_vectors
+        box_vectors = configuration.box_vectors
+
+        if box_vectors is None:
+            n_spatial = configuration.coordinates.shape[1]
+            box_vectors = np.zeros((n_spatial, n_spatial))
+
+        self.vars['box_vectors'][idx] = box_vectors
 
     def get(self, indices):
         return [self.load(idx) for idx in indices]
@@ -119,7 +115,11 @@ class StaticContainerStore(ObjectStore):
         coordinates = self.vars["coordinates"][idx]
         box_vectors = self.vars["box_vectors"][idx]
 
-        configuration = StaticContainer(coordinates=coordinates, box_vectors=box_vectors)
+        if not np.count_nonzero(box_vectors):
+            box_vectors = None
+
+        configuration = StaticContainer(coordinates=coordinates,
+                                        box_vectors=box_vectors)
 
         return configuration
 
@@ -154,6 +154,7 @@ class StaticContainerStore(ObjectStore):
 
     def initialize(self):
         super(StaticContainerStore, self).initialize()
+        error_if_no_simtk_unit("StaticContainerStore")
 
         self.create_variable(
             'coordinates', 'numpy.float32',
@@ -161,13 +162,13 @@ class StaticContainerStore(ObjectStore):
             description="coordinate of atom '{ix[1]}' in dimension " +
                         "'{ix[2]}' of configuration '{ix[0]}'.",
             chunksizes=('n_atoms', 'n_spatial'),
-            simtk_unit=u.nanometers)
+            simtk_unit=unit.nanometers)
 
         self.create_variable(
             'box_vectors', 'numpy.float32',
             dimensions=('n_spatial', 'n_spatial'),
             chunksizes=('n_spatial', 'n_spatial'),
-            simtk_unit=u.nanometers)
+            simtk_unit=unit.nanometers)
 
 
 # =============================================================================
@@ -183,26 +184,14 @@ class KineticContainer(StorableObject):
     ----------
     velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
         atomic velocities
-
+    engine : :class:`.DynamicsEngine`
+        the engine that creating this data
     """
 
-    def __init__(self, velocities):
-        """
-        Create a simulation momentum from either an OpenMM context or
-        individually-specified components.
-
-        Parameters
-        ----------
-        velocities
-        """
-
+    def __init__(self, velocities, engine=None):
         super(KineticContainer, self).__init__()
-
         self.velocities = copy.deepcopy(velocities)
-
-    # =========================================================================
-    # Utility functions
-    # =========================================================================
+        self.engine = engine
 
     def copy(self):
         """
@@ -214,9 +203,8 @@ class KineticContainer(StorableObject):
         Momentum()
             the shallow copy
         """
-
-        this = KineticContainer(velocities=self.velocities)
-
+        this = KineticContainer(velocities=self.velocities,
+                                engine=self.engine)
         return this
 
     def to_dict(self):
@@ -295,6 +283,7 @@ class KineticContainerStore(ObjectStore):
         """
         Initializes the associated storage to index momentums in it
         """
+        error_if_no_simtk_unit("KineticContainerStore")
 
         super(KineticContainerStore, self).initialize()
 
@@ -304,4 +293,4 @@ class KineticContainerStore(ObjectStore):
             description="the velocity of atom 'atom' in dimension " +
                         "'coordinate' of momentum 'momentum'.",
             chunksizes=('n_atoms', 'n_spatial'),
-            simtk_unit=u.nanometers / u.picoseconds)
+            simtk_unit=unit.nanometers / unit.picoseconds)

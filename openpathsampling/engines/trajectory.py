@@ -4,11 +4,13 @@
 """
 
 import numpy as np
-import mdtraj as md
-import simtk.unit as u
 
-from openpathsampling.netcdfplus import StorableObject
+from openpathsampling.integration_tools import (
+    error_if_no_mdtraj, is_simtk_quantity_type, md
+)
+from openpathsampling.netcdfplus import StorableObject, LoaderProxy
 import openpathsampling as paths
+
 
 # ==============================================================================
 # TRAJECTORY
@@ -64,6 +66,10 @@ class Trajectory(list, StorableObject):
     def __repr__(self):
         return 'Trajectory[' + str(len(self)) + ']'
 
+    @property
+    def snapshots(self):
+        return list(self)
+
     def map(self, fnc, allow_fast=True):
         """
         This runs a function and tries to be fast.
@@ -103,9 +109,9 @@ class Trajectory(list, StorableObject):
     def n_snapshots(self):
         """
         Return the number of frames in the trajectory.
-        
+
         Returns
-        -------        
+        -------
         length (int) - the number of frames in the trajectory
 
         Notes
@@ -125,63 +131,44 @@ class Trajectory(list, StorableObject):
         Fallback to access Snapshot properties
 
         """
-        if len(self) > 0:
-            snapshot_class = self[0].__class__
-            if hasattr(snapshot_class, item) or \
-                    hasattr(snapshot_class, '__features__') \
-                    and item in snapshot_class.__features__.variables:
-                first = getattr(self[0], item)
-                if type(first) is u.Quantity:
-                    inner = first._value
-                    if type(inner) is np.ndarray:
-                        dtype = inner.dtype
-
-                        out = np.empty(tuple([len(self)] +
-                                             list(inner.shape)), dtype=dtype)
-
-                        for idx, s in enumerate(list.__iter__(self)):
-                            np.copyto(out[idx], getattr(s, item)._value)
-
-                        return out * first.unit
-                    else:
-                        out = [None] * len(self)
-
-                        for idx, s in enumerate(list.__iter__(self)):
-                            out[idx] = getattr(s, item)
-
-                        return out
-                elif type(first) is np.ndarray:
-                    dtype = first.dtype
-
-                    out = np.empty(tuple([len(self)] +
-                                         list(first.shape)), dtype=dtype)
-
-                    for idx, s in enumerate(list.__iter__(self)):
-                        np.copyto(out[idx], getattr(s, item))
-
-                    return out
-                else:
-                    out = [None] * len(self)
-
-                    for idx, s in enumerate(list.__iter__(self)):
-                        out[idx] = getattr(s, item)
-
-                    return out
-
-            else:
-                std_msg = "'{0}' object has no attribute '{1}'"
-                snap_msg = "Cannot delegate to snapshots. "
-                snap_msg += "'{2}' has no attribute '{1}'"
-                spacer = "\n                "
-                msg = (std_msg + spacer + snap_msg).format(
-                    str(self.__class__.__name__), 
-                    item,
-                    snapshot_class.__name__
-                )
-                raise AttributeError(msg)
-
-        else:
+        if len(self) == 0:
             return []
+
+        snapshot_class = self[0].__class__
+        def is_snapshot_attr(cls, item):
+            return hasattr(cls, item) or (hasattr(cls, '__features__') and
+                                         item in cls.__features__.variables)
+
+        if is_snapshot_attr(snapshot_class, item):
+            # if there's a trajectory_item in features, that should be a
+            # function to return a trajectory
+            traj_item = "trajectory_" + item
+            if traj_item in snapshot_class.__features__.functions:
+                traj_func = getattr(snapshot_class, traj_item)
+                return traj_func(self)
+
+            # get the results
+            out = [getattr(snap, item) for snap in self]
+
+            # if the first result is a numpy object, return the whole as a
+            # numpy array
+            if isinstance(out[0], np.ndarray):
+                out = np.array(out)
+
+            return out
+
+        # behavior when it can't be delegated to snapshot
+        std_msg = "'{0}' object has no attribute '{1}'"
+        snap_msg = "Cannot delegate to snapshots. "
+        snap_msg += "'{2}' has no attribute '{1}'"
+        spacer = "\n                "
+        msg = (std_msg + spacer + snap_msg).format(
+            str(self.__class__.__name__),
+            item,
+            snapshot_class.__name__
+        )
+        raise AttributeError(msg)
+
 
     # ==========================================================================
     # LIST INHERITANCE FUNCTIONS
@@ -194,6 +181,9 @@ class Trajectory(list, StorableObject):
 
         return ret
 
+    # this is intuitive. hash(Trajectory(traj)) == hash(traj)
+    # but hash(LoaderProxy(..., traj.__uuid__)) != hash(traj)
+
     def __hash__(self):
         if len(self) == 0:
             return hash(tuple())
@@ -202,6 +192,16 @@ class Trajectory(list, StorableObject):
                 (list.__getitem__(self, 0), len(self),
                  list.__getitem__(self, -1)))
 
+    # this might be faster, but does not allow to compare arbitrary
+    # trajectories as one might expect. hash(Trajectory(traj)) != hash(traj)
+    # but hash(LoaderProxy(..., traj.__uuid__)) == hash(traj)
+    # it could also lead to better caching and memory behaviour
+
+    # __hash__ = StorableObject.__hash__
+    #
+    # __eq__ = StorableObject.__eq__
+    # __ne__ = StorableObject.__ne__
+    #
     def __getitem__(self, index):
         # Allow for numpy style selection using lists
         if hasattr(index, '__iter__'):
@@ -211,7 +211,7 @@ class Trajectory(list, StorableObject):
 
         if type(ret) is list:
             ret = Trajectory(ret)
-        elif hasattr(ret, '_idx'):
+        elif type(ret) is LoaderProxy:
             ret = ret.__subject__
 
         return ret
@@ -318,7 +318,7 @@ class Trajectory(list, StorableObject):
 
         This will always give real :class:`openpathsampling.snapshot.Snapshot`
         objects and never proxies to snapshots.
-        If you prefer proxies (if available) use `.iteritems()`
+        If you prefer proxies (if available) use `.items()`
 
         Returns
         -------
@@ -520,21 +520,41 @@ class Trajectory(list, StorableObject):
             If not None this topology will be used to construct the mdtraj
             objects otherwise the topology object will be taken from the
             configurations in the trajectory snapshots.
-        
+
         Returns
-        -------        
+        -------
         :class:`mdtraj.Trajectory`
             the trajectory
+
+        Notes
+        -----
+
+        If the OPS trajectory is zero-length (has no snapshots), then this
+        fails. OPS cannot currently convert zero-length trajectories to
+        MDTraj, because an OPS zero-length trajectory cannot determine its
+        MDTraj topology.
         """
-
-
+        error_if_no_mdtraj("Converting to mdtraj")
+        try:
+            snap = self[0]
+        except IndexError:
+            raise ValueError("Cannot convert zero-length trajectory "
+                             + "to MDTraj")
         if topology is None:
-            topology = self.topology.mdtraj
+            # TODO: maybe add better error output?
+            # if AttributeError here, engine doesn't support mdtraj
+            topology = snap.engine.mdtraj_topology
 
         output = self.xyz
 
         traj = md.Trajectory(output, topology)
-        traj.unitcell_vectors = self.box_vectors
+        box_vectors = self.box_vectors
+        # box_vectors is a list with an entry for each frame of the traj
+        # if they're all None, we return None, not [None, None, ..., None]
+        if not np.any(box_vectors):
+            box_vectors = None
+
+        traj.unitcell_vectors = box_vectors
         return traj
 
     @property

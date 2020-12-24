@@ -1,7 +1,7 @@
 import numpy as np
-from shared import StaticContainerStore, StaticContainer
-import mdtraj
+from .shared import StaticContainerStore, StaticContainer, unmask_quantity
 from openpathsampling.netcdfplus import WeakLRUCache
+import openpathsampling as paths
 
 variables = ['statics']
 lazy = ['statics']
@@ -9,6 +9,22 @@ lazy = ['statics']
 storables = ['statics']
 
 dimensions = ['n_atoms', 'n_spatial']
+
+_length_unit = "simtk(unit.nanometer)"
+_array32 = "ndarray.float32"
+schema_entries = [
+    ('statics', [
+        ('coordinates',
+         '{length_unit}*{array32}({{n_atoms}},{{n_spatial}})'.format(
+             length_unit=_length_unit, array32=_array32
+        )),
+        ('box_vectors',
+         '{length_unit}*{array32}({{n_spatial}},{{n_spatial}})'.format(
+             length_unit=_length_unit, array32=_array32
+        )),
+        ('engine', 'uuid'),
+    ]),
+]
 
 
 def netcdfplus_init(store):
@@ -39,7 +55,7 @@ def coordinates(snapshot):
     """
 
     if snapshot.statics is not None:
-        return snapshot.statics.coordinates
+        return unmask_quantity(snapshot.statics.coordinates)
 
     return None
 
@@ -47,7 +63,9 @@ def coordinates(snapshot):
 @coordinates.setter
 def coordinates(self, value):
     if value is not None:
-        sc = StaticContainer(coordinates=value, box_vectors=self.box_vectors)
+        sc = StaticContainer(coordinates=value,
+                             box_vectors=self.box_vectors,
+                             engine=self.engine)
     else:
         sc = None
 
@@ -64,7 +82,7 @@ def box_vectors(snapshot):
         simtk.unit.Unit.
     """
     if snapshot.statics is not None:
-        return snapshot.statics.box_vectors
+        return unmask_quantity(snapshot.statics.box_vectors)
 
     return None
 
@@ -72,7 +90,9 @@ def box_vectors(snapshot):
 @box_vectors.setter
 def box_vectors(self, value):
     if value is not None:
-        sc = StaticContainer(box_vectors=value, coordinates=self.coordinates)
+        sc = StaticContainer(box_vectors=value,
+                             coordinates=self.coordinates,
+                             engine=self.engine)
     else:
         sc = None
 
@@ -89,16 +109,11 @@ def md(snapshot):
 
     Notes
     -----
-    Rather slow since the topology has to be made each time. Try to avoid it
+    Rather slow since the topology has to be made each time. Try to avoid
+    it. This will only work if the engine has an mdtraj_topology property.
     """
-
     if snapshot.statics is not None:
-        n_atoms = snapshot.coordinates.shape[0]
-
-        output = np.zeros([1, n_atoms, 3], np.float32)
-        output[0, :, :] = snapshot.coordinates
-
-        return mdtraj.Trajectory(output, snapshot.topology.mdtraj)
+        return paths.Trajectory([snapshot]).to_mdtraj()
 
 
 @property

@@ -1,3 +1,4 @@
+from builtins import object
 import openpathsampling.engines.toy as toys
 import numpy as np
 
@@ -10,7 +11,7 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testToySnapshotFeatures(object):
+class TestToySnapshotFeatures(object):
     def setup(self):
         integ = toys.LangevinBAOABIntegrator(dt=0.002,
                                              temperature=1.0,

@@ -1,7 +1,12 @@
-from nose.tools import (assert_equal, assert_not_equal, assert_items_equal,
-                        raises, assert_almost_equal)
+from __future__ import division
+from __future__ import absolute_import
+from builtins import zip
+from past.utils import old_div
+from builtins import object
+from nose.tools import (assert_equal, assert_not_equal, raises,
+                        assert_almost_equal)
 from nose.plugins.skip import SkipTest
-from test_helpers import make_1d_traj
+from .test_helpers import make_1d_traj
 
 import openpathsampling as paths
 
@@ -14,7 +19,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class testTrajectorySegmentContainer(object):
+class TestTrajectorySegmentContainer(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
@@ -45,6 +50,17 @@ class testTrajectorySegmentContainer(object):
         assert_equal(self.container[0], self.trajectory[0:2])
         assert_equal(self.container[1], self.trajectory[6:8])
         assert_equal(self.container[2], self.trajectory[9:12])
+
+    def test_from_trajectory_and_indices(self):
+        container = \
+            paths.TrajectorySegmentContainer.from_trajectory_and_indices(
+                trajectory=self.trajectory,
+                indices=[(0, 2), (6, 8), (9, 12)],
+                dt=0.5
+            )
+        assert_equal(container[0], self.trajectory[0:2])
+        assert_equal(container[1], self.trajectory[6:8])
+        assert_equal(container[2], self.trajectory[9:12])
 
     def test_n_frames(self):
         assert_equal(self.container.n_frames.tolist(), [2, 2, 3])
@@ -86,7 +102,7 @@ class testTrajectorySegmentContainer(object):
         assert_equal(container_B_id, id(container_B))
 
 
-class testTrajectoryTransitionAnalysis(object):
+class TestTrajectoryTransitionAnalysis(object):
     def setup(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
@@ -116,7 +132,7 @@ class testTrajectoryTransitionAnalysis(object):
         delta = 0.05
         for char in traj_str:
             params = char_to_parameters[char]
-            n_max = int((params['hi'] - params['lo'])/delta)
+            n_max = int(old_div((params['hi'] - params['lo']),delta))
             sequence.append(params['lo'] + delta*random.randint(1, n_max-1))
 
         return make_1d_traj(coordinates=sequence,
@@ -191,6 +207,16 @@ class testTrajectoryTransitionAnalysis(object):
                      [flux_traj[2:5], flux_traj[8:13], flux_traj[14:15],
                       flux_traj[27:29]])
 
+    def test_minus_flux(self):
+        flux_iface_traj_str = "axxxaaaxxxa"
+        flux_traj = self._make_traj(flux_iface_traj_str)
+        self.analyzer.reset_analysis()
+        flux_segs_A = self.analyzer.analyze_flux(flux_traj, self.stateA,
+                                                 self.interfaceA0)
+        assert_equal(flux_segs_A['in'][:], [flux_traj[4:7]])
+        assert_equal(flux_segs_A['out'][:],
+                     [flux_traj[1:4], flux_traj[7:10]])
+
     def test_flux(self):
         flux_iface_traj_str = "aixixaiaxiixiaxaixbxbixiaaixiai"
         flux_traj = self._make_traj(flux_iface_traj_str)
@@ -199,9 +225,9 @@ class testTrajectoryTransitionAnalysis(object):
         flux = self.analyzer.flux(trajectories=[flux_traj],
                                   state=self.stateA,
                                   interface=self.interfaceA0)
-        average_out = (3.0 + 5.0 + 1.0 + 2.0) / 4.0
-        average_in = (3.0 + 1.0 + 2.0 + 3.0) / 4.0
-        assert_almost_equal(flux, 1.0 / (average_out + average_in))
+        average_out = old_div((3.0 + 5.0 + 1.0 + 2.0), 4.0)
+        average_in = old_div((3.0 + 1.0 + 2.0 + 3.0), 4.0)
+        assert_almost_equal(flux, old_div(1.0, (average_out + average_in)))
         self.analyzer.dt = None
 
     @raises(RuntimeError)
