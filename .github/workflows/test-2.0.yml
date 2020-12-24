@@ -49,7 +49,7 @@ jobs:
           conda list
       - name: "Autorelease check"
         run: |
-          pip install autorelase
+          python -m pip install autorelease
           python devtools/autorelease_check.py
       - name: "Unit tests"
         run: |
