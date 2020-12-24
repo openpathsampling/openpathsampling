@@ -18,8 +18,8 @@ jobs:
       matrix:
         CONDA_PY:
           - 3.7
-          - 3.8
-          - 3.9
+          #- 3.8
+          #- 3.9
         MINIMAL: [""]
         include:
           - CONDA_PY: 3.7
