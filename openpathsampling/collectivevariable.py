@@ -5,9 +5,6 @@ from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 from openpathsampling.netcdfplus import WeakKeyCache, \
     ObjectJSON, create_to_dict, ObjectStore, PseudoAttribute
 
-from openpathsampling.deprecations import (has_deprecations, deprecate,
-                                           MSMBUILDER)
-
 import sys
 if sys.version_info > (3, ):
     get_code = lambda func: func.__code__
@@ -586,93 +583,7 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
         }
 
 
-@has_deprecations
-@deprecate(MSMBUILDER)
-class MSMBFeaturizerCV(CoordinateGeneratorCV):
-    """A CollectiveVariable that uses an MSMBuilder3 featurizer"""
-
-    def __init__(
-            self,
-            name,
-            featurizer,
-            topology,
-            cv_wrap_numpy_array=True,
-            cv_scalarize_numpy_singletons=True,
-            **kwargs
-    ):
-        """
-
-        Parameters
-        ----------
-        name
-        featurizer : msmbuilder.Featurizer, callable
-            the featurizer used as a callable class
-        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
-            the mdtraj topology wrapper from OPS that is used to initialize
-            the featurizer in ``pyemma.coordinates.featurizer(topology)``
-        **kwargs :
-            a dictionary of named arguments which should be given to ``c``
-            (for example, the atoms which define a specific distance/angle).
-            Finally an instance ``instance = cls(**kwargs)`` is created when
-            the CV is created and using the CV will call
-            ``instance(snapshots)``
-        cv_wrap_numpy_array
-        cv_scalarize_numpy_singletons
-
-        Notes
-        -----
-        All trajectories or snapshots passed in kwargs will be converted
-        to mdtraj objects for convenience
-        """
-
-        md_kwargs = dict()
-        md_kwargs.update(kwargs)
-
-        # turn Snapshot and Trajectory into md.trajectory
-        for key in md_kwargs:
-            if isinstance(md_kwargs[key], paths.BaseSnapshot):
-                md_kwargs[key] = md_kwargs[key].to_mdtraj()
-            elif isinstance(md_kwargs[key], paths.Trajectory):
-                md_kwargs[key] = md_kwargs[key].to_mdtraj()
-
-        self._instance = featurizer(**md_kwargs)
-        self.topology = topology
-
-        super(GeneratorCV, self).__init__(
-            name,
-            cv_callable=featurizer,
-            cv_time_reversible=True,
-            cv_requires_lists=True,
-            cv_wrap_numpy_array=cv_wrap_numpy_array,
-            cv_scalarize_numpy_singletons=cv_scalarize_numpy_singletons,
-            **kwargs
-        )
-
-    @property
-    def featurizer(self):
-        return self.cv_callable
-
-    def _eval(self, items):
-        trajectory = paths.Trajectory(items)
-
-        # create an mdtraj trajectory out of it
-        ptraj = trajectory_to_mdtraj(trajectory, self.topology.mdtraj)
-
-        # run the featurizer
-        return self._instance.partial_transform(ptraj)
-
-    def to_dict(self):
-        return {
-            'name': self.name,
-            'featurizer': ObjectJSON.callable_to_dict(self.featurizer),
-            'topology': self.topology,
-            'kwargs': self.kwargs,
-            'cv_wrap_numpy_array': self.cv_wrap_numpy_array,
-            'cv_scalarize_numpy_singletons': self.cv_scalarize_numpy_singletons
-        }
-
-
-class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
+class PyEMMAFeaturizerCV(CoordinateGeneratorCV):
     """Make a CV from a function that takes mdtraj.trajectory as input.
 
     This is identical to :class:`CoordinateGeneratorCV` except that the
@@ -738,6 +649,10 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
             cv_scalarize_numpy_singletons=True,
             **kwargs
         )
+
+    @property
+    def featurizer(self):
+        return self.cv_callable
 
     def _eval(self, items):
         trajectory = paths.Trajectory(items)

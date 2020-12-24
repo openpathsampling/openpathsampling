@@ -118,42 +118,6 @@ def version_tuple_to_string(version_tuple):
 
 # DEPRECATED THINGS SLATED FOR REMOVAL IN 2.0
 
-OPENMMTOOLS_VERSION = Deprecation(
-    problem="{OPS} {version} will require OpenMMTools 0.15 or later.",
-    remedy="Please update OpenMMTools.",
-    remove_version=(2, 0),
-    deprecated_in=(0, 9, 6)
-)
-
-SAMPLE_DETAILS = Deprecation(
-    problem="SampleDetails will be removed in {OPS} {version}.",
-    remedy="Use generic Details class instead.",
-    remove_version=(2, 0),
-    deprecated_in=(0, 9, 3)
-)
-
-MOVE_DETAILS = Deprecation(
-    problem="MoveDetails will be removed in {OPS} {version}.",
-    remedy="Use generic Details class instead.",
-    remove_version=(2, 0),
-    deprecated_in=(0, 9, 3)
-)
-
-SAVE_RELOAD_OLD_TPS_NETWORK = Deprecation(
-    problem="Old TPS networks will not be reloaded in {OPS} {version}.",
-    remedy="This file may not work with {OPS} {version}.",
-    remove_version=(2, 0),
-    deprecated_in=(0, 9 ,3)
-)
-
-MSMBUILDER = Deprecation(
-    problem=("MSMBuilder is no longer maintained. "
-             + "MSMBFeaturizer is no longer officially supported."),
-    remedy="Create a CoordinateFunctionCV based on MSMBuilderFeaturizers.",
-    remove_version=(2, 0),
-    deprecated_in=(1, 1, 0)
-)
-
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
 def has_deprecations(cls):
