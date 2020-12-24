@@ -68,6 +68,8 @@ class TPSTransition(Transition):
 
     @classmethod
     def from_dict(cls, dct):
+        if 'name' not in dct:
+            dct['name'] = None
         mytrans = TPSTransition(dct['stateA'], dct['stateB'], dct['name'])
         mytrans.ensembles = dct['ensembles']
         return mytrans
@@ -285,7 +287,8 @@ class TISTransition(Transition):
                 self.histograms[hist] = {}
             self.histograms[hist][ensemble] = Histogram(**(hist_info.hist_args))
 
-        in_ens_samples = (s for s in samples if s.ensemble is ensemble)
+        in_ens_samples = (s for s in samples if s.ensemble.__uuid__ ==
+                          ensemble.__uuid__)
         hist_data = {}
         buflen = -1
         sample_buf = []
@@ -499,6 +502,8 @@ class TISTransition(Transition):
 
     @classmethod
     def from_dict(cls, dct):
+        if 'name' not in dct:
+            dct['name'] = None
         mytrans = TISTransition(
             stateA=dct['stateA'],
             stateB=dct['stateB'],

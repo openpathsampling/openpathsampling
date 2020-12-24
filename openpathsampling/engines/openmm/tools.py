@@ -1,12 +1,24 @@
-import mdtraj as md
 import numpy as np
-import simtk.unit as u
 
-from .snapshot import Snapshot
-from .topology import Topology, MDTrajTopology
+from openpathsampling.integration_tools import (
+    md, error_if_no_mdtraj, unit, error_if_no_simtk_unit
+)
+try:
+    import simtk.openmm
+    import simtk.openmm.app
+    from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
+except ImportError:
+    # this happens when we directly import tools (e.g., for
+    # trajectory_to/from_mdtraj) when we don't have OpenMM installed. In
+    # that case, we skip the imports in the else statement
+    # (engines/openmm/__init__.py prevents them from being made)
+    pass
+else:
+    from .snapshot import Snapshot
+    from .topology import Topology, MDTrajTopology
+
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
-from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
 
 __author__ = 'Jan-Hendrik Prinz'
 
@@ -161,9 +173,11 @@ def snapshot_from_testsystem(testsystem, simple_topology=False,
         the constructed Snapshot
 
     """
-
-    velocities = u.Quantity(
-        np.zeros(testsystem.positions.shape), u.nanometers / u.picoseconds)
+    error_if_no_simtk_unit("snapshot_from_testsystem")
+    u_nm = unit.nanometers
+    u_ps = unit.picoseconds
+    velocities = unit.Quantity(np.zeros(testsystem.positions.shape), 
+                               u_nm / u_ps)
 
     if simple_topology:
         topology = Topology(*testsystem.positions.shape)
@@ -171,10 +185,8 @@ def snapshot_from_testsystem(testsystem, simple_topology=False,
         topology = MDTrajTopology(md.Topology.from_openmm(testsystem.topology))
 
     if periodic:
-        box_vectors = \
-            np.array([
-                v / u.nanometers for v in
-                testsystem.system.getDefaultPeriodicBoxVectors()]) * u.nanometers
+        sys_box_vectors = testsystem.system.getDefaultPeriodicBoxVectors()
+        box_vectors = np.array([v / u_nm for v in sys_box_vectors]) * u_nm
     else:
         box_vectors = None
 
@@ -208,8 +220,11 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
     openpathsampling.engines.Trajectory
         the constructed Trajectory instance
     """
+    error_if_no_simtk_unit("trajectory_from_mdtraj")
     trajectory = Trajectory()
-    vel_unit = u.nanometer / u.picosecond
+    u_nm = unit.nanometer
+    u_ps = unit.picosecond
+    vel_unit = u_nm / u_ps
 
     if simple_topology:
         topology = Topology(*mdtrajectory.xyz[0].shape)
@@ -217,11 +232,12 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
         topology = MDTrajTopology(mdtrajectory.topology)
 
     if velocities is None:
-        empty_vel = u.Quantity(np.zeros(mdtrajectory.xyz[0].shape),
-                               vel_unit)
+        empty_vel = unit.Quantity(np.zeros(mdtrajectory.xyz[0].shape),
+                                  vel_unit)
 
     if mdtrajectory.unitcell_vectors is not None:
-        box_vects = u.Quantity(mdtrajectory.unitcell_vectors, u.nanometers)
+        box_vects = unit.Quantity(mdtrajectory.unitcell_vectors,
+                                  unit.nanometers)
     else:
         box_vects = [None] * len(mdtrajectory)
 
@@ -230,9 +246,9 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
 
     for frame_num in range(len(mdtrajectory)):
         # mdtraj trajectories only have coordinates and box_vectors
-        coord = u.Quantity(mdtrajectory.xyz[frame_num], u.nanometers)
+        coord = unit.Quantity(mdtrajectory.xyz[frame_num], u_nm)
         if velocities is not None:
-            vel = u.Quantity(velocities[frame_num], vel_unit)
+            vel = unit.Quantity(velocities[frame_num], vel_unit)
         else:
             vel = empty_vel
 
@@ -240,9 +256,11 @@ def trajectory_from_mdtraj(mdtrajectory, simple_topology=False,
 
         statics = Snapshot.StaticContainer(
             coordinates=coord,
-            box_vectors=box_v
+            box_vectors=box_v,
+            engine=engine
         )
-        kinetics = Snapshot.KineticContainer(velocities=vel)
+        kinetics = Snapshot.KineticContainer(velocities=vel,
+                                             engine=engine)
 
         snap = Snapshot(
             statics=statics,
@@ -274,18 +292,22 @@ def empty_snapshot_from_openmm_topology(topology, simple_topology=False):
         the complete snapshot with zero coordinates and velocities
 
     """
+
+    error_if_no_simtk_unit("empty_snapshot_from_openmm_topology")
+    u_nm = unit.nanometers
+    u_ps = unit.picoseconds
     n_atoms = topology.n_atoms
 
     if simple_topology:
         topology = Topology(n_atoms, 3)
     else:
+        error_if_no_mdtraj("empty_snaphsot_from_openmm_topology")
         topology = MDTrajTopology(md.Topology.from_openmm(topology))
 
     snapshot = Snapshot.construct(
-        coordinates=u.Quantity(np.zeros((n_atoms, 3)), u.nanometers),
-        box_vectors=u.Quantity(topology.setUnitCellDimensions(), u.nanometers),
-        velocities=u.Quantity(
-            np.zeros((n_atoms, 3)), u.nanometers / u.picoseconds),
+        coordinates=unit.Quantity(np.zeros((n_atoms, 3)), u_nm),
+        box_vectors=unit.Quantity(topology.setUnitCellDimensions(), u_nm),
+        velocities=unit.Quantity(np.zeros((n_atoms, 3)), u_nm / u_ps),
         engine=TopologyEngine(topology)
     )
 
@@ -312,7 +334,7 @@ def to_openmm_topology(obj):
         if hasattr(obj.topology, 'mdtraj'):
             openmm_topology = obj.topology.mdtraj.to_openmm()
             box_size_dimension = np.linalg.norm(
-                obj.box_vectors.value_in_unit(u.nanometer), axis=1)
+                obj.box_vectors.value_in_unit(unit.nanometer), axis=1)
             openmm_topology.setUnitCellDimensions(box_size_dimension)
 
             return openmm_topology
@@ -342,15 +364,12 @@ def trajectory_to_mdtraj(trajectory, md_topology=None):
         else:
             trajectory = Trajectory(trajectory)
 
-    # TODO: The following would work if we remove trajectory.to_mdtraj()
     # For now, let's keep all the code in one place, and better for
     # engines.openmm.tools to require engines.trajectory than vice versa
-    # output = trajectory.xyz
-    # traj = md.Trajectory(output, md_topology)
-    # traj.unitcell_vectors = trajectory.box_vectors
     return trajectory.to_mdtraj(md_topology)
 
 def ops_load_trajectory(filename, **kwargs):
+    error_if_no_mdtraj("ops_load_trajectory")
     return trajectory_from_mdtraj(md.load(filename, **kwargs))
 
 # ops_load_trajectory and the mdtraj stuff is not OpenMM-specific
@@ -372,7 +391,7 @@ def reduced_box_vectors(snapshot):
     :class:`.Snapshot`
         snapshot with correctly reduced box vectors
     """
-    nm = u.nanometer
+    nm = unit.nanometer
     return np.array(
         reducePeriodicBoxVectors(snapshot.box_vectors).value_in_unit(nm)
     ) * nm

@@ -1979,6 +1979,25 @@ class ConditionalSequentialMover(SequentialMover):
             movechanges, mover=self)
 
 
+class NonCanonicalConditionalSequentialMover(ConditionalSequentialMover):
+    """ Special mover for reactive flux simulation.
+
+    This mover inherits from :class:`.ConditionalSequentialMover` and
+    alters only the `move` method to return the output of the corresponding
+    :class:`.NonCanonicalConditionalSequentialMoveChange`.
+    """
+    _is_canonical = False
+
+    def move(self, sample_set):
+        change = super(NonCanonicalConditionalSequentialMover,
+                       self).move(sample_set)
+        return paths.NonCanonicalConditionalSequentialMoveChange(
+            subchanges=change.subchanges,
+            mover=change.mover,
+            details=change.details
+        )
+
+
 # class ReplicaIDChangeMover(PathMover):
 #     """
 #     Changes the replica ID for a path.
@@ -2474,6 +2493,23 @@ class MinusMover(SubPathMover):
 
         super(MinusMover, self).__init__(mover)
 
+    def move(self, sample_set):
+        change = super(MinusMover, self).move(sample_set)
+        cond_seq_changes = change.subchanges[0].subchanges[0].subchanges
+        seg_swap = None
+        if len(cond_seq_changes) >= 2:
+            seg_swap = cond_seq_changes[1].subchanges[0].trials
+
+        ext_traj = None
+        if len(cond_seq_changes) >= 3:
+            ext_traj = cond_seq_changes[2].subchanges[0].trials[0].trajectory
+
+        details = Details(segment_swap_samples=seg_swap,
+                          extension_trajectory=ext_traj)
+        if change.details is None:
+            change.details = details
+
+        return change
 
 class SingleReplicaMinusMover(MinusMover):
     """
@@ -2539,6 +2575,10 @@ class SingleReplicaMinusMover(MinusMover):
 
         # we skip MinusMover's init and go to the grandparent
         super(MinusMover, self).__init__(mover)
+
+    def move(self, sample_set):
+        # skip the MinusMover's implementation
+        return super(MinusMover, self).move(sample_set)
 
 
 class PathSimulatorMover(SubPathMover):

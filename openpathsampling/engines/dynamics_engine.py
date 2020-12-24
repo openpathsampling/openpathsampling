@@ -8,9 +8,8 @@ Created on 01.07.2014
 import logging
 import sys
 
-import simtk.unit as u
-
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.integration_tools import is_simtk_unit_type
 
 from .snapshot import BaseSnapshot
 from .trajectory import Trajectory
@@ -94,8 +93,9 @@ class DynamicsEngine(StorableNamedObject):
     on_retry : str or callable
         the behaviour when a try is started. Since you have already generated
         some trajectory you might not restart completely. Possibilities are
+
         1.  `full` will restart completely and use the initial frames (default)
-        2.  `50%` will cut the existing in half but keeping at least the initial
+        2.  `keep_half` will cut the existing in half but keeping at least the initial
         3.  `remove_interval` will remove as many frames as the `interval`
         4.  a callable will be used as a function to generate the new from the
             old trajectories, e.g. `lambda t: t[:10]` would restart with the
@@ -121,10 +121,15 @@ class DynamicsEngine(StorableNamedObject):
         'on_error': 'fail'
     }
 
+    #units = {
+        #'length': u.Unit({}),
+        #'velocity': u.Unit({}),
+        #'energy': u.Unit({})
+    #}
     units = {
-        'length': u.Unit({}),
-        'velocity': u.Unit({}),
-        'energy': u.Unit({})
+        'length': None,
+        'velocity': None,
+        'energy': None
     }
 
     base_snapshot_type = BaseSnapshot
@@ -218,7 +223,8 @@ class DynamicsEngine(StorableNamedObject):
 
                 if variable in my_options:
                     if type(my_options[variable]) is type(default_value):
-                        if type(my_options[variable]) is u.Unit:
+                        #if type(my_options[variable]) is u.Unit:
+                        if is_simtk_unit_type(my_options[variable]):
                             if my_options[variable].unit.is_compatible(
                                     default_value):
                                 okay_options[variable] = my_options[variable]
@@ -503,15 +509,17 @@ class DynamicsEngine(StorableNamedObject):
                             int(len(trajectory) * 0.9),
                             max(
                                 len(initial),
-                                len(trajectory) / 2))]
+                                int(len(trajectory) / 2)))]
                 elif hasattr(self.on_retry, '__call__'):
                     trajectory = self.on_retry(trajectory)
-
-            if direction > 0:
-                self.current_snapshot = trajectory[-1]
-            elif direction < 0:
-                # backward simulation needs reversed snapshots
-                self.current_snapshot = trajectory[0].reversed
+            
+            """ Case of run dying before first output"""
+            if len(trajectory) >= 1:
+                if direction > 0:
+                    self.current_snapshot = trajectory[-1]
+                elif direction < 0:
+                    # backward simulation needs reversed snapshots
+                    self.current_snapshot = trajectory[0].reversed
 
             logger.info("Starting trajectory")
             self.start()
@@ -658,7 +666,7 @@ class DynamicsEngine(StorableNamedObject):
 
     def generate_n_frames(self, n_frames=1):
         """Generates n_frames, from but not including the current snapshot.
-        
+
         This generates a fixed number of frames at once. If you desire the
         reversed trajectory, you can reverse the returned trajectory.
 

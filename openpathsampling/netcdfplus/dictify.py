@@ -2,7 +2,8 @@ import base64
 import importlib
 
 import numpy as np
-from simtk import unit as units
+
+from openpathsampling.integration_tools import is_simtk_quantity, unit
 import math
 import abc
 from uuid import UUID
@@ -47,6 +48,10 @@ else:
     opcode_arg_width = 2
     opcode_no_arg_width = 0
 
+if int(ujson.__version__.split(".")[0]) <= 2:
+    ujson_kwargs = dict()
+else:
+    ujson_kwargs = {"reject_bytes": False}
 
 class ObjectJSON(object):
     """
@@ -134,7 +139,8 @@ class ObjectJSON(object):
                 '_integer': str(obj)}
 
         elif obj.__class__.__module__ != builtin_module:
-            if obj.__class__ is units.Quantity:
+            #if obj.__class__ is units.Quantity:
+            if is_simtk_quantity(obj):
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
                     return {
@@ -320,11 +326,12 @@ class ObjectJSON(object):
 
     @staticmethod
     def unit_from_dict(unit_dict):
-        unit = units.Unit({})
+        # this will *only* work if simtk.unit is installed
+        this_unit = unit.Unit({})
         for unit_name, unit_multiplication in unit_dict.items():
-            unit *= getattr(units, unit_name) ** unit_multiplication
+            this_unit *= getattr(unit, unit_name) ** unit_multiplication
 
-        return unit
+        return this_unit
 
     @staticmethod
     def callable_to_dict(c):
@@ -553,7 +560,7 @@ class ObjectJSON(object):
 
     def to_json(self, obj, base_type=''):
         simplified = self.simplify(obj, base_type)
-        return ujson.dumps(simplified)
+        return ujson.dumps(simplified, **ujson_kwargs)
 
     def to_json_object(self, obj):
         if hasattr(obj, 'base_cls') \
@@ -562,7 +569,7 @@ class ObjectJSON(object):
         else:
             simplified = self.simplify(obj)
         try:
-            json_str = ujson.dumps(simplified)
+            json_str = ujson.dumps(simplified, **ujson_kwargs)
         except TypeError as e:
             err = (
                 'Cannot convert object of type `%s` to json. '

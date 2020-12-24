@@ -3,6 +3,28 @@ import openpathsampling.netcdfplus as netcdfplus
 import collections
 import copy
 
+from functools import partial
+
+def _cv_max_func(trajectory, cv):
+    return max(cv(trajectory))
+
+def _netcdfplus_cv_max(cv):
+    return paths.netcdfplus.FunctionPseudoAttribute(
+        name="max " + cv.name,
+        key_class=paths.Trajectory,
+        f=_cv_max_func,
+        cv=cv
+    ).with_diskcache(allow_incomplete=True)
+
+
+def _simstore_cv_max(cv):
+    from openpathsampling.experimental.simstore import StorableFunction
+    return StorableFunction(
+        func=_cv_max_func,
+        cv=cv
+    ).named("max " + cv.name)
+
+
 class InterfaceSet(netcdfplus.StorableNamedObject):
     """List of volumes representing a set of interfaces, plus metadata.
 
@@ -24,6 +46,7 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
     # This is a class variable because more than one interface set may use
     # the same CV (with different interface values) -- common in testing.
     _cv_max_dict = {}
+    simstore = False
 
     def __init__(self, volumes, cv=None, lambdas=None, cv_max=None,
                  direction=None):
@@ -37,13 +60,9 @@ class InterfaceSet(netcdfplus.StorableNamedObject):
                 self.cv_max = self._cv_max_dict[self.cv]
                 # NOTE: If KeyError occurs, see InterfaceSet._reset()
             elif self.cv is not None:
-                cv_max_func = lambda t, cv_: max(cv_(t))
-                self.cv_max = paths.netcdfplus.FunctionPseudoAttribute(
-                    name="max " + self.cv.name,
-                    key_class=paths.Trajectory,
-                    f=cv_max_func,
-                    cv_=self.cv
-                ).with_diskcache(allow_incomplete=True)
+                factory = {True: _simstore_cv_max,
+                           False: _netcdfplus_cv_max}[self.simstore]
+                self.cv_max = factory(cv)
             else:
                 self.cv_max = None
         else:
@@ -191,14 +210,20 @@ class GenericVolumeInterfaceSet(InterfaceSet):
             self.volume_func = lambda minv: volume_func(minv, self.maxvals)
 
     def to_dict(self):
-        return {'cv': self.cv,
-                'cv_max': self.cv_max,
-                'minvals': self.minvals,
-                'maxvals': self.maxvals,
-                'intersect_with': self.intersect_with,
-                'lambdas': self.lambdas,
-                'direction': self.direction,
-                'volumes': self.volumes}
+        dct = {'cv': self.cv,
+               'minvals': self.minvals,
+               'maxvals': self.maxvals,
+               'intersect_with': self.intersect_with,
+               'lambdas': self.lambdas,
+               'direction': self.direction,
+               'volumes': self.volumes}
+        try:
+            dct.update({'cv_max': self.cv_max})
+        except AttributeError:  # pragma: no cover
+            # reverse compatibility; deprecated in 0.9.5, remove in 2.0
+            pass
+
+        return dct
 
     def _load_from_dict(self, dct):
         self.cv = dct['cv']

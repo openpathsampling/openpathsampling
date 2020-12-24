@@ -1,21 +1,15 @@
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
-from nose.tools import (assert_equal, assert_not_equal,
-                        assert_almost_equal, raises)
-from nose.plugins.skip import Skip, SkipTest
-from .test_helpers import (
-    true_func, assert_equal_array_array, make_1d_traj, data_filename,
-    assert_items_equal
-)
-
+from pandas.testing import assert_frame_equal
+from nose.tools import assert_equal
+from .test_helpers import assert_items_equal
 import openpathsampling as paths
-from openpathsampling.high_level.interface_set import GenericVolumeInterfaceSet
 
 import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+
 
 class TestResamplingStatistics(object):
     # NOTE: we test the mean_df and std_df functions within this
@@ -90,6 +84,7 @@ class TestResamplingStatistics(object):
             check_dtype=False
         )
 
+
 class TestBlockResampling(object):
     def setup(self):
         self.samples = list(range(100))
@@ -129,7 +124,8 @@ class TestBlockResampling(object):
         assert_items_equal(resampler_2.unassigned, list(range(96, 100)))
 
     def test_n_per_block_initialization(self):
-        resampler = paths.numerics.BlockResampling(self.samples, n_per_block=10)
+        resampler = paths.numerics.BlockResampling(self.samples,
+                                                   n_per_block=10)
         assert_equal(resampler.n_total_samples, 100)
         assert_equal(resampler.n_blocks, 10)
         assert_equal(resampler.n_per_block, 10)

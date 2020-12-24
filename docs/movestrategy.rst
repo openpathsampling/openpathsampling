@@ -2,8 +2,8 @@
 
 .. currentmodule:: openpathsampling.high_level.move_strategy
 
-MoveStrategy API
-================
+MoveStrategy
+============
 
 TODO: explain the ideas here
 

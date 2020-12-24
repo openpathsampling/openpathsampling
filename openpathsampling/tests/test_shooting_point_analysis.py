@@ -4,9 +4,8 @@ from builtins import zip
 from builtins import range
 from past.utils import old_div
 from builtins import object
-from nose.tools import (assert_equal, assert_not_equal, raises,
+from nose.tools import (assert_equal, raises,
                         assert_almost_equal, assert_true, assert_in)
-from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
 from .test_helpers import (make_1d_traj, data_filename, assert_items_equal,
                            assert_same_items)
@@ -30,9 +29,9 @@ logging.getLogger('openpathsampling.sample').setLevel(logging.CRITICAL)
 
 class TestTransformedDict(object):
     def setup(self):
-        self.untransformed = {(0, 1) : "a", (1, 2) : "b", (2, 3) : "c"}
-        self.transformed = {0 : "a", 1 : "b", 2 : "c"}
-        self.hash_function = lambda x : x[0]
+        self.untransformed = {(0, 1): "a", (1, 2): "b", (2, 3): "c"}
+        self.transformed = {0: "a", 1: "b", 2: "c"}
+        self.hash_function = lambda x: x[0]
         self.empty = TransformedDict(self.hash_function, {})
         self.test_dict = TransformedDict(self.hash_function,
                                          self.untransformed)
@@ -40,28 +39,28 @@ class TestTransformedDict(object):
     def test_initialization(self):
         assert_equal(self.test_dict.store, self.transformed)
         assert_equal(self.test_dict.hash_representatives,
-                     {0: (0,1), 1: (1,2), 2: (2,3)})
+                     {0: (0, 1), 1: (1, 2), 2: (2, 3)})
 
     def test_set_get(self):
-        self.empty[(5,6)] = "d"
+        self.empty[(5, 6)] = "d"
         assert_equal(self.empty.store, {5: "d"})
-        assert_equal(self.empty.hash_representatives, {5: (5,6)})
-        assert_equal(self.empty[(5,6)], "d")
+        assert_equal(self.empty.hash_representatives, {5: (5, 6)})
+        assert_equal(self.empty[(5, 6)], "d")
 
     def test_update(self):
-        self.test_dict.update({(5,6): "d"})
-        assert_equal(self.test_dict.store, 
-                     {0 : "a", 1 : "b", 2 : "c", 5 : "d"})
-        assert_equal(self.test_dict.hash_representatives, 
-                     {0: (0,1), 1: (1,2), 2: (2,3), 5: (5,6)})
+        self.test_dict.update({(5, 6): "d"})
+        assert_equal(self.test_dict.store,
+                     {0: "a", 1: "b", 2: "c", 5: "d"})
+        assert_equal(self.test_dict.hash_representatives,
+                     {0: (0, 1), 1: (1, 2), 2: (2, 3), 5: (5, 6)})
 
     def test_del(self):
         del self.test_dict[(0, 1)]
-        assert_equal(self.test_dict.store, {1 : "b", 2 : "c"})
+        assert_equal(self.test_dict.store, {1: "b", 2: "c"})
 
     def test_iter(self):
         iterated = [k for k in self.test_dict]
-        for (truth, beauty) in zip(list(self.transformed.keys()), iterated):
+        for (truth, beauty) in zip(list(self.untransformed.keys()), iterated):
             assert_equal(truth, beauty)
 
     def test_len(self):
@@ -69,10 +68,10 @@ class TestTransformedDict(object):
         assert_equal(len(self.empty), 0)
 
     def test_rehash(self):
-        rehashed = self.test_dict.rehash(lambda x : x[1])
+        rehashed = self.test_dict.rehash(lambda x: x[1])
         assert_equal(rehashed.store, {1: "a", 2: "b", 3: "c"})
         assert_equal(rehashed.hash_representatives,
-                     {1: (0,1), 2: (1,2), 3: (2,3)})
+                     {1: (0, 1), 2: (1, 2), 3: (2, 3)})
 
 
 class TestSnapshotByCoordinateDict(object):
@@ -80,8 +79,8 @@ class TestSnapshotByCoordinateDict(object):
         self.empty_dict = SnapshotByCoordinateDict()
         coords_A = np.array([[0.0, 0.0]])
         coords_B = np.array([[1.0, 1.0]])
-        self.key_A = coords_A.tostring()
-        self.key_B = coords_B.tostring()
+        self.key_A = coords_A.tobytes()
+        self.key_B = coords_B.tobytes()
         self.snapA1 = peng.toy.Snapshot(coordinates=coords_A,
                                         velocities=np.array([[0.0, 0.0]]))
         self.snapA2 = peng.toy.Snapshot(coordinates=coords_A,
@@ -101,9 +100,11 @@ class TestSnapshotByCoordinateDict(object):
 
 class TestShootingPointAnalysis(object):
     def setup(self):
+        self.HAS_TQDM = paths.progress.HAS_TQDM
+        paths.progress.HAS_TQDM = False
         # taken from the TestCommittorSimulation
         import openpathsampling.engines.toy as toys
-        pes = toys.LinearSlope(m=[0.0], c=[0.0]) # flat line
+        pes = toys.LinearSlope(m=[0.0], c=[0.0])  # flat line
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
         descriptor = peng.SnapshotDescriptor.construct(
             toys.Snapshot,
@@ -126,7 +127,7 @@ class TestShootingPointAnalysis(object):
             'n_steps_per_frame': 5
         }
         self.engine = toys.Engine(options=options, topology=topology)
-        cv = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
+        cv = paths.FunctionCV("Id", lambda snap: snap.coordinates[0][0])
         self.left = paths.CVDefinedVolume(cv, float("-inf"), -1.0)
         self.right = paths.CVDefinedVolume(cv, 1.0, float("inf"))
 
@@ -149,10 +150,11 @@ class TestShootingPointAnalysis(object):
 
     def teardown(self):
         import os
+        paths.progress.HAS_TQDM = self.HAS_TQDM
         self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
-        paths.EngineMover.default_engine = None # set by Committor
+        paths.EngineMover.default_engine = None  # set by Committor
 
     def test_shooting_point_analysis(self):
         assert_equal(len(self.analyzer), 2)
@@ -182,7 +184,7 @@ class TestShootingPointAnalysis(object):
         ensemble = network.all_ensembles[0]
         mover = paths.PathReversalMover(ensemble)
         scheme = paths.LockedMoveScheme(mover, network)
-        init_conds=scheme.initial_conditions_from_trajectories([init_traj])
+        init_conds = scheme.initial_conditions_from_trajectories([init_traj])
         assert_equal(len(init_conds), 1)
         self.storage.close()
         self.storage = paths.Storage(self.filename, "w")
@@ -220,7 +222,7 @@ class TestShootingPointAnalysis(object):
             assert_equal(committor_B[snap],
                          old_div(float(self.analyzer[snap][self.right]), 20.0))
 
-        rehash = lambda snap : 2 * snap.xyz[0][0]
+        rehash = lambda snap: 2 * snap.xyz[0][0]
         committor_A_rehash = self.analyzer.committor(self.left, rehash)
         orig_values = sorted(committor_A.values())
         rehash_values = sorted(committor_A_rehash.values())
@@ -229,7 +231,7 @@ class TestShootingPointAnalysis(object):
             assert_in(rehash(snap), list(committor_A_rehash.keys()))
 
     def test_committor_histogram_1d(self):
-        rehash = lambda snap : 2 * snap.xyz[0][0]
+        rehash = lambda snap: 2 * snap.xyz[0][0]
         input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
         hist, bins = self.analyzer.committor_histogram(rehash, self.left,
                                                        input_bins)
@@ -241,18 +243,18 @@ class TestShootingPointAnalysis(object):
         assert_array_almost_equal(bins, input_bins)
 
     def test_committor_histogram_2d(self):
-        rehash = lambda snap : (snap.xyz[0][0], 2 * snap.xyz[0][0])
+        rehash = lambda snap: (snap.xyz[0][0], 2 * snap.xyz[0][0])
         input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
         hist, b_x, b_y = self.analyzer.committor_histogram(rehash, self.left,
                                                            input_bins)
-        assert_equal(hist.shape, (5,5))
+        assert_equal(hist.shape, (5, 5))
         for i in range(5):
             for j in range(5):
-                if (i,j) in [(0, 0), (1, 2)]:
+                if (i, j) in [(0, 0), (1, 2)]:
                     pass
-                    assert_true(hist[(i,j)] > 0)
+                    assert_true(hist[(i, j)] > 0)
                 else:
-                    assert_true(np.isnan(hist[(i,j)]))
+                    assert_true(np.isnan(hist[(i, j)]))
 
         # this may change later to bins[0]==bins[1]==input_bins
         assert_array_almost_equal(input_bins, b_x)
@@ -261,16 +263,15 @@ class TestShootingPointAnalysis(object):
     @raises(RuntimeError)
     def test_committor_histogram_3d(self):
         # only 1D and 2D are supported
-        rehash = lambda snap : (snap.xyz[0][0], 2 * snap.xyz[0][0], 0.0)
+        rehash = lambda snap: (snap.xyz[0][0], 2 * snap.xyz[0][0], 0.0)
         input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
         hist, b_x, b_y = self.analyzer.committor_histogram(rehash, self.left,
                                                            input_bins)
 
     def test_to_pandas(self):
         df1 = self.analyzer.to_pandas()
-        df2 = self.analyzer.to_pandas(lambda x : x.xyz[0][0])
-        assert_equal(df1.shape, (2,2))
+        df2 = self.analyzer.to_pandas(lambda x: x.xyz[0][0])
+        assert_equal(df1.shape, (2, 2))
         assert_items_equal(df1.index, list(range(2)))
         assert_same_items(df2.index, [0.0, 0.1])
         assert_same_items(df1.columns, [self.left.name, self.right.name])
-

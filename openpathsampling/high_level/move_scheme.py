@@ -4,6 +4,7 @@ import warnings
 
 import openpathsampling as paths
 from openpathsampling.tools import refresh_output
+from openpathsampling.progress import SimpleProgress
 
 from . import move_strategy
 from .move_strategy import levels as strategy_levels
@@ -21,7 +22,7 @@ MoveAcceptanceAnalysisLine = collections.namedtuple(
     'move_name n_accepted n_trials expected_frequency'
 )
 
-class MoveAcceptanceAnalysis(object):
+class MoveAcceptanceAnalysis(SimpleProgress):
     """Class to manage analysis of move acceptance.
 
     One of the powerful things about OPS is the :class:`.MoveChange` object,
@@ -69,7 +70,7 @@ class MoveAcceptanceAnalysis(object):
         self : :class:`.MoveAcceptanceAnalysis`
             returns self for possible chaining
         """
-        for step in steps:
+        for step in self.progress(steps):
             self._calculate_step_acceptance(step)
         self._n_steps += len(steps)
         return self
@@ -243,6 +244,7 @@ class MoveScheme(StorableNamedObject):
         self._mover_acceptance = None  # used in analysis
 
     def to_dict(self):
+        self.move_decision_tree()  # always build before save
         ret_dict = {
             'movers': self.movers,
             'network': self.network,
@@ -590,7 +592,6 @@ class MoveScheme(StorableNamedObject):
         check_initial_conditions
         assert_initial_conditions
         """
-
         if sample_set is None:
             sample_set = paths.SampleSet([])
 
@@ -663,15 +664,12 @@ class MoveScheme(StorableNamedObject):
         initial_conditions_report
         """
         (missing, extras) = self.check_initial_conditions(sample_set)
-        msg = ""
-        if len(missing) > 0:
-            msg += "Missing ensembles: " + str(missing) + "\n"
-        if len(extras) > 0 and not allow_extras:
-            msg += "Extra ensembles: " + str(extras) + "\n"
-        if msg != "":
+        if len(missing) > 0 or (len(extras) > 0 and not allow_extras):
+            msg = self.initial_conditions_report(sample_set,
+                                                 report_correct=False)
             raise AssertionError("Bad initial conditions.\n" + msg)
 
-    def initial_conditions_report(self, sample_set):
+    def initial_conditions_report(self, sample_set, report_correct=True):
         """
         String report on whether the given SampleSet gives good initial
         conditions.
@@ -683,6 +681,9 @@ class MoveScheme(StorableNamedObject):
         ----------
         sample_set : :class:`.SampleSet`
             proposed set of initial conditions for this movescheme
+        report_correct : bool
+            whether to report when there are no missing/extra ensembles;
+            default True
 
         Returns
         -------
@@ -692,16 +693,16 @@ class MoveScheme(StorableNamedObject):
         """
         (missing, extra) = self.check_initial_conditions(sample_set)
         msg = ""
-        if len(missing) == 0:
+        if len(missing) == 0 and report_correct:
             msg += "No missing ensembles.\n"
-        else:
+        elif len(missing) > 0:
             msg += "Missing ensembles:\n"
             for ens_list in missing:
-                msg += "*  [" 
+                msg += "*  ["
                 msg += ", ".join([ens.name for ens in ens_list]) + "]\n"
-        if len(extra) == 0:
+        if len(extra) == 0 and report_correct:
             msg += "No extra ensembles.\n"
-        else:
+        elif len(extra) > 0:
             msg += "Extra ensembles:\n"
             for ens in extra:
                 msg += "*  " + ens.name + "\n"
