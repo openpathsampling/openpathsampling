@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-from openpathsampling.pathsimulator import PathSimulator
+from openpathsampling import PathSimulator
 import openpathsampling as paths
 import os
 
@@ -127,7 +127,7 @@ class TransitionStateEnsemble(PathSimulator):
             snap_max = snap_frame
 
         self.output_stream.flush()
-        snap_frame = snap_min+((snap_max-snap_min)/2)
+        snap_frame = snap_min+((snap_max-snap_min)//2)
 
         # Stops when snap_frame has an invalid value
         # Equal to min or max stop to prevent invinite loops
@@ -168,7 +168,7 @@ class TransitionStateEnsemble(PathSimulator):
 
             # Resets snap_frame after 1 loop
             if self.snap_frame is None:
-                self.snap_frame = ((self.snap_max-self.snap_min)/2)
+                self.snap_frame = ((self.snap_max-self.snap_min)//2)
 
             # Loops while there is a next selected frame
             while self.snap_frame is not None:
@@ -205,8 +205,8 @@ class TransitionStateEnsemble(PathSimulator):
                               steps=self.storage.steps[-self.n_per_snapshot:],
                               states=[stateA, stateB])
                 except AssertionError:
-                    raise RuntimeError("Not all of the tries entered a state," +
-                                       "you might need to increase" +
+                    raise RuntimeError("Not all of the tries entered a state,"
+                                       "you might need to increase"
                                        "n_frames_max of the engine.")
 
                 # Get the committor from the ShootingPointAnalysis object
