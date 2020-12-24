@@ -62,7 +62,14 @@ class SpringShootingSelector(paths.ShootingPointSelector):
         self.check_sanity()
 
     def f(self, snapshot, trajectory, direction=None):
+        """
+        Returns the unnormalized proposal probability of a snapshot
 
+        Notes
+        -----
+        This needs a direction and only makes sense if snapshot is from the
+        previous accepted trajectory.
+        """
         if direction is None:
             raise NotImplementedError("f is not defined without a direction.")
 
