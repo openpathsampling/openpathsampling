@@ -112,10 +112,12 @@ class SpringShootingSelector(paths.ShootingPointSelector):
         else:
             return sum(self._biases(delta_max, k_spring))
 
-    def probability_ratio(self, snapshot, initial_trajectory, trial_trajectory):
+    def probability_ratio(self, snapshot, initial_trajectory,
+                          trial_trajectory):
         """
         Returns the acceptance probability of a trial trajectory, this is 1.0
-        as long as a snapshot has been selected that is inside of the trajectory
+        as long as a snapshot has been selected that is inside of the
+        trajectory.
 
         Parameters
         ----------
@@ -212,7 +214,8 @@ class SpringShootingSelector(paths.ShootingPointSelector):
 
     def restart_from_step(self, step):
         """
-        This restarts the selector, based on the move details of the given step.
+        This restarts the selector, based on the move details of the given
+        step.
 
         Properties
         ----------
@@ -301,7 +304,8 @@ class SpringMover(paths.pathmover.EngineMover):
 
         except paths.engines.EngineMaxLengthError as err:
             trial, details = self._build_sample(
-                input_sample, shooting_index, err.last_trajectory, 'max_length')
+                input_sample, shooting_index, err.last_trajectory,
+                'max_length')
 
             if self.reject_max_length:
                 raise SampleMaxLengthError('Sample with MaxLength',
@@ -450,8 +454,6 @@ class SpringShootingStrategy(move_strategy.SingleEnsembleMoveStrategy):
     Strategy for SpringShooting. Using the spring shooting point selector.
     Parameters
     ----------
-    selector : :class:`.ShootingPointSelector`
-        method used to select shooting point, defaults to SpringShootingSelector
     ensembles : list of :class:`.Ensemble`
         ensembles for which this strategy applies; None gives default
         behavior
@@ -465,12 +467,10 @@ class SpringShootingStrategy(move_strategy.SingleEnsembleMoveStrategy):
     _level = levels.MOVER
 
     def __init__(self, delta_max, k_spring, initial_guess=None,
-                 selector=SpringShootingSelector, ensembles=None, engine=None,
-                 group="shooting", replace=True):
+                 ensembles=None, engine=None, group="shooting", replace=True):
         super(SpringShootingStrategy, self).__init__(
             ensembles=ensembles, group=group, replace=replace
         )
-        self.selector = selector
         self.engine = engine
         self.delta_max = delta_max
         self.k_spring = k_spring
@@ -497,7 +497,7 @@ class SpringShootingStrategy(move_strategy.SingleEnsembleMoveStrategy):
     def make_movers(self, scheme):
         ensemble_list = self.get_init_ensembles(scheme)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        shooters = self.make_mover_set(self.selector, ensembles, self.engine)
+        shooters = self.make_mover_set(None, ensembles, self.engine)
         return shooters
 
 

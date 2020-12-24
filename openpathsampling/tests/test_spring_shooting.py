@@ -299,6 +299,7 @@ class TestSpringShootingMover(MoverTest):
         assert len(mover.movers) == 2
         assert isinstance(mover.movers[0], SpringMover)
         assert isinstance(mover.movers[1], SpringMover)
+        assert mover.movers[0].selector is mover.movers[1].selector
 
 
 class TestSpringShootingStrategy(MoveStrategyTestSetup):
