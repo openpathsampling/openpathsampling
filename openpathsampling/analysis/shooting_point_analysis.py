@@ -1,8 +1,6 @@
-import openpathsampling as paths
 import collections
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 
 from openpathsampling.progress import SimpleProgress
 
@@ -10,6 +8,7 @@ try:
     from collections import abc
 except ImportError:
     import collections as abc
+
 
 # based on http://stackoverflow.com/a/3387975
 class TransformedDict(abc.MutableMapping):
@@ -72,7 +71,7 @@ class SnapshotByCoordinateDict(TransformedDict):
     (e.g., committor analysis).
     """
     def __init__(self, *args, **kwargs):
-        hash_fcn = lambda x : x.coordinates.tostring()
+        hash_fcn = lambda x: x.coordinates.tobytes()
         super(SnapshotByCoordinateDict, self).__init__(hash_fcn,
                                                        *args, **kwargs)
 
@@ -108,7 +107,7 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
             MC steps to analyze
         """
         for step in self.progress(steps):
-            total = self.analyze_single_step(step)
+            self.analyze_single_step(step)
 
     def analyze_single_step(self, step):
         """
@@ -136,7 +135,7 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
 
             total = collections.Counter(
                 {state: sum([int(state(pt)) for pt in test_points])
-                            for state in self.states}
+                 for state in self.states}
             )
             total_count = sum(total.values())
             # TODO: clarify assertion (at least one endpoint in state)
@@ -197,7 +196,7 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
         analyzer = ShootingPointAnalysis(None, states)
         for step in run_results:
             key = step[0]
-            total = collections.Counter({step[1] : 1})
+            total = collections.Counter({step[1]: 1})
             try:
                 analyzer[key] += total
             except KeyError:
@@ -226,12 +225,13 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
             mapping labels given by label_function to the committor value
         """
         if label_function is None:
-            label_function = lambda s : s
+            label_function = lambda s: s
         results = {}
         for k in self:
             out_key = label_function(k)
             counter_k = self[k]
-            committor = float(counter_k[state]) / sum([counter_k[s] for s in self.states])
+            committor = float(counter_k[state]) / sum([counter_k[s]
+                                                       for s in self.states])
             results[out_key] = committor
         return results
 
@@ -267,8 +267,8 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
         """
         rehashed = self.rehash(new_hash)
         r_store = rehashed.store
-        count_all = {k : sum(r_store[k].values()) for k in r_store}
-        count_state = {k : r_store[k][state] for k in r_store}
+        count_all = {k: sum(r_store[k].values()) for k in r_store}
+        count_state = {k: r_store[k][state] for k in r_store}
         ndim = self._get_key_dim(list(r_store.keys())[0])
         if ndim == 1:
             (all_hist, b) = np.histogram(list(count_all.keys()),
