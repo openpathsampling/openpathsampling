@@ -216,22 +216,13 @@ class GenericVolumeInterfaceSet(InterfaceSet):
                'intersect_with': self.intersect_with,
                'lambdas': self.lambdas,
                'direction': self.direction,
-               'volumes': self.volumes}
-        try:
-            dct.update({'cv_max': self.cv_max})
-        except AttributeError:  # pragma: no cover
-            # reverse compatibility; deprecated in 0.9.5, remove in 2.0
-            pass
-
+               'volumes': self.volumes,
+               'cv_max': self.cv_max}
         return dct
 
     def _load_from_dict(self, dct):
         self.cv = dct['cv']
-        try:
-            self.cv_max = dct['cv_max']
-        except KeyError:  # pragma: no cover
-            # reverse compatibility; deprecated in 0.9.4, remove in 2.0
-            pass
+        self.cv_max = dct['cv_max']
         self.minvals = dct['minvals']
         self.maxvals = dct['maxvals']
         self.intersect_with = dct['intersect_with']

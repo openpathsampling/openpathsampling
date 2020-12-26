@@ -16,9 +16,6 @@ from openpathsampling.pathmover_inout import InOutSet, InOut
 from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
-from openpathsampling.deprecations import deprecate, has_deprecations
-from openpathsampling.deprecations import SAMPLE_DETAILS, MOVE_DETAILS
-
 from future.utils import with_metaclass
 
 logger = logging.getLogger(__name__)
@@ -2630,28 +2627,3 @@ class Details(StorableObject):
             else:
                 mystr += str(key) + " = " + str(self.__dict__[key]) + '\n'
         return mystr
-
-
-@has_deprecations
-@deprecate(MOVE_DETAILS)
-class MoveDetails(Details):
-    """Details of the move as applied to a given replica
-
-    Specific move types may have add several other attributes for each
-    MoveDetails object. For example, shooting moves will also include
-    information about the shooting point selection, etc.
-    """
-
-    def __init__(self, **kwargs):
-        super(MoveDetails, self).__init__(**kwargs)
-
-
-# leave this for potential backwards compatibility
-@has_deprecations
-@deprecate(SAMPLE_DETAILS)
-class SampleDetails(Details):
-    """Details of a sample
-    """
-
-    def __init__(self, **kwargs):
-        super(SampleDetails, self).__init__(**kwargs)
