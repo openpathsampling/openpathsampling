@@ -138,7 +138,7 @@ register_serialization_family('openpathsampling', ops_dumps, ops_loads)
 
 
 class SerialScheduler(object):
-    def store_results(self, filename, results):
+    def store_results(self, storage, results):
         storage.save(results)
 
     def wrap_task_only(self, task):
