@@ -23,8 +23,6 @@ try:
 except ImportError:
     md = None
 
-from nose.tools import assert_equal, assert_in, assert_true
-#from nose.tools import assert_items_equal
 from pkg_resources import resource_filename
 
 import openpathsampling as paths
@@ -61,20 +59,20 @@ def make_1d_traj(coordinates, velocities=None, engine=None):
     return paths.Trajectory(traj)
 
 def items_equal(truth, beauty):
-    assert_equal(len(truth), len(beauty))
+    assert len(truth) == len(beauty)
     for (t, b) in zip(truth, beauty):
         if t != b:
             return False
     return True
 
 def assert_items_equal(truth, beauty):
-    assert_equal(len(truth), len(beauty))
+    assert len(truth) == len(beauty)
     for (t, b) in zip(truth, beauty):
-        assert_equal(t, b)
+        assert t == b
 
 def assert_items_almost_equal(truth, beauty, tol=10e-7):
     for (t,b) in zip(truth, beauty):
-        assert_equal( abs(t-b) - tol < 0.0, True)
+        assert abs(t-b) - tol < 0.0
 
 
 def assert_equal_array_array(truth, beauty):
@@ -90,9 +88,9 @@ def assert_not_equal_array_array(list_a, list_b):
     return exist_diff
 
 def assert_same_items(list_a, list_b):
-    assert_equal(len(list_a), len(list_b))
+    assert len(list_a) == len(list_b)
     for elem_a in list_a:
-        assert_in(elem_a, list_b)
+        assert elem_a in list_b
 
 
 class MoverWithSignature(paths.PathMover):
@@ -306,18 +304,18 @@ def raises_with_message_like(err, message=None):
     return decorator
 
 def assert_frame_equal(truth, beauty):
-    assert_equal(len(truth.index), len(beauty.index))
-    assert_equal(len(truth.columns), len(beauty.columns))
-    assert_equal(set(truth.index), set(beauty.index))
-    assert_equal(set(truth.columns), set(beauty.columns))
+    assert len(truth.index) == len(beauty.index)
+    assert len(truth.columns) == len(beauty.columns)
+    assert set(truth.index) == set(beauty.index)
+    assert set(truth.columns) == set(beauty.columns)
     for idx in truth.index:
         for col in truth.columns:
             truth_val = truth.loc[idx, col]
             beauty_val = beauty.loc[idx, col]
             if np.isnan(truth_val):
-                assert_true(np.isnan(beauty_val))
+                assert np.isnan(beauty_val)
             else:
-                assert_equal(truth_val, beauty_val)
+                assert truth_val == beauty_val
 
 def A2BEnsemble(volume_a, volume_b, trusted=True):
     # this is a little replacement for the same name that used to be in
