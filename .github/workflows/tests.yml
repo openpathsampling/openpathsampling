@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - master
+      - github-actions # TODO: for initial testing
     tags:
       - "v*"
   schedule:
