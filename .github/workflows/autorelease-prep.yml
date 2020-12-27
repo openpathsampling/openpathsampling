@@ -1,0 +1,60 @@
+name: "Autorelease"
+on:
+  pull_request:
+    branches:
+      - stable
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  deploy_testpypi:
+    runs-on: ubuntu-latest
+    name: "Deployment test"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+      - run: |  # TODO: move this to an action
+          source ./.github/workflows/autorelease-default-env.sh
+          if [ -f "autorelease-env.sh" ]; then
+            cat autorelease-env.sh >> $GITHUB_ENV
+          fi
+          eval $INSTALL_AUTORELEASE
+        name: "Install autorelease"
+      - run: |
+          python -m pip install twine wheel
+        name: "Install release tools"
+      - run: |
+          bump-dev-version
+          python setup.py --version
+        name: "Bump testpypi dev version"
+      - run: |
+          python setup.py sdist bdist_wheel
+          twine check dist/*
+        name: "Build and check package"
+      - uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.testpypi_password }}
+          repository_url: https://test.pypi.org/legacy/
+        name: "Deploy to testpypi"
+  test_testpypi:
+    runs-on: ubuntu-latest
+    name: "Test deployed"
+    needs: deploy_testpypi
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+      - run: |  # TODO: move this to an action
+          source ./.github/workflows/autorelease-default-env.sh
+          if [ -f "autorelease-env.sh" ]; then
+            cat autorelease-env.sh >> $GITHUB_ENV
+          fi
+          eval $INSTALL_AUTORELEASE
+        name: "Install autorelease"
+      - run: test-testpypi
+
