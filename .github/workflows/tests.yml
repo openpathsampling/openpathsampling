@@ -70,6 +70,7 @@ jobs:
       - name: "Report coverage"
         run: bash <(curl -s https://codecov.io/bash)
       - name: "Notebook tests"
+        if: matrix.MINIMAL == ''
         run: |
           pushd examples/ && ./ipynbtests.sh || exit 1 && popd
       - name: "Deploy docs"
