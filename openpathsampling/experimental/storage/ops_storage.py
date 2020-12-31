@@ -40,7 +40,11 @@ from ..simstore import SQLStorageBackend  # TODO: generalize
 from . import snapshots
 from .snapshots_table import SnapshotsTable
 
-from .simtk_unit import simtk_quantity_codec, SimtkQuantityHandler
+try:
+    from .simtk_unit import simtk_quantity_codec, SimtkQuantityHandler
+except ImportError:
+    simtk_quantity_codec = None
+    SimtkQuantityHandler = None
 
 import logging
 logger = logging.getLogger(__name__)
@@ -71,8 +75,10 @@ ops_schema = {
 ops_schema_sql_metadata = {}
 
 # this defines the simulation object serializer for OPS
-CODECS = DEFAULT_CODECS + [simtk_quantity_codec]
-HANDLERS = DEFAULT_HANDLERS + [SimtkQuantityHandler]
+EXTRA_CODECS = [simtk_quantity_codec] if simtk_quantity_codec else []
+EXTRA_HANDLERS = [SimtkQuantityHandler] if SimtkQuantityHandler else []
+CODECS = DEFAULT_CODECS + EXTRA_CODECS
+HANDLERS = DEFAULT_HANDLERS + EXTRA_HANDLERS
 
 UNSAFE_CODECS = CODECS + [CallableCodec()]
 SAFE_CODECS = CODECS + [CallableCodec({'safemode': True})]
