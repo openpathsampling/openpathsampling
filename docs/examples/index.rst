@@ -28,9 +28,9 @@ alanine dipeptide TPS example, and usually takes no more than 90 minutes to
 complete. It can be downloaded at the link below or directly launched in
 Binder. Read the README file for details on using the tutorial.
 
-* https://github.com/openpathsampling/ops_tutorial |binder|
+* https://github.com/openpathsampling/ops_tutorial |tutorial-binder|
 
-.. |binder| image:: https://mybinder.org/badge_logo.svg
+.. |tutorial-binder| image:: https://mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/openpathsampling/ops_tutorial/HEAD?urlpath=lab
 
 There's also a `YouTube video of the tutorial 
@@ -96,10 +96,10 @@ you might find interesting.
     customizing_visualization
     move_schemes_strategies
 
-In addition, there are a set of examples that are hosted outside the core
-OPS repository. These are the OPS additional examples, primarily developed
-as part of E-CAM, a European Union Horizon 2020 project. Those examples are
-available at https://gitlab.e-cam2020.eu/dwhswenson/ops_additional_examples.
+More examples can be found in the `OPS additional examples repository
+<http://github.com/openpathsampling/ops_additional_examples>`_. Live
+versions of those examples are also available through `binder
+<https://mybinder.org/v2/gh/openpathsampling/ops_additional_examples/HEAD>`_.
 
 Miscellaneous Examples
 ----------------------
