@@ -1,0 +1,29 @@
+name: Autorelease
+on:
+  push:
+    branches:
+      - stable
+
+jobs:
+  release-gh:
+    runs-on: ubuntu-latest
+    name: "Cut release"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.7"
+      - run: |  # TODO: move this to an action
+          source ./.github/workflows/autorelease-default-env.sh
+          if [ -f "autorelease-env.sh" ]; then
+            cat autorelease-env.sh >> $GITHUB_ENV
+          fi
+          eval $INSTALL_AUTORELEASE
+        name: "Install autorelease"
+      - run: |
+          VERSION=`python setup.py --version`
+          PROJECT=`python setup.py --name`
+          echo $PROJECT $VERSION
+          autorelease-release --project $PROJECT --version $VERSION --token $AUTORELEASE_TOKEN
+        env:
+          AUTORELEASE_TOKEN: ${{ secrets.AUTORELEASE_TOKEN }}
