@@ -96,12 +96,13 @@ def test_tag_simtk(obj_type):
         filename = os.path.join(tmpdir, "test.db")
         storage = Storage(filename, mode='w')
         storage.tags['foo'] = quantity
-        reloaded = storage.tags['foo']
+        storage2 = Storage(filename, mode='r')
+        reloaded = storage2.tags['foo']
         assert isinstance(reloaded, unit.Quantity)
+        assert reloaded is not quantity
         if obj_type == 'array':
             np.testing.assert_array_equal(quantity, reloaded)
         else:
             assert quantity == reloaded
         assert quantity.unit == reloaded.unit
-
 
