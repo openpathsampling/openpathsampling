@@ -4,7 +4,6 @@ import pytest
 
 import numpy as np
 from numpy import testing as npt
-from simtk import unit
 
 from . import test_utils
 
