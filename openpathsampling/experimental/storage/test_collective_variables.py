@@ -119,6 +119,7 @@ class TestMDTrajFunctionCV(object):
     def setup(self):
         if not HAS_MDTRAJ:
             pytest.skip("Unable to import MDTraj")
+        pytest.importorskip('simtk.unit')
 
         self.mdt = md.load(data_filename("ala_small_traj.pdb"))
         top = ops_omm.topology.MDTrajTopology(self.mdt.topology)
