@@ -100,8 +100,7 @@ class TestFirstFrameSelector(SelectorTest):
         samples = change.trials
         assert len(samples) == 1
         assert change.accepted is True
-        truth = [-0.5, -0.4, -0.3, -0.2, -0.1],
-
+        truth = [-0.5, -0.4, -0.3, -0.2, -0.1]
         assert truth == [s.coordinates[0][0] for s in samples[0].trajectory]
 
     def test_f(self):
