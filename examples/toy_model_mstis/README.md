@@ -7,7 +7,7 @@ a simple Langevin integrator.
 - [`toy_mstis_1_setup.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/toy_model_mstis/toy_mstis_1_setup.ipynb)
     [Part 1] Setup the system and create initial pathways to be used in
     later parts. Contains an example on how to use bootstrapping.
-- [`toy_mstis_2_run.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/toy_model_mstis/.ipynb)
+- [`toy_mstis_2_run.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/toy_model_mstis/toy_mstis_2_run.ipynb)
     [Part 2] Use the previously generated initial pathways and generate
     data to be analyzed later.
 - [`toy_mstis_3_analysis.ipynb`](http://github.com/openpathsampling/openpathsampling/blob/master/examples/toy_model_mstis/toy_mstis_3_analysis.ipynb)
