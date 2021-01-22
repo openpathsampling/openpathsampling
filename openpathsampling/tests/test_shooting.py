@@ -48,12 +48,6 @@ class TestShootingPointSelector(SelectorTest):
             assert sel.probability(frame, self.mytraj) == \
                     uniform.probability(frame, self.mytraj)
 
-    def test_0_probability(self):
-        # This test that we can, in fact, return 0.0 for illegal trajecotries
-        # Pad more than there are frames in the trajctory
-        uniform = UniformSelector(pad_start=3, pad_end=3)
-        assert uniform.probability(self.mytraj[0], self.mytraj) == 0.0
-
 
 class TestGaussianBiasSelector(SelectorTest):
     def setup(self):
