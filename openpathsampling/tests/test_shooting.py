@@ -1,11 +1,8 @@
 from builtins import object
 import collections
-from nose.tools import assert_equal, assert_almost_equal, raises
-from nose.plugins.skip import Skip, SkipTest
+from nose.tools import assert_equal, raises
 from openpathsampling.tests.test_helpers import (
-    assert_equal_array_array, assert_not_equal_array_array, make_1d_traj,
-    assert_items_equal, CalvinistDynamics
-)
+    make_1d_traj, assert_items_equal, CalvinistDynamics)
 import pytest
 
 from openpathsampling.shooting import *
@@ -34,6 +31,14 @@ class TestUniformSelector(SelectorTest):
         pick_idxs = [sel.pick(self.mytraj) for _ in range(100)]
         assert_equal(set(collections.Counter(pick_idxs).keys()), {1, 2, 3})
 
+    def test_0_probability(self):
+        # This test that we can, in fact, return 0.0 for illegal trajecotories
+        # Pad more than there are frames in the trajctory
+        uniform = UniformSelector(pad_start=3, pad_end=3)
+        for frame in self.mytraj:
+            assert uniform.probability(frame, self.mytraj) == 0.0
+
+
 
 class TestShootingPointSelector(SelectorTest):
     def test_probability(self):
@@ -44,6 +49,13 @@ class TestShootingPointSelector(SelectorTest):
         for frame in self.mytraj:
             assert sel.probability(frame, self.mytraj) == \
                     uniform.probability(frame, self.mytraj)
+
+    def test_0_probability(self):
+        # This test that we can, in fact, return 0.0 for illegal trajecotries
+        # Pad more than there are frames in the trajctory
+        uniform = UniformSelector(pad_start=3, pad_end=3)
+        assert uniform.probability(self.mytraj[0], self.mytraj) == 0.0
+
 
 class TestGaussianBiasSelector(SelectorTest):
     def setup(self):
