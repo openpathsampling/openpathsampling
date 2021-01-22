@@ -95,7 +95,7 @@ class DynamicsEngine(StorableNamedObject):
         some trajectory you might not restart completely. Possibilities are
 
         1.  `full` will restart completely and use the initial frames (default)
-        2.  `50%` will cut the existing in half but keeping at least the initial
+        2.  `keep_half` will cut the existing in half but keeping at least the initial
         3.  `remove_interval` will remove as many frames as the `interval`
         4.  a callable will be used as a function to generate the new from the
             old trajectories, e.g. `lambda t: t[:10]` would restart with the
@@ -510,15 +510,17 @@ class DynamicsEngine(StorableNamedObject):
                             int(len(trajectory) * 0.9),
                             max(
                                 len(initial),
-                                len(trajectory) / 2))]
+                                int(len(trajectory) / 2)))]
                 elif hasattr(self.on_retry, '__call__'):
                     trajectory = self.on_retry(trajectory)
-
-            if direction > 0:
-                self.current_snapshot = trajectory[-1]
-            elif direction < 0:
-                # backward simulation needs reversed snapshots
-                self.current_snapshot = trajectory[0].reversed
+            
+            """ Case of run dying before first output"""
+            if len(trajectory) >= 1:
+                if direction > 0:
+                    self.current_snapshot = trajectory[-1]
+                elif direction < 0:
+                    # backward simulation needs reversed snapshots
+                    self.current_snapshot = trajectory[0].reversed
 
             logger.info("Starting trajectory")
             self.start()

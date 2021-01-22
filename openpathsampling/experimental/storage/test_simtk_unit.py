@@ -1,7 +1,10 @@
 import pytest
 import numpy as np
+import tempfile
+import os
 
 from ..simstore.custom_json import JSONSerializerDeserializer, DEFAULT_CODECS
+from ..storage import Storage
 
 from .simtk_unit import *
 
@@ -80,3 +83,26 @@ class TestSimtkQuantityHandler(object):
         else:
             assert obj == deser
         assert obj.unit == deser.unit
+
+
+@pytest.mark.parametrize('obj_type', ['float', 'array'])
+def test_tag_simtk(obj_type):
+    # this is mainly a smoke test against regression that we couldn't tag
+    # simtk quantities
+    pytest.importorskip('simtk.unit')
+    value = {'float': 2.0, 'array': np.array([1.0, 2.0])}[obj_type]
+    quantity = value * unit.nanometer
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filename = os.path.join(tmpdir, "test.db")
+        storage = Storage(filename, mode='w')
+        storage.tags['foo'] = quantity
+        storage2 = Storage(filename, mode='r')
+        reloaded = storage2.tags['foo']
+        assert isinstance(reloaded, unit.Quantity)
+        assert reloaded is not quantity
+        if obj_type == 'array':
+            np.testing.assert_array_equal(quantity, reloaded)
+        else:
+            assert quantity == reloaded
+        assert quantity.unit == reloaded.unit
+
