@@ -1,11 +1,7 @@
 from builtins import object
 import collections
-from nose.tools import assert_equal, assert_almost_equal, raises
-from nose.plugins.skip import Skip, SkipTest
 from openpathsampling.tests.test_helpers import (
-    assert_equal_array_array, assert_not_equal_array_array, make_1d_traj,
-    assert_items_equal, CalvinistDynamics
-)
+    make_1d_traj, assert_items_equal, CalvinistDynamics)
 import pytest
 
 from openpathsampling.shooting import *
@@ -32,7 +28,14 @@ class TestUniformSelector(SelectorTest):
     def test_pick(self):
         sel = UniformSelector()  # pad_start = pad_end = 1
         pick_idxs = [sel.pick(self.mytraj) for _ in range(100)]
-        assert_equal(set(collections.Counter(pick_idxs).keys()), {1, 2, 3})
+        assert set(collections.Counter(pick_idxs).keys()) == {1, 2, 3}
+
+    def test_0_probability(self):
+        # This test that we can, in fact, return 0.0 for illegal trajecotories
+        # Pad more than there are frames in the trajctory
+        uniform = UniformSelector(pad_start=3, pad_end=3)
+        for frame in self.mytraj:
+            assert uniform.probability(frame, self.mytraj) == 0.0
 
 
 class TestShootingPointSelector(SelectorTest):
@@ -44,6 +47,7 @@ class TestShootingPointSelector(SelectorTest):
         for frame in self.mytraj:
             assert sel.probability(frame, self.mytraj) == \
                     uniform.probability(frame, self.mytraj)
+
 
 class TestGaussianBiasSelector(SelectorTest):
     def setup(self):
@@ -82,9 +86,9 @@ class TestFirstFrameSelector(SelectorTest):
     def test_pick(self):
         sel = FirstFrameSelector()
         sp = sel.pick(self.mytraj)
-        assert_equal(sp, 0)
+        assert sp == 0
         snap = self.mytraj[sp]
-        assert_equal(snap.coordinates[0][0], -0.5)
+        assert snap.coordinates[0][0] == -0.5
 
     def test_shooting_move(self):
         self.shooter = ForwardShootMover(
@@ -94,12 +98,10 @@ class TestFirstFrameSelector(SelectorTest):
         )
         change = self.shooter.move(self.gs)
         samples = change.trials
-        assert_equal(len(samples), 1)
-        assert_equal(change.accepted, True)
-        assert_items_equal(
-            [-0.5, -0.4, -0.3, -0.2, -0.1],
-            [s.coordinates[0][0] for s in samples[0].trajectory]
-        )
+        assert len(samples) == 1
+        assert change.accepted is True
+        truth = [-0.5, -0.4, -0.3, -0.2, -0.1]
+        assert truth == [s.coordinates[0][0] for s in samples[0].trajectory]
 
     def test_f(self):
         sel = FirstFrameSelector()
@@ -112,9 +114,9 @@ class TestFinalFrameSelector(SelectorTest):
     def test_pick(self):
         sel = FinalFrameSelector()
         sp = sel.pick(self.mytraj)
-        assert_equal(sp, 4)
+        assert sp == 4
         snap = self.mytraj[sp]
-        assert_equal(snap.coordinates[0][0], 0.5)
+        assert snap.coordinates[0][0] == 0.5
 
     def test_shooting_move(self):
         self.shooter = BackwardShootMover(
@@ -124,7 +126,7 @@ class TestFinalFrameSelector(SelectorTest):
         )
         change = self.shooter.move(self.gs)
         samples = change.trials
-        assert_equal(change.accepted, True)
+        assert change.accepted is True
         assert_items_equal(
             [0.1, 0.2, 0.3, 0.4, 0.5],
             [s.coordinates[0][0] for s in samples[0].trajectory]
@@ -146,17 +148,18 @@ class TestConstrainedSelector(SelectorTest):
     def test_pick(self):
         mytraj = make_1d_traj(coordinates=[-0.5, -0.4, -0.3, -0.1,
                                            0.1, 0.2, 0.3, 0.5])
-        assert_equal(self.sel.pick(mytraj), 4)
+        assert self.sel.pick(mytraj) == 4
 
-    @raises(RuntimeError)
     def test_all_in_interface(self):
         mytraj = make_1d_traj(coordinates=[-0.5, -0.4, -0.3, -0.1,
                                            -0.1, -0.2, -0.3])
-        self.sel.pick(mytraj)
+        # Assert that the right runtime error pops up
+        with pytest.raises(RuntimeError, match="Interface constrained"):
+            self.sel.pick(mytraj)
 
     def test_sum_bias(self):
         mytraj = make_1d_traj(coordinates=[-0.5, 0.1, 0.2, 0.3, 0.5])
-        assert_equal(self.sel.sum_bias(mytraj), 1.0)
+        assert self.sel.sum_bias(mytraj) == 1.0
 
     def test_f(self):
         mytraj = make_1d_traj(coordinates=[-0.5, -0.4, -0.3, -0.1,
@@ -164,7 +167,7 @@ class TestConstrainedSelector(SelectorTest):
         expected_idx = 4
         idx = self.sel.pick(mytraj)
         frame = mytraj[idx]
-        assert_equal(self.sel.f(frame, mytraj), 1.0)
+        assert self.sel.f(frame, mytraj) == 1.0
         for idx1, frame in enumerate(mytraj):
             if (idx1 != expected_idx):
-                assert_equal(self.sel.f(frame, mytraj), 0.0)
+                assert self.sel.f(frame, mytraj) == 0.0
