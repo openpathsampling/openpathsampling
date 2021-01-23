@@ -6,7 +6,7 @@ from openpathsampling.experimental.storage.dask_integration import \
 from openpathsampling.experimental.simstore.tools import none_to_default
 
 
-class NewCommittor(paths.PathSimulator):
+class ParallelCommittor(paths.PathSimulator):
     def __init__(self, states, engine, storage, scheduler=None):
         super().__init__(storage)
         # NOTE: velocity randomization is performed with the Gromacs
