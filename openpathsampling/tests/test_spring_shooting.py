@@ -37,6 +37,7 @@ class SelectorTest(object):
         self.dyn = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
                                       0.1, 0.2, 0.3, 0.4, 0.5])
         self.dyn.initialized = True
+        self.initial_guess = 3
         self.ens = paths.LengthEnsemble(5)
         self.ges = paths.SampleSet(paths.Sample(
             replica=0, trajectory=self.mytraj, ensemble=self.ens
@@ -162,7 +163,8 @@ class TestSpringShootingSelector(SelectorTest):
 
     @property
     def default_selector(self):
-        sel = SpringShootingSelector(delta_max=1, k_spring=0, initial_guess=3)
+        sel = SpringShootingSelector(delta_max=1, k_spring=0,
+                                     initial_guess=self.initial_guess)
         sel._fw_prob_list = [1.0, 0.0, 0.0]
         sel._bw_prob_list = [0.0, 0.0, 1.0]
         sel._total_bias = 1.0
@@ -249,11 +251,30 @@ class TestSpringShootingSelector(SelectorTest):
         assert sel.previous_snapshot == 3
 
     def test_backward_pick(self):
+        self.initial_guess = 2
         sel = self.default_selector
         pick = sel.pick(trajectory=self.mytraj, direction='backward')
-        assert pick == 4
-        assert sel.trial_snapshot == -1
-        assert sel.previous_snapshot == 3
+        assert pick == 3
+        assert sel.trial_snapshot == -2
+        assert sel.previous_snapshot == self.initial_guess
+
+    def test_illegal_forward_pick(self):
+        self.initial_guess = 1
+        sel = self.default_selector
+        pick = sel.pick(trajectory=self.mytraj, direction='forward')
+        assert pick == len(self.mytraj)-1
+        assert sel.trial_snapshot == len(self.mytraj)-1
+        assert sel.previous_snapshot == self.initial_guess
+        assert sel.acceptable_snapshot is False
+
+    def test_illegal_backward_pick(self):
+        self.initial_guess = 3
+        sel = self.default_selector
+        pick = sel.pick(trajectory=self.mytraj, direction='backward')
+        assert pick == 0
+        assert sel.trial_snapshot == -len(self.mytraj)
+        assert sel.previous_snapshot == self.initial_guess
+        assert sel.acceptable_snapshot is False
 
     @staticmethod
     def test_failed_loading():

@@ -253,10 +253,16 @@ class SpringShootingSelector(paths.ShootingPointSelector):
 
         index = previous_shooting_index + (dframe - delta_max)
 
-        # Check if a valid index has been selected
-        if index < 0 or index >= len(trajectory):
+        # Check if a valid index has been selected (exclude state frames)
+        if index <= 0 or index >= len(trajectory)-1:
+            # This will always result in a 0 md-step try
+            # either start at 0 for backwards or the last frame for forward
+            if direction == "backward":
+                index = 0
+            else:
+                index = len(trajectory)-1
             self.acceptable_snapshot = False
-            index = 1  # Needed to prevent selecting an out of range index
+            # Needed to prevent selecting an out of range index
         else:
             self.acceptable_snapshot = True
 
