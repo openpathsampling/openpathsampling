@@ -15,6 +15,7 @@ from .uuids import (
     is_uuid_string
 )
 
+
 # UUID recognition and encoding #####################################
 # Things in here might be modified for performance optimization. In
 # particular, it might be worth using a string representation of the UUID
@@ -94,7 +95,6 @@ def default_find_uuids(obj, cache_list):
     if is_storage_mappable(obj):
         new_objects.extend(o for o in obj.keys() if has_uuid(o))
         new_objects.extend(obj.values())
-    # elif is_iterable(obj) and not is_numpy_iterable(obj):
     elif is_storage_iterable(obj):
         new_objects.extend(obj)
     return uuids, new_objects
@@ -225,7 +225,7 @@ def replace_uuid(obj, uuid_encoding):
             replace_uuid(k, uuid_encoding): replace_uuid(v, uuid_encoding)
             for (k, v) in replacement.items()
         }
-    elif is_iterable(obj) and not is_numpy_iterable(obj):
+    elif is_storage_iterable(obj):
         replace_type = type(obj)
         replacement = replace_type([replace_uuid(o, uuid_encoding)
                                     for o in obj])
@@ -334,7 +334,7 @@ def from_dict_with_uuids(obj, cache_list):
         replacement = {from_dict_with_uuids(k, cache_list): \
                        from_dict_with_uuids(v, cache_list)
                        for (k, v) in obj.items()}
-    elif is_iterable(obj) and not is_numpy_iterable(obj):
+    elif is_storage_iterable(obj):
         replace_type = type(obj)
         replacement = replace_type([from_dict_with_uuids(o, cache_list)
                                     for o in obj])
