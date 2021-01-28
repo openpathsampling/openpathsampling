@@ -16,7 +16,8 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 import collections
 
 from openpathsampling.numerics import (Histogram, SparseHistogram,
-                                       HistogramPlotter2D)
+                                       HistogramPlotter2D,
+                                       histograms_to_pandas_dataframe)
 
 class MockAxes(object):
     def __init__(self, xticks, yticks):
@@ -25,6 +26,23 @@ class MockAxes(object):
 
     def get_xticks(self): return self.xticks
     def get_yticks(self): return self.yticks
+
+class TestFunctions(object):
+    def test_histograms_to_pandas_dataframe(self):
+        data = [1.0, 1.1, 1.2, 1.3, 2.0, 1.4, 2.3, 2.5, 3.1, 3.5]
+        # This length needs to be larger than 10 to see a difference between
+        # str ordering and int ordering
+        hists = [Histogram(n_bins=5) for i in range(11)]
+        for hist in hists:
+            _ = hist.histogram(data)
+        df = histograms_to_pandas_dataframe(hists)
+        # sort like is done in analysis
+        df = df.sort_index(axis=1)
+
+        # This breaks if the sorting is done based on strings as that will
+        # return [0, 1, 10 ...] instead of [0, 1, 2, ...]
+        for i, c in enumerate(df.columns):
+            assert str(c) == str(i)
 
 class TestHistogram(object):
     def setup(self):
@@ -166,6 +184,7 @@ class TestHistogram(object):
         histo = Histogram(bin_width=0.5, bin_range=(-1.0, 3.5))
         histo.histogram([3.5])
         assert histo.reverse_cumulative() != 0
+
 
 class TestSparseHistogram(object):
     def setup(self):
