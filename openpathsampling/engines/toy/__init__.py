@@ -1,8 +1,12 @@
-from .integrators import (LangevinBAOABIntegrator, LeapfrogVerletIntegrator)
-from .sshooting_integrators import OverdampedLangevinIntegrator
-from .pes import Gaussian, HarmonicOscillator, LinearSlope, OuterWalls, \
+from .integrators import (
+    LangevinBAOABIntegrator, LeapfrogVerletIntegrator,
+    OverdampedLangevinIntegrator
+)
+
+from .pes import (
+    Gaussian, HarmonicOscillator, LinearSlope, OuterWalls, DoubleWell,
     PES_Add, PES_Combination, PES_Sub, PES
-from .sshooting_pes import DoubleWell
+)
 
 from .engine import ToyEngine as Engine
 from .engine import ToyEngine

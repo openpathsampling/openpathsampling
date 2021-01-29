@@ -73,7 +73,7 @@ class SShootingSimulation(ShootFromSnapshotsSimulation):
 
         # Create mover combining forward and backward shooting. No condition
         # here, shots in both directions are executed in any case.
-        self.mover = NonCanonicalSequentialMover([
+        self.mover = paths.NonCanonicalConditionalSequentialMover([
             self.backward_mover,
             self.forward_mover
         ])
@@ -93,33 +93,3 @@ class SShootingSimulation(ShootFromSnapshotsSimulation):
         sshooting.state_S = dct['state_S']
         sshooting.trajectory_length = dct['trajectory_length']
         return sshooting
-
-class NonCanonicalSequentialMover(
-          paths.SequentialMover):
-    """ Special mover for reactive flux simulation.
-
-    This mover inherits from :class:`.SequentialMover` and
-    alters only the `move` method to return the output of the corresponding
-    :class:`.NonCanonicalSequentialMoveChange`.
-    """
-    _is_canonical = False
-
-    def move(self, sample_set):
-        change = super(NonCanonicalSequentialMover,
-                       self).move(sample_set)
-        return NonCanonicalSequentialMoveChange(
-            subchanges=change.subchanges,
-            mover=change.mover,
-            details=change.details
-        )
-
-class NonCanonicalSequentialMoveChange(
-          paths.SequentialMoveChange):
-    """ Special move change for reactive flux simulation.
-
-    This move change inherits from :class:`.SequentialMoveChange`
-    and returns the outcome of the last subchange.
-    """
-    @property
-    def canonical(self):
-        return self.subchanges[-1]
