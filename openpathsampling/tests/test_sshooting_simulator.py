@@ -8,7 +8,7 @@ from openpathsampling.pathsimulators.sshooting_simulator import SShootingSimulat
 import numpy as np
 import os
 
-class testSShootingSimulation(object):
+class TestSShootingSimulation(object):
     def setup(self):
         # PES is one-dimensional zero function (y(x) = 0)
         pes = toys.LinearSlope(m=[0.0], c=[0.0])

@@ -1,15 +1,26 @@
-from .test_helpers import (data_filename)
+from openpathsampling.tests.test_helpers import (data_filename)
 from nose.tools import (assert_equal, assert_not_equal,
                         assert_true, assert_greater, assert_raises,
                         assert_almost_equal)
 import openpathsampling as paths
 import openpathsampling.engines.toy as toys
-from openpathsampling.pathsimulators.sshooting_simulator import *
-from openpathsampling.analysis.sshooting_analysis import *
 import numpy as np
 import os
 
-class testSShootingAnalysis(object):
+from openpathsampling.pathsimulators.sshooting_simulator import *
+from openpathsampling.analysis.sshooting_analysis import *
+
+import logging
+logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.engines').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
+logging.getLogger('openpathsampling.sample').setLevel(logging.CRITICAL)
+
+
+class TestSShootingAnalysis(object):
     def setup(self):
         # PES is one-dimensional negative slope (y(x) = -x)
         pes = toys.LinearSlope(m=[-1.0], c=[0.0])
@@ -69,7 +80,10 @@ class testSShootingAnalysis(object):
                               trajectory_length=self.l)
         self.simulation.output_stream = open(os.devnull, 'w')
         self.simulation.run(n_per_snapshot=1)
-        self.analysis = None
+        self.analysis = SShootingAnalysis(steps=self.storage.steps,
+                                          states=[self.state_A,
+                                                  self.state_B,
+                                                  self.state_S])
 
     def teardown(self):
         if os.path.isfile(self.filename):
@@ -77,12 +91,6 @@ class testSShootingAnalysis(object):
         paths.EngineMover.default_engine = None
 
     def test_analysis(self):
-        self.storage = paths.Storage(self.filename, mode="r")
-        self.analysis = SShootingAnalysis(steps=self.storage.steps,
-                                          states=[self.state_A,
-                                                  self.state_B,
-                                                  self.state_S])
-
         # check wrong analyze_single_step() argument
         empty_dict = self.analysis.analyze_single_step(3.1415)
         assert_equal(empty_dict, {})
