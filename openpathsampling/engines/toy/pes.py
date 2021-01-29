@@ -389,6 +389,16 @@ class DoubleWell(PES):
         self.A = np.array(A)
         self.x0 = np.array(x0)
 
+    def __repr__(self):  # pragma: no cover
+        repr_str = "DoubleWell({obj.A}, {obj.x0})"
+        return repr_str.format(obj=self)
+
+    def to_dict(self):
+        dct = super(DoubleWell, self).to_dict()
+        dct['A'] = dct['A'].tolist()
+        dct['x0'] = dct['x0'].tolist()
+        return dct
+
     def V(self, sys):
         """Potential energy
 

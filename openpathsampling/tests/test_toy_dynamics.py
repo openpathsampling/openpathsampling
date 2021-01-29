@@ -28,11 +28,12 @@ import numpy as np
 
 def setup_module():
     # set up globals
-    global gaussian, linear, outer, harmonic
+    global gaussian, linear, outer, harmonic, doublewell
     gaussian = toy.Gaussian(6.0, [2.5, 40.0], [0.8, 0.5])
     outer = toy.OuterWalls([1.12, 2.0], [0.2, -0.25])
     linear = toy.LinearSlope([1.5, 0.75], 0.5)
     harmonic = toy.HarmonicOscillator([1.5, 2.0], [0.5, 3.0], [0.25, 0.75])
+    doublewell = toy.DoubleWell([5.0, 2.0], [2.0, 3.0])
     global init_pos, init_vel, sys_mass
     init_pos = np.array([0.7, 0.65])
     init_vel = np.array([0.6, 0.5])
@@ -104,6 +105,20 @@ class TestLinearSlope(object):
 
     def test_dVdx(self):
         assert_equal(linear.dVdx(self), [1.5, 0.75])
+
+class TestDoubleWell(object):
+    def setup(self):
+        self.positions = init_pos
+        self.velocities = init_vel
+        self.mass = sys_mass
+
+    def test_V(self):
+        assert_almost_equal(doublewell.V(self), 208.7475125)
+
+    def test_dVdx(self):
+        for (experiment, theory) in zip(doublewell.dVdx(self),
+                                        [-49.14, -44.603]):
+            assert_almost_equal(experiment, theory)
 
 class TestCombinations(object):
     def setup(self):
@@ -336,6 +351,38 @@ class TestLangevinBAOABIntegrator(object):
         # tests that the same random number wasn't used for both:
         assert_not_equal(self.sim.velocities[0] - init_vel[0],
                          self.sim.velocities[1] - init_vel[1])
+
+    def test_step(self):
+        self.sim.generate_next_frame()
+
+class TestOverdampedLangevinIntegrator(object):
+    '''This is only a test if the integrator runs. Because of its stochastic
+    nature we can not actually test its correctness easily.'''
+    def setup(self):
+        pes = linear
+        integ = toy.OverdampedLangevinIntegrator(dt=0.001, temperature=4.0,
+                                                 D=1.0)
+        topology=toy.Topology(
+            n_spatial = 2,
+            masses = sys_mass,
+            pes = pes
+        )
+        options={
+            'integ' : integ,
+            'n_frames_max' : 5}
+        sim = toy.Engine(options=options, topology=topology)
+
+        template = toy.Snapshot(
+            coordinates=init_pos.copy(),
+            velocities=init_vel.copy(),
+            engine=sim
+        )
+
+        sim.positions = init_pos.copy()
+        sim.velocities = init_vel.copy()
+
+        sim.n_steps_per_frame = 10
+        self.sim = sim
 
     def test_step(self):
         self.sim.generate_next_frame()
