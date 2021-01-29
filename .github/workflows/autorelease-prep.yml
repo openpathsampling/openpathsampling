@@ -55,6 +55,9 @@ jobs:
             cat autorelease-env.sh >> $GITHUB_ENV
           fi
           eval $INSTALL_AUTORELEASE
+          which py.test
+          rehash
+          which py.test
         name: "Install autorelease"
       - run: test-testpypi
 
