@@ -1,3 +1,5 @@
+# File vencdored from Autorelease; specific version information should be in
+# the INSTALL_AUTORELEASE variable in autorelease-default-env.sh
 name: "Autorelease"
 on:
   pull_request:
@@ -22,7 +24,11 @@ jobs:
           if [ -f "autorelease-env.sh" ]; then
             cat autorelease-env.sh >> $GITHUB_ENV
           fi
-          eval $INSTALL_AUTORELEASE
+          if [ -f "./.autorelease/install-autorelease" ]; then
+            source ./.autorelease/install-autorelease
+          else
+            eval $INSTALL_AUTORELEASE
+          fi
         name: "Install autorelease"
       - run: |
           python -m pip install twine wheel
@@ -54,10 +60,17 @@ jobs:
           if [ -f "autorelease-env.sh" ]; then
             cat autorelease-env.sh >> $GITHUB_ENV
           fi
-          eval $INSTALL_AUTORELEASE
-          which py.test
-          rehash
-          which py.test
+          if [ -f "./.autorelease/install-autorelease" ]; then
+            source ./.autorelease/install-autorelease
+          else
+            eval $INSTALL_AUTORELEASE
+          fi
         name: "Install autorelease"
-      - run: test-testpypi
-
+      - name: "Install testpypi version"
+        run: install-testpypi
+      - name: "Test testpypi version"
+        run: |
+          if [ -f "autorelease-env.sh" ]; then
+            cat autorelease-env.sh >> $GITHUB_ENV
+          fi
+          test-testpypi
