@@ -25,5 +25,5 @@ if __name__ == "__main__":
     )
     checker.release_branches = RELEASE_BRANCHES + [RELEASE_TAG]
 
-    tests = checker.select_tests_from_sysargs()
+    tests = checker.select_tests()
     n_fails = checker.run_as_test(tests)

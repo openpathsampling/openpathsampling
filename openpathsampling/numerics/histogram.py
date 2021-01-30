@@ -430,7 +430,7 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
             if t != b:
                 raise Warning("Bins don't match up")
         if hist.name is None:
-            hist.name = str(hists.index(hist))
+            hist.name = int(hists.index(hist))
 
         hist_data = {
             "histogram" : hist,
@@ -447,7 +447,6 @@ def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
             "cumulative" : "r"
         }[fcn]
         xvals = hist.xvals(bin_edge)
-
         frames.append(pd.DataFrame({hist.name : hist_data}, index=xvals))
     all_frames = pd.concat(frames, axis=1)
     return all_frames.fillna(0.0)
