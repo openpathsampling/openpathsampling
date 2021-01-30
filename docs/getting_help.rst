@@ -17,10 +17,11 @@ depending on the nature of your question.
   in our `GitHub Issues
   <https://github.com/openpathsampling/openpathsampling/issues>`_.
 * **Feature requests and implementation advice**: "I'd like this feature" or
-  "I'm trying to add this feature, what's the best way?" These is also
+  "I'm trying to add this feature, what's the best way?" These are also
   suitable for `GitHub Issues
-  <https://github.com/openpathsampling/openpathsampling/issues>`_. This is
-  also one of the few cases where emailing the lead developer is a good idea.
+  <https://github.com/openpathsampling/openpathsampling/issues>`_.
+  Implementation advice is also one of the few cases where emailing the lead
+  developer is a good idea.
 
 There are two main motivations in asking you to follow these rules:
 
