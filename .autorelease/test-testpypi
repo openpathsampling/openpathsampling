@@ -1,0 +1,4 @@
+#!/bin/bash
+
+python -m pip install pytest nose
+py.test --pyargs openpathsampling.tests
