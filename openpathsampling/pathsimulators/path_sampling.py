@@ -257,48 +257,52 @@ class PathSampling(PathSimulator):
         hook_state = None
         self.run_hooks('before_simulation', sim=self)
         for nn in range(n_steps):
-            # bookkeeping and before_step hooks
-            self.step += 1
-            logger.info("Beginning MC cycle " + str(self.step))
-            step_number = self.step
-            # TODO: anything else we could want in the step info?
-            step_info = (nn, n_steps)
-            self.run_hooks('before_step', sim=self, step_number=step_number,
-                           step_info=step_info, state=self.sample_set)
+            self.run_one_step()
 
-            # MCStep, i.e. actual sample move
-            time_start = time.time()  # we time **only** the MCStep (no hooks!)
-            movepath = self._mover.move(self.sample_set, step=self.step)
-            samples = movepath.results
-            new_sampleset = self.sample_set.apply_samples(samples)
-            elapsed_step = time.time() - time_start
-            # TODO: we can save this with the MC steps for timing? The bit
-            # below works, but is only a temporary hack
-            setattr(movepath.details, "timing", elapsed_step)
-
-            mcstep = MCStep(
-                simulation=self,
-                mccycle=self.step,
-                previous=self.sample_set,
-                active=new_sampleset,
-                change=movepath
-            )
-            self._current_step = mcstep
-            #self.save_current_step()  # storage hook does this anyway
-            self.sample_set = new_sampleset
-
-            # run after_step hooks
-            hook_state = self.run_hooks('after_step', sim=self,
-                                        step_number=step_number,
-                                        step_info=step_info,
-                                        # TODO: do we want the new state here
-                                        # i.e. state after step as is right now
-                                        # or do we want something similar to
-                                        # shoot_snapshots where
-                                        # old state == shooting snapshot
-                                        state=self.sample_set,
-                                        results=mcstep,
-                                        hook_state=hook_state
-                                        )
         # after simulation hooks
         self.run_hooks('after_simulation', sim=self)
+
+    def run_one_step(self):
+        # bookkeeping and before_step hooks
+        self.step += 1
+        logger.info("Beginning MC cycle " + str(self.step))
+        step_number = self.step
+        # TODO: anything else we could want in the step info?
+        step_info = (nn, n_steps)
+        self.run_hooks('before_step', sim=self, step_number=step_number,
+                       step_info=step_info, state=self.sample_set)
+
+        # MCStep, i.e. actual sample move
+        time_start = time.time()  # we time **only** the MCStep (no hooks!)
+        movepath = self._mover.move(self.sample_set, step=self.step)
+        samples = movepath.results
+        new_sampleset = self.sample_set.apply_samples(samples)
+        elapsed_step = time.time() - time_start
+        # TODO: we can save this with the MC steps for timing? The bit
+        # below works, but is only a temporary hack
+        setattr(movepath.details, "timing", elapsed_step)
+
+        mcstep = MCStep(
+            simulation=self,
+            mccycle=self.step,
+            previous=self.sample_set,
+            active=new_sampleset,
+            change=movepath
+        )
+        self._current_step = mcstep
+        #self.save_current_step()  # storage hook does this anyway
+        self.sample_set = new_sampleset
+
+        # run after_step hooks
+        hook_state = self.run_hooks('after_step', sim=self,
+                                    step_number=step_number,
+                                    step_info=step_info,
+                                    # TODO: do we want the new state here
+                                    # i.e. state after step as is right now
+                                    # or do we want something similar to
+                                    # shoot_snapshots where
+                                    # old state == shooting snapshot
+                                    state=self.sample_set,
+                                    results=mcstep,
+                                    hook_state=hook_state
+                                    )
