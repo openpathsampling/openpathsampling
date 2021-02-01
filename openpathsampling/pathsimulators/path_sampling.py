@@ -253,22 +253,20 @@ class PathSampling(PathSimulator):
         self.output_stream = original_output_stream
 
     def run(self, n_steps):
-        mcstep = None
         hook_state = None
         self.run_hooks('before_simulation', sim=self)
         for nn in range(n_steps):
-            self.run_one_step()
+            step_info = nn, n_steps
+            hook_state, mcstep = self.run_one_step(step_info, hook_state)
 
         # after simulation hooks
         self.run_hooks('after_simulation', sim=self)
 
-    def run_one_step(self):
+    def run_one_step(self, step_info, hook_state=None):
         # bookkeeping and before_step hooks
         self.step += 1
         logger.info("Beginning MC cycle " + str(self.step))
         step_number = self.step
-        # TODO: anything else we could want in the step info?
-        step_info = (nn, n_steps)
         self.run_hooks('before_step', sim=self, step_number=step_number,
                        step_info=step_info, state=self.sample_set)
 
@@ -306,3 +304,4 @@ class PathSampling(PathSimulator):
                                     results=mcstep,
                                     hook_state=hook_state
                                     )
+        return hook_state, mcstep
