@@ -97,7 +97,7 @@ you might find interesting.
     move_schemes_strategies
 
 More examples can be found in the `OPS additional examples repository
-<http://github.com/openpathsampling/ops_additional_examples>`_. Live
+<https://github.com/openpathsampling/ops_additional_examples>`_. Live
 versions of those examples are also available through `binder
 <https://mybinder.org/v2/gh/openpathsampling/ops_additional_examples/HEAD>`_.
 
