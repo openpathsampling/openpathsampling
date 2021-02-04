@@ -234,13 +234,12 @@ class Histogram(SparseHistogram):
         self._inputs = [n_bins, bin_width, bin_range]
 
         # regularize options
-        self.bin_width = None # if not set elsewhere
-        self.bin_range = None # if not set elsewhere
+        self.bin_width = bin_width
+        self.bin_range = bin_range
         if bin_range is not None:
             max_bin = max(bin_range)
             min_bin = min(bin_range)
             if bin_width is not None:
-                self.bin_width = bin_width
                 self.n_bins = int(math.ceil((max_bin-min_bin)/self.bin_width))
                 # if this isn't actually divisible, you'll get one extra bin
             if n_bins is not None:
