@@ -11,6 +11,7 @@ from openpathsampling.beta import hooks
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
+
 class PathSampling(PathSimulator):
     """
     General path sampling code.
@@ -48,14 +49,6 @@ class PathSampling(PathSimulator):
 
         initialization_logging(init_log, self,
                                ['move_scheme', 'sample_set'])
-        # TODO: move this to PathSamplingOutputHook defaults?
-        # i.e. do not attach a hook on default and use status_update_freq=1
-        # as default for PathSamplingOutputHook,
-        # let the user add/modify hook if needed?
-        # this would also 'fix' the fact that you can only set these two
-        # once and before starting any simulation
-        # because the hooks read them only before_simulation and
-        # if their values for them are None
         self.live_visualizer = None
         self.status_update_frequency = 1
 
@@ -124,10 +117,7 @@ class PathSampling(PathSimulator):
         return self._current_step
 
     def save_current_step(self):
-        """
-        Save the current step to the storage
-
-        """
+        """Save the current step to the storage."""
         if self.storage is not None and self._current_step is not None:
             try:
                 # new storage does a stash here, not a save
@@ -262,6 +252,21 @@ class PathSampling(PathSimulator):
         # after simulation hooks
         self.run_hooks('after_simulation', sim=self)
 
+    def run_until_n_accepted(self, n_accepted):
+        hook_state = None
+        self.run_hooks('before_simulation', sim=self)
+        cur_acc = 0
+        step_count = 0
+        while cur_acc < n_accepted:
+            step_info = step_count, None
+            hook_state, mcstep = self.run_one_step(step_info, hook_state)
+            step_count += 1
+            if mcstep.change.canonical.accepted:
+                cur_acc += 1
+
+        # after simulation hooks
+        self.run_hooks('after_simulation', sim=self)
+
     def run_one_step(self, step_info, hook_state=None):
         # bookkeeping and before_step hooks
         self.step += 1
@@ -288,7 +293,6 @@ class PathSampling(PathSimulator):
             change=movepath
         )
         self._current_step = mcstep
-        #self.save_current_step()  # storage hook does this anyway
         self.sample_set = new_sampleset
 
         # run after_step hooks

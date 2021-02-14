@@ -60,6 +60,7 @@ class StorageHook(PathSimulatorHook):
     """
     implemented_for = ['before_simulation', 'after_step',
                        'after_simulation']
+
     def __init__(self, storage=None, frequency=None):
         self.storage = storage
         self.frequency = frequency
@@ -348,14 +349,15 @@ class PathSamplingOutputHook(PathSimulatorHook):
         self._initial_time = time.time()
 
     def before_step(self, sim, step_number, step_info, state):
-        nn, n_steps = step_info
-        elapsed = time.time() - self._initial_time
-        paths.tools.refresh_output(
-            "Working on Monte Carlo cycle number " + str(step_number)
-            + "\n" + paths.tools.progress_string(nn, n_steps, elapsed),
-            refresh=self.allow_refresh,
-            output_stream=self.output_stream
-        )
+        if step_number % self.status_update_frequency == 0:
+            nn, n_steps = step_info
+            elapsed = time.time() - self._initial_time
+            paths.tools.refresh_output(
+                "Working on Monte Carlo cycle number " + str(step_number)
+                + "\n" + paths.tools.progress_string(nn, n_steps, elapsed),
+                refresh=self.allow_refresh,
+                output_stream=self.output_stream
+            )
 
     def after_simulation(self, sim):
         paths.tools.refresh_output(
