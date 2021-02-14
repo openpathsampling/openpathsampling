@@ -232,7 +232,8 @@ class TestPathSamplingOutputHook(object):
                                     allow_refresh=False)
         self.empty_hook = PathSamplingOutputHook()
         self.hook = PathSamplingOutputHook(output_stream=self.stream,
-                                           allow_refresh=False)
+                                           allow_refresh=False,
+                                           status_update_frequency=1)
 
     @pytest.mark.parametrize('hook_name', ['empty', 'std'])
     def test_before_simulation(self, hook_name):
