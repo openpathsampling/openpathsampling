@@ -2239,10 +2239,13 @@ class AllOutXEnsemble(AllInXEnsemble):
     """
     Ensemble of trajectories with all frames outside the given volume
     """
+    def __init__(self, volume, trusted=True):
+        super(AllOutXEnsemble, self).__init__(volume, trusted)
+        self._cached_volume = ~self.volume
 
     @property
     def _volume(self):
-        return ~self.volume
+        return self._cached_volume
 
     def _str(self):
         return 'x[t] in {0} for all t'.format(self._volume)
