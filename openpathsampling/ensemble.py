@@ -1624,6 +1624,10 @@ class SequentialEnsemble(Ensemble):
         traj_final = len(traj)
         ens = self.ensembles[ens_num]
         subtraj = traj[slice(subtraj_first, subtraj_final + 1)]
+
+        # Every trajectory slice generates a new object which is exsessive
+        # So we pre-slice here and ininitialse an iterator to be used later
+        exttraj = traj[slice(subtraj_final + 1, traj_final+1)].__iter__()
         # if we're in the ensemble or could eventually be in the ensemble,
         # we keep building the subtrajectory
 
@@ -1636,12 +1640,15 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Can-app " + str(ens.can_append(subtraj, trusted=True)))
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         # TODO: the weird while condition is handling the OVERSHOOTING
-        while ((ens.can_append(subtraj, trusted=True) or
-                ens(subtraj, trusted=True)
-               ) and subtraj_final < traj_final):
+        while (ens.can_append(subtraj, trusted=True) or
+                ens(subtraj, trusted=True)):
             subtraj_final += 1
-            # TODO: replace with append; probably faster
-            subtraj = traj[slice(subtraj_first, subtraj_final + 1)]
+            # prevent StopIteration
+            if subtraj_final >= traj_final:
+                # prevent over-shooting
+                subtraj_final = min(subtraj_final, traj_final)
+                break
+            subtraj.append(next(exttraj))
             logger.debug(" Traj slice " + str(subtraj_first) + " " +
                          str(subtraj_final + 1) + " / " + str(traj_final))
         return subtraj_final
