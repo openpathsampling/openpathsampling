@@ -1481,6 +1481,7 @@ class SequentialEnsemble(Ensemble):
         self._cache_can_prepend = EnsembleCache(-1)
         self._cache_strict_can_prepend = EnsembleCache(-1)
         self._cache_check_reverse = EnsembleCache(-1)
+        self._zero_traj = paths.Trajectory([])
 
         # sanity checks
         if len(self.min_overlap) != len(self.max_overlap):
@@ -1573,7 +1574,7 @@ class SequentialEnsemble(Ensemble):
                     subtraj_first = subtraj_final
             else:
                 if ens_num <= final_ens and \
-                        self.ensembles[ens_num](paths.Trajectory([])):
+                        self.ensembles[ens_num](self._zero_traj):
                     ens_num += 1
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
@@ -1831,7 +1832,7 @@ class SequentialEnsemble(Ensemble):
                         "returning True")
                     return True
 
-                elif self.ensembles[ens_num](paths.Trajectory([])):
+                elif self.ensembles[ens_num](self._zero_traj):
                     logger.debug(
                         "Moving on because of allowed zero-length ensemble")
                     ens_num += 1
@@ -2005,7 +2006,7 @@ class SequentialEnsemble(Ensemble):
                         "All frames assigned, more ensembles to go: "
                         "returning True")
                     return True
-                elif self.ensembles[ens_num](paths.Trajectory([])):
+                elif self.ensembles[ens_num](self._zero_traj):
                     logger.debug(
                         "Moving on because of allowed zero-length ensemble")
                     ens_num -= 1
