@@ -23,9 +23,12 @@ Fix things
 
 We're not perfect! Like every code, ours has bugs, or small usability
 improvements that should be made. Please, help us out! If you want to help,
-but don't know where to start, consider improving our documentation. Like
+but don't know where to start, try looking at the issues marked `"good first
+issue"`_ on GitHub. Also, might consider improving our documentation. Like
 most open source projects, our developers are focused on the code, and would
 love to have contributions to the docs.
+
+.. _"good first issue": https://github.com/openpathsampling/openpathsampling/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22
 
 Contribute to Core
 ------------------
