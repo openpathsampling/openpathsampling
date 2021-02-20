@@ -266,6 +266,15 @@ class GeneralizedDirectionModifier(SnapshotModifier):
             input snapshot to check for validity
         """
         try:
+            has_constraints = engine.has_constraints()
+        except AttributeError:
+            pass
+        else:
+            if has_constraints:
+                raise RuntimeError("Cannot use this snapshot modifier with "
+                                   "an engine that has constraints.")
+
+        try:
             box_vectors = snapshot.box_vectors
         except AttributeError:
             box_vectors = None
