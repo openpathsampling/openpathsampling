@@ -47,7 +47,7 @@ that we can do that.
 
 If you're not familiar with writing software tests, one of the OPS devs has
 given a tutorial on `software testing in scientific programming
-<http://training.e-cam2020.eu/files/5ca5ba6fe4b0fed490544a7b?dataset=5ca5b9dfe4b0fed490544a56&space=5ca35151e4b0fed490540623>`_.
+<https://training.e-cam2020.eu/files/5ca5ba6fe4b0fed490544a7b?dataset=5ca5b9dfe4b0fed490544a56&space=5ca35151e4b0fed490540623>`_.
 
 For what it's worth, `code review will help you become a better programmer
 <https://simpleprogrammer.com/why-code-reviews-make-better-code-teams/>`_.

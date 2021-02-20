@@ -9,7 +9,7 @@ depending on the nature of your question.
 
 * **Usage questions:** "How do I do X with OPS?", "Is there a way to do Y?"
   "Why does this give an error?" Please ask at
-  http://mattermodeling.stackexchange.com, using the ``openpathsampling``
+  https://mattermodeling.stackexchange.com, using the ``openpathsampling``
   tag.
 * **Bug reports:** "I got this error, and I'm sure it's a bug." Please post
   it, with a `minimal reproducible example
@@ -30,6 +30,6 @@ There are two main motivations in asking you to follow these rules:
    as well!
 2. By posting in public, you can engage the broader community's help. If you
    aren't sure whether the problem you're having is with OPS or with Python,
-   post it at http://mattermodeling.stackexchange.com and use both those
+   post it at https://mattermodeling.stackexchange.com and use both those
    tags -- you might get an answer from a Python expert there before the OPS
    team even has a chance to see your post!
