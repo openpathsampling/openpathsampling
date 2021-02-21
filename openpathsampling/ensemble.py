@@ -2284,14 +2284,16 @@ class PartOutXEnsemble(PartInXEnsemble):
     """
     Ensemble of trajectories with at least one frame outside the volume
     """
-
-    def _str(self):
-        return 'exists t such that x[t] in {0}'.format(self._volume)
+    def __init__(self, volume, trusted=True):
+        super(PartOutXEnsemble, self).__init__(volume, trusted)
+        self._cached_volume = ~self.volume
 
     @property
     def _volume(self):
-        # effectively use PartInXEnsemble but with inverted volume
-        return ~self.volume
+        return self._cached_volume
+
+    def _str(self):
+        return 'exists t such that x[t] in {0}'.format(self._volume)
 
     def __invert__(self):
         return AllInXEnsemble(self.volume, self.trusted)
