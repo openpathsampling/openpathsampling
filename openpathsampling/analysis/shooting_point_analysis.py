@@ -3,12 +3,7 @@ import pandas as pd
 import numpy as np
 
 from openpathsampling.progress import SimpleProgress
-
-try:
-    from collections import abc
-except ImportError:
-    import collections as abc
-
+from collections import abc
 
 # based on http://stackoverflow.com/a/3387975
 class TransformedDict(abc.MutableMapping):

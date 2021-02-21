@@ -160,12 +160,7 @@ def has_deprecations(cls):
     """Decorator to ensure that docstrings get updated for wrapped class"""
     for obj in [cls] + list(vars(cls).values()):
         if callable(obj) and hasattr(obj, '__new_docstring'):
-            try:
-                obj.__doc__ = obj.__new_docstring
-            except AttributeError:
-                # probably Python 2; we can't update docstring in Py2
-                # see https://github.com/Chilipp/docrep/pull/9 and related
-                pass
+            obj.__doc__ = obj.__new_docstring
             del obj.__new_docstring
     return cls
 
