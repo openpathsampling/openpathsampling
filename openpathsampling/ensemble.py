@@ -1715,6 +1715,7 @@ class SequentialEnsemble(Ensemble):
 
         traj_final = len(trajectory)
         final_ens = len(self.ensembles) - 1
+        ltraj = list(trajectory)
         # print traj_final, final_ens
         # logging startup
         if cache.debug_enabled:  # pragma: no cover
@@ -1767,7 +1768,7 @@ class SequentialEnsemble(Ensemble):
                     "(" + str(subtraj_first) + "," + str(subtraj_final) + ")"
                 )
             if subtraj_final - subtraj_first > 0:
-                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                subtraj = ltraj[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
                     if subtraj_final == traj_final:
                         # we're in the last ensemble and the whole
@@ -1816,7 +1817,7 @@ class SequentialEnsemble(Ensemble):
                     # next frame might satisfy next ensemble
                     if self._use_cache:
                         prev_slice = cache.contents['assignments'][ens_num - 1]
-                        prev_subtraj = trajectory[prev_slice]
+                        prev_subtraj = ltraj[prev_slice]
                         prev_ens = self.ensembles[ens_num - 1]
                         if prev_ens.can_append(prev_subtraj, trusted=True):
                             logger.debug(
@@ -1883,6 +1884,7 @@ class SequentialEnsemble(Ensemble):
         subtraj_final = len(trajectory)
         ens_final = len(self.ensembles) - 1
         ens_num = ens_final
+        ltraj = list(trajectory)
 
         if self._use_cache:
             _ = cache.check(trajectory)
@@ -1945,7 +1947,7 @@ class SequentialEnsemble(Ensemble):
                 "(" + str(subtraj_first) + "," + str(subtraj_final) + ")"
             )
             if subtraj_final - subtraj_first > 0:
-                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                subtraj = ltraj[slice(subtraj_first, subtraj_final)]
                 if ens_num == first_ens:
                     if subtraj_first == traj_first:
                         logger.debug("Returning can_prepend")
@@ -1987,7 +1989,7 @@ class SequentialEnsemble(Ensemble):
                     if self._use_cache:
                         prev_slice = cache.contents['assignments'][ens_num + 1]
                         logger.debug("prev_slice " + str(prev_slice))
-                        prev_subtraj = trajectory[prev_slice]
+                        prev_subtraj = ltraj[prev_slice]
                         logger.debug("prev_subtraj " + str(prev_subtraj))
                         logger.debug("traj " + str(trajectory))
                         prev_ens = self.ensembles[ens_num + 1]
