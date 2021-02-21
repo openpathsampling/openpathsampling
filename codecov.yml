@@ -7,3 +7,4 @@ coverage:
 codecov:
   notify:
     wait_for_ci: true
+    after_n_builds: 3
