@@ -169,17 +169,9 @@ class Trajectory(list, StorableObject):
         )
         raise AttributeError(msg)
 
-
     # ==========================================================================
     # LIST INHERITANCE FUNCTIONS
     # ==========================================================================
-
-    def __getslice__(self, *args, **kwargs):
-        ret = list.__getslice__(self, *args, **kwargs)
-        if type(ret) is list:
-            ret = Trajectory(ret)
-
-        return ret
 
     # this is intuitive. hash(Trajectory(traj)) == hash(traj)
     # but hash(LoaderProxy(..., traj.__uuid__)) != hash(traj)
