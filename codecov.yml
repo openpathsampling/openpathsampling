@@ -1,0 +1,9 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+
+codecov:
+  notify:
+    wait_for_ci: true
