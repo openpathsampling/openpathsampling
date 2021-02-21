@@ -59,7 +59,7 @@ from .bias_function import (
 )
 
 from .collectivevariable import (
-    FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
+    FunctionCV, MDTrajFunctionCV,
     InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
     CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
     GeneratorCV)
@@ -91,7 +91,7 @@ from .movechange import (
     RejectedMaxLengthSampleMoveChange
 )
 
-from .pathmover import Details, MoveDetails, SampleDetails
+from .pathmover import Details
 
 from .pathmover import (
     RandomChoiceMover, PathMover, ConditionalSequentialMover,
