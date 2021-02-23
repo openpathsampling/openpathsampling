@@ -43,6 +43,34 @@ def join_ensembles(ensemble_list):
     return ensemble
 
 
+def _get_list_traj(trajectory):
+    """Return a list of (proxy) snapshots from either a list or Trajectory
+
+    Parameters
+    ----------
+    trajectory : :class:`.Trajectory` or :class:`.list`
+       trajectory or list to convert into a list of snapshots
+
+    Returns
+    -------
+    :class:`.list`
+       list of (proxy) snapshots
+
+    Note
+    ----
+    Due to possible UUID space restrictions, we don't want to slice
+    Trajectories if we can help it (as this will generate a new Trajectory
+    object with its own UUID). This is a convenience function that will either
+    turn a Trajectory into a list of (proxy) snapshots or just list to list
+    mapping, which you can slice without generating a new UUID
+
+    For a more in-depth discussion, please see:
+    https://github.com/openpathsampling/openpathsampling/pull/978
+    """
+    itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
+    return list(itraj())
+
+
 # note: the cache is not storable, because that would just be silly!
 class EnsembleCache(object):
     """Object used by ensembles to enable fast algorithms for basic functions.
@@ -1601,9 +1629,8 @@ class SequentialEnsemble(Ensemble):
 
         subtraj_first = 0
         subtraj_i = 0
-        # Don't load proxies if this gets a trajectory
-        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
-        ltraj = list(itraj())
+        # Make a list before slicing
+        ltraj = _get_list_traj(trajectory)
         while subtraj_i < len(self.ensembles):
             subtraj_final = transitions[subtraj_i]
             subtraj = ltraj[slice(subtraj_first, subtraj_final)]
@@ -1632,10 +1659,8 @@ class SequentialEnsemble(Ensemble):
             subtraj_final = max(last_checked, subtraj_first)
         traj_final = len(traj)
         ens = self.ensembles[ens_num]
-        # Don't load proxies if this gets a trajectory
-        itraj = getattr(traj, 'iter_proxies', traj.__iter__)
-        ltraj = list(itraj())
-
+        # Make a list before slicing
+        ltraj = _get_list_traj(traj)
         subtraj = ltraj[slice(subtraj_first, subtraj_final + 1)]
 
         # if we're in the ensemble or could eventually be in the ensemble,
@@ -1666,9 +1691,9 @@ class SequentialEnsemble(Ensemble):
             subtraj_first = min(last_checked, subtraj_final - 1)
         traj_first = 0
         ens = self.ensembles[ens_num]
-        itraj = getattr(traj, 'iter_proxies', traj.__iter__)
-        ltraj = list(itraj())
 
+        # Make a list before slicing
+        ltraj = _get_list_traj(traj)
         subtraj = ltraj[slice(subtraj_first, subtraj_final)]
         logger.debug("*Traj slice " + str(subtraj_first) + " " +
                      str(subtraj_final) + " / " + str(len(traj)))
@@ -1721,9 +1746,8 @@ class SequentialEnsemble(Ensemble):
 
         traj_final = len(trajectory)
         final_ens = len(self.ensembles) - 1
-        # Prevent proxy loading and trajectroy slicing
-        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
-        ltraj = list(itraj())
+        # Make a list before slicing
+        ltraj = _get_list_traj(trajectory)
         # print traj_final, final_ens
         # logging startup
         if cache.debug_enabled:  # pragma: no cover
@@ -1892,9 +1916,8 @@ class SequentialEnsemble(Ensemble):
         subtraj_final = len(trajectory)
         ens_final = len(self.ensembles) - 1
         ens_num = ens_final
-        # Prevent proxy loading and trajectroy slicing
-        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
-        ltraj = list(itraj())
+        # Make list before slicing
+        ltraj = _get_list_traj(trajectory)
 
         if self._use_cache:
             _ = cache.check(trajectory)
@@ -2237,8 +2260,8 @@ class AllInXEnsemble(VolumeEnsemble):
             logger.debug("Untrusted VolumeEnsemble " + repr(self))
             # logger.debug("Trajectory " + repr(trajectory))
             # This can sometimes get a list instead of a Trajectory
-            itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
-            for frame in itraj():
+            # Make sure this is a proxy list
+            for frame in _get_list_traj(trajectory):
                 if not self._volume(frame):
                     return False
             return True
@@ -2297,8 +2320,7 @@ class PartInXEnsemble(VolumeEnsemble):
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             The trajectory to be checked
         """
-        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
-        for frame in list(itraj()):
+        for frame in _get_list_traj(trajectory):
             if self._volume(frame):
                 return True
         return False
@@ -2325,8 +2347,7 @@ class PartOutXEnsemble(PartInXEnsemble):
 
     def __call__(self, trajectory, trusted=None, candidate=False):
         # Don't load proxies if this is a Trajectory
-        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
-        for frame in itraj():
+        for frame in _get_list_traj(trajectory):
             if self._volume(frame):
                 return True
         return False
