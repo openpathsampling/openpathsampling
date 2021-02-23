@@ -1601,7 +1601,9 @@ class SequentialEnsemble(Ensemble):
 
         subtraj_first = 0
         subtraj_i = 0
-        ltraj = list(trajectory)
+        # Don't load proxies if this gets a trajectory
+        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
+        ltraj = list(itraj())
         while subtraj_i < len(self.ensembles):
             subtraj_final = transitions[subtraj_i]
             subtraj = ltraj[slice(subtraj_first, subtraj_final)]
@@ -1630,7 +1632,10 @@ class SequentialEnsemble(Ensemble):
             subtraj_final = max(last_checked, subtraj_first)
         traj_final = len(traj)
         ens = self.ensembles[ens_num]
-        ltraj = list(traj)
+        # Don't load proxies if this gets a trajectory
+        itraj = getattr(traj, 'iter_proxies', traj.__iter__)
+        ltraj = list(itraj())
+
         subtraj = ltraj[slice(subtraj_first, subtraj_final + 1)]
 
         # if we're in the ensemble or could eventually be in the ensemble,
@@ -1648,7 +1653,6 @@ class SequentialEnsemble(Ensemble):
         while ((ens.can_append(subtraj, trusted=True) or
                 ens(subtraj, trusted=True)) and subtraj_final < traj_final):
             subtraj_final += 1
-            # prevent StopIteration
             subtraj = ltraj[slice(subtraj_first, subtraj_final + 1)]
             logger.debug(" Traj slice " + str(subtraj_first) + " " +
                          str(subtraj_final + 1) + " / " + str(traj_final))
@@ -1662,7 +1666,9 @@ class SequentialEnsemble(Ensemble):
             subtraj_first = min(last_checked, subtraj_final - 1)
         traj_first = 0
         ens = self.ensembles[ens_num]
-        ltraj = list(traj)
+        itraj = getattr(traj, 'iter_proxies', traj.__iter__)
+        ltraj = list(itraj())
+
         subtraj = ltraj[slice(subtraj_first, subtraj_final)]
         logger.debug("*Traj slice " + str(subtraj_first) + " " +
                      str(subtraj_final) + " / " + str(len(traj)))
@@ -1715,7 +1721,9 @@ class SequentialEnsemble(Ensemble):
 
         traj_final = len(trajectory)
         final_ens = len(self.ensembles) - 1
-        ltraj = list(trajectory)
+        # Prevent proxy loading and trajectroy slicing
+        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
+        ltraj = list(itraj())
         # print traj_final, final_ens
         # logging startup
         if cache.debug_enabled:  # pragma: no cover
@@ -1884,7 +1892,9 @@ class SequentialEnsemble(Ensemble):
         subtraj_final = len(trajectory)
         ens_final = len(self.ensembles) - 1
         ens_num = ens_final
-        ltraj = list(trajectory)
+        # Prevent proxy loading and trajectroy slicing
+        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
+        ltraj = list(itraj())
 
         if self._use_cache:
             _ = cache.check(trajectory)
@@ -2227,7 +2237,8 @@ class AllInXEnsemble(VolumeEnsemble):
             logger.debug("Untrusted VolumeEnsemble " + repr(self))
             # logger.debug("Trajectory " + repr(trajectory))
             # This can sometimes get a list instead of a Trajectory
-            for frame in list(trajectory):
+            itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
+            for frame in itraj():
                 if not self._volume(frame):
                     return False
             return True
@@ -2286,7 +2297,8 @@ class PartInXEnsemble(VolumeEnsemble):
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             The trajectory to be checked
         """
-        for frame in list(trajectory):
+        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
+        for frame in list(itraj()):
             if self._volume(frame):
                 return True
         return False
@@ -2312,7 +2324,9 @@ class PartOutXEnsemble(PartInXEnsemble):
         return AllInXEnsemble(self.volume, self.trusted)
 
     def __call__(self, trajectory, trusted=None, candidate=False):
-        for frame in list(trajectory):
+        # Don't load proxies if this is a Trajectory
+        itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
+        for frame in itraj():
             if self._volume(frame):
                 return True
         return False
