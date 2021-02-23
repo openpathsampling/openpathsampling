@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     name: "Tests"
     strategy:
+      # NOTE: when changing the test matrix, update the after_n_builds in
+      # codecov.yml to match the number of builds in the matrix
       matrix:
         CONDA_PY:
           #- 3.9
