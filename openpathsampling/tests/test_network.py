@@ -291,6 +291,26 @@ class TestMISTISNetwork(TestMultipleStateTIS):
         for traj_label in ['CB', 'CA']:
             assert_equal(ms_outer_ens(self.traj[traj_label]), False)
 
+    def test_minus_ensembles(self):
+        good_traj_seq = [-0.51, -0.49, -0.40, -0.52, -0.48, -0.51]  # AXXAXA
+        bad_traj_seq = [-0.51, -0.49, -0.05, -0.52, -0.48, -0.51]  # AXBAXA
+
+        minus_dict = self.mistis.special_ensembles['minus']
+        minus_ensembles= [
+            ens for ens, trans in minus_dict.items()
+            if all(t.stateA == self.stateA for t in trans)
+        ]
+        assert len(minus_ensembles) == 1
+        minus_A = minus_ensembles[0]
+
+        good_minus_traj = make_1d_traj(good_traj_seq)
+        bad_minus_traj = make_1d_traj(bad_traj_seq)
+        assert minus_A(good_minus_traj)
+        assert not minus_A(bad_minus_traj)
+
+        ...
+
+
     def test_set_fluxes(self):
         flux_dict = {(self.stateA, self.ifacesA[0]): 2.0,  # same flux 2x
                      (self.stateB, self.ifacesB[0]): 4.0}
@@ -364,6 +384,7 @@ class TestMISTISNetwork(TestMultipleStateTIS):
         assert_equal(ensBA(self.traj['BC']), False)
         assert_equal(ensBA(self.traj['AB']), False)
         assert_equal(ensBA(self.traj['AC']), False)
+
 
     def test_storage(self):
         import os
