@@ -382,7 +382,6 @@ class TestMISTISNetwork(TestMultipleStateTIS):
         assert_equal(ensBA(self.traj['AB']), False)
         assert_equal(ensBA(self.traj['AC']), False)
 
-
     def test_storage(self):
         import os
         fname = data_filename("mistis_storage_test.nc")
