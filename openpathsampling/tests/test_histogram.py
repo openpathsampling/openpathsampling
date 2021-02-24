@@ -118,6 +118,11 @@ class TestHistogram(object):
         assert histo.compare_parameters(self.hist_nbins) is False
         assert self.hist_nbins.compare_parameters(histo) is False
 
+    def test_compare_parameters_empty(self):
+        # regression test; this was preventing histograms from being added
+        hist = self.hist_binwidth_range
+        assert hist.compare_parameters(hist.empty_copy())
+
     def test_xvals(self):
         histo = Histogram(n_bins=5)
         _ = histo.histogram(self.data)  # need this to set the bins
