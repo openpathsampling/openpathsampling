@@ -308,9 +308,6 @@ class TestMISTISNetwork(TestMultipleStateTIS):
         assert minus_A(good_minus_traj)
         assert not minus_A(bad_minus_traj)
 
-        ...
-
-
     def test_set_fluxes(self):
         flux_dict = {(self.stateA, self.ifacesA[0]): 2.0,  # same flux 2x
                      (self.stateB, self.ifacesB[0]): 4.0}
