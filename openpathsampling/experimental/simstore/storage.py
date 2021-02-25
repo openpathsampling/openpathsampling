@@ -113,6 +113,8 @@ class GeneralStorage(StorableNamedObject):
             self._load_missing_info_tables(table_to_class)
             sim_objs = {get_uuid(obj): obj
                         for obj in self.simulation_objects}
+            sim_objs.update({get_uuid(obj): obj
+                             for obj in self.storable_functions})
             self._simulation_objects.update(sim_objs)
             self._update_pseudo_tables(sim_objs)
 
@@ -441,7 +443,10 @@ class GeneralStorage(StorableNamedObject):
     def _cache_simulation_objects(self):
         # load up all the simulation objects
         try:
-            backend_iter = self.backend.table_iterator('simulation_objects')
+            backend_iter = itertools.chain(
+                self.backend.table_iterator('simulation_objects'),
+                self.backend.table_iterator('storable_functions')
+            )
             sim_obj_uuids = [row.uuid for row in backend_iter]
         except KeyError:
             # TODO: this should probably be a custom error; don't rely on
