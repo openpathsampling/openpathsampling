@@ -259,7 +259,6 @@ class GeneralStorage(StorableNamedObject):
         if not input_uuids:
             return  # exit early if everything is already in storage
 
-
         # check default table for things to register; register them
         # TODO: move to function: self.register_missing(by_table)
         # TODO: convert to while?
@@ -291,6 +290,7 @@ class GeneralStorage(StorableNamedObject):
             old_missing = missing
 
         # TODO: move to function self.store_sfr_results(by_table)
+        self.save_function_results()  # always for canonical
         has_sfr = (self.class_info.sfr_info is not None
                    and self.class_info.sfr_info.table in by_table)
         if has_sfr:

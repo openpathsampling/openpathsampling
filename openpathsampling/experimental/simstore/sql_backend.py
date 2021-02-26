@@ -413,10 +413,10 @@ class SQLStorageBackend(StorableNamedObject):
         table = self.metadata.tables[table_name]
         results = []
         for uuid_block in tools.block(uuids, self.max_query_size):
-            # logger
-            uuid_sel = table.select(
-                sql.exists().where(table.c.uuid.in_(uuid_block))
-            )
+            # uuid_sel = table.select(
+                # sql.exists().where(table.c.uuid.in_(uuid_block))
+            # )
+            uuid_sel = table.select().where(table.c.uuid.in_(uuid_block))
             with self.engine.connect() as conn:
                 res = conn.execute(uuid_sel)
                 res = res.fetchall()
