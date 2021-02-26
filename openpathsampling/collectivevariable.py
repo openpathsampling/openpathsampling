@@ -5,11 +5,7 @@ from openpathsampling.engines.openmm.tools import trajectory_to_mdtraj
 from openpathsampling.netcdfplus import WeakKeyCache, \
     ObjectJSON, create_to_dict, ObjectStore, PseudoAttribute
 
-import sys
-if sys.version_info > (3, ):
-    get_code = lambda func: func.__code__
-else:
-    get_code = lambda func: func.func_code
+get_code = lambda func: func.__code__
 
 
 # ==============================================================================

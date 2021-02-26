@@ -9,11 +9,7 @@ from openpathsampling.tools import refresh_output
 
 from collections import Counter
 
-import sys
-if sys.version_info > (3, ):
-    from collections.abc import Mapping
-else:
-    from collections import Mapping
+from collections.abc import Mapping
 
 
 logger = logging.getLogger(__name__)
