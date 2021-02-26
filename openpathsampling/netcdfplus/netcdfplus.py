@@ -877,7 +877,7 @@ class NetCDFPlus(netCDF4.Dataset):
             setter = lambda v: np.array(v)
 
         elif var_type == 'bool':
-            getter = lambda v: v.astype(np.bool).tolist()
+            getter = lambda v: v.astype(bool).tolist()
             setter = lambda v: np.array(v, dtype=np.int8)
 
         elif var_type == 'index':

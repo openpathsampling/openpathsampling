@@ -905,6 +905,7 @@ class MISTISNetwork(TISNetwork):
 
     def _build_sampling_minus_ensembles(self):
         # combining the minus interfaces
+        all_states_set = set(self.initial_states + self.final_states)
         for initial in self.initial_states:
             innermosts = []
             # trans_from_initial: list of transition from initial
@@ -914,9 +915,12 @@ class MISTISNetwork(TISNetwork):
             ]
             for t1 in trans_from_initial:
                 innermosts.append(t1.interfaces[0])
+
+            forbidden = list(all_states_set - {initial})
             minus = paths.MinusInterfaceEnsemble(
                 state_vol=initial,
-                innermost_vols=innermosts
+                innermost_vols=innermosts,
+                forbidden=forbidden
             ).named(initial.name + " MIS minus")
             try:
                 self.special_ensembles['minus'][minus] = trans_from_initial
