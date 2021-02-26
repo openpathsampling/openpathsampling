@@ -284,4 +284,4 @@ def test_multiple_storage_inside_other_object(tmpdir, inputs_and_func):
     container.cv.local_cache.clear()
     assert container.cv.func.call_count == 2
     assert container(inp2) == 'f'
-    # assert container.cv.func.call_count == 2  # TODO: get this to work
+    assert container.cv.func.call_count == 2  # TODO: get this to work

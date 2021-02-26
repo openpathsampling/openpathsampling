@@ -149,6 +149,7 @@ class GeneralStorage(StorableNamedObject):
     def close(self):
         # TODO: should sync on close
         self.backend.close()
+        self._sf_handler.close()
         for fallback in self.fallbacks:
             fallback.close()
 
