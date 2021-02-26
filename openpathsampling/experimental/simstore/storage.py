@@ -138,6 +138,10 @@ class GeneralStorage(StorableNamedObject):
             raise RuntimeError("Unable to register existing database "
                                + "tables: " + str(missing_info_tables))
 
+    def register_from_tables(self, table_names, classes):
+        # override in subclass to handle special lookups
+        pass
+
     def stash(self, objects):
         objects = tools.listify(objects)
         self._stashed.extend(objects)
