@@ -5,7 +5,7 @@ certain behaviors are preserved when interacting with storage.
 """
 
 import pytest
-import mock
+import os
 
 from openpathsampling.experimental.simstore import (
     StorableFunction, GeneralStorage, MemoryStorageBackend,
@@ -200,6 +200,7 @@ def _store_via_container(backend, container, inp, call_count,
     sf_uuid = str(get_uuid(container.cv))
     assert storage.backend.has_table(sf_uuid)
     assert storage.backend.table_len(sf_uuid) == backend_count
+    return storage
 
 def _load_container(storage, sf):
     container_list = [obj for obj in storage.simulation_objects
@@ -285,3 +286,38 @@ def test_multiple_storage_inside_other_object(tmpdir, inputs_and_func):
     assert container.cv.func.call_count == 2
     assert container(inp2) == 'f'
     assert container.cv.func.call_count == 2  # TODO: get this to work
+
+def test_closing(tmpdir, inputs_and_func):
+    inp1, inp2, func, sf, container = inputs_and_func
+    sf_uuid = str(get_uuid(sf))
+    st1_fname = tmpdir.join("st1.db")
+    be_1w = SQLStorageBackend(st1_fname, mode='w')
+    storage = _store_via_container(be_1w, container, inp1, call_count=1,
+                                   backend_count=1)
+
+    assert sf.has_handler
+    storage.close()
+    assert not sf.has_handler
+
+def test_storage_file_problem(tmpdir, inputs_and_func):
+    inp1, inp2, func, sf, container = inputs_and_func
+    sf_uuid = str(get_uuid(sf))
+    st1_fname = tmpdir.join("st1.db")
+    be_1w = SQLStorageBackend(st1_fname, mode='w')
+    _store_via_container(be_1w, container, inp1, call_count=1,
+                         backend_count=1)
+
+    GeneralStorage._known_storages = {}
+    storage = GeneralStorage(
+        backend=SQLStorageBackend(st1_fname, mode='r'),
+        class_info=_serialization,
+        schema=_schema
+    )
+    container = _load_container(storage, sf)
+
+    assert container.cv.func.call_count == 1
+    os.remove(st1_fname)  # naughty user behavior
+
+    with pytest.warns(UserWarning):
+        assert container(inp1) == 'f'
+    assert container.cv.func.call_count == 2
