@@ -13,6 +13,7 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
+
 def test_pretty_print_seconds():
     # test the basics with full reporting
     assert_equal(pretty_print_seconds(93784),
@@ -44,6 +45,7 @@ def test_pretty_print_seconds():
     assert_equal(pretty_print_seconds(93784, separator=", "),
                  "1 day, 2 hours, 3 minutes, 4 seconds")
 
+
 def test_progress_string():
     assert_equal(progress_string(0, 100, 10),
                  "Starting simulation...\nWorking on first step\n")
@@ -51,6 +53,11 @@ def test_progress_string():
                  "Running for 2 hours 36 minutes 18 seconds - "
                  + "9378.40 seconds per step\n"
                  + "Estimated time remaining: 1 day 2.05 hours\n")
+    # Override time_per_step
+    assert_equal(progress_string(1, 11, 9378.4, 10),
+                 "Running for 2 hours 36 minutes 18 seconds - "
+                 + "10.00 seconds per step\n"
+                 + "Estimated time remaining: 1 minute 40 seconds\n")
 
 
 def test_ensure_file_dne():

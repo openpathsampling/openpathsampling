@@ -181,7 +181,8 @@ def pretty_print_seconds(seconds, n_labels=0, separator=" "):
     return output_str
 
 
-def progress_string(n_steps_completed, n_steps_total, time_elapsed):
+def progress_string(n_steps_completed, n_steps_total, time_elapsed,
+                    time_per_step=None):
     """
     String to report on simulation progress.
 
@@ -199,6 +200,8 @@ def progress_string(n_steps_completed, n_steps_total, time_elapsed):
         total number of (Monte Carlo/trajectory-level) step in simulation
     time_elapsed : float-like
         time elapsed in the simulation, in seconds
+    time_per_step : float-like, optional
+        overrides the default estimate of time_elapsed/n_steps_total
 
     Returns
     -------
@@ -206,10 +209,10 @@ def progress_string(n_steps_completed, n_steps_total, time_elapsed):
         string to output describing simulation progress, including estimated
         time remaining
     """
-    try:
-        time_per_step = time_elapsed / n_steps_completed
-    except ZeroDivisionError:
+    if n_steps_completed == 0:
         return "Starting simulation...\nWorking on first step\n"
+    if time_per_step is None:
+        time_per_step = time_elapsed / n_steps_completed
     time_to_finish = (n_steps_total - n_steps_completed) * time_per_step
     output_str = (
         "Running for " + pretty_print_seconds(time_elapsed) + " - "

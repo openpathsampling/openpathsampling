@@ -1,6 +1,7 @@
 import time
 import logging
 import os
+from collections import deque
 
 import openpathsampling as paths
 from .path_simulator import PathSimulator, MCStep
@@ -9,6 +10,7 @@ from ..ops_logging import initialization_logging
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
+
 
 class PathSampling(PathSimulator):
     """
@@ -19,6 +21,7 @@ class PathSampling(PathSimulator):
     """
 
     calc_name = "PathSampling"
+    _deque_len = 10000
 
     def __init__(self, storage, move_scheme=None, sample_set=None,
                  initialize=True):
@@ -244,7 +247,9 @@ class PathSampling(PathSimulator):
         #     cvs = list(self.storage.cvs)
 
         initial_time = time.time()
-
+        time_start = initial_time
+        # Keep track of the last n timings for a better long term estimate
+        deq = deque(maxlen=self._deque_len)
         for nn in range(n_steps):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
@@ -256,17 +261,19 @@ class PathSampling(PathSimulator):
                     self.live_visualizer.draw_ipynb(mcstep)
                     refresh = False
 
-                elapsed = time.time() - initial_time
+                now = time.time()
+                elapsed = now - initial_time
 
                 if nn > 0:
+                    deq.append(now-time_start)
                     time_per_step = elapsed / nn
                 else:
                     time_per_step = 1.0
 
                 paths.tools.refresh_output(
                     "Working on Monte Carlo cycle number " + str(self.step)
-                    + "\n" + paths.tools.progress_string(nn, n_steps,
-                                                         elapsed),
+                    + "\n" + paths.tools.progress_string(nn, n_steps, elapsed,
+                                                         time_per_step),
                     refresh=refresh,
                     output_stream=self.output_stream
                 )
