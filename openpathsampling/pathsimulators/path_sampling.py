@@ -254,6 +254,10 @@ class PathSampling(PathSimulator):
             self.step += 1
             logger.info("Beginning MC cycle " + str(self.step))
             refresh = self.allow_refresh
+            now = time.time()
+            if nn > 0:
+                deq.append(now-time_start)
+
             if self.step % self.status_update_frequency == 0:
                 # do we visualize this step?
                 if self.live_visualizer is not None and mcstep is not None:
@@ -261,12 +265,10 @@ class PathSampling(PathSimulator):
                     self.live_visualizer.draw_ipynb(mcstep)
                     refresh = False
 
-                now = time.time()
                 elapsed = now - initial_time
 
                 if nn > 0:
-                    deq.append(now-time_start)
-                    time_per_step = elapsed / nn
+                    time_per_step = sum(deq) / len(deq)
                 else:
                     time_per_step = 1.0
 
