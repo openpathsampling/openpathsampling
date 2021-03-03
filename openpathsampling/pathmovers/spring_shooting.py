@@ -192,7 +192,7 @@ class SpringShootingSelector(paths.ShootingPointSelector):
                 1.0 if anacceptable snapshot has been chosen 0.0 otherwise
         """
         # Check if an acceptable snapshot was selected
-        if self.acceptable_snapshot:
+        if self._acceptable_snapshot:
             return 1.0
         else:
             return 0.0
@@ -261,10 +261,10 @@ class SpringShootingSelector(paths.ShootingPointSelector):
                 index = 0
             else:
                 index = len(trajectory)-1
-            self.acceptable_snapshot = False
+            self._acceptable_snapshot = False
             # Needed to prevent selecting an out of range index
         else:
-            self.acceptable_snapshot = True
+            self._acceptable_snapshot = True
 
         # Keeps track of the right index if the backward part changes length
         if direction == "backward":
@@ -341,7 +341,7 @@ class SpringMover(paths.pathmover.EngineMover):
             prev_index += len(initial_trajectory)
 
         # Reject imposible snapshots before running any dynamics
-        if not self.selector.acceptable_snapshot:
+        if not self.selector._acceptable_snapshot:
             trial_trajectory = initial_trajectory
             trial, details = self._build_sample(input_sample,
                                                 shooting_index,
@@ -447,7 +447,7 @@ class BackwardSpringMover(SpringMover):
         return 'backward'
 
 
-class SpringShootingMover(paths.pathmover.RandomChoiceMover):
+class SpringShootingMover(paths.pathmover.SpecializedRandomChoiceMover):
     """
     A Sample mover implementing the spring shooting algorithm
 
@@ -492,17 +492,6 @@ class SpringShootingMover(paths.pathmover.RandomChoiceMover):
             movers=movers
         )
 
-    @classmethod
-    def from_dict(cls, dct):
-        mover = cls.__new__(cls)
-
-        # override with stored movers and use the init of the super class
-        # this assumes that the super class has movers as its signature
-        super(cls, mover).__init__(
-            movers=dct['movers']
-        )
-        return mover
-
     @property
     def ensemble(self):
         return self.movers[0].ensemble
@@ -540,29 +529,22 @@ class SpringShootingStrategy(move_strategy.SingleEnsembleMoveStrategy):
         self.k_spring = k_spring
         self.initial_guess = initial_guess
 
-    def make_mover_set(self, selector_set, interface_set, engine=None):
-        if not isinstance(selector_set, list):
-            selector_set = [selector_set] * len(interface_set)
-
-        mover_set = []
-        for (_, iface) in zip(selector_set, interface_set):
-            mover = SpringShootingMover(
-                ensemble=iface,
-                delta_max=self.delta_max,
-                k_spring=self.k_spring,
-                initial_guess=self.initial_guess,
-                engine=engine
-            )
-            mover.named("SpringShootingMover " + str(iface.name))
-            mover_set.append(mover)
-
-        return mover_set
-
     def make_movers(self, scheme):
         ensemble_list = self.get_init_ensembles(scheme)
         ensembles = reduce(list.__add__, map(lambda x: list(x), ensemble_list))
-        shooters = self.make_mover_set(None, ensembles, self.engine)
-        return shooters
+        movers = []
+        for ens in ensembles:
+            mover = SpringShootingMover(
+                ensemble=ens,
+                delta_max=self.delta_max,
+                k_spring=self.k_spring,
+                initial_guess=self.initial_guess,
+                engine=self.engine
+            )
+            mover.named("SpringShootingMover " + str(ens.name))
+            movers.append(mover)
+
+        return movers
 
 
 class SpringShootingMoveScheme(paths.high_level.move_scheme.MoveScheme):

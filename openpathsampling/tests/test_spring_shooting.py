@@ -2,12 +2,12 @@ import pytest
 import openpathsampling as paths
 from openpathsampling import MoveChange, Details
 from openpathsampling.high_level.move_scheme import MoveScheme
-from openpathsampling.engines import NoEngine
 from openpathsampling.tests.test_movestrategy import MoveStrategyTestSetup
 from openpathsampling.pathmover import SampleNaNError, SampleMaxLengthError
 from openpathsampling.tests.test_helpers import (make_1d_traj,
                                                  assert_items_equal,
-                                                 CalvinistDynamics)
+                                                 CalvinistDynamics,
+                                                 NaNEngine)
 
 from openpathsampling.pathmovers.spring_shooting import (
     SpringShootingSelector, SpringMover,
@@ -19,15 +19,6 @@ from openpathsampling.pathmovers.spring_shooting import (
 class FakeStep(object):
     def __init__(self, details):
         self.change = MoveChange(details=details)
-
-
-class NaNEngine(NoEngine):
-    def __init__(self, descriptor):
-        super(NaNEngine, self).__init__(descriptor=descriptor)
-
-    @staticmethod
-    def is_valid_snapshot(snapshot):
-        return False
 
 
 class SelectorTest(object):
@@ -117,10 +108,10 @@ class TestSpringShootingSelector(SelectorTest):
     def test_probability_ratio():
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
-        sel.acceptable_snapshot = True
+        sel._acceptable_snapshot = True
         ratio = sel.probability_ratio(None, None, None)
         assert ratio == 1.0
-        sel.acceptable_snapshot = False
+        sel._acceptable_snapshot = False
         ratio = sel.probability_ratio(None, None, None)
         assert ratio == 0.0
 
@@ -159,7 +150,7 @@ class TestSpringShootingSelector(SelectorTest):
     def test_impossible_pick(self):
         sel = SpringShootingSelector(delta_max=1, k_spring=1, initial_guess=12)
         sel.pick(trajectory=self.mytraj, direction='forward')
-        assert sel.acceptable_snapshot is False
+        assert sel._acceptable_snapshot is False
 
     @property
     def default_selector(self):
@@ -265,7 +256,7 @@ class TestSpringShootingSelector(SelectorTest):
         assert pick == len(self.mytraj)-1
         assert sel.trial_snapshot == len(self.mytraj)-1
         assert sel.previous_snapshot == self.initial_guess
-        assert sel.acceptable_snapshot is False
+        assert sel._acceptable_snapshot is False
 
     def test_illegal_backward_pick(self):
         self.initial_guess = 3
@@ -274,7 +265,7 @@ class TestSpringShootingSelector(SelectorTest):
         assert pick == 0
         assert sel.trial_snapshot == -len(self.mytraj)
         assert sel.previous_snapshot == self.initial_guess
-        assert sel.acceptable_snapshot is False
+        assert sel._acceptable_snapshot is False
 
     @staticmethod
     def test_failed_loading():
