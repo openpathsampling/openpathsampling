@@ -289,7 +289,7 @@ class SpringShootingSelector(paths.ShootingPointSelector):
         # Get the details
         details = step.change.canonical.details
 
-        # Try to reset class variables
+        # Try to reset instance variables
         try:
             self.previous_trajectory = details.initial_trajectory
             self.previous_snapshot = details.last_accepted_shooting_index
