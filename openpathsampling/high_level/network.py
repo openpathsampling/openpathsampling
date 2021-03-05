@@ -773,7 +773,8 @@ class MISTISNetwork(TISNetwork):
             self.input_transitions = {
                 (stateA, stateB):
                 paths.TISTransition(stateA, stateB, interface, interface.cv,
-                                    name=stateA.name+"->"+stateB.name)
+                                    name=stateA.name + "->" + stateB.name,
+                                    name_suffix=" (input)")
                 for (stateA, interface, stateB) in self.trans_info
             }
 
