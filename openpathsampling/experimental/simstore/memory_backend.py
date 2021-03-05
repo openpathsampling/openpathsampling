@@ -81,13 +81,13 @@ class MemoryStorageBackend(object):
 
     @property
     def identifier(self):
-        return id(self)
+        return hex(id(self))
 
     def close(self):
         pass  # no such thing as closing here, but may be needed for API
 
     def register_type(self, type_str, backend_type):
-        pass  # do we need to do anything here? don't think so
+        pass  # no need to do anything here?
 
     def register_schema(self, schema, table_to_class, metadata=None):
         for table_name, schema_entries in schema.items():

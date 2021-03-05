@@ -386,7 +386,7 @@ class TestStorageFunctionHandler(object):
         assert self.sf_handler.all_functions[uuid] == [self.func]
         if not unable_to_register:
             assert self.func.has_handler
-            assert self.func._handler == self.sf_handler
+            assert self.func._handlers == {self.sf_handler}
             assert self.sf_handler.functions == [self.func]
 
         # make a copy of the func

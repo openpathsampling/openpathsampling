@@ -4,6 +4,7 @@ from .storage import (
 )
 from .class_info import ClassInfoContainer, ClassInfo
 from .sql_backend import SQLStorageBackend
+from .memory_backend import MemoryStorageBackend
 from . import dict_serialization_helpers
 from .storable_functions import (
     Processor, StorableFunctionConfig, StorableFunctionResults,

@@ -18,7 +18,11 @@ jobs:
           if [ -f "autorelease-env.sh" ]; then
             cat autorelease-env.sh >> $GITHUB_ENV
           fi
-          eval $INSTALL_AUTORELEASE
+          if [ -f "./.autorelease/install-autorelease" ]; then
+            source ./.autorelease/install-autorelease
+          else
+            eval $INSTALL_AUTORELEASE
+          fi
         name: "Install autorelease"
       - run: |
           VERSION=`python setup.py --version`
