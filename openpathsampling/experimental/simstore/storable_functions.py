@@ -248,7 +248,8 @@ class StorableFunction(StorableNamedObject):
         (None) stores source for anything created in ``__main__`` that is
         not a lambda expression.
     """
-    def __init__(self, func, func_config=None, store_source=None, **kwargs):
+    def __init__(self, func, func_config=None, store_source=None,
+                 period_min=None, period_max=None,**kwargs):
         super(StorableFunction, self).__init__()
         self.func = func
         self.source = None
@@ -270,7 +271,27 @@ class StorableFunction(StorableNamedObject):
         self.local_cache = None  # set correctly by self.mode setter
         self._disk_cache = True
         self._handlers = set([])
+        self._check_period(period_min, period_max)
+        self.period_min = period_min
+        self.period_max = period_max
         self.mode = 'analysis'
+
+    @staticmethod
+    def _check_period(period_min, period_max):
+        is_not_periodic = period_min is None and period_max is None
+        is_periodic = period_min is not None and period_max is not None
+        is_error = not (is_periodic or is_not_periodic)
+        if is_error:
+            raise RuntimeError("Periodic functions must have upper and "
+                               "lower bounds. This function has period_min "
+                               + str(period_min) + " and period_max "
+                               + str(period_max) + ".")
+        return is_periodic
+
+    @property
+    def is_periodic(self):
+        return self._check_period(self.period_min, self.period_max)
+
 
     def add_handler(self, storage, override=False):
         self._handlers.add(storage)
