@@ -43,6 +43,34 @@ def join_ensembles(ensemble_list):
     return ensemble
 
 
+def _get_list_traj(trajectory):
+    """Return a list of (proxy) snapshots from either a list or Trajectory
+
+    Parameters
+    ----------
+    trajectory : :class:`.Trajectory` or :class:`.list`
+       trajectory or list to convert into a list of snapshots
+
+    Returns
+    -------
+    :class:`.list`
+       list of (proxy) snapshots
+
+    Note
+    ----
+    Due to possible UUID space restrictions, we don't want to slice
+    Trajectories if we can help it (as this will generate a new Trajectory
+    object with its own UUID). This is a convenience function that will either
+    turn a Trajectory into a list of (proxy) snapshots or just list to list
+    mapping, which you can slice without generating a new UUID
+
+    For a more in-depth discussion, please see:
+    https://github.com/openpathsampling/openpathsampling/pull/978
+    """
+    itraj = getattr(trajectory, 'iter_proxies', trajectory.__iter__)
+    return list(itraj())
+
+
 # note: the cache is not storable, because that would just be silly!
 class EnsembleCache(object):
     """Object used by ensembles to enable fast algorithms for basic functions.
@@ -121,36 +149,37 @@ class EnsembleCache(object):
             logger.debug("prev_last_idx " + str(self.prev_last_index))
 
         if trajectory is not None:
+            # this might get a list instead of Trajectory from internal
+            # functions
+            get_frame = getattr(trajectory, "get_as_proxy",
+                                trajectory.__getitem__)
+
             # if the first frame has changed, we should reset
             if reset is None:
                 lentraj = len(trajectory)
                 if self.direction > 0:
-                    if trajectory.get_as_proxy(0) != self.start_frame:
+                    if get_frame(0) != self.start_frame:
                         reset = True
                     else:
                         if lentraj == 1:
                             # makes no difference here; always reset
                             reset = True
                         elif lentraj == self.last_length:
-                            reset = (trajectory.get_as_proxy(-1) !=
-                                     self.prev_last_frame)
+                            reset = (get_frame(-1) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
-                            reset = (trajectory.get_as_proxy(-2) !=
-                                     self.prev_last_frame)
+                            reset = (get_frame(-2) != self.prev_last_frame)
                         else:
                             reset = True
                 elif self.direction < 0:
-                    if trajectory.get_as_proxy(-1) != self.start_frame:
+                    if get_frame(-1) != self.start_frame:
                         reset = True
                     else:
                         if lentraj == 1:
                             reset = True
                         elif lentraj == self.last_length:
-                            reset = (trajectory.get_as_proxy(0) !=
-                                     self.prev_last_frame)
+                            reset = (get_frame(0) != self.prev_last_frame)
                         elif lentraj == self.last_length + 1:
-                            reset = (trajectory.get_as_proxy(1) !=
-                                     self.prev_last_frame)
+                            reset = (get_frame(1) != self.prev_last_frame)
                         else:
                             reset = True
                 else:
@@ -165,13 +194,15 @@ class EnsembleCache(object):
             if self.debug_enabled:
                 logger.debug("Resetting cache " + str(self))
             if self.direction > 0:
-                self.start_frame = trajectory.get_as_proxy(0)
-                self.prev_last_frame = trajectory.get_as_proxy(-1)
+                # TODO: this can be hit with trajectory is None?
+                self.start_frame = get_frame(0)
+                self.prev_last_frame = get_frame(-1)
                 self.last_length = len(trajectory)
                 self.contents = {}
             elif self.direction < 0:
-                self.start_frame = trajectory.get_as_proxy(-1)
-                self.prev_last_frame = trajectory.get_as_proxy(0)
+                # TODO: this can be hit with trajectory is None?
+                self.start_frame = get_frame(-1)
+                self.prev_last_frame = get_frame(0)
                 self.last_length = len(trajectory)
                 self.contents = {}
             else:
@@ -181,10 +212,12 @@ class EnsembleCache(object):
         # by returning reset, we allow the functions that call this to reset
         # other things as well
         if self.direction > 0:
-            self.prev_last_frame = trajectory.get_as_proxy(-1)
+            # TODO: this can be hit with trajectory is None?
+            self.prev_last_frame = get_frame(-1)
             self.prev_last_index = len(trajectory) - 1
         elif self.direction < 0:
-            self.prev_last_frame = trajectory.get_as_proxy(0)
+            # TODO: this can be hit with trajectory is None?
+            self.prev_last_frame = get_frame(0)
             self.prev_last_index = 0
         else:
             self.bad_direction_error()
@@ -1481,6 +1514,7 @@ class SequentialEnsemble(Ensemble):
         self._cache_can_prepend = EnsembleCache(-1)
         self._cache_strict_can_prepend = EnsembleCache(-1)
         self._cache_check_reverse = EnsembleCache(-1)
+        self._zero_traj = paths.Trajectory([])
 
         # sanity checks
         if len(self.min_overlap) != len(self.max_overlap):
@@ -1573,7 +1607,7 @@ class SequentialEnsemble(Ensemble):
                     subtraj_first = subtraj_final
             else:
                 if ens_num <= final_ens and \
-                        self.ensembles[ens_num](paths.Trajectory([])):
+                        self.ensembles[ens_num](self._zero_traj):
                     ens_num += 1
                     transitions.append(subtraj_final)
                     subtraj_first = subtraj_final
@@ -1595,9 +1629,11 @@ class SequentialEnsemble(Ensemble):
 
         subtraj_first = 0
         subtraj_i = 0
+        # Make a list before slicing
+        ltraj = _get_list_traj(trajectory)
         while subtraj_i < len(self.ensembles):
             subtraj_final = transitions[subtraj_i]
-            subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+            subtraj = ltraj[slice(subtraj_first, subtraj_final)]
             if not self.ensembles[subtraj_i](subtraj):
                 # print "Returns false b/c ensemble", subtraj_i," fails"
                 return False
@@ -1623,7 +1659,10 @@ class SequentialEnsemble(Ensemble):
             subtraj_final = max(last_checked, subtraj_first)
         traj_final = len(traj)
         ens = self.ensembles[ens_num]
-        subtraj = traj[slice(subtraj_first, subtraj_final + 1)]
+        # Make a list before slicing
+        ltraj = _get_list_traj(traj)
+        subtraj = ltraj[slice(subtraj_first, subtraj_final + 1)]
+
         # if we're in the ensemble or could eventually be in the ensemble,
         # we keep building the subtrajectory
 
@@ -1637,11 +1676,9 @@ class SequentialEnsemble(Ensemble):
         # logger.debug("Call    " + str(ens(subtraj, trusted=True)))
         # TODO: the weird while condition is handling the OVERSHOOTING
         while ((ens.can_append(subtraj, trusted=True) or
-                ens(subtraj, trusted=True)
-               ) and subtraj_final < traj_final):
+                ens(subtraj, trusted=True)) and subtraj_final < traj_final):
             subtraj_final += 1
-            # TODO: replace with append; probably faster
-            subtraj = traj[slice(subtraj_first, subtraj_final + 1)]
+            subtraj = ltraj[slice(subtraj_first, subtraj_final + 1)]
             logger.debug(" Traj slice " + str(subtraj_first) + " " +
                          str(subtraj_final + 1) + " / " + str(traj_final))
         return subtraj_final
@@ -1654,7 +1691,10 @@ class SequentialEnsemble(Ensemble):
             subtraj_first = min(last_checked, subtraj_final - 1)
         traj_first = 0
         ens = self.ensembles[ens_num]
-        subtraj = traj[slice(subtraj_first, subtraj_final)]
+
+        # Make a list before slicing
+        ltraj = _get_list_traj(traj)
+        subtraj = ltraj[slice(subtraj_first, subtraj_final)]
         logger.debug("*Traj slice " + str(subtraj_first) + " " +
                      str(subtraj_final) + " / " + str(len(traj)))
         # logger.debug("Ensemble " + str(ens.__class__.__name__))# + str(ens))
@@ -1665,7 +1705,7 @@ class SequentialEnsemble(Ensemble):
                 ens.check_reverse(subtraj, trusted=True)
                ) and subtraj_first >= traj_first):
             subtraj_first -= 1
-            subtraj = traj[slice(subtraj_first, subtraj_final)]
+            subtraj = ltraj[slice(subtraj_first, subtraj_final)]
             logger.debug(" Traj slice " + str(subtraj_first + 1) + " " +
                          str(subtraj_final) + " / " + str(len(traj)))
         return subtraj_first + 1
@@ -1706,6 +1746,8 @@ class SequentialEnsemble(Ensemble):
 
         traj_final = len(trajectory)
         final_ens = len(self.ensembles) - 1
+        # Make a list before slicing
+        ltraj = _get_list_traj(trajectory)
         # print traj_final, final_ens
         # logging startup
         if cache.debug_enabled:  # pragma: no cover
@@ -1758,7 +1800,7 @@ class SequentialEnsemble(Ensemble):
                     "(" + str(subtraj_first) + "," + str(subtraj_final) + ")"
                 )
             if subtraj_final - subtraj_first > 0:
-                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                subtraj = ltraj[slice(subtraj_first, subtraj_final)]
                 if ens_num == final_ens:
                     if subtraj_final == traj_final:
                         # we're in the last ensemble and the whole
@@ -1807,7 +1849,7 @@ class SequentialEnsemble(Ensemble):
                     # next frame might satisfy next ensemble
                     if self._use_cache:
                         prev_slice = cache.contents['assignments'][ens_num - 1]
-                        prev_subtraj = trajectory[prev_slice]
+                        prev_subtraj = ltraj[prev_slice]
                         prev_ens = self.ensembles[ens_num - 1]
                         if prev_ens.can_append(prev_subtraj, trusted=True):
                             logger.debug(
@@ -1824,7 +1866,7 @@ class SequentialEnsemble(Ensemble):
                         "returning True")
                     return True
 
-                elif self.ensembles[ens_num](paths.Trajectory([])):
+                elif self.ensembles[ens_num](self._zero_traj):
                     logger.debug(
                         "Moving on because of allowed zero-length ensemble")
                     ens_num += 1
@@ -1874,6 +1916,8 @@ class SequentialEnsemble(Ensemble):
         subtraj_final = len(trajectory)
         ens_final = len(self.ensembles) - 1
         ens_num = ens_final
+        # Make list before slicing
+        ltraj = _get_list_traj(trajectory)
 
         if self._use_cache:
             _ = cache.check(trajectory)
@@ -1936,7 +1980,7 @@ class SequentialEnsemble(Ensemble):
                 "(" + str(subtraj_first) + "," + str(subtraj_final) + ")"
             )
             if subtraj_final - subtraj_first > 0:
-                subtraj = trajectory[slice(subtraj_first, subtraj_final)]
+                subtraj = ltraj[slice(subtraj_first, subtraj_final)]
                 if ens_num == first_ens:
                     if subtraj_first == traj_first:
                         logger.debug("Returning can_prepend")
@@ -1978,7 +2022,7 @@ class SequentialEnsemble(Ensemble):
                     if self._use_cache:
                         prev_slice = cache.contents['assignments'][ens_num + 1]
                         logger.debug("prev_slice " + str(prev_slice))
-                        prev_subtraj = trajectory[prev_slice]
+                        prev_subtraj = ltraj[prev_slice]
                         logger.debug("prev_subtraj " + str(prev_subtraj))
                         logger.debug("traj " + str(trajectory))
                         prev_ens = self.ensembles[ens_num + 1]
@@ -1998,7 +2042,7 @@ class SequentialEnsemble(Ensemble):
                         "All frames assigned, more ensembles to go: "
                         "returning True")
                     return True
-                elif self.ensembles[ens_num](paths.Trajectory([])):
+                elif self.ensembles[ens_num](self._zero_traj):
                     logger.debug(
                         "Moving on because of allowed zero-length ensemble")
                     ens_num -= 1
@@ -2176,7 +2220,10 @@ class AllInXEnsemble(VolumeEnsemble):
         cached_val = cache.contents['previous']
         if cached_val or cached_val is None:
             # need to check this frame (no prev traj, or prev traj is True)
-            frame = trajectory.get_as_proxy(frame_num)
+            # This sometimes gets a list instead of a full Trajectory
+            get_frame = getattr(trajectory, "get_as_proxy",
+                                trajectory.__getitem__)
+            frame = get_frame(frame_num)
             cache.contents['previous'] = self._volume(frame)
             return cache.contents['previous']
         else:
@@ -2212,7 +2259,9 @@ class AllInXEnsemble(VolumeEnsemble):
         else:
             logger.debug("Untrusted VolumeEnsemble " + repr(self))
             # logger.debug("Trajectory " + repr(trajectory))
-            for frame in trajectory.as_proxies():
+            # This can sometimes get a list instead of a Trajectory
+            # Make sure this is a proxy list
+            for frame in _get_list_traj(trajectory):
                 if not self._volume(frame):
                     return False
             return True
@@ -2271,7 +2320,7 @@ class PartInXEnsemble(VolumeEnsemble):
         trajectory : :class:`openpathsampling.trajectory.Trajectory`
             The trajectory to be checked
         """
-        for frame in trajectory.as_proxies():
+        for frame in _get_list_traj(trajectory):
             if self._volume(frame):
                 return True
         return False
@@ -2299,11 +2348,11 @@ class PartOutXEnsemble(PartInXEnsemble):
         return AllInXEnsemble(self.volume, self.trusted)
 
     def __call__(self, trajectory, trusted=None, candidate=False):
-        for frame in trajectory.as_proxies():
+        # Don't load proxies if this is a Trajectory
+        for frame in _get_list_traj(trajectory):
             if self._volume(frame):
                 return True
         return False
-
 
 
 class WrappedEnsemble(Ensemble):

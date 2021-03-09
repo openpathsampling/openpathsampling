@@ -113,6 +113,8 @@ class GeneralStorage(StorableNamedObject):
             self._load_missing_info_tables(table_to_class)
             sim_objs = {get_uuid(obj): obj
                         for obj in self.simulation_objects}
+            sim_objs.update({get_uuid(obj): obj
+                             for obj in self.storable_functions})
             self._simulation_objects.update(sim_objs)
             self._update_pseudo_tables(sim_objs)
 
@@ -136,6 +138,10 @@ class GeneralStorage(StorableNamedObject):
             raise RuntimeError("Unable to register existing database "
                                + "tables: " + str(missing_info_tables))
 
+    def register_from_tables(self, table_names, classes):
+        # override in subclass to handle special lookups
+        pass
+
     def stash(self, objects):
         objects = tools.listify(objects)
         self._stashed.extend(objects)
@@ -143,6 +149,7 @@ class GeneralStorage(StorableNamedObject):
     def close(self):
         # TODO: should sync on close
         self.backend.close()
+        self._sf_handler.close()
         for fallback in self.fallbacks:
             fallback.close()
 
@@ -253,7 +260,6 @@ class GeneralStorage(StorableNamedObject):
         if not input_uuids:
             return  # exit early if everything is already in storage
 
-
         # check default table for things to register; register them
         # TODO: move to function: self.register_missing(by_table)
         # TODO: convert to while?
@@ -285,6 +291,7 @@ class GeneralStorage(StorableNamedObject):
             old_missing = missing
 
         # TODO: move to function self.store_sfr_results(by_table)
+        self.save_function_results()  # always for canonical
         has_sfr = (self.class_info.sfr_info is not None
                    and self.class_info.sfr_info.table in by_table)
         if has_sfr:
@@ -441,7 +448,10 @@ class GeneralStorage(StorableNamedObject):
     def _cache_simulation_objects(self):
         # load up all the simulation objects
         try:
-            backend_iter = self.backend.table_iterator('simulation_objects')
+            backend_iter = itertools.chain(
+                self.backend.table_iterator('simulation_objects'),
+                self.backend.table_iterator('storable_functions')
+            )
             sim_obj_uuids = [row.uuid for row in backend_iter]
         except KeyError:
             # TODO: this should probably be a custom error; don't rely on
