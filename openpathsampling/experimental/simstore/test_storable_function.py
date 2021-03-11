@@ -223,6 +223,12 @@ class TestStorableFunction(object):
 
         self.func = StorableFunction(get_expected)
 
+    def test_check_periodic(self):
+        pytest.skip()
+
+    def test_is_periodic(self):
+        pytest.skip
+
     def test_gets_source(self):
         pytest.skip()
         pass
