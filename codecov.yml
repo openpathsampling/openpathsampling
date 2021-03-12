@@ -4,6 +4,10 @@ coverage:
       default:
         target: auto
         threshold: 0.04%
+    patch:
+      default:
+        target: 100%
+        threshold: 0%
 
 codecov:
   notify:
