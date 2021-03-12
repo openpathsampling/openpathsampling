@@ -1,1 +1,2 @@
-print("codecov should scream about this")
+if False:
+    print("codecov should scream about this")

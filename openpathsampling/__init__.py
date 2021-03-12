@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover
         version.full_version += ".dev-" + version.git_version[:7]
     isrelease = str(ops_setup.preferences['released'])
 
-
+from . import test
 from .analysis.path_histogram import PathDensityHistogram
 
 from .analysis.replica_network import (
