@@ -4,7 +4,7 @@ try:
 except ImportError:
     import mock
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 import itertools
 
 import numpy as np
@@ -223,11 +223,23 @@ class TestStorableFunction(object):
 
         self.func = StorableFunction(get_expected)
 
-    def test_check_periodic(self):
-        pytest.skip()
+    @pytest.mark.parametrize('min_max', [(None, None), (None, 10), (0, 10)])
+    def test_check_periodic(self, min_max):
+        period_min, period_max = min_max
+        n_nones = Counter(min_max)[None]
+        expected = {2: False, 0: True, 1: 'error'}[n_nones]
+        check_period = StorableFunction._check_period
+        if expected == 'error':
+            with pytest.raises(RuntimeError):
+                check_period(period_min, period_max)
+        else:
+            assert check_period(period_min, period_max) == expected
 
     def test_is_periodic(self):
-        pytest.skip
+        assert not self.func.is_periodic
+        func = StorableFunction(lambda s: s.xyz[0][0], period_min=0.0,
+                                period_max=1.0)
+        assert func.is_periodic
 
     def test_gets_source(self):
         pytest.skip()
