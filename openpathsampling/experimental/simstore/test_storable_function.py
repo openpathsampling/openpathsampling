@@ -230,7 +230,7 @@ class TestStorableFunction(object):
         expected = {2: False, 0: True, 1: 'error'}[n_nones]
         check_period = StorableFunction._check_period
         if expected == 'error':
-            with pytest.raises(RuntimeError, match='period'):
+            with pytest.raises(ValueError, match='period'):
                 check_period(period_min, period_max)
         else:
             assert check_period(period_min, period_max) == expected

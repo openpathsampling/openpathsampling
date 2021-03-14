@@ -282,10 +282,10 @@ class StorableFunction(StorableNamedObject):
         is_periodic = period_min is not None and period_max is not None
         is_error = not (is_periodic or is_not_periodic)
         if is_error:
-            raise RuntimeError("Periodic functions must have upper and "
-                               "lower bounds. This function has period_min "
-                               + str(period_min) + " and period_max "
-                               + str(period_max) + ".")
+            raise ValueError("Periodic functions must have upper and "
+                             "lower bounds. This function has period_min "
+                             + str(period_min) + " and period_max "
+                             + str(period_max) + ".")
         return is_periodic
 
     @property
