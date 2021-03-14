@@ -26,8 +26,8 @@ jobs:
       # codecov.yml to match the number of builds in the matrix
       matrix:
         CONDA_PY:
-          #- 3.9
-          #- 3.8
+          - 3.9
+          - 3.8
           - 3.7
           - 2.7
         MINIMAL: [""]
