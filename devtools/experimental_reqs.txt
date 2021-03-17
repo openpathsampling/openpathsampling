@@ -1,1 +1,2 @@
-sqlalchemy
+sqlalchemy!=1.4.0
+dill
