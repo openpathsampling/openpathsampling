@@ -6,6 +6,7 @@ import simtk.openmm.app
 import simtk.unit as u
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
+from openpathsampling.engines.openmm import tools
 from .snapshot import Snapshot
 import numpy as np
 
@@ -455,26 +456,11 @@ class OpenMMEngine(DynamicsEngine):
 
     def n_degrees_of_freedom(self):
         if self._n_dofs is None:
-            # dof calculation based on OpenMM's StateDataReporter
-            n_spatial = 3
-            system = self.simulation.system
-            n_particles = system.getNumParticles()
-            dofs_particles = sum([n_spatial for i in range(n_particles)
-                                  if system.getParticleMass(i) > 0*u.dalton])
-            dofs_constaints = system.getNumConstraints()
-            dofs_motion_removers = 0
-            has_cm_motion_remover = any(
-                type(system.getForce(i)) == simtk.openmm.CMMotionRemover
-                for i in range(system.getNumForces())
-            )
-            if has_cm_motion_remover:
-                dofs_motion_removers += 3
-            dofs = dofs_particles - dofs_constaints - dofs_motion_removers
-            self._n_dofs = dofs
+            self._n_dofs = tools.n_dofs_from_system(self.simulation.system)
         return self._n_dofs
 
     def has_constraints(self):
-        return self.simulation.system.getNumConstraints() > 0
+        return tools.has_constraints_from_system(self.simulation.system)
 
 
     def apply_constraints(self, snapshot=None, position_tol=None,
