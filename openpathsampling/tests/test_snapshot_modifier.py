@@ -334,7 +334,7 @@ class TestGeneralizedDirectionModifier(object):
         # when it checks based on the engine, it should be fine
         self.openmm_modifier._verify_snapshot(snap)
         # when modifier overrides snap.engine, it errors
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="constraints"):
             modifier._verify_snapshot(snap)
 
     def test_verify_snapshot_box_vectors(self):
