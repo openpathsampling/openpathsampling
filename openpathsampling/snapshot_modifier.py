@@ -247,10 +247,11 @@ class GeneralizedDirectionModifier(SnapshotModifier):
     SingleAtomVelocityDirectionModifier
     """
     def __init__(self, delta_v, subset_mask=None,
-                 remove_linear_momentum=True):
+                 remove_linear_momentum=True, engine=None):
         super(GeneralizedDirectionModifier, self).__init__(subset_mask)
         self.delta_v = delta_v
         self.remove_linear_momentum = remove_linear_momentum
+        self.engine = engine
 
     def _verify_snapshot(self, snapshot):
         """
@@ -265,6 +266,15 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         snapshot : :class:`.Snapshot`
             input snapshot to check for validity
         """
+        try:
+            has_constraints = self.engine.has_constraints()
+        except AttributeError:
+            pass
+        else:
+            if has_constraints:
+                raise RuntimeError("Cannot use this snapshot modifier with "
+                                   "an engine that has constraints.")
+
         try:
             box_vectors = snapshot.box_vectors
         except AttributeError:

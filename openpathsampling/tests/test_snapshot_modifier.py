@@ -317,6 +317,26 @@ class TestGeneralizedDirectionModifier(object):
         )
         self.openmm_modifier._verify_snapshot(constr_snap)
 
+    def test_verify_engine_constraints(self):
+        ad_vacuum_constr = omt.testsystems.AlanineDipeptideVacuum()
+        constrained_engine = omm_engine.Engine(
+            topology=self.test_snap.topology,
+            system=ad_vacuum_constr.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        modifier = GeneralizedDirectionModifier(
+            1.2 * u.nanometer / u.picosecond,
+            engine=constrained_engine
+        )
+        # this is a hack because ndofs not defined in TestsystemEngine
+        self.openmm_engine.current_snapshot = self.test_snap
+        snap = self.openmm_engine.current_snapshot
+        # when it checks based on the engine, it should be fine
+        self.openmm_modifier._verify_snapshot(snap)
+        # when modifier overrides snap.engine, it errors
+        with pytest.raises(RuntimeError, match="constraints"):
+            modifier._verify_snapshot(snap)
+
     def test_verify_snapshot_box_vectors(self):
         ad_explicit = omt.testsystems.AlanineDipeptideExplicit(
             constraints=None,
