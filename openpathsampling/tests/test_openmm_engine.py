@@ -4,6 +4,7 @@
 from __future__ import division
 from __future__ import absolute_import
 
+import pytest
 from builtins import range
 from builtins import object
 from past.utils import old_div
@@ -263,3 +264,18 @@ class TestOpenMMEngine(object):
 
         # make sure there is no change!
         assert_equal(init_samp[0].trajectory, init_traj)
+
+    @pytest.mark.parametrize('has_constraints', [True, False])
+    def test_has_constraints(self, has_constraints):
+        omt = pytest.importorskip('openmmtools')
+        constraints = app.HBonds if has_constraints else None
+        system = omt.testsystems.AlanineDipeptideVacuum(
+            constraints=constraints
+        )
+        template = peng.snapshot_from_testsystem(system)
+        engine = peng.Engine(
+            topology=template.topology,
+            system=system.system,
+            integrator=omt.integrators.VVVRIntegrator()
+        )
+        assert engine.has_constraints() == has_constraints
