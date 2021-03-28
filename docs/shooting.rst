@@ -11,3 +11,4 @@ ShootingPointSelectors
     ShootingPointSelector
     UniformSelector
     GaussianBiasSelector
+    InterfaceConstrainedSelector
