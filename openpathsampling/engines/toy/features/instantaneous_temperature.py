@@ -9,8 +9,7 @@ def n_degrees_of_freedom(snapshot):
         number of degrees of freedom in this system (after accounting for
         constraints)
     """
-    topol = snapshot.engine.topology
-    return topol.n_atoms * topol.n_spatial
+    return snapshot.engine.n_degrees_of_freedom()
 
 @property
 def instantaneous_temperature(snapshot):

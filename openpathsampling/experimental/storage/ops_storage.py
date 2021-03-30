@@ -39,6 +39,7 @@ from ..simstore import SQLStorageBackend  # TODO: generalize
 
 from . import snapshots
 from .snapshots_table import SnapshotsTable
+from .collective_variables import CollectiveVariable
 
 try:
     from .simtk_unit import simtk_quantity_codec, SimtkQuantityHandler
@@ -266,7 +267,7 @@ ops_simulation_classes = {
     'pathmovers': paths.PathMover,
     'networks': paths.TransitionNetwork,
     'schemes': paths.MoveScheme,
-    'cvs': (paths.CollectiveVariable, StorableFunction),
+    'cvs': (paths.CollectiveVariable, CollectiveVariable),
     'engines': paths.engines.DynamicsEngine
 }  # TODO: add more to these
 

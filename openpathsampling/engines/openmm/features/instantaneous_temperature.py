@@ -10,19 +10,7 @@ def n_degrees_of_freedom(snapshot):
         number of degrees of freedom in this system (after accounting for
         constraints)
     """
-    # dof calculation taken from OpenMM's StateDataReporter
-    n_spatial = 3  # can we get this programmatically?
-    system = snapshot.engine.simulation.system
-    n_particles = system.getNumParticles()
-    dofs_particles = sum([n_spatial for i in range(n_particles)
-                               if system.getParticleMass(i) > 0*u.dalton])
-    dofs_constaints = system.getNumConstraints()
-    dofs_motion_removers = 0
-    if any(type(system.getForce(i)) == mm.CMMotionRemover
-           for i in range(system.getNumForces())):
-        dofs_motion_removers += 3
-    dofs = dofs_particles - dofs_constaints - dofs_motion_removers
-    return dofs
+    return snapshot.engine.n_degrees_of_freedom()
 
 @property
 def instantaneous_temperature(snapshot):
