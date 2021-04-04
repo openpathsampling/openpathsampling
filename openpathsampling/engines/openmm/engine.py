@@ -6,6 +6,7 @@ import simtk.openmm.app
 import simtk.unit as u
 
 from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
+from openpathsampling.engines.openmm import tools
 from .snapshot import Snapshot
 import numpy as np
 
@@ -145,6 +146,7 @@ class OpenMMEngine(DynamicsEngine):
         self._current_box_vectors = None
 
         self._simulation = None
+        self._n_dofs = None
 
     def from_new_options(
             self,
@@ -451,6 +453,15 @@ class OpenMMEngine(DynamicsEngine):
         self.simulation.minimizeEnergy()
         # make sure that we get the minimized structure on request
         self._current_snapshot = None
+
+    def n_degrees_of_freedom(self):
+        if self._n_dofs is None:
+            self._n_dofs = tools.n_dofs_from_system(self.simulation.system)
+        return self._n_dofs
+
+    def has_constraints(self):
+        return tools.has_constraints_from_system(self.simulation.system)
+
 
     def apply_constraints(self, snapshot=None, position_tol=None,
                           velocity_tol=1e-5):
