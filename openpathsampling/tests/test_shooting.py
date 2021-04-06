@@ -3,7 +3,6 @@ import collections
 from openpathsampling.tests.test_helpers import (
     make_1d_traj, assert_items_equal, CalvinistDynamics)
 import pytest
-import numpy as np
 
 from openpathsampling.shooting import *
 from openpathsampling.pathmover import ForwardShootMover, BackwardShootMover
@@ -62,8 +61,6 @@ class TestGaussianBiasSelector(SelectorTest):
             0.9950124791926823,   # = exp(-2.0*(0.3-0.25)**2)
             0.8824969025845955,   # = exp(-2.0*(0.5-0.25)**2)
         ]
-        # Seed rng to prevent flaky test_pick
-        self.sel.rng = np.random.default_rng(42)
 
     def test_pick(self):
         picks = [self.sel.pick(self.mytraj) for _ in range(100)]
