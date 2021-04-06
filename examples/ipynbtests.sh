@@ -21,6 +21,14 @@ case $PYTHON_VERSION in
         mstis=$dropbox_base_url/1ulzssv5p4lr61f/toy_mstis_1k_OPS1_py36.nc
         mistis=$dropbox_base_url/76981cbgxm639m3/toy_mistis_1k_OPS1_py36.nc
         ;;
+    "3.8")
+        mstis=$dropbox_base_url/8rr0tt25xlm47cs/toy_mstis_1k_OPS1_py38.nc
+        mistis=$dropbox_base_url/r3d5s5txbnpste0/toy_mistis_1k_OPS1_py38.nc
+        ;;
+    "3.9")
+        mstis=$dropbox_base_url/8rr0tt25xlm47cs/toy_mstis_1k_OPS1_py38.nc
+        mistis=$dropbox_base_url/r3d5s5txbnpste0/toy_mistis_1k_OPS1_py38.nc
+        ;;
     *)
         echo "Unsupported Python version: $PYTHON_VERSION"
 esac
