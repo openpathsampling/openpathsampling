@@ -227,8 +227,6 @@ def fill_minus(minus_ensemble, innermost_ensemble, forbidden_states,
 
 def bootstrap(sampling_transition, init_frame, forbidden_states, engine,
               ms_outers):
-    # TODO: change this to take a given sampling_transition and
-    # forbidden_states
     my_state = sampling_transition.stateA
     print("Ratcheting initial conditions for state " + my_state.name)
     my_interfaces = sampling_transition.interfaces
@@ -250,11 +248,6 @@ def bootstrap(sampling_transition, init_frame, forbidden_states, engine,
     init_outer = init_conds[max([s.replica for s in init_conds.samples])]
     init_inner = init_conds[0]
     return init_inner.trajectory, init_outer.trajectory
-
-
-def make_parser():
-
-    pass
 
 
 def prep_from_frame(network, initial_frame, engine):
@@ -317,11 +310,13 @@ def main(nsteps, examples_to_run=['mistis', 'mstis'],
         run_example(
             nsteps=nsteps,
             setup=setups[example],
-            output_filename=filename_format.format(example=example, 
+            output_filename=filename_format.format(example=example,
                                                    pyV=pyV)
         )
 
 
 if __name__ == "__main__":
+    # TODO: It should be possible to make a parser that handles nsteps,
+    # examples to run, and filename format. Not really needed now, though.
     main(1000)
 
