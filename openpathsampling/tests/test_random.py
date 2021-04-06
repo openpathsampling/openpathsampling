@@ -1,10 +1,11 @@
 from builtins import object
 from openpathsampling.random import *
 
+
 class TestRandom(object):
     def test_default_rng(self):
         rng = default_rng()
-        #test if we can grab an integer (and rng excludes endpoint)
+        # Test if we can grab an integer (and rng excludes endpoint)
         i = rng.integers(1)
         assert i == 0
 
