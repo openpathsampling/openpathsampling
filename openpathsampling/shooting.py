@@ -4,6 +4,7 @@ import logging
 import numpy as np
 
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling import default_rng
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -12,7 +13,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 class ShootingPointSelector(StorableNamedObject):
     def __init__(self):
         # Assign rng, so it can be set to something else
-        self.rng = np.random.default_rng()
+        self.rng = default_rng()
         super(ShootingPointSelector, self).__init__()
 
     def f(self, snapshot, trajectory):

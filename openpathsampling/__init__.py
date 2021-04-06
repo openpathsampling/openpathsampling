@@ -118,6 +118,7 @@ from .pathsimulators import (
     ShootFromSnapshotsSimulation
 )
 
+from .random import default_rng
 from .sample import Sample, SampleSet
 
 from .shooting import (
