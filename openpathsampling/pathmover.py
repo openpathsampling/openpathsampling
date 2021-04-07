@@ -4,7 +4,6 @@ Created on 19.07.2014
 @author: Jan-Hendrik Prinz
 @author: David W. H. Swenson
 """
-from __future__ import absolute_import
 import abc
 import logging
 import numpy as np
