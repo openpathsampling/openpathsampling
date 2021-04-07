@@ -1,4 +1,4 @@
-import random
+from openpathsampling.random import random
 import logging
 
 import openpathsampling as paths
