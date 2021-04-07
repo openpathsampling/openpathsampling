@@ -63,7 +63,7 @@ class TestGaussianBiasSelector(SelectorTest):
         ]
 
     def test_pick(self):
-        picks = [self.sel.pick(self.mytraj) for _ in range(100)]
+        picks = [self.sel.pick(self.mytraj) for _ in range(1000)]
         pick_counter = collections.Counter(picks)
         assert set(pick_counter.keys()) == set(range(len(self.mytraj)))
         # final test: 99.5 should happen more than 32.4
