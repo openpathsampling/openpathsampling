@@ -325,7 +325,7 @@ class StorableFunction(StorableNamedObject):
 
     @mode.setter
     def mode(self, value):
-        allowed_values = list(self._modes.keys())
+        allowed_values = list(self._modes)
         if value not in allowed_values:
             raise ValueError("Unknown mode: '%s'. Allowed options: %s" %
                              (value, allowed_values))
@@ -562,4 +562,3 @@ class StorageFunctionHandler(object):
         missing = uuids - set(uuid_map.keys())
         missing_map = {uuid: uuid_items[uuid] for uuid in missing}
         return uuid_map, missing_map
-
