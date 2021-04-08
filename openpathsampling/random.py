@@ -7,9 +7,6 @@ import random
 if np.version.version < '1.17':
     # Legacy support, remove when numpy 1.16 support is dropped (Py2)
     class RandomState(np.random.RandomState):
-        def __init__(self, *args, **kwargs):
-            super(RandomState, self).__init__(*args, **kwargs)
-
         # method overrides to mimic numpy.random.Generator
         def random(self, *args, **kwargs):
             return self.random_sample(*args, **kwargs)
