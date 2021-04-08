@@ -7,6 +7,18 @@ from ..simstore.storable_functions import (
 from openpathsampling.netcdfplus import StorableNamedObject
 from ..simstore.serialization_helpers import get_uuid
 
+def _func_config_from_netcdfplus(cv_requires_lists, cv_wrap_numpy,
+                                  cv_scalarize_singletons):
+    configs = []
+    if cv_requires_lists:
+        configs.extend(requires_lists_pre, requires_lists_post)
+    if cv_wrap_numpy:
+        configs.append(wrap_numpy)
+    if cv_scalarize_singletons:
+        configs.append(scalarize_singletons)
+    func_config = StorableFunctionConfig(configs)
+    return func_config
+
 class CollectiveVariable(StorableFunction):
     """Wrapper around functions that map snapshots to values.
 
@@ -14,6 +26,40 @@ class CollectiveVariable(StorableFunction):
     snapshots. In particular, it makes it so that trajectories and sampls
     are seen as lists of snapshots.
     """
+    @staticmethod
+    def _remap_netcdfplus_dict(dct):
+        from openpathsampling.netcdfplus import ObjectJSON
+        # create configs from the netcdfplus CV
+        cv_time_reversible = dct.pop('cv_time_reversible', None)
+        cv_requires_lists = dct.pop('cv_requires_lists', None)
+        cv_wrap_numpy = dct.pop('cv_wrap_numpy', None)
+        cv_scalarize_singletons = dct.pop('cv_scalarize_numpy_singletons',
+                                          None)
+        dct['func_config'] = _func_config_from_netcdfplus(
+            cv_requires_lists, cv_wrap_numpy, cv_scalarize_singletons
+        )
+        # remap changed dict names
+        func_dct = None
+        func_names = iter(['f', 'cv_callable', 'featurizer', 'generator'])
+        while func_dct is None:
+            try:
+                func_dct = dct.pop(next(func_names), None)
+            except StopIteration:
+                raise RuntimeError("Unable to convert netcdfplus CV: ",
+                                   str(dct['name']))
+
+        dct['func'] = ObjectJSON.callable_from_dict(func_dct)
+        # set default dict keys not used in netcdfplus
+        dct['source'] = None
+        return dct
+
+    @classmethod
+    def from_netcdfplus_cv(cls, old_cv):
+        dct = old_cv.to_dict()
+        name = dct.pop('name')
+        dct = cls._remap_netcdfplus_dict(dct)
+        return cls.from_dict(dct).named(name)
+
     def is_scalar(self, item):
         # override is_scalar so that Trajectories and Samples are treated
         # as iterables over snapshots
