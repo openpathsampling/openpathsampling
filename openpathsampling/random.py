@@ -16,10 +16,10 @@ if np.version.version < '1.17':
 
         def integers(self, *args, **kwargs):
             return self.randint(*args, **kwargs)
-    rng = RandomState()
+    DEFAULT_RNG = RandomState()
 else:
-    rng = np.random.default_rng()
+    DEFAULT_RNG = np.random.default_rng()
 
 
 def default_rng():
-    return rng
+    return DEFAULT_RNG

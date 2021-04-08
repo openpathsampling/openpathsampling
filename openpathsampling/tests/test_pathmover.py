@@ -11,7 +11,6 @@ from builtins import object
 from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, raises, assert_true,
                         assert_in, assert_not_in)
-import numpy as np
 from numpy.testing import assert_allclose
 
 from openpathsampling.collectivevariable import FunctionCV
