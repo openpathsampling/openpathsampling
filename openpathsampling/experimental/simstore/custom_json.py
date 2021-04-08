@@ -207,7 +207,7 @@ import numpy as np
 def numpy_to_dict(obj):
     return {'shape': obj.shape,
             'dtype': str(obj.dtype),
-            'string': obj.tostring()}
+            'string': obj.tobytes()}
 
 def numpy_from_dict(dct):
     arr = np.frombuffer(dct['string'], dtype=np.dtype(dct['dtype']))
