@@ -13,7 +13,7 @@ init_log = logging.getLogger('openpathsampling.initialization')
 class ShootingPointSelector(StorableNamedObject):
     def __init__(self):
         # Assign rng, so it can be set to something else
-        self.rng = default_rng()
+        self._rng = default_rng()
         super(ShootingPointSelector, self).__init__()
 
     def f(self, snapshot, trajectory):
@@ -77,7 +77,7 @@ class ShootingPointSelector(StorableNamedObject):
         prob_list = self._biases(trajectory)
         sum_bias = sum(prob_list)
 
-        rand = self.rng.random() * sum_bias
+        rand = self._rng.random() * sum_bias
         idx = 0
         prob = prob_list[0]
         while prob <= rand and idx < len(prob_list):
@@ -151,7 +151,7 @@ class UniformSelector(ShootingPointSelector):
         return float(len(trajectory) - self.pad_start - self.pad_end)
 
     def pick(self, trajectory):
-        idx = self.rng.integers(self.pad_start,
+        idx = self._rng.integers(self.pad_start,
                                 len(trajectory) - self.pad_end)
         return idx
 
