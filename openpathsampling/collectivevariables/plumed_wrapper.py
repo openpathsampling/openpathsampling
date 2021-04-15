@@ -224,7 +224,7 @@ class PLUMEDInterface(StorableNamedObject):
         """
         Parameters
         ----------
-        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+        topology : :obj:`openpathsampling.engines.openmm.MDTrajTopology`
         pathtoplumed : string
             path to the PLUMED installation
         timestep : double
