@@ -143,7 +143,7 @@ SAVE_RELOAD_OLD_TPS_NETWORK = Deprecation(
     problem="Old TPS networks will not be reloaded in {OPS} {version}.",
     remedy="This file may not work with {OPS} {version}.",
     remove_version=(2, 0),
-    deprecated_in=(0, 9 ,3)
+    deprecated_in=(0, 9, 3)
 )
 
 MSMBUILDER = Deprecation(
@@ -153,6 +153,16 @@ MSMBUILDER = Deprecation(
     remove_version=(2, 0),
     deprecated_in=(1, 1, 0)
 )
+
+OPENMM_MDTRAJTOPOLOGY = Deprecation(
+    problem=("openpathsampling.engines.openmm.topology.MDTrajTopology "
+             "has been moved."),
+    remedy=("Import MDTrajTopology from openpathsampling.engines.topology "
+            "instead"),
+    remove_version=(2, 0),
+    deprecated_in=(1, 4, 2)
+)
+
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
