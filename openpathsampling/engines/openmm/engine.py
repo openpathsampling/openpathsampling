@@ -83,7 +83,7 @@ class OpenMMEngine(DynamicsEngine):
         """
         Parameters
         ----------
-        topology : openpathsampling.engines.openmm.MDTopology
+        topology : openpathsampling.engines.openmm.MDTrajTopology
             a template snapshots which provides the topology object to be used
             to create the openmm engine
         system : simtk.openmm.app.System
