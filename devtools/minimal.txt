@@ -8,3 +8,4 @@ matplotlib
 svgwrite
 ujson
 psutil
+mdtraj
