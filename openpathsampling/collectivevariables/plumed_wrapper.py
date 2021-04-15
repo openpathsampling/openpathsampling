@@ -27,7 +27,7 @@ class PLUMEDCV(paths.CoordinateFunctionCV):
     https://doi.org/10.1016/j.cpc.2013.09.018
 
     Examples
-
+    --------
     >>> # To create a `CollectiveVariable` which calculates the dihedral psi
     >>> # formed by the atoms [7,9,15,17] in Ala dipeptide:
     >>> from openpathsampling import PLUMEDCV, PLUMEDInterface
