@@ -30,15 +30,18 @@ from openpathsampling.engines.external_engine import (
     _debug_open_files, close_file_descriptors
 )
 
+
 def _remove_file_if_exists(filename):  # pragma: no cover
     #  not requiring coverage here because it's part of Gromacs integration;
     #  gets covered if gmx is installed though
     if os.path.isfile(filename):
         os.remove(filename)
 
+
 class _GroFileEngine(ExternalEngine):
     SnapshotClass = ExternalMDSnapshot
     InternalizedSnapshotClass = InternalizedMDSnapshot
+
     def __init__(self, gro):
         self.gro = gro
         traj = md.load(gro)
@@ -51,8 +54,8 @@ class _GroFileEngine(ExternalEngine):
                                  'n_atoms': n_atoms}
         )
         super(_GroFileEngine, self).__init__(options={},
-                                            descriptor=descriptor,
-                                            template=None)
+                                             descriptor=descriptor,
+                                             template=None)
 
     def to_dict(self):
         return {'gro': self.gro}
@@ -69,13 +72,103 @@ class _GroFileEngine(ExternalEngine):
         return (xyz, vel, box)
 
 
-
 def snapshot_from_gro(gro_file):
     template_engine = _GroFileEngine(gro_file)
     snapshot = ExternalMDSnapshot(file_name=gro_file,
                                   file_position=0,
                                   engine=template_engine)
     return snapshot
+
+
+# .mdp parsing
+def _parse_mdp_line(line):
+    parser = shlex.shlex(line, posix=True)
+    parser.commenters = ";"
+    parser.wordchars += "-."
+    tokens = list(parser)
+    # gromacs mdp can have more than one token/value to the RHS of the '='
+    # so the bit below wont work
+    #assert len(tokens) in [0, 3], line
+    if len(tokens) == 0:
+        # (probably) a comment line
+        return {}
+    elif len(tokens) >= 3 and tokens[1] == "=":
+        # for lines with content: make sure we parsed the '=' at the right spot
+        return {tokens[0]: tokens[2:]}  # always return a list for the values
+    elif len(tokens) == 2 and tokens[1] == "=":
+        # for lines with empty options, e.g. 'define = '
+        return {tokens[0]: [""]}
+    else:
+        # no idea what happend here...best to let the user have a look :)
+        raise ValueError("Could not parse the following mdp line: {:s}".format(line))
+
+
+# MDP param types, sorted into groups/by headings as in the gromacs user manual
+# https://manual.gromacs.org/documentation/5.1/user-guide/mdp-options.html
+_MDP_FLOAT_PARAMS = []
+_MDP_INT_PARAMS = []
+# Run control
+_MDP_FLOAT_PARAMS += ["tinit", "dt", ]
+_MDP_INT_PARAMS += ["nsteps", "init-step", "nstcomm"]
+# Langevin dynamics
+_MDP_FLOAT_PARAMS += ["bd-fric"]
+_MDP_INT_PARAMS += ["ld-seed"]
+# Energy minimization
+_MDP_FLOAT_PARAMS += ["emtol", "emstep"]
+_MDP_INT_PARAMS += ["nstcgsteep", "nbfgscorr"]
+# Shell Molecular Dynamics
+_MDP_FLOAT_PARAMS += ["fcstep"]
+_MDP_INT_PARAMS += ["niter"]
+# Test particle insertion
+_MDP_FLOAT_PARAMS += ["rtpi"]
+# Output control
+_MDP_FLOAT_PARAMS += ["compressed-x-precision"]
+_MDP_INT_PARAMS += ["nstxout", "nstvout", "nstfout", "nstlog",
+                    "nstcalcenergy", "nstenergy", "nstxout-compressed"]
+# Neighbor searching
+_MDP_FLOAT_PARAMS += ["verlet-buffer-tolerance", "rlist", "rlistlong"]
+_MDP_INT_PARAMS += ["nstlist", "nstcalclr"]
+# Electrostatics
+_MDP_FLOAT_PARAMS += ["rcoulomb-switch", "rcoulomb", "epsilon-r", "epsilon-rf"]
+# Van der Waals
+_MDP_FLOAT_PARAMS += ["rvdw-switch", "rvdw"]
+# Ewald
+_MDP_FLOAT_PARAMS += ["fourierspacing", "ewald-rtol", "ewald-rtol-lj"]
+_MDP_INT_PARAMS += ["fourier-nx", "fourier-ny", "fourier-nz", "pme-order"]
+# Temperature coupling
+_MDP_FLOAT_PARAMS += ["tau-t", "ref-t"]
+_MDP_INT_PARAMS += ["nsttcouple", "nh-chain-length"]
+# Pressure coupling
+_MDP_FLOAT_PARAMS += ["tau-p", "compressibility", "ref-p"]
+_MDP_INT_PARAMS += ["nstpcouple"]
+# Simulated annealing
+_MDP_FLOAT_PARAMS += ["annealing-time", "annealing-temp"]
+_MDP_INT_PARAMS += ["annealing-npoints"]
+# Velocity generation
+_MDP_FLOAT_PARAMS += ["gen-temp"]
+_MDP_INT_PARAMS += ["gen-seed"]
+# Bonds
+_MDP_FLOAT_PARAMS += ["shake-tol", "lincs-warnangle"]
+_MDP_INT_PARAMS += ["lincs-order", "lincs-iter"]
+
+
+def _map_types(parsed_dict):
+    dispatch = {param: lambda l: [str(v) for v in l]
+                for param in parsed_dict}
+    dispatch.update({param: lambda l: [float(v) for v in l]
+                     for param in _MDP_FLOAT_PARAMS})
+    dispatch.update({param: lambda l: [int(v) for v in l]
+                     for param in _MDP_INT_PARAMS})
+    return {key: dispatch[key](value) for key, value in parsed_dict.items()}
+
+
+def parse_mdp(input_text):
+    # the parsed mdp is a dict where the keys are gromacs mdp options
+    # the values are lists of values (since gromacs allows multiple values per option)
+    parsed = {}
+    for line in input_text.split("\n"):
+        parsed.update(_parse_mdp_line(line))
+    return _map_types(parsed)
 
 
 class GromacsEngine(ExternalEngine):
@@ -117,10 +210,6 @@ class GromacsEngine(ExternalEngine):
               -e self.edr_file -g self.log_file``, where the ``topol.top``
               is generated by :meth:`.prepare`, and the other filenames are
               set by :meth:`.set_filenames`. Default is the empty string.
-            * ``snapshot_timestep``: time between frames analysed by ops. 
-              You keep track of the unit, I'd advise ps so the output
-              rates will be in ps. Example. 2 fs timestep in the mdp with 
-              nstxout of 30 would give snapshot_timestep of 60 fs = 0.06 ps
 
     base_dir : string
         root directory where all files will be found (defaults to pwd)
@@ -132,7 +221,6 @@ class GromacsEngine(ExternalEngine):
             'gmx_executable': "gmx ",
             'grompp_args': "",
             'mdrun_args': "",
-            'snapshot_timestep':1.0
         }
     )
     GROMPP_CMD = ("{e.options[gmx_executable]}grompp -c {e.gro} "
@@ -155,6 +243,14 @@ class GromacsEngine(ExternalEngine):
         self.gro_contents, self._gro_hash = ensure_file(self.gro)
         self.mdp_contents, self._mdp_hash = ensure_file(self.mdp)
         self.top_contents, self._top_hash = ensure_file(self.top)
+
+        # parse mdp to do some basic sanity checks
+        self._mdp_parsed = parse_mdp(self.mdp_contents)
+        if self._mdp_parsed["nstxout"][0] != self._mdp_parsed["nstvout"][0]:
+            raise ValueError("The velocity ('nstvout') and position ('nstxout')"
+                             + " save frequency set in the .mdp must be equal.")
+        if self._mdp_parsed["nstxout"][0] <= 0:
+            raise ValueError("The TRR output frequency must be larger than 0.")
 
         # TODO: move to a later stage, before first traj
         dirs = [self.prefix + s for s in ['_trr', '_log', '_edr']]
@@ -182,7 +278,7 @@ class GromacsEngine(ExternalEngine):
         self._mdtraj_topology = None
 
         super(GromacsEngine, self).__init__(options, descriptor, template,
-                                             first_frame_in_file=True)
+                                            first_frame_in_file=True)
 
     def to_dict(self):
         dct = super(GromacsEngine, self).to_dict()
@@ -217,6 +313,11 @@ class GromacsEngine(ExternalEngine):
     @mdtraj_topology.setter
     def mdtraj_topology(self, value):
         self._mdtraj_topology = value
+
+    @property
+    def snapshot_timestep(self):
+        """Time (in ps) between subsequent frames analyzed by ops."""
+        return self._mdp_parsed["nstxout"][0] * self._mdp_parsed["dt"][0]
 
     def read_frame_data(self, filename, frame_num):
         """
@@ -267,9 +368,9 @@ class GromacsEngine(ExternalEngine):
             return 'partial'
         else:
             logger.debug("Creating snapshot")
-            snapshot =  ExternalMDSnapshot(file_name=file_name,
-                                           file_position=frame_num,
-                                           engine=self)
+            snapshot = ExternalMDSnapshot(file_name=file_name,
+                                          file_position=frame_num,
+                                          engine=self)
             return snapshot
 
     def write_frame_to_file(self, filename, snapshot, mode='w'):
