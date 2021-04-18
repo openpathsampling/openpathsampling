@@ -1,8 +1,12 @@
-import mdtraj as md
 import numpy as np
 import pandas as pd
 
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.integration_tools import error_if_no_mdtraj
+try:
+    import mdtraj as md
+except ImportError:
+    pass
 
 import logging
 logger = logging.getLogger(__name__)
@@ -62,6 +66,7 @@ class MDTrajTopology(Topology):
 
     @classmethod
     def from_dict(cls, dct):
+        error_if_no_mdtraj("MDTrajTopology")
         top_dict = dct['mdtraj']
 
         atoms = pd.DataFrame(
