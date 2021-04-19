@@ -157,10 +157,9 @@ MSMBUILDER = Deprecation(
 OPENMM_MDTRAJTOPOLOGY = Deprecation(
     problem=("openpathsampling.engines.openmm.topology.MDTrajTopology "
              "has been moved."),
-    remedy=("Import MDTrajTopology from openpathsampling.engines.topology "
-            "instead"),
+    remedy=("Import MDTrajTopology from openpathsampling.engines instead."),
     remove_version=(2, 0),
-    deprecated_in=(1, 4, 2)
+    deprecated_in=(1, 5, 0)
 )
 
 
@@ -249,4 +248,3 @@ def print_deprecations(version=None):  # pragma: no cover
     deprecations = list_deprecations(version)
     for dep in deprecations:
         print(dep)
-
