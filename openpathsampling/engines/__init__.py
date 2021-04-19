@@ -1,7 +1,7 @@
 from .snapshot import BaseSnapshot, SnapshotFactory, SnapshotDescriptor
 from .trajectory import Trajectory
 
-from .topology import Topology
+from .topology import Topology, MDTrajTopology
 
 from . import features
 

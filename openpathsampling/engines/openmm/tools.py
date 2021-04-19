@@ -16,7 +16,7 @@ except ImportError:
     pass
 else:
     from .snapshot import Snapshot
-    from .topology import Topology, MDTrajTopology
+    from openpathsampling.engines.topology import Topology, MDTrajTopology
 
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
@@ -177,7 +177,7 @@ def snapshot_from_testsystem(testsystem, simple_topology=False,
     error_if_no_simtk_unit("snapshot_from_testsystem")
     u_nm = unit.nanometers
     u_ps = unit.picoseconds
-    velocities = unit.Quantity(np.zeros(testsystem.positions.shape), 
+    velocities = unit.Quantity(np.zeros(testsystem.positions.shape),
                                u_nm / u_ps)
 
     if simple_topology:
