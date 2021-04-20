@@ -1,5 +1,5 @@
 from builtins import object
-from openpathsampling.random import *
+from openpathsampling.rng import *
 
 
 class TestRandom(object):
