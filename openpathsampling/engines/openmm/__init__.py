@@ -29,5 +29,6 @@ else:
     from . import features
 
     from .snapshot import Snapshot, MDSnapshot
+    from . import topology
 
 from openpathsampling.engines import NoEngine, SnapshotDescriptor
