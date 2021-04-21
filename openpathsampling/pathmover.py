@@ -7,11 +7,12 @@ Created on 19.07.2014
 import abc
 import logging
 import numpy as np
+import random
 
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 from openpathsampling.pathmover_inout import InOutSet, InOut
-from openpathsampling.random import default_rng, random
+from openpathsampling.rng import default_rng
 from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
