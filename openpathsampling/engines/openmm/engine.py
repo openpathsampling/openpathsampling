@@ -1,5 +1,4 @@
 import logging
-import copy
 
 import simtk.openmm
 import simtk.openmm.app
@@ -11,6 +10,7 @@ from .snapshot import Snapshot
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
 
 def restore_custom_integrator_interface(integrator):
     """
@@ -74,7 +74,7 @@ class OpenMMEngine(DynamicsEngine):
         """
         Parameters
         ----------
-        topology : openpathsampling.engines.openmm.MDTopology
+        topology : openpathsampling.engines.topology.MDTrajTopology
             a template snapshots which provides the topology object to be used
             to create the openmm engine
         system : simtk.openmm.app.System
@@ -337,6 +337,7 @@ class OpenMMEngine(DynamicsEngine):
             options=options,
             openmm_properties=properties
         )
+
     @property
     def mdtraj_topology(self):
         return self.topology.mdtraj
@@ -372,7 +373,6 @@ class OpenMMEngine(DynamicsEngine):
             # for i in range(iterator_length):
                 # new_item[i] = item[i].value_in_unit_system(u.md_unit_system)
             # return item
-
 
     def _build_current_snapshot(self):
         # TODO: Add caching for this and mark if changed
@@ -452,7 +452,6 @@ class OpenMMEngine(DynamicsEngine):
 
     def has_constraints(self):
         return tools.has_constraints_from_system(self.simulation.system)
-
 
     def apply_constraints(self, snapshot=None, position_tol=None,
                           velocity_tol=1e-5):

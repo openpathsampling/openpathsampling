@@ -118,6 +118,13 @@ def version_tuple_to_string(version_tuple):
 
 # DEPRECATED THINGS SLATED FOR REMOVAL IN 2.0
 
+OPENMM_MDTRAJTOPOLOGY = Deprecation(
+                                    problem=("openpathsampling.engines.openmm.topology.MDTrajTopology "
+                                             "has been moved."),
+                                    remedy=("Import MDTrajTopology from openpathsampling.engines instead."),
+                                    remove_version=(2, 0),
+                                    deprecated_in=(1, 5, 0)
+                                    )
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
 def has_deprecations(cls):
@@ -198,4 +205,3 @@ def print_deprecations(version=None):  # pragma: no cover
     deprecations = list_deprecations(version)
     for dep in deprecations:
         print(dep)
-

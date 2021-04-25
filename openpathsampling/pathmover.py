@@ -4,15 +4,15 @@ Created on 19.07.2014
 @author: Jan-Hendrik Prinz
 @author: David W. H. Swenson
 """
-
 import abc
 import logging
+import numpy as np
 import random
 
-import numpy as np
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 from openpathsampling.pathmover_inout import InOutSet, InOut
+from openpathsampling.rng import default_rng
 from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
@@ -129,7 +129,7 @@ class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
 
     def __init__(self):
         StorableNamedObject.__init__(self)
-
+        self._rng = default_rng()
         self._in_ensembles = None
         self._out_ensembles = None
         self._len = None
@@ -427,6 +427,8 @@ class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
                 "," + str(sample.trajectory) +
                 "," + repr(sample.ensemble) +
                 ")")
+        # TODO: This can't go through numpy.random as Samples unwrap to
+        # Snapshots when cast to arrays
         selected = random.choice(legal)
         logger.debug(
             "selected sample: (" + str(selected.replica) +
@@ -543,7 +545,7 @@ class SampleMover(PathMover):
             else:
                 probability *= sample.bias
 
-        rand = random.random()
+        rand = self._rng.random()
 
         if rand > probability:
             # rejected
@@ -1253,7 +1255,9 @@ class RandomSubtrajectorySelectMover(SubtrajectorySelectMover):
     """
 
     def _choose(self, trajectory_list):
-        return random.choice(trajectory_list), {}
+        # Needed to prevent ragged nested sequence DeprWarning in np 1.20
+        idx = self._rng.choice(len(trajectory_list))
+        return trajectory_list[idx], {}
 
 
 class FirstSubtrajectorySelectMover(SubtrajectorySelectMover):
@@ -1505,7 +1509,6 @@ class SelectionMover(PathMover):
         super(SelectionMover, self).__init__()
 
         self.movers = movers
-
         initialization_logging(init_log, self,
                                entries=['movers'])
 
@@ -1538,20 +1541,10 @@ class SelectionMover(PathMover):
         pass
 
     def select_mover(self, weights):
-        rand = np.random.random() * sum(weights)
-
-        idx = 0
-        prob = weights[0]
+        p = np.array(weights)
+        p /= sum(weights)
         logger.debug(self.name + " " + str(weights))
-        while prob <= rand and idx < len(weights):
-            idx += 1
-            try:
-                prob += weights[idx]
-            except IndexError as e:
-                msg = ("Attempted to get index " + str(idx) + " from " +
-                       str(repr(weights)) + ": ")
-                e.args = tuple([msg + e.args[0]] + list(e.args[1:]))
-                raise
+        idx = self._rng.choice(len(self.movers), p=p)
 
         logger_str = "{name} ({cls}) selecting {mtype} (index {idx})"
         logger.info(logger_str.format(

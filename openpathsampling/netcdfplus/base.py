@@ -242,8 +242,10 @@ class StorableObject(object):
             The name points to the class
         """
         subclasses = StorableObject.descendants()
-
-        return {subclass.__name__: subclass for subclass in subclasses}
+        return {subclass.__name__: subclass for subclass in subclasses
+                if not subclass.__module__.startswith(
+                    'openpathsampling.experimental.storage'
+                )}
 
     @classmethod
     def args(cls):

@@ -29,7 +29,6 @@ except ImportError:  # pragma: no cover
         version.full_version += ".dev-" + version.git_version[:7]
     isrelease = str(ops_setup.preferences['released'])
 
-
 from .analysis.path_histogram import PathDensityHistogram
 
 from .analysis.replica_network import (
@@ -118,6 +117,7 @@ from .pathsimulators import (
     ShootFromSnapshotsSimulation
 )
 
+from .rng import default_rng
 from .sample import Sample, SampleSet
 
 from .shooting import (

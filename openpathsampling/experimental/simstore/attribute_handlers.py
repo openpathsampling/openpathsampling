@@ -136,9 +136,9 @@ class NDArrayHandler(AttributeHandler):
         return parse_ndarray_type(type_str)
 
     def serialize(self, obj):
-        return obj.astype(dtype=self.dtype, copy=False).tostring()
+        return obj.astype(dtype=self.dtype, copy=False).tobytes()
 
     def deserialize(self, data, caches=None):
-        return np.fromstring(data, dtype=self.dtype).reshape(self.shape)
+        return np.frombuffer(data, dtype=self.dtype).reshape(self.shape)
 
 DEFAULT_HANDLERS = [NDArrayHandler, StandardHandler]

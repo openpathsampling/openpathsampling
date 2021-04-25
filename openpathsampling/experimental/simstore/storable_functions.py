@@ -274,6 +274,14 @@ class StorableFunction(StorableNamedObject):
         self._check_period(period_min, period_max)
         self.period_min = period_min
         self.period_max = period_max
+        self._modes = {  # tuples of (function, add_to_cache)
+            'analysis': [(self._get_cached, False),
+                         (self._get_storage, True),
+                         (self._eval, True)],
+            'production': [(self._get_cached, False),
+                           (self._eval, True)],
+            'no-caching': [(self._eval, False)]
+        }
         self.mode = 'analysis'
 
     @staticmethod
@@ -317,7 +325,7 @@ class StorableFunction(StorableNamedObject):
 
     @mode.setter
     def mode(self, value):
-        allowed_values = ['no-caching', 'analysis', 'production']
+        allowed_values = list(self._modes)
         if value not in allowed_values:
             raise ValueError("Unknown mode: '%s'. Allowed options: %s" %
                              (value, allowed_values))
@@ -433,14 +441,7 @@ class StorableFunction(StorableNamedObject):
         uuid_items = {get_uuid(item): item for item in items}
         # TODO: add preprocessing here? if needed?
 
-        cache_mode_order = {  # tuples of (function, add_to_cache)
-            'analysis': [(self._get_cached, False),
-                         (self._get_storage, True),
-                         (self._eval, True)],
-            'production': [(self._get_cached, False),
-                           (self._eval, True)],
-            'no-caching': [(self._eval, False)]
-        }[self.mode]
+        cache_mode_order = self._modes[self.mode]
 
         missing = uuid_items
         result_dict = {}
@@ -561,4 +562,3 @@ class StorageFunctionHandler(object):
         missing = uuids - set(uuid_map.keys())
         missing_map = {uuid: uuid_items[uuid] for uuid in missing}
         return uuid_map, missing_map
-
