@@ -11,7 +11,7 @@ def _func_config_from_netcdfplus(cv_requires_lists, cv_wrap_numpy,
                                   cv_scalarize_singletons):
     configs = []
     if cv_requires_lists:
-        configs.extend(requires_lists_pre, requires_lists_post)
+        configs.extend([requires_lists_pre, requires_lists_post])
     if cv_wrap_numpy:
         configs.append(wrap_numpy)
     if cv_scalarize_singletons:
@@ -32,7 +32,7 @@ class CollectiveVariable(StorableFunction):
         # create configs from the netcdfplus CV
         cv_time_reversible = dct.pop('cv_time_reversible', None)
         cv_requires_lists = dct.pop('cv_requires_lists', None)
-        cv_wrap_numpy = dct.pop('cv_wrap_numpy', None)
+        cv_wrap_numpy = dct.pop('cv_wrap_numpy_array', None)
         cv_scalarize_singletons = dct.pop('cv_scalarize_numpy_singletons',
                                           None)
         dct['func_config'] = _func_config_from_netcdfplus(
@@ -156,6 +156,23 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
         )
         self.topology = topology
         self.mdtraj_topology = topology.mdtraj
+
+    @staticmethod
+    def _remap_netcdfplus_dict(dct):
+        try:
+            is_default = (dct['cv_requires_lists']
+                          and dct['cv_wrap_numpy_array']
+                          and dct['cv_scalarize_numpy_singletons'])
+        except KeyError:
+            raise ValueError("This CV doesn't behave like a default "
+                             "MDTrajFunctionCV.")
+        # NOTE: hard-coded superclass... maybe make this a classmethod?
+        dct = CoordinateFunctionCV._remap_netcdfplus_dict(dct)
+        dct['func_config'] = StorableFunctionConfig([
+            MDTrajProcessor(dct['topology']), wrap_numpy,
+            scalarize_singletons,
+        ])
+        return dct
 
     def to_dict(self):
         dct = super().to_dict()

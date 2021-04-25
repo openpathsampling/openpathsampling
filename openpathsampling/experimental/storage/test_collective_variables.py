@@ -24,6 +24,13 @@ else:
     HAS_MDTRAJ = True
 
 
+def _test_cv_equivalence(cv1, cv2, traj):
+    assert cv1.name == cv2.name
+    for snap in traj:
+        assert cv1(snap) == cv2(snap)
+    assert len(cv1(traj)) == len(cv2(traj))
+
+
 class TestCollectiveVariable(object):
     def setup(self):
         self.cv = CollectiveVariable(lambda x: x.xyz[0][0])
@@ -41,6 +48,12 @@ class TestCollectiveVariable(object):
     def test_is_scalar_false(self, inp_type):
         inp = {'traj': self.traj, 'samp': self.sample}[inp_type]
         assert self.cv.is_scalar(inp) is False
+
+    def test_from_netcdfplus_cv(self):
+        traj = make_1d_traj([0.0, 0.5, 1.0])
+        old = paths.FunctionCV("x", lambda snap: snap.xyz[0][0])
+        new = CollectiveVariable.from_netcdfplus_cv(old)
+        _test_cv_equivalence(new, old, traj)
 
 
 # TODO: It turns out that trajectories don't currently store their reversed
@@ -114,6 +127,12 @@ class TestCoordinateFunctionCV(object):
         for item in loop:
             assert self.storage.backend.called_load[get_uuid(item)] == 1
 
+    def test_from_netcdfplus_cv(self):
+        traj = make_1d_traj([0.0, 0.5, 1.0])
+        old = paths.FunctionCV("x", lambda snap: snap.xyz[0][0])
+        new = CoordinateFunctionCV.from_netcdfplus_cv(old)
+        _test_cv_equivalence(new, old, traj)
+
 
 class TestMDTrajFunctionCV(object):
     def setup(self):
@@ -122,9 +141,9 @@ class TestMDTrajFunctionCV(object):
         pytest.importorskip('simtk.unit')
 
         self.mdt = md.load(data_filename("ala_small_traj.pdb"))
-        top = ops_omm.topology.MDTrajTopology(self.mdt.topology)
+        self.top = ops_omm.topology.MDTrajTopology(self.mdt.topology)
         self.traj = ops_omm.tools.trajectory_from_mdtraj(self.mdt)
-        self.cv = MDTrajFunctionCV(md.compute_distances, top,
+        self.cv = MDTrajFunctionCV(md.compute_distances, self.top,
                                    atom_pairs=[[0, 1]])
 
 
@@ -142,3 +161,9 @@ class TestMDTrajFunctionCV(object):
         by_snap = np.array([self.cv(snap) for snap in self.traj])
         np.testing.assert_array_equal(by_traj, by_snap)
         assert by_traj.shape == (len(self.traj),)
+
+    def test_from_netcdfplus_cv(self):
+        old = paths.MDTrajFunctionCV("phi", md.compute_dihedrals, self.top,
+                                     indices=[[4, 6, 8, 14]])
+        new = MDTrajFunctionCV.from_netcdfplus_cv(old)
+        _test_cv_equivalence(new, old, self.traj)
