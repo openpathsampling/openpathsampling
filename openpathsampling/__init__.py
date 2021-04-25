@@ -58,11 +58,11 @@ from .bias_function import (
     SRTISBiasFromNetwork
 )
 
-from .collectivevariable import (
-    FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
-    InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
-    CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
-    GeneratorCV)
+# from .collectivevariable import (
+    # FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
+    # InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
+    # CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
+    # GeneratorCV)
 
 from .ensemble import (
     Ensemble, EnsembleCombination,
