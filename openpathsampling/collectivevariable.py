@@ -539,7 +539,7 @@ class MDTrajFunctionCV(CoordinateFunctionCV):
         ----------
         name : str
         f
-        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+        topology : :obj:`openpathsampling.engines.topology.MDTrajTopology`
             the mdtraj topology wrapper from OPS that is used to initialize
             the featurizer in ``pyemma.coordinates.featurizer(topology)``
         cv_requires_lists
@@ -607,7 +607,7 @@ class MSMBFeaturizerCV(CoordinateGeneratorCV):
         name
         featurizer : msmbuilder.Featurizer, callable
             the featurizer used as a callable class
-        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+        topology : :obj:`openpathsampling.engines.topology.MDTrajTopology`
             the mdtraj topology wrapper from OPS that is used to initialize
             the featurizer in ``pyemma.coordinates.featurizer(topology)``
         **kwargs :
@@ -696,7 +696,7 @@ class PyEMMAFeaturizerCV(MSMBFeaturizerCV):
         name
         featurizer : :class:`pyemma.coordinates.featurizer`
             the pyemma featurizer used as a callable class
-        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+        topology : :obj:`openpathsampling.engines.topology.MDTrajTopology`
             the mdtraj topology wrapper from OPS that is used to initialize
             the featurizer in ``pyemma.coordinates.featurizer(topology)``
         **kwargs : dict

@@ -32,7 +32,7 @@ class PLUMEDCV(paths.CoordinateFunctionCV):
     >>> # formed by the atoms [7,9,15,17] in Ala dipeptide:
     >>> from openpathsampling import PLUMEDCV, PLUMEDInterface
     >>> plmd = PLUMEDInterface(top)
-    >>> # top is an `openpathsampling.engines.openmm.topology.MDTrajTopology`
+    >>> # top is an `openpathsampling.engines.topology.MDTrajTopology`
     >>> psi_plumed = PLUMEDCV("psi",plmd,"TORSION ATOMS=7,9,15,17")
     >>> print psi_plumed(traj)  # returns psi values for the trajectory
     """
@@ -207,7 +207,7 @@ class PLUMEDInterface(StorableNamedObject):
     >>> # in Ala dipeptide:
     >>> from openpathsampling import PLUMEDCV, PLUMEDInterface
     >>> plmd = PLUMEDInterface(top)
-    >>> # top is an `openpathsampling.engines.openmm.topology.MDTrajTopology`
+    >>> # top is an `openpathsampling.engines.topology.MDTrajTopology`
     >>> plmd.set("group","GROUP ATOMS=7,9,15,17")
     >>> psi_plumed = PLUMEDCV("psi",plmd,"TORSION ATOMS=group")
     >>> print psi_plumed(traj)  # returns psi values for the trajectory
@@ -224,7 +224,7 @@ class PLUMEDInterface(StorableNamedObject):
         """
         Parameters
         ----------
-        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+        topology : :obj:`openpathsampling.engines.topology.MDTrajTopology`
         pathtoplumed : string
             path to the PLUMED installation
         timestep : double

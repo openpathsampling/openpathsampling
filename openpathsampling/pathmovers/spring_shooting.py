@@ -244,7 +244,7 @@ class SpringShootingSelector(paths.ShootingPointSelector):
         # Select the next index from the probability list and shift to range
         # from -delta_max to delta_max, 0 being the shooting index of the last
         # accepted trajectory
-        rand = np.random.random() * self._total_bias
+        rand = self._rng.random() * self._total_bias
         dframe = 0
         prob = prob_list[0]
         while prob <= rand and dframe < len(prob_list):
