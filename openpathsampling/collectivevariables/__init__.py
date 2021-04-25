@@ -1,6 +1,6 @@
 from openpathsampling.collectivevariable import (
     CollectiveVariable, FunctionCV, CoordinateFunctionCV, GeneratorCV,
-    CoordinateGeneratorCV, InVolumeCV,
+    CoordinateGeneratorCV, InVolumeCV, CallableCV,
     MDTrajFunctionCV,
     PyEMMAFeaturizerCV,
     MSMBFeaturizerCV,
