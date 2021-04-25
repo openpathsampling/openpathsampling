@@ -622,7 +622,7 @@ class TestRandomChoiceMover(object):
         self.tps = A2BEnsemble(volA, volB)
         self.len3 = LengthEnsemble(3)
         self.init_samp = SampleSet([Sample(trajectory=traj,
-                                           ensemble=self.len3, 
+                                           ensemble=self.len3,
                                            replica=0)])
         self.hop_to_tis = EnsembleHopMover(
             ensemble=self.len3,
@@ -672,7 +672,7 @@ class TestRandomChoiceMover(object):
 
 class TestRandomAllowedChoiceMover(object):
     def setup(self):
-        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7, 
+        self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7,
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                      ])
         self.dyn.initialized = True
@@ -693,7 +693,7 @@ class TestRandomAllowedChoiceMover(object):
             coordinates=[-0.1, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
             velocities=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         )
-        self.samp1 = Sample(trajectory=init_traj1, replica=0, 
+        self.samp1 = Sample(trajectory=init_traj1, replica=0,
                             ensemble=self.ens1)
         self.samp2 = Sample(trajectory=init_traj2, replica=1,
                             ensemble=self.ens2)
@@ -1134,10 +1134,10 @@ class TestMinusMover(object):
         self.dyn = CalvinistDynamics([
             # successful move: (backward extension then forward)
             -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,
-            # never leaves state: 
+            # never leaves state:
             -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
             -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
-            -0.25, 
+            -0.25,
             -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
             -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
             # goes to other state:
@@ -1152,7 +1152,7 @@ class TestMinusMover(object):
             innermost_ensembles=self.innermost,
             engine=self.dyn
         )
-        self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
+        self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15]
         self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
         self.second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
         init_minus = make_1d_traj(
@@ -1191,7 +1191,7 @@ class TestMinusMover(object):
         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
         assert_equal(samples[0].ensemble, self.minus._segment_ensemble)
         assert_equal(self.mover.engine, self.dyn)
-        
+
 
     def test_successful_move(self):
         init_innermost = make_1d_traj(self.list_innermost, [1.0]*5)
@@ -1371,10 +1371,10 @@ class TestSingleReplicaMinusMover(object):
         self.dyn = CalvinistDynamics([
             # successful move: (backward extension then forward)
             -0.13, 0.13, 0.33, -0.11, -0.12, 0.12, 0.32, -0.131,
-            # never leaves state: 
+            # never leaves state:
             -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
             -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
-            -0.25, 
+            -0.25,
             -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
             -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15, -0.15,
             # goes to other state:
@@ -1389,7 +1389,7 @@ class TestSingleReplicaMinusMover(object):
             innermost_ensembles=self.innermost,
             engine=self.dyn
         )
-        self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15] 
+        self.first_segment = [-0.1, 0.1, 0.3, 0.1, -0.15]
         self.list_innermost = [-0.11, 0.11, 0.31, 0.11, -0.12]
         self.second_segment = [-0.25, 0.2, 0.4, 0.2, -0.2]
         init_minus = make_1d_traj(

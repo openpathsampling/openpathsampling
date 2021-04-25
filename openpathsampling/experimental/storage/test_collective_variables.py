@@ -9,6 +9,7 @@ import numpy as np
 import openpathsampling as paths
 from openpathsampling.tests.test_helpers import make_1d_traj, data_filename
 from openpathsampling.engines import openmm as ops_omm
+from openpathsampling.engines.topology import MDTrajTopology
 
 from .collective_variables import *
 from ..simstore.test_storable_function import MockBackend
@@ -122,7 +123,7 @@ class TestMDTrajFunctionCV(object):
         pytest.importorskip('simtk.unit')
 
         self.mdt = md.load(data_filename("ala_small_traj.pdb"))
-        top = ops_omm.topology.MDTrajTopology(self.mdt.topology)
+        top = MDTrajTopology(self.mdt.topology)
         self.traj = ops_omm.tools.trajectory_from_mdtraj(self.mdt)
         self.cv = MDTrajFunctionCV(md.compute_distances, top,
                                    atom_pairs=[[0, 1]])

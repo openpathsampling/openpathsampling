@@ -4,7 +4,7 @@ try:
 except ImportError:
     import mock
 
-from collections import defaultdict
+from collections import defaultdict, Counter
 import itertools
 
 import numpy as np
@@ -223,6 +223,24 @@ class TestStorableFunction(object):
 
         self.func = StorableFunction(get_expected)
 
+    @pytest.mark.parametrize('min_max', [(None, None), (None, 10), (0, 10)])
+    def test_check_periodic(self, min_max):
+        period_min, period_max = min_max
+        n_nones = Counter(min_max)[None]
+        expected = {2: False, 0: True, 1: 'error'}[n_nones]
+        check_period = StorableFunction._check_period
+        if expected == 'error':
+            with pytest.raises(ValueError, match='period'):
+                check_period(period_min, period_max)
+        else:
+            assert check_period(period_min, period_max) == expected
+
+    def test_is_periodic(self):
+        assert not self.func.is_periodic
+        func = StorableFunction(lambda s: s.xyz[0][0], period_min=0.0,
+                                period_max=1.0)
+        assert func.is_periodic
+
     def test_gets_source(self):
         pytest.skip()
         pass
@@ -257,8 +275,6 @@ class TestStorableFunction(object):
             pass
         else:
             func.local_cache.clear()
-        pytest.skip()
-        pass
 
     @staticmethod
     def _set_storage(func, mode, found_in, expected):
@@ -269,12 +285,13 @@ class TestStorableFunction(object):
                 found = {uuid: uuids[uuid] for uuid in uuids
                          if uuid in expected.keys()}
                 return {uuid: expected[uuid] for uuid in found}, missing
+
         else:
             def get_storage(cv_uuid, uuids):
                 return {}, dict(uuids)
 
         storage = mock.MagicMock(get_function_results=get_storage)
-        func._handler = storage
+        func._handlers.add(storage)
 
     @pytest.mark.parametrize('mode, found_in', [
         ('analysis', 'storage'), ('analysis', 'cache'),
@@ -386,7 +403,7 @@ class TestStorageFunctionHandler(object):
         assert self.sf_handler.all_functions[uuid] == [self.func]
         if not unable_to_register:
             assert self.func.has_handler
-            assert self.func._handler == self.sf_handler
+            assert self.func._handlers == {self.sf_handler}
             assert self.sf_handler.functions == [self.func]
 
         # make a copy of the func

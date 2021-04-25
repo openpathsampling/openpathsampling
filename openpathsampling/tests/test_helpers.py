@@ -7,7 +7,7 @@ a duck.
 
 import os
 from functools import wraps
-
+from openpathsampling.engines import NoEngine
 import numpy as np
 import numpy.testing as npt
 
@@ -325,3 +325,12 @@ def A2BEnsemble(volume_a, volume_b, trusted=True):
         paths.AllOutXEnsemble(volume_a | volume_b),
         paths.AllInXEnsemble(volume_b) & paths.LengthEnsemble(1)
     ])
+
+
+class NaNEngine(NoEngine):
+    def __init__(self, descriptor):
+        super(NaNEngine, self).__init__(descriptor=descriptor)
+
+    @staticmethod
+    def is_valid_snapshot(snapshot):
+        return False

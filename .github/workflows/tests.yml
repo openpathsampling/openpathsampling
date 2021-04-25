@@ -22,19 +22,28 @@ jobs:
     runs-on: ubuntu-latest
     name: "Tests"
     strategy:
+      # NOTE: When changing the test matrix:
+      # * Update the after_n_builds in codecov.yml to match the number of
+      #   builds in the matrix
+      # * You may need to create another example run for the notebook tests
+      #   (see examples/ipynbtests.sh; examples/prep_example_data.py). This
+      #   is because Python internals (usually bytecode, which is saved in
+      #   CVs) can differ between minor Python versions.
       matrix:
         CONDA_PY:
-          #- 3.9
-          #- 3.8
+          - 3.9
+          - 3.8
           - 3.7
           - 2.7
         MINIMAL: [""]
         include:
           - CONDA_PY: 3.7
-            MINIMAL: true
+            MINIMAL: "minimal"
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@v2
       - uses: conda-incubator/setup-miniconda@v2
         with: 
