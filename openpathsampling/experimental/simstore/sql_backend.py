@@ -288,7 +288,7 @@ class SQLStorageBackend(StorableNamedObject):
         table = self.metadata.tables[table_name]
         results = []
         with self.engine.connect() as conn:
-            for block in grouper(idx_list, 1000):
+            for block in grouper(idx_list, 900):
                 or_stmt = sql.or_(*(table.c.idx == idx for idx in block))
                 sel = table.select(or_stmt)
                 results.extend(list(conn.execute(sel)))
