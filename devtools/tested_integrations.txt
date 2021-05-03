@@ -1,5 +1,5 @@
 jupyter
-openmm
+openmm!=7.5.1
 openmmtools
 py-plumed
 pyemma
