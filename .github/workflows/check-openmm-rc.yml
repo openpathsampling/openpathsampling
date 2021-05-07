@@ -4,6 +4,9 @@
 # See also: test-openmm-rc.yml
 name: "Check for OpenMM RC"
 on:
+  pull_request:
+    branches:
+      - master
   schedule:
     - cron: "0 9 * * */2"
 
