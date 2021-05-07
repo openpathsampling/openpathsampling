@@ -18,7 +18,7 @@ jobs:
         with:
           channel: conda-forge
           package: openmm
-          ndays: 30  # TODO: decrease to 7
+          ndays: 30  # TODO: decrease to 3
           labels: openmm_rc
       - uses: benc-uk/workflow-dispatch@v1
         with:

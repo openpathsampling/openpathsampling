@@ -25,7 +25,9 @@ jobs:
           auto-update-conda: true
       - name: "Install requirements"
         run: |
-          source devtools/conda_install_reqs.sh
+          CONDA_PY=$(python -c "import sys; print('.'.join(str(s) for s in sys.version_info[:2]))")
+        echo "Python version: ${CONDA_PY}"
+        source devtools/conda_install_reqs.sh
       - name: "Install OpenMM RC"
         run: |
           conda install -c conda-forge/label/openmm_rc -c conda-forge openmm
