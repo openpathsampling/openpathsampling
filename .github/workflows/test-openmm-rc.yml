@@ -3,9 +3,9 @@
 name: "Test OpenMM Release Candidate"
 on:
   repository_dispatch:
-  # TODO: temporary -- for testing purposes
-  pull_request:
-    branch: master
+  # use this for debugging
+  #pull_request:
+    #branch: master
 
 defaults:
   run:
