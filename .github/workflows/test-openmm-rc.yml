@@ -2,7 +2,7 @@
 # See also: check-openmm-rc.yml
 name: "Test OpenMM Release Candidate"
 on:
-  repository_dispatch:
+  workflow_dispatch:
   # use this for debugging
   #pull_request:
     #branch: master
