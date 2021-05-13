@@ -64,7 +64,7 @@ py.test --nbval --current-env \
     test_snapshot.ipynb \
     test_netcdfplus.ipynb \
     test_cv.ipynb \
-    test_pyemma.ipynb \
+    # test_pyemma.ipynb \ got covered by unittests instead
     || testfail=1
 
 cd ../misc/
