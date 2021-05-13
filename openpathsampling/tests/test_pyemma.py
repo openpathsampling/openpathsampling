@@ -9,7 +9,7 @@ pyemma = pytest.importorskip("pyemma")
 mdtraj = pytest.importorskip("mdtraj")
 
 
-class TestPyEMMA(object):
+class TestPyEMMAFeaturizerCV(object):
     def setup(self):
         self.md_trajectory = mdtraj.load(data_filename("ala_small_traj.pdb"))
         self.ops_trajectory = trajectory_from_mdtraj(self.md_trajectory)
