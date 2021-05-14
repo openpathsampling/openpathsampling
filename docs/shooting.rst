@@ -11,3 +11,7 @@ ShootingPointSelectors
     ShootingPointSelector
     UniformSelector
     GaussianBiasSelector
+    BiasedSelector
+    InterfaceConstrainedSelector
+    FirstFrameSelector
+    FinalFrameSelector
