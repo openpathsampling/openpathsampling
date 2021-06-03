@@ -828,7 +828,7 @@ class TestPathSampling(object):
     def test_save_initial_scheme(self, tmpdir):
         # check that we actually save scheme when we save this
         filename = tmpdir.join("temp.nc")
-        storage = paths.Storage(filename, mode='w')
+        storage = paths.Storage(str(filename), mode='w')
         assert len(storage.schemes) == 0
         sim = paths.PathSampling(storage=storage,
                                  move_scheme=self.scheme,
