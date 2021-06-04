@@ -1,5 +1,5 @@
 [![Tests](https://github.com/openpathsampling/openpathsampling/workflows/Tests/badge.svg?branch=master)](https://github.com/openpathsampling/openpathsampling/actions?query=workflow%3ATests)
-[![Coverage Status](https://coveralls.io/repos/github/openpathsampling/openpathsampling/badge.svg?branch=master)](https://coveralls.io/github/openpathsampling/openpathsampling?branch=master)
+[![codecov](https://codecov.io/gh/openpathsampling/openpathsampling/branch/master/graph/badge.svg?token=9W18VHasdb)](https://codecov.io/gh/openpathsampling/openpathsampling)
 
 # OpenPathSampling
 

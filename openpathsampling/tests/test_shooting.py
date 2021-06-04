@@ -10,6 +10,8 @@ from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.sample import Sample, SampleSet
 import openpathsampling as paths
 
+import numpy as np
+
 
 class SelectorTest(object):
     def setup(self):
@@ -63,7 +65,7 @@ class TestGaussianBiasSelector(SelectorTest):
         ]
 
     def test_pick(self):
-        picks = [self.sel.pick(self.mytraj) for _ in range(100)]
+        picks = [self.sel.pick(self.mytraj) for _ in range(1000)]
         pick_counter = collections.Counter(picks)
         assert set(pick_counter.keys()) == set(range(len(self.mytraj)))
         # final test: 99.5 should happen more than 32.4
@@ -81,6 +83,47 @@ class TestGaussianBiasSelector(SelectorTest):
         expected = pytest.approx(self.f[frame] / norm)
         assert self.sel.probability(traj[frame], traj) == expected
 
+class TestBiasedSelector(SelectorTest):
+    def setup(self):
+        super(TestBiasedSelector, self).setup()
+        self.f = {
+            'gaussian': [
+                0.32465246735834974,  # = exp(-2.0*(-0.5-0.25)**2)
+                0.9559974818331,      # = exp(-2.0*(0.1-0.25)**2)
+                0.9950124791926823,   # = exp(-2.0*(0.2-0.25)**2)
+                0.9950124791926823,   # = exp(-2.0*(0.3-0.25)**2)
+                0.8824969025845955,   # = exp(-2.0*(0.5-0.25)**2)
+            ],
+            'uniform': [1] * 5
+        }
+
+    @staticmethod
+    def _create_selector(func_name):
+        func = {
+            'gaussian': lambda s: np.exp(-2.0 * (s.xyz[0][0] - 0.25)**2),
+            'uniform': lambda s: 1
+        }[func_name]
+        cv = paths.FunctionCV('sel_cv', func)
+        selector = BiasedSelector(cv)
+        return selector
+
+    @pytest.mark.parametrize('func', ['gaussian', 'uniform'])
+    @pytest.mark.parametrize('frame', [0, 1, 2, 3, 4])
+    def test_f(self, func, frame):
+        sel = self._create_selector(func)
+        f = self.f[func]
+        traj = self.mytraj
+        assert sel.f(traj[frame], traj) == pytest.approx(f[frame])
+
+    @pytest.mark.parametrize('func', ['gaussian', 'uniform'])
+    @pytest.mark.parametrize('frame', [0, 1, 2, 3, 4])
+    def test_probability(self, func, frame):
+        sel = self._create_selector(func)
+        f = self.f[func]
+        norm = sum(f)
+        traj = self.mytraj
+        expected = pytest.approx(f[frame] / norm)
+        assert sel.probability(traj[frame], traj) == expected
 
 class TestFirstFrameSelector(SelectorTest):
     def test_pick(self):

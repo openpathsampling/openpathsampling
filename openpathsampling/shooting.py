@@ -4,12 +4,18 @@ import logging
 import numpy as np
 
 from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling import default_rng
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
 class ShootingPointSelector(StorableNamedObject):
+    def __init__(self):
+        # Assign rng, so it can be set to something else
+        self._rng = default_rng()
+        super(ShootingPointSelector, self).__init__()
+
     def f(self, snapshot, trajectory):
         """
         Returns the unnormalized proposal probability of a snapshot
@@ -71,7 +77,7 @@ class ShootingPointSelector(StorableNamedObject):
         prob_list = self._biases(trajectory)
         sum_bias = sum(prob_list)
 
-        rand = np.random.random() * sum_bias
+        rand = self._rng.random() * sum_bias
         idx = 0
         prob = prob_list[0]
         while prob <= rand and idx < len(prob_list):
@@ -120,6 +126,25 @@ class GaussianBiasSelector(ShootingPointSelector):
         return math.exp(-self.alpha * (l_s - self.l_0) ** 2)
 
 
+class BiasedSelector(ShootingPointSelector):
+    """General biased shooting point selector
+
+    Takes any function (wrapped in an OPS CV) and uses that as the bias for
+    selecting the shooting point.
+
+    Parameters
+    ----------
+    func : :class:`.CollectiveVariable`
+        A function wrapped in an OPS CV which gives the relative bias.
+    """
+    def __init__(self, func):
+        super(BiasedSelector, self).__init__()
+        self.func = func
+
+    def f(self, snapshot, trajectory):
+        return self.func(snapshot)
+
+
 class UniformSelector(ShootingPointSelector):
     """
     Selects random frame in range `pad_start` to `len(trajectory-pad_end`.
@@ -145,7 +170,7 @@ class UniformSelector(ShootingPointSelector):
         return float(len(trajectory) - self.pad_start - self.pad_end)
 
     def pick(self, trajectory):
-        idx = np.random.randint(self.pad_start,
+        idx = self._rng.integers(self.pad_start,
                                 len(trajectory) - self.pad_end)
         return idx
 
@@ -231,4 +256,3 @@ class FirstFrameSelector(ShootingPointSelector):
     def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
         # must be matched by a first-frame selector somewhere
         return 1.0
-
