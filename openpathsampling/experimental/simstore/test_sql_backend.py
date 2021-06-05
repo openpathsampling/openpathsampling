@@ -179,6 +179,24 @@ class TestSQLStorageBackend(object):
         assert len(loaded_table) == 3
         pytest.skip()
 
+    def test_load_save_large_numbers(self):
+        # mainly a smoke test to ensure that we reload everything correctly
+        n_objs = 1001
+        snapshot_schema = {'snapshot0': self.schema['snapshot0']}
+        self.database.register_schema(snapshot_schema, self.table_to_class)
+        assert self.database.table_len('snapshot0') == 0
+        snap_dicts = [
+            {'filename': 'foo.trr', 'index': idx, 'uuid': 'uuid' + str(idx)}
+            for idx in range(n_objs)
+        ]
+        self.database.add_to_table('snapshot0', snap_dicts)
+        assert self.database.table_len('snapshot0') == n_objs
+        uuids = [dct['uuid'] for dct in snap_dicts]
+        uuid_table_rows = self.database.load_uuids_table(uuids)
+        assert len(uuid_table_rows) == n_objs
+        reloaded = self.database.load_table_data(uuid_table_rows)
+        assert len(reloaded) == n_objs
+
     def test_load_table_data_missing(self):
         pytest.skip()
 
