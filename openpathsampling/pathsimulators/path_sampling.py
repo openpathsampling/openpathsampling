@@ -51,6 +51,7 @@ class PathSampling(PathSimulator):
         self.status_update_frequency = 1
 
         if initialize:
+            # NOTE: why aren't we using save_initial_step here?
             samples = []
             if sample_set is not None:
                 for sample in sample_set:
@@ -76,6 +77,8 @@ class PathSampling(PathSimulator):
         if self.storage is not None:
             template_trajectory = self.sample_set.samples[0].trajectory
             self.storage.save(template_trajectory)
+            self.storage.save([self.move_scheme, self.root_mover,
+                               self._mover])
             self.save_current_step()
 
     def to_dict(self):
