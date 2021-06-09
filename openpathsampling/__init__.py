@@ -122,7 +122,8 @@ from .sample import Sample, SampleSet
 
 from .shooting import (
     ShootingPointSelector, UniformSelector, GaussianBiasSelector,
-    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector
+    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector,
+    BiasedSelector
 )
 
 from .snapshot_modifier import (

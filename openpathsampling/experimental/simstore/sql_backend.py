@@ -96,6 +96,7 @@ class SQLStorageBackend(StorableNamedObject):
 
     More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
     """
+    MAX_SQL_ITEMS = 900
     def __init__(self, filename, mode='r', sql_dialect='sqlite', **kwargs):
         super().__init__()
         self.filename = filename
@@ -103,7 +104,6 @@ class SQLStorageBackend(StorableNamedObject):
         self.mode = mode
         self.kwargs = kwargs
         self.debug = False
-        self.max_query_size = 900
 
         # maps a specific type name, to generic type info, e.g.
         # 'ndarray.float32(1651,3)': 'ndarray'
@@ -288,7 +288,7 @@ class SQLStorageBackend(StorableNamedObject):
         table = self.metadata.tables[table_name]
         results = []
         with self.engine.connect() as conn:
-            for block in grouper(idx_list, 1000):
+            for block in grouper(idx_list, self.MAX_SQL_ITEMS):
                 or_stmt = sql.or_(*(table.c.idx == idx for idx in block))
                 sel = table.select(or_stmt)
                 results.extend(list(conn.execute(sel)))
@@ -412,7 +412,7 @@ class SQLStorageBackend(StorableNamedObject):
         """
         table = self.metadata.tables[table_name]
         results = []
-        for uuid_block in tools.block(uuids, self.max_query_size):
+        for uuid_block in tools.block(uuids, self.MAX_SQL_ITEMS):
             # uuid_sel = table.select(
                 # sql.exists().where(table.c.uuid.in_(uuid_block))
             # )
@@ -460,7 +460,7 @@ class SQLStorageBackend(StorableNamedObject):
 
         res = []
         uuids = [obj['uuid'] for obj in objects]
-        for uuid_block in tools.block(uuids, self.max_query_size):
+        for uuid_block in tools.block(uuids, self.MAX_SQL_ITEMS):
             sel_uuids_idx = sql.select([table.c.uuid, table.c.idx]).\
                     where(table.c.uuid.in_(uuid_block))
             with self.engine.connect() as conn:
@@ -501,7 +501,7 @@ class SQLStorageBackend(StorableNamedObject):
         uuid_table = self.metadata.tables['uuid']
         logger.debug("Looking for {} UUIDs".format(len(uuids)))
         results = []
-        for uuid_block in tools.block(uuids, self.max_query_size):
+        for uuid_block in tools.block(uuids, self.MAX_SQL_ITEMS):
             logger.debug("New block of {} UUIDs".format(len(uuid_block)))
             uuid_sel = uuid_table.select().\
                     where(uuid_table.c.uuid.in_(uuid_block))

@@ -1,0 +1,27 @@
+# Workflow to check for a recent OpenMM release candidate.
+#
+# If a recent RC is found, trigger a second workflow to test against it.
+# See also: test-openmm-rc.yml
+name: "Check for OpenMM RC"
+on:
+  schedule:
+    - cron: "0 9 * * */2"
+
+jobs:
+  check-rc:
+    runs-on: ubuntu-latest
+    name: "Check for OpenMM RC"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dwhswenson/conda-rc-check@main
+        id: checkrc
+        with:
+          channel: conda-forge
+          package: openmm
+          ndays: 3
+          labels: openmm_rc
+      - uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: Test OpenMM Release Candidate
+          token: ${{ secrets.DISPATCH_TOKEN }}
+        if: ${{ steps.checkrc.outputs.hasrc == 'True' }}
