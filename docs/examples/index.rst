@@ -25,10 +25,13 @@ One of the best ways to get familiar with OPS is our tutorial, which has
 been used in several workshops and classrooms over the years. The main part
 of the tutorial (notebooks numbered 1-3) is essentially the same as the
 alanine dipeptide TPS example, and usually takes no more than 90 minutes to
-complete. It can be downloaded at the link below; see the readme file for
-details:
+complete. It can be downloaded at the link below or directly launched in
+Binder. Read the README file for details on using the tutorial.
 
-* https://gitlab.e-cam2020.eu/dwhswenson/ops_tutorial
+* https://github.com/openpathsampling/ops_tutorial |tutorial-binder|
+
+.. |tutorial-binder| image:: https://mybinder.org/badge_logo.svg
+   :target: https://mybinder.org/v2/gh/openpathsampling/ops_tutorial/HEAD?urlpath=lab
 
 There's also a `YouTube video of the tutorial 
 <https://www.youtube.com/watch?v=a46tOWnqjNY>`_ as it was presented at a
@@ -43,7 +46,7 @@ from an initial frame to a set of initial trajectories, performing the path
 sampling, and the analyzing the results.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    AD_tps
    mstis
@@ -93,10 +96,10 @@ you might find interesting.
     customizing_visualization
     move_schemes_strategies
 
-In addition, there are a set of examples that are hosted outside the core
-OPS repository. These are the OPS additional examples, primarily developed
-as part of E-CAM, a European Union Horizon 2020 project. Those examples are
-available at https://gitlab.e-cam2020.eu/dwhswenson/ops_additional_examples.
+More examples can be found in the `OPS additional examples repository
+<https://github.com/openpathsampling/ops_additional_examples>`_. Live
+versions of those examples are also available through `binder
+<https://mybinder.org/v2/gh/openpathsampling/ops_additional_examples/HEAD>`_.
 
 Miscellaneous Examples
 ----------------------

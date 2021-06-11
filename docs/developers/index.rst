@@ -52,6 +52,7 @@ describe specific aspects.
 .. toctree::
     :maxdepth: 2
 
+    general_advice
     install_developers
     code_structure
     pathsimulators
