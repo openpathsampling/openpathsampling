@@ -86,6 +86,8 @@ class SparseHistogram(object):
         tuple:
             the bin that the data represents
         """
+        # Reshape data to prevent accidental wrong output
+        #data = np.asarray(data).reshape(self.left_bin_edges.shape)
         return tuple(np.floor((data - self.left_bin_edges) / self.bin_widths))
 
     def add_data_to_histogram(self, data, weights=None):
