@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
-import scipy
 import matplotlib.pyplot as plt
 import math
 from .lookup_function import LookupFunction, VoxelLookupFunction
 import collections
 import warnings
 from functools import reduce
+
 
 class SparseHistogram(object):
     """
@@ -111,8 +111,8 @@ class SparseHistogram(object):
         if weights is None:
             weights = [1.0]*len(data)
 
-        part_hist = sum((collections.Counter({self.map_to_bins(d) : w})
-                         for (d, w) in zip (data, weights)),
+        part_hist = sum((collections.Counter({self.map_to_bins(d): w})
+                         for (d, w) in zip(data, weights)),
                         collections.Counter({}))
 
         self._histogram += part_hist
@@ -128,10 +128,9 @@ class SparseHistogram(object):
         elif bin_edge_type == "r":
             return left_bins + widths
         elif bin_edge_type == "p":
-            pass # TODO: patches; give the range
+            pass  # TODO: patches; give the range
         else:
             raise RuntimeError("Unknown bin edge type: " + str(bin_edge_type))
-
 
     def xvals(self, bin_edge_type):
         """Position values for the bin
@@ -179,7 +178,7 @@ class SparseHistogram(object):
         voxel_vol = reduce(lambda x, y: x.__mul__(y), self.bin_widths)
         scale = voxel_vol if not raw_probability else 1.0
         norm = 1.0 / (self.count * scale)
-        counter = collections.Counter({k : self._histogram[k] * norm
+        counter = collections.Counter({k: self._histogram[k] * norm
                                        for k in self._histogram.keys()})
         return VoxelLookupFunction(left_bin_edges=self.left_bin_edges,
                                    bin_widths=self.bin_widths,
@@ -202,7 +201,7 @@ class SparseHistogram(object):
             otherwise
         """
         # None returns false: use that as a quick test
-        if other == None:
+        if other is None:
             return False
         if self.left_bin_edges is None or other.left_bin_edges is None:
             # this is to avoid a numpy warning on the next
@@ -291,7 +290,7 @@ class Histogram(SparseHistogram):
         return super(Histogram, self).histogram(data, weights)
 
     def xvals(self, bin_edge_type="l"):
-        int_bins = np.array(list(self._histogram.keys()))[:,0]
+        int_bins = np.array(list(self._histogram.keys()))[:, 0]
         # always include left_edge_bin as 0 point; always include 0 and
         # greater bin values (but allow negative)
         min_bin = min(min(int_bins), 0)
@@ -354,7 +353,7 @@ class Histogram(SparseHistogram):
         histogram normalized by the sum of the bin counts, with no
         consideration of the bin widths.
         """
-        normed_hist = self() # returns a copy
+        normed_hist = self()  # returns a copy
         nnorm = self._normalization() if not raw_probability else self.count
         norm = 1.0/nnorm
         normed_hist_list = [normed_hist(k) * norm for k in normed_hist.keys()]
@@ -410,7 +409,7 @@ class Histogram(SparseHistogram):
         original bins were uniformly distributed. Note that the original
         data is not destroyed.
         """
-        #TODO
+        # TODO
         pass
 
     def plot_bins(self, scaling=1.0):
@@ -422,34 +421,33 @@ class Histogram(SparseHistogram):
 def histograms_to_pandas_dataframe(hists, fcn="histogram", fcn_args={}):
     """Converts histograms in hists to a pandas data frame"""
     keys = None
-    hist_dict = {}
     frames = []
     for hist in hists:
         # check that the keys match
         if keys is None:
             keys = hist.xvals()
-        for (t,b) in zip(keys, hist.xvals()):
+        for (t, b) in zip(keys, hist.xvals()):
             if t != b:
                 raise Warning("Bins don't match up")
         if hist.name is None:
             hist.name = int(hists.index(hist))
 
         hist_data = {
-            "histogram" : hist,
-            "normalized" : hist.normalized,
-            "reverse_cumulative" : hist.reverse_cumulative,
-            "cumulative" : hist.cumulative,
-            "rebinned" : hist.rebinned
+            "histogram": hist,
+            "normalized": hist.normalized,
+            "reverse_cumulative": hist.reverse_cumulative,
+            "cumulative": hist.cumulative,
+            "rebinned": hist.rebinned
         }[fcn](**fcn_args).values()
 
         bin_edge = {
-            "histogram" : "m",
-            "normalized" : "m",
-            "reverse_cumulative" : "l",
-            "cumulative" : "r"
+            "histogram": "m",
+            "normalized": "m",
+            "reverse_cumulative": "l",
+            "cumulative": "r"
         }[fcn]
         xvals = hist.xvals(bin_edge)
-        frames.append(pd.DataFrame({hist.name : hist_data}, index=xvals))
+        frames.append(pd.DataFrame({hist.name: hist_data}, index=xvals))
     all_frames = pd.concat(frames, axis=1)
     return all_frames.fillna(0.0)
 
@@ -465,6 +463,7 @@ def write_histograms(fname, hists):
 # TODO: might as well add a main function to this; read data / weight from
 # stdin and output an appropriate histogram depending on some options. Then
 # it is both a useful script and a library class!
+
 
 class Histogrammer(object):
     """
@@ -594,7 +593,7 @@ class HistogramPlotter2D(object):
         return (ticks_, range_, lims_)
 
     def axes_setup(self, xticklabels, yticklabels, xlim, ylim):
-        """Set up both x-axis and y-axis for plotting.
+        r"""Set up both x-axis and y-axis for plotting.
 
         Also sets self.xrange\_ and self.yrange\_, which are the (bin-space)
         bounds for the pandas.DataFrame.
@@ -668,8 +667,8 @@ class HistogramPlotter2D(object):
             bw = self.histogram.bin_widths[1]
             edge = self.histogram.left_bin_edges[1]
         else:  # pragma: no cover
-            raise RuntimeError("Bad DOF: "+ str(dof))
-        to_val = lambda n : (n + minval) * bw + edge
+            raise RuntimeError("Bad DOF: " + str(dof))
+        to_val = lambda n: (n + minval) * bw + edge
         ticks = ticks if ticks is not None else ax_ticks
         labels = [self.label_format.format(to_val(n)) for n in ticks]
         return (ticks, labels)

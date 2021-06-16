@@ -225,7 +225,7 @@ class TestSparseHistogram(object):
     def test_mangled_input(self):
         # Sometimes singleton cvs are not unpacked properly
         data = ([0.0], [0.1])
-        # This line should work
+        # This line might return mangled output
         out = self.histo.map_to_bins(data)
         # This raises on modern numpy if this is not 1D
         _ = max(out)
