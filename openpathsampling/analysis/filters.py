@@ -132,7 +132,7 @@ class CanonicalMover(_Filter):
         return self._condition(step.change.canonical.mover)
 
     def __str__(self):
-        return f"(canonical mover is {self.mover}"
+        return f"(canonical mover is {self.mover})"
 
 
 class TrialReplica(_Filter):
