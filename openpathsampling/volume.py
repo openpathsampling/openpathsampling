@@ -7,6 +7,8 @@ Created on 03.09.2014
 from . import range_logic
 import abc
 from openpathsampling.netcdfplus import StorableNamedObject
+import numpy as np
+import warnings
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -290,6 +292,8 @@ class CVDefinedVolume(Volume):
         except AttributeError:
             self.lambda_max = float(lambda_max)
 
+        self._cv_returns_len1 = None  # used to raise warnings
+
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
 
@@ -397,8 +401,31 @@ class CVDefinedVolume(Volume):
         else:
             return super(CVDefinedVolume, self).__sub__(other)
 
+    def _check_cv_for_len1_array(self, val):
+        if self._cv_returns_len1 is not None:
+            return  # early exit
+
+        try:
+            length = len(val)
+        except TypeError:
+            self._cv_returns_len1 = False
+            return
+
+        if length == 1:
+            # if this is a nested array, it should fail on comparison anyway
+            self._cv_returns_len1 = True
+            warnings.warn("The CV " + str(cv.name) + " returns a length-1 "
+                          "iterable. This may lead to problem in analysis.")
+        else:
+            self._cv_returns_len1 = False
+
+    def _get_cv_float(self, snapshot):
+        val = self.collectivevariable(snapshot)
+        self._check_cv_for_len1_array(val)
+        return val.__float__()
+
     def __call__(self, snapshot):
-        l = self.collectivevariable(snapshot).__float__()
+        l = self._get_cv_float(snapshot)
 
         # we explicitly test for infinity to allow the user to
         # define `lambda_min/max='inf'` also when using units
@@ -508,7 +535,7 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
                                    )
 
     def __call__(self, snapshot):
-        l = self.collectivevariable(snapshot).__float__()
+        l = self._get_cv_float(snapshot)
         if self.wrap:
             l = self.do_wrap(l)
         if self.lambda_min > self.lambda_max:
