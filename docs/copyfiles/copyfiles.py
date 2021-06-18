@@ -46,7 +46,7 @@ def make_copies(fileset):
         raise RuntimeError("Bad yaml")
     dirs = fileset.get('mkdirs', [])
     for d in dirs:
-        pathlib.Path(d).mkdir(parents=True)
+        pathlib.Path(d).mkdir(parents=True, exist_ok=True)
     source = set_types[0]
     DISPATCH[source](fileset[source], fileset['target'], fileset['files'])
 

@@ -212,7 +212,7 @@ def setup(app):
     setup.config = app.config
     setup.confdir = app.confdir
 
-    app.add_stylesheet('css/ipynb.css')
+    app.add_css_file('css/ipynb.css')
 
     app.add_node(notebook_node,
                  html=(visit_notebook_node, depart_notebook_node))
