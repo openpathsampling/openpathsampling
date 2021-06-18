@@ -126,7 +126,8 @@ class ShootFromSnapshotsSimulation(PathSimulator):
         snap_num = 0
         n_snapshots = len(self.initial_snapshots)
         hook_state = None
-        self.run_hooks('before_simulation', sim=self)
+        self.run_hooks('before_simulation', sim=self,
+                       n_per_snapshot=n_per_snapshot)
         for snapshot in self.initial_snapshots:
             # before_snapshot
             start_snap = snapshot
@@ -173,7 +174,7 @@ class ShootFromSnapshotsSimulation(PathSimulator):
                 self.step += 1
             # after_snapshot
             snap_num += 1
-        self.run_hooks('after_simulation', sim=self)
+        self.run_hooks('after_simulation', sim=self, hook_state=hook_state)
 
 
 class CommittorSimulation(ShootFromSnapshotsSimulation):

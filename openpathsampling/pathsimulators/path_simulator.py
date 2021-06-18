@@ -134,7 +134,7 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         for hook in self.hooks[hook_name]:
             result = hook(**kwargs)
             if result is not None:
-                hook_name_state.update({hook: result})
+                hook_name_state[hook] = result
         if hook_name_state != {}:
             return hook_name_state
 

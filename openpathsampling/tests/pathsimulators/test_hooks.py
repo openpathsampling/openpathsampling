@@ -45,7 +45,7 @@ class TrivialPathSimulator(paths.PathSimulator):
                                         step_info=(step, n_steps),
                                         state=state, results=result,
                                         hook_state=hook_state)
-        self.run_hooks('after_simulation', sim=self)
+        self.run_hooks('after_simulation', sim=self, hook_state=hook_state)
 
 class NoStepHookPathSimulator(paths.PathSimulator):
     """use this to check that only correct hooks get assigned"""
@@ -72,14 +72,16 @@ class StupidHook(PathSimulatorHook):
                    hook_state):
         self.finished_steps += 1
 
-    def after_simulation(self, sim):
+    def after_simulation(self, sim, hook_state):
         self.finished_simulation = True
 
 class StupiderHook(PathSimulatorHook):
     def __init__(self):
         self.foo = None
 
-    def hook_method(self, sim, extra=None):
+    def hook_method(self, sim, hook_state=None, extra=None):
+        if hook_state is None:
+            hook_state = {}
         self.foo = extra
 
 class TestPathSimulatorHook(object):
@@ -104,7 +106,9 @@ class TestPathSimulatorHook(object):
         stupid = StupidHook()
         stupider = StupiderHook()
         sim.attach_hook(stupid)
-        extra = lambda sim: stupider.hook_method(sim, "foo")
+        extra = lambda sim, hook_state: stupider.hook_method(sim,
+                                                             hook_state,
+                                                             "foo")
         sim.attach_hook(extra, hook_for='after_simulation')
         # before running, check that state is as expected
         assert_equal(stupid.began_simulation, False)
@@ -177,7 +181,7 @@ class TestStorageHook(object):
             self.storage.sync_all.assert_called_once()
 
     def test_after_simulation(self):
-        self.hook.after_simulation(self.simulation)
+        self.hook.after_simulation(self.simulation, {})
         self.storage.sync_all.assert_called_once()
 
 

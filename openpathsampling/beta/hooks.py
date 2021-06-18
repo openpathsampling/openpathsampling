@@ -19,7 +19,7 @@ class PathSimulatorHook(StorableNamedObject):
     implemented_for = ['before_simulation', 'before_step', 'after_step',
                        'after_simulation']
 
-    def before_simulation(self, sim):
+    def before_simulation(self, sim, **kwargs):
         pass  # pragma: no-cover
 
     def before_step(self, sim, step_number, step_info, state):
@@ -29,7 +29,7 @@ class PathSimulatorHook(StorableNamedObject):
                    hook_state):
         pass  # pragma: no-cover
 
-    def after_simulation(self, sim):
+    def after_simulation(self, sim, hook_state):
         pass  # pragma: no-cover
 
 
@@ -42,7 +42,7 @@ class StorageHook(PathSimulatorHook):
         self.storage = storage
         self.frequency = frequency
 
-    def before_simulation(self, sim):
+    def before_simulation(self, sim, **kwargs):
         if self.storage is None:
             self.storage = sim.storage
         if self.frequency is None:
@@ -55,7 +55,7 @@ class StorageHook(PathSimulatorHook):
             if step_number % self.frequency == 0:
                 self.storage.sync_all()
 
-    def after_simulation(self, sim):
+    def after_simulation(self, sim, hook_state):
         if self.storage is not None:
             sim.storage.sync_all()
 
@@ -79,7 +79,7 @@ class ShootFromSnapshotsOutputHook(PathSimulatorHook):
         self.output_stream = output_stream
         self.allow_refresh = allow_refresh
 
-    def before_simulation(self, sim):
+    def before_simulation(self, sim, **kwargs):
         if self.output_stream is None:
             self.output_stream = sim.output_stream
         if self.allow_refresh is None:
