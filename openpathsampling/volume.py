@@ -292,7 +292,7 @@ class CVDefinedVolume(Volume):
         except AttributeError:
             self.lambda_max = float(lambda_max)
 
-        self._cv_returns_len1 = None  # used to raise warnings
+        self._cv_returns_iterable = None  # used to raise warnings
 
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
@@ -401,27 +401,23 @@ class CVDefinedVolume(Volume):
         else:
             return super(CVDefinedVolume, self).__sub__(other)
 
-    def _check_cv_for_len1_array(self, val):
-        if self._cv_returns_len1 is not None:
-            return  # early exit
-
+    def _is_iterable(self, val):
         try:
-            length = len(val)
+            # simtk.Quantity erroneously allows iter, so use len
+            # besides, CVs shouldn't return generators
+            _ = len(val)
         except TypeError:
-            self._cv_returns_len1 = False
-            return
-
-        if length == 1:
-            # if this is a nested array, it should fail on comparison anyway
-            self._cv_returns_len1 = True
-            warnings.warn("The CV " + str(cv.name) + " returns a length-1 "
-                          "iterable. This may lead to problem in analysis.")
+            return False
         else:
-            self._cv_returns_len1 = False
+            cv = self.collectivevariable
+            warnings.warn("The CV '" + str(cv.name) + "' returns an "
+                          "iterable. This may lead to problem in analysis.")
+            return True
 
     def _get_cv_float(self, snapshot):
         val = self.collectivevariable(snapshot)
-        self._check_cv_for_len1_array(val)
+        if self._cv_returns_iterable is None:
+            self._cv_returns_iterable = self._is_iterable(val)
         return val.__float__()
 
     def __call__(self, snapshot):
