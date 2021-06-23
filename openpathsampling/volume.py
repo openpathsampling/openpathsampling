@@ -7,6 +7,8 @@ Created on 03.09.2014
 from . import range_logic
 import abc
 from openpathsampling.netcdfplus import StorableNamedObject
+import numpy as np
+import warnings
 
 # TODO: Make Full and Empty be Singletons to avoid storing them several times!
 
@@ -290,6 +292,8 @@ class CVDefinedVolume(Volume):
         except AttributeError:
             self.lambda_max = float(lambda_max)
 
+        self._cv_returns_iterable = None  # used to raise warnings
+
     # Typically, the logical combinations are only done once. Because of
     # this, it is worth passing these through a check to speed up the logic.
 
@@ -397,8 +401,27 @@ class CVDefinedVolume(Volume):
         else:
             return super(CVDefinedVolume, self).__sub__(other)
 
+    def _is_iterable(self, val):
+        try:
+            # simtk.Quantity erroneously allows iter, so use len
+            # besides, CVs shouldn't return generators
+            _ = len(val)
+        except TypeError:
+            return False
+        else:
+            cv = self.collectivevariable
+            warnings.warn("The CV '" + str(cv.name) + "' returns an "
+                          "iterable. This may lead to problem in analysis.")
+            return True
+
+    def _get_cv_float(self, snapshot):
+        val = self.collectivevariable(snapshot)
+        if self._cv_returns_iterable is None:
+            self._cv_returns_iterable = self._is_iterable(val)
+        return val.__float__()
+
     def __call__(self, snapshot):
-        l = self.collectivevariable(snapshot).__float__()
+        l = self._get_cv_float(snapshot)
 
         # we explicitly test for infinity to allow the user to
         # define `lambda_min/max='inf'` also when using units
@@ -508,7 +531,7 @@ class PeriodicCVDefinedVolume(CVDefinedVolume):
                                    )
 
     def __call__(self, snapshot):
-        l = self.collectivevariable(snapshot).__float__()
+        l = self._get_cv_float(snapshot)
         if self.wrap:
             l = self.do_wrap(l)
         if self.lambda_min > self.lambda_max:
