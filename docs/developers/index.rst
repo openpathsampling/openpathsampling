@@ -56,6 +56,7 @@ describe specific aspects.
     install_developers
     code_structure
     pathsimulators
+    hooks
     engines
     pathmovers_and_movestrategies
     collective_variables
