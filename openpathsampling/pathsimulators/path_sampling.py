@@ -244,17 +244,17 @@ class PathSampling(PathSimulator):
 
     def run(self, n_steps):
         hook_state = None
-        self.run_hooks('before_simulation', sim=self)
+        self.run_hooks('before_simulation', sim=self, n_steps=n_steps)
         for nn in range(n_steps):
             step_info = nn, n_steps
             hook_state, mcstep = self.run_one_step(step_info, hook_state)
 
         # after simulation hooks
-        self.run_hooks('after_simulation', sim=self)
+        self.run_hooks('after_simulation', sim=self, hook_state=hook_state)
 
     def run_until_n_accepted(self, n_accepted):
         hook_state = None
-        self.run_hooks('before_simulation', sim=self)
+        self.run_hooks('before_simulation', sim=self, n_accepted=n_accepted)
         cur_acc = 0
         step_count = 0
         while cur_acc < n_accepted:
@@ -265,7 +265,7 @@ class PathSampling(PathSimulator):
                 cur_acc += 1
 
         # after simulation hooks
-        self.run_hooks('after_simulation', sim=self)
+        self.run_hooks('after_simulation', sim=self, hook_state=hook_state)
 
     def run_one_step(self, step_info, hook_state=None):
         # bookkeeping and before_step hooks

@@ -114,7 +114,11 @@ class StorageHook(PathSimulatorHook):
 
     def after_simulation(self, sim, hook_state):
         if self.storage is not None:
-            sim.storage.sync_all()
+            self.storage.sync_all()
+        if sim.storage is not None:
+            if self.storage is not sim.storage:
+                # can/should call sync_all only once per storage
+                sim.storage.sync_all()
 
 
 class ShootFromSnapshotsOutputHook(PathSimulatorHook):
@@ -253,7 +257,7 @@ class LiveVisualizerHook(PathSimulatorHook):
     def status_update_frequency(self, val):
         self._status_update_frequency = val
 
-    def before_simulation(self, sim):
+    def before_simulation(self, sim, **kwargs):
         self._simulation = sim
 
     def after_step(self, sim, step_number, step_info, state, results,
@@ -344,7 +348,7 @@ class PathSamplingOutputHook(PathSimulatorHook):
     def status_update_frequency(self, val):
         self._status_update_frequency = val
 
-    def before_simulation(self, sim):
+    def before_simulation(self, sim, **kwargs):
         self._simulation = sim
         self._initial_time = time.time()
 
@@ -359,7 +363,7 @@ class PathSamplingOutputHook(PathSimulatorHook):
                 output_stream=self.output_stream
             )
 
-    def after_simulation(self, sim):
+    def after_simulation(self, sim, hook_state):
         paths.tools.refresh_output(
             "DONE! Completed " + str(sim.step) + " Monte Carlo cycles.\n",
             refresh=False,

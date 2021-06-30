@@ -292,6 +292,6 @@ class TestPathSamplingOutputHook(object):
     def test_after_simulation(self):
         # set step_number in PathSampling Mock
         self.simulation.configure_mock(step=2)
-        self.hook.after_simulation(self.simulation)
+        self.hook.after_simulation(self.simulation, hook_state={})
         contents = self.stream.getvalue()
         assert contents == "DONE! Completed 2 Monte Carlo cycles.\n"
