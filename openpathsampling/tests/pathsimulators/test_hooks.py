@@ -186,8 +186,6 @@ class TestStorageHook(object):
         self.storage.save.assert_called_once()
         if step_num in [0, 10]:
             self.storage.sync_all.assert_called_once()
-            # also check that we performed the sample sanity-ckeck
-            self.simulation.sample_set.sanity_check.assert_called_once()
 
     def test_after_simulation(self):
         self.hook.after_simulation(self.simulation, {})

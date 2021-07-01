@@ -49,7 +49,9 @@ class PathSampling(PathSimulator):
 
         initialization_logging(init_log, self,
                                ['move_scheme', 'sample_set'])
-        self.live_visualizer = None
+        self._live_visualizer = None
+        # used to make sure we attach only one LiveVisualizerHook
+        self._live_visualizer_attached = False
         self.status_update_frequency = 1
 
         if initialize:
@@ -108,9 +110,17 @@ class PathSampling(PathSimulator):
     def attach_default_hooks(self):
         self.attach_hook(hooks.StorageHook())
         self.attach_hook(hooks.PathSamplingOutputHook())
-        # TODO: or should we make self.live_visualizer a property?
-        # and only attach the visualizerhook on 'request', i.e. by setting it?
-        self.attach_hook(hooks.LiveVisualizerHook())
+        self.attach_hook(hooks.SampleSetSanityCheckHook())
+
+    @property
+    def live_visualizer(self):
+        return self._live_visualizer
+
+    @live_visualizer.setter
+    def live_visualizer(self, val):
+        if val is not None:
+            if not self._live_visualizer_attached:
+                self.attach_hook(hooks.LiveVisualizerHook())
 
     @property
     def current_step(self):
@@ -299,11 +309,6 @@ class PathSampling(PathSimulator):
         hook_state = self.run_hooks('after_step', sim=self,
                                     step_number=step_number,
                                     step_info=step_info,
-                                    # TODO: do we want the new state here
-                                    # i.e. state after step as is right now
-                                    # or do we want something similar to
-                                    # shoot_snapshots where
-                                    # old state == shooting snapshot
                                     state=self.sample_set,
                                     results=mcstep,
                                     hook_state=hook_state

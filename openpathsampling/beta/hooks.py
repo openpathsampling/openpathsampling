@@ -17,6 +17,24 @@ class SimulationNotFoundError(RuntimeError):
     pass
 
 
+def _self_or_sim_property_or_err(obj, prop_name, sim_prop_name=None):
+    # helper function to get values either from the hook or the parent sim
+    if sim_prop_name is None:
+        # make it possible to have different names for the sim and
+        # self attributes (but default to same name)
+        sim_prop_name = prop_name
+    if getattr(obj, "_" + prop_name) is not None:
+        return getattr(obj, "_" + prop_name)
+    elif obj._simulation is not None:
+        return getattr(obj._simulation, sim_prop_name)
+    else:
+        raise SimulationNotFoundError("'" + prop_name + "' has not "
+                                      + "been set and no hosting "
+                                      + "simulation known to get "
+                                      + "simulation." + sim_prop_name + " ."
+                                      )
+
+
 class PathSimulatorHook(StorableNamedObject):
     """Superclass for PathSimulator hooks.
 
@@ -50,7 +68,7 @@ class StorageHook(PathSimulatorHook):
 
     Parameters
     ----------
-    storage : :class:`.Storage
+    storage : :class:`.Storage`
               where to save to; default ``None`` uses the simulation's
               ``storage``
     frequency : int
@@ -68,15 +86,7 @@ class StorageHook(PathSimulatorHook):
 
     @property
     def frequency(self):
-        if self._frequency is not None:
-            return self._frequency
-        elif self._simulation is not None:
-            return self._simulation.save_frequency
-        else:
-            raise SimulationNotFoundError("'frequency' has not "
-                                          + "been set and no hosting "
-                                          + "simulation known to get a value."
-                                          )
+        return _self_or_sim_property_or_err(self, "frequency", "save_frequency")
 
     @frequency.setter
     def frequency(self, val):
@@ -84,15 +94,7 @@ class StorageHook(PathSimulatorHook):
 
     @property
     def storage(self):
-        if self._storage is not None:
-            return self._storage
-        elif self._simulation is not None:
-            return self._simulation.storage
-        else:
-            raise SimulationNotFoundError("'storage' has not "
-                                          + "been set and no hosting "
-                                          + "simulation known to get a value."
-                                          )
+        return _self_or_sim_property_or_err(self, "storage")
 
     @storage.setter
     def storage(self, val):
@@ -106,10 +108,6 @@ class StorageHook(PathSimulatorHook):
         if self.storage is not None:
             self.storage.save(results)
             if step_number % self.frequency == 0:
-                if sim.sample_set is not None:
-                    # some PathSimulators never set their sample_set
-                    # but PathSimulator.__init__ sets it to None
-                    sim.sample_set.sanity_check()
                 self.storage.sync_all()
 
     def after_simulation(self, sim, hook_state):
@@ -147,15 +145,7 @@ class ShootFromSnapshotsOutputHook(PathSimulatorHook):
 
     @property
     def output_stream(self):
-        if self._output_stream is not None:
-            return self._output_stream
-        elif self._simulation is not None:
-            return self._simulation.output_stream
-        else:
-            raise SimulationNotFoundError("'output_stream' has not "
-                                          + "been set and no hosting "
-                                          + "simulation known to get a value."
-                                          )
+        return _self_or_sim_property_or_err(self, "output_stream")
 
     @output_stream.setter
     def output_stream(self, val):
@@ -163,15 +153,7 @@ class ShootFromSnapshotsOutputHook(PathSimulatorHook):
 
     @property
     def allow_refresh(self):
-        if self._allow_refresh is not None:
-            return self._allow_refresh
-        elif self._simulation is not None:
-            return self._simulation.allow_refresh
-        else:
-            raise SimulationNotFoundError("'allow_refresh' has not "
-                                          + "been set and no hosting "
-                                          + "simulation known to get a value."
-                                          )
+        return _self_or_sim_property_or_err(self, "allow_refresh")
 
     @allow_refresh.setter
     def allow_refresh(self, val):
@@ -191,12 +173,48 @@ class ShootFromSnapshotsOutputHook(PathSimulatorHook):
         )
 
 
+class SampleSetSanityCheckHook(PathSimulatorHook):
+    """
+    Check sample set sanity.
+
+    Parameters
+    ----------
+    frequency : int
+                check frequency measured in steps; default ``None`` uses the
+                simulation's value for ``save_frequency``
+    """
+    implemented_for = ['before_simulation', 'after_step']
+
+    def __init__(self, frequency=None):
+        self.frequency = frequency
+        self._simulation = None
+
+    @property
+    def frequency(self):
+        return _self_or_sim_property_or_err(self, "frequency", "save_frequency")
+
+    @frequency.setter
+    def frequency(self, val):
+        self._frequency = val
+
+    def before_simulation(self, sim, **kwargs):
+        self._simulation = sim
+
+    def after_step(self, sim, step_number, step_info, state, results,
+                   hook_state):
+        if step_number % self.frequency == 0:
+            if sim.sample_set is not None:
+                # some PathSimulators never set their sample_set
+                # but PathSimulator.__init__ sets it to None
+                sim.sample_set.sanity_check()
+
+
 class LiveVisualizerHook(PathSimulatorHook):
     """
     LiveVisualization using the :class:`openpathsampling.StepVisualizer2D`.
 
-    Updates every `simulation.status_update_frequency` MCSteps, where
-    simulation is the `PathSimulator` this hook is attached to.
+    Updates every ``simulation.status_update_frequency`` MCSteps, where
+    simulation is the ``PathSimulator`` this hook is attached to.
 
     NOTE: You will have to set PathSimulator.allow_refresh = False
           Otherwise the LiveVisualization will get refreshed away
@@ -209,10 +227,10 @@ class LiveVisualizerHook(PathSimulatorHook):
     Parameters
     ----------
     live_visualizer : :class:`openpathsampling.StepVisualizer2D`
-        default `None` uses the simulations live_visualizer
+        default ``None`` uses the simulation's live_visualizer
     status_update_frequency : int
         number of steps between two refreshs of the visualization;
-        default `None` uses the simulations value (PathSampling default=1)
+        default ``None`` uses the simulation's value (PathSampling default=1)
     """
     # NOTE: we visualize after step, because otherwise the 'next' MCstep
     #       would depend on the 'previous' one just for viualization
@@ -227,15 +245,7 @@ class LiveVisualizerHook(PathSimulatorHook):
 
     @property
     def live_visualizer(self):
-        if self._live_visualizer is not None:
-            return self._live_visualizer
-        elif self._simulation is not None:
-            return self._simulation.live_visualizer
-        else:
-            # hejung: I think here we should return None, because that is the
-            # default and leaving the default value unchanged should not lead
-            # to an error :)
-            return None
+        return _self_or_sim_property_or_err(self, "live_visualizer")
 
     @live_visualizer.setter
     def live_visualizer(self, val):
@@ -243,15 +253,7 @@ class LiveVisualizerHook(PathSimulatorHook):
 
     @property
     def status_update_frequency(self):
-        if self._status_update_frequency is not None:
-            return self._status_update_frequency
-        elif self._simulation is not None:
-            return self._simulation.status_update_frequency
-        else:
-            raise SimulationNotFoundError("'status_update_frequency' has not "
-                                          + "been set and no hosting "
-                                          + "simulation known to get a value."
-                                          )
+        return _self_or_sim_property_or_err(self, "status_update_frequency")
 
     @status_update_frequency.setter
     def status_update_frequency(self, val):
@@ -273,7 +275,7 @@ class PathSamplingOutputHook(PathSimulatorHook):
     """
     Default (serial) output for PathSamplingSimulation objects.
 
-    Updates every `PathSampling.status_update_frequency` MCSteps.
+    Updates every ``PathSampling.status_update_frequency`` MCSteps.
 
     NOTE: Arguments passed to init take precedence over the corresponding
           parameters of the PathSimulator this hook is attached to. They can
@@ -302,15 +304,7 @@ class PathSamplingOutputHook(PathSimulatorHook):
 
     @property
     def output_stream(self):
-        if self._output_stream is not None:
-            return self._output_stream
-        elif self._simulation is not None:
-            return self._simulation.output_stream
-        else:
-            raise SimulationNotFoundError("'output_stream' has not "
-                                          + "been set and no hosting "
-                                          + "simulation known to get a value."
-                                          )
+        return _self_or_sim_property_or_err(self, "output_stream")
 
     @output_stream.setter
     def output_stream(self, val):
@@ -318,15 +312,7 @@ class PathSamplingOutputHook(PathSimulatorHook):
 
     @property
     def allow_refresh(self):
-        if self._allow_refresh is not None:
-            return self._allow_refresh
-        elif self._simulation is not None:
-            return self._simulation.allow_refresh
-        else:
-            raise SimulationNotFoundError("'allow_refresh' has not "
-                                          + "been set and no hosting "
-                                          + "simulation known to get a value."
-                                          )
+        return _self_or_sim_property_or_err(self, "allow_refresh")
 
     @allow_refresh.setter
     def allow_refresh(self, val):
@@ -334,15 +320,7 @@ class PathSamplingOutputHook(PathSimulatorHook):
 
     @property
     def status_update_frequency(self):
-        if self._status_update_frequency is not None:
-            return self._status_update_frequency
-        elif self._simulation is not None:
-            return self._simulation.status_update_frequency
-        else:
-            raise SimulationNotFoundError("'status_update_frequency' has not "
-                                          + "been set and no hosting "
-                                          + "simulation known to get a value."
-                                          )
+        return _self_or_sim_property_or_err(self, "status_update_frequency")
 
     @status_update_frequency.setter
     def status_update_frequency(self, val):
