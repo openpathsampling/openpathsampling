@@ -113,10 +113,6 @@ class StorageHook(PathSimulatorHook):
     def after_simulation(self, sim, hook_state):
         if self.storage is not None:
             self.storage.sync_all()
-        if sim.storage is not None:
-            if self.storage is not sim.storage:
-                # can/should call sync_all only once per storage
-                sim.storage.sync_all()
 
 
 class ShootFromSnapshotsOutputHook(PathSimulatorHook):
