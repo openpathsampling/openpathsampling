@@ -227,10 +227,13 @@ class TestSelfOrSimProperty(object):
 
 class TestStorageHook(object):
     def setup(self):
-        self.storage = MagicMock()
+        self.storage = MagicMock(spec=["stash", "sync_all"])
+        self.old_storage = MagicMock(spec=["save", "sync_all"])
         self.empty_hook = StorageHook()
         self.hook = StorageHook(storage=self.storage,
                                 frequency=10)
+        self.hook_old_storage = StorageHook(storage=self.old_storage,
+                                            frequency=10)
         self.simulation = MagicMock(storage=self.storage,
                                     save_frequency=10)
 
@@ -242,13 +245,21 @@ class TestStorageHook(object):
         assert hook.storage == self.storage
         assert hook.frequency == 10
 
+    @pytest.mark.parametrize("hook_name", ["new_storage", "old_storage"])
     @pytest.mark.parametrize('step_num', [0, 5, 10])
-    def test_after_step(self, step_num):
-        self.hook.after_step(self.simulation, step_num, ('step', 'info'),
+    def test_after_step(self, step_num, hook_name):
+        hook = {"new_storage": self.hook,
+                "old_storage": self.hook_old_storage}[hook_name]
+        storage = {"new_storage": self.storage,
+                   "old_storage": self.old_storage}[hook_name]
+        hook.after_step(self.simulation, step_num, ('step', 'info'),
                              ('state'), "results", "hook_state")
-        self.storage.save.assert_called_once()
+        if hook_name == "new_storage":
+            storage.stash.assert_called_once()
+        elif hook_name == "old_storage":
+            storage.save.assert_called_once()
         if step_num in [0, 10]:
-            self.storage.sync_all.assert_called_once()
+            storage.sync_all.assert_called_once()
 
     def test_after_simulation(self):
         self.hook.after_simulation(self.simulation, {})

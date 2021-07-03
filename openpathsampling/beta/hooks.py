@@ -106,7 +106,10 @@ class StorageHook(PathSimulatorHook):
     def after_step(self, sim, step_number, step_info, state, results,
                    hook_state):
         if self.storage is not None:
-            self.storage.save(results)
+            try:
+                self.storage.stash(results)
+            except AttributeError:
+                self.storage.save(results)
             if step_number % self.frequency == 0:
                 self.storage.sync_all()
 
