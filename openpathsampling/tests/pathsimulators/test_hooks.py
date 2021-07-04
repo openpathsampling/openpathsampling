@@ -429,7 +429,7 @@ class TestGraciousKillHook(object):
                                                              sync_all=MagicMock()
                                                              )
                                            )
-        self.kill_hook = GraciousKillHook("0 hours 1 second",
+        self.kill_hook = GraciousKillHook("0 hours 20 second",
                                           final_call=self.final_call
                                           )
         self.nokill_hook = GraciousKillHook("10 hours 2 seconds",
@@ -438,17 +438,19 @@ class TestGraciousKillHook(object):
 
     def test_kill(self):
         s_num = 1  # step after which the simulation is killed
-        # start the timer
-        self.kill_hook.before_simulation(self.simulation)
-        time.sleep(0.5)
-        with pytest.raises(GraciousKillError):
-            self.kill_hook.after_step(sim=self.simulation,
-                                      step_number=s_num,
-                                      step_info=(0, 200),
-                                      state=None,
-                                      results=None,
-                                      hook_state=None
-                                      )
+        with patch("openpathsampling.beta.hooks.time.time",
+                   new=MagicMock(side_effect=[0, 10]),
+                   ) as MockTime:
+            # start the timer
+            self.kill_hook.before_simulation(self.simulation)
+            with pytest.raises(GraciousKillError):
+                self.kill_hook.after_step(sim=self.simulation,
+                                          step_number=s_num,
+                                          step_info=(0, 200),
+                                          state=None,
+                                          results=None,
+                                          hook_state=None
+                                          )
         # now assert that everything got called
         self.simulation.storage.sync_all.assert_called_once()
         self.simulation.storage.close.assert_called_once()
@@ -456,16 +458,18 @@ class TestGraciousKillHook(object):
 
     def test_nokill(self):
         s_num = 1  # step after which the simulation is not killed
-        # start the timer
-        self.nokill_hook.before_simulation(self.simulation)
-        time.sleep(0.5)
-        self.nokill_hook.after_step(sim=self.simulation,
-                                    step_number=s_num,
-                                    step_info=(0, 200),
-                                    state=None,
-                                    results=None,
-                                    hook_state=None
-                                    )
+        with patch("openpathsampling.beta.hooks.time.time",
+                   new=MagicMock(side_effect=[0, 10]),
+                   ) as MockTime:
+            # start the timer
+            self.nokill_hook.before_simulation(self.simulation)
+            self.nokill_hook.after_step(sim=self.simulation,
+                                        step_number=s_num,
+                                        step_info=(0, 200),
+                                        state=None,
+                                        results=None,
+                                        hook_state=None
+                                        )
         # now assert that everything got called
         self.nocall_simulation.storage.sync_all.assert_not_called()
         self.nocall_simulation.storage.close.assert_not_called()
