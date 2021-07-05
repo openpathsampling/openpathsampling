@@ -23,10 +23,8 @@ the development process on GitHub_, and follow `@pathsampling
 
 .. _GitHub: http://github.com/openpathsampling/openpathsampling
 
-.. note:: Documentation is still in progress; if you have questions, please
-          `open an issue 
-          <https://github.com/openpathsampling/openpathsampling/issues>`_ or
-          contact the development team.
+.. note:: Documentation is still in progress. Please see :ref:`getting_help`
+          for how to contact us with questions.
 
 To see the most recent updates to the code, see the `release notes
 <https://github.com/openpathsampling/openpathsampling/releases>`_ page on
@@ -64,7 +62,9 @@ For Users
     topics/index
     videos
     cli
+    ecosystem
     faq
+    getting_help
 
 
 For Developers

@@ -82,5 +82,7 @@ Pre-made combined movers
 .. autosummary::
     :toctree: api/generated/
 
-    MinusMover
     OneWayShootingMover
+    TwoWayShootingMover
+    MinusMover
+    SingleReplicaMinusMover

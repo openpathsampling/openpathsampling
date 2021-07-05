@@ -25,8 +25,6 @@ bash $MINICONDA -b
 
 export PATH=$HOME/miniconda${pyV}/bin:$PATH
 
-# this puts the channel priority to (1) conda-forge; (2) omnia (3) defaults
-conda config --add channels http://conda.anaconda.org/omnia
 conda config --add channels http://conda.anaconda.org/conda-forge
 
 # next two lines are workaround for conda/conda#9337

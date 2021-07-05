@@ -275,8 +275,6 @@ class TestStorableFunction(object):
             pass
         else:
             func.local_cache.clear()
-        pytest.skip()
-        pass
 
     @staticmethod
     def _set_storage(func, mode, found_in, expected):
@@ -287,12 +285,13 @@ class TestStorableFunction(object):
                 found = {uuid: uuids[uuid] for uuid in uuids
                          if uuid in expected.keys()}
                 return {uuid: expected[uuid] for uuid in found}, missing
+
         else:
             def get_storage(cv_uuid, uuids):
                 return {}, dict(uuids)
 
         storage = mock.MagicMock(get_function_results=get_storage)
-        func._handler = storage
+        func._handlers.add(storage)
 
     @pytest.mark.parametrize('mode, found_in', [
         ('analysis', 'storage'), ('analysis', 'cache'),
