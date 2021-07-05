@@ -49,7 +49,7 @@ class NegationFilter(_Filter):
 class _FilterCombination(_Filter):
     @property
     def FILTER_TYPE(self):
-        retrun self.filter1.FILTER_TYPE
+        return self.filter1.FILTER_TYPE
 
     def __init__(self, filter1, filter2):
         if filter1.FILTER_TYPE is not filter2.FILTER_TYPE:
@@ -87,7 +87,7 @@ class GenericFilter(_Filter):
 
 ### OPS STEP FILTERS #######################################################
 
-class CanonicalMover(_Filter):
+class canonical_mover(_Filter):
     FILTER_TYPE = paths.MCStep
     def __init__(self, mover):
         if isinstance(mover, paths.PathMover):
@@ -115,7 +115,7 @@ class CanonicalMover(_Filter):
         return f"(canonical mover is {self.mover})"
 
 
-class TrialReplica(_Filter):
+class trial_replica(_Filter):
     FILTER_TYPE = paths.MCStep
     def __init__(self, replica):
         self.replica = replica
@@ -125,7 +125,7 @@ class TrialReplica(_Filter):
         return self.replica in replicas
 
 
-class TrialEnsemble(_Filter):
+class trial_ensemble(_Filter):
     FILTER_TYPE = paths.MCStep
     def __init__(self, ensemble):
         self.ensemble = ensemble
@@ -138,12 +138,12 @@ class TrialEnsemble(_Filter):
 class StepFilter(GenericFilter):
     FILTER_TYPE = paths.MCStep
 
-RejectedSteps = StepFilter(lambda step: not step.change.accepted,
-                           name="RejectedSteps")
-AcceptedSteps = StepFilter(lambda step: step.change.accepted,
-                           name="AcceptedSteps")
-AllSteps = StepFilter(lambda step: True,
-                      name="AllSteps")
+rejected_steps = StepFilter(lambda step: not step.change.accepted,
+                            name="rejected_steps")
+accepted_steps = StepFilter(lambda step: step.change.accepted,
+                            name="accepted_steps")
+all_steps = StepFilter(lambda step: True,
+                       name="all_steps")
 
 
 ### SAMPLE FILTERS #########################################################
@@ -151,9 +151,9 @@ AllSteps = StepFilter(lambda step: True,
 class SampleFilterCondition(GenericFilter):
     FILTER_TYPE = paths.Sample
 
-AllSamples = SampleFilterCondition(lambda sample: True, name="AllSamples")
+all_samples = SampleFilterCondition(lambda sample: True, name="all_samples")
 
-class Ensemble(_Filter):
+class ensemble(_Filter):
     FILTER_TYPE = paths.Sample
     def __init__(self, ensemble):
         self.ensemble = ensemble
@@ -165,7 +165,7 @@ class Ensemble(_Filter):
         return f"Ensemble(<Ensemble name='{self.ensemble.name}'>)"
 
 
-class Replica(_Filter):
+class replica(_Filter):
     FILTER_TYPE = paths.Sample
     def __init__(self, replica):
         self.replica = replica
@@ -194,17 +194,17 @@ class _NetworkEnsemble(_Filter):
         return f"{self.__class__.__name__}({self.network})"
 
 
-class SamplingEnsemble(_NetworkEnsemble):
+class sampling_ensembles(_NetworkEnsemble):
     def _get_ensembles(self):
         return self.network.sampling_ensembles
 
 
-class MinusEnsemble(_NetworkEnsemble):
+class minus_ensembles(_NetworkEnsemble):
     def _get_ensembles(self):
         return self.network.minus_ensembles
 
 
-class MSOuterEnsemble(_NetworkEnsemble):
+class ms_outer_ensembles(_NetworkEnsemble):
     def _get_ensembles(self):
         return self.network.ms_outers
 
@@ -226,7 +226,7 @@ class ExtractorFilter(object):
     _default_secondary = None
     def __init__(self, step_filter, extractor):
         if step_filter is None:
-            step_filter = AllSteps
+            step_filter = all_steps
         # if postprocessor is None:
             # postprocessor = _default_postprocessor
 
@@ -319,7 +319,7 @@ class ExtractorFilter(object):
 
 
 class SampleExtractorFilter(ExtractorFilter):
-    _default_secondary = AllSamples
+    _default_secondary = all_samples
 
 
 ### EXTRACTORS #############################################################
@@ -344,13 +344,13 @@ class Extractor(object):
         return _default_repr(self)
 
 
-class CanonicalDetails(Extractor):
+class canonical_details(Extractor):
     def __init__(self, detail_name, returns_iterable=False):
         super(CanonicalDetails, self).__init__(
             extractor=lambda step: getattr(step.change.canonical.details,
                                            detail_name,
                                            None),
-            name="CanonicalDetails({detail_name})".format(detail_name),
+            name="canonical_details({detail_name})".format(detail_name),
             returns_iterable=returns_iterable
         )
 
@@ -364,10 +364,10 @@ class SampleExtractor(Extractor):
             extractor_filter=SampleExtractorFilter
         )
 
-ActiveSamples = SampleExtractor(lambda step: step.active.samples,
-                                name="ActiveSamples")
-TrialSamples = SampleExtractor(lambda step: step.change.canonical.trials,
-                               name="TrialSamples")
+active_samples = SampleExtractor(lambda step: step.active.samples,
+                                 name="active_samples")
+trial_samples = SampleExtractor(lambda step: step.change.canonical.trials,
+                                name="trial_samples")
 
 
 def _get_shooting_point(step):
@@ -378,12 +378,12 @@ def _get_shooting_point(step):
         shooting_pt = NOT_EXTRACTED
     return shooting_pt
 
-ShootingSteps = StepFilter(
+shooting_steps = StepFilter(
    lambda step: _get_shooting_point(step) is not NOT_EXTRACTED,
-   name="ShootingSteps"
+   name="shooting_steps"
 )
 
-ShootingPoints = Extractor(_get_shooting_point, name="ShootingPoints")
+shooting_points = Extractor(_get_shooting_point, name="shooting_points")
 
 def _get_modified_shooting_point(step):
     if not ShootingSteps.condition(step):
@@ -396,5 +396,5 @@ def _get_modified_shooting_point(step):
         shooting_pt = details.shooting_snapshot
     return shooting_pt
 
-ModifiedShootingPoints = Extractor(_get_modified_shooting_point,
-                                   name="ModifiedShootingPoints")
+modified_shooting_points = Extractor(_get_modified_shooting_point,
+                                     name="modified_shooting_points")
