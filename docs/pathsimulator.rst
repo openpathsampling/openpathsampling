@@ -20,4 +20,5 @@ Specific PathSimulators
     PathSampling
     FullBootstrapping
     CommittorSimulation
+    ReactiveFluxSimulation
     DirectSimulation

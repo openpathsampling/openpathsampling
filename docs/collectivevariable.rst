@@ -1,10 +1,12 @@
 .. _collectivevariable:
 
-.. currentmodule:: openpathsampling.collectivevariable
+.. currentmodule:: openpathsampling.collectivevariables
 
-CollectiveVariable Functions
-============================
-:class:`openpathsampling.CollectiveVariable`
+Collective Variables
+====================
+
+Here we document the various classes that can wrap functions to make them
+into OPS collective variables.
 
 For an introduction on collective variables, read the user guide topic on
 :ref:`creating-cvs`.
@@ -29,3 +31,6 @@ Integrating with other packages
    MDTrajFunctionCV
    PyEMMAFeaturizerCV
    MSMBFeaturizerCV
+   PLUMEDCV
+   PLUMEDInterface
+
