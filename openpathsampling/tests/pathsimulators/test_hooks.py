@@ -377,7 +377,7 @@ class TestPathSamplingOutputHook(object):
         step_info = nn, n_steps
         with patch("openpathsampling.beta.hooks.time.time",
                    new=MagicMock(side_effect=[0, elapsed]),
-                   ) as MockTime:
+                   ):
             self.hook.before_simulation(self.simulation)  # start the hooks timer
             self.hook.before_step(self.simulation, step_number=2,
                                   step_info=step_info, state=None)
@@ -415,3 +415,62 @@ class TestPathSamplingOutputHook(object):
         self.hook.after_simulation(self.simulation, hook_state={})
         contents = self.stream.getvalue()
         assert contents == "DONE! Completed 2 Monte Carlo cycles.\n"
+
+
+class TestGraciousKillHook(object):
+    def setup(self):
+        self.final_call = MagicMock()
+        self.nocall_final_call = MagicMock()
+        self.simulation = MagicMock(storage=MagicMock(close=MagicMock(),
+                                                      sync_all=MagicMock()
+                                                      )
+                                    )
+        self.nocall_simulation = MagicMock(storage=MagicMock(close=MagicMock(),
+                                                             sync_all=MagicMock()
+                                                             )
+                                           )
+        self.kill_hook = GraciousKillHook("0 hours 20 second",
+                                          final_call=self.final_call
+                                          )
+        self.nokill_hook = GraciousKillHook("10 hours 2 seconds",
+                                            final_call=self.nocall_final_call
+                                            )
+
+    def test_kill(self):
+        s_num = 1  # step after which the simulation is killed
+        with patch("openpathsampling.beta.hooks.time.time",
+                   new=MagicMock(side_effect=[0, 10]),
+                   ):
+            # start the timer
+            self.kill_hook.before_simulation(self.simulation)
+            with pytest.raises(GraciousKillError):
+                self.kill_hook.after_step(sim=self.simulation,
+                                          step_number=s_num,
+                                          step_info=(0, 200),
+                                          state=None,
+                                          results=None,
+                                          hook_state=None
+                                          )
+        # now assert that everything got called
+        self.simulation.storage.sync_all.assert_called_once()
+        self.simulation.storage.close.assert_called_once()
+        self.final_call.assert_called_once_with(s_num)
+
+    def test_nokill(self):
+        s_num = 1  # step after which the simulation is not killed
+        with patch("openpathsampling.beta.hooks.time.time",
+                   new=MagicMock(side_effect=[0, 10]),
+                   ):
+            # start the timer
+            self.nokill_hook.before_simulation(self.simulation)
+            self.nokill_hook.after_step(sim=self.simulation,
+                                        step_number=s_num,
+                                        step_info=(0, 200),
+                                        state=None,
+                                        results=None,
+                                        hook_state=None
+                                        )
+        # now assert that everything got called
+        self.nocall_simulation.storage.sync_all.assert_not_called()
+        self.nocall_simulation.storage.close.assert_not_called()
+        self.nocall_final_call.assert_not_called()

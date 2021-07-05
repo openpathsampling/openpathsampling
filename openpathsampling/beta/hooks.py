@@ -5,15 +5,29 @@ These hooks group several methods together for use as part of a
 :class:`.PathSimulator` ``run`` method. They allow for additional
 calculations or output at several points in the simulation.
 """
+import re
 import time
+import logging
 import openpathsampling as paths
+from datetime import timedelta
 from openpathsampling.netcdfplus import StorableNamedObject
+
+
+logger = logging.getLogger(__name__)
 
 
 class SimulationNotFoundError(RuntimeError):
     """
     Raised when a hook tries to access its parent simulation before knowing it.
     """
+    pass
+
+
+class GraciousKillError(RuntimeError):
+    """
+    Raised when a simulation reaches the maximum walltime.
+    """
+    # makes it easy to catch **only** the max walltime but fail on anything else
     pass
 
 
@@ -346,3 +360,92 @@ class PathSamplingOutputHook(PathSimulatorHook):
             refresh=False,
             output_stream=self.output_stream
         )
+
+
+class GraciousKillHook(PathSimulatorHook):
+    """
+    'Graciously' kill a simulation when the maximum walltime is reached.
+
+    If this hook is attached to PathSimulator, it will continously estimate
+    the runtime per step. After each step it checks if the next step would
+    exceed the maximum walltime, if so it syncs and closes the storage, then
+    it calls a custom/user provided function (if any) and finally raises a
+    'GraciousKillError' to end the simulation loop.
+
+    Example usage
+    -------------
+    ```
+    kill_hook = GraciousKillHook("3 minutes 34 seconds")
+    # sampler is a `PathSimulator`
+    sampler.attach_hook(kill_hook)
+    try:
+        sampler.run(2000)
+    except GraciousKillError:
+        print("Simulation ended due to maximum walltime reached")
+    ```
+    """
+
+    implemented_for = ["before_simulation", "after_step"]
+
+    def __init__(self, max_walltime, fuzziness=1, final_call=None):
+        """
+        Initialize a GraciousKillHook.
+
+        Parameters
+        ----------
+        max_walltime - str, maximum allowed walltime,
+                       e.g. `23 hours 20 minutes`
+        fuzziness - float (default=0.9), fraction to add to the time per step
+                    when estimating if the next step could exceed the maximum
+                    walltime, i.e. the default is to stop when the time left
+                    suffices for slighlty less than 2 steps
+        final_call - None or callable (default None), will be called when the
+                     simulation is killed, it must take one argument, the hook
+                     passes the step number of the step after which it killed
+                     the simulation
+        """
+        self.max_walltime = max_walltime
+        self._timedelta = self._get_timedelta(max_walltime).total_seconds()
+        logger.info("Parsed time string '{:s}' as a ".format(self.max_walltime)
+                    + "timedelta of {:d} seconds.".format(int(self._timedelta))
+                    )
+        self.fuzziness = fuzziness
+        self.final_call = final_call
+
+    def _get_timedelta(self, time_str):
+        # https://stackoverflow.com/questions/35545140
+        timespaces = {"days": 0}
+        for timeunit in "year month week day hour minute second".split():
+            content = re.findall(r"([0-9]*?)\s*?" + timeunit, time_str)
+            if content:
+                timespaces[timeunit + "s"] = int(content[0])
+        timespaces["days"] += (30 * timespaces.pop("months", 0)
+                               + 365 * timespaces.pop("years", 0)
+                               )
+        return timedelta(**timespaces)
+
+    def before_simulation(self, sim, **kwargs):
+        self._t_start = time.time()
+
+    def after_step(self, sim, step_number, step_info, state, results,
+                   hook_state):
+        now = time.time()
+        current_step, total_steps = step_info
+        running = now - self._t_start
+        # current_step is zero based, i.e. its a 'range'
+        per_step = running / (current_step + 1)
+        if (per_step * (1 + self.fuzziness) + running) > self._timedelta:
+            logger.info("Ending simulation because maximum walltime"
+                        + " ({:s}) ".format(self.max_walltime)
+                        + "would be surpassed during the next MCstep."
+                        )
+            if sim.storage is not None:
+                sim.storage.sync_all()
+                sim.storage.close()
+            if self.final_call is not None:
+                # call users custom exit function
+                self.final_call(step_number)
+            raise GraciousKillError("Maximum walltime "
+                                    + "({:s})".format(self.max_walltime)
+                                    + " reached."
+                                    )
