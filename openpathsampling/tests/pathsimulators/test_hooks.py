@@ -377,7 +377,7 @@ class TestPathSamplingOutputHook(object):
         step_info = nn, n_steps
         with patch("openpathsampling.beta.hooks.time.time",
                    new=MagicMock(side_effect=[0, elapsed]),
-                   ) as MockTime:
+                   ):
             self.hook.before_simulation(self.simulation)  # start the hooks timer
             self.hook.before_step(self.simulation, step_number=2,
                                   step_info=step_info, state=None)
@@ -440,7 +440,7 @@ class TestGraciousKillHook(object):
         s_num = 1  # step after which the simulation is killed
         with patch("openpathsampling.beta.hooks.time.time",
                    new=MagicMock(side_effect=[0, 10]),
-                   ) as MockTime:
+                   ):
             # start the timer
             self.kill_hook.before_simulation(self.simulation)
             with pytest.raises(GraciousKillError):
@@ -460,7 +460,7 @@ class TestGraciousKillHook(object):
         s_num = 1  # step after which the simulation is not killed
         with patch("openpathsampling.beta.hooks.time.time",
                    new=MagicMock(side_effect=[0, 10]),
-                   ) as MockTime:
+                   ):
             # start the timer
             self.nokill_hook.before_simulation(self.simulation)
             self.nokill_hook.after_step(sim=self.simulation,

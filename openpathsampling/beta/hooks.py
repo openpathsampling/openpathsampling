@@ -413,7 +413,7 @@ class GraciousKillHook(PathSimulatorHook):
         self.final_call = final_call
 
     def _get_timedelta(self, time_str):
-        # https://stackoverflow.com/questions/35545091/convert-human-readable-time-difference-not-timestamp-to-something-usable-for-s/35545140
+        # https://stackoverflow.com/questions/35545140
         timespaces = {"days": 0}
         for timeunit in "year month week day hour minute second".split():
             content = re.findall(r"([0-9]*?)\s*?" + timeunit, time_str)
