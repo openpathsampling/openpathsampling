@@ -75,6 +75,20 @@ class OrFilterCombination(_FilterCombination):
 
 
 class GenericFilter(_Filter):
+    """A generic version of the user-facing code for filters.
+
+    Filters for specific types are subclasses that set the ``FILTER_TYPE``
+    class variable.
+
+    Parameters
+    ----------
+    condition : Callable[Any] -> bool
+        a function that takes an instance of the input type of this filter
+        and returns True if that instance should be kept, or False if it
+        should be filtered out
+    name : str
+        name string, primarily for use in error reporting
+    """
     def __init__(self, condition, name):
         self._condition = condition
         self.name = name
@@ -99,8 +113,12 @@ class canonical_mover(_Filter):
         elif issubclass(mover, paths.PathMover):
             self.mover = mover
             self._condition = self.isinstance_check
+        elif isinstance(mover, paths.MCStep):
+            raise TypeError("canonical_mover filter initialized with a "
+                            "step: Did you mean to use the extractor, "
+                            "canonical_movers? (note the final 's')")
         else:
-            raise ValueError(f"{mover} does not appear to be a path mover")
+            raise TypeError(f"{mover} does not appear to be a path mover")
 
     def equality_check(self, mover):
         return mover == self.mover
@@ -194,17 +212,17 @@ class _NetworkEnsemble(_Filter):
         return f"{self.__class__.__name__}({self.network})"
 
 
-class sampling_ensembles(_NetworkEnsemble):
+class sampling_ensemble(_NetworkEnsemble):
     def _get_ensembles(self):
         return self.network.sampling_ensembles
 
 
-class minus_ensembles(_NetworkEnsemble):
+class minus_ensemble(_NetworkEnsemble):
     def _get_ensembles(self):
         return self.network.minus_ensembles
 
 
-class ms_outer_ensembles(_NetworkEnsemble):
+class ms_outer_ensemble(_NetworkEnsemble):
     def _get_ensembles(self):
         return self.network.ms_outers
 
@@ -398,3 +416,6 @@ def _get_modified_shooting_point(step):
 
 modified_shooting_points = Extractor(_get_modified_shooting_point,
                                      name="modified_shooting_points")
+
+canonical_movers = Extractor(lambda step: step.change.canonical.mover,
+                             name="canonical_movers")
