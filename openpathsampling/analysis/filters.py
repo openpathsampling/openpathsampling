@@ -53,7 +53,8 @@ class _FilterCombination(_Filter):
 
     def __init__(self, filter1, filter2):
         if filter1.FILTER_TYPE is not filter2.FILTER_TYPE:
-            raise TypeError(f"Cannot combine filters {filter1} and {filter2}")
+            raise TypeError("Cannot combine filters " + str(filter1)
+                            + " and " + str(filter2))
         self.filter1 = filter1
         self.filter2 = filter2
 
@@ -118,7 +119,8 @@ class canonical_mover(_Filter):
                             "step: Did you mean to use the extractor, "
                             "canonical_movers? (note the final 's')")
         else:
-            raise TypeError(f"{mover} does not appear to be a path mover")
+            raise TypeError(str(mover) + " does not appear to be a path "
+                            "mover")
 
     def equality_check(self, mover):
         return mover == self.mover
@@ -130,7 +132,7 @@ class canonical_mover(_Filter):
         return self._condition(step.change.canonical.mover)
 
     def __str__(self):
-        return f"(canonical mover is {self.mover})"
+        return "(canonical mover is " + str(self.mover) + ")"
 
 
 class trial_replica(_Filter):
@@ -180,7 +182,7 @@ class ensemble(_Filter):
         return sample.ensemble == self.ensemble
 
     def __repr__(self):
-        return f"Ensemble(<Ensemble name='{self.ensemble.name}'>)"
+        return "Ensemble(<Ensemble name='" + self.ensemble.name + "'>)"
 
 
 class replica(_Filter):
@@ -192,7 +194,7 @@ class replica(_Filter):
         return sample.replica == self.replica
 
     def __repr__(self):
-        return f"Replica({self.replica})"
+        return "Replica(" + str(self.replica) + ")"
 
 
 class _NetworkEnsemble(_Filter):
@@ -209,7 +211,7 @@ class _NetworkEnsemble(_Filter):
         return sample.ensemble in self.ensembles
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.network})"
+        return str(self.__class__.__name__) + "(" + repr(self.network) + ")"
 
 
 class sampling_ensemble(_NetworkEnsemble):
