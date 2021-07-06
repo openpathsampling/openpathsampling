@@ -65,11 +65,11 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         This is likely to be overridden when a pathsimulator is wrapped in
         another simulation.
     """
-    #__metaclass__ = abc.ABCMeta
-
     calc_name = "PathSimulator"
     _excluded_attr = ['sample_set', 'step', 'save_frequency',
                       'output_stream']
+    hook_names = ['before_simulation', 'before_step', 'after_step',
+                  'after_simulation']
 
     def __init__(self, storage):
         super(PathSimulator, self).__init__()
@@ -84,6 +84,8 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         self.sample_set = None
         self.output_stream = sys.stdout  # user can change to file handler
         self.allow_refresh = True
+        self.hooks = self.empty_hooks()
+        self.attach_default_hooks()
 
     def sync_storage(self):
         """
@@ -91,6 +93,50 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         """
         if self.storage is not None:
             self.storage.sync_all()
+
+    def attach_default_hooks(self):
+        pass
+
+    def empty_hooks(self):
+        """Return a hook dictionary with no hooks."""
+        return {k: [] for k in self.hook_names}
+
+    def attach_hook(self, hook, hook_for=None):
+        """Attach a hook class or method to this simulation.
+
+        Parameters
+        ----------
+        hook : :class:`.PathSimulatorHook` or method
+            Hook to add
+        hook_for : str or None
+            If None (default) then the ``hook`` must be a class with methods
+            named to match the hook names in this simulator. If ``hook`` is
+            a method, then ``hook_for`` must be the name of the hook it
+            represents
+        """
+        def add_hook_method(hook_method, hook_name):
+            try:
+                self.hooks[hook_name].append(hook_method)
+            except KeyError:
+                raise TypeError("No hook '" + hook_name + "' in " +
+                                str(self.__class__.__name__))
+
+        if hook_for is None:
+            for hook_name in hook.implemented_for:
+                hook_method = getattr(hook, hook_name)
+                add_hook_method(hook_method, hook_name)
+        else:
+            add_hook_method(hook, hook_for)
+
+    def run_hooks(self, hook_name, **kwargs):
+        """Run the hooks for the given ``hook_name``"""
+        hook_name_state = {}
+        for hook in self.hooks[hook_name]:
+            result = hook(**kwargs)
+            if result is not None:
+                hook_name_state[hook] = result
+        if hook_name_state != {}:
+            return hook_name_state
 
     @abc.abstractmethod
     def run(self, n_steps):
@@ -102,7 +148,7 @@ class PathSimulator(with_metaclass(abc.ABCMeta, StorableNamedObject)):
         n_steps : int
             number of step to be run
         """
-        pass
+        raise NotImplementedError()
 
     def save_initial_step(self):
         """

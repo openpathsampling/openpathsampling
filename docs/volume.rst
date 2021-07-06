@@ -2,15 +2,19 @@
 
 .. currentmodule:: openpathsampling.volume
 
-Volume Functions
-================
+Volumes
+=======
 
-:class:`openpathsampling.Volume`
+A :class:`.Volume` in OpenPathSampling is something that defines a
+hypervolume in phase space. This can involve coordinates as well as
+velocities (or any other snapshot feature, such as box vectors). Since
+volumes represent a set of points, they can be combined using set-theoretic
+intersections, unions, etc.
 
-    >>> import openpathsampling as paths
-    >>> volume = paths.Vnsemble()
+Stable states in path sampling are defined in terms of :class:`.Volume`
+objects. In addition, OPS defines interfaces in TIS as a :class:`.Volume`.
 
-basic volumes
+Basic Volumes
 -------------
 .. autosummary::
     :toctree: api/generated/
@@ -19,7 +23,7 @@ basic volumes
     FullVolume
     EmptyVolume
 
-set-based volume combinations
+Set-Based Volume Combinations
 -----------------------------
 .. autosummary::
     :toctree: api/generated/
@@ -30,7 +34,7 @@ set-based volume combinations
     RelativeComplementVolume
     VolumeCombination
 
-collective variable-based volumes
+Collective Variable-Based Volumes
 ---------------------------------
 .. autosummary::
     :toctree: api/generated/

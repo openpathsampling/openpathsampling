@@ -6,6 +6,7 @@ from openpathsampling.integration_tools import (
 try:
     import simtk.openmm
     import simtk.openmm.app
+    from simtk import unit as u
     from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
 except ImportError:
     # this happens when we directly import tools (e.g., for
@@ -15,7 +16,7 @@ except ImportError:
     pass
 else:
     from .snapshot import Snapshot
-    from .topology import Topology, MDTrajTopology
+    from openpathsampling.engines.topology import Topology, MDTrajTopology
 
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
@@ -176,7 +177,7 @@ def snapshot_from_testsystem(testsystem, simple_topology=False,
     error_if_no_simtk_unit("snapshot_from_testsystem")
     u_nm = unit.nanometers
     u_ps = unit.picoseconds
-    velocities = unit.Quantity(np.zeros(testsystem.positions.shape), 
+    velocities = unit.Quantity(np.zeros(testsystem.positions.shape),
                                u_nm / u_ps)
 
     if simple_topology:
@@ -454,3 +455,47 @@ def load_trr(trr_file, top, velocities=True):
 
     traj = trajectory_from_mdtraj(mdt, velocities=vel)
     return reduce_trajectory_box_vectors(traj)
+
+def n_dofs_from_system(system):
+    """Get the number of degrees of freedom from an Openmm System
+
+    Parameters
+    ----------
+    system : :class:`simtk.openmm.System`
+        object describing the system
+
+    Returns
+    -------
+    int :
+        number of degrees of freedom
+    """
+    # dof calculation based on OpenMM's StateDataReporter
+    n_spatial = 3
+    n_particles = system.getNumParticles()
+    dofs_particles = sum([n_spatial for i in range(n_particles)
+                          if system.getParticleMass(i) > 0*u.dalton])
+    dofs_constaints = system.getNumConstraints()
+    dofs_motion_removers = 0
+    has_cm_motion_remover = any(
+        type(system.getForce(i)) == simtk.openmm.CMMotionRemover
+        for i in range(system.getNumForces())
+    )
+    if has_cm_motion_remover:
+        dofs_motion_removers += 3
+    dofs = dofs_particles - dofs_constaints - dofs_motion_removers
+    return dofs
+
+def has_constraints_from_system(system):
+    """Get the number of degrees of freedom from an Openmm System
+
+    Parameters
+    ----------
+    system : :class:`simtk.openmm.System`
+        object describing the system
+
+    Returns
+    -------
+    bool :
+        whether there are constraints
+    """
+    return system.getNumConstraints() > 0

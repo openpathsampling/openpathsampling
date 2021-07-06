@@ -3,6 +3,7 @@ import openpathsampling as paths
 
 logger = logging.getLogger(__name__)
 from .path_simulator import PathSimulator, MCStep
+from openpathsampling.beta import hooks
 
 class ShootFromSnapshotsSimulation(PathSimulator):
     """
@@ -16,6 +17,17 @@ class ShootFromSnapshotsSimulation(PathSimulator):
     While this is usually subclassed, it isn't technically abstract, so a
     user can create a simulation of this sort on-the-fly for some weird
     ensembles.
+
+    .. note::
+
+        **Hooks**: This can interact with the :class:`.PathSimulatorHook`
+        framework. In these hooks, ``step_info`` is the 4-tuple
+        ``(snap, n_snaps, step, n_steps)`` where ``snap`` is the snapshot
+        number, ``step`` is the step number within that snapshot, and
+        ``n_snaps`` and ``n_steps`` are the total number of each,
+        respectively. The ``state`` will provide the initial snapshot we are
+        shooting from, and ``results`` is the :class:`.MCStep` that comes
+        out of each step.
 
     Parameters
     ----------
@@ -62,7 +74,6 @@ class ShootFromSnapshotsSimulation(PathSimulator):
             ensemble=self.starting_ensemble,
             target_ensemble=self.backward_ensemble
         )
-
         # subclasses will often override this
         self.mover = paths.RandomChoiceMover([self.forward_mover,
                                               self.backward_mover])
@@ -93,6 +104,9 @@ class ShootFromSnapshotsSimulation(PathSimulator):
         obj.mover = dct['mover']
         return obj
 
+    def attach_default_hooks(self):
+        self.attach_hook(hooks.StorageHook())
+        self.attach_hook(hooks.ShootFromSnapshotsOutputHook())
 
     def run(self, n_per_snapshot, as_chain=False):
         """Run the simulation.
@@ -110,19 +124,20 @@ class ShootFromSnapshotsSimulation(PathSimulator):
         """
         self.step = 0
         snap_num = 0
-        self.output_stream.write("\n")
+        n_snapshots = len(self.initial_snapshots)
+        hook_state = None
+        self.run_hooks('before_simulation', sim=self,
+                       n_per_snapshot=n_per_snapshot)
         for snapshot in self.initial_snapshots:
+            # before_snapshot
             start_snap = snapshot
             # do what we need to get the snapshot set up
             for step in range(n_per_snapshot):
-                paths.tools.refresh_output(
-                    "Working on snapshot %d / %d; shot %d / %d\n" % (
-                        snap_num+1, len(self.initial_snapshots),
-                        step+1, n_per_snapshot
-                    ),
-                    output_stream=self.output_stream,
-                    refresh=self.allow_refresh
-                )
+                step_number = self.step
+                step_info = (snap_num, n_snapshots, step, n_per_snapshot)
+                self.run_hooks('before_step', sim=self,
+                               step_number=step_number, step_info=step_info,
+                               state=start_snap)
 
                 if as_chain:
                     start_snap = self.randomizer(start_snap)
@@ -135,6 +150,8 @@ class ShootFromSnapshotsSimulation(PathSimulator):
                                  ensemble=self.starting_ensemble)
                 ])
                 sample_set.sanity_check()
+
+                # shoot_snapshot_task (start)
                 new_pmc = self.mover.move(sample_set)
                 samples = new_pmc.results
                 new_sample_set = sample_set.apply_samples(samples)
@@ -146,15 +163,18 @@ class ShootFromSnapshotsSimulation(PathSimulator):
                     active=new_sample_set,
                     change=new_pmc
                 )
+                # shoot_snapshot_task (end)
 
-                if self.storage is not None:
-                    self.storage.steps.save(mcstep)
-                    if self.step % self.save_frequency == 0:
-                        self.sync_storage()
+                hook_state = self.run_hooks(
+                    'after_step', sim=self, step_number=step_number,
+                    step_info=step_info, state=start_snap, results=mcstep,
+                    hook_state=hook_state
+                )
 
                 self.step += 1
+            # after_snapshot
             snap_num += 1
-
+        self.run_hooks('after_simulation', sim=self, hook_state=hook_state)
 
 
 class CommittorSimulation(ShootFromSnapshotsSimulation):

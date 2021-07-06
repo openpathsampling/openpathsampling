@@ -79,8 +79,15 @@ class MemoryStorageBackend(object):
         self.uuid_table = {}  # maps UUID to table name
         self._table_to_class = {}
 
+    @property
+    def identifier(self):
+        return hex(id(self))
+
     def close(self):
         pass  # no such thing as closing here, but may be needed for API
+
+    def register_type(self, type_str, backend_type):
+        pass  # no need to do anything here?
 
     def register_schema(self, schema, table_to_class, metadata=None):
         for table_name, schema_entries in schema.items():

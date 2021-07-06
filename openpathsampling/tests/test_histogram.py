@@ -118,6 +118,11 @@ class TestHistogram(object):
         assert histo.compare_parameters(self.hist_nbins) is False
         assert self.hist_nbins.compare_parameters(histo) is False
 
+    def test_compare_parameters_empty(self):
+        # regression test; this was preventing histograms from being added
+        hist = self.hist_binwidth_range
+        assert hist.compare_parameters(hist.empty_copy())
+
     def test_xvals(self):
         histo = Histogram(n_bins=5)
         _ = histo.histogram(self.data)  # need this to set the bins
@@ -216,6 +221,14 @@ class TestSparseHistogram(object):
         assert pytest.approx(normed_fcn((0.25, 0.65))) == old_div(0.5, 0.15)
         assert pytest.approx(normed_fcn((0.01, 0.09))) == old_div(0.25, 0.15)
         assert pytest.approx(normed_fcn((0.61, 0.89))) == old_div(0.25, 0.15)
+
+    def test_mangled_input(self):
+        # Sometimes singleton cvs are not unpacked properly
+        data = ([0.0], [0.1])
+        # This line might return mangled output
+        out = self.histo.map_to_bins(data)
+        # This raises on modern numpy if this is not 1D
+        _ = max(out)
 
 
 class TestHistogramPlotter2D(object):

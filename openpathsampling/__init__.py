@@ -29,7 +29,6 @@ except ImportError:  # pragma: no cover
         version.full_version += ".dev-" + version.git_version[:7]
     isrelease = str(ops_setup.preferences['released'])
 
-
 from .analysis.path_histogram import PathDensityHistogram
 
 from .analysis.replica_network import (
@@ -58,11 +57,11 @@ from .bias_function import (
     SRTISBiasFromNetwork
 )
 
-from .collectivevariable import (
-    FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
-    InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
-    CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
-    GeneratorCV)
+# from .collectivevariable import (
+    # FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
+    # InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
+    # CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
+    # GeneratorCV)
 
 from .ensemble import (
     Ensemble, EnsembleCombination,
@@ -118,11 +117,13 @@ from .pathsimulators import (
     ShootFromSnapshotsSimulation
 )
 
+from .rng import default_rng
 from .sample import Sample, SampleSet
 
 from .shooting import (
     ShootingPointSelector, UniformSelector, GaussianBiasSelector,
-    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector
+    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector,
+    BiasedSelector
 )
 
 from .snapshot_modifier import (
@@ -172,6 +173,7 @@ from .collectivevariables import *
 from .pathmovers.move_schemes import *
 
 import openpathsampling.numerics as numerics
+import openpathsampling.beta
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
 

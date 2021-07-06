@@ -222,6 +222,21 @@ class StorableFunctionResults(StorableNamedObject):
         obj.result_dict = dct['result_dict']
 
 
+def _storage_exception_msg(func, storage, exc):
+    func_id = str(get_uuid(func))
+    if func.is_named:
+        func_id += " (" + func.name + ")"
+    try:
+        storage_id = " in " + str(storage.identifier) + "."
+    except:
+        storage_id = "."
+
+    msg = ("A problem occured while loading disk-cached results. "
+           "Function " + func_id + storage_id + "\n" + str(type(exc))
+           + str(exc))
+    return msg
+
+
 class StorableFunction(StorableNamedObject):
     """Function wrapper, providing result caching and storage to disk.
 
@@ -233,7 +248,8 @@ class StorableFunction(StorableNamedObject):
         (None) stores source for anything created in ``__main__`` that is
         not a lambda expression.
     """
-    def __init__(self, func, func_config=None, store_source=None, **kwargs):
+    def __init__(self, func, func_config=None, store_source=None,
+                 period_min=None, period_max=None,**kwargs):
         super(StorableFunction, self).__init__()
         self.func = func
         self.source = None
@@ -254,18 +270,46 @@ class StorableFunction(StorableNamedObject):
 
         self.local_cache = None  # set correctly by self.mode setter
         self._disk_cache = True
-        self._handler = None
+        self._handlers = set([])
+        self._check_period(period_min, period_max)
+        self.period_min = period_min
+        self.period_max = period_max
+        self._modes = {  # tuples of (function, add_to_cache)
+            'analysis': [(self._get_cached, False),
+                         (self._get_storage, True),
+                         (self._eval, True)],
+            'production': [(self._get_cached, False),
+                           (self._eval, True)],
+            'no-caching': [(self._eval, False)]
+        }
         self.mode = 'analysis'
 
-    def set_handler(self, storage, override=False):
-        if not override and self._handler is not None:
-            raise RuntimeError("Handler for this StorableFunction has "
-                               + "already been set:" + str(self._handler))
-        self._handler = storage
+    @staticmethod
+    def _check_period(period_min, period_max):
+        is_not_periodic = period_min is None and period_max is None
+        is_periodic = period_min is not None and period_max is not None
+        is_error = not (is_periodic or is_not_periodic)
+        if is_error:
+            raise ValueError("Periodic functions must have upper and "
+                             "lower bounds. This function has period_min "
+                             + str(period_min) + " and period_max "
+                             + str(period_max) + ".")
+        return is_periodic
+
+    @property
+    def is_periodic(self):
+        return self._check_period(self.period_min, self.period_max)
+
+
+    def add_handler(self, storage, override=False):
+        self._handlers.add(storage)
+
+    def remove_handler(self, handler):
+        self._handlers.discard(handler)
 
     @property
     def has_handler(self):
-        return self._handler is not None
+        return len(self._handlers) > 0
 
     @property
     def disk_cache(self):
@@ -281,7 +325,7 @@ class StorableFunction(StorableNamedObject):
 
     @mode.setter
     def mode(self, value):
-        allowed_values = ['no-caching', 'analysis', 'production']
+        allowed_values = list(self._modes)
         if value not in allowed_values:
             raise ValueError("Unknown mode: '%s'. Allowed options: %s" %
                              (value, allowed_values))
@@ -314,11 +358,14 @@ class StorableFunction(StorableNamedObject):
 
     def preload_cache(self, storage=None):
         if storage is None:
-            storage = self._handler.storage
+            storages = [h.storage for h in self._handlers]
+        else:
+            storages = [storage]
 
         uuid = get_uuid(self)
-        cache_values = storage.backend.load_storable_function_table(uuid)
-        self.local_cache.cache_results(cache_values)
+        for storage in storages:
+            cache = storage.backend.load_storable_function_table(uuid)
+            self.local_cache.cache_results(cache)
 
     def is_scalar(self, item):
         """Determine whether the input needs to be wrapped in a list.
@@ -360,10 +407,27 @@ class StorableFunction(StorableNamedObject):
         return self.local_cache.get_results_as_dict(uuid_items)
 
     def _get_storage(self, uuid_items):
-        if not self._handler:
+        if not self.has_handler:
             return {}, uuid_items
 
-        return self._handler.get_function_results(get_uuid(self), uuid_items)
+        missing = uuid_items
+        found = {}
+        my_uuid = get_uuid(self)
+        for handler in self._handlers:
+            try:
+                uuid_map, missing = handler.get_function_results(
+                    my_uuid, missing
+                )
+            except Exception as e:
+                # for any error, we just warn -- can be correctly calculated
+                # in eval
+                msg = _storage_exception_msg(self, handler.storage, e)
+                warnings.warn(msg)
+                uuid_map = {}
+
+            found.update(uuid_map)
+
+        return found, missing
 
     def __call__(self, items):
         # important: implementation is that we always try to take an
@@ -377,14 +441,7 @@ class StorableFunction(StorableNamedObject):
         uuid_items = {get_uuid(item): item for item in items}
         # TODO: add preprocessing here? if needed?
 
-        cache_mode_order = {  # tuples of (function, add_to_cache)
-            'analysis': [(self._get_cached, False),
-                         (self._get_storage, True),
-                         (self._eval, True)],
-            'production': [(self._get_cached, False),
-                           (self._eval, True)],
-            'no-caching': [(self._eval, False)]
-        }[self.mode]
+        cache_mode_order = self._modes[self.mode]
 
         missing = uuid_items
         result_dict = {}
@@ -475,9 +532,13 @@ class StorageFunctionHandler(object):
         if not is_registered:
             self.all_functions[func_uuid].append(func)
 
-        # set handler; only if the table exists
-        if not func.has_handler and (add_table or not needs_table):
-            func.set_handler(self)
+        if add_table or not needs_table:
+            func.add_handler(self)
+
+    def close(self):
+        for uuid, copies in self.all_functions.items():
+            for func in copies:
+                func.remove_handler(self)
 
     def clear_non_canonical(self):
         self.all_functions = collections.defaultdict(list)
@@ -501,4 +562,3 @@ class StorageFunctionHandler(object):
         missing = uuids - set(uuid_map.keys())
         missing_map = {uuid: uuid_items[uuid] for uuid in missing}
         return uuid_map, missing_map
-

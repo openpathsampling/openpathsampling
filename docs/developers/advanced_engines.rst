@@ -10,6 +10,18 @@ The basic engine setup is easy to do, and enables the core of
 OpenPathSampling's functionality. However, some additional functionality can
 be added with very little effort, for engines where this might be relevant. 
 
+Velocity Randomization
+~~~~~~~~~~~~~~~~~~~~~~
+
+There are two things an engine can do to support velocity randomization
+(i.e., :class:`.RandomVelocities`). First, an engine can implement a method
+called ``randomize_velocities`` that takes a snapshot and returns the new
+snapshot. If you do that, then we'll just use that method.
+
+Alternatively, you can implement ``apply_constraints``. In this case, OPS
+will draw the random velocities, and then use your ``apply_constraints``
+method to constrain velocities.
+
 Shooting Point Velocity Modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -21,7 +33,8 @@ OPS has the ability to do this using the
 :class:`.VelocityDirectionModifier`, but this procedure becomes extremely
 complicated in condensed phase (periodic) systems with holonomic
 constraints. Therefore, OPS only allows this for engines where the snapshots
-have the ``n_degrees_of_freedom`` feature. In addition, the engine can tell
+have the ``n_degrees_of_freedom`` feature, which allows us to determine if
+there are any constraints. In addition, the engine can tell
 OPS not to bother removing linear momentum (e.g., if the engine represents a
 particle rolling on a surface, like our toy engine) by setting
 ``engine.ignore_linear_momentum = True``.

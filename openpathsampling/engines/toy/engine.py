@@ -134,3 +134,10 @@ class ToyEngine(DynamicsEngine):
         for i in range(self.n_steps_per_frame):
             self.integ.step(sys=self)
         return self.current_snapshot
+
+    def n_degrees_of_freedom(self):
+        topol = self.topology
+        return topol.n_atoms * topol.n_spatial
+
+    def has_constraints(self):
+        return False

@@ -7,9 +7,18 @@ from builtins import object
 from nose.tools import (assert_equal, assert_not_equal, assert_is, raises,
                         assert_true, assert_false)
 from nose.plugins.skip import Skip, SkipTest
-from .test_helpers import CallIdentity, raises_with_message_like
+from .test_helpers import (CallIdentity, raises_with_message_like,
+                           make_1d_traj)
 
 import unittest
+import pytest
+import numpy as np
+try:
+    from simtk import unit
+except ImportError:
+    HAS_SIMTK_UNIT = False
+else:
+    HAS_SIMTK_UNIT = True
 
 import openpathsampling.volume as volume
 
@@ -80,7 +89,7 @@ class TestFullVolume(object):
         assert_equal((volA | full).__str__(), "all")
         assert_equal((~ full).__str__(), "empty")
 
-class TestCVRangeVolume(object):
+class TestCVDefinedVolume(object):
     def test_upper_boundary(self):
         assert_equal(volA(0.49), True)
         assert_equal(volA(0.50), False)
@@ -179,6 +188,47 @@ class TestCVRangeVolume(object):
 
         assert (vol(50 * u.nanometers))
         assert (not vol(-70 * u.nanometers))
+
+    @staticmethod
+    def _vol_for_cv_type(inp):
+        if not HAS_SIMTK_UNIT and inp == 'simtk':
+            pytest.skip()
+
+        func = {
+            'float': lambda s: 1.0,
+            'array': lambda s: np.array([1.0, 2.0]),
+            'array1': lambda s: np.array([1.0]),
+            'simtk': None
+        }[inp]
+        if func is None:  # only if simtk
+            func = lambda s: 1.0 * unit.nanometers
+
+        cv = paths.FunctionCV('cv', func)
+        volume = paths.CVDefinedVolume(cv, 0.0, 1.5)
+        return volume
+
+    @pytest.mark.parametrize('inp', ['float', 'array', 'array1', 'simtk'])
+    def test_is_iterable(self, inp):
+        snap = make_1d_traj([0.0])[0]
+        volume = self._vol_for_cv_type(inp)
+        val = volume.collectivevariable(snap)
+        expected = inp in ['array', 'array1']
+        if expected:
+            with pytest.warns(UserWarning, match="returns an iterable"):
+                result = volume._is_iterable(val)
+        else:
+            result = volume._is_iterable(val)
+
+        assert result is expected
+
+    @pytest.mark.parametrize('inp', ['float', 'array1', 'simtk'])
+    @pytest.mark.filterwarnings("ignore:The CV 'cv' returns an iterable")
+    def test_get_cv_float(self, inp):
+        snap = make_1d_traj([0.0])[0]
+        volume = self._vol_for_cv_type(inp)
+        val = volume._get_cv_float(snap)
+        expected = inp in ['float', 'array1']
+        assert isinstance(val, float) is expected
 
 
 class TestCVRangeVolumePeriodic(object):

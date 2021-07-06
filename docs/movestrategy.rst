@@ -23,6 +23,8 @@ Shooting strategies
     :toctree: api/generated/
 
     OneWayShootingStrategy
+    ForwardShootingStrategy
+    TwoWayShootingStrategy
 
 
 Replica exchange strategies
@@ -32,7 +34,6 @@ Replica exchange strategies
     :toctree: api/generated/
 
     NearestNeighborRepExStrategy
-    NthNearestNeighborRepExStrategy
     AllSetRepExStrategy
     SelectedPairsRepExStrategy
 

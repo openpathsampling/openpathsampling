@@ -52,9 +52,11 @@ describe specific aspects.
 .. toctree::
     :maxdepth: 2
 
+    general_advice
     install_developers
     code_structure
     pathsimulators
+    hooks
     engines
     pathmovers_and_movestrategies
     collective_variables

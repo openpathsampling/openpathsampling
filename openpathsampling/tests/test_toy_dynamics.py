@@ -239,6 +239,9 @@ class TestToyEngine(object):
         self.sim.start(snapshot=snap)
         self.sim.stop([snap])
 
+    def test_has_constraints(self):
+        assert not self.sim.has_constraints()
+
 
 # === TESTS FOR TOY INTEGRATORS ===========================================
 

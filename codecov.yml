@@ -1,0 +1,11 @@
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 0.04%
+
+codecov:
+  notify:
+    wait_for_ci: true
+    after_n_builds: 5

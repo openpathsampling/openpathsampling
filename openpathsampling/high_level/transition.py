@@ -138,14 +138,17 @@ class TISTransition(Transition):
 
     """
 
-    def __init__(self, stateA, stateB, interfaces, orderparameter=None, name=None):
+    def __init__(self, stateA, stateB, interfaces, orderparameter=None,
+                 name=None, name_suffix=""):
         super(TISTransition, self).__init__(stateA, stateB)
 
         self.stateA = stateA
         self.stateB = stateB
         self.interfaces = interfaces
+        self.name_suffix = name_suffix
         if name is not None:
             self.name = name
+
 
         # If we reload from a storage file, we want to use the
         # ensembles from the file, not the automatically generated
@@ -183,7 +186,7 @@ class TISTransition(Transition):
             state_vol=stateA,
             innermost_vols=interfaces[0],
             forbidden=stateB
-        ).named("Out " + stateA.name + " minus")
+        ).named("Out " + stateA.name + " minus" + self.name_suffix)
 
     def copy(self, with_results=True):
         copy = self.from_dict(self.to_dict())
@@ -252,9 +255,8 @@ class TISTransition(Transition):
         #self.ensembles = paths.EnsembleFactory.TISEnsembleSet(
             #stateA, stateB, self.interfaces, orderparameter
         #)
-        for ensemble in self.ensembles:
-            ensemble.named(self.name + " " +
-                           str(self.ensembles.index(ensemble)))
+        for idx, ensemble in enumerate(self.ensembles):
+            ensemble.named(self.name + " " + str(idx) + self.name_suffix)
 
 
     # parameters for different types of output
@@ -490,13 +492,14 @@ class TISTransition(Transition):
 
     def to_dict(self):
         ret_dict = {
-            'stateA' : self.stateA,
-            'stateB' : self.stateB,
-            'orderparameter' : self.orderparameter,
-            'interfaces' : self.interfaces,
-            'name' : self.name,
-            'ensembles' : self.ensembles,
-            'minus_ensemble' : self.minus_ensemble
+            'stateA': self.stateA,
+            'stateB': self.stateB,
+            'orderparameter': self.orderparameter,
+            'interfaces': self.interfaces,
+            'name': self.name,
+            'name_suffix': self.name_suffix,
+            'ensembles': self.ensembles,
+            'minus_ensemble': self.minus_ensemble
         }
         return ret_dict
 
@@ -504,15 +507,11 @@ class TISTransition(Transition):
     def from_dict(cls, dct):
         if 'name' not in dct:
             dct['name'] = None
-        mytrans = TISTransition(
-            stateA=dct['stateA'],
-            stateB=dct['stateB'],
-            interfaces=dct['interfaces'],
-            orderparameter=dct['orderparameter'],
-            name=dct['name']
-        )
-        mytrans.minus_ensemble = dct['minus_ensemble']
-        mytrans.ensembles = dct['ensembles']
+        minus_ensemble = dct.pop('minus_ensemble')
+        ensembles = dct.pop('ensembles')
+        mytrans = TISTransition(**dct)
+        mytrans.minus_ensemble = minus_ensemble
+        mytrans.ensembles = ensembles
         return mytrans
 
     @property

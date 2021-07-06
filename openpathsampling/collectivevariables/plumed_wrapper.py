@@ -12,19 +12,19 @@ import os
 import sys
 
 
-class PLUMEDCV(paths.CoordinateFunctionCV):
+class PLUMEDCV(paths.collectivevariable.CoordinateFunctionCV):
 
-    """Make `CollectiveVariable` computed by PLUMED according to the command
-    `name`: `definition`, where `name` is a PLUMED label and `definition`
-    contains all PLUMED keywords.
+    """Make `CollectiveVariable` computed by PLUMED [1]_ according to the
+    command `name`: `definition`, where `name` is a PLUMED label and
+    `definition` contains all PLUMED keywords.
     Takes an `openpathsampling.engines.trajectory.Trajectory` as input.
 
     References
     ----------
 
     .. [1] G.A. Tribello, M. Bonomi, D. Branduardi, C. Camilloni, G. Bussi,
-    PLUMED2: New feathers for an old bird, Comp. Phys. Comm. 185, 604 (2014);
-    https://doi.org/10.1016/j.cpc.2013.09.018
+       PLUMED2: New feathers for an old bird, Comp. Phys. Comm. 185, 604
+       (2014); https://doi.org/10.1016/j.cpc.2013.09.018
 
     Examples
     --------
@@ -32,7 +32,7 @@ class PLUMEDCV(paths.CoordinateFunctionCV):
     >>> # formed by the atoms [7,9,15,17] in Ala dipeptide:
     >>> from openpathsampling import PLUMEDCV, PLUMEDInterface
     >>> plmd = PLUMEDInterface(top)
-    >>> # top is an `openpathsampling.engines.openmm.topology.MDTrajTopology`
+    >>> # top is an `openpathsampling.engines.topology.MDTrajTopology`
     >>> psi_plumed = PLUMEDCV("psi",plmd,"TORSION ATOMS=7,9,15,17")
     >>> print psi_plumed(traj)  # returns psi values for the trajectory
     """
@@ -188,18 +188,19 @@ class PLUMEDCV(paths.CoordinateFunctionCV):
 
 class PLUMEDInterface(StorableNamedObject):
 
-    """Interfaces the Cython PLUMED wrapper located at `/path/to/plumed2/python`
-    and allows to set and get non-`PLUMEDCV` commands (i.e., non-outputting).
-    This includes groups of atoms, centers of mass, include files, etc.
-    Requires PLUMED development version (see https://github.com/plumed/plumed2)
-    and sourcing `/path/to/plumed2/sourceme.sh`
+    """Interfaces the Cython PLUMED wrapper [1]_ located at
+    `/path/to/plumed2/python` and allows to set and get non-`PLUMEDCV`
+    commands (i.e., non-outputting).  This includes groups of atoms, centers
+    of mass, include files, etc.  Requires PLUMED development version (see
+    https://github.com/plumed/plumed2) and sourcing
+    `/path/to/plumed2/sourceme.sh`.
 
     References
     ----------
 
     .. [1] G.A. Tribello, M. Bonomi, D. Branduardi, C. Camilloni, G. Bussi,
-    PLUMED2: New feathers for an old bird, Comp. Phys. Comm. 185, 604 (2014);
-    https://doi.org/10.1016/j.cpc.2013.09.018
+       PLUMED2: New feathers for an old bird, Comp. Phys. Comm. 185, 604
+       (2014); https://doi.org/10.1016/j.cpc.2013.09.018
 
     Examples
     --------
@@ -207,11 +208,12 @@ class PLUMEDInterface(StorableNamedObject):
     >>> # in Ala dipeptide:
     >>> from openpathsampling import PLUMEDCV, PLUMEDInterface
     >>> plmd = PLUMEDInterface(top)
-    >>> # top is an `openpathsampling.engines.openmm.topology.MDTrajTopology`
+    >>> # top is an `openpathsampling.engines.topology.MDTrajTopology`
     >>> plmd.set("group","GROUP ATOMS=7,9,15,17")
     >>> psi_plumed = PLUMEDCV("psi",plmd,"TORSION ATOMS=group")
     >>> print psi_plumed(traj)  # returns psi values for the trajectory
     >>> pld.get()  # returns (('group', 'GROUP ATOMS=7,9,15,17'))
+
     """
 
     def __init__(self,
@@ -224,7 +226,7 @@ class PLUMEDInterface(StorableNamedObject):
         """
         Parameters
         ----------
-        topology : :obj:`openpathsampling.engines.openmm.MDTopology`
+        topology : :obj:`openpathsampling.engines.topology.MDTrajTopology`
         pathtoplumed : string
             path to the PLUMED installation
         timestep : double
