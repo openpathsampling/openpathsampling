@@ -116,6 +116,7 @@ class SQLStorageBackend(StorableNamedObject):
 
         # currently this is only used by the storable functions, but in
         # principle, it might be good for everything to move into this
+        # maps result type (str) to attribute handler to serialize that
         self.serialization = {}
 
         # override later if mode == 'r' or 'a'

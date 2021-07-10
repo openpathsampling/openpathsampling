@@ -21,6 +21,8 @@ class MockBackend(object):
         self.storable_function_tables = defaultdict(dict)
         self.called_register = defaultdict(int)
         self.called_load = defaultdict(int)
+        self.sfr_result_types = {}
+        self.serialization = {}
 
     def has_table(self, table_name):
         return table_name in self.storable_function_tables
@@ -28,6 +30,7 @@ class MockBackend(object):
     def register_storable_function(self, table_name, result_type):
         self.storable_function_tables[table_name] = {}
         self.called_register[table_name] += 1
+        self.sfr_result_types[table_name] = result_type
 
     def load_storable_function_results(self, func_uuid, uuids):
         table = self.storable_function_tables[func_uuid]
@@ -383,6 +386,7 @@ class TestStorageFunctionHandler(object):
         uuid = get_uuid(self.func)
         if has_table:
             self.storage.backend.storable_function_tables[uuid] = {}
+            self.storage.backend.sfr_result_types[uuid] = 'float'
 
         example = 1.0 if with_result else None
         unable_to_register = example is None and not has_table
