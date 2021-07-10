@@ -508,22 +508,34 @@ class StorageFunctionHandler(object):
         func_uuid = get_uuid(func)
 
         # add table to backend if needed
-        needs_table = not self.storage.backend.has_table(func_uuid)
+        has_table = self.storage.backend.has_table(func_uuid)
+        needs_table = not has_table
         add_table = needs_table and (example_result is not None)
         if needs_table and not add_table:
             logger.info("Result type unknown; unable to create table")
         elif add_table:
             identify = self.storage.type_identification.identify
             result_type = identify(example_result)
+            logger.debug("Result type: %s" % result_type)
             self.storage.backend.register_storable_function(
                 table_name=func_uuid,
                 result_type=result_type
             )
+            has_table = True
 
         # register as a canonical function
         if func_uuid not in self.canonical_functions:
             logger.debug("Registering new function: %s" % func_uuid)
             self.canonical_functions[func_uuid] = func
+
+        # get the type from storage
+        if has_table:
+            result_type = self.storage.backend.sfr_result_types[func_uuid]
+            serializer = self.storage.class_info.handler_for(result_type)
+            if serializer is None:
+                raise RuntimeError("Unable to serialize objects of type '"
+                                   + str(result_type) + "'.")
+            self.storage.backend.serialization[result_type] = serializer
 
         # register with all_functions
         is_registered = any([func is registered
