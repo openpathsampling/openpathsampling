@@ -345,6 +345,34 @@ class TestStorableFunction(object):
 
         assert func(['uuid', 'other']) == [found_in_1, found_in_2]
 
+    @pytest.mark.parametrize('error_if_missing', [True, False])
+    def test_validate_missing(self, error_if_missing):
+        get_expected = lambda x: 'result'
+        func = StorableFunction(get_expected)
+        self._set_storage(func, 'analysis', 'eval',
+                          {'input': 'result'})
+        pytest_context = {
+            True: pytest.raises(Exception),  # KeyError is test-specific
+            False: pytest.warns(UserWarning)
+        }[error_if_missing]
+        with pytest_context:
+            func.validate(['input'], error_if_missing)
+
+    @pytest.mark.parametrize('is_valid', [True, False])
+    def test_validate(self, is_valid):
+        get_expected = lambda x: 'result'
+        func = StorableFunction(get_expected)
+        stored_value = 'result' if is_valid else 'foo'
+        self._set_storage(func, 'analysis', 'storage',
+                          {'input': stored_value})
+        try:
+            func.validate('input')
+        except StorableFunctionResultError:
+            if is_valid:
+                raise
+            # else pass
+
+
     def test_to_dict_from_dict_cycle(self):
         pytest.skip()
         pass

@@ -15,6 +15,9 @@ from openpathsampling.netcdfplus import StorableNamedObject
 import logging
 logger = logging.getLogger(__name__)
 
+class StorableFunctionResultError(RuntimeError):
+    pass
+
 
 class Processor(StorableNamedObject):
     """Storable function pre/post processors"""
@@ -428,6 +431,37 @@ class StorableFunction(StorableNamedObject):
             found.update(uuid_map)
 
         return found, missing
+
+    def validate(self, items, error_if_missing=True):
+        real_modes = self._modes
+        orig_mode = self.mode
+        self._modes = {'from-storage': [(self._get_storage, False)],
+                       'from-eval': [(self._eval, False)]}
+
+        self.mode = 'from-eval'
+        from_eval = self(items)
+
+        self.mode = 'from-storage'
+        try:
+            from_storage = self(items)
+        except Exception as e:
+            if error_if_missing:
+                raise
+            else:
+                warnings.warn(str(e))
+                return
+
+        if self.is_scalar(items):
+            from_storage = [from_storage]
+            from_eval = [from_eval]
+
+        for ev, st in zip(from_eval, from_storage):
+            if ev != st:
+                raise StorableFunctionResultError(
+                    "Evaluated result does not match stored result: "
+                    + str(ev) + " != " + str(st)
+                )
+
 
     def __call__(self, items):
         # important: implementation is that we always try to take an
