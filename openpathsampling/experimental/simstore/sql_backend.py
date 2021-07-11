@@ -443,8 +443,12 @@ class SQLStorageBackend(StorableNamedObject):
         """
         table = self.metadata.tables[table_name]
         results = []
-        result_type = self.sfr_result_types[table_name]
-        deserialize = self.serialization[result_type].deserialize
+        result_type = self.sfr_result_types.get(table_name, None)
+        try:
+            deserialize = self.serialization[result_type].deserialize
+        except KeyError:
+            # TODO: this should be removed eventually
+            deserialize = lambda x: x
         for uuid_block in tools.block(uuids, self.MAX_SQL_ITEMS):
             # uuid_sel = table.select(
                 # sql.exists().where(table.c.uuid.in_(uuid_block))
@@ -460,7 +464,13 @@ class SQLStorageBackend(StorableNamedObject):
         return result_dict
 
     def load_storable_function_table(self, table_name):
-        return {row['uuid']: row['value']
+        result_type = self.sfr_result_types.get(table_name, None)
+        try:
+            deserialize = self.serialization[result_type].deserialize
+        except KeyError:
+            # TODO: this should be removed eventually
+            deserialize = lambda x: x
+        return {row['uuid']: deserialize(row['value'])
                 for row in self.table_iterator(table_name)}
 
     def add_tag(self, table_name, name, content):

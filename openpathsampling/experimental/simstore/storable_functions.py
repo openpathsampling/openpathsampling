@@ -563,8 +563,9 @@ class StorageFunctionHandler(object):
             self.canonical_functions[func_uuid] = func
 
         # get the type from storage
-        if has_table:
-            result_type = self.storage.backend.sfr_result_types[func_uuid]
+        result_type = self.storage.backend.sfr_result_types.get(func_uuid,
+                                                                None)
+        if result_type is not None:
             serializer = self.storage.class_info.handler_for(result_type)
             if serializer is None:
                 raise RuntimeError("Unable to serialize objects of type '"
