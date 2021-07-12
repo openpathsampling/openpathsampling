@@ -118,9 +118,10 @@ class PathSampling(PathSimulator):
 
     @live_visualizer.setter
     def live_visualizer(self, val):
-        if val is not None:
-            if not self._live_visualizer_attached:
-                self.attach_hook(hooks.LiveVisualizerHook())
+        self._live_visualizer = val
+        if not self._live_visualizer_attached:
+            self.attach_hook(hooks.LiveVisualizerHook())
+            self._live_visualizer_attached = True
 
     @property
     def current_step(self):
