@@ -345,6 +345,22 @@ class TestLiveVisualizerHook(object):
             # should only visualize when step_num % 2 == 0
             assert not self.live_visualizer.draw_ipynb.called
 
+    def test_integration(self):
+        simulation = paths.PathSampling(
+            storage=None,
+            sample_set=paths.SampleSet([]),
+            move_scheme=MagicMock()
+        )
+        simulation.live_visualizer = MagicMock()
+        simulation.run_hooks('before_simulation', sim=simulation) # prep
+        simulation.run_hooks('after_step', sim=simulation,
+                             step_number=1,
+                             step_info=(1, 100),
+                             state=simulation.sample_set,
+                             results=MagicMock(),
+                             hook_state={})
+        simulation.live_visualizer.draw_ipynb.assert_called_once()
+
 
 class TestPathSamplingOutputHook(object):
     def setup(self):
