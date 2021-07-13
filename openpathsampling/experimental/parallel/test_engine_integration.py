@@ -1,5 +1,7 @@
 import pytest
+import os
 import openpathsampling as paths
+import tempfile
 
 from openpathsampling.experimental.parallel.dask_integration import \
         SerialScheduler, DaskDistributedScheduler
@@ -26,7 +28,6 @@ if HAS_OPENMM:
 
 if HAS_MDTRAJ:
     import mdtraj as md
-
 
 
 from openpathsampling.experimental.storage.collective_variables import \
@@ -120,8 +121,19 @@ class OpenMMADEngine(SimpleEngineTest):
         return make_ad_universal_volume(self.engine.topology)
 
 class GromacsADEngine(SimpleEngineTest):
+    def __init__(self):
+        super().__init__()
+        self.tempdir = tempfile.TemporaryDirectory()
+
     def _make_engine(self):
-        pass
+        prefix = os.path.join(self.tempdir.name, 'project')
+        engine = ops_gmx.Engine(gro="conf.gro",
+                                mdp="md.mdp",
+                                top="topol.top",
+                                options={'mdrun_args': '-nt 1'},
+                                base_dir=data_filename("gromacs_engine"),
+                                prefix=prefix)
+        return engine
 
     def _make_volume(self):
         return make_ad_universal_volume(self.engine.topology)
@@ -145,8 +157,7 @@ def engine_run_5_steps(engine, universal_volume, initial_snapshot):
     traj = engine.generate(initial_snapshot, ensemble.can_append)
     return traj
 
-# @pytest.mark.parametrize('engine_name', ['openmm', 'gromacs', 'toy'])
-@pytest.mark.parametrize('engine_name', ['toy', 'openmm'])
+@pytest.mark.parametrize('engine_name', ['toy', 'openmm', 'gromacs'])
 @pytest.mark.parametrize('scheduler_name', ['serial', 'dask'])
 def test_scheduler_engine_integration(engine_name, scheduler_name):
     eligible_engine = {
