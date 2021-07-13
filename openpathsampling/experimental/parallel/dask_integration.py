@@ -150,6 +150,9 @@ class SerialScheduler(object):
     def finalize(self):
         pass
 
+    def get_result(self, result):
+        return result
+
 
 class DaskDistributedScheduler(object):
     def __init__(self, client=None):
@@ -180,6 +183,9 @@ class DaskDistributedScheduler(object):
         self._final_future = fut
 
     def wrap_task_only(self, task):
+        """Wrap a task where the args/kwargs must be delayed.
+        """
+        # TODO: where am I using this now?
         @functools.wraps(task)
         def inner(*args, **kwargs):
             ops_task = PicklableOPSTask(task)
@@ -193,6 +199,7 @@ class DaskDistributedScheduler(object):
         return inner
 
     def wrap_task(self, task):
+        """Wraps a task that is self-contained"""
         @functools.wraps(task)
         def inner(*args, **kwargs):
             ops_task = PicklableOPSTask(task, args, kwargs)
@@ -208,3 +215,6 @@ class DaskDistributedScheduler(object):
         # ensure that we run the last future
         if self._final_future is not None:
             _ = self._final_future.result()
+
+    def get_result(self, result):
+        return result.result()

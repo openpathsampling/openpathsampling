@@ -1,6 +1,6 @@
 import openpathsampling as paths
 
-from openpathsampling.experimental.storage.dask_integration import \
+from openpathsampling.experimental.parallel.dask_integration import \
         SerialScheduler
 
 from openpathsampling.experimental.simstore.tools import none_to_default
