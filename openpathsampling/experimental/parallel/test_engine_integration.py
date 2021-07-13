@@ -1,7 +1,8 @@
 import pytest
 import openpathsampling as paths
 
-from dask_integration import SerialScheduler, DaskDistributedScheduler
+from openpathsampling.experimental.parallel.dask_integration import \
+        SerialScheduler, DaskDistributedScheduler
 
 from openpathsampling.integration_tools import HAS_OPENMM, HAS_MDTRAJ
 from openpathsampling.tests.test_gromacs_engine import has_gmx as HAS_GMX
