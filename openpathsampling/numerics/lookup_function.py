@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import collections
 
+
 class LookupFunction(object):
     """
     Interpolation between datapoints.
@@ -25,8 +26,8 @@ class LookupFunction(object):
         dictionary values.
     """
     def __init__(self, ordinate, abscissa):
-        self.pairs = { }
-        for (x,y) in zip(ordinate, abscissa):
+        self.pairs = {}
+        for (x, y) in zip(ordinate, abscissa):
             if not np.isnan(y):
                 self.pairs[x] = y
         self.sorted_ordinates = np.array(sorted(self.pairs.keys()))
@@ -57,7 +58,6 @@ class LookupFunction(object):
         """
         return self.sorted_ordinates
 
-
     def __len__(self):
         return len(self.sorted_ordinates)
 
@@ -84,7 +84,7 @@ class LookupFunction(object):
 
     def __call__(self, value):
         # only a 1D implementation so far
-        i=0
+        i = 0
         xvals = self.sorted_ordinates
         nvals = len(xvals)
         if value < xvals[i]:
@@ -109,7 +109,6 @@ class LookupFunction(object):
 
         y = float(value - x1) / (x2 - x1) * (y2-y1) + y1
         return y
-
 
 
 class LookupFunctionGroup(LookupFunction):
@@ -155,7 +154,6 @@ class LookupFunctionGroup(LookupFunction):
 
         self.use_x = use_x
 
-
     @property
     def use_x(self):
         return self._use_x
@@ -191,8 +189,7 @@ class LookupFunctionGroup(LookupFunction):
         return LookupFunction(self.x, mean)
 
     def __call__(self, value):
-        return  self.mean(value)
-
+        return self.mean(value)
 
     def __getitem__(self, item):
         return self.functions[item]
@@ -233,7 +230,7 @@ class VoxelLookupFunction(object):
     @property
     def counter_by_bin_edges(self):
         return collections.Counter(
-            {tuple(self.bin_to_left_edge(k)) : self.counter[k]
+            {tuple(self.bin_to_left_edge(k)): self.counter[k]
              for k in self.counter.keys()}
         )
 
@@ -252,7 +249,6 @@ class VoxelLookupFunction(object):
             Values of the lookup function for each bin. The index and
             columns are bin numbers.
         """
-        bin_widths = self.bin_widths
         if len(self.left_bin_edges) != 2:
             raise RuntimeError("Can't make 2D dataframe from non-2D data!")
         counter = self.counter
@@ -263,7 +259,7 @@ class VoxelLookupFunction(object):
         if y_range is not None:
             columns = range(y_range[0], y_range[1]+1)
         df = pd.DataFrame(index=index, columns=columns)
-        for (k,v) in counter.items():
+        for (k, v) in counter.items():
             df.at[k[0], k[1]] = v
         df = df.sort_index(axis=0).sort_index(axis=1)
         return df
@@ -271,4 +267,3 @@ class VoxelLookupFunction(object):
     def __call__(self, value):
         val_bin = tuple(np.floor(self.val_to_bin(value)))
         return self.counter[val_bin]
-
