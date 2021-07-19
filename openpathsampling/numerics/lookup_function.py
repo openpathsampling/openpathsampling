@@ -202,7 +202,7 @@ class LookupFunctionGroup(LookupFunction):
 
     def __contains__(self, item):
         return item in self.functions
-    
+
     def append(self, item):
         self.functions.append(item)
 
@@ -233,7 +233,7 @@ class VoxelLookupFunction(object):
     @property
     def counter_by_bin_edges(self):
         return collections.Counter(
-            {tuple(self.bin_to_left_edge(k)) : self.counter[k] 
+            {tuple(self.bin_to_left_edge(k)) : self.counter[k]
              for k in self.counter.keys()}
         )
 
@@ -265,7 +265,7 @@ class VoxelLookupFunction(object):
         df = pd.DataFrame(index=index, columns=columns)
         for (k,v) in counter.items():
             df.at[k[0], k[1]] = v
-        df = df.sort_index(0).sort_index(1)
+        df = df.sort_index(axis=0).sort_index(axis=1)
         return df
 
     def __call__(self, value):
