@@ -399,7 +399,6 @@ class SQLStorageBackend(StorableNamedObject):
         result_dict : Mapping[Str, Any]
             mapping from UUID to result
         """
-        # breakpoint()
         # anything in the cache doesn't need to be saved
         known_uuids = self.known_uuids[table_name]
         set_uuids = set(result_dict.keys())
