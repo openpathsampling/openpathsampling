@@ -15,6 +15,9 @@ from openpathsampling.netcdfplus import StorableNamedObject
 import logging
 logger = logging.getLogger(__name__)
 
+class StorableFunctionResultError(RuntimeError):
+    pass
+
 
 class Processor(StorableNamedObject):
     """Storable function pre/post processors"""
@@ -429,6 +432,37 @@ class StorableFunction(StorableNamedObject):
 
         return found, missing
 
+    def validate(self, items, error_if_missing=True):
+        real_modes = self._modes
+        orig_mode = self.mode
+        self._modes = {'from-storage': [(self._get_storage, False)],
+                       'from-eval': [(self._eval, False)]}
+
+        self.mode = 'from-eval'
+        from_eval = self(items)
+
+        self.mode = 'from-storage'
+        try:
+            from_storage = self(items)
+        except Exception as e:
+            if error_if_missing:
+                raise
+            else:
+                warnings.warn(str(e))
+                return
+
+        if self.is_scalar(items):
+            from_storage = [from_storage]
+            from_eval = [from_eval]
+
+        for ev, st in zip(from_eval, from_storage):
+            if ev != st:
+                raise StorableFunctionResultError(
+                    "Evaluated result does not match stored result: "
+                    + str(ev) + " != " + str(st)
+                )
+
+
     def __call__(self, items):
         # important: implementation is that we always try to take an
         # iterable of items ... this makes, e.g., applying a CV to a
@@ -508,22 +542,35 @@ class StorageFunctionHandler(object):
         func_uuid = get_uuid(func)
 
         # add table to backend if needed
-        needs_table = not self.storage.backend.has_table(func_uuid)
+        has_table = self.storage.backend.has_table(func_uuid)
+        needs_table = not has_table
         add_table = needs_table and (example_result is not None)
         if needs_table and not add_table:
             logger.info("Result type unknown; unable to create table")
         elif add_table:
             identify = self.storage.type_identification.identify
             result_type = identify(example_result)
+            logger.debug("Result type: %s" % result_type)
             self.storage.backend.register_storable_function(
                 table_name=func_uuid,
                 result_type=result_type
             )
+            has_table = True
 
         # register as a canonical function
         if func_uuid not in self.canonical_functions:
             logger.debug("Registering new function: %s" % func_uuid)
             self.canonical_functions[func_uuid] = func
+
+        # get the type from storage
+        result_type = self.storage.backend.sfr_result_types.get(func_uuid,
+                                                                None)
+        if result_type is not None:
+            serializer = self.storage.class_info.handler_for(result_type)
+            if serializer is None:
+                raise RuntimeError("Unable to serialize objects of type '"
+                                   + str(result_type) + "'.")
+            self.storage.backend.serialization[result_type] = serializer
 
         # register with all_functions
         is_registered = any([func is registered

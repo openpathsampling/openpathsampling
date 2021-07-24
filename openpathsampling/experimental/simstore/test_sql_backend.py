@@ -17,7 +17,7 @@ class TestSQLStorageBackend(object):
                                'snapshot0': tuple,
                                'snapshot1': tuple}
         self.default_table_names = {'uuid', 'tables', 'schema', 'metadata',
-                                    'tags'}
+                                    'tags', 'sfr_result_types'}
 
     def _sample_data_dict(self):
         sample_list = [(0, 'ens1', 'traj1'),
