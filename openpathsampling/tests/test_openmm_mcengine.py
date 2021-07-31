@@ -1,5 +1,6 @@
 import pytest
 import openpathsampling as paths
+import copy
 
 from openpathsampling.engines.openmm.mcengine import *
 
@@ -34,11 +35,12 @@ def minimized(sampler_state, thermodynamic_state):
     return sampler.sampler_state
 
 @pytest.fixture
-def snapshot(minimized):
+def snapshot(minimized, mcengine):
     return Snapshot.construct(
         coordinates=minimized.positions,
         velocities=None,
-        box_vectors=None
+        box_vectors=None,
+        engine=mcengine
     )
 
 @pytest.fixture
@@ -72,8 +74,6 @@ class TestOpenMMToolsMCEngine(object):
         mcengine.current_snapshot = snapshot
         reloaded = mcengine.current_snapshot
         assert snapshot is reloaded
-        assert snapshot.__uuid__ is reloaded.__uuid__
-        # NOTE: snapshot.coordinates returns a copy to preserve immutability
 
     def test_current_snapshot_set_same(self, mcengine, snapshot):
         # if we try to set the current snapshot the same snapshot we had
@@ -84,10 +84,13 @@ class TestOpenMMToolsMCEngine(object):
         mcengine.current_snapshot = snapshot
         reloaded = mcengine.current_snapshot
         assert snapshot is reloaded
-        assert snapshot.__uuid__ is reloaded.__uuid__
 
-    def test_current_snapshot_uninitialized_error(self, mcengine,
-                                                  sampler_state):
+    def test_current_snapshot_update(self, mcengine, snapshot):
+        # when we set a new snapshot (and one already exists) the
+        # internal information should be updated
+        pytest.skip()
+
+    def test_current_snapshot_uninitialized_error(self, mcengine):
         # if we try to get the current snapshot before the engine has been
         # initialized (by setting the snapshot), we should raise an error
         with pytest.raises(EngineNotInitializedError):
@@ -97,20 +100,48 @@ class TestOpenMMToolsMCEngine(object):
         # generate_next_frame should create a valid snapshot
         pytest.skip()
 
+    def test_generate_next_frame_uninitialized_error(self, mcengine,
+                                                     snapshot):
+        # if we try to generate the next frame before setting the current
+        # snapshot, we should error
+        with pytest.raises(EngineNotInitializedError):
+            mcengine.generate_next_frame()
+
     def test_serialization_cycle(self, mcengine):
         # if we serialize then deserialize, the to_dict of the deserialized
         # object should be the same as the to_dict of the original
+        # breakpoint()
+        serialized = mcengine.to_dict()
+        deserialized = mcengine.__class__.from_dict(copy.copy(serialized))
+        reserialized = deserialized.to_dict()
         pytest.skip()
+        # this assertion currently fails: see choderalab/openmmtools#517
+        assert serialized == reserialized
 
     def test_mdtraj_topology_error(self, mcengine):
         # if no MDTraj topology can be found, raise an error
-        pytest.skip()
+        with pytest.raises(RuntimeError, match="no topology"):
+            mcengine.mdtraj_topology
 
-    def test_trajectory_to_mdtraj(self, ):
+    def test_trajectory_to_mdtraj(self, snapshot, ad_vacuum_testsystem,
+                                  thermodynamic_state):
         # if an MDTraj topology is associated with the engine, we
         # should be able to convert trajectories from this engine into
         # MDTraj trajectories
-        pytest.skip()
+        md = pytest.importorskip('mdtraj')
+        mdtraj_topology = ad_vacuum_testsystem.mdtraj_topology
+        engine = OpenMMToolsMCEngine(
+            thermodynamic_state,
+            mcmc.MCDisplacementMove(),
+            options={'n_steps_per_frame': 1,
+                     'n_frames_max': 1000},
+            topology=paths.engines.MDTrajTopology(mdtraj_topology)
+        )
+        new_snapshot = snapshot.copy_with_replacement(engine=engine)
+        traj = paths.Trajectory([new_snapshot])
+        mdt = traj.to_mdtraj()
+        assert isinstance(mdt, md.Trajectory)
+        assert len(mdt) == len(traj)
 
     def test_get_n_accepted(self):
         # (not API) ensure that we get the correct number of accepted steps
@@ -118,7 +149,9 @@ class TestOpenMMToolsMCEngine(object):
         pytest.skip()
 
     def test_generate_next_frame_accepted_move(self):
+        # accepted moves should create new snapshots
         pytest.skip()
 
     def test_generate_next_frame_rejected_move(self):
+        # rejected moves should not create new snapshots
         pytest.skip()
