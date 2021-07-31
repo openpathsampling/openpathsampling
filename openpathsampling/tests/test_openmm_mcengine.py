@@ -34,6 +34,14 @@ def minimized(sampler_state, thermodynamic_state):
     return sampler.sampler_state
 
 @pytest.fixture
+def snapshot(minimized):
+    return Snapshot.construct(
+        coordinates=minimized.positions,
+        velocities=None,
+        box_vectors=None
+    )
+
+@pytest.fixture
 def mcengine(thermodynamic_state, minimized):
     mcmc = pytest.importorskip('openmmtools.mcmc')
     move = mcmc.MCDisplacementMove()
@@ -58,26 +66,32 @@ def test_snapshot_from_sampler_state(sampler_state):
 
 
 class TestOpenMMToolsMCEngine(object):
-    def test_current_snapshot(self, mcengine, sampler_state):
+    def test_current_snapshot(self, snapshot):
         # when we set then get the current snapshot, we should get the same
         # object (identical in memory) back
-        snap = snapshot_from_sampler_state(sampler_state)
-        mcengine.current_snapshot = snap
+        mcengine.current_snapshot = snapshot
         reloaded = mcengine.current_snapshot
-        assert snap is reloaded
-        # assert snap.coordinates is reloaded.coordinates
-        # assert snap.box_vectors is reloaded.box_vectors
+        assert snapshot is reloaded
+        assert snapshot.__uuid__ is reloaded.__uuid__
+        # NOTE: snapshot.coordinates returns a copy to preserve immutability
 
-    def test_current_snapshot_set_same(self, mcengine, sampler_state):
+    def test_current_snapshot_set_same(self, mcengine, snapshot):
         # if we try to set the current snapshot the same snapshot we had
         # before, the snapshot remains the same object in memory
-        pass
+        assert mcengine._current_snapshot is None
+        mcengine.current_snapshot = snapshot
+        assert mcengine._current_snapshot is not None
+        mcengine.current_snapshot = snapshot
+        reloaded = mcengine.current_snapshot
+        assert snapshot is reloaded
+        assert snapshot.__uuid__ is reloaded.__uuid__
 
     def test_current_snapshot_uninitialized_error(self, mcengine,
                                                   sampler_state):
         # if we try to get the current snapshot before the engine has been
         # initialized (by setting the snapshot), we should raise an error
-        pass
+        with pytest.raises(EngineNotInitializedError):
+            mcengine.current_snapshot
 
     def test_generate_next_frame(self, mcengine, minimized):
         # generate_next_frame should create a valid snapshot
@@ -86,17 +100,17 @@ class TestOpenMMToolsMCEngine(object):
     def test_serialization_cycle(self, mcengine):
         # if we serialize then deserialize, the to_dict of the deserialized
         # object should be the same as the to_dict of the original
-        pass
+        pytest.skip()
 
     def test_mdtraj_topology_error(self, mcengine):
         # if no MDTraj topology can be found, raise an error
-        pass
+        pytest.skip()
 
     def test_trajectory_to_mdtraj(self, ):
         # if an MDTraj topology is associated with the engine, we
         # should be able to convert trajectories from this engine into
         # MDTraj trajectories
-        pass
+        pytest.skip()
 
     def test_get_n_accepted(self):
         # (not API) ensure that we get the correct number of accepted steps
@@ -104,8 +118,7 @@ class TestOpenMMToolsMCEngine(object):
         pytest.skip()
 
     def test_generate_next_frame_accepted_move(self):
-        pass
+        pytest.skip()
 
     def test_generate_next_frame_rejected_move(self):
-        pass
-
+        pytest.skip()
