@@ -119,7 +119,7 @@ class OpenMMToolsMCEngine(paths.engines.DynamicsEngine):
         # We only construct a new snapshot if a trial move has been
         # accepted. This way identical snapshots have the same UUID.
         n_acc_before = self._get_n_accepted()
-        self._sampler.run(1)
+        self._sampler.run(self.options['n_steps_per_frame'])
         n_acc_after = self._get_n_accepted()
         if n_acc_before != n_acc_after:
             self.current_snapshot = snapshot_from_sampler_state(

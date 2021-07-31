@@ -55,6 +55,20 @@ def mcengine(thermodynamic_state, minimized):
     ).named('mcengine')
     return mcengine
 
+### HELPER CLASSES FOR MOCKING #############################################
+
+class AlwaysMove(mcmc.MetropolizedMove):
+    def __init__(self, accept):
+        super(AlwaysMove, self).__init__()
+        self.accept = {'accept': 1, True: 1,
+                       'reject': 0, False: 0}[accept]
+
+    def apply(self, thermodynamic_state, sampler_state):
+        self.n_accepted += self.accept
+        self.n_proposed += 1
+
+    def _propose_positions(self, positions):
+        pass
 
 ### TESTS FOR OPENMMTOOLS MC ENGINE ########################################
 
@@ -143,15 +157,49 @@ class TestOpenMMToolsMCEngine(object):
         assert isinstance(mdt, md.Trajectory)
         assert len(mdt) == len(traj)
 
-    def test_get_n_accepted(self):
+    @pytest.mark.parametrize('accept', ['accept', 'reject'])
+    def test_get_n_accepted(self, accept, thermodynamic_state, snapshot):
         # (not API) ensure that we get the correct number of accepted steps
         # from a mover
-        pytest.skip()
+        move = mcmc.WeightedMove([(AlwaysMove(accept), 1)])
+        results = {'accept': [1, 2], 'reject': [0, 0]}[accept]
+        always_accept = OpenMMToolsMCEngine(
+            move=move,
+            thermodynamic_state=thermodynamic_state,
+            options={'n_steps_per_frame': 1,
+                     'n_frames_max': 1000},
+        )
+        always_accept.current_snapshot = snapshot
+        assert always_accept._get_n_accepted() == 0
+        for result in results:
+            always_accept.generate_next_frame()
+            assert always_accept._get_n_accepted() == result
 
-    def test_generate_next_frame_accepted_move(self):
+    def test_generate_next_frame_accepted_move(self, thermodynamic_state,
+                                               snapshot):
         # accepted moves should create new snapshots
-        pytest.skip()
+        move = mcmc.WeightedMove([(AlwaysMove('accept'), 1)])
+        always_accept = OpenMMToolsMCEngine(
+            move=move,
+            thermodynamic_state=thermodynamic_state,
+            options={'n_steps_per_frame': 1,
+                     'n_frames_max': 1000},
+        )
+        always_accept.current_snapshot = snapshot
+        snap = always_accept.generate_next_frame()
+        assert snap is not snapshot
+        assert snap.__uuid__ != snapshot.__uuid__
 
-    def test_generate_next_frame_rejected_move(self):
+    def test_generate_next_frame_rejected_move(self, thermodynamic_state,
+                                               snapshot):
         # rejected moves should not create new snapshots
-        pytest.skip()
+        move = mcmc.WeightedMove([(AlwaysMove('reject'), 1)])
+        always_reject = OpenMMToolsMCEngine(
+            move=move,
+            thermodynamic_state=thermodynamic_state,
+            options={'n_steps_per_frame': 1,
+                     'n_frames_max': 1000},
+        )
+        always_reject.current_snapshot = snapshot
+        snap = always_reject.generate_next_frame()
+        assert snap is snapshot
