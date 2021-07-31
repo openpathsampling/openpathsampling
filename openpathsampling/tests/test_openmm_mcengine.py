@@ -57,18 +57,19 @@ def mcengine(thermodynamic_state, minimized):
 
 ### HELPER CLASSES FOR MOCKING #############################################
 
-class AlwaysMove(mcmc.MetropolizedMove):
-    def __init__(self, accept):
-        super(AlwaysMove, self).__init__()
-        self.accept = {'accept': 1, True: 1,
-                       'reject': 0, False: 0}[accept]
+if HAS_OPENMMTOOLS:
+    class AlwaysMove(mcmc.MetropolizedMove):
+        def __init__(self, accept):
+            super(AlwaysMove, self).__init__()
+            self.accept = {'accept': 1, True: 1,
+                           'reject': 0, False: 0}[accept]
 
-    def apply(self, thermodynamic_state, sampler_state):
-        self.n_accepted += self.accept
-        self.n_proposed += 1
+        def apply(self, thermodynamic_state, sampler_state):
+            self.n_accepted += self.accept
+            self.n_proposed += 1
 
-    def _propose_positions(self, positions):
-        pass
+        def _propose_positions(self, positions):
+            pass
 
 ### TESTS FOR OPENMMTOOLS MC ENGINE ########################################
 
