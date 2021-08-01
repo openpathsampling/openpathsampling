@@ -400,6 +400,17 @@ class OpenMMEngine(DynamicsEngine):
 
         return True
 
+    def validate_snapshot(self, snapshot):
+        if not self.is_valid_snapshot(snapshot):
+            raise EngineNaNError("Engine generated NaN")
+
+    def snapshot_validation_handler(self, error, snapshot):
+        e = sys.exc_info()
+        se = str(e).lower()
+        if 'nan' in se and ('particle' in se or 'coordinates' in se):
+            return EngineNaNError("Engine generated NaN")
+        return error
+
     @property
     def current_snapshot(self):
         if self._current_snapshot is None:

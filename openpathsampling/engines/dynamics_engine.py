@@ -425,6 +425,9 @@ class DynamicsEngine(StorableNamedObject):
 
         return trajectory
 
+    def iter_generate_2(self, initial, running=None, direction=+1):
+        pass
+
     def iter_generate(self, initial, running=None, direction=+1,
                       intervals=10, max_length=0):
         r"""
@@ -692,6 +695,13 @@ class DynamicsEngine(StorableNamedObject):
             returns `True` if the snapshot is okay to be used
         """
         return True
+
+    def validate_snapshot(self, snapshot, trajectory):
+        if not self.is_valid_snapshot(snapshot):
+            raise EngineError("Snapshot is not valid.")
+
+    def snapshot_validation_handler(self, error, snapshot):
+        return error
 
     @classmethod
     def check_snapshot_type(cls, snapshot):
