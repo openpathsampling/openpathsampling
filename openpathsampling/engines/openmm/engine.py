@@ -1,10 +1,13 @@
 import logging
+import sys
 
 import simtk.openmm
 import simtk.openmm.app
 import simtk.unit as u
 
-from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
+from openpathsampling.engines import (
+    DynamicsEngine, SnapshotDescriptor, EngineNaNError
+)
 from openpathsampling.engines.openmm import tools
 from .snapshot import Snapshot
 import numpy as np
@@ -400,15 +403,15 @@ class OpenMMEngine(DynamicsEngine):
 
         return True
 
-    def validate_snapshot(self, snapshot):
+    def validate_snapshot(self, snapshot, trajectory):
         if not self.is_valid_snapshot(snapshot):
-            raise EngineNaNError("Engine generated NaN")
+            raise EngineNaNError("Snapshot contains NaN", trajectory)
 
-    def snapshot_validation_handler(self, error, snapshot):
+    def snapshot_error_handler(self, error, snapshot, trajectory):
         e = sys.exc_info()
         se = str(e).lower()
         if 'nan' in se and ('particle' in se or 'coordinates' in se):
-            return EngineNaNError("Engine generated NaN")
+            return EngineNaNError("Snapshot contains NaN", trajectory)
         return error
 
     @property
