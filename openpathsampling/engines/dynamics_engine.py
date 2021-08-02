@@ -471,14 +471,16 @@ class DynamicsEngine(StorableNamedObject):
                                     trusted=False)
 
         if stop:
-            return trajectory
+            yield trajectory
+            return
 
         self.start()
         snapshot = None
         while not stop:
 
-            # first we check for maximum length
-            if len(trajectory) >= max_length:
+            # first we check for maximum length; forcible setting
+            # max_length to None will allow infinite trajectories
+            if max_length is not None and len(trajectory) >= max_length:
                 # should only hit on ==, but >= as safety
                 raise EngineMaxLengthError(
                     "Hit maximum trajectory length: %d frames" % max_length,
