@@ -15,6 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     name: "Unit Tests"
     strategy:
+      # NOTE: When changing the test matrix:
+      # * Update the after_n_builds in codecov.yml to match the number of
+      #   builds in the matrix
+      # * You may need to create another example run for the notebook tests
+      #   (see examples/ipynbtests.sh; examples/prep_example_data.py). This
+      #   is because Python internals (usually bytecode, which is saved in
+      #   CVs) can differ between minor Python versions.
       matrix:
         CONDA_PY:
           - 3.7
@@ -23,9 +30,12 @@ jobs:
         MINIMAL: [""]
         include:
           - CONDA_PY: 3.7
-            MINIMAL: "Minimal"
+            MINIMAL: "minimal"
+
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@v2
       - uses: conda-incubator/setup-miniconda@v2
         with:
@@ -34,6 +44,7 @@ jobs:
       - name: "Install requirements"
         env:
           MINIMAL: ${{ matrix.MINIMAL }}
+          CONDA_PY: ${{ matrix.CONDA_PY }}
         run: |
           if [ -z "$MINIMAL" ] ; then
             source devtools/conda_install_reqs.sh
@@ -41,22 +52,26 @@ jobs:
             python -m pip install -r devtools/minimal.txt \
                                   -r devtools/minimal_testing.txt
           fi
-      - name: "Install"
-        run: python -m pip install --no-deps -e .
-      - name: "Autorelease check"
-        run: |
           python -m pip install autorelease
-          python devtools/autorelease_check.py
+      - name: "Install"
+        run: |
+          python -m pip install --no-deps -e .
+          python -c "import openpathsampling"
       - name: "Versions"
         run: |
           conda info --envs
           conda list
+      - name: "Autorelease check"
+        run: python devtools/autorelease_check.py
       - name: "Unit tests"
-        run: |
-          python -c "import openpathsampling"
-          py.test -vv -s --cov=openpathsampling --cov-report xml
-      - name: "Test experimental features"
+        env:
+          PY_COLORS: "1"
+        run: py.test -vv -s --cov=openpathsampling --cov-report xml
+      - name: "Tests: Experimental"
         if: matrix.MINIMAL == ''
         run: py.test -vv -s openpathsampling/experimental
-      #- name: "Upload coverage"
+      #- name: "Report coverage"
         #run: bash <(curl -s https://codecov.io/bash)
+      - name: "Notebook tests"
+        if: matrix.MINIMAL == ''
+        run: pushd examples/ && ./ipynbtests.sh || exit 1 && popd
