@@ -18,8 +18,8 @@ case $PYTHON_VERSION in
         mistis=$dropbox_base_url/76981cbgxm639m3/toy_mistis_1k_OPS1_py36.nc
         ;;
     "3.7")
-        mstis=$dropbox_base_url/1ulzssv5p4lr61f/toy_mstis_1k_OPS1_py36.nc
-        mistis=$dropbox_base_url/76981cbgxm639m3/toy_mistis_1k_OPS1_py36.nc
+        mstis=$dropbox_base_url/s5d76vg5jyf84oa/toy_mstis_1k_OPS1_py37.nc
+        mistis=$dropbox_base_url/vzyywl3yli3pp8u/toy_mistis_1k_OPS1_py37.nc
         ;;
     "3.8")
         mstis=$dropbox_base_url/8rr0tt25xlm47cs/toy_mstis_1k_OPS1_py38.nc
