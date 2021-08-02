@@ -140,7 +140,10 @@ class OpenMMToolsMCEngine(paths.engines.DynamicsEngine):
 
     @classmethod
     def from_dict(cls, dct):
-        deserialize = openmmtools.utils.deserialize
+        # deserialize = openmmtools.utils.deserialize
+        def deserialize(entry):
+            entry = copy.copy(entry)
+            return openmmtools.utils.deserialize(entry)
         dct['thermodynamic_state'] = deserialize(dct['thermodynamic_state'])
         dct['move'] = deserialize(dct['move'])
         return cls(**dct)

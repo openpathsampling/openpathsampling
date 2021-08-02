@@ -129,8 +129,6 @@ class TestOpenMMToolsMCEngine(object):
         serialized = mcengine.to_dict()
         deserialized = mcengine.__class__.from_dict(copy.copy(serialized))
         reserialized = deserialized.to_dict()
-        pytest.skip()
-        # this assertion currently fails: see choderalab/openmmtools#517
         assert serialized == reserialized
 
     def test_mdtraj_topology_error(self, mcengine):
