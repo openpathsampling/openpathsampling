@@ -273,3 +273,7 @@ class TestSQLStorageBackend(object):
             expected = tuple(samp_dct[k]
                              for k in ['replica', 'ensemble', 'trajectory'])
             assert row[2:] == expected
+
+    def test_non_existing_file(self):
+        with pytest.raises(FileNotFoundError, match="foo.sql"):
+            SQLStorageBackend("foo.sql")

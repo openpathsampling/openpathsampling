@@ -142,6 +142,10 @@ class SQLStorageBackend(StorableNamedObject):
                 # act as if the mode is 'w'; note we change this back later
                 self.mode = 'w'
 
+            if self.mode == 'r' and not file_exists:
+                raise FileNotFoundError(
+                    f"No such file or directory: '{filename}'")
+
             self.connection_uri = self.filename_from_dialect(
                 filename,
                 self.sql_dialect
