@@ -45,7 +45,7 @@ class ExampleExternalEngine(peng.ExternalEngine):
         # nothing exists, linecache returns '', so we return None.
         # Otherwise, try to make a snapshot and return "partial" if we fail
         line = linecache.getline(filename, first_line)
-        if line is '':
+        if line == '':
             snap = None
         else:
             try:
