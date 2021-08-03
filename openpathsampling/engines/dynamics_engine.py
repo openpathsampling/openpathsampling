@@ -50,55 +50,6 @@ class EngineNaNError(EngineError):
 class DynamicsEngine(StorableNamedObject):
     """
     Wraps simulation tool (parameters, storage, etc.)
-
-    Attributes
-    ----------
-    on_nan : str
-        set the behaviour of the engine when `NaN` is detected.
-        Possible is
-
-        1.  `fail` will raise an exception `EngineNaNError`
-        2.  `retry` will rerun the trajectory in engine.generate, these moves
-            do not satisfy detailed balance
-
-    on_error : str
-        set the behaviour of the engine when an exception happens.
-        Possible is
-
-        1.  `fail` will raise an exception `EngineError`
-        2.  `retry` will rerun the trajectory in engine.generate, these moves
-            do not satisfy detailed balance
-
-    on_max_length : str
-        set the behaviour if the trajectory length is `n_frames_max`.
-        If `n_frames_max == 0` this will be ignored and nothing happens.
-        Possible is
-
-        1.  `fail` will raise an exception `EngineMaxLengthError`
-        2.  `stop` will stop and return the max length trajectory (default)
-        3.  `retry` will rerun the trajectory in engine.generate, these moves
-            do not satisfy detailed balance
-
-    retries_when_nan : int, default: 2
-        the number of retries (if chosen) before an exception is raised
-
-    retries_when_error : int, default: 2
-        the number of retries (if chosen) before an exception is raised
-
-    retries_when_max_length : int, default: 0
-        the number of retries (if chosen) before an exception is raised
-
-    on_retry : str or callable
-        the behaviour when a try is started. Since you have already generated
-        some trajectory you might not restart completely. Possibilities are
-
-        1.  `full` will restart completely and use the initial frames (default)
-        2.  `keep_half` will cut the existing in half but keeping at least the initial
-        3.  `remove_interval` will remove as many frames as the `interval`
-        4.  a callable will be used as a function to generate the new from the
-            old trajectories, e.g. `lambda t: t[:10]` would restart with the
-            first 10 frames
-
     Notes
     -----
     Should be considered an abstract class: only its subclasses can be
@@ -110,13 +61,6 @@ class DynamicsEngine(StorableNamedObject):
 
     _default_options = {
         'n_frames_max': None,
-        'on_max_length': 'fail',
-        'on_nan': 'fail',
-        'retries_when_nan': 2,
-        'retries_when_error': 0,
-        'retries_when_max_length': 0,
-        'on_retry': 'full',
-        'on_error': 'fail'
     }
 
     #units = {
@@ -506,11 +450,11 @@ class DynamicsEngine(StorableNamedObject):
                 if isinstance(handled, Exception):
                     self.stop(trajectory)
                     raise handled
-                elif handled is True:
-                    pass
+                elif isinstance(handled, BaseSnapshot):
+                    snapshot = handled
                 else:
                     raise EngineError("snapshot_error_handler should return an "
-                                      "error or ``True``, not %s" % handled)
+                                      "error or a snapshot, not %s" % handled)
 
             add_frame(snapshot, trajectory)  # depends on direction
             # now this is trusted
