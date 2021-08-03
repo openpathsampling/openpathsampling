@@ -108,8 +108,13 @@ class OpenMMToolsMCEngine(paths.engines.DynamicsEngine):
 
 
     def _get_n_accepted(self):
-        return sum(dct['n_accepted']
-                   for dct in self._sampler.move.statistics)
+        statistics = self._sampler.move.statistics
+        if isinstance(statistics, dict):
+            # single move
+            return statistics['n_accepted']
+        else:
+            # sequence or weighted move
+            return sum(dct['n_accepted'] for dct in statistics)
 
 
     def generate_next_frame(self):

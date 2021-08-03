@@ -1,6 +1,7 @@
 import pytest
 import openpathsampling as paths
 import copy
+import numpy as np
 
 from openpathsampling.engines.openmm.mcengine import *
 
@@ -103,7 +104,20 @@ class TestOpenMMToolsMCEngine(object):
     def test_current_snapshot_update(self, mcengine, snapshot):
         # when we set a new snapshot (and one already exists) the
         # internal information should be updated
-        pytest.skip()
+        unit = pytest.importorskip('simtk.unit')
+        pos = snapshot.coordinates.value_in_unit(unit.nanometers)
+        new_pos = np.random.random(pos.shape) * unit.nanometers
+        new_snapshot = snapshot.construct(
+            coordinates=new_pos,
+            velocities=snapshot.velocities,
+            box_vectors=snapshot.box_vectors,
+            engine=snapshot.engine
+        )
+        mcengine.current_snapshot = snapshot
+        mcengine.current_snapshot = new_snapshot
+        sampler_state = mcengine._sampler.sampler_state
+        assert not (sampler_state.positions == snapshot.coordinates).all()
+        assert (sampler_state.positions == new_snapshot.coordinates).all()
 
     def test_current_snapshot_uninitialized_error(self, mcengine):
         # if we try to get the current snapshot before the engine has been
@@ -156,11 +170,18 @@ class TestOpenMMToolsMCEngine(object):
         assert isinstance(mdt, md.Trajectory)
         assert len(mdt) == len(traj)
 
+    @pytest.mark.parametrize('wrapper', [None, 'weighted', 'sequence'])
     @pytest.mark.parametrize('accept', ['accept', 'reject'])
-    def test_get_n_accepted(self, accept, thermodynamic_state, snapshot):
+    def test_get_n_accepted(self, wrapper, accept, thermodynamic_state,
+                            snapshot):
         # (not API) ensure that we get the correct number of accepted steps
         # from a mover
-        move = mcmc.WeightedMove([(AlwaysMove(accept), 1)])
+        wrap = {
+            None: lambda x: x,
+            'weighted': lambda x: mcmc.WeightedMove([(x, 1)]),
+            'sequence': lambda x: mcmc.SequenceMove([x]),
+        }[wrapper]
+        move = wrap(AlwaysMove(accept))
         results = {'accept': [1, 2], 'reject': [0, 0]}[accept]
         always_accept = OpenMMToolsMCEngine(
             move=move,
