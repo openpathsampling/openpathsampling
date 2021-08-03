@@ -45,7 +45,7 @@ if HAS_SIMTK:
     )
 
 ### DIRECT SERIALIZATION #################################################
-_simtk_re = re.compile("simtk\((.*)\)\*((ndarray|float).*)")
+_simtk_re = re.compile(r"simtk\((.*)\)\*((ndarray|float).*)")
 
 
 def simtk_unit_from_string(unit_str):

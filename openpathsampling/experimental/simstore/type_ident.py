@@ -3,11 +3,14 @@ import numbers
 import numpy as np
 from .serialization_helpers import has_uuid
 
+
 class TypeStringError(RuntimeError):
     pass
 
+
 class TypeIdentificationError(RuntimeError):
     pass
+
 
 class TypingManager(object):
     def __init__(self, type_ids):
@@ -69,7 +72,7 @@ class StandardTypeIdentifier(object):
 
 class NumpyTypeIdentifier(object):
     ndarray_re = re.compile(
-        "ndarray\.(?P<dtype>[a-z0-9]+)(?P<shape>\([0-9\,\ ]+\))"
+        r"ndarray\.(?P<dtype>[a-z0-9]+)(?P<shape>\([0-9\,\ ]+\))"
     )
     def __init__(self):
         self.name = 'ndarray'
