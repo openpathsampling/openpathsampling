@@ -241,11 +241,12 @@ class SQLStorageBackend(StorableNamedObject):
         More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
         """
         filename = kwargs.pop('filename', None)
+        mode = kwargs.get('mode', 'r')
         obj = cls(**kwargs)
         obj.filename = filename
         obj.connection_uri = connection_uri
         obj._metadata = sql.MetaData(bind=engine)
-        obj._initialize_with_mode(self.mode)
+        obj._initialize_with_mode(mode)
         return obj
 
 
