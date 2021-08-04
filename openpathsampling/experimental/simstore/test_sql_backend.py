@@ -1,6 +1,5 @@
 from .sql_backend import *
 import pytest
-sqla = pytest.importorskip("sqlalchemy")
 
 class TestSQLStorageBackend(object):
     def setup(self):
@@ -88,7 +87,7 @@ class TestSQLStorageBackend(object):
             'write': SQLStorageBackend('test1.sql', mode='w'),
             'append': SQLStorageBackend('test2.sql', mode='a'),
         }[db]
-        table_names = sqla.inspect(database.engine).get_table_names()
+        table_names = sql.inspect(database.engine).get_table_names()
         assert set(table_names) == self.default_table_names
         assert self._col_names_set('uuid') == {'uuid', 'table', 'row'}
         assert self._col_names_set('tables') == {'name', 'idx', 'module',
@@ -100,7 +99,7 @@ class TestSQLStorageBackend(object):
             'snapshot1': [('filename', 'str'), ('index', 'int')]
         }
         self.database.register_schema(new_schema, self.table_to_class)
-        table_names = sqla.inspect(self.database.engine).get_table_names()
+        table_names = sql.inspect(self.database.engine).get_table_names()
         assert set(table_names) == self.default_table_names | {'snapshot1'}
         assert self._col_names_set('snapshot1') == {'idx', 'uuid',
                                                     'filename', 'index'}
