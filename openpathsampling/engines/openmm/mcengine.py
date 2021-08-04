@@ -62,6 +62,15 @@ class OpenMMToolsMCEngine(paths.engines.DynamicsEngine):
         Topology information for this sysetm. If an :class:`.MDTrajTopology`
         is provided, this will enable MDTraj integration.
     """
+
+    base_snapshot_type = Snapshot
+
+    # taken from OpenMM engine; this should change
+    _default_options = {
+        'n_steps_per_frame': 10,
+        'n_frames_max': 5000,
+    }
+
     def __init__(self, thermodynamic_state, move, options, topology=None):
         # we assume that we have standard n_atoms * 3 dimensions
         descriptor = paths.engines.SnapshotDescriptor.construct(

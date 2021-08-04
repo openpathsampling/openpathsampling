@@ -136,6 +136,14 @@ class TestOpenMMToolsMCEngine(object):
         with pytest.raises(EngineNotInitializedError):
             mcengine.generate_next_frame()
 
+    def test_generate_integration(self, mcengine, snapshot):
+        # check that integration with the generate method: we should be able
+        # to create a candidate trajectory for the ensemble
+        ensemble = paths.LengthEnsemble(5)
+        traj = mcengine.generate(snapshot, ensemble.can_append)
+        assert isinstance(traj, paths.Trajectory)
+        assert ensemble(traj)
+
     def test_serialization_cycle(self, mcengine):
         # if we serialize then deserialize, the to_dict of the deserialized
         # object should be the same as the to_dict of the original
