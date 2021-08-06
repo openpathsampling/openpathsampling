@@ -265,8 +265,10 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
         except TypeError:
             ndim = 1
         if ndim > 2 or ndim < 1:
-            raise RuntimeError("Histogram key dimension {0} > 2 or {0} < 1 "
-                               + "(key: {1})".format(ndim, key))
+            err = ("Histogram key dimension {0} > 2 or {0} < 1 "
+                   "(key: {1})").format(ndim, key)
+
+            raise RuntimeError(err)
         return ndim
 
     def committor_histogram(self, new_hash, state, bins=10):
