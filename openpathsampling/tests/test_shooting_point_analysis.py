@@ -2,11 +2,8 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import zip
 from builtins import range
-from past.utils import old_div
 from builtins import object
 import pytest
-from nose.tools import (assert_equal, raises,
-                        assert_almost_equal, assert_true, assert_in)
 from numpy.testing import assert_array_almost_equal
 from .test_helpers import (make_1d_traj, data_filename, assert_items_equal,
                            assert_same_items)
@@ -38,41 +35,40 @@ class TestTransformedDict(object):
                                          self.untransformed)
 
     def test_initialization(self):
-        assert_equal(self.test_dict.store, self.transformed)
-        assert_equal(self.test_dict.hash_representatives,
-                     {0: (0, 1), 1: (1, 2), 2: (2, 3)})
+        assert self.test_dict.store == self.transformed
+        assert (self.test_dict.hash_representatives ==
+                {0: (0, 1), 1: (1, 2), 2: (2, 3)})
 
     def test_set_get(self):
         self.empty[(5, 6)] = "d"
-        assert_equal(self.empty.store, {5: "d"})
-        assert_equal(self.empty.hash_representatives, {5: (5, 6)})
-        assert_equal(self.empty[(5, 6)], "d")
+        assert self.empty.store == {5: "d"}
+        assert self.empty.hash_representatives == {5: (5, 6)}
+        assert self.empty[(5, 6)] == "d"
 
     def test_update(self):
         self.test_dict.update({(5, 6): "d"})
-        assert_equal(self.test_dict.store,
-                     {0: "a", 1: "b", 2: "c", 5: "d"})
-        assert_equal(self.test_dict.hash_representatives,
-                     {0: (0, 1), 1: (1, 2), 2: (2, 3), 5: (5, 6)})
+        assert self.test_dict.store == {0: "a", 1: "b", 2: "c", 5: "d"}
+        assert (self.test_dict.hash_representatives ==
+                {0: (0, 1), 1: (1, 2), 2: (2, 3), 5: (5, 6)})
 
     def test_del(self):
         del self.test_dict[(0, 1)]
-        assert_equal(self.test_dict.store, {1: "b", 2: "c"})
+        assert self.test_dict.store == {1: "b", 2: "c"}
 
     def test_iter(self):
         iterated = [k for k in self.test_dict]
         for (truth, beauty) in zip(list(self.untransformed.keys()), iterated):
-            assert_equal(truth, beauty)
+            assert truth == beauty
 
     def test_len(self):
-        assert_equal(len(self.test_dict), 3)
-        assert_equal(len(self.empty), 0)
+        assert len(self.test_dict) == 3
+        assert len(self.empty) == 0
 
     def test_rehash(self):
         rehashed = self.test_dict.rehash(lambda x: x[1])
-        assert_equal(rehashed.store, {1: "a", 2: "b", 3: "c"})
-        assert_equal(rehashed.hash_representatives,
-                     {1: (0, 1), 2: (1, 2), 3: (2, 3)})
+        assert rehashed.store == {1: "a", 2: "b", 3: "c"}
+        assert (rehashed.hash_representatives ==
+                {1: (0, 1), 2: (1, 2), 3: (2, 3)})
 
 
 class TestSnapshotByCoordinateDict(object):
@@ -92,11 +88,11 @@ class TestSnapshotByCoordinateDict(object):
                                                self.snapB1: "B1"})
 
     def test_initialization(self):
-        assert_equal(self.dict1.store, {self.key_A: "A1", self.key_B: "B1"})
+        assert self.dict1.store == {self.key_A: "A1", self.key_B: "B1"}
 
     def test_get_set(self):
         self.dict1[self.snapA2] = "A2"
-        assert_equal(self.dict1.store, {self.key_A: "A2", self.key_B: "B1"})
+        assert self.dict1.store == {self.key_A: "A2", self.key_B: "B1"}
 
 
 class TestShootingPointAnalysis(object):
@@ -183,13 +179,12 @@ class TestShootingPointAnalysis(object):
             ShootingPointAnalysis(steps, [self.left, self.right],
                                   skip_rejected=True)
 
-
     def test_shooting_point_analysis(self):
-        assert_equal(len(self.analyzer), 2)
-        assert_true(0 < self.analyzer[self.snap0][self.left] < 20)
-        assert_true(0 < self.analyzer[self.snap0][self.right] < 20)
-        assert_true(0 < self.analyzer[self.snap1][self.left] < 20)
-        assert_true(0 < self.analyzer[self.snap1][self.right] < 20)
+        assert len(self.analyzer) == 2
+        assert 0 < self.analyzer[self.snap0][self.left] < 20
+        assert 0 < self.analyzer[self.snap0][self.right] < 20
+        assert 0 < self.analyzer[self.snap1][self.left] < 20
+        assert 0 < self.analyzer[self.snap1][self.right] < 20
 
     def test_from_individual_runs(self):
         runs = [(self.snap0, self.left),
@@ -201,10 +196,10 @@ class TestShootingPointAnalysis(object):
                 (self.snap1, self.left),
                 (self.snap1, self.right)]
         analyzer = ShootingPointAnalysis.from_individual_runs(runs)
-        assert_equal(analyzer[self.snap0][self.left], 3)
-        assert_equal(analyzer[self.snap0][self.right], 1)
-        assert_equal(analyzer[self.snap1][self.left], 2)
-        assert_equal(analyzer[self.snap1][self.right], 2)
+        assert analyzer[self.snap0][self.left] == 3
+        assert analyzer[self.snap0][self.right] == 1
+        assert analyzer[self.snap1][self.left] == 2
+        assert analyzer[self.snap1][self.right] == 2
 
     def test_non_shooting_steps(self):
         network = paths.TPSNetwork(self.left, self.right)
@@ -213,10 +208,10 @@ class TestShootingPointAnalysis(object):
         mover = paths.PathReversalMover(ensemble)
         scheme = paths.LockedMoveScheme(mover, network)
         init_conds = scheme.initial_conditions_from_trajectories([init_traj])
-        assert_equal(len(init_conds), 1)
+        assert len(init_conds) == 1
         self.storage.close()
         self.storage = paths.Storage(self.filename, "w")
-        assert_equal(init_conds[ensemble].trajectory, init_traj)
+        assert init_conds[ensemble].trajectory == init_traj
         sim = paths.PathSampling(storage=self.storage,
                                  move_scheme=scheme,
                                  sample_set=init_conds)
@@ -225,30 +220,30 @@ class TestShootingPointAnalysis(object):
         step0 = self.storage.steps[0]
         step1 = self.storage.steps[1]
 
-        assert_equal(self.analyzer.step_key(step0), None)
-        assert_equal(self.analyzer.step_key(step1), None)
+        assert self.analyzer.step_key(step0) is None
+        assert self.analyzer.step_key(step1) is None
 
-        assert_equal(self.analyzer.analyze_single_step(step0), [])
-        assert_equal(self.analyzer.analyze_single_step(step1), [])
+        assert self.analyzer.analyze_single_step(step0) == []
+        assert self.analyzer.analyze_single_step(step1) == []
 
     def test_committor(self):
         committor_A = self.analyzer.committor(self.left)
         committor_B = self.analyzer.committor(self.right)
-        assert_true(len(committor_A) == len(committor_B) == 2)
+        assert len(committor_A) == len(committor_B) == 2
         keys = [self.snap0, self.snap1]
         hashes0 = [self.analyzer.hash_function(k) for k in keys]
         for kA, kB in zip(list(committor_A.keys()), list(committor_B.keys())):
             hashA = self.analyzer.hash_function(kA)
             hashB = self.analyzer.hash_function(kB)
-            assert_equal(hashA, hashB)
-            assert_in(hashA, hashes0)
+            assert hashA == hashB
+            assert hashA in hashes0
             # hash is the same; snapshot is not
         for snap in committor_A:
-            assert_equal(committor_A[snap],
-                         old_div(float(self.analyzer[snap][self.left]), 20.0))
-            assert_almost_equal(committor_A[snap] + committor_B[snap], 1.0)
-            assert_equal(committor_B[snap],
-                         old_div(float(self.analyzer[snap][self.right]), 20.0))
+            assert (committor_A[snap] ==
+                    float(self.analyzer[snap][self.left]) / 20.0)
+            assert pytest.approx(committor_A[snap] + committor_B[snap]) == 1.0
+            assert (committor_B[snap] ==
+                    float(self.analyzer[snap][self.right]) / 20.0)
 
         rehash = lambda snap: 2 * snap.xyz[0][0]
         committor_A_rehash = self.analyzer.committor(self.left, rehash)
@@ -256,18 +251,18 @@ class TestShootingPointAnalysis(object):
         rehash_values = sorted(committor_A_rehash.values())
         assert_items_equal(orig_values, rehash_values)
         for snap in list(committor_A.keys()):
-            assert_in(rehash(snap), list(committor_A_rehash.keys()))
+            assert rehash(snap) in list(committor_A_rehash.keys())
 
     def test_committor_histogram_1d(self):
         rehash = lambda snap: 2 * snap.xyz[0][0]
         input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
         hist, bins = self.analyzer.committor_histogram(rehash, self.left,
                                                        input_bins)
-        assert_equal(len(hist), 5)
+        assert len(hist) == 5
         for index in [1, 3, 4]:
-            assert_true(np.isnan(hist[index]))
+            assert np.isnan(hist[index])
         for index in [0, 2]:
-            assert_true(hist[index] > 0)
+            assert hist[index] > 0
         assert_array_almost_equal(bins, input_bins)
 
     def test_committor_histogram_2d(self):
@@ -275,31 +270,29 @@ class TestShootingPointAnalysis(object):
         input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
         hist, b_x, b_y = self.analyzer.committor_histogram(rehash, self.left,
                                                            input_bins)
-        assert_equal(hist.shape, (5, 5))
+        assert hist.shape == (5, 5)
         for i in range(5):
             for j in range(5):
                 if (i, j) in [(0, 0), (1, 2)]:
-                    pass
-                    assert_true(hist[(i, j)] > 0)
+                    assert hist[(i, j)] > 0
                 else:
-                    assert_true(np.isnan(hist[(i, j)]))
+                    assert np.isnan(hist[(i, j)])
 
         # this may change later to bins[0]==bins[1]==input_bins
         assert_array_almost_equal(input_bins, b_x)
         assert_array_almost_equal(input_bins, b_y)
 
-    @raises(RuntimeError)
     def test_committor_histogram_3d(self):
         # only 1D and 2D are supported
         rehash = lambda snap: (snap.xyz[0][0], 2 * snap.xyz[0][0], 0.0)
         input_bins = [-0.05, 0.05, 0.15, 0.25, 0.35, 0.45]
-        hist, b_x, b_y = self.analyzer.committor_histogram(rehash, self.left,
-                                                           input_bins)
+        with pytest.raises(RuntimeError, match="key dimension"):
+            self.analyzer.committor_histogram(rehash, self.left, input_bins)
 
     def test_to_pandas(self):
         df1 = self.analyzer.to_pandas()
         df2 = self.analyzer.to_pandas(lambda x: x.xyz[0][0])
-        assert_equal(df1.shape, (2, 2))
+        assert df1.shape == (2, 2)
         assert_items_equal(df1.index, list(range(2)))
         assert_same_items(df2.index, [0.0, 0.1])
         assert_same_items(df1.columns, [self.left.name, self.right.name])
