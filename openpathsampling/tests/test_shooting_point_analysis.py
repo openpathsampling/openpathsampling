@@ -4,6 +4,7 @@ from builtins import zip
 from builtins import range
 from past.utils import old_div
 from builtins import object
+import pytest
 from nose.tools import (assert_equal, raises,
                         assert_almost_equal, assert_true, assert_in)
 from numpy.testing import assert_array_almost_equal
@@ -127,9 +128,9 @@ class TestShootingPointAnalysis(object):
             'n_steps_per_frame': 5
         }
         self.engine = toys.Engine(options=options, topology=topology)
-        cv = paths.FunctionCV("Id", lambda snap: snap.coordinates[0][0])
-        self.left = paths.CVDefinedVolume(cv, float("-inf"), -1.0)
-        self.right = paths.CVDefinedVolume(cv, 1.0, float("inf"))
+        self.cv = paths.FunctionCV("Id", lambda snap: snap.coordinates[0][0])
+        self.left = paths.CVDefinedVolume(self.cv, float("-inf"), -1.0)
+        self.right = paths.CVDefinedVolume(self.cv, 1.0, float("inf"))
 
         randomizer = paths.NoModification()
         self.filename = data_filename("shooting_analysis.nc")
@@ -155,6 +156,33 @@ class TestShootingPointAnalysis(object):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None  # set by Committor
+
+    def test_overlapping_states(self):
+        left2 = paths.CVDefinedVolume(self.cv, float("-inf"), -1.0)
+        right2 = paths.CVDefinedVolume(self.cv, float("-inf"), -1.0)
+        with pytest.raises(ValueError, match="overlap"):
+            ShootingPointAnalysis(self.storage.steps, [self.left, left2,
+                                                       self.right, right2])
+
+    def test_no_endpoint_in_state(self):
+        steps = [s for s in self.storage.steps]
+        # break a step but also reject it
+        broken_step = steps[-1]
+        broken_step.change.canonical._accepted = False
+        init_traj = broken_step.change.canonical.details.initial_trajectory
+        broken_step.change.canonical.trials[0].trajectory = init_traj
+        steps.append(broken_step)
+        with pytest.raises(ValueError, match="skip_rejected"):
+            ShootingPointAnalysis(steps, [self.left, self.right])
+        # Make sure we don't hit it if we skip_rejected
+        ShootingPointAnalysis(steps, [self.left, self.right],
+                              skip_rejected=True)
+        # Make sure we still raise if it is an accepted step
+        broken_step.change.canonical._accepted = True
+        with pytest.raises(ValueError, match="without endpoints"):
+            ShootingPointAnalysis(steps, [self.left, self.right],
+                                  skip_rejected=True)
+
 
     def test_shooting_point_analysis(self):
         assert_equal(len(self.analyzer), 2)

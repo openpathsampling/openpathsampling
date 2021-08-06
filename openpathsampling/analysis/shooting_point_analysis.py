@@ -91,11 +91,16 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
     states : list of :class:`.Volume`
         volumes to consider as states for the analysis. For pandas output,
         these volumes must be named.
+    skip_rejected: bool, default False
+         boolean flag to skip rejected moves
     """
-    def __init__(self, steps, states):
+    def __init__(self, steps, states, skip_rejected=False):
         super(ShootingPointAnalysis, self).__init__()
         self.states = states
-        if steps is not None:
+        self.skip_rejected = skip_rejected
+        if steps and self.skip_rejected:
+            steps = [step for step in steps if step.change.canonical.accepted]
+        if steps:
             self.analyze(steps)
 
     def analyze(self, steps):
@@ -138,8 +143,25 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
                  for state in self.states}
             )
             total_count = sum(total.values())
-            # TODO: clarify assertion (at least one endpoint in state)
-            assert total_count == 1 or total_count == 2
+            if total_count == 0:
+                err = ("Step "+str(step.mccycle)+" has a trajectory without "
+                       "endpoints in any of the states.")
+                solvable = (not step.change.canonical.accepted and
+                            not self.skip_rejected)
+                if solvable:
+                    err += ("\nTo skip analysis of rejected steps set "
+                            "'skip_rejected=True'")
+                raise ValueError(err)
+            if total_count > len(test_points):
+                # TODO: is this actually wrong / an error?
+                err = ("The " + str(len(test_points)) +
+                       " end points of the trail trajectory from step " +
+                       str(step.mccycle) +
+                       " found " + str(total_count) + " stable states."
+                       "\n Are you sure your states don't overlap?"
+                       )
+                raise ValueError(err)
+
             try:
                 self[key] += total
             except KeyError:
@@ -167,7 +189,8 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
         """
         key = None
         try:
-            details = step.change.canonical.details
+            change = step.change.canonical
+            details = change.details
             shooting_snap = details.shooting_snapshot
         except AttributeError:
             # wrong kind of move (no shooting_snapshot)
