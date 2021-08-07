@@ -17,6 +17,35 @@ class EngineNotInitializedError(Exception):
 INITIALIZATION_ERROR = EngineNotInitializedError("Set current_snapshot "
                                                  "before using engine.")
 
+class SamplerStateEngine(paths.engines.DynamicsEngine):
+    SnapshotClass = Snapshot
+    InternalizedSnapshotClass = Snapshot
+    def __init__(self, sampler_state):
+        descriptor = paths.engines.SnapshotDescriptor.construct(
+            snapshot_class=self.SnapshotClass,
+            snapshot_dimensions={
+                'n_atoms': len(sampler_state.positions),
+                'n_spatial': 3,
+            }
+        )
+        super(SamplerStateEngine, self).__init__(options={},
+                                                 descriptor=descriptor)
+
+    @classmethod
+    def from_descriptor(cls, descriptor):
+        obj = cls.__new__(cls)
+        super(SamplerStateEngine, obj).__init__(options={},
+                                                descriptor=descriptor)
+        return obj
+
+    def to_dict(self):
+        return {'descriptor': self.descriptor}
+
+    @classmethod
+    def from_dict(cls, dct):
+        return cls.from_descriptor(dct['descriptor'])
+
+
 def snapshot_from_sampler_state(sampler_state, engine=None):
     """Generate an OPS SnapShot from a OpenMMTools SamplerState
 
@@ -30,12 +59,16 @@ def snapshot_from_sampler_state(sampler_state, engine=None):
         which will make some functionality (e.g, MDTraj integration)
         impossible.
     """
+    if engine is None:
+        engine = SamplerStateEngine(sampler_state)
+
     return Snapshot.construct(
         coordinates=copy.copy(sampler_state.positions),
         velocities=copy.copy(sampler_state.velocities),
         box_vectors=copy.copy(sampler_state.box_vectors),
         engine=engine
     )
+
 
 class OpenMMToolsMCEngine(paths.engines.DynamicsEngine):
     """Engine for the OpenMMTools MCMC package.
@@ -78,10 +111,10 @@ class OpenMMToolsMCEngine(paths.engines.DynamicsEngine):
             {'n_atoms': thermodynamic_state.system.getNumParticles(),
              'n_spatial': 3}
         )
-        super(OpenMMToolsMCEngine, self).__init__(options, descriptor)
+        super(OpenMMToolsMCEngine, self).__init__(options=options,
+                                                  descriptor=descriptor)
         self.thermodynamic_state = thermodynamic_state
         self.move = move
-        self.options = options
         self.topology = topology
         # _sampler is the OpenMMTools MCMCSampler
         self._sampler = None
