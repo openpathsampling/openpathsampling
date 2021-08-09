@@ -410,7 +410,7 @@ def _get_modified_shooting_point(step):
         return NOT_EXTRACTED
     details = step.change.canonical.details
     try:
-        shooting_pt = ...
+        shooting_pt = details.modified_shooting_snapshot
     except AttributeError:
         # return the original shooting point for one-way
         shooting_pt = details.shooting_snapshot
