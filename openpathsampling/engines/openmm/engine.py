@@ -103,7 +103,7 @@ class OpenMMEngine(DynamicsEngine):
 
                 'n_steps_per_frame' : int, default: 10
                     the number of integration steps per returned snapshot
-                'n_frames_max' : int or None, default: 5000,
+                'n_frames_max' : int, default: 5000,
                     the maximal number of frames allowed for a returned
                     trajectory object
 
@@ -173,7 +173,7 @@ class OpenMMEngine(DynamicsEngine):
 
                 'n_steps_per_frame' : int, default: 10
                     the number of integration steps per returned snapshot
-                'n_frames_max' : int or None, default: 5000,
+                'n_frames_max' : int, default: 5000,
                     the maximal number of frames allowed for a returned
                     trajectory object
 
