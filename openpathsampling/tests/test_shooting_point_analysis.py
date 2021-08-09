@@ -156,28 +156,25 @@ class TestShootingPointAnalysis(object):
     def test_overlapping_states(self):
         left2 = paths.CVDefinedVolume(self.cv, float("-inf"), -1.0)
         right2 = paths.CVDefinedVolume(self.cv, float("-inf"), -1.0)
-        with pytest.raises(ValueError, match="overlap"):
+        with pytest.raises(MoreStatesThanFramesError, match="overlap"):
             ShootingPointAnalysis(self.storage.steps, [self.left, left2,
                                                        self.right, right2])
 
-    def test_no_endpoint_in_state(self):
+    @pytest.mark.parametrize("accepted", [True, False])
+    def test_no_endpoint_in_state(self, accepted):
         steps = [s for s in self.storage.steps]
-        # break a step but also reject it
+        # break a step but also force it to be accepted/rejected
         broken_step = steps[-1]
         broken_step.change.canonical._accepted = False
         init_traj = broken_step.change.canonical.details.initial_trajectory
         broken_step.change.canonical.trials[0].trajectory = init_traj
+        broken_step.change.canonical._accepted = accepted
         steps.append(broken_step)
-        with pytest.raises(ValueError, match="skip_rejected"):
+        with pytest.raises(NoFramesInStateError, match="without endpoints"):
             ShootingPointAnalysis(steps, [self.left, self.right])
-        # Make sure we don't hit it if we skip_rejected
+        # Make sure we don't hit it if we don't want to error
         ShootingPointAnalysis(steps, [self.left, self.right],
-                              skip_rejected=True)
-        # Make sure we still raise if it is an accepted step
-        broken_step.change.canonical._accepted = True
-        with pytest.raises(ValueError, match="without endpoints"):
-            ShootingPointAnalysis(steps, [self.left, self.right],
-                                  skip_rejected=True)
+                              error_if_no_state=False)
 
     def test_shooting_point_analysis(self):
         assert len(self.analyzer) == 2

@@ -76,6 +76,14 @@ class SnapshotByCoordinateDict(TransformedDict):
                                                        *args, **kwargs)
 
 
+class NoFramesInStateError(ValueError):
+    pass
+
+
+class MoreStatesThanFramesError(ValueError):
+    pass
+
+
 class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
     """
     Container and methods for shooting point analysis.
@@ -91,15 +99,13 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
     states : list of :class:`.Volume`
         volumes to consider as states for the analysis. For pandas output,
         these volumes must be named.
-    skip_rejected: bool, default False
-         boolean flag to skip rejected moves
+    error_if_no_state: bool, default True
+         boolean flag to error on steps that don't end in one of the states
     """
-    def __init__(self, steps, states, skip_rejected=False):
+    def __init__(self, steps, states, error_if_no_state=True):
         super(ShootingPointAnalysis, self).__init__()
         self.states = states
-        self.skip_rejected = skip_rejected
-        if steps and self.skip_rejected:
-            steps = [step for step in steps if step.change.canonical.accepted]
+        self.error_if_no_state = error_if_no_state
         if steps:
             self.analyze(steps)
 
@@ -112,7 +118,16 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
             MC steps to analyze
         """
         for step in self.progress(steps):
-            self.analyze_single_step(step)
+            try:
+                self.analyze_single_step(step)
+            except NoFramesInStateError as err:
+                if self.error_if_no_state:
+                    addition = ("\nTo disable this error set "
+                                "'error_if_no_state=False'")
+                    raise type(err)(str(err) + addition)
+
+                else:
+                    pass
 
     def analyze_single_step(self, step):
         """
@@ -146,12 +161,7 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
             if total_count == 0:
                 err = ("Step "+str(step.mccycle)+" has a trajectory without "
                        "endpoints in any of the states.")
-                solvable = (not step.change.canonical.accepted and
-                            not self.skip_rejected)
-                if solvable:
-                    err += ("\nTo skip analysis of rejected steps set "
-                            "'skip_rejected=True'")
-                raise ValueError(err)
+                raise NoFramesInStateError(err)
             if total_count > len(test_points):
                 # TODO: is this actually wrong / an error?
                 err = ("The " + str(len(test_points)) +
@@ -160,7 +170,7 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
                        " found " + str(total_count) + " stable states."
                        "\n Are you sure your states don't overlap?"
                        )
-                raise ValueError(err)
+                raise MoreStatesThanFramesError(err)
 
             try:
                 self[key] += total
