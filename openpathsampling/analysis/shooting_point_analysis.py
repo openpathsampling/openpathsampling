@@ -1,6 +1,7 @@
 import collections
 import pandas as pd
 import numpy as np
+import warnings
 
 from openpathsampling.progress import SimpleProgress
 
@@ -76,11 +77,16 @@ class SnapshotByCoordinateDict(TransformedDict):
                                                        *args, **kwargs)
 
 
-class NoFramesInStateError(ValueError):
+class ShootingPointAnalysisError(AssertionError):
+    # TODO this should inherit from a different Error type in OPS 2.0
     pass
 
 
-class MoreStatesThanFramesError(ValueError):
+class NoFramesInStateError(ShootingPointAnalysisError):
+    pass
+
+
+class MoreStatesThanFramesError(ShootingPointAnalysisError):
     pass
 
 
@@ -127,7 +133,7 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
                     raise type(err)(str(err) + addition)
 
                 else:
-                    pass
+                    warnings.warn(str(err))
 
     def analyze_single_step(self, step):
         """

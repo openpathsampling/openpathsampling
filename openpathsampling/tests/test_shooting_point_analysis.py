@@ -165,16 +165,18 @@ class TestShootingPointAnalysis(object):
         steps = [s for s in self.storage.steps]
         # break a step but also force it to be accepted/rejected
         broken_step = steps[-1]
-        broken_step.change.canonical._accepted = False
         init_traj = broken_step.change.canonical.details.initial_trajectory
         broken_step.change.canonical.trials[0].trajectory = init_traj
         broken_step.change.canonical._accepted = accepted
+        broken_step.mccycle = 123
         steps.append(broken_step)
         with pytest.raises(NoFramesInStateError, match="without endpoints"):
             ShootingPointAnalysis(steps, [self.left, self.right])
         # Make sure we don't hit it if we don't want to error
-        ShootingPointAnalysis(steps, [self.left, self.right],
-                              error_if_no_state=False)
+        with pytest.warns(UserWarning, match="Step 123"):
+            ShootingPointAnalysis(steps, [self.left, self.right],
+                                  error_if_no_state=False)
+
 
     def test_shooting_point_analysis(self):
         assert len(self.analyzer) == 2
