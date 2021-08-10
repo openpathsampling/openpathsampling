@@ -169,14 +169,24 @@ class TestShootingPointAnalysis(object):
         broken_step.change.canonical.trials[0].trajectory = init_traj
         broken_step.change.canonical._accepted = accepted
         broken_step.mccycle = 123
-        steps.append(broken_step)
         with pytest.raises(NoFramesInStateError, match="without endpoints"):
             ShootingPointAnalysis(steps, [self.left, self.right])
-        # Make sure we don't hit it if we don't want to error
-        with pytest.warns(UserWarning, match="Step 123"):
+
+        # Make sure we don't raise if we don't want to error
+        # and we warn more than once if multiple steps are wrong
+        broken_step = steps[0]
+        init_traj = broken_step.change.canonical.details.initial_trajectory
+        broken_step.change.canonical.trials[0].trajectory = init_traj
+        broken_step.change.canonical._accepted = accepted
+        broken_step.mccycle = 321
+        with pytest.warns(UserWarning) as warn:
             ShootingPointAnalysis(steps, [self.left, self.right],
                                   error_if_no_state=False)
-
+            # Make sure we raise both warnings
+            assert len(warn) == 2
+            # Assert warnings come out in order of the step list
+            assert "Step 321" in str(warn[0])
+            assert "Step 123" in str(warn[1])
 
     def test_shooting_point_analysis(self):
         assert len(self.analyzer) == 2
