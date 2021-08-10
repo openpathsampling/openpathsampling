@@ -163,7 +163,6 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
                        "endpoints in any of the states.")
                 raise NoFramesInStateError(err)
             if total_count > len(test_points):
-                # TODO: is this actually wrong / an error?
                 err = ("The " + str(len(test_points)) +
                        " end points of the trail trajectory from step " +
                        str(step.mccycle) +
