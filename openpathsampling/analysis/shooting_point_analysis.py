@@ -72,8 +72,7 @@ class SnapshotByCoordinateDict(TransformedDict):
                                                        *args, **kwargs)
 
 
-class ShootingPointAnalysisError(AssertionError):
-    # TODO this should inherit from a different Error type in OPS 2.0
+class ShootingPointAnalysisError(ValueError):
     pass
 
 
