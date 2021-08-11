@@ -72,7 +72,7 @@ class SnapshotByCoordinateDict(TransformedDict):
                                                        *args, **kwargs)
 
 
-class ShootingPointAnalysisError(ValueError):
+class ShootingPointAnalysisError(Exception):
     pass
 
 
