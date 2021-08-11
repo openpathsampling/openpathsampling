@@ -9,6 +9,7 @@ if sys.version_info > (3, ):
     unicode = str
     long = int
 
+
 def has_uuid(obj):
     return hasattr(obj, '__uuid__')
 
@@ -22,6 +23,7 @@ def get_uuid(obj):
             return obj
         else:
             raise e
+
 
 def set_uuid(obj, uuid):
     obj.__uuid__ = long(uuid)
@@ -37,7 +39,7 @@ def decode_uuid(uuid_str):
 
 # use the regular expression when looking through an entire JSON string; use
 # the is_uuid_string method for individual objects
-encoded_uuid_re = re.compile("UUID\((?P<uuid>[\-]?[0-9]+)\)")
+encoded_uuid_re = re.compile(r"UUID\((?P<uuid>[\-]?[0-9]+)\)")
 
 
 def is_uuid_string(obj):
@@ -45,5 +47,3 @@ def is_uuid_string(obj):
         isinstance(obj, (str, unicode))
         and obj[:5] == 'UUID(' and obj[-1] == ')'
     )
-
-
