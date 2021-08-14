@@ -1,4 +1,5 @@
 import os
+import warnings
 import collections
 from collections import abc
 import sqlalchemy as sql
@@ -12,9 +13,10 @@ from .backend import extract_backend_metadata
 from .my_types import backend_registration_type
 from .serialization_helpers import import_class
 
-
 import logging
 logger = logging.getLogger(__name__)
+
+from openpathsampling.deprecations import SIMSTORE_NO_SFR_TYPES
 
 # dict to convert from OPS type descriptors to SQL types
 sql_type = {
@@ -34,7 +36,8 @@ sql_type = {
 
 universal_sql_meta = {
     'uuid': {'uuid': {'primary_key': True}},
-    'tables': {'name': {'primary_key': True}}
+    'tables': {'name': {'primary_key': True}},
+    'sfr_result_types': {'uuid': {'primary_key': True}},
 }
 
 def make_columns(table_name, schema, sql_schema_metadata, backend_types):
@@ -96,6 +99,7 @@ class SQLStorageBackend(StorableNamedObject):
 
     More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
     """
+    MAX_SQL_ITEMS = 900
     def __init__(self, filename, mode='r', sql_dialect='sqlite', **kwargs):
         super().__init__()
         self.filename = filename
@@ -103,12 +107,17 @@ class SQLStorageBackend(StorableNamedObject):
         self.mode = mode
         self.kwargs = kwargs
         self.debug = False
-        self.max_query_size = 900
 
         # maps a specific type name, to generic type info, e.g.
         # 'ndarray.float32(1651,3)': 'ndarray'
         # keys here are in the schema, values are (sql_type, size)
         self.known_types = {k: (k, None) for k in sql_type}
+        self.sfr_result_types = {}
+
+        # currently this is only used by the storable functions, but in
+        # principle, it might be good for everything to move into this
+        # maps result type (str) to attribute handler to serialize that
+        self.serialization = {}
 
         # override later if mode == 'r' or 'a'
         self.schema = {}
@@ -132,6 +141,10 @@ class SQLStorageBackend(StorableNamedObject):
             if self.mode == 'a' and not file_exists:
                 # act as if the mode is 'w'; note we change this back later
                 self.mode = 'w'
+
+            if self.mode == 'r' and not file_exists:
+                raise FileNotFoundError(
+                    f"No such file or directory: '{filename}'")
 
             self.connection_uri = self.filename_from_dialect(
                 filename,
@@ -202,6 +215,21 @@ class SQLStorageBackend(StorableNamedObject):
             self.table_to_number, self.number_to_table = \
                     self.internal_tables_from_db()
 
+            self.sfr_result_types.update(self._load_sfr_types())
+
+    def _load_sfr_types(self):
+        try:
+            table = self.metadata.tables['sfr_result_types']
+        except KeyError:
+            SIMSTORE_NO_SFR_TYPES.warn()
+            sfr_types = {}
+        else:
+            with self.engine.connect() as conn:
+                sfr_type_entries = list(conn.execute(table.select()))
+            sfr_types = {e.uuid: e.result_type for e in sfr_type_entries}
+
+        return sfr_types
+
     @classmethod
     def from_engine(cls, engine, connection_uri=None, **kwargs):
         """Constructor allowing user to specify the SQLAlchemy Engine.
@@ -213,11 +241,12 @@ class SQLStorageBackend(StorableNamedObject):
         More info: https://docs.sqlalchemy.org/en/latest/core/engines.html
         """
         filename = kwargs.pop('filename', None)
+        mode = kwargs.get('mode', 'r')
         obj = cls(**kwargs)
         obj.filename = filename
         obj.connection_uri = connection_uri
         obj._metadata = sql.MetaData(bind=engine)
-        obj._initialize_with_mode(self.mode)
+        obj._initialize_with_mode(mode)
         return obj
 
 
@@ -288,7 +317,7 @@ class SQLStorageBackend(StorableNamedObject):
         table = self.metadata.tables[table_name]
         results = []
         with self.engine.connect() as conn:
-            for block in grouper(idx_list, 1000):
+            for block in grouper(idx_list, self.MAX_SQL_ITEMS):
                 or_stmt = sql.or_(*(table.c.idx == idx for idx in block))
                 sel = table.select(or_stmt)
                 results.extend(list(conn.execute(sel)))
@@ -360,7 +389,11 @@ class SQLStorageBackend(StorableNamedObject):
                             "may already have tables of the same names.")
 
         self.metadata.create_all(self.engine)
-        # TODO : do we need to do anything else for this?
+        sfr_result_types = self.metadata.tables['sfr_result_types']
+        with self.engine.connect() as conn:
+            conn.execute(sfr_result_types.insert(),
+                         {'uuid': table_name, 'result_type': result_type})
+        self.sfr_result_types[table_name] = result_type
 
     def add_storable_function_results(self, table_name, result_dict):
         """
@@ -385,7 +418,9 @@ class SQLStorageBackend(StorableNamedObject):
         unknown_uuids -= set(found_results.keys())
 
         # only store the results that haven't been stored
-        results = [{'uuid': uuid, 'value': result_dict[uuid]}
+        result_type = self.sfr_result_types[table_name]
+        serialize = self.serialization[result_type].serialize
+        results = [{'uuid': uuid, 'value': serialize(result_dict[uuid])}
                    for uuid in unknown_uuids]
         table = self.metadata.tables[table_name]
         if results:
@@ -412,7 +447,13 @@ class SQLStorageBackend(StorableNamedObject):
         """
         table = self.metadata.tables[table_name]
         results = []
-        for uuid_block in tools.block(uuids, self.max_query_size):
+        result_type = self.sfr_result_types.get(table_name, None)
+        try:
+            deserialize = self.serialization[result_type].deserialize
+        except KeyError:
+            # TODO: this should be removed eventually
+            deserialize = lambda x: x
+        for uuid_block in tools.block(uuids, self.MAX_SQL_ITEMS):
             # uuid_sel = table.select(
                 # sql.exists().where(table.c.uuid.in_(uuid_block))
             # )
@@ -423,11 +464,17 @@ class SQLStorageBackend(StorableNamedObject):
             results += res
 
         logger.debug("Found {} UUIDs".format(len(results)))
-        result_dict = {uuid: value for uuid, value in results}
+        result_dict = {uuid: deserialize(value) for uuid, value in results}
         return result_dict
 
     def load_storable_function_table(self, table_name):
-        return {row['uuid']: row['value']
+        result_type = self.sfr_result_types.get(table_name, None)
+        try:
+            deserialize = self.serialization[result_type].deserialize
+        except KeyError:
+            # TODO: this should be removed eventually
+            deserialize = lambda x: x
+        return {row['uuid']: deserialize(row['value'])
                 for row in self.table_iterator(table_name)}
 
     def add_tag(self, table_name, name, content):
@@ -460,7 +507,7 @@ class SQLStorageBackend(StorableNamedObject):
 
         res = []
         uuids = [obj['uuid'] for obj in objects]
-        for uuid_block in tools.block(uuids, self.max_query_size):
+        for uuid_block in tools.block(uuids, self.MAX_SQL_ITEMS):
             sel_uuids_idx = sql.select([table.c.uuid, table.c.idx]).\
                     where(table.c.uuid.in_(uuid_block))
             with self.engine.connect() as conn:
@@ -501,7 +548,7 @@ class SQLStorageBackend(StorableNamedObject):
         uuid_table = self.metadata.tables['uuid']
         logger.debug("Looking for {} UUIDs".format(len(uuids)))
         results = []
-        for uuid_block in tools.block(uuids, self.max_query_size):
+        for uuid_block in tools.block(uuids, self.MAX_SQL_ITEMS):
             logger.debug("New block of {} UUIDs".format(len(uuid_block)))
             uuid_sel = uuid_table.select().\
                     where(uuid_table.c.uuid.in_(uuid_block))

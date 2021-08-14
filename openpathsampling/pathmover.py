@@ -2173,6 +2173,8 @@ class SpecializedRandomChoiceMover(RandomChoiceMover):
 
 class OneWayShootingMover(SpecializedRandomChoiceMover):
     """
+    One-way (stochastic) shooting mover
+
     OneWayShootingMover is a special case of a RandomChoiceMover which
     combines gives a 50/50 chance of selecting either a ForwardShootMover or
     a BackwardShootMover. Both submovers use the same shooting point

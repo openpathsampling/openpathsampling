@@ -90,6 +90,9 @@ class ToDictSerializer(SchemaDeserializer):
     # TODO: I think this class can be basically remobed; need to transfer
     # inherited func and attribs to SchemaSerializer
 
+    # TODO: this seems odd here. I think this should be part of the
+    # SerializationSchema object (which knows the attribute handler
+    # factories).
     def get_handler_from_factories(self, type_name):
         for factory in self.handler_factories:
             handler = factory.from_type_string(type_name)

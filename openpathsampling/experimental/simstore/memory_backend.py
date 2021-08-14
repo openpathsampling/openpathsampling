@@ -79,6 +79,10 @@ class MemoryStorageBackend(object):
         self.uuid_table = {}  # maps UUID to table name
         self._table_to_class = {}
 
+        # at least these, possible more, move to superclass?
+        self.sfr_result_types = {}
+        self.serialization = {}
+
     @property
     def identifier(self):
         return hex(id(self))
@@ -103,6 +107,7 @@ class MemoryStorageBackend(object):
 
     def register_storable_function(self, table_name, result_type):
         self.data[table_name] = {}
+        self.sfr_result_types[table_name] = result_type
 
     def add_storable_function_results(self, table_name, result_dict):
         # TODO: safety checks that we don't overwrite existing

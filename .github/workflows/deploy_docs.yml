@@ -1,0 +1,51 @@
+# NOTE: This workflow should obviate the after_success script
+name: "docs"
+on:
+  push:
+    branches:
+      - master
+      - docs_deploy
+    # TODO: add support for tags/stable
+
+defaults:
+  run:
+    shell: bash -l {0}
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    name: "docs"
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          python-version: 3.9
+      - name: "Install requirements"
+        run: source devtools/conda_install_reqs.sh
+      - name: "Install OPS"
+        run: |
+          python -m pip install --no-deps -e .
+          python -c "import openpathsampling"
+      - name: "Install doc tools"
+        run: |
+          python -m pip install numpydoc s3cmd
+          conda install -y -c conda-forge --file docs/requirements.txt
+      - name: "Versions"
+        run: conda list
+      - name: "Build docs"
+        run: cd docs && python premake.py && make html && cd -
+      - name: "Check docs"
+        run: |
+          ls -lt docs/_build
+          ls -ls docs/_build/html
+          pwd
+      - name: "Deploy docs"
+        # TODO: perhaps run docs build on all, but only push on merge
+        run: python devtools/ci/push-docs-to-s3.py #--clobber
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+

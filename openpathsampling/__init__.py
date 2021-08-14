@@ -57,11 +57,11 @@ from .bias_function import (
     SRTISBiasFromNetwork
 )
 
-from .collectivevariable import (
-    FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
-    InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
-    CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
-    GeneratorCV)
+# from .collectivevariable import (
+    # FunctionCV, MDTrajFunctionCV, MSMBFeaturizerCV,
+    # InVolumeCV, CollectiveVariable, CoordinateGeneratorCV,
+    # CoordinateFunctionCV, CallableCV, PyEMMAFeaturizerCV,
+    # GeneratorCV)
 
 from .ensemble import (
     Ensemble, EnsembleCombination,
@@ -122,7 +122,8 @@ from .sample import Sample, SampleSet
 
 from .shooting import (
     ShootingPointSelector, UniformSelector, GaussianBiasSelector,
-    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector
+    FirstFrameSelector, FinalFrameSelector, InterfaceConstrainedSelector,
+    BiasedSelector
 )
 
 from .snapshot_modifier import (
@@ -172,6 +173,7 @@ from .collectivevariables import *
 from .pathmovers.move_schemes import *
 
 import openpathsampling.numerics as numerics
+import openpathsampling.beta
 
 from openpathsampling.engines import Trajectory, BaseSnapshot
 

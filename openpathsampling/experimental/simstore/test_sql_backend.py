@@ -1,7 +1,6 @@
 from .sql_backend import *
 import pytest
 
-
 class TestSQLStorageBackend(object):
     def setup(self):
         self._delete_tmp_files()
@@ -17,7 +16,7 @@ class TestSQLStorageBackend(object):
                                'snapshot0': tuple,
                                'snapshot1': tuple}
         self.default_table_names = {'uuid', 'tables', 'schema', 'metadata',
-                                    'tags'}
+                                    'tags', 'sfr_result_types'}
 
     def _sample_data_dict(self):
         sample_list = [(0, 'ens1', 'traj1'),
@@ -88,7 +87,7 @@ class TestSQLStorageBackend(object):
             'write': SQLStorageBackend('test1.sql', mode='w'),
             'append': SQLStorageBackend('test2.sql', mode='a'),
         }[db]
-        table_names = database.engine.table_names()
+        table_names = sql.inspect(database.engine).get_table_names()
         assert set(table_names) == self.default_table_names
         assert self._col_names_set('uuid') == {'uuid', 'table', 'row'}
         assert self._col_names_set('tables') == {'name', 'idx', 'module',
@@ -100,7 +99,7 @@ class TestSQLStorageBackend(object):
             'snapshot1': [('filename', 'str'), ('index', 'int')]
         }
         self.database.register_schema(new_schema, self.table_to_class)
-        table_names = self.database.engine.table_names()
+        table_names = sql.inspect(self.database.engine).get_table_names()
         assert set(table_names) == self.default_table_names | {'snapshot1'}
         assert self._col_names_set('snapshot1') == {'idx', 'uuid',
                                                     'filename', 'index'}
@@ -177,7 +176,24 @@ class TestSQLStorageBackend(object):
         uuid_table_rows = self.database.load_uuids_table(uuids)
         loaded_table = self.database.load_table_data(uuid_table_rows)
         assert len(loaded_table) == 3
-        pytest.skip()
+
+    def test_load_save_large_numbers(self):
+        # mainly a smoke test to ensure that we reload everything correctly
+        n_objs = 1001
+        snapshot_schema = {'snapshot0': self.schema['snapshot0']}
+        self.database.register_schema(snapshot_schema, self.table_to_class)
+        assert self.database.table_len('snapshot0') == 0
+        snap_dicts = [
+            {'filename': 'foo.trr', 'index': idx, 'uuid': 'uuid' + str(idx)}
+            for idx in range(n_objs)
+        ]
+        self.database.add_to_table('snapshot0', snap_dicts)
+        assert self.database.table_len('snapshot0') == n_objs
+        uuids = [dct['uuid'] for dct in snap_dicts]
+        uuid_table_rows = self.database.load_uuids_table(uuids)
+        assert len(uuid_table_rows) == n_objs
+        reloaded = self.database.load_table_data(uuid_table_rows)
+        assert len(reloaded) == n_objs
 
     def test_load_table_data_missing(self):
         pytest.skip()
@@ -255,3 +271,7 @@ class TestSQLStorageBackend(object):
             expected = tuple(samp_dct[k]
                              for k in ['replica', 'ensemble', 'trajectory'])
             assert row[2:] == expected
+
+    def test_non_existing_file(self):
+        with pytest.raises(FileNotFoundError, match="foo.sql"):
+            SQLStorageBackend("foo.sql")

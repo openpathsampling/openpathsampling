@@ -46,6 +46,16 @@ def from_dict_attr_to_class(from_dict, attr_name):
         return from_dict(dct)
     return inner
 
+_PREPATCH = {
+    cls: {'to': getattr(cls, 'to_dict'),
+          'from': getattr(cls, 'from_dict')}
+    for cls in [
+        paths.netcdfplus.FunctionPseudoAttribute,
+        paths.TPSNetwork,
+        paths.MISTISNetwork,
+        paths.CallableCV,
+    ]
+}
 
 def monkey_patch_saving(paths):
     paths.netcdfplus.FunctionPseudoAttribute.to_dict = \
@@ -77,4 +87,10 @@ def monkey_patch_loading(paths):
 def monkey_patch_all(paths):
     paths = monkey_patch_saving(paths)
     paths = monkey_patch_loading(paths)
+    return paths
+
+def unpatch(paths):
+    for cls, old in _PREPATCH.items():
+        cls.to_dict = old['to']
+        cls.from_dict = old['from']
     return paths

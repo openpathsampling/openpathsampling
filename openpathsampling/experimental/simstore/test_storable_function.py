@@ -21,6 +21,8 @@ class MockBackend(object):
         self.storable_function_tables = defaultdict(dict)
         self.called_register = defaultdict(int)
         self.called_load = defaultdict(int)
+        self.sfr_result_types = {}
+        self.serialization = {}
 
     def has_table(self, table_name):
         return table_name in self.storable_function_tables
@@ -28,6 +30,7 @@ class MockBackend(object):
     def register_storable_function(self, table_name, result_type):
         self.storable_function_tables[table_name] = {}
         self.called_register[table_name] += 1
+        self.sfr_result_types[table_name] = result_type
 
     def load_storable_function_results(self, func_uuid, uuids):
         table = self.storable_function_tables[func_uuid]
@@ -342,6 +345,34 @@ class TestStorableFunction(object):
 
         assert func(['uuid', 'other']) == [found_in_1, found_in_2]
 
+    @pytest.mark.parametrize('error_if_missing', [True, False])
+    def test_validate_missing(self, error_if_missing):
+        get_expected = lambda x: 'result'
+        func = StorableFunction(get_expected)
+        self._set_storage(func, 'analysis', 'eval',
+                          {'input': 'result'})
+        pytest_context = {
+            True: pytest.raises(Exception),  # KeyError is test-specific
+            False: pytest.warns(UserWarning)
+        }[error_if_missing]
+        with pytest_context:
+            func.validate(['input'], error_if_missing)
+
+    @pytest.mark.parametrize('is_valid', [True, False])
+    def test_validate(self, is_valid):
+        get_expected = lambda x: 'result'
+        func = StorableFunction(get_expected)
+        stored_value = 'result' if is_valid else 'foo'
+        self._set_storage(func, 'analysis', 'storage',
+                          {'input': stored_value})
+        try:
+            func.validate('input')
+        except StorableFunctionResultError:
+            if is_valid:
+                raise
+            # else pass
+
+
     def test_to_dict_from_dict_cycle(self):
         pytest.skip()
         pass
@@ -383,6 +414,7 @@ class TestStorageFunctionHandler(object):
         uuid = get_uuid(self.func)
         if has_table:
             self.storage.backend.storable_function_tables[uuid] = {}
+            self.storage.backend.sfr_result_types[uuid] = 'float'
 
         example = 1.0 if with_result else None
         unable_to_register = example is None and not has_table

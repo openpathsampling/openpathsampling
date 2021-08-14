@@ -808,6 +808,8 @@ class TestPathSampling(object):
             paths.strategies.OrganizeByMoveGroupStrategy()
         ])
         init_cond = scheme.initial_conditions_from_trajectories(init_traj)
+        self.scheme = scheme
+        self.init_cond = init_cond
         self.sim = PathSampling(storage=None, move_scheme=scheme,
                                 sample_set=init_cond)
 
@@ -822,3 +824,13 @@ class TestPathSampling(object):
         init_xyz = set(s.xyz.tobytes() for s in initial_snaps)
         final_xyz = set(s.xyz.tobytes() for s in final_snaps)
         assert init_xyz & final_xyz == set([])
+
+    def test_save_initial_scheme(self, tmpdir):
+        # check that we actually save scheme when we save this
+        filename = tmpdir.join("temp.nc")
+        storage = paths.Storage(str(filename), mode='w')
+        assert len(storage.schemes) == 0
+        sim = paths.PathSampling(storage=storage,
+                                 move_scheme=self.scheme,
+                                 sample_set=self.init_cond)
+        assert len(storage.schemes) == 1

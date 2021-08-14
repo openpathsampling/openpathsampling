@@ -126,6 +126,25 @@ class GaussianBiasSelector(ShootingPointSelector):
         return math.exp(-self.alpha * (l_s - self.l_0) ** 2)
 
 
+class BiasedSelector(ShootingPointSelector):
+    """General biased shooting point selector
+
+    Takes any function (wrapped in an OPS CV) and uses that as the bias for
+    selecting the shooting point.
+
+    Parameters
+    ----------
+    func : :class:`.CollectiveVariable`
+        A function wrapped in an OPS CV which gives the relative bias.
+    """
+    def __init__(self, func):
+        super(BiasedSelector, self).__init__()
+        self.func = func
+
+    def f(self, snapshot, trajectory):
+        return self.func(snapshot)
+
+
 class UniformSelector(ShootingPointSelector):
     """
     Selects random frame in range `pad_start` to `len(trajectory-pad_end`.
