@@ -7,7 +7,7 @@ from openpathsampling.engines import BaseSnapshot
 from . import features
 
 
-@features.base.attach_features(
+@features.attach_features(
     [
         features.statics,
         features.kinetics,
