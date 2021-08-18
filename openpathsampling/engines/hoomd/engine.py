@@ -54,8 +54,8 @@ class HOOMDEngine(DynamicsEngine):
         self._simulation = simulation
 
         dimensions = {
-            "n_atoms": self.sim.state.N_particles,
-            "n_spatial": self.sim.state.box.dimensions,
+            "n_atoms": self.simulation.state.N_particles,
+            "n_spatial": self.simulation.state.box.dimensions,
         }
 
         descriptor = SnapshotDescriptor.construct(Snapshot, dimensions)
@@ -64,21 +64,11 @@ class HOOMDEngine(DynamicsEngine):
 
         # Set no cached snapshot.
         self._current_snapshot = None
-        self._current_momentum = None
-        self._current_configuration = None
-        self._current_box_vectors = None
-
-        self._simulation = None
-        self._n_dofs = None
 
     @property
     def simulation(self):
         """The `hoomd.Simulation` instance."""
         return self._simulation
-
-    @property
-    def mdtraj_topology(self):
-        return self.topology.mdtraj
 
     @property
     def snapshot_timestep(self):
@@ -92,7 +82,8 @@ class HOOMDEngine(DynamicsEngine):
     def _build_current_snapshot(self):
         hoomd_snapshot = self.simulation.state.get_snapshot()
         coordinates = np.array(hoomd_snapshot.particles.position)
-        box_vectors = np.array(hoomd_snapshot.configuration.box.matrix)
+        box = hoomd.Box.from_box(hoomd_snapshot.configuration.box)
+        box_vectors = np.array(box.matrix)
         velocities = np.array(hoomd_snapshot.particles.velocity)
 
         return Snapshot.construct(
