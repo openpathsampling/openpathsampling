@@ -1,14 +1,15 @@
-import openpathsampling.engines.topology as topology
-from openpathsampling.deprecations import OPENMM_MDTRAJTOPOLOGY
+from openpathsampling.engines import Topology
 
-# Mimicked from collections to warn on import
-def __getattr__(name):
-    if name == "MDTrajTopology":
-        # Needs to be stacklevel=3 to surface
-        OPENMM_MDTRAJTOPOLOGY.warn(stacklevel=3)
-        obj = getattr(topology, name)
-        globals()[name] = obj
-        return obj
-    raise AttributeError(
-        "module '{}' has no attribute '{}'".format(__name__, name)
-    )
+
+class HOOMDTopology(Topology):
+    """
+    Parameters
+    ----------
+    n_spatial : int
+        Number of spatial degrees of freedom.
+    n_atoms : int
+        Number of particles.
+    """
+
+    def __init__(self, n_spatial, n_atoms=1):
+        super(HOOMDTopology, self).__init__(n_atoms=n_atoms, n_spatial=n_spatial)

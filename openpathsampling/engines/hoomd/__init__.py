@@ -1,5 +1,6 @@
 def missing_hoomd(*args, **kwargs):
-    raise RuntimeError("Install HOOMD-blue to use this feature")
+    raise RuntimeError("Install HOOMD-blue >= 3.0 to use this feature")
+
 
 try:
     import hoomd
