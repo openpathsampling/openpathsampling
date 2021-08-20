@@ -587,14 +587,28 @@ class StorageTable(abc.Sequence):
 
     def __getitem__(self, item):
         len_self = len(self)
-        if not (-len_self <= item < len_self):
-            raise IndexError("table index out of range")
+        if item is slice:
+            unpack_return = False
+            items = (i for i in range(*item.indices(len_self)))
+        elif type(item) is int:
+            unpack_return = True
+            if not (-len_self <= item < len_self):
+                raise IndexError("table index out of range")
 
-        if item < 0:
-            item += len(self)
+            if item < 0:
+                item += len(self)
+            items = [item]
+        else:
+            raise TypeError("Only acces via slice or int allowed, "
+                            f"got type {type(item)}.")
 
-        row = self.storage.backend.table_get_item(self.table, item)
-        return self.storage.load([row.uuid])[0]
+        rows = [self.storage.backend.table_get_item(self.table, item).uuid
+                for item in items]
+        if unpack_return:
+            return self.storage.load(rows)[0]
+        else:
+            return self.storage.load(rows)
+
 
     def __len__(self):
         return self.storage.backend.table_len(self.table)
@@ -647,7 +661,9 @@ class PseudoTable(abc.MutableSequence):
     def __getitem__(self, item):
         try:
             ret_val = self._sequence[item]
-        except TypeError:
+        except TypeError as err:
+            if type(item) != str:
+                raise err
             uuid = self._name_to_uuid[item]
             ret_val = self.get_by_uuid(uuid)
         return ret_val
