@@ -69,7 +69,7 @@ class GeneralStorage(StorableNamedObject):
                                                         {})
 
         # self._pseudo_tables = {table_name: dict()
-                               # for table_name in self.simulation_classes}
+        #                        for table_name in self.simulation_classes}
         self._simulation_objects = {}
         self._pseudo_tables = {table_name: PseudoTable()
                                for table_name in self.simulation_classes}
@@ -159,8 +159,8 @@ class GeneralStorage(StorableNamedObject):
         # check validity
         self.class_info.register_info(class_info_list, schema)
         # for info in class_info_list:
-            # info.set_defaults(schema)
-            # self.class_info.add_class_info(info)
+        #     info.set_defaults(schema)
+        #     self.class_info.add_class_info(info)
 
         schema_types = [type_str for attr_list in schema.values()
                         for _, type_str in attr_list]
@@ -213,7 +213,6 @@ class GeneralStorage(StorableNamedObject):
 
         return uuid_dict
 
-
     def _uuids_by_table(self, input_uuids, cache, get_table_name):
         # find all UUIDs we need to save with this object
         logger.debug("Listing all objects to save")
@@ -243,7 +242,6 @@ class GeneralStorage(StorableNamedObject):
         loaded = self.load(lazies, allow_lazy=False)
         uuid_mapping.update({get_uuid(obj): obj for obj in loaded})
         return uuid_mapping
-
 
     def save(self, obj_list, use_cache=True):
         if type(obj_list) is not list:
@@ -384,11 +382,11 @@ class GeneralStorage(StorableNamedObject):
         logger.debug("Getting internal structure of %d non-cached objects",
                      len(uuid_list))
         to_load, lazy_uuids, dependencies, uuid_to_table = \
-                get_all_uuids_loading(uuid_list=uuid_list,
-                                      backend=self.backend,
-                                      schema=self.schema,
-                                      existing_uuids=self.cache,
-                                      allow_lazy=allow_lazy)
+            get_all_uuids_loading(uuid_list=uuid_list,
+                                  backend=self.backend,
+                                  schema=self.schema,
+                                  existing_uuids=self.cache,
+                                  allow_lazy=allow_lazy)
         logger.debug("Loading %d objects; creating %d lazy proxies",
                      len(to_load), len(lazy_uuids))
 
@@ -421,7 +419,6 @@ class GeneralStorage(StorableNamedObject):
                 self._sf_handler.register_function(result)
 
         return new_results
-
 
     def deserialize_uuids(self, ordered_uuids, uuid_to_table,
                           uuid_to_table_row, new_uuids=None):
@@ -479,7 +476,7 @@ class GeneralStorage(StorableNamedObject):
                     my_cls = cls
                     # self._pseudo_tables[key][uuid] = obj
                     # if obj.is_named:
-                        # self._pseudo_tables[key][obj.name] = obj
+                    #     self._pseudo_tables[key][obj.name] = obj
             if my_cls is None:
                 self._pseudo_tables['misc_simulation'].append(obj)
 
@@ -511,7 +508,7 @@ class GeneralStorage(StorableNamedObject):
         elif attr in self._pseudo_tables:
             return self._pseudo_tables[attr]
         else:
-            raise AttributeError("'{}' object has no attribute '{}'"\
+            raise AttributeError("'{}' object has no attribute '{}'"
                                  .format(self.__class__.__name__, attr))
 
 
@@ -563,6 +560,7 @@ class MixedCache(abc.MutableMapping):
     def __iter__(self):
         return itertools.chain(self.fixed_cache, self.cache)
 
+
 class StorageTable(abc.Sequence):
     # NOTE: currently you still need to be able to hold the whole table in
     # memory ... at least, with the SQL backend.
@@ -609,12 +607,11 @@ class StorageTable(abc.Sequence):
         else:
             return self.storage.load(rows)
 
-
     def __len__(self):
         return self.storage.backend.table_len(self.table)
 
     def cache_all(self):
-        old_blocksize = self.iter_block_size
+        # old_blocksize = self.iter_block_size
         self.iter_block_size = len(self)
         _ = list(iter(self))
 
@@ -625,6 +622,7 @@ class StorageTable(abc.Sequence):
     # TODO: subclass for MCSteps with additional method .ordered, returning
     # things in the order of the mccycle number -- also, manage special
     # caching
+
 
 class PseudoTable(abc.MutableSequence):
     # TODO: use this in the main code
