@@ -50,12 +50,12 @@ def error_if_no_simtk_unit(name):
 try:
     # MDTraj currently imports OpenMM from the simtk namespace, leading
     # to warnings being issued that we can't control (and cause our
-    # notebook tests for fail)
-    logger = logging.getLogger()
-    level = logger.level
-    logger.setLevel(logging.ERROR)
+    # notebook tests for fail). So we need to disable here.
+    logging.disable(logging.WARNING)
     import mdtraj as md
-    logger.setLevel(level)
+    logging.disable(logging.NOTSET)
+    # The problem with this is that it will shadow any remaining places
+    # we're having this problem -- the simtk import is only done once.
 except ImportError:
     md = None
     HAS_MDTRAJ = False

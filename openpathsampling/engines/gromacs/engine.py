@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 from openpathsampling.integration_tools import md, HAS_MDTRAJ
 if HAS_MDTRAJ:
-    from mdtraj.formats import TRRTrajectoryFile
+    TRRTrajectoryFile = md.formats.TRRTrajectoryFile
 
 from openpathsampling.engines import ExternalEngine
 from openpathsampling.engines import features

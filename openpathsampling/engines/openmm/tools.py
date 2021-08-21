@@ -14,7 +14,7 @@ if HAS_OPENMM:
     try:
         # openmm >= 7.6
         from openmm.app import internal as _internal
-    except AttributeError:
+    except ImportError:
         # openmm < 7.6
         from simtk.openmm.app import internal as _internal
 
