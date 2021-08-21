@@ -2,14 +2,36 @@
 Tools for integration with miscellaneous non-required packages.
 """
 
+import importlib
+
+
 def error_if_no(name, package_name, has_package):
     if not has_package:
         raise RuntimeError(name + " requires " + package_name
                            + ", which is not installed")
 
+def _chain_import(*packages):
+    """
+    Import as whichever name is first importable among ``packages``.
+
+    If none exists, raises error based on last package attempted
+    """
+    error = None
+    for package in packages:
+        try:
+            pkg = importlib.import_module(package)
+        except ImportError as e:
+            error = e
+        else:
+            return pkg
+    # we raise the last error given
+    raise error
+
+
 # simtk.unit ########################################################
 try:
-    from simtk import unit
+    unit = _chain_import('openmm.unit', 'simtk.unit')
+    # from simtk import unit
 except ImportError:
     unit = None
     is_simtk_quantity = lambda obj: False
@@ -39,7 +61,8 @@ def error_if_no_mdtraj(name):
 
 # openmm ############################################################
 try:
-    from simtk import openmm
+    openmm = _chain_import('openmm', 'simtk.openmm')
+    # from simtk import openmm
 except ImportError:
     openmm = None
     HAS_OPENMM = False
