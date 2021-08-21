@@ -1,10 +1,9 @@
 def missing_openmm(*args, **kwargs):
     raise RuntimeError("Install OpenMM to use this feature")
 
-try:
-    import simtk.openmm
-    import simtk.openmm.app
-except ImportError:
+from openpathsampling.integration_tools import HAS_OPENMM
+
+if not HAS_OPENMM:
     HAS_OPENMM = False
     Engine = missing_openmm
     empty_snapshot_from_openmm_topology = missing_openmm

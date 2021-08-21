@@ -1,9 +1,6 @@
-try:
-    import simtk.openmm
-    import simtk.openmm.app
-except ImportError:
-    pass
-else:
+from openpathsampling.integration_tools import HAS_OPENMM
+
+if HAS_OPENMM:
     from openpathsampling.engines.features import *
     from openpathsampling.engines.features.shared import StaticContainer, KineticContainer
     from . import masses

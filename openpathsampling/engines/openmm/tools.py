@@ -11,7 +11,13 @@ if HAS_OPENMM:
     # them from being made)
     from .snapshot import Snapshot
     from openpathsampling.engines.topology import Topology, MDTrajTopology
-    _internal = openmm.app.internal
+    try:
+        # openmm >= 7.6
+        _internal = openmm.app.internal
+    except AttributeError:
+        # openmm < 7.6
+        from simtk.openmm.app import internal as _internal
+
     reducePeriodicBoxVectors = _internal.unitcell.reducePeriodicBoxVectors
 
 

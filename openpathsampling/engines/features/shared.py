@@ -12,12 +12,12 @@ def unmask_quantity(quantity):
 
     Parameters
     ----------
-    quantity : simtk.unit.Quantity wrapping a numpy (masked) array
+    quantity : openmm.unit.Quantity wrapping a numpy (masked) array
         quantity to unmask
 
     Returns
     -------
-    simtk.unit.Quantity
+    openmm.unit.Quantity
         wraps a regular numpy array, not a masked array
     """
     try:
@@ -39,7 +39,7 @@ class StaticContainer(StorableObject):
 
     Parameters
     ----------
-    coordinates : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+    coordinates : openmm.unit.Quantity wrapping Nx3 np array of dimension length
         atomic coordinates
     box_vectors : periodic box vectors
         the periodic box vectors
@@ -182,7 +182,7 @@ class KineticContainer(StorableObject):
 
     Attributes
     ----------
-    velocities : simtk.unit.Quantity wrapping Nx3 np array of dimension length
+    velocities : openmm.unit.Quantity wrapping Nx3 np array of dimension length
         atomic velocities
     engine : :class:`.DynamicsEngine`
         the engine that creating this data

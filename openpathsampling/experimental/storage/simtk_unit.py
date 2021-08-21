@@ -4,16 +4,13 @@ from openpathsampling.experimental.simstore.attribute_handlers import (
 )
 import re
 
-try:
-    import simtk.unit
-except ImportError:
-    HAS_SIMTK = False
-else:
-    HAS_SIMTK = True
+from openpathsampling.integration_tools import HAS_SIMTK, unit
+
+if HAS_SIMTK:
     # note that we need to force simstore to not treat this as an iterable
     from openpathsampling.experimental.simstore.class_lookup import \
         is_storage_iterable
-    is_storage_iterable.force_false(simtk.unit.Quantity)
+    is_storage_iterable.force_false(unit.Quantity)
 
 ### JSON SERIALIZATION ###################################################
 
@@ -22,9 +19,9 @@ def unit_to_dict(obj):
             for p, power in obj.iter_base_or_scaled_units()}
 
 def unit_from_dict(dct):
-    unit = simtk.unit.Unit({})
+    unit = unit.Unit({})
     for u_name, u_power in dct.items():
-        unit *= getattr(simtk.unit, u_name) ** u_power
+        unit *= getattr(unit, u_name) ** u_power
     return unit
 
 def quantity_to_dict(obj):
@@ -38,7 +35,7 @@ def quantity_from_dict(dct):
 
 if HAS_SIMTK:
     simtk_quantity_codec = JSONCodec(
-        cls=simtk.unit.Quantity,
+        cls=unit.Quantity,
         to_dict=quantity_to_dict,
         from_dict=quantity_from_dict,
         is_my_dict=lambda x: '__simtk_unit__' in x
@@ -51,7 +48,6 @@ _simtk_re = re.compile(r"simtk\((.*)\)\*((ndarray|float).*)")
 def simtk_unit_from_string(unit_str):
     # TODO: add safety checks; parse the AST and ensure that all attributes
     # are of `unit` and that all operations are mul/div/pow
-    from simtk import unit
     return eval(unit_str, {'unit': unit})
 
 

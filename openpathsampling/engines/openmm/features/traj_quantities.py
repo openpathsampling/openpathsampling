@@ -1,5 +1,5 @@
 import numpy as np
-from simtk import unit
+from openpathsampling.integration_tools import unit
 
 functions = ['trajectory_coordinates', 'trajectory_box_vectors',
              'trajectory_velocities']
@@ -9,7 +9,7 @@ def _trajectory_units(traj, feature, unit_):
         try:
             obj = obj.value_in_unit(unit_)
         except AttributeError:
-            pass  # not a simtk.unit.Quantity
+            pass  # not an openmm.unit.Quantity
         return obj
 
     vals = [getattr(snap, feature) for snap in traj]

@@ -28,10 +28,9 @@ def _chain_import(*packages):
     raise error
 
 
-# simtk.unit ########################################################
+# openmm.unit ########################################################
 try:
     unit = _chain_import('openmm.unit', 'simtk.unit')
-    # from simtk import unit
 except ImportError:
     unit = None
     is_simtk_quantity = lambda obj: False
@@ -62,7 +61,6 @@ def error_if_no_mdtraj(name):
 # openmm ############################################################
 try:
     openmm = _chain_import('openmm', 'simtk.openmm')
-    # from simtk import openmm
 except ImportError:
     openmm = None
     HAS_OPENMM = False

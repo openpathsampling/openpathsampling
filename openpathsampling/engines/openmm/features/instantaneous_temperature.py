@@ -1,5 +1,5 @@
-import simtk.openmm as mm
-import simtk.unit as u
+from openpathsampling.integration_tools import openmm as mm
+from openpathsampling.integration_tools import unit as u
 
 @property
 def n_degrees_of_freedom(snapshot):
@@ -17,7 +17,7 @@ def instantaneous_temperature(snapshot):
     """
     Returns
     -------
-    instantaneous_temperature : simtk.unit.Quantity (temperature)
+    instantaneous_temperature : openmm.unit.Quantity (temperature)
         instantaneous temperature from the kinetic energy of this snapshot
     """
     # TODO: this can be generalized as a feature that works with any
