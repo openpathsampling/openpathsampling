@@ -19,18 +19,18 @@ def unit_to_dict(obj):
             for p, power in obj.iter_base_or_scaled_units()}
 
 def unit_from_dict(dct):
-    unit = unit.Unit({})
+    units = unit.Unit({})
     for u_name, u_power in dct.items():
-        unit *= getattr(unit, u_name) ** u_power
-    return unit
+        units *= getattr(unit, u_name) ** u_power
+    return units
 
 def quantity_to_dict(obj):
     return {'value': obj.value_in_unit(obj.unit),
             '__simtk_unit__': unit_to_dict(obj.unit)}
 
 def quantity_from_dict(dct):
-    unit = unit_from_dict(dct['__simtk_unit__'])
-    return dct['value'] * unit
+    units = unit_from_dict(dct['__simtk_unit__'])
+    return dct['value'] * units
 
 
 if HAS_SIMTK_UNIT:
@@ -73,9 +73,9 @@ class SimtkQuantityHandler(AttributeHandler):
     def is_my_type(type_str):
         m_simtk_quantity = _simtk_re.match(type_str)
         if m_simtk_quantity:
-            unit = m_simtk_quantity.group(1)
+            units = m_simtk_quantity.group(1)
             wrapped_type = m_simtk_quantity.group(2)
-            return unit, wrapped_type
+            return units, wrapped_type
 
     def serialize(self, obj):
         unwrapped = obj.value_in_unit(self.unit)
