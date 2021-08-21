@@ -4,9 +4,9 @@ from openpathsampling.experimental.simstore.attribute_handlers import (
 )
 import re
 
-from openpathsampling.integration_tools import HAS_SIMTK, unit
+from openpathsampling.integration_tools import HAS_SIMTK_UNIT, unit
 
-if HAS_SIMTK:
+if HAS_SIMTK_UNIT:
     # note that we need to force simstore to not treat this as an iterable
     from openpathsampling.experimental.simstore.class_lookup import \
         is_storage_iterable
@@ -33,7 +33,7 @@ def quantity_from_dict(dct):
     return dct['value'] * unit
 
 
-if HAS_SIMTK:
+if HAS_SIMTK_UNIT:
     simtk_quantity_codec = JSONCodec(
         cls=unit.Quantity,
         to_dict=quantity_to_dict,
