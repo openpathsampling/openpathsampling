@@ -4,8 +4,8 @@ name: "Test OpenMM Release Candidate"
 on:
   workflow_dispatch:
   # use this for debugging
-  pull_request:
-    branch: master
+  #pull_request:
+    #branch: master
 
 defaults:
   run:
