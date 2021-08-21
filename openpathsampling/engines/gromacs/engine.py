@@ -9,8 +9,9 @@ intermediary to monitor when a path needs to be terminated.
 import logging
 logger = logging.getLogger(__name__)
 
-from mdtraj.formats import TRRTrajectoryFile
-import mdtraj as md
+from openpathsampling.integration_tools import md, HAS_MDTRAJ
+if HAS_MDTRAJ:
+    from mdtraj.formats import TRRTrajectoryFile
 
 from openpathsampling.engines import ExternalEngine
 from openpathsampling.engines import features

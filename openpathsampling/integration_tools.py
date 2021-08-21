@@ -3,6 +3,7 @@ Tools for integration with miscellaneous non-required packages.
 """
 
 import importlib
+import logging
 
 
 def error_if_no(name, package_name, has_package):
@@ -27,7 +28,6 @@ def _chain_import(*packages):
     # we raise the last error given
     raise error
 
-
 # openmm.unit ########################################################
 try:
     unit = _chain_import('openmm.unit', 'simtk.unit')
@@ -48,7 +48,14 @@ def error_if_no_simtk_unit(name):
 
 # mdtraj ############################################################
 try:
+    # MDTraj currently imports OpenMM from the simtk namespace, leading
+    # to warnings being issued that we can't control (and cause our
+    # notebook tests for fail)
+    logger = logging.getLogger()
+    level = logger.level
+    logger.setLevel(logging.ERROR)
     import mdtraj as md
+    logger.setLevel(level)
 except ImportError:
     md = None
     HAS_MDTRAJ = False

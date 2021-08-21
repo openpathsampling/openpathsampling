@@ -13,7 +13,7 @@ if HAS_OPENMM:
     from openpathsampling.engines.topology import Topology, MDTrajTopology
     try:
         # openmm >= 7.6
-        _internal = openmm.app.internal
+        from openmm.app import internal as _internal
     except AttributeError:
         # openmm < 7.6
         from simtk.openmm.app import internal as _internal
