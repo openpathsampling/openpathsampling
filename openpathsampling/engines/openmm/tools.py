@@ -1,22 +1,19 @@
 import numpy as np
 
 from openpathsampling.integration_tools import (
-    md, error_if_no_mdtraj, unit, error_if_no_simtk_unit
+    openmm, md, error_if_no_mdtraj, unit, error_if_no_simtk_unit, HAS_OPENMM
 )
-try:
-    import simtk.openmm
-    import simtk.openmm.app
-    from simtk import unit as u
-    from simtk.openmm.app.internal.unitcell import reducePeriodicBoxVectors
-except ImportError:
-    # this happens when we directly import tools (e.g., for
+
+if HAS_OPENMM:
+    # this is in case we directly import tools (e.g., for
     # trajectory_to/from_mdtraj) when we don't have OpenMM installed. In
-    # that case, we skip the imports in the else statement
-    # (engines/openmm/__init__.py prevents them from being made)
-    pass
-else:
+    # that case, we skip these imports (engines/openmm/__init__.py prevents
+    # them from being made)
     from .snapshot import Snapshot
     from openpathsampling.engines.topology import Topology, MDTrajTopology
+    _internal = openmm.app.internal
+    reducePeriodicBoxVectors = _internal.unitcell.reducePeriodicBoxVectors
+
 
 from openpathsampling.engines import Trajectory, NoEngine, SnapshotDescriptor
 
@@ -473,11 +470,11 @@ def n_dofs_from_system(system):
     n_spatial = 3
     n_particles = system.getNumParticles()
     dofs_particles = sum([n_spatial for i in range(n_particles)
-                          if system.getParticleMass(i) > 0*u.dalton])
+                          if system.getParticleMass(i) > 0*unit.dalton])
     dofs_constaints = system.getNumConstraints()
     dofs_motion_removers = 0
     has_cm_motion_remover = any(
-        type(system.getForce(i)) == simtk.openmm.CMMotionRemover
+        type(system.getForce(i)) == openmm.CMMotionRemover
         for i in range(system.getNumForces())
     )
     if has_cm_motion_remover:
@@ -490,7 +487,7 @@ def has_constraints_from_system(system):
 
     Parameters
     ----------
-    system : :class:`simtk.openmm.System`
+    system : :class:`openmm.System`
         object describing the system
 
     Returns
