@@ -597,7 +597,7 @@ class StorageTable(abc.Sequence):
                 item += len(self)
             items = [item]
         else:
-            raise TypeError("Only acces via slice or int allowed, "
+            raise TypeError("Only access via slice or int allowed, "
                             f"got type {type(item)}.")
 
         rows = [self.storage.backend.table_get_item(self.table, item).uuid
@@ -611,9 +611,10 @@ class StorageTable(abc.Sequence):
         return self.storage.backend.table_len(self.table)
 
     def cache_all(self):
-        # old_blocksize = self.iter_block_size
+        old_blocksize = self.iter_block_size
         self.iter_block_size = len(self)
         _ = list(iter(self))
+        self.iter_block_size = old_blocksize
 
     def save(self, obj):
         # this is to match with the netcdfplus API
