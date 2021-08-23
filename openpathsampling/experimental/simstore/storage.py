@@ -600,12 +600,12 @@ class StorageTable(abc.Sequence):
             raise TypeError("Only access via slice or int allowed, "
                             f"got type {type(item).__name__}.")
 
-        rows = [self.storage.backend.table_get_item(self.table, item).uuid
-                for item in items]
+        uuids = [self.storage.backend.table_get_item(self.table, item).uuid
+                 for item in items]
         if unpack_return:
-            return self.storage.load(rows)[0]
+            return self.storage.load(uuids)[0]
         else:
-            return self.storage.load(rows)
+            return self.storage.load(uuids)
 
     def __len__(self):
         return self.storage.backend.table_len(self.table)
