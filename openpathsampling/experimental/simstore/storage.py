@@ -382,11 +382,11 @@ class GeneralStorage(StorableNamedObject):
         logger.debug("Getting internal structure of %d non-cached objects",
                      len(uuid_list))
         to_load, lazy_uuids, dependencies, uuid_to_table = \
-            get_all_uuids_loading(uuid_list=uuid_list,
-                                  backend=self.backend,
-                                  schema=self.schema,
-                                  existing_uuids=self.cache,
-                                  allow_lazy=allow_lazy)
+                get_all_uuids_loading(uuid_list=uuid_list,
+                                      backend=self.backend,
+                                      schema=self.schema,
+                                      existing_uuids=self.cache,
+                                      allow_lazy=allow_lazy)
         logger.debug("Loading %d objects; creating %d lazy proxies",
                      len(to_load), len(lazy_uuids))
 
