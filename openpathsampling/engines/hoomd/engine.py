@@ -11,10 +11,32 @@ logger = logging.getLogger(__name__)
 
 
 class HOOMDEngine(DynamicsEngine):
-    """HOOMD-blue dynamics engine based on ``hoomd`` system and integrator.
+    """HOOMD-blue dynamics engine based on :class:`hoomd.Simulation`.
 
-    The engine will create a :class:`hoomd.Simulation` instance
-    and uses this to generate new frames.
+    The engine will use a :class:`hoomd.Simulation` instance to generate new
+    frames.
+
+    Parameters
+    ----------
+    simulation : hoomd.Simulation
+        A HOOMD Simulation object. This encompasses the system state,
+        operations to apply when running, and the device to use for
+        execution.
+    options : dict
+        A dictionary that provides additional settings for the OPS engine.
+        Allowed keys are:
+
+            'n_steps_per_frame' : int, default: 10
+                The number of integration steps per returned snapshot.
+            'n_frames_max' : int or None, default: 5000
+                The maximal number of frames allowed for a returned
+                trajectory object.
+
+    Notes
+    -----
+    The ``n_frames_max`` does not limit Trajectory objects in length. It only
+    limits the maximal length of returned trajectory objects when this engine is
+    used.
 
     """
 
@@ -26,31 +48,6 @@ class HOOMDEngine(DynamicsEngine):
     base_snapshot_type = Snapshot
 
     def __init__(self, simulation, options=None):
-        """
-        Parameters
-        ----------
-        sim : hoomd.Simulation
-            A HOOMD Simulation object. This encompasses the system state,
-            operations to apply when running, and the device to use for
-            execution.
-        options : dict
-            A dictionary that provides additional settings for the OPS engine.
-            Allowed keys are:
-
-                'n_steps_per_frame' : int, default: 10
-                    the number of integration steps per returned snapshot
-                'n_frames_max' : int or None, default: 5000,
-                    the maximal number of frames allowed for a returned
-                    trajectory object
-
-        Notes
-        -----
-        The `n_frames_max` does not limit Trajectory objects in length. It only
-        limits the maximal length of returned trajectory objects when this
-        engine is used.
-
-        """
-
         self._simulation = simulation
 
         dimensions = {
@@ -67,7 +64,7 @@ class HOOMDEngine(DynamicsEngine):
 
     @property
     def simulation(self):
-        """The `hoomd.Simulation` instance."""
+        """The :class:`hoomd.Simulation` instance."""
         return self._simulation
 
     @property
