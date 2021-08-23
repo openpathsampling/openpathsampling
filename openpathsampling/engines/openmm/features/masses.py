@@ -1,4 +1,4 @@
-import simtk.unit as u
+from openpathsampling.integration_tools import unit as u
 import numpy as np
 
 @property
@@ -6,8 +6,8 @@ def masses_per_mole(snapshot):
     """
     Returns
     -------
-    masses_per_mole : list of simtk.unit.Quantity with length n_atoms
-        atomic masses (with simtk.unit attached) in units of mass/mole
+    masses_per_mole : list of openmm.unit.Quantity with length n_atoms
+        atomic masses (with openmm.unit attached) in units of mass/mole
     """
     try:
         simulation = snapshot.engine.simulation
@@ -35,8 +35,8 @@ def masses(snapshot):
     """
     Returns
     -------
-    masses : list of simtk.unit.Quantity with length n_atoms
-        atomic masses (with simtk.unit attached) in units of mass
+    masses : list of openmm.unit.Quantity with length n_atoms
+        atomic masses (with openmm.unit attached) in units of mass
     """
     masses_per_mole = snapshot.masses_per_mole
     masses = masses_per_mole / u.AVOGADRO_CONSTANT_NA

@@ -11,11 +11,7 @@ from openpathsampling.engines import NoEngine
 import numpy as np
 import numpy.testing as npt
 
-try:
-    import simtk.unit as u
-except ImportError:
-    u = None
-
+from openpathsampling.integration_tools import unit as u
 from openpathsampling.integration_tools import is_simtk_quantity_type
 
 try:

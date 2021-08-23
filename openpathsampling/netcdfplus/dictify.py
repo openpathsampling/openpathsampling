@@ -86,6 +86,8 @@ class ObjectJSON(object):
         'simtk',
         'simtk.unit',
         'simtk.openmm'
+        'openmm',
+        'openmm.unit',
     ]
 
     def __init__(self, unit_system=None):
@@ -139,7 +141,6 @@ class ObjectJSON(object):
                 '_integer': str(obj)}
 
         elif obj.__class__.__module__ != builtin_module:
-            #if obj.__class__ is units.Quantity:
             if is_simtk_quantity(obj):
                 # This is number with a unit so turn it into a list
                 if self.unit_system is not None:
@@ -326,7 +327,7 @@ class ObjectJSON(object):
 
     @staticmethod
     def unit_from_dict(unit_dict):
-        # this will *only* work if simtk.unit is installed
+        # this will *only* work if openmm.unit is installed
         this_unit = unit.Unit({})
         for unit_name, unit_multiplication in unit_dict.items():
             this_unit *= getattr(unit, unit_name) ** unit_multiplication

@@ -2,14 +2,35 @@
 Tools for integration with miscellaneous non-required packages.
 """
 
+import importlib
+import logging
+
+
 def error_if_no(name, package_name, has_package):
     if not has_package:
         raise RuntimeError(name + " requires " + package_name
                            + ", which is not installed")
 
-# simtk.unit ########################################################
+def _chain_import(*packages):
+    """
+    Import as whichever name is first importable among ``packages``.
+
+    If none exists, raises error based on last package attempted
+    """
+    error = None
+    for package in packages:
+        try:
+            pkg = importlib.import_module(package)
+        except ImportError as e:
+            error = e
+        else:
+            return pkg
+    # we raise the last error given
+    raise error
+
+# openmm.unit ########################################################
 try:
-    from simtk import unit
+    unit = _chain_import('openmm.unit', 'simtk.unit')
 except ImportError:
     unit = None
     is_simtk_quantity = lambda obj: False
@@ -27,7 +48,14 @@ def error_if_no_simtk_unit(name):
 
 # mdtraj ############################################################
 try:
+    # MDTraj currently imports OpenMM from the simtk namespace, leading
+    # to warnings being issued that we can't control (and cause our
+    # notebook tests for fail). So we need to disable here.
+    logging.disable(logging.WARNING)
     import mdtraj as md
+    logging.disable(logging.NOTSET)
+    # The problem with this is that it will shadow any remaining places
+    # we're having this problem -- the simtk import is only done once.
 except ImportError:
     md = None
     HAS_MDTRAJ = False
@@ -39,7 +67,7 @@ def error_if_no_mdtraj(name):
 
 # openmm ############################################################
 try:
-    from simtk import openmm
+    openmm = _chain_import('openmm', 'simtk.openmm')
 except ImportError:
     openmm = None
     HAS_OPENMM = False
