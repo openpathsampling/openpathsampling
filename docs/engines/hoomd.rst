@@ -13,4 +13,5 @@ Primary Classes
 
    Snapshot
    Engine
+   engine.HOOMDEngine
 
