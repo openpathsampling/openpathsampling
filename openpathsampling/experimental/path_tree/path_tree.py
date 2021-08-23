@@ -13,7 +13,7 @@ PathTreeStep = namedtuple(
 )
 PathTreeStep.__doc__ = """Step information needed for path tree.
 
-Each :class:`.PathTreeStep` becomes a row of the 
+Each :class:`.PathTreeStep` becomes a row of the path tree.
 
 Parameters
 ----------
@@ -81,17 +81,26 @@ def make_segments(prev, trial):
 
     return TrajectorySegments(**results)
 
-
-def _match_shooting_points(prev, trial, details):
-    shooting_pt = details.shooting_snapshot
+def _shooting_points(details):
     try:
+        shooting_pt = details.shooting_snapshot
+    except AttributeError:
+        # not a shooting move
+        return None, None
+
+    try:
+        # two-way shooting
         mod_shooting = details.modified_shooting_snapshot
     except AttributeError:
+        # one-way shooting
         mod_shooting = shooting_pt
 
+    return shooting_pt, mod_shooting
+
+def _offset_from_shooting(prev, trial, shooting_pt, mod_shooting):
     prev_idx = prev.trajectory.index(shooting_pt)
     new_idx = trial.index(mod_shooting)
-    return new_idx, prev_idx
+    return  prev_idx - new_idx
 
 def _offset_from_trajectories(prev, trial):
     shared = prev.trajectory.shared_configurations(trial,
@@ -134,25 +143,22 @@ class PathTree(paths.progress.SimpleProgress):
             yield trial, step
 
     @staticmethod
-    def _next_path_tree_step(prev, trial, step):
-        details = step.change.canonical.details
-        try:
-            shooting_pt = details.shooting_snapshot
-        except AttributeError:
+    def _get_shift(prev, trial, shooting_pt, mod_shooting):
+        if shooting_pt is None:
+            # not a shooting move
             offset = _offset_from_trajectories(prev, trial)
-            connector = None
         else:
-            new_idx, old_idx = _match_shooting_points(prev, trial, details)
-            offset = old_idx - new_idx
-            connector = new_idx
+            # shooting move
+            offset = _offset_from_shooting(prev, trial, shooting_pt,
+                                           mod_shooting)
 
-        return offset, new_idx
+        return offset
 
     def _first_path_tree_step(self, step):
         """Generate the tree_step for the first step"""
         trajectory = step.active[self.selector].trajectory
         return PathTreeStep(
-            offset=None,
+            offset=0,
             mccycle=step.mccycle,
             mover=None,
             accepted=True,
@@ -162,11 +168,12 @@ class PathTree(paths.progress.SimpleProgress):
                                         new=[(0, len(trajectory))]),
         )
 
-    def _connector(self, connector_idx, trial, existing):
-        if connector_idx is None:
+    def _connector(self, shooting_pt, mod_shooting, trial, existing):
+        if shooting_pt is None:
             return None
-        snap = trial[connector_idx]
-        mccycle = existing[snap]
+
+        connector_idx = trial.index(mod_shooting)
+        mccycle = existing[shooting_pt]
         return Connector(connector_idx, mccycle)
 
     def generate_path_tree_steps(self, steps):
@@ -178,23 +185,24 @@ class PathTree(paths.progress.SimpleProgress):
         offset = 0
         for trial, step in self._filter_steps(steps):
             # track when the snapshot first entered (continuously)
-            existing = {snap: step.mccycle for snap in trial}
-            update = {k: v for k, v in pre_existing.items()
-                      if k in existing}
-            existing.update(update)
+            current = {snap: step.mccycle for snap in trial}
+            existing = dict(current)
+            existing.update(pre_existing)
 
-            # tree_step = self._next_path_tree_step(prev, trial, step)
-            # connector = self._connector(tree_step, existing)
-            shift, shoot_idx = self._next_path_tree_step(prev, trial, step)
-            connector = self._connector(shoot_idx, trial, existing)
+            # get information to make the tree step
+            details = step.change.canonical.details
+            shooting_pt, mod_shooting = _shooting_points(details)
+
+            shift = self._get_shift(prev, trial, shooting_pt, mod_shooting)
+            connector = self._connector(shooting_pt, mod_shooting, trial,
+                                        existing)
 
             if shift is None:
                 offset = 0
-            else:
-                offset += shift
+                shift = 0
 
             tree_step = PathTreeStep(
-                offset=offset,
+                offset=offset + shift,
                 mccycle=step.mccycle,
                 mover=step.change.canonical.mover,
                 accepted=step.change.accepted,
@@ -203,11 +211,14 @@ class PathTree(paths.progress.SimpleProgress):
                 segments=make_segments(prev.trajectory, trial)
             )
 
+            if step.change.accepted:
+                offset += shift
+
             path_tree_steps.append(tree_step)
 
             if tree_step.accepted:
                 prev = tree_step
-                pre_existing = existing
+                pre_existing = {k: existing[k] for k in current}
 
         return path_tree_steps
 

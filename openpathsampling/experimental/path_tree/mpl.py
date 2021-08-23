@@ -89,7 +89,7 @@ def blocks_connector_fix(x, direction):
 class Blocks(MPLPlottingStyle):
     """Blocks plotting style for matplotlib-based path trees.
 
-    The Blocks plotting style uses square patches for each snapshot. 
+    The Blocks plotting style uses rectangular patches for each snapshot.
     """
     FIXES = {
         'ForwardShootMover': partial(blocks_connector_fix, direction=+1),
@@ -103,14 +103,14 @@ class Blocks(MPLPlottingStyle):
         mover, color, plot_segments = self.step_basics(step, options)
         # first we draw the background line
         for left, right in plot_segments:
-            ax.plot([left - 0.5, right - 0.5], [-row]*2, color=color)
+            self.ax.plot([left - 0.5, right - 0.5], [-row]*2, color=color)
 
         # now we draw the boxes
         for left, right in plot_segments:
             width, height = self.block_size
             y = - row - height / 2
             for snap in range(left, right):
-                ax.add_patch(
+                self.ax.add_patch(
                     Rectangle((snap - width / 2, y), width, height,
                               color=color)
                 )
