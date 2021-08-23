@@ -585,7 +585,7 @@ class StorageTable(abc.Sequence):
 
     def __getitem__(self, item):
         len_self = len(self)
-        if item is slice:
+        if type(item) is slice:  # Slice is not an acceptable base class
             unpack_return = False
             items = (i for i in range(*item.indices(len_self)))
         elif type(item) is int:
@@ -598,7 +598,7 @@ class StorageTable(abc.Sequence):
             items = [item]
         else:
             raise TypeError("Only access via slice or int allowed, "
-                            f"got type {type(item)}.")
+                            f"got type {type(item).__name__}.")
 
         rows = [self.storage.backend.table_get_item(self.table, item).uuid
                 for item in items]

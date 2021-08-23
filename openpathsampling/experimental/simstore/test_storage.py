@@ -3,12 +3,22 @@ from .storage import *
 import pytest
 
 from .serialization_helpers import get_uuid
-from .test_utils import all_objects, UnnamedUUID, MockUUIDObject
+from .test_utils import all_objects, UnnamedUUID, MockUUIDObject, MockStorage
 
 
 class TestStorageTable(object):
     def setup(self):
-        pass
+        self.storage = MockStorage()
+        # Override default tables/uuids
+        self.storage.backend.table_names = ["all"]
+        self.obj_list = list(all_objects.values())
+        self.storage.backend.tables = [self.obj_list]
+        self.storage.backend.uuid_table = {
+            e.uuid:
+            self.storage.backend.row_types["uuids"](uuid=e.uuid, table=0,
+                                                    idx=i)
+            for i, e in enumerate(self.obj_list)}
+        self.table = StorageTable(self.storage, "all")
 
     def test_iter(self):
         pytest.skip()
@@ -21,6 +31,24 @@ class TestStorageTable(object):
 
     def test_save(self):
         pytest.skip()
+
+    @pytest.mark.parametrize("s", [slice(None),  # [:]
+                                   slice(5),  # [:5]
+                                   slice(-5),  # [:-5]
+                                   slice(1, 2),  # [1:2]
+                                   slice(100),  # longer slice than possible
+                                   slice(6, 4, -1),  # [6:4:-1]
+                                   slice(5, 5),  # empty
+                                   ])
+    def test_getslice(self, s):
+        truths = self.obj_list[s]
+        tests = self.table[s]
+        for i, j in zip(truths, tests):
+            assert i == j
+
+    def test_bogus_access(self):
+        with pytest.raises(TypeError, match="type tuple"):
+            self.table[(1, 2, 3)]
 
 
 class TestPseudoTable(object):
