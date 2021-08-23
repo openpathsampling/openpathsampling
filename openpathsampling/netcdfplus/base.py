@@ -7,6 +7,7 @@ from types import MethodType
 import sys
 if sys.version_info > (3, ):
     long = int
+    unicode = str
 
 logger = logging.getLogger(__name__)
 
@@ -413,12 +414,15 @@ class StorableNamedObject(StorableObject):
                 'Objects cannot be renamed to `%s` after is has been saved, '
                 'it is already named `%s`') %
                 (name, self._name))
-        else:
-            if name != self._name:
-                self._name = name
-                logger.debug(
-                    'Nameable object is renamed from `%s` to `%s`' %
-                    (self._name, name))
+
+        if not isinstance(name, (unicode, str)):
+            raise TypeError("Invalid name type: " + type(name).__name__)
+
+        if name != self._name:
+            self._name = name
+            logger.debug(
+                'Nameable object is renamed from `%s` to `%s`' %
+                (self._name, name))
 
     @property
     def is_named(self):
