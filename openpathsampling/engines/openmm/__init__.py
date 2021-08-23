@@ -4,7 +4,6 @@ def missing_openmm(*args, **kwargs):
 from openpathsampling.integration_tools import HAS_OPENMM
 
 if not HAS_OPENMM:
-    HAS_OPENMM = False
     Engine = missing_openmm
     empty_snapshot_from_openmm_topology = missing_openmm
     snapshot_from_pdb = missing_openmm

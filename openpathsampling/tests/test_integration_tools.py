@@ -12,5 +12,5 @@ def test_chain_import(modules):
     assert mod is os.path
 
 def test_chain_import_error():
-    with pytest.raises(ImportError):
+    with pytest.raises(ImportError, match="bar"):
         _chain_import('foo', 'bar')
