@@ -1,8 +1,9 @@
 import re
 import numpy as np
 ndarray_re = re.compile(
-    "ndarray\.(?P<dtype>[a-z0-9]+)(?P<shape>\([0-9\,\ ]+\))"
+    r"ndarray\.(?P<dtype>[a-z0-9]+)(?P<shape>\([0-9\,\ ]+\))"
 )
+
 
 def parse_ndarray_type(type_name):
     m_ndarray = ndarray_re.match(type_name)
@@ -12,15 +13,15 @@ def parse_ndarray_type(type_name):
         return dtype, shape
     return None
 
+
 # TODO: this needs to be set up in a way to make it extensible (without
 # editing core code)
 def backend_registration_type(type_name):
     backend_type = type_name
     ndarray_info = parse_ndarray_type(type_name)
-    if parse_ndarray_type(type_name):
+    if ndarray_info:
         backend_type = 'ndarray'
     return backend_type
-
 
 
 uuid_types = ['uuid', 'lazy']
@@ -31,5 +32,3 @@ ndarray_types = ['ndarray']
 all_types = uuid_types + uuid_list_types + builtin_types + ndarray_types
 all_uuid_types = ['uuid', 'lazy', 'list_uuid']
 json_obj_types = ['json', 'json_obj']
-
-

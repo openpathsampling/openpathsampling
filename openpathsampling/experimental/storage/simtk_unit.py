@@ -4,16 +4,13 @@ from openpathsampling.experimental.simstore.attribute_handlers import (
 )
 import re
 
-try:
-    import simtk.unit
-except ImportError:
-    HAS_SIMTK = False
-else:
-    HAS_SIMTK = True
+from openpathsampling.integration_tools import HAS_SIMTK_UNIT, unit
+
+if HAS_SIMTK_UNIT:
     # note that we need to force simstore to not treat this as an iterable
     from openpathsampling.experimental.simstore.class_lookup import \
         is_storage_iterable
-    is_storage_iterable.force_false(simtk.unit.Quantity)
+    is_storage_iterable.force_false(unit.Quantity)
 
 ### JSON SERIALIZATION ###################################################
 
@@ -22,36 +19,35 @@ def unit_to_dict(obj):
             for p, power in obj.iter_base_or_scaled_units()}
 
 def unit_from_dict(dct):
-    unit = simtk.unit.Unit({})
+    units = unit.Unit({})
     for u_name, u_power in dct.items():
-        unit *= getattr(simtk.unit, u_name) ** u_power
-    return unit
+        units *= getattr(unit, u_name) ** u_power
+    return units
 
 def quantity_to_dict(obj):
     return {'value': obj.value_in_unit(obj.unit),
             '__simtk_unit__': unit_to_dict(obj.unit)}
 
 def quantity_from_dict(dct):
-    unit = unit_from_dict(dct['__simtk_unit__'])
-    return dct['value'] * unit
+    units = unit_from_dict(dct['__simtk_unit__'])
+    return dct['value'] * units
 
 
-if HAS_SIMTK:
+if HAS_SIMTK_UNIT:
     simtk_quantity_codec = JSONCodec(
-        cls=simtk.unit.Quantity,
+        cls=unit.Quantity,
         to_dict=quantity_to_dict,
         from_dict=quantity_from_dict,
         is_my_dict=lambda x: '__simtk_unit__' in x
     )
 
 ### DIRECT SERIALIZATION #################################################
-_simtk_re = re.compile("simtk\((.*)\)\*((ndarray|float).*)")
+_simtk_re = re.compile(r"simtk\((.*)\)\*((ndarray|float).*)")
 
 
 def simtk_unit_from_string(unit_str):
     # TODO: add safety checks; parse the AST and ensure that all attributes
     # are of `unit` and that all operations are mul/div/pow
-    from simtk import unit
     return eval(unit_str, {'unit': unit})
 
 
@@ -77,9 +73,9 @@ class SimtkQuantityHandler(AttributeHandler):
     def is_my_type(type_str):
         m_simtk_quantity = _simtk_re.match(type_str)
         if m_simtk_quantity:
-            unit = m_simtk_quantity.group(1)
+            units = m_simtk_quantity.group(1)
             wrapped_type = m_simtk_quantity.group(2)
-            return unit, wrapped_type
+            return units, wrapped_type
 
     def serialize(self, obj):
         unwrapped = obj.value_in_unit(self.unit)

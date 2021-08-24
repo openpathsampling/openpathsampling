@@ -8,16 +8,12 @@ from ..storage import Storage
 
 from .simtk_unit import *
 
-try:
-    from simtk import unit
-except ImportError:
-    HAS_SIMTK = False
-else:
-    HAS_SIMTK = True
+from openpathsampling.integration_tools import HAS_SIMTK_UNIT, unit
 
 class TestSimtkUnitCodec(object):
     def setup(self):
-        pytest.importorskip('simtk.unit')
+        if not HAS_SIMTK_UNIT:
+            pytest.skip("openmm.unit not installed")
         my_unit = unit.nanometer / unit.picosecond**2
         self.values = {
             'float': 1.0 * my_unit,

@@ -21,14 +21,11 @@ from .test_helpers import data_filename
 
 from openpathsampling.engines.openmm import Snapshot
 from openpathsampling.integration_tools import HAS_OPENMM, HAS_MDTRAJ
+from openpathsampling.integration_tools import unit, HAS_SIMTK_UNIT
 
-try:
-    from simtk.unit import nanometer as nm
-    from simtk.unit import picosecond as ps
-except ImportError:
-    HAS_SIMTK_UNIT = False
-else:
-    HAS_SIMTK_UNIT = True
+if HAS_SIMTK_UNIT:
+    nm = unit.nanometer
+    ps = unit.picosecond
 
 import numpy.testing as npt
 import numpy as np

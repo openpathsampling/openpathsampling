@@ -276,7 +276,7 @@ class TestGeneralizedDirectionModifier(object):
         if not omt:
             raise SkipTest("Requires OpenMMTools (not installed)")
         if not u:
-            raise SkipTest("Requires simtk.unit (not installed)")
+            raise SkipTest("Requires openmm.unit (not installed)")
         u_vel = old_div(u.nanometer, u.picosecond)
         self.openmm_modifier = GeneralizedDirectionModifier(1.2 * u_vel)
         ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
