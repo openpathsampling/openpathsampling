@@ -92,8 +92,8 @@ class HOOMDEngine(DynamicsEngine):
 
     @staticmethod
     def is_valid_snapshot(snapshot):
-        return (not np.any(np.isnan(snapshot.coordinates._value))) and (
-            not np.any(np.isnan(snapshot.velocities._value))
+        return (not np.any(np.isnan(snapshot.coordinates))) and (
+            not np.any(np.isnan(snapshot.velocities))
         )
 
     @property
@@ -103,17 +103,14 @@ class HOOMDEngine(DynamicsEngine):
 
         return self._current_snapshot
 
-    def _changed(self):
-        self._current_snapshot = None
-
     @current_snapshot.setter
     def current_snapshot(self, snapshot):
         self.check_snapshot_type(snapshot)
 
         if snapshot is not self._current_snapshot:
-            hoomd_snapshot = self.simulation.state.get_snapshot(snapshot)
+            hoomd_snapshot = self.simulation.state.get_snapshot()
             if snapshot.coordinates is not None:
-                hoomd_snapshot.particles.position = snapshot.coordinates
+                hoomd_snapshot.particles.position[:] = snapshot.coordinates
 
             if snapshot.box_vectors is not None:
                 hoomd_snapshot.configuration.box = hoomd.Box.from_matrix(
@@ -121,7 +118,10 @@ class HOOMDEngine(DynamicsEngine):
                 )
 
             if snapshot.velocities is not None:
-                hoomd_snapshot.particles.velocities = snapshot.velocities
+                hoomd_snapshot.particles.velocity[:] = snapshot.velocities
+
+            # Update the current simulation state with the snapshot
+            self.simulation.state.set_snapshot(hoomd_snapshot)
 
             # After the updates cache the new snapshot
             if snapshot.engine is self:
