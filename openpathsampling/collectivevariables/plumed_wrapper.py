@@ -14,7 +14,7 @@ import sys
 
 class PLUMEDCV(paths.collectivevariable.CoordinateFunctionCV):
 
-    """Make `CollectiveVariable` computed by PLUMED [1]_ according to the
+    """Make `CollectiveVariable` computed by PLUMED [PLU2a]_ according to the
     command `name`: `definition`, where `name` is a PLUMED label and
     `definition` contains all PLUMED keywords.
     Takes an `openpathsampling.engines.trajectory.Trajectory` as input.
@@ -22,7 +22,7 @@ class PLUMEDCV(paths.collectivevariable.CoordinateFunctionCV):
     References
     ----------
 
-    .. [1] G.A. Tribello, M. Bonomi, D. Branduardi, C. Camilloni, G. Bussi,
+    .. [PLU2a] G.A. Tribello, M. Bonomi, D. Branduardi, C. Camilloni, G. Bussi,
        PLUMED2: New feathers for an old bird, Comp. Phys. Comm. 185, 604
        (2014); https://doi.org/10.1016/j.cpc.2013.09.018
 
@@ -188,7 +188,7 @@ class PLUMEDCV(paths.collectivevariable.CoordinateFunctionCV):
 
 class PLUMEDInterface(StorableNamedObject):
 
-    """Interfaces the Cython PLUMED wrapper [1]_ located at
+    """Interfaces the Cython PLUMED wrapper [PLU2b]_ located at
     `/path/to/plumed2/python` and allows to set and get non-`PLUMEDCV`
     commands (i.e., non-outputting).  This includes groups of atoms, centers
     of mass, include files, etc.  Requires PLUMED development version (see
@@ -198,7 +198,7 @@ class PLUMEDInterface(StorableNamedObject):
     References
     ----------
 
-    .. [1] G.A. Tribello, M. Bonomi, D. Branduardi, C. Camilloni, G. Bussi,
+    .. [PLU2b] G.A. Tribello, M. Bonomi, D. Branduardi, C. Camilloni, G. Bussi,
        PLUMED2: New feathers for an old bird, Comp. Phys. Comm. 185, 604
        (2014); https://doi.org/10.1016/j.cpc.2013.09.018
 
