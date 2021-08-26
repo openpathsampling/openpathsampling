@@ -72,7 +72,7 @@ class NotebookDirective(Directive):
 
         skip_exceptions = 'skip_exceptions' in self.options
 
-        print('[NotebookDirective] Comverting %s' % nb_filename)
+        print('[NotebookDirective] Converting %s' % nb_filename)
 #        start = time.time()
 #        evaluated_text = evaluate_notebook(nb_abs_path, dest_path_eval,
 #                                           skip_exceptions=skip_exceptions)
