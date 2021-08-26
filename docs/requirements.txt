@@ -1,7 +1,7 @@
 matplotlib
 sphinx
 jupyter
-nbconvert<6  # TODO: remove
+nbconvert>=5  # TODO: remove
 nbsphinx
 jinja2
 netcdf4
