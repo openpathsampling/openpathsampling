@@ -8,6 +8,9 @@
 cover
 *pstat
 
+# Ignore HOOMD-blue GSD (General Simulation Data) files
+*.gsd
+
 .pytest_cache
 dask-worker-space
 
