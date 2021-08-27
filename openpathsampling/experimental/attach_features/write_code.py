@@ -31,7 +31,7 @@ def _make_arguments(parameters):
     defaults = [p for p in parameters
                 if p.default is not inspect.Parameter.empty]
     code = ", ".join([p.name for p in no_defaults])
-    if len(defaults):
+    if len(defaults) and len(no_defaults):
         code += ", "
     code += ", ".join([f"{p.name}={p.default_as_code}" for p in defaults])
     return code
@@ -39,7 +39,7 @@ def _make_arguments(parameters):
 def _call_super(method, parameters, assign_to=None):
     """Call super with ``parameters`` as pass-through parameters"""
     params = ", ".join([f"{p.name}={p.name}" for p in parameters])
-    code = f"super().{method}({params})"
+    code = f"super(self.__class__, self).{method}({params})"
     if assign_to is not None:
         code = f"{assign_to} = {code}"
     return code
@@ -59,10 +59,7 @@ def make_init_code(features):
     fname = '__init__'
     code = [
         _def_function(fname, features.parameters),
-        INDENT + _call_super(fname, []),
-    ]
-    code += [
-        INDENT + _set_attribute(p.name) for p in features.parameters
+        INDENT + _call_super(fname, features.parameters),
     ]
     return code
 
