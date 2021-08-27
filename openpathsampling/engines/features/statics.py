@@ -51,7 +51,7 @@ def coordinates(snapshot):
     -------
     coordinates: numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
         the atomic coordinates of the configuration. The coordinates are
-        wrapped in a `simtk.unit.Unit`.
+        wrapped in a :class:`openmm.unit.Unit`.
     """
 
     if snapshot.statics is not None:
@@ -79,7 +79,7 @@ def box_vectors(snapshot):
     -------
     box_vectors: numpy.ndarray, shape=(3, 3), dtype=numpy.float32
         the box_vectors of the configuration. The coordinates are wrapped in a
-        simtk.unit.Unit.
+        openmm.unit.Unit.
     """
     if snapshot.statics is not None:
         return unmask_quantity(snapshot.statics.box_vectors)
@@ -125,7 +125,7 @@ def xyz(snapshot):
         atomic coordinates without dimensions. Be careful.
 
     """
-    import simtk.unit as u
+    from openpathsampling.integration_tools import unit as u
 
     coord = snapshot.coordinates
     if type(coord) is u.Quantity:

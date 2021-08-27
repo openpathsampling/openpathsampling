@@ -166,7 +166,6 @@ from .high_level.ms_outer_interface import MSOuterTISInterface
 from .high_level.part_in_b_tps import (
     PartInBFixedLengthTPSNetwork, PartInBFixedLengthTPSTransition
 )
-
 from .ensembles import *
 from .pathmovers import *
 from .collectivevariables import *

@@ -13,12 +13,8 @@ from .test_helpers import (CallIdentity, raises_with_message_like,
 import unittest
 import pytest
 import numpy as np
-try:
-    from simtk import unit
-except ImportError:
-    HAS_SIMTK_UNIT = False
-else:
-    HAS_SIMTK_UNIT = True
+
+from openpathsampling.integration_tools import unit, HAS_SIMTK_UNIT
 
 import openpathsampling.volume as volume
 
@@ -173,7 +169,7 @@ class TestCVDefinedVolume(object):
     def test_unit_support(self):
         if not paths.integration_tools.HAS_SIMTK_UNIT:
             raise SkipTest
-        import simtk.unit as u
+        u = unit
 
         vol = volume.CVDefinedVolume(
             op_id, -0.5 * u.nanometers, 0.25 * u.nanometers)
@@ -200,7 +196,7 @@ class TestCVDefinedVolume(object):
             'array1': lambda s: np.array([1.0]),
             'simtk': None
         }[inp]
-        if func is None:  # only if simtk
+        if func is None:  # only if inp is 'simtk'
             func = lambda s: 1.0 * unit.nanometers
 
         cv = paths.FunctionCV('cv', func)
