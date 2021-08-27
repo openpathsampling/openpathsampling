@@ -1,7 +1,3 @@
-"""
-@author: Bradley Dice
-"""
-
 from openpathsampling.engines import BaseSnapshot
 
 from . import features

@@ -73,6 +73,7 @@ class HOOMDEngine(DynamicsEngine):
         if issubclass(integrator, hoomd.md.Integrator):
             dt = integrator.dt
         else:
+            # Assign dt = 1 for Monte Carlo simulations
             dt = 1
         return self.n_steps_per_frame * dt
 
