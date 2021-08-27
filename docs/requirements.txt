@@ -1,11 +1,10 @@
 matplotlib
 sphinx
 jupyter
-nbconvert>=5  # TODO: remove
+nbconvert>=5
 nbsphinx
 jinja2
 netcdf4
-runipy  # TODO: remove
 openmm
 pytables
 scikit-learn

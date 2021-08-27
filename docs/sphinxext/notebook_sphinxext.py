@@ -15,8 +15,8 @@ from nbconvert.exporters import HTMLExporter, PythonExporter
 class NotebookDirective(Directive):
     """Insert an evaluated notebook into a document
 
-    This uses runipy and nbconvert to transform a path to an unevaluated notebook
-    into html suitable for embedding in a Sphinx document.
+    This uses nbconvert to transform a path to an unevaluated notebook into
+    html suitable for embedding in a Sphinx document.
     """
     required_arguments = 1
     optional_arguments = 1
