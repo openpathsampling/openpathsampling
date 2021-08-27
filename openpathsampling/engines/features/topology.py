@@ -1,8 +1,8 @@
 """
 Attributes
 ----------
-topology : :class:`openpathsampling.Topolgy`
-    object containing a description of the snapshots topology
+topology : :class:`openpathsampling.Topology`
+    object containing a description of the snapshot's topology
 """
 
 
