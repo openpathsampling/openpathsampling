@@ -69,7 +69,7 @@ class GeneralStorage(StorableNamedObject):
                                                         {})
 
         # self._pseudo_tables = {table_name: dict()
-                               # for table_name in self.simulation_classes}
+        #                        for table_name in self.simulation_classes}
         self._simulation_objects = {}
         self._pseudo_tables = {table_name: PseudoTable()
                                for table_name in self.simulation_classes}
@@ -159,8 +159,8 @@ class GeneralStorage(StorableNamedObject):
         # check validity
         self.class_info.register_info(class_info_list, schema)
         # for info in class_info_list:
-            # info.set_defaults(schema)
-            # self.class_info.add_class_info(info)
+        #     info.set_defaults(schema)
+        #     self.class_info.add_class_info(info)
 
         schema_types = [type_str for attr_list in schema.values()
                         for _, type_str in attr_list]
@@ -213,7 +213,6 @@ class GeneralStorage(StorableNamedObject):
 
         return uuid_dict
 
-
     def _uuids_by_table(self, input_uuids, cache, get_table_name):
         # find all UUIDs we need to save with this object
         logger.debug("Listing all objects to save")
@@ -243,7 +242,6 @@ class GeneralStorage(StorableNamedObject):
         loaded = self.load(lazies, allow_lazy=False)
         uuid_mapping.update({get_uuid(obj): obj for obj in loaded})
         return uuid_mapping
-
 
     def save(self, obj_list, use_cache=True):
         if type(obj_list) is not list:
@@ -422,7 +420,6 @@ class GeneralStorage(StorableNamedObject):
 
         return new_results
 
-
     def deserialize_uuids(self, ordered_uuids, uuid_to_table,
                           uuid_to_table_row, new_uuids=None):
         # TODO: remove this, replace with SerializationSchema
@@ -479,7 +476,7 @@ class GeneralStorage(StorableNamedObject):
                     my_cls = cls
                     # self._pseudo_tables[key][uuid] = obj
                     # if obj.is_named:
-                        # self._pseudo_tables[key][obj.name] = obj
+                    #     self._pseudo_tables[key][obj.name] = obj
             if my_cls is None:
                 self._pseudo_tables['misc_simulation'].append(obj)
 
@@ -511,7 +508,7 @@ class GeneralStorage(StorableNamedObject):
         elif attr in self._pseudo_tables:
             return self._pseudo_tables[attr]
         else:
-            raise AttributeError("'{}' object has no attribute '{}'"\
+            raise AttributeError("'{}' object has no attribute '{}'"
                                  .format(self.__class__.__name__, attr))
 
 
@@ -563,6 +560,7 @@ class MixedCache(abc.MutableMapping):
     def __iter__(self):
         return itertools.chain(self.fixed_cache, self.cache)
 
+
 class StorageTable(abc.Sequence):
     # NOTE: currently you still need to be able to hold the whole table in
     # memory ... at least, with the SQL backend.
@@ -587,14 +585,27 @@ class StorageTable(abc.Sequence):
 
     def __getitem__(self, item):
         len_self = len(self)
-        if not (-len_self <= item < len_self):
-            raise IndexError("table index out of range")
+        if type(item) is slice:  # Slice is not an acceptable base class
+            unpack_return = False
+            items = (i for i in range(*item.indices(len_self)))
+        elif type(item) is int:
+            unpack_return = True
+            if not (-len_self <= item < len_self):
+                raise IndexError("table index out of range")
 
-        if item < 0:
-            item += len(self)
+            if item < 0:
+                item += len(self)
+            items = [item]
+        else:
+            raise TypeError("Only access via slice or int allowed, "
+                            f"got type {type(item).__name__}.")
 
-        row = self.storage.backend.table_get_item(self.table, item)
-        return self.storage.load([row.uuid])[0]
+        uuids = [self.storage.backend.table_get_item(self.table, item).uuid
+                 for item in items]
+        if unpack_return:
+            return self.storage.load(uuids)[0]
+        else:
+            return self.storage.load(uuids)
 
     def __len__(self):
         return self.storage.backend.table_len(self.table)
@@ -603,6 +614,7 @@ class StorageTable(abc.Sequence):
         old_blocksize = self.iter_block_size
         self.iter_block_size = len(self)
         _ = list(iter(self))
+        self.iter_block_size = old_blocksize
 
     def save(self, obj):
         # this is to match with the netcdfplus API
@@ -611,6 +623,7 @@ class StorageTable(abc.Sequence):
     # TODO: subclass for MCSteps with additional method .ordered, returning
     # things in the order of the mccycle number -- also, manage special
     # caching
+
 
 class PseudoTable(abc.MutableSequence):
     # TODO: use this in the main code
@@ -647,7 +660,9 @@ class PseudoTable(abc.MutableSequence):
     def __getitem__(self, item):
         try:
             ret_val = self._sequence[item]
-        except TypeError:
+        except TypeError as err:
+            if type(item) != str:
+                raise err
             uuid = self._name_to_uuid[item]
             ret_val = self.get_by_uuid(uuid)
         return ret_val
