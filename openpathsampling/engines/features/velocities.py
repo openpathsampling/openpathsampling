@@ -5,6 +5,15 @@ velocities : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
     atomic velocities
 """
 
+# from openpathsampling.experimental.attach_features import Parameter
+# velocities = Parameter(
+#     name='velocities',
+#     docstring="""
+#     velocities : numpy.ndarray, shape=(atoms, 3), dtype=numpy.float32
+#         atomic velocities
+#     """,
+# )
+
 variables = ['velocities']
 minus = ['velocities']
 numpy = ['velocities']
