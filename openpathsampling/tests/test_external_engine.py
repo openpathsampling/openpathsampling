@@ -83,12 +83,11 @@ def setup_module():
 
 
 def teardown_module():
-    # proc = psutil.Popen("make clean", cwd=engine_dir, shell=True)
-    # proc.wait()
+    # Delete compilation files
+    proc = psutil.Popen(["make", "clean"], cwd=engine_dir)
+    proc.wait()
     for testfile in glob.glob("test*out") + glob.glob("test*inp"):
         os.remove(testfile)
-    engine_binary = os.path.join(engine_dir, "engine")
-    os.remove(engine_binary)
 
 
 class TestExternalEngine(object):
