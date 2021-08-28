@@ -1,3 +1,5 @@
+from openpathsampling.netcdfplus import StorableObject
+
 # TODO: get these from some universal source
 def set_uuid(obj, uuid):
     obj.__uuid__ = uuid

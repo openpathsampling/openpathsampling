@@ -4,7 +4,6 @@ import warnings
 from copy import deepcopy
 import numpy as np
 
-from openpathsampling.netcdfplus import StorableObject
 
 from .write_code import make_init, make_copy_with_replacement
 
