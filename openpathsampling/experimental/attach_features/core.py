@@ -52,17 +52,21 @@ class Parameter:
         self._default_as_code = None
 
     def copy_with_replacement(self, name=None, default=_empty, lazy=None,
-                              docstring=None):
+                              copy=None, operations=None, docstring=None):
         if name is None:
             name = self.name
         if default is _empty:
             default = self.default
         if lazy is None:
             lazy = self.lazy
+        if copy is None:
+            copy = self.copy
+        if operations is None:
+            operations = self.operations
         if docstring is None:
             docstring = self.docstring
 
-        return Parameter(name, default, lazy, docstring)
+        return Parameter(name, default, lazy, copy, operations, docstring)
 
     def __repr__(self):
         return f"Parameter(name='{self.name}')"
