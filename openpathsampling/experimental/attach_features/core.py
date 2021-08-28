@@ -1,19 +1,12 @@
-from collections import namedtuple
-import functools
-from copy import deepcopy
 import inspect
-from numbers import Number
+import operator
+import warnings
+from copy import deepcopy
 import numpy as np
 
 from openpathsampling.netcdfplus import StorableObject
 
 from .write_code import make_init, make_copy_with_replacement
-
-def set_uuid(obj, uuid):
-    obj.__uuid__ = uuid
-
-def get_uuid(obj):
-    return obj.__uuid__
 
 # we use inpect.Parameter.empty in order to more easily convert to
 # inspect.Parameter
@@ -96,77 +89,8 @@ class Parameter:
         self._default_as_code = value
 
 
-class Snapshot(StorableObject):
-    def __init__(self, **kwargs):
-        super().__init__()
-        self._reversed_uuid = self.reverse_uuid()  # TODO: change SimStore
-        self._reversed_snapshot = None
-        for arg, val in kwargs.items():
-            setattr(self, arg, val)
-
-    @classmethod
-    def _is_compatible(cls, other):
-        """check that all required features of ``self`` are in ``other``"""
-        required = [p.name for p in cls.__features__.parameters
-                    if p.default is p.empty]
-        for name in required:
-            try:
-                _ = getattr(other, name)
-            except AttributeError:
-                return False
-
-        return True
-
-    def copy_with_replacement(self, **kwargs):
-        dct = self.to_dict()
-
-        # copy things that need to be copied
-        copy_params = [p for p in self.__features__.parameters
-                       if p not in kwargs]
-        for param in copy_params:
-            dct[param.name] = param.copy(dct[param.name])
-
-        # update with new versions
-        dct.update(kwargs)
-        return self.from_dict(dct)
-
-    def to_dict(self):
-        return {p.name: getattr(self, p.name)
-                for p in self.__features__.parameters}
-
-    def _create_reversed(self):
-        reversed_dct = {p.name: p.time_reverse(getattr(self, p.name))
-                        for p in self.__features__.parameters
-                        if 'time_reverse' in p.operations}
-        rev = self.copy_with_replacement(**reversed_dct)
-        set_uuid(rev, self._reversed_uuid)
-        rev._reversed_uuid = get_uuid(self)
-        rev._reversed_snapshot = self
-        self._reversed_snapshot = rev
-        return rev
-
-    @property
-    def reverse(self):
-        if self._reversed_snapshot is None:
-            self._reversed_snapshot = self._create_reversed()
-        return self._reversed_snapshot
-
-    @classmethod
-    def create_empty(cls):
-        new = cls.__new__(cls)
-        super(cls, new).__init__()
-
-
-def minus_reverser(value):
-    return -value
-
-def flip_reverser(value):
-    return ~value
-
-
-
 class function_feature:
-    """decorator to label function features"""
+    """Decorator to label function features"""
     def __init__(self, func):
         self.func = func
 
@@ -175,16 +99,28 @@ class function_feature:
 
 
 class FeatureCollection:
-    """
+    """Collection of feature modules, used by the attach_features decorator.
 
-    Note
-    ----
+    Parameters
+    ----------
+    parameters : List[Parameter]
+        the parameter objects from the included feature modules
+    functions : Dict[str, Callable]
+        mapping of name to callable for functions that can act as instance
+        methods for the snapshot
+    properties : Dict[str, property]
+        mapping of name to property object for methods that can act as
+        properties for the snapshot
+    modules : List[Module]
+        list of feature modules that have been included in this collection
 
-        The regular initialization construction should almost never be used
-        -- it only creates an empty object. In general, either use the
-        ``from_module`` constructor to reate a FeatureCollection from a
-        feature module, or combine two feature collections by adding them
-        together.
+    Notes
+    -----
+        This is almost never used by users. It is primarily an internal tool
+        for snapshot feature management. Even then, it's usage from other
+        classes is generally based on using the ``from_module`` constructor
+        to create a FeatureCollection from a feature module, or on combining
+        two feature collections by adding them together.
     """
     def __init__(self, parameters=None, functions=None, properties=None,
                  modules=None):
@@ -223,9 +159,9 @@ class FeatureCollection:
                 default = Parameter.empty
 
             if variable in getattr(module, 'minus', []):
-                reverser = minus_reverser
+                reverser = operator.neg
             elif variable in getattr(module, 'flip', []):
-                reverser = flip_reverser
+                reverser = operator.inv
             else:
                 reverser = None
 
@@ -282,7 +218,19 @@ class FeatureCollection:
 
     @classmethod
     def from_module(cls, module):
+        """
+        Create a feature collection from a feature module.
 
+        In practice, this is the starting point for loading features into
+        your snapshots. This takes a feature module an engine contributor
+        has written, and gathers the things that will be attached to the
+        snapshot class.
+
+        Parameters
+        ----------
+        module : Module
+            the module (or namespace) to load data from
+        """
         attrs = ['variables', 'lazy']  # shared module attributes
         # extras will probably not be used in OPS 2.0
         extras = ['required', 'numpy', 'reversal', 'minus', 'flip',
@@ -327,14 +275,29 @@ class FeatureCollection:
         return item in self.all_names
 
 
-def attach_features(features):
+def attach_features(features, warn_overload=True):
+    """Decorator to attach feature modules to a snapshot class.
+
+    This allows you to build a snapshot class without writing a lot of
+    boilerplate code -- especially since that code is often repetitive.
+
+    Parameters
+    ----------
+    features: List[Module]
+        modules containing features to attach to this snapshot class
+    warn_overload: bool
+        whether to warn when an automatically-generated method has a
+        user-defined override
+    """
     def _decorator(cls):
         # NOTE: this actually updates ``cls`` in place. That's fine when
         # using this with the @-syntax for decorators, but if you use it as
         # a function, that can be a problem:
         # >>> Foo = attach_features(features_1)(Original)
         # >>> Bar = attach_features(features_2)(Original)
-        # Bar has features_1 and features_2!
+        # >>> Foo is Bar is Original
+        # True
+        # (And Foo and Bar both have both sets of features!)
 
         # gather all the features into one FeatureCollection
         orig = getattr(cls, '__features__', FeatureCollection())
@@ -353,8 +316,12 @@ def attach_features(features):
         for name, constructor in constructions.items():
             if name not in vars(cls):
                 setattr(cls, name, constructor(__features__))
-            else:
-                pass  # warn that this is user-defined
+            elif warn_overload:
+                func = {v: k for k, v in constructions.items()}[constructor]
+                warnings.warn(f"The class {cls.__name__} has a user-defined "
+                              f"implementation of {func}, so the "
+                              "automatically generated version will not be "
+                              "used.")
 
         # attach properties
         for name, prop in __features__.properties.items():

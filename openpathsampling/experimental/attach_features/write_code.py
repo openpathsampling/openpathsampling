@@ -39,7 +39,7 @@ def _make_arguments(parameters):
 def _call_super(method, parameters, assign_to=None):
     """Call super with ``parameters`` as pass-through parameters"""
     params = ", ".join([f"{p.name}={p.name}" for p in parameters])
-    code = f"super(self.__class__, self).{method}({params})"
+    code = f"super().{method}({params})"
     if assign_to is not None:
         code = f"{assign_to} = {code}"
     return code
