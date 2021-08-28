@@ -6,6 +6,7 @@ on:
 
 jobs:
   release-gh:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Cut release"
     steps:

@@ -13,6 +13,7 @@ defaults:
 
 jobs:
   docs:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "docs"
     steps:

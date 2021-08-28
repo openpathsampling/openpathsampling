@@ -19,6 +19,7 @@ defaults:
 
 jobs:
   tests:
+    if: ${{ github.event_name != 'schedule' || github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Tests"
     strategy:
