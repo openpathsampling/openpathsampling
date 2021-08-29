@@ -1,4 +1,4 @@
-OPS was described in a pair of papers published in JCTC:
+OpenPathSampling was described in a pair of papers published in JCTC:
 
 1. David W.H. Swenson, Jan-Hendrik Prinz, Frank Noé, John D. Chodera, and
    Peter G. Bolhuis. "OpenPathSampling: A flexible, open framework for path
