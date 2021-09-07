@@ -93,4 +93,8 @@ def unpatch(paths):
     for cls, old in _PREPATCH.items():
         cls.to_dict = old['to']
         cls.from_dict = old['from']
+    importlib.reload(paths.netcdfplus)
+    importlib.reload(paths.collectivevariable)
+    importlib.reload(paths.collectivevariables)
+    importlib.reload(paths)
     return paths
