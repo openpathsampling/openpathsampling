@@ -265,6 +265,36 @@ class TestGromacsEngine(object):
         # files?
         pytest.skip()
 
+    def test_iter_generate_clear_cache(self):
+        # when running with iter_generate, only the most recently generated
+        # snapshot should contain data -- the others should have their cache
+        # cleared
+        if not has_gmx:
+            pytest.skip("Gromacs (gmx) not found. Skipping test.")
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not found. Skipping test.")
+
+        def continue_condition(trajectory, trusted=False):
+            if len(trajectory) == 5:
+                return False
+            for snap in trajectory[1:]:
+                # the initial snapshot might not be cleared
+                # the final snapshot has not yet been loaded
+                assert snap._xyz is None
+                assert snap._velocities is None
+                assert snap._box_vectors is None
+            return True
+
+        traj_0 = self.engine.trajectory_filename(0)
+        snap = self.engine.read_frame_from_file(traj_0, 0)
+        self.engine.filename_setter.reset(0)
+        # breakpoint()
+        traj = self.engine.generate(snap, running=continue_condition)
+        assert len(traj) == 5
+        ttraj = md.load(self.engine.trajectory_filename(1),
+                        top=self.engine.gro)
+        assert len(ttraj) < 100
+
     def test_serialization_cycle(self):
         serialized = self.engine.to_dict()
         deserialized = Engine.from_dict(serialized)
@@ -378,4 +408,3 @@ class TestGromacsExternalMDSnapshot(object):
         npt.assert_almost_equal(internalized.xyz, reloaded.xyz)
         assert internalized.__class__ != self.snapshot.__class__
         assert internalized.__class__ == reloaded.__class__
-

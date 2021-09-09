@@ -133,6 +133,7 @@ class DynamicsEngine(StorableNamedObject):
     }
 
     base_snapshot_type = BaseSnapshot
+    clear_snapshot_cache = False
 
     def __init__(self, options=None, descriptor=None):
         """
@@ -512,7 +513,7 @@ class DynamicsEngine(StorableNamedObject):
                                 int(len(trajectory) / 2)))]
                 elif hasattr(self.on_retry, '__call__'):
                     trajectory = self.on_retry(trajectory)
-            
+
             """ Case of run dying before first output"""
             if len(trajectory) >= 1:
                 if direction > 0:
@@ -533,6 +534,7 @@ class DynamicsEngine(StorableNamedObject):
             log_rate = 10
             has_nan = False
             has_error = False
+            snapshot = None  # so it is in scope
 
             while not stop:
                 if intervals > 0 and frame % intervals == 0:
@@ -660,6 +662,13 @@ class DynamicsEngine(StorableNamedObject):
 
         logger.info("Finished trajectory, length: %d", len(trajectory))
         yield trajectory
+        if self.clear_snapshot_cache:
+            try:
+                # isolate the AttributeError to just getting this method
+                clear_cache = snapshot.clear_cache
+            except AttributeError:
+                clear_cache = lambda: None
+            clear_cache()
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
