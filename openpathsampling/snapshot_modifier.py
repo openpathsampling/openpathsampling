@@ -124,7 +124,7 @@ class RandomVelocities(SnapshotModifier):
     are all in the same unit system. In particular, ``1.0 / beta * masses``
     must be in units of ``velocity**2``.
 
-    For the OpenMMEngine, for example (after ``from simtk import unit as
+    For the OpenMMEngine, for example (after ``from openmm import unit as
     u``), the ``beta`` parameter for 300 K would be created with
 
     .. code-block:: python
@@ -133,7 +133,7 @@ class RandomVelocities(SnapshotModifier):
 
     Parameters
     ----------
-    beta : float or simtk.unit.Quantity
+    beta : float or openmm.unit.Quantity
         inverse temperature (including kB) for the distribution
     engine : :class:`.DynamicsEngine` or None
         engine to be used for constraints; if None, use the snapshot's
@@ -394,7 +394,7 @@ class GeneralizedDirectionModifier(SnapshotModifier):
             velocities adjusted to have the desired kinetic energy
         """
         # from here, we're doing the KE rescaling
-        # can't just use the dot product because of simtk.units
+        # can't just use the dot product because of openmm.unit
         momenta = velocities * masses[:, np.newaxis]
         dof_ke = momenta * velocities
         zero_energy = 0 * dof_ke[0][0]

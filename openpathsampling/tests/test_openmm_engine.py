@@ -11,12 +11,13 @@ from past.utils import old_div
 import numpy as np
 from nose.tools import (assert_equal)
 from nose.plugins.skip import SkipTest
-try:
-    import simtk.openmm as mm
-    from simtk.openmm import app
-except ImportError:
-    mm = None
+
+from openpathsampling.integration_tools import openmm as mm
+
+if mm is None:
     app = None
+else:
+    app = mm.app
 
 import openpathsampling.engines.openmm as peng
 import openpathsampling.engines as dyn
