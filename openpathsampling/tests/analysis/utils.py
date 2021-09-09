@@ -64,14 +64,33 @@ class MockMove(object):
     def mock_mover(self, mover):
         return mover
 
-    def __call__(self, inputs):
-        mover = _select_by_input_ensembles(
-            movers=self.scheme.movers[self.group_name],
-            ensembles=self.ensemble
-        )
+    def _generate_step_acceptance(self, inputs, accepted):
+        for mover in random.shuffle(list(self.scheme[self.group_name])):
+            change = self._do_move(mover, inputs)
+            if change.accepted is accepted:
+                return change
+
+        looking_for = 'accepted' if accepted else 'rejected'
+        raise AnalysisTestSetupError("unable to generate %s step" %
+                                     looking_for)
+
+    def accepted_step(self, inputs):
+        return _generate_step_acceptance(inputs, accepted=True)
+
+    def rejected_step(self, inputs):
+        return _generate_step_acceptance(inputs, accepted=False)
+
+    def _do_move(self, mover, inputs):
         mover = self.mock_mover(mover)
         change = mover.move(inputs)
         return change
+
+    def __call__(self, inputs):
+        mover = _select_by_input_ensembles(
+            movers=self.scheme.movers[self.group_name],
+            ensembles=self.ensembles
+        )
+        return self._do_move(mover, inputs)
 
 class _MockSingleEnsembleMove(MockMove):
     def __init__(self, scheme, ensemble, group_name):

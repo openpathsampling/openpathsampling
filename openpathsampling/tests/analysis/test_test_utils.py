@@ -40,7 +40,22 @@ def test_backward_shooting_move(scheme):
 
 @pytest.mark.parametrize('accepted', [True, False])
 def test_repex_move(scheme, accepted):
-    pytest.skip()
+    t1 = make_trajectory(0.4)
+    t2 = make_trajectory(1.0)
+    init_conds = scheme.initial_conditions_from_trajectories([t1, t2])
+    assert init_conds[0].trajectory is t1 and init_conds[1].trajectory is t1
+    assert init_conds[2].trajectory is t2
+
+    if accepted:
+        e1, e2 = scheme.network.sampling_ensembles[:2]
+    else:
+        e1, e2 = scheme.network.sampling_ensembles[1:]
+
+    ensembles = e2, e1
+    move = MockRepex(scheme, ensembles)
+    change = move(init_conds)
+    assert change.accepted is accepted
+    assert isinstance(change.canonical.mover, paths.ReplicaExchangeMover)
 
 @pytest.mark.parametrize('accepted', [True, False])
 def test_mock_pathreversal(scheme, accepted):

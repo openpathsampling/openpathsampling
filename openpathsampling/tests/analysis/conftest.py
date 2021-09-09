@@ -7,7 +7,7 @@ def tis_network():
     cv = paths.FunctionCV("x", lambda s: s.xyz[0][0])
     state_A = paths.CVDefinedVolume(cv, float("-inf"), 0)
     state_B = paths.CVDefinedVolume(cv, 1.0, float("inf"))
-    interfaces = paths.VolumeInterfaceSet(cv, float("-inf"), [0.0, 0.1, 0.2])
+    interfaces = paths.VolumeInterfaceSet(cv, float("-inf"), [0.0, 0.3, 0.6])
     network = paths.MISTISNetwork([(state_A, interfaces, state_B)])
     return network
 
