@@ -3,6 +3,7 @@ import pytest
 import openpathsampling as paths
 
 from openpathsampling.tests.analysis.utils import *
+from openpathsampling.tests.analysis.utils import _select_by_input_ensembles
 
 @pytest.mark.parametrize('maxval', [0.5, 1.0])
 def test_make_trajectory(maxval):
@@ -22,10 +23,17 @@ def test_make_trajectory(maxval):
 
 @pytest.mark.parametrize('ensemble', [None, 'ensemble'])
 def test_select_by_input_ensembles(scheme, ensemble):
-    pass
+    movers = scheme.movers['shooting']
+    print([m.ensemble_signature for m in movers])
+    if ensemble == 'ensemble':
+        ensemble = frozenset([movers[0]])
+
+    selected = _select_by_input_ensembles(movers, ensemble)
+    assert selected in movers  # this is enough for ensemble=None
+    pytest.skip()
 
 def test_wrap_one_way_shooting_mover(scheme):
-    pass
+    pytest.skip()
 
-def test_wrap_repex_move():
-    pass
+def test_wrap_repex_move(scheme):
+    pytest.skip()

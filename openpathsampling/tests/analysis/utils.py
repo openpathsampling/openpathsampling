@@ -3,7 +3,10 @@ Tools for generating sequences of steps for analysis tests.
 
 
 """
+
+
 import numpy as np
+import random
 from openpathsampling.tests.test_helpers import make_1d_traj
 
 def make_trajectory(cv_max):
@@ -20,17 +23,19 @@ def make_trajectory(cv_max):
 def _select_by_input_ensembles(movers, ensembles):
     # quick return if we don't actually care about which mover we use
     if ensembles is None:
-        return np.random.choice(movers)
+        return random.choice(movers)
 
     try:
         signature = frozenset(ensembles)
     except TypeError:
         signature = frozenset([ensembles])
-        sel = [m for m in movers if m.ensemble_signature == signature]
-        if len(sel) != 1:
-            raise RuntimeError("Error is test setup: expected 1 mover "
-                               "matching signature; found %d" % len(sel))
-        return sel[0]
+    for m in movers: print(m.ensemble_signature[0])
+    sel = [m for m in movers if m.ensemble_signature[0] == signature]
+    print(sel)
+    if len(sel) != 1:
+        raise RuntimeError("Error in test setup: expected 1 mover "
+                           "matching signature; found %d" % len(sel))
+    return sel[0]
 
 def wrap_one_way_shooting_move(scheme, ensemble=None, shooting_index=None):
     pass
