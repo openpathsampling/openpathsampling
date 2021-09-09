@@ -57,6 +57,13 @@ _PREPATCH = {
     ]
 }
 
+_UNPATCH_MODULES = [
+    paths.netcdfplus,
+    paths.collectivevariable,
+    paths.collectivevariables,
+    paths
+]
+
 def monkey_patch_saving(paths):
     paths.netcdfplus.FunctionPseudoAttribute.to_dict = \
             function_pseudo_attribute_to_dict
@@ -93,8 +100,11 @@ def unpatch(paths):
     for cls, old in _PREPATCH.items():
         cls.to_dict = old['to']
         cls.from_dict = old['from']
-    importlib.reload(paths.netcdfplus)
-    importlib.reload(paths.collectivevariable)
-    importlib.reload(paths.collectivevariables)
-    importlib.reload(paths)
+
+    # we loop over the modules twice as quick-and-dirty solution to avoid
+    # figuring the DAG topological order for imports (should actually in
+    # order leaf to root)
+    for module in _UNPATCH_MODULES * 2:
+        importlib.reload(module)
+
     return paths
