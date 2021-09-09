@@ -24,16 +24,33 @@ def test_make_trajectory(maxval):
 @pytest.mark.parametrize('ensemble', [None, 'ensemble'])
 def test_select_by_input_ensembles(scheme, ensemble):
     movers = scheme.movers['shooting']
-    print([m.ensemble_signature for m in movers])
     if ensemble == 'ensemble':
-        ensemble = frozenset([movers[0]])
+        ensemble = movers[0].input_ensembles[0]
 
     selected = _select_by_input_ensembles(movers, ensemble)
     assert selected in movers  # this is enough for ensemble=None
+    if ensemble == 'ensemble':
+        assert selected == movers[0]
+
+def test_forward_shooting_move(scheme):
     pytest.skip()
 
-def test_wrap_one_way_shooting_mover(scheme):
+def test_backward_shooting_move(scheme):
     pytest.skip()
 
-def test_wrap_repex_move(scheme):
+@pytest.mark.parametrize('accepted', [True, False])
+def test_repex_move(scheme, accepted):
+    pytest.skip()
+
+@pytest.mark.parametrize('accepted', [True, False])
+def test_mock_pathreversal(scheme, accepted):
+    move = MockPathReversal(scheme)
+    maxval = {True: 0.6, False: 1.0}[accepted]
+    init_traj = make_trajectory(maxval)
+    init_conds = scheme.initial_conditions_from_trajectories(init_traj)
+    change = move(init_conds)
+    assert change.accepted is accepted
+    assert isinstance(change.canonical.mover, paths.PathReversalMover)
+
+def test_steps():
     pytest.skip()

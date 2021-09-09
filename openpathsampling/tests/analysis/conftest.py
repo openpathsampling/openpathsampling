@@ -4,7 +4,7 @@ import openpathsampling as paths
 @pytest.fixture
 def tis_network():
     paths.InterfaceSet._reset()
-    cv = paths.FunctionCV("x", lambda x: x)
+    cv = paths.FunctionCV("x", lambda s: s.xyz[0][0])
     state_A = paths.CVDefinedVolume(cv, float("-inf"), 0)
     state_B = paths.CVDefinedVolume(cv, 1.0, float("inf"))
     interfaces = paths.VolumeInterfaceSet(cv, float("-inf"), [0.0, 0.1, 0.2])

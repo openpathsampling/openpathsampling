@@ -1,14 +1,30 @@
 """
 Tools for generating sequences of steps for analysis tests.
 
+The idea here is to have client code specify things like which snapshot
+index is the shooting point and what partial trajectory from one-way
+shooting should be, then we patch those things and use the internals of the
+mover to generate the real data.
 
+In this way, we use as much of the actual OPS machinery as possible,
+ensuring, for example, that the details we return are correct.
 """
 
 
 import numpy as np
 import random
+from unittest.mock import Mock, patch
 from openpathsampling.tests.test_helpers import make_1d_traj
 
+class AnalysisTestSetupError(Exception):
+    """Raised for when an internal error occurs during test setup.
+
+    These usually indicate a problem with test suite, not with the code
+    itself.
+    """
+    pass
+
+# TODO: add lower_bound support
 def make_trajectory(cv_max):
     """Create a trajectory with maximum x at cv_max < x < cv_max + 0.1
     """
@@ -26,39 +42,117 @@ def _select_by_input_ensembles(movers, ensembles):
         return random.choice(movers)
 
     try:
-        signature = frozenset(ensembles)
+        signature = tuple(ensembles)
     except TypeError:
-        signature = frozenset([ensembles])
+        signature = tuple([ensembles])
     for m in movers: print(m.ensemble_signature[0])
     sel = [m for m in movers if m.ensemble_signature[0] == signature]
-    print(sel)
     if len(sel) != 1:
-        raise RuntimeError("Error in test setup: expected 1 mover "
-                           "matching signature; found %d" % len(sel))
+        raise AnalysisTestSetupError(
+            "expected 1 mover matching signature %s; found %d" %
+            (signature, len(sel))
+        )
     return sel[0]
 
-def wrap_one_way_shooting_move(scheme, ensemble=None, shooting_index=None):
-    pass
 
-def wrap_repex_move(scheme, accepted=None, ensembles=None):
-    if ensembles is not None:
-        mover = _select_by_input_signature(
-            movers=scheme.groups['repex'],
-            signature=frozenset(ensembles)
+class MockMove(object):
+    def __init__(self, scheme, ensembles=None, group_name=None):
+        self.scheme = scheme
+        self.ensembles = ensembles
+        self.group_name = group_name
+
+    def mock_mover(self, mover):
+        return mover
+
+    def __call__(self, inputs):
+        mover = _select_by_input_ensembles(
+            movers=self.scheme.movers[self.group_name],
+            ensembles=self.ensemble
         )
-    else:
-        mover = np.random.choice(scheme.groups['repex'])
+        mover = self.mock_mover(mover)
+        change = mover.move(inputs)
+        return change
 
-    pass
+class _MockSingleEnsembleMove(MockMove):
+    def __init__(self, scheme, ensemble, group_name):
+        super(_MockSingleEnsembleMove, self).__init__(
+            scheme=scheme,
+            ensembles=ensemble,
+            group_name=group_name
+        )
 
-def wrap_msouter_move(scheme, accepted=None):
-    pass
+    @property
+    def ensemble(self):
+        return self.ensembles
 
-def wrap_minus_move(scheme, accepted=None):
-    pass
+class _MockOneWayShooting(_MockSingleEnsembleMove):
+    def __init__(self, shooting_index, partial_traj, direction, scheme,
+                 ensemble, group_name):
+        super(_MockOneWayShooting, self).__init__(scheme=scheme,
+                                                  ensemble=ensemble,
+                                                  group_name=group_name)
+        self.shooting_index = shooting_index
+        self.partial_traj = partial_traj
+        self.direction = direction
 
-def make_steps(moves):
-    pass
+    def mock_move(self, mover):
+        ...  # here's all the logic
 
 
+class MockForwardShooting(_MockOneWayShooting):
+    def __init__(self, shooting_index, partial_traj, scheme, ensemble=None,
+                 group_name='shooting'):
+        super(MockForwardShooting, self).__init__(
+            shooting_index=shooting_index,
+            partial_traj=partial_traj,
+            direction='forward',
+            scheme=scheme,
+            ensemble=ensemble,
+            group_name=group_name
+        )
 
+class MockBackwardShooting(_MockOneWayShooting):
+    def __init__(self, shooting_index, partial_traj, scheme, ensemble=None,
+                 group_name='shooting'):
+        super(MockBackwardShooting, self).__init__(
+            shooting_index=shooting_index,
+            partial_traj=partial_traj,
+            direction='backward',
+            scheme=scheme,
+            ensemble=ensemble,
+            group_name=group_name
+        )
+
+
+class MockRepex(MockMove):
+    def __init__(self, scheme, ensembles=None, group_name='repex'):
+        super(MockRepex, self).__init__(scheme=scheme,
+                                        ensembles=ensembles,
+                                        group_name=group_name)
+
+class MockPathReversal(_MockSingleEnsembleMove):
+    def __init__(self, scheme, ensembles=None, group_name='pathreversal'):
+        super(MockPathReversal, self).__init__(scheme=scheme,
+                                               ensemble=ensembles,
+                                               group_name=group_name)
+
+
+def _do_single_step(init_conds, move, org_by_group):
+    change = move(init_conds)
+    if org_by_group:
+        ...  # TODO: add this
+    return change
+
+def steps(init_conds, moves, org_by_group=True):
+    for stepnum, move in enumerate(moves):
+        change = _do_single_step(init_conds, move,
+                                 org_by_group=org_by_group)
+        new_conds = init_conds.apply_samples(change.results)
+        step = paths.MCStep(
+            simulation=None,
+            mccycle=stepnum,
+            active=new_conds,
+            change=change
+        )
+        yield step
+        init_conds = new_conds
