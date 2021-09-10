@@ -32,6 +32,21 @@ def test_select_by_input_ensembles(scheme, ensemble):
     if ensemble == 'ensemble':
         assert selected == movers[0]
 
+def test_random_choice_mover(scheme):
+    mover = scheme.movers['shooting'][0]
+    target_change = Mock(mover=mover)
+    shooting_choosers = [group for group in scheme.root_mover.submovers
+                         if mover in group.submovers]
+    assert len(shooting_choosers) == 1
+    shooting_chooser = shooting_choosers[0]
+    # make sure we got the right one
+    assert shooting_chooser.name == "ShootingChooser"
+
+    random_choice = MockRandomChoiceMover(shooting_chooser, target_change)
+    change = random_choice('foo')  # exact inputs are ignored
+    assert change.mover is shooting_chooser
+    assert change.subchanges[0] is target_change
+
 def test_forward_shooting_move(scheme):
     pytest.skip()
 
@@ -51,7 +66,7 @@ def test_repex_move(scheme, accepted):
     else:
         e1, e2 = scheme.network.sampling_ensembles[1:]
 
-    ensembles = e2, e1
+    ensembles = e1, e2
     move = MockRepex(scheme, ensembles)
     change = move(init_conds)
     assert change.accepted is accepted
