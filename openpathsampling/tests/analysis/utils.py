@@ -28,16 +28,20 @@ class AnalysisTestSetupError(Exception):
     pass
 
 # TODO: add lower_bound support
-def make_trajectory(cv_max):
+def make_trajectory(cv_max, lower_bound=None):
     """Create a trajectory with maximum x at cv_max < x < cv_max + 0.1
     """
-    increasing = list(range(-1, int(cv_max * 10) + 1))
-    if cv_max < 1.0:
+    do_decreasing = False
+    if lower_bound is None:
+        lower_bound = -0.1
+        do_decreasing = True
+    increasing = list(np.arange(lower_bound, cv_max + 0.01, 0.1))
+    if do_decreasing and cv_max < 1.0:
         decreasing = list(reversed(increasing))[1:]
     else:
         decreasing = []
-    array = np.array(increasing + decreasing) + np.random.random()
-    return make_1d_traj(array * 0.1)
+    array = np.array(increasing + decreasing) + np.random.random() * 0.1
+    return make_1d_traj(array)
 
 def _select_by_input_ensembles(movers, ensembles):
     # quick return if we don't actually care about which mover we use
@@ -172,40 +176,60 @@ class _MockSingleEnsembleMove(MockMove):
 
 class _MockOneWayShooting(_MockSingleEnsembleMove):
     def __init__(self, shooting_index, partial_traj, direction, scheme,
-                 ensemble, group_name):
+                 ensemble, accepted, group_name):
         super(_MockOneWayShooting, self).__init__(scheme=scheme,
                                                   ensemble=ensemble,
                                                   group_name=group_name)
         self.shooting_index = shooting_index
         self.partial_traj = partial_traj
         self.direction = direction
+        self.accepted = accepted
 
     def patches(self, mover):
-        ...  # here's all the logic
+        selector_mock = Mock(pick=Mock(return_value=self.shooting_index))
+        if self.accepted is not None:
+            value = 1.0 if accepted else 0.0
+            selector_mock.probability_ratio = Mock(return_value=value)
+
+        selector_patch = patch.object(mover, 'selector', selector_mock)
+
+        if self.direction == 'forward':
+            traj_patch = patch.object(mover, '_make_forward_trajectory',
+                                      Mock(return_value=self.partial_traj))
+        elif self.direction == 'backward':
+            traj_patch = patch.object(mover, '_make_backward_trajectory',
+                                      Mock(return_value=self.partial_traj))
+        else:
+            raise AnalysisTestSetupError("Invalid direction: %s" %
+                                         self.direction)
+
+        return [selector_patch, traj_patch]
 
 
 class MockForwardShooting(_MockOneWayShooting):
     def __init__(self, shooting_index, partial_traj, scheme, ensemble=None,
-                 group_name='shooting'):
+                 accepted=None, group_name='shooting'):
         super(MockForwardShooting, self).__init__(
             shooting_index=shooting_index,
             partial_traj=partial_traj,
             direction='forward',
             scheme=scheme,
             ensemble=ensemble,
+            accepted=accepted,
             group_name=group_name
         )
 
 
 class MockBackwardShooting(_MockOneWayShooting):
     def __init__(self, shooting_index, partial_traj, scheme, ensemble=None,
-                 group_name='shooting'):
+                 accepted=None, group_name='shooting'):
         super(MockBackwardShooting, self).__init__(
             shooting_index=shooting_index,
             partial_traj=partial_traj,
             direction='backward',
             scheme=scheme,
             ensemble=ensemble,
+            accepted=accepted,
             group_name=group_name
         )
 

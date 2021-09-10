@@ -21,6 +21,21 @@ def test_make_trajectory(maxval):
     else:
         raise RuntimeError("This shouldn't happen")
 
+@pytest.mark.parametrize('maxval', [0.5, 1.0])
+def test_make_trajectory_lower_bound(maxval):
+    traj = make_trajectory(maxval, 0.3)
+    xvals = traj.xyz[:,0,0]
+    assert 0.3 < min(xvals) <= 0.4
+    assert max(xvals) == xvals[-1]
+    if maxval == 0.5:
+        assert len(traj) == 3
+        assert 0.5 < max(xvals) <= 0.6
+    elif maxval == 1.0:
+        assert len(traj) == 8
+        assert 1.0 < max(xvals) <= 1.1
+    else:
+        raise RuntimeError("This shouldn't happen")
+
 @pytest.mark.parametrize('ensemble', [None, 'ensemble'])
 def test_select_by_input_ensembles(scheme, ensemble):
     movers = scheme.movers['shooting']
@@ -47,10 +62,12 @@ def test_random_choice_mover(scheme):
     assert change.mover is shooting_chooser
     assert change.subchanges[0] is target_change
 
-def test_forward_shooting_move(scheme):
+@pytest.mark.parametrize('accepted', [True, False])
+def test_forward_shooting_move(scheme, accepted):
     pytest.skip()
 
-def test_backward_shooting_move(scheme):
+@pytest.mark.parametrize('accepted', [True, False])
+def test_backward_shooting_move(scheme, accepted):
     pytest.skip()
 
 @pytest.mark.parametrize('accepted', [True, False])
