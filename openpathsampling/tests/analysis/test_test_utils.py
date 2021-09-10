@@ -82,5 +82,19 @@ def test_mock_pathreversal(scheme, accepted):
     assert change.accepted is accepted
     assert isinstance(change.canonical.mover, paths.PathReversalMover)
 
+@pytest.mark.parametrize('accepted', [True, False])
+def test_wrap_org_by_group(scheme, accepted):
+    # the specific mover doesn't matter; path reversal is easy
+    move = MockPathReversal(scheme)
+    maxval = {True: 0.6, False: 1.0}[accepted]
+    init_traj = make_trajectory(maxval)
+    init_conds = scheme.initial_conditions_from_trajectories(init_traj)
+    canonical = move(init_conds)
+    wrapped = move.wrap_org_by_group(canonical, init_conds)
+    assert wrapped.mover is scheme.root_mover
+    assert wrapped.subchanges[0].mover.name == "PathreversalChooser"
+    assert wrapped.canonical is canonical
+    assert wrapped.subchanges[0].subchanges[0] is canonical
+
 def test_steps():
     pytest.skip()

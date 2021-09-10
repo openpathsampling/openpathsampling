@@ -104,10 +104,10 @@ class MockMove(object):
     def wrap_org_by_group(self, change, inputs):
         # extract the root_mover (selects type of move) and the
         # group_selector (selects a specific move within the move type)
-        root_mover = scheme.root_mover
+        root_mover = self.scheme.root_mover
         group_selectors = root_mover.submovers
         group_selector = [g for g in group_selectors
-                          if change.mover in g.subsubmovers]
+                          if change.mover in g.submovers]
         if len(group_selector) != 1:
             raise AnalysisTestSetupError(
                 "expected 1 group containing the mover %s; found %d" %
