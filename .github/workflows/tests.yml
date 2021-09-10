@@ -60,7 +60,7 @@ jobs:
             python -m pip install -r devtools/minimal.txt \
                                   -r devtools/minimal_testing.txt
           fi
-          python -m pip install autorelease
+          python -m pip install autorelease "gitpython<3.1.20"
       - name: "Install"
         run: |
           python -m pip install --no-deps -e .
