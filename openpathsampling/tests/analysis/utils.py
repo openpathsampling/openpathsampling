@@ -18,6 +18,14 @@ import numpy as np
 import random
 from unittest.mock import Mock, patch
 from openpathsampling.tests.test_helpers import make_1d_traj
+import openpathsampling as paths
+
+def _get_only(iterable, condition, error_msg):
+    possibilities = [item for item in iterable if condition(item)]
+    if len(possibilities) != 1:
+        raise AnalysisTestSetupError(error_msg.format(len(possibilities)))
+    return possibilities[0]
+
 
 class AnalysisTestSetupError(Exception):
     """Raised for when an internal error occurs during test setup.
@@ -186,24 +194,45 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
         self.accepted = accepted
 
     def patches(self, mover):
-        selector_mock = Mock(pick=Mock(return_value=self.shooting_index))
-        if self.accepted is not None:
-            value = 1.0 if accepted else 0.0
-            selector_mock.probability_ratio = Mock(return_value=value)
-
-        selector_patch = patch.object(mover, 'selector', selector_mock)
-
         if self.direction == 'forward':
-            traj_patch = patch.object(mover, '_make_forward_trajectory',
-                                      Mock(return_value=self.partial_traj))
+            shoot_type = paths.ForwardShootMover
         elif self.direction == 'backward':
-            traj_patch = patch.object(mover, '_make_backward_trajectory',
-                                      Mock(return_value=self.partial_traj))
+            shoot_type = paths.BackwardShootMover
         else:
             raise AnalysisTestSetupError("Invalid direction: %s" %
                                          self.direction)
 
-        return [selector_patch, traj_patch]
+        shooter = _get_only(
+            iterable=mover.submovers,
+            condition=lambda m: isinstance(m, shoot_type),
+            error_msg=(
+                "expected only 1 submover of type {shoot_type};".format(
+                    shoot_type=shoot_type.__class__.__name__)
+                ) + " found {n_items}"
+            )
+
+        # patch for the choice of fwd vs bkwd shooter
+        direction_idx = mover.submovers.index(shooter)
+        rng_mock = Mock(choice=Mock(return_value=direction_idx))
+        direction_patch = patch.object(mover, '_rng', rng_mock)
+
+        # patch for the partial trajectory returned by dynamics
+        traj_patch = patch.object(shooter.engine, 'generate',
+                                  Mock(return_value=self.partial_traj))
+
+        # patch for the shooting point selector
+        pick_patch = patch.object(shooter.selector, 'pick',
+                                  Mock(return_value=self.shooting_index))
+        if self.accepted is not None:
+            value = 1.0 if accepted else 0.0
+            probability_ratio_patch = [patch.object(shooter.selector,
+                                                    'probability_ratio',
+                                                    return_value=value)]
+        else:
+            probability_ratio_patch = []
+
+        return ([direction_patch, traj_patch, pick_patch]
+                + probability_ratio_patch)
 
 
 class MockForwardShooting(_MockOneWayShooting):

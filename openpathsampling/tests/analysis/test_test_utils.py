@@ -64,10 +64,61 @@ def test_random_choice_mover(scheme):
 
 @pytest.mark.parametrize('accepted', [True, False])
 def test_forward_shooting_move(scheme, accepted):
-    pytest.skip()
+    t1 = make_trajectory(0.5)
+    t2 = make_trajectory(1.0)
+    init_conds = scheme.initial_conditions_from_trajectories([t1, t2])
+    partial_traj = make_trajectory(0.2, lower_bound=-0.1).reversed
+    len_expected = 6
+    if accepted:
+        # guaranteed to accept because it will be shorter
+        ensemble = scheme.network.sampling_ensembles[0]
+    else:
+        # guaranteed to reject because it doesn't meet the ensemble (doesn't
+        # cross interface)
+        ensemble = scheme.network.sampling_ensembles[2]
+
+    move = MockForwardShooting(shooting_index=2,
+                               partial_traj=partial_traj,
+                               scheme=scheme,
+                               ensemble=ensemble)
+    change = move(init_conds)
+    assert change.accepted is accepted
+    assert len(change.trials) == 1
+    assert len(change.trials[0].trajectory) == len_expected
+    shooting_snapshot = change.subchanges[0].details.shooting_snapshot
+    assert shooting_snapshot is init_conds[ensemble][2]
 
 @pytest.mark.parametrize('accepted', [True, False])
 def test_backward_shooting_move(scheme, accepted):
+    t1 = make_trajectory(0.5)
+    t2 = make_trajectory(1.0)
+    init_conds = scheme.initial_conditions_from_trajectories([t1, t2])
+    ensemble = scheme.network.sampling_ensembles[2]
+    pytest.skip()
+    if accepted:
+        partial_traj = make_trajectory(0.2, ...)
+    else:
+        partial_traj = make_trajectory(..., ...)
+
+    mover = MockBackwardShooting(shooting_index=...,
+                                 partial_traj=partial_traj,
+                                 scheme=scheme,
+                                 ensemble=ensemble)
+
+    change = move(init_conds)
+    assert change.accepted is accepted
+    assert len(change.trials) == 1
+    assert len(change.trials[0].trajectory) == len_expected
+    shooting_snapshot = change.subchange[0].details.shooting_snapshot
+    assert shooting_snapshot is init_conds[ensemble][...]
+
+
+@pytest.mark.parametrize('accepted', [True, False, None])
+def test_shooting_move_force_accept(scheme, accepted):
+    # only test this with the forward shooting mover, since the logic is
+    # shared with backward
+    # in the case of None, run the test multiple times and should have some
+    # accepted and some rejected
     pytest.skip()
 
 @pytest.mark.parametrize('accepted', [True, False])
@@ -79,9 +130,9 @@ def test_repex_move(scheme, accepted):
     assert init_conds[2].trajectory is t2
 
     if accepted:
-        e1, e2 = scheme.network.sampling_ensembles[:2]
+        e2, e1 = scheme.network.sampling_ensembles[:2]
     else:
-        e1, e2 = scheme.network.sampling_ensembles[1:]
+        e2, e1 = scheme.network.sampling_ensembles[1:]
 
     ensembles = e1, e2
     move = MockRepex(scheme, ensembles)
