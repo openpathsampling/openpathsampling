@@ -61,7 +61,8 @@ def _select_by_input_ensembles(movers, ensembles):
     except TypeError:
         signature = tuple([ensembles])
     for m in movers: print(m.ensemble_signature[0])
-    sel = [m for m in movers if m.ensemble_signature[0] == signature]
+    sel = [m for m in movers
+           if set(m.ensemble_signature[0]) == set(signature)]
 
     if len(sel) != 1:
         raise AnalysisTestSetupError(
@@ -141,21 +142,24 @@ class MockMove(object):
     def patches(self, mover):
         return []
 
-    def _generate_step_acceptance(self, inputs, accepted):
-        for mover in random.shuffle(list(self.scheme[self.group_name])):
-            change = self._do_move(mover, inputs)
-            if change.accepted is accepted:
-                return change
+    def safety_checks(self, change, inputs):
+        pass
 
-        looking_for = 'accepted' if accepted else 'rejected'
-        raise AnalysisTestSetupError("unable to generate %s step" %
-                                     looking_for)
+    # def _generate_step_acceptance(self, inputs, accepted):
+    #     for mover in random.shuffle(list(self.scheme[self.group_name])):
+    #         change = self._do_move(mover, inputs)
+    #         if change.accepted is accepted:
+    #             return change
 
-    def accepted_step(self, inputs):
-        return _generate_step_acceptance(inputs, accepted=True)
+    #     looking_for = 'accepted' if accepted else 'rejected'
+    #     raise AnalysisTestSetupError("unable to generate %s step" %
+    #                                  looking_for)
 
-    def rejected_step(self, inputs):
-        return _generate_step_acceptance(inputs, accepted=False)
+    # def accepted_step(self, inputs):
+    #     return _generate_step_acceptance(inputs, accepted=True)
+
+    # def rejected_step(self, inputs):
+    #     return _generate_step_acceptance(inputs, accepted=False)
 
     def _do_move(self, mover, inputs):
         patches = self.patches(mover)
@@ -166,7 +170,9 @@ class MockMove(object):
             movers=self.scheme.movers[self.group_name],
             ensembles=self.ensembles
         )
-        return self._do_move(mover, inputs)
+        change = self._do_move(mover, inputs)
+        self.safety_checks(change, inputs)
+        return change
 
 
 class _MockSingleEnsembleMove(MockMove):
@@ -193,6 +199,9 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
         self.direction = direction
         self.accepted = accepted
 
+    def _generate_mock(self, snapshot, running):
+        return paths.Trajectory([snapshot] + self.partial_traj)
+
     def patches(self, mover):
         if self.direction == 'forward':
             shoot_type = paths.ForwardShootMover
@@ -218,7 +227,7 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
 
         # patch for the partial trajectory returned by dynamics
         traj_patch = patch.object(shooter.engine, 'generate',
-                                  Mock(return_value=self.partial_traj))
+                                  self._generate_mock)
 
         # patch for the shooting point selector
         pick_patch = patch.object(shooter.selector, 'pick',
@@ -233,6 +242,15 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
 
         return ([direction_patch, traj_patch, pick_patch]
                 + probability_ratio_patch)
+
+    def safety_checks(self, change, inputs):
+        # was the shooting point included in the trial trajectory? (we can't
+        # know this until after we create the move change)
+        shooting_snapshot = change.canonical.details.shooting_snapshot
+        trial_traj = change.canonical.trials[0].trajectory
+        if shooting_snapshot not in trial_traj:
+            raise AnalysisTestSetupError("shooting point not included in "
+                                         "partial trajectory")
 
 
 class MockForwardShooting(_MockOneWayShooting):
