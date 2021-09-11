@@ -23,6 +23,10 @@ import openpathsampling as paths
 def _get_only(iterable, condition, error_msg):
     possibilities = [item for item in iterable if condition(item)]
     if len(possibilities) != 1:
+        raise AnalysisTestSetupError.non_singleton(
+            msg=error_msg,
+            found=possibilities
+        )
         raise AnalysisTestSetupError(error_msg.format(len(possibilities)))
     return possibilities[0]
 
@@ -33,7 +37,11 @@ class AnalysisTestSetupError(Exception):
     These usually indicate a problem with test suite, not with the code
     itself.
     """
-    pass
+    @classmethod
+    def non_singleton(cls, msg, found):
+        return cls("expected 1 {msg}; found {nfound}: {found}".format(
+            msg=msg, nfound=len(found), found=found)
+        )
 
 # TODO: add lower_bound support
 def make_trajectory(cv_max, lower_bound=None):
@@ -61,13 +69,15 @@ def _select_by_input_ensembles(movers, ensembles):
     except TypeError:
         signature = tuple([ensembles])
     for m in movers: print(m.ensemble_signature[0])
+
+    # TODO: change this to _get_only
     sel = [m for m in movers
            if set(m.ensemble_signature[0]) == set(signature)]
 
     if len(sel) != 1:
-        raise AnalysisTestSetupError(
-            "expected 1 mover matching signature %s; found %d. Allowed: %s"
-            % (signature, len(sel), [m.ensemble_signature[0] for m in movers])
+        raise AnalysisTestSetupError.non_singleton(
+            msg="mover matching signature{sig}".format(sig=signature),
+            found=sel
         )
     return sel[0]
 
@@ -119,12 +129,13 @@ class MockMove(object):
         # group_selector (selects a specific move within the move type)
         root_mover = self.scheme.root_mover
         group_selectors = root_mover.submovers
+        # TODO: change to _get_only
         group_selector = [g for g in group_selectors
                           if change.mover in g.submovers]
         if len(group_selector) != 1:
-            raise AnalysisTestSetupError(
-                "expected 1 group containing the mover %s; found %d" %
-                (change.mover, len(group_selector))
+            raise AnalysisTestSetupError.non_singleton(
+                msg="group containing the mover {mover}".format(mover=mover),
+                found=group_selector
             )
         group_selector = group_selector[0]
 
@@ -215,9 +226,9 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
             iterable=mover.submovers,
             condition=lambda m: isinstance(m, shoot_type),
             error_msg=(
-                "expected only 1 submover of type {shoot_type};".format(
+                "submover of type {shoot_type};".format(
                     shoot_type=shoot_type.__class__.__name__)
-                ) + " found {n_items}"
+                )
             )
 
         # patch for the choice of fwd vs bkwd shooter
@@ -233,7 +244,7 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
         pick_patch = patch.object(shooter.selector, 'pick',
                                   Mock(return_value=self.shooting_index))
         if self.accepted is not None:
-            value = 1.0 if accepted else 0.0
+            value = 1.0 if self.accepted else 0.0
             probability_ratio_patch = [patch.object(shooter.selector,
                                                     'probability_ratio',
                                                     return_value=value)]

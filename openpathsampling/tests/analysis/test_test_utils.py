@@ -1,6 +1,10 @@
 import pytest
 
+import collections
+
 import openpathsampling as paths
+
+from openpathsampling.tests.test_helpers import make_1d_traj
 
 from openpathsampling.tests.analysis.utils import *
 from openpathsampling.tests.analysis.utils import _select_by_input_ensembles
@@ -44,7 +48,7 @@ def test_select_by_input_ensembles(scheme, ensemble):
 
     selected = _select_by_input_ensembles(movers, ensemble)
     assert selected in movers  # this is enough for ensemble=None
-    if ensemble == 'ensemble':
+    if ensemble is not None:
         assert selected == movers[0]
 
 def test_random_choice_mover(scheme):
@@ -112,7 +116,7 @@ def test_one_way_shooting_move(scheme, direction, accepted):
                     partial_traj=partial_traj,
                     scheme=scheme,
                     ensemble=ensemble)
-    
+
     change = move(init_conds)
 
     # check that this looks like a move change from shooting
@@ -137,7 +141,28 @@ def test_shooting_move_force_accept(scheme, accepted):
     # probability.
     # only test this with the forward shooting mover, since the logic is
     # shared with backward
-    pytest.skip()
+    init_traj = make_trajectory(1.0)
+    partial_traj = make_1d_traj([0.95] * (len(init_traj)-2) + [1.05])
+    init_conds = scheme.initial_conditions_from_trajectories(init_traj)
+    ensemble = scheme.network.sampling_ensembles[2]
+    shooting_idx = len(init_traj) - 2
+
+    move = MockForwardShooting(shooting_index=shooting_idx,
+                               partial_traj=partial_traj,
+                               accepted=accepted,
+                               scheme=scheme,
+                               ensemble=ensemble)
+
+    n_attempts = 25
+    changes = [move(init_conds) for _ in range(n_attempts)]
+    results = collections.Counter(change.accepted for change in changes)
+    if accepted is not None:
+        assert results[accepted] == n_attempts
+        assert not accepted not in results
+    else:
+        assert results[True] > 0
+        assert results[False] > 0
+        assert results[True] + results[False] == n_attempts
 
 @pytest.mark.parametrize('accepted', [True, False])
 def test_repex_move(scheme, accepted):
