@@ -7,7 +7,28 @@ import openpathsampling as paths
 from openpathsampling.tests.test_helpers import make_1d_traj
 
 from openpathsampling.tests.analysis.utils import *
-from openpathsampling.tests.analysis.utils import _select_by_input_ensembles
+from openpathsampling.tests.analysis.utils import (
+    _select_by_input_ensembles, _get_only
+)
+
+def test_get_only():
+    test_list = ['foo', 'bar', 'baz', 'qux']
+    only = _get_only(iterable=test_list,
+                     condition=lambda s: s.startswith('f'),
+                     error_msg="string starting with f")
+    assert only == 'foo'
+
+def test_get_only_error():
+    test_list = ['foo', 'bar', 'baz', 'qux']
+    with pytest.raises(AnalysisTestSetupError, match="found 2"):
+        _get_only(test_list,
+                  condition=lambda s: s.startswith('b'),
+                  error_msg="string starting with b")
+
+    with pytest.raises(AnalysisTestSetupError, match="found 0"):
+        _get_only(test_list,
+                  condition=lambda s: s.startswith('z'),
+                  error_msg="string starting with z")
 
 @pytest.mark.parametrize('maxval', [0.5, 1.0])
 def test_make_trajectory(maxval):
@@ -66,6 +87,21 @@ def test_random_choice_mover(scheme):
     assert change.mover is shooting_chooser
     assert change.subchanges[0] is target_change
 
+def test_random_choice_mover_error(scheme):
+    mover = scheme.movers['repex'][0]
+    target_change = Mock(mover=mover)
+    shoot_mover = scheme.movers['shooting'][0]
+    shooting_choosers = [group for group in scheme.root_mover.submovers
+                         if shoot_mover in group.submovers]
+    assert len(shooting_choosers) == 1
+    shooting_chooser = shooting_choosers[0]
+    # make sure we got the right one
+    assert shooting_chooser.name == "ShootingChooser"
+
+    random_choice = MockRandomChoiceMover(shooting_chooser, target_change)
+    with pytest.raises(AnalysisTestSetupError, match="not found as sub"):
+        random_choice('foo')
+
 def _setup_one_way_forward(scheme, accepted):
     partial_traj = make_trajectory(0.2, lower_bound=-0.1).reversed
     # * ensemble 0 is always accepted because the trial trajectory is
@@ -116,6 +152,8 @@ def test_one_way_shooting_move(scheme, direction, accepted):
                     partial_traj=partial_traj,
                     scheme=scheme,
                     ensemble=ensemble)
+
+    assert move.ensemble == ensemble
 
     change = move(init_conds)
 

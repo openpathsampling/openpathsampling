@@ -31,7 +31,6 @@ def _get_only(iterable, condition, error_msg):
             msg=error_msg,
             found=possibilities
         )
-        raise AnalysisTestSetupError(error_msg.format(len(possibilities)))
     return possibilities[0]
 
 
@@ -71,18 +70,13 @@ def _select_by_input_ensembles(movers, ensembles):
         signature = tuple(ensembles)
     except TypeError:
         signature = tuple([ensembles])
-    for m in movers: print(m.ensemble_signature[0])
 
-    # TODO: change this to _get_only
-    sel = [m for m in movers
-           if set(m.ensemble_signature[0]) == set(signature)]
-
-    if len(sel) != 1:
-        raise AnalysisTestSetupError.non_singleton(
-            msg="mover matching signature{sig}".format(sig=signature),
-            found=sel
-        )
-    return sel[0]
+    mover = _get_only(
+        iterable=movers,
+        condition=lambda m: set(m.ensemble_signature[0]) == set(signature),
+        error_msg="mover matching signature{sig}".format(sig=signature)
+    )
+    return mover
 
 def _run_patched(mover, patches, inputs):
     for patch in patches:
@@ -131,16 +125,13 @@ class MockMove(object):
         # extract the root_mover (selects type of move) and the
         # group_selector (selects a specific move within the move type)
         root_mover = self.scheme.root_mover
-        group_selectors = root_mover.submovers
-        # TODO: change to _get_only
-        group_selector = [g for g in group_selectors
-                          if change.mover in g.submovers]
-        if len(group_selector) != 1:
-            raise AnalysisTestSetupError.non_singleton(
-                msg="group containing the mover {mover}".format(mover=mover),
-                found=group_selector
+        group_selector = _get_only(
+            iterable=root_mover.submovers,
+            condition=lambda g: change.mover in g.submovers,
+            error_msg="group containing the mover {mover}".format(
+                mover=change.mover
             )
-        group_selector = group_selector[0]
+        )
 
         # make a move change for the inner step (selecting which mover
         # within the move type)
@@ -205,7 +196,7 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
             shoot_type = paths.ForwardShootMover
         elif self.direction == 'backward':
             shoot_type = paths.BackwardShootMover
-        else:
+        else:  # pragma: no cover
             raise AnalysisTestSetupError("Invalid direction: %s" %
                                          self.direction)
 
@@ -246,7 +237,9 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
         # know this until after we create the move change)
         shooting_snapshot = change.canonical.details.shooting_snapshot
         trial_traj = change.canonical.trials[0].trajectory
-        if shooting_snapshot not in trial_traj:
+        if shooting_snapshot not in trial_traj:  # pragma: no cover
+            # This should not be possible, because the mock mover adds the
+            # shooting point. Safety against weird failures, though.
             raise AnalysisTestSetupError("shooting point not included in "
                                          "partial trajectory")
 
