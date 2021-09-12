@@ -27,10 +27,12 @@ import openpathsampling as paths
 def _get_only(iterable, condition, error_msg):
     possibilities = [item for item in iterable if condition(item)]
     if len(possibilities) != 1:
-        raise AnalysisTestSetupError.non_singleton(
-            msg=error_msg,
+        msg = "expected 1 {error_msg}; found {nfound}: found".format(
+            error_msg=error_msg,
+            nfound=len(possibilities),
             found=possibilities
         )
+        raise AnalysisTestSetupError(msg)
     return possibilities[0]
 
 
@@ -40,26 +42,28 @@ class AnalysisTestSetupError(Exception):
     These usually indicate a problem with test suite, not with the code
     itself.
     """
-    @classmethod
-    def non_singleton(cls, msg, found):
-        return cls("expected 1 {msg}; found {nfound}: {found}".format(
-            msg=msg, nfound=len(found), found=found)
-        )
 
-def make_trajectory(cv_max, lower_bound=None):
-    """Create a trajectory with maximum x at cv_max < x < cv_max + 0.1
+def make_trajectory(lower, upper):
+    """Make a trajectory from `lower` to `upper`.
+
+    This makes a trajectory segment with x-values of frames spread by 0.1.
+    For each trajectory, some random value epsilon is added, such that the
+    lowest value is ``lower + epsilon`` and the highest value is ``upper +
+    epsilon``.
     """
-    do_decreasing = False
-    if lower_bound is None:
-        lower_bound = -0.1
-        do_decreasing = True
-    increasing = list(np.arange(lower_bound, cv_max + 0.01, 0.1))
-    if do_decreasing and cv_max < 1.0:
-        decreasing = list(reversed(increasing))[1:]
+    xvals = np.arange(lower, upper + 0.01, 0.1) + np.random.random() * 0.1
+    return make_1d_traj(xvals)
+
+def make_tis_trajectory(cv_max, lower_bound=-0.1):
+    """Make a TIS trajectory with a given maximum x value.
+
+    """
+    increasing = make_trajectory(lower_bound, cv_max)
+    if cv_max >= 1.0:
+        return increasing
     else:
-        decreasing = []
-    array = np.array(increasing + decreasing) + np.random.random() * 0.1
-    return make_1d_traj(array)
+        decreasing = increasing.reversed[1:]
+        return increasing + decreasing
 
 def _select_by_input_ensembles(movers, ensembles):
     # quick return if we don't actually care about which mover we use
