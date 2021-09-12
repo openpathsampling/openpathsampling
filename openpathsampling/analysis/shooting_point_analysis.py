@@ -1,6 +1,7 @@
 import collections
 import pandas as pd
 import numpy as np
+import warnings
 
 from openpathsampling.progress import SimpleProgress
 
@@ -76,6 +77,19 @@ class SnapshotByCoordinateDict(TransformedDict):
                                                        *args, **kwargs)
 
 
+class ShootingPointAnalysisError(AssertionError):
+    # TODO this should inherit from a different Error type in OPS 2.0
+    pass
+
+
+class NoFramesInStateError(ShootingPointAnalysisError):
+    pass
+
+
+class MoreStatesThanFramesError(ShootingPointAnalysisError):
+    pass
+
+
 class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
     """
     Container and methods for shooting point analysis.
@@ -91,11 +105,14 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
     states : list of :class:`.Volume`
         volumes to consider as states for the analysis. For pandas output,
         these volumes must be named.
+    error_if_no_state: bool, default True
+         boolean flag to error on steps that don't end in one of the states
     """
-    def __init__(self, steps, states):
+    def __init__(self, steps, states, error_if_no_state=True):
         super(ShootingPointAnalysis, self).__init__()
         self.states = states
-        if steps is not None:
+        self.error_if_no_state = error_if_no_state
+        if steps:
             self.analyze(steps)
 
     def analyze(self, steps):
@@ -107,7 +124,16 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
             MC steps to analyze
         """
         for step in self.progress(steps):
-            self.analyze_single_step(step)
+            try:
+                self.analyze_single_step(step)
+            except NoFramesInStateError as err:
+                if self.error_if_no_state:
+                    addition = ("\nTo disable this error set "
+                                "'error_if_no_state=False'")
+                    raise type(err)(str(err) + addition)
+
+                else:
+                    warnings.warn(str(err))
 
     def analyze_single_step(self, step):
         """
@@ -138,8 +164,19 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
                  for state in self.states}
             )
             total_count = sum(total.values())
-            # TODO: clarify assertion (at least one endpoint in state)
-            assert total_count == 1 or total_count == 2
+            if total_count == 0:
+                err = ("Step "+str(step.mccycle)+" has a trajectory without "
+                       "endpoints in any of the states.")
+                raise NoFramesInStateError(err)
+            if total_count > len(test_points):
+                err = ("The " + str(len(test_points)) +
+                       " end points of the trail trajectory from step " +
+                       str(step.mccycle) +
+                       " found " + str(total_count) + " stable states."
+                       "\n Are you sure your states don't overlap?"
+                       )
+                raise MoreStatesThanFramesError(err)
+
             try:
                 self[key] += total
             except KeyError:
@@ -167,7 +204,8 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
         """
         key = None
         try:
-            details = step.change.canonical.details
+            change = step.change.canonical
+            details = change.details
             shooting_snap = details.shooting_snapshot
         except AttributeError:
             # wrong kind of move (no shooting_snapshot)
@@ -242,8 +280,10 @@ class ShootingPointAnalysis(SimpleProgress, SnapshotByCoordinateDict):
         except TypeError:
             ndim = 1
         if ndim > 2 or ndim < 1:
-            raise RuntimeError("Histogram key dimension {0} > 2 or {0} < 1 "
-                               + "(key: {1})".format(ndim, key))
+            err = ("Histogram key dimension {0} > 2 or {0} < 1 "
+                   "(key: {1})").format(ndim, key)
+
+            raise RuntimeError(err)
         return ndim
 
     def committor_histogram(self, new_hash, state, bins=10):
