@@ -155,6 +155,7 @@ def test_shooting_move_force_accept(scheme, accepted):
 
     n_attempts = 25
     changes = [move(init_conds) for _ in range(n_attempts)]
+    # TODO: add assert to check that the pick probability is as expected?
     results = collections.Counter(change.accepted for change in changes)
     if accepted is not None:
         assert results[accepted] == n_attempts
@@ -163,6 +164,25 @@ def test_shooting_move_force_accept(scheme, accepted):
         assert results[True] > 0
         assert results[False] > 0
         assert results[True] + results[False] == n_attempts
+
+
+def test_reject_nonsense_forced_acceptance(scheme):
+    # if a user requires that the shooting move be accepted, but the given
+    # trajectory cannot be accepted because it doesn't match the ensemble,
+    # we should raise an error
+    init_traj = make_trajectory(1.0)
+    init_conds = scheme.initial_conditions_from_trajectories(init_traj)
+    # get a setup that should never be accepted
+    ensemble, partial_traj = _setup_one_way_backward(scheme, accepted=False)
+    shooting_idx = 4
+    move = MockBackwardShooting(shooting_index=shooting_idx,
+                                partial_traj=partial_traj,
+                                accepted=True,
+                                scheme=scheme,
+                                ensemble=ensemble)
+
+    with pytest.raises(AnalysisTestSetupError, match="force acceptance"):
+        move(init_conds)
 
 @pytest.mark.parametrize('accepted', [True, False])
 def test_repex_move(scheme, accepted):
@@ -207,5 +227,63 @@ def test_wrap_org_by_group(scheme, accepted):
     assert wrapped.canonical is canonical
     assert wrapped.subchanges[0].subchanges[0] is canonical
 
-def test_steps():
-    pytest.skip()
+@pytest.mark.parametrize('accepted', [True, False])
+def test_run_moves_single(scheme, accepted):
+    # check that a single accepted step gives an MCStep with results that
+    # match the expected active for accepted/rejected steps
+    traj = {True: make_trajectory(0.5),
+            False: make_trajectory(1.0)}[accepted]
+    init_conds = scheme.initial_conditions_from_trajectories(traj)
+    ensemble = scheme.network.sampling_ensembles[0]
+    move = MockPathReversal(scheme, ensemble=ensemble)
+    steplist = list(run_moves(init_conds, [move]))
+
+    assert len(steplist) == 1
+    step = steplist[0]
+    assert isinstance(step, paths.MCStep)
+    assert isinstance(step.change.canonical.mover, paths.PathReversalMover)
+    assert step.change.accepted is accepted
+    if accepted:
+        assert step.active[ensemble].trajectory == traj.reversed
+    else:
+        assert step.active[ensemble] is init_conds[ensemble]
+
+
+def test_run_moves_multiple(scheme):
+    traj = make_trajectory(1.0)
+    init_conds = scheme.initial_conditions_from_trajectories(traj)
+    ensemble = scheme.network.sampling_ensembles[2]
+
+    moves = [
+        # first move is force-accepted (always accepted anyway)
+        MockForwardShooting(
+            shooting_index=8,
+            partial_traj=make_trajectory(1.0, 0.8),
+            accepted=True,
+            scheme=scheme,
+            ensemble=ensemble
+        ),
+        # second move is rejected (bad ensemble)
+        MockBackwardShooting(
+            shooting_index=4,
+            partial_traj=make_trajectory(1.0, 0.3),
+            scheme=scheme,
+            ensemble=ensemble
+        ),
+        # third move is force accepted
+        MockBackwardShooting(
+            shooting_index=9,
+            partial_traj=make_trajectory(0.8, -0.1).reversed,
+            accepted=True,
+            scheme=scheme,
+            ensemble=ensemble
+        )
+    ]
+
+    steps = list(run_moves(init_conds, moves))
+    initial_traj = init_conds[ensemble].trajectory
+    final_traj = steps[-1].active[ensemble].trajectory
+
+    assert len(steps) == 3
+    assert [step.change.accepted for step in steps] == [True, False, True]
+    assert not initial_traj.is_correlated(final_traj)

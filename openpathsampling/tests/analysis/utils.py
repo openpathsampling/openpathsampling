@@ -16,7 +16,11 @@ represents an individual type of move that can be reused for many steps.
 
 import numpy as np
 import random
-from unittest.mock import Mock, patch
+try:
+    from unittest.mock import Mock, patch
+except ImportError:
+    from mock import Mock, patch
+
 from openpathsampling.tests.test_helpers import make_1d_traj
 import openpathsampling as paths
 
@@ -43,7 +47,6 @@ class AnalysisTestSetupError(Exception):
             msg=msg, nfound=len(found), found=found)
         )
 
-# TODO: add lower_bound support
 def make_trajectory(cv_max, lower_bound=None):
     """Create a trajectory with maximum x at cv_max < x < cv_max + 0.1
     """
@@ -156,22 +159,6 @@ class MockMove(object):
     def safety_checks(self, change, inputs):
         pass
 
-    # def _generate_step_acceptance(self, inputs, accepted):
-    #     for mover in random.shuffle(list(self.scheme[self.group_name])):
-    #         change = self._do_move(mover, inputs)
-    #         if change.accepted is accepted:
-    #             return change
-
-    #     looking_for = 'accepted' if accepted else 'rejected'
-    #     raise AnalysisTestSetupError("unable to generate %s step" %
-    #                                  looking_for)
-
-    # def accepted_step(self, inputs):
-    #     return _generate_step_acceptance(inputs, accepted=True)
-
-    # def rejected_step(self, inputs):
-    #     return _generate_step_acceptance(inputs, accepted=False)
-
     def _do_move(self, mover, inputs):
         patches = self.patches(mover)
         return _run_patched(mover, patches, inputs)
@@ -254,7 +241,7 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
         return ([direction_patch, traj_patch, pick_patch]
                 + probability_ratio_patch)
 
-    def safety_checks(self, change, inputs):
+    def _check_shooting_point_in_trial(self, change, inputs):
         # was the shooting point included in the trial trajectory? (we can't
         # know this until after we create the move change)
         shooting_snapshot = change.canonical.details.shooting_snapshot
@@ -262,6 +249,26 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
         if shooting_snapshot not in trial_traj:
             raise AnalysisTestSetupError("shooting point not included in "
                                          "partial trajectory")
+
+    def _check_forced_accepted_reasonable(self, change, inputs):
+        trial = change.canonical.trials[0]
+        if self.accepted and not trial.ensemble(trial.trajectory):
+            if change.accepted:  # pragma: no cover
+                raise AnalysisTestSetupError(
+                    "Something when wrong in the mock mover. A step that "
+                    "can not be accepted was accepted."
+                )
+            else:
+                raise AnalysisTestSetupError(
+                    "Step tried to force acceptance on a trial that can "
+                    "not be accepted."
+                )
+
+
+
+    def safety_checks(self, change, inputs):
+        self._check_shooting_point_in_trial(change, inputs)
+        self._check_forced_accepted_reasonable(change, inputs)
 
 
 class MockForwardShooting(_MockOneWayShooting):
@@ -300,9 +307,9 @@ class MockRepex(MockMove):
 
 
 class MockPathReversal(_MockSingleEnsembleMove):
-    def __init__(self, scheme, ensembles=None, group_name='pathreversal'):
+    def __init__(self, scheme, ensemble=None, group_name='pathreversal'):
         super(MockPathReversal, self).__init__(scheme=scheme,
-                                               ensemble=ensembles,
+                                               ensemble=ensemble,
                                                group_name=group_name)
 
 
@@ -312,7 +319,7 @@ def _do_single_step(init_conds, move, org_by_group):
         change = move.wrap_org_by_group(change, init_conds)
     return change
 
-def steps(init_conds, moves, org_by_group=True):
+def run_moves(init_conds, moves, org_by_group=True):
     for stepnum, move in enumerate(moves):
         change = _do_single_step(init_conds, move,
                                  org_by_group=org_by_group)
