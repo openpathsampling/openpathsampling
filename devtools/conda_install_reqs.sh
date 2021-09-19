@@ -47,7 +47,7 @@ echo "TESTING=$TESTING"
 # TODO: allow different installs for different versions
 # (needed this when msmbuilder was only available on older pythons; similar
 # situations may come up in the future)
-ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL" # $TESTING"
+ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS" # $EXPERIMENTAL" # $TESTING"
 
 echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES"
 $EXE install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
