@@ -37,7 +37,7 @@ INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
 EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
-INTEGRATIONS="future svgwrite ujson numpy scipy pandas"
+INTEGRATIONS="future svgwrite ujson numpy scipy pandas matplotlib networkx"
 
 echo "PY_INSTALL=$PY_INSTALL"
 echo "REQUIREMENTS=$REQUIREMENTS"
