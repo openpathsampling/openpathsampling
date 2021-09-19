@@ -1,7 +1,7 @@
 import openpathsampling as paths
 import enum
 
-def _default_repr(obj):
+def _default_repr(obj):  # pragma: no cover
     return obj.name if obj.name is not None \
             else super(obj.__class__, obj).__repr__()
 
@@ -41,7 +41,7 @@ class NegationFilter(_Filter):
         self.filter = filt
 
     def condition(self, inp):
-        return not self.filter(inp)
+        return not self.filter.condition(inp)
 
     def __repr__(self):
         return "~" + repr(self.filter)
@@ -282,61 +282,6 @@ class ExtractorFilter(object):
             finalized = finalizer(extracted)
             for result in finalized:
                 yield result
-
-# For the time being, leaving all this combination-related code commented
-# out. It's enough typing to keep it around in case we decide we want it,
-# but I have the feeling right now that it would be overly complicated from
-# a user standpoint.
-#
-#    def __and__(self, other):
-#        return _AndExtractorFilter(self, other)
-#
-#    def __or__(self, other):
-#        return _OrExtractorFilter(self, other)
-#
-#    def __invert__(self):
-#        return _NegationExtractorFilter(self)
-#
-#    def _test_compatibility(self, other):
-#        value_err_str = ("Can not combine ExtractorFilters that do not "
-#                         "have the same {attr}: {self_attr} != "
-#                         "{other_attr}")
-#        if self.extractor != other.extractor:
-#            raise ValueError(value_err_str.format(
-#                attr='extractor',
-#                self_attr=self.extractor,
-#                other_attr=other.extractor
-#            ))
-#        if self.secondary_filter != other.secondary_filter:
-#            raise ValueError(value_err_str.format(
-#                attr='secondary filter',
-#                self_attr=self.secondary_filter,
-#                other_attr=other.secondary_filter
-#            ))
-#
-#class _AndExtractorFilter(ExtractorFilter):
-#    def __init__(self, ef1, ef2):
-#        ef1._test_compatibility(ef2)
-#        step_filter = ef1.step_filter & ef2.step_filter
-#        self._default_secondary = ef1._default_secondary
-#        super(_AndExtractorFilter, self).__init__(step_filter,
-#                                                  ef1.extractor)
-#
-#class _OrExtractorFilter(ExtractorFilter):
-#    def __init__(self, ef1, ef2):
-#        ef1._test_compatibility(ef2)
-#        step_filter = ef1.step_filter | ef2.step_filter
-#        self._default_secondary = ef1._default_secondary
-#        super(_OrExtractorFilter, self).__init__(step_filter,
-#                                                  ef1.extractor)
-#
-#class _NegationExtractorFilter(ExtractorFilter):
-#    def __init__(self, ef):
-#        self._default_secondary = ef._default_secondary
-#        super(_NegationExtractorFilter, self).__init__(~ef.step_filter,
-#                                                       ef.extractor)
-#        self.with_filter(ef.secondary_filter)
-
 
 class SampleExtractorFilter(ExtractorFilter):
     _default_secondary = all_samples

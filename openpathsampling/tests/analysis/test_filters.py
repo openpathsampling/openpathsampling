@@ -31,7 +31,61 @@ def seven_steps_no_dynamics(scheme):
     ]
     return run_moves(init_conds, moves)
 
+@pytest.fixture
+def seven_steps_trial_samples(seven_steps_no_dynamics):
+    return sum([step.change.canonical.trials
+                for step in seven_steps_no_dynamics], [])
+
 ### TESTS ##################################################################
+
+##### generic filter logic #################################################
+
+class StringFilter(GenericFilter):
+    FILTER_TYPE = str
+
+@pytest.fixture
+def strings():
+    return ['foo', 'bar', 'baz', 'qux', 'quux']
+
+def test_filter_condition(strings):
+    has_a = StringFilter(condition=lambda s: 'a' in s, name='has_a')
+    assert list(has_a(strings)) == ['bar', 'baz']
+
+def test_or_filter_condition(strings):
+    has_a = StringFilter(condition=lambda s: 'a' in s, name='has_a')
+    len_4 = StringFilter(condition=lambda s: len(s) == 4, name='len_4')
+    filt = has_a | len_4
+    assert list(filt(strings)) == ['bar', 'baz', 'quux']
+
+def test_and_filter_condition(strings):
+    has_q = StringFilter(condition=lambda s: 'q' in s, name='has_q')
+    len_4 = StringFilter(condition=lambda s: len(s) == 4, name='len_4')
+    filt = has_q & len_4
+    assert list(filt(strings)) == ['quux']
+
+def test_invert_filter_condition(strings):
+    has_q = StringFilter(condition=lambda s: 'q' in s, name='has_q')
+    filt = ~has_q
+    assert list(filt(strings)) == ['foo', 'bar', 'baz']
+
+def test_sub_filter_condition(strings):
+    len_3 = StringFilter(condition=lambda s: len(s) == 3, name='len_3')
+    has_b = StringFilter(condition=lambda s: 'b' in s, name='has_b')
+    filt = len_3 - has_b
+    assert list(filt(strings)) == ['foo', 'qux']
+
+def test_xor_filter_condition(strings):
+    len_3 = StringFilter(condition=lambda s: len(s) == 3, name='len_3')
+    has_q = StringFilter(condition=lambda s: 'q' in s, name='has_q')
+    filt = len_3 ^ has_q
+    assert list(filt(strings)) == ['foo', 'bar', 'baz', 'quux']
+
+
+def test_extractor(strings):
+    pytest.skip()
+
+def test_extractor_using(strings):
+    pytest.skip()
 
 ##### step filters #########################################################
 
@@ -82,43 +136,42 @@ def test_all_steps_filter(seven_steps_no_dynamics):
     assert len(filtered_steps) == 7
     assert [s.mccycle for s in filtered_steps] == list(range(7))
 
-
 ##### sample filters #######################################################
 
-def test_all_samples_filter():
+def test_all_samples_filter(seven_steps_trial_samples):
     pytest.skip()
 
-def test_ensemble_sample_filter():
-    pass
+def test_ensemble_sample_filter(scheme, seven_steps_trial_samples):
+    pytest.skip()
 
-def test_replica_sample_filter():
-    pass
+def test_replica_sample_filter(seven_steps_trial_samples):
+    pytest.skip()
 
 def test_minus_ensemble_sample_filter():
-    pass
+    pytest.skip()
 
 def test_ms_outer_ensemble_sample_filter():
-    pass
+    pytest.skip()
 
 def test_sampling_ensemble_sample_filter():
-    pass
+    pytest.skip()
 
 ##### extractors ###########################################################
 
 def test_active_samples_extractor():
-    pass
+    pytest.skip()
 
 def test_trial_samples_extractor():
-    pass
+    pytest.skip()
 
 def test_shooting_steps_filter():
-    pass
+    pytest.skip()
 
 def test_shooting_points_extractor():
-    pass
+    pytest.skip()
 
 def test_modified_shooting_points_extractor():
-    pass
+    pytest.skip()
 
 def test_canonical_movers_extractor():
-    pass
+    pytest.skip()
