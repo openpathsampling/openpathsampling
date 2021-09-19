@@ -57,6 +57,7 @@ jobs:
         run: |
           if [ -z "$MINIMAL" ] ; then
             source devtools/conda_install_reqs.sh
+            python -m pip install nose pytest pytest-cov coveralls nbval
           else
             python -m pip install -r devtools/minimal.txt \
                                   -r devtools/minimal_testing.txt

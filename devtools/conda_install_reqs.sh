@@ -42,7 +42,7 @@ echo "REQUIREMENTS=$REQUIREMENTS"
 echo "INTEGRATIONS=$INTEGRATIONS"
 echo "EXPERIMENTAL=$EXPERIMENTAL"
 echo "WORKAROUNDS=$WORKAROUNDS"
-echo "TESTING=$TESTING"
+#echo "TESTING=$TESTING"
 
 # TODO: allow different installs for different versions
 # (needed this when msmbuilder was only available on older pythons; similar
