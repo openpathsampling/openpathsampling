@@ -49,6 +49,7 @@ jobs:
         with: 
           auto-update-conda: true
           python-version: ${{ matrix.CONDA_PY }}
+          miniforge-variant: Mambaforge
       - name: "Install requirements"
         env:
           MINIMAL: ${{ matrix.MINIMAL }}

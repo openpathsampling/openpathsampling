@@ -9,12 +9,19 @@
 
 DEVTOOLS_DIR=`dirname "${BASH_SOURCE[0]}"`
 
+if [ ! command -v mamba ]
+then
+    EXE="conda"
+else
+    EXE="mamba"
+fi
+
 if [ ! -z "$OPS_ENV" ]
 then
-    conda create -q -y --name $OPS_ENV conda future pyyaml python=$CONDA_PY
+    $EXE create -q -y --name $OPS_ENV conda future pyyaml python=$CONDA_PY
     source activate $OPS_ENV
 else
-    conda install -y -q future pyyaml  # ensure that these are available
+    $EXE install -y -q future pyyaml  # ensure that these are available
 fi
 
 # for some reason, these approaches to pinning don't always work (but conda
@@ -43,4 +50,4 @@ echo "TESTING=$TESTING"
 ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL $TESTING"
 
 echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES"
-conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
+$EXE install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
