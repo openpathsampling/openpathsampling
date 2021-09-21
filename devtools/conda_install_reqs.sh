@@ -42,9 +42,9 @@ PIPREQS="future svgwrite numpy scipy pandas"
 REQUIREMENTS="psutil netcdf4 networkx matplotlib ujson mdtraj"
 INTEGRATIONS=""
 EXPERIMENTAL=""
-TESTING=""
 
 PIP_INSTALLS="${TESTING} ${PIPREQS}"
+TESTING=""
 
 echo "PY_INSTALL=$PY_INSTALL"
 echo "REQUIREMENTS=$REQUIREMENTS"
