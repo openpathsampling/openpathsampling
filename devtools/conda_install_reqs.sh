@@ -37,9 +37,9 @@ INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
 EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
-PIP_INSTALLS="${TESTING} ${REQUIREMENTS}"
+PIP_INSTALLS="${TESTING}" #${REQUIREMENTS}"
 
-REQUIREMENTS=""
+#REQUIREMENTS=""
 INTEGRATIONS=""
 EXPERIMENTAL=""
 TESTING=""
