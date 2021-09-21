@@ -16,12 +16,16 @@ else
     EXE="mamba"
 fi
 
+INSTALL_CMD="$EXE install -y -q -c conda-forge -c omnia --override-channels"
+
+# TODO: is this preinstall needed? We're certainly no longer using pyyaml,
+# and it looks like we should be, but aren't, using future in setup_cfg_reqs
 if [ ! -z "$OPS_ENV" ]
 then
-    $EXE create -q -y --name $OPS_ENV conda future pyyaml python=$CONDA_PY
+    $INSTALL_CMD --name $OPS_ENV conda future pyyaml python=$CONDA_PY
     source activate $OPS_ENV
 else
-    $EXE install -y -q future pyyaml  # ensure that these are available
+    $INSTALL_CMD future pyyaml  # ensure that these are available
 fi
 
 # for some reason, these approaches to pinning don't always work (but conda
@@ -58,6 +62,6 @@ echo "TESTING=$TESTING"
 # situations may come up in the future)
 ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL $TESTING"
 
-echo "$EXE install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES"
-$EXE install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
+echo "$INSTALL_CMD $PY_INSTALL $ALL_PACKAGES"
+$INSTALL_CMD $PY_INSTALL $ALL_PACKAGES
 python -m pip install $PIP_INSTALLS
