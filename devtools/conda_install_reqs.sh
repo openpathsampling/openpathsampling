@@ -9,7 +9,7 @@
 
 DEVTOOLS_DIR=`dirname "${BASH_SOURCE[0]}"`
 
-if [ ! command -v mamba >/dev/null 2>&1 ]
+if ! command -v mamba &> /dev/null
 then
     EXE="conda"
 else
