@@ -38,7 +38,7 @@ EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
 
-REQUIREMENTS="future svgwrite numpy scipy pandas networkx matplotbli"
+REQUIREMENTS="future svgwrite numpy scipy pandas networkx matplotlib"
 PIPREQS="psutil netcdf4 ujson mdtraj"
 INTEGRATIONS=""
 EXPERIMENTAL=""
