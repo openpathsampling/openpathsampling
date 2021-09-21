@@ -37,6 +37,13 @@ INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
 EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
+PIP_INSTALLS="${TESTING} ${REQUIREMENTS}"
+
+REQUIREMENTS=""
+INTEGRATIONS=""
+EXPERIMENTAL=""
+TESTING=""
+
 echo "PY_INSTALL=$PY_INSTALL"
 echo "REQUIREMENTS=$REQUIREMENTS"
 echo "INTEGRATIONS=$INTEGRATIONS"
@@ -51,3 +58,4 @@ ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL $TESTING"
 
 echo "$EXE install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES"
 $EXE install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
+python -m pip install $PIP_INSTALLS

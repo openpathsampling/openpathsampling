@@ -32,13 +32,13 @@ jobs:
       matrix:
         CONDA_PY:
           - 3.9
-          - 3.8
-          - 3.7
-          - 2.7
+          #- 3.8
+          #- 3.7
+          #- 2.7
         MINIMAL: [""]
-        include:
-          - CONDA_PY: 3.7
-            MINIMAL: "minimal"
+        #include:
+          #- CONDA_PY: 3.7
+            #MINIMAL: "minimal"
 
     steps:
       - uses: actions/checkout@v2
@@ -74,16 +74,16 @@ jobs:
         env:
           PY_COLORS: "1"
         run: py.test -vv -s --cov --cov-report xml
-      - name: "Tests: Experimental"
-        if: matrix.MINIMAL == '' && matrix.CONDA_PY != '2.7'
-        run: py.test openpathsampling/experimental/ -vv -s
-      - name: "Report coverage"
-        run: bash <(curl -s https://codecov.io/bash)
-      - name: "Notebook tests"
-        if: matrix.MINIMAL == ''
-        run: |
-          pushd examples/ && ./ipynbtests.sh || exit 1 && popd
-      - name: "Deploy docs"
-        if: matrix.CONDA_PY == '3.7' && matrix.MINIMAL == ''
-        run: |
-          echo "TODO"
+      #- name: "Tests: Experimental"
+        #if: matrix.MINIMAL == '' && matrix.CONDA_PY != '2.7'
+        #run: py.test openpathsampling/experimental/ -vv -s
+      #- name: "Report coverage"
+        #run: bash <(curl -s https://codecov.io/bash)
+      #- name: "Notebook tests"
+        #if: matrix.MINIMAL == ''
+        #run: |
+          #pushd examples/ && ./ipynbtests.sh || exit 1 && popd
+      #- name: "Deploy docs"
+        #if: matrix.CONDA_PY == '3.7' && matrix.MINIMAL == ''
+        #run: |
+          #echo "TODO"
