@@ -133,7 +133,7 @@ class TestReactiveFluxAnalysis(object):
 
     def teardown(self):
         if os.path.isfile(self.filename):
-            self.filename.close()
+            self.storage.close()
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
 
@@ -143,8 +143,8 @@ class TestReactiveFluxAnalysis(object):
         return np.array([[1.0]])
 
     def test_analysis(self):
-        self.storage = paths.Storage(self.filename, mode="r")
-        self.analysis = paths.ReactiveFluxAnalysis(steps=self.storage.steps,
+        storage = paths.Storage(self.filename, mode="r")
+        self.analysis = paths.ReactiveFluxAnalysis(steps=storage.steps,
                                                    gradient=self.gradient)
 
         # check wrong analyze_single_step() argument
