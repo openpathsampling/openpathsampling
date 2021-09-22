@@ -47,6 +47,8 @@ PIPREQS="netcdf4"
 INTEGRATIONS=""
 EXPERIMENTAL=""
 
+# PIP_INSTALLS is used for debugging installation problems -- override the
+# default $REQUIREMENTS, etc. and move some installs to $PIP_INSTALLS
 PIP_INSTALLS="${PIPREQS}"
 #TESTING=""
 
@@ -64,4 +66,9 @@ ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL $TESTING"
 
 echo "$INSTALL_CMD $PY_INSTALL $ALL_PACKAGES"
 $INSTALL_CMD $PY_INSTALL $ALL_PACKAGES
-python -m pip install $PIP_INSTALLS
+
+if [ -n "$PIP_INSTALLS" ]
+then
+    echo "python -m pip install $PIP_INSTALLS"
+    python -m pip install $PIP_INSTALLS
+fi
