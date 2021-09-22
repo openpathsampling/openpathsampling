@@ -51,7 +51,7 @@ EXPERIMENTAL=""
 # PIP_INSTALLS is used for debugging installation problems -- override the
 # default $REQUIREMENTS, etc. and move some installs to $PIP_INSTALLS
 PIP_INSTALLS="${PIPREQS}"
-TESTING="pytest nose"  # override plugins; coveralls
+#TESTING="pytest nose"  # override plugins; coveralls
 
 echo "PY_INSTALL=$PY_INSTALL"
 echo "REQUIREMENTS=$REQUIREMENTS"
@@ -68,6 +68,7 @@ ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL $TESTING"
 echo "$INSTALL_CMD $PY_INSTALL $ALL_PACKAGES"
 $INSTALL_CMD $PY_INSTALL $ALL_PACKAGES
 
+# occasional workaround; usually a do-nothing
 if [ -n "$PIP_INSTALLS" ]
 then
     echo "python -m pip install $PIP_INSTALLS"

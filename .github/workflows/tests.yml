@@ -72,15 +72,6 @@ jobs:
         run: python devtools/autorelease_check.py
       #- name: "DEBUG: enable SSH login"
         #uses: mxschmitt/action-tmate@v3
-      - name: "DEBUG: Install gdb"
-        run: sudo apt-get install gdb
-      - name: "DEBUG: Minimal failing tests for #1072"
-        run: |
-          # we run this 4 times because it doesn't always fail
-          gdb --batch --quiet -ex r -ex "thread apply all bt" --args "$(readlink -f $(which python3))" -m pytest -p no:faulthandler openpathsampling/tests/test_pathsimulator.py::TestReactiveFluxSimulation::test_initialization openpathsampling/tests/test_reactive_flux_analysis.py::TestReactiveFluxAnalysis::test_analysis
-          gdb --batch --quiet -ex r -ex "thread apply all bt" --args "$(readlink -f $(which python3))" -m pytest -p no:faulthandler openpathsampling/tests/test_pathsimulator.py::TestReactiveFluxSimulation::test_initialization openpathsampling/tests/test_reactive_flux_analysis.py::TestReactiveFluxAnalysis::test_analysis
-          gdb --batch --quiet -ex r -ex "thread apply all bt" --args "$(readlink -f $(which python3))" -m pytest -p no:faulthandler openpathsampling/tests/test_pathsimulator.py::TestReactiveFluxSimulation::test_initialization openpathsampling/tests/test_reactive_flux_analysis.py::TestReactiveFluxAnalysis::test_analysis
-          gdb --batch --quiet -ex r -ex "thread apply all bt" --args "$(readlink -f $(which python3))" -m pytest -p no:faulthandler openpathsampling/tests/test_pathsimulator.py::TestReactiveFluxSimulation::test_initialization openpathsampling/tests/test_reactive_flux_analysis.py::TestReactiveFluxAnalysis::test_analysis
       - name: "Unit Tests"
         env:
           PY_COLORS: "1"
