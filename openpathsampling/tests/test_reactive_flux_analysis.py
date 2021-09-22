@@ -133,6 +133,7 @@ class TestReactiveFluxAnalysis(object):
 
     def teardown(self):
         if os.path.isfile(self.filename):
+            self.filename.close()
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
 
