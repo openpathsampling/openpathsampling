@@ -42,16 +42,9 @@ EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
 
-REQUIREMENTS="future svgwrite numpy scipy pandas networkx matplotlib psutil
-ujson mdtraj netcdf4"
-PIPREQS=""
-INTEGRATIONS=""
-EXPERIMENTAL=""
-
 # PIP_INSTALLS is used for debugging installation problems -- override the
 # default $REQUIREMENTS, etc. and move some installs to $PIP_INSTALLS
-PIP_INSTALLS="${PIPREQS}"
-#TESTING="pytest nose"  # override plugins; coveralls
+PIP_INSTALLS=""
 
 echo "PY_INSTALL=$PY_INSTALL"
 echo "REQUIREMENTS=$REQUIREMENTS"
