@@ -63,6 +63,6 @@ $INSTALL_CMD $PY_INSTALL $ALL_PACKAGES
 # occasional workaround; usually a do-nothing
 if [ -n "$PIP_INSTALLS" ]
 then
-echo "python -m pip install $PIP_INSTALLS"
-python -m pip install $PIP_INSTALLS
+    echo "python -m pip install $PIP_INSTALLS"
+    python -m pip install $PIP_INSTALLS
 fi
