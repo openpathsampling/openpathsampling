@@ -9,24 +9,22 @@
 
 DEVTOOLS_DIR=`dirname "${BASH_SOURCE[0]}"`
 
-if ! command -v mamba &> /dev/null
-then
+# use mamba if we can, otherwise use conda
+if ! command -v mamba &> /dev/null; then
     EXE="conda"
 else
     EXE="mamba"
 fi
 
-INSTALL_CMD="$EXE install -y -q -c conda-forge -c omnia --override-channels"
-
-# TODO: is this preinstall needed? We're certainly no longer using pyyaml,
-# and it looks like we should be, but aren't, using future in setup_cfg_reqs
-if [ ! -z "$OPS_ENV" ]
-then
-    $INSTALL_CMD --name $OPS_ENV conda future pyyaml python=$CONDA_PY
-    source activate $OPS_ENV
+# If OPS_ENV is defined, we're creating a new environment. Otherwise install
+# into current env.
+if [ ! -z "$OPS_ENV" ]; then
+    INSTALL="create --name $OPS_ENV"
 else
-    $INSTALL_CMD future pyyaml  # ensure that these are available
+    INSTALL="install"
 fi
+
+INSTALL_CMD="$EXE $INSTALL -y -q -c conda-forge -c omnia --override-channels"
 
 # for some reason, these approaches to pinning don't always work (but conda
 # always obeys if you explicitly request a pinned version)
@@ -58,11 +56,19 @@ echo "TESTING=$TESTING"
 ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL $TESTING"
 
 echo "$INSTALL_CMD $PY_INSTALL $ALL_PACKAGES"
-$INSTALL_CMD $PY_INSTALL $ALL_PACKAGES
+if [ -z "$DRY" ]; then
+    $INSTALL_CMD $PY_INSTALL $ALL_PACKAGES
+fi
+
+if [ -z "$OPS_ENV" ]
+then
+    source activate $OPS_ENV
+fi
 
 # occasional workaround; usually a do-nothing
-if [ -n "$PIP_INSTALLS" ]
-then
+if [ -n "$PIP_INSTALLS" ]; then
     echo "python -m pip install $PIP_INSTALLS"
-    python -m pip install $PIP_INSTALLS
+    if [ -z "$DRY" ]; then
+        python -m pip install $PIP_INSTALLS
+    fi
 fi
