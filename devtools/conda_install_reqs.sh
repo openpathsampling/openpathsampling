@@ -60,9 +60,8 @@ if [ -z "$DRY" ]; then
     $INSTALL_CMD $PY_INSTALL $ALL_PACKAGES
 fi
 
-if [ -z "$OPS_ENV" ]
-then
-    source activate $OPS_ENV
+if [ -n "$OPS_ENV" ] && [ -z "$DRY" ]; then
+    conda activate $OPS_ENV
 fi
 
 # occasional workaround; usually a do-nothing
