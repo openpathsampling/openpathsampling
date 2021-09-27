@@ -168,6 +168,15 @@ OPENMM_MDTRAJTOPOLOGY = Deprecation(
     deprecated_in=(1, 5, 0)
 )
 
+SNAPSHOTMODIFIER_PROB_RAT = Deprecation(
+    problem=("This function will raise a NotImplementedError in "
+             "{OPS} {version}."),
+    remedy=("All SnapshotModifier subclasses should override the "
+            "probability_ratio function."),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
+
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
