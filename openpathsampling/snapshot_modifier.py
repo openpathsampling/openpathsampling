@@ -222,18 +222,10 @@ class RandomVelocities(SnapshotModifier):
         new_snap = make_snapshot(snapshot)
         return new_snap
 
-    def _calc_kinetic_energy(self, snapshot):
-        velocities = snapshot.velocities
-        v_2 = velocities**2
-        masses = snapshot.masses
-        ekin = 0.5*np.sum(v_2*masses[:, np.newaxis])
-        return ekin
-
     def probability_ratio(self, old_snapshot, new_snapshot):
-        # Should always be 1.0 but might not due to constraints
-        e_old = self._calc_kinetic_energy(old_snapshot)
-        e_new = self._calc_kinetic_energy(new_snapshot)
-        return np.exp(-self.beta*(e_new-e_old))
+        # Should always be 1.0 becasue it is directly sampled from the right
+        # distribution
+        return 1.0
 
 
 class GeneralizedDirectionModifier(SnapshotModifier):
