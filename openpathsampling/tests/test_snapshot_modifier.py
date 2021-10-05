@@ -9,7 +9,7 @@ from nose.tools import (assert_equal, assert_not_equal, raises,
                         assert_almost_equal, assert_true)
 from nose.plugins.skip import SkipTest
 from numpy.testing import assert_array_almost_equal
-from .test_helpers import make_1d_traj, u
+from .test_helpers import u
 
 import openpathsampling as paths
 import openpathsampling.engines as peng
@@ -31,6 +31,7 @@ import logging
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
+
 
 class TestNoModification(object):
     def setup(self):
@@ -56,7 +57,7 @@ class TestNoModification(object):
 
     # test methods from the abstract base class along with NoModification
     def test_extract_subset(self):
-        mod = NoModification(subset_mask=[1,2])
+        mod = NoModification(subset_mask=[1, 2])
         sub_1Dx = mod.extract_subset(self.snapshot_1D.coordinates)
         assert_array_almost_equal(sub_1Dx, np.array([1.0, 2.0]))
         sub_1Dv = mod.extract_subset(self.snapshot_1D.velocities)
@@ -70,7 +71,7 @@ class TestNoModification(object):
                                                      [2.5, 2.6, 2.7]]))
 
     def test_apply_to_subset(self):
-        mod = NoModification(subset_mask=[1,2])
+        mod = NoModification(subset_mask=[1, 2])
         copy_1Dx = self.snapshot_1D.coordinates.copy()
         new_1Dx = mod.apply_to_subset(copy_1Dx, np.array([-1.0, -2.0]))
         assert_array_almost_equal(new_1Dx, np.array([0.0, -1.0, -2.0, 3.0]))
@@ -115,6 +116,7 @@ class TestNoModification(object):
         # This should always return 1.0 even for invalid input
         assert self.modifier.probability_ratio(None, None) == 1.0
 
+
 class TestRandomizeVelocities(object):
     def setup(self):
         # TODO: check against several possibilities, including various
@@ -149,7 +151,7 @@ class TestRandomizeVelocities(object):
         # NOTE: these tests basically check the API. Tests for correctness
         # are in `test_snapshot_modifier.ipynb`, because they are inherently
         # stochastic.
-        randomizer = RandomVelocities(beta=old_div(1.0,5.0))
+        randomizer = RandomVelocities(beta=old_div(1.0, 5.0))
         new_1x2D = randomizer(self.snap_1x2D)
         assert_equal(new_1x2D.coordinates.shape, new_1x2D.velocities.shape)
         assert_array_almost_equal(new_1x2D.coordinates,
@@ -182,7 +184,7 @@ class TestRandomizeVelocities(object):
             assert_not_equal(val, 0.0)
 
     def test_subset_call(self):
-        randomizer = RandomVelocities(beta=old_div(1.0,5.0), subset_mask=[0])
+        randomizer = RandomVelocities(beta=old_div(1.0, 5.0), subset_mask=[0])
         new_2x3D = randomizer(self.snap_2x3D)
         assert_equal(new_2x3D.coordinates.shape, new_2x3D.velocities.shape)
         assert_array_almost_equal(new_2x3D.coordinates,
@@ -254,6 +256,7 @@ class TestRandomizeVelocities(object):
         # Should be sampled correctio, so this has to be 1.0
         randomizer = RandomVelocities(beta=20)
         assert randomizer.probability_ratio(None, None) == 1.0
+
 
 class TestGeneralizedDirectionModifier(object):
     def setup(self):
@@ -352,7 +355,7 @@ class TestGeneralizedDirectionModifier(object):
             rigid_water=False
         )
         ad_explicit_tmpl = omm_engine.snapshot_from_testsystem(ad_explicit)
-        explicit_engine= omm_engine.Engine(
+        explicit_engine = omm_engine.Engine(
             topology=ad_explicit_tmpl.topology,
             system=ad_explicit.system,
             integrator=omt.integrators.VVVRIntegrator()
@@ -412,8 +415,10 @@ class TestGeneralizedDirectionModifier(object):
         u_mass = old_div(u.dalton, u.AVOGADRO_CONSTANT_NA)
         u_energy = old_div(u.kilojoule_per_mole, u.AVOGADRO_CONSTANT_NA)
 
-        velocities = \
-                np.array([[1.5, -1.0], [-1.0, 2.0], [0.25, -1.0]]) * u_vel
+        velocities = np.array([[1.5, -1.0],
+                               [-1.0, 2.0],
+                               [0.25, -1.0]]
+                              ) * u_vel
         masses = np.array([1.0, 1.5, 4.0]) * u_mass
         new_vel = self.openmm_modifier._remove_linear_momentum(
             velocities=velocities,
@@ -443,6 +448,7 @@ class TestGeneralizedDirectionModifier(object):
         # Should always be 1 as KE is conserved
         assert self.toy_modifier_all.probability_ratio(None, None) == 1.0
 
+
 class TestVelocityDirectionModifier(object):
     def setup(self):
         import openpathsampling.engines.toy as toys
@@ -469,7 +475,8 @@ class TestVelocityDirectionModifier(object):
                 remove_linear_momentum=False
             )
             if omt:  # TODO: separate out tests
-                ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+                ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(
+                    constraints=None)
                 self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
                 self.openmm_engine = omm_engine.Engine(
                     topology=self.test_snap.topology,
@@ -479,7 +486,8 @@ class TestVelocityDirectionModifier(object):
 
                 self.openmm_snap = self.test_snap.copy_with_replacement(
                     engine=self.openmm_engine,
-                    velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
+                    velocities=np.ones(
+                        shape=self.test_snap.velocities.shape) * u_vel
                 )
 
     def test_select_atoms_to_modify(self):
@@ -550,6 +558,7 @@ class TestVelocityDirectionModifier(object):
             assert_array_almost_equal(total_momenta,
                                       np.array([0.0]*3) * u_vel * u_mass)
 
+
 class TestSingleAtomVelocityDirectionModifier(object):
     def setup(self):
         import openpathsampling.engines.toy as toys
@@ -575,7 +584,8 @@ class TestSingleAtomVelocityDirectionModifier(object):
                 delta_v=1.2*u_vel,
                 remove_linear_momentum=False
             )
-            ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(constraints=None)
+            ad_vacuum = omt.testsystems.AlanineDipeptideVacuum(
+                constraints=None)
             self.test_snap = omm_engine.snapshot_from_testsystem(ad_vacuum)
             self.openmm_engine = omm_engine.Engine(
                 topology=self.test_snap.topology,
@@ -585,7 +595,8 @@ class TestSingleAtomVelocityDirectionModifier(object):
 
             self.openmm_snap = self.test_snap.copy_with_replacement(
                 engine=self.openmm_engine,
-                velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
+                velocities=np.ones(
+                    shape=self.test_snap.velocities.shape) * u_vel
             )
 
     def test_select_atoms_to_modify(self):
@@ -622,7 +633,8 @@ class TestSingleAtomVelocityDirectionModifier(object):
                         for i in range(len(new_vel))]
             same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
-            assert_equal(Counter(same_vel), Counter({True: n_atoms-1, False: 1}))
+            assert_equal(Counter(same_vel),
+                         Counter({True: n_atoms-1, False: 1}))
             u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
             for new_v, old_v in zip(new_vel, old_vel):
                 assert_almost_equal(

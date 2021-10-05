@@ -1,7 +1,6 @@
 from __future__ import print_function
 import sys
 import warnings
-from collections import namedtuple
 from functools import wraps
 from inspect import isclass
 
@@ -13,6 +12,7 @@ numpydoc_deprecation = """
 .. deprecated:: {deprecated_in}
     {problem} {remedy}
 """
+
 
 class Deprecation(object):
     """
@@ -105,6 +105,7 @@ def update_docstring(thing_with_docstring, deprecation):
         docs = thing_with_docstring.__doc__
     return docs + deprecation.docstring_message()
 
+
 def version_tuple_to_string(version_tuple):
     """
     Parameters
@@ -193,6 +194,7 @@ def has_deprecations(cls):
             del obj.__new_docstring
     return cls
 
+
 def deprecate(deprecation):
     """Decorator to deprecate a class/method
 
@@ -219,6 +221,7 @@ def deprecate(deprecation):
         else:
             return wrapper
     return decorator
+
 
 def list_deprecations(version=None, deprecations=None):
     """List deprecations that should have been removed by ``version``
