@@ -2317,7 +2317,8 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         trial_trajectory : :class:`.Trajectory`
             the resulting trial trajectory
         details : dict
-            details dictionary (includes modified shooting point)
+            details dictionary (includes modified shooting point and
+            modification bias)
         """
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
@@ -2364,7 +2365,8 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         trial_trajectory : :class:`.Trajectory`
             the resulting trial trajectory
         details : dict
-            details dictionary (includes modified shooting point)
+            details dictionary (includes modified shooting point and
+            modification bias)
         """
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
@@ -2522,6 +2524,7 @@ class MinusMover(SubPathMover):
             change.details = details
 
         return change
+
 
 class SingleReplicaMinusMover(MinusMover):
     """
