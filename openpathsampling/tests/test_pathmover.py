@@ -280,6 +280,15 @@ class TestOneWayShootingMover(TestShootingMover):
 class TestForwardFirstTwoWayShootingMover(TestShootingMover):
     _MoverType = ForwardFirstTwoWayShootingMover
     # this allows us to run the exact same tests for backward-first
+    def test_modifier_default(self):
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=None,
+            engine=self.dyn
+        )
+        assert isinstance(mover.modifier, paths.NoModification)
+
     def test_run(self):
         mover = self._MoverType(
             ensemble=self.tps,
