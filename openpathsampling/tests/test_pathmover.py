@@ -12,6 +12,7 @@ from nose.plugins.skip import SkipTest
 from nose.tools import (assert_equal, assert_not_equal, raises, assert_true,
                         assert_in, assert_not_in)
 from numpy.testing import assert_allclose
+import numpy as np
 
 from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
@@ -320,6 +321,46 @@ class TestForwardFirstTwoWayShootingMover(TestShootingMover):
                   change.trials[0].trajectory)
         assert_in(change.details.shooting_snapshot,
                   change.initial_trajectory)
+
+    def test_run_toy_0_bias(self):
+        class NoAcceptModification(paths.NoModification):
+            def probability_ratio(self, a, b):
+                return 0.0
+
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=NoAcceptModification(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.toy_samp)
+        assert change.accepted is False
+        assert change.details.metropolis_acceptance == 0.0
+
+
+    def test_run_toy_inf_bias(self):
+        class InfAcceptModification(paths.NoModification):
+            def probability_ratio(self, a, b):
+                return np.inf
+
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=InfAcceptModification(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.toy_samp)
+        assert change.accepted is True
+        assert change.details.metropolis_acceptance == np.inf
+
+
+        assert_in(change.details.modified_shooting_snapshot,
+                  change.trials[0].trajectory)
+        assert_in(change.details.shooting_snapshot,
+                  change.initial_trajectory)
+
+
+
 
     def _setup_early_reject(self, pair):
         zero_vel_traj = paths.Trajectory([

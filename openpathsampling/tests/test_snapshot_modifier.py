@@ -111,6 +111,9 @@ class TestNoModification(object):
         assert_true(self.snapshot_3D.coordinates is not new_3D.coordinates)
         assert_true(self.snapshot_3D.velocities is not new_3D.velocities)
 
+    def test_probability_ratio(self):
+        # This should always return 1.0 even for invalid input
+        assert self.modifier.probability_ratio(None, None) == 1.0
 
 class TestRandomizeVelocities(object):
     def setup(self):
@@ -156,6 +159,7 @@ class TestRandomizeVelocities(object):
         assert_true(new_1x2D.velocities is not self.snap_1x2D.velocities)
         for val in new_1x2D.velocities.flatten():
             assert_not_equal(val, 0.0)
+        assert randomizer.probability_ratio(self.snap_1x2D, new_1x2D) == 1.0
 
         new_2x3D = randomizer(self.snap_2x3D)
         assert_equal(new_2x3D.coordinates.shape, new_2x3D.velocities.shape)
@@ -245,6 +249,11 @@ class TestRandomizeVelocities(object):
         # internal snapshot unchanged
         assert_equal(engine.current_snapshot, zero_snap)
         engine.generate(new_snap, [lambda x, foo: len(x) <= 4])
+
+    def test_probability_ratio(self):
+        # Should be sampled correctio, so this has to be 1.0
+        randomizer = RandomVelocities(beta=20)
+        assert randomizer.probability_ratio(None, None) == 1.0
 
 class TestGeneralizedDirectionModifier(object):
     def setup(self):
@@ -430,6 +439,9 @@ class TestGeneralizedDirectionModifier(object):
         assert_equal(new_ke.unit, (20.0 * u_energy).unit)
         assert_almost_equal(new_ke._value, (20.0 * u_energy)._value)
 
+    def test_probability_ratio(self):
+        # Should always be 1 as KE is conserved
+        assert self.toy_modifier_all.probability_ratio(None, None) == 1.0
 
 class TestVelocityDirectionModifier(object):
     def setup(self):
@@ -483,7 +495,7 @@ class TestVelocityDirectionModifier(object):
                                   self.toy_snapshot.coordinates)
         new_vel = new_toy_snap.velocities
         old_vel = self.toy_snapshot.velocities
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+        same_vel = [np.allclose(new_vel[i], old_vel[i])
                     for i in range(len(new_vel))]
         assert_equal(Counter(same_vel), Counter({True: 1, False: 2}))
         for new_v, old_v in zip(new_vel, old_vel):
@@ -497,9 +509,9 @@ class TestVelocityDirectionModifier(object):
                                       self.openmm_snap.coordinates)
             new_vel = new_omm_snap.velocities
             old_vel = self.openmm_snap.velocities
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
             assert_equal(Counter(same_vel), Counter({False: n_atoms}))
             u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
@@ -570,7 +582,7 @@ class TestSingleAtomVelocityDirectionModifier(object):
                 system=ad_vacuum.system,
                 integrator=omt.integrators.VVVRIntegrator()
             )
-        
+
             self.openmm_snap = self.test_snap.copy_with_replacement(
                 engine=self.openmm_engine,
                 velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
@@ -592,7 +604,7 @@ class TestSingleAtomVelocityDirectionModifier(object):
                                   self.toy_snapshot.coordinates)
         new_vel = new_toy_snap.velocities
         old_vel = self.toy_snapshot.velocities
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+        same_vel = [np.allclose(new_vel[i], old_vel[i])
                     for i in range(len(new_vel))]
         assert_equal(Counter(same_vel), Counter({True: 2, False: 1}))
         for new_v, old_v in zip(new_vel, old_vel):
@@ -606,9 +618,9 @@ class TestSingleAtomVelocityDirectionModifier(object):
                                       self.openmm_snap.coordinates)
             new_vel = new_omm_snap.velocities
             old_vel = self.openmm_snap.velocities
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
             assert_equal(Counter(same_vel), Counter({True: n_atoms-1, False: 1}))
             u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
@@ -646,3 +658,17 @@ class TestSingleAtomVelocityDirectionModifier(object):
             total_momenta = sum(momenta, zero_momentum)
             assert_array_almost_equal(total_momenta,
                                       np.array([0.0]*3) * u_vel * u_mass)
+
+
+class TestSnapshotModifierDeprecation(object):
+    # TODO OPS 2.0: Depr should b completed and this test altered to check for
+    # the error
+    def test_raise_deprecation(self):
+        class DummyMod(SnapshotModifier):
+            pass
+        dummy_mod = DummyMod()
+        with pytest.warns(DeprecationWarning) as warn:
+            a = dummy_mod.probability_ratio(None, None)
+            assert len(warn) == 1
+            assert "NotImplementedError" in str(warn[0])
+        assert a == 1.0
