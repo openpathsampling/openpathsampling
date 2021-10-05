@@ -666,11 +666,13 @@ class TestSingleAtomVelocityDirectionModifier(object):
 
 
 class TestSnapshotModifierDeprecation(object):
-    # TODO OPS 2.0: Depr should b completed and this test altered to check for
+    # TODO OPS 2.0: Depr should be completed and this test altered to check for
     # the error
     def test_raise_deprecation(self):
         class DummyMod(SnapshotModifier):
-            pass
+            # TODO PY 2.7, don't override __call__ for  PY 3.x
+            def __call__(self, a):
+                pass
         dummy_mod = DummyMod()
         with pytest.warns(DeprecationWarning) as warn:
             a = dummy_mod.probability_ratio(None, None)
