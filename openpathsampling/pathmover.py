@@ -741,12 +741,14 @@ class EngineMover(SampleMover):
     # this will store the engine attribute for all subclasses as well
     _included_attr = ['_engine']
 
-    def __init__(self, ensemble, target_ensemble, selector, engine=None):
+    def __init__(self, ensemble, target_ensemble, selector, engine=None,
+                 modifier=None):
         super(EngineMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
         self._engine = engine
+        self.modifier = modifier or paths.NoModification()
         self._trust_candidate = True  # can I safely do that?
         # I think that is safe. Note for future: if we come across a bug
         # based on this, an alternative would be to have the move strategy
@@ -802,7 +804,8 @@ class EngineMover(SampleMover):
 
         else:
             trial, details = self._build_sample(
-                input_sample, shooting_index, trial_trajectory)
+                input_sample, shooting_index, trial_trajectory,
+                run_details=run_details)
 
         trials = [trial]
         details.update(run_details)
@@ -814,13 +817,19 @@ class EngineMover(SampleMover):
             input_sample,
             shooting_index,
             trial_trajectory,
-            stopping_reason=None
+            stopping_reason=None,
+            run_details={}
             ):
-
+        # TODO OPS 2.0: the passing of run_details is a hack and should be
+        # properly refactored
         initial_trajectory = input_sample.trajectory
 
         if stopping_reason is None:
-            bias = self.selector.probability_ratio(
+            bias = 1.0
+            for key, value in run_details.items():
+                if str(key).startswith('bias'):
+                    bias *= value
+            bias *= self.selector.probability_ratio(
                 initial_trajectory[shooting_index],
                 initial_trajectory,
                 trial_trajectory
@@ -2255,9 +2264,11 @@ class AbstractTwoWayShootingMover(EngineMover):
             ensemble=ensemble,
             target_ensemble=ensemble,
             selector=selector,
-            engine=engine
+            engine=engine,
+            modifier=modifier
         )
-        self.modifier = modifier
+        # TODO OPS 2.0: This init signature should be aligned with EngineMover
+        #self.modifier = modifier
 
     # required for concrete class; not really used
     @property
@@ -2316,7 +2327,9 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         ))
 
         original = trajectory[shooting_index]
+        # TODO OPS 2.0: Modification+bias should be done in engine mover
         modified = self.modifier(original)
+        modifier_bias = self.modifier.probability_ratio(original, modified)
 
         fwd_partial = self._make_forward_trajectory(trajectory, modified,
                                                     shooting_index)
@@ -2329,7 +2342,8 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
 
-        details = {'modified_shooting_snapshot': modified}
+        details = {'modified_shooting_snapshot': modified,
+                   'bias_snapshot_modification': modifier_bias}
         return trial_trajectory, details
 
 
@@ -2360,7 +2374,9 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         ))
 
         original = trajectory[shooting_index]
+        # TODO OPS 2.0: Modification+bias should be done in engine mover
         modified = self.modifier(original)
+        modifier_bias = self.modifier.probability_ratio(original, modified)
 
         bkwd_partial = self._make_backward_trajectory(trajectory, modified,
                                                       shooting_index)
@@ -2377,8 +2393,9 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
 
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
+        details = {'modified_shooting_snapshot': modified,
+                   'bias_snapshot_modification': modifier_bias}
 
-        details = {'modified_shooting_snapshot': modified}
         return trial_trajectory, details
 
 

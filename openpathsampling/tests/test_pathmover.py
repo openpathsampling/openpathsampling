@@ -288,14 +288,21 @@ class TestForwardFirstTwoWayShootingMover(TestShootingMover):
         )
         traj, details = mover._run(self.init_samp[0].trajectory, 4)
         assert_allclose(traj.xyz[:,0,0], [-0.1, 0.2, 0.4, 0.6, 0.8])
-        assert_equal(list(details.keys()), ['modified_shooting_snapshot'])
+        assert_equal(list(details.keys()),
+                     ['modified_shooting_snapshot',
+                      'bias_snapshot_modification']
+                     )
         assert_equal(details['modified_shooting_snapshot'], traj[2])
         assert_not_in(details['modified_shooting_snapshot'],
                       self.init_samp[0].trajectory)
+        assert details['bias_snapshot_modification'] == 1.0
 
         traj, details = mover._run(self.init_samp[0].trajectory, 3)
         assert_allclose(traj.xyz[:,0,0], [-0.1, 0.1, 0.3, 0.5, 0.7])
-        assert_equal(list(details.keys()), ['modified_shooting_snapshot'])
+        assert_equal(list(details.keys()),
+                     ['modified_shooting_snapshot',
+                      'bias_snapshot_modification'])
+        assert details['bias_snapshot_modification'] == 1.0
         assert_equal(details['modified_shooting_snapshot'], traj[2])
         assert_not_in(details['modified_shooting_snapshot'],
                       self.init_samp[0].trajectory)
