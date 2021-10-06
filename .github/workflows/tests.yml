@@ -79,8 +79,8 @@ jobs:
       - name: "Tests: Experimental"
         if: matrix.MINIMAL == '' && matrix.CONDA_PY != '2.7'
         run: py.test openpathsampling/experimental/ -vv -s
-      - name: "Report coverage"
       - uses: codecov/codecov-action@v2
+      #- name: "Report coverage"
         #run: bash <(curl -s https://codecov.io/bash)
       - name: "Notebook tests"
         if: matrix.MINIMAL == ''
