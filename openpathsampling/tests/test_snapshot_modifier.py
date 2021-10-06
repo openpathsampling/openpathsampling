@@ -68,7 +68,12 @@ class TestNoModification(object):
                                                      [2.5, 2.6, 2.7]]))
 
     def test_apply_to_subset(self):
+        # TODO OPS 2.0: this test should be testing SnapshotModifier instead of
+        # NoModification, but python 2.7 does not allow for the initialisation
+        # without overwriting the abstract __call__ for now this raises a
+        # DeprecationWarning
         mod = NoModification(subset_mask=[1, 2])
+
         copy_1Dx = self.snapshot_1D.coordinates.copy()
         new_1Dx = mod.apply_to_subset(copy_1Dx, np.array([-1.0, -2.0]))
         assert_array_almost_equal(new_1Dx, np.array([0.0, -1.0, -2.0, 3.0]))
@@ -108,6 +113,16 @@ class TestNoModification(object):
         assert self.snapshot_1D.velocities is not new_1D.velocities
         assert self.snapshot_3D.coordinates is not new_3D.coordinates
         assert self.snapshot_3D.velocities is not new_3D.velocities
+        # TODO OPS 2.0: the following tests should probabily work
+        # assert new_1D == self.snapshot_1D
+        # assert new_3D == self.snapshot_3D
+
+    def test_call_no_copy(self):
+        mod = NoModification(as_copy=False)
+        new_1D = mod(self.snapshot_1D)
+        assert new_1D is self.snapshot_1D
+        new_3D = mod(self.snapshot_3D)
+        assert new_3D is self.snapshot_3D
 
     def test_probability_ratio(self):
         # This should always return 1.0 even for invalid input
@@ -665,10 +680,10 @@ class TestSingleAtomVelocityDirectionModifier(object):
                                       np.array([0.0]*3) * u_vel * u_mass)
 
 
-class TestSnapshotModifierDeprecation(object):
+class TestSnapshotModifierDeprecations(object):
     # TODO OPS 2.0: Depr should be completed and this test altered to check for
     # the error
-    def test_raise_deprecation(self):
+    def test_raise_deprecation_prob_ratio(self):
         class DummyMod(SnapshotModifier):
             # TODO PY 2.7, don't override __call__ for  PY 3.x
             def __call__(self, a):
@@ -679,3 +694,13 @@ class TestSnapshotModifierDeprecation(object):
             assert len(warn) == 1
             assert "NotImplementedError" in str(warn[0])
         assert a == 1.0
+
+    def test_raise_depr_nomodifier_subset(self):
+        # The warning might be emited before on line 75
+        # (NoModification(subset_mask))
+        # Therefor this will not always trigger
+        pass
+        # with pytest.warns(DeprecationWarning) as warn:
+        #     _ = NoModification(subset_mask="foo")
+        #     assert len(warn) == 1
+        #     assert "subset_mask" in str(warn[0])

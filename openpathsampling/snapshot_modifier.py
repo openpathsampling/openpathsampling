@@ -6,7 +6,8 @@ import functools
 import numpy as np
 
 from openpathsampling.netcdfplus import StorableNamedObject
-from openpathsampling.deprecations import SNAPSHOTMODIFIER_PROB_RAT
+from openpathsampling.deprecations import (SNAPSHOTMODIFIER_PROB_RAT,
+                                           NOMODIFICATION_SUBSET_MASK)
 logger = logging.getLogger(__name__)
 
 
@@ -113,9 +114,24 @@ class SnapshotModifier(StorableNamedObject):
 
 
 class NoModification(SnapshotModifier):
-    """Modifier with no change: returns a copy of the snapshot."""
+    """Modifier with no change: "
+
+    Parameters
+    ----------
+    as_copy : bool, default True
+        if True calls return a copy of the snapshot, else the snapshot itself.
+    """
+    def __init__(self, subset_mask=None, as_copy=True):
+        # TODO OPS 2.0: subset mask should be removed from this init call
+        if subset_mask is not None:
+            NOMODIFICATION_SUBSET_MASK.warn(stacklevel=3)
+        # masking is nonsense for no modification, but used in testing so this
+        # is here to conserve API
+        super(NoModification, self).__init__(subset_mask=subset_mask)
+        self.as_copy = as_copy
+
     def __call__(self, snapshot):
-        return snapshot.copy()
+        return snapshot.copy() if self.as_copy else snapshot
 
     def probability_ratio(self, old_snapshot, new_snapshot):
         """This modifier does not alter the snapshot, so equal probability."""

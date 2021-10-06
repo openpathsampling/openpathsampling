@@ -178,6 +178,14 @@ SNAPSHOTMODIFIER_PROB_RAT = Deprecation(
     deprecated_in=(1, 6, 0)
 )
 
+NOMODIFICATION_SUBSET_MASK = Deprecation(
+    problem=("subset_mask is nonsense for NoModification, is ignored in the "
+             "call, and will be removed as initialisation argument."),
+    remedy=("You should not use this keyword"),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
+
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
