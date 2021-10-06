@@ -1,8 +1,6 @@
 import math
 import logging
 
-import numpy as np
-
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling import default_rng
 
@@ -34,9 +32,13 @@ class ShootingPointSelector(StorableNamedObject):
         else:
             return 0.0
 
-    def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
+    def probability_ratio(self, snapshot, old_trajectory,
+                          new_trajectory, new_snapshot=None):
+        # TODO OPS 2.0: We should probabily alter the order and keyword names
+        # of this call
+        new_snapshot = new_snapshot or snapshot
         p_old = self.probability(snapshot, old_trajectory)
-        p_new = self.probability(snapshot, new_trajectory)
+        p_new = self.probability(new_snapshot, new_trajectory)
         return p_new / p_old
 
     def _biases(self, trajectory):
@@ -171,7 +173,7 @@ class UniformSelector(ShootingPointSelector):
 
     def pick(self, trajectory):
         idx = self._rng.integers(self.pad_start,
-                                len(trajectory) - self.pad_end)
+                                 len(trajectory) - self.pad_end)
         return idx
 
 
@@ -229,7 +231,9 @@ class FinalFrameSelector(ShootingPointSelector):
     def probability(self, snapshot, trajectory):  # pragma: no cover
         return 1.0  # there's only one choice
 
-    def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
+    def probability_ratio(self, snapshot, old_trajectory,
+                          new_trajectory, new_snapshot=None):
+        # TODO OPS 2.0: alter the order + keywords in the call
         # must be matched by a final-frame selector somewhere
         return 1.0
 
@@ -253,6 +257,8 @@ class FirstFrameSelector(ShootingPointSelector):
     def probability(self, snapshot, trajectory):  # pragma: no cover
         return 1.0  # there's only one choice
 
-    def probability_ratio(self, snapshot, old_trajectory, new_trajectory):
+    def probability_ratio(self, snapshot, old_trajectory,
+                          new_trajectory, new_snapshot=None):
+        # TODO OPS 2.0: alter the order + keywords in the call
         # must be matched by a first-frame selector somewhere
         return 1.0

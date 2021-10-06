@@ -171,7 +171,7 @@ class SpringShootingSelector(paths.ShootingPointSelector):
             return sum(self._spring_biases(delta_max, k_spring))
 
     def probability_ratio(self, snapshot, initial_trajectory,
-                          trial_trajectory):
+                          trial_trajectory, new_snapshot=None):
         """
         Returns the acceptance probability of a trial trajectory, this is 1.0
         as long as a snapshot has been selected that is inside of the
