@@ -214,3 +214,17 @@ class TestConstrainedSelector(SelectorTest):
         for idx1, frame in enumerate(mytraj):
             if (idx1 != expected_idx):
                 assert self.sel.f(frame, mytraj) == 0.0
+
+    def test_probability_ratio_modified_coordinates(self):
+        # Test if probability ratio still works when coordinates are modified
+        mytraj = make_1d_traj(coordinates=[-0.5, -0.4, -0.3, -0.1,
+                                           0.1, 0.2, 0.3, 0.5])
+        idx = self.sel.pick(mytraj)
+        frame = mytraj[idx]
+        # Alter 0.1 to 0.11 and replace the original snapshot with the modded
+        # one
+        mod_frame = frame.copy_with_replacement(coordinates=0.11)
+        mod_traj = mytraj[:idx]
+        mod_traj += paths.Trajectory([mod_frame])
+        mod_traj + mytraj[idx+1:]
+        assert self.sel.probability_ratio(frame, mytraj, mod_traj) == 1.0
