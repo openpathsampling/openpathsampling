@@ -9,6 +9,7 @@ import numpy as np
 import openpathsampling as paths
 from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
 
+from openpathsampling.deprecations import NOMODIFICATION_SUBSET_MASK
 logger = logging.getLogger(__name__)
 
 
@@ -109,9 +110,24 @@ class SnapshotModifier(StorableNamedObject):
         raise NotImplementedError
 
 class NoModification(SnapshotModifier):
-    """Modifier with no change: returns a copy of the snapshot."""
+    """Modifier with no change: "
+
+    Parameters
+    ----------
+    as_copy : bool, default True
+        if True calls return a copy of the snapshot, else the snapshot itself.
+    """
+    def __init__(self, subset_mask=None, as_copy=True):
+        # TODO OPS 2.0: subset mask should be removed from this init call
+        if subset_mask is not None:
+            NOMODIFICATION_SUBSET_MASK.warn(stacklevel=3)
+        # masking is nonsense for no modification, but used in testing so this
+        # is here to conserve API
+        super(NoModification, self).__init__(subset_mask=subset_mask)
+        self.as_copy = as_copy
+
     def __call__(self, snapshot):
-        return snapshot.copy()
+        return snapshot.copy() if self.as_copy else snapshot
 
 class RandomVelocities(SnapshotModifier):
     """Randomize velocities according to the Boltzmann distribution.

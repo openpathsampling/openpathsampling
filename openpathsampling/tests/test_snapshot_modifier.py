@@ -70,7 +70,12 @@ class TestNoModification(object):
                                                      [2.5, 2.6, 2.7]]))
 
     def test_apply_to_subset(self):
-        mod = NoModification(subset_mask=[1,2])
+        # TODO OPS 2.0: this test should be testing SnapshotModifier instead of
+        # NoModification, but python 2.7 does not allow for the initialisation
+        # without overwriting the abstract __call__ for now this raises a
+        # DeprecationWarning
+        mod = NoModification(subset_mask=[1, 2])
+
         copy_1Dx = self.snapshot_1D.coordinates.copy()
         new_1Dx = mod.apply_to_subset(copy_1Dx, np.array([-1.0, -2.0]))
         assert_array_almost_equal(new_1Dx, np.array([0.0, -1.0, -2.0, 3.0]))
@@ -106,10 +111,21 @@ class TestNoModification(object):
                                   new_3D.coordinates)
         assert_array_almost_equal(self.snapshot_3D.velocities,
                                   new_3D.velocities)
-        assert_true(self.snapshot_1D.coordinates is not new_1D.coordinates)
-        assert_true(self.snapshot_1D.velocities is not new_1D.velocities)
-        assert_true(self.snapshot_3D.coordinates is not new_3D.coordinates)
-        assert_true(self.snapshot_3D.velocities is not new_3D.velocities)
+        assert self.snapshot_1D.coordinates is not new_1D.coordinates
+        assert self.snapshot_1D.velocities is not new_1D.velocities
+        assert self.snapshot_3D.coordinates is not new_3D.coordinates
+        assert self.snapshot_3D.velocities is not new_3D.velocities
+        # TODO OPS 2.0: the following tests should probabily work
+        # assert new_1D == self.snapshot_1D
+        # assert new_3D == self.snapshot_3D
+
+    def test_call_no_copy(self):
+        mod = NoModification(as_copy=False)
+        new_1D = mod(self.snapshot_1D)
+        assert new_1D is self.snapshot_1D
+        new_3D = mod(self.snapshot_3D)
+        assert new_3D is self.snapshot_3D
+
 
 
 class TestRandomizeVelocities(object):
@@ -483,7 +499,7 @@ class TestVelocityDirectionModifier(object):
                                   self.toy_snapshot.coordinates)
         new_vel = new_toy_snap.velocities
         old_vel = self.toy_snapshot.velocities
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+        same_vel = [np.allclose(new_vel[i], old_vel[i])
                     for i in range(len(new_vel))]
         assert_equal(Counter(same_vel), Counter({True: 1, False: 2}))
         for new_v, old_v in zip(new_vel, old_vel):
@@ -497,9 +513,9 @@ class TestVelocityDirectionModifier(object):
                                       self.openmm_snap.coordinates)
             new_vel = new_omm_snap.velocities
             old_vel = self.openmm_snap.velocities
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
             assert_equal(Counter(same_vel), Counter({False: n_atoms}))
             u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
@@ -570,7 +586,7 @@ class TestSingleAtomVelocityDirectionModifier(object):
                 system=ad_vacuum.system,
                 integrator=omt.integrators.VVVRIntegrator()
             )
-        
+
             self.openmm_snap = self.test_snap.copy_with_replacement(
                 engine=self.openmm_engine,
                 velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
@@ -592,7 +608,7 @@ class TestSingleAtomVelocityDirectionModifier(object):
                                   self.toy_snapshot.coordinates)
         new_vel = new_toy_snap.velocities
         old_vel = self.toy_snapshot.velocities
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+        same_vel = [np.allclose(new_vel[i], old_vel[i])
                     for i in range(len(new_vel))]
         assert_equal(Counter(same_vel), Counter({True: 2, False: 1}))
         for new_v, old_v in zip(new_vel, old_vel):
@@ -606,9 +622,9 @@ class TestSingleAtomVelocityDirectionModifier(object):
                                       self.openmm_snap.coordinates)
             new_vel = new_omm_snap.velocities
             old_vel = self.openmm_snap.velocities
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
             assert_equal(Counter(same_vel), Counter({True: n_atoms-1, False: 1}))
             u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
@@ -646,3 +662,18 @@ class TestSingleAtomVelocityDirectionModifier(object):
             total_momenta = sum(momenta, zero_momentum)
             assert_array_almost_equal(total_momenta,
                                       np.array([0.0]*3) * u_vel * u_mass)
+
+
+class TestSnapshotModifierDeprecations(object):
+    # TODO OPS 2.0: Depr should be completed and this test altered to check for
+    # the error
+
+    def test_raise_depr_nomodifier_subset(self):
+        # The warning might be emited before on line 75
+        # (NoModification(subset_mask))
+        # Therefor this will not always trigger
+        pass
+        # with pytest.warns(DeprecationWarning) as warn:
+        #     _ = NoModification(subset_mask="foo")
+        #     assert len(warn) == 1
+        #     assert "subset_mask" in str(warn[0])
