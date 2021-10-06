@@ -49,6 +49,7 @@ jobs:
         with: 
           auto-update-conda: true
           python-version: ${{ matrix.CONDA_PY }}
+          miniforge-variant: Mambaforge
       - name: "Install requirements"
         env:
           MINIMAL: ${{ matrix.MINIMAL }}
@@ -69,6 +70,8 @@ jobs:
         run: conda list
       - name: "Autorelease check"
         run: python devtools/autorelease_check.py
+      #- name: "DEBUG: enable SSH login"
+        #uses: mxschmitt/action-tmate@v3
       - name: "Unit Tests"
         env:
           PY_COLORS: "1"
@@ -76,13 +79,8 @@ jobs:
       - name: "Tests: Experimental"
         if: matrix.MINIMAL == '' && matrix.CONDA_PY != '2.7'
         run: py.test openpathsampling/experimental/ -vv -s
-      - name: "Report coverage"
-        run: bash <(curl -s https://codecov.io/bash)
+      - uses: codecov/codecov-action@v2
       - name: "Notebook tests"
         if: matrix.MINIMAL == ''
         run: |
           pushd examples/ && ./ipynbtests.sh || exit 1 && popd
-      - name: "Deploy docs"
-        if: matrix.CONDA_PY == '3.7' && matrix.MINIMAL == ''
-        run: |
-          echo "TODO"
