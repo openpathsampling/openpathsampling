@@ -32,9 +32,16 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class TestNoModification(object):
+
+class TestSnapshotModifier(object):
     def setup(self):
-        self.modifier = NoModification()
+        # TODO OPS 2.0: This subclass is only here for python 2.7 should be
+        # replaced with SnapshotModifier
+        class DummyMod(SnapshotModifier):
+            def __call__(self, a):
+                return a
+        self.Modifier = DummyMod
+        self.modifier = DummyMod()
         self.snapshot_1D = peng.toy.Snapshot(
             coordinates=np.array([0.0, 1.0, 2.0, 3.0]),
             velocities=np.array([0.5, 1.5, 2.5, 3.5])
@@ -54,9 +61,8 @@ class TestNoModification(object):
                                  [3.5, 3.6, 3.7]])
         )
 
-    # test methods from the abstract base class along with NoModification
     def test_extract_subset(self):
-        mod = NoModification(subset_mask=[1,2])
+        mod = self.Modifier(subset_mask=[1, 2])
         sub_1Dx = mod.extract_subset(self.snapshot_1D.coordinates)
         assert_array_almost_equal(sub_1Dx, np.array([1.0, 2.0]))
         sub_1Dv = mod.extract_subset(self.snapshot_1D.velocities)
@@ -70,12 +76,7 @@ class TestNoModification(object):
                                                      [2.5, 2.6, 2.7]]))
 
     def test_apply_to_subset(self):
-        # TODO OPS 2.0: this test should be testing SnapshotModifier instead of
-        # NoModification, but python 2.7 does not allow for the initialisation
-        # without overwriting the abstract __call__ for now this raises a
-        # DeprecationWarning
-        mod = NoModification(subset_mask=[1, 2])
-
+        mod = self.Modifier(subset_mask=[1, 2])
         copy_1Dx = self.snapshot_1D.coordinates.copy()
         new_1Dx = mod.apply_to_subset(copy_1Dx, np.array([-1.0, -2.0]))
         assert_array_almost_equal(new_1Dx, np.array([0.0, -1.0, -2.0, 3.0]))
@@ -99,6 +100,12 @@ class TestNoModification(object):
                                             [1.0, 1.1, 1.2],
                                             [2.0, 2.1, 2.2],
                                             [3.0, 3.1, 3.2]]))
+
+
+class TestNoModification(TestSnapshotModifier):
+    def setup(self):
+        super().setup()
+        self.modifier = NoModification()
 
     def test_call(self):
         new_1D = self.modifier(self.snapshot_1D)
@@ -125,7 +132,6 @@ class TestNoModification(object):
         assert new_1D is self.snapshot_1D
         new_3D = mod(self.snapshot_3D)
         assert new_3D is self.snapshot_3D
-
 
 
 class TestRandomizeVelocities(object):
