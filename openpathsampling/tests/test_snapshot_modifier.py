@@ -668,18 +668,3 @@ class TestSingleAtomVelocityDirectionModifier(object):
             total_momenta = sum(momenta, zero_momentum)
             assert_array_almost_equal(total_momenta,
                                       np.array([0.0]*3) * u_vel * u_mass)
-
-
-class TestSnapshotModifierDeprecations(object):
-    # TODO OPS 2.0: Depr should be completed and this test altered to check for
-    # the error
-
-    def test_raise_depr_nomodifier_subset(self):
-        # The warning might be emited before on line 75
-        # (NoModification(subset_mask))
-        # Therefor this will not always trigger
-        pass
-        # with pytest.warns(DeprecationWarning) as warn:
-        #     _ = NoModification(subset_mask="foo")
-        #     assert len(warn) == 1
-        #     assert "subset_mask" in str(warn[0])
