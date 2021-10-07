@@ -104,7 +104,7 @@ class TestSnapshotModifier(object):
 
 class TestNoModification(TestSnapshotModifier):
     def setup(self):
-        super().setup()
+        super(TestNoModification, self).setup()
         self.modifier = NoModification()
 
     def test_call(self):
