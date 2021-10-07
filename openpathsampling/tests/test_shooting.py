@@ -83,6 +83,7 @@ class TestGaussianBiasSelector(SelectorTest):
         expected = pytest.approx(self.f[frame] / norm)
         assert self.sel.probability(traj[frame], traj) == expected
 
+
 class TestBiasedSelector(SelectorTest):
     def setup(self):
         super(TestBiasedSelector, self).setup()
@@ -124,6 +125,7 @@ class TestBiasedSelector(SelectorTest):
         traj = self.mytraj
         expected = pytest.approx(f[frame] / norm)
         assert sel.probability(traj[frame], traj) == expected
+
 
 class TestFirstFrameSelector(SelectorTest):
     def test_pick(self):
@@ -214,3 +216,19 @@ class TestConstrainedSelector(SelectorTest):
         for idx1, frame in enumerate(mytraj):
             if (idx1 != expected_idx):
                 assert self.sel.f(frame, mytraj) == 0.0
+
+    @pytest.mark.parametrize("new_coord,expected", [(0.11, 1.0), (-0.09, 0.0)])
+    def test_probability_ratio_modified_coordinates(self, new_coord, expected):
+        # Test if probability ratio still works when coordinates are modified
+        mytraj = make_1d_traj(coordinates=[-0.5, -0.4, -0.3, -0.1,
+                                           0.1, 0.2, 0.3, 0.5])
+        idx = self.sel.pick(mytraj)
+        frame = mytraj[idx]
+        # Alter 0.1 to 0.11 and replace the original snapshot with the modded
+        # one
+        mod_frame = frame.copy_with_replacement(coordinates=[[new_coord]])
+        mod_traj = mytraj[:idx]
+        mod_traj += paths.Trajectory([mod_frame])
+        mod_traj += mytraj[idx+1:]
+        prob = self.sel.probability_ratio(frame, mytraj, mod_traj, mod_frame)
+        assert prob == expected
