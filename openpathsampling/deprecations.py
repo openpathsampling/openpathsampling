@@ -168,6 +168,17 @@ OPENMM_MDTRAJTOPOLOGY = Deprecation(
     deprecated_in=(1, 5, 0)
 )
 
+NEW_SNAPSHOT_SELECTOR = Deprecation(
+    problem=("new_snapshot=None; If snapshot has been copied or modified we "
+             "can't find it in trial_trajectory. This call signature will "
+             "update to "
+             "(old_snapshot, old_trajectory, new_snapshot, new_trajectory) "
+             "in {OPS} {version}. "),
+    remedy=("Call with kwargs and use new_snapshot=old_snapshot if "
+            " old_snapshot is not copied or modified in new_traj"),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735

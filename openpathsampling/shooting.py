@@ -3,6 +3,7 @@ import logging
 
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling import default_rng
+from openpathsampling.deprecations import NEW_SNAPSHOT_SELECTOR
 
 logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
@@ -36,6 +37,8 @@ class ShootingPointSelector(StorableNamedObject):
                           new_trajectory, new_snapshot=None):
         # TODO OPS 2.0: We should probabily alter the order and keyword names
         # of this call
+        if new_snapshot is None:
+            NEW_SNAPSHOT_SELECTOR.warn(stacklevel=3)
         new_snapshot = new_snapshot or snapshot
         p_old = self.probability(snapshot, old_trajectory)
         p_new = self.probability(new_snapshot, new_trajectory)
@@ -235,6 +238,9 @@ class FinalFrameSelector(ShootingPointSelector):
                           new_trajectory, new_snapshot=None):
         # TODO OPS 2.0: alter the order + keywords in the call
         # must be matched by a final-frame selector somewhere
+
+        if new_snapshot is None:
+            NEW_SNAPSHOT_SELECTOR.warn(stacklevel=3)
         return 1.0
 
 
@@ -261,4 +267,7 @@ class FirstFrameSelector(ShootingPointSelector):
                           new_trajectory, new_snapshot=None):
         # TODO OPS 2.0: alter the order + keywords in the call
         # must be matched by a first-frame selector somewhere
+
+        if new_snapshot is None:
+            NEW_SNAPSHOT_SELECTOR.warn(stacklevel=3)
         return 1.0

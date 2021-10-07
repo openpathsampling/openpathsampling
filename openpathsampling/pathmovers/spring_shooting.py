@@ -3,6 +3,7 @@ import numpy as np
 from openpathsampling.high_level.move_strategy import levels
 from openpathsampling.pathmover import SampleNaNError, SampleMaxLengthError
 import openpathsampling.high_level.move_strategy as move_strategy
+from openpathsampling.deprecations import NEW_SNAPSHOT_SELECTOR
 from functools import reduce
 
 
@@ -192,6 +193,8 @@ class SpringShootingSelector(paths.ShootingPointSelector):
                 1.0 if anacceptable snapshot has been chosen 0.0 otherwise
         """
         # Check if an acceptable snapshot was selected
+        if new_snapshot is None:
+            NEW_SNAPSHOT_SELECTOR.warn(stacklevel=3)
         if self._acceptable_snapshot:
             return 1.0
         else:
