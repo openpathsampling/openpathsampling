@@ -109,9 +109,21 @@ class SnapshotModifier(StorableNamedObject):
         raise NotImplementedError
 
 class NoModification(SnapshotModifier):
-    """Modifier with no change: returns a copy of the snapshot."""
+    """Modifier with no change: "
+
+    Parameters
+    ----------
+    as_copy : bool, default True
+        if True calls return a copy of the snapshot, else the snapshot itself.
+    """
+    def __init__(self, as_copy=True):
+        # masking is nonsense for no modification, but used in testing so this
+        # is here to conserve API
+        super(NoModification, self).__init__(subset_mask=None)
+        self.as_copy = as_copy
+
     def __call__(self, snapshot):
-        return snapshot.copy()
+        return snapshot.copy() if self.as_copy else snapshot
 
 class RandomVelocities(SnapshotModifier):
     """Randomize velocities according to the Boltzmann distribution.

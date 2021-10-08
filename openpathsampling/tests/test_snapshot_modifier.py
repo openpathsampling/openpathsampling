@@ -32,9 +32,16 @@ logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
-class TestNoModification(object):
+
+class TestSnapshotModifier(object):
     def setup(self):
-        self.modifier = NoModification()
+        # TODO OPS 2.0: This subclass is only here for python 2.7 should be
+        # replaced with SnapshotModifier
+        class DummyMod(SnapshotModifier):
+            def __call__(self, a):
+                return a
+        self.Modifier = DummyMod
+        self.modifier = DummyMod()
         self.snapshot_1D = peng.toy.Snapshot(
             coordinates=np.array([0.0, 1.0, 2.0, 3.0]),
             velocities=np.array([0.5, 1.5, 2.5, 3.5])
@@ -54,9 +61,8 @@ class TestNoModification(object):
                                  [3.5, 3.6, 3.7]])
         )
 
-    # test methods from the abstract base class along with NoModification
     def test_extract_subset(self):
-        mod = NoModification(subset_mask=[1,2])
+        mod = self.Modifier(subset_mask=[1, 2])
         sub_1Dx = mod.extract_subset(self.snapshot_1D.coordinates)
         assert_array_almost_equal(sub_1Dx, np.array([1.0, 2.0]))
         sub_1Dv = mod.extract_subset(self.snapshot_1D.velocities)
@@ -70,7 +76,7 @@ class TestNoModification(object):
                                                      [2.5, 2.6, 2.7]]))
 
     def test_apply_to_subset(self):
-        mod = NoModification(subset_mask=[1,2])
+        mod = self.Modifier(subset_mask=[1, 2])
         copy_1Dx = self.snapshot_1D.coordinates.copy()
         new_1Dx = mod.apply_to_subset(copy_1Dx, np.array([-1.0, -2.0]))
         assert_array_almost_equal(new_1Dx, np.array([0.0, -1.0, -2.0, 3.0]))
@@ -95,6 +101,12 @@ class TestNoModification(object):
                                             [2.0, 2.1, 2.2],
                                             [3.0, 3.1, 3.2]]))
 
+
+class TestNoModification(TestSnapshotModifier):
+    def setup(self):
+        super(TestNoModification, self).setup()
+        self.modifier = NoModification()
+
     def test_call(self):
         new_1D = self.modifier(self.snapshot_1D)
         assert_array_almost_equal(self.snapshot_1D.coordinates,
@@ -106,10 +118,17 @@ class TestNoModification(object):
                                   new_3D.coordinates)
         assert_array_almost_equal(self.snapshot_3D.velocities,
                                   new_3D.velocities)
-        assert_true(self.snapshot_1D.coordinates is not new_1D.coordinates)
-        assert_true(self.snapshot_1D.velocities is not new_1D.velocities)
-        assert_true(self.snapshot_3D.coordinates is not new_3D.coordinates)
-        assert_true(self.snapshot_3D.velocities is not new_3D.velocities)
+        assert self.snapshot_1D.coordinates is not new_1D.coordinates
+        assert self.snapshot_1D.velocities is not new_1D.velocities
+        assert self.snapshot_3D.coordinates is not new_3D.coordinates
+        assert self.snapshot_3D.velocities is not new_3D.velocities
+
+    def test_call_no_copy(self):
+        mod = NoModification(as_copy=False)
+        new_1D = mod(self.snapshot_1D)
+        assert new_1D is self.snapshot_1D
+        new_3D = mod(self.snapshot_3D)
+        assert new_3D is self.snapshot_3D
 
 
 class TestRandomizeVelocities(object):
@@ -483,7 +502,7 @@ class TestVelocityDirectionModifier(object):
                                   self.toy_snapshot.coordinates)
         new_vel = new_toy_snap.velocities
         old_vel = self.toy_snapshot.velocities
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+        same_vel = [np.allclose(new_vel[i], old_vel[i])
                     for i in range(len(new_vel))]
         assert_equal(Counter(same_vel), Counter({True: 1, False: 2}))
         for new_v, old_v in zip(new_vel, old_vel):
@@ -497,9 +516,9 @@ class TestVelocityDirectionModifier(object):
                                       self.openmm_snap.coordinates)
             new_vel = new_omm_snap.velocities
             old_vel = self.openmm_snap.velocities
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
             assert_equal(Counter(same_vel), Counter({False: n_atoms}))
             u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
@@ -570,7 +589,7 @@ class TestSingleAtomVelocityDirectionModifier(object):
                 system=ad_vacuum.system,
                 integrator=omt.integrators.VVVRIntegrator()
             )
-        
+
             self.openmm_snap = self.test_snap.copy_with_replacement(
                 engine=self.openmm_engine,
                 velocities=np.ones(shape=self.test_snap.velocities.shape) * u_vel
@@ -592,7 +611,7 @@ class TestSingleAtomVelocityDirectionModifier(object):
                                   self.toy_snapshot.coordinates)
         new_vel = new_toy_snap.velocities
         old_vel = self.toy_snapshot.velocities
-        same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+        same_vel = [np.allclose(new_vel[i], old_vel[i])
                     for i in range(len(new_vel))]
         assert_equal(Counter(same_vel), Counter({True: 2, False: 1}))
         for new_v, old_v in zip(new_vel, old_vel):
@@ -606,9 +625,9 @@ class TestSingleAtomVelocityDirectionModifier(object):
                                       self.openmm_snap.coordinates)
             new_vel = new_omm_snap.velocities
             old_vel = self.openmm_snap.velocities
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
-            same_vel = [np.allclose(new_vel[i], old_vel[i]) 
+            same_vel = [np.allclose(new_vel[i], old_vel[i])
                         for i in range(len(new_vel))]
             assert_equal(Counter(same_vel), Counter({True: n_atoms-1, False: 1}))
             u_vel_sq = (old_div(u.nanometers, u.picoseconds))**2
