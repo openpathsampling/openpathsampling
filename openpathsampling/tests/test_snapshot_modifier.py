@@ -122,9 +122,6 @@ class TestNoModification(TestSnapshotModifier):
         assert self.snapshot_1D.velocities is not new_1D.velocities
         assert self.snapshot_3D.coordinates is not new_3D.coordinates
         assert self.snapshot_3D.velocities is not new_3D.velocities
-        # TODO OPS 2.0: the following tests should probabily work
-        # assert new_1D == self.snapshot_1D
-        # assert new_3D == self.snapshot_3D
 
     def test_call_no_copy(self):
         mod = NoModification(as_copy=False)
