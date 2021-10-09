@@ -14,6 +14,7 @@ from openpathsampling.pathmovers.spring_shooting import (
     ForwardSpringMover, BackwardSpringMover,
     SpringShootingMover, SpringShootingStrategy,
     SpringShootingMoveScheme)
+from openpathsampling.deprecations import NEW_SNAPSHOT_SELECTOR
 
 
 class FakeStep(object):
@@ -295,6 +296,15 @@ class TestSpringShootingSelector(SelectorTest):
         step = FakeStep(details)
         sel.restart_from_step(step)
         assert sel.trial_snapshot == 10
+
+    def test_deprectation(self):
+        sel = self.default_selector
+        # Override to mimick a good pick
+        sel._acceptable_snapshot = True
+        with pytest.warns(DeprecationWarning, match="new_snapshot"):
+            _ = sel.probability_ratio(None, None, None)
+        # Reset warning
+        NEW_SNAPSHOT_SELECTOR.has_warned = False
 
 
 class MoverTest(SelectorTest):
