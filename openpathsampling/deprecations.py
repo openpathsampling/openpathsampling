@@ -178,10 +178,14 @@ SNAPSHOTMODIFIER_PROB_RAT = Deprecation(
     deprecated_in=(1, 6, 0)
 )
 
-NOMODIFICATION_SUBSET_MASK = Deprecation(
-    problem=("subset_mask is nonsense for NoModification, is ignored in the "
-             "call, and will be removed as initialisation argument."),
-    remedy=("You should not use this keyword"),
+NEW_SNAPSHOT_SELECTOR = Deprecation(
+    problem=("new_snapshot=None; If snapshot has been copied or modified we "
+             "can't find it in trial_trajectory. This call signature will "
+             "update to "
+             "(old_snapshot, old_trajectory, new_snapshot, new_trajectory) "
+             "in {OPS} {version}. "),
+    remedy=("Call with kwargs and use new_snapshot=old_snapshot if "
+            " old_snapshot is not copied or modified in new_traj"),
     remove_version=(2, 0),
     deprecated_in=(1, 6, 0)
 )
