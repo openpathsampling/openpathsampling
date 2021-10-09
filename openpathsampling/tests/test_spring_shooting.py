@@ -109,10 +109,14 @@ class TestSpringShootingSelector(SelectorTest):
         sel = SpringShootingSelector(delta_max=1,
                                      k_spring=1)
         sel._acceptable_snapshot = True
-        ratio = sel.probability_ratio(None, None, None)
+        # TODO OPS 2.0:  Last value here is not None to silence deprecation
+        # warnings, should be set to None after the completion
+        ratio = sel.probability_ratio(None, None, None, 1)
         assert ratio == 1.0
         sel._acceptable_snapshot = False
-        ratio = sel.probability_ratio(None, None, None)
+        # TODO OPS 2.0:  Last value here is not None to silence deprecation
+        # warnings, should be set to None after the completion
+        ratio = sel.probability_ratio(None, None, None, 1)
         assert ratio == 0.0
 
     def test_sanity_breaking_fw_pick(self):

@@ -751,7 +751,7 @@ class EngineMover(SampleMover):
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
         self._engine = engine
-        self.modifier = modifier or paths.NoModification()
+        self.modifier = modifier or paths.NoModification(as_copy=False)
         self._trust_candidate = True  # can I safely do that?
         # I think that is safe. Note for future: if we come across a bug
         # based on this, an alternative would be to have the move strategy
@@ -830,14 +830,18 @@ class EngineMover(SampleMover):
 
         if stopping_reason is None:
             bias = 1.0
-            for key, value in run_details.items():
-                if str(key).startswith('bias'):
-                    bias *= value
+            old_snapshot = initial_trajectory[shooting_index]
+            new_snapshot = run_details.get("modified_shooting_snapshot",
+                                           old_snapshot)
+            # Selector bias
             bias *= self.selector.probability_ratio(
                 initial_trajectory[shooting_index],
                 initial_trajectory,
-                trial_trajectory
+                trial_trajectory,
+                new_snapshot=new_snapshot
             )
+            # Modifier bias
+            bias *= self.modifier.probability_ratio(old_snapshot, new_snapshot)
         else:
             bias = 0.0
 
@@ -2342,7 +2346,6 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         original = trajectory[shooting_index]
         # TODO OPS 2.0: Modification+bias should be done in engine mover
         modified = self.modifier(original)
-        modifier_bias = self.modifier.probability_ratio(original, modified)
 
         fwd_partial = self._make_forward_trajectory(trajectory, modified,
                                                     shooting_index)
@@ -2355,8 +2358,7 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
 
-        details = {'modified_shooting_snapshot': modified,
-                   'bias_snapshot_modification': modifier_bias}
+        details = {'modified_shooting_snapshot': modified}
         return trial_trajectory, details
 
 
@@ -2390,7 +2392,6 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         original = trajectory[shooting_index]
         # TODO OPS 2.0: Modification+bias should be done in engine mover
         modified = self.modifier(original)
-        modifier_bias = self.modifier.probability_ratio(original, modified)
 
         bkwd_partial = self._make_backward_trajectory(trajectory, modified,
                                                       shooting_index)
@@ -2407,8 +2408,7 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
 
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
-        details = {'modified_shooting_snapshot': modified,
-                   'bias_snapshot_modification': modifier_bias}
+        details = {'modified_shooting_snapshot': modified}
 
         return trial_trajectory, details
 

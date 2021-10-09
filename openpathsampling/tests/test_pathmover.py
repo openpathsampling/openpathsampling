@@ -300,20 +300,15 @@ class TwoWayShootingMoverTest(TestShootingMover):
         )
         traj, details = mover._run(self.init_samp[0].trajectory, 4)
         assert_allclose(traj.xyz[:, 0, 0], [-0.1, 0.2, 0.4, 0.6, 0.8])
-        assert (list(details.keys()) ==
-                ['modified_shooting_snapshot', 'bias_snapshot_modification']
-                )
+        assert list(details.keys()) == ['modified_shooting_snapshot']
+
         assert details['modified_shooting_snapshot'] == traj[2]
         assert (details['modified_shooting_snapshot'] not in
                 self.init_samp[0].trajectory)
-        assert details['bias_snapshot_modification'] == 1.0
 
         traj, details = mover._run(self.init_samp[0].trajectory, 3)
         assert_allclose(traj.xyz[:, 0, 0], [-0.1, 0.1, 0.3, 0.5, 0.7])
-        assert (list(details.keys()) ==
-                ['modified_shooting_snapshot', 'bias_snapshot_modification']
-                )
-        assert details['bias_snapshot_modification'] == 1.0
+        assert list(details.keys()) == ['modified_shooting_snapshot']
         assert details['modified_shooting_snapshot'] == traj[2]
         assert (details['modified_shooting_snapshot'] not in
                 self.init_samp[0].trajectory)
