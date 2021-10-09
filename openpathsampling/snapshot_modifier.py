@@ -6,8 +6,8 @@ import functools
 import numpy as np
 
 from openpathsampling.netcdfplus import StorableNamedObject
-from openpathsampling.deprecations import (SNAPSHOTMODIFIER_PROB_RAT,
-                                           NOMODIFICATION_SUBSET_MASK)
+from openpathsampling.deprecations import SNAPSHOTMODIFIER_PROB_RAT
+
 logger = logging.getLogger(__name__)
 
 
