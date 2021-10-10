@@ -10,6 +10,7 @@ import sys
 
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.integration_tools import is_simtk_unit_type
+import openpathsampling as paths
 
 from .snapshot import BaseSnapshot
 from .trajectory import Trajectory
@@ -49,55 +50,6 @@ class EngineNaNError(EngineError):
 class DynamicsEngine(StorableNamedObject):
     """
     Wraps simulation tool (parameters, storage, etc.)
-
-    Attributes
-    ----------
-    on_nan : str
-        set the behaviour of the engine when `NaN` is detected.
-        Possible is
-
-        1.  `fail` will raise an exception `EngineNaNError`
-        2.  `retry` will rerun the trajectory in engine.generate, these moves
-            do not satisfy detailed balance
-
-    on_error : str
-        set the behaviour of the engine when an exception happens.
-        Possible is
-
-        1.  `fail` will raise an exception `EngineError`
-        2.  `retry` will rerun the trajectory in engine.generate, these moves
-            do not satisfy detailed balance
-
-    on_max_length : str
-        set the behaviour if the trajectory length is `n_frames_max`.
-        If `n_frames_max == 0` this will be ignored and nothing happens.
-        Possible is
-
-        1.  `fail` will raise an exception `EngineMaxLengthError`
-        2.  `stop` will stop and return the max length trajectory (default)
-        3.  `retry` will rerun the trajectory in engine.generate, these moves
-            do not satisfy detailed balance
-
-    retries_when_nan : int, default: 2
-        the number of retries (if chosen) before an exception is raised
-
-    retries_when_error : int, default: 2
-        the number of retries (if chosen) before an exception is raised
-
-    retries_when_max_length : int, default: 0
-        the number of retries (if chosen) before an exception is raised
-
-    on_retry : str or callable
-        the behaviour when a try is started. Since you have already generated
-        some trajectory you might not restart completely. Possibilities are
-
-        1.  `full` will restart completely and use the initial frames (default)
-        2.  `keep_half` will cut the existing in half but keeping at least the initial
-        3.  `remove_interval` will remove as many frames as the `interval`
-        4.  a callable will be used as a function to generate the new from the
-            old trajectories, e.g. `lambda t: t[:10]` would restart with the
-            first 10 frames
-
     Notes
     -----
     Should be considered an abstract class: only its subclasses can be
@@ -109,13 +61,6 @@ class DynamicsEngine(StorableNamedObject):
 
     _default_options = {
         'n_frames_max': None,
-        'on_max_length': 'fail',
-        'on_nan': 'fail',
-        'retries_when_nan': 2,
-        'retries_when_error': 0,
-        'retries_when_max_length': 0,
-        'on_retry': 'full',
-        'on_error': 'fail'
     }
 
     #units = {
@@ -420,10 +365,109 @@ class DynamicsEngine(StorableNamedObject):
             intervals=0,
             max_length=self.options['n_frames_max'])
 
+        it = self.iter_generate_2(snapshot, running, direction)
+
         for trajectory in it:
             pass
 
         return trajectory
+
+    def iter_generate_2(self, initial, running=None, direction=+1,
+                        max_length=None):
+        """
+        Generator that returns the trajectory as it grows
+
+        Parameters
+        ----------
+        initial : :class:`.Snapshot` or :class:`.Trajectory`
+            initial conditions to run dynamics from
+        running : list of callable
+            conditions that return true if the trajectory should continue to
+            run
+        direction : +1 or -1
+            whether to run the dynamics forward (+1) or backward (-1) in
+            time
+        max_length : int or None
+            the maximum length to allow; default (None) will use the
+            engine's `n_frames_max`.
+
+        Yields
+        ------
+        :class:`.Trajectory`
+            the trajectory
+        """
+        started = False
+        trajectory = paths.utils.trajectorify(initial)
+
+        # things that depend on direction
+        get_snapshot = {+1 : lambda t: t[-1],
+                        -1 : lambda t: t[0].reversed}[direction]
+        add_frame = {+1: lambda s, t: t.append(s),
+                     -1: lambda s, t: t.insert(0, s.reversed)}[direction]
+
+        if max_length is None:
+            max_length = self.options['n_frames_max']
+
+        self.current_snapshot = get_snapshot(trajectory)
+
+        stop = self.stop_conditions(trajectory=trajectory,
+                                    continue_conditions=running,
+                                    trusted=False)
+
+        if stop:
+            yield trajectory
+            return
+
+        self.start()
+        snapshot = None
+        while not stop:
+
+            # first we check for maximum length; forcible setting
+            # max_length to None will allow infinite trajectories
+            if max_length is not None and len(trajectory) >= max_length:
+                # should only hit on ==, but >= as safety
+                raise EngineMaxLengthError(
+                    "Hit maximum trajectory length: %d frames" % max_length,
+                    trajectory
+                )
+
+            try:
+                with self.interrupter():
+                    snapshot = self.generate_next_frame()
+                    self.validate_snapshot(snapshot, trajectory)
+
+            except KeyboardInterrupt:
+                logger.info("Keyboard interrupt. Shutting down simulation")
+                self.stop(trajectory)
+                raise
+            except Exception as e:
+                # if there's an error, shut down the trajectory
+                logger.info("Error in dynamics")
+                # snapshot error handler returns a modified error to raise
+                # or True if we should pass
+                handled = self.snapshot_error_handler(e, snapshot,
+                                                      trajectory)
+                if isinstance(handled, Exception):
+                    self.stop(trajectory)
+                    raise handled
+                elif isinstance(handled, BaseSnapshot):
+                    snapshot = handled
+                else:
+                    raise EngineError("snapshot_error_handler should return an "
+                                      "error or a snapshot, not %s" % handled)
+
+            add_frame(snapshot, trajectory)  # depends on direction
+            # now this is trusted
+            yield trajectory
+
+            stop = self.stop_conditions(trajectory=trajectory,
+                                        continue_conditions=running,
+                                        trusted=True)
+            # TODO: add this once all snapshots have clear_cache
+            # snapshot.clear_cache()
+
+        self.stop(trajectory)
+
 
     def iter_generate(self, initial, running=None, direction=+1,
                       intervals=10, max_length=0):
@@ -692,6 +736,16 @@ class DynamicsEngine(StorableNamedObject):
             returns `True` if the snapshot is okay to be used
         """
         return True
+
+    def validate_snapshot(self, snapshot, trajectory):
+        if not self.is_valid_snapshot(snapshot):
+            raise EngineError("Snapshot is not valid.")
+
+    def snapshot_error_handler(self, error, snapshot, trajetory):
+        # This is used for custom error handling for a given engine. As a
+        # common example, you might catch an error raised by the underlying
+        # engine and change it to an OPS error, so that OPS can handle it.
+        return error
 
     @classmethod
     def check_snapshot_type(cls, snapshot):

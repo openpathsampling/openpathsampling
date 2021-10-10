@@ -10,6 +10,7 @@ from functools import wraps
 from openpathsampling.engines import NoEngine
 import numpy as np
 import numpy.testing as npt
+import openpathsampling as paths
 
 from openpathsampling.integration_tools import unit as u
 from openpathsampling.integration_tools import is_simtk_quantity_type
@@ -330,3 +331,8 @@ class NaNEngine(NoEngine):
     @staticmethod
     def is_valid_snapshot(snapshot):
         return False
+
+    def validate_snapshot(self, snapshot, trajectory):
+        if not self.is_valid_snapshot(snapshot):
+            raise paths.engines.EngineNaNError("Snapshot contains NaN",
+                                               trajectory)

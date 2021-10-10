@@ -1,9 +1,12 @@
 import logging
+import sys
 
 from openpathsampling.integration_tools import openmm
 from openpathsampling.integration_tools import unit as u
 
-from openpathsampling.engines import DynamicsEngine, SnapshotDescriptor
+from openpathsampling.engines import (
+    DynamicsEngine, SnapshotDescriptor, EngineNaNError
+)
 from openpathsampling.engines.openmm import tools
 from .snapshot import Snapshot
 import numpy as np
@@ -398,6 +401,17 @@ class OpenMMEngine(DynamicsEngine):
             return False
 
         return True
+
+    def validate_snapshot(self, snapshot, trajectory):
+        if not self.is_valid_snapshot(snapshot):
+            raise EngineNaNError("Snapshot contains NaN", trajectory)
+
+    def snapshot_error_handler(self, error, snapshot, trajectory):
+        e = sys.exc_info()
+        se = str(e).lower()
+        if 'nan' in se and ('particle' in se or 'coordinates' in se):
+            return EngineNaNError("Snapshot contains NaN", trajectory)
+        return error
 
     @property
     def current_snapshot(self):
