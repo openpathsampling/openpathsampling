@@ -297,7 +297,7 @@ class TestSpringShootingSelector(SelectorTest):
         sel.restart_from_step(step)
         assert sel.trial_snapshot == 10
 
-    def test_deprectation(self):
+    def test_deprecation(self):
         sel = self.default_selector
         # Override to mimick a good pick
         sel._acceptable_snapshot = True
