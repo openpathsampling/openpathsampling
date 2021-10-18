@@ -1,4 +1,3 @@
-import random
 import logging
 import copy
 import abc
@@ -6,8 +5,8 @@ import functools
 
 import numpy as np
 
-import openpathsampling as paths
-from openpathsampling.netcdfplus import StorableNamedObject, StorableObject
+from openpathsampling.netcdfplus import StorableNamedObject
+from openpathsampling.deprecations import SNAPSHOTMODIFIER_PROB_RAT
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +107,12 @@ class SnapshotModifier(StorableNamedObject):
     def __call__(self, snapshot):
         raise NotImplementedError
 
+    def probability_ratio(self, old_snapshot, new_snapshot):
+        """Only here for backwards compatability, will raise in the future"""
+        SNAPSHOTMODIFIER_PROB_RAT.warn(stacklevel=3)
+        return 1.0
+
+
 class NoModification(SnapshotModifier):
     """Modifier with no change: "
 
@@ -124,6 +129,11 @@ class NoModification(SnapshotModifier):
 
     def __call__(self, snapshot):
         return snapshot.copy() if self.as_copy else snapshot
+
+    def probability_ratio(self, old_snapshot, new_snapshot):
+        """This modifier does not alter the snapshot, so equal probability."""
+        return 1.0
+
 
 class RandomVelocities(SnapshotModifier):
     """Randomize velocities according to the Boltzmann distribution.
@@ -225,6 +235,11 @@ class RandomVelocities(SnapshotModifier):
         new_snap = make_snapshot(snapshot)
         return new_snap
 
+    def probability_ratio(self, old_snapshot, new_snapshot):
+        # Should always be 1.0 becasue it is directly sampled from the right
+        # distribution
+        return 1.0
+
 
 class GeneralizedDirectionModifier(SnapshotModifier):
     """
@@ -288,11 +303,6 @@ class GeneralizedDirectionModifier(SnapshotModifier):
                                    "an engine that has constraints.")
 
         try:
-            box_vectors = snapshot.box_vectors
-        except AttributeError:
-            box_vectors = None
-
-        try:
             n_dofs = snapshot.n_degrees_of_freedom
         except AttributeError:
             raise RuntimeError("Snapshot missing n_degrees_of_freedom. "
@@ -305,6 +315,11 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         # NOTE: none of our engines currently explicitly remove angular
         # (but isn't angular momentum impossible in periodic condensed
         # phase)
+        # try:
+        #     box_vectors = snapshot.box_vectors
+        # except AttributeError:
+        #     box_vectors = None
+
         remove_angular = 0  # if box_vectors is None else 1
         remove_linear = 1 if n_atoms != 1 else 0
         if remove_linear:
@@ -475,6 +490,11 @@ class GeneralizedDirectionModifier(SnapshotModifier):
         # NOTE: no constraint correction here! constraints are not allowed!
         return new_snap
 
+    def probability_ratio(self, old_snapshot, new_snapshot):
+        # No constraints allowed, so this should always be 1.0
+        return 1.0
+
+
 class VelocityDirectionModifier(GeneralizedDirectionModifier):
     """
     Randomly change all the velocities (in the subset masked, at least)
@@ -503,6 +523,7 @@ class VelocityDirectionModifier(GeneralizedDirectionModifier):
     """
     def _select_atoms_to_modify(self, n_subset_atoms):
         return list(range(n_subset_atoms))
+
 
 class SingleAtomVelocityDirectionModifier(GeneralizedDirectionModifier):
     """
@@ -535,4 +556,3 @@ class SingleAtomVelocityDirectionModifier(GeneralizedDirectionModifier):
     """
     def _select_atoms_to_modify(self, n_subset_atoms):
         return [np.random.choice(range(n_subset_atoms))]
-

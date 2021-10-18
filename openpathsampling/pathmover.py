@@ -25,8 +25,9 @@ logger = logging.getLogger(__name__)
 init_log = logging.getLogger('openpathsampling.initialization')
 
 
-# TODO: Remove if really not used anymore otherwise might move to utils or tools
-def make_list_of_pairs(l):
+# TODO: Remove if really not used anymore
+# otherwise might move to utils or tools
+def make_list_of_pairs(inlist):
     """
     Converts input from several possible formats into a list of pairs: used
     to clean input for swap-like moves.
@@ -40,34 +41,37 @@ def make_list_of_pairs(l):
 
     Parameters
     ----------
-    l : list
+    inlist : list
         input list, either flat list of length 2N, a list of pairs or None
 
     Returns
     -------
     list of pairs
     """
-    if l is None:
+    if inlist is None:
         return None
 
-    _ = len(l)  # raises TypeError, avoids everything else
+    _ = len(inlist)  # raises TypeError, avoids everything else
 
     # based on first element, decide whether this should be a list of lists
     # or a flat list
     try:
-        _ = len(l[0])
+        _ = len(inlist[0])
         list_of_lists = True
     except TypeError:
         list_of_lists = False
 
     if list_of_lists:
-        for elem in l:
+        for elem in inlist:
             assert len(elem) == 2, "List of lists: inner list length != 2"
-        outlist = l
+        outlist = inlist
     else:
-        assert len(l) % 2 == 0, "Flattened list: length not divisible by 2"
+        assert len(inlist) % 2 == 0, \
+            "Flattened list: length not divisible by 2"
         outlist = [
-            [a, b] for (a, b) in zip(l[slice(0, None, 2)], l[slice(1, None, 2)])
+            [a, b] for (a, b) in zip(
+                inlist[slice(0, None, 2)],
+                inlist[slice(1, None, 2)])
         ]
     # Note that one thing we don't check is whether the items are of the
     # same type. That might be worth doing someday; for now, we trust that
@@ -128,7 +132,7 @@ class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
     in the PathMover, but have it be a separate class ~~~DWHS
     """
 
-    #__metaclass__ = abc.ABCMeta
+    # __metaclass__ = abc.ABCMeta
 
     def __init__(self):
         StorableNamedObject.__init__(self)
@@ -228,11 +232,10 @@ class PathMover(with_metaclass(abc.ABCMeta, TreeMixin, StorableNamedObject)):
             return {
                 InOutSet([])
             }
-        elif len(self.input_ensembles) == 1 and len(self.output_ensembles) == 1:
-            return InOutSet([
-                InOut(
-                    [((self.input_ensembles[0], self.output_ensembles[0], 0), 1)]
-                )])
+        elif (len(self.input_ensembles) == len(self.output_ensembles) == 1):
+            in_ens = self.input_ensembles[0]
+            out_ens = self.output_ensembles[0]
+            return InOutSet([InOut([((in_ens, out_ens, 0), 1)])])
         else:
             # Fallback could be all possibilities, but for now we ask the user!
             raise NotImplementedError(
@@ -699,8 +702,8 @@ class SampleMover(PathMover):
     def _accept(self, trials):
         """Function to determine the acceptance of a trial
 
-        Defaults to calling the Metropolis acceptance criterion for all returned
-        trial samples. Means all samples most be valid and accepted.
+        Defaults to calling the Metropolis acceptance criterion for all
+        returned trial samples. Means all samples most be valid and accepted.
         """
         return self.metropolis(trials)
 
@@ -741,12 +744,14 @@ class EngineMover(SampleMover):
     # this will store the engine attribute for all subclasses as well
     _included_attr = ['_engine']
 
-    def __init__(self, ensemble, target_ensemble, selector, engine=None):
+    def __init__(self, ensemble, target_ensemble, selector, engine=None,
+                 modifier=None):
         super(EngineMover, self).__init__()
         self.selector = selector
         self.ensemble = ensemble
         self.target_ensemble = target_ensemble
         self._engine = engine
+        self.modifier = modifier or paths.NoModification(as_copy=False)
         self._trust_candidate = True  # can I safely do that?
         # I think that is safe. Note for future: if we come across a bug
         # based on this, an alternative would be to have the move strategy
@@ -798,11 +803,13 @@ class EngineMover(SampleMover):
                 input_sample, shooting_index, e.last_trajectory, 'max_length')
 
             if EngineMover.reject_max_length:
-                raise SampleMaxLengthError('Sample with MaxLength', trial, details)
+                raise SampleMaxLengthError('Sample with MaxLength', trial,
+                                           details)
 
         else:
             trial, details = self._build_sample(
-                input_sample, shooting_index, trial_trajectory)
+                input_sample, shooting_index, trial_trajectory,
+                run_details=run_details)
 
         trials = [trial]
         details.update(run_details)
@@ -814,17 +821,27 @@ class EngineMover(SampleMover):
             input_sample,
             shooting_index,
             trial_trajectory,
-            stopping_reason=None
+            stopping_reason=None,
+            run_details={}
             ):
-
+        # TODO OPS 2.0: the passing of run_details is a hack and should be
+        # properly refactored
         initial_trajectory = input_sample.trajectory
 
         if stopping_reason is None:
-            bias = self.selector.probability_ratio(
+            bias = 1.0
+            old_snapshot = initial_trajectory[shooting_index]
+            new_snapshot = run_details.get("modified_shooting_snapshot",
+                                           old_snapshot)
+            # Selector bias
+            bias *= self.selector.probability_ratio(
                 initial_trajectory[shooting_index],
                 initial_trajectory,
-                trial_trajectory
+                trial_trajectory,
+                new_snapshot=new_snapshot
             )
+            # Modifier bias
+            bias *= self.modifier.probability_ratio(old_snapshot, new_snapshot)
         else:
             bias = 0.0
 
@@ -857,7 +874,7 @@ class EngineMover(SampleMover):
         initial_snapshot = trajectory[shooting_index]  # .copy()
         run_f = paths.PrefixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[0:shooting_index]
-                                              ).can_append
+                                               ).can_append
         partial_trajectory = self.engine.generate(initial_snapshot,
                                                   running=[run_f])
         trial_trajectory = (trajectory[0:shooting_index] +
@@ -870,7 +887,7 @@ class EngineMover(SampleMover):
         initial_snapshot = trajectory[shooting_index].reversed  # _copy()
         run_f = paths.SuffixTrajectoryEnsemble(self.target_ensemble,
                                                trajectory[shooting_index + 1:]
-                                              ).can_prepend
+                                               ).can_prepend
         partial_trajectory = self.engine.generate(initial_snapshot,
                                                   running=[run_f])
         trial_trajectory = (partial_trajectory.reversed +
@@ -1027,12 +1044,13 @@ class ReplicaExchangeMover(SampleMover):
         return [self.ensemble1, self.ensemble2]
 
     def _generate_in_out(self):
+        ens1 = self.ensemble1
+        ens2 = self.ensemble2
+        move_type = 1 * InOut._use_move_type
         return InOutSet([
-            InOut([
-                ((self.ensemble1, self.ensemble2, 1 * InOut._use_move_type), 1),
-                ((self.ensemble2, self.ensemble1, 1 * InOut._use_move_type), 1)
+            InOut([((ens1, ens2, move_type), 1),
+                   ((ens2, ens1, move_type), 1)])
             ])
-        ])
 
     def __call__(self, sample1, sample2):
         # convert sample to the language used here before
@@ -1111,12 +1129,13 @@ class StateSwapMover(SampleMover):
         return [self.ensemble1, self.ensemble2]
 
     def _generate_in_out(self):
+        ens1 = self.ensemble1
+        ens2 = self.ensemble2
+        move_type = -1 * InOut._use_move_type
         return InOutSet([
-            InOut([
-                ((self.ensemble1, self.ensemble2, -1 * InOut._use_move_type), 1),
-                ((self.ensemble2, self.ensemble1, -1 * InOut._use_move_type), 1)
+            InOut([((ens1, ens2, move_type), 1),
+                   ((ens2, ens1, move_type), 1)])
             ])
-        ])
 
     def __call__(self, sample1, sample2):
         # convert sample to the language used here before
@@ -1444,16 +1463,18 @@ class EnsembleHopMover(SampleMover):
             replica = self.change_replica
 
         logger.info(
-            "Attempting ensemble hop from {e1} to {e2} replica ID {rid}".format(
+            "Attempting ensemble hop from {e1} to {e2} "
+            "replica ID {rid}".format(
                 e1=repr(ens_from), e2=repr(ens_to), rid=repr(replica)))
 
         trajectory = rep_sample.trajectory
         logger.debug("  selected replica: " + str(replica))
         logger.debug("  initial ensemble: " + repr(rep_sample.ensemble))
 
-        logger.info("Hop starts from legal ensemble: "+str(ens_from(trajectory)))
-        logger.info("Hop ends in legal ensemble: "+str(ens_to(trajectory)))
-
+        logger.info("Hop starts from legal ensemble: " +
+                    str(ens_from(trajectory)))
+        logger.info("Hop ends in legal ensemble: " +
+                    str(ens_to(trajectory)))
 
         # TODO: remove this and generalize!!!
         if type(self.bias) is float:
@@ -1917,9 +1938,10 @@ class PartialAcceptanceSequentialMover(SequentialMover):
         movechanges = []
         for mover in self.movers:
             logger.info(str(self.name)
-                        + " starting mover index " + str(self.movers.index(mover))
+                        + " starting mover index "
+                        + str(self.movers.index(mover))
                         + " (" + mover.name + ")"
-                       )
+                        )
             # Run the sub mover
             movepath = mover.move(subglobal)
             samples = movepath.results
@@ -1948,7 +1970,9 @@ class ConditionalSequentialMover(SequentialMover):
     """
 
     def _generate_in_out(self):
-        return InOutSet(sum([sub.in_out for sub in self.submovers], InOutSet()))
+        return InOutSet(
+            sum([sub.in_out for sub in self.submovers], InOutSet())
+        )
 
     def move(self, sample_set):
         logger.debug("Starting conditional sequential move")
@@ -2107,8 +2131,8 @@ class EnsembleFilterMover(SubPathMover):
         self.ensembles = ensembles
 
         if not set(self.mover.output_ensembles) & set(self.ensembles):
-            # little sanity check, if the underlying move will be removed by the
-            # filter throw a warning
+            # little sanity check, if the underlying move will be removed by
+            # the filter throw a warning
             raise ValueError(
                 'Your filter removes the underlying move completely. ' +
                 'Please check your ensembles and submovers!')
@@ -2170,6 +2194,7 @@ class SpecializedRandomChoiceMover(RandomChoiceMover):
             details=details
         )
         return change
+
 
 class OneWayShootingMover(SpecializedRandomChoiceMover):
     """
@@ -2255,9 +2280,10 @@ class AbstractTwoWayShootingMover(EngineMover):
             ensemble=ensemble,
             target_ensemble=ensemble,
             selector=selector,
-            engine=engine
+            engine=engine,
+            modifier=modifier
         )
-        self.modifier = modifier
+        # TODO OPS 2.0: This init signature should be aligned with EngineMover
 
     # required for concrete class; not really used
     @property
@@ -2289,6 +2315,7 @@ class AbstractTwoWayShootingMover(EngineMover):
         # to override the default implementation in EngineMover
         raise NotImplementedError
 
+
 class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
     def _run(self, trajectory, shooting_index):
         """
@@ -2306,7 +2333,8 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         trial_trajectory : :class:`.Trajectory`
             the resulting trial trajectory
         details : dict
-            details dictionary (includes modified shooting point)
+            details dictionary (includes modified shooting point and
+            modification bias)
         """
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
@@ -2316,6 +2344,7 @@ class ForwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         ))
 
         original = trajectory[shooting_index]
+        # TODO OPS 2.0: Modification+bias should be done in engine mover
         modified = self.modifier(original)
 
         fwd_partial = self._make_forward_trajectory(trajectory, modified,
@@ -2350,7 +2379,8 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         trial_trajectory : :class:`.Trajectory`
             the resulting trial trajectory
         details : dict
-            details dictionary (includes modified shooting point)
+            details dictionary (includes modified shooting point and
+            modification bias)
         """
         shoot_str = "Running {sh_dir} from frame {fnum} in [0:{maxt}]"
         logger.info(shoot_str.format(
@@ -2360,25 +2390,26 @@ class BackwardFirstTwoWayShootingMover(AbstractTwoWayShootingMover):
         ))
 
         original = trajectory[shooting_index]
+        # TODO OPS 2.0: Modification+bias should be done in engine mover
         modified = self.modifier(original)
 
         bkwd_partial = self._make_backward_trajectory(trajectory, modified,
                                                       shooting_index)
-        #logger.info("Complete backward shot (length " +
-                    #str(len(bkwd_partial)) + ")")
+        # logger.info("Complete backward shot (length " +
+        #             str(len(bkwd_partial)) + ")")
         # TODO: come up with a test that shows why you need mid_traj here;
         # should be a SeqEns with OptionalEnsembles. Exact example is hard!
         mid_traj = bkwd_partial.reversed + trajectory[shooting_index + 1:]
         mid_traj_shoot_idx = len(bkwd_partial) - 1
         fwd_partial = self._make_forward_trajectory(mid_traj, modified,
                                                     mid_traj_shoot_idx)
-        #logger.info("Complete forward shot (length " +
-                    #str(len(fwd_partial)) + ")")
+        # logger.info("Complete forward shot (length " +
+        #             str(len(fwd_partial)) + ")")
 
         # join the two
         trial_trajectory = bkwd_partial.reversed + fwd_partial[1:]
-
         details = {'modified_shooting_snapshot': modified}
+
         return trial_trajectory, details
 
 
@@ -2505,6 +2536,7 @@ class MinusMover(SubPathMover):
             change.details = details
 
         return change
+
 
 class SingleReplicaMinusMover(MinusMover):
     """

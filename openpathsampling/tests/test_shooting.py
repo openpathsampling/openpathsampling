@@ -232,3 +232,17 @@ class TestConstrainedSelector(SelectorTest):
         mod_traj += mytraj[idx+1:]
         prob = self.sel.probability_ratio(frame, mytraj, mod_traj, mod_frame)
         assert prob == expected
+
+
+class TestDeprecations(object):
+    @pytest.mark.parametrize('selector_class', [ShootingPointSelector,
+                                                FirstFrameSelector,
+                                                FinalFrameSelector])
+    def test_new_snapshot(self, selector_class):
+        selector = selector_class()
+        mytraj = make_1d_traj(coordinates=[-0.5, -0.4, -0.3, -0.1,
+                                           0.1, 0.2, 0.3, 0.5])
+        with pytest.deprecated_call(match='new_snapshot'):
+            _ = selector.probability_ratio(mytraj[1], mytraj, mytraj)
+        # Reset the warning for the next class
+        NEW_SNAPSHOT_SELECTOR.has_warned = False

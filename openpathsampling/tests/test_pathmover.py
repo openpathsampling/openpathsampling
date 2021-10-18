@@ -8,11 +8,12 @@ from builtins import zip
 from builtins import str
 from builtins import range
 from builtins import object
-from nose.plugins.skip import SkipTest
-from nose.tools import (assert_equal, assert_not_equal, raises, assert_true,
-                        assert_in, assert_not_in)
+import logging
 from numpy.testing import assert_allclose
+import numpy as np
+import pytest
 
+import openpathsampling as paths
 from openpathsampling.collectivevariable import FunctionCV
 from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import LengthEnsemble
@@ -22,62 +23,66 @@ from openpathsampling.sample import Sample, SampleSet
 from openpathsampling.shooting import UniformSelector
 from openpathsampling.volume import CVDefinedVolume
 import openpathsampling.engines.toy as toys
-from .test_helpers import CallIdentity, raises_with_message_like
 from .test_helpers import (assert_equal_array_array, items_equal,
-                          make_1d_traj, assert_items_equal,
-                          CalvinistDynamics, assert_same_items, A2BEnsemble)
+                           make_1d_traj, CalvinistDynamics, CallIdentity,
+                           assert_same_items, A2BEnsemble)
 
-#logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
+# logging.getLogger('openpathsampling.pathmover').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.initialization').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 
-#logging.getLogger('openpathsampling.pathmover').propagate = False
-#logging.getLogger('openpathsampling.initialization').propagate = False
+# logging.getLogger('openpathsampling.pathmover').propagate = False
+# logging.getLogger('openpathsampling.initialization').propagate = False
 
 class TestMakeListOfPairs(object):
     def setup(self):
-        self.correct = [ [0, 1], [2, 3], [4, 5] ]
+        self.correct = [[0, 1], [2, 3], [4, 5]]
 
-    @raises(TypeError)
     def test_not_iterable_type_error(self):
-        result = make_list_of_pairs(1)
+        with pytest.raises(TypeError, match='no len()'):
+            make_list_of_pairs(1)
 
     def test_list_of_list_pairs(self):
         result = make_list_of_pairs([[0, 1], [2, 3], [4, 5]])
-        assert_equal_array_array(result, self.correct)
+        assert result == self.correct
 
-    @raises(AssertionError)
     def test_list_of_list_notpairs(self):
-        result = make_list_of_pairs([[0], [1], [2]])
+        with pytest.raises(AssertionError, match='inner list length != 2'):
+            make_list_of_pairs([[0], [1], [2]])
 
-    @raises(AssertionError)
     def test_list_not_even(self):
-        result = make_list_of_pairs([0, 1, 2, 3, 4])
+        with pytest.raises(AssertionError, match='not divisible by 2'):
+            make_list_of_pairs([0, 1, 2, 3, 4])
 
     def test_list_even(self):
         result = make_list_of_pairs([0, 1, 2, 3, 4, 5])
         assert_equal_array_array(result, self.correct)
 
     def test_empty(self):
-        assert_equal(make_list_of_pairs(None), None)
+        assert make_list_of_pairs(None) is None
+
 
 def assert_sample_set_accepted(sample_set, results):
     for sample, result in zip(sample_set, results):
-        assert_equal(sample.details.accepted, result)
+        assert sample.details.accepted == result
+
 
 def assert_subchanges_set_accepted(change, results):
     for ch, result in zip(change.subchanges, results):
-        assert_equal(ch.accepted, result)
+        assert ch.accepted == result
+
 
 def assert_choice_of(result, choices):
     for choice in choices:
         if result is choice:
             return
 
-    raise AssertionError("%s is not in list of choices [%s]" % (result, choices))
+    raise AssertionError("%s is not in list of choices [%s]" %
+                         (result, choices))
+
 
 class TestPathMover(object):
     def setup(self):
@@ -107,23 +112,23 @@ class TestPathMover(object):
 
     def test_is_ensemble_change_mover(self):
         pm = IdentityPathMover()
-        assert_equal(pm.is_ensemble_change_mover, False)
-        assert_equal(pm._is_ensemble_change_mover, None)
+        assert pm.is_ensemble_change_mover is False
+        assert pm._is_ensemble_change_mover is None
         pm._is_ensemble_change_mover = True
-        assert_equal(pm.is_ensemble_change_mover, True)
+        assert pm.is_ensemble_change_mover is True
 
     def test_is_canonical(self):
         pm = IdentityPathMover()
-        assert_equal(pm.is_canonical, None)
+        assert pm.is_canonical is None
         pm._is_canonical = True
-        assert_equal(pm.is_canonical, True)
+        assert pm.is_canonical is True
 
 
 class TestShootingMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7,
                                       -0.1, 0.2, 0.4, 0.6, 0.8])
-        op = FunctionCV("myid", f=lambda snap : snap.coordinates[0][0])
+        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         self.stateA = CVDefinedVolume(op, -100, 0.0)
         self.stateB = CVDefinedVolume(op, 0.65, 100)
         self.tps = A2BEnsemble(self.stateA, self.stateB)
@@ -139,8 +144,8 @@ class TestShootingMover(object):
 
         integ = toys.LeapfrogVerletIntegrator(dt=0.1)
         pes = toys.LinearSlope(m=[0.0], c=[0.0])
-        pes_AA = toys.LinearSlope(m=[10.0], c=[0.0])
-        pes_BB = toys.LinearSlope(m=[-10.0], c=[0.0])
+        # pes_AA = toys.LinearSlope(m=[10.0], c=[0.0])
+        # pes_BB = toys.LinearSlope(m=[-10.0], c=[0.0])
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
         self.toy_opts = {'integ': integ,
                          'n_frames_max': 1000,
@@ -163,11 +168,12 @@ class TestShootingMover(object):
                                           replica=0,
                                           ensemble=self.tps)])
         # setup checks: keep around (commented) for debugging
-        # assert_equal(self.stateA(self.toy_traj[0]), True)
-        # assert_equal(self.stateA(self.toy_traj[1]), False)
-        # assert_equal(self.stateB(self.toy_traj[-2]), False)
-        # assert_equal(self.stateB(self.toy_traj[-1]), True)
-        # assert_equal(self.tps(self.toy_traj), True)
+        # assert self.stateA(self.toy_traj[0]) is True
+        # assert self.stateA(self.toy_traj[1]) is False)
+        # assert self.stateB(self.toy_traj[-2]) is False)
+        # assert self.stateB(self.toy_traj[-1]) is True)
+        # assert self.tps(self.toy_traj) is True)
+
 
 class TestForwardShootMover(TestShootingMover):
     def test_move(self):
@@ -179,10 +185,10 @@ class TestForwardShootMover(TestShootingMover):
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp.apply_samples(change)
-        assert_equal(len(newsamp), 1)
-        assert_equal(change.accepted, True)
-        assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
-        assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
+        assert len(newsamp) == 1
+        assert change.accepted is True
+        assert newsamp[0].ensemble(newsamp[0].trajectory) is True
+        assert newsamp[0].trajectory == change.trials[0].trajectory
 
     def test_move_toy_engine(self):
         mover = ForwardShootMover(
@@ -192,23 +198,20 @@ class TestForwardShootMover(TestShootingMover):
         )
         change = mover.move(self.toy_samp)
         newsamp = self.toy_samp.apply_samples(change)
-        assert_equal(len(newsamp), 1)
-        assert_equal(change.accepted, True)
+        assert len(newsamp) == 1
+        assert change.accepted is True
         newsamp.sanity_check()
         # the next two prove that we did a forward shot correctly
-        assert_equal(self.toy_samp[0].trajectory[0],
-                     newsamp[0].trajectory[0])
-        assert_not_equal(self.toy_samp[0].trajectory[-1],
-                         newsamp[0].trajectory[-1])
-
+        assert self.toy_samp[0].trajectory[0] == newsamp[0].trajectory[0]
+        assert self.toy_samp[0].trajectory[-1] != newsamp[0].trajectory[-1]
 
     def test_is_ensemble_change_mover(self):
         mover = ForwardShootMover(
             selector=UniformSelector(),
             ensemble=self.tps
         )
+        assert mover.is_ensemble_change_mover is False
 
-        assert_equal(mover.is_ensemble_change_mover, False)
 
 class TestBackwardShootMover(TestShootingMover):
     def test_move(self):
@@ -220,16 +223,14 @@ class TestBackwardShootMover(TestShootingMover):
         self.dyn.initialized = True
         change = mover.move(self.init_samp)
         newsamp = self.init_samp.apply_samples(change)
-        assert_equal(len(newsamp), 1)
-        assert_equal(len(self.init_samp[0].trajectory), 8)
-        assert_not_equal(newsamp[0].trajectory[0],
-                         self.init_samp[0].trajectory[0])
-        assert_equal(newsamp[0].trajectory[-1],
-                     self.init_samp[0].trajectory[-1])
-        assert_true(len(newsamp[0].trajectory) <= 8)
-        assert_equal(change.accepted, True)
-        assert_equal(newsamp[0].ensemble(newsamp[0].trajectory), True)
-        assert_equal(newsamp[0].trajectory, change.trials[0].trajectory)
+        assert len(newsamp) == 1
+        assert len(self.init_samp[0].trajectory) == 8
+        assert newsamp[0].trajectory[0] != self.init_samp[0].trajectory[0]
+        assert newsamp[0].trajectory[-1] == self.init_samp[0].trajectory[-1]
+        assert len(newsamp[0].trajectory) <= 8
+        assert change.accepted is True
+        assert newsamp[0].ensemble(newsamp[0].trajectory) is True
+        assert newsamp[0].trajectory == change.trials[0].trajectory
 
     def test_move_toy_engine(self):
         mover = BackwardShootMover(
@@ -239,22 +240,20 @@ class TestBackwardShootMover(TestShootingMover):
         )
         change = mover.move(self.toy_samp)
         newsamp = self.toy_samp.apply_samples(change)
-        assert_equal(len(newsamp), 1)
-        assert_equal(change.accepted, True)
+        assert len(newsamp) == 1
+        assert change.accepted is True
         newsamp.sanity_check()
         # the next two prove that we did a backward shot correctly
-        assert_not_equal(self.toy_samp[0].trajectory[0],
-                     newsamp[0].trajectory[0])
-        assert_equal(self.toy_samp[0].trajectory[-1],
-                         newsamp[0].trajectory[-1])
-
+        assert self.toy_samp[0].trajectory[0] != newsamp[0].trajectory[0]
+        assert self.toy_samp[0].trajectory[-1] == newsamp[0].trajectory[-1]
 
     def test_is_ensemble_change_mover(self):
         mover = BackwardShootMover(
             selector=UniformSelector(),
             ensemble=self.tps
         )
-        assert_equal(mover.is_ensemble_change_mover, False)
+        assert mover.is_ensemble_change_mover is False
+
 
 class TestOneWayShootingMover(TestShootingMover):
     def test_mover_initialization(self):
@@ -263,22 +262,35 @@ class TestOneWayShootingMover(TestShootingMover):
             selector=UniformSelector(),
             engine=self.dyn
         )
-        assert_equal(len(mover.movers), 2)
-        assert_equal(isinstance(mover, RandomChoiceMover), True)
-        assert_equal(isinstance(mover, OneWayShootingMover), True)
+        assert len(mover.movers) == 2
+        assert isinstance(mover, RandomChoiceMover)
+        assert isinstance(mover, OneWayShootingMover)
         moverclasses = [m.__class__ for m in mover.movers]
-        assert_equal(ForwardShootMover in moverclasses, True)
-        assert_equal(BackwardShootMover in moverclasses, True)
-        assert_equal(mover.engine, mover.movers[0].engine)
-        assert_equal(mover.engine, mover.movers[1].engine)
-        assert_equal(mover.selector, mover.movers[0].selector)
-        assert_equal(mover.selector, mover.movers[1].selector)
-        assert_equal(mover.ensemble, mover.movers[0].ensemble)
-        assert_equal(mover.ensemble, mover.movers[1].ensemble)
+        assert ForwardShootMover in moverclasses
+        assert BackwardShootMover in moverclasses
+        # Should the engine asserts check for 'is'?
+        assert mover.engine == mover.movers[0].engine
+        assert mover.engine == mover.movers[1].engine
+        assert mover.selector == mover.movers[0].selector
+        assert mover.selector == mover.movers[1].selector
+        assert mover.ensemble == mover.movers[0].ensemble
+        assert mover.ensemble == mover.movers[1].ensemble
 
-class TestForwardFirstTwoWayShootingMover(TestShootingMover):
-    _MoverType = ForwardFirstTwoWayShootingMover
-    # this allows us to run the exact same tests for backward-first
+
+class TwoWayShootingMoverTest(TestShootingMover):
+    _MoverType = None
+    # this allows us to run the exact same tests for forward-first and
+    # backward-first
+
+    def test_modifier_default(self):
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=None,
+            engine=self.dyn
+        )
+        assert isinstance(mover.modifier, paths.NoModification)
+
     def test_run(self):
         mover = self._MoverType(
             ensemble=self.tps,
@@ -287,18 +299,19 @@ class TestForwardFirstTwoWayShootingMover(TestShootingMover):
             engine=self.dyn
         )
         traj, details = mover._run(self.init_samp[0].trajectory, 4)
-        assert_allclose(traj.xyz[:,0,0], [-0.1, 0.2, 0.4, 0.6, 0.8])
-        assert_equal(list(details.keys()), ['modified_shooting_snapshot'])
-        assert_equal(details['modified_shooting_snapshot'], traj[2])
-        assert_not_in(details['modified_shooting_snapshot'],
-                      self.init_samp[0].trajectory)
+        assert_allclose(traj.xyz[:, 0, 0], [-0.1, 0.2, 0.4, 0.6, 0.8])
+        assert list(details.keys()) == ['modified_shooting_snapshot']
+
+        assert details['modified_shooting_snapshot'] == traj[2]
+        assert (details['modified_shooting_snapshot'] not in
+                self.init_samp[0].trajectory)
 
         traj, details = mover._run(self.init_samp[0].trajectory, 3)
-        assert_allclose(traj.xyz[:,0,0], [-0.1, 0.1, 0.3, 0.5, 0.7])
-        assert_equal(list(details.keys()), ['modified_shooting_snapshot'])
-        assert_equal(details['modified_shooting_snapshot'], traj[2])
-        assert_not_in(details['modified_shooting_snapshot'],
-                      self.init_samp[0].trajectory)
+        assert_allclose(traj.xyz[:, 0, 0], [-0.1, 0.1, 0.3, 0.5, 0.7])
+        assert list(details.keys()) == ['modified_shooting_snapshot']
+        assert details['modified_shooting_snapshot'] == traj[2]
+        assert (details['modified_shooting_snapshot'] not in
+                self.init_samp[0].trajectory)
 
     def test_run_toy(self):
         # mostly smoke test for toy engine integration
@@ -309,10 +322,39 @@ class TestForwardFirstTwoWayShootingMover(TestShootingMover):
             engine=self.toy_engine
         )
         change = mover.move(self.toy_samp)
-        assert_in(change.details.modified_shooting_snapshot,
-                  change.trials[0].trajectory)
-        assert_in(change.details.shooting_snapshot,
-                  change.initial_trajectory)
+        assert (change.details.modified_shooting_snapshot in
+                change.trials[0].trajectory)
+        assert change.details.shooting_snapshot in change.initial_trajectory
+
+    def test_run_toy_0_bias(self):
+        class NoAcceptModification(paths.NoModification):
+            def probability_ratio(self, a, b):
+                return 0.0
+
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=NoAcceptModification(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.toy_samp)
+        assert change.accepted is False
+        assert change.details.metropolis_acceptance == 0.0
+
+    def test_run_toy_inf_bias(self):
+        class InfAcceptModification(paths.NoModification):
+            def probability_ratio(self, a, b):
+                return np.inf
+
+        mover = self._MoverType(
+            ensemble=self.tps,
+            selector=UniformSelector(),
+            modifier=InfAcceptModification(),
+            engine=self.toy_engine
+        )
+        change = mover.move(self.toy_samp)
+        assert change.accepted is True
+        assert change.details.metropolis_acceptance == np.inf
 
     def _setup_early_reject(self, pair):
         zero_vel_traj = paths.Trajectory([
@@ -372,7 +414,7 @@ class TestForwardFirstTwoWayShootingMover(TestShootingMover):
 
             expected_early_reject = path_type in expected_rejections
             ran_full_two_way = ensemble(change.trials[0].trajectory)
-            assert_equal(expected_early_reject, not ran_full_two_way)
+            assert expected_early_reject is not ran_full_two_way
 
     def test_early_reject_tps(self):
         self._test_early_reject(test_ensemble=self.tps,
@@ -407,12 +449,17 @@ class TestForwardFirstTwoWayShootingMover(TestShootingMover):
 
         new_change = mover.move(real_sample_set)
         new_traj = new_change.trials[0].trajectory
-        assert_allclose(new_traj.xyz[:,0,0], real_traj.xyz[:,0,0])
+        assert_allclose(new_traj.xyz[:, 0, 0], real_traj.xyz[:, 0, 0])
 
 
-class TestBackwardFirstTwoWayShootingMover(TestForwardFirstTwoWayShootingMover):
+class TestForwardFirstTwoWayShootingMover(TwoWayShootingMoverTest):
+    _MoverType = ForwardFirstTwoWayShootingMover
+
+
+class TestBackwardFirstTwoWayShootingMover(TwoWayShootingMoverTest):
     _MoverType = BackwardFirstTwoWayShootingMover
     # runs the same tests as ForwardFirst
+
     def test_early_reject_tps(self):
         self._test_early_reject(test_ensemble=self.tps,
                                 path_types=['AA', 'BB', 'AB'],
@@ -441,9 +488,9 @@ class TestTwoWayShootingMover(TestShootingMover):
             modifier=modifier,
             engine=self.dyn
         )
-        assert_equal(mover.ensemble, self.tps)
-        assert_equal(mover.selector, selector)
-        assert_equal(mover.modifier, modifier)
+        assert mover.ensemble is self.tps
+        assert mover.selector is selector
+        assert mover.modifier is modifier
 
     def test_to_dict_from_dict(self):
         mover = TwoWayShootingMover(
@@ -454,16 +501,15 @@ class TestTwoWayShootingMover(TestShootingMover):
         )
         dct = mover.to_dict()
         new_mover = mover.from_dict(dct)
-        assert_equal(mover.movers, new_mover.movers)
-        assert_equal(mover.ensemble, new_mover.ensemble)
-        assert_equal(mover.selector, new_mover.selector)
-        assert_equal(mover.modifier, new_mover.modifier)
+        assert mover.movers == new_mover.movers
+        assert mover.ensemble == new_mover.ensemble
+        assert mover.selector == new_mover.selector
+        assert mover.modifier == new_mover.modifier
 
 
 class TestPathReversalMover(object):
     def setup(self):
-        op = FunctionCV("myid", f=lambda snap :
-                             snap.coordinates[0][0])
+        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
 
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
@@ -474,18 +520,18 @@ class TestPathReversalMover(object):
         self.op = op
 
     def test_is_ensemble_change_mover(self):
-        assert_equal(self.move.is_ensemble_change_mover, False)
+        assert self.move.is_ensemble_change_mover is False
 
     def test_AXA_path(self):
         trajAXA = make_1d_traj(coordinates=[-0.1, 0.75, -0.6],
                                velocities=[0.1, 0.05, -0.05])
-        assert_equal(self.tis(trajAXA), True)
+        assert self.tis(trajAXA) is True
         sampAXA = Sample(trajectory=trajAXA,
                          ensemble=self.tis,
                          replica=0)
         gs_AXA = SampleSet([sampAXA])
         change = self.move.move(gs_AXA)
-        assert_equal(change.accepted, True)
+        assert change.accepted is True
 
     def test_A_A_path(self):
         trajA_A = make_1d_traj(coordinates=[-0.3, 0.1, -0.4])
@@ -494,8 +540,7 @@ class TestPathReversalMover(object):
                          replica=0)
         gs_A_A = SampleSet([sampA_A])
         change = self.move.move(gs_A_A)
-        assert_equal(change.accepted, False)
-
+        assert change.accepted is False
 
     def test_AB_path(self):
         trajAXB = make_1d_traj(coordinates=[-0.2, 0.75, 1.8])
@@ -504,8 +549,7 @@ class TestPathReversalMover(object):
                          replica=0)
         gs_AXB = SampleSet([sampAXB])
         change = self.move.move(gs_AXB)
-        assert_equal(change.accepted, False)
-
+        assert change.accepted is False
 
     def test_BA_path(self):
         trajBXA = make_1d_traj(coordinates=[1.2, 0.7, -0.25])
@@ -514,8 +558,9 @@ class TestPathReversalMover(object):
                          replica=0)
         gs_BXA = SampleSet([sampBXA])
         change = self.move.move(gs_BXA)
-        # print [[v.coordinates[0] for v in t.trajectory] for t in change.trials]
-        assert_equal(change.accepted, True)
+        # print [[v.coordinates[0] for v in t.trajectory]
+        #        for t in change.trials]
+        assert change.accepted is True
 
 
 class TestReplicaIDChangeMover(object):
@@ -523,16 +568,15 @@ class TestReplicaIDChangeMover(object):
         pass
 
     def test_replica_in_sample_set(self):
-        raise SkipTest
+        pytest.skip("Not implemented")
 
     def test_replica_not_in_sample_set(self):
-        raise SkipTest
+        pytest.skip("Not implemented")
 
 
 class TestReplicaExchangeMover(object):
     def setup(self):
-        op = FunctionCV("myid", f=lambda snap :
-                             snap.coordinates[0][0])
+        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
 
         state1 = CVDefinedVolume(op, -100, 0.0)
         state2 = CVDefinedVolume(op, 1, 100)
@@ -545,9 +589,12 @@ class TestReplicaExchangeMover(object):
         self.traj0 = make_1d_traj([-0.1, 0.2, 0.3, 0.1, -0.2])
         self.traj1 = make_1d_traj([-0.1, 0.1, 0.4, 0.6, 0.3, 0.2, -0.15])
         self.traj2 = make_1d_traj([-0.1, 0.2, 0.3, 0.7, 0.6, 0.4, 0.1, -0.15])
-        self.sampA0 = Sample(replica=0, trajectory=self.traj0, ensemble=self.tisA)
-        self.sampB1 = Sample(replica=1, trajectory=self.traj1, ensemble=self.tisB)
-        self.sampA2 = Sample(replica=2, trajectory=self.traj2, ensemble=self.tisA)
+        self.sampA0 = Sample(replica=0, trajectory=self.traj0,
+                             ensemble=self.tisA)
+        self.sampB1 = Sample(replica=1, trajectory=self.traj1,
+                             ensemble=self.tisB)
+        self.sampA2 = Sample(replica=2, trajectory=self.traj2,
+                             ensemble=self.tisA)
         self.gs_B1A2 = SampleSet([self.sampB1, self.sampA2])
         self.gs_A0B1 = SampleSet([self.sampA0, self.sampB1])
 
@@ -556,7 +603,7 @@ class TestReplicaExchangeMover(object):
             ensemble1=self.tisA,
             ensemble2=self.tisB
         )
-        assert_equal(repex_AB.is_ensemble_change_mover, True)
+        assert repex_AB.is_ensemble_change_mover is True
 
     def test_repex_ens_rej(self):
         repex_AB = ReplicaExchangeMover(
@@ -567,23 +614,23 @@ class TestReplicaExchangeMover(object):
         repex_change = repex_AB.move(old_sset)
         samples = repex_change.results
 
-        assert_equal(len(repex_change.results), 0) # since rejected
+        assert len(repex_change.results) == 0  # since rejected
 
         samples_A0B1_ens = repex_change.trials
-        assert_equal(len(samples_A0B1_ens), 2)
-        assert_equal(repex_change.accepted, False)
+        assert len(samples_A0B1_ens) == 2
+        assert repex_change.accepted is False
 
         new_sset = old_sset.apply_samples(samples)
 
-        assert_equal(new_sset[0].trajectory, old_sset[0].trajectory)
-        assert_equal(new_sset[1].trajectory, old_sset[1].trajectory)
+        assert new_sset[0].trajectory == old_sset[0].trajectory
+        assert new_sset[1].trajectory == old_sset[1].trajectory
 
-        A0 = [s for s in samples_A0B1_ens if s.ensemble==self.tisA]
-        assert_equal(len(A0), 1)
-        assert_equal(A0[0].trajectory, self.traj1)
-        B1 = [s for s in samples_A0B1_ens if s.ensemble==self.tisB]
-        assert_equal(len(B1), 1)
-        assert_equal(B1[0].trajectory, self.traj0)
+        A0 = [s for s in samples_A0B1_ens if s.ensemble == self.tisA]
+        assert len(A0) == 1
+        assert A0[0].trajectory == self.traj1
+        B1 = [s for s in samples_A0B1_ens if s.ensemble == self.tisB]
+        assert len(B1) == 1
+        assert B1[0].trajectory == self.traj0
 
     def test_repex_ens_acc(self):
         repex_12 = ReplicaExchangeMover(
@@ -594,21 +641,20 @@ class TestReplicaExchangeMover(object):
         samples_B2A1_rep = repex_12.move(old_sset)
         change = samples_B2A1_rep
         samples = change.results
-        assert_equal(len(samples), 2)
-
-        assert_equal(change.accepted, True)
+        assert len(samples) == 2
+        assert change.accepted is True
 
         new_sset = old_sset.apply_samples(samples)
 
-        assert_equal(new_sset[1].trajectory, old_sset[1].trajectory)
-        assert_equal(new_sset[2].trajectory, old_sset[2].trajectory)
+        assert new_sset[1].trajectory == old_sset[1].trajectory
+        assert new_sset[2].trajectory == old_sset[2].trajectory
 
-        B2 = [s for s in samples if s.ensemble==self.tisB]
-        assert_equal(len(B2), 1)
-        assert_equal(B2[0].trajectory, self.traj2)
-        A1 = [s for s in samples if s.ensemble==self.tisA]
-        assert_equal(len(A1), 1)
-        assert_equal(A1[0].trajectory, self.traj1)
+        B2 = [s for s in samples if s.ensemble == self.tisB]
+        assert len(B2) == 1
+        assert B2[0].trajectory == self.traj2
+        A1 = [s for s in samples if s.ensemble == self.tisA]
+        assert len(A1) == 1
+        assert A1[0].trajectory == self.traj1
 
 
 class TestRandomChoiceMover(object):
@@ -635,50 +681,50 @@ class TestRandomChoiceMover(object):
         self.mover = RandomChoiceMover([self.hop_to_tis, self.hop_to_tps])
 
     def test_is_ensemble_change_mover(self):
-        assert_equal(self.mover.is_ensemble_change_mover, True)
+        assert self.mover.is_ensemble_change_mover is True
 
     def test_is_canonical(self):
         for t in range(20):
             change = self.mover.move(self.init_samp)
-            assert_not_equal(change.canonical.mover, self.mover)
+            assert change.canonical.mover != self.mover
             canonical_submovers = 0
             for submover in self.mover.movers:
                 if change.canonical.mover is submover:
                     canonical_submovers += 1
-            assert_equal(canonical_submovers, 1)
+            assert canonical_submovers == 1
 
     def test_random_choice(self):
         # test that both get selected, but that we always return only one
         # sample
-        count = {}
+        # count = {}
         for t in range(100):
             change = self.mover.move(self.init_samp)
-            assert_equal(len(change.results), 1)
-#            try:
-                # Since self is the root mover, mover_path[-1] is self.
-                # That means that mover_path[-2] is the mover that this
-                # mover chose.
-#                count[samples[0].details.mover_path[-2]] += 1
-#            except KeyError:
-#                count[samples[0].details.mover_path[-2]] = 1
-#        assert_equal(len(count.keys()), 2)
+            assert len(change.results) == 1
+
+            # try:
+            #     # Since self is the root mover, mover_path[-1] is self.
+            #     # That means that mover_path[-2] is the mover that this
+            #     # mover chose.
+            #     count[samples[0].details.mover_path[-2]] += 1
+            # except KeyError:
+            #     count[samples[0].details.mover_path[-2]] = 1
+        # assert len(count.keys()) == 2
 
     def test_restricted_by_replica(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
 
     def test_restricted_by_ensemble(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
 
 
 class TestRandomAllowedChoiceMover(object):
     def setup(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7,
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
-                                     ])
+                                      ])
         self.dyn.initialized = True
         # SampleMover.engine = self.dyn
-        op = FunctionCV("myid", f=lambda snap :
-                             snap.coordinates[0][0])
+        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         stateA = CVDefinedVolume(op, -100, 0.0)
         stateB = CVDefinedVolume(op, 0.65, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
@@ -703,26 +749,23 @@ class TestRandomAllowedChoiceMover(object):
                                          engine=self.dyn)
         self.pathrev = PathReversalMover(ensemble=self.ens1)
 
-        ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
-        # self.mover = EnsembleDictionaryMover(ens_dict)
         self.mover = RandomAllowedChoiceMover([self.shooter, self.pathrev])
 
     def test_move_single_replica(self):
         sample_set = SampleSet([self.samp1])
         change = self.mover.move(sample_set)
         subchange = change.subchange
-        assert_equal(subchange.mover, self.pathrev)
-        assert_equal(subchange.accepted, True)
-        assert_equal(change.accepted, True)
-        assert_equal(len(subchange.samples), 1)
+        assert subchange.mover == self.pathrev
+        assert subchange.accepted is True
+        assert change.accepted is True
+        assert len(subchange.samples) == 1
 
         sample_set = SampleSet([self.samp2])
         change = self.mover.move(sample_set)
         subchange = change.subchange
-        assert_equal(subchange.mover, self.shooter)
-        assert_equal(subchange.accepted, True)
-        assert_equal(change.accepted, True)
-
+        assert subchange.mover == self.shooter
+        assert subchange.accepted is True
+        assert change.accepted is True
 
     def test_move_multiple_replicas(self):
         sample_set = SampleSet([self.samp1, self.samp2])
@@ -730,48 +773,45 @@ class TestRandomAllowedChoiceMover(object):
         for i in range(100):
             change = self.mover.move(sample_set)
             subchange = change.subchange
-            assert_equal(change.accepted, True)
-            assert_equal(subchange.accepted, True)
-            assert_equal(len(subchange.samples), 1)
+            assert change.accepted is True
+            assert subchange.accepted is True
+            assert len(subchange.samples) == 1
             ens = subchange.trials[0].ensemble
             try:
                 count[ens] += 1
             except KeyError:
                 count[ens] = 1
             if ens == self.ens1:
-                assert_equal(subchange.mover, self.pathrev)
+                assert subchange.mover == self.pathrev
             elif ens == self.ens2:
-                assert_equal(subchange.mover, self.shooter)
+                assert subchange.mover == self.shooter
             else:
                 raise AssertionError("Resulting mover unknown!")
-        assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
-
+        assert set(count.keys()) == set([self.ens1, self.ens2])
 
     def test_move_multiple_replicas_weighted_ensembles(self):
         sample_set = SampleSet([self.samp1, self.samp2])
-        ens_dict = {self.ens1 : self.pathrev, self.ens2 : self.shooter}
-        # weighted_mover = EnsembleDictionaryMover(ens_dict, [1.0, 2.0])
-        weighted_mover = RandomAllowedChoiceMover([self.pathrev,
-                                                   self.shooter], [1.0, 2.0])
+        weighted_mover = RandomAllowedChoiceMover([self.pathrev, self.shooter],
+                                                  [1.0, 2.0])
         count = {}
         for i in range(100):
             change = weighted_mover.move(sample_set)
             subchange = change.subchange
-            assert_equal(change.accepted, True)
-            assert_equal(subchange.accepted, True)
-            assert_equal(len(subchange.samples), 1)
+            assert change.accepted is True
+            assert subchange.accepted is True
+            assert len(subchange.samples) == 1
             ens = subchange.trials[0].ensemble
             try:
                 count[ens] += 1
             except KeyError:
                 count[ens] = 1
             if ens == self.ens1:
-                assert_equal(subchange.mover, self.pathrev)
+                assert subchange.mover == self.pathrev
             elif ens == self.ens2:
-                assert_equal(subchange.mover, self.shooter)
+                assert subchange.mover == self.shooter
             else:
                 raise AssertionError("Resulting mover unknown!")
-        assert_equal(set(count.keys()), set([self.ens1, self.ens2]))
+        assert set(count.keys()) == set([self.ens1, self.ens2])
         try:
             assert(count[self.ens1] < count[self.ens2])
         except AssertionError:
@@ -792,27 +832,27 @@ class TestSequentialMover(object):
         len2 = LengthEnsemble(2)
         self.hop_to_tis = RandomAllowedChoiceMover(
             [EnsembleHopMover(*ens) for ens in [[tis, tis],
-                 [tps, tis],
-                 [len3, tis],
-                 [len2, tis]]]
+                                                [tps, tis],
+                                                [len3, tis],
+                                                [len2, tis]]]
         )
         self.hop_to_tps = RandomAllowedChoiceMover(
             [EnsembleHopMover(*ens) for ens in [[tis, tps],
-                 [tps, tps],
-                 [len3, tps],
-                 [len2, tps]]]
+                                                [tps, tps],
+                                                [len3, tps],
+                                                [len2, tps]]]
         )
         self.hop_to_len3 = RandomAllowedChoiceMover(
             [EnsembleHopMover(*ens) for ens in [[tis, len3],
-                 [tps, len3],
-                 [len3, len3],
-                 [len2, len3]]]
+                                                [tps, len3],
+                                                [len3, len3],
+                                                [len2, len3]]]
         )
         self.hop_to_len2 = RandomAllowedChoiceMover(
             [EnsembleHopMover(*ens) for ens in [[tis, len2],
-                 [tps, len2],
-                 [len3, len2],
-                 [len2, len2]]]
+                                                [tps, len2],
+                                                [len3, len2],
+                                                [len2, len2]]]
         )
         self.init_sample = Sample(trajectory=traj,
                                   ensemble=len3,
@@ -833,18 +873,18 @@ class TestSequentialMover(object):
 
     def test_is_ensemble_change_mover(self):
         move = SequentialMover(movers=self.everything_accepted_movers)
-        assert_equal(move.is_ensemble_change_mover, True)
+        assert move.is_ensemble_change_mover is True
 
     def test_everything_accepted(self):
         move = SequentialMover(movers=self.everything_accepted_movers)
         gs = SampleSet(self.init_sample)
         change = move.move(gs)
         samples = change.results
-        assert_equal(len(samples), 3)
+        assert len(samples) == 3
         for subchange in change:
-            assert_equal(subchange.accepted, True)
+            assert subchange.accepted is True
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.tps)
+        assert gs[0].ensemble == self.tps
 
     def test_first_rejected(self):
         move = SequentialMover(movers=self.first_rejected_movers)
@@ -853,95 +893,105 @@ class TestSequentialMover(object):
         samples = change.results
         # @DWHS: This should have two samples since two are accepted
         # and thus applied
-        assert_equal(len(samples), 2)
-        assert_equal(change[0].accepted, False)
-        assert_equal(change[1].accepted, True)
-        assert_equal(change[2].accepted, True)
+        assert len(samples) == 2
+        assert change[0].accepted is False
+        assert change[1].accepted is True
+        assert change[2].accepted is True
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.tps)
+        assert gs[0].ensemble == self.tps
 
     def test_last_rejected(self):
         move = SequentialMover(movers=self.last_rejected_movers)
         gs = SampleSet(self.init_sample)
         change = move.move(gs)
         samples = change.results
-        assert_equal(len(samples), 2)
+        assert len(samples) == 2
         # @DWHS: I think if the last is rejected then there should only be two
         # samples to be used, since the last one is not accepted and thus
         # discarded (does not mean that it is not stored!!!)
-        assert_equal(change[0].accepted, True)
-        assert_equal(change[1].accepted, True)
-        assert_equal(change[2].accepted, False)
+        assert change[0].accepted is True
+        assert change[1].accepted is True
+        assert change[2].accepted is False
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.tps)
+        assert gs[0].ensemble == self.tps
 
     def test_restricted_by_replica(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
 
     def test_restricted_by_ensemble(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
+
 
 class TestPartialAcceptanceSequentialMover(TestSequentialMover):
     def test_everything_accepted(self):
-        move = PartialAcceptanceSequentialMover(movers=self.everything_accepted_movers)
+        move = PartialAcceptanceSequentialMover(
+            movers=self.everything_accepted_movers
+        )
         gs = SampleSet(self.init_sample)
         change = move.move(gs)
         samples = change.results
-        assert_equal(len(samples), 3)
+        assert len(samples) == 3
         for subchange in change:
-            assert_equal(subchange.accepted, True)
-        assert_equal(len(change.trials,),3)
+            assert subchange.accepted is True
+        assert len(change.trials,) == 3
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.tps)
+        assert gs[0].ensemble == self.tps
 
     def test_first_rejected(self):
-        move = PartialAcceptanceSequentialMover(movers=self.first_rejected_movers)
+        move = PartialAcceptanceSequentialMover(
+            movers=self.first_rejected_movers
+        )
         gs = SampleSet(self.init_sample)
         change = move.move(gs)
         samples = change.results
         # returns zero sample since even the first is rejected
         # the first one is still stored
-        assert_equal(len(samples), 0)
+        assert len(samples) == 0
         allsamp = change.trials
-        assert_equal(len(allsamp), 1)
-        assert_equal(change[0].accepted, False)
+        assert len(allsamp) == 1
+        assert change[0].accepted is False
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.len3)
+        assert gs[0].ensemble == self.len3
 
     def test_last_rejected(self):
-        move = PartialAcceptanceSequentialMover(movers=self.last_rejected_movers)
+        move = PartialAcceptanceSequentialMover(
+            movers=self.last_rejected_movers
+        )
         gs = SampleSet(self.init_sample)
         change = move.move(gs)
         samples = change.results
         # @see above, this should return 2 samples. Important the third is
         # still run!
-        assert_equal(len(samples), 2)
+        assert len(samples) == 2
         allsamp = change.trials
-        assert_equal(len(allsamp), 3)
+        assert len(allsamp) == 3
 
-        assert_equal(change[0].accepted, True)
-        assert_equal(change[1].accepted, True)
-        assert_equal(change[2].accepted, False)
+        assert change[0].accepted is True
+        assert change[1].accepted is True
+        assert change[2].accepted is False
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.tps)
+        assert gs[0].ensemble == self.tps
 
     def test_restricted_by_replica(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
 
     def test_restricted_by_ensemble(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
+
 
 class TestConditionalSequentialMover(TestSequentialMover):
     def test_everything_accepted(self):
-        move = ConditionalSequentialMover(movers=self.everything_accepted_movers)
+        move = ConditionalSequentialMover(
+            movers=self.everything_accepted_movers
+        )
         gs = SampleSet(self.init_sample)
         change = move.move(gs)
         samples = change.results
-        assert_equal(len(samples), 3)
+        assert len(samples) == 3
         for ch in change:
-            assert_equal(change.accepted, True)
+            assert change.accepted is True
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.tps)
+        assert gs[0].ensemble == self.tps
 
     def test_first_rejected(self):
         move = ConditionalSequentialMover(movers=self.first_rejected_movers)
@@ -949,12 +999,12 @@ class TestConditionalSequentialMover(TestSequentialMover):
         change = move.move(gs)
         samples = change.results
         # should be zero since the move is completely rejected
-        assert_equal(len(samples), 0)
+        assert len(samples) == 0
         allsamp = change.trials
-        assert_equal(len(allsamp), 1)
-        assert_equal(change[0].accepted, False)
+        assert len(allsamp) == 1
+        assert change[0].accepted is False
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.len3)
+        assert gs[0].ensemble == self.len3
 
     def test_last_rejected(self):
         move = ConditionalSequentialMover(movers=self.last_rejected_movers)
@@ -962,27 +1012,27 @@ class TestConditionalSequentialMover(TestSequentialMover):
         change = move.move(gs)
         samples = change.results
         # number of accepted samples is 0 for this type of mover
-        assert_equal(len(samples), 0)
+        assert len(samples) == 0
         allsamp = change.trials
-        assert_equal(len(allsamp), 3)
+        assert len(allsamp) == 3
 
         # check here if last actual samples was false
         # this actually allows to see later if the single samples were
         # accepted or not, even from the change without loading samples
-        assert_equal(change[0].accepted, True)
-        assert_equal(change[1].accepted, True)
-        assert_equal(change[2].accepted, False)
+        assert change[0].accepted is True
+        assert change[1].accepted is True
+        assert change[2].accepted is False
         gs = gs.apply_samples(change)
-        assert_equal(gs[0].ensemble, self.len3)
+        assert gs[0].ensemble == self.len3
 
     def test_restricted_by_replica(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
 
     def test_restricted_by_ensemble(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
+
 
 class SubtrajectorySelectTester(object):
-
     def setup(self):
         op = CallIdentity()
         vol = paths.CVDefinedVolume(op, -0.5, 0.5)
@@ -1011,10 +1061,11 @@ class SubtrajectorySelectTester(object):
     def test_paths_in_ensemble(self):
         # more a test of SequentialEnsemble, but also a test of sanity
         # before the real tests
-        assert_equal(self.ensemble(self.traj_with_3_subtrajs), True)
-        assert_equal(self.subensemble(self.subtraj0), True)
-        assert_equal(self.subensemble(self.subtraj1), True)
-        assert_equal(self.subensemble(self.subtraj2), True)
+        assert self.ensemble(self.traj_with_3_subtrajs)
+        assert self.subensemble(self.subtraj0)
+        assert self.subensemble(self.subtraj1)
+        assert self.subensemble(self.subtraj2)
+
 
 class TestRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_accepts_all(self):
@@ -1026,10 +1077,10 @@ class TestRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         for t in range(100):
             change = mover.move(self.gs)
             samples = change.results
-            assert_equal(len(samples), 1)
-            assert_equal(self.subensemble, samples[0].ensemble)
-            assert_equal(self.subensemble(samples[0].trajectory), True)
-            assert_equal(self.ensemble(samples[0].trajectory), False)
+            assert len(samples) == 1
+            assert self.subensemble == samples[0].ensemble
+            assert self.subensemble(samples[0].trajectory)
+            assert not self.ensemble(samples[0].trajectory)
             if samples[0].trajectory == self.subtraj0:
                 found[0] = True
             elif samples[0].trajectory == self.subtraj1:
@@ -1038,15 +1089,14 @@ class TestRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
                 found[2] = True
             else:
                 raise RuntimeError("Subtraj unknown!")
-        assert_equal(found[0] and found[1] and found[2], True)
+        assert (found[0] and found[1] and found[2])
 
     def test_is_ensemble_change_mover(self):
         mover = RandomSubtrajectorySelectMover(ensemble=1, sub_ensemble=1)
-        assert_equal(mover.is_ensemble_change_mover, True)
-
+        assert mover.is_ensemble_change_mover is True
 
     def test_nl_fails(self):
-        raise SkipTest
+        pytest.skip("Not implemented?")
 
     def test_nothing_allowed(self):
         mover = RandomSubtrajectorySelectMover(
@@ -1057,9 +1107,10 @@ class TestRandomSubtrajectorySelectMover(SubtrajectorySelectTester):
         self.gs[0].trajectory = traj_with_no_subtrajs
         change = mover.move(self.gs)
         samples = change.results
-        assert_equal(len(samples), 0)
+        assert len(samples) == 0
         # print change.samples
-        assert_equal(len(change.samples), 0)
+        assert len(change.samples) == 0
+
 
 class TestFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
@@ -1069,11 +1120,12 @@ class TestFirstSubtrajectorySelectMover(SubtrajectorySelectTester):
         )
         change = mover.move(self.gs)
         samples = change.results
-        assert_equal(len(samples), 1)
-        assert_equal(self.subensemble, samples[0].ensemble)
-        assert_equal(self.subensemble(samples[0].trajectory), True)
-        assert_equal(self.ensemble(samples[0].trajectory), False)
-        assert_equal(samples[0].trajectory, self.subtraj0)
+        assert len(samples) == 1
+        assert self.subensemble == samples[0].ensemble
+        assert self.subensemble(samples[0].trajectory)
+        assert not self.ensemble(samples[0].trajectory)
+        assert samples[0].trajectory == self.subtraj0
+
 
 class TestFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
     def test_move(self):
@@ -1083,11 +1135,11 @@ class TestFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
         )
         change = mover.move(self.gs)
         samples = change.results
-        assert_equal(len(samples), 1)
-        assert_equal(self.subensemble, samples[0].ensemble)
-        assert_equal(self.subensemble(samples[0].trajectory), True)
-        assert_equal(self.ensemble(samples[0].trajectory), False)
-        assert_equal(samples[0].trajectory, self.subtraj2)
+        assert len(samples) == 1
+        assert self.subensemble == samples[0].ensemble
+        assert self.subensemble(samples[0].trajectory)
+        assert not self.ensemble(samples[0].trajectory)
+        assert samples[0].trajectory == self.subtraj2
 
 # class TestForceEnsembleChangeMover(object):
 #     def setup(self):
@@ -1109,25 +1161,22 @@ class TestFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 #         mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len3]])
 #         change = mover.move(self.gs)
 #         samples = change.results
-#         assert_equal(change.details.initial_ensemble(samples[0].trajectory),
-#                      True)
-#         assert_equal(samples[0].ensemble(samples[0].trajectory), True)
-#         assert_equal(samples[0].ensemble, self.len3)
+#         assert change.details.initial_ensemble(samples[0].trajectory)
+#         assert samples[0].ensemble(samples[0].trajectory)
+#         assert samples[0].ensemble == self.len3
 #
 #     def test_not_in_ensemble(self):
 #         mover = ForceEnsembleChangeMover(ensembles=[[self.tis, self.len2]])
 #         change = mover.move(self.gs)
 #         samples = change.results
-#         assert_equal(change.details.initial_ensemble(samples[0].trajectory),
-#                      True)
-#         assert_equal(samples[0].ensemble, self.len2)
-#         assert_equal(samples[0].ensemble(samples[0].trajectory), False)
+#         assert change.details.initial_ensemble(samples[0].trajectory)
+#         assert samples[0].ensemble == self.len2
+#         assert not samples[0].ensemble(samples[0].trajectory)
+
 
 class TestMinusMover(object):
     def setup(self):
-        op = FunctionCV("myid", f=lambda snap :
-                             snap.coordinates[0][0])
-
+        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
@@ -1166,32 +1215,30 @@ class TestMinusMover(object):
         )
 
     def test_is_ensemble_change_mover(self):
-        assert_equal(self.mover.is_ensemble_change_mover, True)
+        assert self.mover.is_ensemble_change_mover is True
 
     def test_is_canonical(self):
-        assert_equal(self.mover.is_canonical, True)
+        assert self.mover.is_canonical is True
 
     def test_setup_sanity(self):
         # sanity checks to make sure that what we set up makes sense
-        assert_equal(self.minus_sample.ensemble(self.minus_sample.trajectory),
-                    True)
+        assert self.minus_sample.ensemble(self.minus_sample.trajectory)
         first_subtraj = FirstSubtrajectorySelectMover(
             ensemble=self.minus,
             sub_ensemble=self.minus._segment_ensemble
         )
         change = first_subtraj.move(SampleSet(self.minus_sample))
         samples = change.results
-        assert_equal(samples[0].ensemble(samples[0].trajectory), True)
+        assert samples[0].ensemble(samples[0].trajectory)
         final_subtraj = FinalSubtrajectorySelectMover(
             ensemble=self.minus,
             sub_ensemble=self.minus._segment_ensemble
         )
         change = final_subtraj.move(SampleSet(self.minus_sample))
         samples = change.results
-        assert_equal(samples[0].ensemble(samples[0].trajectory), True)
-        assert_equal(samples[0].ensemble, self.minus._segment_ensemble)
-        assert_equal(self.mover.engine, self.dyn)
-
+        assert samples[0].ensemble(samples[0].trajectory)
+        assert samples[0].ensemble == self.minus._segment_ensemble
+        assert self.mover.engine == self.dyn
 
     def test_successful_move(self):
         init_innermost = make_1d_traj(self.list_innermost, [1.0]*5)
@@ -1202,11 +1249,11 @@ class TestMinusMover(object):
         )
         gs = SampleSet([init_sample, self.minus_sample])
 
-        extend_forward =  self.list_innermost + [0.12, 0.32, -0.131]
+        extend_forward = self.list_innermost + [0.12, 0.32, -0.131]
         extend_backward = [-0.13, 0.13, 0.33] + self.list_innermost
 
-        assert_equal(self.minus(make_1d_traj(extend_forward)), True)
-        assert_equal(self.minus(make_1d_traj(extend_backward)), True)
+        assert self.minus(make_1d_traj(extend_forward))
+        assert self.minus(make_1d_traj(extend_backward))
 
         seg_dir = {}
         for i in range(100):
@@ -1215,22 +1262,24 @@ class TestMinusMover(object):
             assert change.details.extension_trajectory is not None
             samples = change.results
             sub_samples = change.subchange.subchange.results
-            assert_equal(len(samples), 2)
-            assert_equal(len(sub_samples), 4)
-            s_inner = [s for s in sub_samples if s.ensemble==self.innermost]
-            s_minus = [s for s in sub_samples if s.ensemble==self.minus]
-            s_sub = [s for s in sub_samples if s.ensemble==self.minus._segment_ensemble]
-            assert_equal(len(s_inner), 1)
-            assert_equal(len(s_minus), 1)
-            assert_equal(len(s_sub), 2)
+            assert len(samples) == 2
+            assert len(sub_samples) == 4
+            s_inner = [s for s in sub_samples if s.ensemble == self.innermost]
+            s_minus = [s for s in sub_samples if s.ensemble == self.minus]
+            s_sub = [s for s in sub_samples
+                     if s.ensemble == self.minus._segment_ensemble]
+            assert len(s_inner) == 1
+            assert len(s_minus) == 1
+            assert len(s_sub) == 2
 
             for c in change:
-                assert_equal(c.accepted, True)
+                assert c.accepted is True
 
-            assert_equal(change.canonical.mover, self.mover)
+            assert change.canonical.mover == self.mover
 
             key = ""
-            s_inner0_xvals = [s.coordinates[0,0] for s in s_inner[0].trajectory]
+            s_inner0_xvals = [s.coordinates[0, 0]
+                              for s in s_inner[0].trajectory]
             if items_equal(s_inner0_xvals, self.first_segment):
                 key += "1"
             elif items_equal(s_inner0_xvals, self.second_segment):
@@ -1240,7 +1289,8 @@ class TestMinusMover(object):
                 raise RuntimeError("Chosen segment neither first nor last!")
 
             # final sample s_minus is accepted
-            s_minus_xvals = [s.coordinates[0,0] for s in s_minus[-1].trajectory]
+            s_minus_xvals = [s.coordinates[0, 0]
+                             for s in s_minus[-1].trajectory]
             if items_equal(s_minus_xvals, extend_forward):
                 key += "f"
             elif items_equal(s_minus_xvals, extend_backward):
@@ -1253,7 +1303,7 @@ class TestMinusMover(object):
                 seg_dir[key] += 1
             except KeyError:
                 seg_dir[key] = 1
-        assert_equal(len(list(seg_dir.keys())), 4)
+        assert len(list(seg_dir.keys())) == 4
 
     def test_repex_fails_other_ensemble(self):
         innermost_other_ensemble = make_1d_traj([-0.11, 0.1, -0.12])
@@ -1265,15 +1315,15 @@ class TestMinusMover(object):
         gs = SampleSet([samp_other_ensemble, self.minus_sample])
 
         change = self.mover.move(gs)
-        assert_equal(len(change.trials), 1)
+        assert len(change.trials) == 1
         assert change.details.segment_swap_samples is not None
         assert change.details.extension_trajectory is None
 
         sub = change.subchange.subchange
-        assert_equal(self.innermost(innermost_other_ensemble), False)
-        assert_equal(sub[0].accepted, True)
-        assert_equal(sub[1].accepted, False)
-        assert_equal(len(sub.trials), 3) # stop after failed repex
+        assert not self.innermost(innermost_other_ensemble)
+        assert sub[0].accepted is True
+        assert sub[1].accepted is False
+        assert len(sub.trials) == 3  # stop after failed repex
         # only one sample which is not a segment
 
     def test_repex_fails_innermost_crosses_state(self):
@@ -1286,13 +1336,13 @@ class TestMinusMover(object):
         gs = SampleSet([samp_crosses_to_state, self.minus_sample])
 
         change = self.mover.move(gs)
-        assert_equal(len(change.trials), 1) # stop after failed repex
+        assert len(change.trials) == 1  # stop after failed repex
         assert change.details.segment_swap_samples is not None
         assert change.details.extension_trajectory is None
 
         sub = change.subchange.subchange
-        assert_equal(self.innermost(innermost_crosses_to_state), True)
-        assert_equal(len(sub.trials), 3) # stop after failed repex
+        assert self.innermost(innermost_crosses_to_state)
+        assert len(sub.trials) == 3  # stop after failed repex
         assert_subchanges_set_accepted(sub, [True, False, False])
 
     def test_repex_fails_minus_crosses_to_state(self):
@@ -1311,14 +1361,14 @@ class TestMinusMover(object):
         )
         gs = SampleSet([badminus_sample, init_sample])
 
-        assert_equal(self.minus(minus_crosses_to_state), True)
+        assert self.minus(minus_crosses_to_state)
 
         change = self.mover.move(gs)
         assert change.details.segment_swap_samples is not None
         assert change.details.extension_trajectory is None
         sub = change.subchange.subchange
-        assert_equal(len(sub.trials), 3)  # stop after failed repex
-        assert_equal(len(change.trials), 1)
+        assert len(sub.trials) == 3  # stop after failed repex
+        assert len(change.trials) == 1
         assert_subchanges_set_accepted(sub, [True, False, False])
 
     def test_extension_fails(self):
@@ -1334,37 +1384,33 @@ class TestMinusMover(object):
             ensemble=self.innermost
         )
 
-        assert_equal(self.innermost(traj_bad_extension), True)
+        assert self.innermost(traj_bad_extension)
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
         change = self.mover.move(gs)
-        assert_equal(change.accepted, False) # whole minus has failed
+        assert change.accepted is False  # whole minus has failed
 
         sub = change.subchange.subchange
-        assert_equal(len(sub.trials), 4)
+        assert len(sub.trials) == 4
         assert change.details.segment_swap_samples is not None
         assert change.details.extension_trajectory is not None
 
         # after filtering there are only 2 trials
-        assert_equal(len(change.trials), 2)
+        assert len(change.trials) == 2
 
         assert_subchanges_set_accepted(sub, [True] * 2 + [False])
         # first two work and the extension fails
         # this only happens due to length
 
-        assert_equal(
-            len(sub[-1][0].trials[0].trajectory),
-            len(traj_bad_extension)+self.dyn.n_frames_max-1
-        )
+        assert (len(sub[-1][0].trials[0].trajectory) ==
+                len(traj_bad_extension) + self.dyn.n_frames_max-1)
 
         self.dyn.options['on_max_length'] = 'fail'
 
 
 class TestSingleReplicaMinusMover(object):
     def setup(self):
-        op = FunctionCV("myid", f=lambda snap :
-                             snap.coordinates[0][0])
-
+        op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
         volX = CVDefinedVolume(op, -100, 0.25)
@@ -1403,7 +1449,7 @@ class TestSingleReplicaMinusMover(object):
         )
 
     def test_is_ensemble_change_mover(self):
-        assert_equal(self.mover.is_ensemble_change_mover, True)
+        assert self.mover.is_ensemble_change_mover is True
 
     def test_successful_move(self):
         init_innermost = make_1d_traj(self.list_innermost, [1.0]*5)
@@ -1414,11 +1460,11 @@ class TestSingleReplicaMinusMover(object):
         )
         gs = SampleSet([init_sample, self.minus_sample])
 
-        extend_forward =  self.list_innermost + [0.12, 0.32, -0.131]
+        extend_forward = self.list_innermost + [0.12, 0.32, -0.131]
         extend_backward = [-0.13, 0.13, 0.33] + self.list_innermost
 
-        assert_equal(self.minus(make_1d_traj(extend_forward)), True)
-        assert_equal(self.minus(make_1d_traj(extend_backward)), True)
+        assert self.minus(make_1d_traj(extend_forward))
+        assert self.minus(make_1d_traj(extend_backward))
 
         output_forward = [-0.12, 0.12, 0.32, -0.131]
         output_backward = [-0.13, 0.13, 0.33, -0.11]
@@ -1428,22 +1474,23 @@ class TestSingleReplicaMinusMover(object):
             change = self.mover.move(gs)
             samples = change.results
             sub_samples = change.subchange.subchange.results
-            assert_equal(len(samples), 1)
-            assert_equal(len(sub_samples), 4)
-            s_inner = [s for s in sub_samples if s.ensemble==self.innermost]
-            s_minus = [s for s in sub_samples if s.ensemble==self.minus]
-            s_seg = [s for s in sub_samples if s.ensemble==self.minus._segment_ensemble]
-            assert_equal(len(s_inner), 1) # this is the output
-            assert_equal(len(s_minus), 1) # this is the minus version
-            assert_equal(len(s_seg), 2) # first the selected, then the final
+            assert len(samples) == 1
+            assert len(sub_samples) == 4
+            s_inner = [s for s in sub_samples if s.ensemble == self.innermost]
+            s_minus = [s for s in sub_samples if s.ensemble == self.minus]
+            s_seg = [s for s in sub_samples
+                     if s.ensemble == self.minus._segment_ensemble]
+            assert len(s_inner) == 1  # this is the output
+            assert len(s_minus) == 1  # this is the minus version
+            assert len(s_seg) == 2  # first the selected, then the final
 
             for c in change:
-               assert_equal(c.accepted, True)
+                assert c.accepted is True
 
-            assert_equal(change.canonical.mover, self.mover)
+            assert change.canonical.mover == self.mover
 
             key = ""
-            s_seg0_xvals = [s.coordinates[0,0] for s in s_seg[0].trajectory]
+            s_seg0_xvals = [s.coordinates[0, 0] for s in s_seg[0].trajectory]
             if items_equal(s_seg0_xvals, self.list_innermost):
                 key += "0"
             else:
@@ -1451,29 +1498,25 @@ class TestSingleReplicaMinusMover(object):
                 raise RuntimeError("Chosen segment neither first nor last!")
 
             # s_minus is the intermediate
-            s_minus_xvals = [s.coordinates[0,0] for s in s_minus[-1].trajectory]
+            s_minus_xvals = [s.coordinates[0, 0]
+                             for s in s_minus[-1].trajectory]
             if items_equal(s_minus_xvals, extend_forward):
                 key += "f"
-                assert_equal(
-                    [s.coordinates[0,0] for s in s_inner[0].trajectory],
-                    output_forward
-                )
+                assert ([s.coordinates[0, 0] for s in s_inner[0].trajectory] ==
+                        output_forward)
             elif items_equal(s_minus_xvals, extend_backward):
                 key += "b"
-                assert_equal(
-                    [s.coordinates[0,0] for s in s_inner[0].trajectory],
-                    output_backward
-                )
+                assert ([s.coordinates[0, 0] for s in s_inner[0].trajectory] ==
+                        output_backward)
             else:
                 print("s_minus_xvals:", s_minus_xvals)
                 raise RuntimeError("Unexpected minus extension result!")
-
 
             try:
                 seg_dir[key] += 1
             except KeyError:
                 seg_dir[key] = 1
-        assert_equal(len(list(seg_dir.keys())), 2)
+        assert len(list(seg_dir.keys())) == 2
 
     def test_first_hop_fails(self):
         crossing_traj = make_1d_traj([-0.11, 0.11, 0.31, 1.01], [1.0]*4)
@@ -1483,12 +1526,12 @@ class TestSingleReplicaMinusMover(object):
         gs.sanity_check()
 
         change = self.mover.move(gs)
-        assert_equal(change.accepted, False)
-        assert_equal(len(change.results), 0)
+        assert change.accepted is False
+        assert len(change.results) == 0
         sub_trials = change.subchange.subchange.subchange.trials
-        assert_equal(len(sub_trials), 1)
-        assert_equal(sub_trials[0].trajectory, crossing_traj)
-        assert_equal(sub_trials[0].ensemble, self.minus._segment_ensemble)
+        assert len(sub_trials) == 1
+        assert sub_trials[0].trajectory == crossing_traj
+        assert sub_trials[0].ensemble == self.minus._segment_ensemble
 
     def test_extension_fails(self):
         # we use `stop` and not `fail` for max length
@@ -1502,46 +1545,31 @@ class TestSingleReplicaMinusMover(object):
             ensemble=self.innermost
         )
 
-        assert_equal(self.innermost(traj_bad_extension), True)
+        assert self.innermost(traj_bad_extension)
 
         gs = SampleSet([self.minus_sample, samp_bad_extension])
         change = self.mover.move(gs)
-        assert_equal(change.accepted, False) # whole minus has failed
+        assert change.accepted is False  # whole minus has failed
 
         #     Minus : Filter  :ChooseFB : CondSeq
         sub = change.subchange.subchange.subchange
-        assert_equal(len(sub.trials), 2)
-        assert_equal(len(change.trials), 0) # no trials survive filtering
+        assert len(sub.trials) == 2
+        assert len(change.trials) == 0  # no trials survive filtering
         assert_subchanges_set_accepted(sub, [True, False])
 
         # first two work and the extension fails
         # this only happens due to length
-        assert_equal(
-            len(sub[-1].trials[0].trajectory),
-            len(traj_bad_extension)+self.dyn.n_frames_max-1
-        )
-
-
+        assert (len(sub[-1].trials[0].trajectory) ==
+                len(traj_bad_extension) + self.dyn.n_frames_max - 1)
         self.dyn.options['on_max_length'] = 'fail'
 
 
 class TestAbstract(object):
-    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
-    def test_abstract_pathmover(self):
-        mover = paths.PathMover()
-
-    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
-    def test_abstract_samplemover(self):
-        mover = paths.SampleMover()
-
-    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
-    def test_abstract_enginemover(self):
-        mover = paths.EngineMover()
-
-    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
-    def test_abstract_selectionmover(self):
-        mover = paths.SelectionMover()
-
-    @raises_with_message_like(TypeError, "Can't instantiate abstract class")
-    def test_abstract_subtrajectoryselectmover(self):
-        mover = paths.SubtrajectorySelectMover()
+    @pytest.mark.parametrize("class_name", ["PathMover", "SampleMover",
+                                            "EngineMover", "SelectionMover",
+                                            "SubtrajectorySelectMover"])
+    def test_abstract_mover_classes(self, class_name):
+        abstract_class = getattr(paths, class_name)
+        with pytest.raises(TypeError,
+                           match="Can't instantiate abstract class"):
+            abstract_class()
