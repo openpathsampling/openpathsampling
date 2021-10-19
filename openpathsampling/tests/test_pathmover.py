@@ -15,7 +15,6 @@ import pytest
 
 import openpathsampling as paths
 from openpathsampling.collectivevariable import FunctionCV
-from openpathsampling.deprecations import Deprecation
 from openpathsampling.engines.trajectory import Trajectory
 from openpathsampling.ensemble import LengthEnsemble
 from openpathsampling.pathmover import *
