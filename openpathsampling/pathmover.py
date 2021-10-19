@@ -17,7 +17,8 @@ from .ops_logging import initialization_logging
 from .treelogic import TreeMixin
 
 from openpathsampling.deprecations import deprecate, has_deprecations
-from openpathsampling.deprecations import SAMPLE_DETAILS, MOVE_DETAILS
+from openpathsampling.deprecations import (SAMPLE_DETAILS, MOVE_DETAILS,
+                                           NEW_SNAPSHOT_KWARG_SELECTOR)
 
 from future.utils import with_metaclass
 
@@ -834,12 +835,20 @@ class EngineMover(SampleMover):
             new_snapshot = run_details.get("modified_shooting_snapshot",
                                            old_snapshot)
             # Selector bias
-            bias *= self.selector.probability_ratio(
-                initial_trajectory[shooting_index],
-                initial_trajectory,
-                trial_trajectory,
-                new_snapshot=new_snapshot
-            )
+            try:
+                bias *= self.selector.probability_ratio(
+                    initial_trajectory[shooting_index],
+                    initial_trajectory,
+                    trial_trajectory,
+                    new_snapshot=new_snapshot
+                )
+            except TypeError:
+                bias *= self.selector.probability_ratio(
+                    initial_trajectory[shooting_index],
+                    initial_trajectory,
+                    trial_trajectory)
+                NEW_SNAPSHOT_KWARG_SELECTOR.warn()
+
             # Modifier bias
             bias *= self.modifier.probability_ratio(old_snapshot, new_snapshot)
         else:

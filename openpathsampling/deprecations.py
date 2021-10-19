@@ -190,6 +190,20 @@ NEW_SNAPSHOT_SELECTOR = Deprecation(
     deprecated_in=(1, 6, 0)
 )
 
+NEW_SNAPSHOT_KWARG_SELECTOR = Deprecation(
+    problem=("'new_snapshot' should be a supported keyword in "
+             "selector.probability_ratio(); If snapshot has been copied or "
+             "modified we can't reliably find it in trial_trajectory. This "
+             "keyword must be supported in the expected signature: "
+             "(old_snapshot, old_trajectory, new_snapshot, new_trajectory) "
+             "in {OPS} {version}. "),
+    remedy=("kwarg 'new_snapshot' must to be supported, implement it as "
+            "new_snapshot=old_snapshot if new_traj is not used to calculate "
+            "the weight of old_snapshot"),
+    remove_version=(2, 0),
+    deprecated_in=(1, 6, 0)
+)
+
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
