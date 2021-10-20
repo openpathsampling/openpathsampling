@@ -1573,3 +1573,30 @@ class TestAbstract(object):
         with pytest.raises(TypeError,
                            match="Can't instantiate abstract class"):
             abstract_class()
+
+
+class TestDeprecation(TestShootingMover):
+    def test_no_new_snapshot_kwarg_selector(self):
+        class OldSelector(UniformSelector):
+            def __init__(self):
+                super(OldSelector, self).__init__()
+
+            # Override prob_ratio with old signature
+            def probability_ratio(self, snapshot,
+                                  old_trajectory, new_trajectory):
+                prob = super(OldSelector, self).probability_ratio(
+                    snapshot,
+                    old_trajectory,
+                    new_trajectory,
+                    snapshot
+                )
+                return prob
+
+        mover = ForwardShootMover(ensemble=self.tps,
+                                  selector=OldSelector(),
+                                  engine=self.dyn)
+        self.dyn.initialized = True
+        with pytest.warns(DeprecationWarning,
+                          match="'new_snapshot' should be a supported "):
+            a = mover.move(self.init_samp)
+        assert a is not None
