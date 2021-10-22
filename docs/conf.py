@@ -229,8 +229,8 @@ html_static_path = ['_static']
 # after sphinx_rtd_theme 1.0; see
 # https://github.com/readthedocs/sphinx_rtd_theme/issues/1240
 html_css_files = [
-    '_static/theme_overrides.css',  # override wide tables in RTD theme
-    '_static/ipynb.css',  # tweak output of notebooks
+    'theme_overrides.css',  # override wide tables in RTD theme
+    'ipynb.css',  # tweak output of notebooks
 ]
 
 # Add any extra paths that contain custom files (such as robots.txt or
