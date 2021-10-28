@@ -15,8 +15,8 @@ def masses_per_mole(snapshot):
         # OpenMM snapshot not from simulation engine (setup snapshot,
         # probably)
         ops_topology = snapshot.topology
-        topology = ops_topology.mdtraj.to_openmm()
-        masses_per_mole = [a.element.mass for a in topology.atoms()]
+        topology = ops_topology.mdtraj
+        masses_per_mole = [a.element.mass * u.dalton for a in topology.atoms]
     else:
         # standard case from simulation
         system = simulation.context.getSystem()
