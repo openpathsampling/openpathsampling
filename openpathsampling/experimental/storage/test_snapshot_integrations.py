@@ -71,19 +71,23 @@ class TestSnapshotIntegration(object):
 
         snap = make_snap()
 
-        # already skipping if OpenMM isn't available, so we can use unit
-        nm = unit.nanometer
-        ps = unit.picosecond
-        get_velocities = {
-            'gromacs': lambda snap: snap.velocities,
-            'gromacs_int': lambda snap: snap.velocities,
-            'openmm': lambda snap: snap.velocities.value_in_unit(nm/ps),
-        }[integration]
-        get_box_vectors = {
-            'gromacs': lambda snap: snap.box_vectors,
-            'gromacs_int': lambda snap: snap.box_vectors,
-            'openmm': lambda snap: snap.box_vectors.value_in_unit(nm),
-        }[integration]
+        def get_velocities(snap):
+            return snap.velocities
+
+        def get_box_vectors(snap):
+            return snap.box_vectors
+
+        if integration == 'openmm':
+            # already skipping if OpenMM isn't available, so we can use unit
+            nm = unit.nanometer
+            ps = unit.picosecond
+            def extract_unit(func, units):
+                def inner(snap):
+                    return func(snap).value_in_unit(units)
+                return inner
+
+            get_velocities = extract_unit(get_velocities, nm/ps)
+            get_box_vectors = extract_unit(get_box_vectors, nm)
 
         storage = self._make_storage(mode='w')
         assert not storage.backend.has_table('snapshot0')
