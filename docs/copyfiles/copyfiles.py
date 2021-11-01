@@ -33,9 +33,20 @@ def copy_gitlab(source, dest, files):
         print(url)
         urllib.request.urlretrieve(url, dest / f)
 
+def copy_github(source, dest, files):
+    domain = "http://raw.githubusercontent.com/"
+    if not source.endswith("/"):
+        source = source + "/"
+    dest = pathlib.Path(dest)
+    for f in files:
+        url = domain + source + f
+        print(url)
+        urllib.request.urlretrieve(url, dest / f)
+
 DISPATCH = {
     'local': copy_local,
-    'gitlab': copy_gitlab
+    'gitlab': copy_gitlab,
+    'github': copy_github,
 }
 
 def make_copies(fileset):
