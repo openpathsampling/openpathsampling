@@ -1,0 +1,28 @@
+engine:
+  header: Engines
+  description: |
+    Engines provide the interface to the external tools that actually
+    perform the molecular dynamics. Usually you set up an engine using its
+    native tools, and provide OPS with those configuration files.
+
+cv:
+  header: Collective Variables
+  description: |
+    Collective variables (CVs)
+
+volume:
+  header: Volumes
+  description: |
+    State and interface definitions in OpenPathSampling are (hyper)volumes
+    in phase space. Use these tools to define states and the substituent
+    volumes that comprise them.
+
+network:
+  header: Networks
+
+scheme:
+  header: Move Schemes
+
+strategy:
+  header: Move Strategies
+

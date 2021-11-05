@@ -1,0 +1,3 @@
+Generate the RST files here with:
+
+python -m paths_cli.compiling.gendocs categories.yml
