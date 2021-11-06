@@ -1,5 +1,5 @@
-Wizard
-======
+The Wizard
+==========
 
 The OpenPathSampling Wizard is a friendly interactive tool for setting up
 path sampling simulations. In general, the Wizard is best for users who are
