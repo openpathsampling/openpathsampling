@@ -24,10 +24,11 @@ except ImportError:
 from openpathsampling.tests.test_helpers import make_1d_traj
 import openpathsampling as paths
 
+
 def _get_only(iterable, condition, error_msg):
     possibilities = [item for item in iterable if condition(item)]
     if len(possibilities) != 1:
-        msg = "expected 1 {error_msg}; found {nfound}: found".format(
+        msg = "expected 1 {error_msg}; found {nfound}: {found}".format(
             error_msg=error_msg,
             nfound=len(possibilities),
             found=possibilities
@@ -42,6 +43,7 @@ class AnalysisTestSetupError(Exception):
     These usually indicate a problem with test suite, not with the code
     itself.
     """
+
 
 def make_trajectory(lower, upper):
     """Make a trajectory from `lower` to `upper`.
@@ -78,6 +80,7 @@ def make_tis_trajectory(cv_max, lower_bound=-0.1):
     else:
         decreasing = increasing.reversed[1:]
         return increasing + decreasing
+
 
 def _select_by_input_ensembles(movers, ensembles):
     """Select a mover by input ensembles.
@@ -180,7 +183,7 @@ class MockMove(object):
         # make a move change for the outer step (selecting which move type
         # to do from the root_mover)
         outer_mock = MockRandomChoiceMover(root_mover, inner_change)
-        outer_change=  outer_mock(inputs)
+        outer_change = outer_mock(inputs)
         return outer_change
 
     def patches(self, mover):
@@ -330,8 +333,6 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
                     "not be accepted."
                 )
 
-
-
     def safety_checks(self, change, inputs):
         self._check_shooting_point_in_trial(change, inputs)
         self._check_forced_accepted_reasonable(change, inputs)
@@ -461,6 +462,7 @@ def _do_single_step(init_conds, move, org_by_group):
     if org_by_group:
         change = move.wrap_org_by_group(change, init_conds)
     return change
+
 
 def run_moves(init_conds, moves, org_by_group=True):
     """Run a sequence of moves.
