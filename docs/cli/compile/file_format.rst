@@ -7,13 +7,24 @@ files in JSON format should have the extension ``.json`` or ``.jsn``. Most
 examples here will use YAML format, although this page will include
 equivalent versions in JSON.
 
+The advantages for the YAML format are that it generally requires less
+typing, and it allows comments. The main advantage of JSON is that it is
+easier to see the structure of mappings and lists than in YAML. Which you
+use is personal preference -- the ``compile`` command reads both equally.
+
 
 Terminology
 -----------
 
 There are a few terms that we will use 
 
-* **keyword**: Like most input file formats the 
+* **keyword**: Like most input file formats, an import part of OPS compile
+  files is mapping keywords that identify a property to a user-defined
+  value for that property.
+* **top-level keyword**: Only certain keywords are allowed at the outermost
+  level of the nested structure. These keywords are the top-level keywords.
+  The top-level keywords in OPS are: ``engines``, ``cvs``, ``volumes``,
+  ``states``, ``networks``, and ``schemes``.
 
 Input files for OPS are structures as nested key-value pairs. Each object
 that you will store in the database has certain keywords that are needed
@@ -27,7 +38,7 @@ Example: Basics and evaluated expressions
 Let's use an OpenMM engine as a simple example. Since this is an engine,
 we'll put it under the ``engines`` top-level keyword.  From the
 :ref:`documentation on the OpenMM engine <engine--openmm>`, we know that it
-requires the several parameters:
+requires several parameters:
 
 .. code:: yaml
 
@@ -60,16 +71,14 @@ These filenames should be relative to the path from which the
 
 The final two parameters, ``n_steps_per_frame`` and ``n_frames_max``, are
 integers. However, for ``n_steps_per_frame``, we provide a string which will
-be treated as an :ref:`evaluated expression <expression-evaluation>`. In
-this example, we imagine that perhaps the timesteps is 0.002 ps and that the
-user wants to save a frame of the trajectory every 1.0 ps, so there are 1.0
-/ 0.002 = 500 steps per frame. Internally, this will be converted to an
-integer according to Python's ``int`` builtin. For ``n_frames_max``, we just
-give the integer value.
+be treated as an :ref:`evaluated expression <expression_eval>`. In
+this example, we imagine that perhaps the integrator's timestep is 0.002 ps
+and that the user wants to save a frame of the trajectory every 1.0 ps, so
+there are 1.0 / 0.002 = 500 steps per frame. Internally, this will be
+converted to an integer according to Python's ``int`` builtin. For
+``n_frames_max``, we just give the integer value.
 
-The same code could also be implemented in JSON. The main advantages of YAML
-are that it is less verbose than JSON, and it allows comments. Which format
-you use is a matter of personal preference -- OPS reads both equally.
+The same code could also be implemented in JSON:
 
 .. code:: json
 

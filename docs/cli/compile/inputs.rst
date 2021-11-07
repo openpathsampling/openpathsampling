@@ -26,7 +26,7 @@ Input parameters for compile files
 
        input/move_strategies
        input/shooting_point_selectors.rst
-       input/interface_sets.rst
+       input/interface_set.rst
        input/missing_type_information.rst
 
 .. ifconfig:: HAS_OPS_CLI is False

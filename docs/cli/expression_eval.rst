@@ -1,4 +1,5 @@
 .. _expression_eval:
+
 Expression Evaluation
 =====================
 
@@ -25,6 +26,7 @@ following namespaces are available:
 * ``math``: standard math library, as if ``import math``
 
 .. _EvalFloat:
+
 EvalFloat
 ---------
 
@@ -33,6 +35,7 @@ evaluate to a floating point number. It will be cast to a Python ``float``,
 and if that cast fails, an error will be raised.
 
 .. _EvalInt:
+
 EvalInt
 -------
 
@@ -43,10 +46,11 @@ truncation rules for ``int`` (``int(1.5) == 1``, ``int(-1.5) == -1``, etc.).
 If that cast fails, an error will be raised.
 
 .. _EvalIntStrictPos:
+
 EvalIntStrictPos
 ----------------
 
 A parameter of type ``EvalIntStrictPos`` follows the same rules as a
-parameter of type :ref:`EvalInt` with the additional restriction that the
-resulting value must be strictly positive (non-negative, non-zero). If it is
-not, an error will be raised.
+parameter of type :ref:`EvalInt <EvalInt>` with the additional restriction
+that the resulting value must be strictly positive (non-negative, non-zero).
+If it is not, an error will be raised.

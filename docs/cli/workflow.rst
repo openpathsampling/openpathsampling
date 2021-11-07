@@ -40,8 +40,8 @@ files. NetCDFPlus support will be dropped in OPS 2.0.
 For more on the ``wizard`` and ``compile`` commands, see the detailed
 documentation on each:
 
-* :ref:`cli_wizard`
-* :ref:`cli_compile`
+* :ref:`The Wizard <wizard_command>`
+* :ref:`The Compile Command <compile_command>`
 
 Running Simulations
 -------------------

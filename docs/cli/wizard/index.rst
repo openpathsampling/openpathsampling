@@ -1,3 +1,4 @@
+.. _wizard_command:
 The Wizard
 ==========
 

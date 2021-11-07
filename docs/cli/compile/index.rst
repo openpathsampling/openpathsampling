@@ -1,3 +1,4 @@
+.. _compile_command:
 The Compile Command
 ===================
 
