@@ -375,7 +375,7 @@ class TestStorableFunction(object):
             return obj
 
         func = StorableFunction(func=identity, period_min=-2, period_max=2,
-                               store_source=True)
+                                store_source=True)
         dct = func.to_dict()
         assert 'identity' in dct['source']
         assert dct['period_max'] == 2
