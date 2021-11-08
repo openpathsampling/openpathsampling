@@ -1,9 +1,10 @@
-# File vencdored from Autorelease; specific version information should be in
-# the INSTALL_AUTORELEASE variable in autorelease-default-env.sh
-name: "Autorelease"
+# Vendored from Autorelease 0.3.2
+# Update by updating Autorelease and running `autorelease vendor actions`
+name: "Autorelease testpypi"
 on:
   pull_request:
     branches:
+      # TODO: this should come from yaml conf
       - stable
 
 defaults:
@@ -12,6 +13,7 @@ defaults:
 
 jobs:
   deploy_testpypi:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Deployment test"
     steps:
@@ -47,6 +49,7 @@ jobs:
           repository_url: https://test.pypi.org/legacy/
         name: "Deploy to testpypi"
   test_testpypi:
+    if: ${{ github.repository == 'openpathsampling/openpathsampling' }}
     runs-on: ubuntu-latest
     name: "Test deployed"
     needs: deploy_testpypi

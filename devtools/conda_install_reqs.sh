@@ -9,13 +9,22 @@
 
 DEVTOOLS_DIR=`dirname "${BASH_SOURCE[0]}"`
 
-if [ ! -z "$OPS_ENV" ]
-then
-    conda create -q -y --name $OPS_ENV conda future pyyaml python=$CONDA_PY
-    source activate $OPS_ENV
+# use mamba if we can, otherwise use conda
+if ! command -v mamba &> /dev/null; then
+    EXE="conda"
 else
-    conda install -y -q future pyyaml  # ensure that these are available
+    EXE="mamba"
 fi
+
+# If OPS_ENV is defined, we're creating a new environment. Otherwise install
+# into current env.
+if [ ! -z "$OPS_ENV" ]; then
+    INSTALL="create --name $OPS_ENV"
+else
+    INSTALL="install"
+fi
+
+INSTALL_CMD="$EXE $INSTALL -y -q -c conda-forge -c omnia --override-channels"
 
 # for some reason, these approaches to pinning don't always work (but conda
 # always obeys if you explicitly request a pinned version)
@@ -30,6 +39,10 @@ INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
 EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
 PY_INSTALL="python=$CONDA_PY"
 
+# PIP_INSTALLS is used for debugging installation problems -- override the
+# default $REQUIREMENTS, etc. and move some installs to $PIP_INSTALLS
+PIP_INSTALLS=""
+
 echo "PY_INSTALL=$PY_INSTALL"
 echo "REQUIREMENTS=$REQUIREMENTS"
 echo "INTEGRATIONS=$INTEGRATIONS"
@@ -42,5 +55,19 @@ echo "TESTING=$TESTING"
 # situations may come up in the future)
 ALL_PACKAGES="$WORKAROUNDS $REQUIREMENTS $INTEGRATIONS $EXPERIMENTAL $TESTING"
 
-echo "conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES"
-conda install -y -q -c conda-forge -c omnia $PY_INSTALL $ALL_PACKAGES
+echo "$INSTALL_CMD $PY_INSTALL $ALL_PACKAGES"
+if [ -z "$DRY" ]; then
+    $INSTALL_CMD $PY_INSTALL $ALL_PACKAGES
+fi
+
+if [ -n "$OPS_ENV" ] && [ -z "$DRY" ]; then
+    conda activate $OPS_ENV
+fi
+
+# occasional workaround; usually a do-nothing
+if [ -n "$PIP_INSTALLS" ]; then
+    echo "python -m pip install $PIP_INSTALLS"
+    if [ -z "$DRY" ]; then
+        python -m pip install $PIP_INSTALLS
+    fi
+fi
