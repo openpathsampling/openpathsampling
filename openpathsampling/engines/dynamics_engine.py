@@ -378,15 +378,23 @@ class DynamicsEngine(StorableNamedObject):
             true if the dynamics should be stopped; false otherwise
         """
         stop = False
-        if continue_conditions is not None:
-            if isinstance(continue_conditions, list):
-                for condition in continue_conditions:
-                    can_continue = condition(trajectory, trusted)
-                    stop = stop or not can_continue
-            else:
-                stop = not continue_conditions(trajectory, trusted)
+        if callable(continue_conditions):
+            continue_conditions = [continue_conditions]
+
+        for condition in continue_conditions:
+            stop = not condition(trajectory, trusted)
+            # TODO: Consider short-circuit logic (uncomment code below).
+            # Pros: short circuit will be faster; avoid wasted effort.
+            # Cons: there may be desired side effects from not shorting.
+            # Current thought: No short circuit means that CVs may be
+            # calculated as part of stop conditions here, so keep as is.
+            # (NB: ensembles/volumes use short-circuit logic, so there isn't
+            # really a promise that CVs get calculated.)
+            # if stop:
+            #     return True
 
         return stop
+
 
     def generate(self, snapshot, running=None, direction=+1):
         r"""
@@ -541,12 +549,14 @@ class DynamicsEngine(StorableNamedObject):
                     # return the current status
                     logger.info("Through frame: %d", frame)
                     yield trajectory
+                    self._clear_snapshot_cache(snapshot)
 
                 elif frame % log_rate == 0:
                     logger.info("Through frame: %d", frame)
 
                 # Do integrator x steps
 
+                self._clear_snapshot_cache(snapshot)  # clear old snapshot
                 snapshot = None
 
                 try:
@@ -619,6 +629,7 @@ class DynamicsEngine(StorableNamedObject):
                     stop = self.stop_conditions(trajectory=trajectory,
                                             continue_conditions=running)
 
+            # check what to do if stop is True
             if has_nan:
                 on = self.on_nan
                 if on == 'fail':
@@ -658,11 +669,15 @@ class DynamicsEngine(StorableNamedObject):
         if final_error is not None:
             yield trajectory
             logger.info("Through frame: %d", len(trajectory))
+            self._clear_snapshot_cache(snapshot)
             raise final_error
 
         logger.info("Finished trajectory, length: %d", len(trajectory))
         yield trajectory
-        if self.clear_snapshot_cache:
+        self._clear_snapshot_cache(snapshot)
+
+    def _clear_snapshot_cache(self, snapshot):
+        if self.clear_snapshot_cache and snapshot is not None:
             try:
                 # isolate the AttributeError to just getting this method
                 clear_cache = snapshot.clear_cache
