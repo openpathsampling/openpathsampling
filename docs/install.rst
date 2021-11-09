@@ -1,103 +1,134 @@
-.. _install:
-
-************
+============
 Installation
-************
+============
 
-OpenPathSampling currently only works on Mac and Linux. It is tested against
-Python 2.7, 3.6, and 3.7, although there may be some corners of the code
-that aren't Python 3-compatible yet.
+This page has instructions on installing OPS, installing software packages
+that integrate with OPS, and testing that your OPS installation is working.
 
-.. note:: As of OpenPathSampling 1.1, OpenMM will no longer be automatically
-          installed when you install OPS. However, the OpenMM engine will be
-          immediately available if you install OpenMM yourself. See the
-          `OpenMM installation instructions
-          <http://docs.openmm.org/latest/userguide/application.html#installing-openmm>`_
-          for a detailed guide, but ``conda install -c conda-forge -c omnia
-          openmm`` will work for most people. (COMING SOON: details on OPS
-          integrations with other tools.)
+OpenPathSampling currently only works on POSIX systems (macOS and
+UNIX/Linux). It is tested against Python 2.7, 3.7, 3.8, and 3.9.
+
+Installing OpenPathSampling
+===========================
 
 .. _install-with-conda:
 
-Standard Install with Conda
-===========================
+Installation with ``conda`` (recommended)
+-----------------------------------------
 
-We recommend using ``conda`` to install OpenPathSampling.  `conda
-<http://www.continuum.io/downloads>`_ is a Python package manager built for
-scientific Python, and which handles binary dependencies seamlessly.  If you
-don't want the full ``conda`` installation, the ``miniconda`` package
-provides much of the convenience of ``conda`` with a smaller footprint.
+OpenPathSampling can be installed with ``conda``, ``pip``, or by using
+``setuptools``. We recommend using ``conda`` because it provides easy
+installation of other tools, including molecular dynamics engines such as
+OpenMM and GROMACS, which most users will want to install when using OPS.
+Conda can be installed either with the `full Anaconda distribution
+<https://www.anaconda.com/products/individual>`_, or with
+the `smaller-footprint miniconda
+<https://docs.conda.io/en/latest/miniconda.html>`_. 
 
-OpenPathSampling is part of the ``conda-forge`` channel in ``conda``.  To
-install the most recent release of OpenPathSampling with conda, use the
-following command ::
+OpenPathSampling can be installed from the ``conda-forge`` channel. To
+install the most recent release, use the command ::
 
   $ conda install -c conda-forge openpathsampling
 
 With that, you should be ready to use OPS!
 
-.. _developer-install-conda:
+Installation with ``pip`` or ``setuptools``
+-------------------------------------------
 
-Developer Install with Conda
-============================
+OPS can also be installed with ``pip`` via the command ``pip install
+openpathsampling``, or the source can be downloaded and installed using
+``setuptools`` and the command ``python setup.py install`` (run from the
+root directory of the source repository). We only recommend these
+installation mechanisms for users who are familiar with these tools.
 
-To install a developer version of OPS (using ``conda``), change to a
-directory where you want to OPS code (i.e., if you want the OPS git
-repository at ``directory/openpathsampling/``, change to ``directory/``.)
-Then download the ``conda_ops_dev_install.sh`` and run it ::
+Developer install
+-----------------
 
-  $ curl -OLk https://raw.githubusercontent.com/openpathsampling/openpathsampling/master/devtools/conda_ops_dev_install.sh
-  $ bash conda_ops_dev_install.sh
+OpenPathSampling can be installed as an "editable" (developer) install
+through standard mechanisms (``pip install -e .`` or ``python setup.py
+develop``). 
 
-At this point, any changes to the code in that download of the OPS directory
-will be live in your Python installation. You can use experimental code from
-other forks by `adding the fork as a remote
-<https://help.github.com/articles/adding-a-remote/>`_ and checking out a
-branch.  You can combine changes from multiple users by merging them into a
-branch in your local version of the repository.
+Additionally, we provide a script that downloads the OPS source repository,
+uses ``conda`` to install OPS's requirements (including several optional
+integrations) and the installs OPS. Details on using this script are in
+:ref:`quick-dev-install`.
 
-Additional functionality of the ``conda_ops_dev_install.sh`` script is
-described in :ref:`quick-dev-install`.
 
-.. _manual-install:
+Integration with other packages
+===============================
 
-Manual Installation
-===================
+When you install OpenPathSampling, you only get the core of OPS and the
+internal toy dynamics engine. In practice, you'll probably want a more
+powerful MD engine like OpenMM or GROMACS.
 
-If you don't want to use ``conda``, you will have to manually obtain the
-dependencies, which you can see listed under ``install_requires`` in
-``setup.py``. Then you can install from our GitHub repository.
+To add support for optional packages, all you need to do is install them.
+For example, simply by having OpenMM or GROMACS installed on your system,
+you will automatically have support for those engines within OPS. 
 
-Clone the source code repository from GitHub::
+The tables below list several packages that provide OPS with extra
+functionality when installed, and include links to their ``conda`` packages.
 
-  $ git clone https://github.com/openpathsampling/openpathsampling.git
+Molecular dynamics engines
+--------------------------
 
-Then, in the directory containing the source code, you can install it with ::
++------------------------+-------------------------------------------------+
+| | **OpenMM**           |                                                 |
+| | |openmm-conda|_      |                                                 |
++------------------------+-------------------------------------------------+
+| | **OpenMMTools**      | OPS has special support for integrators from    |
+| | |openmmtools-conda|_ | OpenMMTools (and we strongly recommend using    |
+|                        | one of the reversible integrators provided      |
+|                        | there, such as VVVR).                           |
++------------------------+-------------------------------------------------+
+| | **GROMACS**          | OPS will work with any installed GROMACS; it    |
+| | |gromacs-conda|_     | does not need to come from ``conda``.           |
++------------------------+-------------------------------------------------+
 
-  $ python setup.py install
+.. |openmm-conda| image:: https://img.shields.io/conda/vn/conda-forge/openmm
+.. |openmmtools-conda| image:: https://img.shields.io/conda/vn/conda-forge/openmmtools
+.. |gromacs-conda| image:: https://img.shields.io/conda/vn/bioconda/gromacs
 
-Or, for a developer install ::
+.. _openmm-conda: https://anaconda.org/conda-forge/openmm
+.. _openmmtools-conda: https://anaconda.org/conda-forge/openmmtools
+.. _gromacs-conda: https://anaconda.org/bioconda/gromacs
 
-  $ python setup.py develop
+Collective variables
+--------------------
+
+In addition to the optional packages listed below, OPS ships with MDTraj
+built-in.
+
++------------------------+-------------------------------------------------+
+| | **PyEMMA**           |                                                 |
+| | |pyemma-conda|_      |                                                 |
++------------------------+-------------------------------------------------+
+| | **py-PLUMED**        |                                                 |
+| | |plumed-conda|_      |                                                 |
++------------------------+-------------------------------------------------+
+
+.. |pyemma-conda| image:: https://img.shields.io/conda/vn/conda-forge/pyemma
+.. |plumed-conda| image:: https://img.shields.io/conda/vn/conda-forge/py-plumed
+
+.. _plumed-conda: https://anaconda.org/conda-forge/py-plumed
+.. _pyemma-conda: https://anaconda.org/conda-forge/pyemma
+
 
 .. _run-tests:
 
-Testing Your Installation
+Testing your installation
 =========================
 
-Running the tests is a great way to verify that everything is working. The
-test suite uses `pytest <http://pytest.org>`_ and, for legacy reasons, also
-requires the `nose <https://nose.readthedocs.org/en/latest/>`_ package. You can pick these up via ``conda`` if you don't already have them. ::
+OpenPathSampling includes a thorough test suite, and running the test suite
+is a good start to troubleshooting any installation problems. The OPS test
+suite requires the packages ``pytest`` and (for legacy reasons) ``nose``.
+These can be  installed with either ``conda`` or ``pip``. For example: ::
 
   $ conda install pytest nose
 
-From the source directory ``openpathsampling/tests``, you can run the tests
-by typing ``py.test`` on the command line. The test suite includes over 900
-individual tests, and runs in around 2-3 minutes.
+Once those are installed, you can run the test suite on your installation
+with the command: ::
 
-Beta testing experimental updates
-=================================
+  $ py.test --pyargs openpathsampling.tests
 
-In rare cases, you may want to test code that hasn't been merged into the
-core of OPS yet. Instructions to install in this case are in the docs for
-:ref:`install-devs`.
+The test suite includes over 1100 individual tests, and runs in around 2-3
+minutes. All tests should either pass or skip.
