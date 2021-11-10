@@ -35,7 +35,7 @@ With that, you should be ready to use OPS!
 Installation with ``pip`` or ``setuptools``
 -------------------------------------------
 
-OPS can also be installed with ``pip`` via the command ``pip install
+OPS can also be installed with ``pip`` via the command ``python -m pip install
 openpathsampling``, or the source can be downloaded and installed using
 ``setuptools`` and the command ``python setup.py install`` (run from the
 root directory of the source repository). We only recommend these
@@ -45,7 +45,7 @@ Developer install
 -----------------
 
 OpenPathSampling can be installed as an "editable" (developer) install
-through standard mechanisms (``pip install -e .`` or ``python setup.py
+through standard mechanisms (``python -m pip install -e .`` or ``python setup.py
 develop``). 
 
 Additionally, we provide a script that downloads the OPS source repository,
