@@ -18,7 +18,7 @@ import numpy as np
 import random
 try:
     from unittest.mock import Mock, patch
-except ImportError:
+except ImportError:  # pragma: no cover
     from mock import Mock, patch
 
 from openpathsampling.tests.test_helpers import make_1d_traj
