@@ -1,7 +1,11 @@
 import pytest
 
-import collections
+try:
+    from unittest.mock import Mock
+except ImportError:  # pragma: no cover
+    from mock import Mock
 
+import collections
 import openpathsampling as paths
 
 from openpathsampling.tests.test_helpers import make_1d_traj

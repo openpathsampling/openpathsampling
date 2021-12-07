@@ -14,7 +14,7 @@ from openpathsampling.tests.analysis.utils.fixture_classes import (
 
 
 def unidirectional_tis_network():
-    """Fixture for unidirectional TIS with the default (RETIS) scheme.
+    r"""Fixture for unidirectional TIS with the default (RETIS) scheme.
 
     This has states defined as initial state :math:`x < 0` and final state
     :math:`x \ge 10`. The interfaces are at :math:`x=0`, :math:`x=3`, and

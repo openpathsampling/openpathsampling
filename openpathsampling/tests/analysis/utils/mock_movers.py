@@ -14,14 +14,12 @@ Note that for the classes here, each instance represents a single move
 represents an individual type of move that can be reused for many steps.
 """
 
-import numpy as np
 import random
 try:
     from unittest.mock import Mock, patch
 except ImportError:  # pragma: no cover
     from mock import Mock, patch
 
-from openpathsampling.tests.test_helpers import make_1d_traj
 import openpathsampling as paths
 
 
@@ -66,15 +64,16 @@ def _select_by_input_ensembles(movers, ensembles):
     )
     return mover
 
+
 def _run_patched(mover, patches, inputs):
     """Run the move with the given patches for the given inputs"""
-    for patch in patches:
-        patch.start()
+    for p in patches:
+        p.start()
 
     change = mover.move(inputs)
 
-    for patch in patches:
-        patch.stop()
+    for p in patches:
+        p.stop()
     return change
 
 

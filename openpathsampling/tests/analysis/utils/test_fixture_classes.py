@@ -37,5 +37,3 @@ def test_make_tis_trajectory_transition(default_unidirectional_tis):
     traj = make_tis_trajectory(10)
     xvals = traj.xyz[:, 0, 0]
     assert max(xvals) == xvals[-1]
-
-
