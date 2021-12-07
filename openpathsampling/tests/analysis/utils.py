@@ -45,43 +45,6 @@ class AnalysisTestSetupError(Exception):
     """
 
 
-def make_trajectory(lower, upper):
-    """Make a trajectory from `lower` to `upper`.
-
-    This makes a trajectory segment with x-values of frames spread by 0.1.
-    For each trajectory, some random value epsilon is added, such that the
-    lowest value is ``lower + epsilon`` and the highest value is ``upper +
-    epsilon``.
-
-    Parameters
-    ----------
-    lower : float
-        the lower bound x-value of the trajectory
-    upper: float
-        the upper bound x-value of the trajectory (NOTE: trajectories will
-        cross this value, but not cross ``upper + 0.1``)
-
-
-    Returns
-    -------
-    :class:`.Trajectory`
-        the trajectory segment
-    """
-    xvals = np.arange(lower, upper + 0.01, 0.1) + np.random.random() * 0.1
-    return make_1d_traj(xvals)
-
-def make_tis_trajectory(cv_max, lower_bound=-0.1):
-    """Make a TIS trajectory with a given maximum x value.
-
-    """
-    increasing = make_trajectory(lower_bound, cv_max)
-    if cv_max >= 1.0:
-        return increasing
-    else:
-        decreasing = increasing.reversed[1:]
-        return increasing + decreasing
-
-
 def _select_by_input_ensembles(movers, ensembles):
     """Select a mover by input ensembles.
 

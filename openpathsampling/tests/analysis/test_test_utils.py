@@ -7,9 +7,11 @@ import openpathsampling as paths
 from openpathsampling.tests.test_helpers import make_1d_traj
 
 from openpathsampling.tests.analysis.utils import *
+from openpathsampling.tests.analysis.fixtures import TPSSystemFixture
 from openpathsampling.tests.analysis.utils import (
     _select_by_input_ensembles, _get_only
 )
+
 
 def test_get_only():
     test_list = ['foo', 'bar', 'baz', 'qux']
@@ -17,6 +19,7 @@ def test_get_only():
                      condition=lambda s: s.startswith('f'),
                      error_msg="string starting with f")
     assert only == 'foo'
+
 
 def test_get_only_error():
     test_list = ['foo', 'bar', 'baz', 'qux']
@@ -30,38 +33,46 @@ def test_get_only_error():
                   condition=lambda s: s.startswith('z'),
                   error_msg="string starting with z")
 
-@pytest.mark.parametrize('bounds', [(-0.1, 1.0), (-0.1, 0.5)])
-def test_make_trajectory(bounds):
+
+@pytest.mark.parametrize('bounds', [(-1, 10), (-1, 5)])
+def test_make_trajectory(bounds, default_two_state_tps):
+    make_trajectory = default_two_state_tps.make_trajectory
     lower, upper = bounds
     traj = make_trajectory(lower, upper)
-    xvals = traj.xyz[:,0,0]
-    assert upper <= max(xvals) < upper + 0.1
-    assert lower <= min(xvals) < lower + 0.1
-    expected_len = round((upper - lower) / 0.1) + 1
+    xvals = traj.xyz[:, 0, 0]
+    assert upper <= max(xvals) < upper + 1
+    assert lower <= min(xvals) < lower + 1
+    expected_len = upper - lower + 1
     assert len(traj) == expected_len
 
-@pytest.mark.parametrize('lower_bound', [None, -0.2])
-def test_make_tis_trajectory(lower_bound):
-    cv_max = 0.5
+
+@pytest.mark.parametrize('lower_bound', [None, -2])
+def test_make_tis_trajectory(lower_bound, default_unidirectional_tis):
+    make_tis_trajectory = default_unidirectional_tis.make_tis_trajectory
+    cv_max = 5
     kwargs = {'lower_bound': lower_bound} if lower_bound is not None else {}
     traj = make_tis_trajectory(cv_max, **kwargs)
-    xvals = traj.xyz[:,0,0]
+    xvals = traj.xyz[:, 0, 0]
 
     if lower_bound is None:
-        lower_bound = -0.1
+        lower_bound = -1
 
-    assert lower_bound <= min(xvals) < lower_bound + 0.1
-    assert cv_max <= max(xvals) < cv_max + 0.1
-    expected_len = 2 * (round((cv_max - lower_bound) / 0.1)) + 1
+    assert lower_bound <= min(xvals) < lower_bound + 1
+    assert cv_max <= max(xvals) < cv_max + 1
+    expected_len = 2 * (cv_max - lower_bound) + 1
     assert len(traj) == expected_len
 
-def test_make_tis_trajectory_transition():
-    traj = make_tis_trajectory(1.0)
-    xvals = traj.xyz[:,0,0]
+
+def test_make_tis_trajectory_transition(default_unidirectional_tis):
+    make_tis_trajectory = default_unidirectional_tis.make_tis_trajectory
+    traj = make_tis_trajectory(10)
+    xvals = traj.xyz[:, 0, 0]
     assert max(xvals) == xvals[-1]
 
+
 @pytest.mark.parametrize('ensemble', [None, 'ensemble'])
-def test_select_by_input_ensembles(scheme, ensemble):
+def test_select_by_input_ensembles(default_unidirectional_tis, ensemble):
+    scheme = default_unidirectional_tis.scheme
     movers = scheme.movers['shooting']
     if ensemble == 'ensemble':
         ensemble = movers[0].input_ensembles[0]
@@ -71,7 +82,9 @@ def test_select_by_input_ensembles(scheme, ensemble):
     if ensemble is not None:
         assert selected == movers[0]
 
-def test_random_choice_mover(scheme):
+
+def test_random_choice_mover(default_unidirectional_tis):
+    scheme = default_unidirectional_tis.scheme
     mover = scheme.movers['shooting'][0]
     target_change = Mock(mover=mover)
     shooting_choosers = [group for group in scheme.root_mover.submovers
@@ -86,7 +99,9 @@ def test_random_choice_mover(scheme):
     assert change.mover is shooting_chooser
     assert change.subchanges[0] is target_change
 
-def test_random_choice_mover_error(scheme):
+
+def test_random_choice_mover_error(default_unidirectional_tis):
+    scheme = default_unidirectional_tis.scheme
     mover = scheme.movers['repex'][0]
     target_change = Mock(mover=mover)
     shoot_mover = scheme.movers['shooting'][0]
@@ -101,8 +116,10 @@ def test_random_choice_mover_error(scheme):
     with pytest.raises(AnalysisTestSetupError, match="not found as sub"):
         random_choice('foo')
 
+
 def _setup_one_way_forward(scheme, accepted):
-    partial_traj = make_trajectory(-0.1, 0.2).reversed
+    make_trajectory = TPSSystemFixture.make_trajectory
+    partial_traj = make_trajectory(-1, 2).reversed
     # * ensemble 0 is always accepted because the trial trajectory is
     #   shorter than the input trajectory
     # * ensemble 2 is always rejected because the trial trajectory doesn't
@@ -111,21 +128,26 @@ def _setup_one_way_forward(scheme, accepted):
     ensemble = scheme.network.sampling_ensembles[ensemble_idx]
     return ensemble, partial_traj
 
+
 def _setup_one_way_backward(scheme, accepted):
     ensemble = scheme.network.sampling_ensembles[2]
     # * accepted trajectory always accepted because trial trajectory is
     #   shorter than the input trajectory
     # * rejected trajectory always rejected because it is B->B (does not
     #   satisfy the ensemble)
-    partial_traj = {True: make_trajectory(-0.1, 0.1).reversed,
-                    False: make_trajectory(-0.3, 1.0)}[accepted]
+    make_trajectory = TPSSystemFixture.make_trajectory
+    partial_traj = {True: make_trajectory(-1, 1).reversed,
+                    False: make_trajectory(-3, 10)}[accepted]
     return ensemble, partial_traj
+
 
 @pytest.mark.parametrize('direction', ['forward', 'backward'])
 @pytest.mark.parametrize('accepted', [True, False])
-def test_one_way_shooting_move(scheme, direction, accepted):
-    t1 = make_tis_trajectory(0.5)
-    t2 = make_tis_trajectory(1.0)
+def test_one_way_shooting_move(default_unidirectional_tis, direction,
+                               accepted):
+    scheme = default_unidirectional_tis.scheme
+    t1 = default_unidirectional_tis.make_tis_trajectory(5)
+    t2 = default_unidirectional_tis.make_tis_trajectory(10)
     init_conds = scheme.initial_conditions_from_trajectories([t1, t2])
     shooting_idx = 4
 
@@ -170,7 +192,7 @@ def test_one_way_shooting_move(scheme, direction, accepted):
 
 
 @pytest.mark.parametrize('accepted', [True, False, None])
-def test_shooting_move_force_accept(scheme, accepted):
+def test_shooting_move_force_accept(default_unidirectional_tis, accepted):
     # If the a given trial can be either accepted or rejected, then the
     # resulting change depends on the `accept` parameter of the mock move --
     # True accepts, False rejects, and None uses the default internal math.
@@ -178,8 +200,9 @@ def test_shooting_move_force_accept(scheme, accepted):
     # probability.
     # only test this with the forward shooting mover, since the logic is
     # shared with backward
-    init_traj = make_tis_trajectory(1.0)
-    partial_traj = make_1d_traj([0.95] * (len(init_traj)-2) + [1.05])
+    scheme = default_unidirectional_tis.scheme
+    init_traj = default_unidirectional_tis.make_tis_trajectory(10)
+    partial_traj = make_1d_traj([9.5] * (len(init_traj)-2) + [10.5])
     init_conds = scheme.initial_conditions_from_trajectories(init_traj)
     ensemble = scheme.network.sampling_ensembles[2]
     shooting_idx = len(init_traj) - 2
@@ -203,11 +226,12 @@ def test_shooting_move_force_accept(scheme, accepted):
         assert results[True] + results[False] == n_attempts
 
 
-def test_reject_nonsense_forced_acceptance(scheme):
+def test_reject_nonsense_forced_acceptance(default_unidirectional_tis):
     # if a user requires that the shooting move be accepted, but the given
     # trajectory cannot be accepted because it doesn't match the ensemble,
     # we should raise an error
-    init_traj = make_tis_trajectory(1.0)
+    scheme = default_unidirectional_tis.scheme
+    init_traj = default_unidirectional_tis.make_tis_trajectory(10)
     init_conds = scheme.initial_conditions_from_trajectories(init_traj)
     # get a setup that should never be accepted
     ensemble, partial_traj = _setup_one_way_backward(scheme, accepted=False)
@@ -221,10 +245,12 @@ def test_reject_nonsense_forced_acceptance(scheme):
     with pytest.raises(AnalysisTestSetupError, match="force acceptance"):
         move(init_conds)
 
+
 @pytest.mark.parametrize('accepted', [True, False])
-def test_repex_move(scheme, accepted):
-    t1 = make_tis_trajectory(0.4)
-    t2 = make_tis_trajectory(1.0)
+def test_repex_move(default_unidirectional_tis, accepted):
+    scheme = default_unidirectional_tis.scheme
+    t1 = default_unidirectional_tis.make_tis_trajectory(4)
+    t2 = default_unidirectional_tis.make_tis_trajectory(10)
     init_conds = scheme.initial_conditions_from_trajectories([t1, t2])
     assert init_conds[0].trajectory is t1 and init_conds[1].trajectory is t1
     assert init_conds[2].trajectory is t2
@@ -240,22 +266,26 @@ def test_repex_move(scheme, accepted):
     assert change.accepted is accepted
     assert isinstance(change.canonical.mover, paths.ReplicaExchangeMover)
 
+
 @pytest.mark.parametrize('accepted', [True, False])
-def test_mock_pathreversal(scheme, accepted):
+def test_mock_pathreversal(default_unidirectional_tis, accepted):
+    scheme = default_unidirectional_tis.scheme
     move = MockPathReversal(scheme)
-    maxval = {True: 0.6, False: 1.0}[accepted]
-    init_traj = make_tis_trajectory(maxval)
+    maxval = {True: 6, False: 10}[accepted]
+    init_traj = default_unidirectional_tis.make_tis_trajectory(maxval)
     init_conds = scheme.initial_conditions_from_trajectories(init_traj)
     change = move(init_conds)
     assert change.accepted is accepted
     assert isinstance(change.canonical.mover, paths.PathReversalMover)
 
+
 @pytest.mark.parametrize('accepted', [True, False])
-def test_wrap_org_by_group(scheme, accepted):
+def test_wrap_org_by_group(default_unidirectional_tis, accepted):
     # the specific mover doesn't matter; path reversal is easy
+    scheme = default_unidirectional_tis.scheme
     move = MockPathReversal(scheme)
-    maxval = {True: 0.6, False: 1.0}[accepted]
-    init_traj = make_tis_trajectory(maxval)
+    maxval = {True: 6, False: 10}[accepted]
+    init_traj = default_unidirectional_tis.make_tis_trajectory(maxval)
     init_conds = scheme.initial_conditions_from_trajectories(init_traj)
     canonical = move(init_conds)
     wrapped = move.wrap_org_by_group(canonical, init_conds)
@@ -264,12 +294,15 @@ def test_wrap_org_by_group(scheme, accepted):
     assert wrapped.canonical is canonical
     assert wrapped.subchanges[0].subchanges[0] is canonical
 
+
 @pytest.mark.parametrize('accepted', [True, False])
-def test_run_moves_single(scheme, accepted):
+def test_run_moves_single(default_unidirectional_tis, accepted):
     # check that a single accepted step gives an MCStep with results that
     # match the expected active for accepted/rejected steps
-    traj = {True: make_tis_trajectory(0.5),
-            False: make_tis_trajectory(1.0)}[accepted]
+    scheme = default_unidirectional_tis.scheme
+    make_tis_trajectory = default_unidirectional_tis.make_tis_trajectory
+    traj = {True: make_tis_trajectory(5),
+            False: make_tis_trajectory(10)}[accepted]
     init_conds = scheme.initial_conditions_from_trajectories(traj)
     ensemble = scheme.network.sampling_ensembles[0]
     move = MockPathReversal(scheme, ensemble=ensemble)
@@ -286,8 +319,10 @@ def test_run_moves_single(scheme, accepted):
         assert step.active[ensemble] is init_conds[ensemble]
 
 
-def test_run_moves_multiple(scheme):
-    traj = make_tis_trajectory(1.0)
+def test_run_moves_multiple(default_unidirectional_tis):
+    scheme = default_unidirectional_tis.scheme
+    traj = default_unidirectional_tis.make_tis_trajectory(10)
+    make_trajectory = default_unidirectional_tis.make_trajectory
     init_conds = scheme.initial_conditions_from_trajectories(traj)
     ensemble = scheme.network.sampling_ensembles[2]
 
@@ -295,7 +330,7 @@ def test_run_moves_multiple(scheme):
         # first move is force-accepted (always accepted anyway)
         MockForwardShooting(
             shooting_index=8,
-            partial_traj=make_trajectory(0.8, 1.0),
+            partial_traj=make_trajectory(8, 10),
             accepted=True,
             scheme=scheme,
             ensemble=ensemble
@@ -303,14 +338,14 @@ def test_run_moves_multiple(scheme):
         # second move is rejected (bad ensemble)
         MockBackwardShooting(
             shooting_index=4,
-            partial_traj=make_trajectory(0.3, 1.0),
+            partial_traj=make_trajectory(3, 10),
             scheme=scheme,
             ensemble=ensemble
         ),
         # third move is force accepted
         MockBackwardShooting(
             shooting_index=9,
-            partial_traj=make_trajectory(-0.1, 0.8).reversed,
+            partial_traj=make_trajectory(-1, 8).reversed,
             accepted=True,
             scheme=scheme,
             ensemble=ensemble
