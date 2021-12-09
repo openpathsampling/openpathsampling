@@ -3,6 +3,7 @@ import numpy as np
 from openpathsampling.high_level.move_strategy import levels
 from openpathsampling.pathmover import SampleNaNError, SampleMaxLengthError
 import openpathsampling.high_level.move_strategy as move_strategy
+from openpathsampling.deprecations import NEW_SNAPSHOT_SELECTOR
 from functools import reduce
 
 
@@ -171,7 +172,7 @@ class SpringShootingSelector(paths.ShootingPointSelector):
             return sum(self._spring_biases(delta_max, k_spring))
 
     def probability_ratio(self, snapshot, initial_trajectory,
-                          trial_trajectory):
+                          trial_trajectory, new_snapshot=None):
         """
         Returns the acceptance probability of a trial trajectory, this is 1.0
         as long as a snapshot has been selected that is inside of the
@@ -192,6 +193,8 @@ class SpringShootingSelector(paths.ShootingPointSelector):
                 1.0 if anacceptable snapshot has been chosen 0.0 otherwise
         """
         # Check if an acceptable snapshot was selected
+        if new_snapshot is None:
+            NEW_SNAPSHOT_SELECTOR.warn(stacklevel=3)
         if self._acceptable_snapshot:
             return 1.0
         else:

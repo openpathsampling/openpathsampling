@@ -213,7 +213,7 @@ class TestStorableFunctionResults(object):
         assert len(self.sfr) == 2
 
     def test_to_dict_from_dict_cycle(self):
-        pass
+        pytest.skip()
 
 
 @mock.patch(_MODULE + '.get_uuid', lambda x: x)
@@ -246,15 +246,12 @@ class TestStorableFunction(object):
 
     def test_gets_source(self):
         pytest.skip()
-        pass
 
     def test_no_source_warning(self):
         pytest.skip()
-        pass
 
     def test_disk_cache_property(self):
         pytest.skip()
-        pass
 
     @pytest.mark.parametrize('mode', ['no-caching', 'analysis',
                                       'production'])
@@ -374,12 +371,21 @@ class TestStorableFunction(object):
 
 
     def test_to_dict_from_dict_cycle(self):
-        pytest.skip()
-        pass
+        def identity(obj):
+            return obj
+
+        func = StorableFunction(func=identity, period_min=-2, period_max=2,
+                                store_source=True)
+        dct = func.to_dict()
+        assert 'identity' in dct['source']
+        assert dct['period_max'] == 2
+        assert dct['period_min'] == -2
+        obj = StorableFunction.from_dict(dct.copy())
+        reser = obj.to_dict()
+        assert dct == reser
 
     def test_full_serialization_cycle(self):
         pytest.skip()
-        pass
 
     @pytest.mark.parametrize('found_in', ['cache', 'storage', 'eval'])
     def test_analysis_mode_integration(self, found_in):
