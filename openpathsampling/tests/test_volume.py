@@ -91,10 +91,20 @@ class TestCVDefinedVolume(object):
         assert_equal(volA(0.50), False)
         assert_equal(volA(0.51), False)
 
+    def test_inf_upper_boundary(self):
+        volX = volume.CVDefinedVolume(op_id, 0, float('inf'))
+        assert volA(float('inf')) is False
+        assert volX(float('inf')) is True
+
     def test_lower_boundary(self):
         assert_equal(volA(-0.49), True)
         assert_equal(volA(-0.50), True)
         assert_equal(volA(-0.51), False)
+
+    def test_inf_lower_boundary(self):
+        volX = volume.CVDefinedVolume(op_id, float('-inf'), 0)
+        assert volA(float('-inf')) is False
+        assert volX(float('-inf')) is True
 
     def test_negation(self):
         assert_equal((~volA)(0.25), False)
@@ -363,7 +373,7 @@ class TestCVRangeVolumePeriodic(object):
         assert_equal((self.pvolA | self.pvolB)(125), False)
         assert_equal((self.pvolB | self.pvolC),
                      volume.UnionVolume(self.pvolB, self.pvolC))
-        assert_equal((self.pvolC | self.pvolB), 
+        assert_equal((self.pvolC | self.pvolB),
                      volume.UnionVolume(self.pvolC, self.pvolB))
         assert_is((self.pvolA | self.pvolA), self.pvolA)
         assert_equal((self.pvolA | self.pvolA_), volume.FullVolume())
@@ -385,7 +395,7 @@ class TestCVRangeVolumePeriodic(object):
     def test_periodic_not_combos(self):
         assert_equal(~self.pvolA, self.pvolA_)
         assert_equal(self.pvolA, ~self.pvolA_)
-        assert_equal(~(self.pvolB | self.pvolC), 
+        assert_equal(~(self.pvolB | self.pvolC),
                      volume.NegatedVolume(self.pvolB | self.pvolC))
         assert_equal((~(self.pvolB | self.pvolC))(25), True)
         assert_equal((~(self.pvolB | self.pvolC))(75), False)
