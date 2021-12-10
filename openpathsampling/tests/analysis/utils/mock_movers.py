@@ -36,7 +36,7 @@ def _get_only(iterable, condition, error_msg):
 
 
 class AnalysisTestSetupError(Exception):
-    """Raised for when an internal error occurs during test setup.
+    """Raised when an internal error occurs during test setup.
 
     These usually indicate a problem with test suite, not with the code
     itself.
@@ -60,7 +60,7 @@ def _select_by_input_ensembles(movers, ensembles):
     mover = _get_only(
         iterable=movers,
         condition=lambda m: set(m.ensemble_signature[0]) == set(signature),
-        error_msg="mover matching signature{sig}".format(sig=signature)
+        error_msg="mover matching signature {sig}".format(sig=signature)
     )
     return mover
 

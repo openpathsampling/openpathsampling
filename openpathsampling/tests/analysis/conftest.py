@@ -3,9 +3,6 @@
 # should be moved into `fixtures` subdirectory of tests with the necessary
 # objects imported into the main tests/conftest.py, for use across the test
 # suite.
-from functools import partial
-
-import pytest
 import openpathsampling as paths
 
 from openpathsampling.tests.analysis.utils.fixture_classes import (
