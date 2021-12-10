@@ -429,7 +429,7 @@ class CVDefinedVolume(Volume):
         if self.lambda_min != float('-inf') and self.lambda_min > l:
             return False
 
-        if self.lambda_min != float('inf') and self.lambda_max <= l:
+        if self.lambda_max != float('inf') and self.lambda_max <= l:
             return False
 
         return True
