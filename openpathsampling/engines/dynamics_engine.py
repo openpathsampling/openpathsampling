@@ -395,7 +395,6 @@ class DynamicsEngine(StorableNamedObject):
 
         return stop
 
-
     def generate(self, snapshot, running=None, direction=+1):
         r"""
         Generate a trajectory consisting of ntau segments of tau_steps in
@@ -678,11 +677,7 @@ class DynamicsEngine(StorableNamedObject):
 
     def _clear_snapshot_cache(self, snapshot):
         if self.clear_snapshot_cache and snapshot is not None:
-            try:
-                # isolate the AttributeError to just getting this method
-                clear_cache = snapshot.clear_cache
-            except AttributeError:
-                clear_cache = lambda: None
+            clear_cache = getattr(snapshot, 'clear_cache', lambda: None)
             clear_cache()
 
     def generate_next_frame(self):
