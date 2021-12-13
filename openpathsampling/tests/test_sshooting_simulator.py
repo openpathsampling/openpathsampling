@@ -99,3 +99,9 @@ class TestSShootingSimulation(object):
             # last mover should be forward mover of simulation
             expected_mover = self.simulation.forward_mover
             assert step.change.canonical.mover == expected_mover
+
+    def test_serialization_cycle(self):
+        dct = self.simulation.to_dict()
+        obj = SShootingSimulation.from_dict(dct)
+        dct2 = obj.to_dict()
+        assert dct == dct2
