@@ -1,5 +1,5 @@
 import pytest
-from openpathsampling.tests.test_helpers import (data_filename)
+from openpathsampling.tests.test_helpers import data_filename
 import openpathsampling as paths
 import openpathsampling.engines.toy as toys
 import numpy as np
