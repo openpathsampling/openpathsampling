@@ -4,9 +4,10 @@ import numpy as np
 
 from unittest.mock import Mock, patch
 
-from openpathsampling.tests.analysis.utils import (
+from openpathsampling.tests.analysis.utils.mock_movers import (
     MockForwardShooting, MockBackwardShooting, MockRepex, MockPathReversal,
-    make_tis_trajectory, make_trajectory, run_moves
+    run_moves,
+    # make_tis_trajectory, make_trajectory, run_moves
 )
 
 import pytest
@@ -15,10 +16,15 @@ import pytest
 ### FIXTURES ###############################################################
 
 @pytest.fixture
-def seven_steps_no_dynamics(scheme):
+def scheme(default_unidirectional_tis):
+    return default_unidirectional_tis.scheme
+
+@pytest.fixture
+def seven_steps_no_dynamics(default_unidirectional_tis):
+    scheme = default_unidirectional_tis.scheme
     ens0, ens1, ens2 = scheme.network.sampling_ensembles
-    t1 = make_tis_trajectory(0.5)
-    t2 = make_tis_trajectory(1.0)
+    t1 = default_unidirectional_tis.make_tis_trajectory(5)
+    t2 = default_unidirectional_tis.make_tis_trajectory(10)
     init_conds = scheme.initial_conditions_from_trajectories([t1, t2])
     moves = [
         MockPathReversal(scheme, ensemble=ens0),  # ACC
