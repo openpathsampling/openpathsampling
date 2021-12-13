@@ -346,6 +346,8 @@ class StorableFunction(StorableNamedObject):
             'func': self.func,  # made into JSON by CallableCodec
             'source': self.source,
             'kwargs': self.kwargs,
+            'period_min': self.period_min,
+            'period_max': self.period_max,
         }
 
     @classmethod
