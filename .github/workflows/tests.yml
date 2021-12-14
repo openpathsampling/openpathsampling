@@ -49,12 +49,12 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with: 
           auto-update-conda: true
-          python-version: ${{ matrix.CONDA_PY }}
+          python-version: "${{ matrix.CONDA_PY }}"
           miniforge-variant: Mambaforge
       - name: "Install requirements"
         env:
           MINIMAL: ${{ matrix.MINIMAL }}
-          CONDA_PY: ${{ matrix.CONDA_PY }}
+          CONDA_PY: "${{ matrix.CONDA_PY }}"
         run: |
           if [ -z "$MINIMAL" ] ; then
             source devtools/conda_install_reqs.sh
