@@ -37,7 +37,7 @@ REQUIREMENTS=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py`
 TESTING=`python ${DEVTOOLS_DIR}/setup_cfg_reqs.py --extra test`
 INTEGRATIONS=`cat ${DEVTOOLS_DIR}/tested_integrations.txt | tr "\n" " "`
 EXPERIMENTAL=`cat ${DEVTOOLS_DIR}/experimental_reqs.txt | tr "\n" " "`
-PY_INSTALL="python=$CONDA_PY"
+PY_INSTALL='python="$CONDA_PY"'
 
 # PIP_INSTALLS is used for debugging installation problems -- override the
 # default $REQUIREMENTS, etc. and move some installs to $PIP_INSTALLS
