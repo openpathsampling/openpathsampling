@@ -6,4 +6,4 @@ from .shoot_snapshots import (
     ShootFromSnapshotsSimulation, CommittorSimulation
 )
 from .reactive_flux import ReactiveFluxSimulation
-
+from .sshooting_simulator import SShootingSimulation
