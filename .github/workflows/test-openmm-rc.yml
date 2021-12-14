@@ -4,8 +4,8 @@ name: "Test OpenMM Release Candidate"
 on:
   workflow_dispatch:
   # use this for debugging
-  #pull_request:
-    #branch: master
+  pull_request:
+    branch: master
 
 defaults:
   run:
@@ -25,7 +25,8 @@ jobs:
           auto-update-conda: true
       - name: "Install requirements"
         run: |
-          CONDA_PY=$(python -c "import sys; print('.'.join(str(s) for s in sys.version_info[:2]))")
+          #CONDA_PY=$(python -c "import sys; print('.'.join(str(s) for s in sys.version_info[:2]))")
+          export CONDA_PY=3.9
           echo "Python version: ${CONDA_PY}"
           source devtools/conda_install_reqs.sh
       - name: "Install OpenMM RC"
