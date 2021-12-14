@@ -1,5 +1,6 @@
 import openpathsampling as paths
 import enum
+import inspect
 
 def _default_repr(obj):  # pragma: no cover
     return obj.name if obj.name is not None \
@@ -111,7 +112,7 @@ class canonical_mover(_Filter):
         elif isinstance(mover, str):
             self.mover = getattr(paths, mover)
             self._condition = self.isinstance_check
-        elif issubclass(mover, paths.PathMover):
+        elif inspect.isclass(mover) and issubclass(mover, paths.PathMover):
             self.mover = mover
             self._condition = self.isinstance_check
         elif isinstance(mover, paths.MCStep):

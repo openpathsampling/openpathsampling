@@ -129,6 +129,17 @@ def test_canonical_mover_step_filter(input_type, seven_steps_no_dynamics,
     assert [s.mccycle for s in filtered_steps] == expected
 
 
+def test_canonical_mover_step_filter_input_step(seven_steps_no_dynamics):
+    step = next(seven_steps_no_dynamics)
+    with pytest.raises(TypeError, match="mean to use the extractor"):
+        _ = canonical_mover(step)
+
+
+def test_canonical_mover_step_filter_bad_input():
+    with pytest.raises(TypeError, match="does not appear to be"):
+        _ = canonical_mover(5)
+
+
 def test_trial_replica_step_filter(seven_steps_no_dynamics):
     filt = trial_replica(0)
     filtered_steps = list(filt(seven_steps_no_dynamics))
@@ -200,12 +211,11 @@ def test_sampling_ensemble_sample_filter():
 
 ##### extractors ###########################################################
 
-def map_replicas_and_ensembles(sample_set):
+def _map_replicas_and_ensembles(sample_set):
     return {s.replica: s.ensemble for s in sample_set}
 
 
 def test_active_samples_extractor(scheme, seven_steps_no_dynamics):
-    # check that the active samples are correct for the first 4 steps
     ens0, ens1, ens2 = scheme.network.sampling_ensembles
     all_expected = [
         {0: ens0, 1: ens1, 2: ens2},
@@ -217,7 +227,7 @@ def test_active_samples_extractor(scheme, seven_steps_no_dynamics):
         {0: ens0, 1: ens1, 2: ens2},
     ]
     for step, expected in zip(seven_steps_no_dynamics, all_expected):
-        found = map_replicas_and_ensembles(step.active)
+        found = _map_replicas_and_ensembles(step.active)
         assert found == expected
 
 
@@ -233,7 +243,7 @@ def test_trial_samples_extractor(scheme, seven_steps_no_dynamics):
         {1: ens2, 2: ens1},
     ]
     for step, expected in zip(seven_steps_no_dynamics, all_expected):
-        found = map_replicas_and_ensembles(step.change.trials)
+        found = _map_replicas_and_ensembles(step.change.trials)
         assert found == expected
 
 
