@@ -371,7 +371,7 @@ class LinearSlope(PES):
 
 
 class DoubleWell(PES):
-    """Simple double-well potential. Independent in each degree of freedom.
+    r"""Simple double-well potential. Independent in each degree of freedom.
 
     V(x) = \sum_i A_i * (x_i**2 - x0_i**2)**2
 
