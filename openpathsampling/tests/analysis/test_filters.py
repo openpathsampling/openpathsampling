@@ -99,8 +99,21 @@ def test_xor_filter_condition(strings):
     assert list(filt(strings)) == ['foo', 'bar', 'baz', 'quux']
 
 
-def test_extractor(strings):
-    pytest.skip()
+@pytest.mark.parametrize('returns_iterable', [True, False])
+def test_extractor(strings, returns_iterable):
+    extractor_func = {
+        True: lambda x: x[:2],
+        False: lambda x: x[0]
+    }[returns_iterable]
+    expected = {
+        False: ['f', 'b', 'b', 'q', 'q'],
+        True: ['fo', 'ba', 'ba', 'qu', 'qu'],
+    }[returns_iterable]
+
+    extractor = Extractor(extractor_func, name='string_ext',
+                          returns_iterable=returns_iterable)
+    extracted = [extractor(s) for s in strings]
+    assert extracted == expected
 
 
 def test_extractor_using(strings):
