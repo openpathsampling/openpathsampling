@@ -382,7 +382,7 @@ class DynamicsEngine(StorableNamedObject):
             continue_conditions = [continue_conditions]
 
         for condition in continue_conditions:
-            stop = not condition(trajectory, trusted)
+            stop = (not condition(trajectory, trusted)) or stop
             # TODO: Consider short-circuit logic (uncomment code below).
             # Pros: short circuit will be faster; avoid wasted effort.
             # Cons: there may be desired side effects from not shorting.
