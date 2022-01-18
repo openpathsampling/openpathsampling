@@ -548,7 +548,6 @@ class DynamicsEngine(StorableNamedObject):
                     # return the current status
                     logger.info("Through frame: %d", frame)
                     yield trajectory
-                    self._clear_snapshot_cache(snapshot)
 
                 elif frame % log_rate == 0:
                     logger.info("Through frame: %d", frame)
