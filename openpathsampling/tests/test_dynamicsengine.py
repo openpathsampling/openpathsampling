@@ -1,10 +1,16 @@
 from __future__ import absolute_import
 from builtins import object
+import pytest
 import openpathsampling as paths
 
 from nose.tools import (assert_equal, assert_not_equal, raises, assert_true)
 from nose.plugins.skip import SkipTest
 from .test_helpers import make_1d_traj, raises_with_message_like
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 
 class StupidEngine(paths.engines.DynamicsEngine):
@@ -21,6 +27,17 @@ class StupidEngine(paths.engines.DynamicsEngine):
             self.attempted = True
             raise AttributeError("Internal error")
         return self.attempted
+
+    def generate_next_frame(self):
+        return make_1d_traj([0.0])[0]
+
+    @property
+    def current_snapshot(self):
+        return make_1d_traj([0.0])[0]
+
+    @current_snapshot.setter
+    def current_snapshot(self, snap):
+        pass
 
 
 class TestDynamicsEngine(object):
@@ -68,12 +85,27 @@ class TestDynamicsEngine(object):
         self.stupid.foo
 
     def test_getattr_dimension(self):
-        assert(self.engine.n_atoms == 1)
-        assert (self.engine.n_spatial == 1)
-        assert(self.stupid.n_atoms == 1)
-        assert (self.stupid.n_spatial == 1)
+        assert self.engine.n_atoms == 1
+        assert self.engine.n_spatial == 1
+        assert self.stupid.n_atoms == 1
+        assert self.stupid.n_spatial == 1
 
     def test_unicode_options(self):
         # regression test: this should NOT raise an error
         options = {'on_nan': u'fail'}
         engine = paths.engines.DynamicsEngine(options, self.descriptor)
+
+    @pytest.mark.parametrize('stoppable', ['first', 'last'])
+    def test_generate_multiple_running_conditions(self, stoppable):
+        # test to ensure that, when multiple continue conditions are
+        # defined, we stop if any of them tell us to stop
+        mock_true_false_true = mock.Mock(side_effect=[True, False, True])
+        mock_true = mock.Mock(return_value=True)
+
+        init_snap = make_1d_traj([0.0])[0]
+        conditions = {'first': [mock_true_false_true, mock_true],
+                      'last': [mock_true, mock_true_false_true]}[stoppable]
+        # this raises an StopIteration (and then RuntimeError) when it
+        # doesn't work
+        traj = self.stupid.generate(init_snap, conditions)
+        assert len(traj) == 2
