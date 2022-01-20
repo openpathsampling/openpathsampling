@@ -6,6 +6,9 @@ name: "Check for OpenMM RC"
 on:
   schedule:
     - cron: "0 9 * * *"
+  # use this for debugging
+  pull_request:
+    branch: master
 
 jobs:
   check-rc:
@@ -14,7 +17,7 @@ jobs:
     name: "Check for OpenMM RC"
     steps:
       - uses: actions/checkout@v2
-      - uses: dwhswenson/conda-rc-check@main
+      - uses: dwhswenson/conda-rc-check@v1
         id: checkrc
         with:
           channel: conda-forge
