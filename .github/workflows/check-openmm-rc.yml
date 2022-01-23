@@ -7,8 +7,8 @@ on:
   schedule:
     - cron: "0 9 * * *"
   # use this for debugging
-  pull_request:
-    branch: master
+  #pull_request:
+    #branch: master
 
 jobs:
   check-rc:
