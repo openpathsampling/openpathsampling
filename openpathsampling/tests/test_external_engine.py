@@ -228,13 +228,22 @@ class TestExternalEngine(object):
 class TestFilenameSetter(object):
     def test_default_setter(self):
         setter = FilenameSetter()
-        assert setter() == 0
-        assert setter() == 1
+        assert setter() == "0"
+        assert setter() == "1"
 
     def test_specific_number_setter(self):
         setter = FilenameSetter(100)
-        assert setter() == 100
-        assert setter() == 101
+        assert setter() == "100"
+        assert setter() == "101"
+
+    def test_specific_length(self):
+        setter = FilenameSetter(length=3)
+        assert setter() == "000"
+        assert setter() == "001"
+
+    def test_length_overrun(self):
+        setter = FilenameSetter(1000, length=3)
+        assert setter() == "1000"
 
 
 class TestRandomStringFilenames(object):

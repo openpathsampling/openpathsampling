@@ -309,7 +309,8 @@ class GromacsEngine(ExternalEngine):
             num_str = '{:07d}'.format(number + 1)
             self.output_file = self.trajectory_filename(number + 1)
             init_filename = "initial_frame.trr"
-            self.filename_setter.reset(number + 1)
+            if hasattr(self.filename_setter, 'reset'):
+                self.filename_setter.reset(number + 1)
         else:
             num_str = number
             self.output_file = self.trajectory_filename(num_str)

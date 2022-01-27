@@ -55,29 +55,7 @@ def _debug_snapshot_loading(snapshot):
     snapshot.clear_cache()
 
 
-class FilenameSetter(StorableNamedObject):
-    """Just use numbers, as we did previously.
-
-    This is the default for compatibility reasons, but it not recommended.
-    Generally, we recommend using :class:`.RandomString`.
-    """
-    # the weird use of this as the base class is because engine options has
-    # some weird type testing that requires replace object to be instances
-    # of the default
-    def __init__(self, count=0):
-        super(FilenameSetter, self).__init__()
-        self.count = count
-
-    def __call__(self):
-        retval = self.count
-        self.count += 1
-        return retval
-
-    def reset(self, count=0):
-        self.count = count
-
-
-class RandomStringFilenames(FilenameSetter):
+class RandomStringFilenames(StorableNamedObject):
     """Use a random string for filename prefixes.
 
     This is recommended, and will become the default in future versions of
@@ -100,6 +78,30 @@ class RandomStringFilenames(FilenameSetter):
 
     def __call__(self):
         return "".join(np.random.choice(self.allowed, self.length))
+
+
+class FilenameSetter(RandomStringFilenames):
+    """Just use numbers, as we did previously.
+
+    This is the default for compatibility reasons, but it not recommended.
+    Generally, we recommend using :class:`.RandomString`.
+    """
+    # the weird use of this as the base class is because engine options has
+    # some weird type testing that requires replace object to be instances
+    # of the default
+    def __init__(self, count=0, length=1):
+        super(FilenameSetter, self).__init__(length=length)
+        self.count = count
+
+    def __call__(self):
+        retval = self.count
+        self.count += 1
+        # This invocation returns a string padded to at least self.length with
+        # zeros
+        return f"{retval:0{self.length}d}"
+
+    def reset(self, count=0):
+        self.count = count
 
 
 class _InternalizedEngineProxy(DynamicsEngine):
