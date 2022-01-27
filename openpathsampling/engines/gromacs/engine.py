@@ -14,8 +14,7 @@ if HAS_MDTRAJ:
     TRRTrajectoryFile = md.formats.TRRTrajectoryFile
 
 from openpathsampling.engines import ExternalEngine
-from openpathsampling.engines import features
-from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
+from openpathsampling.engines.snapshot import SnapshotDescriptor
 from openpathsampling.engines.topology import MDTrajTopology
 from openpathsampling.engines.external_snapshots import \
         ExternalMDSnapshot, InternalizedMDSnapshot
@@ -24,12 +23,12 @@ from openpathsampling.tools import ensure_file
 import os
 import psutil
 import shlex
-import time
 import numpy as np
 
 from openpathsampling.engines.external_engine import (
-    _debug_open_files, close_file_descriptors
+    close_file_descriptors
 )
+
 
 def _remove_file_if_exists(filename):  # pragma: no cover
     #  not requiring coverage here because it's part of Gromacs integration;
@@ -37,9 +36,11 @@ def _remove_file_if_exists(filename):  # pragma: no cover
     if os.path.isfile(filename):
         os.remove(filename)
 
+
 class _GroFileEngine(ExternalEngine):
     SnapshotClass = ExternalMDSnapshot
     InternalizedSnapshotClass = InternalizedMDSnapshot
+
     def __init__(self, gro):
         self.gro = gro
         traj = md.load(gro)
@@ -52,8 +53,8 @@ class _GroFileEngine(ExternalEngine):
                                  'n_atoms': n_atoms}
         )
         super(_GroFileEngine, self).__init__(options={},
-                                            descriptor=descriptor,
-                                            template=None)
+                                             descriptor=descriptor,
+                                             template=None)
 
     def to_dict(self):
         return {'gro': self.gro}
@@ -68,7 +69,6 @@ class _GroFileEngine(ExternalEngine):
         vel = np.zeros(shape=xyz.shape)
         box = traj.unitcell_vectors[0]
         return (xyz, vel, box)
-
 
 
 def snapshot_from_gro(gro_file):
@@ -129,13 +129,13 @@ class GromacsEngine(ExternalEngine):
         prefix within ``base_dir`` for output folders (defaults to gmx)
     """
     _default_options = dict(ExternalEngine._default_options,
-        **{
-            'gmx_executable': "gmx ",
-            'grompp_args': "",
-            'mdrun_args': "",
-            'snapshot_timestep':1.0
-        }
-    )
+                            **{
+                               'gmx_executable': "gmx ",
+                               'grompp_args': "",
+                               'mdrun_args': "",
+                               'snapshot_timestep': 1.0
+                                }
+                            )
     GROMPP_CMD = ("{e.options[gmx_executable]}grompp -c {e.gro} "
                   + "-f {e.mdp} -p {e.top} -t {e.input_file} "
                   + "-po {e.mdout_file} -o {e.tpr_file} "
@@ -146,6 +146,7 @@ class GromacsEngine(ExternalEngine):
     # use these as CMD.format(e=engine, **engine.options)
     SnapshotClass = ExternalMDSnapshot
     InternalizedSnapshotClass = InternalizedMDSnapshot
+
     def __init__(self, gro, mdp, top, options, base_dir="", prefix="gmx"):
         self.base_dir = base_dir
         self.gro = os.path.join(base_dir, gro)
@@ -183,7 +184,7 @@ class GromacsEngine(ExternalEngine):
         self._mdtraj_topology = None
 
         super(GromacsEngine, self).__init__(options, descriptor, template,
-                                             first_frame_in_file=True)
+                                            first_frame_in_file=True)
 
     def to_dict(self):
         dct = super(GromacsEngine, self).to_dict()
@@ -224,14 +225,14 @@ class GromacsEngine(ExternalEngine):
         Returns pos, vel, box or raises error
         """
         # if self._last_filename != filename:
-            # try:
-                # self._file.close()
-            # except AttributeError:
-                # pass  # first time thru, self._file is None
-            # self._file = TRRTrajectoryFile(filename)
+        #     try:
+        #         self._file.close()
+        #     except AttributeError:
+        #         pass  # first time thru, self._file is None
+        #     self._file = TRRTrajectoryFile(filename)
         # f = self._file
         # do we need to reopen the TRR each time to avoid problems with the
-        # fiel length changing?
+        # file length changing?
         trr = TRRTrajectoryFile(filename)
         f = trr
         logger.debug("Reading file %s frame %d (of %d)",
@@ -261,16 +262,16 @@ class GromacsEngine(ExternalEngine):
             logger.debug("Expected exception caught: " + str(e))
             close_file_descriptors(basename)
             return None
-        except RuntimeError as e:
+        except RuntimeError:
             # TODO: matches "TRR read error"
             logger.debug("Received partial frame for %s %d", file_name,
                          frame_num+1)
             return 'partial'
         else:
             logger.debug("Creating snapshot")
-            snapshot =  ExternalMDSnapshot(file_name=file_name,
-                                           file_position=frame_num,
-                                           engine=self)
+            snapshot = ExternalMDSnapshot(file_name=file_name,
+                                          file_position=frame_num,
+                                          engine=self)
             return snapshot
 
     def write_frame_to_file(self, filename, snapshot, mode='w'):
