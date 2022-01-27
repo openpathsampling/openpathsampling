@@ -222,11 +222,11 @@ class TestGromacsEngine(object):
         assert len(beauty) == len(truth)
         assert beauty == truth
 
-    @pytest.mark.skipif(not has_gmx,
-                        reason="Gromacs 5 (gmx) not found. Skipping test.")
-    @pytest.mark.skipif(not HAS_MDTRAJ,
-                        reason="MDTraj not found. Skipping test.")
     def test_generate(self):
+        if not has_gmx:
+            pytest.skip("Gromacs 5 (gmx) not found. Skipping test.")
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not found. Skipping test.")
         traj_0 = self.engine.trajectory_filename(0)
         snap = self.engine.read_frame_from_file(traj_0, 0)
 
