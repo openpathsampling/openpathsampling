@@ -1,7 +1,6 @@
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.engines.dynamics_engine import DynamicsEngine
 from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
-from openpathsampling.deprecations import NEW_DEFAULT_FILENAME_SETTER
 
 import numpy as np
 import os
@@ -147,7 +146,7 @@ class ExternalEngine(DynamicsEngine):
         'n_spatial': 1,
         'n_atoms': 1,
         'n_poll_per_step': 1,
-        'filename_setter': FilenameSetter(),
+        'filename_setter': RandomStringFilenames()
     }
 
     killsig = signal.SIGTERM
@@ -165,11 +164,6 @@ class ExternalEngine(DynamicsEngine):
         self._current_snapshot = template
         self.n_frames_since_start = None
         self.internalized_engine = _InternalizedEngineProxy(self)
-        if 'filename_setter' not in options:
-            # Level 6 is needed to raise it to the initialization of a
-            # gromacs engine. This is a FutureWarning to also warn
-            # users, not only developers.
-            NEW_DEFAULT_FILENAME_SETTER.warn(6, category=FutureWarning)
 
     def to_dict(self):
         dct = super(ExternalEngine, self).to_dict()

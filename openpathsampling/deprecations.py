@@ -1,7 +1,6 @@
 from __future__ import print_function
 import sys
 import warnings
-from collections import namedtuple
 from functools import wraps
 from inspect import isclass
 
@@ -166,21 +165,6 @@ NEW_SNAPSHOT_KWARG_SELECTOR = Deprecation(
     remove_version=(2, 0),
     deprecated_in=(1, 6, 0)
 )
-
-NEW_DEFAULT_FILENAME_SETTER =  Deprecation(
-    problem=("The default FilenameSetter for external engines is now a counter"
-             ", but will become a random string. This is more robust against "
-             "accidental overwrites."),
-    remedy=("If you want to keep the old counting behavior, add "
-            '{"filename_setter": '
-            "paths.engines.external_engine.FilenameSetter() } to the 'options'"
-            " of this engine. Otherwise, this behaviour will automatically "
-            "change to RandomStringFilenames in OPS 2.0."),
-    remove_version=(2, 0),
-    deprecated_in=(1, 6, 0)
-)
-
-
 
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
