@@ -211,7 +211,7 @@ NEW_DEFAULT_FILENAME_SETTER =  Deprecation(
     remedy=("If you want to keep the old counting behavior, add "
             '{"filename_setter": '
             "paths.engines.external_engine.FilenameSetter() } to the 'options'"
-            " of this engine. Otherwise, this behaviour will automatically "
+            " of this engine. Otherwise, this behavior will automatically "
             "change to RandomStringFilenames in OPS 2.0."),
     remove_version=(2, 0),
     deprecated_in=(1, 6, 0)
