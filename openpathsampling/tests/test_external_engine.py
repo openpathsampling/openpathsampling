@@ -34,10 +34,12 @@ class FakeStep(object):
         self.simulation.storage = lambda: None
         self.simulation.storage.trajectories = [[]]
 
+
 class FakeExternalFrame(object):
     """A frame that only has a filename"""
     def __init__(self, file_name):
         self.file_name = file_name
+
 
 class ExampleExternalEngine(peng.ExternalEngine):
     """Trivial external engine for engine.c in the tests.
