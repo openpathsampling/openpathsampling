@@ -4,9 +4,9 @@ Created on 01.07.2014
 @author JDC Chodera
 @author: JH Prinz
 """
-
 import logging
 import sys
+import threading
 
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.integration_tools import is_simtk_unit_type
@@ -14,7 +14,7 @@ from openpathsampling.integration_tools import is_simtk_unit_type
 from .snapshot import BaseSnapshot
 from .trajectory import Trajectory
 
-from .delayedinterrupt import DelayedInterrupt
+from .delayedinterrupt import get_interrupter
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,8 @@ class DynamicsEngine(StorableNamedObject):
 
         self.descriptor = descriptor
         self._check_options(options)
-        self.interrupter = DelayedInterrupt
+
+        self.interrupter = get_interrupter()
 
     @property
     def current_snapshot(self):
@@ -291,7 +292,7 @@ class DynamicsEngine(StorableNamedObject):
             # raise AttributeError("Something went wrong with " + str(item))
 
         # see, if the attribute is actually a dimension
-        if self.descriptor is not None:
+        if 'descriptor' in self.__dict__ and self.descriptor is not None:
             if item in self.descriptor.dimensions:
                 return self.descriptor.dimensions[item]
 
@@ -558,7 +559,8 @@ class DynamicsEngine(StorableNamedObject):
                 snapshot = None
 
                 try:
-                    with self.interrupter():
+                    interrupter = get_interrupter()
+                    with interrupter():
                         snapshot = self.generate_next_frame()
 
                         # if self.on_nan != 'ignore' and \

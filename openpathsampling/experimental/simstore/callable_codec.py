@@ -1,6 +1,7 @@
 import types
 import dis
-import dill
+# import dill
+import cloudpickle as cp
 from .serialization_helpers import has_uuid, do_import
 
 GLOBALS_ERROR_MESSAGE="""
@@ -107,7 +108,11 @@ class CallableCodec(object):
 
             # Case 2: arbitrary function
             if obj.__module__ == "__main__":
-                all_globals = dill.detect.globalvars(obj)
+                pass
+                # all_globals = dill.detect.globalvars(obj)
+                # TODO: this is a serious oversight (should fail tests)
+                # problems getting dill & cloudpickle to play nice
+                all_globals = {}
             else:
                 all_globals = {}
             errors += self._error_message(GLOBALS_ERROR_MESSAGE,
@@ -127,7 +132,7 @@ class CallableCodec(object):
 
             return {
                 '__callable_name__': obj.__name__,
-                '_dilled': dill.dumps(obj)
+                '_dilled': cp.dumps(obj)
             }
         return obj
 
@@ -138,7 +143,7 @@ class CallableCodec(object):
             elif '__module__' in dct:
                 func = do_import(dct['__module__'], dct['__callable_name__'])
             elif '_dilled' in dct:
-                func =  dill.loads(dct['_dilled'])
+                func =  cp.loads(dct['_dilled'])
             else:  # pragma: no cover
                 raise RuntimeError("Error reloading ",
                                    dct['__callable_name__'])

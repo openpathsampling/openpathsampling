@@ -11,6 +11,8 @@ import itertools
 from openpathsampling.netcdfplus import StorableNamedObject
 import openpathsampling as paths
 
+import operator
+
 from future.utils import with_metaclass
 
 
@@ -1425,14 +1427,14 @@ class EnsembleCombination(Ensemble):
 class UnionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(UnionEnsemble, self).__init__(ensemble1, ensemble2,
-                                            fnc=lambda a, b: a or b,
+                                            fnc=operator.__or__,
                                             str_fnc='{0}\nor\n{1}')
 
 
 class IntersectionEnsemble(EnsembleCombination):
     def __init__(self, ensemble1, ensemble2):
         super(IntersectionEnsemble, self).__init__(ensemble1, ensemble2,
-                                                   fnc=lambda a, b: a and b,
+                                                   fnc=operator.__and__,
                                                    str_fnc='{0}\nand\n{1}')
 
 
