@@ -82,11 +82,13 @@ class TestGromacsEngine(object):
     def setup(self):
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not installed.")
+        filename_setter = paths.engines.external_engine.FilenameSetter()
         self.test_dir = data_filename("gromacs_engine")
         self.engine = Engine(gro="conf.gro",
                              mdp="md.mdp",
                              top="topol.top",
-                             options={'mdrun_args': '-nt 1'},
+                             options={'mdrun_args': '-nt 1',
+                                      'filename_setter': filename_setter},
                              base_dir=self.test_dir,
                              prefix="project")
 
