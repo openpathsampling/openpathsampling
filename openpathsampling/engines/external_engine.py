@@ -81,10 +81,10 @@ class RandomStringFilenames(StorableNamedObject):
 
 
 class FilenameSetter(RandomStringFilenames):
-    """Just use numbers, as we did previously.
+    """Just use an increasing count.
 
-    This is the default for compatibility reasons, but it not recommended.
-    Generally, we recommend using :class:`.RandomString`.
+    This used to be the default for compatibility reasons, but is not
+    recommended. Generally, we recommend using :class:`.RandomString`.
     """
     # the weird use of this as the base class is because engine options has
     # some weird type testing that requires replace object to be instances
