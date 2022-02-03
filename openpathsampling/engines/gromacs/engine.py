@@ -146,6 +146,7 @@ class GromacsEngine(ExternalEngine):
     # use these as CMD.format(e=engine, **engine.options)
     SnapshotClass = ExternalMDSnapshot
     InternalizedSnapshotClass = InternalizedMDSnapshot
+    clear_snapshot_cache = True
 
     def __init__(self, gro, mdp, top, options, base_dir="", prefix="gmx"):
         self.base_dir = base_dir

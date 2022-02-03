@@ -13,6 +13,7 @@ numpydoc_deprecation = """
     {problem} {remedy}
 """
 
+
 class Deprecation(object):
     """
     Parameters
@@ -104,6 +105,7 @@ def update_docstring(thing_with_docstring, deprecation):
         docs = thing_with_docstring.__doc__
     return docs + deprecation.docstring_message()
 
+
 def version_tuple_to_string(version_tuple):
     """
     Parameters
@@ -166,6 +168,7 @@ NEW_SNAPSHOT_KWARG_SELECTOR = Deprecation(
     deprecated_in=(1, 6, 0)
 )
 
+
 # has_deprecations and deprecate hacks to change docstrings inspired by:
 # https://stackoverflow.com/a/47441572/4205735
 def has_deprecations(cls):
@@ -175,6 +178,7 @@ def has_deprecations(cls):
             obj.__doc__ = obj.__new_docstring
             del obj.__new_docstring
     return cls
+
 
 def deprecate(deprecation):
     """Decorator to deprecate a class/method
@@ -202,6 +206,7 @@ def deprecate(deprecation):
         else:
             return wrapper
     return decorator
+
 
 def list_deprecations(version=None, deprecations=None):
     """List deprecations that should have been removed by ``version``

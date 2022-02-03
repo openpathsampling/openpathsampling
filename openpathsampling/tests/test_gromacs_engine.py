@@ -266,6 +266,49 @@ class TestGromacsEngine(object):
         # files?
         pytest.skip()
 
+    def test_iter_generate_clear_cache(self):
+        # when running with iter_generate, only the most recently generated
+        # snapshot should contain data -- the others should have their cache
+        # cleared
+        if not has_gmx:
+            pytest.skip("Gromacs (gmx) not found. Skipping test.")
+        if not HAS_MDTRAJ:
+            pytest.skip("MDTraj not found. Skipping test.")
+
+        def continue_condition(trajectory, trusted=False):
+            if len(trajectory) == 5:
+                return False
+            for snap in trajectory[1:-1]:
+                # the initial snapshot does not get cleared
+                # the final snapshot has not yet been cleared
+                assert snap._xyz is None
+                assert snap._velocities is None
+                assert snap._box_vectors is None
+            # the final snapshot should have been loaded, and not yet
+            # cleared
+            assert trajectory[-1]._xyz is not None
+            assert trajectory[-1]._velocities is not None
+            assert trajectory[-1]._box_vectors is not None
+            return True
+
+        cv_x0 = paths.CoordinateFunctionCV('x0', lambda snap:
+                                           snap.xyz[0][0])
+        in_all_space = paths.AllInXEnsemble(
+            paths.CVDefinedVolume(cv_x0, float("-inf"), float("inf"))
+        )
+
+        traj_0 = self.engine.trajectory_filename(0)
+        snap = self.engine.read_frame_from_file(traj_0, 0)
+        self.engine.filename_setter.reset(0)
+        traj = self.engine.generate(snap, running=[
+            in_all_space.can_append,
+            continue_condition
+        ])
+        assert len(traj) == 5
+        ttraj = md.load(self.engine.trajectory_filename(1),
+                        top=self.engine.gro)
+        assert len(ttraj) < 100
+
     def test_serialization_cycle(self):
         serialized = self.engine.to_dict()
         deserialized = Engine.from_dict(serialized)

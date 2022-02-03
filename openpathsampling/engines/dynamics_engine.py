@@ -130,6 +130,7 @@ class DynamicsEngine(StorableNamedObject):
     }
 
     base_snapshot_type = BaseSnapshot
+    clear_snapshot_cache = False
 
     def __init__(self, options=None, descriptor=None):
         """
@@ -371,13 +372,20 @@ class DynamicsEngine(StorableNamedObject):
             true if the dynamics should be stopped; false otherwise
         """
         stop = False
-        if continue_conditions is not None:
-            if isinstance(continue_conditions, list):
-                for condition in continue_conditions:
-                    can_continue = condition(trajectory, trusted)
-                    stop = stop or not can_continue
-            else:
-                stop = not continue_conditions(trajectory, trusted)
+        if callable(continue_conditions):
+            continue_conditions = [continue_conditions]
+
+        for condition in continue_conditions:
+            stop = (not condition(trajectory, trusted)) or stop
+            # TODO: Consider short-circuit logic (uncomment code below).
+            # Pros: short circuit will be faster; avoid wasted effort.
+            # Cons: there may be desired side effects from not shorting.
+            # Current thought: No short circuit means that CVs may be
+            # calculated as part of stop conditions here, so keep as is.
+            # (NB: ensembles/volumes use short-circuit logic, so there isn't
+            # really a promise that CVs get calculated.)
+            # if stop:
+            #     return True
 
         return stop
 
@@ -506,7 +514,7 @@ class DynamicsEngine(StorableNamedObject):
                                 int(len(trajectory) / 2)))]
                 elif hasattr(self.on_retry, '__call__'):
                     trajectory = self.on_retry(trajectory)
-            
+
             """ Case of run dying before first output"""
             if len(trajectory) >= 1:
                 if direction > 0:
@@ -527,6 +535,7 @@ class DynamicsEngine(StorableNamedObject):
             log_rate = 10
             has_nan = False
             has_error = False
+            snapshot = None  # so it is in scope
 
             while not stop:
                 if intervals > 0 and frame % intervals == 0:
@@ -539,6 +548,7 @@ class DynamicsEngine(StorableNamedObject):
 
                 # Do integrator x steps
 
+                self._clear_snapshot_cache(snapshot)  # clear old snapshot
                 snapshot = None
 
                 try:
@@ -611,6 +621,7 @@ class DynamicsEngine(StorableNamedObject):
                     stop = self.stop_conditions(trajectory=trajectory,
                                             continue_conditions=running)
 
+            # check what to do if stop is True
             if has_nan:
                 on = self.on_nan
                 if on == 'fail':
@@ -650,10 +661,17 @@ class DynamicsEngine(StorableNamedObject):
         if final_error is not None:
             yield trajectory
             logger.info("Through frame: %d", len(trajectory))
+            self._clear_snapshot_cache(snapshot)
             raise final_error
 
         logger.info("Finished trajectory, length: %d", len(trajectory))
         yield trajectory
+        self._clear_snapshot_cache(snapshot)
+
+    def _clear_snapshot_cache(self, snapshot):
+        if self.clear_snapshot_cache and snapshot is not None:
+            clear_cache = getattr(snapshot, 'clear_cache', lambda: None)
+            clear_cache()
 
     def generate_next_frame(self):
         raise NotImplementedError('Next frame generation must be implemented!')
