@@ -329,8 +329,10 @@ class ExternalEngine(DynamicsEngine):
 
     def restart_at_step(self, step):
         """Restart the filecounter (if used) to the right number."""
-        if not isinstance(self.filename_setter, FilenameSetter):
+        if not type(self.filename_setter) == FilenameSetter:
             # Nothing to do
+            # TODO OPS 2.0: this can be turned into isinstance after
+            # inheritance is swapped
             return
         # Grab the last trajectory that was written to the storage
         last_trajectory = step.simulation.storage.trajectories[-1]
