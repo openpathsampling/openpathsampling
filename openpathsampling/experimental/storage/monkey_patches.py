@@ -64,7 +64,14 @@ _UNPATCH_MODULES = [
     paths
 ]
 
+_IS_PATCHED_SAVING = False
+_IS_PATCHED_LOADING = False
+
 def monkey_patch_saving(paths):
+    global _IS_PATCHED_SAVING
+    if _IS_PATCHED_SAVING:
+        return paths
+
     paths.netcdfplus.FunctionPseudoAttribute.to_dict = \
             function_pseudo_attribute_to_dict
     paths.TPSNetwork.to_dict = tuple_keys_to_dict(
@@ -73,9 +80,14 @@ def monkey_patch_saving(paths):
     paths.MISTISNetwork.to_dict = tuple_keys_to_dict(
         paths.MISTISNetwork.to_dict, 'input_transitions'
     )
+    _IS_PATCHED_SAVING = True
     return paths
 
 def monkey_patch_loading(paths):
+    global _IS_PATCHED_LOADING
+    if _IS_PATCHED_LOADING:
+        return paths
+
     paths.CallableCV.from_dict = classmethod(callable_cv_from_dict)
     paths.netcdfplus.FunctionPseudoAttribute.from_dict = \
             classmethod(from_dict_attr_to_class(
@@ -89,6 +101,7 @@ def monkey_patch_loading(paths):
     paths.MISTISNetwork.from_dict = classmethod(tuple_keys_from_dict(
         paths.MISTISNetwork.from_dict, 'input_transitions'
     ))
+    _IS_PATCHED_LOADING = True
     return paths
 
 def monkey_patch_all(paths):
