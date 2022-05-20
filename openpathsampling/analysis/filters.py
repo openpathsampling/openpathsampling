@@ -291,6 +291,20 @@ class SampleExtractorFilter(ExtractorFilter):
 ### EXTRACTORS #############################################################
 
 class Extractor(object):
+    """Extract information from a step.
+
+    Parameters
+    ----------
+    extractor : Callable[[MCStep], Any]
+        function that extracts the desired information from an MCStep
+    name : Optional[str]
+        name of this extractor (used in error messages)
+    returns_iterable : bool
+        whether the return object is an iterable
+    extractor_filter : class
+        the class to use to create the extractor filter from the
+        meth:`.using` method.
+    """
     def __init__(self, extractor, name=None,
                  returns_iterable=False,
                  extractor_filter=ExtractorFilter):
@@ -303,6 +317,18 @@ class Extractor(object):
         return self.extractor(step)
 
     def using(self, step_filter=None):
+        """Create an :class:`.ExtractorFilter` with the given filter
+
+        Parameters
+        ----------
+        step_filter : :class:`.StepFilter`
+            the filter to use for in the resulting extractor-filter
+
+        Returns
+        -------
+        ExtractorFilter :
+            object that filters steps and extracts the desired information
+        """
         return self.extractor_filter(step_filter=step_filter,
                                      extractor=self)
 
@@ -332,8 +358,15 @@ class SampleExtractor(Extractor):
 
 active_samples = SampleExtractor(lambda step: step.active.samples,
                                  name="active_samples")
+"""Extractor for active samples
+
+Active samples count toward statistical sampling, and appear repeatedly to
+increase their (Monte Carlo) weight.
+"""
+
 trial_samples = SampleExtractor(lambda step: step.change.canonical.trials,
                                 name="trial_samples")
+"""Extractor for trial samples"""
 
 
 def _get_shooting_point(step):
@@ -348,6 +381,9 @@ shooting_steps = StepFilter(
    lambda step: _get_shooting_point(step) is not NOT_EXTRACTED,
    name="shooting_steps"
 )
+"""
+Filter to select steps 
+"""
 
 shooting_points = Extractor(_get_shooting_point, name="shooting_points")
 

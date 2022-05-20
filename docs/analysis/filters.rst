@@ -39,7 +39,7 @@ be used as the ``secondary_filter`` when creating extractor-filters.
 * ``replica``
 * ``sampling_ensemble``
 * ``minus_ensemble``
-* ``ms_outer_ensemble`
+* ``ms_outer_ensemble``
 
 
 Writing custom filters

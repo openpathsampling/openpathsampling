@@ -32,6 +32,11 @@ Built-in extractors
 Writing custom extractors
 -------------------------
 
+To create your own extractor, you need to provide an extactor function. The
+extractor function is a bare Python function that takes a step and extracts
+the relevant piece of information. If that piece of information is not
+found, you should return the special value ``NOT_EXTRACTED``.
+
 Extractors API
 --------------
 
@@ -41,4 +46,5 @@ Extractor-Filters API
 In general, the way to create and use an extractor-filter is to create it
 with the ``extractor.using(step_filter)`` method, and then to wrap the input
 ``steps`` with the resulting extractor-filter. Users will rarely directly
-initialize an extractor-filter via its ``__init__`` method.
+initialize an extractor-filter via its ``__init__`` method. The API is
+provided here for 
