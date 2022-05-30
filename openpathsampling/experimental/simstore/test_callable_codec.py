@@ -26,7 +26,7 @@ class TestCallableCodec(object):
         for func in ['generic', 'use_known_module', 'use_globals']:
             self.functions[func].__module__ = "__main__"
 
-        dilled = {key: dill.dumps(func)
+        dilled = {key: dill.dumps(func, recurse=True)
                   for key, func in self.functions.items()}
         self.dcts = {
             'generic': {
