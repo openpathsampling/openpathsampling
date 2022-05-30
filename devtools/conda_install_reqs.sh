@@ -41,7 +41,7 @@ PY_INSTALL="python=$CONDA_PY"
 
 # PIP_INSTALLS is used for debugging installation problems -- override the
 # default $REQUIREMENTS, etc. and move some installs to $PIP_INSTALLS
-PIP_INSTALLS=""
+PIP_INSTALLS="git+https://github.com/anivegesana/dill.git@qualname_lookup"
 
 echo "PY_INSTALL=$PY_INSTALL"
 echo "REQUIREMENTS=$REQUIREMENTS"
