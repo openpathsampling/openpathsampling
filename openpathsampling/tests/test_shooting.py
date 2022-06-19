@@ -50,6 +50,23 @@ class TestShootingPointSelector(SelectorTest):
             assert sel.probability(frame, self.mytraj) == \
                     uniform.probability(frame, self.mytraj)
 
+    def test_pick(self):
+        sel = ShootingPointSelector()
+        test_traj_len = 22  # must be a multiple of 2 for this test
+        test_traj = [1 for _ in range(test_traj_len)]
+        # overwrite _biases to make sure we can only pick the last frame
+        sel._biases = lambda traj: [0 for _ in traj[:-1]] + [1]
+        assert sel.pick(test_traj) == test_traj_len - 1
+        # test pick first frame
+        sel._biases = lambda traj: [1] + [0 for _ in traj[1:]]
+        assert sel.pick(test_traj) == 0
+        # and test middle frame (only works if test_traj_len is a multiple of 2)
+        sel._biases = lambda traj: ([0 for _ in traj[:test_traj_len // 2]]
+                                    + [1]
+                                    + [0 for _ in traj[test_traj_len // 2 + 1:]]
+                                    )
+        assert sel.pick(test_traj) == test_traj_len // 2
+
 
 class TestGaussianBiasSelector(SelectorTest):
     def setup(self):
