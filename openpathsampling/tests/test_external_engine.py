@@ -7,7 +7,6 @@ from openpathsampling.engines.toy import ToySnapshot
 from openpathsampling.engines.external_engine import *
 
 import numpy as np
-import pytest
 
 import psutil
 
@@ -122,16 +121,6 @@ class TestExternalEngine(object):
                                                  self.template)
         self.ensemble = paths.LengthEnsemble(5)
 
-    def test_deprecation(self):
-        slow_options = {'n_frames_max': 10000,
-                        'engine_sleep': 100,
-                        'name_prefix': "test",
-                        'engine_directory': engine_dir}
-        with pytest.warns(FutureWarning, match='filename_setter'):
-            _ = ExampleExternalEngine(slow_options,
-                                      self.descriptor,
-                                      self.template)
-
     def test_start_stop(self):
         eng = self.fast_engine
         # check that it isn't running yet
@@ -239,13 +228,22 @@ class TestExternalEngine(object):
 class TestFilenameSetter(object):
     def test_default_setter(self):
         setter = FilenameSetter()
-        assert setter() == 0
-        assert setter() == 1
+        assert setter() == "0"
+        assert setter() == "1"
 
     def test_specific_number_setter(self):
         setter = FilenameSetter(100)
-        assert setter() == 100
-        assert setter() == 101
+        assert setter() == "100"
+        assert setter() == "101"
+
+    def test_specific_length(self):
+        setter = FilenameSetter(length=3)
+        assert setter() == "000"
+        assert setter() == "001"
+
+    def test_length_overrun(self):
+        setter = FilenameSetter(1000, length=3)
+        assert setter() == "1000"
 
 
 class TestRandomStringFilenames(object):

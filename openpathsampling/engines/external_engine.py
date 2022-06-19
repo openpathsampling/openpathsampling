@@ -1,7 +1,6 @@
 from openpathsampling.netcdfplus import StorableNamedObject
 from openpathsampling.engines.dynamics_engine import DynamicsEngine
 from openpathsampling.engines.snapshot import BaseSnapshot, SnapshotDescriptor
-from openpathsampling.deprecations import NEW_DEFAULT_FILENAME_SETTER
 
 import numpy as np
 import os
@@ -56,29 +55,7 @@ def _debug_snapshot_loading(snapshot):
     snapshot.clear_cache()
 
 
-class FilenameSetter(StorableNamedObject):
-    """Just use numbers, as we did previously.
-
-    This is the default for compatibility reasons, but it not recommended.
-    Generally, we recommend using :class:`.RandomString`.
-    """
-    # the weird use of this as the base class is because engine options has
-    # some weird type testing that requires replace object to be instances
-    # of the default
-    def __init__(self, count=0):
-        super(FilenameSetter, self).__init__()
-        self.count = count
-
-    def __call__(self):
-        retval = self.count
-        self.count += 1
-        return retval
-
-    def reset(self, count=0):
-        self.count = count
-
-
-class RandomStringFilenames(FilenameSetter):
+class RandomStringFilenames(StorableNamedObject):
     """Use a random string for filename prefixes.
 
     This is recommended, and will become the default in future versions of
@@ -101,6 +78,30 @@ class RandomStringFilenames(FilenameSetter):
 
     def __call__(self):
         return "".join(np.random.choice(self.allowed, self.length))
+
+
+class FilenameSetter(RandomStringFilenames):
+    """Just use an increasing count.
+
+    This used to be the default for compatibility reasons, but is not
+    recommended. Generally, we recommend using :class:`.RandomString`.
+    """
+    # the weird use of this as the base class is because engine options has
+    # some weird type testing that requires replace object to be instances
+    # of the default
+    def __init__(self, count=0, length=1):
+        super(FilenameSetter, self).__init__(length=length)
+        self.count = count
+
+    def __call__(self):
+        retval = self.count
+        self.count += 1
+        # This invocation returns a string padded to at least self.length with
+        # zeros
+        return f"{retval:0{self.length}d}"
+
+    def reset(self, count=0):
+        self.count = count
 
 
 class _InternalizedEngineProxy(DynamicsEngine):
@@ -147,7 +148,7 @@ class ExternalEngine(DynamicsEngine):
         'n_spatial': 1,
         'n_atoms': 1,
         'n_poll_per_step': 1,
-        'filename_setter': FilenameSetter(),
+        'filename_setter': RandomStringFilenames()
     }
 
     killsig = signal.SIGTERM
@@ -165,11 +166,6 @@ class ExternalEngine(DynamicsEngine):
         self._current_snapshot = template
         self.n_frames_since_start = None
         self.internalized_engine = _InternalizedEngineProxy(self)
-        if 'filename_setter' not in options:
-            # Level 6 is needed to raise it to the initialization of a
-            # gromacs engine. This is a FutureWarning to also warn
-            # users, not only developers.
-            NEW_DEFAULT_FILENAME_SETTER.warn(6, category=FutureWarning)
 
     def to_dict(self):
         dct = super(ExternalEngine, self).to_dict()
