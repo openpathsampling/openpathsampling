@@ -120,4 +120,8 @@ def unpatch(paths):
     for module in _UNPATCH_MODULES * 2:
         importlib.reload(module)
 
+    global _IS_PATCHED_SAVING
+    global _IS_PATCHED_LOADING
+    _IS_PATCHED_SAVING = False
+    _IS_PATCHED_LOADING = False
     return paths
