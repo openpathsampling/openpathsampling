@@ -47,6 +47,21 @@ def seven_steps_trial_samples(seven_steps_no_dynamics):
                 for step in seven_steps_no_dynamics], [])
 
 
+@pytest.fixture
+def repex_and_shooting_steps():
+    # 3 steps shooting (2 acc, 1 rej) and 1 step repex
+    scheme = default_unidirectional_tis.scheme
+    ens0, ens1, ens2 = scheme.network.sampling_ensembles
+    t1 = default_unidirectional_tis.make_tis_trajectory(5)
+    t2 = default_unidirectional_tis.make_tis_trajectory(10)
+    init_conds = scheme.initial_conditions_from_trajectories([t1, t2])
+    moves = [
+        # TODO
+    ]
+    return run_moves(init_conds, moves)
+
+
+
 ### TESTS ##################################################################
 
 ##### generic filter logic #################################################
