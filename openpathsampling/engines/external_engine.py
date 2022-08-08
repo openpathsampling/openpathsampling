@@ -252,7 +252,8 @@ class ExternalEngine(DynamicsEngine):
         file_prefix = self.filename_setter()
         self.set_filenames(file_prefix)
         self.write_frame_to_file(self.input_file, self.current_snapshot, "w")
-        if not self.prepare():
+        error_code = self.prepare()
+        if error_code:
             # subclasses SHOULD raise an error if there's a problem here,
             # but if they don't, we catch it now
             raise RuntimeError("Something went wrong when preparing to "
