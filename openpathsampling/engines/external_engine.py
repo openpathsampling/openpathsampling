@@ -314,8 +314,13 @@ class ExternalEngine(DynamicsEngine):
     def prepare(self):
         """
         Any preparation between writing snapshot and running command
+
+        Returns
+        -------
+        int :
+            Error code. Return 0 on success, nonzero on any error.
         """
-        pass
+        return 0
 
     def cleanup(self):
         """Any cleanup actions to do after the subprocess dies."""
