@@ -182,6 +182,7 @@ class GromacsEngine(ExternalEngine):
         self.mdout_file = "mdout.mdp"
 
         self._mdtraj_topology = None
+        self._masses = None
 
         super(GromacsEngine, self).__init__(options, descriptor, template,
                                              first_frame_in_file=True)
@@ -219,6 +220,13 @@ class GromacsEngine(ExternalEngine):
     @mdtraj_topology.setter
     def mdtraj_topology(self, value):
         self._mdtraj_topology = value
+
+    @property
+    def masses(self):
+        if self._masses is None:
+            self._masses = [atom.element.mass
+                            for atom in self.mdtraj_topology.atoms]
+        return self._masses
 
     def read_frame_data(self, filename, frame_num):
         """
