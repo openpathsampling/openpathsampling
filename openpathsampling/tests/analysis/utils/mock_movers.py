@@ -419,6 +419,91 @@ class MockPathReversal(_MockSingleEnsembleMove):
                                                group_name=group_name)
 
 
+class MockTwoWayShooting(_MockSingleEnsembleMove):
+    def __init__(self, shooting_index, new_traj, modified_snapshot,
+                 direction, scheme, ensemble, accepted,
+                 group_name="shooting"):
+        super(MockTwoWayShooting, self).__init__(
+            scheme=scheme,
+            ensemble=ensemble,
+            group_name=group_name
+        )
+        self.shooting_index = shooting_index
+        self.modified_snapshot = modified_snapshot
+        self.new_traj = new_traj
+        self.direction = direction
+        self.accepted = accepted
+
+    def patches(self, mover):
+        if self.direction == "forward-first":
+            shoot_type = paths.ForwardFirstTwoWayShootingMover
+        elif self.direction == "backward-first":
+            shoot_type = paths.BackwardFirstTwoWayShootingMover
+        else:  # pragma: no cover
+            raise AnalysisTestSetupError("Invalid direction: %s" %
+                                         self.direction)
+
+        shooter = _get_only(
+            iterable=mover.submovers,
+            condition=lambda m: isinstance(m, shoot_type),
+            error_msg=(
+                "submover of type {shoot_type};".format(
+                    shoot_type=shoot_type.__class__.__name__)
+                )
+            )
+
+        direction_idx = mover.submovers.index(shooter)
+        rng_mock = Mock(choice=Mock(return_value=direction_idx))
+        direction_patch = patch.object(mover, '_rng', rng_mock)
+
+        new_traj_shooting_idx = self.new_traj.index(self.modified_snapshot)
+        fwd_partial = self.new_traj[new_traj_shooting_idx:]
+        bkwd_partial = self.new_traj[:new_traj_shooting_idx+1].reversed
+
+        pick_patch = patch.object(shooter.selector, 'pick',
+                                  Mock(return_value=self.shooting_index))
+        modifier_patch = patch.object(
+            shooter, 'modifier',
+            Mock(
+                return_value=self.modified_snapshot,
+                probability_ratio=Mock(return_value=1.0)
+            )
+        )
+        make_fwd_patch = patch.object(shooter, '_make_forward_trajectory',
+                                      Mock(return_value=fwd_partial))
+        make_bkwd_patch = patch.object(shooter, '_make_backward_trajectory',
+                                       Mock(return_value=bkwd_partial))
+
+        all_patches = [
+            direction_patch,
+            pick_patch,
+            modifier_patch,
+            make_fwd_patch,
+            make_bkwd_patch,
+        ]
+        return all_patches
+
+    def _check_shooting_point_changed(self, change):
+        orig = change.canonical.details.shooting_snapshot
+        mod = change.canonical.details.modified_shooting_snapshot
+        if orig == mod:
+            raise AnalysisTestSetupError(
+                "shooting point in two-way shooting did not change"
+            )
+
+    def _check_modified_shooting_point_in_trial(self, change):
+        mod = change.canonical.details.modified_shooting_snapshot
+        if mod not in change.trials[0]:
+            raise AnalysisTestSetupError(
+                "Modified shooting point not in trial trajectory"
+            )
+
+    def safety_checks(self, change, inputs):
+        self._check_modified_shooting_point_in_trial(change)
+        self._check_shooting_point_changed(change)
+
+
+
 def _do_single_step(init_conds, move, org_by_group):
     change = move(init_conds)
     if org_by_group:

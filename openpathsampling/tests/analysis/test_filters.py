@@ -48,13 +48,23 @@ def seven_steps_trial_samples(seven_steps_no_dynamics):
 
 
 @pytest.fixture
-def repex_and_shooting_steps():
+def shooting_and_pathrev_steps(default_unidirectional_tis):
     # 3 steps shooting (2 acc, 1 rej) and 1 step repex
     scheme = default_unidirectional_tis.scheme
     ens0, ens1, ens2 = scheme.network.sampling_ensembles
-    t1 = default_unidirectional_tis.make_tis_trajectory(5)
-    t2 = default_unidirectional_tis.make_tis_trajectory(10)
-    init_conds = scheme.initial_conditions_from_trajectories([t1, t2])
+    t0 = default_unidirectional_tis.make_tis_trajectory(5)
+    t1 = default_unidirectional_tis.make_tis_trajectory(10)
+    init_conds = scheme.initial_conditions_from_trajectories([t0, t1])
+    t2 = ...
+    t3 = ...
+    t4 = ...
+    # initially: {replica: (traj, ens)}
+    # {0: (t0, ens0), 1: (t0, ens1), 2: (t1, ens3)}
+    # What these steps need to test:
+    # 1. accepted and rejected shooting moves with same shooting point
+    # 2. modified shooting point that differs from original
+    # 3. includes non-trivial canonical mover (one-way shooting works)
+    # 4. includes non-shooting moves as well
     moves = [
         # TODO
     ]
