@@ -32,7 +32,7 @@ class TestAbstract(object):
 
 
 class TestFullBootstrapping(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV("Id", lambda snap: snap.xyz[0][0])
         cv_neg = paths.FunctionCV("Neg", lambda snap: -snap.xyz[0][0])
@@ -169,7 +169,7 @@ class TestShootFromSnapshotsSimulation(object):
     # for CommittorSimulation. This is just an additional test to show that
     # using different ensembles from the ones used for the committor will
     # also work.
-    def setup(self):
+    def setup_method(self):
         # As a test system, let's use 1D motion on a flat potential. If the
         # velocity is positive, you right the state on the right. If it is
         # negative, you hit the state on the left.
@@ -204,7 +204,7 @@ class TestShootFromSnapshotsSimulation(object):
         )
         self.simulation.output_stream = open(os.devnull, "w")
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
@@ -232,7 +232,7 @@ class TestShootFromSnapshotsSimulation(object):
 
 
 class TestCommittorSimulation(object):
-    def setup(self):
+    def setup_method(self):
         # As a test system, let's use 1D motion on a flat potential. If the
         # velocity is positive, you right the state on the right. If it is
         # negative, you hit the state on the left.
@@ -268,7 +268,7 @@ class TestCommittorSimulation(object):
                                               initial_snapshots=self.snap0)
         self.simulation.output_stream = open(os.devnull, 'w')
 
-    def teardown(self):
+    def teardown_method(self):
         self.storage.close()
         if os.path.isfile(self.filename):
             os.remove(self.filename)
@@ -425,7 +425,7 @@ class TestCommittorSimulation(object):
 
 
 class TestReactiveFluxSimulation(object):
-    def setup(self):
+    def setup_method(self):
         # PES is one-dimensional linear slope (y(x) = x)
         pes = toys.LinearSlope(m=[-1.0], c=[0.0])
         # one particle with mass 1.0
@@ -484,7 +484,7 @@ class TestReactiveFluxSimulation(object):
                               rc=rc)
         self.simulation.output_stream = open(os.devnull, 'w')
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None
@@ -546,7 +546,7 @@ class TestReactiveFluxSimulation(object):
 
 
 class TestDirectSimulation(object):
-    def setup(self):
+    def setup_method(self):
         pes = toys.HarmonicOscillator(A=[1.0], omega=[1.0], x0=[0.0])
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
         integrator = toys.LeapfrogVerletIntegrator(0.1)
@@ -780,7 +780,7 @@ class TestDirectSimulation(object):
 
 
 class TestPathSampling(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         self.cv = paths.FunctionCV("x", lambda x: x.xyz[0][0])
         self.state_A = paths.CVDefinedVolume(self.cv, float("-inf"), 0.0)

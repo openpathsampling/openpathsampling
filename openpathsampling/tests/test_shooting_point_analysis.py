@@ -26,7 +26,7 @@ logging.getLogger('openpathsampling.sample').setLevel(logging.CRITICAL)
 
 
 class TestTransformedDict(object):
-    def setup(self):
+    def setup_method(self):
         self.untransformed = {(0, 1): "a", (1, 2): "b", (2, 3): "c"}
         self.transformed = {0: "a", 1: "b", 2: "c"}
         self.hash_function = lambda x: x[0]
@@ -72,7 +72,7 @@ class TestTransformedDict(object):
 
 
 class TestSnapshotByCoordinateDict(object):
-    def setup(self):
+    def setup_method(self):
         self.empty_dict = SnapshotByCoordinateDict()
         coords_A = np.array([[0.0, 0.0]])
         coords_B = np.array([[1.0, 1.0]])
@@ -96,7 +96,7 @@ class TestSnapshotByCoordinateDict(object):
 
 
 class TestShootingPointAnalysis(object):
-    def setup(self):
+    def setup_method(self):
         self.HAS_TQDM = paths.progress.HAS_TQDM
         paths.progress.HAS_TQDM = False
         # taken from the TestCommittorSimulation
@@ -145,7 +145,7 @@ class TestShootingPointAnalysis(object):
         self.analyzer = ShootingPointAnalysis(self.storage.steps,
                                               [self.left, self.right])
 
-    def teardown(self):
+    def teardown_method(self):
         import os
         paths.progress.HAS_TQDM = self.HAS_TQDM
         self.storage.close()

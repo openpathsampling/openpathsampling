@@ -27,7 +27,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 # add tests for topology conversions as well
 
 class TestMDTrajSupport(object):
-    def setup(self):
+    def setup_method(self):
         if not md:
             raise SkipTest("mdtraj not installed")
         self.md_trajectory = md.load(data_filename("ala_small_traj.pdb"))

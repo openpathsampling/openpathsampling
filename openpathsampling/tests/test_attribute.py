@@ -15,7 +15,7 @@ import os
 
 
 class TestFunctionPseudoAttribute(object):
-    def setup(self):
+    def setup_method(self):
         if not md:
             raise SkipTest("mdtraj not installed")
         self.mdtraj = md.load(data_filename("ala_small_traj.pdb"))
@@ -30,7 +30,7 @@ class TestFunctionPseudoAttribute(object):
         if os.path.isfile("myfile.nc"):
             os.remove("myfile.nc")
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile("myfile.nc"):
             os.remove("myfile.nc")
 
