@@ -15,7 +15,7 @@ from openpathsampling.sample import Sample
 
 
 class TestSampleSet(object):
-    def setup(self):
+    def setup_method(self):
         self.ensA = LengthEnsemble(1)
         self.ensB = LengthEnsemble(2)
         traj0A = Trajectory([0.5])
@@ -103,7 +103,7 @@ class TestSampleSet(object):
         testset2 = SampleSet([self.s0A, self.s1A, self.s2B])
         # if we accidentally hit the statistical code, repeating 100 times
         # reduces odds of getting the same replacement each time
-        for i in range(100): 
+        for i in range(100):
             self.testset[self.ensA] = self.s0A
             self.testset.consistency_check()
             assert_equal(len(self.testset), 3)

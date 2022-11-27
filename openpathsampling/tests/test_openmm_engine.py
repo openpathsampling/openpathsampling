@@ -73,7 +73,7 @@ def setup_module():
 
 
 class TestOpenMMEngine(object):
-    def setup(self):
+    def setup_method(self):
 
         # OpenMM Integrator
         integrator = mm.LangevinIntegrator(
@@ -102,7 +102,7 @@ class TestOpenMMEngine(object):
         context.setPositions(template.coordinates)
         context.setVelocities(u.Quantity(zero_array, old_div(u.nanometers, u.picoseconds)))
 
-    def teardown(self):
+    def teardown_method(self):
         pass
 
     def test_sanity(self):
@@ -126,7 +126,7 @@ class TestOpenMMEngine(object):
         testvel = []
         testpos = []
         for i in range(len(pdb_pos)):
-            testpos.append(list(np.array(pdb_pos[i]) + 
+            testpos.append(list(np.array(pdb_pos[i]) +
                                 np.array([1.0, 1.0, 1.0]))
                           )
             testvel.append([0.1*i, 0.1*i, 0.1*i])

@@ -44,7 +44,7 @@ finally:
 
 
 class TestGroFileEngine(object):
-    def setup(self):
+    def setup_method(self):
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not installed.")
         self.gro = os.path.join(data_filename("gromacs_engine"), "conf.gro")
@@ -83,7 +83,7 @@ class TestGromacsEngine(object):
     # conf.gro, md.mdp, topol.top : standard Gromacs input files
     # project_trr/0000000.trr : working file, 4 frames
     # project_trr/0000099.trr : 49 working frames, final frame partial
-    def setup(self):
+    def setup_method(self):
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not installed.")
         self.test_dir = data_filename("gromacs_engine")
@@ -94,7 +94,7 @@ class TestGromacsEngine(object):
                              base_dir=self.test_dir,
                              prefix="project")
 
-    def teardown(self):
+    def teardown_method(self):
         files = ['topol.tpr', 'mdout.mdp', 'initial_frame.trr', 'state.cpt',
                  'state_prev.cpt', 'traj_comp.xtc',
                  self.engine.trajectory_filename(1)]
@@ -316,7 +316,7 @@ class TestGromacsEngine(object):
 
 
 class TestGromacsExternalMDSnapshot(object):
-    def setup(self):
+    def setup_method(self):
         if not HAS_MDTRAJ:
             pytest.skip("MDTraj not installed.")
 
@@ -336,7 +336,7 @@ class TestGromacsExternalMDSnapshot(object):
         self.snapshot_shape = (1651, 3)
         self.storage_filename = "gmx_snap.nc"
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile(self.storage_filename):
             os.remove(self.storage_filename)
 

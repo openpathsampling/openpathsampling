@@ -23,7 +23,7 @@ class FakeStep(object):
 
 
 class SelectorTest(object):
-    def setup(self):
+    def setup_method(self):
         self.mytraj = make_1d_traj(coordinates=[-0.5, 0.1, 0.2, 0.3, 0.5],
                                    velocities=[1.0, 1.0, 1.0, 1.0, 1.0])
         self.dyn = CalvinistDynamics([-0.5, -0.4, -0.3, -0.2, -0.1,
@@ -308,8 +308,8 @@ class TestSpringShootingSelector(SelectorTest):
 
 
 class MoverTest(SelectorTest):
-    def setup(self):
-        super(MoverTest, self).setup()
+    def setup_method(self):
+        super(MoverTest, self).setup_method()
         sel = SpringShootingSelector(delta_max=1, k_spring=0)
         sel._fw_prob_list = [1.0, 0.0, 0.0]
         sel._bw_prob_list = [0.0, 0.0, 1.0]

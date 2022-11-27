@@ -19,7 +19,7 @@ logging.getLogger('openpathsampling.sample').setLevel(logging.CRITICAL)
 
 
 class TestSShootingAnalysis(object):
-    def setup(self):
+    def setup_method(self):
         # PES is one-dimensional negative slope (y(x) = -x)
         pes = toys.LinearSlope(m=[-1.0], c=[0.0])
         topology = toys.Topology(n_spatial=1, masses=[1.0], pes=pes)
@@ -83,7 +83,7 @@ class TestSShootingAnalysis(object):
                                                   self.state_B,
                                                   self.state_S])
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         paths.EngineMover.default_engine = None

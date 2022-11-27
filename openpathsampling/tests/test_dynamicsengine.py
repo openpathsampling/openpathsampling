@@ -41,7 +41,7 @@ class StupidEngine(paths.engines.DynamicsEngine):
 
 
 class TestDynamicsEngine(object):
-    def setup(self):
+    def setup_method(self):
         options = {'n_frames_max' : 100, 'random_option' : True}
 
         snapshot_dimensions = {

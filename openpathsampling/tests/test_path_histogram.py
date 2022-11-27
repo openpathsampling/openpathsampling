@@ -26,14 +26,14 @@ from openpathsampling.analysis.path_histogram import *
 from collections import Counter
 
 class PathHistogramTester(object):
-    def setup(self):
+    def setup_method(self):
         self.HAS_TQDM = paths.progress.HAS_TQDM
         paths.progress.HAS_TQDM = False
         self.trajectory = [(0.1, 0.3), (2.1, 3.1), (1.7, 1.4),
                            (1.6, 0.6), (0.1, 1.4), (2.2, 3.3)]
         self.diag = [(0.25, 0.25), (2.25, 2.25)]
 
-    def teardown(self):
+    def teardown_method(self):
         paths.progress.HAS_TQDM = self.HAS_TQDM
 
     def test_nopertraj(self):
@@ -74,8 +74,8 @@ class PathHistogramTester(object):
 
 class TestPathHistogramNoInterpolate(PathHistogramTester):
     Interpolator = NoInterpolation
-    def setup(self):
-        super(TestPathHistogramNoInterpolate, self).setup()
+    def setup_method(self):
+        super(TestPathHistogramNoInterpolate, self).setup_method()
         self.expected_bins = [(0, 0), (4, 6), (3, 2),
                               (3, 1), (0, 2), (4, 6)]
 
@@ -89,8 +89,8 @@ class TestPathHistogramNoInterpolate(PathHistogramTester):
 
 class TestPathHistogramSubdivideInterpolate(PathHistogramTester):
     Interpolator = SubdivideInterpolation
-    def setup(self):
-        super(TestPathHistogramSubdivideInterpolate, self).setup()
+    def setup_method(self):
+        super(TestPathHistogramSubdivideInterpolate, self).setup_method()
         self.expected_bins = [
             (0, 0),  # initial
             (0, 1), (1, 1), (1, 2), (1, 3), (2, 3), (2, 4), (3, 4),
@@ -105,8 +105,8 @@ class TestPathHistogramSubdivideInterpolate(PathHistogramTester):
 
 class TestPathHistogramBesenhamLikeInterpolate(PathHistogramTester):
     Interpolator = BresenhamLikeInterpolation
-    def setup(self):
-        super(TestPathHistogramBesenhamLikeInterpolate, self).setup()
+    def setup_method(self):
+        super(TestPathHistogramBesenhamLikeInterpolate, self).setup_method()
         # NOTE: the (4, 5) in the 1->2 transition is exactly on bin edge;
         # left bin edge is inclusive
         self.expected_bins = [
@@ -121,8 +121,8 @@ class TestPathHistogramBesenhamLikeInterpolate(PathHistogramTester):
 
 class TestPathHistogramBesenhamInterpolate(PathHistogramTester):
     Interpolator = BresenhamInterpolation
-    def setup(self):
-        super(TestPathHistogramBesenhamInterpolate, self).setup()
+    def setup_method(self):
+        super(TestPathHistogramBesenhamInterpolate, self).setup_method()
         self.expected_bins = [
             (0, 0),  # initial
             (1, 1), (1, 2), (2, 3), (3, 4), (3, 5), (4, 6),  # 0->1
@@ -134,14 +134,14 @@ class TestPathHistogramBesenhamInterpolate(PathHistogramTester):
 
 class TestPathHistogram(object):
     # tests of fundamental things in PathHistogram, not interpolators
-    def setup(self):
+    def setup_method(self):
         self.HAS_TQDM = paths.progress.HAS_TQDM
         paths.progress.HAS_TQDM = False
         self.trajectory = [(0.1, 0.3), (2.1, 3.1), (1.7, 1.4),
                            (1.6, 0.6), (0.1, 1.4), (2.2, 3.3)]
         self.diag = [(0.25, 0.25), (2.25, 2.25)]
 
-    def teardown(self):
+    def teardown_method(self):
         paths.progress.HAS_TQDM = self.HAS_TQDM
 
     def test_add_with_weight(self):
@@ -199,7 +199,7 @@ class TestPathHistogram(object):
 
 
 class TestPathDensityHistogram(object):
-    def setup(self):
+    def setup_method(self):
         self.HAS_TQDM = paths.progress.HAS_TQDM
         paths.progress.HAS_TQDM = False
         id_cv = paths.FunctionCV("Id",
@@ -218,7 +218,7 @@ class TestPathDensityHistogram(object):
         self.traj2 = make_1d_traj([0.6, 0.7])
         # [(2, 1, 0), (2, 1, 1)]
 
-    def teardown(self):
+    def teardown_method(self):
         paths.progress.HAS_TQDM = self.HAS_TQDM
 
     def test_histogram_no_weights(self):
@@ -235,7 +235,7 @@ class TestPathDensityHistogram(object):
     def test_histogram_with_weights(self):
         hist = PathDensityHistogram(self.cvs, self.left_bin_edges,
                                     self.bin_widths)
-        counter = hist.histogram([self.traj1, self.traj2], 
+        counter = hist.histogram([self.traj1, self.traj2],
                                  weights=[1.0, 2.0])
         assert_equal(len(counter), 5)
         for bin_label in [(0,0,0), (2,0,0), (1,0,0)]:

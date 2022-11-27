@@ -43,7 +43,7 @@ def setup_module():
 # === TESTS FOR TOY POTENTIAL ENERGY SURFACES =============================
 
 class TestHarmonicOscillator(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -65,7 +65,7 @@ class TestHarmonicOscillator(object):
 
 
 class TestGaussian(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -82,7 +82,7 @@ class TestGaussian(object):
 
 
 class TestOuterWalls(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -99,7 +99,7 @@ class TestOuterWalls(object):
 
 
 class TestLinearSlope(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -112,7 +112,7 @@ class TestLinearSlope(object):
 
 
 class TestDoubleWell(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -133,7 +133,7 @@ class TestDoubleWell(object):
 
 
 class TestCombinations(object):
-    def setup(self):
+    def setup_method(self):
         self.positions = init_pos
         self.velocities = init_vel
         self.mass = sys_mass
@@ -142,7 +142,7 @@ class TestCombinations(object):
 
     def test_V(self):
         assert_almost_equal(self.simpletest.V(self), 2*2.37918851445)
-        assert_almost_equal(self.fullertest.V(self), 
+        assert_almost_equal(self.fullertest.V(self),
                             2.37918851445 + 1.080382 - 2.0375)
 
     def test_dVdx(self):
@@ -171,7 +171,7 @@ class Test_convert_fcn(object):
                                  np.array([[1.0, 2.0, 3.0], [4.0, 0.0, 0.0]]))
 
 class TestToyEngine(object):
-    def setup(self):
+    def setup_method(self):
         pes = linear
         integ = toy.LeapfrogVerletIntegrator(dt=0.002)
         topology = toy.Topology(
@@ -196,7 +196,7 @@ class TestToyEngine(object):
         sim.n_steps_per_frame = 10
         self.sim = sim
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile('toy_tmp.nc'):
             os.remove('toy_tmp.nc')
 
@@ -253,7 +253,7 @@ class TestToyEngine(object):
         assert_equal(len(traj1), len(traj2))
         for (s1, s2) in zip(traj1, traj2):
             # snapshots are not the same object
-            assert_not_equal(s1, s2) 
+            assert_not_equal(s1, s2)
             # however, they have the same values stored in them
             assert_equal(len(s1.coordinates), 1)
             assert_equal(len(s1.coordinates[0]), 2)
@@ -273,7 +273,7 @@ class TestToyEngine(object):
 # === TESTS FOR TOY INTEGRATORS ===========================================
 
 class TestLeapfrogVerletIntegrator(object):
-    def setup(self):
+    def setup_method(self):
         pes = linear
         integ = toy.LeapfrogVerletIntegrator(dt=0.002)
         topology = toy.Topology(
@@ -326,7 +326,7 @@ class TestLangevinBAOABIntegrator(object):
     '''Testing for correctness is hard, since this is a stochastic
     calculation. However, we can at least run tests to make sure nothing
     crashes.'''
-    def setup(self):
+    def setup_method(self):
         pes = linear
         integ = toy.LangevinBAOABIntegrator(dt=0.002, temperature=0.5,
                                             gamma=1.0)
@@ -373,7 +373,7 @@ class TestLangevinBAOABIntegrator(object):
 class TestOverdampedLangevinIntegrator(object):
     '''This is only a test if the integrator runs. Because of its stochastic
     nature we can not actually test its correctness easily.'''
-    def setup(self):
+    def setup_method(self):
         pes = linear
         integ = toy.OverdampedLangevinIntegrator(dt=0.001, temperature=4.0,
                                                  D=1.0)

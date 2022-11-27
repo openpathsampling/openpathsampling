@@ -24,13 +24,13 @@ for logger in quiet_loggers:
 
 
 class TestBiasEnsembleTable(object):
-    def setup(self):
+    def setup_method(self):
         # create the network
         paths.InterfaceSet._reset()
         xval = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
         self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
-        ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0), 
+        ifacesA = paths.VolumeInterfaceSet(xval, float(-1.0),
                                            [-0.5, -0.4, -0.3, -0.2])
         self.network = paths.MISTISNetwork([
             (self.stateA, ifacesA, self.stateB)
@@ -76,7 +76,7 @@ class TestBiasEnsembleTable(object):
 
         # for old_to_new, the probability of moving outerward depends on the
         # ratio of the probabilities of the two ensembles
-        change_vals = { 
+        change_vals = {
             self.change_01 : 0.5,
             self.change_02 : 0.2,
             self.change_12 : old_div(0.2, 0.5),
@@ -233,13 +233,13 @@ class TestBiasEnsembleTable(object):
         bias_ABC = bias_A + bias_B + bias_C
 
 class TestSRTISBiasFromNetwork(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         xval = paths.CoordinateFunctionCV(name="xA",
                                           f=lambda s : s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, -1.0, -0.5).named("A")
         self.stateB = paths.CVDefinedVolume(xval, 0.5, float("inf")).named("B")
-        self.ifacesA = paths.VolumeInterfaceSet(xval, -1.0, 
+        self.ifacesA = paths.VolumeInterfaceSet(xval, -1.0,
                                                 [-0.5, -0.4, -0.3, -0.2])
         self.ifacesB = paths.VolumeInterfaceSet(xval, [0.5, 0.4, 0.3, 0.2],
                                                 1.0)
