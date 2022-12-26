@@ -56,7 +56,7 @@ class TestStrategyLevels(object):
 
 
 class MoveStrategyTestSetup(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s: s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s: -s.xyz[0][0])
@@ -126,8 +126,8 @@ class TestMoveStrategy(MoveStrategyTestSetup):
 
 
 class TestSingleEnsembleMoveStrategy(MoveStrategyTestSetup):
-    def setup(self):
-        super(TestSingleEnsembleMoveStrategy, self).setup()
+    def setup_method(self):
+        super(TestSingleEnsembleMoveStrategy, self).setup_method()
         self.strategy = MockSingleEnsembleMoveStrategy(
             ensembles=None,
             group='test_group',
@@ -356,7 +356,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         # set up the swap pairs
         swap_pairs = []
         for trans in self.network.sampling_transitions:
-            swap_pairs.extend([[trans.ensembles[i], trans.ensembles[i+1]] 
+            swap_pairs.extend([[trans.ensembles[i], trans.ensembles[i+1]]
                                for i in range(len(trans.ensembles)-1)])
         assert_equal(len(swap_pairs), 4)
 
@@ -415,7 +415,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
             input_ensembles=[ens0, ens1],
             output_ensembles=[ens1, ens2]
         )
-        assert_equal(weird_mover.ensemble_signature, 
+        assert_equal(weird_mover.ensemble_signature,
                      ((ens0,ens1),(ens1,ens2)))
         scheme = MoveScheme(self.network)
         scheme.movers['weird'] = [weird_mover]
@@ -436,7 +436,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         # groups: both the new and the old.
         scheme = DefaultScheme(self.network)
         scheme.movers ={}
-        scheme.append(EnsembleHopStrategy(replace=False, 
+        scheme.append(EnsembleHopStrategy(replace=False,
                                           group='hop',
                                           from_group='repex'))
         scheme.build_move_decision_tree()
@@ -448,7 +448,7 @@ class TestEnsembleHopStrategy(MoveStrategyTestSetup):
         # remove the old from_group from existence
         scheme = DefaultScheme(self.network)
         scheme.movers ={}
-        scheme.append(EnsembleHopStrategy(replace=True, 
+        scheme.append(EnsembleHopStrategy(replace=True,
                                           group='hop',
                                           from_group='repex'))
         scheme.build_move_decision_tree()
@@ -717,7 +717,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         for groupname in list(scheme.movers.keys()):
             for mover in scheme.movers[groupname]:
                 mover_weights[(groupname, mover.ensemble_signature)] = 1.0
-    
+
         m_sig = {}
         for g in scheme.movers:
             for m in scheme.movers[g]:
@@ -756,9 +756,9 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
 
         strategy = OrganizeByMoveGroupStrategy()
         root = strategy.make_movers(scheme)
-        
+
         assert_equal(len(root.movers), 4)
-        names = ['ShootingChooser', 'RepexChooser', 'PathreversalChooser', 
+        names = ['ShootingChooser', 'RepexChooser', 'PathreversalChooser',
                  'MinusChooser']
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
         for name in names:
@@ -830,7 +830,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         root = strategy.make_movers(scheme)
 
         name_dict = {root.movers[i].name : i for i in range(len(root.movers))}
-        
+
         name = 'BlahblahblahChooser'
         weight = root.weights[name_dict[name]]
         chooser = root.movers[name_dict[name]]
@@ -862,7 +862,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         # check that the number of sigs in a each group matches the number
         # of movers in that group
         for group in list(group_weights.keys()):
-            mover_sigs = [sig for sig in list(mover_weights.keys()) 
+            mover_sigs = [sig for sig in list(mover_weights.keys())
                           if sig[0]==group]
             assert_equal(len(mover_sigs), len(scheme.movers[group]))
 
@@ -883,7 +883,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         assert_equal(group_weights, {'shooting' : 1.0})
         for sig in mover_weights:
             assert_equal(mover_weights[sig], 1.0)
-            assert_in(sig[1], [m.ensemble_signature 
+            assert_in(sig[1], [m.ensemble_signature
                                for m in scheme2.movers[sig[0]]])
 
         for group in list(scheme2.movers.keys()):
@@ -897,18 +897,18 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         ensA_sig = ((ensA,),(ensA,))
 
         scheme = MoveScheme(self.network)
-        scheme.append([NearestNeighborRepExStrategy(), 
-                       OneWayShootingStrategy(), 
+        scheme.append([NearestNeighborRepExStrategy(),
+                       OneWayShootingStrategy(),
                        strategy])
         root = scheme.move_decision_tree()
         old_choice_probability = scheme.choice_probability
-        old_shooter_ensA = [m for m in scheme.movers['shooting'] 
+        old_shooter_ensA = [m for m in scheme.movers['shooting']
                             if m.ensemble_signature == ensA_sig][0]
 
         strategy.group_weights['repex'] = 3.0
         strategy.mover_weights[('shooting',ensA_sig)]= 2.0
         scheme.choice_probability = {} # this is unset here
- 
+
         (group_weights, mover_weights) = strategy.get_weights(
             scheme=scheme,
             sorted_movers=scheme.movers,
@@ -938,7 +938,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
                      3.0*len(new_repex_chooser.movers))
 
         new_shoot_chooser = [m for m in root if m.name=="ShootingChooser"][0]
-        new_shooter_ensA = [m for m in scheme.movers['shooting'] 
+        new_shooter_ensA = [m for m in scheme.movers['shooting']
                             if m.ensemble_signature == ensA_sig][0]
         shooter_ensA_idx = new_shoot_chooser.movers.index(new_shooter_ensA)
         assert_equal(new_shoot_chooser.weights[shooter_ensA_idx], 2.0)
@@ -948,8 +948,8 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def test_get_weights_group_weights_set(self):
         strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
-        scheme.append([NearestNeighborRepExStrategy(), 
-                       OneWayShootingStrategy(), 
+        scheme.append([NearestNeighborRepExStrategy(),
+                       OneWayShootingStrategy(),
                        strategy])
         root = scheme.move_decision_tree()
 
@@ -986,12 +986,12 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
             assert_almost_equal(choice_prob[mover], old_div(1.0,7.0))
         for mover in scheme.movers['repex']:
             assert_almost_equal(choice_prob[mover], old_div(1.0,28.0))
-        
+
 
     def test_get_weights_mover_weights_set(self):
         strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
-        scheme.append([NearestNeighborRepExStrategy(), 
+        scheme.append([NearestNeighborRepExStrategy(),
                        OneWayShootingStrategy(),
                        strategy])
         # build it so there's an old version
@@ -1005,7 +1005,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         assert_equal(group_weights, {'shooting' : 1.0, 'repex' : 3.0})
 
         ensA = self.network.sampling_transitions[0].ensembles[0]
-        ensA_sig = ((ensA,),(ensA,)) 
+        ensA_sig = ((ensA,),(ensA,))
         strategy.group_weights = {}
         strategy.mover_weights[('shooting',ensA_sig)] = 2.0
 
@@ -1028,7 +1028,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
     def test_get_weights_internal_unset_choice_prob_set(self):
         strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
-        scheme.append([NearestNeighborRepExStrategy(), 
+        scheme.append([NearestNeighborRepExStrategy(),
                        OneWayShootingStrategy(),
                        strategy])
         ensA = self.network.sampling_transitions[0].ensembles[0]
@@ -1066,10 +1066,10 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         for group in scheme.movers:
             for mover in scheme.movers[group]:
                 old_mover = [
-                    old for old in old_movers[group] 
+                    old for old in old_movers[group]
                     if mover.ensemble_signature==old.ensemble_signature
                 ][0]
-                assert_almost_equal(new_choice_prob[mover], 
+                assert_almost_equal(new_choice_prob[mover],
                                     old_choice_prob[old_mover])
 
         #print new_choice_prob
@@ -1087,7 +1087,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         # with path reversal
         strategy = OrganizeByMoveGroupStrategy()
         scheme = MoveScheme(self.network)
-        scheme.append([NearestNeighborRepExStrategy(), 
+        scheme.append([NearestNeighborRepExStrategy(),
                        PathReversalStrategy(),
                        strategy])
         strategy.group_weights['repex'] = 3.0
@@ -1100,7 +1100,7 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
         )
         assert_equal(group_weights, {'pathreversal' : 1.0, 'repex' : 3.0})
         ensA = self.network.sampling_transitions[0].ensembles[0]
-        ensA_sig = ((ensA,),(ensA,)) 
+        ensA_sig = ((ensA,),(ensA,))
         strategy.group_weights = {}
         strategy.mover_weights[('pathreversal',ensA_sig)] = 2.0
 
@@ -1124,8 +1124,8 @@ class TestOrganizeByMoveGroupStrategy(MoveStrategyTestSetup):
 
 class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
     StrategyClass = OrganizeByEnsembleStrategy
-    def setup(self):
-        super(TestOrganizeByEnsembleStrategy, self).setup()
+    def setup_method(self):
+        super(TestOrganizeByEnsembleStrategy, self).setup_method()
         scheme = MoveScheme(self.network)
         ens0 = self.network.sampling_transitions[0].ensembles[0]
         ens1 = self.network.sampling_transitions[0].ensembles[1]
@@ -1142,7 +1142,7 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
             paths.ReplicaExchangeMover(ens1, ens2)
         ]
         scheme.movers['pathreversal'] = [
-            paths.PathReversalMover(ensemble=ens) 
+            paths.PathReversalMover(ensemble=ens)
             for ens in [ens0, ens1, ens2]
         ]
         scheme.movers['minus'] = [paths.MinusMover(
@@ -1184,8 +1184,8 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         # minus: 1/9
 
         # ens0 moves: shooting (2.0), repex01 (1.0), minus (1.0), rev (1.0)
-        # ens1 moves: shooting (1.0), repex01 (1.0), repex12 (1.0), rev (1.0) 
-        # ens2 moves: shooting (1.0), repex12 (1.0), rev (1.0) 
+        # ens1 moves: shooting (1.0), repex01 (1.0), repex12 (1.0), rev (1.0)
+        # ens2 moves: shooting (1.0), repex12 (1.0), rev (1.0)
         # minus moves: minus (1.0)
 
         # ens0 norm: 5.0
@@ -1197,7 +1197,7 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         #   shooting0 = 4/9 * 2.0/5.0 = 8.0/45.0
         #   shooting1 = 2/9 * 1.0/4.0 = 1.0/18.0
         #   shooting2 = 2/9 * 1.0/3.0 = 2.0/27.0
-        #   repex01 = 4/9 * 1.0/5.0 + 2/9 * 1.0/4.0 = 13.0/90.0 
+        #   repex01 = 4/9 * 1.0/5.0 + 2/9 * 1.0/4.0 = 13.0/90.0
         #   repex12 = 2/9 * 1.0/4.0 + 2/9 * 1.0/3.0 = 7.0/54.0
         #   minus = 1/9*1.0 + 4/9*1.0/5.0 = 1.8/9.0
         #   rev0 = 4/9 * 1.0/5.0 = 4.0/45.0
@@ -1242,7 +1242,7 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
         (ensemble_weights, mover_weights) = strategy.default_weights(scheme)
 
         for ens in [ens0, ens1, ens2, minus]:
-            chooser_mweights = strategy.chooser_mover_weights(scheme, ens, 
+            chooser_mweights = strategy.chooser_mover_weights(scheme, ens,
                                                               mover_weights)
             for mover in chooser_mweights:
                 assert_in(ens, mover.ensemble_signature[0])
@@ -1265,12 +1265,12 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
         (ensemble_weights, mover_weights)= strategy.default_weights(scheme)
 
-        assert_equal(ensemble_weights, 
+        assert_equal(ensemble_weights,
                      {e : 1.0 for e in [ens0, ens1, ens2, minus]})
 
         # get the correct order on repex and minus signatures for testing
-        double_sigs = [m.ensemble_signature 
-                       for m in sum([scheme.movers[g] 
+        double_sigs = [m.ensemble_signature
+                       for m in sum([scheme.movers[g]
                                      for g in ['repex', 'minus']], [])
                       ]
         repex01_sig = reorder_ensemble_signature(((ens0,ens1),(ens0,ens1)),
@@ -1297,7 +1297,7 @@ class TestOrganizeByEnsembleStrategy(MoveStrategyTestSetup):
 
         assert_equal(len(mover_ens_sigs), len(list(mover_weights.keys())))
         assert_equal(set(mover_weights.keys()), set(mover_ens_sigs))
-        
+
         expected = {s : 1.0 for s in mover_ens_sigs}
         assert_equal(expected, mover_weights)
 
@@ -1406,10 +1406,10 @@ class TestPoorSingleReplicaStrategy(TestOrganizeByEnsembleStrategy):
         (ens_w, mov_w) = strategy.get_weights(scheme, scheme.movers,
                                               strategy.ensemble_weights,
                                               strategy.mover_weights)
-        scheme.choice_probability = strategy.choice_probability(scheme, 
+        scheme.choice_probability = strategy.choice_probability(scheme,
                                                                 ens_w, mov_w)
         for ens in [ens0, ens1, ens2, minus]:
-            chooser_mweights = strategy.chooser_mover_weights(scheme, ens, 
+            chooser_mweights = strategy.chooser_mover_weights(scheme, ens,
                                                               mover_weights)
             if ens in [ens0, ens1]:
                 assert_equal(len(chooser_mweights), 5)
@@ -1418,7 +1418,7 @@ class TestPoorSingleReplicaStrategy(TestOrganizeByEnsembleStrategy):
             elif ens is ens2:
                 assert_equal(len(chooser_mweights), 4)
 
-            real_movers = [m for m in list(chooser_mweights.keys()) 
+            real_movers = [m for m in list(chooser_mweights.keys())
                            if m != strategy.null_mover]
             for m in real_movers:
                 assert_equal(scheme.choice_probability[m], chooser_mweights[m])

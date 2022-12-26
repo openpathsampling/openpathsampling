@@ -170,7 +170,7 @@ class TestPathSimulatorHook(object):
 
 
 class TestSelfOrSimProperty(object):
-    def setup(self):
+    def setup_method(self):
         self.attr_name = "test_attr"
         self.simulation = MagicMock(test_attr="sim_attr")
         self.sans_attr_sans_sim = MagicMock(_test_attr=None, _simulation=None)
@@ -226,7 +226,7 @@ class TestSelfOrSimProperty(object):
 
 
 class TestStorageHook(object):
-    def setup(self):
+    def setup_method(self):
         self.storage = MagicMock(spec=["stash", "sync_all"])
         self.old_storage = MagicMock(spec=["save", "sync_all"])
         self.empty_hook = StorageHook()
@@ -267,7 +267,7 @@ class TestStorageHook(object):
 
 
 class TestShootFromSnapshotsOutputHook(object):
-    def setup(self):
+    def setup_method(self):
         if sys.version_info < (3,):
             self.stream = io.BytesIO()
         else:
@@ -295,7 +295,7 @@ class TestShootFromSnapshotsOutputHook(object):
 
 
 class TestSampleSetSanityCheckHook(object):
-    def setup(self):
+    def setup_method(self):
         self.simulation = MagicMock(save_frequency=10)
         self.empty_hook = SampleSetSanityCheckHook()
         self.hook = SampleSetSanityCheckHook(frequency=10)
@@ -319,7 +319,7 @@ class TestSampleSetSanityCheckHook(object):
 
 
 class TestLiveVisualizerHook(object):
-    def setup(self):
+    def setup_method(self):
         self.live_visualizer = MagicMock()
         self.simulation = MagicMock(live_visualizer=self.live_visualizer,
                                     status_update_frequency=2)
@@ -363,7 +363,7 @@ class TestLiveVisualizerHook(object):
 
 
 class TestPathSamplingOutputHook(object):
-    def setup(self):
+    def setup_method(self):
         if sys.version_info < (3,):
             self.stream = io.BytesIO()
         else:
@@ -434,7 +434,7 @@ class TestPathSamplingOutputHook(object):
 
 
 class TestGraciousKillHook(object):
-    def setup(self):
+    def setup_method(self):
         self.final_call = MagicMock()
         self.nocall_final_call = MagicMock()
         self.simulation = MagicMock(storage=MagicMock(close=MagicMock(),

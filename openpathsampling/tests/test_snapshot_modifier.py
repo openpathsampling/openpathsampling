@@ -31,7 +31,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 
 class TestSnapshotModifier(object):
-    def setup(self):
+    def setup_method(self):
         # TODO OPS 2.0: This subclass is only here for python 2.7 should be
         # replaced with SnapshotModifier
         class DummyMod(SnapshotModifier):
@@ -100,8 +100,8 @@ class TestSnapshotModifier(object):
 
 
 class TestNoModification(TestSnapshotModifier):
-    def setup(self):
-        super(TestNoModification, self).setup()
+    def setup_method(self):
+        super(TestNoModification, self).setup_method()
         self.modifier = NoModification()
 
     def test_call(self):
@@ -133,7 +133,7 @@ class TestNoModification(TestSnapshotModifier):
 
 
 class TestRandomizeVelocities(object):
-    def setup(self):
+    def setup_method(self):
         # TODO: check against several possibilities, including various
         # combinations of shapes of velocities and masses.
         topology_2x3D = paths.engines.toy.Topology(
@@ -271,7 +271,7 @@ class TestRandomizeVelocities(object):
 
 
 class TestGeneralizedDirectionModifier(object):
-    def setup(self):
+    def setup_method(self):
         import openpathsampling.engines.toy as toys
         # applies one delta_v to all atoms
         self.toy_modifier_all = GeneralizedDirectionModifier(1.5)
@@ -462,7 +462,7 @@ class TestGeneralizedDirectionModifier(object):
 
 
 class TestVelocityDirectionModifier(object):
-    def setup(self):
+    def setup_method(self):
         import openpathsampling.engines.toy as toys
         self.toy_modifier = VelocityDirectionModifier(
             delta_v=[1.0, 2.0],
@@ -573,7 +573,7 @@ class TestVelocityDirectionModifier(object):
 
 
 class TestSingleAtomVelocityDirectionModifier(object):
-    def setup(self):
+    def setup_method(self):
         import openpathsampling.engines.toy as toys
         self.toy_modifier = SingleAtomVelocityDirectionModifier(
             delta_v=[1.0, 2.0],

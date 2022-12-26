@@ -26,7 +26,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestOpenMMSnapshot(object):
-    def setup(self):
+    def setup_method(self):
         if not openmm:
             raise SkipTest("OpenMM not installed")
         if not omt:

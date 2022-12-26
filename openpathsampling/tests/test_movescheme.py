@@ -92,7 +92,7 @@ def _make_null_mover_step(mccycle, path_sim_mover, null_mover):
 
 
 class TestMoveAcceptanceAnalysis(object):
-    def setup(self):
+    def setup_method(self):
         self.HAS_TQDM = paths.progress.HAS_TQDM
         paths.progress.HAS_TQDM = False
         paths.InterfaceSet._reset()
@@ -146,7 +146,7 @@ class TestMoveAcceptanceAnalysis(object):
                          'normal': acceptance,
                          'with_null': acceptance_null}
 
-    def teardown(self):
+    def teardown_method(self):
         paths.progress.HAS_TQDM = self.HAS_TQDM
 
     @pytest.mark.parametrize('step_num', [0, 1, 2, 3, 4])
@@ -391,7 +391,7 @@ class TestMoveAcceptanceAnalysis(object):
 
 
 class TestMoveScheme(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
@@ -421,7 +421,7 @@ class TestMoveScheme(object):
 
         strats = self.scheme.strategies
         assert_equal(len(list(strats.keys())), 3)
-        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat), 
+        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat),
                  (levels.GLOBAL, defaultstrat)]
         for (k, v) in pairs:
             assert_in(v, strats[k])
@@ -435,7 +435,7 @@ class TestMoveScheme(object):
 
         strats = self.scheme.strategies
         assert_equal(len(list(strats.keys())), 3)
-        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat), 
+        pairs = [(levels.MOVER, shootstrat), (levels.SIGNATURE, repexstrat),
                  (levels.GLOBAL, defaultstrat)]
         for (k, v) in pairs:
             assert_in(v, strats[k])
@@ -470,7 +470,7 @@ class TestMoveScheme(object):
         repexstrat = NearestNeighborRepExStrategy()
         defaultstrat = OrganizeByMoveGroupStrategy()
         assert_equal(len(list(self.scheme.strategies.keys())), 0)
-        self.scheme.append([shootstrat, repexstrat, defaultstrat], 
+        self.scheme.append([shootstrat, repexstrat, defaultstrat],
                            [45, 55, 65])
 
         strats = self.scheme.strategies
@@ -659,7 +659,7 @@ class TestMoveScheme(object):
 
     def test_select_movers(self):
         self.scheme.append([
-            OneWayShootingStrategy(), 
+            OneWayShootingStrategy(),
             NearestNeighborRepExStrategy(),
             OrganizeByMoveGroupStrategy()
         ])
@@ -677,7 +677,7 @@ class TestMoveScheme(object):
 
     def test_n_trials_for_steps(self):
         self.scheme.append([
-            OneWayShootingStrategy(), 
+            OneWayShootingStrategy(),
             NearestNeighborRepExStrategy(),
             OrganizeByMoveGroupStrategy()
         ])
@@ -728,15 +728,15 @@ class TestMoveScheme(object):
 
 
 class TestDefaultScheme(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         self.network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),
@@ -862,7 +862,7 @@ class TestDefaultScheme(object):
 
         assert_almost_equal(sum(scheme.choice_probability.values()), 1.0)
 
-        tot_norm = sum([default_group_weights[group] 
+        tot_norm = sum([default_group_weights[group]
                         for group in scheme.movers])
 
         prob_shoot0 = scheme.choice_probability[scheme.movers['shooting'][0]]
@@ -1112,15 +1112,15 @@ class TestDefaultScheme(object):
 
 
 class TestLockedMoveScheme(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         self.network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),
@@ -1175,15 +1175,15 @@ class TestLockedMoveScheme(object):
 
 
 class TestOneWayShootingMoveScheme(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         cvA = paths.FunctionCV(name="xA", f=lambda s : s.xyz[0][0])
         cvB = paths.FunctionCV(name="xB", f=lambda s : -s.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(cvA, float("-inf"), -0.5)
         self.stateB = paths.CVDefinedVolume(cvB, float("-inf"), -0.5)
-        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"), 
+        interfacesA = paths.VolumeInterfaceSet(cvA, float("-inf"),
                                                [-0.5, -0.3, -0.1])
-        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"), 
+        interfacesB = paths.VolumeInterfaceSet(cvB, float("-inf"),
                                                [-0.5, -0.3, -0.1])
         self.network = paths.MSTISNetwork(
             [(self.stateA, interfacesA),
@@ -1209,7 +1209,7 @@ class TestOneWayShootingMoveScheme(object):
         root = scheme.move_decision_tree()
         unused = scheme.find_unused_ensembles()
         specials = self.network.special_ensembles
-        expected_unused = sum([list(specials[special_type].keys()) 
+        expected_unused = sum([list(specials[special_type].keys())
                                for special_type in specials], [])
         assert_equal(set(expected_unused), set(unused))
 

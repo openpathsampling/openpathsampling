@@ -25,7 +25,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestMultipleStateTIS(object):
     # generic class to set up states and ifaces
-    def setup(self):
+    def setup_method(self):
         # need to clear this before each run, otherwise it saves the
         # previous setup
         paths.InterfaceSet._reset()
@@ -91,8 +91,8 @@ class TestMultipleStateTIS(object):
 
 
 class TestMSTISNetwork(TestMultipleStateTIS):
-    def setup(self):
-        super(TestMSTISNetwork, self).setup()
+    def setup_method(self):
+        super(TestMSTISNetwork, self).setup_method()
 
         ifacesA = self.ifacesA[:-1]
         ifacesB = self.ifacesB[:-1]
@@ -241,8 +241,8 @@ class TestMSTISNetwork(TestMultipleStateTIS):
 
 
 class TestMISTISNetwork(TestMultipleStateTIS):
-    def setup(self):
-        super(TestMISTISNetwork, self).setup()
+    def setup_method(self):
+        super(TestMISTISNetwork, self).setup_method()
 
         ifacesA = self.ifacesA[:-1]
         ifacesB = self.ifacesB[:-1]
@@ -411,7 +411,7 @@ class TestTPSNetwork(object):
     NetworkType = TPSNetwork
     std_kwargs = {}
 
-    def setup(self):
+    def setup_method(self):
         from .test_helpers import CallIdentity
         xval = paths.FunctionCV("xval", lambda snap: snap.xyz[0][0])
         self.stateA = paths.CVDefinedVolume(xval, float("-inf"), -0.5)

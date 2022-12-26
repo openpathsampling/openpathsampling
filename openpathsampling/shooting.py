@@ -85,7 +85,7 @@ class ShootingPointSelector(StorableNamedObject):
         rand = self._rng.random() * sum_bias
         idx = 0
         prob = prob_list[0]
-        while prob <= rand and idx < len(prob_list):
+        while prob <= rand and idx < len(prob_list) - 1:
             idx += 1
             prob += prob_list[idx]
 

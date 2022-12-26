@@ -13,7 +13,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestResamplingStatistics(object):
     # NOTE: we test the mean_df and std_df functions within this
-    def setup(self):
+    def setup_method(self):
         # order of the column/index labels should not matter
         self.list_AB = ['A', 'B']
         self.list_BA = ['B', 'A']
@@ -86,7 +86,7 @@ class TestResamplingStatistics(object):
 
 
 class TestBlockResampling(object):
-    def setup(self):
+    def setup_method(self):
         self.samples = list(range(100))
 
     def test_default_initialization(self):

@@ -18,10 +18,10 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestMSOuterTISInterface(object):
-    def setup(self):
+    def setup_method(self):
         paths.InterfaceSet._reset()
         self.cv_inc = paths.FunctionCV(name="inc", f=lambda s: s.xyz[0][0])
-        self.cv_dec = paths.FunctionCV(name="dec", 
+        self.cv_dec = paths.FunctionCV(name="dec",
                                         f=lambda s: 1.0-s.xyz[0][0])
         self.lambdas = [0.0, 0.1, 0.2, 0.3]
         self.interfaces_inc = paths.VolumeInterfaceSet(cv=self.cv_inc,

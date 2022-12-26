@@ -127,7 +127,7 @@ class CallableCodec(object):
 
             return {
                 '__callable_name__': obj.__name__,
-                '_dilled': dill.dumps(obj)
+                '_dilled': dill.dumps(obj, recurse=True)
             }
         return obj
 

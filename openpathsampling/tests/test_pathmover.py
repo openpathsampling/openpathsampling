@@ -38,7 +38,7 @@ logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 # logging.getLogger('openpathsampling.initialization').propagate = False
 
 class TestMakeListOfPairs(object):
-    def setup(self):
+    def setup_method(self):
         self.correct = [[0, 1], [2, 3], [4, 5]]
 
     def test_not_iterable_type_error(self):
@@ -85,7 +85,7 @@ def assert_choice_of(result, choices):
 
 
 class TestPathMover(object):
-    def setup(self):
+    def setup_method(self):
         self.l1 = LengthEnsemble(1)
         self.l2 = LengthEnsemble(2)
         self.l3 = LengthEnsemble(3)
@@ -125,7 +125,7 @@ class TestPathMover(object):
 
 
 class TestShootingMover(object):
-    def setup(self):
+    def setup_method(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7,
                                       -0.1, 0.2, 0.4, 0.6, 0.8])
         op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
@@ -508,7 +508,7 @@ class TestTwoWayShootingMover(TestShootingMover):
 
 
 class TestPathReversalMover(object):
-    def setup(self):
+    def setup_method(self):
         op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
 
         volA = CVDefinedVolume(op, -100, 0.0)
@@ -564,7 +564,7 @@ class TestPathReversalMover(object):
 
 
 class TestReplicaIDChangeMover(object):
-    def setup(self):
+    def setup_method(self):
         pass
 
     def test_replica_in_sample_set(self):
@@ -575,7 +575,7 @@ class TestReplicaIDChangeMover(object):
 
 
 class TestReplicaExchangeMover(object):
-    def setup(self):
+    def setup_method(self):
         op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
 
         state1 = CVDefinedVolume(op, -100, 0.0)
@@ -658,7 +658,7 @@ class TestReplicaExchangeMover(object):
 
 
 class TestRandomChoiceMover(object):
-    def setup(self):
+    def setup_method(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
         volA = CVDefinedVolume(op, -100, 0.0)
@@ -718,7 +718,7 @@ class TestRandomChoiceMover(object):
 
 
 class TestRandomAllowedChoiceMover(object):
-    def setup(self):
+    def setup_method(self):
         self.dyn = CalvinistDynamics([-0.1, 0.1, 0.3, 0.5, 0.7,
                                       -0.1, 0.2, 0.4, 0.6, 0.8,
                                       ])
@@ -820,7 +820,7 @@ class TestRandomAllowedChoiceMover(object):
 
 
 class TestSequentialMover(object):
-    def setup(self):
+    def setup_method(self):
         traj = Trajectory([-0.5, 0.7, 1.1])
         op = CallIdentity()
         volA = CVDefinedVolume(op, -100, 0.0)
@@ -1033,7 +1033,7 @@ class TestConditionalSequentialMover(TestSequentialMover):
 
 
 class SubtrajectorySelectTester(object):
-    def setup(self):
+    def setup_method(self):
         op = CallIdentity()
         vol = paths.CVDefinedVolume(op, -0.5, 0.5)
         inX = paths.AllInXEnsemble(vol)
@@ -1175,7 +1175,7 @@ class TestFinalSubtrajectorySelectMover(SubtrajectorySelectTester):
 
 
 class TestMinusMover(object):
-    def setup(self):
+    def setup_method(self):
         op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)
@@ -1409,7 +1409,7 @@ class TestMinusMover(object):
 
 
 class TestSingleReplicaMinusMover(object):
-    def setup(self):
+    def setup_method(self):
         op = FunctionCV("myid", f=lambda snap: snap.coordinates[0][0])
         volA = CVDefinedVolume(op, -100, 0.0)
         volB = CVDefinedVolume(op, 1.0, 100)

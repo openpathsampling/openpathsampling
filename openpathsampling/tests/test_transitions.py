@@ -18,7 +18,7 @@ logging.getLogger('openpathsampling.storage').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestTISTransition(object):
-    def setup(self):
+    def setup_method(self):
         pass
 
     def test_initialization(self):
@@ -28,7 +28,7 @@ class TestTISTransition(object):
         pass
 
 class TestFixedLengthTPSTransition(object):
-    def setup(self):
+    def setup_method(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.stateA = paths.CVDefinedVolume(op, 0.1, 0.5)
         self.stateB = paths.CVDefinedVolume(op, 2.0, 2.5)
@@ -75,7 +75,7 @@ class TestFixedLengthTPSTransition(object):
             os.remove(filename)
 
 class TestMinusSidesSummary(object):
-    def setup(self):
+    def setup_method(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
@@ -110,18 +110,18 @@ class TestMinusSidesSummary(object):
                      {"in" : [5], "out" : [4]})
         assert_not_equal(minus_sides_summary(self.traj_axaxa, minus),
                          {"in" : [5], "out" : [3]})
-        assert_equal(minus_sides_summary(self.traj_aixiaixia, minus), 
+        assert_equal(minus_sides_summary(self.traj_aixiaixia, minus),
                      {"in" : [5], "out" : [6] })
-        assert_equal(minus_sides_summary(self.traj_aixixiaxia, minus), 
+        assert_equal(minus_sides_summary(self.traj_aixixiaxia, minus),
                      {"in" : [5], "out" : [10] })
 
     def test_minus_with_interstitial(self):
         minus = paths.MinusInterfaceEnsemble(self.stateA, self.innermost)
         assert_equal(minus_sides_summary(self.traj_axaxa, minus),
                      {"in" : [5], "out" : [4]})
-        assert_equal(minus_sides_summary(self.traj_aixiaixia, minus), 
+        assert_equal(minus_sides_summary(self.traj_aixiaixia, minus),
                      {"in" : [6], "out" : [4] })
-        assert_equal(minus_sides_summary(self.traj_aixixiaxia, minus), 
+        assert_equal(minus_sides_summary(self.traj_aixixiaxia, minus),
                      {"in" : [5], "out" : [8] })
 
     def test_minus_with_multiple_excursion(self):

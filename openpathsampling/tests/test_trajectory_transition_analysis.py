@@ -20,7 +20,7 @@ logging.getLogger('openpathsampling.ensemble').setLevel(logging.CRITICAL)
 logging.getLogger('openpathsampling.netcdfplus').setLevel(logging.CRITICAL)
 
 class TestTrajectorySegmentContainer(object):
-    def setup(self):
+    def setup_method(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         self.vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         self.vol3 = paths.CVDefinedVolume(op, 2.0, 2.5)
@@ -103,7 +103,7 @@ class TestTrajectorySegmentContainer(object):
 
 
 class TestTrajectoryTransitionAnalysis(object):
-    def setup(self):
+    def setup_method(self):
         op = paths.FunctionCV("Id", lambda snap : snap.coordinates[0][0])
         vol1 = paths.CVDefinedVolume(op, 0.1, 0.5)
         vol2 = paths.CVDefinedVolume(op, -0.1, 0.7)
@@ -139,7 +139,7 @@ class TestTrajectoryTransitionAnalysis(object):
                             velocities=[1.0]*len(sequence))
 
     def test_analyze_continuous_time(self):
-        resultA = self.analyzer.analyze_continuous_time(self.trajectory, 
+        resultA = self.analyzer.analyze_continuous_time(self.trajectory,
                                                         self.stateA)
         assert_equal(resultA.n_frames.tolist(), [3, 1, 1, 1, 1, 1, 1])
         resultB = self.analyzer.analyze_continuous_time(self.trajectory,

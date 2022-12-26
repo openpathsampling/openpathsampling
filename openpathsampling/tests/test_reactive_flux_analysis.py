@@ -30,7 +30,7 @@ logging.getLogger('openpathsampling.sample').setLevel(logging.CRITICAL)
 
 
 class TestReactiveFluxAnalysis(object):
-    def setup(self):
+    def setup_method(self):
         import openpathsampling.engines.toy as toys
         # PES is one-dimensional linear slope (y(x) = -x)
         pes = toys.LinearSlope(m=[-1.0], c=[0.0])
@@ -131,7 +131,7 @@ class TestReactiveFluxAnalysis(object):
         self.simulation.run(n_per_snapshot=1)
         self.analysis = None
 
-    def teardown(self):
+    def teardown_method(self):
         if os.path.isfile(self.filename):
             self.storage.close()
             os.remove(self.filename)
