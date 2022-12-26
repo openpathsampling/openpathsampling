@@ -298,6 +298,8 @@ class _MockOneWayShooting(_MockSingleEnsembleMove):
     def safety_checks(self, change, inputs):
         self._check_shooting_point_in_trial(change, inputs)
         self._check_forced_accepted_reasonable(change, inputs)
+        if self.accepted is not None:
+            assert change.accepted is self.accepted
 
 
 class MockForwardShooting(_MockOneWayShooting):
@@ -452,6 +454,7 @@ class MockTwoWayShooting(_MockSingleEnsembleMove):
                 )
             )
 
+
         direction_idx = mover.submovers.index(shooter)
         rng_mock = Mock(choice=Mock(return_value=direction_idx))
         direction_patch = patch.object(mover, '_rng', rng_mock)
@@ -469,6 +472,9 @@ class MockTwoWayShooting(_MockSingleEnsembleMove):
                 probability_ratio=Mock(return_value=1.0)
             )
         )
+        acc_value = 1.0 if self.accepted else 0.0
+        accepted_patch = patch.object(shooter.selector, 'probability_ratio',
+                                      return_value=acc_value)
         make_fwd_patch = patch.object(shooter, '_make_forward_trajectory',
                                       Mock(return_value=fwd_partial))
         make_bkwd_patch = patch.object(shooter, '_make_backward_trajectory',
@@ -478,6 +484,7 @@ class MockTwoWayShooting(_MockSingleEnsembleMove):
             direction_patch,
             pick_patch,
             modifier_patch,
+            accepted_patch,
             make_fwd_patch,
             make_bkwd_patch,
         ]
@@ -501,7 +508,6 @@ class MockTwoWayShooting(_MockSingleEnsembleMove):
     def safety_checks(self, change, inputs):
         self._check_modified_shooting_point_in_trial(change)
         self._check_shooting_point_changed(change)
-
 
 
 def _do_single_step(init_conds, move, org_by_group):

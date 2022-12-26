@@ -9,7 +9,7 @@ except ImportError:
 
 from openpathsampling.tests.analysis.utils.mock_movers import (
     MockForwardShooting, MockBackwardShooting, MockRepex, MockPathReversal,
-    run_moves,
+    MockTwoWayShooting, run_moves,
 )
 
 import pytest
@@ -55,18 +55,42 @@ def shooting_and_pathrev_steps(default_unidirectional_tis):
     t0 = default_unidirectional_tis.make_tis_trajectory(5)
     t1 = default_unidirectional_tis.make_tis_trajectory(10)
     init_conds = scheme.initial_conditions_from_trajectories([t0, t1])
-    t2 = ...
+    # t2: rejected trial in ens1 from shooting point ...
+    p2 = ...
+    # t3: accepted trial in ens1 from shooting point ...
     t3 = ...
+    # t4: two-way shooting trial from shooting point ...
     t4 = ...
-    # initially: {replica: (traj, ens)}
-    # {0: (t0, ens0), 1: (t0, ens1), 2: (t1, ens3)}
+    # trials: (format: {replica: (traj, ens)})
+    # step0 (initial):     {0: (t0, ens0), 1: (t0, ens1), 2: (t1, ens2)}
+    # step1 (pathrev-acc): {0: (t0*, ens0), 1: (t0, ens1), 2: (t1, ens1)}
+    # step2 (pathrev-acc): {0: (t0, ens0), 1: (t0, ens1), 2: (t1, ens1)}
+    # step3 (shoot-rej):   {0: (t0, ens0), 1: (t2, ens1), 2: (t1, ens2)}
+    # step4 (shoot-acc):   {0: (t0, ens0), 1: (t3, ens1), 2: (t1, ens2)}
+    # step5 (twoway-acc):  {0: (t0, ens0), 1: (t4, ens1), 2: (t1, ens2)}
     # What these steps need to test:
     # 1. accepted and rejected shooting moves with same shooting point
     # 2. modified shooting point that differs from original
     # 3. includes non-trivial canonical mover (one-way shooting works)
     # 4. includes non-shooting moves as well
     moves = [
-        # TODO
+        MockPathReversal(scheme, ensemble=ens0),  # ACC
+        MockPathReversal(scheme, ensemble=ens0),  # ACC
+        MockForwardShooting(shooting_index=4,
+                            partial_traj=p2,
+                            scheme=scheme,
+                            ensemble=ens1),
+        MockForwardShooting(shooting_index=4,
+                            partial_traj=p3,
+                            scheme=scheme,
+                            ensemble=ens1),
+        MockTwoWayShooting(shooting_index=4,
+                           new_traj=t4,
+                           modified_snapshot=...,
+                           direction="forward-first",
+                           scheme=scheme,
+                           ensemble=ens1,
+                           accepted=True),
     ]
     return run_moves(init_conds, moves)
 
@@ -285,15 +309,23 @@ def test_trial_samples_extractor(scheme, seven_steps_no_dynamics):
         assert found == expected
 
 
-def test_shooting_steps_filter():
+def test_shooting_steps_filter(shooting_and_pathrev_steps):
+    shooting = list(shooting_steps(shooting_and_pathrev_steps))
+    assert len(shooting) == 3
+    pytest.skip()
+    for step in shooting:
+        assert isinstance(step.change.canonical.mover,
+                          (paths.ForwardFirstTwoWayShooting,
+                           paths.BackwardFirstTwoWayShooing,
+                           paths.ForwardShooting,
+                           paths.BackwardShooting))
+
+
+def test_shooting_points_extractor(shooting_and_pathrev_steps):
     pytest.skip()
 
 
-def test_shooting_points_extractor():
-    pytest.skip()
-
-
-def test_modified_shooting_points_extractor():
+def test_modified_shooting_points_extractor(shooting_and_pathrev_steps):
     pytest.skip()
 
 

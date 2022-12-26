@@ -243,15 +243,17 @@ def test_two_way_shooting_move(two_state_tps_two_way_shooting, accepted,
                               ensemble=ensemble,
                               accepted=accepted)
 
+    # import pdb; pdb.set_trace()
     change = move(init_conds)
     assert change.trials[0].trajectory == new_traj
     assert isinstance(change.mover, paths.TwoWayShootingMover)
+    assert change.mover is scheme.movers['shooting'][0]
     expected_movetype = {
         'forward-first': paths.ForwardFirstTwoWayShootingMover,
         'backward-first': paths.BackwardFirstTwoWayShootingMover,
     }[direction]
-    assert isinstance(change.mover.submovers[0], expected_movetype)
-    # assert change.accepted is accepted
+    assert isinstance(change.subchanges[0].mover, expected_movetype)
+    assert change.accepted is accepted
 
 
 
