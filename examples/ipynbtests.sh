@@ -6,7 +6,7 @@ testfail=0
 PYTHON_VERSION=`python -V 2>&1 | awk '{print $2}' | awk 'BEGIN { FS="." } { print $1 "." $2}'`
 echo "Running tests for Python version: $PYTHON_VERSION"
 
-dropbox_base_url="http://www.dropbox.com/s"
+dropbox_base_url="https://www.dropbox.com/s"
 
 case $PYTHON_VERSION in
     "2.7")
