@@ -6,7 +6,7 @@ testfail=0
 PYTHON_VERSION=`python -V 2>&1 | awk '{print $2}' | awk 'BEGIN { FS="." } { print $1 "." $2}'`
 echo "Running tests for Python version: $PYTHON_VERSION"
 
-dropbox_base_url="http://www.dropbox.com/s"
+dropbox_base_url="https://www.dropbox.com/s"
 
 case $PYTHON_VERSION in
     "2.7")
@@ -33,8 +33,8 @@ case $PYTHON_VERSION in
         echo "Unsupported Python version: $PYTHON_VERSION"
 esac
 
-curl -OLk $mstis
-curl -OLk $mistis
+curl -OLk --http1.1 $mstis
+curl -OLk --http1.1 $mistis
 cp `basename $mstis` toy_mstis_1k_OPS1.nc
 cp `basename $mistis` toy_mistis_1k_OPS1.nc
 
