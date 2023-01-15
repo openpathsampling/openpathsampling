@@ -29,6 +29,6 @@ jobs:
 
   test_rc:
     needs: check_rc
-    uses: ./.github/workflow/test-openmm-rc.yml
+    uses: ./.github/workflows/test-openmm-rc.yml
     secrets: inherit
     if: ${{ needs.check_rc.outputs.hasrc == 'True' }}
