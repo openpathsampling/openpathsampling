@@ -156,7 +156,7 @@ class SQLStorageBackend(StorableNamedObject):
 
     def _initialize_from_engine(self, engine):
         self.engine = engine
-        self._metadata = sql.MetaData(bind=self.engine)
+        self._metadata = sql.MetaData()
         self._initialize_with_mode(self.mode)
 
     @property
@@ -298,7 +298,7 @@ class SQLStorageBackend(StorableNamedObject):
         module = cls_.__module__
         class_name = cls_.__name__
 
-        with self.engine.connect() as conn:
+        with self.engine.begin() as conn:
             conn.execute(tables.insert().values(name=table_name,
                                                 idx=n_tables,
                                                 module=module,
@@ -319,7 +319,10 @@ class SQLStorageBackend(StorableNamedObject):
         with self.engine.connect() as conn:
             for block in grouper(idx_list, self.MAX_SQL_ITEMS):
                 or_stmt = sql.or_(*(table.c.idx == idx for idx in block))
-                sel = table.select(or_stmt)
+                # TODO: check correctness that these give the same SQL
+                # statement
+                # sel = table.select(or_stmt)
+                sel = table.select().where(or_stmt)
                 results.extend(list(conn.execute(sel)))
 
         return results
@@ -502,15 +505,15 @@ class SQLStorageBackend(StorableNamedObject):
         # this is if we don't use the UUID in the schema... but doing so
         # would be another option (redundant data, but better sanity checks)
 
-        with self.engine.connect() as conn:
+        with self.engine.begin() as conn:
             conn.execute(table.insert(), objects)
 
         res = []
         uuids = [obj['uuid'] for obj in objects]
         for uuid_block in tools.block(uuids, self.MAX_SQL_ITEMS):
-            sel_uuids_idx = sql.select([table.c.uuid, table.c.idx]).\
+            sel_uuids_idx = sql.select(table.c.uuid, table.c.idx).\
                     where(table.c.uuid.in_(uuid_block))
-            with self.engine.connect() as conn:
+            with self.engine.begin() as conn:
                 res += list(conn.execute(sel_uuids_idx))
 
         uuid_to_rows = {r[0]: r[1] for r in res}
@@ -520,7 +523,7 @@ class SQLStorageBackend(StorableNamedObject):
         uuid_insert_dicts = [{'uuid': k, 'table': table_num, 'row':v}
                              for (k, v) in uuid_to_rows.items()]
 
-        with self.engine.connect() as conn:
+        with self.engine.begin() as conn:
             # here we use executemany for performance
             conn.execute(uuid_table.insert(), uuid_insert_dicts)
 
@@ -658,7 +661,9 @@ class SQLStorageBackend(StorableNamedObject):
 
     def table_len(self, table_name):
         table = self.metadata.tables[table_name]
-        count_query = sql.select([sql.func.count()]).select_from(table)
+        # TODO: check that we're getting the same SQL here
+        # count_query = sql.select([sql.func.count()]).select_from(table)
+        count_query = sql.select(sql.func.count()).select_from(table)
         with self.engine.connect() as conn:
             results = conn.execute(count_query)
             count_list = [r for r in results]
